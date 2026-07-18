@@ -1,13 +1,13 @@
-"""Nanobase BI ↔ DB-GPT bridge.
+"""Nanobase BI ↔ DB-GPT bridge (all-in on DB-GPT for BI SPA).
 
-Listens on :8787 (Vite/nginx default). Speaks the FE `/api/v1/bi/*` (+ portal stub)
-contract and calls DB-GPT on :5670.
+Default listen :8789 on portal (nginx `/bi-api/` + `/api/v1/bi/` + `/api/v1/llm/`).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import Any, AsyncIterator, Optional
@@ -18,7 +18,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
 DBGPT_BASE = os.environ.get("DBGPT_BASE", "http://127.0.0.1:5670").rstrip("/")
-BRIDGE_PORT = int(os.environ.get("BRIDGE_PORT", "8787"))
+LLM_BASE = os.environ.get("OPENAI_API_BASE", "http://127.0.0.1:8010/v1").rstrip("/")
+LLM_KEY = os.environ.get("OPENAI_API_KEY", "nanobase-local")
+LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp")
+EMBED_URL = os.environ.get("BI_EMBED_URL", "http://127.0.0.1:8083/v1/embeddings")
+EMBED_KEY = os.environ.get("BI_EMBED_API_KEY", "")
+BRIDGE_PORT = int(os.environ.get("BRIDGE_PORT", "8789"))
 SOURCES_FILE = Path(
     os.environ.get(
         "BI_SOURCES_FILE",
@@ -27,7 +32,7 @@ SOURCES_FILE = Path(
 )
 ACTIVE_DB = {"id": "erp"}
 
-app = FastAPI(title="Nanobase BI → DB-GPT bridge", version="0.1.0")
+app = FastAPI(title="Nanobase BI → DB-GPT bridge", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("PORTAL_CORS_ORIGINS", "*").split(","),
@@ -71,13 +76,7 @@ def _sources_list_payload() -> dict[str, Any]:
     return {"active_id": ACTIVE_DB["id"], "sources": items}
 
 
-async def _dbgpt_json(
-    method: str,
-    path: str,
-    *,
-    json_body: Any = None,
-    timeout: float = 120.0,
-) -> Any:
+async def _dbgpt_json(method: str, path: str, *, json_body: Any = None, timeout: float = 120.0) -> Any:
     url = f"{DBGPT_BASE}{path}"
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.request(method, url, json=json_body)
@@ -87,21 +86,33 @@ async def _dbgpt_json(
         return resp.json()
 
 
+async def _probe(url: str, headers: Optional[dict[str, str]] = None) -> bool:
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(url, headers=headers or {})
+            return r.status_code < 500
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
-# Health / portal stubs (FE bootstrap)
+# Health / portal (BI SPA uses /bi-api → these stubs)
 # ---------------------------------------------------------------------------
 
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    dbgpt_ok = False
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(f"{DBGPT_BASE}/")
-            dbgpt_ok = r.status_code < 500
-    except Exception:
-        dbgpt_ok = False
-    return {"ok": True, "bridge": True, "dbgpt": dbgpt_ok, "dbgpt_base": DBGPT_BASE}
+    dbgpt_ok = await _probe(f"{DBGPT_BASE}/")
+    llm_ok = await _probe(f"{LLM_BASE}/models", {"Authorization": f"Bearer {LLM_KEY}"})
+    return {
+        "ok": True,
+        "bridge": True,
+        "dbgpt": dbgpt_ok,
+        "llm": llm_ok,
+        "dbgpt_base": DBGPT_BASE,
+        "llm_base": LLM_BASE,
+        "engine": "dbgpt",
+    }
 
 
 @app.get("/api/v1/bi/health")
@@ -110,9 +121,11 @@ async def bi_status() -> dict[str, Any]:
     h = await health()
     return {
         "ok": True,
-        "status": "ready" if h["dbgpt"] else "degraded",
+        "status": "ready" if h["dbgpt"] and h["llm"] else ("degraded" if h["dbgpt"] else "down"),
         "engine": "dbgpt",
         "dbgpt": h["dbgpt"],
+        "llm": h["llm"],
+        "llm_model": LLM_MODEL,
         "active_source": ACTIVE_DB["id"],
     }
 
@@ -120,22 +133,33 @@ async def bi_status() -> dict[str, Any]:
 @app.get("/api/v1/portal/bootstrap")
 async def portal_bootstrap() -> dict[str, Any]:
     return {
+        "auth_required": False,
+        "portal_users_enabled": False,
         "portal_auto_login": True,
-        "auth_mode": "bearer",
+        "httponly_api_key": False,
+        "portal_modules": ["bi"],
         "modules": ["bi"],
         "features": {"bi": True},
-        "runtime_config": {"api_base": "", "cookie_auth": False},
+        "supported_locales": ["tr", "en"],
     }
 
 
 @app.get("/api/v1/portal/runtime-config")
 async def runtime_config() -> dict[str, Any]:
-    return {"api_base": "", "cookie_auth": False, "modules": ["bi"]}
+    return {
+        "apiKey": "dbgpt-bridge-local",
+        "apiKeyConfigured": True,
+        "authMode": "bearer",
+        "portalAutoLogin": True,
+        "authenticated": True,
+        "role": "admin",
+        "modules": ["bi"],
+    }
 
 
 @app.post("/api/v1/portal/auth/login")
 async def portal_login(request: Request) -> dict[str, Any]:
-    body = {}
+    body: dict[str, Any] = {}
     try:
         body = await request.json()
     except Exception:
@@ -144,9 +168,15 @@ async def portal_login(request: Request) -> dict[str, Any]:
     return {
         "token": "dbgpt-bridge-local",
         "access_token": "dbgpt-bridge-local",
+        "api_key": "dbgpt-bridge-local",
         "user": {"id": "local", "username": user, "role": "admin", "roles": ["admin"]},
         "session": {"id": "local", "token": "dbgpt-bridge-local"},
     }
+
+
+@app.post("/api/v1/portal/auth/logout")
+async def portal_logout() -> dict[str, Any]:
+    return {"ok": True}
 
 
 @app.get("/api/v1/portal/auth/me")
@@ -155,9 +185,22 @@ async def portal_me() -> dict[str, Any]:
     return {"id": "local", "username": "bi-local", "role": "admin", "roles": ["admin"]}
 
 
+@app.get("/api/v1/portal/users")
+async def portal_users() -> list[Any]:
+    return [{"id": "local", "username": "bi-local", "role": "admin"}]
+
+
 @app.get("/api/v1/llm/status")
 async def llm_status() -> dict[str, Any]:
-    return {"busy": False, "model": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp")}
+    ok = await _probe(f"{LLM_BASE}/models", {"Authorization": f"Bearer {LLM_KEY}"})
+    return {
+        "busy": False,
+        "ok": ok,
+        "model": LLM_MODEL,
+        "api_base": LLM_BASE,
+        "engine": "llama.cpp",
+        "via": "dbgpt",
+    }
 
 
 @app.post("/api/v1/llm/cancel")
@@ -165,8 +208,33 @@ async def llm_cancel() -> dict[str, Any]:
     return {"ok": True}
 
 
+# OpenAI-compat embedding shim → BGE-M3 contract service (texts[] API)
+@app.post("/v1/embeddings")
+async def openai_embeddings(request: Request) -> JSONResponse:
+    body = await request.json()
+    raw = body.get("input") or body.get("texts") or []
+    texts = raw if isinstance(raw, list) else [str(raw)]
+    headers = {"Content-Type": "application/json"}
+    if EMBED_KEY:
+        headers["Authorization"] = f"Bearer {EMBED_KEY}"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(EMBED_URL, headers=headers, json={"texts": texts})
+        if r.status_code >= 400:
+            return JSONResponse({"error": r.text[:400]}, status_code=r.status_code)
+        data = r.json()
+    vectors = data.get("embeddings") or []
+    return JSONResponse(
+        {
+            "object": "list",
+            "model": data.get("model") or "BAAI/bge-m3",
+            "data": [{"object": "embedding", "index": i, "embedding": v} for i, v in enumerate(vectors)],
+            "usage": {"prompt_tokens": 0, "total_tokens": 0},
+        }
+    )
+
+
 # ---------------------------------------------------------------------------
-# Sources / connection → DB-GPT datasources
+# Sources / connection / schema
 # ---------------------------------------------------------------------------
 
 
@@ -175,42 +243,95 @@ async def sources_list() -> dict[str, Any]:
     return _sources_list_payload()
 
 
+@app.put("/api/v1/bi/sources/{source_id}")
+async def sources_upsert(source_id: str, request: Request) -> dict[str, Any]:
+    body = await request.json()
+    raw = _load_sources()
+    sources = raw.setdefault("sources", {})
+    sources[source_id] = {**sources.get(source_id, {}), **body, "id": source_id}
+    try:
+        SOURCES_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SOURCES_FILE.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+    return {"ok": True, "id": source_id}
+
+
 @app.post("/api/v1/bi/sources/{source_id}/activate")
 async def sources_activate(source_id: str) -> dict[str, Any]:
     ACTIVE_DB["id"] = source_id
     raw = _load_sources()
     raw["active_id"] = source_id
-    if SOURCES_FILE.parent.is_dir():
-        try:
-            SOURCES_FILE.write_text(json.dumps(raw, indent=2), encoding="utf-8")
-        except OSError:
-            pass
+    try:
+        SOURCES_FILE.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+    except OSError:
+        pass
     return {"ok": True, "active_id": source_id}
 
 
 @app.get("/api/v1/bi/connection")
 async def connection_get() -> dict[str, Any]:
     payload = _sources_list_payload()
-    active = payload["active_id"]
     for s in payload["sources"]:
-        if s["id"] == active:
+        if s["id"] == payload["active_id"]:
             return s
     return payload["sources"][0] if payload["sources"] else {}
 
 
+@app.put("/api/v1/bi/connection")
+async def connection_save(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    sid = str(body.get("id") or ACTIVE_DB["id"] or "erp")
+    return await sources_upsert(sid, request)
+
+
 @app.post("/api/v1/bi/connection/test")
 async def connection_test() -> dict[str, Any]:
-    return {"ok": True, "message": "OK (bridge)", "dialect": "postgresql"}
+    try:
+        await _dbgpt_json("GET", "/api/v1/chat/db/list")
+        return {"ok": True, "message": "OK (DB-GPT datasource registry)", "dialect": "postgresql"}
+    except Exception as e:
+        return {"ok": False, "message": str(e), "dialect": "postgresql"}
 
 
 @app.get("/api/v1/bi/schema")
 async def schema_get() -> dict[str, Any]:
-    return {"tables": [], "dialect": "postgresql", "source_id": ACTIVE_DB["id"]}
+    db = ACTIVE_DB["id"]
+    tables: list[dict[str, Any]] = []
+    try:
+        data = await _dbgpt_json("GET", f"/api/v1/editor/db/tables?db_name={db}")
+        rows = data.get("data") if isinstance(data, dict) else data
+        if isinstance(rows, list):
+            for t in rows:
+                name = t.get("table_name") or t.get("name") or str(t)
+                cols = t.get("columns") or t.get("column_info") or []
+                columns = []
+                if isinstance(cols, list):
+                    for c in cols:
+                        if isinstance(c, dict):
+                            columns.append(
+                                {
+                                    "name": c.get("name") or c.get("column_name") or "col",
+                                    "type": c.get("type") or c.get("column_type") or "text",
+                                    "nullable": c.get("nullable", True),
+                                }
+                            )
+                        else:
+                            columns.append({"name": str(c), "type": "text"})
+                tables.append({"name": name, "schema": t.get("schema") or "public", "columns": columns})
+    except Exception:
+        tables = []
+    return {"tables": tables, "dialect": "postgresql", "source_id": db, "graph": {"nodes": [], "edges": []}}
 
 
 @app.post("/api/v1/bi/schema/refresh")
 async def schema_refresh() -> dict[str, Any]:
-    return {"ok": True, "tables": 0}
+    try:
+        await _dbgpt_json("POST", "/api/v1/chat/db/refresh", json_body={"db_name": ACTIVE_DB["id"]})
+    except Exception:
+        pass
+    schema = await schema_get()
+    return {"ok": True, "tables": len(schema.get("tables") or [])}
 
 
 @app.get("/api/v1/bi/templates")
@@ -222,25 +343,120 @@ async def templates() -> list[Any]:
 async def chat_sessions() -> list[Any]:
     try:
         data = await _dbgpt_json("POST", "/api/v1/serve/conversation/list", json_body={})
-        if isinstance(data, dict) and "data" in data:
-            return data["data"] or []
-        return data if isinstance(data, list) else []
+        rows = data.get("data") if isinstance(data, dict) else data
+        out = []
+        if isinstance(rows, list):
+            for r in rows:
+                out.append(
+                    {
+                        "id": r.get("conv_uid") or r.get("id"),
+                        "title": r.get("user_input") or r.get("title") or "Chat",
+                        "updated_at": r.get("gmt_modified") or r.get("updated_at"),
+                    }
+                )
+        return out
     except Exception:
         return []
 
 
 @app.get("/api/v1/bi/chat/{session_id}")
 async def chat_history(session_id: str) -> dict[str, Any]:
-    return {"session_id": session_id, "messages": []}
+    try:
+        data = await _dbgpt_json(
+            "POST",
+            "/api/v1/serve/conversation/messages/history",
+            json_body={"conv_uid": session_id},
+        )
+        msgs = data.get("data") if isinstance(data, dict) else data
+        return {"session_id": session_id, "messages": msgs or []}
+    except Exception:
+        return {"session_id": session_id, "messages": []}
+
+
+@app.get("/api/v1/bi/chat/{session_id}/pending")
+async def chat_pending(session_id: str) -> dict[str, Any]:
+    return {"pending": False, "session_id": session_id}
 
 
 @app.delete("/api/v1/bi/chat/{session_id}")
 async def chat_delete(session_id: str) -> dict[str, Any]:
+    try:
+        await _dbgpt_json("POST", "/api/v1/serve/conversation/delete", json_body={"conv_uid": session_id})
+    except Exception:
+        pass
     return {"ok": True}
 
 
+@app.patch("/api/v1/bi/chat/{session_id}")
+async def chat_rename(session_id: str, request: Request) -> dict[str, Any]:
+    return {"ok": True, "id": session_id}
+
+
 # ---------------------------------------------------------------------------
-# Chat → DB-GPT chat_with_db_execute
+# Soft capabilities (DB-GPT has no native budgets/Superset SaaS layer)
+# Return shaped empties so FE pages load; chat remains the real BI surface.
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/bi/analytics/status")
+async def analytics_status() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "engine": "dbgpt",
+        "superset_enabled": False,
+        "message": "Superset canvas not wired through DB-GPT; use Chat for analysis.",
+    }
+
+
+@app.get("/api/v1/bi/analytics/dashboards")
+@app.get("/api/v1/bi/analytics/charts")
+@app.get("/api/v1/bi/analytics/datasets")
+async def analytics_empty() -> list[Any]:
+    return []
+
+
+@app.get("/api/v1/bi/budgets")
+@app.get("/api/v1/bi/alerts")
+@app.get("/api/v1/bi/shares")
+@app.get("/api/v1/bi/schedules")
+@app.get("/api/v1/bi/glossary")
+@app.get("/api/v1/bi/queries")
+@app.get("/api/v1/bi/audit")
+@app.get("/api/v1/bi/anomalies")
+@app.get("/api/v1/bi/comments")
+async def list_empty() -> list[Any]:
+    return []
+
+
+@app.get("/api/v1/bi/budgets/summary")
+async def budget_summary() -> dict[str, Any]:
+    return {"years": [], "totals": {}, "engine": "dbgpt"}
+
+
+@app.get("/api/v1/bi/briefing")
+async def briefing() -> dict[str, Any]:
+    return {
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "items": [],
+        "message": "Ask Chat for a live briefing against the active Neon source.",
+        "engine": "dbgpt",
+    }
+
+
+@app.get("/api/v1/bi/semantic/metrics")
+@app.get("/api/v1/bi/semantic/joins")
+@app.get("/api/v1/bi/semantic/templates")
+async def semantic_empty() -> list[Any]:
+    return []
+
+
+@app.get("/api/v1/bi/semantic/status")
+async def semantic_status() -> dict[str, Any]:
+    return {"ok": True, "enabled": False, "engine": "dbgpt", "message": "Semantic layer via DB-GPT chat/schema."}
+
+
+# ---------------------------------------------------------------------------
+# Chat → DB-GPT
 # ---------------------------------------------------------------------------
 
 
@@ -270,7 +486,7 @@ async def _stream_dbgpt_chat(message: str, session_id: str, db_name: str) -> Asy
         "conv_uid": session_id,
         "chat_mode": "chat_with_db_execute",
         "select_param": db_name,
-        "model_name": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp"),
+        "model_name": LLM_MODEL,
         "incremental": True,
         "temperature": 0.2,
         "max_new_tokens": 2048,
@@ -313,7 +529,6 @@ async def _stream_dbgpt_chat(message: str, session_id: str, db_name: str) -> Asy
                         if content:
                             reply_parts.append(content)
                             yield _sse("token", {"t": content}).encode()
-                        # Best-effort SQL sniff
                         if "```sql" in content.lower() or content.strip().upper().startswith("SELECT"):
                             sql = (sql or "") + content
 
@@ -334,6 +549,7 @@ async def chat_stream(request: Request) -> StreamingResponse:
     session_id = str(body.get("session_id") or uuid.uuid4())
     db_name = ACTIVE_DB["id"] or "erp"
     if not message:
+
         async def _err() -> AsyncIterator[bytes]:
             yield _sse("error", {"message": "empty message"}).encode()
 
@@ -375,23 +591,18 @@ async def chat(request: Request) -> JSONResponse:
     return JSONResponse(_empty_chat_result(session_id, "".join(reply_parts) or "Empty reply"))
 
 
-# Catch-all stub so unused BI pages degrade gracefully
 @app.api_route("/api/v1/bi/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def bi_stub(full_path: str, request: Request) -> JSONResponse:
+    """Graceful degradation for remaining BI SaaS routes not in DB-GPT."""
     if request.method == "GET":
         return JSONResponse([])
-    return JSONResponse({"ok": True, "stub": True, "path": full_path})
+    return JSONResponse({"ok": True, "engine": "dbgpt", "limited": True, "path": full_path})
 
 
 def main() -> None:
     import uvicorn
 
-    uvicorn.run(
-        "bridge.app:app",
-        host=os.environ.get("BRIDGE_HOST", "0.0.0.0"),
-        port=BRIDGE_PORT,
-        reload=False,
-    )
+    uvicorn.run("bridge.app:app", host=os.environ.get("BRIDGE_HOST", "0.0.0.0"), port=BRIDGE_PORT, reload=False)
 
 
 if __name__ == "__main__":

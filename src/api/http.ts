@@ -70,13 +70,21 @@ export function withSessionConfig(config: ApiConfig, sessionToken?: string): Api
 }
 
 export function loadApiConfig(): ApiConfig {
+  const envBase = String(import.meta.env.VITE_API_BASE || '')
+    .trim()
+    .replace(/\/$/, '');
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return hydrateStoredConfig(JSON.parse(raw) as ApiConfig);
+    if (raw) {
+      const stored = hydrateStoredConfig(JSON.parse(raw) as ApiConfig);
+      // Prefer build-time BI API prefix when stored base is empty
+      if (!stored.baseUrl && envBase) return { ...stored, baseUrl: envBase };
+      return stored;
+    }
   } catch {
     /* ignore */
   }
-  return { baseUrl: '', apiKey: '', role: 'qa', authMode: 'bearer' };
+  return { baseUrl: envBase, apiKey: '', role: 'admin', authMode: 'bearer' };
 }
 
 export function saveApiConfig(config: ApiConfig): void {
