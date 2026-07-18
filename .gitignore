@@ -17,3 +17,4 @@ backend/cache/
 backend/bing_search.log
 **/pilot/
 *.log
+__pycache__/

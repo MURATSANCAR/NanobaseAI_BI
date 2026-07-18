@@ -153,22 +153,29 @@ def _patch_sqlite_ext_config(db_name: str, ext_config: dict) -> None:
         conn.close()
 
 
-def _test(base: str, src: dict) -> None:
-    body = {
-        "db_type": "postgresql",
-        "db_name": src["id"],
-        "db_host": src["host"],
-        "db_port": int(src.get("port") or 5432),
-        "db_user": src["username"],
-        "db_pwd": src["password"],
-        "comment": src.get("label") or src["id"],
-        "file_path": "",
-    }
-    # Test connect uses db_name as postgres database — inject real name via a
-    # temporary connection that the API understands: use db_name=neondb for probe.
-    body["db_name"] = src.get("database") or "neondb"
-    res = _http_json("POST", f"{base.rstrip('/')}/api/v1/chat/db/test/connect", body)
-    print(f"test {src['id']} (as neondb): success={res.get('success')} data={res.get('data')}")
+def _probe_psycopg(src: dict) -> None:
+    """Fast connectivity check (avoids DB-GPT full schema reflection timeout)."""
+    try:
+        import psycopg2
+    except ImportError:
+        print(f"skip probe {src['id']}: psycopg2 not installed")
+        return
+    host = src["host"]
+    port = int(src.get("port") or 5432)
+    user = src["username"]
+    password = src["password"]
+    database = src.get("database") or "neondb"
+    dsn = (
+        f"host={host} port={port} dbname={database} user={user} "
+        f"password={password} sslmode=require connect_timeout=20"
+    )
+    conn = psycopg2.connect(dsn)
+    cur = conn.cursor()
+    cur.execute("select current_database(), current_user")
+    db, usr = cur.fetchone()
+    cur.close()
+    conn.close()
+    print(f"probe {src['id']}: ok db={db} user={usr}")
 
 
 def main() -> None:
@@ -183,7 +190,7 @@ def main() -> None:
         if not src.get("password"):
             raise SystemExit(f"{sid} password missing in local connection file")
         _upsert(base, src)
-        _test(base, src)
+        _probe_psycopg(src)
     listed = _http_json("GET", f"{base.rstrip('/')}/api/v1/chat/db/list")
     names = [d.get("db_name") for d in (listed.get("data") or [])]
     print("registered datasources:", names)
