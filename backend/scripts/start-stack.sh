@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Start DB-GPT (:5670) then the BI bridge (:8787).
+# Start DB-GPT (:5670) then the BI bridge (default :8787; prod portal uses :8789).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,6 +23,9 @@ fi
 export DBGPT_HOME="${DBGPT_HOME:-$ROOT/.dbgpt}"
 mkdir -p "$DBGPT_HOME"
 
+export BRIDGE_PORT="${BRIDGE_PORT:-8787}"
+export DBGPT_PORT="${DBGPT_PORT:-5670}"
+
 # Prefer local :8010, else remote public proxy :8015 (MobilTest LLM-SERVER.md)
 if curl -sf --connect-timeout 1 "http://127.0.0.1:8010/v1/models" >/dev/null 2>&1; then
   export OPENAI_API_BASE="${OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
@@ -44,10 +47,10 @@ else
   python -m pip install -q -r bridge/requirements.txt
 fi
 
-# Stop stale listeners
+# Stop stale DB-GPT + bridge only (never touch QA runner :8787 unless bridge uses it)
 "$ROOT/scripts/stop.sh" >/dev/null 2>&1 || true
 if command -v lsof >/dev/null; then
-  for p in 5670 8787; do
+  for p in "$DBGPT_PORT" "$BRIDGE_PORT"; do
     pids="$(lsof -ti "tcp:${p}" -sTCP:LISTEN 2>/dev/null || true)"
     [[ -n "$pids" ]] && kill -TERM $pids 2>/dev/null || true
   done
@@ -56,7 +59,7 @@ fi
 
 CONFIG="$ROOT/configs/dbgpt-openai-compat.toml"
 echo "LLM OPENAI_API_BASE=$OPENAI_API_BASE"
-echo "Starting DB-GPT on :${DBGPT_PORT:-5670}..."
+echo "Starting DB-GPT on :${DBGPT_PORT}..."
 (
   cd "$ROOT"
   exec dbgpt start web --config "$CONFIG" --yes
@@ -64,9 +67,8 @@ echo "Starting DB-GPT on :${DBGPT_PORT:-5670}..."
 echo $! >"$DBGPT_HOME/dbgpt.pid"
 disown || true
 
-# Wait for DB-GPT
 for i in $(seq 1 90); do
-  if curl -sf --connect-timeout 1 "http://127.0.0.1:${DBGPT_PORT:-5670}/" >/dev/null 2>&1; then
+  if curl -sf --connect-timeout 1 "http://127.0.0.1:${DBGPT_PORT}/" >/dev/null 2>&1; then
     echo "DB-GPT ready"
     break
   fi
@@ -77,29 +79,31 @@ for i in $(seq 1 90); do
   sleep 1
 done
 
-# Register Neon sources if local file exists
-SOURCES_JSON="$ROOT/../configs/sources/local/connection.local.json"
+SOURCES_JSON="${BI_SOURCES_FILE:-$ROOT/../configs/sources/local/connection.local.json}"
+# Server deploy path
+if [[ ! -f "$SOURCES_JSON" && -f /data/nanobaseai/bi/secrets/connection.local.json ]]; then
+  SOURCES_JSON=/data/nanobaseai/bi/secrets/connection.local.json
+fi
 if [[ -f "$SOURCES_JSON" ]]; then
   BI_SOURCES_FILE="$SOURCES_JSON" \
-    DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT:-5670}" \
+    DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT}" \
     "$ROOT/scripts/register-neon-sources.sh" || echo "warn: neon register failed (check passwords / DB-GPT API)"
 fi
 
-export DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT:-5670}"
-export BRIDGE_PORT=8787
+export DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT}"
 export BI_SOURCES_FILE="${BI_SOURCES_FILE:-$SOURCES_JSON}"
-echo "Starting BI bridge on :8787 → $DBGPT_BASE"
+echo "Starting BI bridge on :${BRIDGE_PORT} → $DBGPT_BASE"
 (
   cd "$ROOT"
-  exec python -m uvicorn bridge.app:app --host 0.0.0.0 --port 8787
+  exec python -m uvicorn bridge.app:app --host 0.0.0.0 --port "${BRIDGE_PORT}"
 ) >"$DBGPT_HOME/bridge.log" 2>&1 &
 echo $! >"$DBGPT_HOME/bridge.pid"
 disown || true
 
 sleep 2
-if curl -sf "http://127.0.0.1:8787/health"; then
+if curl -sf "http://127.0.0.1:${BRIDGE_PORT}/health"; then
   echo
-  echo "OK — FE proxy target http://127.0.0.1:8787"
+  echo "OK — BI bridge http://127.0.0.1:${BRIDGE_PORT}"
 else
   echo "error: bridge health failed — see $DBGPT_HOME/bridge.log" >&2
   exit 1
