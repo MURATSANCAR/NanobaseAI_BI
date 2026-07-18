@@ -51,7 +51,14 @@ Config file: [`configs/dbgpt-openai-compat.toml`](configs/dbgpt-openai-compat.to
 - **In:** DB-GPT REST API / agent backend as a separate process
 - **Out:** Cloning DB-GPT’s React UI; wiring this app’s Vite proxy or `src/api/bi-api.ts` to DB-GPT
 
-Postgres datasource support is included so Neon ERP/Sigorta can be registered later via DB-GPT APIs. Connecting the Nanobase BI SPA requires a separate adapter to `/api/v1/bi/*`.
+Postgres datasource support is included. Neon **ERP** + **Sigorta** (both DB name `neondb`) are registered as connection ids `erp` / `sigorta` via `scripts/register_neon_datasources.py`. `scripts/run_web.py` patches DB-GPT so `ext_config.database` is used as the real Postgres database.
+
+```bash
+./scripts/start.sh
+./.venv/bin/python scripts/register_neon_datasources.py
+```
+
+Secrets: `../configs/sources/local/neon-dsns.env` (gitignored). Connecting the Nanobase BI SPA still requires the MobilTest runner `/api/v1/bi/*`.
 
 ## Docs
 

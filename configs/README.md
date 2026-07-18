@@ -29,6 +29,25 @@ Operator configs for the NanobaseAI BI stack. The FE talks to the runner API; th
 - SSL: required
 - Active source on server (last snapshot): `erp`
 
+## Local secrets (dev)
+
+Passwords are **not** in git. Sync from the Nanobase server vault into:
+
+| Path | Purpose |
+|------|---------|
+| `sources/local/neon-dsns.env` | `BI_ERP_*` / `BI_SIGORTA_*` DSNs + passwords |
+| `sources/local/connection.local.json` | Full registry with passwords (chmod 600) |
+
+```bash
+# Probe Neon (needs local/neon-dsns.env)
+python3 -c "import psycopg2, pathlib; ..."  # or use backend scripts below
+
+# DB-GPT: start sidecar, then register both sources
+cd backend && ./scripts/start.sh
+# other terminal:
+./backend/.venv/bin/python backend/scripts/register_neon_datasources.py
+```
+
 ## Security
 
 - **Do not commit passwords** or full `BI_DATABASE_URL` with credentials.
