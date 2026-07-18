@@ -4,6 +4,11 @@ dist
 .DS_Store
 *.tsbuildinfo
 
+# Local Neon credentials (never commit)
+configs/sources/local/
+configs/backend.env
+configs/.env.local
+
 # DB-GPT backend
 backend/.venv/
 backend/.env
