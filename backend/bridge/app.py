@@ -179,6 +179,16 @@ async def portal_logout() -> dict[str, Any]:
     return {"ok": True}
 
 
+@app.post("/api/v1/portal/session")
+async def portal_session_create() -> dict[str, Any]:
+    return {"ok": True, "token": "dbgpt-bridge-local"}
+
+
+@app.delete("/api/v1/portal/session")
+async def portal_session_clear() -> dict[str, Any]:
+    return {"ok": True}
+
+
 @app.get("/api/v1/portal/auth/me")
 @app.get("/api/v1/portal/me")
 async def portal_me() -> dict[str, Any]:

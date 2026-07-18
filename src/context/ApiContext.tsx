@@ -43,8 +43,15 @@ type PortalBootstrapConfig = {
   portal_show_powered_by?: boolean;
 };
 
+function portalApiRoot(): string {
+  return String(import.meta.env.VITE_API_BASE || '')
+    .trim()
+    .replace(/\/$/, '');
+}
+
 async function loadRuntimeConfig(): Promise<PortalRuntimeConfig | null> {
-  const sources = ['/api/v1/portal/runtime-config', '/config.json'];
+  const root = portalApiRoot();
+  const sources = [`${root}/api/v1/portal/runtime-config`, `${root}/config.json`, '/config.json'];
   const stored = loadApiConfig();
   const session =
     (typeof localStorage !== 'undefined' && localStorage.getItem('nanobase_qa_session')) ||
@@ -70,7 +77,11 @@ async function loadRuntimeConfig(): Promise<PortalRuntimeConfig | null> {
 
 async function loadBootstrap(): Promise<PortalBootstrapConfig> {
   try {
-    const res = await fetch('/api/v1/portal/bootstrap', { cache: 'no-store', credentials: 'include' });
+    const root = portalApiRoot();
+    const res = await fetch(`${root}/api/v1/portal/bootstrap`, {
+      cache: 'no-store',
+      credentials: 'include',
+    });
     if (!res.ok) return { auth_required: true };
     const data = (await res.json()) as PortalBootstrapConfig;
     return {
@@ -87,11 +98,14 @@ async function loadBootstrap(): Promise<PortalBootstrapConfig> {
 }
 
 function mergeConfig(stored: ApiConfig, runtime: PortalRuntimeConfig | null): ApiConfig {
-  if (!runtime) return stored;
-  const role = runtime.role ?? stored.role ?? 'qa';
+  const envBase = portalApiRoot();
+  if (!runtime) {
+    return envBase && !stored.baseUrl ? { ...stored, baseUrl: envBase } : stored;
+  }
+  const role = runtime.role ?? stored.role ?? 'admin';
   if (runtime.authMode === 'cookie') {
     return {
-      baseUrl: runtime.baseUrl ?? stored.baseUrl ?? '',
+      baseUrl: runtime.baseUrl ?? stored.baseUrl ?? envBase ?? '',
       apiKey: COOKIE_AUTH_SENTINEL,
       role,
       authMode: 'cookie',
@@ -101,7 +115,7 @@ function mergeConfig(stored: ApiConfig, runtime: PortalRuntimeConfig | null): Ap
     };
   }
   return {
-    baseUrl: runtime.baseUrl ?? stored.baseUrl ?? '',
+    baseUrl: runtime.baseUrl ?? stored.baseUrl ?? envBase ?? '',
     apiKey: runtime.apiKey ?? stored.apiKey ?? '',
     role,
     authMode: runtime.authMode ?? stored.authMode ?? 'bearer',
@@ -116,7 +130,8 @@ export async function fetchRuntimeApiConfig(): Promise<PortalRuntimeConfig | nul
 }
 
 export async function establishRunnerSession(apiKey: string): Promise<void> {
-  const res = await fetch('/api/v1/portal/session', {
+  const root = portalApiRoot();
+  const res = await fetch(`${root}/api/v1/portal/session`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -129,7 +144,8 @@ export async function establishRunnerSession(apiKey: string): Promise<void> {
 }
 
 export async function clearRunnerSession(): Promise<void> {
-  await fetch('/api/v1/portal/session', { method: 'DELETE', credentials: 'include' });
+  const root = portalApiRoot();
+  await fetch(`${root}/api/v1/portal/session`, { method: 'DELETE', credentials: 'include' });
 }
 
 export function ApiProvider({ children }: { children: ReactNode }) {
