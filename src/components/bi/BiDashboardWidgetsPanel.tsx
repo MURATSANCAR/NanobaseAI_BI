@@ -1,0 +1,170 @@
+import { useCallback, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowDown, ArrowUp, Loader2, Trash2, X } from 'lucide-react';
+import { api, type ApiConfig } from '@/api/client';
+import { t } from '@/i18n';
+import { localizeUserMessage } from '@/utils/backendLabels';
+
+type Props = {
+  config: ApiConfig;
+  dashboardId: number;
+  onClose: () => void;
+  onChanged?: () => void;
+};
+
+export default function BiDashboardWidgetsPanel({
+  config,
+  dashboardId,
+  onClose,
+  onChanged,
+}: Props) {
+  const qc = useQueryClient();
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const chartsQ = useQuery({
+    queryKey: ['bi-analytics-dashboard-charts', dashboardId],
+    queryFn: () => api.bi.analytics.dashboardCharts(config, dashboardId),
+    enabled: dashboardId > 0,
+  });
+
+  const charts = chartsQ.data?.charts ?? [];
+
+  const refresh = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ['bi-analytics-dashboard-charts', dashboardId] });
+    await qc.invalidateQueries({ queryKey: ['bi-analytics-charts'] });
+    onChanged?.();
+  }, [dashboardId, onChanged, qc]);
+
+  const removeMut = useMutation({
+    mutationFn: (chartId: number) => api.bi.analytics.removeChart(config, dashboardId, chartId),
+    onSuccess: () => void refresh(),
+  });
+
+  const reorderMut = useMutation({
+    mutationFn: (chartIds: number[]) => api.bi.analytics.reorderLayout(config, dashboardId, chartIds),
+    onSuccess: () => void refresh(),
+  });
+
+  const move = async (index: number, delta: number) => {
+    const next = [...charts];
+    const target = index + delta;
+    if (target < 0 || target >= next.length) return;
+    const tmp = next[index]!;
+    next[index] = next[target]!;
+    next[target] = tmp;
+    setError(null);
+    setBusyId(tmp.id);
+    try {
+      await reorderMut.mutateAsync(next.map((c) => c.id));
+    } catch (err) {
+      setError(localizeUserMessage((err as Error).message));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (chartId: number) => {
+    if (!window.confirm(t('bi.analytics.removeWidgetConfirm'))) return;
+    setError(null);
+    setBusyId(chartId);
+    try {
+      await removeMut.mutateAsync(chartId);
+    } catch (err) {
+      setError(localizeUserMessage((err as Error).message));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const mutating = removeMut.isPending || reorderMut.isPending;
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex shrink-0 items-center gap-2 border-b border-[#E1DFDD] px-3 py-2.5">
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
+          {t('bi.analytics.manageWidgets')}
+        </p>
+        <button
+          type="button"
+          className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
+          onClick={onClose}
+          aria-label={t('common.close')}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {error && (
+        <div className="shrink-0 border-b border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+          {error}
+        </div>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        {chartsQ.isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-xs text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('bi.analytics.loading')}
+          </div>
+        ) : !charts.length ? (
+          <div className="px-2 py-8 text-center text-xs text-slate-500">
+            <p>{t('bi.analytics.emptyWidgets')}</p>
+            <p className="mt-2 text-slate-400">{t('bi.analytics.emptyWidgetsHint')}</p>
+          </div>
+        ) : (
+          <ul className="space-y-1.5">
+            {charts.map((chart, index) => {
+              const busy = busyId === chart.id && mutating;
+              return (
+                <li
+                  key={chart.id}
+                  className="flex items-start gap-1 rounded-xl border border-[#E1DFDD]/90 bg-white px-2 py-2 shadow-sm"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-xs font-medium text-slate-800">
+                      {chart.title || `#${chart.id}`}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">#{chart.id}</p>
+                  </div>
+                  <div className="flex shrink-0 flex-col gap-0.5">
+                    <button
+                      type="button"
+                      className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                      disabled={index === 0 || mutating}
+                      onClick={() => void move(index, -1)}
+                      aria-label={t('bi.analytics.moveWidgetUp')}
+                      title={t('bi.analytics.moveWidgetUp')}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                      disabled={index >= charts.length - 1 || mutating}
+                      onClick={() => void move(index, 1)}
+                      aria-label={t('bi.analytics.moveWidgetDown')}
+                      title={t('bi.analytics.moveWidgetDown')}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded p-1 text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                    disabled={mutating}
+                    onClick={() => void remove(chart.id)}
+                    aria-label={t('bi.removeWidget')}
+                    title={t('bi.removeWidget')}
+                  >
+                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
