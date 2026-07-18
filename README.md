@@ -11,6 +11,16 @@ npm run dev
 
 Dev server: **http://127.0.0.1:5174** — proxies `/api` and `/health` to the runner (default `http://127.0.0.1:8787`).
 
+## Backend (DB-GPT)
+
+Optional sidecar: [DB-GPT](https://github.com/eosphoros-ai/DB-GPT) via pip (no FE bridge yet). See [`backend/README.md`](backend/README.md).
+
+```bash
+cd backend && ./scripts/setup.sh && cp .env.example .env && ./scripts/start.sh
+```
+
+Listens on **http://127.0.0.1:5670**; LLM defaults to OpenAI-compatible `http://127.0.0.1:8010/v1`.
+
 ## Configuration
 
 | Variable | Purpose |

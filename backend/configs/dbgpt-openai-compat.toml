@@ -1,0 +1,33 @@
+# DB-GPT OpenAI-compatible LLM proxy (Nanobase local :8010)
+# Based on https://github.com/eosphoros-ai/DB-GPT/blob/main/configs/dbgpt-proxy-openai.toml
+
+[system]
+language = "${env:DBGPT_LANG:-en}"
+api_keys = []
+encrypt_key = "${env:DBGPT_ENCRYPT_KEY:-nanobase-dbgpt-local-key}"
+
+[service.web]
+host = "${env:DBGPT_HOST:-0.0.0.0}"
+port = "${env:DBGPT_PORT:-5670}"
+
+[service.web.database]
+type = "sqlite"
+path = "pilot/meta_data/dbgpt.db"
+
+[rag.storage]
+[rag.storage.vector]
+type = "chroma"
+persist_path = "pilot/data"
+
+[models]
+[[models.llms]]
+name = "${env:LLM_MODEL_NAME:-nanobase-qwen36-35b-a3b-mtp}"
+provider = "${env:LLM_MODEL_PROVIDER:-proxy/openai}"
+api_base = "${env:OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
+api_key = "${env:OPENAI_API_KEY:-nanobase-local}"
+
+[[models.embeddings]]
+name = "${env:EMBEDDING_MODEL_NAME:-text-embedding-3-small}"
+provider = "${env:EMBEDDING_MODEL_PROVIDER:-proxy/openai}"
+api_url = "${env:EMBEDDING_MODEL_API_URL:-http://127.0.0.1:8010/v1/embeddings}"
+api_key = "${env:OPENAI_API_KEY:-nanobase-local}"

@@ -3,3 +3,9 @@ dist
 .env
 .DS_Store
 *.tsbuildinfo
+
+# DB-GPT backend
+backend/.venv/
+backend/.env
+backend/.dbgpt/
+**/pilot/

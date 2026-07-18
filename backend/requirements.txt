@@ -1,0 +1,3 @@
+# DB-GPT backend (https://github.com/eosphoros-ai/DB-GPT)
+# Python 3.10+ required
+dbgpt-app[proxy_openai,storage_chromadb,datasource_postgres]>=0.7.0
