@@ -43,9 +43,15 @@ All app routes live under `/bi/*`:
 
 Legacy portal aliases (`/bi/superset`, `/bi/dashboard`, etc.) redirect to `/bi`.
 
-## Build
+## Production deploy (server)
 
-```bash
-npm run build
-npm run preview
-```
+Current live FE (until `bi.nanobase.ai` DNS exists):
+
+- **URL:** https://portal.nanobase.ai:8445
+- **Static:** `/data/nanobaseai/bi/portal/dist`
+- **Source:** `/data/nanobaseai/bi/frontend` (this repo)
+- **API:** same-origin `/api` → runner `:8787`
+- **Nginx:** `deploy/nginx/portal-bi-8445.conf`
+- Portal hub redirects `/bi/*` via `VITE_BI_APP_ORIGIN=https://portal.nanobase.ai:8445`
+
+When DNS `bi.nanobase.ai` → `38.247.162.28` is live, use `deploy/nginx/bi.nanobase.ai.conf` + certbot and set `VITE_BI_APP_ORIGIN=https://bi.nanobase.ai`.
