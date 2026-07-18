@@ -57,33 +57,51 @@ fi
 CONFIG="$ROOT/configs/dbgpt-openai-compat.toml"
 echo "LLM OPENAI_API_BASE=$OPENAI_API_BASE"
 echo "Starting DB-GPT on :${DBGPT_PORT:-5670}..."
-nohup dbgpt start web --config "$CONFIG" --yes >"$DBGPT_HOME/dbgpt.log" 2>&1 &
+(
+  cd "$ROOT"
+  exec dbgpt start web --config "$CONFIG" --yes
+) >"$DBGPT_HOME/dbgpt.log" 2>&1 &
 echo $! >"$DBGPT_HOME/dbgpt.pid"
+disown || true
 
 # Wait for DB-GPT
-for i in $(seq 1 60); do
+for i in $(seq 1 90); do
   if curl -sf --connect-timeout 1 "http://127.0.0.1:${DBGPT_PORT:-5670}/" >/dev/null 2>&1; then
     echo "DB-GPT ready"
     break
+  fi
+  if [[ "$i" -eq 90 ]]; then
+    echo "error: DB-GPT did not become ready — see $DBGPT_HOME/dbgpt.log" >&2
+    exit 1
   fi
   sleep 1
 done
 
 # Register Neon sources if local file exists
-if [[ -f "$ROOT/../configs/sources/local/connection.local.json" ]]; then
-  BI_SOURCES_FILE="$ROOT/../configs/sources/local/connection.local.json" \
+SOURCES_JSON="$ROOT/../configs/sources/local/connection.local.json"
+if [[ -f "$SOURCES_JSON" ]]; then
+  BI_SOURCES_FILE="$SOURCES_JSON" \
     DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT:-5670}" \
     "$ROOT/scripts/register-neon-sources.sh" || echo "warn: neon register failed (check passwords / DB-GPT API)"
 fi
 
 export DBGPT_BASE="http://127.0.0.1:${DBGPT_PORT:-5670}"
 export BRIDGE_PORT=8787
-export BI_SOURCES_FILE="${BI_SOURCES_FILE:-$ROOT/../configs/sources/local/connection.local.json}"
+export BI_SOURCES_FILE="${BI_SOURCES_FILE:-$SOURCES_JSON}"
 echo "Starting BI bridge on :8787 → $DBGPT_BASE"
-cd "$ROOT"
-nohup python -m uvicorn bridge.app:app --host 0.0.0.0 --port 8787 >"$DBGPT_HOME/bridge.log" 2>&1 &
+(
+  cd "$ROOT"
+  exec python -m uvicorn bridge.app:app --host 0.0.0.0 --port 8787
+) >"$DBGPT_HOME/bridge.log" 2>&1 &
 echo $! >"$DBGPT_HOME/bridge.pid"
+disown || true
 
-sleep 1
-curl -sf "http://127.0.0.1:8787/health" && echo && echo "OK — FE proxy target http://127.0.0.1:8787"
+sleep 2
+if curl -sf "http://127.0.0.1:8787/health"; then
+  echo
+  echo "OK — FE proxy target http://127.0.0.1:8787"
+else
+  echo "error: bridge health failed — see $DBGPT_HOME/bridge.log" >&2
+  exit 1
+fi
 echo "Logs: $DBGPT_HOME/dbgpt.log , $DBGPT_HOME/bridge.log"
