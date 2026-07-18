@@ -1,0 +1,261 @@
+{
+  "source_id": "sigorta",
+  "tables": [
+    {
+      "name": "hasar_belgeleri",
+      "columns": [
+        "id",
+        "hasar_id",
+        "belge_tipi",
+        "dosya_adi",
+        "yukleme_tarihi"
+      ]
+    },
+    {
+      "name": "ihbar_kanallari",
+      "columns": [
+        "id",
+        "ad"
+      ]
+    },
+    {
+      "name": "acente_hedefleri",
+      "columns": [
+        "id",
+        "acente_id",
+        "donem",
+        "hedef_prim",
+        "hedef_police",
+        "created_at"
+      ]
+    },
+    {
+      "name": "musteri_iletisim",
+      "columns": [
+        "id",
+        "musteri_id",
+        "kanal",
+        "deger",
+        "birincil"
+      ]
+    },
+    {
+      "name": "bolgeler",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "iller",
+      "columns": [
+        "id",
+        "bolge_id",
+        "ad"
+      ]
+    },
+    {
+      "name": "hasar_nedenleri",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "brans"
+      ]
+    },
+    {
+      "name": "odeme_yontemleri",
+      "columns": [
+        "id",
+        "ad"
+      ]
+    },
+    {
+      "name": "teminatlar",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "brans"
+      ]
+    },
+    {
+      "name": "urunler",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "brans",
+        "aktif"
+      ]
+    },
+    {
+      "name": "acenteler",
+      "columns": [
+        "id",
+        "kod",
+        "unvan",
+        "bolge",
+        "il_id",
+        "komp_kodu",
+        "komisyon_orani",
+        "aktif",
+        "created_at",
+        "deleted_at"
+      ]
+    },
+    {
+      "name": "araclar",
+      "columns": [
+        "id",
+        "musteri_id",
+        "plaka",
+        "marka",
+        "model",
+        "model_yili",
+        "kullanim_tarzi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ekspertizler",
+      "columns": [
+        "id",
+        "hasar_id",
+        "eksper_adi",
+        "rapor_no",
+        "tespit_tutari",
+        "rapor_tarihi",
+        "durum"
+      ]
+    },
+    {
+      "name": "hasar_talepleri",
+      "columns": [
+        "id",
+        "hasar_no",
+        "poliçe_id",
+        "police_id",
+        "musteri_id",
+        "acente_id",
+        "neden_id",
+        "durum",
+        "talep_tutari",
+        "onaylanan_tutar",
+        "fraud_skoru",
+        "ihbar_tarihi",
+        "olay_tarihi",
+        "kapama_tarihi",
+        "created_at",
+        "deleted_at"
+      ]
+    },
+    {
+      "name": "prim_odemeleri",
+      "columns": [
+        "id",
+        "poliçe_id",
+        "police_id",
+        "taksit_no",
+        "planlanan_tutar",
+        "planlanan_tarih",
+        "odeme_tutari",
+        "odeme_tarihi",
+        "odeme_yontem_id",
+        "odeme_yontemi",
+        "durum",
+        "dekont_referans",
+        "aciklama",
+        "created_at"
+      ]
+    },
+    {
+      "name": "police_teminatlari",
+      "columns": [
+        "id",
+        "police_id",
+        "teminat_id",
+        "limit_tutari",
+        "muafiyet_tutari"
+      ]
+    },
+    {
+      "name": "komisyon_odemeleri",
+      "columns": [
+        "id",
+        "acente_id",
+        "police_id",
+        "donem",
+        "tutar",
+        "durum",
+        "odeme_tarihi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "police_notlari",
+      "columns": [
+        "id",
+        "police_id",
+        "kullanici",
+        "not_metni",
+        "created_at"
+      ]
+    },
+    {
+      "name": "policeler",
+      "columns": [
+        "id",
+        "police_no",
+        "musteri_id",
+        "acente_id",
+        "urun_id",
+        "arac_id",
+        "konut_id",
+        "durum",
+        "prim_tutari",
+        "net_prim",
+        "vergi_tutari",
+        "komisyon_tutari",
+        "teminat_bedeli",
+        "baslangic_tarihi",
+        "bitis_tarihi",
+        "yenileme_no",
+        "created_at",
+        "deleted_at"
+      ]
+    },
+    {
+      "name": "konutlar",
+      "columns": [
+        "id",
+        "musteri_id",
+        "il_id",
+        "yapi_tarzi",
+        "metrekare",
+        "deprem_bolgesi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "musteriler",
+      "columns": [
+        "id",
+        "musteri_no",
+        "tip",
+        "ad",
+        "soyad",
+        "tckn_vkn",
+        "dogum_tarihi",
+        "cinsiyet",
+        "email",
+        "telefon",
+        "il_id",
+        "risk_skoru",
+        "created_at",
+        "deleted_at"
+      ]
+    }
+  ]
+}

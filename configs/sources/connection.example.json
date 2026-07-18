@@ -1,0 +1,37 @@
+{
+  "active_id": "erp",
+  "sources": {
+    "erp": {
+      "id": "erp",
+      "label": "ERP (Neon)",
+      "deployment": "cloud",
+      "driver": "postgresql",
+      "dialect": "postgresql",
+      "host": "ep-little-hill-at81gpda.c-9.us-east-1.aws.neon.tech",
+      "port": 5432,
+      "database": "neondb",
+      "username": "neondb_owner",
+      "ssl": true,
+      "secret_ref": "bi/default/erp/password",
+      "tenant_id": "default",
+      "project_id": "default"
+    },
+    "sigorta": {
+      "id": "sigorta",
+      "label": "Sigorta (Neon)",
+      "deployment": "cloud",
+      "driver": "postgresql",
+      "dialect": "postgresql",
+      "host": "ep-sweet-star-adwrp395.c-2.us-east-1.aws.neon.tech",
+      "port": 5432,
+      "database": "neondb",
+      "username": "neondb_owner",
+      "ssl": true,
+      "secret_ref": "bi/default/sigorta/password",
+      "tenant_id": "default",
+      "project_id": "default"
+    }
+  },
+  "updated_at": null,
+  "_comment": "Passwords live in Vault via secret_ref. Never commit plaintext passwords. Runtime path on server: $BI_DIR/connection.json"
+}

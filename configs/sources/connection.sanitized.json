@@ -1,0 +1,44 @@
+{
+  "active_id": "erp",
+  "sources": {
+    "sigorta": {
+      "id": "sigorta",
+      "label": "Sigorta (Neon)",
+      "deployment": "cloud",
+      "driver": "postgresql",
+      "host": "ep-sweet-star-adwrp395.c-2.us-east-1.aws.neon.tech",
+      "port": 5432,
+      "database": "neondb",
+      "username": "neondb_owner",
+      "ssl": true,
+      "supabase_url": "",
+      "supabase_api_key": "",
+      "sqlite_path": "",
+      "updated_at": "2026-07-14T14:53:18.989845+00:00",
+      "last_test_at": "2026-07-14T16:23:43.484829+00:00",
+      "last_test_ok": true,
+      "last_test_message": "Connected",
+      "secret_ref": "bi/default/sigorta/password"
+    },
+    "erp": {
+      "id": "erp",
+      "tenant_id": "default",
+      "project_id": "default",
+      "label": "ERP (Neon)",
+      "driver": "postgresql",
+      "host": "ep-little-hill-at81gpda.c-9.us-east-1.aws.neon.tech",
+      "port": 5432,
+      "database": "neondb",
+      "username": "neondb_owner",
+      "secret_ref": "bi/default/erp/password",
+      "ssl": true,
+      "dialect": "postgresql",
+      "connection_url_masked": "",
+      "last_test_ok": true,
+      "last_test_at": "2026-07-17T19:55:04.273296+00:00",
+      "updated_at": "2026-07-16T11:20:35.201454+00:00",
+      "last_test_message": "Connected"
+    }
+  },
+  "updated_at": "2026-07-17T19:55:04.274547+00:00"
+}

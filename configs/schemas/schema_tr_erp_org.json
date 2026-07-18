@@ -1,0 +1,77 @@
+{
+  "dialect": "postgresql",
+  "tables": [
+    {
+      "schema": "public",
+      "name": "musteriler",
+      "full_name": "public.musteriler",
+      "columns": [
+        {"name": "id", "type": "integer"},
+        {"name": "grup_id", "type": "integer"},
+        {"name": "musteri_no", "type": "text"},
+        {"name": "unvan", "type": "text"},
+        {"name": "risk_limit", "type": "numeric"},
+        {"name": "aktif", "type": "boolean"}
+      ],
+      "foreign_keys": [
+        {"referred_table": "musteri_gruplari", "constrained_columns": ["grup_id"], "referred_columns": ["id"]}
+      ]
+    },
+    {
+      "schema": "public",
+      "name": "musteri_gruplari",
+      "full_name": "public.musteri_gruplari",
+      "columns": [
+        {"name": "id", "type": "integer"},
+        {"name": "kod", "type": "text"},
+        {"name": "ad", "type": "text"}
+      ],
+      "foreign_keys": []
+    },
+    {
+      "schema": "public",
+      "name": "subeler",
+      "full_name": "public.subeler",
+      "columns": [
+        {"name": "id", "type": "integer"},
+        {"name": "sirket_id", "type": "integer"},
+        {"name": "kod", "type": "text"},
+        {"name": "ad", "type": "text"}
+      ],
+      "foreign_keys": []
+    },
+    {
+      "schema": "public",
+      "name": "faturalar",
+      "full_name": "public.faturalar",
+      "columns": [
+        {"name": "id", "type": "integer"},
+        {"name": "musteri_id", "type": "integer"},
+        {"name": "sube_id", "type": "integer"},
+        {"name": "genel_toplam", "type": "numeric"},
+        {"name": "fatura_tarihi", "type": "date"},
+        {"name": "vade_tarihi", "type": "date"}
+      ],
+      "foreign_keys": [
+        {"referred_table": "musteriler", "constrained_columns": ["musteri_id"], "referred_columns": ["id"]},
+        {"referred_table": "subeler", "constrained_columns": ["sube_id"], "referred_columns": ["id"]}
+      ]
+    },
+    {
+      "schema": "public",
+      "name": "tahsilatlar",
+      "full_name": "public.tahsilatlar",
+      "columns": [
+        {"name": "id", "type": "integer"},
+        {"name": "musteri_id", "type": "integer"},
+        {"name": "fatura_id", "type": "integer"},
+        {"name": "tutar", "type": "numeric"},
+        {"name": "odeme_tarihi", "type": "date"}
+      ],
+      "foreign_keys": [
+        {"referred_table": "musteriler", "constrained_columns": ["musteri_id"], "referred_columns": ["id"]},
+        {"referred_table": "faturalar", "constrained_columns": ["fatura_id"], "referred_columns": ["id"]}
+      ]
+    }
+  ]
+}

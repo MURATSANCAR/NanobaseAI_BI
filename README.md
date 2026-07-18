@@ -21,6 +21,17 @@ Copy `.env.example` to `.env` and adjust as needed.
 
 Portal (`portal.nanobase.ai`) redirects `/bi/*` to this app via `VITE_BI_APP_ORIGIN` (e.g. `https://bi.nanobase.ai`). Backend stays on the MobilTest runner (`/api/v1/bi/*`).
 
+## Data sources (ERP + Sigorta)
+
+Operator configs live under [`configs/`](configs/README.md):
+
+- **Connection profiles** (Neon hosts + Vault `secret_ref`, no passwords): `configs/sources/connection.example.json`
+- **Schema catalogs**: `configs/schemas/erp.catalog.json`, `sigorta.catalog.json`
+- **Seed SQL**: `configs/seeds/neon-erp-seed.sql`, `neon-sigorta-seed*.sql`
+- **Semantic bindings**: `configs/semantic/binding_erp_*.json`
+
+Passwords stay in Vault (`bi/default/erp/password`, `bi/default/sigorta/password`). Runtime registry on server: `/data/nanobaseai-mobile/bi/connection.json`.
+
 ## Routes
 
 All app routes live under `/bi/*`:

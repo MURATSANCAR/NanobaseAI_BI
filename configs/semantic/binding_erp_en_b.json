@@ -1,0 +1,275 @@
+{
+  "project_id": "erp_en_b",
+  "dialect": "postgresql",
+  "binding_version": "erp_en_b.v1",
+  "semantic_model_version": "finance.v1",
+  "concept_version": "finance.concepts.v1",
+  "business_graph_version": "finance.graph.v1",
+  "ontology_version": "finance.ontology.v1",
+  "status": "draft",
+  "entities": {
+    "customer": {
+      "table": "crm.accounts",
+      "key": "account_id",
+      "keys": {
+        "customer_group_key": "segment_id"
+      }
+    },
+    "invoice": {
+      "table": "ar.invoice_header",
+      "key": "invoice_id",
+      "keys": {
+        "customer_key": "bill_to_account_id",
+        "branch_key": "org_unit_id"
+      }
+    },
+    "payment": {
+      "table": "ar.cash_receipts",
+      "key": "receipt_id",
+      "keys": {
+        "invoice_key": "invoice_id"
+      }
+    },
+    "branch": {
+      "table": "org.organization_units",
+      "key": "org_unit_id"
+    },
+    "customer_group": {
+      "table": "crm.account_segments",
+      "key": "segment_id"
+    },
+    "supplier": {
+      "table": "ap.vendors",
+      "key": "vendor_id"
+    },
+    "purchase_invoice": {
+      "table": "ap.bill_header",
+      "key": "bill_id",
+      "keys": {
+        "supplier_key": "vendor_id"
+      }
+    },
+    "supplier_payment": {
+      "table": "ap.vendor_payments",
+      "key": "payment_id",
+      "keys": {
+        "purchase_invoice_key": "bill_id"
+      }
+    }
+  },
+  "measures": {
+    "invoice_total": {
+      "entity": "invoice",
+      "field": "gross_amount",
+      "aggregation": "sum"
+    },
+    "payment_total": {
+      "entity": "payment",
+      "field": "amount",
+      "aggregation": "sum"
+    },
+    "invoice_count": {
+      "entity": "invoice",
+      "field": "id",
+      "aggregation": "count"
+    },
+    "payment_count": {
+      "entity": "payment",
+      "field": "id",
+      "aggregation": "count"
+    },
+    "customer_count": {
+      "entity": "customer",
+      "field": "id",
+      "aggregation": "count_distinct"
+    },
+    "supplier_count": {
+      "entity": "supplier",
+      "field": "id",
+      "aggregation": "count_distinct"
+    },
+    "purchase_invoice_total": {
+      "entity": "purchase_invoice",
+      "field": "gross_amount",
+      "aggregation": "sum"
+    },
+    "supplier_payment_total": {
+      "entity": "supplier_payment",
+      "field": "amount",
+      "aggregation": "sum"
+    }
+  },
+  "event_dates": {
+    "invoice": "invoice_date",
+    "payment": "payment_date",
+    "purchase_invoice": "bill_date"
+  },
+  "label_fields": {
+    "customer": "name",
+    "branch": "unit_name",
+    "customer_group": "segment_name",
+    "supplier": "vendor_name"
+  },
+  "approval": {
+    "approved_by": "finance_steward",
+    "approved_at": "2026-07-17T00:00:00Z",
+    "notes": "AR gross_amount; AP uses ap.bill_header — not ar.invoice_header"
+  },
+  "measure_profiles": {
+    "invoice_total": {
+      "null_ratio": 0.0,
+      "min_value": 0,
+      "max_value": 5000000,
+      "sample_values": [
+        250.0,
+        1999.99
+      ],
+      "comment": "Gross billed amount"
+    },
+    "purchase_invoice_total": {
+      "null_ratio": 0.0,
+      "sample_values": [
+        800.0,
+        4200.0
+      ],
+      "comment": "AP bill gross"
+    },
+    "payment_total": {
+      "null_ratio": 0.0,
+      "sample_values": [
+        100.0,
+        500.0
+      ],
+      "comment": "Inbound receipt amount"
+    },
+    "supplier_payment_total": {
+      "null_ratio": 0.0,
+      "sample_values": [
+        200.0
+      ],
+      "comment": "Outbound vendor payment"
+    },
+    "invoice_count": {
+      "null_ratio": 0.0,
+      "sample_values": [1, 2],
+      "comment": "AR invoice row count (PK)"
+    },
+    "payment_count": {
+      "null_ratio": 0.0,
+      "sample_values": [1],
+      "comment": "Receipt row count (PK)"
+    },
+    "customer_count": {
+      "null_ratio": 0.0,
+      "sample_values": [1],
+      "comment": "Distinct customer key"
+    },
+    "supplier_count": {
+      "null_ratio": 0.0,
+      "sample_values": [1],
+      "comment": "Distinct supplier key"
+    }
+  },
+  "measure_alternatives": {
+    "invoice_total": [
+      {
+        "field": "net_amount",
+        "reason": "Lookalike numeric — excludes tax",
+        "profile": {
+          "null_ratio": 0.0,
+          "sample_values": [
+            200.0,
+            1600.0
+          ],
+          "comment": "Net of tax"
+        }
+      },
+      {
+        "field": "tax_included_total",
+        "reason": "May double-count depending on ERP config",
+        "profile": {
+          "sample_values": [
+            250.0
+          ],
+          "comment": "Ambiguous tax inclusion"
+        }
+      }
+    ],
+    "purchase_invoice_total": [
+      {
+        "field": "net_amount",
+        "reason": "AP net lookalike",
+        "profile": {
+          "sample_values": [
+            700.0
+          ],
+          "comment": "Net of tax"
+        }
+      }
+    ],
+    "payment_total": [
+      {
+        "field": "net_amount",
+        "reason": "Receipt net lookalike",
+        "profile": {
+          "sample_values": [
+            90.0
+          ],
+          "comment": "Net"
+        }
+      }
+    ],
+    "supplier_payment_total": [
+      {
+        "field": "net_amount",
+        "reason": "Payment net lookalike",
+        "profile": {
+          "sample_values": [
+            180.0
+          ],
+          "comment": "Net"
+        }
+      }
+    ],
+    "invoice_count": [
+      {
+        "field": "invoice_number",
+        "reason": "Document number is not a row-count measure",
+        "profile": {
+          "sample_values": ["INV-1"],
+          "comment": "Invoice number"
+        }
+      }
+    ],
+    "payment_count": [
+      {
+        "field": "receipt_number",
+        "reason": "Receipt number is not a row-count measure",
+        "profile": {
+          "sample_values": ["RCPT-1"],
+          "comment": "Receipt number"
+        }
+      }
+    ],
+    "customer_count": [
+      {
+        "field": "account_code",
+        "reason": "Business code is not distinct-id count",
+        "profile": {
+          "sample_values": ["A-1"],
+          "comment": "Account code"
+        }
+      }
+    ],
+    "supplier_count": [
+      {
+        "field": "vendor_code",
+        "reason": "Vendor code is not distinct-id count",
+        "profile": {
+          "sample_values": ["V-1"],
+          "comment": "Vendor code"
+        }
+      }
+    ]
+  }
+}

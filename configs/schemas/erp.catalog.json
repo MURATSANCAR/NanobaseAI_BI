@@ -1,0 +1,437 @@
+{
+  "source_id": "erp",
+  "tables": [
+    {
+      "name": "ulkeler",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "iller",
+      "columns": [
+        "id",
+        "ulke_id",
+        "ad"
+      ]
+    },
+    {
+      "name": "odeme_kosullari",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "gun"
+      ]
+    },
+    {
+      "name": "para_birimleri",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "sirketler",
+      "columns": [
+        "id",
+        "kod",
+        "unvan",
+        "vergi_no",
+        "created_at"
+      ]
+    },
+    {
+      "name": "subeler",
+      "columns": [
+        "id",
+        "sirket_id",
+        "kod",
+        "ad",
+        "il_id"
+      ]
+    },
+    {
+      "name": "birimler",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "depolar",
+      "columns": [
+        "id",
+        "sube_id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "personeller",
+      "columns": [
+        "id",
+        "sube_id",
+        "departman_id",
+        "sicil_no",
+        "ad",
+        "soyad",
+        "unvan",
+        "ise_giris",
+        "aktif"
+      ]
+    },
+    {
+      "name": "departmanlar",
+      "columns": [
+        "id",
+        "sirket_id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "musteri_gruplari",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "musteriler",
+      "columns": [
+        "id",
+        "grup_id",
+        "musteri_no",
+        "tip",
+        "unvan",
+        "vergi_no",
+        "il_id",
+        "email",
+        "telefon",
+        "risk_limit",
+        "aktif",
+        "created_at"
+      ]
+    },
+    {
+      "name": "musteri_adresleri",
+      "columns": [
+        "id",
+        "musteri_id",
+        "tip",
+        "adres",
+        "il_id",
+        "birincil"
+      ]
+    },
+    {
+      "name": "tedarikci_gruplari",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "tedarikciler",
+      "columns": [
+        "id",
+        "grup_id",
+        "tedarikci_no",
+        "unvan",
+        "vergi_no",
+        "il_id",
+        "email",
+        "telefon",
+        "aktif",
+        "created_at"
+      ]
+    },
+    {
+      "name": "urun_kategorileri",
+      "columns": [
+        "id",
+        "parent_id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "urunler",
+      "columns": [
+        "id",
+        "kategori_id",
+        "marka_id",
+        "stok_kodu",
+        "ad",
+        "birim_id",
+        "alis_fiyat",
+        "satis_fiyat",
+        "kdv_orani",
+        "aktif",
+        "created_at"
+      ]
+    },
+    {
+      "name": "markalar",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "stok_bakiyeleri",
+      "columns": [
+        "id",
+        "depo_id",
+        "urun_id",
+        "miktar",
+        "rezervasyon"
+      ]
+    },
+    {
+      "name": "siparis_durumlari",
+      "columns": [
+        "id",
+        "kod",
+        "ad"
+      ]
+    },
+    {
+      "name": "fatura_kalemleri",
+      "columns": [
+        "id",
+        "fatura_id",
+        "urun_id",
+        "miktar",
+        "birim_fiyat",
+        "kdv_orani",
+        "tutar"
+      ]
+    },
+    {
+      "name": "faturalar",
+      "columns": [
+        "id",
+        "fatura_no",
+        "musteri_id",
+        "siparis_id",
+        "sube_id",
+        "tip",
+        "durum",
+        "fatura_tarihi",
+        "vade_tarihi",
+        "ara_toplam",
+        "kdv_toplam",
+        "genel_toplam",
+        "created_at"
+      ]
+    },
+    {
+      "name": "tahsilatlar",
+      "columns": [
+        "id",
+        "tahsilat_no",
+        "musteri_id",
+        "fatura_id",
+        "tutar",
+        "odeme_tarihi",
+        "yontem",
+        "durum",
+        "created_at"
+      ]
+    },
+    {
+      "name": "satis_siparisleri",
+      "columns": [
+        "id",
+        "siparis_no",
+        "musteri_id",
+        "sube_id",
+        "personel_id",
+        "durum_id",
+        "para_id",
+        "siparis_tarihi",
+        "teslim_tarihi",
+        "ara_toplam",
+        "kdv_toplam",
+        "genel_toplam",
+        "created_at"
+      ]
+    },
+    {
+      "name": "satis_siparis_kalemleri",
+      "columns": [
+        "id",
+        "siparis_id",
+        "urun_id",
+        "miktar",
+        "birim_fiyat",
+        "kdv_orani",
+        "tutar"
+      ]
+    },
+    {
+      "name": "sevkiyatlar",
+      "columns": [
+        "id",
+        "sevkiyat_no",
+        "siparis_id",
+        "depo_id",
+        "durum",
+        "sevk_tarihi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sevkiyat_kalemleri",
+      "columns": [
+        "id",
+        "sevkiyat_id",
+        "urun_id",
+        "miktar"
+      ]
+    },
+    {
+      "name": "satin_alma_siparisleri",
+      "columns": [
+        "id",
+        "siparis_no",
+        "tedarikci_id",
+        "sube_id",
+        "durum_id",
+        "siparis_tarihi",
+        "ara_toplam",
+        "kdv_toplam",
+        "genel_toplam",
+        "created_at"
+      ]
+    },
+    {
+      "name": "satin_alma_kalemleri",
+      "columns": [
+        "id",
+        "siparis_id",
+        "urun_id",
+        "miktar",
+        "birim_fiyat",
+        "tutar"
+      ]
+    },
+    {
+      "name": "yevmiye_fisleri",
+      "columns": [
+        "id",
+        "fis_no",
+        "fis_tarihi",
+        "aciklama",
+        "created_at"
+      ]
+    },
+    {
+      "name": "stok_hareketleri",
+      "columns": [
+        "id",
+        "depo_id",
+        "urun_id",
+        "hareket_tipi",
+        "miktar",
+        "referans_no",
+        "hareket_tarihi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "yevmiye_kalemleri",
+      "columns": [
+        "id",
+        "fis_id",
+        "hesap_id",
+        "borc",
+        "alacak"
+      ]
+    },
+    {
+      "name": "hesap_planlari",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "tip",
+        "aktif"
+      ]
+    },
+    {
+      "name": "fiyat_listeleri",
+      "columns": [
+        "id",
+        "kod",
+        "ad",
+        "para_id",
+        "aktif"
+      ]
+    },
+    {
+      "name": "fiyat_listesi_kalemleri",
+      "columns": [
+        "id",
+        "liste_id",
+        "urun_id",
+        "fiyat"
+      ]
+    },
+    {
+      "name": "butce_planlari",
+      "columns": [
+        "id",
+        "mali_yil",
+        "departman_kod",
+        "butce_kodu",
+        "kalem_adi",
+        "tur",
+        "planlanan_tutar",
+        "para_birimi",
+        "created_at"
+      ]
+    },
+    {
+      "name": "alis_faturalari",
+      "columns": [
+        "id",
+        "fatura_no",
+        "tedarikci_id",
+        "siparis_id",
+        "sube_id",
+        "butce_kodu",
+        "departman_kod",
+        "durum",
+        "fatura_tarihi",
+        "vade_tarihi",
+        "ara_toplam",
+        "kdv_toplam",
+        "genel_toplam",
+        "created_at"
+      ]
+    },
+    {
+      "name": "alis_fatura_kalemleri",
+      "columns": [
+        "id",
+        "alis_fatura_id",
+        "aciklama",
+        "butce_kodu",
+        "miktar",
+        "birim_fiyat",
+        "kdv_orani",
+        "tutar"
+      ]
+    }
+  ]
+}
