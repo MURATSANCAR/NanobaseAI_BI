@@ -1,66 +1,53 @@
-# DB-GPT Backend (sidecar)
+# DB-GPT Backend (sidecar + BI bridge)
 
-Standalone [DB-GPT](https://github.com/eosphoros-ai/DB-GPT) install via pip. Provides Text2SQL, agents, datasources, and RAG over a FastAPI process. The built-in web UI on port 5670 is **not** used by the Nanobase React BI frontend (no `/api/v1/bi/*` bridge in this phase).
+[DB-GPT](https://github.com/eosphoros-ai/DB-GPT) via pip + a thin FastAPI **bridge** so the React BI app keeps calling `/api/v1/bi/*` while execution runs on DB-GPT.
 
-Upstream: https://github.com/eosphoros-ai/DB-GPT · Package: `dbgpt-app` (PyPI)
+```
+FE (:5174/bi or portal/bi) → bridge :8787 → DB-GPT :5670 → LLM :8010/:8015
+```
 
 ## Prerequisites
 
-- Python **3.11** recommended (`brew install python@3.11`) — DB-GPT 0.8.1 pins `aiohttp==3.8.4`, which often fails to build on 3.12+
-- Python **3.10+** minimum
-- [uv](https://docs.astral.sh/uv/) recommended for install (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-- OpenAI-compatible LLM at `http://127.0.0.1:8010/v1` (or change `OPENAI_API_BASE`)
+- Python **3.11** (`brew install python@3.11`) + [uv](https://docs.astral.sh/uv/)
+- LLM OpenAI-compatible API (MobilTest [LLM-SERVER.md](https://github.com/)):
+
+| | |
+|--|--|
+| Local (server) | `http://127.0.0.1:8010/v1` |
+| Remote proxy | `http://38.247.162.28:8015/v1` |
+| Key | `nanobase-local` |
+| Model | `nanobase-qwen36-35b-a3b-mtp` |
 
 ## Setup
 
 ```bash
 cd backend
 ./scripts/setup.sh
-cp .env.example .env   # edit if needed
-```
-
-Installs into `backend/.venv`:
-
-- `dbgpt-app==0.8.1` (includes OpenAI proxy + ChromaDB/RAG)
-- `dbgpt-ext[datasource_postgres]==0.8.1`
-
-## Start / stop
-
-```bash
-./scripts/start.sh    # http://127.0.0.1:5670
+cp .env.example .env
+./scripts/start-stack.sh   # DB-GPT + bridge; registers Neon if local JSON exists
 ./scripts/stop.sh
 ```
 
-`DBGPT_HOME` defaults to `backend/.dbgpt` (SQLite meta + Chroma under that tree).
-
-Config file: [`configs/dbgpt-openai-compat.toml`](configs/dbgpt-openai-compat.toml)
-
-## Environment
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `OPENAI_API_BASE` | `http://127.0.0.1:8010/v1` | OpenAI-compatible chat API |
-| `OPENAI_API_KEY` | `nanobase-local` | API key for the proxy |
-| `LLM_MODEL_NAME` | `nanobase-qwen36-35b-a3b-mtp` | Model id sent to the proxy |
-| `EMBEDDING_MODEL_API_URL` | `…/v1/embeddings` | Embedding endpoint (override if LLM host has none) |
-| `DBGPT_PORT` | `5670` | Listen port |
-| `DBGPT_HOME` | `backend/.dbgpt` | Workspace root |
-
-## Scope
-
-- **In:** DB-GPT REST API / agent backend as a separate process
-- **Out:** Cloning DB-GPT’s React UI; wiring this app’s Vite proxy or `src/api/bi-api.ts` to DB-GPT
-
-Postgres datasource support is included. Neon **ERP** + **Sigorta** (both DB name `neondb`) are registered as connection ids `erp` / `sigorta` via `scripts/register_neon_datasources.py`. `scripts/run_web.py` patches DB-GPT so `ext_config.database` is used as the real Postgres database.
+Manual pieces:
 
 ```bash
-./scripts/start.sh
-./.venv/bin/python scripts/register_neon_datasources.py
+./scripts/start.sh                 # DB-GPT only
+python -m uvicorn bridge.app:app --port 8787
+./scripts/register-neon-sources.sh
 ```
 
-Secrets: `../configs/sources/local/neon-dsns.env` (gitignored). Connecting the Nanobase BI SPA still requires the MobilTest runner `/api/v1/bi/*`.
+## Neon datasources
 
-## Docs
+Passwords live in gitignored `configs/sources/local/connection.local.json` (or `BI_ERP_PASSWORD` / `BI_SIGORTA_PASSWORD`). Never commit plaintext.
 
-- Quick start: https://docs.dbgpt.cn/docs/getting-started/cli-quickstart
-- Datasources: http://docs.dbgpt.cn/docs/modules/connections
+## Layout
+
+| Path | Role |
+|------|------|
+| `configs/dbgpt-openai-compat.toml` | DB-GPT LLM/embedding |
+| `bridge/app.py` | FE contract adapter |
+| `scripts/start-stack.sh` | One-shot start |
+
+## Embeddings
+
+Default points at `${OPENAI_API_BASE}/embeddings`. If llama.cpp has no embedding route, RAG may fail; chat/Text2SQL still works. Optional: BGE-M3 on `:8083` — set `EMBEDDING_MODEL_API_URL`.

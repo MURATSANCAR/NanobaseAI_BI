@@ -6,62 +6,69 @@ Standalone BI module extracted from the Nanobase QA portal. React + Vite app for
 
 ```bash
 npm install
+cp .env.example .env
+# Backend stack (DB-GPT + bridge on :8787)
+cd backend && ./scripts/setup.sh && ./scripts/start-stack.sh && cd ..
 npm run dev
 ```
 
-Dev server: **http://127.0.0.1:5174** — proxies `/api` and `/health` to the runner (default `http://127.0.0.1:8787`).
+Dev server: **http://127.0.0.1:5174/bi/** — proxies `/api` and `/health` to the bridge (`:8787` → DB-GPT `:5670`).
+
+## Portal path (production)
+
+BI opens same-origin at **https://portal.nanobase.ai/bi** (not a separate subdomain by default).
+
+| Piece | Role |
+|-------|------|
+| Vite `base` | `/bi/` ([vite.config.ts](vite.config.ts)) |
+| Nginx | [deploy/nginx/portal-bi-path.conf](deploy/nginx/portal-bi-path.conf) |
+| Portal hub | MobilTest `VITE_BI_APP_ORIGIN=` (empty) → `/bi` links stay on portal |
 
 ## Backend (DB-GPT)
 
-Optional sidecar: [DB-GPT](https://github.com/eosphoros-ai/DB-GPT) via pip (no FE bridge yet). See [`backend/README.md`](backend/README.md).
+See [`backend/README.md`](backend/README.md).
 
 ```bash
-cd backend && ./scripts/setup.sh && cp .env.example .env && ./scripts/start.sh
+cd backend && ./scripts/setup.sh && cp .env.example .env && ./scripts/start-stack.sh
 ```
 
-Listens on **http://127.0.0.1:5670**; LLM defaults to OpenAI-compatible `http://127.0.0.1:8010/v1`.
+| Service | Port |
+|---------|------|
+| DB-GPT | 5670 |
+| BI bridge (`/api/v1/bi/*`) | 8787 |
+| LLM (Qwen llama.cpp) | 8010 local / 8015 public proxy |
+
+LLM credentials (MobilTest `docs/LLM-SERVER.md`): key `nanobase-local`, model `nanobase-qwen36-35b-a3b-mtp`.
+
+Neon ERP/Sigorta: `configs/sources/local/connection.local.json` (gitignored) → `./scripts/register-neon-sources.sh`.
 
 ## Configuration
 
 | Variable | Purpose |
 |----------|---------|
-| `VITE_API_BASE` | Runner API origin when not using same-origin proxy. Empty = Vite/nginx proxy to `/api`. |
-
-Copy `.env.example` to `.env` and adjust as needed.
-
-Portal (`portal.nanobase.ai`) redirects `/bi/*` to this app via `VITE_BI_APP_ORIGIN` (e.g. `https://bi.nanobase.ai`). Backend stays on the MobilTest runner (`/api/v1/bi/*`).
+| `VITE_API_BASE` | Bridge origin when not using same-origin proxy. Empty = Vite/nginx → `/api`. |
+| `VITE_BASE` | Asset/router base. Default `/bi/`. |
 
 ## Data sources (ERP + Sigorta)
 
 Operator configs live under [`configs/`](configs/README.md):
 
-- **Connection profiles** (Neon hosts + Vault `secret_ref`, no passwords): `configs/sources/connection.example.json`
-- **Schema catalogs**: `configs/schemas/erp.catalog.json`, `sigorta.catalog.json`
-- **Seed SQL**: `configs/seeds/neon-erp-seed.sql`, `neon-sigorta-seed*.sql`
-- **Semantic bindings**: `configs/semantic/binding_erp_*.json`
-
-Passwords stay in Vault (`bi/default/erp/password`, `bi/default/sigorta/password`). Runtime registry on server: `/data/nanobaseai-mobile/bi/connection.json`.
+- **Connection profiles** (Neon hosts + Vault `secret_ref`): `configs/sources/connection.example.json`
+- Local passwords: `configs/sources/local/` (gitignored)
+- **Schema catalogs**, seeds, semantic bindings — unchanged
 
 ## Routes
 
-All app routes live under `/bi/*`:
+App routes under `/bi/*` (with Vite base `/bi/`):
 
-- `/bi` — Superset dashboard canvas
+- `/bi` — dashboard canvas
 - `/bi/chat`, `/bi/budget`, `/bi/sources`, `/bi/connection`, `/bi/schema`, `/bi/settings`
-- `/bi/queries`, `/bi/templates`, `/bi/glossary`, `/bi/alerts`, `/bi/shares`, `/bi/audit`, `/bi/schedules`
-- `/bi/public/:token` — public guest embed (no auth)
+- `/bi/public/:token` — public guest embed
 
-Legacy portal aliases (`/bi/superset`, `/bi/dashboard`, etc.) redirect to `/bi`.
+## Production deploy
 
-## Production deploy (server)
-
-Current live FE (until `bi.nanobase.ai` DNS exists):
-
-- **URL:** https://portal.nanobase.ai:8445
-- **Static:** `/data/nanobaseai/bi/portal/dist`
-- **Source:** `/data/nanobaseai/bi/frontend` (this repo)
-- **API:** same-origin `/api` → runner `:8787`
-- **Nginx:** `deploy/nginx/portal-bi-8445.conf`
-- Portal hub redirects `/bi/*` via `VITE_BI_APP_ORIGIN=https://portal.nanobase.ai:8445`
-
-When DNS `bi.nanobase.ai` → `38.247.162.28` is live, use `deploy/nginx/bi.nanobase.ai.conf` + certbot and set `VITE_BI_APP_ORIGIN=https://bi.nanobase.ai`.
+1. `npm run build` → `dist/` with `/bi/` asset paths  
+2. Sync to `/data/nanobaseai/bi/portal/dist`  
+3. Apply [deploy/nginx/portal-bi-path.conf](deploy/nginx/portal-bi-path.conf) (or merge `/bi/` locations into portal `:443`)  
+4. Run `backend/scripts/start-stack.sh` on the server (LLM on `:8010`)  
+5. Rebuild portal hub with `VITE_BI_APP_ORIGIN=` so home BI card opens `/bi`
