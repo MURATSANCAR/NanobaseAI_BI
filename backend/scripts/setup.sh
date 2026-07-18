@@ -14,8 +14,9 @@ else
   UV=()
 fi
 
+# Prefer 3.11: dbgpt 0.8.1 pins aiohttp==3.8.4 (no reliable cp312 wheels on macOS).
 PYTHON=""
-for candidate in python3.12 python3.11 python3.10 python3; do
+for candidate in python3.11 python3.10 python3.12 python3; do
   if command -v "$candidate" >/dev/null 2>&1; then
     ver="$("$candidate" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
     major="${ver%%.*}"
@@ -28,8 +29,8 @@ for candidate in python3.12 python3.11 python3.10 python3; do
 done
 
 if [[ -z "$PYTHON" ]]; then
-  echo "error: Python 3.10+ required (tried python3.12/3.11/3.10/3)." >&2
-  echo "Install with: brew install python@3.12" >&2
+  echo "error: Python 3.10+ required (prefer 3.11)." >&2
+  echo "Install with: brew install python@3.11" >&2
   exit 1
 fi
 

@@ -19,4 +19,25 @@ fi
 
 PORT="${DBGPT_PORT:-5670}"
 echo "Stopping DB-GPT webserver on port ${PORT}..."
-dbgpt stop webserver --port "$PORT" || true
+
+if command -v dbgpt >/dev/null 2>&1; then
+  dbgpt stop webserver --port "$PORT" 2>/dev/null || true
+fi
+
+# Fallback: CLI may not find daemonized/foreground processes
+if command -v lsof >/dev/null 2>&1; then
+  pids="$(lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -n "${pids}" ]]; then
+    echo "Killing listeners on :${PORT}: ${pids}"
+    # shellcheck disable=SC2086
+    kill -TERM ${pids} 2>/dev/null || true
+    sleep 1
+    still="$(lsof -ti "tcp:${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
+    if [[ -n "${still}" ]]; then
+      # shellcheck disable=SC2086
+      kill -KILL ${still} 2>/dev/null || true
+    fi
+  fi
+fi
+
+echo "Done."

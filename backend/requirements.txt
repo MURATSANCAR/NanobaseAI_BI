@@ -1,5 +1,5 @@
 # DB-GPT backend (https://github.com/eosphoros-ai/DB-GPT)
-# Python 3.10+ required.
+# Python 3.11 recommended (aiohttp==3.8.4 wheels); 3.10+ minimum.
 #
 # dbgpt-app already pulls OpenAI-compatible proxy + ChromaDB + RAG.
 # Postgres connector is on dbgpt-ext (dbgpt-app has no datasource_postgres extra).

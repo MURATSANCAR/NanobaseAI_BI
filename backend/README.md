@@ -6,7 +6,9 @@ Upstream: https://github.com/eosphoros-ai/DB-GPT · Package: `dbgpt-app` (PyPI)
 
 ## Prerequisites
 
-- Python **3.10+** (recommend `brew install python@3.12`)
+- Python **3.11** recommended (`brew install python@3.11`) — DB-GPT 0.8.1 pins `aiohttp==3.8.4`, which often fails to build on 3.12+
+- Python **3.10+** minimum
+- [uv](https://docs.astral.sh/uv/) recommended for install (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
 - OpenAI-compatible LLM at `http://127.0.0.1:8010/v1` (or change `OPENAI_API_BASE`)
 
 ## Setup
@@ -17,9 +19,10 @@ cd backend
 cp .env.example .env   # edit if needed
 ```
 
-Installs into `backend/.venv` with:
+Installs into `backend/.venv`:
 
-`dbgpt-app[proxy_openai,storage_chromadb,datasource_postgres]`
+- `dbgpt-app==0.8.1` (includes OpenAI proxy + ChromaDB/RAG)
+- `dbgpt-ext[datasource_postgres]==0.8.1`
 
 ## Start / stop
 
