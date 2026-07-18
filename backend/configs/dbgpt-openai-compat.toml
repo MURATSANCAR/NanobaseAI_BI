@@ -27,7 +27,8 @@ api_base = "${env:OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
 api_key = "${env:OPENAI_API_KEY:-nanobase-local}"
 
 [[models.embeddings]]
-name = "${env:EMBEDDING_MODEL_NAME:-text-embedding-3-small}"
+# OpenAI-compat shim on BI bridge → BGE-M3 (:8083). Override with EMBEDDING_MODEL_API_URL.
+name = "${env:EMBEDDING_MODEL_NAME:-BAAI/bge-m3}"
 provider = "${env:EMBEDDING_MODEL_PROVIDER:-proxy/openai}"
-api_url = "${env:EMBEDDING_MODEL_API_URL:-http://127.0.0.1:8010/v1/embeddings}"
-api_key = "${env:OPENAI_API_KEY:-nanobase-local}"
+api_url = "${env:EMBEDDING_MODEL_API_URL:-http://127.0.0.1:8789/v1/embeddings}"
+api_key = "${env:EMBEDDING_API_KEY:-nanobase-local}"
