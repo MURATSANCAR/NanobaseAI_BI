@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from nanobase_api.config import get_settings
 from nanobase_api.infrastructure.superset_client import SupersetError, get_superset_client
-from nanobase_api.source_widgets import build_source_widgets
+from nanobase_api.source_widgets import build_source_widgets, save_widget_type
 
 router = APIRouter(tags=["analytics"])
 
@@ -33,23 +33,50 @@ def _err(exc: SupersetError) -> JSONResponse:
     )
 
 
-@router.get("/api/v1/bi/analytics/source-widgets")
-async def analytics_source_widgets(request: Request) -> dict[str, Any]:
-    """Live KPI widgets for the active (or requested) BI datasource — fills Superset widgets panel."""
-    # Prefer explicit ?datasource_id=; else bridge ACTIVE_DB if imported by nanobase_api.app
+def _resolve_source_id(request: Request, body_sid: str | None = None) -> str:
     from nanobase_api.infrastructure.active_source import prefer_datasource_id
 
     q_sid = (request.query_params.get("datasource_id") or "").strip()
     memory = ""
-    if not q_sid:
+    if not q_sid and not body_sid:
         try:
             from bridge import app as bridge_mod  # type: ignore
 
             memory = str(bridge_mod.ACTIVE_DB.get("id") or "")
         except Exception:
             memory = ""
-    sid = prefer_datasource_id(q_sid, memory_id=memory)
+    return prefer_datasource_id(body_sid, q_sid, memory_id=memory)
+
+
+@router.get("/api/v1/bi/analytics/source-widgets")
+async def analytics_source_widgets(request: Request) -> dict[str, Any]:
+    """Live KPI widgets for the active (or requested) BI datasource — fills Superset widgets panel."""
+    sid = _resolve_source_id(request)
     return await build_source_widgets(datasource_id=sid, qg_base=QG_BASE)
+
+
+@router.patch("/api/v1/bi/analytics/source-widgets/{widget_id}")
+async def analytics_patch_source_widget(widget_id: str, request: Request) -> Any:
+    """Persist visual type for a source widget (applied on next list/build)."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    wtype = str((body or {}).get("type") or "").strip()
+    try:
+        sid = _resolve_source_id(request, str((body or {}).get("datasource_id") or "").strip() or None)
+        return save_widget_type(datasource_id=sid, widget_id=widget_id, widget_type=wtype)
+    except ValueError as e:
+        code = str(e)
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "error": code, "code": code},
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "error": str(e)[:300]},
+        )
 
 
 @router.get("/api/v1/bi/analytics/status")

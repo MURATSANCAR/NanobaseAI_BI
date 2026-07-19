@@ -117,7 +117,7 @@ class ScenarioQdrantPublisher:
 
         by_id = {i.id: i for i in instances}
         points = []
-        for p, vec in zip(paraphrases, vectors, strict=False):
+        for p, vec in zip(paraphrases, vectors):
             inst = by_id.get(p.scenario_id)
             if inst is None or inst.status != ScenarioStatus.PUBLISHED:
                 continue

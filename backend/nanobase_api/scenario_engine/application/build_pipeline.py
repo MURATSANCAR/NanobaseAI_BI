@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo
 from nanobase_api.scenario_engine import GENERATOR_VERSION
 from nanobase_api.scenario_engine.domain.risk import RiskTier
 from nanobase_api.scenario_engine.domain.scenario import (
-    CostProfile,
     ScenarioCompilation,
     ScenarioInstance,
     ScenarioParaphrase,

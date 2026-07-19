@@ -99,7 +99,7 @@ class PostgresLogicalPlanCompiler:
             parts.append(f"{dc} >= :period_start")
             parts.append(f"{dc} < :period_end")
             binds.extend(["period_start", "period_end"])
-        if _EXCLUDE := (plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters):
+        if plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters:
             if plan.status_filter != "cancelled":
                 parts.append(f'{alias}."status" <> :cancelled_status')
                 binds.append("cancelled_status")

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -275,16 +274,14 @@ class ScenarioMatcher:
         if entity is None:
             return None
         period = None
-        for phrase, kind in _PERIOD_TOKENS.items():
-            if phrase in q and kind.endswith("MONTH") or kind in ("TODAY", "YESTERDAY"):
-                if phrase in q:
-                    period = kind if kind not in ("AGING", "UNPAID", "CANCELLED") else None
-                    break
-        # detect via patterns more carefully
-        if "gecen ay" in q or "geçen ay" in normalize_question(question):
+        if "gecen ay" in q or "geçen ay" in question.lower():
             period = "PREVIOUS_MONTH"
-        elif "bugun" in q or "bugün" in question.lower():
+        elif "bu ay" in q:
+            period = "CURRENT_MONTH"
+        elif "bugun" in q or "bugün" in question.lower() or "bugüne" in question.lower():
             period = "TODAY"
+        elif "dun" in q or "dün" in question.lower():
+            period = "YESTERDAY"
         family = "LIST_ENTITY"
         if "kaç" in q or "sayısı" in q or "sayisi" in q:
             family = "COUNT_ENTITY"

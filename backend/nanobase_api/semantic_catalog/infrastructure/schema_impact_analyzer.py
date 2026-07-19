@@ -154,4 +154,31 @@ def apply_schema_impact(
                     m.status = AssetStatus.STALE
                     store.save_metric(m)
                     report.stale_assets.append(f"METRIC:{edge.from_code}")
+
+    # Precompiled scenarios: mark STALE on column/table removal
+    try:
+        from nanobase_api.scenario_engine.infrastructure.metrics import SCENARIO_STALE, inc
+        from nanobase_api.scenario_engine.infrastructure.redis_cache import get_plan_cache
+        from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+        scn_store = get_scenario_store()
+        for d in diffs:
+            if d.impact in (ImpactLevel.NONE, ImpactLevel.LOW):
+                continue
+            if d.kind in (
+                DiffKind.COLUMN_REMOVED,
+                DiffKind.COLUMN_RENAMED,
+                DiffKind.TYPE_CHANGED,
+                DiffKind.TABLE_REMOVED,
+            ):
+                stale_ids = scn_store.mark_stale_by_column(tenant_id, datasource_id, d.ref)
+                for sid in stale_ids:
+                    key = f"SCENARIO:{sid}"
+                    if key not in report.stale_assets:
+                        report.stale_assets.append(key)
+                    inc(SCENARIO_STALE)
+        get_plan_cache().invalidate_prefix(tenant_id=tenant_id, datasource_id=datasource_id)
+    except Exception:
+        pass
+
     return report

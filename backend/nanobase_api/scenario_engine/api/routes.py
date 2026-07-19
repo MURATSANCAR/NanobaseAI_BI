@@ -9,10 +9,8 @@ from fastapi import APIRouter, Body, Path, Query
 
 from nanobase_api.scenario_engine.application.build_pipeline import get_build, start_build
 from nanobase_api.scenario_engine.application.matcher import ScenarioMatcher
-from nanobase_api.scenario_engine.application.param_resolver import resolve_parameters
 from nanobase_api.scenario_engine.application.runtime import try_precompiled_scenario
 from nanobase_api.scenario_engine.application.seeds.invoice_slice import seed_invoice_scenario_slice
-from nanobase_api.scenario_engine.domain.risk import RiskTier
 from nanobase_api.scenario_engine.domain.status import ScenarioStatus
 from nanobase_api.scenario_engine.infrastructure.compiler import get_compiler
 from nanobase_api.scenario_engine.infrastructure.metrics import snapshot as metrics_snapshot

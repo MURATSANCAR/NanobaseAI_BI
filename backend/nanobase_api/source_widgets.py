@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -220,6 +221,33 @@ def _normalize_rows(payload: dict[str, Any]) -> tuple[list[str], list[dict[str, 
     return [str(c) for c in cols], out_rows
 
 
+_ALLOWED_TYPES = frozenset(
+    {
+        "kpi",
+        "card",
+        "metric",
+        "gauge",
+        "bar",
+        "column",
+        "stacked_bar",
+        "stacked_column",
+        "line",
+        "area",
+        "combo",
+        "pie",
+        "donut",
+        "table",
+        "matrix",
+        "scatter",
+        "funnel",
+        "treemap",
+        "waterfall",
+    }
+)
+
+_TYPE_OVERRIDES_PATH = SECRETS / "source-widget-types.json"
+
+
 def _widget_specs_for(datasource_id: str) -> list[dict[str, Any]]:
     """Resolve widget SQL pack for a datasource — exact id only, no other-DS fallback."""
     sid = str(datasource_id or "").strip()
@@ -246,6 +274,67 @@ def _widget_specs_for(datasource_id: str) -> list[dict[str, Any]]:
     return list(packs.get(sid) or [])
 
 
+def _load_type_overrides() -> dict[str, dict[str, str]]:
+    if not _TYPE_OVERRIDES_PATH.is_file():
+        return {}
+    try:
+        raw = json.loads(_TYPE_OVERRIDES_PATH.read_text(encoding="utf-8"))
+        sources = raw.get("sources") if isinstance(raw, dict) else None
+        if not isinstance(sources, dict):
+            return {}
+        out: dict[str, dict[str, str]] = {}
+        for sid, mapping in sources.items():
+            if not isinstance(mapping, dict):
+                continue
+            clean = {
+                str(wid): str(wtype).strip().lower()
+                for wid, wtype in mapping.items()
+                if str(wtype).strip().lower() in _ALLOWED_TYPES
+            }
+            if clean:
+                out[str(sid)] = clean
+        return out
+    except (OSError, json.JSONDecodeError, TypeError):
+        return {}
+
+
+def _save_type_overrides(data: dict[str, dict[str, str]]) -> None:
+    SECRETS.mkdir(parents=True, exist_ok=True)
+    payload = {"sources": data, "updated_at": datetime.now(timezone.utc).isoformat()}
+    tmp = _TYPE_OVERRIDES_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(_TYPE_OVERRIDES_PATH)
+
+
+def save_widget_type(
+    *,
+    datasource_id: str,
+    widget_id: str,
+    widget_type: str,
+) -> dict[str, Any]:
+    """Persist visual type override for a source widget (survives refresh)."""
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
+    sid = prefer_datasource_id(datasource_id)
+    wid = str(widget_id or "").strip()
+    wtype = str(widget_type or "").strip().lower()
+    if not wid:
+        raise ValueError("bi_widget_id_required")
+    if wtype not in _ALLOWED_TYPES:
+        raise ValueError("bi_widget_type_invalid")
+    # Ensure widget exists in pack for this source
+    known = {str(s.get("id")) for s in _widget_specs_for(sid)}
+    if known and wid not in known:
+        raise ValueError("bi_widget_not_found")
+
+    overrides = _load_type_overrides()
+    bucket = dict(overrides.get(sid) or {})
+    bucket[wid] = wtype
+    overrides[sid] = bucket
+    _save_type_overrides(overrides)
+    return {"ok": True, "datasource_id": sid, "widget_id": wid, "type": wtype}
+
+
 async def build_source_widgets(
     *,
     datasource_id: str,
@@ -256,6 +345,7 @@ async def build_source_widgets(
 
     sid = prefer_datasource_id(datasource_id)
     specs = _widget_specs_for(sid)
+    type_overrides = _load_type_overrides().get(sid) or {}
     widgets: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
 
@@ -283,9 +373,11 @@ async def build_source_widgets(
                     )
                     continue
                 columns, rows = _normalize_rows(data)
+                wid = str(spec["id"])
+                wtype = type_overrides.get(wid) or str(spec["type"])
                 w: dict[str, Any] = {
-                    "id": spec["id"],
-                    "type": spec["type"],
+                    "id": wid,
+                    "type": wtype,
                     "title": spec["title"],
                     "sql": sql,
                     "format": spec.get("format"),

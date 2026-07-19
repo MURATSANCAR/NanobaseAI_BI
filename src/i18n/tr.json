@@ -435,6 +435,8 @@
   "bi.analytics.viewData": "Veriyi gör",
   "bi.analytics.widgetDataTable": "Veri",
   "bi.analytics.widgetDetailMeta": "{{rows}} satır · {{type}}",
+  "bi.analytics.widgetType": "Grafik tipi",
+  "bi.analytics.widgetTypeSaved": "Tip kaydedildi",
   "bi.anomaly.askPrompt": "{key} anomalisini açıkla ve sonraki adımları öner",
   "bi.anomaly.openBanner": "Anomaliden açıldı",
   "bi.artifact.openBanner": "Paylaşılan yanıt açıldı",

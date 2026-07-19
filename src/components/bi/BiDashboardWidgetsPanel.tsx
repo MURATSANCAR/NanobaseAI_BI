@@ -283,7 +283,10 @@ export default function BiDashboardWidgetsPanel({
       {selectedSourceWidget ? (
         <BiWidgetDetailSheet
           widget={selectedSourceWidget}
+          config={config}
+          datasourceId={activeSourceId}
           onClose={() => setSelectedSourceWidget(null)}
+          onUpdated={(w) => setSelectedSourceWidget(w)}
         />
       ) : null}
     </div>

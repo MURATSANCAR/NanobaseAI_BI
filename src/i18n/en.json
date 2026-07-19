@@ -435,6 +435,8 @@
   "bi.analytics.viewData": "View data",
   "bi.analytics.widgetDataTable": "Data",
   "bi.analytics.widgetDetailMeta": "{{rows}} rows · {{type}}",
+  "bi.analytics.widgetType": "Chart type",
+  "bi.analytics.widgetTypeSaved": "Type saved",
   "bi.anomaly.askPrompt": "Explain anomaly {key} and suggest next actions",
   "bi.anomaly.openBanner": "Opened from anomaly",
   "bi.artifact.openBanner": "Opened shared answer",

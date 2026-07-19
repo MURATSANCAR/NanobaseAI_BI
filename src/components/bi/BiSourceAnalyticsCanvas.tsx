@@ -140,7 +140,15 @@ export default function BiSourceAnalyticsCanvas({
         )}
       </div>
 
-      {selected ? <BiWidgetDetailSheet widget={selected} onClose={() => setSelected(null)} /> : null}
+      {selected ? (
+        <BiWidgetDetailSheet
+          widget={selected}
+          config={config}
+          datasourceId={datasourceId}
+          onClose={() => setSelected(null)}
+          onUpdated={(w) => setSelected(w)}
+        />
+      ) : null}
     </div>
   );
 }

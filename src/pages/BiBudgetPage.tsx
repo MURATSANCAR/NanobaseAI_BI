@@ -542,18 +542,6 @@ export default function BiBudgetPage() {
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
 
-  const alertMut = useMutation({
-    mutationFn: (id: string) => api.bi.budgets.createAlert(config, id, { threshold_pct: 80, condition: 'gte' }),
-    onSuccess: (res) => {
-      showFlash(
-        res.created === false ? t('bi.budget.alertExists') : t('bi.budget.alertCreated'),
-        true,
-      );
-    },
-    onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
-  });
-  void alertMut;
-
   const approveMut = useMutation({
     mutationFn: (id: string) => api.bi.budgets.approve(config, id),
     onSuccess: (row) => {

@@ -1295,6 +1295,16 @@ export function createBiApi() {
             datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''
           }`,
         ),
+      updateSourceWidgetType: (
+        c: ApiConfig,
+        widgetId: string,
+        body: { type: string; datasource_id?: string },
+      ) =>
+        request<{ ok: boolean; datasource_id: string; widget_id: string; type: string }>(
+          c,
+          `/api/v1/bi/analytics/source-widgets/${encodeURIComponent(widgetId)}`,
+          { method: 'PATCH', body: JSON.stringify(body) },
+        ),
       datasets: (c: ApiConfig) =>
         request<{ datasets: Array<{ id: number; table_name?: string }> }>(c, '/api/v1/bi/analytics/datasets'),
       guestToken: (c: ApiConfig, dashboardId: number) =>
