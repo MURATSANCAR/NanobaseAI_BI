@@ -48,6 +48,7 @@ import {
   showWebNotification,
   type NotifyPermission,
 } from '@/lib/webNotifications';
+import { ALERT_CREATE_INTENT, withAlertCreateHint } from '@/lib/alertChatIntent';
 import { BiAnswerBlocks } from '@/components/BiWidgets';
 import BiChatWidgetPreview from '@/components/bi/BiChatWidgetPreview';
 import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
@@ -241,6 +242,8 @@ type BiChatPanelProps = {
   onResponse?: (resp: BiChatResponse) => void;
   className?: string;
   initialMessage?: string;
+  /** Hidden send-time intent (e.g. create_alert) — never shown in the composer. */
+  initialIntent?: string;
   fullHeight?: boolean;
   /** Hide duplicate chrome when rendered inside BiAnalyticsChatDock */
   embedded?: boolean;
@@ -319,6 +322,7 @@ export default function BiChatPanel({
   onResponse,
   className,
   initialMessage,
+  initialIntent,
   fullHeight,
   embedded,
   autoFocus,
