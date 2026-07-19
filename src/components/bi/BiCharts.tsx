@@ -1062,15 +1062,24 @@ export function BiMatrixWidget({ widget, maxHeight, onDatumClick }: { widget: Bi
   );
 }
 
-export function BiTableWidget({ widget, maxHeight }: { widget: BiWidget; maxHeight?: number }) {
+export function BiTableWidget({
+  widget,
+  maxHeight,
+  maxRows = 25,
+}: {
+  widget: BiWidget;
+  maxHeight?: number;
+  maxRows?: number;
+}) {
   const c = cols(widget);
-  const r = rows(widget).slice(0, 25);
+  const limit = Math.max(1, maxRows);
+  const r = rows(widget).slice(0, limit);
   return (
     <div className="bi-table-scroll h-full overflow-auto" style={maxHeight ? { maxHeight } : undefined}>
       {r.length === 0 ? (
         <p className="p-4 text-center text-sm text-[#605E5C]">{t('bi.noData')}</p>
       ) : (
-        <DynamicResultTable columns={c} rows={r} maxRows={25} compact />
+        <DynamicResultTable columns={c} rows={r} maxRows={limit} compact />
       )}
     </div>
   );

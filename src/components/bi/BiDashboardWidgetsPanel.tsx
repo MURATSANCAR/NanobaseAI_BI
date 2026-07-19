@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDown, ArrowUp, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { api, type ApiConfig } from '@/api/client';
 import { BiCardWidget, BiVisualChart } from '@/components/bi/BiCharts';
+import BiWidgetDetailSheet from '@/components/bi/BiWidgetDetailSheet';
 import type { BiWidget } from '@/api/types';
 import { t } from '@/i18n';
 import { localizeUserMessage } from '@/utils/backendLabels';
@@ -14,22 +15,35 @@ type Props = {
   onChanged?: () => void;
 };
 
-function SourceWidgetCard({ widget }: { widget: BiWidget }) {
+function SourceWidgetCard({
+  widget,
+  onOpen,
+}: {
+  widget: BiWidget;
+  onOpen: (w: BiWidget) => void;
+}) {
   const isKpi = widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
   return (
-    <li className="overflow-hidden rounded-xl border border-[#E1DFDD]/90 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-2.5 py-1.5">
-        <p className="truncate text-xs font-semibold text-slate-800">{widget.title}</p>
-      </div>
-      <div className="p-2">
-        {isKpi ? (
-          <BiCardWidget widget={widget} kpi variant="preview" />
-        ) : (
-          <div className="h-40">
-            <BiVisualChart widget={widget} variant="preview" height={160} />
-          </div>
-        )}
-      </div>
+    <li>
+      <button
+        type="button"
+        onClick={() => onOpen(widget)}
+        className="w-full overflow-hidden rounded-xl border border-[#E1DFDD]/90 bg-white text-left shadow-sm transition hover:ring-2 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+        aria-label={t('bi.analytics.openWidgetDetail', { title: widget.title || widget.id })}
+      >
+        <div className="border-b border-slate-100 px-2.5 py-1.5">
+          <p className="truncate text-xs font-semibold text-slate-800">{widget.title}</p>
+        </div>
+        <div className="pointer-events-none p-2">
+          {isKpi ? (
+            <BiCardWidget widget={widget} kpi variant="preview" />
+          ) : (
+            <div className="h-40">
+              <BiVisualChart widget={widget} variant="preview" height={160} />
+            </div>
+          )}
+        </div>
+      </button>
     </li>
   );
 }
@@ -43,6 +57,7 @@ export default function BiDashboardWidgetsPanel({
   const qc = useQueryClient();
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSourceWidget, setSelectedSourceWidget] = useState<BiWidget | null>(null);
 
   const sourcesQ = useQuery({
     queryKey: ['bi-sources', config],
@@ -172,7 +187,7 @@ export default function BiDashboardWidgetsPanel({
           ) : (
             <ul className="space-y-2">
               {sourceWidgets.map((w) => (
-                <SourceWidgetCard key={w.id} widget={w} />
+                <SourceWidgetCard key={w.id} widget={w} onOpen={setSelectedSourceWidget} />
               ))}
             </ul>
           )}
@@ -252,6 +267,13 @@ export default function BiDashboardWidgetsPanel({
           </section>
         ) : null}
       </div>
+
+      {selectedSourceWidget ? (
+        <BiWidgetDetailSheet
+          widget={selectedSourceWidget}
+          onClose={() => setSelectedSourceWidget(null)}
+        />
+      ) : null}
     </div>
   );
 }

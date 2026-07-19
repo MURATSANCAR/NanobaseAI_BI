@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, Table2 } from 'lucide-react';
 import { api, type ApiConfig } from '@/api/client';
 import { BiCardWidget, BiVisualChart } from '@/components/bi/BiCharts';
+import BiWidgetDetailSheet from '@/components/bi/BiWidgetDetailSheet';
 import type { BiWidget } from '@/api/types';
 import { t } from '@/i18n';
 import { localizeUserMessage } from '@/utils/backendLabels';
@@ -13,31 +15,50 @@ type Props = {
   className?: string;
 };
 
-function WidgetTile({ widget, index }: { widget: BiWidget; index: number }) {
-  const isKpi = widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
+function isKpiWidget(widget: BiWidget) {
+  return widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
+}
+
+function WidgetTile({
+  widget,
+  index,
+  onOpen,
+}: {
+  widget: BiWidget;
+  index: number;
+  onOpen: (w: BiWidget) => void;
+}) {
+  const kpi = isKpiWidget(widget);
   return (
-    <article
+    <button
+      type="button"
+      onClick={() => onOpen(widget)}
       className={
-        isKpi
-          ? 'bi-pbi-tile bi-pbi-tile--3d flex min-h-[8.5rem] flex-col p-4'
-          : 'bi-pbi-tile bi-pbi-tile--3d flex min-h-[16rem] flex-col p-3 sm:col-span-2 lg:col-span-2'
+        kpi
+          ? 'bi-pbi-tile bi-pbi-tile--3d flex min-h-[8.5rem] w-full flex-col p-4 text-left transition hover:ring-2 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400'
+          : 'bi-pbi-tile bi-pbi-tile--3d flex min-h-[16rem] w-full flex-col p-3 text-left transition hover:ring-2 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:col-span-2 lg:col-span-2'
       }
       data-accent={index % 6}
+      aria-label={t('bi.analytics.openWidgetDetail', { title: widget.title || widget.id })}
     >
       <div className="bi-pbi-tile-glow" aria-hidden />
       <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
         <h3 className="mb-2 truncate text-xs font-semibold uppercase tracking-wide text-slate-600">
           {widget.title}
         </h3>
-        <div className="min-h-0 flex-1">
-          {isKpi ? (
+        <div className="pointer-events-none min-h-0 flex-1">
+          {kpi ? (
             <BiCardWidget widget={widget} kpi variant="tile" />
           ) : (
             <BiVisualChart widget={widget} variant="tile" height={220} />
           )}
         </div>
+        <p className="relative z-[1] mt-2 flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+          <Table2 className="h-3 w-3" aria-hidden />
+          {t('bi.analytics.viewData')}
+        </p>
       </div>
-    </article>
+    </button>
   );
 }
 
@@ -48,6 +69,8 @@ export default function BiSourceAnalyticsCanvas({
   sourceLabel,
   className,
 }: Props) {
+  const [selected, setSelected] = useState<BiWidget | null>(null);
+
   const widgetsQ = useQuery({
     queryKey: ['bi-analytics-source-widgets', config, datasourceId],
     queryFn: () => api.bi.analytics.sourceWidgets(config, datasourceId),
@@ -102,11 +125,13 @@ export default function BiSourceAnalyticsCanvas({
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {widgets.map((w, i) => (
-              <WidgetTile key={w.id} widget={w} index={i} />
+              <WidgetTile key={w.id} widget={w} index={i} onOpen={setSelected} />
             ))}
           </div>
         )}
       </div>
+
+      {selected ? <BiWidgetDetailSheet widget={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   );
 }
