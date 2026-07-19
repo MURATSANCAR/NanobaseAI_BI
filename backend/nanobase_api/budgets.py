@@ -188,7 +188,7 @@ def upsert_budget(engine: Engine, body: dict[str, Any], *, tenant_id: str = "def
                     "alloc": float(body.get("allocated") or 0),
                     "cur": body.get("currency") or "TRY",
                     "comm": float(body.get("committed") or 0),
-                    "asql": body.get("actuals_sql"),
+                    "asql": body.get("actuals_sql") or "",
                     "owner": body.get("owner"),
                     "status": body.get("status") or "draft",
                     "notes": body.get("notes"),
@@ -222,7 +222,7 @@ def upsert_budget(engine: Engine, body: dict[str, Any], *, tenant_id: str = "def
                     "alloc": float(body.get("allocated") or 0),
                     "cur": body.get("currency") or "TRY",
                     "comm": float(body.get("committed") or 0),
-                    "asql": body.get("actuals_sql"),
+                    "asql": body.get("actuals_sql") or "",
                     "owner": body.get("owner"),
                     "status": body.get("status") or "draft",
                     "notes": body.get("notes"),
@@ -294,10 +294,10 @@ def sync_from_erp_butce(
                         """
                         INSERT INTO bi_budgets (
                           id, tenant_id, fiscal_year, cost_center, kind, name, allocated, currency,
-                          committed, status, scenario, version, locked, payload_json, created_at, updated_at
+                          committed, actuals_sql, status, scenario, version, locked, payload_json, created_at, updated_at
                         ) VALUES (
                           :id, :tenant, :fy, :cc, :kind, :name, :alloc, :cur,
-                          0, :status, 'base', 1, false, :payload, :now, :now
+                          0, '', :status, 'base', 1, false, :payload, :now, :now
                         )
                         """
                     ),
