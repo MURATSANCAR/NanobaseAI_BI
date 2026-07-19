@@ -256,6 +256,59 @@
         "created_at",
         "deleted_at"
       ]
+    },
+    {
+      "name": "v_acente_performans_ozeti",
+      "columns": [
+        "acente_id",
+        "unvan",
+        "bolge",
+        "komisyon_orani",
+        "aktif",
+        "police_sayisi",
+        "aktif_police",
+        "toplam_prim",
+        "toplam_hasar",
+        "hasar_sayisi",
+        "fraud_supheli",
+        "hasar_prim_orani_pct",
+        "tahmini_komisyon"
+      ]
+    },
+    {
+      "name": "v_aktif_policeler",
+      "columns": [
+        "id",
+        "police_no",
+        "musteri_id",
+        "acente_id",
+        "urun_id",
+        "arac_id",
+        "konut_id",
+        "durum",
+        "prim_tutari",
+        "net_prim",
+        "vergi_tutari",
+        "komisyon_tutari",
+        "teminat_bedeli",
+        "baslangic_tarihi",
+        "bitis_tarihi",
+        "yenileme_no",
+        "created_at",
+        "deleted_at"
+      ]
+    },
+    {
+      "name": "v_bolge_yonetim_ozeti",
+      "columns": [
+        "bolge",
+        "acente_sayisi",
+        "police_sayisi",
+        "toplam_prim",
+        "toplam_hasar",
+        "ort_komisyon",
+        "hasar_prim_orani_pct"
+      ]
     }
   ]
 }

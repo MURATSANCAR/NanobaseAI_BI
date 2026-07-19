@@ -2431,10 +2431,14 @@
   .bi-pbi-tile[data-accent='4'] { --tile-glow: linear-gradient(135deg, rgba(53, 153, 184, 0.22), rgba(102, 187, 106, 0.12)); }
   .bi-pbi-tile[data-accent='5'] { --tile-glow: linear-gradient(135deg, rgba(214, 69, 80, 0.18), rgba(230, 108, 55, 0.12)); }
 
-  /* BI Schema — 3D glass stage */
+  /* BI Schema — 3D glass stage (scroll with page; graph panel keeps a real viewport) */
   .bi-schema-stage {
-    @apply relative space-y-5;
+    @apply relative flex w-full flex-col gap-4 pb-4;
     perspective: 1400px;
+  }
+
+  .bi-schema-stage .bi-schema-view-panel {
+    @apply min-h-[min(58vh,36rem)] w-full overflow-auto;
   }
 
   .bi-schema-stage::before {
@@ -2790,7 +2794,7 @@
   }
 
   .bi-schema-view-panel {
-    @apply min-h-[12rem] scroll-mt-28;
+    @apply min-h-[min(58vh,36rem)] scroll-mt-28;
   }
 
   .bi-schema-relations-grid {

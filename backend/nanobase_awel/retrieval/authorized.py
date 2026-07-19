@@ -49,9 +49,13 @@ def build_qdrant_filter(
     database_type: str | None = None,
     allowed_owners: list[str] | None = None,
     semantic_version: str | None = None,
-    status: str = "ACTIVE",
+    status: str | None = None,
 ) -> dict[str, Any] | None:
-    """Payload filter — must include tenant + datasource; Oracle adds owner/type."""
+    """Payload filter — must include datasource; tenant/status only when set.
+
+    Neon/Postgres schema index payloads typically have no ``status`` field.
+    Default is therefore no status clause (Oracle callers may pass status=\"ACTIVE\").
+    """
     must: list[dict[str, Any]] = [
         {"key": "datasource_id", "match": {"value": datasource_id}},
     ]
@@ -64,6 +68,9 @@ def build_qdrant_filter(
         must.append({"key": "schema", "match": {"any": list(allowed_schemas)}})
     if database_type:
         must.append({"key": "database_type", "match": {"value": database_type.upper()}})
+        # Oracle scanner stamps status=ACTIVE; include only for typed Oracle searches.
+        if status is None and database_type.upper() in ("ORACLE", "ADB"):
+            status = "ACTIVE"
     if allowed_owners:
         must.append(
             {"key": "owner", "match": {"any": [o.upper() for o in allowed_owners]}}
@@ -118,12 +125,25 @@ async def retrieve_authorized_schema(
                     )
                 return {"ok": False, "collection": coll, "hits": [], "tables": [], "hint_extra": ""}
             sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
-            # If filter unsupported / empty, retry without filter (legacy collections)
+            # If filter unsupported, retry without filter (legacy collections)
             if sr.status_code >= 400 and "filter" in body:
                 body.pop("filter", None)
                 sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
             sr.raise_for_status()
             result = sr.json().get("result") or []
+            # Neon/Postgres index has no status payload — drop status clause on empty hits
+            if not result and isinstance(body.get("filter"), dict):
+                must = list((body["filter"].get("must") or []))
+                stripped = [m for m in must if m.get("key") != "status"]
+                if len(stripped) < len(must):
+                    body["filter"] = {"must": stripped} if stripped else None
+                    if body["filter"] is None:
+                        body.pop("filter", None)
+                    sr = await client.post(
+                        f"{QDRANT_URL}/collections/{coll}/points/search", json=body
+                    )
+                    sr.raise_for_status()
+                    result = sr.json().get("result") or []
     except WorkflowError:
         raise
     except Exception as e:

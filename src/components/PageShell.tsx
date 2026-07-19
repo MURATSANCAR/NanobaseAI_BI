@@ -1,10 +1,7 @@
 import type { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
 import type { HelpPageId } from '@/help/pages';
 import ModuleAiHero from '@/components/ModuleAiHero';
-import BiFlowStepper from '@/components/bi/BiFlowStepper';
 import { isModuleDashboardPage, moduleFromPageId } from '@/lib/moduleFromPageId';
-import { biFlowIndexFromPath } from '@/lib/biFlow';
 
 type PageHeaderProps = {
   pageId: HelpPageId;
@@ -14,6 +11,7 @@ type PageHeaderProps = {
   children?: ReactNode;
   header?: ReactNode;
   heroTrailing?: ReactNode;
+  /** @deprecated Setup stepper removed — kept as no-op for call-site compatibility. */
   showBiFlow?: boolean;
   biFlowStep?: number | null;
 };
@@ -26,10 +24,7 @@ export function PageShell({
   header,
   heroTrailing,
   children,
-  showBiFlow = false,
-  biFlowStep,
 }: PageHeaderProps) {
-  const { pathname, search } = useLocation();
   const module = moduleFromPageId(pageId);
   const heroSize = isModuleDashboardPage(pageId) ? 'dashboard' : 'page';
 
@@ -44,29 +39,19 @@ export function PageShell({
       />
     ) : null;
 
-  const resolvedBiStep =
-    biFlowStep !== undefined ? biFlowStep : biFlowIndexFromPath(pathname, search);
-
   return (
     <div
       className={[
-        'mobile-page ai-page-shell mx-auto flex w-full min-w-0 flex-1 flex-col animate-fade-in',
-        showBiFlow ? 'gap-2 h-full min-h-0 overflow-hidden' : 'gap-2 sm:gap-3 min-h-0',
+        // Do not clip with overflow-hidden — Layout <main> scrolls.
+        // Chat fills viewport via .ai-page-shell:has(.bi-chat-page) in CSS.
+        'mobile-page ai-page-shell mx-auto flex w-full min-w-0 flex-1 flex-col gap-2 animate-fade-in sm:gap-3',
         maxWidth,
       ]
         .filter(Boolean)
         .join(' ')}
     >
-      <div className={['shrink-0', showBiFlow ? 'space-y-1' : 'space-y-2'].join(' ')}>
-        {header ?? defaultHeader}
-        {showBiFlow && <BiFlowStepper activeIndex={resolvedBiStep} />}
-      </div>
-      <div
-        className={[
-          'ai-page-content relative z-10 flex min-h-0 min-w-0 flex-1 flex-col',
-          showBiFlow ? 'gap-2 overflow-hidden' : 'gap-2 sm:gap-3 stagger-children',
-        ].join(' ')}
-      >
+      <div className="shrink-0 space-y-2">{header ?? defaultHeader}</div>
+      <div className="ai-page-content relative z-10 flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
         {children}
       </div>
     </div>

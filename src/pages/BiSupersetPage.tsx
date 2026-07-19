@@ -20,6 +20,7 @@ import BiDashboardWidgetsPanel from '@/components/bi/BiDashboardWidgetsPanel';
 import BiLineageDrawer from '@/components/bi/BiLineageDrawer';
 import BiMorningBriefing from '@/components/bi/BiMorningBriefing';
 import BiNarrativeStrip from '@/components/bi/BiNarrativeStrip';
+import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
 import BiSupersetEmbed from '@/components/bi/BiSupersetEmbed';
 import type { LayoutOutletContext } from '@/components/Layout';
 import { api, isRunnerConfigured } from '@/api/client';
@@ -38,6 +39,28 @@ type EmbedState = {
   title?: string;
 };
 
+/** One Superset board per BI datasource (ERP / Sigorta / …). */
+function sourceBoardTitle(sourceId: string, label?: string): string {
+  const name = (label || sourceId || 'default').trim();
+  return `NanobaseAI · ${name}`;
+}
+
+function findSourceBoard(
+  dashboards: Array<{ id: number; title?: string }>,
+  sourceId: string,
+  label?: string,
+) {
+  const needles = [
+    `nanobaseai · ${(label || '').toLowerCase()}`,
+    `nanobaseai · ${sourceId.toLowerCase()}`,
+    sourceId.toLowerCase(),
+  ].filter((n) => n.length > 2);
+  return dashboards.find((d) => {
+    const title = String(d.title || '').toLowerCase();
+    return needles.some((n) => title.includes(n));
+  });
+}
+
 export default function BiSupersetPage() {
   const { config } = useApiConfig();
   const { openMenu } = useOutletContext<LayoutOutletContext>();
@@ -54,7 +77,7 @@ export default function BiSupersetPage() {
   const [browserFullscreen, setBrowserFullscreen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const [sidePanel, setSidePanel] = useState<'comments' | 'widgets' | 'none'>(() =>
-    searchParams.get('comments') === '1' ? 'comments' : 'none',
+    searchParams.get('comments') === '1' ? 'comments' : 'widgets',
   );
   const [lineageOpen, setLineageOpen] = useState(() => Boolean(searchParams.get('metric')));
   const [embedNonce, setEmbedNonce] = useState(0);
@@ -66,6 +89,16 @@ export default function BiSupersetPage() {
   const hideBriefing = narrow && chatOpen;
   const runnerReady = isRunnerConfigured(config);
 
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled: runnerReady,
+    staleTime: 15_000,
+  });
+  const activeSourceId = sourcesQ.data?.active_id || '';
+  const activeSourceLabel =
+    sourcesQ.data?.sources?.find((s) => s.id === activeSourceId)?.label || activeSourceId;
+
   const statusQ = useQuery({
     queryKey: ['bi-analytics-status'],
     queryFn: () => api.bi.analytics.status(config),
@@ -74,7 +107,7 @@ export default function BiSupersetPage() {
   });
 
   const dashboardsQ = useQuery({
-    queryKey: ['bi-analytics-dashboards'],
+    queryKey: ['bi-analytics-dashboards', activeSourceId],
     queryFn: () => api.bi.analytics.dashboards(config),
     enabled: runnerReady && Boolean(statusQ.data?.enabled),
     staleTime: 60_000,
@@ -240,6 +273,10 @@ export default function BiSupersetPage() {
         ? t('bi.analytics.statusError')
         : null;
   const dashboards = dashboardsQ.data?.dashboards ?? [];
+  const sourceDashboards = activeSourceId
+    ? dashboards.filter((d) => findSourceBoard([d], activeSourceId, activeSourceLabel))
+    : dashboards;
+  const pickerDashboards = sourceDashboards.length ? sourceDashboards : dashboards;
 
   useEffect(() => {
     if (!dashboardFromUrl || !enabled) return;
@@ -249,12 +286,66 @@ export default function BiSupersetPage() {
     void openDashboard(id, dash?.title);
   }, [dashboardFromUrl, enabled, dashboards, openDashboard]);
 
+  // Ensure a Superset board exists for the active datasource and open it.
   useEffect(() => {
-    if (embed || !enabled || dashboardsQ.isLoading || dashboardFromUrl) return;
-    const first = dashboards[0];
-    if (!first?.id) return;
-    void openDashboard(Number(first.id), first.title);
-  }, [embed, enabled, dashboards, dashboardsQ.isLoading, openDashboard, dashboardFromUrl]);
+    if (!enabled || !activeSourceId || dashboardFromUrl || dashboardsQ.isLoading) return;
+    let cancelled = false;
+    const wantedTitle = sourceBoardTitle(activeSourceId, activeSourceLabel);
+    const existing = findSourceBoard(dashboards, activeSourceId, activeSourceLabel);
+
+    const run = async () => {
+      try {
+        if (existing?.id) {
+          if (embed?.dashboardId === Number(existing.id)) return;
+          await openDashboard(Number(existing.id), existing.title || wantedTitle);
+          return;
+        }
+        const created = await api.bi.analytics.createDashboard(config, { title: wantedTitle });
+        if (cancelled) return;
+        await qc.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] });
+        const guest = created.guest;
+        if (
+          guest?.token &&
+          guest.dashboard_id != null &&
+          guest.embed_uuid &&
+          guest.analytics_url
+        ) {
+          setEmbedFromGuest(
+            {
+              token: guest.token,
+              dashboard_id: Number(guest.dashboard_id),
+              embed_uuid: String(guest.embed_uuid),
+              analytics_url: String(guest.analytics_url),
+            },
+            created.title || wantedTitle,
+          );
+          setEmbedNonce((n) => n + 1);
+        } else if (created.id) {
+          await openDashboard(Number(created.id), created.title || wantedTitle);
+        }
+      } catch (exc) {
+        if (!cancelled) {
+          setOpenError(exc instanceof Error ? exc.message : String(exc));
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    enabled,
+    activeSourceId,
+    activeSourceLabel,
+    dashboards,
+    dashboardsQ.isLoading,
+    dashboardFromUrl,
+    embed?.dashboardId,
+    openDashboard,
+    config,
+    qc,
+    setEmbedFromGuest,
+  ]);
 
   return (
     <div className="bi-fluent-shell flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-[#F5F5F5]">
@@ -298,6 +389,7 @@ export default function BiSupersetPage() {
               {embed?.title || t('bi.analytics.subtitle')}
             </p>
           </div>
+          <BiSourceSwitcher config={config} compact className="hidden min-w-0 md:flex" />
         </div>
 
         <div className="relative min-w-0">
@@ -309,9 +401,9 @@ export default function BiSupersetPage() {
           >
             <LayoutDashboard className="h-3.5 w-3.5 shrink-0 text-violet-600" />
             <span className="truncate">{embed?.title || t('bi.analytics.selectDashboard')}</span>
-            {dashboards.length > 1 && (
+            {pickerDashboards.length > 1 && (
               <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
-                {dashboards.length}
+                {pickerDashboards.length}
               </span>
             )}
             <ChevronDown className={clsx('h-3.5 w-3.5 shrink-0 transition', pickerOpen && 'rotate-180')} />
@@ -322,7 +414,9 @@ export default function BiSupersetPage() {
               <button type="button" className="fixed inset-0 z-30" aria-label={t('bi.analytics.closeChat')} onClick={() => setPickerOpen(false)} />
               <div className="absolute right-0 z-40 mt-2 w-[min(calc(100vw-2rem),16rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xl sm:w-64">
                 <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                  <span className="text-xs font-semibold text-slate-700">{t('bi.analytics.dashboards')}</span>
+                  <span className="text-xs font-semibold text-slate-700">
+                    {activeSourceLabel || t('bi.analytics.dashboards')}
+                  </span>
                   <button
                     type="button"
                     className="rounded p-1 text-slate-500 hover:bg-slate-100"
@@ -332,7 +426,7 @@ export default function BiSupersetPage() {
                   </button>
                 </div>
                 <ul className="max-h-56 overflow-y-auto py-1 text-sm">
-                  {dashboards.map((d) => (
+                  {pickerDashboards.map((d) => (
                     <li key={d.id}>
                       <button
                         type="button"
@@ -354,7 +448,7 @@ export default function BiSupersetPage() {
                       </button>
                     </li>
                   ))}
-                  {!dashboards.length && (
+                  {!pickerDashboards.length && (
                     <li className="px-3 py-4 text-center text-xs text-slate-500">{t('bi.analytics.emptyDashboards')}</li>
                   )}
                 </ul>
@@ -373,7 +467,6 @@ export default function BiSupersetPage() {
             onClick={() => setSidePanel((p) => (p === 'widgets' ? 'none' : 'widgets'))}
             title={t('bi.analytics.manageWidgets')}
             aria-label={t('bi.analytics.manageWidgets')}
-            disabled={!embed?.dashboardId}
           >
             <ListOrdered className="h-4 w-4" />
           </button>
@@ -525,11 +618,11 @@ export default function BiSupersetPage() {
               />
             </div>
           )}
-          {sidePanel === 'widgets' && embed?.dashboardId && !narrow ? (
+          {sidePanel === 'widgets' && !narrow ? (
             <div className="w-80 shrink-0 border-l border-slate-200 bg-white">
               <BiDashboardWidgetsPanel
                 config={config}
-                dashboardId={embed.dashboardId}
+                dashboardId={embed?.dashboardId ?? 0}
                 onClose={() => setSidePanel('none')}
                 onChanged={() => void refreshEmbed()}
               />
@@ -576,10 +669,10 @@ export default function BiSupersetPage() {
                   targetId={embed ? String(embed.dashboardId) : 'default'}
                 />
               ) : null}
-              {sidePanel === 'widgets' && embed?.dashboardId ? (
+              {sidePanel === 'widgets' ? (
                 <BiDashboardWidgetsPanel
                   config={config}
-                  dashboardId={embed.dashboardId}
+                  dashboardId={embed?.dashboardId ?? 0}
                   onClose={() => setSidePanel('none')}
                   onChanged={() => void refreshEmbed()}
                 />

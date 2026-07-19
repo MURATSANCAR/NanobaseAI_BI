@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowDown, ArrowUp, Loader2, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 import { api, type ApiConfig } from '@/api/client';
+import { BiCardWidget, BiVisualChart } from '@/components/bi/BiCharts';
+import type { BiWidget } from '@/api/types';
 import { t } from '@/i18n';
 import { localizeUserMessage } from '@/utils/backendLabels';
 
@@ -11,6 +13,26 @@ type Props = {
   onClose: () => void;
   onChanged?: () => void;
 };
+
+function SourceWidgetCard({ widget }: { widget: BiWidget }) {
+  const isKpi = widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
+  return (
+    <li className="overflow-hidden rounded-xl border border-[#E1DFDD]/90 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-2.5 py-1.5">
+        <p className="truncate text-xs font-semibold text-slate-800">{widget.title}</p>
+      </div>
+      <div className="p-2">
+        {isKpi ? (
+          <BiCardWidget widget={widget} kpi variant="preview" />
+        ) : (
+          <div className="h-40">
+            <BiVisualChart widget={widget} variant="preview" height={160} />
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
 
 export default function BiDashboardWidgetsPanel({
   config,
@@ -22,6 +44,22 @@ export default function BiDashboardWidgetsPanel({
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    staleTime: 30_000,
+  });
+  const activeSourceId = sourcesQ.data?.active_id || undefined;
+  const activeLabel =
+    sourcesQ.data?.sources?.find((s) => s.id === activeSourceId)?.label || activeSourceId || '—';
+
+  const sourceWidgetsQ = useQuery({
+    queryKey: ['bi-analytics-source-widgets', config, activeSourceId],
+    queryFn: () => api.bi.analytics.sourceWidgets(config, activeSourceId),
+    staleTime: 60_000,
+    refetchInterval: 120_000,
+  });
+
   const chartsQ = useQuery({
     queryKey: ['bi-analytics-dashboard-charts', dashboardId],
     queryFn: () => api.bi.analytics.dashboardCharts(config, dashboardId),
@@ -29,10 +67,12 @@ export default function BiDashboardWidgetsPanel({
   });
 
   const charts = chartsQ.data?.charts ?? [];
+  const sourceWidgets = sourceWidgetsQ.data?.widgets ?? [];
 
   const refresh = useCallback(async () => {
     await qc.invalidateQueries({ queryKey: ['bi-analytics-dashboard-charts', dashboardId] });
     await qc.invalidateQueries({ queryKey: ['bi-analytics-charts'] });
+    await qc.invalidateQueries({ queryKey: ['bi-analytics-source-widgets'] });
     onChanged?.();
   }, [dashboardId, onChanged, qc]);
 
@@ -88,6 +128,15 @@ export default function BiDashboardWidgetsPanel({
         <button
           type="button"
           className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
+          onClick={() => void refresh()}
+          aria-label={t('common.refresh')}
+          title={t('common.refresh')}
+        >
+          <RefreshCw className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
           onClick={onClose}
           aria-label={t('common.close')}
         >
@@ -102,68 +151,106 @@ export default function BiDashboardWidgetsPanel({
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-        {chartsQ.isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-xs text-slate-500">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {t('bi.analytics.loading')}
+        <section className="mb-3">
+          <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t('bi.analytics.sourceWidgetsTitle')}
+            </p>
+            <span className="truncate text-[10px] font-medium text-violet-700">{activeLabel}</span>
           </div>
-        ) : !charts.length ? (
-          <div className="px-2 py-8 text-center text-xs text-slate-500">
-            <p>{t('bi.analytics.emptyWidgets')}</p>
-            <p className="mt-2 text-slate-400">{t('bi.analytics.emptyWidgetsHint')}</p>
-          </div>
-        ) : (
-          <ul className="space-y-1.5">
-            {charts.map((chart, index) => {
-              const busy = busyId === chart.id && mutating;
-              return (
-                <li
-                  key={chart.id}
-                  className="flex items-start gap-1 rounded-xl border border-[#E1DFDD]/90 bg-white px-2 py-2 shadow-sm"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-xs font-medium text-slate-800">
-                      {chart.title || `#${chart.id}`}
-                    </p>
-                    <p className="mt-0.5 text-[10px] text-slate-400">#{chart.id}</p>
-                  </div>
-                  <div className="flex shrink-0 flex-col gap-0.5">
-                    <button
-                      type="button"
-                      className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
-                      disabled={index === 0 || mutating}
-                      onClick={() => void move(index, -1)}
-                      aria-label={t('bi.analytics.moveWidgetUp')}
-                      title={t('bi.analytics.moveWidgetUp')}
+          {sourceWidgetsQ.isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t('bi.analytics.loading')}
+            </div>
+          ) : sourceWidgetsQ.isError ? (
+            <p className="px-1 py-3 text-xs text-rose-700">
+              {localizeUserMessage((sourceWidgetsQ.error as Error).message)}
+            </p>
+          ) : !sourceWidgets.length ? (
+            <p className="px-1 py-3 text-xs text-slate-500">{t('bi.analytics.sourceWidgetsEmpty')}</p>
+          ) : (
+            <ul className="space-y-2">
+              {sourceWidgets.map((w) => (
+                <SourceWidgetCard key={w.id} widget={w} />
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {dashboardId > 0 ? (
+          <section>
+            <p className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+              {t('bi.analytics.supersetWidgetsTitle')}
+            </p>
+            {chartsQ.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('bi.analytics.loading')}
+              </div>
+            ) : !charts.length ? (
+              <div className="px-1 py-4 text-center text-xs text-slate-500">
+                <p>{t('bi.analytics.emptyWidgets')}</p>
+                <p className="mt-2 text-slate-400">{t('bi.analytics.emptyWidgetsHint')}</p>
+              </div>
+            ) : (
+              <ul className="space-y-1.5">
+                {charts.map((chart, index) => {
+                  const busy = busyId === chart.id && mutating;
+                  return (
+                    <li
+                      key={chart.id}
+                      className="flex items-start gap-1 rounded-xl border border-[#E1DFDD]/90 bg-white px-2 py-2 shadow-sm"
                     >
-                      <ArrowUp className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
-                      disabled={index >= charts.length - 1 || mutating}
-                      onClick={() => void move(index, 1)}
-                      aria-label={t('bi.analytics.moveWidgetDown')}
-                      title={t('bi.analytics.moveWidgetDown')}
-                    >
-                      <ArrowDown className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded p-1 text-rose-600 hover:bg-rose-50 disabled:opacity-40"
-                    disabled={mutating}
-                    onClick={() => void remove(chart.id)}
-                    aria-label={t('bi.removeWidget')}
-                    title={t('bi.removeWidget')}
-                  >
-                    {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                      <div className="min-w-0 flex-1">
+                        <p className="line-clamp-2 text-xs font-medium text-slate-800">
+                          {chart.title || `#${chart.id}`}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">#{chart.id}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-0.5">
+                        <button
+                          type="button"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                          disabled={index === 0 || mutating}
+                          onClick={() => void move(index, -1)}
+                          aria-label={t('bi.analytics.moveWidgetUp')}
+                          title={t('bi.analytics.moveWidgetUp')}
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded p-1 text-slate-500 hover:bg-slate-100 disabled:opacity-40"
+                          disabled={index >= charts.length - 1 || mutating}
+                          onClick={() => void move(index, 1)}
+                          aria-label={t('bi.analytics.moveWidgetDown')}
+                          title={t('bi.analytics.moveWidgetDown')}
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-rose-600 hover:bg-rose-50 disabled:opacity-40"
+                        disabled={mutating}
+                        onClick={() => void remove(chart.id)}
+                        aria-label={t('bi.removeWidget')}
+                        title={t('bi.removeWidget')}
+                      >
+                        {busy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        ) : null}
       </div>
     </div>
   );

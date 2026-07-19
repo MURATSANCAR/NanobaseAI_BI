@@ -61,9 +61,17 @@ export default function BiSchemaPage() {
   const packRef = useRef<HTMLDivElement>(null);
   const flags = getFeatureFlags();
 
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled: isRunnerConfigured(config),
+    staleTime: 30_000,
+  });
+  const activeSourceId = sourcesQ.data?.active_id || undefined;
+
   const schema = useQuery({
-    queryKey: ['bi-schema'],
-    queryFn: () => api.bi.schema(config),
+    queryKey: ['bi-schema', activeSourceId],
+    queryFn: () => api.bi.schema(config, activeSourceId),
     enabled: isRunnerConfigured(config) && flags.enableSchemaExplorer,
     retry: false,
     staleTime: 60_000,
@@ -71,15 +79,15 @@ export default function BiSchemaPage() {
   });
 
   const graph = useQuery({
-    queryKey: ['bi-schema-graph'],
-    queryFn: () => api.bi.schemaGraph(config),
+    queryKey: ['bi-schema-graph', activeSourceId],
+    queryFn: () => api.bi.schemaGraph(config, activeSourceId),
     enabled: isRunnerConfigured(config) && Boolean(schema.data?.tables?.length),
     staleTime: 60_000,
     retry: 1,
   });
 
   const refresh = useMutation({
-    mutationFn: () => api.bi.refreshSchema(config),
+    mutationFn: () => api.bi.refreshSchema(config, activeSourceId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['bi-schema'] });
       void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
@@ -183,7 +191,7 @@ export default function BiSchemaPage() {
   ) : null;
 
   return (
-    <PageShell pageId="biSchema" titleKey="bi.schemaTitle" subtitleKey="bi.schemaSubtitle" maxWidth="max-w-7xl" showBiFlow>
+    <PageShell pageId="biSchema" titleKey="bi.schemaTitle" subtitleKey="bi.schemaSubtitle" maxWidth="max-w-[1600px]">
       <div className="bi-schema-stage">
         <ApiErrorBanner error={schemaLoadFailed ? (schema.error as Error) : null} />
         <ApiErrorBanner error={graph.isError ? (graph.error as Error) : null} />

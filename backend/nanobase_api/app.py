@@ -31,7 +31,19 @@ META_DSN = os.environ.get(
 )
 _engine = None
 
-bridge_mod.ACTIVE_DB["id"] = os.environ.get("NANOBASE_ACTIVE_DB", "bi_reporting")
+from nanobase_api.infrastructure.active_source import (  # noqa: E402
+    resolve_active_id,
+    resolve_schema_datasource_id,
+    write_persisted_active,
+)
+from nanobase_api.infrastructure.datasource_registry import (  # noqa: E402
+    merge_gateway_ro_sources,
+)
+
+bridge_mod.ACTIVE_DB["id"] = resolve_active_id(
+    memory_id=None,
+    known_ids=None,
+)
 
 
 def _meta_engine():
@@ -46,7 +58,12 @@ _orig_health = bridge_mod.health
 
 
 def _sources_list_payload_overlay(tenant_id: str | None = None) -> dict:
+    # Bridge _sources_list_payload stamps ACTIVE_DB from a *different*
+    # connection.local.json than nanobase secrets — remember and restore.
+    remembered = str(bridge_mod.ACTIVE_DB.get("id") or "").strip()
     base = _orig_sources_list()
+    if remembered:
+        bridge_mod.ACTIVE_DB["id"] = remembered
     by_id = {s["id"]: s for s in (base.get("sources") or [])}
 
     try:
@@ -91,101 +108,19 @@ def _sources_list_payload_overlay(tenant_id: str | None = None) -> dict:
                     "project_id": r["project_id"] or "default",
                     "password_masked": "********" if r["secret_ref"] else None,
                     "deployment": "cloud",
+                    "managed": False,
+                    "protected": False,
                 }
     except Exception:
         pass
 
-    if "bi_reporting" not in by_id:
-        by_id["bi_reporting"] = {
-            "id": "bi_reporting",
-            "label": "BI Reporting (RO)",
-            "driver": "postgresql",
-            "dialect": "postgresql",
-            "host": "127.0.0.1",
-            "port": 5435,
-            "database": "bi_reporting",
-            "username": "bi_reporting_ro",
-            "ssl": False,
-            "secret_ref": "file:/data/nanobaseai/bi/secrets/reporting-ro.password",
-            "tenant_id": "default",
-            "project_id": "default",
-            "password_masked": "********",
-            "deployment": "onprem",
-        }
+    # Neon / Oracle / SAP / local reporting — whatever is registered in secrets maps
+    merge_gateway_ro_sources(by_id)
 
-    # Faz 8: surface Oracle RO sources registered for Query Gateway (no passwords)
-    try:
-        secrets = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
-        ora_map = secrets / "oracle-ro.datasources.json"
-        if ora_map.is_file():
-            raw = json.loads(ora_map.read_text(encoding="utf-8"))
-            for sid, cfg in (raw.get("sources") or raw).items():
-                if not isinstance(cfg, dict):
-                    continue
-                by_id[str(sid)] = {
-                    "id": str(sid),
-                    "label": cfg.get("label") or str(sid),
-                    "driver": "oracle",
-                    "dialect": "oracle",
-                    "host": cfg.get("host") or "",
-                    "port": int(cfg.get("port") or 1522),
-                    "database": cfg.get("service_name") or cfg.get("database") or "",
-                    "username": cfg.get("user") or cfg.get("username") or "",
-                    "ssl": True,
-                    "secret_ref": cfg.get("password_file")
-                    or f"file:{secrets}/oracle-adb.password",
-                    "tenant_id": "default",
-                    "project_id": "default",
-                    "password_masked": "********",
-                    "deployment": "cloud",
-                }
-        sap_map = secrets / "sap-ro.datasources.json"
-        if sap_map.is_file():
-            raw = json.loads(sap_map.read_text(encoding="utf-8"))
-            for sid, cfg in (raw.get("sources") or raw).items():
-                if not isinstance(cfg, dict):
-                    continue
-                driver = (cfg.get("driver") or "").lower()
-                if driver in ("hana", "sap_hana", "hdb"):
-                    by_id[str(sid)] = {
-                        "id": str(sid),
-                        "label": cfg.get("label") or str(sid),
-                        "driver": "hana",
-                        "dialect": "hana",
-                        "host": cfg.get("host") or "",
-                        "port": int(cfg.get("port") or 443),
-                        "database": cfg.get("database") or "",
-                        "username": cfg.get("user") or cfg.get("username") or "",
-                        "ssl": True,
-                        "secret_ref": cfg.get("password_file") or "",
-                        "tenant_id": "default",
-                        "project_id": "default",
-                        "password_masked": "********",
-                        "deployment": "cloud",
-                    }
-                elif driver in ("odata", "cds", "cds_odata"):
-                    by_id[str(sid)] = {
-                        "id": str(sid),
-                        "label": cfg.get("label") or str(sid),
-                        "driver": "odata",
-                        "dialect": "odata",
-                        "host": cfg.get("base_url") or cfg.get("url") or "",
-                        "port": 443,
-                        "database": "",
-                        "username": cfg.get("user") or cfg.get("username") or "",
-                        "ssl": True,
-                        "secret_ref": cfg.get("password_file") or cfg.get("token_file") or "",
-                        "tenant_id": "default",
-                        "project_id": "default",
-                        "password_masked": "********",
-                        "deployment": "cloud",
-                    }
-    except Exception:
-        pass
-
-    active = os.environ.get("NANOBASE_ACTIVE_DB") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
-    if active not in by_id:
-        active = next(iter(by_id), "bi_reporting")
+    active = resolve_active_id(
+        memory_id=bridge_mod.ACTIVE_DB.get("id"),
+        known_ids=set(by_id.keys()),
+    )
     bridge_mod.ACTIVE_DB["id"] = active
 
     return {"active_id": active, "sources": list(by_id.values())}
@@ -569,12 +504,24 @@ async def sources_delete_api(
     return _ds_service().delete_source(principal, source_id)
 
 
+async def _qg_registered_datasource_ids() -> set[str]:
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{QG_BASE}/health")
+            if r.status_code >= 400:
+                return set()
+            return {str(x) for x in (r.json() or {}).get("datasources") or []}
+    except Exception:
+        return set()
+
+
 async def _test_datasource(principal: RequestPrincipal, sid: str) -> dict:
     require_source_admin(principal)
     try:
         return _ds_service().test_connection(principal, sid)
     except ApiError as e:
-        if e.code == "DATASOURCE_NOT_FOUND" and sid in ("bi_reporting", "erp", "sigorta"):
+        # Any Gateway-registered source (not a fixed name list) can be probed via QG
+        if e.code == "DATASOURCE_NOT_FOUND" and sid in await _qg_registered_datasource_ids():
             async with httpx.AsyncClient(timeout=10.0) as client:
                 r = await client.post(
                     f"{QG_BASE}/api/v1/query/execute",
@@ -614,8 +561,18 @@ async def connection_test_api(
 
 @app.post("/api/v1/bi/sources/{source_id}/activate")
 async def sources_activate_api(source_id: str) -> dict:
-    bridge_mod.ACTIVE_DB["id"] = source_id
-    return {"ok": True, "active_id": source_id}
+    sid = str(source_id or "").strip()
+    if not sid:
+        raise ApiError("SOURCE_ID_REQUIRED", "source_id required", status=400)
+    bridge_mod.ACTIVE_DB["id"] = sid
+    write_persisted_active(sid)
+    # Return list shape FE expects after activate
+    overlay = _sources_list_payload_overlay()
+    return {
+        "ok": True,
+        "active_id": overlay.get("active_id") or sid,
+        "sources": overlay.get("sources") or [],
+    }
 
 
 @app.post("/api/v1/bi/sources/{source_id}/scan")
@@ -635,9 +592,23 @@ async def schema_scan_status_api(
     return _scan_service().get_status(principal, scan_id)
 
 
+def _schema_datasource_id(request: Request | None = None, body: dict | None = None) -> str:
+    q = ""
+    b = ""
+    if request is not None:
+        q = str(request.query_params.get("datasource_id") or request.query_params.get("db_name") or "").strip()
+    if isinstance(body, dict):
+        b = str(body.get("datasource_id") or body.get("db_name") or "").strip()
+    return resolve_schema_datasource_id(
+        query_datasource_id=q or None,
+        body_datasource_id=b or None,
+        memory_id=bridge_mod.ACTIVE_DB.get("id"),
+    )
+
+
 @app.get("/api/v1/bi/schema")
-async def schema_get() -> JSONResponse:
-    ds = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+async def schema_get(request: Request) -> JSONResponse:
+    ds = _schema_datasource_id(request)
     try:
         return JSONResponse(fetch_schema(ds))
     except Exception as e:
@@ -654,8 +625,15 @@ async def schema_get() -> JSONResponse:
 
 
 @app.post("/api/v1/bi/schema/refresh")
-async def schema_refresh() -> JSONResponse:
-    ds = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+async def schema_refresh(request: Request) -> JSONResponse:
+    body: dict = {}
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            body = {}
+    except Exception:
+        body = {}
+    ds = _schema_datasource_id(request, body)
     try:
         schema = fetch_schema(ds)
         return JSONResponse(

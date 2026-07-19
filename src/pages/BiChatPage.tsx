@@ -58,7 +58,6 @@ export default function BiChatPage() {
       titleKey="bi.chatFullscreen"
       subtitleKey="bi.chatWelcome"
       maxWidth="max-w-[1600px]"
-      showBiFlow
     >
       <div className="bi-chat-page flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="bi-chat-page-toolbar mb-2 shrink-0 lg:hidden">

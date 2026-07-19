@@ -419,7 +419,7 @@ export type BiConnectionProfile = {
   id?: string;
   active_id?: string | null;
   label: string;
-  deployment: 'local' | 'cloud';
+  deployment: 'local' | 'cloud' | 'onprem';
   driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase' | 'hana' | 'odata';
   host: string;
   port: number;
@@ -437,6 +437,9 @@ export type BiConnectionProfile = {
   last_test_ok?: boolean | null;
   last_test_message?: string | null;
   active?: boolean;
+  /** Gateway/secrets-map managed — not user-deletable */
+  managed?: boolean;
+  protected?: boolean;
 };
 
 export type BiSourcesList = {

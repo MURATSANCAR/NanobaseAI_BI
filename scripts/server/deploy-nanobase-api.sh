@@ -25,6 +25,11 @@ fi
 META_PW="$(tr -d '\n\r' < "${SECRETS}/bi-meta-db.password")"
 META_PW_ENC="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$META_PW")"
 ENV_FILE=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
+# Keep operator overlays (Superset, embed key, etc.) across redeploys
+PRESERVE_ENV="$(mktemp)"
+if [[ -f "$ENV_FILE" ]]; then
+  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|BI_SOURCES_FILE)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
+fi
 umask 077
 cat > "$ENV_FILE" <<EOF
 NANOBASE_API_PORT=8790
@@ -47,12 +52,18 @@ QDRANT_URL=http://127.0.0.1:6333
 EOF
 # Prefer shared contract embedding key when present (BGE-M3 :8083)
 if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
+  # Reuse previously deployed key first
+  if [[ -s "$PRESERVE_ENV" ]]; then
+    BI_EMBED_API_KEY="$(grep -E '^BI_EMBED_API_KEY=' "$PRESERVE_ENV" | head -1 | cut -d= -f2- | tr -d '\"\r')"
+  fi
+fi
+if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
   for cand in \
+    "${ROOT}/backend/.env" \
     /data/nanobaseai/mobile-qa/contract-intelligence/embedding-service/.env \
     /data/nanobaseai/bi/secrets/embed-api.key; do
     if [[ -f "$cand" ]]; then
-      # shellcheck disable=SC1090
-      BI_EMBED_API_KEY="$(grep -E '^API_KEY=' "$cand" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\"\r')"
+      BI_EMBED_API_KEY="$(grep -E '^(BI_EMBED_API_KEY|API_KEY|OPENAI_API_KEY)=' "$cand" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\"\r')"
       [[ -n "$BI_EMBED_API_KEY" ]] && break
     fi
   done
@@ -62,6 +73,16 @@ if [[ -n "${BI_EMBED_API_KEY:-}" ]]; then
 else
   log "WARN: BI_EMBED_API_KEY unset — schema retrieve will fail until set"
 fi
+# Restore preserved overlays (skip BI_EMBED_API_KEY if already written)
+if [[ -s "$PRESERVE_ENV" ]]; then
+  while IFS= read -r line; do
+    k="${line%%=*}"
+    [[ "$k" == "BI_EMBED_API_KEY" ]] && grep -q '^BI_EMBED_API_KEY=' "$ENV_FILE" && continue
+    printf '%s\n' "$line" >> "$ENV_FILE"
+  done <"$PRESERVE_ENV"
+  log "Restored preserved env overlays from prior nanobase_api.env"
+fi
+rm -f "$PRESERVE_ENV"
 chmod 600 "$ENV_FILE"
 
 log "Running Alembic migrations"

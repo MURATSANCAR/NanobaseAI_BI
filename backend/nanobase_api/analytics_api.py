@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from fastapi import APIRouter, Request
@@ -9,8 +10,11 @@ from fastapi.responses import JSONResponse
 
 from nanobase_api.config import get_settings
 from nanobase_api.infrastructure.superset_client import SupersetError, get_superset_client
+from nanobase_api.source_widgets import build_source_widgets
 
 router = APIRouter(tags=["analytics"])
+
+QG_BASE = os.environ.get("QUERY_GATEWAY_BASE", "http://127.0.0.1:8792").rstrip("/")
 
 
 def _disabled_status() -> dict[str, Any]:
@@ -27,6 +31,22 @@ def _err(exc: SupersetError) -> JSONResponse:
         status_code=exc.status,
         content={"error": exc.code, "message": exc.message, "detail": exc.message},
     )
+
+
+@router.get("/api/v1/bi/analytics/source-widgets")
+async def analytics_source_widgets(request: Request) -> dict[str, Any]:
+    """Live KPI widgets for the active (or requested) BI datasource — fills Superset widgets panel."""
+    # Prefer explicit ?datasource_id=; else bridge ACTIVE_DB if imported by nanobase_api.app
+    q_sid = (request.query_params.get("datasource_id") or "").strip()
+    if not q_sid:
+        try:
+            from bridge import app as bridge_mod  # type: ignore
+
+            q_sid = str(bridge_mod.ACTIVE_DB.get("id") or "")
+        except Exception:
+            q_sid = ""
+    sid = q_sid or "bi_reporting"
+    return await build_source_widgets(datasource_id=sid, qg_base=QG_BASE)
 
 
 @router.get("/api/v1/bi/analytics/status")

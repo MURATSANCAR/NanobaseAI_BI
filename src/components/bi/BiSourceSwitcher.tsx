@@ -25,15 +25,30 @@ export default function BiSourceSwitcher({ config, className, compact }: Props) 
 
   const activateMut = useMutation({
     mutationFn: (id: string) => api.bi.sources.activate(config, id),
-    onSuccess: () => {
+    onSuccess: (data, id) => {
+      // Optimistic + server list shape so the chip updates immediately.
+      qc.setQueryData(['bi-sources', config], (prev: unknown) => {
+        const base = (prev && typeof prev === 'object' ? prev : {}) as {
+          sources?: unknown[];
+          active_id?: string | null;
+        };
+        return {
+          ...base,
+          sources: (data as { sources?: unknown[] })?.sources ?? base.sources ?? [],
+          active_id: (data as { active_id?: string })?.active_id ?? id,
+        };
+      });
       void qc.invalidateQueries({ queryKey: ['bi-sources'] });
       void qc.invalidateQueries({ queryKey: ['bi-connection'] });
       void qc.invalidateQueries({ queryKey: ['bi-status'] });
       void qc.invalidateQueries({ queryKey: ['bi-schema'] });
+      void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
       void qc.invalidateQueries({ queryKey: ['bi-briefing'] });
       void qc.invalidateQueries({ queryKey: ['bi-ops-health'] });
       void qc.invalidateQueries({ queryKey: ['bi-templates'] });
       void qc.invalidateQueries({ queryKey: ['bi-kpi-suggestions'] });
+      void qc.invalidateQueries({ queryKey: ['bi-analytics-source-widgets'] });
+      void qc.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] });
     },
   });
 

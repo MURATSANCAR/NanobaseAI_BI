@@ -29,25 +29,9 @@ def _pg_connect(cfg: dict[str, Any]):
 
 
 def _datasource_cfg(datasource_id: str) -> dict[str, Any] | None:
-    if datasource_id == "bi_reporting":
-        ro = SECRETS / "reporting-ro.password"
-        if not ro.is_file():
-            return None
-        return {
-            "host": os.environ.get("REPORTING_HOST", "127.0.0.1"),
-            "port": int(os.environ.get("REPORTING_PORT", "5435")),
-            "database": os.environ.get("REPORTING_DB", "bi_reporting"),
-            "user": os.environ.get("REPORTING_RO_USER", "bi_reporting_ro"),
-            "password": ro.read_text(encoding="utf-8").strip(),
-            "sslmode": "disable",
-        }
-    neon = SECRETS / "neon-ro.datasources.json"
-    if neon.is_file():
-        raw = json.loads(neon.read_text(encoding="utf-8"))
-        cfg = (raw.get("sources") or {}).get(datasource_id)
-        if isinstance(cfg, dict) and cfg.get("host"):
-            return cfg
-    return None
+    from nanobase_api.infrastructure.datasource_registry import resolve_pg_connect_cfg
+
+    return resolve_pg_connect_cfg(datasource_id)
 
 
 def fetch_schema(datasource_id: str) -> dict[str, Any]:

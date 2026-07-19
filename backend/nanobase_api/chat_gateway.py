@@ -91,8 +91,6 @@ def _schema_hint_for(datasource_id: str) -> str:
             "Only SELECT/WITH. Owner-qualify (NANOBASE_REPORTING.*). "
             "Use FETCH FIRST n ROWS ONLY. No LIMIT, ILIKE, hints, DB links, or PL/SQL."
         )
-    if datasource_id in ("bi_reporting", "", "default"):
-        return DEFAULT_SCHEMA_HINT
     if _HINTS_CACHE is None:
         _HINTS_CACHE = {}
         hints_path = SECRETS / "neon-schema-hints.json"
@@ -108,7 +106,18 @@ def _schema_hint_for(datasource_id: str) -> str:
                     _HINTS_CACHE[str(sid)] = "\n".join(lines)
             except Exception:
                 pass
-    return _HINTS_CACHE.get(datasource_id) or (
+    if datasource_id in _HINTS_CACHE:
+        return _HINTS_CACHE[datasource_id]
+    # Local reporting seed hint only when that datasource id is the configured reporting id
+    try:
+        from nanobase_api.infrastructure.datasource_registry import reporting_datasource_id
+
+        if datasource_id in ("", "default") or datasource_id == reporting_datasource_id():
+            return DEFAULT_SCHEMA_HINT
+    except Exception:
+        if datasource_id in ("", "default"):
+            return DEFAULT_SCHEMA_HINT
+    return (
         f"PostgreSQL datasource '{datasource_id}'. Only SELECT/WITH. Prefer LIMIT 50."
     )
 

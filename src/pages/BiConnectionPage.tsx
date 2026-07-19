@@ -4,13 +4,11 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, ChevronDown, Database, Loader2, RefreshCw, Table2, Trash2, Wifi, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { PageShell } from '@/components/PageShell';
-import BiFirstValueTour from '@/components/bi/BiFirstValueTour';
 import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
 import { api, isRunnerConfigured } from '@/api/client';
 import { createDatasourceService } from '@/api/services';
 import { useApiConfig } from '@/context/ApiContext';
 import { useAuth } from '@/context/AuthContext';
-import { useBiChatDock } from '@/context/BiChatDockContext';
 import type { BiConnectionProfile, BiConnectionUpsert } from '@/api/types';
 import type { SchemaScan } from '@/api/contracts/datasource';
 import { formatBackendErrorText, localizeUserMessage } from '@/utils/backendLabels';
@@ -124,7 +122,6 @@ export default function BiConnectionPage() {
   const { config } = useApiConfig();
   const { canBi } = useAuth();
   const qc = useQueryClient();
-  const { openChat } = useBiChatDock();
   const [searchParams] = useSearchParams();
   const enabled = isRunnerConfigured(config);
   const canWrite = canBi('sources.write');
@@ -253,7 +250,8 @@ export default function BiConnectionPage() {
     mutationFn: async () => {
       const sid = selectedId;
       if (!sid) throw new Error(t('bi.deleteNoSource'));
-      if (['bi_reporting', 'erp', 'sigorta'].includes(sid)) {
+      const src = sources.find((s) => s.id === sid);
+      if (src?.protected || src?.managed) {
         throw new Error(t('bi.deleteSystemSourceBlocked'));
       }
       return dsService.deleteDatasource(config, sid);
@@ -283,16 +281,9 @@ export default function BiConnectionPage() {
   };
 
   return (
-    <PageShell pageId="biConnection" titleKey="bi.sources.title" subtitleKey="bi.sources.subtitle" maxWidth="max-w-4xl" showBiFlow>
-      <div className="space-y-4">
-        <BiFirstValueTour
-          variant="panel"
-          config={config}
-          status={biStatus.data}
-          onAskDemo={(prompt) => openChat({ prompt })}
-        />
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+    <PageShell pageId="biConnection" titleKey="bi.sources.title" subtitleKey="bi.sources.subtitle" maxWidth="max-w-[1400px]">
+      <div className="flex w-full flex-col gap-4 pb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <BiSourceSwitcher config={config} />
         <button
           type="button"
@@ -308,7 +299,7 @@ export default function BiConnectionPage() {
       </div>
 
       {sources.length > 0 && (
-        <div className="mb-4 grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {sources.map((s) => {
             const id = s.id || '';
             const active = id === activeId;
@@ -651,7 +642,11 @@ export default function BiConnectionPage() {
               {canScan && !flags.useNanobaseBackend && (
                 <p className="w-full text-xs text-slate-500 sm:w-auto">{t('bi.scanLegacyUnavailable')}</p>
               )}
-              {canWrite && selectedId && !['bi_reporting', 'erp', 'sigorta'].includes(selectedId) && (
+              {canWrite &&
+                selectedId &&
+                selected &&
+                !selected.protected &&
+                !selected.managed && (
                 <button
                   type="button"
                   className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 text-rose-700 sm:w-auto"

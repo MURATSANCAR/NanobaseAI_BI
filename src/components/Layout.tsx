@@ -77,6 +77,7 @@ export default function Layout() {
                     : 'flex min-h-0 min-w-0 flex-1 flex-col'
                 }
               >
+                {/* Non-immersive pages scroll in <main>; do not nest another overflow-hidden here. */}
                 <Outlet context={outletContext} />
               </div>
             </main>

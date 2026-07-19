@@ -61,10 +61,25 @@ export function createBiApi() {
   const bi = {
     status: (c: ApiConfig) => request<BiStatus>(c, '/api/v1/bi/status'),
     health: (c: ApiConfig) => request<Record<string, unknown>>(c, '/api/v1/bi/health'),
-    schema: (c: ApiConfig) => request<BiSchema>(c, '/api/v1/bi/schema'),
-    schemaGraph: (c: ApiConfig) => request<BiSchemaGraph>(c, '/api/v1/bi/schema/graph'),
-    refreshSchema: (c: ApiConfig) =>
-      request<BiSchema>(c, '/api/v1/bi/schema/refresh', { method: 'POST' }),
+    schema: (c: ApiConfig, datasourceId?: string) =>
+      request<BiSchema>(
+        c,
+        datasourceId
+          ? `/api/v1/bi/schema?datasource_id=${encodeURIComponent(datasourceId)}`
+          : '/api/v1/bi/schema',
+      ),
+    schemaGraph: (c: ApiConfig, datasourceId?: string) =>
+      request<BiSchemaGraph>(
+        c,
+        datasourceId
+          ? `/api/v1/bi/schema/graph?datasource_id=${encodeURIComponent(datasourceId)}`
+          : '/api/v1/bi/schema/graph',
+      ),
+    refreshSchema: (c: ApiConfig, datasourceId?: string) =>
+      request<BiSchema>(c, '/api/v1/bi/schema/refresh', {
+        method: 'POST',
+        body: JSON.stringify(datasourceId ? { datasource_id: datasourceId } : {}),
+      }),
     briefing: (c: ApiConfig, dashboardId: string, locale = 'en') =>
       request<{
         dashboard_id: string;
@@ -1237,6 +1252,18 @@ export function createBiApi() {
         }),
       charts: (c: ApiConfig) =>
         request<{ charts: Array<{ id: number; title?: string; viz_type?: string }> }>(c, '/api/v1/bi/analytics/charts'),
+      sourceWidgets: (c: ApiConfig, datasourceId?: string) =>
+        request<{
+          datasource_id: string;
+          widgets: import('@/api/types').BiWidget[];
+          count: number;
+          errors?: Array<{ id: string; message: string }>;
+        }>(
+          c,
+          `/api/v1/bi/analytics/source-widgets${
+            datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''
+          }`,
+        ),
       datasets: (c: ApiConfig) =>
         request<{ datasets: Array<{ id: number; table_name?: string }> }>(c, '/api/v1/bi/analytics/datasets'),
       guestToken: (c: ApiConfig, dashboardId: number) =>
