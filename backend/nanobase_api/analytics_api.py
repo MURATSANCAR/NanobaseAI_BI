@@ -37,15 +37,18 @@ def _err(exc: SupersetError) -> JSONResponse:
 async def analytics_source_widgets(request: Request) -> dict[str, Any]:
     """Live KPI widgets for the active (or requested) BI datasource — fills Superset widgets panel."""
     # Prefer explicit ?datasource_id=; else bridge ACTIVE_DB if imported by nanobase_api.app
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
     q_sid = (request.query_params.get("datasource_id") or "").strip()
+    memory = ""
     if not q_sid:
         try:
             from bridge import app as bridge_mod  # type: ignore
 
-            q_sid = str(bridge_mod.ACTIVE_DB.get("id") or "")
+            memory = str(bridge_mod.ACTIVE_DB.get("id") or "")
         except Exception:
-            q_sid = ""
-    sid = q_sid or "bi_reporting"
+            memory = ""
+    sid = prefer_datasource_id(q_sid, memory_id=memory)
     return await build_source_widgets(datasource_id=sid, qg_base=QG_BASE)
 
 

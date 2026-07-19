@@ -130,6 +130,83 @@ class ConversationRepository:
         # chronological
         return [{"role": r["role"], "content": r["content"]} for r in reversed(list(rows))]
 
+    def top_user_questions(
+        self,
+        *,
+        tenant_id: str,
+        datasource_id: str | None = None,
+        limit: int = 8,
+    ) -> list[dict[str, Any]]:
+        """Most-asked natural-language questions for a datasource (learning signal)."""
+        lim = max(1, min(int(limit or 8), 20))
+        ds = (datasource_id or "").strip() or None
+        merged: dict[str, dict[str, Any]] = {}
+
+        def _absorb(question: str, cnt: int, last_at: Any) -> None:
+            q = (question or "").strip()
+            if len(q) < 8:
+                return
+            key = " ".join(q.lower().split())[:240]
+            if not key:
+                return
+            prev = merged.get(key)
+            if prev is None:
+                merged[key] = {"question": q, "count": int(cnt or 1), "last_at": last_at}
+                return
+            prev["count"] = int(prev["count"]) + int(cnt or 1)
+            if last_at and (prev.get("last_at") is None or last_at > prev["last_at"]):
+                prev["last_at"] = last_at
+                prev["question"] = q
+
+        with self._engine.connect() as conn:
+            for r in conn.execute(
+                text(
+                    """
+                    SELECT
+                      MIN(question) AS question,
+                      COUNT(*)::int AS cnt,
+                      MAX(created_at) AS last_at
+                    FROM bi_query_plans
+                    WHERE tenant_id = :t
+                      AND question IS NOT NULL
+                      AND length(trim(question)) >= 8
+                      AND (:ds IS NULL OR datasource_id = :ds)
+                    GROUP BY lower(regexp_replace(trim(question), '\\s+', ' ', 'g'))
+                    """
+                ),
+                {"t": tenant_id, "ds": ds},
+            ).mappings():
+                _absorb(str(r.get("question") or ""), int(r.get("cnt") or 1), r.get("last_at"))
+            for r in conn.execute(
+                text(
+                    """
+                    SELECT
+                      MIN(content) AS question,
+                      COUNT(*)::int AS cnt,
+                      MAX(created_at) AS last_at
+                    FROM bi_conversation_messages
+                    WHERE tenant_id = :t
+                      AND role = 'user'
+                      AND length(trim(content)) >= 8
+                      AND length(trim(content)) <= 280
+                      AND (:ds IS NULL OR datasource_id = :ds)
+                    GROUP BY lower(regexp_replace(trim(content), '\\s+', ' ', 'g'))
+                    """
+                ),
+                {"t": tenant_id, "ds": ds},
+            ).mappings():
+                _absorb(str(r.get("question") or ""), int(r.get("cnt") or 1), r.get("last_at"))
+
+        ranked = sorted(
+            merged.values(),
+            key=lambda x: (-int(x.get("count") or 0), x.get("last_at") or 0),
+        )
+        return [
+            {"question": str(item["question"]).strip(), "count": int(item.get("count") or 1)}
+            for item in ranked[:lim]
+            if item.get("question")
+        ]
+
     def save_plan(
         self,
         *,

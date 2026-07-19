@@ -22,7 +22,6 @@ import BiMorningBriefing from '@/components/bi/BiMorningBriefing';
 import BiNarrativeStrip from '@/components/bi/BiNarrativeStrip';
 import BiSourceAnalyticsCanvas from '@/components/bi/BiSourceAnalyticsCanvas';
 import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
-import BiSupersetEmbed from '@/components/bi/BiSupersetEmbed';
 import type { LayoutOutletContext } from '@/components/Layout';
 import { api, isRunnerConfigured } from '@/api/client';
 import { useApiConfig } from '@/context/ApiContext';
@@ -81,7 +80,6 @@ export default function BiSupersetPage() {
     searchParams.get('comments') === '1' ? 'comments' : 'widgets',
   );
   const [lineageOpen, setLineageOpen] = useState(() => Boolean(searchParams.get('metric')));
-  const [embedNonce, setEmbedNonce] = useState(0);
   const [artifactBanner, setArtifactBanner] = useState<string | null>(null);
   const [anomalyBanner, setAnomalyBanner] = useState<string | null>(
     () => (anomalyFromUrl ? anomalyFromUrl : null),
@@ -135,7 +133,6 @@ export default function BiSupersetPage() {
         setOpenError(null);
         const guest = await api.bi.analytics.guestToken(config, id);
         setEmbedFromGuest(guest, title);
-        setEmbedNonce((n) => n + 1);
         setPickerOpen(false);
       } catch (exc) {
         setOpenError(exc instanceof Error ? exc.message : String(exc));
@@ -155,7 +152,6 @@ export default function BiSupersetPage() {
       if (guest) {
         const dash = dashboardsQ.data?.dashboards?.find((d) => Number(d.id) === Number(guest.dashboard_id));
         setEmbedFromGuest(guest, dash?.title);
-        setEmbedNonce((n) => n + 1);
       } else if (resp.analytics?.dashboard_id) {
         const id = Number(resp.analytics.dashboard_id);
         const dash = dashboardsQ.data?.dashboards?.find((d) => Number(d.id) === id);
@@ -174,7 +170,6 @@ export default function BiSupersetPage() {
         qc.invalidateQueries({ queryKey: ['bi-analytics-dashboard-charts'] });
         // Force embed remount so newly pinned charts appear without manual refresh.
         if (resp.intent === 'pin' || resp.intent === 'pin_dashboard' || resp.analytics?.guest) {
-          setEmbedNonce((n) => n + 1);
         }
       }
     },
@@ -320,7 +315,6 @@ export default function BiSupersetPage() {
             },
             created.title || wantedTitle,
           );
-          setEmbedNonce((n) => n + 1);
         } else if (created.id) {
           await openDashboard(Number(created.id), created.title || wantedTitle);
         }

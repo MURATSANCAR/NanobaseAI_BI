@@ -32,6 +32,7 @@ META_DSN = os.environ.get(
 _engine = None
 
 from nanobase_api.infrastructure.active_source import (  # noqa: E402
+    prefer_datasource_id,
     resolve_active_id,
     resolve_schema_datasource_id,
     write_persisted_active,
@@ -39,6 +40,14 @@ from nanobase_api.infrastructure.active_source import (  # noqa: E402
 from nanobase_api.infrastructure.datasource_registry import (  # noqa: E402
     merge_gateway_ro_sources,
 )
+
+
+def _active_ds(*candidates: str | None) -> str:
+    """Resolve request/active datasource — never a hardcoded source name."""
+    return prefer_datasource_id(
+        *candidates,
+        memory_id=bridge_mod.ACTIVE_DB.get("id"),
+    )
 
 bridge_mod.ACTIVE_DB["id"] = resolve_active_id(
     memory_id=None,
@@ -359,7 +368,7 @@ def _schema_pulse(sid: str) -> dict:
 async def bi_status() -> dict:
     h = await _health_overlay()
     ready = await health_ready()
-    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    active = _active_ds()
     sources_payload = _sources_list_payload_overlay()
     sources = sources_payload.get("sources") or []
     conn = await _probe_datasource_live(str(active))
@@ -410,7 +419,7 @@ async def bi_status() -> dict:
 @app.get("/api/v1/bi/ops-health")
 async def bi_ops_health(dashboard_id: str = "default") -> dict:
     """FE ops strip / settings panel — was falling through to limited catch-all."""
-    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    active = _active_ds()
     conn = await _probe_datasource_live(str(active))
     pulse = _schema_pulse(str(active))
     db_ready = bool(conn.get("ok"))
@@ -435,7 +444,7 @@ async def bi_ops_health(dashboard_id: str = "default") -> dict:
 async def bi_briefing(dashboard_id: str = "default", locale: str = "tr") -> dict:
     """Minimal briefing pulse so morning strip does not show 'db not connected'."""
     _ = locale
-    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    active = _active_ds()
     conn = await _probe_datasource_live(str(active))
     pulse = _schema_pulse(str(active))
     db_ready = bool(conn.get("ok"))
@@ -550,7 +559,7 @@ async def connection_test_api(
     request: Request,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
-    sid = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    sid = _active_ds()
     try:
         body = await request.json()
         sid = str(body.get("datasource_id") or body.get("id") or sid)
@@ -653,7 +662,7 @@ async def proxy_query_validate(
     _ = principal
     body = await request.json()
     if "datasource_id" not in body:
-        body["datasource_id"] = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+        body["datasource_id"] = _active_ds()
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
 
     qg = QueryGatewayClient(QG_BASE)
@@ -675,7 +684,7 @@ async def proxy_query_execute(
     """Portal-authenticated proxy — never expose Query Gateway without principal."""
     body = await request.json()
     if "datasource_id" not in body:
-        body["datasource_id"] = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+        body["datasource_id"] = _active_ds()
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
 
     qg = QueryGatewayClient(QG_BASE)
@@ -700,7 +709,7 @@ async def chat_stream_gateway(
     body = await request.json()
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
-    ds = str(body.get("db_name") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting")
+    ds = str(body.get("db_name") or _active_ds())
     if not message:
 
         async def _err():
@@ -779,7 +788,7 @@ async def semantic_joins() -> JSONResponse:
 
 @app.get("/api/v1/bi/semantic/verified-sql")
 async def verified_sql_list(datasource_id: str | None = None) -> JSONResponse:
-    ds = datasource_id or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    ds = datasource_id or _active_ds()
     try:
         with _meta_engine().connect() as conn:
             rows = conn.execute(
@@ -844,7 +853,7 @@ async def query_feedback(
         result = semantic_mod.save_feedback(
             _meta_engine(),
             datasource_id=str(
-                body.get("datasource_id") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+                body.get("datasource_id") or _active_ds()
             ),
             question=question,
             rating=rating,
@@ -935,7 +944,7 @@ async def budgets_sync_from_source(request: Request) -> JSONResponse:
         body = await request.json()
     except Exception:
         body = {}
-    ds = str(body.get("datasource_id") or "erp")
+    ds = str(body.get("datasource_id") or _active_ds())
     sql = (
         "SELECT id, mali_yil, departman_kod, butce_kodu, kalem_adi, tur, "
         "planlanan_tutar, para_birimi FROM butce_planlari"
@@ -991,7 +1000,7 @@ async def alerts_check_now(request: Request) -> JSONResponse:
         body = await request.json()
     except Exception:
         body = {}
-    ds = str(body.get("datasource_id") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting")
+    ds = str(body.get("datasource_id") or _active_ds())
     try:
         result = await alerts_mod.check_alerts_now(
             _meta_engine(), gateway_base=QG_BASE, datasource_id=ds
@@ -1012,7 +1021,7 @@ async def workflow_nl2sql_plan(request: Request) -> JSONResponse:
     question = str(body.get("question") or "").strip()
     if not question:
         return JSONResponse({"error": "question required"}, status_code=400)
-    ds = str(body.get("datasource_id") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting")
+    ds = str(body.get("datasource_id") or _active_ds())
     from nanobase_api.chat_gateway import _schema_hint_for
 
     try:
@@ -1067,7 +1076,7 @@ async def internal_sql_plan(
     question = str(body.get("question") or "").strip()
     if not question:
         return JSONResponse({"code": "VALIDATION_ERROR", "message": "question required"}, status_code=400)
-    ds = str(body.get("datasourceId") or body.get("datasource_id") or "bi_reporting")
+    ds = str(body.get("datasourceId") or body.get("datasource_id") or _active_ds())
     try:
         plan = await WorkflowTextToSqlAdapter().generate_sql_plan(
             question=question,
@@ -1096,7 +1105,7 @@ async def internal_sql_repair(
     try:
         out = await WorkflowTextToSqlAdapter().repair_sql(
             question=str(body.get("question") or ""),
-            datasource_id=str(body.get("datasourceId") or body.get("datasource_id") or "bi_reporting"),
+            datasource_id=str(body.get("datasourceId") or body.get("datasource_id") or _active_ds()),
             previous_sql=str(body.get("previousSql") or body.get("previous_sql") or ""),
             error_code=str((body.get("gatewayError") or {}).get("code") or body.get("code") or ""),
             error_message=str(

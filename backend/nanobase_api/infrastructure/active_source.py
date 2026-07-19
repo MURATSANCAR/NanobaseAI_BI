@@ -126,3 +126,19 @@ def resolve_schema_datasource_id(
         if sid:
             return sid
     return resolve_active_id(memory_id=memory_id)
+
+
+def prefer_datasource_id(
+    *candidates: str | None,
+    memory_id: str | None = None,
+    known_ids: set[str] | None = None,
+) -> str:
+    """First non-empty candidate, else resolve_active_id. No hardcoded source names."""
+    for cand in candidates:
+        sid = str(cand or "").strip()
+        if not sid:
+            continue
+        if known_ids is not None and known_ids and sid not in known_ids:
+            continue
+        return sid
+    return resolve_active_id(memory_id=memory_id, known_ids=known_ids)

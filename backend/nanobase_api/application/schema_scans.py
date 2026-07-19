@@ -49,12 +49,12 @@ class SchemaScanService:
         try:
             self.sources.get(tenant_id=principal.tenant_id, datasource_id=datasource_id)
         except ApiError as e:
-            if e.code != "DATASOURCE_NOT_FOUND" or datasource_id not in (
-                "bi_reporting",
-                "erp",
-                "sigorta",
-                "nanobase_test",
-            ):
+            from nanobase_api.infrastructure.datasource_registry import (
+                is_registered_ro_datasource,
+            )
+
+            # Allow any secrets-map / local-reporting id — not a fixed name list
+            if e.code != "DATASOURCE_NOT_FOUND" or not is_registered_ro_datasource(datasource_id):
                 raise
         if self.scans.has_running(tenant_id=principal.tenant_id, datasource_id=datasource_id):
             raise ApiError(

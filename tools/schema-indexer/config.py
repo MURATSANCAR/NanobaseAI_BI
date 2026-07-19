@@ -11,9 +11,13 @@ def _env(name: str, default: str = "") -> str:
     return (os.environ.get(name) or default).strip()
 
 
+def _reporting_datasource_id() -> str:
+    return _env("REPORTING_DATASOURCE_ID", "bi_reporting") or "bi_reporting"
+
+
 @dataclass
 class IndexerConfig:
-    datasource_id: str = "bi_reporting"
+    datasource_id: str = field(default_factory=_reporting_datasource_id)
     collection: str | None = None
     schemas: tuple[str, ...] = ("analytics", "public")
     secrets_root: Path = field(

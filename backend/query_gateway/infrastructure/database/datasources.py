@@ -111,13 +111,16 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
         except Exception:
             pw = ro_file.read_text(encoding="utf-8").strip() if ro_file.is_file() else ""
         if pw:
-            ds["bi_reporting"] = {
-                "id": "bi_reporting",
+            rid = (
+                os.environ.get("REPORTING_DATASOURCE_ID") or "bi_reporting"
+            ).strip() or "bi_reporting"
+            ds[rid] = {
+                "id": rid,
                 "driver": "postgresql",
                 "host": os.environ.get("REPORTING_HOST", "127.0.0.1"),
                 "port": int(os.environ.get("REPORTING_PORT", "5435")),
-                "database": os.environ.get("REPORTING_DB", "bi_reporting"),
-                "user": os.environ.get("REPORTING_RO_USER", "bi_reporting_ro"),
+                "database": os.environ.get("REPORTING_DB", rid),
+                "user": os.environ.get("REPORTING_RO_USER", f"{rid}_ro"),
                 "password": pw,
                 "sslmode": "disable",
                 "dialect": "postgres",

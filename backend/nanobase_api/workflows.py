@@ -38,7 +38,9 @@ async def nl2sql_plan(
     schema_hint: str | None = None,
     retrieved_schema: str | None = None,
 ) -> dict[str, Any]:
-    ds_id = str((datasource_context or {}).get("datasource_id") or "bi_reporting")
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
+    ds_id = prefer_datasource_id((datasource_context or {}).get("datasource_id"))
     return await _adapter.generate_sql_plan(
         question=question,
         datasource_id=ds_id,

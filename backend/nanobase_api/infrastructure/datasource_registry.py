@@ -11,7 +11,47 @@ SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
 
 
 def reporting_datasource_id() -> str:
+    """Product default id for the optional local reporting RO database.
+
+    Overridable via REPORTING_DATASOURCE_ID — never hardcode this name at call sites.
+    """
     return (os.environ.get("REPORTING_DATASOURCE_ID") or "bi_reporting").strip() or "bi_reporting"
+
+
+def registered_ro_datasource_ids() -> set[str]:
+    """All datasource ids present in secrets RO maps (+ local reporting if configured)."""
+    ids: set[str] = set()
+    if local_reporting_entry():
+        ids.add(reporting_datasource_id())
+    for map_name in (
+        "neon-ro.datasources.json",
+        "oracle-ro.datasources.json",
+        "sap-ro.datasources.json",
+    ):
+        path = SECRETS / map_name
+        if not path.is_file():
+            continue
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            sources = raw.get("sources") if isinstance(raw, dict) else None
+            if not isinstance(sources, dict):
+                sources = raw if isinstance(raw, dict) else {}
+            for sid in sources:
+                if sid and isinstance(sources.get(sid), dict):
+                    ids.add(str(sid))
+        except (OSError, json.JSONDecodeError, TypeError):
+            continue
+    return ids
+
+
+def is_registered_ro_datasource(datasource_id: str) -> bool:
+    sid = str(datasource_id or "").strip()
+    if not sid:
+        return False
+    # Legacy alias used in some checklists → reporting id
+    if sid == "nanobase_test":
+        sid = reporting_datasource_id()
+    return sid in registered_ro_datasource_ids()
 
 
 def _mark_managed(entry: dict[str, Any]) -> dict[str, Any]:

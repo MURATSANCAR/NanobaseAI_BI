@@ -30,7 +30,7 @@ SOURCES_FILE = Path(
         str(Path(__file__).resolve().parents[2] / "configs" / "sources" / "local" / "connection.local.json"),
     )
 )
-ACTIVE_DB = {"id": "erp"}
+ACTIVE_DB = {"id": (os.environ.get("NANOBASE_ACTIVE_DB") or "").strip()}
 
 app = FastAPI(title="Nanobase BI → DB-GPT bridge", version="0.2.0")
 app.add_middleware(
@@ -45,7 +45,7 @@ app.add_middleware(
 def _load_sources() -> dict[str, Any]:
     if SOURCES_FILE.is_file():
         return json.loads(SOURCES_FILE.read_text(encoding="utf-8"))
-    return {"active_id": "erp", "sources": {}}
+    return {"active_id": ACTIVE_DB.get("id") or "", "sources": {}}
 
 
 def _sources_list_payload() -> dict[str, Any]:
@@ -291,7 +291,9 @@ async def connection_get() -> dict[str, Any]:
 @app.put("/api/v1/bi/connection")
 async def connection_save(request: Request) -> dict[str, Any]:
     body = await request.json()
-    sid = str(body.get("id") or ACTIVE_DB["id"] or "erp")
+    sid = str(body.get("id") or ACTIVE_DB.get("id") or "").strip()
+    if not sid:
+        return {"ok": False, "error": "datasource id required"}
     return await sources_upsert(sid, request)
 
 
@@ -576,7 +578,9 @@ async def chat_stream(request: Request) -> StreamingResponse:
     body = await request.json()
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
-    db_name = ACTIVE_DB["id"] or "erp"
+    db_name = str(ACTIVE_DB.get("id") or "").strip()
+    if not db_name:
+        return {"ok": False, "error": "no active datasource"}
     if not message:
 
         async def _err() -> AsyncIterator[bytes]:

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
 from typing import Any
 
 import httpx
 
-# Safe SELECT-only packs keyed by datasource_id. Titles are TR operator-facing.
+SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
+
+# Optional demo packs keyed by datasource_id (exact match only — never cross-fallback).
+# Additional / custom sources: SECRETS/source-widgets.json → {"sources": {"my_ds": [...]}}
 _WIDGET_SPECS: dict[str, list[dict[str, Any]]] = {
     "bi_reporting": [
         {
@@ -81,6 +87,22 @@ _WIDGET_SPECS: dict[str, list[dict[str, Any]]] = {
             "format": "number",
         },
         {
+            "id": "erp_personel",
+            "type": "kpi",
+            "title": "Personel",
+            "sql": "SELECT COUNT(*)::bigint AS value FROM personeller",
+            "value_key": "value",
+            "format": "number",
+        },
+        {
+            "id": "erp_stok",
+            "type": "kpi",
+            "title": "Stok satırları",
+            "sql": "SELECT COUNT(*)::bigint AS value FROM stok_bakiyeleri",
+            "value_key": "value",
+            "format": "number",
+        },
+        {
             "id": "erp_iller",
             "type": "bar",
             "title": "Fatura — illere göre",
@@ -141,12 +163,34 @@ _WIDGET_SPECS: dict[str, list[dict[str, Any]]] = {
             "format": "number",
         },
         {
+            "id": "sig_araclar",
+            "type": "kpi",
+            "title": "Araçlar",
+            "sql": "SELECT COUNT(*)::bigint AS value FROM araclar",
+            "value_key": "value",
+            "format": "number",
+        },
+        {
             "id": "sig_hasar_durum",
-            "type": "bar",
+            "type": "donut",
             "title": "Hasar durumu dağılımı",
             "sql": (
                 "SELECT durum AS label, COUNT(*)::int AS value "
                 "FROM hasar_talepleri GROUP BY 1 ORDER BY 2 DESC LIMIT 6"
+            ),
+            "x_key": "label",
+            "y_key": "value",
+            "label_key": "label",
+            "value_key": "value",
+        },  # value_key used by pie/donut + KPI path
+        {
+            "id": "sig_poliçe_aylik",
+            "type": "bar",
+            "title": "Aylık yeni poliçe",
+            "sql": (
+                "SELECT DATE_TRUNC('month', baslangic_tarihi)::date::text AS label, "
+                "COUNT(*)::int AS value "
+                "FROM policeler GROUP BY 1 ORDER BY 1 DESC LIMIT 6"
             ),
             "x_key": "label",
             "y_key": "value",
@@ -176,14 +220,42 @@ def _normalize_rows(payload: dict[str, Any]) -> tuple[list[str], list[dict[str, 
     return [str(c) for c in cols], out_rows
 
 
+def _widget_specs_for(datasource_id: str) -> list[dict[str, Any]]:
+    """Resolve widget SQL pack for a datasource — exact id only, no other-DS fallback."""
+    sid = str(datasource_id or "").strip()
+    if not sid:
+        return []
+    path = SECRETS / "source-widgets.json"
+    if path.is_file():
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            specs = (raw.get("sources") or {}).get(sid)
+            if isinstance(specs, list):
+                return [s for s in specs if isinstance(s, dict)]
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+    packs = dict(_WIDGET_SPECS)
+    try:
+        from nanobase_api.infrastructure.datasource_registry import reporting_datasource_id
+
+        rid = reporting_datasource_id()
+        if rid != "bi_reporting" and "bi_reporting" in packs:
+            packs[rid] = packs.pop("bi_reporting")
+    except Exception:
+        pass
+    return list(packs.get(sid) or [])
+
+
 async def build_source_widgets(
     *,
     datasource_id: str,
     qg_base: str,
     tenant_id: str = "default",
 ) -> dict[str, Any]:
-    sid = (datasource_id or "bi_reporting").strip()
-    specs = _WIDGET_SPECS.get(sid) or _WIDGET_SPECS.get("bi_reporting") or []
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
+    sid = prefer_datasource_id(datasource_id)
+    specs = _widget_specs_for(sid)
     widgets: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
 
