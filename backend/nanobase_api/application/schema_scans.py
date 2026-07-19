@@ -1,0 +1,142 @@
+"""Schema scan use cases + job enqueue."""
+
+from __future__ import annotations
+
+import asyncio
+from typing import Any
+
+from nanobase_api.auth.principal import RequestPrincipal
+from nanobase_api.config import get_settings
+from nanobase_api.errors import ApiError
+from nanobase_api.infrastructure.audit_repo import AuditRepository
+from nanobase_api.infrastructure.schema_indexer_adapter import SchemaIndexerAdapter
+from nanobase_api.infrastructure.schema_scan_repo import SchemaScanRepository
+from nanobase_api.infrastructure.sources_repo import SourcesRepository
+
+
+class SchemaScanService:
+    def __init__(
+        self,
+        scans: SchemaScanRepository,
+        sources: SourcesRepository,
+        indexer: SchemaIndexerAdapter,
+        audit: AuditRepository,
+    ) -> None:
+        self.scans = scans
+        self.sources = sources
+        self.indexer = indexer
+        self.audit = audit
+
+    def get_status(self, principal: RequestPrincipal, scan_id: str) -> dict[str, Any]:
+        row = self.scans.get(tenant_id=principal.tenant_id, scan_id=scan_id)
+        return {
+            "scanId": row["id"],
+            "status": row["status"],
+            "datasourceId": row["datasource_id"],
+            "schemaCount": row.get("schema_count"),
+            "tableCount": row.get("table_count"),
+            "columnCount": row.get("column_count"),
+            "relationshipCount": row.get("relationship_count"),
+            "indexedDocumentCount": row.get("indexed_document_count"),
+            "skippedDocumentCount": row.get("skipped_document_count"),
+            "error": row.get("error"),
+            "startedAt": row["started_at"].isoformat() if row.get("started_at") else None,
+            "completedAt": row["completed_at"].isoformat() if row.get("completed_at") else None,
+        }
+
+    async def start_scan(self, principal: RequestPrincipal, datasource_id: str) -> dict[str, Any]:
+        # tenant ownership when registered; allow known gateway datasources
+        try:
+            self.sources.get(tenant_id=principal.tenant_id, datasource_id=datasource_id)
+        except ApiError as e:
+            if e.code != "DATASOURCE_NOT_FOUND" or datasource_id not in (
+                "bi_reporting",
+                "erp",
+                "sigorta",
+                "nanobase_test",
+            ):
+                raise
+        if self.scans.has_running(tenant_id=principal.tenant_id, datasource_id=datasource_id):
+            raise ApiError(
+                "SCHEMA_SCAN_ALREADY_RUNNING",
+                "Bu datasource için zaten bir scan çalışıyor.",
+                status_code=409,
+            )
+        scan = self.scans.create(tenant_id=principal.tenant_id, datasource_id=datasource_id)
+        self.audit.record(
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            action="SCHEMA_SCAN_REQUESTED",
+            ok=True,
+            extra={"scan_id": scan["id"], "datasource_id": datasource_id},
+        )
+        await self._enqueue(scan["id"], datasource_id, principal.tenant_id)
+        return {"scanId": scan["id"], "status": "QUEUED"}
+
+    async def _enqueue(self, scan_id: str, datasource_id: str, tenant_id: str) -> None:
+        settings = get_settings()
+        if settings.arq_enabled:
+            try:
+                from arq import create_pool
+                from arq.connections import RedisSettings
+
+                redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+                try:
+                    await redis.enqueue_job(
+                        "run_schema_scan",
+                        scan_id,
+                        datasource_id,
+                        tenant_id,
+                    )
+                    return
+                finally:
+                    await redis.close()
+            except Exception:
+                pass
+        # Fallback: non-blocking asyncio task (HTTP returns immediately)
+        asyncio.create_task(self._run_inline(scan_id, datasource_id, tenant_id))
+
+    async def _run_inline(self, scan_id: str, datasource_id: str, tenant_id: str) -> None:
+        await asyncio.to_thread(execute_schema_scan, scan_id, datasource_id, tenant_id)
+
+
+def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> None:
+    """Called by ARQ worker or inline task."""
+    from nanobase_api.db import get_sync_engine
+
+    engine = get_sync_engine()
+    scans = SchemaScanRepository(engine)
+    indexer = SchemaIndexerAdapter()
+    audit = AuditRepository(engine)
+    scans.mark_running(scan_id)
+    audit.record(
+        tenant_id=tenant_id,
+        user_id=None,
+        action="SCHEMA_SCAN_STARTED",
+        ok=True,
+        extra={"scan_id": scan_id, "datasource_id": datasource_id},
+    )
+    try:
+        report = indexer.run_scan(datasource_id=datasource_id)
+        scans.mark_completed(scan_id, report)
+        audit.record(
+            tenant_id=tenant_id,
+            user_id=None,
+            action="SCHEMA_SCAN_COMPLETED",
+            ok=True,
+            extra={
+                "scan_id": scan_id,
+                "documents_total": report.get("documents_total"),
+                "points_count": report.get("points_count"),
+            },
+        )
+    except Exception as e:
+        scans.mark_failed(scan_id, str(e))
+        audit.record(
+            tenant_id=tenant_id,
+            user_id=None,
+            action="SCHEMA_SCAN_FAILED",
+            ok=False,
+            error=str(e)[:300],
+            extra={"scan_id": scan_id},
+        )

@@ -13,15 +13,13 @@ die() { printf '[deploy-nanobase-api] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [[ -d "$VENV" ]] || { echo "missing $VENV"; exit 1; }
 
-log "Checking API deps in shared backend venv"
-if ! "${VENV}/bin/python" -c "import fastapi,uvicorn,httpx,sqlalchemy,psycopg2" 2>/dev/null; then
-  if "${VENV}/bin/python" -m ensurepip --upgrade >/dev/null 2>&1; then
-    "${VENV}/bin/python" -m pip install -q -r "${APP_DIR}/requirements.txt"
-  elif command -v uv >/dev/null; then
-    uv pip install --python "${VENV}/bin/python" -r "${APP_DIR}/requirements.txt"
-  else
-    die "Missing deps and no pip/uv to install ${APP_DIR}/requirements.txt"
-  fi
+log "Installing API deps in shared backend venv"
+if "${VENV}/bin/python" -m ensurepip --upgrade >/dev/null 2>&1; then
+  "${VENV}/bin/python" -m pip install -q -r "${APP_DIR}/requirements.txt"
+elif command -v uv >/dev/null; then
+  uv pip install --python "${VENV}/bin/python" -r "${APP_DIR}/requirements.txt"
+else
+  die "Missing pip/uv to install ${APP_DIR}/requirements.txt"
 fi
 
 META_PW="$(tr -d '\n\r' < "${SECRETS}/bi-meta-db.password")"
@@ -36,8 +34,19 @@ LLM_MODEL_NAME=nanobase-qwen36-35b-a3b-mtp
 NANOBASE_ACTIVE_DB=bi_reporting
 QUERY_GATEWAY_BASE=http://127.0.0.1:8792
 PYTHONPATH=${ROOT}/backend
+AUTH_MODE=dev
+DEV_TENANT_ID=default
+NANOBASE_TEXT2SQL_EXECUTION_MODE=QUERY_GATEWAY
+ARQ_ENABLED=1
+REDIS_URL=redis://127.0.0.1:6379/0
+SCHEMA_INDEXER_ROOT=${ROOT}/tools/schema-indexer
+NANOBASE_PYTHON=${VENV}/bin/python
+SECRETS_ROOT=${SECRETS}
 EOF
 chmod 600 "$ENV_FILE"
+
+log "Running Alembic migrations"
+"${ROOT}/scripts/server/migrate-nanobase-api.sh"
 
 sudo tee "$UNIT" >/dev/null <<UNIT
 [Unit]

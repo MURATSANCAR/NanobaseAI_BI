@@ -19,7 +19,11 @@ from sqlalchemy import create_engine, text  # noqa: E402
 
 app = bridge_mod.app
 app.title = "Nanobase BI API"
-app.version = "0.7.0"
+app.version = "0.10.0"
+
+from nanobase_api.errors import ApiError, api_error_handler  # noqa: E402
+
+app.add_exception_handler(ApiError, api_error_handler)
 
 META_DSN = os.environ.get(
     "NANOBASE_META_DSN",
@@ -213,6 +217,10 @@ _REMOVE_PATHS = {
     "/api/v1/bi/budgets",
     "/api/v1/bi/budgets/summary",
     "/api/v1/bi/alerts",
+    "/api/v1/bi/sources",
+    "/api/v1/bi/sources/{source_id}",
+    "/api/v1/bi/sources/{source_id}/activate",
+    "/api/v1/bi/connection/test",
 }
 _app_routes = list(app.router.routes)
 for _route in _app_routes:
@@ -236,20 +244,51 @@ from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
 from nanobase_api import workflows as workflows_mod  # noqa: E402
 from nanobase_api.secrets_resolver import secrets_status  # noqa: E402
+from nanobase_api.auth import get_current_principal, RequestPrincipal  # noqa: E402
+from nanobase_api.application.datasources import DatasourceService  # noqa: E402
+from nanobase_api.application.schema_scans import SchemaScanService  # noqa: E402
+from nanobase_api.infrastructure.sources_repo import SourcesRepository  # noqa: E402
+from nanobase_api.infrastructure.secret_store import FileVaultSecretStore  # noqa: E402
+from nanobase_api.infrastructure.audit_repo import AuditRepository  # noqa: E402
+from nanobase_api.infrastructure.schema_scan_repo import SchemaScanRepository  # noqa: E402
+from nanobase_api.infrastructure.schema_indexer_adapter import SchemaIndexerAdapter  # noqa: E402
+from nanobase_api.config import get_settings  # noqa: E402
+from fastapi import Depends  # noqa: E402
 
 QG_BASE = os.environ.get("QUERY_GATEWAY_BASE", "http://127.0.0.1:8792").rstrip("/")
-app.version = "0.9.5"
+app.version = "0.10.0"
+
+
+def _ds_service() -> DatasourceService:
+    eng = _meta_engine()
+    return DatasourceService(SourcesRepository(eng), FileVaultSecretStore(), AuditRepository(eng))
+
+
+def _scan_service() -> SchemaScanService:
+    eng = _meta_engine()
+    return SchemaScanService(
+        SchemaScanRepository(eng),
+        SourcesRepository(eng),
+        SchemaIndexerAdapter(),
+        AuditRepository(eng),
+    )
 
 
 @app.get("/health")
-async def health() -> dict:
-    return await _health_overlay()
+@app.get("/api/v1/bi/health/live")
+async def health_live() -> dict:
+    return {"status": "UP", "service": "nanobase_api"}
 
 
-@app.get("/api/v1/bi/health")
-@app.get("/api/v1/bi/status")
-async def bi_status() -> dict:
-    h = await _health_overlay()
+@app.get("/api/v1/bi/health/ready")
+async def health_ready() -> dict:
+    checks: dict[str, str] = {}
+    try:
+        with _meta_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["metadataDatabase"] = "UP"
+    except Exception:
+        checks["metadataDatabase"] = "DOWN"
     qg_ok = False
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
@@ -257,18 +296,141 @@ async def bi_status() -> dict:
             qg_ok = r.status_code == 200
     except Exception:
         qg_ok = False
+    checks["queryGateway"] = "UP" if qg_ok else "DOWN"
+    redis_ok = False
+    try:
+        import redis as redis_lib
+
+        redis_lib.Redis.from_url(get_settings().redis_url, socket_timeout=1).ping()
+        redis_ok = True
+    except Exception:
+        redis_ok = False
+    checks["redis"] = "UP" if redis_ok else "DOWN"
+    status = "UP" if checks["metadataDatabase"] == "UP" else "DOWN"
+    if status == "UP" and (checks["queryGateway"] == "DOWN" or checks["redis"] == "DOWN"):
+        status = "DEGRADED"
+    return {"status": status, "checks": checks}
+
+
+@app.get("/api/v1/bi/health")
+@app.get("/api/v1/bi/status")
+async def bi_status() -> dict:
+    h = await _health_overlay()
+    ready = await health_ready()
     return {
         "ok": True,
-        "status": "ready" if h.get("meta") and qg_ok else "degraded",
+        "status": "ready" if ready.get("status") in ("UP", "DEGRADED") and h.get("meta") else "degraded",
         "engine": "nanobase_api",
         "service": "nanobase_api",
         "meta": h.get("meta"),
         "dbgpt": h.get("dbgpt"),
         "llm": h.get("llm"),
-        "query_gateway": qg_ok,
+        "query_gateway": ready.get("checks", {}).get("queryGateway") == "UP",
+        "redis": ready.get("checks", {}).get("redis") == "UP",
+        "auth_mode": get_settings().auth_mode.value,
+        "execution_mode": get_settings().execution_mode.value,
         "active_source": bridge_mod.ACTIVE_DB.get("id"),
         "llm_model": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp"),
+        "checks": ready.get("checks"),
     }
+
+
+@app.get("/api/v1/bi/sources")
+async def sources_list_api(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    meta_list = _ds_service().list_sources(principal)
+    # Merge with overlay (builtin + neon/oracle maps) for FE continuity
+    overlay = _sources_list_payload_overlay()
+    by_id = {s["id"]: s for s in (overlay.get("sources") or [])}
+    for s in meta_list.get("sources") or []:
+        by_id[s["id"]] = s
+    return {
+        "active_id": overlay.get("active_id") or bridge_mod.ACTIVE_DB.get("id"),
+        "sources": list(by_id.values()),
+    }
+
+
+@app.put("/api/v1/bi/sources/{source_id}")
+async def sources_upsert_api(
+    source_id: str,
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    body = await request.json()
+    return _ds_service().upsert_source(principal, source_id, body)
+
+
+@app.delete("/api/v1/bi/sources/{source_id}")
+async def sources_delete_api(
+    source_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    return _ds_service().delete_source(principal, source_id)
+
+
+async def _test_datasource(principal: RequestPrincipal, sid: str) -> dict:
+    try:
+        return _ds_service().test_connection(principal, sid)
+    except ApiError as e:
+        if e.code == "DATASOURCE_NOT_FOUND" and sid in ("bi_reporting", "erp", "sigorta"):
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                r = await client.post(
+                    f"{QG_BASE}/api/v1/query/execute",
+                    json={"datasource_id": sid, "sql": "SELECT 1 AS ok"},
+                )
+                ok = r.status_code == 200 and (r.json() or {}).get("ok")
+            return {
+                "success": bool(ok),
+                "ok": bool(ok),
+                "databaseType": "POSTGRESQL",
+                "via": "query_gateway",
+            }
+        raise
+
+
+@app.post("/api/v1/bi/sources/{source_id}/test")
+async def sources_test_api(
+    source_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    return await _test_datasource(principal, source_id)
+
+
+@app.post("/api/v1/bi/connection/test")
+async def connection_test_api(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    sid = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    try:
+        body = await request.json()
+        sid = str(body.get("datasource_id") or body.get("id") or sid)
+    except Exception:
+        pass
+    return await _test_datasource(principal, sid)
+
+
+@app.post("/api/v1/bi/sources/{source_id}/activate")
+async def sources_activate_api(source_id: str) -> dict:
+    bridge_mod.ACTIVE_DB["id"] = source_id
+    return {"ok": True, "active_id": source_id}
+
+
+@app.post("/api/v1/bi/sources/{source_id}/scan")
+async def sources_scan_api(
+    source_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    return await _scan_service().start_scan(principal, source_id)
+
+
+@app.get("/api/v1/bi/schema-scans/{scan_id}")
+async def schema_scan_status_api(
+    scan_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    return _scan_service().get_status(principal, scan_id)
 
 
 @app.get("/api/v1/bi/schema")
@@ -328,8 +490,11 @@ async def proxy_query_execute(request: Request) -> JSONResponse:
 
 
 @app.post("/api/v1/bi/chat/stream")
-async def chat_stream_gateway(request: Request) -> StreamingResponse:
-    """Faz 6/7: verified cache | LLM → Query Gateway validate/execute/explain."""
+async def chat_stream_gateway(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> StreamingResponse:
+    """Faz 6/7/3: verified cache | LLM → Query Gateway validate/execute/explain."""
     body = await request.json()
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
@@ -343,8 +508,29 @@ async def chat_stream_gateway(request: Request) -> StreamingResponse:
 
         return StreamingResponse(_err(), media_type="text/event-stream")
 
+    try:
+        from nanobase_api.infrastructure.audit_repo import AuditRepository
+
+        AuditRepository(_meta_engine()).record(
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            action="QUESTION_SUBMITTED",
+            ok=True,
+            session_id=session_id,
+            extra={"datasource_id": ds},
+        )
+    except Exception:
+        pass
+
     return StreamingResponse(
-        stream_chat_via_gateway(message, session_id, ds, meta_engine=_meta_engine()),
+        stream_chat_via_gateway(
+            message,
+            session_id,
+            ds,
+            meta_engine=_meta_engine(),
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        ),
         media_type="text/event-stream",
     )
 
@@ -424,13 +610,16 @@ async def verified_sql_list(datasource_id: str | None = None) -> JSONResponse:
 
 @app.post("/api/v1/bi/query/feedback")
 @app.post("/api/v1/bi/feedback")
-async def query_feedback(request: Request) -> JSONResponse:
+async def query_feedback(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
     body = await request.json()
     question = str(body.get("question") or "").strip()
     rating = int(body.get("rating") or 0)
     if not question or rating not in (-1, 1):
         return JSONResponse(
-            {"ok": False, "error": "question and rating (-1|1) required"},
+            {"ok": False, "code": "VALIDATION_ERROR", "error": "question and rating (-1|1) required"},
             status_code=400,
         )
     try:
@@ -446,6 +635,17 @@ async def query_feedback(request: Request) -> JSONResponse:
             comment=(str(body["comment"]) if body.get("comment") else None),
             promote_verified=bool(body.get("promote_verified")),
         )
+        try:
+            AuditRepository(_meta_engine()).record(
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                action="FEEDBACK_SUBMITTED",
+                ok=True,
+                session_id=str(body["session_id"]) if body.get("session_id") else None,
+                extra={"rating": rating, "promote_verified": bool(body.get("promote_verified"))},
+            )
+        except Exception:
+            pass
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
