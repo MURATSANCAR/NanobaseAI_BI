@@ -210,6 +210,9 @@ _REMOVE_PATHS = {
     "/api/v1/bi/semantic/joins",
     "/api/v1/bi/semantic/templates",
     "/api/v1/bi/semantic/status",
+    "/api/v1/bi/budgets",
+    "/api/v1/bi/budgets/summary",
+    "/api/v1/bi/alerts",
 }
 _app_routes = list(app.router.routes)
 for _route in _app_routes:
@@ -229,9 +232,11 @@ from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from nanobase_api.chat_gateway import stream_chat_via_gateway  # noqa: E402
 from nanobase_api import semantic as semantic_mod  # noqa: E402
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
+from nanobase_api import budgets as budgets_mod  # noqa: E402
+from nanobase_api import alerts as alerts_mod  # noqa: E402
 
 QG_BASE = os.environ.get("QUERY_GATEWAY_BASE", "http://127.0.0.1:8792").rstrip("/")
-app.version = "0.9.2"
+app.version = "0.9.3"
 
 
 @app.get("/health")
@@ -442,6 +447,137 @@ async def query_feedback(request: Request) -> JSONResponse:
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
+# Budgets + Alerts (bi_meta)
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/v1/bi/budgets")
+async def budgets_list(
+    fiscal_year: int | None = None,
+    kind: str | None = None,
+    status: str | None = None,
+    scenario: str | None = None,
+) -> JSONResponse:
+    try:
+        items = budgets_mod.list_budgets(
+            _meta_engine(),
+            fiscal_year=fiscal_year,
+            kind=kind,
+            status=status,
+            scenario=scenario,
+        )
+        return JSONResponse({"budgets": items, "engine": "nanobase_api"})
+    except Exception as e:
+        return JSONResponse({"budgets": [], "error": str(e)[:300]}, status_code=503)
+
+
+@app.get("/api/v1/bi/budgets/summary")
+async def budgets_summary(
+    fiscal_year: int | None = None, scenario: str | None = None
+) -> JSONResponse:
+    try:
+        return JSONResponse(
+            budgets_mod.budget_summary(
+                _meta_engine(), fiscal_year=fiscal_year, scenario=scenario
+            )
+        )
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:300]}, status_code=503)
+
+
+@app.post("/api/v1/bi/budgets")
+async def budgets_upsert(request: Request) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(budgets_mod.upsert_budget(_meta_engine(), body))
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.delete("/api/v1/bi/budgets/{budget_id}")
+async def budgets_delete(budget_id: str) -> JSONResponse:
+    try:
+        budgets_mod.delete_budget(_meta_engine(), budget_id)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:300]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/sync-from-source")
+async def budgets_sync_from_source(request: Request) -> JSONResponse:
+    """Pull erp.butce_planlari via Query Gateway into bi_budgets."""
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    ds = str(body.get("datasource_id") or "erp")
+    sql = (
+        "SELECT id, mali_yil, departman_kod, butce_kodu, kalem_adi, tur, "
+        "planlanan_tutar, para_birimi FROM butce_planlari"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.post(
+                f"{QG_BASE}/api/v1/query/execute",
+                json={"datasource_id": ds, "sql": sql, "max_limit": 500},
+            )
+            data = r.json()
+        if r.status_code >= 400 or not data.get("ok"):
+            return JSONResponse(
+                {"ok": False, "error": data.get("detail") or data.get("error") or "gateway failed"},
+                status_code=400,
+            )
+        result = budgets_mod.sync_from_erp_butce(_meta_engine(), data.get("rows") or [])
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.get("/api/v1/bi/alerts")
+async def alerts_list() -> JSONResponse:
+    try:
+        return JSONResponse({"alerts": alerts_mod.list_alerts(_meta_engine()), "engine": "nanobase_api"})
+    except Exception as e:
+        return JSONResponse({"alerts": [], "error": str(e)[:300]}, status_code=503)
+
+
+@app.post("/api/v1/bi/alerts")
+async def alerts_save(request: Request) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(alerts_mod.save_alert(_meta_engine(), body))
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.delete("/api/v1/bi/alerts/{alert_id}")
+async def alerts_delete(alert_id: str) -> JSONResponse:
+    try:
+        alerts_mod.delete_alert(_meta_engine(), alert_id)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:300]}, status_code=500)
+
+
+@app.post("/api/v1/bi/alerts/check-now")
+async def alerts_check_now(request: Request) -> JSONResponse:
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    ds = str(body.get("datasource_id") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting")
+    try:
+        result = await alerts_mod.check_alerts_now(
+            _meta_engine(), gateway_base=QG_BASE, datasource_id=ds
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"checked": 0, "triggered": 0, "errors": [str(e)[:300]]}, status_code=500)
 
 
 # Soft catch-all AFTER real routes (empty stubs for remaining FE SaaS paths)
