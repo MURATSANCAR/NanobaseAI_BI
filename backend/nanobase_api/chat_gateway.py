@@ -86,18 +86,48 @@ async def stream_chat_via_gateway(
     if not sql:
         yield _sse(
             "status",
+            {"phase": "schema_retrieval", "datasource_id": datasource_id},
+        ).encode()
+        retrieved = ""
+        retrieval_meta: dict[str, Any] = {}
+        try:
+            from nanobase_api.schema_retrieve import retrieve_schema_context
+
+            retrieval_meta = await retrieve_schema_context(message, datasource_id)
+            retrieved = str(retrieval_meta.get("hint_extra") or "")
+            yield _sse(
+                "status",
+                {
+                    "phase": "schema_retrieval_done",
+                    "ok": retrieval_meta.get("ok"),
+                    "collection": retrieval_meta.get("collection"),
+                    "tables": retrieval_meta.get("tables") or [],
+                    "hit_count": len(retrieval_meta.get("hits") or []),
+                },
+            ).encode()
+        except Exception as e:
+            yield _sse("status", {"phase": "schema_retrieval_skip", "detail": str(e)[:200]}).encode()
+
+        yield _sse(
+            "status",
             {"phase": "nl2sql_plan", "workflow": "nanobase-nl2sql-plan", "datasource_id": datasource_id},
         ).encode()
         try:
             plan = await nl2sql_plan(
                 question=message,
                 schema_hint=_schema_hint_for(datasource_id),
+                retrieved_schema=retrieved or None,
                 datasource_context={"datasource_id": datasource_id},
             )
         except Exception as e:
             yield _sse("error", {"message": f"nl2sql-plan failed: {e}"}).encode()
             return
         sql = str(plan.get("sql") or "").strip()
+        plan["retrieval"] = {
+            "collection": retrieval_meta.get("collection"),
+            "tables": retrieval_meta.get("tables") or [],
+            "hit_count": len(retrieval_meta.get("hits") or []),
+        }
         yield _sse("status", {"phase": "plan_ready", "plan": plan}).encode()
         if not sql:
             yield _sse("error", {"message": "No SQL from nl2sql-plan", "plan": plan}).encode()

@@ -81,9 +81,12 @@ async def nl2sql_plan(
     allowed_schemas: list[str] | None = None,
     allowed_tables: list[str] | None = None,
     schema_hint: str | None = None,
+    retrieved_schema: str | None = None,
 ) -> dict[str, Any]:
     """Produce SQL plan JSON. Does NOT execute against any database."""
     hint = schema_hint or DEFAULT_SCHEMA_HINT
+    if retrieved_schema:
+        hint = f"{hint}\n\n{retrieved_schema}"
     if allowed_tables:
         hint += "\nAllowed tables only: " + ", ".join(allowed_tables)
     if allowed_schemas:
@@ -132,6 +135,7 @@ async def nl2sql_plan(
         "assumptions": parsed.get("assumptions") if isinstance(parsed.get("assumptions"), list) else [],
         "confidence": confidence,
         "executes": False,
+        "retrieval_used": bool(retrieved_schema),
     }
 
 
