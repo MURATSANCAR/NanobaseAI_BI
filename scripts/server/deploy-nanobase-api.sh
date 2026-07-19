@@ -34,6 +34,7 @@ NANOBASE_META_DSN=postgresql+psycopg2://bi_meta:${META_PW_ENC}@127.0.0.1:5434/bi
 DBGPT_BASE=http://127.0.0.1:5670
 LLM_MODEL_NAME=nanobase-qwen36-35b-a3b-mtp
 NANOBASE_ACTIVE_DB=bi_reporting
+QUERY_GATEWAY_BASE=http://127.0.0.1:8792
 PYTHONPATH=${ROOT}/backend
 EOF
 chmod 600 "$ENV_FILE"

@@ -1,0 +1,29 @@
+{
+  "sources": {
+    "oracle_adb_ssb": {
+      "label": "Oracle ADB SSB (RO)",
+      "driver": "oracle",
+      "dialect": "oracle",
+      "host": "adb.REGION.oraclecloud.com",
+      "port": 1522,
+      "service_name": "YOURDB_low.adb.oraclecloud.com",
+      "user": "ADMIN",
+      "password_file": "/data/nanobaseai/bi/secrets/oracle-adb.password",
+      "comment": "Enable TLS (wallet-less) on Autonomous DB. Prefer …_low / …_medium for SSB.",
+      "allowed_tables": [
+        "ssb.customer",
+        "ssb.part",
+        "ssb.supplier",
+        "ssb.date_dim",
+        "ssb.lineorder",
+        "ssb.dwdate",
+        "customer",
+        "part",
+        "supplier",
+        "date_dim",
+        "lineorder",
+        "dwdate"
+      ]
+    }
+  }
+}

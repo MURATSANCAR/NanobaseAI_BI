@@ -1,0 +1,33 @@
+{
+  "sources": {
+    "sap_hana_ro": {
+      "label": "SAP HANA (RO)",
+      "driver": "hana",
+      "host": "hana.example.com",
+      "port": 443,
+      "user": "REPORTING_RO",
+      "password_file": "/data/nanobaseai/bi/secrets/sap-hana.password",
+      "encrypt": true,
+      "ssl_validate": false,
+      "allowed_tables": [
+        "sales_order",
+        "sflight",
+        "scarr"
+      ],
+      "comment": "Requires: uv pip install hdbcli"
+    },
+    "sap_cds_odata": {
+      "label": "SAP CDS OData (RO)",
+      "driver": "odata",
+      "base_url": "https://host/sap/opu/odata/sap/API_SERVICE",
+      "user": "REPORTING_RO",
+      "password_file": "/data/nanobaseai/bi/secrets/sap-odata.password",
+      "verify_tls": true,
+      "allowed_entities": [
+        "A_SalesOrder",
+        "A_BusinessPartner"
+      ],
+      "comment": "Execute via Gateway sql field: A_SalesOrder?$select=SalesOrder&$top=10"
+    }
+  }
+}
