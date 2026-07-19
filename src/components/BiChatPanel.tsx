@@ -15,18 +15,25 @@ import {
   Search,
   Send,
   Sparkles,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { api, isRunnerConfigured } from '@/api/client';
+import { submitQueryFeedback } from '@/api/services';
+import { getFeatureFlags } from '@/config/environment';
+import type { ChatExecutionState } from '@/api/contracts/datasource';
 import { useApiConfig } from '@/context/ApiContext';
 import { t } from '@/i18n';
 import { brandText } from '@/utils/brand';
 import { stripSqlFromChatText } from '@/utils/biChatSanitize';
-import { revealText } from '@/lib/biChatStream';
+import { mapPhaseToChatState, revealText } from '@/lib/biChatStream';
 import { localizeUserMessage } from '@/utils/backendLabels';
 import {
+  abortBiChatJob,
   biChatJobCount,
   getBiChatJobsSettled,
   isBiChatJobPending,
@@ -65,6 +72,11 @@ type ChatMessage = {
   elapsedSec?: number;
   /** True once live tokens arrived — skip fake reveal on done. */
   liveTokens?: boolean;
+  chatState?: ChatExecutionState;
+  draftSql?: string;
+  draftTables?: string[];
+  executionMode?: string;
+  feedbackRating?: -1 | 1;
 };
 
 function mapHistoryMessages(raw: unknown[]): ChatMessage[] {
@@ -111,10 +123,20 @@ function applyAssistantResult(
     ? next.findIndex((m) => m.jobId === jobId && m.role === 'assistant')
     : next.findIndex((m) => m.streaming);
   if (idx >= 0) {
-    next[idx] = { role: 'assistant', content, meta: result, jobId };
+    const prevMsg = next[idx]!;
+    next[idx] = {
+      role: 'assistant',
+      content,
+      meta: result,
+      jobId,
+      draftSql: result.sql || prevMsg.draftSql,
+      draftTables: result.provenance?.selected_tables || prevMsg.draftTables,
+      chatState: 'COMPLETED',
+      executionMode: prevMsg.executionMode,
+    };
     return next;
   }
-  return [...next, { role: 'assistant', content, meta: result }];
+  return [...next, { role: 'assistant', content, meta: result, chatState: 'COMPLETED' }];
 }
 
 function statusLabelForMessage(m: ChatMessage): string {
@@ -273,11 +295,19 @@ export default function BiChatPanel({
   autoFocus,
 }: BiChatPanelProps) {
   const { config } = useApiConfig();
+  const flags = getFeatureFlags();
   const templates = useQuery({
     queryKey: ['bi-templates', config],
     queryFn: () => api.bi.templates(config),
     enabled: isRunnerConfigured(config),
   });
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled: isRunnerConfigured(config),
+    staleTime: 60_000,
+  });
+  const activeDbName = sourcesQ.data?.active_id || undefined;
 
   const [warmTick, setWarmTick] = useState(0);
   useEffect(() => {
@@ -670,19 +700,29 @@ export default function BiChatPanel({
       let sawLiveTokens = false;
       const { jobId, promise, unsubscribe } = runBiChatJob(
         config,
-        { message: payload, session_id: sessionId, dashboard_id: dashboardId, context },
+        {
+          message: payload,
+          session_id: sessionId,
+          dashboard_id: dashboardId,
+          db_name: activeDbName,
+          context,
+        },
         (ev) => {
           const id = jobRef.id;
           if (!id) return;
           if (ev.type === 'status') {
+            const chatState = mapPhaseToChatState(ev.phase);
             setMessages((prev) =>
               prev.map((m) =>
                 m.jobId === id && m.streaming
                   ? {
                       ...m,
                       streamPhase: ev.phase,
+                      chatState,
                       queuePosition: typeof ev.position === 'number' ? ev.position : m.queuePosition,
                       elapsedSec: typeof ev.elapsed_sec === 'number' ? ev.elapsed_sec : m.elapsedSec,
+                      draftSql:
+                        typeof ev.payload?.sql === 'string' ? String(ev.payload.sql) : m.draftSql,
                     }
                   : m,
               ),
@@ -693,6 +733,61 @@ export default function BiChatPanel({
               if (!job || job.phase === ev.phase) return prev;
               return { ...prev, [id]: { ...job, phase: ev.phase } };
             });
+            return;
+          }
+          if (ev.type === 'schema_context') {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.jobId === id && m.streaming
+                  ? { ...m, draftTables: ev.tables, chatState: 'RETRIEVING_CONTEXT' }
+                  : m,
+              ),
+            );
+            return;
+          }
+          if (ev.type === 'sql_generated') {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.jobId === id && m.streaming
+                  ? { ...m, draftSql: ev.sql, chatState: 'GENERATING_SQL' }
+                  : m,
+              ),
+            );
+            return;
+          }
+          if (ev.type === 'answer_delta') {
+            sawLiveTokens = true;
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (!(m.jobId === id && m.streaming)) return m;
+                return {
+                  ...m,
+                  content: `${m.content || ''}${ev.text}`,
+                  liveTokens: true,
+                  streamPhase: 'composing',
+                  chatState: 'GENERATING_ANSWER',
+                };
+              }),
+            );
+            return;
+          }
+          if (ev.type === 'completed') {
+            const p = ev.payload || {};
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.jobId === id && m.streaming
+                  ? {
+                      ...m,
+                      chatState: 'COMPLETED',
+                      draftSql: typeof p.sql === 'string' ? String(p.sql) : m.draftSql,
+                      executionMode:
+                        typeof p.execution_mode === 'string'
+                          ? String(p.execution_mode)
+                          : m.executionMode,
+                    }
+                  : m,
+              ),
+            );
             return;
           }
           if (ev.type === 'token') {
@@ -706,6 +801,7 @@ export default function BiChatPanel({
                   content: nextContent,
                   liveTokens: true,
                   streamPhase: 'composing',
+                  chatState: 'GENERATING_ANSWER',
                 };
               }),
             );
@@ -804,7 +900,45 @@ export default function BiChatPanel({
         }
       }
     },
-    [config, dashboardId, history, input, onResponse, sessionId],
+    [activeDbName, config, dashboardId, history, input, onResponse, sessionId],
+  );
+
+  const stopStreaming = useCallback(() => {
+    abortBiChatJob(sessionId);
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.streaming ? { ...m, streaming: false, chatState: 'CANCELLED', content: m.content || 'İstek durduruldu.' } : m,
+      ),
+    );
+    setPendingCount(0);
+    drivingSendRef.current = false;
+  }, [sessionId]);
+
+  const sendFeedback = useCallback(
+    async (msg: ChatMessage, rating: -1 | 1) => {
+      if (!flags.enableFeedback || msg.feedbackRating) return;
+      const idx = messages.indexOf(msg);
+      const question =
+        [...messages]
+          .slice(0, idx >= 0 ? idx : messages.length)
+          .reverse()
+          .find((m) => m.role === 'user')?.content || '';
+      try {
+        await submitQueryFeedback(config, {
+          question,
+          rating,
+          sql: pickExportSql(msg.meta) || msg.draftSql,
+          session_id: sessionId,
+          datasource_id: activeDbName,
+        });
+        setMessages((prev) =>
+          prev.map((m) => (m === msg || (msg.jobId && m.jobId === msg.jobId) ? { ...m, feedbackRating: rating } : m)),
+        );
+      } catch (err) {
+        setError(localizeUserMessage((err as Error).message));
+      }
+    },
+    [activeDbName, config, flags.enableFeedback, messages, sessionId],
   );
 
   const sendTemplate = useCallback(
@@ -1139,6 +1273,59 @@ export default function BiChatPanel({
                     />
                   </div>
                 )}
+              {flags.enableSqlPanel && (m.draftSql || pickExportSql(m.meta)) && (
+                  <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs text-slate-700">
+                    <summary className="cursor-pointer font-semibold text-slate-800">
+                      SQL
+                      {m.executionMode ? ` · ${m.executionMode}` : ''}
+                    </summary>
+                    {(m.draftTables?.length || m.meta?.provenance?.selected_tables?.length) ? (
+                      <p className="mt-2 text-[11px] text-slate-500">
+                        Tablolar:{' '}
+                        {(m.draftTables || m.meta?.provenance?.selected_tables || []).join(', ')}
+                      </p>
+                    ) : null}
+                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] text-slate-800">
+                      {m.draftSql || pickExportSql(m.meta)}
+                    </pre>
+                    {flags.enableTestExecution ? (
+                      <p className="mt-2 text-[11px] text-amber-700">
+                        Test çalıştırma bu ortamda açıktır (prod’da kapalı).
+                      </p>
+                    ) : null}
+                  </details>
+                )}
+              {m.role === 'assistant' && !m.streaming && flags.enableFeedback && m.meta && (
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={clsx(
+                      'inline-flex h-8 w-8 items-center justify-center rounded-lg border text-slate-600 hover:bg-emerald-50',
+                      m.feedbackRating === 1 && 'border-emerald-400 bg-emerald-50 text-emerald-700',
+                    )}
+                    aria-label="Doğru"
+                    disabled={Boolean(m.feedbackRating)}
+                    onClick={() => void sendFeedback(m, 1)}
+                  >
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className={clsx(
+                      'inline-flex h-8 w-8 items-center justify-center rounded-lg border text-slate-600 hover:bg-rose-50',
+                      m.feedbackRating === -1 && 'border-rose-400 bg-rose-50 text-rose-700',
+                    )}
+                    aria-label="Yanlış"
+                    disabled={Boolean(m.feedbackRating)}
+                    onClick={() => void sendFeedback(m, -1)}
+                  >
+                    <ThumbsDown className="h-3.5 w-3.5" />
+                  </button>
+                  {m.feedbackRating ? (
+                    <span className="text-[11px] text-slate-500">Geri bildirim kaydedildi</span>
+                  ) : null}
+                </div>
+              )}
               {m.role === 'assistant' && !m.streaming && pickExportSql(m.meta) && (
                 <div className="mt-2 flex w-full max-w-lg flex-col items-stretch gap-2 self-end sm:max-w-md">
                   <div className="flex flex-wrap justify-end gap-2">
@@ -1257,9 +1444,26 @@ export default function BiChatPanel({
               }
             }}
           />
-          <button type="button" className="btn-primary h-11 w-11 shrink-0 rounded-lg p-0 sm:h-10 sm:w-10" disabled={!input.trim()} onClick={() => sendMessage()}>
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          </button>
+          {pending ? (
+            <button
+              type="button"
+              className="btn-secondary h-11 w-11 shrink-0 rounded-lg p-0 text-rose-700 sm:h-10 sm:w-10"
+              aria-label="Durdur"
+              title="Durdur"
+              onClick={stopStreaming}
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary h-11 w-11 shrink-0 rounded-lg p-0 sm:h-10 sm:w-10"
+              disabled={!input.trim()}
+              onClick={() => sendMessage()}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          )}
         </div>
         {!embedded && <p className="mt-2 hidden text-center text-[11px] text-slate-400 sm:block">{t('bi.chatSendHint')}</p>}
       </div>

@@ -8,6 +8,7 @@ type TrackedJob = {
   id: string;
   promise: Promise<BiChatResponse>;
   listeners: Set<BiChatJobListener>;
+  abort: AbortController;
 };
 
 type SessionJobs = {
@@ -37,7 +38,7 @@ export function isBiChatJobPending(sessionId: string): boolean {
 }
 
 export function biChatJobCount(sessionId: string): number {
-  return sessions.get(sessionId)?.jobs.size ?? 0;
+  return (sessions.get(sessionId)?.jobs.size ?? 0);
 }
 
 export function subscribeBiChatJob(sessionId: string, listener: BiChatJobListener): () => void {
@@ -68,6 +69,19 @@ export function getBiChatJobsSettled(sessionId: string): Promise<void> | null {
   return Promise.allSettled([...bucket.jobs.values()].map((j) => j.promise)).then(() => undefined);
 }
 
+/** Abort one job (or all jobs for the session). */
+export function abortBiChatJob(sessionId: string, jobId?: string): void {
+  const bucket = sessions.get(sessionId);
+  if (!bucket) return;
+  if (jobId) {
+    bucket.jobs.get(jobId)?.abort.abort();
+    return;
+  }
+  for (const job of bucket.jobs.values()) {
+    job.abort.abort();
+  }
+}
+
 /**
  * Always starts a new stream for this message (FIFO on the server).
  * Does not attach a second prompt to an existing in-flight job.
@@ -79,29 +93,46 @@ export function runBiChatJob(
     session_id: string;
     recipient?: string;
     dashboard_id?: string;
+    db_name?: string;
     context?: Record<string, unknown>;
   },
   listener?: BiChatJobListener,
-): { jobId: string; promise: Promise<BiChatResponse>; unsubscribe: () => void } {
+): { jobId: string; promise: Promise<BiChatResponse>; unsubscribe: () => void; abort: () => void } {
   const sessionId = body.session_id;
   const bucket = sessionBucket(sessionId);
   const jobId = nextJobId();
   const listeners = new Set<BiChatJobListener>();
+  const abort = new AbortController();
 
-  const promise = streamBiChat(config, body, (ev) => {
-    listeners.forEach((fn) => {
-      try {
-        fn(ev);
-      } catch {
-        /* ignore listener errors */
+  const promise = streamBiChat(
+    config,
+    body,
+    (ev) => {
+      listeners.forEach((fn) => {
+        try {
+          fn(ev);
+        } catch {
+          /* ignore listener errors */
+        }
+      });
+    },
+    abort.signal,
+  )
+    .catch((err: unknown) => {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new Error('İstek durduruldu.');
       }
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error('İstek durduruldu.');
+      }
+      throw err;
+    })
+    .finally(() => {
+      bucket.jobs.delete(jobId);
+      if (bucket.jobs.size === 0) sessions.delete(sessionId);
     });
-  }).finally(() => {
-    bucket.jobs.delete(jobId);
-    if (bucket.jobs.size === 0) sessions.delete(sessionId);
-  });
 
-  const tracked: TrackedJob = { id: jobId, promise, listeners };
+  const tracked: TrackedJob = { id: jobId, promise, listeners, abort };
   bucket.jobs.set(jobId, tracked);
 
   let unsubscribe = () => undefined;
@@ -112,5 +143,10 @@ export function runBiChatJob(
     };
   }
 
-  return { jobId, promise, unsubscribe };
+  return {
+    jobId,
+    promise,
+    unsubscribe,
+    abort: () => abort.abort(),
+  };
 }

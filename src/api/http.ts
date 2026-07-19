@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/api-error';
 import { parseApiErrorBody } from '@/utils/backendLabels';
 
 const STORAGE_KEY = 'nanobase_qa_api';
@@ -123,6 +124,22 @@ export async function request<T>(
   });
   if (!res.ok) {
     const text = await res.text();
+    let body: Record<string, unknown> | null = null;
+    try {
+      body = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      body = null;
+    }
+    if (body && (body.code || body.traceId || body.trace_id)) {
+      const err = new ApiError({
+        code: String(body.code || 'INTERNAL_ERROR'),
+        message: String(body.message || body.error || `HTTP ${res.status}`),
+        traceId: String(body.traceId || body.trace_id || ''),
+        status: res.status,
+        details: Array.isArray(body.details) ? (body.details as ApiError['details']) : [],
+      });
+      throw new Error(err.userMessage());
+    }
     throw new Error(parseApiError(text, res.status));
   }
   if (res.status === 204) return undefined as T;

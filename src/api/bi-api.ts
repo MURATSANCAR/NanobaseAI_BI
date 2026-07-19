@@ -1234,7 +1234,63 @@ export function createBiApi() {
         request<BiSourcesList>(c, `/api/v1/bi/sources/${encodeURIComponent(sourceId)}/activate`, {
           method: 'POST',
         }),
+      delete: (c: ApiConfig, sourceId: string) =>
+        request<{ ok: boolean }>(c, `/api/v1/bi/sources/${encodeURIComponent(sourceId)}`, {
+          method: 'DELETE',
+        }),
+      test: (c: ApiConfig, sourceId: string) =>
+        request<{
+          success?: boolean;
+          ok?: boolean;
+          databaseType?: string;
+          databaseVersion?: string;
+          latencyMs?: number;
+          message?: string;
+          via?: string;
+        }>(c, `/api/v1/bi/sources/${encodeURIComponent(sourceId)}/test`, {
+          method: 'POST',
+          body: '{}',
+        }),
+      scan: (c: ApiConfig, sourceId: string) =>
+        request<{ scanId: string; status: string }>(
+          c,
+          `/api/v1/bi/sources/${encodeURIComponent(sourceId)}/scan`,
+          { method: 'POST', body: '{}' },
+        ),
     },
+    schemaScans: {
+      get: (c: ApiConfig, scanId: string) =>
+        request<{
+          scanId: string;
+          status: string;
+          datasourceId?: string;
+          schemaCount?: number | null;
+          tableCount?: number | null;
+          columnCount?: number | null;
+          relationshipCount?: number | null;
+          indexedDocumentCount?: number | null;
+          skippedDocumentCount?: number | null;
+          error?: string | null;
+          startedAt?: string | null;
+          completedAt?: string | null;
+        }>(c, `/api/v1/bi/schema-scans/${encodeURIComponent(scanId)}`),
+    },
+    queryFeedback: (
+      c: ApiConfig,
+      body: {
+        question: string;
+        rating: -1 | 1;
+        sql?: string;
+        session_id?: string;
+        comment?: string;
+        datasource_id?: string;
+        promote_verified?: boolean;
+      },
+    ) =>
+      request<{ ok?: boolean }>(c, '/api/v1/bi/query/feedback', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
     download: async (c: ApiConfig, path: string, filename: string, sqlBody?: string) => {
       const url = `${apiBase(c)}${path}`;
       const headers: Record<string, string> = { Authorization: `Bearer ${c.apiKey}` };

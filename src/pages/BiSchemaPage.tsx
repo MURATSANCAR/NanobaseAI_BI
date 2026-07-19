@@ -21,6 +21,7 @@ import {
   type SchemaView,
 } from '@/utils/biSchemaRelations';
 import { t } from '@/i18n';
+import { getFeatureFlags } from '@/config/environment';
 
 const VIEW_META: Array<{
   id: SchemaView;
@@ -58,13 +59,15 @@ export default function BiSchemaPage() {
   const showPack = searchParams.get('pack') === '1';
   const panelRef = useRef<HTMLDivElement>(null);
   const packRef = useRef<HTMLDivElement>(null);
+  const flags = getFeatureFlags();
 
   const schema = useQuery({
     queryKey: ['bi-schema'],
     queryFn: () => api.bi.schema(config),
-    enabled: isRunnerConfigured(config),
+    enabled: isRunnerConfigured(config) && flags.enableSchemaExplorer,
     retry: false,
     staleTime: 60_000,
+    refetchOnWindowFocus: true,
   });
 
   const graph = useQuery({
@@ -223,7 +226,7 @@ export default function BiSchemaPage() {
         ) : null}
 
         {showEmpty && !showPack ? (
-          <BiSchemaEmptyGate>
+          <BiSchemaEmptyGate ctaTo="/bi/sources">
             <button
               type="button"
               className="btn-primary mt-3 inline-flex items-center gap-2"
@@ -234,6 +237,12 @@ export default function BiSchemaPage() {
               {t('bi.refreshSchema')}
             </button>
           </BiSchemaEmptyGate>
+        ) : null}
+
+        {hasSchema && search.trim() && tables.length === 0 ? (
+          <div className="bi-schema-panel p-6 text-center text-sm text-slate-500">
+            “{search.trim()}” ile eşleşen tablo veya kolon yok.
+          </div>
         ) : null}
 
         {hasSchema ? (

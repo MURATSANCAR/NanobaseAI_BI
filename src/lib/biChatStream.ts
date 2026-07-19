@@ -1,5 +1,7 @@
 import type { BiChatResponse } from '@/api/types';
 import { buildRunnerHeaders, type ApiConfig } from '@/api/client';
+import { parseSseStream } from '@/lib/sse/parseSseStream';
+import type { ChatExecutionState } from '@/api/contracts/datasource';
 
 function apiBase(config: ApiConfig): string {
   return (config.baseUrl || '').replace(/\/$/, '');
@@ -10,10 +12,32 @@ function authHeaders(config: ApiConfig): Record<string, string> {
 }
 
 export type BiStreamEvent =
-  | { type: 'status'; phase: string; position?: number; queue_depth?: number; elapsed_sec?: number }
+  | {
+      type: 'status';
+      phase: string;
+      position?: number;
+      queue_depth?: number;
+      elapsed_sec?: number;
+      payload?: Record<string, unknown>;
+    }
   | { type: 'token'; t: string; reset?: boolean }
+  | { type: 'schema_context'; tables: string[] }
+  | { type: 'sql_generated'; sql: string; sql_source?: string }
+  | { type: 'answer_delta'; text: string }
+  | { type: 'completed'; payload?: Record<string, unknown> }
   | { type: 'done'; result: BiChatResponse }
   | { type: 'error'; message: string };
+
+export function mapPhaseToChatState(phase: string): ChatExecutionState {
+  const p = phase.toLowerCase();
+  if (p.includes('schema_retrieval')) return 'RETRIEVING_CONTEXT';
+  if (p.includes('nl2sql') || p.includes('plan') || p.includes('verified')) return 'GENERATING_SQL';
+  if (p.includes('validat')) return 'VALIDATING';
+  if (p.includes('execut')) return 'EXECUTING';
+  if (p.includes('explain') || p.includes('final')) return 'GENERATING_ANSWER';
+  if (p.includes('prepar')) return 'SUBMITTING';
+  return 'GENERATING_ANSWER';
+}
 
 export async function streamBiChat(
   config: ApiConfig,
@@ -22,9 +46,11 @@ export async function streamBiChat(
     session_id?: string;
     recipient?: string;
     dashboard_id?: string;
+    db_name?: string;
     context?: Record<string, unknown>;
   },
   onEvent: (ev: BiStreamEvent) => void,
+  signal?: AbortSignal,
 ): Promise<BiChatResponse> {
   const url = `${apiBase(config)}/api/v1/bi/chat/stream`;
   const resp = await fetch(url, {
@@ -32,6 +58,7 @@ export async function streamBiChat(
     headers: authHeaders(config),
     body: JSON.stringify(body),
     credentials: 'include',
+    signal,
   });
   if (!resp.ok) {
     const text = await resp.text();
@@ -39,26 +66,12 @@ export async function streamBiChat(
   }
   if (!resp.body) throw new Error('No response body');
 
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
   let result: BiChatResponse | null = null;
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const parts = buffer.split('\n\n');
-    buffer = parts.pop() ?? '';
-    for (const part of parts) {
-      const lines = part.split('\n');
-      let event = 'message';
-      let data = '';
-      for (const line of lines) {
-        if (line.startsWith('event:')) event = line.slice(6).trim();
-        if (line.startsWith('data:')) data += line.slice(5).trim();
-      }
-      if (!data) continue;
+  await parseSseStream(
+    resp.body,
+    (frame) => {
+      const { event, data } = frame;
       try {
         const parsed = JSON.parse(data) as Record<string, unknown>;
         if (event === 'status') {
@@ -68,6 +81,26 @@ export async function streamBiChat(
             position: typeof parsed.position === 'number' ? parsed.position : undefined,
             queue_depth: typeof parsed.queue_depth === 'number' ? parsed.queue_depth : undefined,
             elapsed_sec: typeof parsed.elapsed_sec === 'number' ? parsed.elapsed_sec : undefined,
+            payload: parsed,
+          });
+        } else if (event === 'schema_context') {
+          const payload = (parsed.payload as Record<string, unknown>) || parsed;
+          const tables = (payload.tables as string[]) || [];
+          onEvent({ type: 'schema_context', tables });
+        } else if (event === 'sql_generated') {
+          const payload = (parsed.payload as Record<string, unknown>) || parsed;
+          onEvent({
+            type: 'sql_generated',
+            sql: String(payload.sql ?? ''),
+            sql_source: payload.sql_source ? String(payload.sql_source) : undefined,
+          });
+        } else if (event === 'answer_delta') {
+          const payload = (parsed.payload as Record<string, unknown>) || parsed;
+          onEvent({ type: 'answer_delta', text: String(payload.text ?? '') });
+        } else if (event === 'completed') {
+          onEvent({
+            type: 'completed',
+            payload: (parsed.payload as Record<string, unknown>) || parsed,
           });
         } else if (event === 'token') {
           onEvent({
@@ -85,9 +118,11 @@ export async function streamBiChat(
       } catch (e) {
         if (e instanceof Error && event === 'error') throw e;
       }
-    }
-  }
+    },
+    signal,
+  );
 
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   if (!result) throw new Error('Stream ended without result');
   return result;
 }
@@ -99,10 +134,10 @@ export async function revealText(
   chunkSize = 3,
   delayMs = 12,
 ): Promise<void> {
-  let acc = '';
-  for (let i = 0; i < text.length; i += chunkSize) {
-    acc += text.slice(i, i + chunkSize);
-    onChunk(acc);
-    await new Promise((r) => setTimeout(r, delayMs));
+  let i = 0;
+  while (i < text.length) {
+    i = Math.min(text.length, i + chunkSize);
+    onChunk(text.slice(0, i));
+    if (i < text.length) await new Promise((r) => setTimeout(r, delayMs));
   }
 }

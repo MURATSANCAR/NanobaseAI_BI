@@ -16,6 +16,7 @@ export default function BiSchemaEmptyGate({ children, ctaTo = '/bi/sources' }: P
         ctaLabelKey="empty.bi.schema.cta"
         ctaTo={ctaTo}
       >
+        <p className="mt-2 text-sm text-slate-500">Henüz tarama yok — önce bağlantıyı test edip şemayı tarayın.</p>
         {children}
       </EmptyState>
     </div>

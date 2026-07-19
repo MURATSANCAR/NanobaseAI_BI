@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams, Link } from 'react-router-dom';
-import { CheckCircle2, ChevronDown, Database, Loader2, Table2, Wifi, XCircle } from 'lucide-react';
+import { CheckCircle2, ChevronDown, Database, Loader2, RefreshCw, Table2, Trash2, Wifi, XCircle } from 'lucide-react';
 import clsx from 'clsx';
 import { PageShell } from '@/components/PageShell';
 import BiFirstValueTour from '@/components/bi/BiFirstValueTour';
 import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
 import { api, isRunnerConfigured } from '@/api/client';
+import { createDatasourceService } from '@/api/services';
 import { useApiConfig } from '@/context/ApiContext';
 import { useBiChatDock } from '@/context/BiChatDockContext';
 import type { BiConnectionProfile, BiConnectionUpsert } from '@/api/types';
+import type { SchemaScan } from '@/api/contracts/datasource';
 import { formatBackendErrorText, localizeUserMessage } from '@/utils/backendLabels';
 import { t } from '@/i18n';
+import { getFeatureFlags } from '@/config/environment';
+
+const dsService = createDatasourceService();
 
 const DRIVERS = ['postgresql', 'mysql', 'oracle', 'sqlite', 'supabase'] as const;
 
@@ -125,9 +130,30 @@ export default function BiConnectionPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [form, setForm] = useState<BiConnectionUpsert & { source_id: string }>(emptyForm());
   const [formOpen, setFormOpen] = useState(false);
+  const [scanId, setScanId] = useState<string | null>(null);
+  const [testState, setTestState] = useState<'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILED'>('IDLE');
+  const flags = getFeatureFlags();
 
   const sources = sourcesQ.data?.sources ?? [];
   const activeId = sourcesQ.data?.active_id ?? null;
+
+  const scanQ = useQuery({
+    queryKey: ['bi-schema-scan', scanId],
+    queryFn: () => dsService.getScan(config, scanId!),
+    enabled: Boolean(enabled && scanId),
+    refetchInterval: (q) => {
+      const st = (q.state.data as SchemaScan | undefined)?.status;
+      return st === 'COMPLETED' || st === 'FAILED' ? false : 2500;
+    },
+  });
+
+  useEffect(() => {
+    if (scanQ.data?.status === 'COMPLETED') {
+      void qc.invalidateQueries({ queryKey: ['bi-schema'] });
+      void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
+      void qc.invalidateQueries({ queryKey: ['bi-status'] });
+    }
+  }, [qc, scanQ.data?.status]);
 
   useEffect(() => {
     if (!sources.length) return;
@@ -152,15 +178,17 @@ export default function BiConnectionPage() {
   };
 
   const testMut = useMutation({
-    mutationFn: () => {
-      const { source_id: _sid, ...body } = form;
-      return api.bi.connection.test(config, {
-        ...body,
-        // Persist result on the selected / active source so the banner matches reality
-        ...(selectedId ? { label: form.label || selectedId } : {}),
-      });
+    mutationFn: async () => {
+      const sid = selectedId || form.source_id;
+      if (!sid) throw new Error('Önce bir kaynak seçin veya kaydedin.');
+      setTestState('TESTING');
+      return dsService.testDatasource(config, sid);
     },
-    onSettled: () => invalidate(),
+    onSuccess: (res) => {
+      setTestState(res.ok || res.success ? 'SUCCESS' : 'FAILED');
+      invalidate();
+    },
+    onError: () => setTestState('FAILED'),
   });
 
   const saveMut = useMutation({
@@ -171,19 +199,46 @@ export default function BiConnectionPage() {
         .replace(/[^a-z0-9_-]+/g, '_')
         .replace(/^_+|_+$/g, '') || 'primary';
       const { source_id: _sid, ...body } = form;
-      return api.bi.sources.upsert(config, sid, { ...body, label: form.label || sid });
+      return dsService.createDatasource(config, sid, { ...body, label: form.label || sid, name: form.label || sid });
     },
     onSuccess: (res) => {
       invalidate();
-      const id = res.source?.id || form.source_id;
+      const id = (res as { source?: { id?: string }; id?: string }).source?.id || (res as { id?: string }).id || form.source_id;
       setSelectedId(id || null);
       setForm((f) => ({ ...f, source_id: id || f.source_id, password: '', supabase_api_key: '', connection_url: '' }));
     },
   });
 
   const activateMut = useMutation({
-    mutationFn: (id: string) => api.bi.sources.activate(config, id),
+    mutationFn: (id: string) => dsService.activate(config, id),
     onSuccess: invalidate,
+  });
+
+  const scanMut = useMutation({
+    mutationFn: async () => {
+      const sid = selectedId || form.source_id;
+      if (!sid) throw new Error('Tarama için bir kaynak seçin.');
+      return dsService.startScan(config, sid);
+    },
+    onSuccess: (scan) => {
+      if (scan.scanId) setScanId(scan.scanId);
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async () => {
+      const sid = selectedId;
+      if (!sid) throw new Error('Silinecek kaynak yok.');
+      if (['bi_reporting', 'erp', 'sigorta'].includes(sid)) {
+        throw new Error('Paylaşılan sistem kaynakları silinemez.');
+      }
+      return dsService.deleteDatasource(config, sid);
+    },
+    onSuccess: () => {
+      setSelectedId(null);
+      setForm(emptyForm());
+      invalidate();
+    },
   });
 
   const isSqlite = form.driver === 'sqlite';
@@ -537,7 +592,7 @@ export default function BiConnectionPage() {
               <button
                 type="button"
                 className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
-                disabled={testMut.isPending}
+                disabled={testMut.isPending || !selectedId}
                 onClick={() => testMut.mutate()}
               >
                 {testMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
@@ -552,20 +607,84 @@ export default function BiConnectionPage() {
                 {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
                 {t('bi.saveConnection')}
               </button>
+              {flags.useNanobaseBackend && (
+                <button
+                  type="button"
+                  className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
+                  disabled={scanMut.isPending || !selectedId}
+                  onClick={() => scanMut.mutate()}
+                >
+                  {scanMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Şemayı tara
+                </button>
+              )}
+              {selectedId && !['bi_reporting', 'erp', 'sigorta'].includes(selectedId) && (
+                <button
+                  type="button"
+                  className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 text-rose-700 sm:w-auto"
+                  disabled={deleteMut.isPending}
+                  onClick={() => {
+                    if (window.confirm('Bu datasource silinsin mi?')) deleteMut.mutate();
+                  }}
+                >
+                  {deleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Sil
+                </button>
+              )}
             </div>
 
+            {testState === 'TESTING' && (
+              <div className="text-sm text-slate-600">Bağlantı test ediliyor…</div>
+            )}
             {testMut.isSuccess && (
-              <div className={clsx('text-sm', testMut.data.ok ? 'text-status-ok' : 'text-status-fail')}>
-                {testMut.data.ok ? t('bi.testSuccess') : formatBackendErrorText(testMut.data.message)}
+              <div className={clsx('text-sm', testMut.data.ok || testMut.data.success ? 'text-status-ok' : 'text-status-fail')}>
+                {testMut.data.ok || testMut.data.success
+                  ? `Bağlantı başarılı${testMut.data.databaseVersion ? ` — ${testMut.data.databaseVersion}` : ''}${
+                      testMut.data.latencyMs != null ? ` (${testMut.data.latencyMs} ms)` : ''
+                    }`
+                  : 'Veritabanına bağlantı kurulamadı.'}
               </div>
             )}
-            {(testMut.isError || saveMut.isError) && (
+            {(testMut.isError || saveMut.isError || scanMut.isError || deleteMut.isError) && (
               <div className="text-sm text-status-fail">
                 {localizeUserMessage((testMut.error as Error)?.message) ||
-                  localizeUserMessage((saveMut.error as Error)?.message)}
+                  localizeUserMessage((saveMut.error as Error)?.message) ||
+                  localizeUserMessage((scanMut.error as Error)?.message) ||
+                  localizeUserMessage((deleteMut.error as Error)?.message)}
               </div>
             )}
             {saveMut.isSuccess && <div className="text-sm text-status-ok">{t('bi.saveSuccess')}</div>}
+
+            {scanId && scanQ.data && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-900">
+                  Schema scan: {scanQ.data.status}
+                  {(scanQ.data.status === 'QUEUED' || scanQ.data.status === 'RUNNING') && (
+                    <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin" />
+                  )}
+                </p>
+                {scanQ.data.status === 'COMPLETED' && (
+                  <ul className="mt-2 list-inside list-disc text-xs text-slate-600">
+                    <li>{scanQ.data.tableCount ?? '—'} tablo</li>
+                    <li>{scanQ.data.columnCount ?? '—'} kolon</li>
+                    <li>{scanQ.data.relationshipCount ?? '—'} ilişki</li>
+                    <li>{scanQ.data.indexedDocumentCount ?? '—'} indeks dokümanı</li>
+                    <li>{scanQ.data.skippedDocumentCount ?? '—'} atlanan (fingerprint)</li>
+                  </ul>
+                )}
+                {scanQ.data.status === 'FAILED' && (
+                  <p className="mt-2 text-status-fail">
+                    Şema taraması tamamlanamadı.
+                    {scanQ.data.error ? ` (${formatBackendErrorText(scanQ.data.error)})` : ''}
+                  </p>
+                )}
+                {flags.enableSchemaExplorer && scanQ.data.status === 'COMPLETED' && (
+                  <Link to="/bi/schema" className="mt-3 inline-block text-sm font-medium text-violet-700 hover:underline">
+                    Schema Explorer →
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
