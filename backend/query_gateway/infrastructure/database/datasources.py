@@ -26,6 +26,15 @@ DEFAULT_ORACLE_SSB_TABLES = {
     "ssb.dwdate",
 }
 
+DEFAULT_ORACLE_REPORTING_TABLES = {
+    "nanobase_reporting.v_invoice",
+    "nanobase_reporting.v_invoices",
+    "nanobase_reporting.v_customer",
+    "v_invoice",
+    "v_invoices",
+    "v_customer",
+}
+
 BI_REPORTING_TABLES = {
     "customers",
     "products",
@@ -167,16 +176,44 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
                 except Exception:
                     continue
                 user = cfg.get("user") or cfg.get("username")
-                dsn = (cfg.get("dsn") or "").strip()
-                host = cfg.get("host")
-                service = cfg.get("service_name") or cfg.get("service") or cfg.get("database")
+                # Reject forbidden privileged accounts at load time
+                from query_gateway.infrastructure.oracle.profile import (
+                    FORBIDDEN_ORACLE_USERS,
+                    validate_allowed_owners,
+                )
+
                 if not pw or not user:
                     continue
-                if not dsn and not (host and service):
+                if str(user).upper() in FORBIDDEN_ORACLE_USERS:
                     continue
-                port = int(cfg.get("port") or 1522)
+                dsn = (cfg.get("dsn") or "").strip()
+                host = cfg.get("host")
+                service = cfg.get("service_name") or cfg.get("serviceName") or cfg.get("service") or cfg.get("database")
+                allow_sid = bool(cfg.get("allow_sid") or cfg.get("allowSid") or False)
+                if not dsn and not (host and service) and not (allow_sid and host and cfg.get("sid")):
+                    continue
+                port = int(cfg.get("port") or 1521)
                 if not dsn:
-                    dsn = f"{host}:{port}/{service}"
+                    if allow_sid and cfg.get("sid"):
+                        dsn = f"{host}:{port}/{cfg.get('sid')}"
+                    else:
+                        dsn = f"{host}:{port}/{service}"
+                owners_raw = cfg.get("allowed_owners") or cfg.get("allowedOwners")
+                try:
+                    allowed_owners = validate_allowed_owners(
+                        list(owners_raw) if owners_raw else ["NANOBASE_REPORTING"]
+                    )
+                except Exception:
+                    continue
+                default_tables = (
+                    DEFAULT_ORACLE_REPORTING_TABLES
+                    if "NANOBASE_REPORTING" in allowed_owners
+                    else DEFAULT_ORACLE_SSB_TABLES
+                )
+                tables = _allowed_tables(cfg, default_tables)
+                # Normalize table names to lowercase for policy engine
+                if tables is not None:
+                    tables = {str(t).lower() for t in tables}
                 ds[str(sid)] = {
                     "id": str(sid),
                     "driver": "oracle",
@@ -187,9 +224,28 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
                     "dsn": dsn,
                     "user": user,
                     "password": pw,
-                    "sslmode": cfg.get("sslmode") or "tcps",
+                    "sslmode": cfg.get("sslmode") or cfg.get("sslMode") or "tcps",
+                    "ssl_mode": cfg.get("ssl_mode") or cfg.get("sslMode") or "REQUIRE",
                     "dialect": "oracle",
-                    "allowed_tables": _allowed_tables(cfg, DEFAULT_ORACLE_SSB_TABLES),
+                    "connection_mode": str(
+                        cfg.get("connection_mode") or cfg.get("connectionMode") or "THIN"
+                    ).upper(),
+                    "wallet_secret_ref": cfg.get("wallet_secret_ref") or cfg.get("walletSecretRef"),
+                    "allow_sid": allow_sid,
+                    "sid": cfg.get("sid"),
+                    "allowed_owners": allowed_owners,
+                    "allowed_schemas": {o.lower() for o in allowed_owners},
+                    "allowed_tables": tables,
+                    "column_policies": cfg.get("column_policies") or cfg.get("columnPolicies") or {},
+                    "size_profile": cfg.get("size_profile") or cfg.get("sizeProfile") or "medium",
+                    "plan_user": cfg.get("plan_user") or cfg.get("planUser"),
+                    "plan_password": cfg.get("plan_password") or cfg.get("planPassword"),
+                    "metadata_user": cfg.get("metadata_user") or cfg.get("metadataUser"),
+                    "metadata_password": cfg.get("metadata_password") or cfg.get("metadataPassword"),
+                    "container_name": cfg.get("container_name") or cfg.get("containerName"),
+                    "database_unique_name": cfg.get("database_unique_name")
+                    or cfg.get("databaseUniqueName"),
+                    "require_vpd": bool(cfg.get("require_vpd") or cfg.get("requireVpd") or False),
                     "label": cfg.get("label") or sid,
                 }
             else:

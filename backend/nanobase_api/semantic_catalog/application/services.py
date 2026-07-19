@@ -74,8 +74,7 @@ def create_candidate_from_feedback(
         candidate_score=score,
         status=AssetStatus.DRAFT,
     )
-    store.candidates[cand.id] = cand
-    # Open promotion request
+    store.save_candidate(cand)
     promo = PromotionRequest(
         id=_new_id("promo"),
         tenant_id=tenant_id,
@@ -86,7 +85,7 @@ def create_candidate_from_feedback(
         phase=PromotionPhase.CANDIDATE,
         created_by=user_id,
     )
-    store.promotions[promo.id] = promo
+    store.save_promotion(promo)
     return cand
 
 
@@ -115,7 +114,7 @@ def add_promotion_review(
             comment=comment,
         )
     )
-    store.promotions[promo.id] = promo
+    store.save_promotion(promo)
     return promo
 
 
@@ -197,7 +196,7 @@ def publish_promotion(
 
     store.set_active_version(version)
     promo.mark_published()
-    store.promotions[promo.id] = promo
+    store.save_promotion(promo)
     return version
 
 

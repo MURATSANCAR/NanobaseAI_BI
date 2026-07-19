@@ -1,0 +1,10 @@
+Question: {{ question }}
+Previous SQL:
+{{ previous_sql }}
+Gateway error: {{ error_code }} — {{ error_message }}
+Attempt: {{ attempt }}
+Authorized context:
+{{ context }}
+
+Return ONLY JSON plan (status PLANNED or AMBIGUOUS) with corrected Oracle sql.
+dialect must be oracle.

@@ -1,0 +1,39 @@
+allowedRoots:
+  - SELECT
+  - WITH_SELECT
+forbidden:
+  - INSERT
+  - UPDATE
+  - DELETE
+  - MERGE
+  - CREATE
+  - ALTER
+  - DROP
+  - TRUNCATE
+  - GRANT
+  - REVOKE
+  - COMMENT
+  - ANALYZE
+  - AUDIT
+  - NOAUDIT
+  - FLASHBACK
+  - PURGE
+  - RENAME
+  - LOCK_TABLE
+  - CALL
+  - EXEC
+  - BEGIN
+  - DECLARE
+  - CONNECT_BY
+  - START_WITH
+  - MODEL
+  - MATCH_RECOGNIZE
+  - SAMPLE
+  - XMLTABLE
+  - DATABASE_LINK
+  - OPTIMIZER_HINT
+  - FOR_UPDATE
+  - ALTER_SESSION
+notes: |
+  Read-only transaction alone is not sufficient; LOCK TABLE and FOR UPDATE
+  are blocked at the parser layer.

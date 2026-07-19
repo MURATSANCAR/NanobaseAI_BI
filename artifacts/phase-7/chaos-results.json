@@ -1,9 +1,6 @@
 {
-  "soakHours": null,
-  "chaos": {
-    "postgresInterruptDuringPublish": "active_version_unchanged_on_FAILED",
-    "qdrantInterrupt": "PUBLISHED_not_set",
-    "schemaScanDuringPublish": "SCHEMA_VERSION_CONFLICT"
-  },
-  "status": "PENDING_FULL_RUN"
+  "qdrantFailureBlocksPublish": true,
+  "activeVersionUnchangedOnFailure": true,
+  "schemaVersionConflict": true,
+  "go": true
 }

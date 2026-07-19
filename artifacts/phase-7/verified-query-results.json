@@ -1,0 +1,13 @@
+{
+  "summary": {
+    "totalCandidates": 150,
+    "candidatePipelineOk": 150,
+    "failed": 0,
+    "unauthorizedPublish": 0,
+    "wrongVersionRetrieval": 0,
+    "staleQueryUsage": 0,
+    "crossTenantVerifiedQuery": 0,
+    "activeSemanticVersion": "7.0.0",
+    "go": true
+  }
+}

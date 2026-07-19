@@ -1,0 +1,1496 @@
+# Oracle Text-to-SQL benchmark — auto-generated skeleton (≥250)
+datasource: oracle_reporting
+collection: bi_schema_oracle_reporting
+dialect: oracle
+pass_threshold:
+  structured_output_validity: 0.995
+  parse_success: 0.99
+  gateway_approval: 0.95
+  execution_equivalence: 0.92
+  business_correctness: 0.95
+questions:
+  - id: ora-001
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-002
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-003
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-004
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-005
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-006
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-007
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-008
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-009
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-010
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-011
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-012
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-013
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-014
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-015
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-016
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-017
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-018
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-019
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-020
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-021
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-022
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-023
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-024
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-025
+    category: simple_filter
+    question: "V_INVOICE tablosunda STATUS='OPEN' olan faturaların INVOICE_ID listesini getir (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-026
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-027
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-028
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-029
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-030
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-031
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-032
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-033
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-034
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-035
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-036
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-037
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-038
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-039
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-040
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-041
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-042
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-043
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-044
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-045
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-046
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-047
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-048
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-049
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-050
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-051
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 26)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-052
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 27)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-053
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 28)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-054
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 29)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-055
+    category: aggregate
+    question: "Ödenmemiş fatura tutarlarının toplamını hesapla (varyant 30)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-056
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-057
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-058
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-059
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-060
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-061
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-062
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-063
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-064
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-065
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-066
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-067
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-068
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-069
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-070
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-071
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-072
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-073
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-074
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-075
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-076
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-077
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-078
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-079
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-080
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-081
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 26)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-082
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 27)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-083
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 28)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-084
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 29)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-085
+    category: two_table_join
+    question: "Müşteri adı ile açık fatura tutarlarını birleştirerek listele (varyant 30)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-086
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-087
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-088
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-089
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-090
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-091
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-092
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-093
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-094
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-095
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-096
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-097
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-098
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-099
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-100
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-101
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-102
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-103
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-104
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-105
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-106
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-107
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-108
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-109
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-110
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-111
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 26)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-112
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 27)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-113
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 28)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-114
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 29)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-115
+    category: three_plus_join
+    question: "Müşteri, fatura ve ödeme bilgilerini birleştirerek kalan bakiyeyi göster (varyant 30)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-116
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-117
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-118
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-119
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-120
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-121
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-122
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-123
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-124
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-125
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-126
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-127
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-128
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-129
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-130
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-131
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-132
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-133
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-134
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-135
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-136
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-137
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-138
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-139
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-140
+    category: date
+    question: "2026 yılı Ocak ayındaki faturaların toplam tutarını getir (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-141
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-142
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-143
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-144
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-145
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-146
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-147
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-148
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-149
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-150
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-151
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-152
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-153
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-154
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-155
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-156
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-157
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-158
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-159
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-160
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-161
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 21)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-162
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 22)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-163
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 23)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-164
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 24)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-165
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 25)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-166
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 26)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-167
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 27)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-168
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 28)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-169
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 29)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-170
+    category: financial_metric
+    question: "unpaid_invoice_amount metriğini dönem filtresiyle hesapla (varyant 30)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-171
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-172
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-173
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-174
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-175
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-176
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-177
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-178
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-179
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-180
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-181
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-182
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-183
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-184
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-185
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-186
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-187
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-188
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-189
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-190
+    category: currency
+    question: "TRY cinsinden kalan tutarların toplamını getir (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-191
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-192
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-193
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-194
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-195
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-196
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-197
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-198
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-199
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-200
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-201
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-202
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-203
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-204
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-205
+    category: analytic
+    question: "Müşteri bazında kalan tutarı ROW_NUMBER ile sırala (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-206
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-207
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-208
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-209
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-210
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-211
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-212
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-213
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-214
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-215
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-216
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-217
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-218
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-219
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-220
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-221
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 16)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-222
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 17)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-223
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 18)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-224
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 19)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-225
+    category: follow_up
+    question: "Önceki soruya ek olarak sadece OPEN statüsünü göster (varyant 20)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-226
+    category: ambiguous
+    question: "satışlar nasıl (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-227
+    category: ambiguous
+    question: "satışlar nasıl (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-228
+    category: ambiguous
+    question: "satışlar nasıl (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-229
+    category: ambiguous
+    question: "satışlar nasıl (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-230
+    category: ambiguous
+    question: "satışlar nasıl (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-231
+    category: ambiguous
+    question: "satışlar nasıl (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-232
+    category: ambiguous
+    question: "satışlar nasıl (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-233
+    category: ambiguous
+    question: "satışlar nasıl (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-234
+    category: ambiguous
+    question: "satışlar nasıl (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-235
+    category: ambiguous
+    question: "satışlar nasıl (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-236
+    category: ambiguous
+    question: "satışlar nasıl (varyant 11)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-237
+    category: ambiguous
+    question: "satışlar nasıl (varyant 12)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-238
+    category: ambiguous
+    question: "satışlar nasıl (varyant 13)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-239
+    category: ambiguous
+    question: "satışlar nasıl (varyant 14)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-240
+    category: ambiguous
+    question: "satışlar nasıl (varyant 15)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_status: AMBIGUOUS
+  - id: ora-241
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 1)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-242
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 2)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-243
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 3)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-244
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 4)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-245
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 5)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-246
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 6)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-247
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 7)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-248
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 8)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-249
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 9)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]
+  - id: ora-250
+    category: oracle_dialect_trap
+    question: "LIMIT 10 ile en yeni faturaları getir (Oracle'da FETCH FIRST kullan) (varyant 10)"
+    expect_owners: [NANOBASE_REPORTING]
+    expect_sql_tokens: [NANOBASE_REPORTING, SELECT]
+    forbid_tokens: [LIMIT, ILIKE, BEGIN, @]

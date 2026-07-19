@@ -44,10 +44,14 @@ def build_qdrant_filter(
     *,
     tenant_id: str,
     datasource_id: str,
-    schema_version: int | None = None,
+    schema_version: int | str | None = None,
     allowed_schemas: list[str] | None = None,
+    database_type: str | None = None,
+    allowed_owners: list[str] | None = None,
+    semantic_version: str | None = None,
+    status: str = "ACTIVE",
 ) -> dict[str, Any] | None:
-    """Payload filter — must include tenant + datasource when those keys exist in index."""
+    """Payload filter — must include tenant + datasource; Oracle adds owner/type."""
     must: list[dict[str, Any]] = [
         {"key": "datasource_id", "match": {"value": datasource_id}},
     ]
@@ -56,7 +60,18 @@ def build_qdrant_filter(
     if schema_version is not None:
         must.append({"key": "schema_version", "match": {"value": schema_version}})
     if allowed_schemas:
+        # Postgres uses schema; Oracle payloads also set schema=owner
         must.append({"key": "schema", "match": {"any": list(allowed_schemas)}})
+    if database_type:
+        must.append({"key": "database_type", "match": {"value": database_type.upper()}})
+    if allowed_owners:
+        must.append(
+            {"key": "owner", "match": {"any": [o.upper() for o in allowed_owners]}}
+        )
+    if semantic_version:
+        must.append({"key": "semantic_version", "match": {"value": semantic_version}})
+    if status:
+        must.append({"key": "status", "match": {"value": status}})
     return {"must": must}
 
 
@@ -66,8 +81,11 @@ async def retrieve_authorized_schema(
     tenant_id: str,
     datasource_id: str,
     max_documents: int = 30,
-    schema_version: int | None = None,
+    schema_version: int | str | None = None,
     allowed_schemas: list[str] | None = None,
+    database_type: str | None = None,
+    allowed_owners: list[str] | None = None,
+    semantic_version: str | None = None,
     fail_closed: bool = False,
 ) -> dict[str, Any]:
     coll = collection_for(datasource_id)
@@ -76,6 +94,9 @@ async def retrieve_authorized_schema(
         datasource_id=datasource_id,
         schema_version=schema_version,
         allowed_schemas=allowed_schemas,
+        database_type=database_type,
+        allowed_owners=allowed_owners,
+        semantic_version=semantic_version,
     )
     try:
         vec = await _embed(question)

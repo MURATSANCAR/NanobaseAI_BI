@@ -8,12 +8,24 @@ from query_gateway.config.settings import Settings, get_settings
 from query_gateway.domain.errors import DATASOURCE_NOT_FOUND, GatewayError
 from query_gateway.infrastructure.audit.logger import get_audit_logger
 from query_gateway.infrastructure.database.datasources import load_datasources
+from query_gateway.infrastructure.oracle.parser_policy import enforce_oracle_sql_policy
+from query_gateway.infrastructure.oracle.profile import build_profile_from_datasource
 from query_gateway.infrastructure.parser.sqlglot_parser import fingerprint, parse_sql, apply_limit
 from query_gateway.infrastructure.policy.engine import (
     load_policy_bundle,
     policy_from_datasource_cfg,
     validate_parsed,
 )
+
+
+def _resolve_dialect(ds: dict[str, Any]) -> str:
+    driver = (ds.get("driver") or "").lower()
+    dialect = str(ds.get("dialect") or "").lower()
+    if driver == "oracle" or dialect == "oracle":
+        return "oracle"
+    if driver.startswith("postgres") or dialect in ("postgres", "postgresql"):
+        return "postgres"
+    return dialect or "postgres"
 
 
 def validate_query(
@@ -28,10 +40,10 @@ def validate_query(
     trace_id: str | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
-    bundle = load_policy_bundle(settings)
     ds_map = load_datasources(settings)
     ds = ds_map.get(datasource_id)
     if not ds:
+        bundle = load_policy_bundle(settings)
         raise GatewayError(
             DATASOURCE_NOT_FOUND,
             "Datasource bulunamadı.",
@@ -41,21 +53,29 @@ def validate_query(
             policy_version=bundle.policy_version,
         )
 
-    dialect = "postgres" if (ds.get("driver") or "").startswith("postgres") else ds.get("dialect") or "postgres"
-    if dialect not in ("postgres", "postgresql"):
-        # Internal v1 Postgres-first; legacy API still handles oracle/hana
-        dialect = "postgres" if ds.get("driver") == "postgresql" else str(ds.get("dialect") or "postgres")
+    dialect = _resolve_dialect(ds)
+    if dialect == "oracle":
+        # Fail-closed profile validation (forbidden users, SERVICE_NAME, owners)
+        build_profile_from_datasource(ds)
 
-    parsed = parse_sql(sql, dialect="postgres" if "postgres" in str(dialect) else str(dialect))
+    bundle = load_policy_bundle(settings, dialect=dialect)
+    parsed = parse_sql(sql, dialect=dialect)
     cfg = dict(ds)
-    # ensure allowed_tables set for policy
     if isinstance(cfg.get("allowed_tables"), set):
         cfg["allowed_tables"] = sorted(cfg["allowed_tables"])
+    # Oracle: also allow owner.table from allowed_owners when tables list uses uppercase
+    if dialect == "oracle" and cfg.get("allowed_owners"):
+        owners = {str(o).lower() for o in cfg["allowed_owners"]}
+        schemas = set(cfg.get("allowed_schemas") or [])
+        schemas |= owners
+        cfg["allowed_schemas"] = sorted(schemas)
+
     ds_policy = policy_from_datasource_cfg(datasource_id, cfg, bundle)
     warnings = validate_parsed(parsed, ds_policy, bundle)
+    if dialect == "oracle":
+        warnings.extend(enforce_oracle_sql_policy(sql, parsed))
 
     limit = min(max_rows or settings.max_rows, settings.max_limit)
-    # fingerprint on normalized before limit rewrite
     fp = fingerprint(
         dialect=parsed.dialect,
         normalized_sql=parsed.normalized_sql,
@@ -78,6 +98,7 @@ def validate_query(
             "policyVersion": ds_policy.policy_version,
             "result": "APPROVED",
             "traceId": trace_id,
+            "dialect": dialect,
         }
     )
 
@@ -93,4 +114,5 @@ def validate_query(
         "functions": parsed.functions,
         "warnings": warnings,
         "policyVersion": ds_policy.policy_version,
+        "dialect": dialect,
     }

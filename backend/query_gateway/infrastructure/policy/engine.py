@@ -52,17 +52,29 @@ def _policy_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "config" / "policies"
 
 
-def load_policy_bundle(settings: Settings | None = None) -> PolicyBundle:
+def load_policy_bundle(
+    settings: Settings | None = None,
+    *,
+    dialect: str = "postgres",
+) -> PolicyBundle:
     settings = settings or get_settings()
     pdir = _policy_dir()
     fn_raw: dict[str, Any] = {}
-    fn_path = pdir / "postgres-functions.yaml"
+    dialect_l = (dialect or "postgres").lower()
+    fn_name = "oracle-functions.yaml" if dialect_l == "oracle" else "postgres-functions.yaml"
+    fn_path = pdir / fn_name
     if fn_path.is_file():
         fn_raw = yaml.safe_load(fn_path.read_text(encoding="utf-8")) or {}
     limits: dict[str, Any] = {}
     lim_path = pdir / "default-limits.yaml"
     if lim_path.is_file():
         limits = yaml.safe_load(lim_path.read_text(encoding="utf-8")) or {}
+    # Oracle reporting objects are owner-qualified; require qualification by default.
+    require_qualified = bool(
+        limits.get("requireQualifiedTables", settings.require_qualified_tables)
+    )
+    if dialect_l == "oracle":
+        require_qualified = True
     return PolicyBundle(
         functions=FunctionPolicy(
             allowed={str(x).upper() for x in (fn_raw.get("allowed") or [])},
@@ -74,9 +86,7 @@ def load_policy_bundle(settings: Settings | None = None) -> PolicyBundle:
         reject_wildcard=bool(
             limits.get("rejectWildcardSelect", settings.reject_wildcard_select)
         ),
-        require_qualified=bool(
-            limits.get("requireQualifiedTables", settings.require_qualified_tables)
-        ),
+        require_qualified=require_qualified,
     )
 
 
@@ -211,6 +221,17 @@ def validate_parsed(
             "DATETRUNC": "DATE_TRUNC",
             "TOCHAR": "TO_CHAR",
             "TODATE": "TO_DATE",
+            "TOTIMESTAMP": "TO_TIMESTAMP",
+            "TONUMBER": "TO_NUMBER",
+            "NVL": "NVL",
+            "TRUNC": "TRUNC",
+            "SUBSTR": "SUBSTR",
+            "LISTAGG": "LISTAGG",
+            "ADDMONTHS": "ADD_MONTHS",
+            "LASTDAY": "LAST_DAY",
+            "MONTHSBETWEEN": "MONTHS_BETWEEN",
+            "SYSDATE": "SYSDATE",
+            "SYSTIMESTAMP": "SYSTIMESTAMP",
             "ROWNUMBER": "ROW_NUMBER",
             "RANK": "RANK",
             "DENSERANK": "DENSE_RANK",

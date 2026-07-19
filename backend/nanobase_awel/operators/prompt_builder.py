@@ -21,7 +21,18 @@ def render_simple(template: str, **kwargs: str) -> str:
     return out
 
 
-def sql_plan_prompts() -> tuple[str, str]:
+def sql_plan_prompts(*, dialect: str = "postgres") -> tuple[str, str]:
+    dialect_l = (dialect or "postgres").lower().replace("postgresql", "postgres")
+    if dialect_l == "oracle":
+        system = _read("sql-plan/v1-oracle/system.jinja2") or (
+            "You are nanobase-oracle-sql-plan-v1. Output valid JSON only. "
+            "Oracle SELECT only. FETCH FIRST. No LIMIT/hints/DB links/PL/SQL."
+        )
+        user_tpl = _read("sql-plan/v1-oracle/user.jinja2") or (
+            "{{ context_blocks }}\n\nQuestion: {{ question }}\n\n"
+            "Return ONLY JSON. dialect must be oracle."
+        )
+        return system, user_tpl
     system = _read("sql-plan/v1/system.jinja2") or (
         "You are nanobase-sql-plan-v1. Output valid JSON only. Never execute SQL. "
         "Never invent tables/columns. No SELECT *. No DML/DDL. Schema-qualified tables preferred."
@@ -34,7 +45,19 @@ def sql_plan_prompts() -> tuple[str, str]:
     return system, user_tpl
 
 
-def sql_repair_prompts() -> tuple[str, str]:
+def sql_repair_prompts(*, dialect: str = "postgres") -> tuple[str, str]:
+    dialect_l = (dialect or "postgres").lower().replace("postgresql", "postgres")
+    if dialect_l == "oracle":
+        system = _read("sql-repair/v1-oracle/system.jinja2") or (
+            "You are nanobase-oracle-sql-repair-v1. Fix Oracle SQL. Output JSON only."
+        )
+        user_tpl = _read("sql-repair/v1-oracle/user.jinja2") or (
+            "Question: {{ question }}\nPrevious SQL:\n{{ previous_sql }}\n"
+            "Gateway error: {{ error_code }} — {{ error_message }}\n"
+            "Attempt: {{ attempt }}\nAuthorized context:\n{{ context }}\n\n"
+            "Return ONLY JSON plan with corrected Oracle sql. dialect must be oracle."
+        )
+        return system, user_tpl
     system = _read("sql-repair/v1/system.jinja2") or (
         "You are nanobase-sql-repair-v1. Fix SQL for the given gateway error. "
         "Output valid JSON only. Do not expand authorization scope. Never execute SQL."

@@ -1,0 +1,11 @@
+# Thick Mode deployment profile (separate process — never co-located with Thin)
+
+image: query-gateway-oracle-thick
+env:
+  ORACLE_CONNECTION_MODE: THICK
+  # Instant Client must be present in the image
+  ORACLE_CLIENT_LIB_DIR: /opt/oracle/instantclient
+notes: |
+  Same Query Gateway code; process calls oracledb.init_oracle_client() at startup.
+  Do not run Thin and Thick pools in one process.
+  Certify only after vertical-slice Thin GO.

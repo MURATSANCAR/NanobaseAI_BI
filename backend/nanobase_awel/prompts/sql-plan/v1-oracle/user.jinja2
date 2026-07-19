@@ -1,0 +1,8 @@
+{{ context_blocks }}
+
+Question: {{ question }}
+
+Return ONLY JSON with keys:
+status, sql, dialect, tables, columns, functions, assumptions, warnings, ambiguities, clarificationQuestion, confidence.
+dialect must be oracle. confidence is 0..1.
+Use FETCH FIRST for limits. Owner-qualify every table. No LIMIT, ILIKE, hints, DB links, or PL/SQL.

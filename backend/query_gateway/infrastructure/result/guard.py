@@ -13,7 +13,12 @@ from query_gateway.domain.errors import RESULT_LIMIT_EXCEEDED, RESULT_MASKING_FA
 from query_gateway.infrastructure.result.masking import column_mask_kind, mask_value
 
 
-def _normalize_cell(value: Any, settings: Settings) -> Any:
+def _normalize_cell(
+    value: Any,
+    settings: Settings,
+    *,
+    preserve_decimal_strings: bool = False,
+) -> Any:
     if value is None:
         return None
     if isinstance(value, bool):
@@ -25,6 +30,8 @@ def _normalize_cell(value: Any, settings: Settings) -> Any:
             return None
         return value
     if isinstance(value, Decimal):
+        if preserve_decimal_strings:
+            return format(value, "f")
         f = float(value)
         if math.isnan(f) or math.isinf(f):
             return None
@@ -54,6 +61,7 @@ def guard_result(
     column_policies: dict[str, str] | None = None,
     truncated: bool = False,
     settings: Settings | None = None,
+    preserve_decimal_strings: bool = False,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
     policies = {k.lower(): str(v).upper() for k, v in (column_policies or {}).items()}
@@ -83,7 +91,11 @@ def guard_result(
         for row in rows:
             item: dict[str, Any] = {}
             for c in columns:
-                val = _normalize_cell(row.get(c), settings)
+                val = _normalize_cell(
+                    row.get(c),
+                    settings,
+                    preserve_decimal_strings=preserve_decimal_strings,
+                )
                 kind = column_mask_kind(c, policies)
                 if kind:
                     val = mask_value(val, kind)

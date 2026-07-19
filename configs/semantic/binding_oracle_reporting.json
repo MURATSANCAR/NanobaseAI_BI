@@ -1,0 +1,47 @@
+{
+  "project_id": "oracle_reporting",
+  "dialect": "oracle",
+  "binding_version": "oracle_reporting.v1",
+  "semantic_model_version": "finance.v1",
+  "status": "draft",
+  "entities": {
+    "invoice": {
+      "owner": "NANOBASE_REPORTING",
+      "table": "NANOBASE_REPORTING.V_INVOICE",
+      "key": "INVOICE_ID",
+      "keys": {
+        "customer_key": "CUSTOMER_ID"
+      }
+    },
+    "customer": {
+      "owner": "NANOBASE_REPORTING",
+      "table": "NANOBASE_REPORTING.V_CUSTOMER",
+      "key": "CUSTOMER_ID"
+    }
+  },
+  "measures": {
+    "unpaid_invoice_amount": {
+      "entity": "invoice",
+      "field": "REMAINING_AMOUNT",
+      "aggregation": "SUM",
+      "null_policy": "ZERO",
+      "time_field": "INVOICE_DATE",
+      "status_field": "STATUS",
+      "binding": {
+        "dialect": "oracle",
+        "owner": "NANOBASE_REPORTING",
+        "object": "V_INVOICE",
+        "amountColumn": "REMAINING_AMOUNT",
+        "timeColumn": "INVOICE_DATE",
+        "statusColumn": "STATUS"
+      }
+    }
+  },
+  "filters": {
+    "exclude_cancelled_void": {
+      "field": "STATUS",
+      "operator": "NOT_IN",
+      "values": ["CANCELLED", "VOID"]
+    }
+  }
+}

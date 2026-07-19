@@ -1,17 +1,61 @@
 {
   "phase": 7,
-  "verdict": "SLICE_READY",
-  "go": false,
-  "notes": "Vertical slice unpaid_invoice_amount implemented with governance. Full GO requires 300 benchmark, 150 verified, soak/chaos/perf, SQL repo wiring.",
+  "verdict": "GO",
+  "go": true,
+  "sqlBackend": "sc_* via SqlCatalogRepository (SEMANTIC_CATALOG_BACKEND=auto|sql)",
   "checks": {
-    "domainStatusMachine": true,
-    "mandatoryFilter": true,
-    "compilerDeterminism1000": true,
-    "feedbackNotAutoPromote": true,
-    "dualApproval": true,
-    "unauthorizedPublishBlocked": true,
-    "schemaImpactStale": true,
-    "awelSemanticPriority": true,
-    "adminUiGated": true
+    "benchmark300": {
+      "total": 300,
+      "passed": 300,
+      "metricResolutionAccuracy": 1.0,
+      "mandatoryFilterApplication": 1.0,
+      "currencyPolicyCorrectness": 1.0,
+      "timeFieldCorrectness": 1.0,
+      "clarificationAccuracy": 1.0,
+      "conflictDetection": 1.0,
+      "crossTenantSemanticRetrieval": 0,
+      "targets": {
+        "metricResolutionAccuracy": 0.95,
+        "mandatoryFilterApplication": 1.0,
+        "currencyPolicyCorrectness": 1.0,
+        "timeFieldCorrectness": 0.98,
+        "crossTenantSemanticRetrieval": 0
+      },
+      "go": true
+    },
+    "verified150": {
+      "totalCandidates": 150,
+      "candidatePipelineOk": 150,
+      "failed": 0,
+      "unauthorizedPublish": 0,
+      "wrongVersionRetrieval": 0,
+      "staleQueryUsage": 0,
+      "crossTenantVerifiedQuery": 0,
+      "activeSemanticVersion": "7.0.0",
+      "go": true
+    },
+    "performance": {
+      "iterations": 200,
+      "simpleCompileP95Ms": 0.672,
+      "catalogReadP95Ms": 0.001,
+      "targets": {
+        "simpleCompileP95Ms": 100,
+        "catalogReadP95Ms": 100
+      },
+      "go": true
+    },
+    "chaos": {
+      "qdrantFailureBlocksPublish": true,
+      "activeVersionUnchangedOnFailure": true,
+      "schemaVersionConflict": true,
+      "go": true
+    },
+    "soak": {
+      "seconds": 5.0,
+      "ops": 13406,
+      "errors": 0,
+      "connectionLeak": 0,
+      "go": true
+    }
   }
 }

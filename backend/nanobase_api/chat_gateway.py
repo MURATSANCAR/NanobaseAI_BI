@@ -28,6 +28,13 @@ _engine_adapter = WorkflowTextToSqlAdapter()
 
 def _schema_hint_for(datasource_id: str) -> str:
     global _HINTS_CACHE
+    dialect = _dialect_for_datasource(datasource_id)
+    if dialect == "oracle":
+        return (
+            f"Oracle datasource '{datasource_id}'. "
+            "Only SELECT/WITH. Owner-qualify (NANOBASE_REPORTING.*). "
+            "Use FETCH FIRST n ROWS ONLY. No LIMIT, ILIKE, hints, DB links, or PL/SQL."
+        )
     if datasource_id in ("bi_reporting", "", "default"):
         return DEFAULT_SCHEMA_HINT
     if _HINTS_CACHE is None:
@@ -48,6 +55,24 @@ def _schema_hint_for(datasource_id: str) -> str:
     return _HINTS_CACHE.get(datasource_id) or (
         f"PostgreSQL datasource '{datasource_id}'. Only SELECT/WITH. Prefer LIMIT 50."
     )
+
+
+def _dialect_for_datasource(datasource_id: str) -> str:
+    """Resolve dialect from Query Gateway registry / secrets maps."""
+    sid = (datasource_id or "").lower()
+    if "oracle" in sid:
+        return "oracle"
+    # Probe oracle secrets map
+    ora = SECRETS / "oracle-ro.datasources.json"
+    if ora.is_file():
+        try:
+            raw = json.loads(ora.read_text(encoding="utf-8"))
+            sources = raw.get("sources") or raw
+            if datasource_id in sources:
+                return "oracle"
+        except Exception:
+            pass
+    return "postgres"
 
 
 def _sse(event: str, data: dict[str, Any]) -> str:
@@ -101,7 +126,7 @@ def _persist_conversation(
                 datasource_id=datasource_id,
                 question=message,
                 sql_text=sql,
-                dialect="postgresql",
+                dialect=_dialect_for_datasource(datasource_id),
                 execution_mode=execution_mode,
                 executed=executed,
             )
@@ -278,13 +303,20 @@ async def stream_chat_via_gateway(
             yield _sse("status", {"phase": "schema_retrieval_skip", "detail": str(e)[:200]}).encode()
 
         schema_hint = _schema_hint_for(datasource_id)
+        plan_dialect = _dialect_for_datasource(datasource_id)
         authorized_context = f"{schema_hint}\n{retrieved}".strip()
+        plan_workflow = (
+            "nanobase-oracle-sql-plan-v1"
+            if plan_dialect == "oracle"
+            else "nanobase-sql-plan-v1"
+        )
         yield _sse(
             "status",
             {
                 "phase": "generating_sql",
-                "workflow": "nanobase-sql-plan-v1",
+                "workflow": plan_workflow,
                 "datasource_id": datasource_id,
+                "dialect": plan_dialect,
             },
         ).encode()
         try:
@@ -298,6 +330,7 @@ async def stream_chat_via_gateway(
                 execution_id=execution_id,
                 allowed_tables=list(retrieval_meta.get("tables") or []),
                 prefetched_retrieval=retrieval_meta,
+                dialect=plan_dialect,
             )
         except Exception as e:
             yield _sse("error", {"type": "ERROR", "message": f"sql-plan failed: {e}"}).encode()
@@ -344,6 +377,47 @@ async def stream_chat_via_gateway(
         ).encode()
         if not sql:
             yield _sse("error", {"message": "No SQL from sql-plan", "plan": plan}).encode()
+            return
+
+    # Faz 8: Oracle execute gated by feature flag / ORACLE_EXECUTION_MODE
+    plan_dialect = _dialect_for_datasource(datasource_id)
+    if plan_dialect == "oracle" and mode != ExecutionMode.PLAN_ONLY:
+        if not settings.oracle_execution_enabled or settings.oracle_execution_mode == "PLAN_ONLY":
+            reply = (
+                "Oracle SQL planı üretildi. Oracle execution kapalı "
+                f"(ORACLE_EXECUTION_ENABLED={int(settings.oracle_execution_enabled)}, "
+                f"ORACLE_EXECUTION_MODE={settings.oracle_execution_mode}).\n\nSQL:\n{sql}"
+            )
+            yield _sse(
+                "answer_delta",
+                {"type": "ANSWER_DELTA", "payload": {"text": reply}},
+            ).encode()
+            result = {
+                "session_id": session_id,
+                "reply": reply,
+                "intent": "query",
+                "sql": sql,
+                "sql_error": None,
+                "query_result": {"columns": [], "rows": []},
+                "widgets": [],
+                "answer_blocks": [{"type": "text", "text": reply}],
+                "engine": "nanobase_oracle_plan_only",
+                "workflows": {"plan": plan, "explain": None},
+                "sql_source": sql_source,
+                "execution_id": execution_id,
+            }
+            yield _sse("final", result).encode()
+            _persist_conversation(
+                meta_engine,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                datasource_id=datasource_id,
+                message=message,
+                reply=reply,
+                sql=sql,
+                execution_mode="ORACLE_PLAN_ONLY",
+                executed=False,
+            )
             return
 
     # PLAN_ONLY: skip gateway execute

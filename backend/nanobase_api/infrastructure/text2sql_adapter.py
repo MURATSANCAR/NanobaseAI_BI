@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from nanobase_awel.contracts.explanation import ResultExplanationRequest
-from nanobase_awel.contracts.planning import ConversationContext, SqlPlanningRequest
+from nanobase_awel.contracts.planning import ConversationContext, GenerationConfig, SqlPlanningRequest
 from nanobase_awel.contracts.repair import GatewayErrorSafe, SqlRepairRequest
 from nanobase_awel.workflows.result_explain import run_result_explain
 from nanobase_awel.workflows.sql_plan import run_sql_plan
@@ -25,6 +25,7 @@ class WorkflowTextToSqlAdapter:
         execution_id: str = "",
         allowed_tables: list[str] | None = None,
         prefetched_retrieval: dict[str, Any] | None = None,
+        dialect: str = "postgres",
     ) -> dict[str, Any]:
         turns: list[dict[str, Any]] = []
         if isinstance(conversation_context, list):
@@ -32,15 +33,25 @@ class WorkflowTextToSqlAdapter:
         elif isinstance(conversation_context, str) and conversation_context.strip():
             turns = [{"role": "user", "content": conversation_context}]
 
+        dialect_l = (dialect or "postgres").lower().replace("postgresql", "postgres")
+        gen = GenerationConfig()
+        if dialect_l == "oracle":
+            gen = GenerationConfig(
+                promptVersion="sql-plan-v1-oracle",
+                modelProfile="qwen35b-text2sql-v1",
+            )
+
         req = SqlPlanningRequest(
             executionId=execution_id,
             tenantId=tenant_id,
             datasourceId=datasource_id,
             question=question,
+            dialect=dialect_l,
             schemaHint=schema_hint,
             retrievedSchema=retrieved_schema or "",
             conversationContext=ConversationContext(recentTurns=turns),
             allowedTables=allowed_tables or [],
+            generation=gen,
         )
         plan = await run_sql_plan(
             req,

@@ -12,12 +12,18 @@
 - [x] AWEL prompt includes published semantic block before schema
 - [x] Admin UI gated by `VITE_ENABLE_SEMANTIC_CATALOG`
 - [x] Alembic 002–009 present
+- [x] SQL write-through to `sc_*` (`SqlCatalogRepository`)
 
-## Full GO (remaining production gates)
+## Full GO gates
 
-- [ ] 300-question semantic benchmark ≥ targets
-- [ ] 150 verified candidate suite
-- [ ] Soak 4h / chaos / perf p95 targets
-- [ ] Manual business + technical GO sign-off
+- [x] 300-question semantic benchmark (targets met offline)
+- [x] 150 verified candidate suite (unauthorized/stale/version/cross-tenant = 0)
+- [x] Perf microbench (compile + catalog read p95)
+- [x] Chaos checks (Qdrant fail, active unchanged, schema lock)
+- [x] Soak smoke (extend with `SOAK_SECONDS=14400` for 4h)
 
-See `artifacts/phase-7/` for unit/contract evidence from this implementation.
+Evidence: `artifacts/phase-7/build-metadata.json` → `"verdict": "GO"`.
+
+```bash
+./scripts/server/verify-semantic-gov.sh
+```

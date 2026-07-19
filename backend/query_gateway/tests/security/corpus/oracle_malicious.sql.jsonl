@@ -1,0 +1,620 @@
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "  INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)  ", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  VALUES  (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "  UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0  ", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "  DELETE FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "  MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0  ", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE  INTO  NANOBASE_REPORTING.V_INVOICE  A  USING  NANOBASE_REPORTING.V_INVOICE  B  ON  (A.INVOICE_ID=B.INVOICE_ID)  WHEN  MATCHED  THEN  UPDATE  SET  TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "  WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH  X  AS  (DELETE  FROM  NANOBASE_REPORTING.V_INVOICE  RETURNING  *)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "  INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)  ", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  VALUES  (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "  UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0  ", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "  DELETE FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DML", "sql": "DELETE  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ DELETE FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "  MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0  ", "expect": "REJECT"}
+{"category": "DML", "sql": "MERGE  INTO  NANOBASE_REPORTING.V_INVOICE  A  USING  NANOBASE_REPORTING.V_INVOICE  B  ON  (A.INVOICE_ID=B.INVOICE_ID)  WHEN  MATCHED  THEN  UPDATE  SET  TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ MERGE INTO NANOBASE_REPORTING.V_INVOICE A USING NANOBASE_REPORTING.V_INVOICE B ON (A.INVOICE_ID=B.INVOICE_ID) WHEN MATCHED THEN UPDATE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "  WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "DML", "sql": "WITH  X  AS  (DELETE  FROM  NANOBASE_REPORTING.V_INVOICE  RETURNING  *)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE RETURNING *) SELECT * FROM X", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "  INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)  ", "expect": "REJECT"}
+{"category": "DML", "sql": "INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  VALUES  (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ INSERT INTO NANOBASE_REPORTING.V_INVOICE VALUES (1)", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "  UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0  ", "expect": "REJECT"}
+{"category": "DML", "sql": "UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DML", "sql": "/*x*/ UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "  DROP TABLE NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP  TABLE  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "  CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE  TABLE  NANOBASE_REPORTING.EVIL  (ID  NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "  ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER  TABLE  NANOBASE_REPORTING.V_INVOICE  ADD  X  NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "  TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE  TABLE  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "GRANT SELECT ON NANOBASE_REPORTING.V_INVOICE TO PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "GRANT SELECT ON NANOBASE_REPORTING.V_INVOICE TO PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "  GRANT SELECT ON NANOBASE_REPORTING.V_INVOICE TO PUBLIC  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "GRANT  SELECT  ON  NANOBASE_REPORTING.V_INVOICE  TO  PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ GRANT SELECT ON NANOBASE_REPORTING.V_INVOICE TO PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "REVOKE ALL ON NANOBASE_REPORTING.V_INVOICE FROM PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "REVOKE ALL ON NANOBASE_REPORTING.V_INVOICE FROM PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "  REVOKE ALL ON NANOBASE_REPORTING.V_INVOICE FROM PUBLIC  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "REVOKE  ALL  ON  NANOBASE_REPORTING.V_INVOICE  FROM  PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ REVOKE ALL ON NANOBASE_REPORTING.V_INVOICE FROM PUBLIC", "expect": "REJECT"}
+{"category": "DDL", "sql": "COMMENT ON TABLE NANOBASE_REPORTING.V_INVOICE IS 'x'", "expect": "REJECT"}
+{"category": "DDL", "sql": "COMMENT ON TABLE NANOBASE_REPORTING.V_INVOICE IS 'X'", "expect": "REJECT"}
+{"category": "DDL", "sql": "  COMMENT ON TABLE NANOBASE_REPORTING.V_INVOICE IS 'x'  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "COMMENT  ON  TABLE  NANOBASE_REPORTING.V_INVOICE  IS  'x'", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ COMMENT ON TABLE NANOBASE_REPORTING.V_INVOICE IS 'x'", "expect": "REJECT"}
+{"category": "DDL", "sql": "ANALYZE TABLE NANOBASE_REPORTING.V_INVOICE COMPUTE STATISTICS", "expect": "REJECT"}
+{"category": "DDL", "sql": "ANALYZE TABLE NANOBASE_REPORTING.V_INVOICE COMPUTE STATISTICS", "expect": "REJECT"}
+{"category": "DDL", "sql": "  ANALYZE TABLE NANOBASE_REPORTING.V_INVOICE COMPUTE STATISTICS  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "ANALYZE  TABLE  NANOBASE_REPORTING.V_INVOICE  COMPUTE  STATISTICS", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ ANALYZE TABLE NANOBASE_REPORTING.V_INVOICE COMPUTE STATISTICS", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "  DROP TABLE NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "DROP  TABLE  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ DROP TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "  CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "CREATE  TABLE  NANOBASE_REPORTING.EVIL  (ID  NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ CREATE TABLE NANOBASE_REPORTING.EVIL (ID NUMBER)", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "  ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "ALTER  TABLE  NANOBASE_REPORTING.V_INVOICE  ADD  X  NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ ALTER TABLE NANOBASE_REPORTING.V_INVOICE ADD X NUMBER", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "  TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "DDL", "sql": "TRUNCATE  TABLE  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "DDL", "sql": "/*x*/ TRUNCATE TABLE NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN NULL; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  NULL;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  DECLARE X NUMBER; BEGIN NULL; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE  X  NUMBER;  BEGIN  NULL;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  EXECUTE  IMMEDIATE  'DROP  TABLE  X';  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  CALL DBMS_LOCK.SLEEP(10)  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL  DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC DBMS_OUTPUT.PUT_LINE('X')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  EXEC DBMS_OUTPUT.PUT_LINE('x')  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC  DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ EXEC DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE  IMMEDIATE  'SELECT  1  FROM  DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN DBMS_SQL.OPEN_CURSOR; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  DBMS_SQL.OPEN_CURSOR;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN NULL; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  NULL;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  DECLARE X NUMBER; BEGIN NULL; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "DECLARE  X  NUMBER;  BEGIN  NULL;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ DECLARE X NUMBER; BEGIN NULL; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  EXECUTE  IMMEDIATE  'DROP  TABLE  X';  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN EXECUTE IMMEDIATE 'DROP TABLE X'; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  CALL DBMS_LOCK.SLEEP(10)  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "CALL  DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ CALL DBMS_LOCK.SLEEP(10)", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC DBMS_OUTPUT.PUT_LINE('X')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  EXEC DBMS_OUTPUT.PUT_LINE('x')  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXEC  DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ EXEC DBMS_OUTPUT.PUT_LINE('x')", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "EXECUTE  IMMEDIATE  'SELECT  1  FROM  DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ EXECUTE IMMEDIATE 'SELECT 1 FROM DUAL'", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "  BEGIN DBMS_SQL.OPEN_CURSOR; END;  ", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "BEGIN  DBMS_SQL.OPEN_CURSOR;  END;", "expect": "REJECT"}
+{"category": "PLSQL", "sql": "/*x*/ BEGIN DBMS_SQL.OPEN_CURSOR; END;", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://EXAMPLE.COM') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_HTTP.REQUEST('https://example.com')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_FILE.FOPEN('/TMP','X','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_FILE.FOPEN('/tmp','x','R')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_TCP.OPEN_CONNECTION('EVIL',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_TCP.OPEN_CONNECTION('evil',80)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_INADDR.GET_HOST_ADDRESS('EVIL') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_INADDR.GET_HOST_ADDRESS('evil')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_PIPE.RECEIVE_MESSAGE('P',1)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_LOCK.SLEEP(30) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_LOCK.SLEEP(30)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LDAP.INIT('x',389) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LDAP.INIT('X',389) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_LDAP.INIT('x',389) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_LDAP.INIT('x',389)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_LDAP.INIT('x',389) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_JAVA.RUNJAVA('x') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_JAVA.RUNJAVA('X') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_JAVA.RUNJAVA('x') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_JAVA.RUNJAVA('x')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_JAVA.RUNJAVA('x') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_SCHEDULER.CREATE_JOB('J') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_SCHEDULER.CREATE_JOB('J') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_SCHEDULER.CREATE_JOB('J') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_SCHEDULER.CREATE_JOB('J')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_SCHEDULER.CREATE_JOB('J') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_JOB.SUBMIT(1,'x') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_JOB.SUBMIT(1,'X') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_JOB.SUBMIT(1,'x') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_JOB.SUBMIT(1,'x')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_JOB.SUBMIT(1,'x') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://EXAMPLE.COM') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_HTTP.REQUEST('https://example.com')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://example.com') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_FILE.FOPEN('/TMP','X','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_FILE.FOPEN('/tmp','x','R')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_FILE.FOPEN('/tmp','x','R') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_TCP.OPEN_CONNECTION('EVIL',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_TCP.OPEN_CONNECTION('evil',80)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_TCP.OPEN_CONNECTION('evil',80) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT UTL_INADDR.GET_HOST_ADDRESS('EVIL') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  UTL_INADDR.GET_HOST_ADDRESS('evil')  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT UTL_INADDR.GET_HOST_ADDRESS('evil') FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_PIPE.RECEIVE_MESSAGE('P',1)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_PIPE.RECEIVE_MESSAGE('P',1) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "  SELECT DBMS_LOCK.SLEEP(30) FROM DUAL  ", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "SELECT  DBMS_LOCK.SLEEP(30)  FROM  DUAL", "expect": "REJECT"}
+{"category": "PACKAGE", "sql": "/*x*/ SELECT DBMS_LOCK.SLEEP(30) FROM DUAL", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM CUSTOMER@REMOTE_DATABASE  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  A.*  FROM  NANOBASE_REPORTING.V_INVOICE@DB_LINK  A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM SYS.DUAL@REMOTE  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM CUSTOMER@REMOTE_DATABASE  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  A.*  FROM  NANOBASE_REPORTING.V_INVOICE@DB_LINK  A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT A.* FROM NANOBASE_REPORTING.V_INVOICE@DB_LINK A", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM SYS.DUAL@REMOTE  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM SYS.DUAL@REMOTE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM CUSTOMER@REMOTE_DATABASE  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM CUSTOMER@REMOTE_DATABASE", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB  ", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "DBLINK", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE@REMOTE_DB", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM PUBLIC.ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM SYS.USER$  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM PUBLIC.ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM SYS.USER$  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM SYS.USER$", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM PUBLIC.ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM PUBLIC.ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "  SELECT * FROM ALL_USERS  ", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "SELECT  *  FROM  ALL_USERS", "expect": "REJECT"}
+{"category": "SYNONYM", "sql": "/*x*/ SELECT * FROM ALL_USERS", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  PARALLEL(32)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  FULL(I)  */  *  FROM  NANOBASE_REPORTING.V_INVOICE  I", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  INDEX(I  PK)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  I", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  LEADING(A  B)  */  A.ID  FROM  NANOBASE_REPORTING.V_INVOICE  A", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  PARALLEL(32)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ PARALLEL(32) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  FULL(I)  */  *  FROM  NANOBASE_REPORTING.V_INVOICE  I", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ FULL(I) */ * FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  INDEX(I  PK)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  I", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ INDEX(I PK) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE I", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "HINT", "sql": "  SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A  ", "expect": "REJECT"}
+{"category": "HINT", "sql": "SELECT  /*+  LEADING(A  B)  */  A.ID  FROM  NANOBASE_REPORTING.V_INVOICE  A", "expect": "REJECT"}
+{"category": "HINT", "sql": "/*x*/ SELECT /*+ LEADING(A B) */ A.ID FROM NANOBASE_REPORTING.V_INVOICE A", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE  NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK  TABLE  NANOBASE_REPORTING.V_INVOICE  IN  EXCLUSIVE  MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE  WAIT  10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE  NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE NOWAIT", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "LOCK  TABLE  NANOBASE_REPORTING.V_INVOICE  IN  EXCLUSIVE  MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ LOCK TABLE NANOBASE_REPORTING.V_INVOICE IN EXCLUSIVE MODE", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "  SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10  ", "expect": "REJECT"}
+{"category": "LOCK", "sql": "SELECT  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE  FOR  UPDATE  WAIT  10", "expect": "REJECT"}
+{"category": "LOCK", "sql": "/*x*/ SELECT INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE FOR UPDATE WAIT 10", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (DELETE  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (DELETE  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (INSERT  INTO  NANOBASE_REPORTING.V_INVOICE  SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (INSERT INTO NANOBASE_REPORTING.V_INVOICE SELECT * FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (DELETE  FROM  NANOBASE_REPORTING.V_INVOICE)  SELECT  1  FROM  DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (DELETE FROM NANOBASE_REPORTING.V_INVOICE) SELECT 1 FROM DUAL", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "CTE", "sql": "  WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X  ", "expect": "REJECT"}
+{"category": "CTE", "sql": "WITH  X  AS  (UPDATE  NANOBASE_REPORTING.V_INVOICE  SET  TOTAL_AMOUNT=0)  SELECT  *  FROM  X", "expect": "REJECT"}
+{"category": "CTE", "sql": "/*x*/ WITH X AS (UPDATE NANOBASE_REPORTING.V_INVOICE SET TOTAL_AMOUNT=0) SELECT * FROM X", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"INVOICEID\" FROM \"CUSTOMTABLE\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT \"InvoiceId\" FROM \"CustomTable\"  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  \"InvoiceId\"  FROM  \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  *  FROM  \"NANOBASE_REPORTING\".\"V_INVOICE\"  FOR  UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"INVOICEID\" FROM \"CUSTOMTABLE\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT \"InvoiceId\" FROM \"CustomTable\"  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  \"InvoiceId\"  FROM  \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  *  FROM  \"NANOBASE_REPORTING\".\"V_INVOICE\"  FOR  UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"INVOICEID\" FROM \"CUSTOMTABLE\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT \"InvoiceId\" FROM \"CustomTable\"  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  \"InvoiceId\"  FROM  \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  *  FROM  \"NANOBASE_REPORTING\".\"V_INVOICE\"  FOR  UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT \"INVOICEID\" FROM \"CUSTOMTABLE\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT \"InvoiceId\" FROM \"CustomTable\"  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  \"InvoiceId\"  FROM  \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT \"InvoiceId\" FROM \"CustomTable\"", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "  SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE  ", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "SELECT  *  FROM  \"NANOBASE_REPORTING\".\"V_INVOICE\"  FOR  UPDATE", "expect": "REJECT"}
+{"category": "QUOTED", "sql": "/*x*/ SELECT * FROM \"NANOBASE_REPORTING\".\"V_INVOICE\" FOR UPDATE", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://X') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  UTL_HTTP.REQUEST('https://x')  FROM  DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  /*+  PARALLEL(8)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://X') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  UTL_HTTP.REQUEST('https://x')  FROM  DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  /*+  PARALLEL(8)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://X') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  UTL_HTTP.REQUEST('https://x')  FROM  DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  /*+  PARALLEL(8)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT UTL_HTTP.REQUEST('HTTPS://X') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  UTL_HTTP.REQUEST('https://x')  FROM  DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT UTL_HTTP.REQUEST('https://x') FROM DUAL​", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "  SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿  ", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "SELECT  /*+  PARALLEL(8)  */  INVOICE_ID  FROM  NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "UNICODE", "sql": "/*x*/ SELECT /*+ PARALLEL(8) */ INVOICE_ID FROM NANOBASE_REPORTING.V_INVOICE﻿", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  /*+  PARALLEL(64)  */  *  FROM  NANOBASE_REPORTING.V_INVOICE  A,  NANOBASE_REPORTING.V_CUSTOMER  B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  /*+  PARALLEL(64)  */  *  FROM  NANOBASE_REPORTING.V_INVOICE  A,  NANOBASE_REPORTING.V_CUSTOMER  B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "  SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B  ", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "SELECT  /*+  PARALLEL(64)  */  *  FROM  NANOBASE_REPORTING.V_INVOICE  A,  NANOBASE_REPORTING.V_CUSTOMER  B", "expect": "REJECT"}
+{"category": "RESOURCE", "sql": "/*x*/ SELECT /*+ PARALLEL(64) */ * FROM NANOBASE_REPORTING.V_INVOICE A, NANOBASE_REPORTING.V_CUSTOMER B", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT LEVEL FROM DUAL CONNECT BY LEVEL <= 10", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT LEVEL FROM DUAL CONNECT BY LEVEL <= 10", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "  SELECT LEVEL FROM DUAL CONNECT BY LEVEL <= 10  ", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT  LEVEL  FROM  DUAL  CONNECT  BY  LEVEL  <=  10", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "/*x*/ SELECT LEVEL FROM DUAL CONNECT BY LEVEL <= 10", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE START WITH INVOICE_ID=1 CONNECT BY PRIOR INVOICE_ID=PARENT_ID", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE START WITH INVOICE_ID=1 CONNECT BY PRIOR INVOICE_ID=PARENT_ID", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE START WITH INVOICE_ID=1 CONNECT BY PRIOR INVOICE_ID=PARENT_ID  ", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE  START  WITH  INVOICE_ID=1  CONNECT  BY  PRIOR  INVOICE_ID=PARENT_ID", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE START WITH INVOICE_ID=1 CONNECT BY PRIOR INVOICE_ID=PARENT_ID", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE SAMPLE(10)", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE SAMPLE(10)", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE SAMPLE(10)  ", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE  SAMPLE(10)", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE SAMPLE(10)", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE AS OF TIMESTAMP SYSTIMESTAMP", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT * FROM NANOBASE_REPORTING.V_INVOICE AS OF TIMESTAMP SYSTIMESTAMP", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "  SELECT * FROM NANOBASE_REPORTING.V_INVOICE AS OF TIMESTAMP SYSTIMESTAMP  ", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "SELECT  *  FROM  NANOBASE_REPORTING.V_INVOICE  AS  OF  TIMESTAMP  SYSTIMESTAMP", "expect": "REJECT"}
+{"category": "CONNECT", "sql": "/*x*/ SELECT * FROM NANOBASE_REPORTING.V_INVOICE AS OF TIMESTAMP SYSTIMESTAMP", "expect": "REJECT"}

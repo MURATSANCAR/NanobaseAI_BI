@@ -1,29 +1,50 @@
 {
   "sources": {
+    "oracle_reporting": {
+      "label": "Oracle Finans Reporting (RO)",
+      "driver": "oracle",
+      "dialect": "oracle",
+      "host": "oracle-scan.internal",
+      "port": 1521,
+      "service_name": "FINPDB.internal",
+      "user": "NANOBASE_QUERY_RO",
+      "password_file": "/data/nanobaseai/bi/secrets/oracle-query-ro.password",
+      "connectionMode": "THIN",
+      "sslMode": "REQUIRE",
+      "allowedOwners": ["NANOBASE_REPORTING"],
+      "allowed_tables": [
+        "nanobase_reporting.v_invoice",
+        "nanobase_reporting.v_customer"
+      ],
+      "planUser": "NANOBASE_PLAN_RO",
+      "planPasswordFile": "/data/nanobaseai/bi/secrets/oracle-plan-ro.password",
+      "metadataUser": "NANOBASE_METADATA_RO",
+      "sizeProfile": "medium",
+      "requireVpd": true,
+      "containerName": "FINPDB",
+      "databaseUniqueName": "FINDB",
+      "comment": "Production profile: Thin Mode + SERVICE_NAME + reporting owner. SYS/SYSTEM/ADMIN forbidden."
+    },
     "oracle_adb_ssb": {
-      "label": "Oracle ADB SSB (RO)",
+      "label": "Oracle ADB SSB (legacy RO)",
       "driver": "oracle",
       "dialect": "oracle",
       "host": "adb.REGION.oraclecloud.com",
       "port": 1522,
       "service_name": "YOURDB_low.adb.oraclecloud.com",
-      "user": "ADMIN",
+      "user": "NANOBASE_QUERY_RO",
       "password_file": "/data/nanobaseai/bi/secrets/oracle-adb.password",
-      "comment": "Enable TLS (wallet-less) on Autonomous DB. Prefer …_low / …_medium for SSB.",
+      "connectionMode": "THIN",
+      "allowedOwners": ["SSB"],
       "allowed_tables": [
         "ssb.customer",
         "ssb.part",
         "ssb.supplier",
         "ssb.date_dim",
         "ssb.lineorder",
-        "ssb.dwdate",
-        "customer",
-        "part",
-        "supplier",
-        "date_dim",
-        "lineorder",
-        "dwdate"
-      ]
+        "ssb.dwdate"
+      ],
+      "comment": "Legacy SSB sample — use NANOBASE_QUERY_RO not ADMIN."
     }
   }
 }

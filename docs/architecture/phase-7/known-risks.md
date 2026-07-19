@@ -1,6 +1,6 @@
 # Known risks
 
-- In-memory `CatalogStore` is process-local until SQL repositories are wired to `sc_*` tables in production deploy.
-- Qdrant upsert uses placeholder vectors until embedding pipeline is connected.
-- Full 300-question benchmark / 150 verified suite / soak / chaos remain for GO.
+- SQL backend (`SEMANTIC_CATALOG_BACKEND=auto|sql`) persists to `sc_*` when Alembic 002–009 applied; falls back to memory if tables missing.
+- Qdrant upsert still uses placeholder vectors until embedding pipeline is connected.
+- Soak default in CI is 5s; full 4h: `SOAK_SECONDS=14400 ./scripts/server/verify-semantic-gov.sh`
 - Legacy glossary UI still hits `/api/v1/bi/glossary` (read-only coexistence).

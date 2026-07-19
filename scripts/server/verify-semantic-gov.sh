@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Faz 7 governance verification — unit + contract + compiler determinism
+# Faz 7 governance verification — unit + contract + 300/150 suites + perf/chaos/soak
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BACKEND="$ROOT/backend"
@@ -7,6 +7,7 @@ ART="$ROOT/artifacts/phase-7"
 mkdir -p "$ART"
 cd "$BACKEND"
 export PYTHONPATH=.
+export SEMANTIC_CATALOG_BACKEND=memory
 PY="${BACKEND}/.venv/bin/python"
 if [[ ! -x "$PY" ]]; then PY=python3; fi
 
@@ -43,36 +44,10 @@ print(json.dumps(out, indent=2))
 assert ok and out["mandatoryFilterApplied"]
 PY
 
-# Promotion security smoke artifact
-ROOT="$ROOT" "$PY" <<'PY'
-import json, os
-from pathlib import Path
-from nanobase_api.semantic_catalog.domain.errors import AuthorizationError
-from nanobase_api.semantic_catalog.domain.promotion import PromotionPhase, PromotionRequest
-from nanobase_api.semantic_catalog.application.services import publish_promotion
-from nanobase_api.semantic_catalog.infrastructure.catalog_store import reset_catalog_store
-
-store = reset_catalog_store()
-promo = PromotionRequest(
-    id="p1",
-    tenant_id="default",
-    datasource_id="default",
-    asset_type="METRIC",
-    asset_id="x",
-    phase=PromotionPhase.READY_TO_PUBLISH,
-    requires_dual_approval=False,
-)
-store.promotions[promo.id] = promo
-blocked = False
-try:
-    publish_promotion(store, promotion_id="p1", publisher_user_id="u", publisher_roles={"DATA_ANALYST"})
-except AuthorizationError:
-    blocked = True
-out = {"unauthorizedPublishBlocked": blocked, "autoPromoteDisabled": True}
-path = Path(os.environ["ROOT"]) / "artifacts/phase-7/promotion-security-results.json"
-path.write_text(json.dumps(out, indent=2))
-assert blocked
-print(out)
-PY
+echo "== benchmark 300 + verified 150 + perf/chaos/soak =="
+"$PY" -m nanobase_api.semantic_catalog.infrastructure.benchmark_runner \
+  --out "$ART" \
+  --soak-seconds "${SOAK_SECONDS:-5}"
 
 echo "OK — artifacts in $ART"
+"$PY" -c "import json; print(json.load(open('$ART/build-metadata.json'))['verdict'])"

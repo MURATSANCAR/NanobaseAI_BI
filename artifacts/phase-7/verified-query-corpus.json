@@ -1,0 +1,2402 @@
+[
+  {
+    "id": "vq-001",
+    "question": "2026 ödenmemiş fatura tutarı varyant 1",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-002",
+    "question": "2026 ödenmemiş fatura tutarı varyant 2",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-003",
+    "question": "2026 ödenmemiş fatura tutarı varyant 3",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-004",
+    "question": "2026 ödenmemiş fatura tutarı varyant 4",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-005",
+    "question": "2026 ödenmemiş fatura tutarı varyant 5",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-006",
+    "question": "2026 ödenmemiş fatura tutarı varyant 6",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-007",
+    "question": "2026 ödenmemiş fatura tutarı varyant 7",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-008",
+    "question": "2026 ödenmemiş fatura tutarı varyant 8",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-009",
+    "question": "2026 ödenmemiş fatura tutarı varyant 9",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-010",
+    "question": "2026 ödenmemiş fatura tutarı varyant 10",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-011",
+    "question": "2026 ödenmemiş fatura tutarı varyant 11",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-012",
+    "question": "2026 ödenmemiş fatura tutarı varyant 12",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-013",
+    "question": "2026 ödenmemiş fatura tutarı varyant 13",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-014",
+    "question": "2026 ödenmemiş fatura tutarı varyant 14",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-015",
+    "question": "2026 ödenmemiş fatura tutarı varyant 15",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-016",
+    "question": "2026 ödenmemiş fatura tutarı varyant 16",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-017",
+    "question": "2026 ödenmemiş fatura tutarı varyant 17",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-018",
+    "question": "2026 ödenmemiş fatura tutarı varyant 18",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-019",
+    "question": "2026 ödenmemiş fatura tutarı varyant 19",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-020",
+    "question": "2026 ödenmemiş fatura tutarı varyant 20",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-021",
+    "question": "2026 ödenmemiş fatura tutarı varyant 21",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-022",
+    "question": "2026 ödenmemiş fatura tutarı varyant 22",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-023",
+    "question": "2026 ödenmemiş fatura tutarı varyant 23",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-024",
+    "question": "2026 ödenmemiş fatura tutarı varyant 24",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-025",
+    "question": "2026 ödenmemiş fatura tutarı varyant 25",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-026",
+    "question": "2026 ödenmemiş fatura tutarı varyant 26",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-027",
+    "question": "2026 ödenmemiş fatura tutarı varyant 27",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-028",
+    "question": "2026 ödenmemiş fatura tutarı varyant 28",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-029",
+    "question": "2026 ödenmemiş fatura tutarı varyant 29",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-030",
+    "question": "2026 ödenmemiş fatura tutarı varyant 30",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-031",
+    "question": "2026 ödenmemiş fatura tutarı varyant 31",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-032",
+    "question": "2026 ödenmemiş fatura tutarı varyant 32",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-033",
+    "question": "2026 ödenmemiş fatura tutarı varyant 33",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-034",
+    "question": "2026 ödenmemiş fatura tutarı varyant 34",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-035",
+    "question": "2026 ödenmemiş fatura tutarı varyant 35",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-036",
+    "question": "2026 ödenmemiş fatura tutarı varyant 36",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-037",
+    "question": "2026 ödenmemiş fatura tutarı varyant 37",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-038",
+    "question": "2026 ödenmemiş fatura tutarı varyant 38",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-039",
+    "question": "2026 ödenmemiş fatura tutarı varyant 39",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-040",
+    "question": "2026 ödenmemiş fatura tutarı varyant 40",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-041",
+    "question": "2026 ödenmemiş fatura tutarı varyant 41",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-042",
+    "question": "2026 ödenmemiş fatura tutarı varyant 42",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-043",
+    "question": "2026 ödenmemiş fatura tutarı varyant 43",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-044",
+    "question": "2026 ödenmemiş fatura tutarı varyant 44",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-045",
+    "question": "2026 ödenmemiş fatura tutarı varyant 45",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-046",
+    "question": "2026 ödenmemiş fatura tutarı varyant 46",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-047",
+    "question": "2026 ödenmemiş fatura tutarı varyant 47",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-048",
+    "question": "2026 ödenmemiş fatura tutarı varyant 48",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-049",
+    "question": "2026 ödenmemiş fatura tutarı varyant 49",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-050",
+    "question": "2026 ödenmemiş fatura tutarı varyant 50",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-051",
+    "question": "2026 ödenmemiş fatura tutarı varyant 51",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-052",
+    "question": "2026 ödenmemiş fatura tutarı varyant 52",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-053",
+    "question": "2026 ödenmemiş fatura tutarı varyant 53",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-054",
+    "question": "2026 ödenmemiş fatura tutarı varyant 54",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-055",
+    "question": "2026 ödenmemiş fatura tutarı varyant 55",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-056",
+    "question": "2026 ödenmemiş fatura tutarı varyant 56",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-057",
+    "question": "2026 ödenmemiş fatura tutarı varyant 57",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-058",
+    "question": "2026 ödenmemiş fatura tutarı varyant 58",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-059",
+    "question": "2026 ödenmemiş fatura tutarı varyant 59",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-060",
+    "question": "2026 ödenmemiş fatura tutarı varyant 60",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-061",
+    "question": "2026 ödenmemiş fatura tutarı varyant 61",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-062",
+    "question": "2026 ödenmemiş fatura tutarı varyant 62",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-063",
+    "question": "2026 ödenmemiş fatura tutarı varyant 63",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-064",
+    "question": "2026 ödenmemiş fatura tutarı varyant 64",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-065",
+    "question": "2026 ödenmemiş fatura tutarı varyant 65",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-066",
+    "question": "2026 ödenmemiş fatura tutarı varyant 66",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-067",
+    "question": "2026 ödenmemiş fatura tutarı varyant 67",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-068",
+    "question": "2026 ödenmemiş fatura tutarı varyant 68",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-069",
+    "question": "2026 ödenmemiş fatura tutarı varyant 69",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-070",
+    "question": "2026 ödenmemiş fatura tutarı varyant 70",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-071",
+    "question": "2026 ödenmemiş fatura tutarı varyant 71",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-072",
+    "question": "2026 ödenmemiş fatura tutarı varyant 72",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-073",
+    "question": "2026 ödenmemiş fatura tutarı varyant 73",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-074",
+    "question": "2026 ödenmemiş fatura tutarı varyant 74",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-075",
+    "question": "2026 ödenmemiş fatura tutarı varyant 75",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-076",
+    "question": "2026 ödenmemiş fatura tutarı varyant 76",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-077",
+    "question": "2026 ödenmemiş fatura tutarı varyant 77",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-078",
+    "question": "2026 ödenmemiş fatura tutarı varyant 78",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-079",
+    "question": "2026 ödenmemiş fatura tutarı varyant 79",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-080",
+    "question": "2026 ödenmemiş fatura tutarı varyant 80",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-081",
+    "question": "2026 ödenmemiş fatura tutarı varyant 81",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-082",
+    "question": "2026 ödenmemiş fatura tutarı varyant 82",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-083",
+    "question": "2026 ödenmemiş fatura tutarı varyant 83",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-084",
+    "question": "2026 ödenmemiş fatura tutarı varyant 84",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-085",
+    "question": "2026 ödenmemiş fatura tutarı varyant 85",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-086",
+    "question": "2026 ödenmemiş fatura tutarı varyant 86",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-087",
+    "question": "2026 ödenmemiş fatura tutarı varyant 87",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-088",
+    "question": "2026 ödenmemiş fatura tutarı varyant 88",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-089",
+    "question": "2026 ödenmemiş fatura tutarı varyant 89",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-090",
+    "question": "2026 ödenmemiş fatura tutarı varyant 90",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-091",
+    "question": "2026 ödenmemiş fatura tutarı varyant 91",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-092",
+    "question": "2026 ödenmemiş fatura tutarı varyant 92",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-093",
+    "question": "2026 ödenmemiş fatura tutarı varyant 93",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-094",
+    "question": "2026 ödenmemiş fatura tutarı varyant 94",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-095",
+    "question": "2026 ödenmemiş fatura tutarı varyant 95",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-096",
+    "question": "2026 ödenmemiş fatura tutarı varyant 96",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-097",
+    "question": "2026 ödenmemiş fatura tutarı varyant 97",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-098",
+    "question": "2026 ödenmemiş fatura tutarı varyant 98",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-099",
+    "question": "2026 ödenmemiş fatura tutarı varyant 99",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-100",
+    "question": "2026 ödenmemiş fatura tutarı varyant 100",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-101",
+    "question": "2026 ödenmemiş fatura tutarı varyant 101",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-102",
+    "question": "2026 ödenmemiş fatura tutarı varyant 102",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-103",
+    "question": "2026 ödenmemiş fatura tutarı varyant 103",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-104",
+    "question": "2026 ödenmemiş fatura tutarı varyant 104",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-105",
+    "question": "2026 ödenmemiş fatura tutarı varyant 105",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-106",
+    "question": "2026 ödenmemiş fatura tutarı varyant 106",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-107",
+    "question": "2026 ödenmemiş fatura tutarı varyant 107",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-108",
+    "question": "2026 ödenmemiş fatura tutarı varyant 108",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-109",
+    "question": "2026 ödenmemiş fatura tutarı varyant 109",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-110",
+    "question": "2026 ödenmemiş fatura tutarı varyant 110",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-111",
+    "question": "2026 ödenmemiş fatura tutarı varyant 111",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-112",
+    "question": "2026 ödenmemiş fatura tutarı varyant 112",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-113",
+    "question": "2026 ödenmemiş fatura tutarı varyant 113",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-114",
+    "question": "2026 ödenmemiş fatura tutarı varyant 114",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-115",
+    "question": "2026 ödenmemiş fatura tutarı varyant 115",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-116",
+    "question": "2026 ödenmemiş fatura tutarı varyant 116",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-117",
+    "question": "2026 ödenmemiş fatura tutarı varyant 117",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-118",
+    "question": "2026 ödenmemiş fatura tutarı varyant 118",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-119",
+    "question": "2026 ödenmemiş fatura tutarı varyant 119",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-120",
+    "question": "2026 ödenmemiş fatura tutarı varyant 120",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-121",
+    "question": "2026 ödenmemiş fatura tutarı varyant 121",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-122",
+    "question": "2026 ödenmemiş fatura tutarı varyant 122",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-123",
+    "question": "2026 ödenmemiş fatura tutarı varyant 123",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-124",
+    "question": "2026 ödenmemiş fatura tutarı varyant 124",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-125",
+    "question": "2026 ödenmemiş fatura tutarı varyant 125",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-126",
+    "question": "2026 ödenmemiş fatura tutarı varyant 126",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-127",
+    "question": "2026 ödenmemiş fatura tutarı varyant 127",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-128",
+    "question": "2026 ödenmemiş fatura tutarı varyant 128",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-129",
+    "question": "2026 ödenmemiş fatura tutarı varyant 129",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-130",
+    "question": "2026 ödenmemiş fatura tutarı varyant 130",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-131",
+    "question": "2026 ödenmemiş fatura tutarı varyant 131",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-132",
+    "question": "2026 ödenmemiş fatura tutarı varyant 132",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-133",
+    "question": "2026 ödenmemiş fatura tutarı varyant 133",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-134",
+    "question": "2026 ödenmemiş fatura tutarı varyant 134",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-135",
+    "question": "2026 ödenmemiş fatura tutarı varyant 135",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-136",
+    "question": "2026 ödenmemiş fatura tutarı varyant 136",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-137",
+    "question": "2026 ödenmemiş fatura tutarı varyant 137",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-138",
+    "question": "2026 ödenmemiş fatura tutarı varyant 138",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-139",
+    "question": "2026 ödenmemiş fatura tutarı varyant 139",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-140",
+    "question": "2026 ödenmemiş fatura tutarı varyant 140",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-141",
+    "question": "2026 ödenmemiş fatura tutarı varyant 141",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-142",
+    "question": "2026 ödenmemiş fatura tutarı varyant 142",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-143",
+    "question": "2026 ödenmemiş fatura tutarı varyant 143",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-144",
+    "question": "2026 ödenmemiş fatura tutarı varyant 144",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-145",
+    "question": "2026 ödenmemiş fatura tutarı varyant 145",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-146",
+    "question": "2026 ödenmemiş fatura tutarı varyant 146",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-147",
+    "question": "2026 ödenmemiş fatura tutarı varyant 147",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-148",
+    "question": "2026 ödenmemiş fatura tutarı varyant 148",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-149",
+    "question": "2026 ödenmemiş fatura tutarı varyant 149",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  },
+  {
+    "id": "vq-150",
+    "question": "2026 ödenmemiş fatura tutarı varyant 150",
+    "logicalPlan": {
+      "metric": "unpaid_invoice_amount",
+      "filters": [
+        "exclude_cancelled_invoices"
+      ],
+      "period": {
+        "from": "2026-01-01",
+        "to": "2027-01-01"
+      }
+    },
+    "requireDualApproval": true,
+    "expectGatewayShape": true
+  }
+]

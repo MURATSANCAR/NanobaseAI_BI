@@ -1,23 +1,2658 @@
 {
-  "suite": "semantic-benchmark-smoke",
-  "note": "Full 300-question corpus deferred to GO; vertical slice smoke below",
-  "cases": [
+  "summary": {
+    "total": 300,
+    "passed": 300,
+    "metricResolutionAccuracy": 1.0,
+    "mandatoryFilterApplication": 1.0,
+    "currencyPolicyCorrectness": 1.0,
+    "timeFieldCorrectness": 1.0,
+    "clarificationAccuracy": 1.0,
+    "conflictDetection": 1.0,
+    "crossTenantSemanticRetrieval": 0,
+    "targets": {
+      "metricResolutionAccuracy": 0.95,
+      "mandatoryFilterApplication": 1.0,
+      "currencyPolicyCorrectness": 1.0,
+      "timeFieldCorrectness": 0.98,
+      "crossTenantSemanticRetrieval": 0
+    },
+    "go": true
+  },
+  "results": [
     {
-      "id": "unpaid-tr-1",
-      "question": "Ödenmemiş fatura tutarı nedir?",
-      "expectedMetric": "unpaid_invoice_amount",
-      "mandatoryFilter": "exclude_cancelled_invoices",
-      "result": "PASS"
+      "id": "business_term_synonym-001",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
     },
     {
-      "id": "unpaid-tr-2",
-      "question": "2026 açık faturalar ne kadar?",
-      "expectedMetric": "unpaid_invoice_amount",
-      "mandatoryFilter": "exclude_cancelled_invoices",
-      "result": "PASS"
+      "id": "business_term_synonym-002",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-003",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-004",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-005",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-006",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-007",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-008",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-009",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-010",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-011",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-012",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-013",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-014",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-015",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-016",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-017",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-018",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-019",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-020",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-021",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-022",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-023",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-024",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-025",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-026",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-027",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-028",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-029",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "business_term_synonym-030",
+      "category": "business_term_synonym",
+      "ok": true,
+      "detail": {
+        "term": true
+      }
+    },
+    {
+      "id": "single_metric-001",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-002",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-003",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-004",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-005",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-006",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-007",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-008",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-009",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-010",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-011",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-012",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-013",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-014",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-015",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-016",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-017",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-018",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-019",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-020",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-021",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-022",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-023",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-024",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-025",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-026",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-027",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-028",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-029",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-030",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-031",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-032",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-033",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-034",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-035",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-036",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-037",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-038",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-039",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "single_metric-040",
+      "category": "single_metric",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-001",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-002",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-003",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-004",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-005",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-006",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-007",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-008",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-009",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-010",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-011",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-012",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-013",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-014",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-015",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-016",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-017",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-018",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-019",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-020",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-021",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-022",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-023",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-024",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-025",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-026",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-027",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-028",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-029",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-030",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-031",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-032",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-033",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-034",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-035",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-036",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-037",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-038",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-039",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_dimension-040",
+      "category": "metric_dimension",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-001",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-002",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-003",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-004",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-005",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-006",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-007",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-008",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-009",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-010",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-011",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-012",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-013",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-014",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-015",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-016",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-017",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-018",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-019",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-020",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-021",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-022",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-023",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-024",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-025",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-026",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-027",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-028",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-029",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-030",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-031",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-032",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-033",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-034",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-035",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-036",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-037",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-038",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-039",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_filter-040",
+      "category": "metric_filter",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-001",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-002",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-003",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-004",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-005",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-006",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-007",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-008",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-009",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-010",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-011",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-012",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-013",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-014",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-015",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-016",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-017",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-018",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-019",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-020",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-021",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-022",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-023",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-024",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-025",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-026",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-027",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-028",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-029",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_time-030",
+      "category": "metric_time",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-001",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-002",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-003",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-004",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-005",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-006",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-007",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-008",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-009",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-010",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-011",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-012",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-013",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-014",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-015",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-016",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-017",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-018",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-019",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-020",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-021",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-022",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-023",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-024",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-025",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-026",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-027",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-028",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-029",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "metric_currency-030",
+      "category": "metric_currency",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-001",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-002",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-003",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-004",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-005",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-006",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-007",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-008",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-009",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-010",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-011",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-012",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-013",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-014",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-015",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-016",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-017",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-018",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-019",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-020",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-021",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-022",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-023",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-024",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-025",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-026",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-027",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-028",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-029",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "multi_join-030",
+      "category": "multi_join",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-001",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-002",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-003",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-004",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-005",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-006",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-007",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-008",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-009",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-010",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-011",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-012",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-013",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-014",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-015",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-016",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-017",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-018",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-019",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-020",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-021",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-022",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-023",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-024",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "follow_up-025",
+      "category": "follow_up",
+      "ok": true,
+      "detail": {
+        "metric": "unpaid_invoice_amount",
+        "mandatoryFilter": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-001",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-002",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-003",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-004",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-005",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-006",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-007",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-008",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-009",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-010",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-011",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-012",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-013",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-014",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-015",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-016",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-017",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-018",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-019",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "ambiguous_metric-020",
+      "category": "ambiguous_metric",
+      "ok": true,
+      "detail": {
+        "clarification": true
+      }
+    },
+    {
+      "id": "semantic_conflict-001",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-002",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-003",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-004",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-005",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-006",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-007",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-008",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-009",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-010",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-011",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-012",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-013",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-014",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
+    },
+    {
+      "id": "semantic_conflict-015",
+      "category": "semantic_conflict",
+      "ok": true,
+      "detail": {
+        "conflict_detected": true
+      }
     }
-  ],
-  "metricResolutionAccuracy": 1.0,
-  "mandatoryFilterApplication": 1.0,
-  "crossTenantRetrieval": 0
+  ]
 }

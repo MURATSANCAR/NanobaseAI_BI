@@ -56,11 +56,19 @@ class Settings:
         # Faz 7 semantic governance
         self.semantic_catalog_enabled = os.environ.get("SEMANTIC_CATALOG_ENABLED", "1") == "1"
         self.semantic_shadow_mode = os.environ.get("SEMANTIC_SHADOW_MODE", "0") == "1"
+        self.semantic_catalog_backend = os.environ.get("SEMANTIC_CATALOG_BACKEND", "auto").lower()
         self.semantic_metric_flags = {
-            k.split(".", 1)[-1]: v.lower() in ("1", "true", "yes")
+            k.removeprefix("SEMANTIC_METRIC_").lower(): v.lower() in ("1", "true", "yes")
             for k, v in os.environ.items()
             if k.startswith("SEMANTIC_METRIC_")
         }
+        # Faz 8 Oracle rollout
+        self.oracle_execution_enabled = os.environ.get("ORACLE_EXECUTION_ENABLED", "0") == "1"
+        self.oracle_execution_mode = (
+            os.environ.get("ORACLE_EXECUTION_MODE") or "QUERY_GATEWAY"
+        ).upper()
+        if self.oracle_execution_mode not in ("QUERY_GATEWAY", "PLAN_ONLY", "METADATA_ONLY"):
+            self.oracle_execution_mode = "PLAN_ONLY"
 
 
 @lru_cache

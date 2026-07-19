@@ -54,7 +54,7 @@ async def run_sql_plan(
         semantic_context=semantic_ctx or None,
     )
 
-    system, user_tpl = sql_plan_prompts()
+    system, user_tpl = sql_plan_prompts(dialect=req.dialect)
     user = render_simple(user_tpl, context_blocks=context_blocks, question=req.question)
 
     try:
@@ -70,7 +70,13 @@ async def run_sql_plan(
     except Exception as e:
         raise WorkflowError(OUTPUT_PARSE_FAILED, f"Planlama başarısız: {e}") from e
 
-    plan.workflow = PLAN_WORKFLOW
+    # Force dialect from request for Oracle workflows
+    if (req.dialect or "").lower() == "oracle":
+        plan.dialect = "oracle"
+        plan.workflow = "nanobase-oracle-sql-plan-v1"
+        plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-oracle"
+    else:
+        plan.workflow = PLAN_WORKFLOW
     plan.retrieval_used = bool(retrieval.get("hits") or hint)
 
     allowed = set(req.allowedTables) | set(retrieval.get("tables") or [])

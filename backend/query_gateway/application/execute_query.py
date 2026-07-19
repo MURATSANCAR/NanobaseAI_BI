@@ -1,4 +1,4 @@
-"""Validate + execute via Postgres RO path."""
+"""Validate + execute via Postgres or Oracle RO hardened path."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ from query_gateway.domain.errors import DATASOURCE_NOT_FOUND, GatewayError
 from query_gateway.infrastructure.audit.logger import get_audit_logger
 from query_gateway.infrastructure.database.datasources import load_datasources
 from query_gateway.infrastructure.database.postgres_executor import execute_postgres_ro
+from query_gateway.infrastructure.oracle.executor import execute_oracle_ro
 from query_gateway.infrastructure.result.guard import guard_result
 
 
@@ -46,28 +47,41 @@ def execute_query(
     if not ds:
         raise GatewayError(DATASOURCE_NOT_FOUND, "Datasource bulunamadı.", status=404)
 
-    driver = ds.get("driver") or "postgresql"
-    if driver != "postgresql":
-        raise GatewayError(
-            DATASOURCE_NOT_FOUND,
-            "Internal execute şu an yalnız PostgreSQL destekler.",
-            status=400,
-            execution_id=execution_id,
-        )
-
+    driver = (ds.get("driver") or "postgresql").lower()
     rows_limit = min(max_rows or settings.max_rows, settings.max_limit)
     timeout = min(timeout_ms or settings.statement_timeout_ms, 60_000)
 
-    cols, rows, truncated, exec_ms = execute_postgres_ro(
-        ds,
-        approved["normalizedSql"],
-        tenant_id=tenant_id,
-        timeout_ms=timeout,
-        max_rows=rows_limit,
-        size_profile=str(ds.get("size_profile") or "medium"),
-        run_explain=True,
-        settings=settings,
-    )
+    if driver in ("postgresql", "postgres"):
+        cols, rows, truncated, exec_ms = execute_postgres_ro(
+            ds,
+            approved["normalizedSql"],
+            tenant_id=tenant_id,
+            timeout_ms=timeout,
+            max_rows=rows_limit,
+            size_profile=str(ds.get("size_profile") or "medium"),
+            run_explain=True,
+            settings=settings,
+        )
+    elif driver == "oracle":
+        cols, rows, truncated, exec_ms = execute_oracle_ro(
+            ds,
+            approved["normalizedSql"],
+            tenant_id=tenant_id,
+            user_id=user_id,
+            execution_id=execution_id,
+            timeout_ms=timeout,
+            max_rows=rows_limit,
+            size_profile=str(ds.get("size_profile") or "medium"),
+            run_explain=True,
+            settings=settings,
+        )
+    else:
+        raise GatewayError(
+            DATASOURCE_NOT_FOUND,
+            f"Internal execute bu driver için desteklenmiyor: {driver}.",
+            status=400,
+            execution_id=execution_id,
+        )
 
     guarded = guard_result(
         cols,
@@ -75,6 +89,7 @@ def execute_query(
         column_policies=ds.get("column_policies") or {},
         truncated=truncated,
         settings=settings,
+        preserve_decimal_strings=driver == "oracle",
     )
 
     gateway_ms = int((time.time() - t0) * 1000)
@@ -91,6 +106,7 @@ def execute_query(
             "datasourceId": datasource_id,
             "tenantId": tenant_id,
             "sqlFingerprint": approved.get("sqlFingerprint"),
+            "driver": driver,
         }
     )
 

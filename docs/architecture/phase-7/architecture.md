@@ -34,9 +34,16 @@ Alembic: `002`–`009` on `nanobase_alembic_version`.
 | Flag | Purpose |
 |------|---------|
 | `SEMANTIC_CATALOG_ENABLED` | Master switch (default on) |
+| `SEMANTIC_CATALOG_BACKEND` | `auto` (SQL if `sc_*` exist) / `sql` / `memory` |
 | `SEMANTIC_SHADOW_MODE` | Compile/log without serving SQL to user |
 | `SEMANTIC_METRIC_<code>=true` | Metric-based rollout |
 | `VITE_ENABLE_SEMANTIC_CATALOG` | Admin UI |
+
+## Persistence
+
+`CatalogStore` write-through via `SqlCatalogRepository` → PostgreSQL `sc_*` tables
+(Alembic 002–009). Hydrates on process start when tables are present.
+
 
 ## Docs in this folder
 

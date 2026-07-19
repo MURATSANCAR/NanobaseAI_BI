@@ -1,0 +1,29 @@
+{
+  "phase": 8,
+  "generated": "2026-07-19",
+  "oracle_security_corpus": {
+    "path": "backend/query_gateway/tests/security/corpus/oracle_malicious.sql.jsonl",
+    "count": 620,
+    "rejected": 620,
+    "approved": 0,
+    "status": "PASS"
+  },
+  "oracle_text2sql_benchmark": {
+    "path": "tests/text2sql/oracle-250.yaml",
+    "questions": 250,
+    "status": "SKELETON"
+  },
+  "cross_dialect": {
+    "path": "tests/text2sql/cross-dialect-100.json",
+    "metrics": 100,
+    "status": "SKELETON"
+  },
+  "unit_tests": {
+    "oracle_package": "PASS",
+    "note": "make test-oracle-corpus"
+  },
+  "live_integration": {
+    "status": "SKIP",
+    "reason": "oracle-ro.datasources.json not provisioned in CI"
+  }
+}

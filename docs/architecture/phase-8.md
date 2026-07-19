@@ -1,53 +1,36 @@
-# Nanobase BI — Faz 8 Oracle reporting RO connector
+# Nanobase BI — Faz 8 Oracle reporting (connector + production cert)
 
-## Goal
+## Two layers
 
-Register an **Oracle Autonomous DB (SSB/SH)** read-only source in Query Gateway
-so Text-to-SQL can validate/execute Oracle dialect SQL with the same guardrails
-as Postgres (`SELECT`/`WITH` only, table allowlist, row caps).
+1. **Connector (original)** — Oracle RO source in Query Gateway secrets map (`oracledb` Thin).
+2. **Production certification** — hardened `/internal/v1` path, policy corpus, Plan/Result/VPD guards.
+   See **[phase-8/](phase-8/)** for full architecture, acceptance, and rollback.
 
 ## Secrets (never commit)
 
-On the server:
-
 ```bash
-# 1) password file
-install -m 600 /dev/null /data/nanobaseai/bi/secrets/oracle-adb.password
-# paste RO password, save
-
-# 2) datasource map (from example)
 cp configs/oracle-ro.datasources.json.example \
    /data/nanobaseai/bi/secrets/oracle-ro.datasources.json
-chmod 600 /data/nanobaseai/bi/secrets/oracle-ro.datasources.json
-# edit host / service_name / user
+# Use NANOBASE_QUERY_RO — never SYS/SYSTEM/ADMIN
 ```
 
-Optional full TNS: set `"dsn": "(description=...)"` and omit host/service.
-
-## Gateway behaviour
-
-| Item | Value |
-|------|--------|
-| Driver | `oracledb` thin (no Instant Client) |
-| Dialect | sqlglot `oracle` → `FETCH FIRST n ROWS ONLY` |
-| Default allowlist | SSB sample tables |
-| Config path | `/data/nanobaseai/bi/secrets/oracle-ro.datasources.json` |
-| Port | `:8792` (unchanged) |
-
-Without the secrets file, Gateway behaves exactly as Faz 5 (Postgres only).
-
-## Deploy
+## Quick verify
 
 ```bash
-./scripts/server/deploy-query-gateway.sh   # installs oracledb
-./scripts/server/verify-query-gateway.sh   # Postgres regression
-./scripts/server/verify-oracle.sh          # Oracle if secrets present
+./scripts/server/deploy-query-gateway.sh
+./scripts/server/verify-oracle.sh          # offline policy always; live SKIP without secrets
+cd backend/query_gateway && make test-oracle-corpus
 ```
 
-## Acceptance
+## Feature flags
+
+| Env | Default | Meaning |
+|-----|---------|---------|
+| `ORACLE_EXECUTION_ENABLED` | `0` | API allows Oracle execute path |
+| `ORACLE_EXECUTION_MODE` | `QUERY_GATEWAY` | Gateway: `PLAN_ONLY` disables execute |
+
+## Acceptance (offline)
 
 1. `GET /health` → `oracle_driver: true`
-2. With secrets: `oracle_adb_ssb` listed in `/api/v1/query/datasources`
-3. `SELECT COUNT(*) FROM ssb.customer` → 200 via Gateway
-4. `INSERT` / non-allowlisted table → 400
-5. Without secrets: verify script reports `SKIP (no oracle-ro.datasources.json)`
+2. `make test-oracle-corpus` → 600/600 malicious REJECT
+3. Without secrets: verify script SKIP after offline policy OK
