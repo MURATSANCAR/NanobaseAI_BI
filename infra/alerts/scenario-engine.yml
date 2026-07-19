@@ -1,0 +1,66 @@
+# Prometheus alert rules for Precompiled Query Scenario Engine
+groups:
+  - name: scenario-engine
+    rules:
+      - alert: ScenarioCrossTenantMatch
+        expr: increase(scenario_cross_tenant_blocked_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Scenario matcher blocked a cross-tenant hit"
+          description: "Cross-tenant scenario access attempted (must stay at 0)."
+
+      - alert: ScenarioStaleExecute
+        expr: increase(scenario_stale_total[10m]) > 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Stale scenario executions rising"
+          description: "More than 3 stale scenario marks in 10m."
+
+      - alert: ScenarioBuildStuck
+        expr: |
+          (
+            time() - scenario_build_started_timestamp_seconds
+          ) > 900
+          and on() scenario_build_running == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scenario build stuck >15m"
+          description: "A scenario build has been RUNNING longer than 15 minutes."
+
+      - alert: ScenarioQdrantChecksumMismatch
+        expr: increase(scenario_qdrant_checksum_mismatch_total[15m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Qdrant publish checksum mismatch"
+          description: "Scenario embedding publish batch failed checksum validation."
+
+      - alert: ScenarioValidationFailureSpike
+        expr: |
+          (
+            increase(scenario_static_validation_failures_total[10m])
+            + increase(scenario_execution_validation_failures_total[10m])
+            + increase(scenario_performance_validation_failures_total[10m])
+          ) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scenario validation failure spike"
+          description: "Combined validation failures exceeded 50 in 10 minutes."
+
+      - alert: ScenarioGatewayRejectionSpike
+        expr: increase(scenario_query_gateway_rejections_total[10m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scenario Query Gateway rejections elevated"
+          description: "Gateway rejected more than 20 scenario executes in 10m."

@@ -199,7 +199,8 @@ import uuid  # noqa: E402
 
 import httpx  # noqa: E402
 from fastapi import Request  # noqa: E402
-from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
+from fastapi import File, UploadFile  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse  # noqa: E402
 
 from nanobase_api.chat_gateway import stream_chat_via_gateway  # noqa: E402
 from nanobase_api import semantic as semantic_mod  # noqa: E402
@@ -216,6 +217,10 @@ from nanobase_api import budget_actuals as budget_actuals_mod  # noqa: E402
 from nanobase_api import budget_ops as budget_ops_mod  # noqa: E402
 from nanobase_api import budget_fx as budget_fx_mod  # noqa: E402
 from nanobase_api import budget_lines as budget_lines_mod  # noqa: E402
+from nanobase_api import budget_import as budget_import_mod  # noqa: E402
+from nanobase_api import budget_export as budget_export_mod  # noqa: E402
+from nanobase_api import budget_match as budget_match_mod  # noqa: E402
+from nanobase_api import budget_shares as budget_shares_mod  # noqa: E402
 from nanobase_api.infrastructure.budget_schema import ensure_budget_tables  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
 from nanobase_api import workflows as workflows_mod  # noqa: E402
@@ -709,10 +714,12 @@ async def proxy_query_validate(
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
 
     qg = QueryGatewayClient(QG_BASE)
+    params = body.get("parameters") if isinstance(body.get("parameters"), dict) else None
     data = await qg.validate(
         sql=str(body.get("sql") or ""),
         datasource_id=str(body.get("datasource_id")),
         tenant_id=principal.tenant_id,
+        parameters=params,
     )
     status = 200 if data.get("ok") else 400
     return JSONResponse(data, status_code=status)
@@ -731,12 +738,14 @@ async def proxy_query_execute(
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
 
     qg = QueryGatewayClient(QG_BASE)
+    params = body.get("parameters") if isinstance(body.get("parameters"), dict) else None
     try:
         data = await qg.execute(
             sql=str(body.get("sql") or ""),
             datasource_id=str(body.get("datasource_id")),
             tenant_id=principal.tenant_id,
             explain=bool(body.get("explain")),
+            parameters=params,
         )
         return JSONResponse(data, status_code=200 if data.get("ok") else 400)
     except Exception as e:
@@ -1147,20 +1156,43 @@ async def budgets_change_log(
 @app.get("/api/v1/bi/budgets/{budget_id}/history")
 async def budgets_history(
     budget_id: str,
+    limit: int = 24,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> JSONResponse:
-    # Shape-compatible empty until actuals history snapshots are wired
-    _ = (budget_id, principal)
-    return JSONResponse({"points": []})
+    points = budget_actuals_mod.list_actuals_history(
+        _meta_engine(),
+        budget_id,
+        tenant_id=principal.tenant_id,
+        limit=limit,
+    )
+    return JSONResponse({"points": points})
 
 
 @app.get("/api/v1/bi/budgets/{budget_id}/breakdown")
 async def budgets_breakdown(
     budget_id: str,
+    limit: int = 50,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> JSONResponse:
-    _ = (budget_id, principal)
-    return JSONResponse({"rows": [], "columns": []})
+    budget = budgets_mod.get_budget(
+        _meta_engine(), budget_id, tenant_id=principal.tenant_id
+    )
+    if not budget:
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_not_found", "error": "bi_budget_not_found"},
+            status_code=404,
+        )
+    try:
+        return JSONResponse(
+            await budget_ops_mod.run_budget_breakdown(
+                budget,
+                datasource_id=_active_ds(),
+                tenant_id=principal.tenant_id,
+                row_limit=limit,
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
 
 
 @app.get("/api/v1/bi/budgets/{budget_id}/periods")
@@ -1414,12 +1446,184 @@ async def cost_centers_rollup(
     )
 
 
+@app.get("/api/v1/bi/budgets/match-preview")
+async def budgets_match_preview(
+    fiscal_year: int | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        return JSONResponse(
+            await budget_match_mod.preview_matches(
+                fiscal_year=fiscal_year,
+                datasource_id=_active_ds(),
+                tenant_id=principal.tenant_id,
+            )
+        )
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.get("/api/v1/bi/budgets/import-template")
+async def budgets_import_template(
+    fiscal_year: int | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+):
+    _ = principal
+    from datetime import datetime, timezone
+
+    path = budget_import_mod.build_import_template(fiscal_year=fiscal_year)
+    year = fiscal_year or datetime.now(timezone.utc).year
+    return FileResponse(
+        path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=f"butce-sablon-{year}.xlsx",
+    )
+
+
+@app.get("/api/v1/bi/budgets/export")
+async def budgets_export(
+    format: str = "pdf",
+    fiscal_year: int | None = None,
+    locale: str | None = None,
+    scenario: str = "base",
+    reporting_currency: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+):
+    from datetime import datetime, timezone
+
+    year = fiscal_year if fiscal_year is not None else datetime.now(timezone.utc).year
+    report_ccy = (reporting_currency or "").strip().upper() or None
+    try:
+        path = budget_export_mod.export_budget_board_pack(
+            _meta_engine(),
+            format=format,
+            fiscal_year=year,
+            locale=locale,
+            tenant_id=principal.tenant_id,
+            scenario=scenario or "base",
+            reporting_currency=report_ccy,
+        )
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_export_failed", "error": str(e)[:400]},
+            status_code=500,
+        )
+    fmt = (format or "pdf").lower()
+    if fmt == "xlsx":
+        media = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        filename = f"butce-raporu-{year}.xlsx"
+    else:
+        media = "application/pdf"
+        filename = f"butce-raporu-{year}.pdf"
+    return FileResponse(path, media_type=media, filename=filename)
+
+
+@app.post("/api/v1/bi/budgets/import")
+async def budgets_import(
+    fiscal_year: int | None = None,
+    file: UploadFile = File(...),
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    raw = await file.read()
+    if not raw:
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_import_empty", "error": "bi_budget_import_empty"},
+            status_code=400,
+        )
+    try:
+        rows = budget_import_mod.parse_budget_file(file.filename or "upload.xlsx", raw)
+        result = budget_import_mod.import_budget_rows(
+            _meta_engine(),
+            rows,
+            tenant_id=principal.tenant_id,
+            default_fiscal_year=fiscal_year,
+        )
+        return JSONResponse(result)
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.post("/api/v1/bi/budgets/share-pack", status_code=201)
+async def budgets_share_pack(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if not get_settings().public_share_enabled:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled"},
+            status_code=403,
+        )
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        fy = int(body.get("fiscal_year") or 0)
+        if fy < 2000:
+            raise ValueError("bi_budget_fiscal_year_invalid")
+        report_ccy = (body.get("reporting_currency") or "").strip().upper() or None
+        scen = str(body.get("scenario") or "base").strip().lower() or "base"
+        loc = str(body.get("locale") or "en").strip().lower()[:2] or "en"
+        resource_id = budget_ops_mod.encode_budget_pack_resource_id(
+            fy,
+            scenario=scen,
+            reporting_currency=report_ccy,
+            locale=loc,
+        )
+        share = budget_shares_mod.create_share(
+            resource_type="budget_pack",
+            resource_id=resource_id,
+            ttl_hours=float(body.get("ttl_hours") or 72),
+            password=body.get("password"),
+            tenant_id=principal.tenant_id,
+        )
+        return JSONResponse(share, status_code=201)
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/create-alert", status_code=201)
+async def budgets_create_alert(
+    budget_id: str,
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    budget = budgets_mod.get_budget(
+        _meta_engine(), budget_id, tenant_id=principal.tenant_id
+    )
+    if not budget:
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_not_found", "error": "bi_budget_not_found"},
+            status_code=404,
+        )
+    try:
+        result = budget_ops_mod.create_alert_from_budget(
+            _meta_engine(),
+            budget,
+            tenant_id=principal.tenant_id,
+            threshold_pct=float(body.get("threshold_pct") or 80),
+            condition=str(body.get("condition") or "gte"),
+            recipient=body.get("recipient"),
+        )
+        return JSONResponse(result, status_code=201)
+    except ValueError as e:
+        return _budget_err(e)
+
+
 @app.post("/api/v1/bi/budgets/sync-from-source")
 async def budgets_sync_from_source(
     request: Request,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> JSONResponse:
-    """Pull butce_planlari via authenticated Query Gateway into bi_budgets."""
+    """Discover plan/spend tables, upsert envelopes, optionally refresh actuals."""
     body = {}
     try:
         body = await request.json()
@@ -1429,39 +1633,94 @@ async def budgets_sync_from_source(
     fiscal_year = body.get("fiscal_year")
     scenario = str(body.get("scenario") or "base")
     do_refresh = bool(body.get("refresh"))
-    sql = (
-        "SELECT id, mali_yil, departman_kod, butce_kodu, kalem_adi, tur, "
-        "planlanan_tutar, para_birimi FROM butce_planlari"
-    )
     try:
-        from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
-
-        qg = QueryGatewayClient(QG_BASE)
-        data = await qg.execute(sql=sql, datasource_id=ds, tenant_id=principal.tenant_id)
-        if not data.get("ok"):
-            return JSONResponse(
-                {"ok": False, "error": data.get("error") or "gateway failed"},
-                status_code=400,
-            )
-        result = budgets_mod.sync_from_erp_butce(
+        result = await budget_match_mod.sync_envelopes_from_source(
             _meta_engine(),
-            data.get("rows") or [],
-            tenant_id=principal.tenant_id,
-            datasource_id=ds,
             fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
+            tenant_id=principal.tenant_id,
+            refresh=do_refresh,
             scenario=scenario,
+            actor=principal.user_id,
+            datasource_id=ds,
         )
-        if do_refresh:
-            refresh = await budget_actuals_mod.refresh_all(
-                _meta_engine(),
-                tenant_id=principal.tenant_id,
-                fiscal_year=int(fiscal_year) if fiscal_year is not None else result.get("fiscal_year"),
-                datasource_id=ds,
-            )
-            result["refresh"] = refresh
         return JSONResponse(result)
+    except ValueError as e:
+        return _budget_err(e)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+def _resolve_budget_pack_share(token: str, *, password: str | None = None, unlock: bool = False) -> dict:
+    entry = budget_shares_mod.get_share(token)
+    if not entry:
+        raise KeyError("share_not_found")
+    if entry.get("password_hash"):
+        if not unlock:
+            return {
+                "locked": True,
+                "requires_password": True,
+                "password_protected": True,
+                "type": entry.get("resource_type"),
+                "resource_type": entry.get("resource_type"),
+                "resource_id": entry.get("resource_id"),
+            }
+        import hashlib
+
+        expected = str(entry.get("password_hash") or "")
+        got = hashlib.sha256((password or "").encode("utf-8")).hexdigest()
+        if not password or got != expected:
+            raise PermissionError("share_password_invalid")
+    parsed = budget_ops_mod.decode_budget_pack_resource_id(str(entry.get("resource_id") or ""))
+    pack = budget_ops_mod.build_budget_pack_share_payload(
+        _meta_engine(),
+        tenant_id=str(entry.get("tenant_id") or "default"),
+        fiscal_year=int(parsed.get("fiscal_year") or 0),
+        scenario=str(parsed.get("scenario") or "base"),
+        reporting_currency=parsed.get("reporting_currency"),
+        locale=parsed.get("locale") or "en",
+    )
+    pack["locked"] = False
+    pack["share"] = {
+        "expires_at": entry.get("expires_at"),
+        "view_count": 0,
+    }
+    return pack
+
+
+@app.get("/api/v1/bi/public/{token}")
+async def bi_public_share(token: str) -> JSONResponse:
+    try:
+        return JSONResponse(_resolve_budget_pack_share(token, unlock=False))
+    except KeyError:
+        return JSONResponse(
+            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
+            status_code=404,
+        )
+
+
+@app.post("/api/v1/bi/public/{token}/unlock")
+async def bi_public_share_unlock(token: str, request: Request) -> JSONResponse:
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        return JSONResponse(
+            _resolve_budget_pack_share(
+                token, password=str(body.get("password") or ""), unlock=True
+            )
+        )
+    except KeyError:
+        return JSONResponse(
+            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
+            status_code=404,
+        )
+    except PermissionError:
+        return JSONResponse(
+            {"ok": False, "code": "share_password_invalid", "error": "share_password_invalid"},
+            status_code=403,
+        )
 
 
 @app.get("/api/v1/bi/audit")
@@ -1667,18 +1926,6 @@ async def internal_result_explain(
 @app.api_route("/api/v1/bi/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def bi_limited(full_path: str) -> JSONResponse:
     path = (full_path or "").strip().strip("/")
-    if path.startswith("budgets/import") or path.startswith("budgets/export") or path == "budgets/import-template":
-        return JSONResponse(
-            {"ok": False, "code": "bi_budget_feature_pending", "error": "Excel import/export is not enabled yet."},
-            status_code=501,
-        )
-    if path == "budgets/share-pack" or path.endswith("/create-alert"):
-        return JSONResponse(
-            {"ok": False, "code": "bi_budget_feature_pending", "created": False, "error": "Feature pending."},
-            status_code=501,
-        )
-    if path == "budgets/match-preview":
-        return JSONResponse({"fiscal_year": 0, "matches": [], "warnings": ["bi_budget_feature_pending"]})
     if path.startswith("shares"):
         return JSONResponse({"shares": []})
     return JSONResponse({"ok": True, "engine": "nanobase_api", "limited": True, "path": full_path})

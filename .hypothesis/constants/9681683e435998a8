@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/domain/period.py
+# hypothesis_version: 6.141.1
+
+[1970, 9999, 'AFTER', 'AFTER requires start', 'AS_OF', 'BEFORE', 'BEFORE requires end', 'BETWEEN', 'CURRENT_MONTH', 'CURRENT_QUARTER', 'CURRENT_WEEK', 'CURRENT_YEAR', 'Europe/Istanbul', 'LAST_N_DAYS', 'MONTH_TO_DATE', 'NEXT_N_DAYS', 'PREVIOUS_MONTH', 'PREVIOUS_QUARTER', 'PREVIOUS_WEEK', 'PREVIOUS_YEAR', 'QUARTER_TO_DATE', 'TODAY', 'TOMORROW', 'YEAR_TO_DATE', 'YESTERDAY', 'period_end', 'period_start']

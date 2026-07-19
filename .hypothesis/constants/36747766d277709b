@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/redis_cache.py
+# hypothesis_version: 6.141.1
+
+[3600, 'REDIS_URL', 'astFingerprint', 'ast_fingerprint', 'bindParams', 'bind_params', 'dialect', 'policyVersion', 'policy_version', 'scenarioId', 'scenario_id', 'schemaVersion', 'schema_version', 'semanticVersion', 'semantic_version', 'sqlTemplate', 'sql_template', '|']

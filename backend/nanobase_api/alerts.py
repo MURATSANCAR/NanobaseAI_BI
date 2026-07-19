@@ -13,6 +13,12 @@ from sqlalchemy.engine import Engine
 
 
 def _row_to_alert(r: Any) -> dict[str, Any]:
+    try:
+        meta = json.loads(r["payload_json"] or "{}")
+    except Exception:
+        meta = {}
+    if not isinstance(meta, dict):
+        meta = {}
     return {
         "id": r["id"],
         "title": r["title"],
@@ -26,6 +32,10 @@ def _row_to_alert(r: Any) -> dict[str, Any]:
         "last_triggered_at": r["last_triggered_at"].isoformat() if r["last_triggered_at"] else None,
         "created_at": r["created_at"].isoformat() if r["created_at"] else None,
         "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+        "budget_id": meta.get("budget_id"),
+        "budget_fingerprint": meta.get("budget_fingerprint"),
+        "budget_threshold_pct": meta.get("budget_threshold_pct"),
+        "channels": meta,
     }
 
 
@@ -47,6 +57,10 @@ def list_alerts(engine: Engine, *, tenant_id: str = "default") -> list[dict[str,
 def save_alert(engine: Engine, body: dict[str, Any], *, tenant_id: str = "default") -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     aid = str(body.get("id") or f"al-{uuid.uuid4().hex[:10]}")
+    payload = dict(body.get("channels") or {})
+    for key in ("budget_id", "budget_fingerprint", "budget_threshold_pct"):
+        if body.get(key) is not None:
+            payload[key] = body[key]
     vals = {
         "id": aid,
         "tenant": tenant_id,
@@ -57,7 +71,7 @@ def save_alert(engine: Engine, body: dict[str, Any], *, tenant_id: str = "defaul
         "thr": float(body.get("threshold") or 0),
         "recip": body.get("recipient"),
         "status": body.get("status") or "active",
-        "payload": json.dumps(body.get("channels") or {}, ensure_ascii=False),
+        "payload": json.dumps(payload, ensure_ascii=False),
         "now": now,
     }
     with engine.begin() as conn:

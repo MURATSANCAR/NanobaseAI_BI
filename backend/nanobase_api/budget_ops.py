@@ -2,17 +2,253 @@
 
 from __future__ import annotations
 
+import hashlib
+import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy.engine import Engine
 
+from nanobase_api import alerts as alerts_mod
 from nanobase_api import budgets as budgets_mod
 from nanobase_api.budget_actuals import validate_budget_sql
+from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+
+_AS_COL = re.compile(r"\bas\s+([a-z_][\w]*)\s*$", re.I | re.M)
 
 
 def _actor_label(actor: str | None) -> str:
     return (actor or "system")[:128]
+
+
+def _sql_result_column(sql: str) -> str:
+    cleaned = (sql or "").strip().rstrip(";")
+    m = _AS_COL.search(cleaned)
+    if m:
+        return m.group(1)
+    return "amount"
+
+
+def _fingerprint(budget_id: str, threshold_pct: float, condition: str) -> str:
+    raw = f"{budget_id}|{threshold_pct:.4g}|{condition}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def create_alert_from_budget(
+    engine: Engine,
+    budget: dict[str, Any],
+    *,
+    tenant_id: str,
+    threshold_pct: float = 80.0,
+    condition: str = "gte",
+    recipient: str | None = None,
+) -> dict[str, Any]:
+    """Idempotent: same budget+threshold+condition returns existing alert."""
+    sql = str(budget.get("actuals_sql") or "").strip()
+    if not sql:
+        raise ValueError("bi_budget_sql_required")
+    allocated = float(budget.get("allocated") or 0)
+    if allocated < 0:
+        raise ValueError("bi_budget_allocated_invalid")
+    bid = str(budget.get("id") or "")
+    if not bid:
+        raise ValueError("bi_budget_not_found")
+    cond = (condition or "gte").lower()
+    if cond not in ("gt", "gte", "lt", "lte", "eq", "neq"):
+        cond = "gte"
+    pct = float(threshold_pct)
+    if pct <= 0 or pct > 500:
+        pct = 80.0
+    threshold_amount = round(allocated * (pct / 100.0), 2)
+    fp = _fingerprint(bid, pct, cond)
+    column = _sql_result_column(sql)
+    name = str(budget.get("name") or bid)
+    title = f"[Budget] {name} ≥ {pct:g}% plan"
+
+    existing = alerts_mod.list_alerts(engine, tenant_id=tenant_id)
+    for a in existing:
+        if a.get("budget_fingerprint") == fp:
+            return {**a, "created": False}
+
+    entry = {
+        "title": title[:256],
+        "sql": sql,
+        "column": column,
+        "condition": cond,
+        "threshold": threshold_amount,
+        "recipient": recipient,
+        "status": "active",
+        "budget_id": bid,
+        "budget_fingerprint": fp,
+        "budget_threshold_pct": pct,
+        "channels": {
+            "budget_id": bid,
+            "budget_fingerprint": fp,
+            "budget_threshold_pct": pct,
+        },
+    }
+    saved = alerts_mod.save_alert(engine, entry, tenant_id=tenant_id)
+    return {**saved, "created": True}
+
+
+def encode_budget_pack_resource_id(
+    fiscal_year: int,
+    *,
+    scenario: str = "base",
+    reporting_currency: str | None = None,
+    locale: str | None = None,
+) -> str:
+    """Compact share resource_id: ``YYYY`` / ``YYYY:scenario`` / ``YYYY:scenario:CCY`` / ``…:locale``."""
+    scen = (scenario or "base").strip().lower() or "base"
+    if scen not in ("base", "optimistic", "pessimistic"):
+        scen = "base"
+    ccy = (reporting_currency or "").strip().upper() or None
+    loc = (locale or "").strip().lower()[:2] or None
+    if loc and loc not in ("en", "tr", "ru", "uz"):
+        loc = "en"
+    if loc:
+        return f"{int(fiscal_year)}:{scen}:{ccy or '_'}:{loc}"
+    if ccy:
+        return f"{int(fiscal_year)}:{scen}:{ccy}"
+    if scen != "base":
+        return f"{int(fiscal_year)}:{scen}"
+    return str(int(fiscal_year))
+
+
+def decode_budget_pack_resource_id(resource_id: str) -> dict[str, Any]:
+    """Parse share resource_id; plain year stays backward-compatible."""
+    raw = str(resource_id or "").strip()
+    parts = raw.split(":")
+    year = 0
+    if parts and parts[0]:
+        try:
+            year = int(parts[0])
+        except ValueError:
+            year = 0
+    scen = (parts[1] if len(parts) > 1 and parts[1] else "base").strip().lower() or "base"
+    if scen not in ("base", "optimistic", "pessimistic"):
+        scen = "base"
+    ccy_raw = parts[2].strip() if len(parts) > 2 else ""
+    ccy = ccy_raw.upper() if ccy_raw and ccy_raw != "_" else None
+    loc_raw = parts[3].strip().lower()[:2] if len(parts) > 3 else ""
+    locale = loc_raw if loc_raw in ("en", "tr", "ru", "uz") else None
+    return {
+        "fiscal_year": year,
+        "scenario": scen,
+        "reporting_currency": ccy,
+        "locale": locale,
+    }
+
+
+async def run_budget_breakdown(
+    budget: dict[str, Any],
+    *,
+    datasource_id: str,
+    tenant_id: str | None = None,
+    row_limit: int = 50,
+) -> dict[str, Any]:
+    """Execute envelope breakdown_sql (read-only, limited rows)."""
+    sql = str(budget.get("breakdown_sql") or "").strip()
+    if not sql:
+        raise ValueError("bi_budget_breakdown_sql_required")
+    validated = await validate_budget_sql(
+        sql, datasource_id=datasource_id, tenant_id=tenant_id
+    )
+    cleaned = str(validated.get("sql") or sql).strip().rstrip(";")
+    client = QueryGatewayClient()
+    result = await client.execute(
+        sql=cleaned, datasource_id=datasource_id, tenant_id=tenant_id
+    )
+    if not result.get("ok"):
+        raise ValueError(result.get("error") or "bi_budget_breakdown_failed")
+    columns = list(result.get("columns") or [])
+    all_rows = list(result.get("rows") or [])
+    lim = max(1, min(int(row_limit or 50), 50))
+    rows = all_rows[:lim]
+    return {
+        "budget_id": budget.get("id"),
+        "columns": columns,
+        "rows": rows,
+        "row_count": len(rows),
+        "truncated": len(all_rows) > len(rows),
+    }
+
+
+def build_budget_pack_share_payload(
+    engine: Engine,
+    *,
+    tenant_id: str,
+    fiscal_year: int,
+    scenario: str = "base",
+    reporting_currency: str | None = None,
+    locale: str | None = None,
+) -> dict[str, Any]:
+    """Read-only public board-pack payload (no SQL / owner emails)."""
+    from nanobase_api.budget_export import display_budget_lines
+
+    year = int(fiscal_year or datetime.now(timezone.utc).year)
+    scen = (scenario or "base").strip().lower() or "base"
+    if scen not in ("base", "optimistic", "pessimistic"):
+        scen = "base"
+    report_ccy = (reporting_currency or "").strip().upper() or None
+    loc = (locale or "en").strip().lower()[:2] or "en"
+    if loc not in ("en", "tr", "ru", "uz"):
+        loc = "en"
+    summary = budgets_mod.budget_summary(
+        engine,
+        fiscal_year=year,
+        tenant_id=tenant_id,
+        scenario=scen,
+        reporting_currency=report_ccy,
+    )
+    rows_raw = display_budget_lines(
+        engine,
+        fiscal_year=year,
+        tenant_id=tenant_id,
+        scenario=scen,
+        reporting_currency=report_ccy,
+    )
+    table = [
+        {
+            "id": r.get("id"),
+            "name": r.get("name"),
+            "kind": r.get("kind"),
+            "cost_center": r.get("cost_center"),
+            "allocated": r.get("allocated"),
+            "committed": r.get("committed"),
+            "actual": r.get("actual"),
+            "remaining": r.get("remaining"),
+            "used_pct": r.get("used_pct"),
+            "health": r.get("health"),
+            "status": r.get("status"),
+            "currency": r.get("currency") or report_ccy or "TRY",
+            "scenario": r.get("scenario") or scen,
+        }
+        for r in rows_raw
+    ]
+    title = f"Budget FY{year} · {scen}"
+    if report_ccy:
+        title = f"{title} · {report_ccy}"
+    narrative = build_budget_narrative(
+        engine,
+        tenant_id=tenant_id,
+        fiscal_year=year,
+        locale=loc,
+        scenario=scen,
+        reporting_currency=report_ccy,
+    )
+    return {
+        "type": "budget_pack",
+        "resource_type": "budget_pack",
+        "title": title,
+        "fiscal_year": year,
+        "scenario": scen,
+        "reporting_currency": report_ccy,
+        "locale": loc,
+        "summary": summary,
+        "rows": table,
+        "narrative": narrative.get("text"),
+    }
 
 
 async def approve_budget(

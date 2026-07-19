@@ -14,6 +14,7 @@ const BiBudgetPage = lazy(() => import('@/pages/BiBudgetPage'));
 const BiAuditPage = lazy(() => import('@/pages/BiAuditPage'));
 const BiGlossaryPage = lazy(() => import('@/pages/BiGlossaryPage'));
 const BiSemanticCatalogPage = lazy(() => import('@/pages/BiSemanticCatalogPage'));
+const BiScenarioReviewsPage = lazy(() => import('@/pages/BiScenarioReviewsPage'));
 const BiTemplatesPage = lazy(() => import('@/pages/BiTemplatesPage'));
 const BiQueriesPage = lazy(() => import('@/pages/BiQueriesPage'));
 const BiConnectionPage = lazy(() => import('@/pages/BiConnectionPage'));
@@ -54,6 +55,7 @@ export default function App() {
               <Route path="bi/templates" element={<BiTemplatesPage />} />
               <Route path="bi/glossary" element={<BiGlossaryPage />} />
               <Route path="bi/semantic-catalog" element={<BiSemanticCatalogPage />} />
+              <Route path="bi/scenario-reviews" element={<BiScenarioReviewsPage />} />
               <Route path="bi/alerts" element={<BiAlertsPage />} />
               <Route path="bi/budget" element={<BiBudgetPage />} />
               <Route path="bi/shares" element={<BiSharesPage />} />

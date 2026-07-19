@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/combination.py
+# hypothesis_version: 6.141.1
+
+[100, 150, 200, '->', '.', '2000', 'ASC', 'BUSINESS_DATE', 'DESC', 'DUE_DATE', 'Faturalar', 'OVERDUE', 'SUM', '_', 'businessDate', 'by_city', 'by_customer', 'by_status', 'cancelled', 'compare', 'count', 'customer', 'customer_address', 'customer_city', 'customer_name', 'dimension_column', 'dueDate', 'due_date', 'excl_cancel', 'from', 'from_col', 'full', 'gross_amount', 'incl_cancel', 'invoice', 'invoice.list.overdue', 'invoice_date', 'invoice_gross_amount', 'join_edges', 'list', 'metric', 'month', 'open', 'overdue', 'paid', 'partial', 'remaining_amount', 'remaining_amount > 0', 'slim', 'status', 'sum', 'to', 'to_col', 'top', 'unpaid', 'unpaid_predicate', 'vs']

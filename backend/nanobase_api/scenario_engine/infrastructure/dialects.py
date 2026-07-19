@@ -45,32 +45,34 @@ def oracle_enabled() -> bool:
     return os.environ.get("SCENARIO_ORACLE_ENABLED", "").lower() in ("1", "true", "yes")
 
 
+def hana_enabled() -> bool:
+    import os
+
+    return os.environ.get("SCENARIO_HANA_ENABLED", "").lower() in ("1", "true", "yes")
+
+
+def odata_enabled() -> bool:
+    import os
+
+    return os.environ.get("SCENARIO_ODATA_ENABLED", "").lower() in ("1", "true", "yes")
+
+
 def expand_oracle_compiler(plan: LogicalPlan) -> CompileResult:
-    """Faz 4: map binds to Oracle style (:name remains; FETCH FIRST for limit)."""
-    if not oracle_enabled():
-        return OracleLogicalPlanCompiler().compile(plan)
-    pg = PostgresLogicalPlanCompiler().compile(plan)
-    sql = pg.sql_template
-    # Rough translation for vertical expansion
-    sql = sql.replace("LIMIT :fetch_limit", "FETCH FIRST :fetch_limit ROWS ONLY")
-    sql = sql.replace("COALESCE(", "NVL(")
-    sql = sql.replace("date_trunc('month',", "TRUNC(")
-    fp = pg.ast_fingerprint  # re-fingerprint would be ideal; keep for now
-    return CompileResult(
-        sql_template=sql,
-        dialect="oracle",
-        ast_fingerprint=fp,
-        bind_params=pg.bind_params,
-        logical_plan=plan.to_dict(),
-    )
+    """Oracle compiler (FETCH FIRST / NVL) when SCENARIO_ORACLE_ENABLED=1."""
+    return OracleLogicalPlanCompiler().compile(plan)
 
 
-def hana_compile_stub(plan: LogicalPlan) -> CompileResult:
+def hana_compile(plan: LogicalPlan) -> CompileResult:
     return HanaLogicalPlanCompiler().compile(plan)
 
 
-def odata_compile_stub(plan: LogicalPlan) -> CompileResult:
+def odata_compile(plan: LogicalPlan) -> CompileResult:
     return ODataLogicalPlanCompiler().compile(plan)
+
+
+# Back-compat aliases
+hana_compile_stub = hana_compile
+odata_compile_stub = odata_compile
 
 
 def next_domain_after(current: str) -> str | None:

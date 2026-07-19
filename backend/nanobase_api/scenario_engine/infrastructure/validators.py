@@ -329,7 +329,13 @@ def run_differential_for_plan(
     if family == "SUM_MEASURE":
         try:
             rows = execute_fn(compiled.sql_template, params)
-            total = float((rows[0] or {}).get("total") or (rows[0] or {}).get(metric) or 0) if rows else 0.0
+            row0 = rows[0] if rows else {}
+            total = float(
+                row0.get("total_amount")
+                or row0.get("total")
+                or row0.get(metric)
+                or 0
+            )
             # Rebuild detail rows with same filters via list projection of metric only
             filter_parts = []
             if plan.period and plan.date_column:
@@ -357,7 +363,10 @@ def run_differential_for_plan(
     if family == "GROUP_MEASURE":
         try:
             rows = execute_fn(compiled.sql_template, params)
-            sql_total = sum(float(r.get("metric") or r.get("total") or r.get(metric) or 0) for r in rows)
+            sql_total = sum(
+                float(r.get("total_amount") or r.get("metric") or r.get("total") or r.get(metric) or 0)
+                for r in rows
+            )
             # Compare to ungrouped sum with same period filters
             where = ""
             if plan.period and plan.date_column:

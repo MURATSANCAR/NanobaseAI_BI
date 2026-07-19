@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/application/followups.py
+# hypothesis_version: 6.141.1
+
+['AGING', 'GROUP_MEASURE', 'LIST_ENTITY', 'STATUS_FILTER', 'SUM_MEASURE']

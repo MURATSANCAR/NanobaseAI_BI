@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/domain/logical_plan.py
+# hypothesis_version: 6.141.1
+
+[100, 10000, 'ASC', 'DESC', 'aggregation', 'agingBucket', 'aging_bucket', 'comparisonPeriod', 'comparison_period', 'dateColumn', 'dateRole', 'date_column', 'date_role', 'dimension', 'direction', 'entity', 'extra', 'family', 'field', 'joinPath', 'join_path', 'limit', 'mandatoryFilters', 'mandatory_filters', 'metric', 'metricColumn', 'metric_column', 'period', 'physicalTable', 'physical_table', 'projection', 'sort', 'statusFilter', 'status_filter', 'topN', 'top_n', 'utf-8']

@@ -93,6 +93,21 @@ _DDL = [
       CONSTRAINT uq_bi_cost_center_code UNIQUE (tenant_id, code)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS bi_budget_actuals_history (
+      pk SERIAL PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      budget_id VARCHAR(64) NOT NULL,
+      actual DOUBLE PRECISION,
+      source VARCHAR(64) NOT NULL DEFAULT 'refresh',
+      recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      payload_json TEXT NOT NULL DEFAULT '{}'
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_bi_budget_hist_budget
+      ON bi_budget_actuals_history (tenant_id, budget_id, recorded_at DESC)
+    """,
 ]
 
 _ensured = False

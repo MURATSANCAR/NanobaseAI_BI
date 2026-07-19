@@ -112,6 +112,9 @@ def _row_to_budget(r: Any) -> dict[str, Any]:
         "version": int(r["version"] or 1),
         "budget_code": payload.get("budget_code"),
         "match_source": payload.get("match_source"),
+        "match_key": payload.get("match_key"),
+        "match_value": payload.get("match_value"),
+        "match_confidence": payload.get("match_confidence"),
         "breakdown_sql": payload.get("breakdown_sql") or "",
         "created_at": r["created_at"].isoformat() if r["created_at"] else None,
         "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
@@ -368,6 +371,11 @@ def upsert_budget(
         **old_payload,
         "budget_code": body.get("budget_code", old_payload.get("budget_code")),
         "match_source": body.get("match_source", old_payload.get("match_source")),
+        "match_key": body.get("match_key", old_payload.get("match_key")),
+        "match_value": body.get("match_value", old_payload.get("match_value")),
+        "match_confidence": body.get(
+            "match_confidence", old_payload.get("match_confidence")
+        ),
         "breakdown_sql": body.get("breakdown_sql", old_payload.get("breakdown_sql") or ""),
     }
 

@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/application/runtime.py
+# hypothesis_version: 6.141.1
+
+['AWEL', 'astFingerprint', 'bindParams', 'confidence', 'execution_count', 'fallback_count', 'followUps', 'logicalPlan', 'parameters', 'postgres', 'precompiled_scenario', 'route', 'scenarioCode', 'scenarioId', 'schemaVersion', 'semanticVersion', 'sql', 'sqlSource', 'sqlTemplate']

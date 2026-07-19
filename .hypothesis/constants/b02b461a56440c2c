@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/relationship_graph.py
+# hypothesis_version: 6.141.1
+
+['.', 'MANY_TO_MANY', 'MANY_TO_ONE', 'ONE_TO_MANY', 'ONE_TO_ONE', 'from', 'to']

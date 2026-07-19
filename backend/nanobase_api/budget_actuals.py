@@ -6,9 +6,11 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from nanobase_api import budgets as budgets_mod
+from nanobase_api.infrastructure.budget_schema import ensure_budget_tables
 from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
 
 _LITERAL_SQL = re.compile(
@@ -85,6 +87,66 @@ async def validate_budget_sql(
     return {"ok": True, "sample": sample, "sql": cleaned, "source": "query_gateway"}
 
 
+def _insert_actuals_history(
+    engine: Engine,
+    *,
+    tenant_id: str,
+    budget_id: str,
+    actual: float,
+    source: str = "refresh",
+) -> None:
+    ensure_budget_tables(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                INSERT INTO bi_budget_actuals_history
+                  (tenant_id, budget_id, actual, source, recorded_at, payload_json)
+                VALUES (:tenant, :bid, :actual, :source, NOW(), :payload)
+                """
+            ),
+            {
+                "tenant": tenant_id,
+                "bid": budget_id,
+                "actual": actual,
+                "source": (source or "refresh")[:64],
+                "payload": "{}",
+            },
+        )
+
+
+def list_actuals_history(
+    engine: Engine,
+    budget_id: str,
+    *,
+    tenant_id: str = "default",
+    limit: int = 24,
+) -> list[dict[str, Any]]:
+    ensure_budget_tables(engine)
+    lim = max(1, min(int(limit or 24), 200))
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT actual, source, recorded_at
+                FROM bi_budget_actuals_history
+                WHERE tenant_id = :tenant AND budget_id = :bid
+                ORDER BY recorded_at DESC
+                LIMIT :lim
+                """
+            ),
+            {"tenant": tenant_id, "bid": budget_id, "lim": lim},
+        ).mappings()
+        return [
+            {
+                "actual": float(r["actual"]) if r["actual"] is not None else None,
+                "source": r["source"] or "refresh",
+                "recorded_at": r["recorded_at"].isoformat() if r["recorded_at"] else None,
+            }
+            for r in rows
+        ]
+
+
 async def refresh_one(
     engine: Engine,
     budget_id: str,
@@ -107,13 +169,22 @@ async def refresh_one(
         )
     try:
         actual = await fetch_actual_value(sql, datasource_id=datasource_id, tenant_id=tenant_id)
-        return budgets_mod.patch_budget_fields(
+        row = budgets_mod.patch_budget_fields(
             engine,
             budget_id,
             {"actual": actual, "actual_error": None, "actuals_at": now},
             tenant_id=tenant_id,
             allow_locked=True,
         )
+        if not row.get("actual_error"):
+            _insert_actuals_history(
+                engine,
+                tenant_id=tenant_id,
+                budget_id=budget_id,
+                actual=float(actual),
+                source="refresh",
+            )
+        return row
     except Exception as exc:
         return budgets_mod.patch_budget_fields(
             engine,

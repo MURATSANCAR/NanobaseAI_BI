@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/baselines.py
+# hypothesis_version: 6.141.1
+
+[0.01, 'REPORTING_DSN', 'cancelled', 'expected_row_count', 'expected_sum', 'infra', 'invoice.list.unpaid', 'n', 'no_baseline', 'ok', 'postgresql://', 's', 'scenario_code', 'sql', 'utf-8']

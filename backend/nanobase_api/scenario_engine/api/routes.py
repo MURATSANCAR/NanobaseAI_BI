@@ -167,12 +167,7 @@ async def validate_scenario(scenario_id: str = Path(...)) -> dict[str, Any]:
     return {"scenarioId": scenario_id, "static": {"passed": static.passed, "detail": static.detail}}
 
 
-@router.post("/internal/v1/query-scenarios/{scenario_id}/review")
-async def review_scenario(
-    scenario_id: str = Path(...),
-    body: dict[str, Any] = Body(...),
-) -> dict[str, Any]:
-    """Tier B review stub — approve / reject."""
+def _apply_review(scenario_id: str, body: dict[str, Any]) -> dict[str, Any]:
     store = get_scenario_store()
     inst = store.get_instance(scenario_id)
     if inst is None:
@@ -190,6 +185,24 @@ async def review_scenario(
         store.save_instance(inst)
         return {"scenarioId": scenario_id, "status": inst.status.value}
     return {"error": "INVALID_DECISION", "status": inst.status.value, "riskTier": inst.risk_tier.value}
+
+
+@router.post("/internal/v1/query-scenarios/{scenario_id}/review")
+async def review_scenario(
+    scenario_id: str = Path(...),
+    body: dict[str, Any] = Body(...),
+) -> dict[str, Any]:
+    """Tier B review — approve / reject."""
+    return _apply_review(scenario_id, body)
+
+
+@router.post("/api/v1/query-scenarios/{scenario_id}/review")
+async def review_scenario_public(
+    scenario_id: str = Path(...),
+    body: dict[str, Any] = Body(...),
+) -> dict[str, Any]:
+    """Public Tier B review endpoint for admin UI."""
+    return _apply_review(scenario_id, body)
 
 
 @router.get("/api/v1/query-scenarios/metrics")

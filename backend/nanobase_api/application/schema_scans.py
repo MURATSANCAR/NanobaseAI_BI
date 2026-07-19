@@ -100,14 +100,14 @@ class SchemaScanService:
         await asyncio.to_thread(execute_schema_scan, scan_id, datasource_id, tenant_id)
 
 
-def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) -> None:
-    """Fire-and-forget scenario build (ARQ or thread)."""
+def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) -> str:
+    """Fire-and-forget scenario build (ARQ or thread). Returns build_id."""
     import threading
 
     build_id = f"build-scan-{datasource_id}"[:64]
 
     def _run() -> None:
-        from nanobase_api.scenario_engine.application.build_pipeline import start_build
+        from nanobase_api.scenario_engine.application.staged_pipeline import ensure_build, run_staged_build
         from nanobase_api.scenario_engine.infrastructure.reporting_exec import reporting_dsn
         from nanobase_api.scenario_engine.infrastructure.schema_snapshot import (
             invoice_analytics_snapshot,
@@ -116,6 +116,7 @@ def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) ->
         from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
 
         store = get_scenario_store()
+        ensure_build(store, build_id=build_id, tenant_id=tenant_id, datasource_id=datasource_id)
         snap = None
         dsn = reporting_dsn()
         if dsn:
@@ -125,13 +126,14 @@ def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) ->
                 snap = invoice_analytics_snapshot()
         else:
             snap = invoice_analytics_snapshot()
-        start_build(
+        run_staged_build(
             tenant_id=tenant_id,
             datasource_id=datasource_id,
             store=store,
             snapshot=snap,
             auto_publish=True,
             force=True,
+            build_id=build_id,
         )
 
     settings = get_settings()
@@ -156,17 +158,27 @@ def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) ->
                     await redis.close()
 
             try:
+                from nanobase_api.scenario_engine.application.staged_pipeline import ensure_build
+                from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+                ensure_build(
+                    get_scenario_store(),
+                    build_id=build_id,
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                )
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     asyncio.ensure_future(_arq())
                 else:
                     loop.run_until_complete(_arq())
-                return
+                return build_id
             except Exception:
                 pass
         except Exception:
             pass
     threading.Thread(target=_run, name=f"scenario-build-{datasource_id}", daemon=True).start()
+    return build_id
 
 
 def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> None:
@@ -233,13 +245,19 @@ def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> Non
         )
         # Production: enqueue scenario rebuild after successful schema scan
         try:
-            _enqueue_scenario_build_after_scan(tenant_id=tenant_id, datasource_id=datasource_id)
+            build_id = _enqueue_scenario_build_after_scan(
+                tenant_id=tenant_id, datasource_id=datasource_id
+            )
             audit.record(
                 tenant_id=tenant_id,
                 user_id=None,
                 action="SCENARIO_BUILD_ENQUEUED",
                 ok=True,
-                extra={"scan_id": scan_id, "datasource_id": datasource_id},
+                extra={
+                    "scan_id": scan_id,
+                    "datasource_id": datasource_id,
+                    "scenario_build_id": build_id,
+                },
             )
         except Exception:
             pass

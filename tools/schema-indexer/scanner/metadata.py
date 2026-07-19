@@ -13,6 +13,33 @@ from config import (
 from models import ColumnMeta, ForeignKey, RelationshipMeta, TableMeta
 
 
+def _format_type_display(
+    data_type: str,
+    udt_name: str | None,
+    max_length: int | None,
+    precision: int | None,
+    scale: int | None,
+) -> str:
+    dt = (data_type or "text").strip().lower()
+    udt = (udt_name or "").strip().lower()
+    if max_length is not None:
+        if "text" in dt or udt in ("text", "citext"):
+            return "citext" if udt == "citext" else "text"
+        if udt == "bpchar" or dt in ("character", "char"):
+            return f"char({int(max_length)})"
+        if udt == "varchar" or "varying" in dt or dt == "varchar":
+            return f"varchar({int(max_length)})"
+        return f"{udt or dt}({int(max_length)})"
+    is_numeric = udt == "numeric" or dt in ("numeric", "decimal")
+    if is_numeric and precision is not None:
+        if scale is not None and int(scale) > 0:
+            return f"numeric({int(precision)},{int(scale)})"
+        return f"numeric({int(precision)})"
+    if udt in ("int2", "int4", "int8", "bool", "uuid", "json", "jsonb", "bytea", "date"):
+        return {"int2": "smallint", "int4": "integer", "int8": "bigint", "bool": "boolean"}.get(udt, udt)
+    return udt or dt
+
+
 def connect(cfg: IndexerConfig):
     kw = cfg.pg_connect_kwargs()
     return psycopg2.connect(**kw)
@@ -96,7 +123,9 @@ def scan_metadata(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relationshi
             pg_t_comment = _comment(cur, schema, name, None)
             cur.execute(
                 """
-                SELECT column_name, data_type, is_nullable, ordinal_position
+                SELECT column_name, data_type, udt_name, is_nullable, ordinal_position,
+                       character_maximum_length, numeric_precision, numeric_scale,
+                       datetime_precision
                 FROM information_schema.columns
                 WHERE table_schema=%s AND table_name=%s
                 ORDER BY ordinal_position
@@ -173,17 +202,31 @@ def scan_metadata(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relationshi
                 ):
                     samples = _safe_samples(cur, conn, schema, name, cname)
 
+                char_len = c.get("character_maximum_length")
+                udt = str(c.get("udt_name") or "") or None
+                dt = str(c.get("data_type") or "text")
+                is_numeric = (udt == "numeric") or dt.lower() in ("numeric", "decimal")
+                max_length = int(char_len) if char_len is not None else None
+                prec_raw = c.get("numeric_precision")
+                scale_raw = c.get("numeric_scale")
+                precision = int(prec_raw) if prec_raw is not None and is_numeric else None
+                scale = int(scale_raw) if scale_raw is not None and is_numeric else None
                 columns.append(
                     ColumnMeta(
                         schema_name=schema,
                         table_name=name,
                         column_name=cname,
-                        data_type=c["data_type"],
+                        data_type=dt,
                         nullable=str(c["is_nullable"]).upper() == "YES",
                         ordinal=int(c["ordinal_position"]),
                         is_pk=cname in pks,
                         description=_col_desc(name, cname, pg_c),
                         samples=samples,
+                        udt_name=udt,
+                        max_length=max_length,
+                        precision=precision,
+                        scale=scale,
+                        type_display=_format_type_display(dt, udt, max_length, precision, scale),
                     )
                 )
 

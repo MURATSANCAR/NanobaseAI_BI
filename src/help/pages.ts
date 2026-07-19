@@ -23,6 +23,7 @@ export function helpPageFromPath(pathname: string): HelpPageId {
   if (pathname.startsWith('/bi/chat')) return 'biChat';
   if (pathname.startsWith('/bi/alerts')) return 'biAlerts';
   if (pathname.startsWith('/bi/budget')) return 'biBudget';
+  if (pathname.startsWith('/bi/scenario-reviews')) return 'biSemanticCatalog';
   if (pathname.startsWith('/bi/semantic-catalog')) return 'biSemanticCatalog';
   if (pathname.startsWith('/bi/glossary')) return 'biGlossary';
   if (pathname.startsWith('/bi/queries')) return 'biQueries';

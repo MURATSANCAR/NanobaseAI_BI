@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/domain/status.py
+# hypothesis_version: 6.141.1
+
+['APPROVED', 'ARCHIVED', 'DEPRECATED', 'DISCOVERED', 'EXECUTION_VALIDATED', 'EXECUTION_VALIDATING', 'FAILED', 'GENERATED', 'PREPARING', 'PUBLISHED', 'READY', 'READY_FOR_REVIEW', 'REJECTED', 'STALE', 'STATIC_VALIDATED', 'STATIC_VALIDATING']

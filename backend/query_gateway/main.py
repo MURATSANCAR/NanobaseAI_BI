@@ -37,6 +37,7 @@ class LegacyExecuteRequest(BaseModel):
     explain: bool = False
     max_limit: Optional[int] = None
     timeout_s: Optional[float] = None
+    parameters: Optional[dict[str, Any]] = None
 
 
 def create_app() -> FastAPI:
@@ -155,11 +156,23 @@ def create_app() -> FastAPI:
             truncated = True
         return rows_raw, truncated
 
-    def _execute_postgres_legacy(ds: dict[str, Any], sql: str, *, timeout_s: float, explain: bool):
+    def _execute_postgres_legacy(
+        ds: dict[str, Any],
+        sql: str,
+        *,
+        timeout_s: float,
+        explain: bool,
+        parameters: dict[str, Any] | None = None,
+    ):
         import psycopg2
         import psycopg2.extras
+        import re
 
         exec_sql = f"EXPLAIN (FORMAT TEXT) {sql}" if explain else sql
+        # Named :param → %(param)s for psycopg2
+        bind = dict(parameters or {})
+        if bind:
+            exec_sql = re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"%(\1)s", exec_sql)
         conn = psycopg2.connect(
             host=ds["host"],
             port=ds["port"],
@@ -173,7 +186,10 @@ def create_app() -> FastAPI:
             conn.set_session(readonly=True, autocommit=True)
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute(f"SET statement_timeout = '{int(timeout_s * 1000)}'")
-                cur.execute(exec_sql)
+                if bind and not explain:
+                    cur.execute(exec_sql, bind)
+                else:
+                    cur.execute(exec_sql)
                 if cur.description is None:
                     return [], [], False
                 cols = [d.name for d in cur.description]
@@ -237,8 +253,16 @@ def create_app() -> FastAPI:
                 "dialect": "odata",
                 "odata_query": q,
             }
+        sql_for_guard = body.sql
+        if body.parameters:
+            try:
+                from query_gateway.infrastructure.parser.bind_params import probe_sql_for_parse
+
+                sql_for_guard = probe_sql_for_parse(body.sql, body.parameters)
+            except Exception:
+                sql_for_guard = body.sql
         result = validate_and_rewrite(
-            body.sql,
+            sql_for_guard,
             dialect=ds["dialect"],
             allowed_tables=ds.get("allowed_tables"),
             max_limit=max_limit,
@@ -249,6 +273,7 @@ def create_app() -> FastAPI:
             "error": result.error,
             "tables": result.tables,
             "dialect": ds["dialect"],
+            "parameters": body.parameters or {},
         }
 
     @app.post("/api/v1/query/execute")
@@ -284,8 +309,16 @@ def create_app() -> FastAPI:
                 "driver": "odata",
             }
 
+        sql_for_guard = body.sql
+        if body.parameters:
+            try:
+                from query_gateway.infrastructure.parser.bind_params import probe_sql_for_parse
+
+                sql_for_guard = probe_sql_for_parse(body.sql, body.parameters)
+            except Exception:
+                sql_for_guard = body.sql
         guard = validate_and_rewrite(
-            body.sql,
+            sql_for_guard,
             dialect=ds["dialect"],
             allowed_tables=ds.get("allowed_tables"),
             max_limit=max_limit,
@@ -293,15 +326,17 @@ def create_app() -> FastAPI:
         if not guard.ok:
             raise HTTPException(400, guard.error or "sql rejected")
 
+        # Keep original named-bind template for drivers that accept parameters
+        exec_sql = body.sql if body.parameters else guard.sql
         try:
             if driver == "oracle":
                 cols, rows, truncated = _execute_oracle(
-                    ds, guard.sql, timeout_s=timeout_s, explain=body.explain
+                    ds, exec_sql if body.parameters else guard.sql, timeout_s=timeout_s, explain=body.explain
                 )
             elif driver == "hana":
                 cols, rows, truncated = sap_mod.execute_hana(
                     ds,
-                    guard.sql,
+                    exec_sql if body.parameters else guard.sql,
                     timeout_s=timeout_s,
                     max_rows=settings.max_rows,
                     max_cells=int(os.environ.get("QG_MAX_CELLS", "50000")),
@@ -309,7 +344,11 @@ def create_app() -> FastAPI:
                 )
             else:
                 cols, rows, truncated = _execute_postgres_legacy(
-                    ds, guard.sql, timeout_s=timeout_s, explain=body.explain
+                    ds,
+                    exec_sql if body.parameters else guard.sql,
+                    timeout_s=timeout_s,
+                    explain=body.explain,
+                    parameters=body.parameters,
                 )
         except HTTPException:
             raise

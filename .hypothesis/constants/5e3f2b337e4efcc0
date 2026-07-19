@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/domain/family.py
+# hypothesis_version: 6.141.1
+
+['AGING', 'AVERAGE_MEASURE', 'COMPARE_PERIOD', 'COUNT_ENTITY', 'DUPLICATE', 'GROUP_MEASURE', 'LIST_ENTITY', 'MIN_MAX', 'MISSING_DATA', 'ORPHAN_RELATION', 'RATIO', 'STATUS_FILTER', 'SUM_MEASURE', 'TIME_TREND', 'TOP_N']

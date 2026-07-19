@@ -262,10 +262,20 @@ def reset_scenario_store() -> ScenarioStore:
 
 
 def _try_attach_meta_sql(store: ScenarioStore) -> None:
+    """Attach SQL repo. Memory only when SCENARIO_SQL_DISABLED=1 (unit tests).
+
+    Fail-closed when SCENARIO_REQUIRE_SQL=1 and meta DSN missing / attach fails.
+    """
     if os.environ.get("SCENARIO_SQL_DISABLED", "").lower() in ("1", "true", "yes"):
+        store.backend = "memory"
         return
+    require = os.environ.get("SCENARIO_REQUIRE_SQL", "").lower() in ("1", "true", "yes")
     dsn = os.environ.get("NANOBASE_META_DSN")
     if not dsn:
+        if require:
+            raise RuntimeError(
+                "SCENARIO_REQUIRE_SQL=1 but NANOBASE_META_DSN is not set (fail-closed)"
+            )
         return
     try:
         from sqlalchemy import create_engine
@@ -276,5 +286,10 @@ def _try_attach_meta_sql(store: ScenarioStore) -> None:
         repo = SqlScenarioRepository(engine)
         if repo.tables_ready():
             store.attach_sql(repo, hydrate=True)
-    except Exception:
-        pass
+        elif require:
+            raise RuntimeError("SCENARIO_REQUIRE_SQL=1 but scenario SQL tables are not ready")
+    except RuntimeError:
+        raise
+    except Exception as e:
+        if require:
+            raise RuntimeError(f"SCENARIO_REQUIRE_SQL=1 but SQL attach failed: {e}") from e

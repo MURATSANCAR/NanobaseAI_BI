@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/api/routes.py
+# hypothesis_version: 6.141.1
+
+[100, 'APPROVE', 'AWEL', 'Genel', 'INVALID_DECISION', 'NOT_FOUND', 'QUEUED', 'REDIS_URL', 'REJECT', 'arq_enabled', 'async', 'autoPublish', 'bi_reporting', 'buildId', 'canonicalQuestion', 'categories', 'category', 'datasourceId', 'decision', 'default', 'detail', 'dialect', 'error', 'family', 'id', 'items', 'matched', 'passed', 'phase', 'postgres', 'question', 'questions', 'riskTier', 'route', 'run_scenario_build', 'scenario-engine', 'scenarioCode', 'scenarioId', 'static', 'status', 'tenantId']

@@ -33,6 +33,11 @@ class ColumnMeta:
     is_pk: bool = False
     description: str = ""
     samples: list[str] = field(default_factory=list)
+    udt_name: str | None = None
+    max_length: int | None = None
+    precision: int | None = None
+    scale: int | None = None
+    type_display: str = ""
 
 
 @dataclass

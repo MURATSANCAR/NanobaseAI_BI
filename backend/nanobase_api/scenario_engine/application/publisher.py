@@ -81,7 +81,16 @@ class AtomicPublisher:
                         if inst.status == ScenarioStatus.EXECUTION_VALIDATED:
                             inst.transition_to(ScenarioStatus.READY_FOR_REVIEW)
                         # leave for review — not in this batch publish set
-                elif inst.status == ScenarioStatus.APPROVED:
+                elif inst.risk_tier == RiskTier.C:
+                    # Finance / ledger — never auto-publish
+                    if inst.status not in (
+                        ScenarioStatus.READY_FOR_REVIEW,
+                        ScenarioStatus.APPROVED,
+                        ScenarioStatus.REJECTED,
+                    ):
+                        if inst.status == ScenarioStatus.EXECUTION_VALIDATED:
+                            inst.transition_to(ScenarioStatus.READY_FOR_REVIEW)
+                elif inst.status == ScenarioStatus.APPROVED and inst.risk_tier != RiskTier.C:
                     publishable.append(inst)
 
             if not publishable:

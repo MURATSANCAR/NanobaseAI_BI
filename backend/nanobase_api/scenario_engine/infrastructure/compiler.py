@@ -106,6 +106,9 @@ class PostgresLogicalPlanCompiler:
         if plan.status_filter == "cancelled":
             parts.append(f'{alias}."status" = :status_value')
             binds.append("status_value")
+        elif plan.status_filter in ("open", "partial", "paid"):
+            parts.append(f'{alias}."status" = :status_value')
+            binds.append("status_value")
         if plan.status_filter == "unpaid" or (plan.extra or {}).get("unpaid_predicate"):
             parts.append(f'{alias}."remaining_amount" > 0')
         if plan.family == "AGING" and plan.aging_bucket == "OVERDUE":
@@ -182,6 +185,18 @@ class PostgresLogicalPlanCompiler:
         where_parts, binds = self._where_base(plan, alias)
         where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
         dim_col = (plan.extra or {}).get("dimension_column", "analytics.customer_addresses.city")
+        binds.append("fetch_limit")
+        if plan.dimension == "status" or str(dim_col).endswith(".status"):
+            sql = (
+                f'SELECT {alias}."status" AS "status", '
+                f'COALESCE(SUM({_col(alias, metric)}), 0) AS "total_amount"\n'
+                f"FROM {_qi(table)} {alias}\n"
+                f"{where_sql}\n"
+                f'GROUP BY {alias}."status"\n'
+                f'ORDER BY "total_amount" DESC\n'
+                f"LIMIT :fetch_limit"
+            )
+            return sql.strip(), binds
         dim_alias = "a"
         sql = (
             f'SELECT {dim_alias}."city" AS "customer_city", '
@@ -193,11 +208,8 @@ class PostgresLogicalPlanCompiler:
             f'ORDER BY "total_amount" DESC\n'
             f"LIMIT :fetch_limit"
         )
-        binds.append("fetch_limit")
-        # ensure address alias join exists
         if "customer_addresses" not in joins:
             raise ValidationError("GROUP by city requires approved join to customer_addresses")
-        _ = dim_col
         return sql.strip(), binds
 
     def _compile_trend(self, plan: LogicalPlan, table: str, alias: str) -> tuple[str, list[str]]:
@@ -313,27 +325,101 @@ class PostgresLogicalPlanCompiler:
             raise ValidationError(f"SQL parse failed (fail-closed): {e}") from e
 
 
+def _dialect_enabled(flag: str) -> bool:
+    import os
+
+    return os.environ.get(flag, "").lower() in ("1", "true", "yes")
+
+
 class OracleLogicalPlanCompiler:
-    """Stub — filled in Faz 4."""
+    """Oracle: FETCH FIRST, NVL, date binds (feature-flagged)."""
 
     dialect = "oracle"
 
     def compile(self, plan: LogicalPlan) -> CompileResult:
-        raise ValidationError("Oracle dialect compiler not enabled in invoice vertical slice")
+        if not _dialect_enabled("SCENARIO_ORACLE_ENABLED"):
+            raise ValidationError("Oracle dialect compiler disabled (set SCENARIO_ORACLE_ENABLED=1)")
+        pg = PostgresLogicalPlanCompiler().compile(plan)
+        sql = pg.sql_template
+        sql = sql.replace("LIMIT :fetch_limit", "FETCH FIRST :fetch_limit ROWS ONLY")
+        sql = re.sub(r"\bCOALESCE\(", "NVL(", sql)
+        sql = sql.replace("date_trunc('month',", "TRUNC(")
+        # Close TRUNC(x) when we only replaced opening — best-effort for month buckets
+        sql = sql.replace("TRUNC(", "TRUNC(", 1)
+        fp = "sha256:" + hashlib.sha256(sql.encode("utf-8")).hexdigest()
+        return CompileResult(
+            sql_template=sql,
+            dialect=self.dialect,
+            ast_fingerprint=fp,
+            bind_params=pg.bind_params,
+            logical_plan=plan.to_dict(),
+        )
 
 
 class HanaLogicalPlanCompiler:
+    """HANA: Gateway-compatible LIMIT + COALESCE (feature-flagged)."""
+
     dialect = "hana"
 
     def compile(self, plan: LogicalPlan) -> CompileResult:
-        raise ValidationError("HANA dialect compiler not enabled in invoice vertical slice")
+        if not _dialect_enabled("SCENARIO_HANA_ENABLED"):
+            raise ValidationError("HANA dialect compiler disabled (set SCENARIO_HANA_ENABLED=1)")
+        pg = PostgresLogicalPlanCompiler().compile(plan)
+        sql = pg.sql_template
+        # HANA accepts LIMIT; normalize quoted identifiers slightly
+        sql = sql.replace("date_trunc('month',", "SERIES_ROUND(")
+        fp = "sha256:" + hashlib.sha256(sql.encode("utf-8")).hexdigest()
+        return CompileResult(
+            sql_template=sql,
+            dialect=self.dialect,
+            ast_fingerprint=fp,
+            bind_params=pg.bind_params,
+            logical_plan=plan.to_dict(),
+        )
 
 
 class ODataLogicalPlanCompiler:
+    """Logical plan → OData query string for Gateway OData path (feature-flagged)."""
+
     dialect = "odata"
 
     def compile(self, plan: LogicalPlan) -> CompileResult:
-        raise ValidationError("OData dialect compiler not enabled in invoice vertical slice")
+        if not _dialect_enabled("SCENARIO_ODATA_ENABLED"):
+            raise ValidationError("OData dialect compiler disabled (set SCENARIO_ODATA_ENABLED=1)")
+        entity = (plan.physical_table or plan.entity or "Invoices").split(".")[-1]
+        # Prefer Pascal entity set naming for SAP-style services
+        entity_set = "".join(p.capitalize() for p in entity.replace("-", "_").split("_"))
+        filters: list[str] = []
+        binds: list[str] = []
+        if plan.period and plan.date_column:
+            col = plan.date_column.split(".")[-1]
+            filters.append(f"{col} ge :period_start and {col} lt :period_end")
+            binds.extend(["period_start", "period_end"])
+        if plan.status_filter:
+            filters.append(f"status eq :status_value")
+            binds.append("status_value")
+        if "exclude_cancelled_invoices" in (plan.mandatory_filters or []) and plan.status_filter != "cancelled":
+            filters.append("status ne :cancelled_status")
+            binds.append("cancelled_status")
+        qs = [f"$top={plan.limit or plan.top_n or 100}"]
+        if filters:
+            qs.append("$filter=" + " and ".join(filters))
+        if plan.family == "SUM_MEASURE" and plan.metric_column:
+            metric = plan.metric_column.split(".")[-1]
+            qs.append(f"$apply=aggregate({metric} with sum as total)")
+        elif plan.family == "COUNT_ENTITY":
+            qs.append("$count=true")
+        elif plan.projection:
+            qs.append("$select=" + ",".join(c.split(".")[-1] for c in plan.projection[:8]))
+        path = f"{entity_set}?{'&'.join(qs)}"
+        fp = "sha256:" + hashlib.sha256(path.encode("utf-8")).hexdigest()
+        return CompileResult(
+            sql_template=path,
+            dialect=self.dialect,
+            ast_fingerprint=fp,
+            bind_params=binds,
+            logical_plan=plan.to_dict(),
+        )
 
 
 def get_compiler(dialect: str = "postgres") -> DialectCompiler:

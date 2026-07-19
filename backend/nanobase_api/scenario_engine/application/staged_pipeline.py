@@ -423,6 +423,16 @@ def stage_performance_validation(
             if live_fn is not None:
                 params = resolve_parameters(inst.canonical_question, inst.logical_plan).to_bind_dict()
                 _ = run_explain_cost_check(live_fn, compiled.sql_template, params)
+                try:
+                    from nanobase_api.scenario_engine.infrastructure.shadow_perf import (
+                        run_shadow_explain,
+                    )
+
+                    b.setdefault("shadowPerf", {})[sid] = run_shadow_explain(
+                        live_fn, compiled.sql_template, params
+                    )
+                except Exception:
+                    pass
 
             if inst.risk_tier == RiskTier.A:
                 inst.transition_to(ScenarioStatus.PERFORMANCE_VALIDATING)
@@ -510,12 +520,11 @@ def stage_embedding_publish(
             _set_phase(store, build_id, "PUBLISHING")
             pub = AtomicPublisher(store=store)
             pub_ids = {i.id for i in validated_for_publish}
-            paraphrases = [
-                p
-                for pid in (b["workspace"].get("paraphraseIds") or [])
-                for p in [store.paraphrases.get(pid)]
-                if p is not None and p.scenario_id in pub_ids
-            ]
+            paraphrases = []
+            for pid in b["workspace"].get("paraphraseIds") or []:
+                p = store.paraphrases.get(pid)
+                if p is not None and p.scenario_id in pub_ids:
+                    paraphrases.append(p)
             batch = pub.publish_batch(
                 tenant_id=tenant_id,
                 datasource_id=datasource_id,
@@ -529,6 +538,9 @@ def stage_embedding_publish(
                 inc(SCENARIO_PUBLISHED, float(batch.scenario_count))
             elif batch.status == ScenarioStatus.FAILED:
                 return _fail(store, build_id, f"publish failed: {batch_info}")
+        elif not auto_publish:
+            # Questions ready; leave Tier A approved / Tier B in review
+            pass
 
         b["status"] = "COMPLETED"
         b["phase"] = "PUBLISHED" if batch_info else "READY_FOR_REVIEW"

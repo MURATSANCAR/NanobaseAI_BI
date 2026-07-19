@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/schema_snapshot.py
+# hypothesis_version: 6.141.1
+
+['.', 'YES', 'address_id', 'analytics', 'attname', 'bi_reporting', 'boolean', 'branch_id', 'city', 'column_name', 'columns', 'currency', 'customer_addresses', 'customer_id', 'customer_name', 'customers', 'data_type', 'datasource_id', 'date', 'default', 'due_date', 'fk', 'fk_ref', 'fks', 'foreign_keys', 'fqn', 'from', 'from_column', 'gross_amount', 'integer', 'invoice_date', 'invoice_id', 'invoices', 'is_fk', 'is_nullable', 'is_pk', 'is_primary', 'line1', 'name', 'nullable', 'numeric', 'order_date', 'order_id', 'pk', 'postgresql://', 'public', 'remaining_amount', 'reporting', 'sales_orders', 'sha256:', 'status', 'table_name', 'table_schema', 'tables', 'text', 'to', 'type', 'utf-8']

@@ -94,6 +94,13 @@ export const BI_NAV_GROUPS: NavGroupDef[] = [
         emojiKey: 'nav.biSemanticCatalog.emoji',
         hintKey: 'nav.hint.biSemanticCatalog',
       },
+      {
+        to: '/bi/scenario-reviews',
+        icon: Search,
+        labelKey: 'nav.biScenarioReviews',
+        emojiKey: 'nav.biScenarioReviews.emoji',
+        hintKey: 'nav.hint.biScenarioReviews',
+      },
     ],
   },
   {

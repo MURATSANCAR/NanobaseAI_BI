@@ -45,7 +45,7 @@ def normalize_documents(
             "column": None,
         }
         col_lines = [
-            f"- {c.column_name} {c.data_type} nullable={c.nullable}"
+            f"- {c.column_name} {c.type_display or c.data_type} nullable={c.nullable}"
             + (f" samples={c.samples}" if c.samples else "")
             for c in t.columns
         ]
@@ -98,6 +98,10 @@ def normalize_documents(
                 "table_name": t.table_name,
                 "column_name": c.column_name,
                 "data_type": c.data_type,
+                "type_display": c.type_display or c.data_type,
+                "max_length": c.max_length,
+                "precision": c.precision,
+                "scale": c.scale,
                 "nullable": c.nullable,
                 "description": c.description,
                 "is_pk": c.is_pk,
@@ -115,9 +119,11 @@ def normalize_documents(
                 ),
                 "",
             )
+            type_label = c.type_display or c.data_type
             text_c = (
-                f"Column {fq}.{c.column_name} type={c.data_type} "
+                f"Column {fq}.{c.column_name} type={type_label} "
                 f"nullable={c.nullable} pk={c.is_pk} "
+                f"max_length={c.max_length} precision={c.precision} scale={c.scale} "
                 f"description={c.description or '-'} "
                 f"relationship={rel_for_col or '-'} "
                 f"samples={c.samples} datasource={datasource_id}"
@@ -127,11 +133,14 @@ def normalize_documents(
                 t.schema_name,
                 t.table_name,
                 c.column_name,
-                c.data_type,
+                type_label,
                 c.nullable,
                 c.description,
                 rel_for_col,
                 c.samples,
+                c.max_length,
+                c.precision,
+                c.scale,
             )
             key_c = f"{datasource_id}:COLUMN:{fq}.{c.column_name}"
             col_payload["fingerprint"] = fp_c

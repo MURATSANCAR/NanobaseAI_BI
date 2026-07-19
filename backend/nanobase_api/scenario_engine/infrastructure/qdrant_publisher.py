@@ -22,12 +22,17 @@ def _deterministic_vector(text: str, dim: int = 64) -> list[float]:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Embed texts. Production requires BI_EMBED_URL unless deterministic embed allowed."""
+    """Embed texts. Prod/CI: SCENARIO_ALLOW_DETERMINISTIC_EMBED=0 and BI_EMBED_URL required."""
+    # Default allow deterministic for local/unit; CI/prod should set 0
     allow_det = os.environ.get("SCENARIO_ALLOW_DETERMINISTIC_EMBED", "1").lower() in (
         "1",
         "true",
         "yes",
     )
+    if os.environ.get("SCENARIO_REQUIRE_QDRANT", "").lower() in ("1", "true", "yes"):
+        # Strict mode implies real embeddings unless explicitly allowed
+        if os.environ.get("SCENARIO_ALLOW_DETERMINISTIC_EMBED") is None:
+            allow_det = False
     url = os.environ.get("BI_EMBED_URL", "").rstrip("/")
     if url:
         try:

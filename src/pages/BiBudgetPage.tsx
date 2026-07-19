@@ -426,7 +426,6 @@ export default function BiBudgetPage() {
     mutationFn: () => api.bi.budgets.downloadTemplate(config, year),
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
-  void templateMut;
 
   const importMut = useMutation({
     mutationFn: (file: File) => api.bi.budgets.importFile(config, file, year),
@@ -481,7 +480,18 @@ export default function BiBudgetPage() {
       }),
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
-  void exportMut;
+
+  const createAlertMut = useMutation({
+    mutationFn: (id: string) => api.bi.budgets.createAlert(config, id, { threshold_pct: 80, condition: 'gte' }),
+    onSuccess: (res) => {
+      const created = res.created !== false;
+      showFlash(
+        created ? t('bi.budget.createAlertDone') : t('bi.budget.createAlertExists'),
+        true,
+      );
+    },
+    onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
+  });
 
   const narrativeQ = useQuery({
     queryKey: ['bi-budgets-narrative', config, year, scenarioFilter, reportingCurrency, getLocale()],
@@ -588,7 +598,6 @@ export default function BiBudgetPage() {
     },
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
-  void sharePackMut;
 
   const transferMut = useMutation({
     mutationFn: () =>
@@ -1349,19 +1358,27 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled
-                title={t('bi.budget.featurePending')}
+                disabled={templateMut.isPending || !enabled}
+                onClick={() => templateMut.mutate()}
               >
-                <Download className="h-3.5 w-3.5 text-slate-400" />
+                {templateMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 text-violet-600" />
+                )}
                 {t('bi.budget.downloadTemplate')}
               </button>
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled
-                title={t('bi.budget.featurePending')}
+                disabled={importMut.isPending || !enabled}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="h-3.5 w-3.5 text-slate-400" />
+                {importMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5 text-violet-600" />
+                )}
                 {t('bi.budget.uploadExcel')}
               </button>
             </ToolbarGroup>
@@ -1372,19 +1389,27 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled
-                title={t('bi.budget.featurePending')}
+                disabled={exportMut.isPending || !enabled}
+                onClick={() => exportMut.mutate('pdf')}
               >
-                <FileText className="h-3.5 w-3.5 text-slate-400" />
+                {exportMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5 text-violet-600" />
+                )}
                 {t('bi.budget.exportPdf')}
               </button>
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled
-                title={t('bi.budget.featurePending')}
+                disabled={exportMut.isPending || !enabled}
+                onClick={() => exportMut.mutate('xlsx')}
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-slate-400" />
+                {exportMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-3.5 w-3.5 text-violet-600" />
+                )}
                 {t('bi.budget.exportExcel')}
               </button>
             </ToolbarGroup>
@@ -1414,8 +1439,24 @@ export default function BiBudgetPage() {
                 className={toolbarBtn}
                 disabled={syncFromSourceMut.isPending || !enabled}
                 title={t('bi.budget.syncFromSourceHint')}
-                onClick={() => {
-                  if (window.confirm(t('bi.budget.syncFromSourceConfirm', { year: String(year) }))) {
+                onClick={async () => {
+                  let previewHint = '';
+                  try {
+                    const preview = await api.bi.budgets.matchPreview(config, year);
+                    const n = preview.matches?.length ?? 0;
+                    const warns = (preview.warnings || [])
+                      .map((w) => localizeUserMessage(w))
+                      .filter(Boolean);
+                    previewHint =
+                      t('bi.budget.matchPreviewSummary', { count: String(n) }) +
+                      (warns.length ? `\n${warns.join(' · ')}` : '');
+                  } catch {
+                    previewHint = '';
+                  }
+                  const msg =
+                    (previewHint ? `${previewHint}\n\n` : '') +
+                    t('bi.budget.syncFromSourceConfirm', { year: String(year) });
+                  if (window.confirm(msg)) {
                     syncFromSourceMut.mutate();
                   }
                 }}
@@ -1430,10 +1471,18 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled
-                title={t('bi.budget.featurePending')}
+                disabled={sharePackMut.isPending || !enabled}
+                onClick={() => {
+                  if (window.confirm(t('bi.budget.sharePackConfirm', { year: String(year) }))) {
+                    sharePackMut.mutate();
+                  }
+                }}
               >
-                <Link2 className="h-3.5 w-3.5 text-slate-400" />
+                {sharePackMut.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Link2 className="h-3.5 w-3.5 text-violet-600" />
+                )}
                 {t('bi.budget.sharePack')}
               </button>
               <button
@@ -2149,8 +2198,16 @@ export default function BiBudgetPage() {
                         <button
                           type="button"
                           className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled
-                          title={t('bi.budget.featurePending')}
+                          disabled={createAlertMut.isPending || !String(r.actuals_sql || '').trim()}
+                          title={
+                            String(r.actuals_sql || '').trim()
+                              ? t('bi.budget.createAlertHint')
+                              : t('bi.budget.createAlertNeedsSql')
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            createAlertMut.mutate(r.id);
+                          }}
                         >
                           {t('bi.budget.createAlert')}
                         </button>

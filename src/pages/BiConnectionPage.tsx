@@ -11,6 +11,7 @@ import { useApiConfig } from '@/context/ApiContext';
 import { useAuth } from '@/context/AuthContext';
 import type { BiConnectionProfile, BiConnectionUpsert } from '@/api/types';
 import type { SchemaScan } from '@/api/contracts/datasource';
+import { request } from '@/api/http';
 import { formatBackendErrorText, localizeUserMessage } from '@/utils/backendLabels';
 import { t } from '@/i18n';
 import { getFeatureFlags } from '@/config/environment';
@@ -152,6 +153,8 @@ export default function BiConnectionPage() {
   const [form, setForm] = useState<BiConnectionUpsert & { source_id: string }>(emptyForm());
   const [formOpen, setFormOpen] = useState(false);
   const [scanId, setScanId] = useState<string | null>(null);
+  const [scenarioBuildId, setScenarioBuildId] = useState<string | null>(null);
+  const [scenarioToast, setScenarioToast] = useState<string | null>(null);
   const [testState, setTestState] = useState<'IDLE' | 'TESTING' | 'SUCCESS' | 'FAILED'>('IDLE');
   const flags = getFeatureFlags();
 
@@ -173,8 +176,41 @@ export default function BiConnectionPage() {
       void qc.invalidateQueries({ queryKey: ['bi-schema'] });
       void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
       void qc.invalidateQueries({ queryKey: ['bi-status'] });
+      const ds = scanQ.data.datasourceId || selectedId;
+      if (ds) {
+        const bid = `build-scan-${ds}`.slice(0, 64);
+        setScenarioBuildId(bid);
+        setScenarioToast(t('bi.scenarioBuildPreparing') || 'Senaryolar hazırlanıyor…');
+      }
     }
-  }, [qc, scanQ.data?.status]);
+  }, [qc, scanQ.data?.status, scanQ.data?.datasourceId, selectedId]);
+
+  const scenarioBuildQ = useQuery({
+    queryKey: ['scenario-build', scenarioBuildId, config],
+    queryFn: async () => {
+      const ds = selectedId || 'bi_reporting';
+      return request<{ status?: string; phase?: string; error?: string }>(
+        config,
+        `/api/v1/datasources/${encodeURIComponent(ds)}/scenario-builds/${encodeURIComponent(scenarioBuildId!)}`,
+      );
+    },
+    enabled: Boolean(enabled && scenarioBuildId),
+    refetchInterval: (q) => {
+      const st = (q.state.data as { status?: string } | undefined)?.status;
+      return st === 'COMPLETED' || st === 'FAILED' ? false : 2500;
+    },
+  });
+
+  useEffect(() => {
+    const st = scenarioBuildQ.data?.status;
+    if (st === 'COMPLETED') {
+      setScenarioToast(t('bi.scenarioBuildReady') || 'Senaryolar hazır');
+    } else if (st === 'FAILED') {
+      setScenarioToast(t('bi.scenarioBuildFailed') || 'Senaryo derlemesi başarısız');
+    } else if (scenarioBuildId && (st === 'RUNNING' || st === 'QUEUED')) {
+      setScenarioToast(t('bi.scenarioBuildPreparing') || 'Senaryolar hazırlanıyor…');
+    }
+  }, [scenarioBuildQ.data?.status, scenarioBuildId]);
 
   useEffect(() => {
     if (!sources.length) return;
@@ -684,6 +720,22 @@ export default function BiConnectionPage() {
               </div>
             )}
             {saveMut.isSuccess && <div className="text-sm text-status-ok">{t('bi.saveSuccess')}</div>}
+
+            {scenarioToast && (
+              <div
+                className={clsx(
+                  'rounded-lg px-3 py-2 text-sm',
+                  scenarioBuildQ.data?.status === 'FAILED'
+                    ? 'bg-rose-50 text-rose-800'
+                    : scenarioBuildQ.data?.status === 'COMPLETED'
+                      ? 'bg-emerald-50 text-emerald-800'
+                      : 'bg-amber-50 text-amber-900',
+                )}
+                role="status"
+              >
+                {scenarioToast}
+              </div>
+            )}
 
             {scanId && scanQ.data && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-700">
