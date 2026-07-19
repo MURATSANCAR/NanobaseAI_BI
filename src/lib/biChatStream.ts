@@ -18,6 +18,7 @@ export type BiStreamEvent =
       position?: number;
       queue_depth?: number;
       elapsed_sec?: number;
+      message?: string;
       payload?: Record<string, unknown>;
     }
   | { type: 'token'; t: string; reset?: boolean }
@@ -81,6 +82,7 @@ export async function streamBiChat(
             position: typeof parsed.position === 'number' ? parsed.position : undefined,
             queue_depth: typeof parsed.queue_depth === 'number' ? parsed.queue_depth : undefined,
             elapsed_sec: typeof parsed.elapsed_sec === 'number' ? parsed.elapsed_sec : undefined,
+            message: typeof parsed.message === 'string' ? parsed.message : undefined,
             payload: parsed,
           });
         } else if (event === 'schema_context') {
