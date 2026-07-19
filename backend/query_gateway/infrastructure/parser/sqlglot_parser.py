@@ -169,9 +169,14 @@ def parse_sql(sql: str, *, dialect: str = "postgres") -> ParsedQuery:
     for fn in tree.find_all(exp.Anonymous):
         if fn.this:
             functions.add(_norm(str(fn.this)).upper())
+    # sqlglot models connectors / CASE / IF as Func — those are SQL syntax, not UDFs.
+    _skip_func_types = (exp.Connector,)
+    for extra in ("Case", "If", "Cast", "TryCast", "Paren"):
+        cls = getattr(exp, extra, None)
+        if cls is not None:
+            _skip_func_types = (*_skip_func_types, cls)
     for fn in tree.find_all(exp.Func):
-        # sqlglot models AND/OR (and other connectors) as Func — not real UDFs.
-        if isinstance(fn, exp.Connector):
+        if isinstance(fn, _skip_func_types):
             continue
         functions.add(type(fn).__name__.upper())
 

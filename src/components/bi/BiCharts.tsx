@@ -6,6 +6,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -237,6 +238,49 @@ function paletteColor(variant: BiChartVariant | undefined, index = 0): string {
   return colors[index % colors.length] ?? PBI_COLORS[0];
 }
 
+/** Show numeric values on chart marks when there is room (avoid clutter). */
+function showChartDataLabels(height: number, pointCount: number, variant?: BiChartVariant): boolean {
+  if (pointCount <= 0) return false;
+  if (pointCount > 16) return false;
+  if (variant === 'preview' && height < 120) return pointCount <= 5;
+  return height >= 120;
+}
+
+function formatChartDataLabel(value: unknown): string {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return '';
+  return formatPbiNumber(n);
+}
+
+const CHART_LABEL_STYLE = {
+  fontSize: 10,
+  fill: '#252423',
+  fontWeight: 600 as const,
+};
+
+function ChartValueLabels({
+  dataKey,
+  position,
+  fill,
+}: {
+  dataKey: string;
+  position: 'top' | 'right' | 'center' | 'insideTop';
+  fill?: string;
+}) {
+  return (
+    <LabelList
+      dataKey={dataKey}
+      position={position}
+      formatter={formatChartDataLabel as never}
+      style={{ ...CHART_LABEL_STYLE, fill: fill ?? CHART_LABEL_STYLE.fill }}
+    />
+  );
+}
+
+function chartMarginWithLabels(withLabels: boolean) {
+  return withLabels ? { ...PBI_CHART_MARGIN, top: 28 } : PBI_CHART_MARGIN;
+}
+
 
 export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = CHART_H_DEFAULT, variant }: ChartProps) {
   const vtype = normalizeVisualType(widget.type);
@@ -256,10 +300,12 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
     const data = stackedData(widget);
     const series = stackedSeries(widget);
     const layout = horizontal ? 'vertical' : 'horizontal';
+    const showLabels = showChartDataLabels(height, data.length, variant) && series.length <= 4;
+    const lastSeries = series[series.length - 1];
     return (
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} layout={layout as 'horizontal' | 'vertical'} margin={PBI_CHART_MARGIN}>
+          <BarChart data={data} layout={layout as 'horizontal' | 'vertical'} margin={chartMarginWithLabels(showLabels)}>
           <BarGradientDefs widgetId={widget.id} count={series.length} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           {horizontal ? (
@@ -283,7 +329,11 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
               fill={`url(#${pbiGradientId(widget.id, i)})`}
               radius={i === series.length - 1 ? [barRadius, barRadius, 0, 0] : undefined}
               animationDuration={animDuration}
-            />
+            >
+              {showLabels && s === lastSeries ? (
+                <ChartValueLabels dataKey={s} position={horizontal ? 'right' : 'top'} />
+              ) : null}
+            </Bar>
           ))}
           </BarChart>
         </ResponsiveContainer>
@@ -292,11 +342,12 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
   }
 
   const data = chartRows(widget);
+  const showLabels = showChartDataLabels(height, data.length, variant);
   if (horizontal) {
     return (
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} layout="vertical" margin={PBI_CHART_MARGIN}>
+          <BarChart data={data} layout="vertical" margin={chartMarginWithLabels(showLabels)}>
           <BarGradientDefs widgetId={widget.id} count={data.length} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           <XAxis type="number" tick={PBI_AXIS} />
@@ -316,6 +367,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
             {data.map((_, i) => (
               <Cell key={i} fill={`url(#${pbiGradientId(widget.id, i)})`} />
             ))}
+            {showLabels ? <ChartValueLabels dataKey={yk} position="right" /> : null}
           </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -326,7 +378,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
   return (
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} margin={PBI_CHART_MARGIN}>
+        <BarChart data={data} margin={chartMarginWithLabels(showLabels)}>
         <BarGradientDefs widgetId={widget.id} count={data.length} vivid={vivid} />
         <CartesianGrid {...PBI_GRID} />
         <XAxis dataKey={xk} tick={PBI_AXIS} interval={0} angle={-16} textAnchor="end" height={48} tickFormatter={(v) => truncateAxisLabel(v)} />
@@ -346,6 +398,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
           {data.map((_, i) => (
             <Cell key={i} fill={`url(#${pbiGradientId(widget.id, i)})`} />
           ))}
+          {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
         </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -361,18 +414,21 @@ export function BiLineChartWidget({ widget, targetValue, onDatumClick, height = 
   const animDuration = chartAnimationDuration(variant);
   const stroke = paletteColor(variant, 0);
   const barRadius = PBI_BAR_RADIUS;
+  const showLabels = showChartDataLabels(height, data.length, variant);
   if (!data.length) return <BiChartFrame height={height} empty />;
   if (data.length === 1) {
     return (
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} margin={PBI_CHART_MARGIN}>
+          <BarChart data={data} margin={chartMarginWithLabels(true)}>
             <BarGradientDefs widgetId={widget.id} vivid={vivid} />
             <CartesianGrid {...PBI_GRID} />
             <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} />
             <YAxis tick={PBI_AXIS} width={44} />
             <Tooltip content={<BiPbiTooltip />} cursor={PBI_TOOLTIP.cursor} />
-            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration} />
+            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
+              <ChartValueLabels dataKey={yk} position="top" />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </BiChartFrame>
@@ -381,7 +437,7 @@ export function BiLineChartWidget({ widget, targetValue, onDatumClick, height = 
   return (
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={PBI_CHART_MARGIN}>
+        <LineChart data={data} margin={chartMarginWithLabels(showLabels)}>
         <CartesianGrid {...PBI_GRID} />
         <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} interval="preserveStartEnd" />
         <YAxis tick={PBI_AXIS} width={44} />
@@ -399,7 +455,9 @@ export function BiLineChartWidget({ widget, targetValue, onDatumClick, height = 
             const payload = (d as { payload?: Record<string, unknown> })?.payload;
             if (payload && onDatumClick) onDatumClick(String(xk), String(payload[xk] ?? ''));
           }}
-        />
+        >
+          {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
+        </Line>
         </LineChart>
       </ResponsiveContainer>
     </BiChartFrame>
@@ -414,18 +472,21 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
   const animDuration = chartAnimationDuration(variant);
   const stroke = paletteColor(variant, 0);
   const barRadius = PBI_BAR_RADIUS;
+  const showLabels = showChartDataLabels(height, data.length, variant);
   if (!data.length) return <BiChartFrame height={height} empty />;
   if (data.length === 1) {
     return (
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
-          <BarChart data={data} margin={PBI_CHART_MARGIN}>
+          <BarChart data={data} margin={chartMarginWithLabels(true)}>
             <BarGradientDefs widgetId={widget.id} vivid={vivid} />
             <CartesianGrid {...PBI_GRID} />
             <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} />
             <YAxis tick={PBI_AXIS} width={44} />
             <Tooltip content={<BiPbiTooltip />} cursor={PBI_TOOLTIP.cursor} />
-            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration} />
+            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
+              <ChartValueLabels dataKey={yk} position="top" />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </BiChartFrame>
@@ -434,7 +495,7 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
   return (
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
-        <AreaChart data={data} margin={PBI_CHART_MARGIN}>
+        <AreaChart data={data} margin={chartMarginWithLabels(showLabels)}>
         <defs>
           <linearGradient id={pbiGradientId(widget.id, 0)} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={stroke} stopOpacity={vivid ? 0.45 : 0.35} />
@@ -452,7 +513,9 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
           strokeWidth={2}
           fill={`url(#${pbiGradientId(widget.id, 0)})`}
           animationDuration={animDuration}
-        />
+        >
+          {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
+        </Area>
         </AreaChart>
       </ResponsiveContainer>
     </BiChartFrame>
@@ -469,13 +532,15 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
   const lineStroke = paletteColor(variant, 2);
   const barRadius = PBI_BAR_RADIUS;
   const hasLine = cols(widget).includes(y2k) && data.some((r) => coerceNumber(r[y2k]) !== 0);
+  const showLabels = showChartDataLabels(height, data.length, variant);
   if (!data.length) {
     return <BiChartFrame height={height} empty />;
   }
+  const margin = { ...chartMarginWithLabels(showLabels), right: hasLine ? 48 : 16 };
   return (
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart data={data} margin={{ ...PBI_CHART_MARGIN, right: hasLine ? 48 : 16 }}>
+        <ComposedChart data={data} margin={margin}>
           <BarGradientDefs widgetId={widget.id} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} interval={0} angle={-16} textAnchor="end" height={48} />
@@ -494,7 +559,9 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
               const payload = d?.payload as Record<string, unknown> | undefined;
               if (payload && onDatumClick) onDatumClick(String(xk), String(payload[xk] ?? ''));
             }}
-          />
+          >
+            {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
+          </Bar>
           {hasLine && (
             <Line
               yAxisId="right"
@@ -505,7 +572,9 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
               strokeWidth={2.5}
               dot={{ r: 3, fill: '#fff', stroke: lineStroke, strokeWidth: 2 }}
               animationDuration={animDuration}
-            />
+            >
+              {showLabels ? <ChartValueLabels dataKey={y2k} position="top" /> : null}
+            </Line>
           )}
         </ComposedChart>
       </ResponsiveContainer>
@@ -522,7 +591,7 @@ export function BiPieChartWidget({ widget, onDatumClick, donut = false, height =
     .map((r) => ({ name: String(r[labelKey] ?? ''), value: coerceNumber(r[valueKey]) }));
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!data.length || total === 0) return <BiChartFrame height={height} empty />;
-  const showSliceLabels = !donut && height >= 220;
+  const showSliceLabels = !donut && height >= 160;
   return (
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
@@ -536,7 +605,12 @@ export function BiPieChartWidget({ widget, onDatumClick, donut = false, height =
             innerRadius={donut ? '52%' : 0}
             outerRadius={donut ? '72%' : '76%'}
             paddingAngle={donut ? 2 : 1}
-            label={showSliceLabels ? ({ name, percent }) => `${truncateAxisLabel(name, 10)} ${(percent * 100).toFixed(0)}%` : false}
+            label={
+              showSliceLabels
+                ? ({ name, percent, value }) =>
+                    `${truncateAxisLabel(String(name ?? ''), 10)} ${formatPbiNumber(Number(value) || 0)} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                : false
+            }
             labelLine={showSliceLabels}
           onClick={(_, idx) => {
             const row = data[idx];
@@ -621,9 +695,10 @@ export function BiWaterfallChartWidget({ widget, height = CHART_H_DEFAULT, varia
       fill: paletteColor(variant, 0),
     });
   }
+  const showLabels = showChartDataLabels(height, data.length, variant);
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={data} margin={PBI_CHART_MARGIN} stackOffset="none">
+      <BarChart data={data} margin={chartMarginWithLabels(showLabels)} stackOffset="none">
         <CartesianGrid {...PBI_GRID} />
         <XAxis dataKey="name" tick={PBI_AXIS} interval={0} angle={-18} textAnchor="end" height={52} />
         <YAxis tick={PBI_AXIS} width={48} />
@@ -633,6 +708,14 @@ export function BiWaterfallChartWidget({ widget, height = CHART_H_DEFAULT, varia
           {data.map((entry, i) => (
             <Cell key={i} fill={entry.fill} />
           ))}
+          {showLabels ? (
+            <LabelList
+              dataKey="delta"
+              position="top"
+              formatter={formatChartDataLabel as never}
+              style={CHART_LABEL_STYLE}
+            />
+          ) : null}
         </Bar>
       </BarChart>
     </ResponsiveContainer>

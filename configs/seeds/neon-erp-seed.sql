@@ -163,7 +163,7 @@ CREATE TABLE butce_planlari (
   departman_kod text NOT NULL,
   butce_kodu text NOT NULL,
   kalem_adi text NOT NULL,
-  tur text NOT NULL DEFAULT 'opex',
+  tur text NOT NULL DEFAULT 'OPEX',
   planlanan_tutar numeric(18,2) NOT NULL,
   para_birimi text NOT NULL DEFAULT 'TRY',
   created_at timestamptz NOT NULL DEFAULT now()
@@ -243,17 +243,17 @@ VALUES
  (3,'T-CONS','IT Danışmanlık A.Ş.','5555555555',34,'cons@example.com','',true,now());
 
 INSERT INTO butce_planlari (mali_yil, departman_kod, butce_kodu, kalem_adi, tur, planlanan_tutar) VALUES
- (2026,'IT-OPEX','IT-CLOUD','Bulut altyapı (IaaS/PaaS)','opex',1800000),
- (2026,'IT-OPEX','IT-SAAS','SaaS abonelikleri','opex',720000),
- (2026,'IT-OPEX','IT-LICENSE','Yazılım lisans / bakım','opex',950000),
- (2026,'IT-OPEX','IT-SUPPORT','Destek ve managed service','opex',480000),
- (2026,'IT-OPEX','IT-TELCO','Telekom / hat','opex',240000),
- (2026,'IT-OPEX','IT-CONTRACTOR','IT danışman / contractor','opex',600000),
- (2026,'IT-CAPEX','IT-HW','Sunucu / network donanımı','capex',2500000),
- (2026,'IT-CAPEX','IT-ENDPOINT','Uç nokta / notebook yenileme','capex',900000),
- (2026,'IT-CAPEX','IT-SW-CAP','Büyük yazılım aktivasyonu','capex',1500000),
- (2025,'IT-OPEX','IT-CLOUD','Bulut altyapı (IaaS/PaaS)','opex',1500000),
- (2025,'IT-CAPEX','IT-HW','Sunucu / network donanımı','capex',2000000);
+ (2026,'IT-OPEX','IT-CLOUD','Bulut altyapı (IaaS/PaaS)','OPEX',1800000),
+ (2026,'IT-OPEX','IT-SAAS','SaaS abonelikleri','OPEX',720000),
+ (2026,'IT-OPEX','IT-LICENSE','Yazılım lisans / bakım','OPEX',950000),
+ (2026,'IT-OPEX','IT-SUPPORT','Destek ve managed service','OPEX',480000),
+ (2026,'IT-OPEX','IT-TELCO','Telekom / hat','OPEX',240000),
+ (2026,'IT-OPEX','IT-CONTRACTOR','IT danışman / contractor','OPEX',600000),
+ (2026,'IT-CAPEX','IT-HW','Sunucu / network donanımı','CAPEX',2500000),
+ (2026,'IT-CAPEX','IT-ENDPOINT','Uç nokta / notebook yenileme','CAPEX',900000),
+ (2026,'IT-CAPEX','IT-SW-CAP','Büyük yazılım aktivasyonu','CAPEX',1500000),
+ (2025,'IT-OPEX','IT-CLOUD','Bulut altyapı (IaaS/PaaS)','OPEX',1500000),
+ (2025,'IT-CAPEX','IT-HW','Sunucu / network donanımı','CAPEX',2000000);
 
 INSERT INTO alis_faturalari
   (fatura_no, tedarikci_id, sube_id, butce_kodu, departman_kod, durum, fatura_tarihi, vade_tarihi,
