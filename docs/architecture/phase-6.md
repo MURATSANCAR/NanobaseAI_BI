@@ -1,21 +1,33 @@
-# Nanobase BI — Faz 6 chat via Gateway
+# Nanobase BI — Faz 6 controlled text2sql workflows
 
 ## Flow
 
-```
+```text
 FE chat/stream
   → nanobase_api
-  → llama.cpp (SQL JSON only)
-  → Query Gateway validate + execute (+ EXPLAIN)
-  → SSE done { sql, query_result, explain }
+  → nanobase_awel sql-plan-v1 (Qdrant authorized retrieve + Qwen JSON)
+  → Query Gateway validate (+ sql-repair-v1 ≤2)
+  → Query Gateway execute
+  → nanobase_awel result-explain-v1 + fidelity
+  → SSE
 ```
 
 DB-GPT `chat_with_db_execute` is **not** used for customer SQL execution.
 
-## Verify
+Package: [`backend/nanobase_awel/`](../../backend/nanobase_awel/)
 
-```bash
-curl -N -X POST https://portal.nanobase.ai/bi-api/api/v1/bi/chat/stream \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"Kaç müşteri var?","session_id":"faz6-test"}'
+## Internal endpoints
+
+- `POST /api/v1/bi/internal/workflows/sql-plan`
+- `POST /api/v1/bi/internal/workflows/sql-repair`
+- `POST /api/v1/bi/internal/workflows/result-explain`
+
+Header: `X-Nanobase-Workflow-Version: 1`
+
+## Rollback
+
+```env
+NANOBASE_TEXT2SQL_EXECUTION_MODE=PLAN_ONLY
 ```
+
+See [`phase-6/`](phase-6/).

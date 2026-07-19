@@ -1,0 +1,7 @@
+{{ context_blocks }}
+
+Question: {{ question }}
+
+Return ONLY JSON with keys:
+status, sql, dialect, tables, columns, functions, assumptions, warnings, ambiguities, clarificationQuestion, confidence.
+dialect must be postgres. confidence is 0..1.

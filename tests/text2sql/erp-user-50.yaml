@@ -1,0 +1,165 @@
+# ERP (Neon) — kullanıcı gibi 50 soru (kolay → karmaşık)
+# session: tek conversation; chat/stream + Query Gateway
+datasource: erp
+pass_threshold: 0.60
+
+questions:
+  # --- Kolay: sayım / liste ---
+  - id: e01
+    difficulty: easy
+    question: Kaç müşteri var?
+  - id: e02
+    difficulty: easy
+    question: Aktif müşteri sayısı nedir?
+  - id: e03
+    difficulty: easy
+    question: Kaç ürün kayıtlı?
+  - id: e04
+    difficulty: easy
+    question: Kaç şube var?
+  - id: e05
+    difficulty: easy
+    question: Personel sayısı kaç?
+  - id: e06
+    difficulty: easy
+    question: Tedarikçi listesini getir (ilk 20)
+  - id: e07
+    difficulty: easy
+    question: Para birimlerini listele
+  - id: e08
+    difficulty: easy
+    question: Ülke listesini göster
+  - id: e09
+    difficulty: easy
+    question: Müşteri gruplarını listele
+  - id: e10
+    difficulty: easy
+    question: Depo sayısı kaç?
+
+  # --- Orta-kolay: filtre / basit join ---
+  - id: e11
+    difficulty: medium_easy
+    question: Aktif ürünlerin adını ve stok kodunu getir
+  - id: e12
+    difficulty: medium_easy
+    question: İstanbul ilindeki müşterileri listele
+  - id: e13
+    difficulty: medium_easy
+    question: En pahalı 10 ürün (satış fiyatına göre)
+  - id: e14
+    difficulty: medium_easy
+    question: En ucuz 5 ürün hangileri?
+  - id: e15
+    difficulty: medium_easy
+    question: Marka listesini getir
+  - id: e16
+    difficulty: medium_easy
+    question: Departmanları şirket bilgisiyle birlikte listele
+  - id: e17
+    difficulty: medium_easy
+    question: Aktif personellerin ad soyad ve unvanını getir
+  - id: e18
+    difficulty: medium_easy
+    question: Fatura durumlarına göre fatura sayısı
+  - id: e19
+    difficulty: medium_easy
+    question: Kaç satış siparişi var?
+  - id: e20
+    difficulty: medium_easy
+    question: Tahsilat kayıt sayısı nedir?
+
+  # --- Orta: agregasyon ---
+  - id: e21
+    difficulty: medium
+    question: Faturaların toplam genel tutarı nedir?
+  - id: e22
+    difficulty: medium
+    question: Toplam tahsilat tutarı kaç?
+  - id: e23
+    difficulty: medium
+    question: Müşteri bazında fatura sayısı (en çok faturası olan 10 müşteri)
+  - id: e24
+    difficulty: medium
+    question: Kategori bazında ürün sayısı
+  - id: e25
+    difficulty: medium
+    question: Depo bazında stok miktarı toplamı
+  - id: e26
+    difficulty: medium
+    question: Şube bazında personel sayısı
+  - id: e27
+    difficulty: medium
+    question: Aylık fatura adedi (fatura tarihine göre)
+  - id: e28
+    difficulty: medium
+    question: Ödeme yöntemine göre tahsilat tutarı
+  - id: e29
+    difficulty: medium
+    question: Ortalama fatura tutarı nedir?
+  - id: e30
+    difficulty: medium
+    question: En yüksek tutarlı 5 fatura
+
+  # --- Orta-zor: çoklu join ---
+  - id: e31
+    difficulty: medium_hard
+    question: Fatura kalemleriyle birlikte fatura no, ürün adı ve kalem tutarını getir (ilk 20)
+  - id: e32
+    difficulty: medium_hard
+    question: Satış siparişlerinin müşteri unvanı ve sipariş tarihiyle listesi
+  - id: e33
+    difficulty: medium_hard
+    question: Sevkiyatları sipariş numarası ve depo adıyla göster
+  - id: e34
+    difficulty: medium_hard
+    question: Hangi müşterinin ne kadar tahsilatı var? (müşteri unvanı + toplam)
+  - id: e35
+    difficulty: medium_hard
+    question: Ürün stok bakiyesi ile ürün adı ve depo adı
+  - id: e36
+    difficulty: medium_hard
+    question: Alış faturalarının tedarikçi unvanı ve genel toplamı
+  - id: e37
+    difficulty: medium_hard
+    question: Satın alma siparişlerinde tedarikçi ve toplam tutar
+  - id: e38
+    difficulty: medium_hard
+    question: Personelin şube adı ve departman adıyla listesi
+  - id: e39
+    difficulty: medium_hard
+    question: Faturası olan ama tahsilatı olmayan müşteriler var mı?
+  - id: e40
+    difficulty: medium_hard
+    question: Stok hareket tipi bazında toplam miktar
+
+  # --- Zor: analitik / karmaşık ---
+  - id: e41
+    difficulty: hard
+    question: Müşteri bazında fatura toplamı ile tahsilat toplamını karşılaştır (bakiye gibi)
+  - id: e42
+    difficulty: hard
+    question: En çok satılan 10 ürün (fatura kalemi miktarına göre)
+  - id: e43
+    difficulty: hard
+    question: Aylık ciro (faturalar genel_toplam toplamı, aya göre)
+  - id: e44
+    difficulty: hard
+    question: Şube bazında fatura cirosu
+  - id: e45
+    difficulty: hard
+    question: KDV oranı bazında fatura kalemi tutar toplamı
+  - id: e46
+    difficulty: hard
+    question: Risk limiti 100000 üzerinde olan aktif müşterilerin fatura toplamı
+  - id: e47
+    difficulty: hard
+    question: Bütçe planlarında departman bazında planlanan tutar toplamı
+  - id: e48
+    difficulty: hard
+    question: Yevmiye fişlerinde borç toplamı ile alacak toplamı eşit mi?
+  - id: e49
+    difficulty: hard
+    question: Son 90 günde kesilen faturaların müşteri grubuna göre cirosu
+  - id: e50
+    difficulty: hard
+    question: Hem satış faturası hem alış faturası olan ürünleri ve ilgili tutar özetini çıkar

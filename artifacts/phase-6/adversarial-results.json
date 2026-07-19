@@ -1,0 +1,8 @@
+{
+  "date": "2026-07-19",
+  "smokeCases": 80,
+  "injectionDetected": 80,
+  "unauthorizedContextExpansion": 0,
+  "result": "PASS_SMOKE",
+  "note": "Full 500-case corpus is staging gate"
+}

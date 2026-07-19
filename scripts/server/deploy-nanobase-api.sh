@@ -42,7 +42,26 @@ REDIS_URL=redis://127.0.0.1:6379/0
 SCHEMA_INDEXER_ROOT=${ROOT}/tools/schema-indexer
 NANOBASE_PYTHON=${VENV}/bin/python
 SECRETS_ROOT=${SECRETS}
+BI_EMBED_URL=http://127.0.0.1:8083/v1/embeddings
+QDRANT_URL=http://127.0.0.1:6333
 EOF
+# Prefer shared contract embedding key when present (BGE-M3 :8083)
+if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
+  for cand in \
+    /data/nanobaseai/mobile-qa/contract-intelligence/embedding-service/.env \
+    /data/nanobaseai/bi/secrets/embed-api.key; do
+    if [[ -f "$cand" ]]; then
+      # shellcheck disable=SC1090
+      BI_EMBED_API_KEY="$(grep -E '^API_KEY=' "$cand" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\"\r')"
+      [[ -n "$BI_EMBED_API_KEY" ]] && break
+    fi
+  done
+fi
+if [[ -n "${BI_EMBED_API_KEY:-}" ]]; then
+  printf 'BI_EMBED_API_KEY=%s\n' "$BI_EMBED_API_KEY" >> "$ENV_FILE"
+else
+  log "WARN: BI_EMBED_API_KEY unset — schema retrieve will fail until set"
+fi
 chmod 600 "$ENV_FILE"
 
 log "Running Alembic migrations"

@@ -26,7 +26,27 @@ class TextToSqlEnginePort(Protocol):
         datasource_id: str,
         schema_hint: str,
         retrieved_schema: str | None = None,
-        conversation_context: str | None = None,
+        conversation_context: list[dict[str, Any]] | str | None = None,
+        tenant_id: str = "default",
+        execution_id: str = "",
+        allowed_tables: list[str] | None = None,
+        prefetched_retrieval: dict[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def repair_sql(
+        self,
+        *,
+        question: str,
+        datasource_id: str,
+        previous_sql: str,
+        error_code: str,
+        error_message: str,
+        attempt: int,
+        authorized_context: str = "",
+        schema_hint: str = "",
+        allowed_tables: list[str] | None = None,
+        tenant_id: str = "default",
+        execution_id: str = "",
     ) -> dict[str, Any]: ...
 
     async def explain_result(
@@ -37,6 +57,9 @@ class TextToSqlEnginePort(Protocol):
         columns: list[Any],
         rows: list[Any],
         truncated: bool = False,
+        datasource_id: str = "",
+        tenant_id: str = "default",
+        execution_id: str = "",
     ) -> dict[str, Any]: ...
 
 

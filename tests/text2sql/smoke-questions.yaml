@@ -1,4 +1,5 @@
-# 20-question Text-to-SQL smoke suite (bi_reporting / analytics)
+# 50-question Text-to-SQL smoke suite (bi_reporting / analytics)
+# Staging target: 200-Q (see docs/architecture/phase-6/acceptance.md)
 # expect_tables: bare table names that retrieval should surface
 datasource: bi_reporting
 collection: bi_schema_bi_reporting
@@ -85,3 +86,123 @@ questions:
     question: İptal edilmiş faturaları hariç tutarak toplam tutar
     expect_tables: [invoices]
     expect_sql_tokens: [select, cancelled, sum]
+  - id: q21
+    question: SMB segmentindeki müşteri sayısı
+    expect_tables: [customers]
+    expect_sql_tokens: [select, count, smb]
+  - id: q22
+    question: Türkiye'deki müşterileri listele
+    expect_tables: [customers]
+    expect_sql_tokens: [select, country]
+  - id: q23
+    question: İstanbul'daki müşteri adları
+    expect_tables: [customers]
+    expect_sql_tokens: [select, city]
+  - id: q24
+    question: Hardware kategorisindeki ürün sayısı
+    expect_tables: [products]
+    expect_sql_tokens: [select, count, hardware]
+  - id: q25
+    question: Birim fiyatı 1000'den pahalı ürünler
+    expect_tables: [products]
+    expect_sql_tokens: [select, unit_price]
+  - id: q26
+    question: Aktif ürünleri getir
+    expect_tables: [products]
+    expect_sql_tokens: [select, active]
+  - id: q27
+    question: Sipariş durumlarına göre sipariş sayısı
+    expect_tables: [orders]
+    expect_sql_tokens: [select, status, count]
+  - id: q28
+    question: Son 30 gündeki siparişler
+    expect_tables: [orders]
+    expect_sql_tokens: [select, order_date]
+  - id: q29
+    question: Müşteri başına sipariş sayısı
+    expect_tables: [orders, customers]
+    expect_sql_tokens: [select, count, group]
+  - id: q30
+    question: Ortalama sipariş kalemi adedi
+    expect_tables: [order_items]
+    expect_sql_tokens: [select, avg, quantity]
+  - id: q31
+    question: En yüksek birim fiyatlı sipariş kalemi
+    expect_tables: [order_items]
+    expect_sql_tokens: [select, unit_price]
+  - id: q32
+    question: Ürün bazında toplam satış adedi
+    expect_tables: [order_items, products]
+    expect_sql_tokens: [select, sum, quantity]
+  - id: q33
+    question: Gelir görünümünden en yüksek ciro yapan müşteri
+    expect_tables: [v_order_revenue]
+    expect_sql_tokens: [select, revenue]
+  - id: q34
+    question: Segment ve ülke kırılımında ciro
+    expect_tables: [v_order_revenue]
+    expect_sql_tokens: [select, segment, country]
+  - id: q35
+    question: Paid fatura sayısı
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, paid, count]
+  - id: q36
+    question: Fatura tutarı 10000'den büyük olanlar
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, amount]
+  - id: q37
+    question: Vadesi geçmiş ödenmemiş faturalar
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, overdue, due]
+  - id: q38
+    question: Müşteri adına göre fatura listesi
+    expect_tables: [invoices, customers]
+    expect_sql_tokens: [select, invoice]
+  - id: q39
+    question: Completed siparişlerin ortalama tutarı
+    expect_tables: [orders, order_items]
+    expect_sql_tokens: [select, completed, avg]
+  - id: q40
+    question: Kategori bazında ortalama ürün fiyatı
+    expect_tables: [products]
+    expect_sql_tokens: [select, category, avg]
+  - id: q41
+    question: Hiç siparişi olmayan müşteriler
+    expect_tables: [customers, orders]
+    expect_sql_tokens: [select, left, null]
+  - id: q42
+    question: Birden fazla kalemi olan siparişler
+    expect_tables: [order_items, orders]
+    expect_sql_tokens: [select, count, having]
+  - id: q43
+    question: En son oluşturulan 10 sipariş
+    expect_tables: [orders]
+    expect_sql_tokens: [select, order_date, limit]
+  - id: q44
+    question: SKU ile başlayan ürün kodları
+    expect_tables: [products]
+    expect_sql_tokens: [select, sku]
+  - id: q45
+    question: Aylık sipariş adedi trendi
+    expect_tables: [orders]
+    expect_sql_tokens: [select, date, count]
+  - id: q46
+    question: Toplam kalan fatura bakiyesi
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, remaining, sum]
+  - id: q47
+    question: Enterprise müşterilerin fatura toplamı
+    expect_tables: [customers, invoices]
+    expect_sql_tokens: [select, enterprise, sum]
+  - id: q48
+    question: Sipariş ve fatura birleşik görünüm sorgusu
+    expect_tables: [orders, invoices]
+    expect_sql_tokens: [select]
+  - id: q49
+    question: Ürün adı Soft içeren kayıtlar
+    expect_tables: [products]
+    expect_sql_tokens: [select, name]
+  - id: q50
+    question: En düşük fiyatlı 5 ürün
+    expect_tables: [products]
+    expect_sql_tokens: [select, unit_price, limit]

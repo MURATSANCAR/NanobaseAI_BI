@@ -1,0 +1,7 @@
+{
+  "date": "2026-07-19",
+  "unitCases": 30,
+  "result": "PASS",
+  "stagingTarget": 150,
+  "note": "Full 150-case fidelity corpus is staging gate"
+}

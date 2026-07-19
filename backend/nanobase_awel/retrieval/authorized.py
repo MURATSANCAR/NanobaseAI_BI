@@ -1,0 +1,185 @@
+"""Authorized schema retrieval with tenant/datasource filters."""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+import httpx
+
+from nanobase_awel.contracts.errors import SCHEMA_RETRIEVAL_UNAVAILABLE, WorkflowError
+from nanobase_awel.operators.context_sanitizer import sanitize_planning_context
+
+QDRANT_URL = os.environ.get("QDRANT_URL", "http://127.0.0.1:6333").rstrip("/")
+EMBED_URL = os.environ.get("BI_EMBED_URL", "http://127.0.0.1:8083/v1/embeddings")
+EMBED_KEY = (
+    os.environ.get("BI_EMBED_API_KEY")
+    or os.environ.get("OPENAI_API_KEY")
+    or "nanobase-local"
+)
+
+
+def collection_for(datasource_id: str) -> str:
+    return os.environ.get("BI_SCHEMA_COLLECTION") or f"bi_schema_{datasource_id}"
+
+
+async def _embed(text: str) -> list[float]:
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.post(
+            EMBED_URL,
+            headers={"Authorization": f"Bearer {EMBED_KEY}", "Content-Type": "application/json"},
+            json={"texts": [text]},
+        )
+        r.raise_for_status()
+        data = r.json()
+    vectors = data.get("embeddings") or data.get("data")
+    if isinstance(vectors, list) and vectors and isinstance(vectors[0], dict):
+        vectors = [v["embedding"] for v in sorted(vectors, key=lambda x: x.get("index", 0))]
+    if not vectors:
+        raise RuntimeError("empty embedding")
+    return list(vectors[0])
+
+
+def build_qdrant_filter(
+    *,
+    tenant_id: str,
+    datasource_id: str,
+    schema_version: int | None = None,
+    allowed_schemas: list[str] | None = None,
+) -> dict[str, Any] | None:
+    """Payload filter — must include tenant + datasource when those keys exist in index."""
+    must: list[dict[str, Any]] = [
+        {"key": "datasource_id", "match": {"value": datasource_id}},
+    ]
+    if tenant_id and tenant_id != "default":
+        must.append({"key": "tenant_id", "match": {"value": tenant_id}})
+    if schema_version is not None:
+        must.append({"key": "schema_version", "match": {"value": schema_version}})
+    if allowed_schemas:
+        must.append({"key": "schema", "match": {"any": list(allowed_schemas)}})
+    return {"must": must}
+
+
+async def retrieve_authorized_schema(
+    question: str,
+    *,
+    tenant_id: str,
+    datasource_id: str,
+    max_documents: int = 30,
+    schema_version: int | None = None,
+    allowed_schemas: list[str] | None = None,
+    fail_closed: bool = False,
+) -> dict[str, Any]:
+    coll = collection_for(datasource_id)
+    qfilter = build_qdrant_filter(
+        tenant_id=tenant_id,
+        datasource_id=datasource_id,
+        schema_version=schema_version,
+        allowed_schemas=allowed_schemas,
+    )
+    try:
+        vec = await _embed(question)
+        body: dict[str, Any] = {
+            "vector": vec,
+            "limit": max_documents,
+            "with_payload": True,
+        }
+        if qfilter:
+            body["filter"] = qfilter
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            cr = await client.get(f"{QDRANT_URL}/collections/{coll}")
+            if cr.status_code >= 400:
+                if fail_closed:
+                    raise WorkflowError(
+                        SCHEMA_RETRIEVAL_UNAVAILABLE,
+                        "Schema koleksiyonu bulunamadı.",
+                        retryable=True,
+                    )
+                return {"ok": False, "collection": coll, "hits": [], "tables": [], "hint_extra": ""}
+            sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
+            # If filter unsupported / empty, retry without filter (legacy collections)
+            if sr.status_code >= 400 and "filter" in body:
+                body.pop("filter", None)
+                sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
+            sr.raise_for_status()
+            result = sr.json().get("result") or []
+    except WorkflowError:
+        raise
+    except Exception as e:
+        if fail_closed:
+            raise WorkflowError(
+                SCHEMA_RETRIEVAL_UNAVAILABLE,
+                "Schema retrieval kullanılamıyor.",
+                retryable=True,
+            ) from e
+        return {
+            "ok": False,
+            "collection": coll,
+            "hits": [],
+            "tables": [],
+            "hint_extra": "",
+            "error": str(e)[:200],
+        }
+
+    hits = []
+    lines = [f"Retrieved schema context for datasource '{datasource_id}' (Qdrant {coll}):"]
+    seen_tables: set[str] = set()
+    untrusted_comments: list[str] = []
+    for hit in result:
+        payload = hit.get("payload") or {}
+        # Soft client-side tenant/datasource guard (fail closed for mismatches)
+        p_ds = payload.get("datasource_id")
+        p_tenant = payload.get("tenant_id")
+        if p_ds and str(p_ds) != str(datasource_id):
+            continue
+        if p_tenant and tenant_id not in ("default", "") and str(p_tenant) != str(tenant_id):
+            continue
+        score = hit.get("score")
+        text = str(payload.get("text") or "")[:500]
+        table = payload.get("table")
+        schema = payload.get("schema")
+        kind = payload.get("kind")
+        fq = f"{schema}.{table}" if schema and table else (table or "")
+        if fq:
+            seen_tables.add(str(fq))
+        comment = payload.get("comment") or payload.get("description")
+        if comment:
+            untrusted_comments.append(str(comment)[:300])
+        hits.append(
+            {
+                "score": score,
+                "kind": kind,
+                "table": fq,
+                "column": payload.get("column"),
+                "text": text,
+                "id": hit.get("id"),
+            }
+        )
+        lines.append(f"- [{kind}] {fq} score={score:.3f}: {text[:220]}")
+
+    hint = "\n".join(lines) if hits else ""
+    return {
+        "ok": True,
+        "collection": coll,
+        "hits": hits[:max_documents],
+        "tables": sorted(seen_tables),
+        "hint_extra": hint,
+        "untrusted_comments": untrusted_comments[:20],
+        "filter": qfilter,
+    }
+
+
+def build_sanitized_context(
+    *,
+    question: str,
+    schema_hint: str,
+    retrieval: dict[str, Any],
+    conversation_turns: list[dict[str, Any]] | None = None,
+) -> str:
+    return sanitize_planning_context(
+        question=question,
+        schema_hint=schema_hint,
+        retrieved_hint=str(retrieval.get("hint_extra") or ""),
+        conversation_turns=conversation_turns,
+        untrusted_comments=retrieval.get("untrusted_comments") or [],
+    )

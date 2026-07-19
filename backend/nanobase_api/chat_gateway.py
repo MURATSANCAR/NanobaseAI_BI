@@ -169,16 +169,33 @@ async def stream_chat_via_gateway(
         except Exception as e:
             yield _sse("status", {"phase": "verified_lookup_skip", "detail": str(e)[:200]}).encode()
 
+    conversation_turns: list[dict[str, Any]] = []
+    if meta_engine is not None:
+        try:
+            from nanobase_api.infrastructure.conversation_repo import ConversationRepository
+
+            hist = ConversationRepository(meta_engine).list_recent_messages(
+                tenant_id=tenant_id, conversation_id=session_id, limit=6
+            )
+            conversation_turns = hist
+        except Exception:
+            conversation_turns = []
+
+    authorized_context = ""
     if not sql:
         yield _sse(
             "status",
-            {"phase": "schema_retrieval", "datasource_id": datasource_id},
+            {"phase": "schema_retrieval", "type": "STATUS", "datasource_id": datasource_id},
         ).encode()
         retrieved = ""
         try:
-            from nanobase_api.schema_retrieve import retrieve_schema_context
+            from nanobase_awel.retrieval.authorized import retrieve_authorized_schema
 
-            retrieval_meta = await retrieve_schema_context(message, datasource_id)
+            retrieval_meta = await retrieve_authorized_schema(
+                message,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+            )
             retrieved = str(retrieval_meta.get("hint_extra") or "")
             tables = retrieval_meta.get("tables") or []
             yield _sse(
@@ -198,20 +215,60 @@ async def stream_chat_via_gateway(
         except Exception as e:
             yield _sse("status", {"phase": "schema_retrieval_skip", "detail": str(e)[:200]}).encode()
 
+        schema_hint = _schema_hint_for(datasource_id)
+        authorized_context = f"{schema_hint}\n{retrieved}".strip()
         yield _sse(
             "status",
-            {"phase": "nl2sql_plan", "workflow": "nanobase-nl2sql-plan", "datasource_id": datasource_id},
+            {
+                "phase": "generating_sql",
+                "workflow": "nanobase-sql-plan-v1",
+                "datasource_id": datasource_id,
+            },
         ).encode()
         try:
             plan = await _engine_adapter.generate_sql_plan(
                 question=message,
                 datasource_id=datasource_id,
-                schema_hint=_schema_hint_for(datasource_id),
+                schema_hint=schema_hint,
                 retrieved_schema=retrieved or None,
+                conversation_context=conversation_turns,
+                tenant_id=tenant_id,
+                execution_id=execution_id,
+                allowed_tables=list(retrieval_meta.get("tables") or []),
+                prefetched_retrieval=retrieval_meta,
             )
         except Exception as e:
-            yield _sse("error", {"type": "ERROR", "message": f"nl2sql-plan failed: {e}"}).encode()
+            yield _sse("error", {"type": "ERROR", "message": f"sql-plan failed: {e}"}).encode()
             return
+
+        if str(plan.get("status") or "").upper() == "AMBIGUOUS":
+            clarify = plan.get("clarificationQuestion") or "Soruyu biraz daha netleştirebilir misiniz?"
+            yield _sse(
+                "status",
+                {
+                    "phase": "clarification_required",
+                    "type": "CLARIFICATION_REQUIRED",
+                    "question": clarify,
+                    "ambiguities": plan.get("ambiguities") or [],
+                },
+            ).encode()
+            result = {
+                "session_id": session_id,
+                "reply": clarify,
+                "intent": "clarify",
+                "sql": None,
+                "needs_clarification": True,
+                "query_result": {"columns": [], "rows": []},
+                "widgets": [],
+                "answer_blocks": [{"type": "text", "text": clarify}],
+                "engine": "nanobase_awel",
+                "workflows": {"plan": plan},
+                "execution_id": execution_id,
+            }
+            yield _sse("completed", {"type": "COMPLETED", "payload": {"clarification": True}}).encode()
+            yield _sse("done", result).encode()
+            return
+
         sql = str(plan.get("sql") or "").strip()
         plan["retrieval"] = {
             "collection": retrieval_meta.get("collection"),
@@ -224,7 +281,7 @@ async def stream_chat_via_gateway(
             {"type": "SQL_GENERATED", "payload": {"sql": sql, "sql_source": sql_source}},
         ).encode()
         if not sql:
-            yield _sse("error", {"message": "No SQL from nl2sql-plan", "plan": plan}).encode()
+            yield _sse("error", {"message": "No SQL from sql-plan", "plan": plan}).encode()
             return
 
     # PLAN_ONLY: skip gateway execute
@@ -287,10 +344,12 @@ async def stream_chat_via_gateway(
 
     yield _sse("status", {"phase": "validating", "sql": sql, "sql_source": sql_source}).encode()
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+    from nanobase_awel.workflows.sql_repair import is_repairable
 
     qg = QueryGatewayClient(QG_BASE)
     repair_attempts = 0
     max_repairs = 2
+    last_error_code = ""
     safe_sql = sql
     ej: dict = {}
     explain_plan_text = None
@@ -302,15 +361,69 @@ async def stream_chat_via_gateway(
             tenant_id=tenant_id,
         )
         if not vj.get("ok"):
-            code = vj.get("code") or "QUERY_POLICY_REJECTED"
+            code = str(vj.get("code") or "QUERY_POLICY_REJECTED")
             msg = vj.get("message") or vj.get("error") or vj.get("detail") or "SQL rejected by gateway"
-            # Limited repair: strip trailing semicolon / comments once
-            if repair_attempts < max_repairs and code in (
-                "SQL_PARSE_FAILED",
-                "WILDCARD_NOT_ALLOWED",
+            yield _sse(
+                "status",
+                {"phase": "sql_rejected", "type": "SQL_REJECTED", "code": code, "message": msg},
+            ).encode()
+            if (
+                repair_attempts < max_repairs
+                and is_repairable(code)
+                and code != last_error_code
             ):
                 repair_attempts += 1
-                safe_sql = safe_sql.strip().rstrip(";").replace("select *", "select 1").replace("SELECT *", "SELECT 1")
+                last_error_code = code
+                yield _sse(
+                    "status",
+                    {
+                        "phase": "repairing_sql",
+                        "type": "STATUS",
+                        "attempt": repair_attempts,
+                        "workflow": "nanobase-sql-repair-v1",
+                    },
+                ).encode()
+                try:
+                    repaired = await _engine_adapter.repair_sql(
+                        question=message,
+                        datasource_id=datasource_id,
+                        previous_sql=safe_sql,
+                        error_code=code,
+                        error_message=str(msg)[:500],
+                        attempt=repair_attempts,
+                        authorized_context=authorized_context,
+                        schema_hint=_schema_hint_for(datasource_id),
+                        allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                        tenant_id=tenant_id,
+                        execution_id=execution_id,
+                    )
+                except Exception as e:
+                    yield _sse(
+                        "error",
+                        {"message": str(e), "code": code, "type": "QUERY_POLICY_REJECTED"},
+                    ).encode()
+                    return
+                new_sql = str(repaired.get("sql") or "").strip()
+                if not new_sql or new_sql == safe_sql:
+                    yield _sse(
+                        "error",
+                        {
+                            "message": msg,
+                            "code": code,
+                            "sql": safe_sql,
+                            "type": "QUERY_POLICY_REJECTED",
+                        },
+                    ).encode()
+                    return
+                safe_sql = new_sql
+                yield _sse(
+                    "status",
+                    {"phase": "sql_repaired", "type": "SQL_REPAIRED", "sql": safe_sql},
+                ).encode()
+                yield _sse(
+                    "sql_generated",
+                    {"type": "SQL_GENERATED", "payload": {"sql": safe_sql, "sql_source": "repair"}},
+                ).encode()
                 continue
             yield _sse(
                 "error",
@@ -375,7 +488,8 @@ async def stream_chat_via_gateway(
     cols = ej.get("columns") or []
 
     yield _sse(
-        "status", {"phase": "result_explain", "workflow": "nanobase-result-explain"}
+        "status",
+        {"phase": "generating_answer", "workflow": "nanobase-result-explain-v1"},
     ).encode()
     try:
         explained = await _engine_adapter.explain_result(
@@ -384,10 +498,13 @@ async def stream_chat_via_gateway(
             columns=cols,
             rows=rows,
             truncated=bool(ej.get("truncated")),
+            datasource_id=datasource_id,
+            tenant_id=tenant_id,
+            execution_id=execution_id,
         )
     except Exception as e:
         explained = {
-            "workflow": "nanobase-result-explain",
+            "workflow": "nanobase-result-explain-v1",
             "answer": f"Sonuç alındı ({len(rows)} satır). Açıklama üretilemedi: {e}",
             "insights": [],
             "warnings": ["explain_failed"],

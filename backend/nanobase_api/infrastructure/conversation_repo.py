@@ -108,6 +108,28 @@ class ConversationRepository:
             )
         return mid
 
+    def list_recent_messages(
+        self,
+        *,
+        tenant_id: str,
+        conversation_id: str,
+        limit: int = 6,
+    ) -> list[dict[str, Any]]:
+        with self._engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    """
+                    SELECT role, content FROM bi_conversation_messages
+                    WHERE tenant_id = :t AND conversation_id = :cid
+                    ORDER BY created_at DESC
+                    LIMIT :lim
+                    """
+                ),
+                {"t": tenant_id, "cid": conversation_id, "lim": limit},
+            ).mappings().all()
+        # chronological
+        return [{"role": r["role"], "content": r["content"]} for r in reversed(list(rows))]
+
     def save_plan(
         self,
         *,

@@ -865,6 +865,94 @@ async def workflow_result_explain(request: Request) -> JSONResponse:
         return JSONResponse({"error": str(e)[:400]}, status_code=500)
 
 
+@app.post("/api/v1/bi/internal/workflows/sql-plan")
+async def internal_sql_plan(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    """Faz 6 internal: nanobase-sql-plan-v1 (no DB execute)."""
+    if request.headers.get("X-Nanobase-Workflow-Version") not in (None, "", "1"):
+        return JSONResponse({"code": "CONTRACT_VERSION_NOT_SUPPORTED"}, status_code=400)
+    body = await request.json()
+    from nanobase_api.chat_gateway import _schema_hint_for
+    from nanobase_api.infrastructure.text2sql_adapter import WorkflowTextToSqlAdapter
+
+    question = str(body.get("question") or "").strip()
+    if not question:
+        return JSONResponse({"code": "VALIDATION_ERROR", "message": "question required"}, status_code=400)
+    ds = str(body.get("datasourceId") or body.get("datasource_id") or "bi_reporting")
+    try:
+        plan = await WorkflowTextToSqlAdapter().generate_sql_plan(
+            question=question,
+            datasource_id=ds,
+            schema_hint=_schema_hint_for(ds),
+            conversation_context=body.get("conversationContext") or body.get("conversation_context"),
+            tenant_id=principal.tenant_id,
+            execution_id=str(body.get("executionId") or ""),
+            allowed_tables=body.get("allowedTables") or body.get("allowed_tables"),
+        )
+        return JSONResponse(plan)
+    except Exception as e:
+        return JSONResponse({"code": "FAILED", "message": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/internal/workflows/sql-repair")
+async def internal_sql_repair(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if request.headers.get("X-Nanobase-Workflow-Version") not in (None, "", "1"):
+        return JSONResponse({"code": "CONTRACT_VERSION_NOT_SUPPORTED"}, status_code=400)
+    body = await request.json()
+    from nanobase_api.infrastructure.text2sql_adapter import WorkflowTextToSqlAdapter
+
+    try:
+        out = await WorkflowTextToSqlAdapter().repair_sql(
+            question=str(body.get("question") or ""),
+            datasource_id=str(body.get("datasourceId") or body.get("datasource_id") or "bi_reporting"),
+            previous_sql=str(body.get("previousSql") or body.get("previous_sql") or ""),
+            error_code=str((body.get("gatewayError") or {}).get("code") or body.get("code") or ""),
+            error_message=str(
+                (body.get("gatewayError") or {}).get("safeMessage")
+                or body.get("message")
+                or "policy"
+            ),
+            attempt=int(body.get("attempt") or 1),
+            authorized_context=str(body.get("authorizedContext") or ""),
+            tenant_id=principal.tenant_id,
+            execution_id=str(body.get("executionId") or ""),
+        )
+        return JSONResponse(out)
+    except Exception as e:
+        return JSONResponse({"code": "FAILED", "message": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/internal/workflows/result-explain")
+async def internal_result_explain(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if request.headers.get("X-Nanobase-Workflow-Version") not in (None, "", "1"):
+        return JSONResponse({"code": "CONTRACT_VERSION_NOT_SUPPORTED"}, status_code=400)
+    body = await request.json()
+    from nanobase_api.infrastructure.text2sql_adapter import WorkflowTextToSqlAdapter
+
+    try:
+        out = await WorkflowTextToSqlAdapter().explain_result(
+            question=str(body.get("question") or ""),
+            executed_sql=str(body.get("executedSql") or body.get("executed_sql") or ""),
+            columns=list(body.get("columns") or []),
+            rows=list(body.get("rows") or []),
+            truncated=bool(body.get("truncated")),
+            datasource_id=str(body.get("datasourceId") or ""),
+            tenant_id=principal.tenant_id,
+            execution_id=str(body.get("executionId") or ""),
+        )
+        return JSONResponse(out)
+    except Exception as e:
+        return JSONResponse({"code": "FAILED", "message": str(e)[:400]}, status_code=500)
+
+
 # Soft catch-all AFTER real routes (empty stubs for remaining FE SaaS paths)
 @app.api_route("/api/v1/bi/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def bi_limited(full_path: str) -> JSONResponse:
