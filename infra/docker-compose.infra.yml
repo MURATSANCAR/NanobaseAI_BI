@@ -1,0 +1,60 @@
+# Nanobase Text-to-SQL — Faz 1 infra
+# Qdrant + metadata Postgres + test Postgres (RO user + seed)
+#
+# Usage:
+#   cd infra && docker compose -f docker-compose.infra.yml up -d
+#   ./scripts/phase1-verify.sh
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: nanobase-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+  meta-postgres:
+    image: postgres:16-alpine
+    container_name: nanobase-meta-pg
+    environment:
+      POSTGRES_DB: nanobase_meta
+      POSTGRES_USER: nanobase
+      POSTGRES_PASSWORD: nanobase_meta_dev
+    ports:
+      - "5433:5432"
+    volumes:
+      - meta_pg_data:/var/lib/postgresql/data
+      - ./postgres/init-meta.sql:/docker-entrypoint-initdb.d/01-init-meta.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nanobase -d nanobase_meta"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  test-postgres:
+    image: postgres:16-alpine
+    container_name: nanobase-test-pg
+    environment:
+      POSTGRES_DB: nanobase_demo
+      POSTGRES_USER: demo_admin
+      POSTGRES_PASSWORD: demo_admin_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - test_pg_data:/var/lib/postgresql/data
+      - ./postgres/init-test.sql:/docker-entrypoint-initdb.d/01-init-test.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo_admin -d nanobase_demo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  qdrant_data:
+  meta_pg_data:
+  test_pg_data:
