@@ -115,7 +115,7 @@ function NavSection({
 export default function Sidebar({ open, onClose }: SidebarProps) {
   const { pathname } = useLocation();
   const { locale, setAppLocale } = useLocale();
-  const { user, logout, portalUsersEnabled } = useAuth();
+  const { user, logout, portalUsersEnabled, canBi } = useAuth();
 
   return (
     <>
@@ -155,9 +155,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
           {BI_NAV_GROUPS.map((group) => {
             const flags = getFeatureFlags();
-            const links = group.links.filter(
-              (l) => l.to !== '/bi/semantic-catalog' || flags.enableSemanticCatalog,
-            );
+            const links = group.links.filter((l) => {
+              if (l.to === '/bi/semantic-catalog' && !flags.enableSemanticCatalog) return false;
+              if (l.to.includes('semantic') && !canBi('semantic.review') && !canBi('semantic.publish')) {
+                return false;
+              }
+              if ((l.to === '/bi/connection' || l.to === '/bi/sources') && !canBi('sources.write') && !canBi('sources.read')) {
+                return false;
+              }
+              if (l.to === '/bi/schema' && !canBi('schema.read')) return false;
+              if (l.to === '/bi/chat' && !canBi('chat.use')) return false;
+              return true;
+            });
             if (links.length === 0) return null;
             return (
               <NavSection

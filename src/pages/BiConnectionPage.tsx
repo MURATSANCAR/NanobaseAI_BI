@@ -9,6 +9,7 @@ import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
 import { api, isRunnerConfigured } from '@/api/client';
 import { createDatasourceService } from '@/api/services';
 import { useApiConfig } from '@/context/ApiContext';
+import { useAuth } from '@/context/AuthContext';
 import { useBiChatDock } from '@/context/BiChatDockContext';
 import type { BiConnectionProfile, BiConnectionUpsert } from '@/api/types';
 import type { SchemaScan } from '@/api/contracts/datasource';
@@ -121,10 +122,13 @@ const emptyForm = (): BiConnectionUpsert & { source_id: string } => ({
 
 export default function BiConnectionPage() {
   const { config } = useApiConfig();
+  const { canBi } = useAuth();
   const qc = useQueryClient();
   const { openChat } = useBiChatDock();
   const [searchParams] = useSearchParams();
   const enabled = isRunnerConfigured(config);
+  const canWrite = canBi('sources.write');
+  const canScan = canBi('schema.scan');
 
   const sourcesQ = useQuery({
     queryKey: ['bi-sources', config],
@@ -609,25 +613,31 @@ export default function BiConnectionPage() {
             )}
 
             <div className="flex flex-col gap-3 border-t border-surface-border pt-4 sm:flex-row sm:flex-wrap">
-              <button
-                type="button"
-                className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
-                disabled={testMut.isPending || !selectedId}
-                onClick={() => testMut.mutate()}
-              >
-                {testMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
-                {t('bi.testConnection')}
-              </button>
-              <button
-                type="button"
-                className="btn-primary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
-                disabled={saveMut.isPending}
-                onClick={() => saveMut.mutate()}
-              >
-                {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
-                {t('bi.saveConnection')}
-              </button>
-              {flags.useNanobaseBackend && (
+              {canWrite ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
+                    disabled={testMut.isPending || !selectedId}
+                    onClick={() => testMut.mutate()}
+                  >
+                    {testMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wifi className="h-4 w-4" />}
+                    {t('bi.testConnection')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
+                    disabled={saveMut.isPending}
+                    onClick={() => saveMut.mutate()}
+                  >
+                    {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                    {t('bi.saveConnection')}
+                  </button>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">{t('api.error.bi_source_admin_required')}</p>
+              )}
+              {canScan && flags.useNanobaseBackend && (
                 <button
                   type="button"
                   className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
@@ -638,7 +648,7 @@ export default function BiConnectionPage() {
                   Şemayı tara
                 </button>
               )}
-              {selectedId && !['bi_reporting', 'erp', 'sigorta'].includes(selectedId) && (
+              {canWrite && selectedId && !['bi_reporting', 'erp', 'sigorta'].includes(selectedId) && (
                 <button
                   type="button"
                   className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 text-rose-700 sm:w-auto"

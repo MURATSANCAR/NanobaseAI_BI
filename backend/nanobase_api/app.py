@@ -261,7 +261,11 @@ from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
 from nanobase_api import workflows as workflows_mod  # noqa: E402
 from nanobase_api.secrets_resolver import secrets_status  # noqa: E402
-from nanobase_api.auth import get_current_principal, RequestPrincipal  # noqa: E402
+from nanobase_api.auth import (  # noqa: E402
+    RequestPrincipal,
+    get_current_principal,
+    require_source_admin,
+)
 from nanobase_api.application.datasources import DatasourceService  # noqa: E402
 from nanobase_api.application.schema_scans import SchemaScanService  # noqa: E402
 from nanobase_api.infrastructure.sources_repo import SourcesRepository  # noqa: E402
@@ -390,6 +394,7 @@ async def sources_upsert_api(
     request: Request,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
+    require_source_admin(principal)
     body = await request.json()
     return _ds_service().upsert_source(principal, source_id, body)
 
@@ -399,10 +404,12 @@ async def sources_delete_api(
     source_id: str,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
+    require_source_admin(principal)
     return _ds_service().delete_source(principal, source_id)
 
 
 async def _test_datasource(principal: RequestPrincipal, sid: str) -> dict:
+    require_source_admin(principal)
     try:
         return _ds_service().test_connection(principal, sid)
     except ApiError as e:
@@ -455,6 +462,7 @@ async def sources_scan_api(
     source_id: str,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
+    require_source_admin(principal)
     return await _scan_service().start_scan(principal, source_id)
 
 
@@ -671,10 +679,26 @@ async def query_feedback(
 ) -> JSONResponse:
     body = await request.json()
     question = str(body.get("question") or "").strip()
-    rating = int(body.get("rating") or 0)
-    if not question or rating not in (-1, 1):
+    try:
+        rating = int(body.get("rating"))
+    except (TypeError, ValueError):
         return JSONResponse(
-            {"ok": False, "code": "VALIDATION_ERROR", "error": "question and rating (-1|1) required"},
+            {"ok": False, "code": "VALIDATION_ERROR", "error": "question and rating (-1|0|1) required"},
+            status_code=400,
+        )
+    comment = str(body["comment"]).strip() if body.get("comment") is not None else ""
+    if not question or rating not in (-1, 0, 1):
+        return JSONResponse(
+            {"ok": False, "code": "VALIDATION_ERROR", "error": "question and rating (-1|0|1) required"},
+            status_code=400,
+        )
+    if rating in (-1, 0) and len(comment) < 5:
+        return JSONResponse(
+            {
+                "ok": False,
+                "code": "VALIDATION_ERROR",
+                "error": "Kısmi veya yanlış geri bildirim için en az 5 karakterlik açıklama gerekli.",
+            },
             status_code=400,
         )
     try:
@@ -687,8 +711,9 @@ async def query_feedback(
             rating=rating,
             sql_text=(str(body["sql"]) if body.get("sql") else None),
             session_id=(str(body["session_id"]) if body.get("session_id") else None),
-            comment=(str(body["comment"]) if body.get("comment") else None),
+            comment=(comment or None),
             promote_verified=bool(body.get("promote_verified")),
+            tenant_id=principal.tenant_id,
         )
         try:
             AuditRepository(_meta_engine()).record(

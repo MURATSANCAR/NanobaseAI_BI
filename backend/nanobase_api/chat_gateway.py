@@ -29,6 +29,59 @@ _HINTS_CACHE: dict[str, str] | None = None
 _engine_adapter = WorkflowTextToSqlAdapter()
 
 
+def _build_provenance(
+    plan: dict[str, Any] | None,
+    *,
+    executed: bool,
+    execution_mode: str | None = None,
+    extra_warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    """Map SqlPlan dict → FE provenance for SQL panel / hero."""
+    p = plan or {}
+    warnings = [str(w) for w in (p.get("warnings") or [])]
+    if extra_warnings:
+        warnings.extend(str(w) for w in extra_warnings)
+    conf = p.get("confidence")
+    try:
+        conf_f = float(conf) if conf is not None else None
+    except (TypeError, ValueError):
+        conf_f = None
+    return {
+        "type": "sql_plan",
+        "selected_tables": [str(t) for t in (p.get("tables") or [])],
+        "columns": [str(c) for c in (p.get("columns") or [])],
+        "assumptions": [str(a) for a in (p.get("assumptions") or [])],
+        "ambiguities": [str(a) for a in (p.get("ambiguities") or [])],
+        "warnings": warnings,
+        "confidence": conf_f,
+        "dialect": str(p.get("dialect") or "") or None,
+        "executed": bool(executed),
+        "execution_mode": execution_mode,
+    }
+
+
+def _with_provenance(
+    result: dict[str, Any],
+    plan: dict[str, Any] | None,
+    *,
+    executed: bool,
+    execution_mode: str | None = None,
+    extra_warnings: list[str] | None = None,
+) -> dict[str, Any]:
+    out = dict(result)
+    prov = _build_provenance(
+        plan, executed=executed, execution_mode=execution_mode, extra_warnings=extra_warnings
+    )
+    out["provenance"] = prov
+    if extra_warnings:
+        existing = list(out.get("warnings") or [])
+        for w in extra_warnings:
+            if w not in existing:
+                existing.append(w)
+        out["warnings"] = existing
+    return out
+
+
 def _schema_hint_for(datasource_id: str) -> str:
     global _HINTS_CACHE
     dialect = _dialect_for_datasource(datasource_id)
@@ -456,19 +509,24 @@ async def stream_chat_via_gateway(
                     "ambiguities": plan.get("ambiguities") or [],
                 },
             ).encode()
-            result = {
-                "session_id": session_id,
-                "reply": clarify,
-                "intent": "clarify",
-                "sql": None,
-                "needs_clarification": True,
-                "query_result": {"columns": [], "rows": []},
-                "widgets": [],
-                "answer_blocks": [{"type": "text", "text": clarify}],
-                "engine": "nanobase_awel",
-                "workflows": {"plan": plan},
-                "execution_id": execution_id,
-            }
+            result = _with_provenance(
+                {
+                    "session_id": session_id,
+                    "reply": clarify,
+                    "intent": "clarify",
+                    "sql": None,
+                    "needs_clarification": True,
+                    "query_result": {"columns": [], "rows": []},
+                    "widgets": [],
+                    "answer_blocks": [{"type": "text", "text": clarify}],
+                    "engine": "nanobase_awel",
+                    "workflows": {"plan": plan},
+                    "execution_id": execution_id,
+                },
+                plan,
+                executed=False,
+                execution_mode=mode.value,
+            )
             yield _sse("completed", {"type": "COMPLETED", "payload": {"clarification": True}}).encode()
             yield _sse("done", result).encode()
             return
@@ -501,21 +559,28 @@ async def stream_chat_via_gateway(
                 "answer_delta",
                 {"type": "ANSWER_DELTA", "payload": {"text": reply}},
             ).encode()
-            result = {
-                "session_id": session_id,
-                "reply": reply,
-                "intent": "query",
-                "sql": sql,
-                "sql_error": None,
-                "query_result": {"columns": [], "rows": []},
-                "widgets": [],
-                "answer_blocks": [{"type": "text", "text": reply}],
-                "engine": "nanobase_oracle_plan_only",
-                "workflows": {"plan": plan, "explain": None},
-                "sql_source": sql_source,
-                "execution_id": execution_id,
-            }
+            result = _with_provenance(
+                {
+                    "session_id": session_id,
+                    "reply": reply,
+                    "intent": "query",
+                    "sql": sql,
+                    "sql_error": None,
+                    "query_result": {"columns": [], "rows": []},
+                    "widgets": [],
+                    "answer_blocks": [{"type": "text", "text": reply}],
+                    "engine": "nanobase_oracle_plan_only",
+                    "workflows": {"plan": plan, "explain": None},
+                    "sql_source": sql_source,
+                    "execution_id": execution_id,
+                    "execution_mode": "ORACLE_PLAN_ONLY",
+                },
+                plan,
+                executed=False,
+                execution_mode="ORACLE_PLAN_ONLY",
+            )
             yield _sse("final", result).encode()
+            yield _sse("done", result).encode()
             _persist_conversation(
                 meta_engine,
                 tenant_id=tenant_id,
@@ -546,21 +611,28 @@ async def stream_chat_via_gateway(
                 "answer_delta",
                 {"type": "ANSWER_DELTA", "payload": {"text": reply}},
             ).encode()
-            result = {
-                "session_id": session_id,
-                "reply": reply,
-                "intent": "query",
-                "sql": sql,
-                "sql_error": None,
-                "query_result": {"columns": [], "rows": []},
-                "widgets": [],
-                "answer_blocks": [{"type": "text", "text": reply}],
-                "engine": "nanobase_sap_plan_only",
-                "workflows": {"plan": plan, "explain": None},
-                "sql_source": sql_source,
-                "execution_id": execution_id,
-            }
+            result = _with_provenance(
+                {
+                    "session_id": session_id,
+                    "reply": reply,
+                    "intent": "query",
+                    "sql": sql,
+                    "sql_error": None,
+                    "query_result": {"columns": [], "rows": []},
+                    "widgets": [],
+                    "answer_blocks": [{"type": "text", "text": reply}],
+                    "engine": "nanobase_sap_plan_only",
+                    "workflows": {"plan": plan, "explain": None},
+                    "sql_source": sql_source,
+                    "execution_id": execution_id,
+                    "execution_mode": "SAP_PLAN_ONLY",
+                },
+                plan,
+                executed=False,
+                execution_mode="SAP_PLAN_ONLY",
+            )
             yield _sse("final", result).encode()
+            yield _sse("done", result).encode()
             _persist_conversation(
                 meta_engine,
                 tenant_id=tenant_id,
@@ -584,25 +656,31 @@ async def stream_chat_via_gateway(
             "answer_delta",
             {"type": "ANSWER_DELTA", "payload": {"text": reply}},
         ).encode()
-        result = {
-            "session_id": session_id,
-            "reply": reply,
-            "intent": "query",
-            "sql": sql,
-            "sql_error": None,
-            "query_result": {"columns": [], "rows": []},
-            "widgets": [],
-            "answer_blocks": [{"type": "text", "text": reply}],
-            "engine": "nanobase_plan_only",
-            "workflows": {"plan": plan, "explain": None},
-            "sql_source": sql_source,
-            "verified_sql_id": (verified_meta or {}).get("id"),
-            "datasource_id": datasource_id,
-            "execution_mode": mode.value,
-            "execution_id": execution_id,
-            "insights": [],
-            "warnings": ["EXECUTION_DISABLED"],
-        }
+        result = _with_provenance(
+            {
+                "session_id": session_id,
+                "reply": reply,
+                "intent": "query",
+                "sql": sql,
+                "sql_error": None,
+                "query_result": {"columns": [], "rows": []},
+                "widgets": [],
+                "answer_blocks": [{"type": "text", "text": reply}],
+                "engine": "nanobase_plan_only",
+                "workflows": {"plan": plan, "explain": None},
+                "sql_source": sql_source,
+                "verified_sql_id": (verified_meta or {}).get("id"),
+                "datasource_id": datasource_id,
+                "execution_mode": mode.value,
+                "execution_id": execution_id,
+                "insights": [],
+                "warnings": ["EXECUTION_DISABLED"],
+            },
+            plan,
+            executed=False,
+            execution_mode=mode.value,
+            extra_warnings=["EXECUTION_DISABLED"],
+        )
         try:
             from nanobase_api.infrastructure.audit_repo import AuditRepository
 
@@ -839,32 +917,38 @@ async def stream_chat_via_gateway(
         {"type": "ANSWER_DELTA", "payload": {"text": reply[:500]}},
     ).encode()
 
-    result = {
-        "session_id": session_id,
-        "reply": reply,
-        "intent": "query",
-        "sql": safe_sql,
-        "sql_error": None,
-        "query_result": {"columns": cols, "rows": rows},
-        "widgets": [],
-        "answer_blocks": [
-            {"type": "text", "text": reply},
-            {"type": "table", "columns": cols, "rows": rows},
-        ],
-        "engine": "nanobase_gateway",
-        "workflows": {
-            "plan": plan,
-            "explain": explained,
+    result = _with_provenance(
+        {
+            "session_id": session_id,
+            "reply": reply,
+            "intent": "query",
+            "sql": safe_sql,
+            "sql_error": None,
+            "query_result": {"columns": cols, "rows": rows},
+            "widgets": [],
+            "answer_blocks": [
+                {"type": "text", "text": reply},
+                {"type": "table", "columns": cols, "rows": rows},
+            ],
+            "engine": "nanobase_gateway",
+            "workflows": {
+                "plan": plan,
+                "explain": explained,
+            },
+            "sql_source": sql_source,
+            "verified_sql_id": (verified_meta or {}).get("id"),
+            "datasource_id": datasource_id,
+            "explain": explain_plan_text,
+            "insights": explained.get("insights") or [],
+            "warnings": explained.get("warnings") or [],
+            "execution_mode": mode.value,
+            "execution_id": execution_id,
         },
-        "sql_source": sql_source,
-        "verified_sql_id": (verified_meta or {}).get("id"),
-        "datasource_id": datasource_id,
-        "explain": explain_plan_text,
-        "insights": explained.get("insights") or [],
-        "warnings": explained.get("warnings") or [],
-        "execution_mode": mode.value,
-        "execution_id": execution_id,
-    }
+        plan,
+        executed=True,
+        execution_mode=mode.value,
+        extra_warnings=[str(w) for w in (explained.get("warnings") or [])],
+    )
     _persist_conversation(
         meta_engine,
         tenant_id=tenant_id,

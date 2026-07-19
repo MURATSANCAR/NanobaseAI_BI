@@ -118,6 +118,7 @@ class ModelQueue:
             user_id=user_id,
             enqueued_at=time.monotonic(),
         )
+        # Never yield while holding _lock (async with + yield deadlocks other waiters).
         async with self._lock:
             if self._tenant_load(waiter.tenant_id) >= self.tenant_limit:
                 raise ModelQueueFullError(
@@ -129,19 +130,24 @@ class ModelQueue:
                 self._active += 1
                 self._tenant_active[waiter.tenant_id] = self._tenant_active.get(waiter.tenant_id, 0) + 1
                 waiter.acquired = True
-                yield ("acquired", _Slot(self, waiter))
-                return
+                immediate = True
+                pos = 0
+                depth = self._active
+            else:
+                if len(self._waiters) >= self.queue_limit:
+                    raise ModelQueueFullError(
+                        "MODEL_QUEUE_FULL",
+                        "Şu anda çok fazla soru bekliyor. Lütfen kısa süre sonra tekrar deneyin.",
+                    )
+                self._waiters.append(waiter)
+                self._tenant_waiting[waiter.tenant_id] = self._tenant_waiting.get(waiter.tenant_id, 0) + 1
+                immediate = False
+                pos = self.position_of(waiter)
+                depth = len(self._waiters) + self._active
 
-            if len(self._waiters) >= self.queue_limit:
-                raise ModelQueueFullError(
-                    "MODEL_QUEUE_FULL",
-                    "Şu anda çok fazla soru bekliyor. Lütfen kısa süre sonra tekrar deneyin.",
-                )
-
-            self._waiters.append(waiter)
-            self._tenant_waiting[waiter.tenant_id] = self._tenant_waiting.get(waiter.tenant_id, 0) + 1
-            pos = self.position_of(waiter)
-            depth = len(self._waiters) + self._active
+        if immediate:
+            yield ("acquired", _Slot(self, waiter))
+            return
 
         yield (
             "waiting",

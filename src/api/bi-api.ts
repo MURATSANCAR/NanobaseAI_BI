@@ -1364,7 +1364,7 @@ export function createBiApi() {
       c: ApiConfig,
       body: {
         question: string;
-        rating: -1 | 1;
+        rating: -1 | 0 | 1;
         sql?: string;
         session_id?: string;
         comment?: string;

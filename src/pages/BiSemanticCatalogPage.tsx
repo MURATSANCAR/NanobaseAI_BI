@@ -5,18 +5,22 @@ import EmptyState from '@/components/EmptyState';
 import { PageShell } from '@/components/PageShell';
 import { api, isRunnerConfigured } from '@/api/client';
 import { useApiConfig } from '@/context/ApiContext';
+import { useAuth } from '@/context/AuthContext';
 import { getFeatureFlags } from '@/config/environment';
 import { Navigate } from 'react-router-dom';
 
 export default function BiSemanticCatalogPage() {
   const flags = getFeatureFlags();
   const { config } = useApiConfig();
+  const { canBi } = useAuth();
   const qc = useQueryClient();
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [reviewRole, setReviewRole] = useState<'BUSINESS_REVIEWER' | 'TECHNICAL_REVIEWER'>(
     'BUSINESS_REVIEWER',
   );
+  const canReview = canBi('semantic.review');
+  const canPublish = canBi('semantic.publish');
 
   if (!flags.enableSemanticCatalog) {
     return <Navigate to="/bi/glossary" replace />;
@@ -225,20 +229,24 @@ export default function BiSemanticCatalogPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="rounded border px-2 py-1 text-xs"
-                    onClick={() => reviewMut.mutate(String(p.id))}
-                  >
-                    Approve ({reviewRole})
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded bg-emerald-700 px-2 py-1 text-xs text-white"
-                    onClick={() => publishMut.mutate(String(p.id))}
-                  >
-                    Publish
-                  </button>
+                  {canReview ? (
+                    <button
+                      type="button"
+                      className="rounded border px-2 py-1 text-xs"
+                      onClick={() => reviewMut.mutate(String(p.id))}
+                    >
+                      Approve ({reviewRole})
+                    </button>
+                  ) : null}
+                  {canPublish ? (
+                    <button
+                      type="button"
+                      className="rounded bg-emerald-700 px-2 py-1 text-xs text-white"
+                      onClick={() => publishMut.mutate(String(p.id))}
+                    >
+                      Publish
+                    </button>
+                  ) : null}
                 </div>
               </li>
             ))}

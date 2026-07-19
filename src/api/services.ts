@@ -20,7 +20,8 @@ export function resetDatasourceService(): void {
 
 export type FeedbackPayload = {
   question: string;
-  rating: -1 | 1;
+  /** 1 = correct, 0 = partial, -1 = wrong */
+  rating: -1 | 0 | 1;
   sql?: string;
   session_id?: string;
   comment?: string;

@@ -31,11 +31,14 @@ export type BiStreamEvent =
 
 export function mapPhaseToChatState(phase: string): ChatExecutionState {
   const p = phase.toLowerCase();
+  if (p.includes('queued')) return 'SUBMITTING';
   if (p.includes('schema_retrieval')) return 'RETRIEVING_CONTEXT';
-  if (p.includes('nl2sql') || p.includes('plan') || p.includes('verified')) return 'GENERATING_SQL';
+  if (p.includes('nl2sql') || p.includes('plan') || p.includes('verified') || p.includes('generating_sql'))
+    return 'GENERATING_SQL';
   if (p.includes('validat')) return 'VALIDATING';
   if (p.includes('execut')) return 'EXECUTING';
-  if (p.includes('explain') || p.includes('final')) return 'GENERATING_ANSWER';
+  if (p.includes('explain') || p.includes('final') || p.includes('generating_answer'))
+    return 'GENERATING_ANSWER';
   if (p.includes('prepar')) return 'SUBMITTING';
   return 'GENERATING_ANSWER';
 }

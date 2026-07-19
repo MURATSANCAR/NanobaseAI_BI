@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   MessageSquareText,
+  Minus,
   RotateCcw,
   Search,
   Send,
@@ -27,6 +28,7 @@ import { submitQueryFeedback } from '@/api/services';
 import { getFeatureFlags } from '@/config/environment';
 import type { ChatExecutionState } from '@/api/contracts/datasource';
 import { useApiConfig } from '@/context/ApiContext';
+import { useAuth } from '@/context/AuthContext';
 import { t } from '@/i18n';
 import { brandText } from '@/utils/brand';
 import { stripSqlFromChatText } from '@/utils/biChatSanitize';
@@ -76,8 +78,19 @@ type ChatMessage = {
   chatState?: ChatExecutionState;
   draftSql?: string;
   draftTables?: string[];
+  draftColumns?: string[];
+  draftAssumptions?: string[];
+  draftWarnings?: string[];
+  draftDialect?: string;
+  draftConfidence?: number;
   executionMode?: string;
-  feedbackRating?: -1 | 1;
+  feedbackRating?: -1 | 0 | 1;
+};
+
+type FeedbackDraft = {
+  msgKey: string;
+  rating: -1 | 0 | 1;
+  comment: string;
 };
 
 function mapHistoryMessages(raw: unknown[]): ChatMessage[] {
@@ -125,15 +138,24 @@ function applyAssistantResult(
     : next.findIndex((m) => m.streaming);
   if (idx >= 0) {
     const prevMsg = next[idx]!;
+    const prov = result.provenance;
+    const plan = result.workflows?.plan;
     next[idx] = {
       role: 'assistant',
       content,
       meta: result,
       jobId,
       draftSql: result.sql || prevMsg.draftSql,
-      draftTables: result.provenance?.selected_tables || prevMsg.draftTables,
+      draftTables: prov?.selected_tables || plan?.tables || prevMsg.draftTables,
+      draftColumns: prov?.columns || plan?.columns || prevMsg.draftColumns,
+      draftAssumptions: prov?.assumptions || plan?.assumptions || prevMsg.draftAssumptions,
+      draftWarnings: prov?.warnings || result.warnings || plan?.warnings || prevMsg.draftWarnings,
+      draftDialect: prov?.dialect || plan?.dialect || prevMsg.draftDialect,
+      draftConfidence:
+        prov?.confidence ?? plan?.confidence ?? prevMsg.draftConfidence,
       chatState: 'COMPLETED',
-      executionMode: prevMsg.executionMode,
+      executionMode:
+        result.execution_mode || prov?.execution_mode || prevMsg.executionMode,
     };
     return next;
   }
@@ -301,6 +323,8 @@ export default function BiChatPanel({
 }: BiChatPanelProps) {
   const { config } = useApiConfig();
   const flags = getFeatureFlags();
+  const { canBi } = useAuth();
+  const showSqlPanel = flags.enableSqlPanel && canBi('sql.panel');
   const templates = useQuery({
     queryKey: ['bi-templates', config],
     queryFn: () => api.bi.templates(config),
@@ -333,6 +357,8 @@ export default function BiChatPanel({
   const [jobProgress, setJobProgress] = useState<
     Record<string, { question: string; tipIndex: number; startedAt: number; phase?: string }>
   >({});
+  const [feedbackDraft, setFeedbackDraft] = useState<FeedbackDraft | null>(null);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prefilledRef = useRef<string | null>(null);
@@ -717,6 +743,10 @@ export default function BiChatPanel({
           if (!id) return;
           if (ev.type === 'status') {
             const chatState = mapPhaseToChatState(ev.phase);
+            const plan =
+              ev.payload?.plan && typeof ev.payload.plan === 'object'
+                ? (ev.payload.plan as Record<string, unknown>)
+                : null;
             setMessages((prev) =>
               prev.map((m) =>
                 m.jobId === id && m.streaming
@@ -731,7 +761,33 @@ export default function BiChatPanel({
                           : m.queueMessage,
                       elapsedSec: typeof ev.elapsed_sec === 'number' ? ev.elapsed_sec : m.elapsedSec,
                       draftSql:
-                        typeof ev.payload?.sql === 'string' ? String(ev.payload.sql) : m.draftSql,
+                        typeof ev.payload?.sql === 'string'
+                          ? String(ev.payload.sql)
+                          : typeof plan?.sql === 'string'
+                            ? String(plan.sql)
+                            : m.draftSql,
+                      ...(plan
+                        ? {
+                            draftTables: Array.isArray(plan.tables)
+                              ? (plan.tables as string[])
+                              : m.draftTables,
+                            draftColumns: Array.isArray(plan.columns)
+                              ? (plan.columns as string[])
+                              : m.draftColumns,
+                            draftAssumptions: Array.isArray(plan.assumptions)
+                              ? (plan.assumptions as string[])
+                              : m.draftAssumptions,
+                            draftWarnings: Array.isArray(plan.warnings)
+                              ? (plan.warnings as string[])
+                              : m.draftWarnings,
+                            draftDialect:
+                              typeof plan.dialect === 'string' ? plan.dialect : m.draftDialect,
+                            draftConfidence:
+                              typeof plan.confidence === 'number'
+                                ? plan.confidence
+                                : m.draftConfidence,
+                          }
+                        : {}),
                     }
                   : m,
               ),
@@ -923,31 +979,51 @@ export default function BiChatPanel({
     drivingSendRef.current = false;
   }, [sessionId]);
 
-  const sendFeedback = useCallback(
-    async (msg: ChatMessage, rating: -1 | 1) => {
-      if (!flags.enableFeedback || msg.feedbackRating) return;
-      const idx = messages.indexOf(msg);
+  const msgFeedbackKey = (m: ChatMessage, index: number) => m.jobId || `idx-${index}`;
+
+  const beginFeedback = useCallback((msg: ChatMessage, index: number, rating: -1 | 0 | 1) => {
+    if (!flags.enableFeedback || msg.feedbackRating != null) return;
+    setFeedbackDraft({ msgKey: msgFeedbackKey(msg, index), rating, comment: '' });
+    setError(null);
+  }, []);
+
+  const submitFeedbackDraft = useCallback(
+    async (msg: ChatMessage, index: number) => {
+      if (!flags.enableFeedback || !feedbackDraft || msg.feedbackRating != null) return;
+      if (feedbackDraft.msgKey !== msgFeedbackKey(msg, index)) return;
+      const { rating, comment } = feedbackDraft;
+      if (rating !== 1 && comment.trim().length < 5) {
+        setError(t('bi.feedback.commentRequired'));
+        return;
+      }
       const question =
         [...messages]
-          .slice(0, idx >= 0 ? idx : messages.length)
+          .slice(0, index >= 0 ? index : messages.length)
           .reverse()
           .find((m) => m.role === 'user')?.content || '';
+      setFeedbackBusy(true);
       try {
         await submitQueryFeedback(config, {
           question,
           rating,
+          comment: comment.trim() || undefined,
           sql: pickExportSql(msg.meta) || msg.draftSql,
           session_id: sessionId,
           datasource_id: activeDbName,
         });
         setMessages((prev) =>
-          prev.map((m) => (m === msg || (msg.jobId && m.jobId === msg.jobId) ? { ...m, feedbackRating: rating } : m)),
+          prev.map((m, i) =>
+            i === index || (msg.jobId && m.jobId === msg.jobId) ? { ...m, feedbackRating: rating } : m,
+          ),
         );
+        setFeedbackDraft(null);
       } catch (err) {
         setError(localizeUserMessage((err as Error).message));
+      } finally {
+        setFeedbackBusy(false);
       }
     },
-    [activeDbName, config, flags.enableFeedback, messages, sessionId],
+    [activeDbName, config, feedbackDraft, flags.enableFeedback, messages, sessionId],
   );
 
   const sendTemplate = useCallback(
@@ -1283,18 +1359,76 @@ export default function BiChatPanel({
                     />
                   </div>
                 )}
-              {flags.enableSqlPanel && (m.draftSql || pickExportSql(m.meta)) && (
+              {showSqlPanel && (m.draftSql || pickExportSql(m.meta)) && (
                   <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs text-slate-700">
                     <summary className="cursor-pointer font-semibold text-slate-800">
                       SQL
+                      {m.draftDialect ? ` · ${m.draftDialect}` : ''}
                       {m.executionMode ? ` · ${m.executionMode}` : ''}
                     </summary>
-                    {(m.draftTables?.length || m.meta?.provenance?.selected_tables?.length) ? (
-                      <p className="mt-2 text-[11px] text-slate-500">
-                        Tablolar:{' '}
-                        {(m.draftTables || m.meta?.provenance?.selected_tables || []).join(', ')}
+                    <div className="mt-2 space-y-1.5 text-[11px] text-slate-600">
+                      {m.draftDialect || m.meta?.provenance?.dialect ? (
+                        <p>
+                          <span className="font-medium text-slate-700">{t('bi.provenance.dialect')}: </span>
+                          {m.draftDialect || m.meta?.provenance?.dialect}
+                        </p>
+                      ) : null}
+                      {m.draftConfidence != null || m.meta?.provenance?.confidence != null ? (
+                        <p>
+                          <span className="font-medium text-slate-700">{t('bi.provenance.confidence')}: </span>
+                          {(m.draftConfidence ?? m.meta?.provenance?.confidence ?? 0).toFixed(2)}
+                        </p>
+                      ) : null}
+                      <p>
+                        <span className="font-medium text-slate-700">
+                          {m.meta?.provenance?.executed ||
+                          (m.executionMode &&
+                            !String(m.executionMode).includes('PLAN_ONLY') &&
+                            m.executionMode !== 'PLAN_ONLY')
+                            ? t('bi.provenance.executed')
+                            : t('bi.provenance.notExecuted')}
+                        </span>
                       </p>
-                    ) : null}
+                      {(m.draftTables?.length || m.meta?.provenance?.selected_tables?.length) ? (
+                        <p>
+                          <span className="font-medium text-slate-700">{t('bi.provenance.tables')}: </span>
+                          {(m.draftTables || m.meta?.provenance?.selected_tables || []).join(', ')}
+                        </p>
+                      ) : null}
+                      {(m.draftColumns?.length || m.meta?.provenance?.columns?.length) ? (
+                        <p>
+                          <span className="font-medium text-slate-700">{t('bi.provenance.columns')}: </span>
+                          {(m.draftColumns || m.meta?.provenance?.columns || []).join(', ')}
+                        </p>
+                      ) : null}
+                      {(m.draftAssumptions?.length || m.meta?.provenance?.assumptions?.length) ? (
+                        <div>
+                          <p className="font-medium text-slate-700">{t('bi.provenance.assumptions')}</p>
+                          <ul className="mt-0.5 list-disc pl-4">
+                            {(m.draftAssumptions || m.meta?.provenance?.assumptions || []).map((a) => (
+                              <li key={a}>{a}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {(m.draftWarnings?.length ||
+                        m.meta?.provenance?.warnings?.length ||
+                        m.meta?.warnings?.length) ? (
+                        <div>
+                          <p className="font-medium text-amber-800">{t('bi.provenance.warnings')}</p>
+                          <ul className="mt-0.5 list-disc pl-4 text-amber-800">
+                            {(
+                              m.draftWarnings ||
+                              m.meta?.provenance?.warnings ||
+                              m.meta?.warnings ||
+                              []
+                            ).map((w) => (
+                              <li key={w}>{w}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
                     <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] text-slate-800">
                       {m.draftSql || pickExportSql(m.meta)}
                     </pre>
@@ -1306,33 +1440,96 @@ export default function BiChatPanel({
                   </details>
                 )}
               {m.role === 'assistant' && !m.streaming && flags.enableFeedback && m.meta && (
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    className={clsx(
-                      'inline-flex h-8 w-8 items-center justify-center rounded-lg border text-slate-600 hover:bg-emerald-50',
-                      m.feedbackRating === 1 && 'border-emerald-400 bg-emerald-50 text-emerald-700',
-                    )}
-                    aria-label="Doğru"
-                    disabled={Boolean(m.feedbackRating)}
-                    onClick={() => void sendFeedback(m, 1)}
-                  >
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    className={clsx(
-                      'inline-flex h-8 w-8 items-center justify-center rounded-lg border text-slate-600 hover:bg-rose-50',
-                      m.feedbackRating === -1 && 'border-rose-400 bg-rose-50 text-rose-700',
-                    )}
-                    aria-label="Yanlış"
-                    disabled={Boolean(m.feedbackRating)}
-                    onClick={() => void sendFeedback(m, -1)}
-                  >
-                    <ThumbsDown className="h-3.5 w-3.5" />
-                  </button>
-                  {m.feedbackRating ? (
-                    <span className="text-[11px] text-slate-500">Geri bildirim kaydedildi</span>
+                <div className="mt-2 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className={clsx(
+                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-emerald-50',
+                        m.feedbackRating === 1 && 'border-emerald-400 bg-emerald-50 text-emerald-700',
+                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
+                          feedbackDraft.rating === 1 &&
+                          'border-emerald-400 bg-emerald-50',
+                      )}
+                      aria-label={t('bi.feedback.correct')}
+                      disabled={m.feedbackRating != null || feedbackBusy}
+                      onClick={() => beginFeedback(m, i, 1)}
+                    >
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      {t('bi.feedback.correct')}
+                    </button>
+                    <button
+                      type="button"
+                      className={clsx(
+                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-amber-50',
+                        m.feedbackRating === 0 && 'border-amber-400 bg-amber-50 text-amber-800',
+                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
+                          feedbackDraft.rating === 0 &&
+                          'border-amber-400 bg-amber-50',
+                      )}
+                      aria-label={t('bi.feedback.partial')}
+                      disabled={m.feedbackRating != null || feedbackBusy}
+                      onClick={() => beginFeedback(m, i, 0)}
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                      {t('bi.feedback.partial')}
+                    </button>
+                    <button
+                      type="button"
+                      className={clsx(
+                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-rose-50',
+                        m.feedbackRating === -1 && 'border-rose-400 bg-rose-50 text-rose-700',
+                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
+                          feedbackDraft.rating === -1 &&
+                          'border-rose-400 bg-rose-50',
+                      )}
+                      aria-label={t('bi.feedback.wrong')}
+                      disabled={m.feedbackRating != null || feedbackBusy}
+                      onClick={() => beginFeedback(m, i, -1)}
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" />
+                      {t('bi.feedback.wrong')}
+                    </button>
+                    {m.feedbackRating != null ? (
+                      <span className="text-[11px] text-slate-500">{t('bi.feedback.saved')}</span>
+                    ) : null}
+                  </div>
+                  {feedbackDraft?.msgKey === msgFeedbackKey(m, i) && m.feedbackRating == null ? (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-2">
+                      <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                        {feedbackDraft.rating === 1
+                          ? t('bi.feedback.commentOptional')
+                          : t('bi.feedback.commentRequired')}
+                      </label>
+                      <textarea
+                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800"
+                        rows={2}
+                        value={feedbackDraft.comment}
+                        onChange={(e) =>
+                          setFeedbackDraft((d) => (d ? { ...d, comment: e.target.value } : d))
+                        }
+                        placeholder={t('bi.feedback.commentPlaceholder')}
+                        disabled={feedbackBusy}
+                      />
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          className="btn-primary text-xs"
+                          disabled={feedbackBusy}
+                          onClick={() => void submitFeedbackDraft(m, i)}
+                        >
+                          {t('bi.feedback.submit')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary text-xs"
+                          disabled={feedbackBusy}
+                          onClick={() => setFeedbackDraft(null)}
+                        >
+                          {t('bi.feedback.cancel')}
+                        </button>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
               )}

@@ -12,9 +12,11 @@ import { useApiConfig } from '@/context/ApiContext';
 import type { PortalLocale } from '@/i18n';
 import { normalizeActiveLocale, setLocale, t } from '@/i18n';
 import { hydrateActiveProjectFromUser } from '@/hooks/useActiveProjectId';
+import { canBi, type BiCapability } from '@/lib/biCapabilities';
 import { normalizeUserModules, type PortalModule } from '@/lib/portalModules';
 
 export type { PortalModule };
+export type { BiCapability };
 
 export type PortalUser = {
   id: string;
@@ -42,6 +44,7 @@ type AuthContextValue = {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasModule: (module: PortalModule) => boolean;
+  canBi: (capability: BiCapability) => boolean;
   isUserAdmin: boolean;
 };
 
@@ -241,6 +244,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [portalUsersEnabled, user],
   );
 
+  const canBiCap = useCallback(
+    (capability: BiCapability) => {
+      if (!portalUsersEnabled) return true;
+      if (!user) return canBi('qa', capability);
+      if (user.is_user_admin) return canBi('admin', capability);
+      return canBi(user.role, capability);
+    },
+    [portalUsersEnabled, user],
+  );
+
   const value = useMemo(
     () => ({
       user,
@@ -251,9 +264,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       refreshUser,
       hasModule,
+      canBi: canBiCap,
       isUserAdmin: Boolean(user?.is_user_admin),
     }),
-    [user, sessionToken, ready, portalUsersEnabled, login, logout, refreshUser, hasModule],
+    [user, sessionToken, ready, portalUsersEnabled, login, logout, refreshUser, hasModule, canBiCap],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

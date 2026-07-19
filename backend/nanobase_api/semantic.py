@@ -140,8 +140,8 @@ def save_feedback(
             },
         )
         # Kural 2: Feedback asla otomatik verified SQL yazmaz.
-        # promote_verified yalnız candidate üretimini tetikler (semantic_catalog).
-        if (promote_verified or rating == 1) and sql_text:
+        # Yalnız rating == 1 (doğru) candidate üretebilir; kısmi/yanlış promote etmez.
+        if rating == 1 and sql_text:
             try:
                 from nanobase_api.semantic_catalog.application.services import (
                     create_candidate_from_feedback,

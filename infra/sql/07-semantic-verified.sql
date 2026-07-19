@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS bi_query_feedback (
     session_id      VARCHAR(128),
     question        TEXT NOT NULL,
     sql_text        TEXT,
-    rating          SMALLINT NOT NULL CHECK (rating IN (-1, 1)),
+    rating          SMALLINT NOT NULL CHECK (rating IN (-1, 0, 1)),
     comment         TEXT,
     promote_verified BOOLEAN NOT NULL DEFAULT false,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()

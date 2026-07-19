@@ -113,9 +113,30 @@ export type BiChatResponse = {
     ambiguities?: string[];
     confidence?: number;
     selected_tables?: string[];
+    columns?: string[];
+    warnings?: string[];
+    dialect?: string;
+    executed?: boolean;
+    execution_mode?: string;
     sql_fingerprint?: string;
     mandatory_filters?: string[];
   };
+  workflows?: {
+    plan?: {
+      dialect?: string;
+      tables?: string[];
+      columns?: string[];
+      assumptions?: string[];
+      warnings?: string[];
+      ambiguities?: string[];
+      confidence?: number;
+      sql?: string;
+      [key: string]: unknown;
+    };
+    explain?: unknown;
+  };
+  execution_mode?: string;
+  warnings?: string[];
   action_preview?: {
     status?: string;
     message?: string;

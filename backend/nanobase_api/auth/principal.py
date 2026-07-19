@@ -28,7 +28,7 @@ def _dev_principal() -> RequestPrincipal:
     return RequestPrincipal(
         user_id=s.dev_user_id,
         tenant_id=s.dev_tenant_id,
-        roles=frozenset({"DATA_ANALYST", "ADMIN"}),
+        roles=frozenset({ROLE_DATA_ANALYST, ROLE_ADMIN, ROLE_DATA_ENGINEER}),
     )
 
 
@@ -45,10 +45,13 @@ def verify_jwt(token: str) -> RequestPrincipal:
     roles = claims.get("roles") or []
     if isinstance(roles, str):
         roles = [roles]
+    portal = claims.get("portal_role") or claims.get("role")
+    if portal:
+        roles = list(roles) + [str(portal)]
     return RequestPrincipal(
         user_id=str(sub),
         tenant_id=str(tenant),
-        roles=frozenset(str(r) for r in roles),
+        roles=normalize_roles(roles),
     )
 
 
@@ -85,6 +88,32 @@ ROLE_TECHNICAL_REVIEWER = "TECHNICAL_REVIEWER"
 ROLE_SEMANTIC_PUBLISHER = "SEMANTIC_PUBLISHER"
 ROLE_ADMIN = "ADMIN"
 ROLE_DATA_ANALYST = "DATA_ANALYST"
+ROLE_DATA_ENGINEER = "DATA_ENGINEER"
+
+# Portal lowercase roles → JWT capability roles (Faz 1–4 RBAC).
+_PORTAL_ROLE_MAP: dict[str, frozenset[str]] = {
+    "admin": frozenset(
+        {ROLE_ADMIN, ROLE_DATA_ENGINEER, ROLE_DATA_ANALYST, ROLE_SEMANTIC_PUBLISHER}
+    ),
+    "manager": frozenset({ROLE_DATA_ENGINEER, ROLE_DATA_ANALYST}),
+    "developer": frozenset({ROLE_DATA_ANALYST}),
+    "qa": frozenset(),
+}
+
+
+def normalize_roles(raw: list[str] | tuple[str, ...] | set[str] | frozenset[str]) -> frozenset[str]:
+    """Expand portal role names and uppercase known JWT roles."""
+    out: set[str] = set()
+    for r in raw:
+        key = str(r).strip()
+        if not key:
+            continue
+        low = key.lower()
+        if low in _PORTAL_ROLE_MAP:
+            out |= set(_PORTAL_ROLE_MAP[low])
+            continue
+        out.add(key.upper())
+    return frozenset(out)
 
 
 def require_roles(principal: RequestPrincipal, *roles: str) -> None:
@@ -95,6 +124,11 @@ def require_roles(principal: RequestPrincipal, *roles: str) -> None:
             f"Gerekli roller: {', '.join(roles)}",
             status_code=403,
         )
+
+
+def require_source_admin(principal: RequestPrincipal) -> None:
+    """Datasource write / test / schema scan — ADMIN or DATA_ENGINEER."""
+    require_roles(principal, ROLE_ADMIN, ROLE_DATA_ENGINEER)
 
 
 def has_role(principal: RequestPrincipal, role: str) -> bool:
