@@ -1,0 +1,72 @@
+# NanobaseAI analytics engine (Apache Superset)
+# Usage (server):
+#   cd /data/nanobaseai/bi/frontend/infra/docker/superset
+#   cp ../../../configs/superset-bi.env.example .env   # then edit secrets
+#   docker compose --env-file .env up -d
+#
+# Internal API: 127.0.0.1:8089  →  BI_SUPERSET_URL
+# Public embed: nginx portal-analytics-8443.conf → BI_SUPERSET_PUBLIC_URL
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: nanobase-superset-db
+    environment:
+      POSTGRES_DB: superset
+      POSTGRES_USER: superset
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD:-superset_change_me}
+    volumes:
+      - ${SUPERSET_DB_DATA:-/data/nanobaseai/bi/infra/superset-pg}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U superset -d superset"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - superset_net
+
+  redis:
+    image: redis:7-alpine
+    container_name: nanobase-superset-redis
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+    networks:
+      - superset_net
+
+  superset:
+    image: apache/superset:4.0.2
+    container_name: nanobase-superset
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8089:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-nanobase_superset_change_me}
+      SUPERSET_CONFIG_PATH: /app/pythonpath/superset_config.py
+      SQLALCHEMY_DATABASE_URI: postgresql+psycopg2://superset:${SUPERSET_DB_PASSWORD:-superset_change_me}@db:5432/superset
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      GUEST_TOKEN_JWT_SECRET: ${BI_SUPERSET_GUEST_SECRET:-changeme_guest_jwt_secret_min_32_chars}
+      GUEST_TOKEN_JWT_AUDIENCE: ${BI_SUPERSET_GUEST_AUDIENCE:-http://0.0.0.0:8080/}
+      SUPERSET_CORS_ORIGINS: ${SUPERSET_CORS_ORIGINS:-https://portal.nanobase.ai,https://bi.nanobase.ai}
+      SUPERSET_DEFAULT_LOCALE: ${SUPERSET_DEFAULT_LOCALE:-tr}
+      ADMIN_USERNAME: ${BI_SUPERSET_USERNAME:-nanobase-bi-svc}
+      ADMIN_PASSWORD: ${BI_SUPERSET_PASSWORD:-changeme}
+      ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL:-bi@nanobase.ai}
+    volumes:
+      - ./superset_config.py:/app/pythonpath/superset_config.py:ro
+      - ./docker-entrypoint.sh:/app/docker-entrypoint-nanobase.sh:ro
+      - ${SUPERSET_HOME:-/data/nanobaseai/bi/infra/superset-home}:/app/superset_home
+    entrypoint: ["/bin/bash", "/app/docker-entrypoint-nanobase.sh"]
+    restart: unless-stopped
+    networks:
+      - superset_net
+
+networks:
+  superset_net:
+    name: nanobase-superset
+    driver: bridge

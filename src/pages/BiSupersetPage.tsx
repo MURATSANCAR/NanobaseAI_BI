@@ -17,6 +17,7 @@ import {
 import clsx from 'clsx';
 import BiCommentsDrawer from '@/components/bi/BiCommentsDrawer';
 import BiDashboardWidgetsPanel from '@/components/bi/BiDashboardWidgetsPanel';
+import BiLineageDrawer from '@/components/bi/BiLineageDrawer';
 import BiMorningBriefing from '@/components/bi/BiMorningBriefing';
 import BiNarrativeStrip from '@/components/bi/BiNarrativeStrip';
 import BiSupersetEmbed from '@/components/bi/BiSupersetEmbed';
@@ -55,6 +56,7 @@ export default function BiSupersetPage() {
   const [sidePanel, setSidePanel] = useState<'comments' | 'widgets' | 'none'>(() =>
     searchParams.get('comments') === '1' ? 'comments' : 'none',
   );
+  const [lineageOpen, setLineageOpen] = useState(() => Boolean(searchParams.get('metric')));
   const [embedNonce, setEmbedNonce] = useState(0);
   const [artifactBanner, setArtifactBanner] = useState<string | null>(null);
   const [anomalyBanner, setAnomalyBanner] = useState<string | null>(
@@ -390,8 +392,11 @@ export default function BiSupersetPage() {
           {metricFromUrl ? (
             <button
               type="button"
-              className="min-h-10 min-w-10 rounded-xl p-2 text-slate-600 transition hover:bg-slate-100"
-              onClick={() => openChat()}
+              className={clsx(
+                'min-h-10 min-w-10 rounded-xl p-2 transition hover:bg-slate-100',
+                lineageOpen ? 'bg-violet-50 text-violet-700' : 'text-slate-600',
+              )}
+              onClick={() => setLineageOpen((v) => !v)}
               title={t('bi.lineage.title')}
               aria-label={t('bi.lineage.title')}
             >
@@ -511,8 +516,8 @@ export default function BiSupersetPage() {
               </div>
             )}
           </div>
-          {sidePanel === 'comments' && (
-            <div className="hidden w-72 shrink-0 border-l border-slate-200 bg-white p-2 sm:block">
+          {sidePanel === 'comments' && !narrow && (
+            <div className="w-72 shrink-0 border-l border-slate-200 bg-white p-2">
               <BiCommentsDrawer
                 config={config}
                 targetType="dashboard"
@@ -520,8 +525,8 @@ export default function BiSupersetPage() {
               />
             </div>
           )}
-          {sidePanel === 'widgets' && embed?.dashboardId ? (
-            <div className="hidden w-80 shrink-0 border-l border-slate-200 bg-white sm:block">
+          {sidePanel === 'widgets' && embed?.dashboardId && !narrow ? (
+            <div className="w-80 shrink-0 border-l border-slate-200 bg-white">
               <BiDashboardWidgetsPanel
                 config={config}
                 dashboardId={embed.dashboardId}
@@ -530,7 +535,65 @@ export default function BiSupersetPage() {
               />
             </div>
           ) : null}
+          {lineageOpen && metricFromUrl && !narrow ? (
+            <div className="w-80 shrink-0 overflow-y-auto border-l border-slate-200 bg-white p-2">
+              <BiLineageDrawer
+                config={config}
+                metricId={metricFromUrl}
+                onClose={() => setLineageOpen(false)}
+              />
+            </div>
+          ) : null}
         </div>
+        {narrow && (sidePanel !== 'none' || (lineageOpen && metricFromUrl)) ? (
+          <div className="absolute inset-0 z-30 flex flex-col bg-black/40" role="dialog" aria-modal>
+            <button
+              type="button"
+              className="min-h-[20%] flex-1 cursor-default"
+              aria-label={t('common.close')}
+              onClick={() => {
+                setSidePanel('none');
+                setLineageOpen(false);
+              }}
+            />
+            <div className="max-h-[80%] overflow-y-auto rounded-t-2xl bg-white p-3 shadow-2xl">
+              <div className="mb-2 flex justify-end">
+                <button
+                  type="button"
+                  className="rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+                  onClick={() => {
+                    setSidePanel('none');
+                    setLineageOpen(false);
+                  }}
+                >
+                  {t('common.close')}
+                </button>
+              </div>
+              {sidePanel === 'comments' ? (
+                <BiCommentsDrawer
+                  config={config}
+                  targetType="dashboard"
+                  targetId={embed ? String(embed.dashboardId) : 'default'}
+                />
+              ) : null}
+              {sidePanel === 'widgets' && embed?.dashboardId ? (
+                <BiDashboardWidgetsPanel
+                  config={config}
+                  dashboardId={embed.dashboardId}
+                  onClose={() => setSidePanel('none')}
+                  onChanged={() => void refreshEmbed()}
+                />
+              ) : null}
+              {lineageOpen && metricFromUrl ? (
+                <BiLineageDrawer
+                  config={config}
+                  metricId={metricFromUrl}
+                  onClose={() => setLineageOpen(false)}
+                />
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

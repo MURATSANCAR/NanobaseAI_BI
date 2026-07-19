@@ -19,7 +19,6 @@ export function RequirePortalSession() {
 
   if (!ready) return <AuthLoading />;
   if (portalUsersEnabled && !user) {
-    if (location.pathname === '/settings') return <Outlet />;
     return <PortalAuthGate />;
   }
 
@@ -34,6 +33,6 @@ export function RequireUserAdmin() {
   const { isUserAdmin, portalUsersEnabled, user, ready } = useAuth();
   if (!ready) return <AuthLoading />;
   if (portalUsersEnabled && !user) return <PortalAuthGate />;
-  if (portalUsersEnabled && !isUserAdmin) return <Navigate to="/settings" replace />;
+  if (portalUsersEnabled && !isUserAdmin) return <Navigate to="/bi" replace />;
   return <Outlet />;
 }

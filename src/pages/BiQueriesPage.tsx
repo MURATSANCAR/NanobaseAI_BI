@@ -64,7 +64,7 @@ export default function BiQueriesPage() {
 
   return (
     <PageShell pageId="biQueries" titleKey="bi.queriesTitle" subtitleKey="bi.queriesSubtitle" maxWidth="max-w-7xl">
-      {flash && <p className="mb-3 text-sm text-status-ok">{flash}</p>}
+      {flash && <p className="mb-3 text-sm text-status-fail">{flash}</p>}
 
       {q.isLoading ? (
         <div className="card flex items-center justify-center gap-2 p-10 text-sm text-slate-500">

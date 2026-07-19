@@ -82,6 +82,35 @@ class Settings:
         self.model_queue_limit = max(1, int(os.environ.get("MODEL_QUEUE_LIMIT", "100")))
         self.tenant_queue_limit = max(1, int(os.environ.get("TENANT_QUEUE_LIMIT", "20")))
         self.model_queue_timeout = float(os.environ.get("MODEL_QUEUE_TIMEOUT", "120"))
+        # Apache Superset analytics canvas
+        self.superset_enabled = os.environ.get("BI_SUPERSET_ENABLED", "0").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        self.superset_url = (os.environ.get("BI_SUPERSET_URL") or "").rstrip("/")
+        self.superset_public_url = (
+            os.environ.get("BI_SUPERSET_PUBLIC_URL") or self.superset_url or ""
+        ).rstrip("/")
+        self.superset_username = os.environ.get("BI_SUPERSET_USERNAME") or ""
+        self.superset_password = os.environ.get("BI_SUPERSET_PASSWORD") or ""
+        self.superset_guest_secret = os.environ.get("BI_SUPERSET_GUEST_SECRET") or ""
+        self.superset_guest_audience = (
+            os.environ.get("BI_SUPERSET_GUEST_AUDIENCE")
+            or os.environ.get("GUEST_TOKEN_JWT_AUDIENCE")
+            or "http://0.0.0.0:8080/"
+        )
+        self.superset_guest_ttl_min = max(
+            1, int(os.environ.get("BI_SUPERSET_GUEST_TTL_MIN", "30"))
+        )
+        domains_raw = os.environ.get(
+            "BI_SUPERSET_EMBED_DOMAINS",
+            "portal.nanobase.ai,bi.nanobase.ai,localhost,127.0.0.1",
+        )
+        self.superset_embed_domains = [
+            d.strip() for d in domains_raw.split(",") if d.strip()
+        ]
 
 
 

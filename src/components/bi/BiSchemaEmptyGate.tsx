@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import EmptyState from '@/components/EmptyState';
+import { t } from '@/i18n';
 
 type Props = {
   children?: ReactNode;
@@ -16,7 +17,7 @@ export default function BiSchemaEmptyGate({ children, ctaTo = '/bi/sources' }: P
         ctaLabelKey="empty.bi.schema.cta"
         ctaTo={ctaTo}
       >
-        <p className="mt-2 text-sm text-slate-500">Henüz tarama yok — önce bağlantıyı test edip şemayı tarayın.</p>
+        <p className="mt-2 text-sm text-slate-500">{t('bi.schemaEmptyScanHint')}</p>
         {children}
       </EmptyState>
     </div>

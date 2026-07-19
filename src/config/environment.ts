@@ -35,7 +35,7 @@ export function getFeatureFlags(): FeatureFlags {
     enableSqlPanel: envFlag('VITE_ENABLE_SQL_PANEL', true),
     enableTestExecution: envFlag('VITE_ENABLE_TEST_EXECUTION', false),
     enableFeedback: envFlag('VITE_ENABLE_FEEDBACK', true),
-    enableExports: envFlag('VITE_ENABLE_EXPORTS', false),
+    enableExports: envFlag('VITE_ENABLE_EXPORTS', true),
     enableSemanticCatalog: envFlag('VITE_ENABLE_SEMANTIC_CATALOG', false),
   };
 }

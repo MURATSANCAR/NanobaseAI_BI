@@ -410,19 +410,27 @@ async def chat_rename(session_id: str, request: Request) -> dict[str, Any]:
 
 @app.get("/api/v1/bi/analytics/status")
 async def analytics_status() -> dict[str, Any]:
+    # Shaped for FE (api.bi.analytics.status). Production uses nanobase_api overlay.
     return {
-        "ok": True,
-        "engine": "dbgpt",
-        "superset_enabled": False,
-        "message": "Superset canvas not wired through DB-GPT; use Chat for analysis.",
+        "enabled": False,
+        "url": None,
+        "health": {"ok": False, "message": "analytics_disabled", "dashboard_count": 0},
     }
 
 
 @app.get("/api/v1/bi/analytics/dashboards")
+async def analytics_dashboards() -> dict[str, Any]:
+    return {"dashboards": []}
+
+
 @app.get("/api/v1/bi/analytics/charts")
+async def analytics_charts() -> dict[str, Any]:
+    return {"charts": []}
+
+
 @app.get("/api/v1/bi/analytics/datasets")
-async def analytics_empty() -> list[Any]:
-    return []
+async def analytics_datasets() -> dict[str, Any]:
+    return {"datasets": []}
 
 
 @app.get("/api/v1/bi/budgets")
@@ -445,11 +453,22 @@ async def budget_summary() -> dict[str, Any]:
 
 @app.get("/api/v1/bi/briefing")
 async def briefing() -> dict[str, Any]:
+    # Shaped for FE morning briefing; production nanobase_api overlays this route.
     return {
-        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "items": [],
-        "message": "Ask Chat for a live briefing against the active Neon source.",
-        "engine": "dbgpt",
+        "dashboard_id": "default",
+        "attention": [],
+        "insights": [],
+        "delta_summary": {"up": 0, "down": 0, "flat": 0},
+        "data_pulse": {
+            "db_ready": False,
+            "table_count": 0,
+            "source_label": None,
+            "top_tables": [],
+        },
+        "actions": [],
+        "anomaly_count": 0,
+        "alert_count": 0,
+        "action_count": 0,
     }
 
 

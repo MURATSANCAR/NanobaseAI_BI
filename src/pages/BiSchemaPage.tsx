@@ -241,7 +241,7 @@ export default function BiSchemaPage() {
 
         {hasSchema && search.trim() && tables.length === 0 ? (
           <div className="bi-schema-panel p-6 text-center text-sm text-slate-500">
-            “{search.trim()}” ile eşleşen tablo veya kolon yok.
+            {t('bi.schemaSearchEmpty', { query: search.trim() })}
           </div>
         ) : null}
 

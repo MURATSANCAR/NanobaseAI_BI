@@ -1,0 +1,186 @@
+"""BI analytics (Apache Superset) routes — FE contract for canvas embed."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
+
+from nanobase_api.config import get_settings
+from nanobase_api.infrastructure.superset_client import SupersetError, get_superset_client
+
+router = APIRouter(tags=["analytics"])
+
+
+def _disabled_status() -> dict[str, Any]:
+    s = get_settings()
+    return {
+        "enabled": False,
+        "url": s.superset_public_url or None,
+        "health": {"ok": False, "message": "analytics_disabled", "dashboard_count": 0},
+    }
+
+
+def _err(exc: SupersetError) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status,
+        content={"error": exc.code, "message": exc.message, "detail": exc.message},
+    )
+
+
+@router.get("/api/v1/bi/analytics/status")
+async def analytics_status() -> dict[str, Any]:
+    client = get_superset_client()
+    if not client.configured():
+        return _disabled_status()
+    health = await client.health()
+    return {
+        "enabled": True,
+        "url": client.public_url,
+        "health": health,
+    }
+
+
+@router.get("/api/v1/bi/analytics/dashboards")
+async def analytics_dashboards() -> dict[str, Any]:
+    client = get_superset_client()
+    if not client.configured():
+        return {"dashboards": []}
+    try:
+        return {"dashboards": await client.list_dashboards()}
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.post("/api/v1/bi/analytics/dashboards")
+async def analytics_create_dashboard(request: Request) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
+        )
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    title = str((body or {}).get("title") or "NanobaseAI Panel")
+    try:
+        return await client.create_dashboard(title)
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.get("/api/v1/bi/analytics/charts")
+async def analytics_charts() -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return {"charts": []}
+    try:
+        return {"charts": await client.list_charts()}
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.get("/api/v1/bi/analytics/datasets")
+async def analytics_datasets() -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return {"datasets": []}
+    try:
+        return {"datasets": await client.list_datasets()}
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.post("/api/v1/bi/analytics/guest-token/{dashboard_id}")
+async def analytics_guest_token(dashboard_id: int) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
+        )
+    try:
+        return await client.mint_guest_token(int(dashboard_id))
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.get("/api/v1/bi/analytics/dashboards/{dashboard_id}/charts")
+async def analytics_dashboard_charts(dashboard_id: int) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return {"charts": []}
+    try:
+        return {"charts": await client.dashboard_charts(int(dashboard_id))}
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.post("/api/v1/bi/analytics/dashboards/{dashboard_id}/pin")
+async def analytics_pin(dashboard_id: int, request: Request) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    sql = str((body or {}).get("sql") or "").strip()
+    if not sql:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "sql_required", "message": "pin requires sql"},
+        )
+    title = str((body or {}).get("title") or "NanobaseAI Chart")
+    viz_type = str((body or {}).get("viz_type") or "table")
+    try:
+        return await client.pin_sql_chart(
+            int(dashboard_id), sql=sql, title=title, viz_type=viz_type
+        )
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.delete("/api/v1/bi/analytics/dashboards/{dashboard_id}/charts/{chart_id}")
+async def analytics_remove_chart(dashboard_id: int, chart_id: int) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
+        )
+    try:
+        return await client.remove_chart(int(dashboard_id), int(chart_id))
+    except SupersetError as e:
+        return _err(e)
+
+
+@router.put("/api/v1/bi/analytics/dashboards/{dashboard_id}/layout")
+async def analytics_reorder_layout(dashboard_id: int, request: Request) -> Any:
+    client = get_superset_client()
+    if not client.configured():
+        return JSONResponse(
+            status_code=503,
+            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
+        )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    chart_ids = (body or {}).get("chart_ids") or []
+    if not isinstance(chart_ids, list):
+        return JSONResponse(
+            status_code=400,
+            content={"error": "invalid_layout", "message": "chart_ids must be a list"},
+        )
+    try:
+        return await client.reorder_layout(int(dashboard_id), [int(x) for x in chart_ids])
+    except SupersetError as e:
+        return _err(e)

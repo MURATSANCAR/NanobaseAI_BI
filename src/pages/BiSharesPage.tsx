@@ -123,13 +123,22 @@ export default function BiSharesPage() {
       ) : null}
       {createError ? <p className="mb-3 text-sm text-status-fail">{createError}</p> : null}
       {copiedToken && <p className="mb-3 text-sm text-status-ok">{t('bi.linkCopied')}</p>}
-      {lastCreated && (
-        <p className="mb-3 text-sm text-status-ok">
-          {t('bi.shareCreatedMeta', {
-            views: String(lastCreated.view_count ?? 0),
-            expires: lastCreated.expires_at?.slice(0, 16) ?? t('bi.shareTtl.unlimited'),
-          })}
-        </p>
+      {lastCreated?.token && (
+        <div className="mb-3 flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            {t('bi.shareCreatedMeta', {
+              views: String(lastCreated.view_count ?? 0),
+              expires: lastCreated.expires_at?.slice(0, 16) ?? t('bi.shareTtl.unlimited'),
+            })}
+          </p>
+          <button
+            type="button"
+            className="btn-primary inline-flex min-h-10 items-center justify-center gap-1.5 px-3 text-xs"
+            onClick={() => void copy(lastCreated.token!)}
+          >
+            <Copy className="h-3.5 w-3.5" /> {t('bi.copyLink')}
+          </button>
+        </div>
       )}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -218,7 +227,7 @@ export default function BiSharesPage() {
               mobileLabel: t('common.actions'),
               cell: (r) => {
                 const token = shareToken(r);
-                const revokeId = token || r.token_hash;
+                const manageId = token || r.token_hash;
                 return (
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -233,8 +242,9 @@ export default function BiSharesPage() {
                     <button
                       type="button"
                       className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
-                      disabled={!token}
-                      onClick={() => token && setViewsToken(token)}
+                      disabled={!manageId}
+                      title={!manageId ? t('bi.shareTokenMissing') : t('bi.shareViews')}
+                      onClick={() => manageId && setViewsToken(manageId)}
                     >
                       <Eye className="h-4 w-4" /> {t('bi.shareViews')}
                     </button>
@@ -242,9 +252,9 @@ export default function BiSharesPage() {
                       type="button"
                       className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg text-status-fail hover:bg-red-50 disabled:opacity-40"
                       title={t('common.delete')}
-                      disabled={!revokeId}
+                      disabled={!manageId}
                       onClick={() => {
-                        if (revokeId && window.confirm(t('bi.deleteShareConfirm'))) delMut.mutate(revokeId);
+                        if (manageId && window.confirm(t('bi.deleteShareConfirm'))) delMut.mutate(manageId);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />

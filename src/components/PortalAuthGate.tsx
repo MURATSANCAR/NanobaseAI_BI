@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { KeyRound } from 'lucide-react';
 import { isRunnerConfigured } from '@/api/client';
 import NanobaseLogo from '@/components/NanobaseLogo';
@@ -62,9 +61,14 @@ export default function PortalAuthGate() {
               <KeyRound className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <p>{t('auth.missingKey')}</p>
-                <Link to="/settings" className="mt-1 inline-block font-medium text-violet-700 underline">
-                  {t('auth.openSettings')}
-                </Link>
+                <button
+                  type="button"
+                  className="mt-1 inline-block font-medium text-violet-700 underline disabled:opacity-50"
+                  onClick={() => void handleResetConnection()}
+                  disabled={pending}
+                >
+                  {t('auth.resetConnection')}
+                </button>
               </div>
             </div>
           </div>

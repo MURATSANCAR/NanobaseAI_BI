@@ -5,6 +5,7 @@ export const HELP_PAGE_IDS = [
   'biQueries',
   'biTemplates',
   'biGlossary',
+  'biSemanticCatalog',
   'biAlerts',
   'biBudget',
   'biConnection',
@@ -12,8 +13,6 @@ export const HELP_PAGE_IDS = [
   'biSettings',
   'biShares',
   'biAudit',
-  'settings',
-  'login',
 ] as const;
 
 export type HelpPageId = (typeof HELP_PAGE_IDS)[number];
@@ -24,6 +23,7 @@ export function helpPageFromPath(pathname: string): HelpPageId {
   if (pathname.startsWith('/bi/chat')) return 'biChat';
   if (pathname.startsWith('/bi/alerts')) return 'biAlerts';
   if (pathname.startsWith('/bi/budget')) return 'biBudget';
+  if (pathname.startsWith('/bi/semantic-catalog')) return 'biSemanticCatalog';
   if (pathname.startsWith('/bi/glossary')) return 'biGlossary';
   if (pathname.startsWith('/bi/queries')) return 'biQueries';
   if (pathname.startsWith('/bi/templates')) return 'biTemplates';
@@ -32,7 +32,6 @@ export function helpPageFromPath(pathname: string): HelpPageId {
   if (pathname.startsWith('/bi/settings')) return 'biSettings';
   if (pathname.startsWith('/bi/sources') || pathname.startsWith('/bi/connection')) return 'biConnection';
   if (pathname.startsWith('/bi')) return 'bi';
-  if (pathname.startsWith('/settings')) return 'settings';
   return 'bi';
 }
 

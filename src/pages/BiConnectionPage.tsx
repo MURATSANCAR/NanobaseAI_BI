@@ -241,7 +241,7 @@ export default function BiConnectionPage() {
   const scanMut = useMutation({
     mutationFn: async () => {
       const sid = selectedId || form.source_id;
-      if (!sid) throw new Error('Tarama için bir kaynak seçin.');
+      if (!sid) throw new Error(t('bi.scanSelectSource'));
       return dsService.startScan(config, sid);
     },
     onSuccess: (scan) => {
@@ -252,9 +252,9 @@ export default function BiConnectionPage() {
   const deleteMut = useMutation({
     mutationFn: async () => {
       const sid = selectedId;
-      if (!sid) throw new Error('Silinecek kaynak yok.');
+      if (!sid) throw new Error(t('bi.deleteNoSource'));
       if (['bi_reporting', 'erp', 'sigorta'].includes(sid)) {
-        throw new Error('Paylaşılan sistem kaynakları silinemez.');
+        throw new Error(t('bi.deleteSystemSourceBlocked'));
       }
       return dsService.deleteDatasource(config, sid);
     },
@@ -645,8 +645,11 @@ export default function BiConnectionPage() {
                   onClick={() => scanMut.mutate()}
                 >
                   {scanMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Şemayı tara
+                  {t('bi.scanSchema')}
                 </button>
+              )}
+              {canScan && !flags.useNanobaseBackend && (
+                <p className="w-full text-xs text-slate-500 sm:w-auto">{t('bi.scanLegacyUnavailable')}</p>
               )}
               {canWrite && selectedId && !['bi_reporting', 'erp', 'sigorta'].includes(selectedId) && (
                 <button
@@ -654,25 +657,27 @@ export default function BiConnectionPage() {
                   className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 text-rose-700 sm:w-auto"
                   disabled={deleteMut.isPending}
                   onClick={() => {
-                    if (window.confirm('Bu datasource silinsin mi?')) deleteMut.mutate();
+                    if (window.confirm(t('bi.deleteDatasourceConfirm'))) deleteMut.mutate();
                   }}
                 >
                   {deleteMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Sil
+                  {t('common.delete')}
                 </button>
               )}
             </div>
 
             {testState === 'TESTING' && (
-              <div className="text-sm text-slate-600">Bağlantı test ediliyor…</div>
+              <div className="text-sm text-slate-600">{t('bi.testingConnection')}</div>
             )}
             {testMut.isSuccess && (
               <div className={clsx('text-sm', testMut.data.ok || testMut.data.success ? 'text-status-ok' : 'text-status-fail')}>
                 {testMut.data.ok || testMut.data.success
-                  ? `Bağlantı başarılı${testMut.data.databaseVersion ? ` — ${testMut.data.databaseVersion}` : ''}${
-                      testMut.data.latencyMs != null ? ` (${testMut.data.latencyMs} ms)` : ''
-                    }`
-                  : 'Veritabanına bağlantı kurulamadı.'}
+                  ? t('bi.connectionTestOk', {
+                      version: testMut.data.databaseVersion ? ` — ${testMut.data.databaseVersion}` : '',
+                      latency:
+                        testMut.data.latencyMs != null ? ` (${testMut.data.latencyMs} ms)` : '',
+                    })
+                  : t('bi.connectionTestFail')}
               </div>
             )}
             {(testMut.isError || saveMut.isError || scanMut.isError || deleteMut.isError) && (
@@ -688,29 +693,29 @@ export default function BiConnectionPage() {
             {scanId && scanQ.data && (
               <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-700">
                 <p className="font-semibold text-slate-900">
-                  Schema scan: {scanQ.data.status}
+                  {t('bi.scanTitle', { status: scanQ.data.status })}
                   {(scanQ.data.status === 'QUEUED' || scanQ.data.status === 'RUNNING') && (
                     <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin" />
                   )}
                 </p>
                 {scanQ.data.status === 'COMPLETED' && (
                   <ul className="mt-2 list-inside list-disc text-xs text-slate-600">
-                    <li>{scanQ.data.tableCount ?? '—'} tablo</li>
-                    <li>{scanQ.data.columnCount ?? '—'} kolon</li>
-                    <li>{scanQ.data.relationshipCount ?? '—'} ilişki</li>
-                    <li>{scanQ.data.indexedDocumentCount ?? '—'} indeks dokümanı</li>
-                    <li>{scanQ.data.skippedDocumentCount ?? '—'} atlanan (fingerprint)</li>
+                    <li>{t('bi.scanTables', { count: String(scanQ.data.tableCount ?? '—') })}</li>
+                    <li>{t('bi.scanColumns', { count: String(scanQ.data.columnCount ?? '—') })}</li>
+                    <li>{t('bi.scanRelationships', { count: String(scanQ.data.relationshipCount ?? '—') })}</li>
+                    <li>{t('bi.scanIndexed', { count: String(scanQ.data.indexedDocumentCount ?? '—') })}</li>
+                    <li>{t('bi.scanSkipped', { count: String(scanQ.data.skippedDocumentCount ?? '—') })}</li>
                   </ul>
                 )}
                 {scanQ.data.status === 'FAILED' && (
                   <p className="mt-2 text-status-fail">
-                    Şema taraması tamamlanamadı.
+                    {t('bi.scanFailed')}
                     {scanQ.data.error ? ` (${formatBackendErrorText(scanQ.data.error)})` : ''}
                   </p>
                 )}
                 {flags.enableSchemaExplorer && scanQ.data.status === 'COMPLETED' && (
                   <Link to="/bi/schema" className="mt-3 inline-block text-sm font-medium text-violet-700 hover:underline">
-                    Schema Explorer →
+                    {t('bi.openSchemaExplorer')}
                   </Link>
                 )}
               </div>

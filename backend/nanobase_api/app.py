@@ -213,7 +213,7 @@ async def _health_overlay():
 bridge_mod._sources_list_payload = _sources_list_payload_overlay
 bridge_mod.health = _health_overlay
 
-# Remove bridge catch-all + chat/semantic stubs + health so overlays bind cleanly
+# Remove bridge catch-all + chat/semantic/analytics stubs + health so overlays bind cleanly
 _REMOVE_PATHS = {
     "/health",
     "/api/v1/bi/health",
@@ -235,6 +235,11 @@ _REMOVE_PATHS = {
     "/api/v1/bi/sources/{source_id}",
     "/api/v1/bi/sources/{source_id}/activate",
     "/api/v1/bi/connection/test",
+    "/api/v1/bi/analytics/status",
+    "/api/v1/bi/analytics/dashboards",
+    "/api/v1/bi/analytics/charts",
+    "/api/v1/bi/analytics/datasets",
+    "/api/v1/bi/briefing",
 }
 _app_routes = list(app.router.routes)
 for _route in _app_routes:
@@ -254,8 +259,10 @@ from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 from nanobase_api.chat_gateway import stream_chat_via_gateway  # noqa: E402
 from nanobase_api import semantic as semantic_mod  # noqa: E402
 from nanobase_api.semantic_catalog.api import router as semantic_catalog_router  # noqa: E402
+from nanobase_api.analytics_api import router as analytics_router  # noqa: E402
 
 app.include_router(semantic_catalog_router)
+app.include_router(analytics_router)
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
@@ -345,11 +352,84 @@ async def health_ready() -> dict:
     return {"status": status, "checks": checks}
 
 
+async def _probe_datasource_live(sid: str) -> dict:
+    """Lightweight SELECT 1 via Query Gateway for FE connection.ok banners."""
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.post(
+                f"{QG_BASE}/api/v1/query/execute",
+                json={"datasource_id": sid, "sql": "SELECT 1 AS ok"},
+            )
+            data = r.json() if r.content else {}
+            ok = r.status_code == 200 and bool(data.get("ok"))
+            msg = None
+            if not ok:
+                msg = (
+                    data.get("error")
+                    or data.get("message")
+                    or data.get("detail")
+                    or f"datasource probe failed ({r.status_code})"
+                )
+                if isinstance(msg, dict):
+                    msg = str(msg.get("message") or msg)[:240]
+                else:
+                    msg = str(msg)[:240]
+            return {
+                "ok": ok,
+                "dialect": "postgresql",
+                "message": msg,
+                "code": None if ok else "CONNECTION_FAILED",
+                "datasource_id": sid,
+            }
+    except Exception as e:
+        return {
+            "ok": False,
+            "dialect": "postgresql",
+            "message": str(e)[:240],
+            "code": "CONNECTION_FAILED",
+            "datasource_id": sid,
+        }
+
+
+def _schema_pulse(sid: str) -> dict:
+    try:
+        schema = fetch_schema(sid)
+    except Exception as e:
+        return {
+            "schema_ready": False,
+            "schema_cached": False,
+            "table_count": 0,
+            "error": str(e)[:200],
+            "source_label": sid,
+        }
+    tables = schema.get("tables") or []
+    table_count = int(schema.get("table_count") or len(tables) or 0)
+    ready = table_count > 0 and not schema.get("error")
+    return {
+        "schema_ready": ready,
+        "schema_cached": ready,
+        "table_count": table_count,
+        "source_label": sid,
+        "top_tables": [
+            (t.get("name") or t.get("table_name") or "")
+            for t in tables[:8]
+            if isinstance(t, dict)
+        ],
+        "error": schema.get("error"),
+    }
+
+
 @app.get("/api/v1/bi/health")
 @app.get("/api/v1/bi/status")
 async def bi_status() -> dict:
     h = await _health_overlay()
     ready = await health_ready()
+    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    sources_payload = _sources_list_payload_overlay()
+    sources = sources_payload.get("sources") or []
+    conn = await _probe_datasource_live(str(active))
+    pulse = _schema_pulse(str(active))
+    settings = get_settings()
     return {
         "ok": True,
         "status": "ready" if ready.get("status") in ("UP", "DEGRADED") and h.get("meta") else "degraded",
@@ -360,9 +440,9 @@ async def bi_status() -> dict:
         "llm": h.get("llm"),
         "query_gateway": ready.get("checks", {}).get("queryGateway") == "UP",
         "redis": ready.get("checks", {}).get("redis") == "UP",
-        "auth_mode": get_settings().auth_mode.value,
-        "execution_mode": get_settings().execution_mode.value,
-        "active_source": bridge_mod.ACTIVE_DB.get("id"),
+        "auth_mode": settings.auth_mode.value,
+        "execution_mode": settings.execution_mode.value,
+        "active_source": active,
         "llm_model": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp"),
         "model_queue": __import__(
             "nanobase_awel.operators.model_queue", fromlist=["get_model_queue"]
@@ -370,6 +450,75 @@ async def bi_status() -> dict:
         .get_model_queue()
         .stats(),
         "checks": ready.get("checks"),
+        "analytics": {
+            "enabled": settings.superset_enabled,
+            "url": settings.superset_public_url or None,
+            "health": {"ok": bool(settings.superset_enabled)},
+        },
+        "engine_mode": "superset" if settings.superset_enabled else None,
+        # FE contract (BiConnectionBanner / BiOpsHealthPanel / briefing)
+        "database_configured": len(sources) > 0,
+        "connection": conn,
+        "schema_ready": pulse["schema_ready"],
+        "schema_cached": pulse["schema_cached"],
+        "table_count": pulse["table_count"],
+        "warnings": [],
+        "capabilities": {
+            "chat": True,
+            "schema": True,
+            "analytics": bool(settings.superset_enabled),
+            "share": False,
+        },
+    }
+
+
+@app.get("/api/v1/bi/ops-health")
+async def bi_ops_health(dashboard_id: str = "default") -> dict:
+    """FE ops strip / settings panel — was falling through to limited catch-all."""
+    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    conn = await _probe_datasource_live(str(active))
+    pulse = _schema_pulse(str(active))
+    db_ready = bool(conn.get("ok"))
+    return {
+        "dashboard_id": dashboard_id,
+        "anomaly_count": 0,
+        "alert_count": 0,
+        "action_count": 0,
+        "db_ready": db_ready,
+        "data_pulse": {
+            "db_ready": db_ready,
+            "table_count": pulse["table_count"],
+            "source_label": pulse["source_label"],
+            "top_tables": pulse.get("top_tables") or [],
+        },
+        "delta_summary": [],
+        "actions": [],
+    }
+
+
+@app.get("/api/v1/bi/briefing")
+async def bi_briefing(dashboard_id: str = "default", locale: str = "tr") -> dict:
+    """Minimal briefing pulse so morning strip does not show 'db not connected'."""
+    _ = locale
+    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    conn = await _probe_datasource_live(str(active))
+    pulse = _schema_pulse(str(active))
+    db_ready = bool(conn.get("ok"))
+    return {
+        "dashboard_id": dashboard_id,
+        "attention": [],
+        "insights": [],
+        "delta_summary": {"up": 0, "down": 0, "flat": 0},
+        "data_pulse": {
+            "db_ready": db_ready,
+            "table_count": pulse["table_count"],
+            "source_label": pulse["source_label"],
+            "top_tables": pulse.get("top_tables") or [],
+        },
+        "actions": [],
+        "anomaly_count": 0,
+        "alert_count": 0,
+        "action_count": 0,
     }
 
 

@@ -2,9 +2,14 @@ import { useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import AiAmbientShow from '@/components/AiAmbientShow';
+import { BiVisualChart } from '@/components/bi/BiCharts';
+import BiPbiTile from '@/components/bi/BiPbiTile';
 import BiSupersetEmbed from '@/components/bi/BiSupersetEmbed';
+import { isCompactVisual, widgetVisualType } from '@/components/bi/biVisualTypes';
 import { loadApiConfig, api, isRunnerConfigured } from '@/api/client';
-import { t } from '@/i18n';
+import type { BiWidget } from '@/api/types';
+import { getLocale, t } from '@/i18n';
+import { biWidgetTitle } from '@/lib/biWidgetTitle';
 import { localizeUserMessage } from '@/utils/backendLabels';
 
 function resolveAssetUrl(base: string, url?: string | null): string | undefined {
@@ -16,7 +21,7 @@ function resolveAssetUrl(base: string, url?: string | null): string | undefined 
 
 type PublicResource = {
   title?: string;
-  widgets?: [];
+  widgets?: BiWidget[];
   id?: number;
   token?: string;
   embed_uuid?: string;
@@ -87,6 +92,8 @@ export default function BiPublicPage() {
     && Boolean(answerMd || (payload as { artifact?: unknown })?.artifact);
   const isBudgetPack =
     String((payload as { resource_type?: string })?.resource_type || shareType) === 'budget_pack';
+  const widgets = (Array.isArray(resource?.widgets) ? resource!.widgets! : []) as BiWidget[];
+  const isWidgetShare = widgets.length > 0;
   const budgetSummary = (payload as { summary?: { totals?: Record<string, number>; budget_watch_count?: number } })
     ?.summary;
   const budgetRows =
@@ -96,7 +103,9 @@ export default function BiPublicPage() {
     (isBudgetPack ? t('bi.budget.publicPackTitle') : '');
   const budgetReportCcy = String((payload as { reporting_currency?: string })?.reporting_currency || '').trim().toUpperCase();
   const budgetScenario = String((payload as { scenario?: string })?.scenario || 'base');
-  const isLive = (Boolean(resource?.widgets) || isSuperset || isChatAnswer || isBudgetPack) && !locked;
+  const needsUnlock = locked && !unlocked;
+  const isLive = (isWidgetShare || isSuperset || isChatAnswer || isBudgetPack) && !locked;
+  const locale = getLocale();
 
   const money = (n: unknown, currency = 'TRY') => {
     const v = typeof n === 'number' ? n : Number(n);
@@ -141,7 +150,7 @@ export default function BiPublicPage() {
           </div>
         </header>
 
-        {locked && !resource && (
+        {needsUnlock && (
           <div className="card mx-auto max-w-md space-y-3 p-6">
             <h2 className="text-sm font-semibold text-slate-900">{t('bi.shareUnlockTitle')}</h2>
             <p className="text-xs text-slate-500">{t('bi.shareUnlockHint')}</p>
@@ -166,12 +175,35 @@ export default function BiPublicPage() {
           </div>
         )}
 
-        {data.isError && !locked && (
+        {data.isError && !needsUnlock && (
           <p className="text-status-fail">
             {localizeUserMessage((data.error as Error).message) || t('bi.publicShareLoadFailed')}
           </p>
         )}
-        {isSuperset && resource?.embed_uuid && resource.analytics_url && resource.id != null && (
+        {isWidgetShare && !locked && (
+          <div className="bi-fluent-canvas grid grid-cols-1 gap-3 rounded-2xl border border-[#E1DFDD]/80 bg-white/70 p-3 sm:grid-cols-2 sm:p-4">
+            {widgets.map((widget, index) => {
+              const visual = widgetVisualType(widget);
+              const compact = isCompactVisual(visual);
+              const wide = visual === 'table' || visual === 'matrix';
+              return (
+                <BiPbiTile
+                  key={widget.id || `${visual}-${index}`}
+                  visualType={visual}
+                  accentIndex={index}
+                  title={biWidgetTitle(widget, locale)}
+                  compact
+                  kpi={compact}
+                  className={wide ? 'sm:col-span-2' : undefined}
+                  bodyClassName={compact ? 'p-2' : 'p-2 pt-1'}
+                >
+                  <BiVisualChart widget={widget} variant="preview" />
+                </BiPbiTile>
+              );
+            })}
+          </div>
+        )}
+        {isSuperset && !locked && resource?.embed_uuid && resource.analytics_url && resource.id != null && (
           <div className="bi-fluent-canvas bi-analytics-viewer min-h-0 flex-1 overflow-hidden rounded-2xl border border-[#E1DFDD] bg-[#F5F5F5] shadow-lg h-[min(72dvh,720px)] sm:h-[70vh] sm:min-h-[420px]">
             <BiSupersetEmbed
               config={config}

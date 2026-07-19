@@ -8,6 +8,8 @@ import { useApiConfig } from '@/context/ApiContext';
 import { useAuth } from '@/context/AuthContext';
 import { getFeatureFlags } from '@/config/environment';
 import { Navigate } from 'react-router-dom';
+import { t } from '@/i18n';
+import { localizeUserMessage } from '@/utils/backendLabels';
 
 export default function BiSemanticCatalogPage() {
   const flags = getFeatureFlags();
@@ -21,30 +23,28 @@ export default function BiSemanticCatalogPage() {
   );
   const canReview = canBi('semantic.review');
   const canPublish = canBi('semantic.publish');
-
-  if (!flags.enableSemanticCatalog) {
-    return <Navigate to="/bi/glossary" replace />;
-  }
+  const catalogEnabled = flags.enableSemanticCatalog;
+  const queriesEnabled = catalogEnabled && isRunnerConfigured(config);
 
   const statusQ = useQuery({
     queryKey: ['bi-catalog-gov-status', config],
     queryFn: () => api.bi.catalogGov.status(config),
-    enabled: isRunnerConfigured(config),
+    enabled: queriesEnabled,
   });
   const metricsQ = useQuery({
     queryKey: ['bi-catalog-gov-metrics', config],
     queryFn: () => api.bi.catalogGov.metrics(config),
-    enabled: isRunnerConfigured(config),
+    enabled: queriesEnabled,
   });
   const promosQ = useQuery({
     queryKey: ['bi-catalog-gov-promos', config],
     queryFn: () => api.bi.catalogGov.promotions(config),
-    enabled: isRunnerConfigured(config),
+    enabled: queriesEnabled,
   });
   const versionsQ = useQuery({
     queryKey: ['bi-catalog-gov-versions', config],
     queryFn: () => api.bi.catalogGov.versions(config),
-    enabled: isRunnerConfigured(config),
+    enabled: queriesEnabled,
   });
 
   const invalidate = () => {
@@ -58,29 +58,29 @@ export default function BiSemanticCatalogPage() {
   const bootstrapMut = useMutation({
     mutationFn: () => api.bi.catalogGov.bootstrapSlice(config, { datasourceId: 'default' }),
     onSuccess: (r) => {
-      setMsg(`Slice seeded: metric=${r.metric_id}`);
+      setMsg(t('bi.catalog.seeded', { metric: String(r.metric_id) }));
       setErr(null);
       invalidate();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
 
   const validateMut = useMutation({
     mutationFn: (metricId: string) => api.bi.catalogGov.validateMetric(config, metricId),
     onSuccess: (r) => {
-      setMsg(`Validate: ${JSON.stringify(r).slice(0, 200)}`);
+      setMsg(t('bi.catalog.validateResult', { detail: JSON.stringify(r).slice(0, 200) }));
       invalidate();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
 
   const submitMut = useMutation({
     mutationFn: (metricId: string) => api.bi.catalogGov.submitReview(config, metricId),
     onSuccess: () => {
-      setMsg('Promotion request opened');
+      setMsg(t('bi.catalog.reviewOpened'));
       invalidate();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
 
   const reviewMut = useMutation({
@@ -91,20 +91,20 @@ export default function BiSemanticCatalogPage() {
         comment: 'UI review',
       }),
     onSuccess: () => {
-      setMsg(`Reviewed as ${reviewRole}`);
+      setMsg(t('bi.catalog.reviewedAs', { role: reviewRole }));
       invalidate();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
 
   const publishMut = useMutation({
     mutationFn: (promotionId: string) =>
       api.bi.catalogGov.publish(config, promotionId, { semanticVersion: '7.0.0' }),
     onSuccess: (r) => {
-      setMsg(`Published: ${JSON.stringify(r).slice(0, 240)}`);
+      setMsg(t('bi.catalog.published', { detail: JSON.stringify(r).slice(0, 240) }));
       invalidate();
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
 
   const compileMut = useMutation({
@@ -117,15 +117,19 @@ export default function BiSemanticCatalogPage() {
       setMsg(r.sql || JSON.stringify(r));
       setErr(null);
     },
-    onError: (e: Error) => setErr(e.message),
+    onError: (e: Error) => setErr(localizeUserMessage(e.message) || e.message),
   });
+
+  if (!catalogEnabled) {
+    return <Navigate to="/bi/glossary" replace />;
+  }
 
   const metrics = metricsQ.data?.metrics || [];
   const promos = promosQ.data?.promotionRequests || [];
   const versions = versionsQ.data?.versions || [];
 
   return (
-    <PageShell pageId="biGlossary" titleKey="nav.biSemanticCatalog" subtitleKey="nav.hint.biSemanticCatalog">
+    <PageShell pageId="biSemanticCatalog" titleKey="nav.biSemanticCatalog" subtitleKey="nav.hint.biSemanticCatalog">
       {(err || statusQ.error) && (
         <ApiErrorBanner error={err ? new Error(err) : (statusQ.error as Error)} />
       )}
@@ -141,39 +145,43 @@ export default function BiSemanticCatalogPage() {
           className="rounded bg-slate-900 px-3 py-2 text-sm text-white"
           onClick={() => bootstrapMut.mutate()}
         >
-          Seed unpaid_invoice_amount slice
+          {t('bi.catalog.seedSlice')}
         </button>
         <button
           type="button"
           className="rounded border border-slate-300 px-3 py-2 text-sm"
           onClick={() => compileMut.mutate()}
         >
-          Compile metric SQL
+          {t('bi.catalog.compileSql')}
         </button>
         <label className="flex items-center gap-2 text-sm text-slate-600">
-          Review role
+          {t('bi.catalog.reviewRole')}
           <select
             className="rounded border border-slate-300 px-2 py-1"
             value={reviewRole}
             onChange={(e) => setReviewRole(e.target.value as typeof reviewRole)}
           >
-            <option value="BUSINESS_REVIEWER">Business</option>
-            <option value="TECHNICAL_REVIEWER">Technical</option>
+            <option value="BUSINESS_REVIEWER">{t('bi.catalog.roleBusiness')}</option>
+            <option value="TECHNICAL_REVIEWER">{t('bi.catalog.roleTechnical')}</option>
           </select>
         </label>
       </div>
 
       <section className="mb-8">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Status</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          {t('bi.catalog.status')}
+        </h2>
         <pre className="rounded border border-slate-200 bg-white p-3 text-xs">
           {JSON.stringify(statusQ.data || {}, null, 2)}
         </pre>
       </section>
 
       <section className="mb-8">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Metrics</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          {t('bi.catalog.metrics')}
+        </h2>
         {metrics.length === 0 ? (
-          <EmptyState titleKey="bi.queriesEmptyTitle" descriptionKey="bi.queriesEmptyHint" />
+          <EmptyState titleKey="bi.catalog.emptyTitle" descriptionKey="bi.catalog.emptyHint" />
         ) : (
           <ul className="space-y-2">
             {metrics.map((m) => (
@@ -193,14 +201,14 @@ export default function BiSemanticCatalogPage() {
                     className="rounded border px-2 py-1 text-xs"
                     onClick={() => validateMut.mutate(String(m.id))}
                   >
-                    Validate
+                    {t('bi.catalog.validate')}
                   </button>
                   <button
                     type="button"
                     className="rounded border px-2 py-1 text-xs"
                     onClick={() => submitMut.mutate(String(m.id))}
                   >
-                    Submit review
+                    {t('bi.catalog.submitReview')}
                   </button>
                 </div>
               </li>
@@ -211,10 +219,10 @@ export default function BiSemanticCatalogPage() {
 
       <section className="mb-8">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Promotion queue
+          {t('bi.catalog.promotionQueue')}
         </h2>
         {promos.length === 0 ? (
-          <EmptyState titleKey="bi.queriesEmptyTitle" descriptionKey="bi.queriesEmptyHint" />
+          <EmptyState titleKey="bi.catalog.emptyPromoTitle" descriptionKey="bi.catalog.emptyPromoHint" />
         ) : (
           <ul className="space-y-2">
             {promos.map((p) => (
@@ -235,7 +243,7 @@ export default function BiSemanticCatalogPage() {
                       className="rounded border px-2 py-1 text-xs"
                       onClick={() => reviewMut.mutate(String(p.id))}
                     >
-                      Approve ({reviewRole})
+                      {t('bi.catalog.approveAs', { role: reviewRole })}
                     </button>
                   ) : null}
                   {canPublish ? (
@@ -244,7 +252,7 @@ export default function BiSemanticCatalogPage() {
                       className="rounded bg-emerald-700 px-2 py-1 text-xs text-white"
                       onClick={() => publishMut.mutate(String(p.id))}
                     >
-                      Publish
+                      {t('bi.catalog.publish')}
                     </button>
                   ) : null}
                 </div>
@@ -256,7 +264,7 @@ export default function BiSemanticCatalogPage() {
 
       <section>
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Semantic versions
+          {t('bi.catalog.versions')}
         </h2>
         <pre className="rounded border border-slate-200 bg-white p-3 text-xs">
           {JSON.stringify({ active: versionsQ.data?.active, versions }, null, 2)}

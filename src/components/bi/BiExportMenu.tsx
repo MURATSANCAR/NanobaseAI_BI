@@ -2,6 +2,7 @@ import { Download, FileSpreadsheet, FileText } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { api } from '@/api/client';
+import { getFeatureFlags } from '@/config/environment';
 import { useApiConfig } from '@/context/ApiContext';
 import { t } from '@/i18n';
 
@@ -18,6 +19,7 @@ export default function BiExportMenu({ sql, onClose, className }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
+  const exportsEnabled = getFeatureFlags().enableExports;
 
   const exportFmt = async (fmt: 'csv' | 'xlsx' | 'pdf') => {
     if (!sql) return;
@@ -47,7 +49,7 @@ export default function BiExportMenu({ sql, onClose, className }: Props) {
     };
   }, [open]);
 
-  if (!sql) return null;
+  if (!sql || !exportsEnabled) return null;
 
   return (
     <div ref={rootRef} className={clsx('relative inline-flex', className)}>

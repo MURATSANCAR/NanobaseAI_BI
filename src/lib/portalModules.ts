@@ -24,5 +24,5 @@ export function firstInAppModulePath(
   for (const module of ['contracts', 'bi', 'test'] as PortalModule[]) {
     if (hasModule(module)) return moduleHome[module];
   }
-  return '/settings';
+  return '/bi';
 }
