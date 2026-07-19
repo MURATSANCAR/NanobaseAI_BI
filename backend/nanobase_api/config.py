@@ -76,6 +76,12 @@ class Settings:
             self.sap_execution_mode = "PLAN_ONLY"
         self.sap_hana_execution_enabled = os.environ.get("SAP_HANA_EXECUTION_ENABLED", "0") == "1"
         self.sap_fi_execution_enabled = os.environ.get("SAP_FI_EXECUTION_ENABLED", "0") == "1"
+        # Local LLM capacity / backpressure (Final Gate §25)
+        self.model_max_concurrency = max(1, int(os.environ.get("MODEL_MAX_CONCURRENCY", "2")))
+        self.model_queue_limit = max(1, int(os.environ.get("MODEL_QUEUE_LIMIT", "100")))
+        self.tenant_queue_limit = max(1, int(os.environ.get("TENANT_QUEUE_LIMIT", "20")))
+        self.model_queue_timeout = float(os.environ.get("MODEL_QUEUE_TIMEOUT", "120"))
+
 
 
 @lru_cache

@@ -6,11 +6,12 @@ Supports NANOBASE_TEXT2SQL_EXECUTION_MODE=QUERY_GATEWAY|PLAN_ONLY.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Awaitable, Optional
 
 import httpx
 from sqlalchemy.engine import Engine
@@ -18,6 +19,8 @@ from sqlalchemy.engine import Engine
 from nanobase_api.config import ExecutionMode, get_settings
 from nanobase_api.infrastructure.text2sql_adapter import WorkflowTextToSqlAdapter
 from nanobase_api.workflows import DEFAULT_SCHEMA_HINT
+from nanobase_awel.contracts.errors import WorkflowError
+from nanobase_awel.operators import model_queue as model_queue_mod
 
 QG_BASE = os.environ.get("QUERY_GATEWAY_BASE", "http://127.0.0.1:8792").rstrip("/")
 SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
@@ -96,6 +99,82 @@ def _dialect_for_datasource(datasource_id: str) -> str:
 
 def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+async def _await_llm_with_queue_sse(
+    coro: Awaitable[Any],
+    *,
+    tenant_id: str,
+    user_id: str | None,
+    request_id: str,
+    out: list[Any],
+) -> AsyncIterator[bytes]:
+    """Run an LLM-backed awaitable while streaming queue wait status to the client."""
+    sink: asyncio.Queue = asyncio.Queue()
+    tokens = (
+        model_queue_mod.progress_sink.set(sink),
+        model_queue_mod.tenant_ctx.set(tenant_id or "default"),
+        model_queue_mod.user_ctx.set(user_id),
+        model_queue_mod.request_ctx.set(request_id),
+    )
+    task = asyncio.create_task(coro)  # inherits contextvars (3.11+)
+    try:
+        while not task.done():
+            try:
+                st = await asyncio.wait_for(sink.get(), timeout=0.5)
+                yield _sse(
+                    "status",
+                    {
+                        "type": "STATUS",
+                        "phase": st.get("phase") or "queued",
+                        "position": st.get("position"),
+                        "queue_depth": st.get("queue_depth"),
+                        "message": st.get("message"),
+                        "elapsed_sec": st.get("elapsed_sec"),
+                    },
+                ).encode()
+            except asyncio.TimeoutError:
+                continue
+        while True:
+            try:
+                st = sink.get_nowait()
+                yield _sse(
+                    "status",
+                    {
+                        "type": "STATUS",
+                        "phase": st.get("phase") or "queued",
+                        "position": st.get("position"),
+                        "queue_depth": st.get("queue_depth"),
+                        "message": st.get("message"),
+                        "elapsed_sec": st.get("elapsed_sec"),
+                    },
+                ).encode()
+            except asyncio.QueueEmpty:
+                break
+        try:
+            out.append(await task)
+        except WorkflowError as e:
+            yield _sse(
+                "error",
+                {
+                    "type": "ERROR",
+                    "code": e.code,
+                    "message": e.message,
+                    "retryable": e.retryable,
+                },
+            ).encode()
+            out.append(None)
+    finally:
+        model_queue_mod.progress_sink.reset(tokens[0])
+        model_queue_mod.tenant_ctx.reset(tokens[1])
+        model_queue_mod.user_ctx.reset(tokens[2])
+        model_queue_mod.request_ctx.reset(tokens[3])
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 def _persist_conversation(
@@ -338,22 +417,33 @@ async def stream_chat_via_gateway(
                 "dialect": plan_dialect,
             },
         ).encode()
+        plan_box: list[Any] = []
         try:
-            plan = await _engine_adapter.generate_sql_plan(
-                question=message,
-                datasource_id=datasource_id,
-                schema_hint=schema_hint,
-                retrieved_schema=retrieved or None,
-                conversation_context=conversation_turns,
+            async for chunk in _await_llm_with_queue_sse(
+                _engine_adapter.generate_sql_plan(
+                    question=message,
+                    datasource_id=datasource_id,
+                    schema_hint=schema_hint,
+                    retrieved_schema=retrieved or None,
+                    conversation_context=conversation_turns,
+                    tenant_id=tenant_id,
+                    execution_id=execution_id,
+                    allowed_tables=list(retrieval_meta.get("tables") or []),
+                    prefetched_retrieval=retrieval_meta,
+                    dialect=plan_dialect,
+                ),
                 tenant_id=tenant_id,
-                execution_id=execution_id,
-                allowed_tables=list(retrieval_meta.get("tables") or []),
-                prefetched_retrieval=retrieval_meta,
-                dialect=plan_dialect,
-            )
+                user_id=user_id,
+                request_id=execution_id,
+                out=plan_box,
+            ):
+                yield chunk
         except Exception as e:
             yield _sse("error", {"type": "ERROR", "message": f"sql-plan failed: {e}"}).encode()
             return
+        if not plan_box or plan_box[0] is None:
+            return
+        plan = plan_box[0]
 
         if str(plan.get("status") or "").upper() == "AMBIGUOUS":
             clarify = plan.get("clarificationQuestion") or "Soruyu biraz daha netleştirebilir misiniz?"
@@ -583,26 +673,37 @@ async def stream_chat_via_gateway(
                         "workflow": "nanobase-sql-repair-v1",
                     },
                 ).encode()
+                repair_box: list[Any] = []
                 try:
-                    repaired = await _engine_adapter.repair_sql(
-                        question=message,
-                        datasource_id=datasource_id,
-                        previous_sql=safe_sql,
-                        error_code=code,
-                        error_message=str(msg)[:500],
-                        attempt=repair_attempts,
-                        authorized_context=authorized_context,
-                        schema_hint=_schema_hint_for(datasource_id),
-                        allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                    async for chunk in _await_llm_with_queue_sse(
+                        _engine_adapter.repair_sql(
+                            question=message,
+                            datasource_id=datasource_id,
+                            previous_sql=safe_sql,
+                            error_code=code,
+                            error_message=str(msg)[:500],
+                            attempt=repair_attempts,
+                            authorized_context=authorized_context,
+                            schema_hint=_schema_hint_for(datasource_id),
+                            allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                            tenant_id=tenant_id,
+                            execution_id=execution_id,
+                        ),
                         tenant_id=tenant_id,
-                        execution_id=execution_id,
-                    )
+                        user_id=user_id,
+                        request_id=f"{execution_id}-repair-{repair_attempts}",
+                        out=repair_box,
+                    ):
+                        yield chunk
                 except Exception as e:
                     yield _sse(
                         "error",
                         {"message": str(e), "code": code, "type": "QUERY_POLICY_REJECTED"},
                     ).encode()
                     return
+                if not repair_box or repair_box[0] is None:
+                    return
+                repaired = repair_box[0]
                 new_sql = str(repaired.get("sql") or "").strip()
                 if not new_sql or new_sql == safe_sql:
                     yield _sse(
@@ -691,17 +792,34 @@ async def stream_chat_via_gateway(
         "status",
         {"phase": "generating_answer", "workflow": "nanobase-result-explain-v1"},
     ).encode()
+    explain_box: list[Any] = []
     try:
-        explained = await _engine_adapter.explain_result(
-            question=message,
-            executed_sql=safe_sql,
-            columns=cols,
-            rows=rows,
-            truncated=bool(ej.get("truncated")),
-            datasource_id=datasource_id,
+        async for chunk in _await_llm_with_queue_sse(
+            _engine_adapter.explain_result(
+                question=message,
+                executed_sql=safe_sql,
+                columns=cols,
+                rows=rows,
+                truncated=bool(ej.get("truncated")),
+                datasource_id=datasource_id,
+                tenant_id=tenant_id,
+                execution_id=execution_id,
+            ),
             tenant_id=tenant_id,
-            execution_id=execution_id,
-        )
+            user_id=user_id,
+            request_id=f"{execution_id}-explain",
+            out=explain_box,
+        ):
+            yield chunk
+        if explain_box and explain_box[0] is not None:
+            explained = explain_box[0]
+        else:
+            explained = {
+                "workflow": "nanobase-result-explain-v1",
+                "answer": f"Sonuç alındı ({len(rows)} satır).",
+                "insights": [],
+                "warnings": ["explain_queued_or_failed"],
+            }
     except Exception as e:
         explained = {
             "workflow": "nanobase-result-explain-v1",
