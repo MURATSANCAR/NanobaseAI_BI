@@ -6,8 +6,12 @@ import re
 import time
 from typing import Any
 
-import psycopg2
-
+from nanobase_api.application.connection_probes import (
+    load_gateway_datasource,
+    map_probe_error,
+    row_to_probe_ds,
+    run_probe,
+)
 from nanobase_api.auth.principal import RequestPrincipal
 from nanobase_api.errors import ApiError
 from nanobase_api.infrastructure.audit_repo import AuditRepository
@@ -74,14 +78,25 @@ class DatasourceService:
                 password=str(password),
             )
 
+        driver = str(body.get("driver") or body.get("databaseType") or "postgresql").lower()
+        connection_url = str(body.get("connection_url") or "").strip()
+        # Persist Oracle TNS/EZConnect descriptor in host when provided (no schema change).
+        if driver == "oracle" and connection_url.startswith("("):
+            host = connection_url
+        # OData: prefer explicit URL in connection_url / supabase_url style fields
+        if driver in ("odata", "cds", "cds_odata", "sap_s4hana_odata"):
+            url = connection_url or str(body.get("base_url") or body.get("supabase_url") or host).strip()
+            if url:
+                host = url.rstrip("/")
+
         row = self.sources.upsert(
             tenant_id=principal.tenant_id,
             datasource_id=datasource_id,
             label=str(body.get("label") or body.get("name") or datasource_id),
-            driver=str(body.get("driver") or body.get("databaseType") or "postgresql").lower(),
-            dialect=str(body.get("dialect") or "postgresql").lower(),
+            driver=driver,
+            dialect=str(body.get("dialect") or driver).lower(),
             host=host or "127.0.0.1",
-            port=int(body.get("port") or 5432),
+            port=int(body.get("port") or (1521 if driver == "oracle" else 5432)),
             database=str(body.get("database") or body.get("database_name") or ""),
             username=str(body.get("username") or ""),
             secret_ref=secret_ref,
@@ -93,7 +108,7 @@ class DatasourceService:
             user_id=principal.user_id,
             action="DATASOURCE_CREATED",
             ok=True,
-            extra={"datasource_id": datasource_id, "host": host},
+            extra={"datasource_id": datasource_id, "host": host[:80] if host else ""},
         )
         return {"ok": True, "id": datasource_id, "source": _public_source(row)}
 
@@ -110,72 +125,110 @@ class DatasourceService:
 
     def test_connection(self, principal: RequestPrincipal, datasource_id: str) -> dict[str, Any]:
         t0 = time.time()
-        row = self.sources.get(tenant_id=principal.tenant_id, datasource_id=datasource_id)
-        if row["driver"] not in ("postgresql", "postgres"):
-            raise ApiError(
-                "DATASOURCE_CONNECTION_FAILED",
-                "Connection test şu an yalnız PostgreSQL için destekleniyor.",
-                status_code=400,
-            )
         try:
-            password = self.secrets.resolve(row["secret_ref"] or "")
+            row = self.sources.get(tenant_id=principal.tenant_id, datasource_id=datasource_id)
+        except ApiError as e:
+            if e.code == "DATASOURCE_NOT_FOUND":
+                return self._test_gateway_registry(principal, datasource_id, t0)
+            raise
+
+        driver = str(row.get("driver") or "postgresql").lower()
+        try:
+            password = self.secrets.resolve(row["secret_ref"] or "") if row.get("secret_ref") else ""
         except Exception as e:
-            self.audit.record(
-                tenant_id=principal.tenant_id,
-                user_id=principal.user_id,
-                action="DATASOURCE_CONNECTION_TESTED",
-                ok=False,
-                error=str(e)[:200],
-                extra={"datasource_id": datasource_id},
-            )
+            self._audit_test(principal, datasource_id, ok=False, error=str(e)[:200], t0=t0, db_type=driver)
             raise ApiError("DATASOURCE_CONNECTION_FAILED", "Secret çözülemedi.", status_code=400) from e
 
+        connection_url = ""
+        host = str(row.get("host") or "")
+        if host.startswith("("):
+            connection_url = host
+
+        ds = row_to_probe_ds(row, password, connection_url=connection_url)
+        return self._run_and_record(principal, datasource_id, ds, t0, persist_mark=True)
+
+    def _test_gateway_registry(
+        self, principal: RequestPrincipal, datasource_id: str, t0: float
+    ) -> dict[str, Any]:
+        ds = load_gateway_datasource(datasource_id)
+        if not ds:
+            raise ApiError("DATASOURCE_NOT_FOUND", "Datasource bulunamadı.", status_code=404)
+        return self._run_and_record(principal, datasource_id, ds, t0, persist_mark=False)
+
+    def _run_and_record(
+        self,
+        principal: RequestPrincipal,
+        datasource_id: str,
+        ds: dict[str, Any],
+        t0: float,
+        *,
+        persist_mark: bool,
+    ) -> dict[str, Any]:
+        driver = str(ds.get("driver") or ds.get("dialect") or "").lower()
         try:
-            conn = psycopg2.connect(
-                host=row["host"],
-                port=int(row["port"]),
-                dbname=row["database"],
-                user=row["username"],
-                password=password,
-                connect_timeout=5,
-                sslmode="require" if row["ssl"] else "prefer",
-            )
-            try:
-                cur = conn.cursor()
-                cur.execute("SELECT 1, version()")
-                ver = cur.fetchone()[1]
-                cur.close()
-            finally:
-                conn.close()
+            meta = run_probe(ds)
             latency = int((time.time() - t0) * 1000)
-            self.sources.mark_test(tenant_id=principal.tenant_id, datasource_id=datasource_id, ok=True)
-            self.audit.record(
-                tenant_id=principal.tenant_id,
-                user_id=principal.user_id,
-                action="DATASOURCE_CONNECTION_TESTED",
+            if persist_mark:
+                self.sources.mark_test(tenant_id=principal.tenant_id, datasource_id=datasource_id, ok=True)
+            self._audit_test(
+                principal,
+                datasource_id,
                 ok=True,
-                duration_ms=latency,
-                extra={"datasource_id": datasource_id},
+                t0=t0,
+                latency=latency,
+                db_type=meta.get("databaseType") or driver,
             )
             return {
                 "success": True,
                 "ok": True,
-                "databaseType": "POSTGRESQL",
-                "databaseVersion": str(ver)[:120],
+                "databaseType": meta.get("databaseType"),
+                "databaseVersion": meta.get("databaseVersion"),
                 "latencyMs": latency,
             }
-        except Exception as e:
-            self.sources.mark_test(tenant_id=principal.tenant_id, datasource_id=datasource_id, ok=False)
-            self.audit.record(
-                tenant_id=principal.tenant_id,
-                user_id=principal.user_id,
-                action="DATASOURCE_CONNECTION_TESTED",
-                ok=False,
-                error=str(e)[:200],
-                extra={"datasource_id": datasource_id},
+        except ApiError as e:
+            if persist_mark:
+                try:
+                    self.sources.mark_test(
+                        tenant_id=principal.tenant_id, datasource_id=datasource_id, ok=False
+                    )
+                except Exception:
+                    pass
+            self._audit_test(
+                principal, datasource_id, ok=False, error=e.message[:200], t0=t0, db_type=driver
             )
-            raise ApiError(
-                "DATASOURCE_CONNECTION_FAILED",
-                "Veritabanı bağlantı testi başarısız.",
-                status_code=400,
-            ) from e
+            raise
+        except Exception as e:
+            err = map_probe_error(e, driver=driver)
+            if persist_mark:
+                try:
+                    self.sources.mark_test(
+                        tenant_id=principal.tenant_id, datasource_id=datasource_id, ok=False
+                    )
+                except Exception:
+                    pass
+            self._audit_test(
+                principal, datasource_id, ok=False, error=str(e)[:200], t0=t0, db_type=driver
+            )
+            raise err from e
+
+    def _audit_test(
+        self,
+        principal: RequestPrincipal,
+        datasource_id: str,
+        *,
+        ok: bool,
+        t0: float,
+        error: str | None = None,
+        latency: int | None = None,
+        db_type: str | None = None,
+    ) -> None:
+        duration = latency if latency is not None else int((time.time() - t0) * 1000)
+        self.audit.record(
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            action="DATASOURCE_CONNECTION_TESTED",
+            ok=ok,
+            duration_ms=duration,
+            error=error,
+            extra={"datasource_id": datasource_id, "databaseType": db_type},
+        )

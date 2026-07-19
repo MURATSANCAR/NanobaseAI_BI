@@ -348,7 +348,27 @@ async def bi_status() -> dict:
         "execution_mode": get_settings().execution_mode.value,
         "active_source": bridge_mod.ACTIVE_DB.get("id"),
         "llm_model": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp"),
+        "model_queue": __import__(
+            "nanobase_awel.operators.model_queue", fromlist=["get_model_queue"]
+        )
+        .get_model_queue()
+        .stats(),
         "checks": ready.get("checks"),
+    }
+
+
+@app.get("/api/v1/bi/model-queue/status")
+async def model_queue_status() -> dict:
+    """Public queue depth for ops / UI (no secrets)."""
+    from nanobase_awel.operators.model_queue import USER_WAIT_MESSAGE_TR, get_model_queue
+
+    q = get_model_queue()
+    st = q.stats()
+    return {
+        "ok": True,
+        **st,
+        "userWaitMessage": USER_WAIT_MESSAGE_TR,
+        "saturated": st["waiting"] > 0 or st["active"] >= st["maxConcurrency"],
     }
 
 

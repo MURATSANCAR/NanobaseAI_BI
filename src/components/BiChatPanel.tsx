@@ -725,6 +725,10 @@ export default function BiChatPanel({
                       streamPhase: ev.phase,
                       chatState,
                       queuePosition: typeof ev.position === 'number' ? ev.position : m.queuePosition,
+                      queueMessage:
+                        typeof ev.message === 'string' && ev.message
+                          ? ev.message
+                          : m.queueMessage,
                       elapsedSec: typeof ev.elapsed_sec === 'number' ? ev.elapsed_sec : m.elapsedSec,
                       draftSql:
                         typeof ev.payload?.sql === 'string' ? String(ev.payload.sql) : m.draftSql,
@@ -1168,6 +1172,7 @@ export default function BiChatPanel({
                         tipIndex={job.tipIndex}
                         phase={m.streamPhase}
                         queuePosition={m.queuePosition}
+                        queueMessage={m.queueMessage}
                       />
                     );
                   }
