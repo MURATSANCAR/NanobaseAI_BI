@@ -117,6 +117,22 @@ class ModelQueue:
         user_id: str | None = None,
         request_id: str | None = None,
     ) -> "_Slot":
+        async for kind, payload in self.acquire_with_progress(
+            tenant_id=tenant_id, user_id=user_id, request_id=request_id
+        ):
+            if kind == "acquired":
+                return payload  # type: ignore[return-value]
+        raise RuntimeError("model queue acquire failed")
+
+    async def acquire_with_progress(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        request_id: str | None = None,
+        lang: str = "tr",
+    ):
+        """Yield ('waiting', status_dict) while queued, then ('acquired', Slot)."""
         waiter = _Waiter(
             id=request_id or str(uuid.uuid4()),
             tenant_id=tenant_id or "default",
@@ -124,33 +140,44 @@ class ModelQueue:
             enqueued_at=time.monotonic(),
         )
         async with self._lock:
-            if len(self._waiters) + (1 if self._active >= self.max_concurrency else 0) >= self.queue_limit:
-                # Allow immediate acquire if a slot is free and no waiters ahead
-                if self._active < self.max_concurrency and not self._waiters:
-                    pass
-                elif self._active >= self.max_concurrency or self._waiters:
-                    if len(self._waiters) >= self.queue_limit:
-                        raise ModelQueueFullError(
-                            "MODEL_QUEUE_FULL",
-                            "Şu anda çok fazla soru bekliyor. Lütfen kısa süre sonra tekrar deneyin.",
-                        )
             if self._tenant_load(waiter.tenant_id) >= self.tenant_limit:
                 raise ModelQueueFullError(
                     "TENANT_QUEUE_FULL",
                     "Şirket hesabınızda şu anda çok fazla eşzamanlı soru var. "
                     "Lütfen sıradaki cevaplar gelsin, sonra tekrar deneyin.",
                 )
-            # Fast path: free slot and empty queue
             if self._active < self.max_concurrency and not self._waiters:
                 self._active += 1
                 self._tenant_active[waiter.tenant_id] = self._tenant_active.get(waiter.tenant_id, 0) + 1
                 waiter.acquired = True
-                return _Slot(self, waiter)
+                yield (
+                    "acquired",
+                    _Slot(self, waiter),
+                )
+                return
+
+            if len(self._waiters) >= self.queue_limit:
+                raise ModelQueueFullError(
+                    "MODEL_QUEUE_FULL",
+                    "Şu anda çok fazla soru bekliyor. Lütfen kısa süre sonra tekrar deneyin.",
+                )
 
             self._waiters.append(waiter)
             self._tenant_waiting[waiter.tenant_id] = self._tenant_waiting.get(waiter.tenant_id, 0) + 1
+            pos = self.position_of(waiter)
+            depth = len(self._waiters) + self._active
 
-        # Wait loop with timeout
+        yield (
+            "waiting",
+            {
+                "phase": "queued",
+                "position": pos,
+                "queue_depth": depth,
+                "message": wait_message(lang=lang),
+                "elapsed_sec": 0,
+            },
+        )
+
         deadline = time.monotonic() + self.queue_timeout_s
         try:
             while True:
@@ -160,10 +187,24 @@ class ModelQueue:
                     raise ModelQueueTimeoutError(
                         "Bekleme süresi doldu. Sistem yoğun; lütfen yeniden sorun."
                     )
-                # Try promote
                 promoted = await self._try_promote(waiter)
                 if promoted:
-                    return _Slot(self, waiter)
+                    yield ("acquired", _Slot(self, waiter))
+                    return
+                async with self._lock:
+                    pos = self.position_of(waiter)
+                    depth = len(self._waiters) + self._active
+                elapsed = int(time.monotonic() - waiter.enqueued_at)
+                yield (
+                    "waiting",
+                    {
+                        "phase": "queued",
+                        "position": pos,
+                        "queue_depth": depth,
+                        "message": wait_message(lang=lang),
+                        "elapsed_sec": elapsed,
+                    },
+                )
                 try:
                     await asyncio.wait_for(waiter.event.wait(), timeout=min(1.0, remaining))
                 except asyncio.TimeoutError:
