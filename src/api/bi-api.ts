@@ -262,6 +262,20 @@ export function createBiApi() {
         default_count?: number;
       }>(c, `/api/v1/bi/suggestions${suffix}`);
     },
+    alertSuggestions: (
+      c: ApiConfig,
+      opts?: { datasourceId?: string; limit?: number },
+    ) => {
+      const qs = new URLSearchParams();
+      if (opts?.datasourceId) qs.set('datasource_id', opts.datasourceId);
+      if (opts?.limit != null) qs.set('limit', String(opts.limit));
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      return request<{
+        datasource_id: string;
+        suggestions: Array<{ text: string; source: string; count: number }>;
+        ask_prompt?: string;
+      }>(c, `/api/v1/bi/alert-suggestions${suffix}`);
+    },
     templates: (c: ApiConfig, opts?: { refresh?: boolean }) =>
       request<{
         templates: BiQueryTemplate[];

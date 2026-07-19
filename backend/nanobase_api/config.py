@@ -111,6 +111,13 @@ class Settings:
         self.superset_embed_domains = [
             d.strip() for d in domains_raw.split(",") if d.strip()
         ]
+        # Public board-pack / team share links — default ON; set BI_PUBLIC_SHARE_ENABLED=false to disable
+        self.public_share_enabled = os.environ.get("BI_PUBLIC_SHARE_ENABLED", "true").lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
 
 
 

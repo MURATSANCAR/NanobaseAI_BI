@@ -21,7 +21,7 @@ def _row_to_budget(r: Any) -> dict[str, Any]:
     health = None
     if actual_f is not None:
         remaining = allocated - committed - actual_f
-        used_pct = (actual_f / allocated * 100.0) if allocated else None
+        used_pct = round(actual_f / allocated * 100.0, 2) if allocated else None
         if remaining < 0:
             health = "over"
         elif used_pct is not None and used_pct >= 80:

@@ -299,7 +299,7 @@ export default function BiPublicPage() {
                         {money(r.remaining, budgetReportCcy || String(r.currency || 'TRY'))}
                       </td>
                       <td className="px-3 py-2 tabular-nums">
-                        {r.used_pct != null ? `${r.used_pct}%` : '—'}
+                        {r.used_pct != null ? `${Number(r.used_pct).toFixed(2)}%` : '—'}
                       </td>
                       <td className="px-3 py-2 text-slate-600">{String(r.health || '—')}</td>
                     </tr>

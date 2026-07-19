@@ -228,7 +228,7 @@ function chartAnimationDuration(variant?: BiChartVariant) {
 }
 
 function chartVivid(variant?: BiChartVariant) {
-  return variant === 'preview';
+  return variant === 'preview' || variant === 'tile';
 }
 
 function paletteColor(variant: BiChartVariant | undefined, index = 0): string {

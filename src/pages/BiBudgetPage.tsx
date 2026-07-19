@@ -92,6 +92,11 @@ function money(n: number | null | undefined, currency = 'TRY'): string {
   }
 }
 
+function formatUsedPct(n: number | null | undefined): string {
+  if (n == null || Number.isNaN(Number(n))) return '—';
+  return `${Number(n).toFixed(2)}%`;
+}
+
 function healthStatus(health?: string | null): string {
   if (health === 'ok') return 'ok';
   if (health === 'watch') return 'warn';
@@ -2073,7 +2078,7 @@ export default function BiBudgetPage() {
                     return (
                       <div className="inline-block w-[5.5rem] text-left">
                         <p className="tabular-nums text-xs font-medium text-slate-700">
-                          {r.used_pct != null ? `${r.used_pct}%` : '—'}
+                          {formatUsedPct(r.used_pct)}
                         </p>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
                           <div

@@ -17,24 +17,31 @@ type Props = {
 
 function SourceWidgetCard({
   widget,
+  index,
   onOpen,
 }: {
   widget: BiWidget;
+  index: number;
   onOpen: (w: BiWidget) => void;
 }) {
   const isKpi = widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
+  const accent = index % 8;
   return (
     <li>
       <button
         type="button"
         onClick={() => onOpen(widget)}
-        className="w-full overflow-hidden rounded-xl border border-[#E1DFDD]/90 bg-white text-left shadow-sm transition hover:ring-2 hover:ring-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+        className="bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid w-full overflow-hidden p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+        data-accent={accent}
         aria-label={t('bi.analytics.openWidgetDetail', { title: widget.title || widget.id })}
       >
-        <div className="border-b border-slate-100 px-2.5 py-1.5">
+        <div className="bi-pbi-tile-glow" aria-hidden />
+        <div className="bi-pbi-tile-shine" aria-hidden />
+        <div className="bi-pbi-tile-accent" data-visual={widget.type || 'card'} aria-hidden />
+        <div className="relative z-[1] border-b border-white/40 px-2.5 py-1.5">
           <p className="truncate text-xs font-semibold text-slate-800">{widget.title}</p>
         </div>
-        <div className="pointer-events-none p-2">
+        <div className="pointer-events-none relative z-[1] p-2">
           {isKpi ? (
             <BiCardWidget widget={widget} kpi variant="preview" />
           ) : (
@@ -185,9 +192,14 @@ export default function BiDashboardWidgetsPanel({
           ) : !sourceWidgets.length ? (
             <p className="px-1 py-3 text-xs text-slate-500">{t('bi.analytics.sourceWidgetsEmpty')}</p>
           ) : (
-            <ul className="space-y-2">
-              {sourceWidgets.map((w) => (
-                <SourceWidgetCard key={w.id} widget={w} onOpen={setSelectedSourceWidget} />
+            <ul className="space-y-2.5">
+              {sourceWidgets.map((w, i) => (
+                <SourceWidgetCard
+                  key={w.id}
+                  widget={w}
+                  index={i}
+                  onOpen={setSelectedSourceWidget}
+                />
               ))}
             </ul>
           )}

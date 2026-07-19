@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from nanobase_api.suggestions import build_suggestions, defaults_for
+from nanobase_api.suggestions import (
+    alert_defaults_for,
+    build_alert_suggestions,
+    build_suggestions,
+    defaults_for,
+)
 
 
 class _FakeRepo:
@@ -48,3 +53,23 @@ def test_build_suggestions_prefers_learned():
     assert out["suggestions"][0]["source"] == "learned"
     assert out["learned_count"] == 2
     assert out["default_count"] == 2
+
+
+def test_alert_defaults_per_datasource():
+    sigorta = alert_defaults_for("sigorta")
+    erp = alert_defaults_for("erp")
+    assert any("hasar" in q.lower() for q in sigorta)
+    assert any("fatura" in q.lower() or "stok" in q.lower() for q in erp)
+    assert "satış" not in " ".join(sigorta).lower() or "poliçe" in " ".join(sigorta).lower()
+
+
+def test_build_alert_suggestions(monkeypatch):
+    monkeypatch.setattr(
+        "nanobase_api.infrastructure.active_source.prefer_datasource_id",
+        lambda x: (x or "sigorta").strip() or "sigorta",
+    )
+    out = build_alert_suggestions(datasource_id="sigorta", limit=3)
+    assert out["datasource_id"] == "sigorta"
+    assert len(out["suggestions"]) == 3
+    assert out["ask_prompt"]
+    assert "hasar" in out["ask_prompt"].lower() or "poliçe" in out["ask_prompt"].lower()

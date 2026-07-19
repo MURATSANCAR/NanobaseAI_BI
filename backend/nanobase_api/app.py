@@ -411,7 +411,7 @@ async def bi_status() -> dict:
             "chat": True,
             "schema": True,
             "analytics": bool(settings.superset_enabled),
-            "share": False,
+            "share": bool(settings.public_share_enabled),
         },
     }
 
@@ -485,6 +485,20 @@ async def chat_suggestions_api(
         datasource_id=sid,
         limit=limit,
     )
+
+
+@app.get("/api/v1/bi/alert-suggestions")
+async def alert_suggestions_api(
+    datasource_id: str | None = None,
+    limit: int = 3,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """Threshold-alert chips for the active (or given) datasource / project."""
+    from nanobase_api.suggestions import build_alert_suggestions
+
+    _ = principal
+    sid = _active_ds(datasource_id)
+    return build_alert_suggestions(datasource_id=sid, limit=limit)
 
 
 @app.get("/api/v1/bi/model-queue/status")

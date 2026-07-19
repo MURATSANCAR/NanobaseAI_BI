@@ -24,7 +24,7 @@ const emptyForm = (): Partial<BiAlertRule> => ({
   recipient: '',
 });
 
-const ALERT_CHIP_KEYS = [
+const FALLBACK_ALERT_CHIP_KEYS = [
   'bi.alertChip.salesBelow',
   'bi.alertChip.stockLow',
   'bi.alertChip.overdueInvoices',
@@ -61,6 +61,25 @@ export default function BiAlertsPage() {
     queryKey: ['bi-alerts', config],
     queryFn: () => api.bi.alerts.list(config),
     enabled: isRunnerConfigured(config),
+  });
+
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled: isRunnerConfigured(config),
+    staleTime: 60_000,
+  });
+  const activeDbName = sourcesQ.data?.active_id || undefined;
+
+  const alertSuggestionsQ = useQuery({
+    queryKey: ['bi-alert-suggestions', config, activeDbName],
+    queryFn: () =>
+      api.bi.alertSuggestions(config, {
+        datasourceId: activeDbName,
+        limit: 3,
+      }),
+    enabled: isRunnerConfigured(config) && Boolean(activeDbName),
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -126,7 +145,14 @@ export default function BiAlertsPage() {
   });
 
   const items = sortByIsoDateDesc(a.data?.alerts ?? [], (r) => r.updated_at ?? r.created_at);
-  const askPrompt = t('bi.alertsAskPrompt');
+  const alertChips =
+    (alertSuggestionsQ.data?.suggestions ?? [])
+      .map((s) => s.text?.trim())
+      .filter((text): text is string => Boolean(text)) || [];
+  const askPrompt =
+    alertSuggestionsQ.data?.ask_prompt?.trim() ||
+    alertChips[0] ||
+    t('bi.alertsAskPrompt');
   const canSaveManual =
     Boolean(form?.title?.trim()) &&
     Boolean(form?.recipient?.trim()) &&
@@ -162,17 +188,29 @@ export default function BiAlertsPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
-        {ALERT_CHIP_KEYS.map((key) => (
-          <button
-            key={key}
-            type="button"
-            className="ai-pill max-w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
-            onClick={() => openChat({ prompt: t(key) })}
-          >
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-            <span className="line-clamp-2">{t(key)}</span>
-          </button>
-        ))}
+        {alertChips.length > 0
+          ? alertChips.map((text) => (
+              <button
+                key={text}
+                type="button"
+                className="ai-pill max-w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
+                onClick={() => openChat({ prompt: text })}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                <span className="line-clamp-2">{text}</span>
+              </button>
+            ))
+          : FALLBACK_ALERT_CHIP_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className="ai-pill max-w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
+                onClick={() => openChat({ prompt: t(key) })}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                <span className="line-clamp-2">{t(key)}</span>
+              </button>
+            ))}
       </div>
 
       {flash && <p className="mb-3 text-sm text-status-ok">{flash}</p>}
