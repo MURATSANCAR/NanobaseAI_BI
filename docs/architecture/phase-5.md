@@ -1,24 +1,31 @@
-# Nanobase BI — Faz 5 Query Gateway
+# Nanobase BI — Faz 5 Query Gateway (harden)
 
 ## Role
 
 All customer/reporting SQL execution goes through **Query Gateway** (`:8792`):
 
-- sqlglot parse → SELECT/WITH only
-- table allowlist
-- LIMIT + `statement_timeout` + result size caps
-- RO DB credentials from secrets (never from the request body)
+- sqlglot AST parse → SELECT/WITH only (CTE-DML, INTO, FOR UPDATE rejected)
+- Policy engine (tables, functions, joins, wildcard)
+- Internal auth: service JWT + HMAC + replay
+- Postgres RO transaction + `app.tenant_id` GUC (RLS) + EXPLAIN cost guard
+- Result limit + sensitive column masking
+- RO credentials from secrets/Vault (never from request body)
 
-Neon/ERP are **not** executable until registered in `/data/nanobaseai/bi/secrets/neon-ro.datasources.json`.
+Legacy routes `/api/v1/query/*` remain for Oracle/SAP/alerts; Postgres chat path prefers `/internal/v1/queries/*` via `QueryGatewayClient`.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/health` | liveness + registered datasources |
-| GET | `/api/v1/query/datasources` | non-secret DS list |
-| POST | `/api/v1/query/validate` | guardrails only |
-| POST | `/api/v1/query/execute` | validate + RO execute |
+| GET | `/health` | legacy liveness + datasources |
+| GET | `/health/live` | liveness |
+| GET | `/health/ready` | policy/redis/secrets readiness |
+| GET | `/metrics` | Prometheus |
+| POST | `/internal/v1/queries/validate` | auth + policy |
+| POST | `/internal/v1/queries/execute` | auth + validate + RO execute |
+| GET | `/internal/v1/queries/{executionId}` | audit status |
+| POST | `/api/v1/query/validate` | legacy |
+| POST | `/api/v1/query/execute` | legacy (Oracle/HANA/OData too) |
 
 ## Deploy
 
@@ -28,3 +35,17 @@ Neon/ERP are **not** executable until registered in `/data/nanobaseai/bi/secrets
 ```
 
 systemd: `nanobase-query-gateway`
+
+Shared secrets (`QG_SERVICE_JWT_SECRET`, `QG_HMAC_SECRET`) written into gateway + nanobase API env.
+
+## Rollback
+
+```env
+NANOBASE_TEXT2SQL_EXECUTION_MODE=PLAN_ONLY
+```
+
+Never: DB-GPT → customer DB.
+
+## Docs
+
+See [`phase-5/acceptance.md`](phase-5/acceptance.md) and sibling notes under `docs/architecture/phase-5/`.

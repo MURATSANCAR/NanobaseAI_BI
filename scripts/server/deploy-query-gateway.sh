@@ -32,15 +32,34 @@ if ! "${VENV}/bin/python" -c "import oracledb" 2>/dev/null; then
 fi
 
 umask 077
+# Preserve existing shared secrets if present
+QG_JWT=$(grep -E '^QG_SERVICE_JWT_SECRET=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+QG_HMAC=$(grep -E '^QG_HMAC_SECRET=' "$ENV_FILE" 2>/dev/null | cut -d= -f2- || true)
+if [[ -z "${QG_JWT}" ]]; then QG_JWT=$(openssl rand -hex 32); fi
+if [[ -z "${QG_HMAC}" ]]; then QG_HMAC="${QG_JWT}"; fi
 cat > "$ENV_FILE" <<EOF
 QUERY_GATEWAY_PORT=8792
 SECRETS_ROOT=/data/nanobaseai/bi/secrets
+REDIS_URL=redis://127.0.0.1:6379/0
 QG_STATEMENT_TIMEOUT_S=15
-QG_MAX_LIMIT=500
-QG_MAX_ROWS=500
+QG_MAX_LIMIT=1000
+QG_MAX_ROWS=1000
+QG_AUTH_REQUIRED=true
+QG_REPLAY_REQUIRED=true
+QG_REJECT_WILDCARD=true
+QG_AUDIT_REQUIRED=true
+QG_SERVICE_JWT_SECRET=${QG_JWT}
+QG_HMAC_SECRET=${QG_HMAC}
 PYTHONPATH=${ROOT}/backend
 EOF
 chmod 600 "$ENV_FILE"
+# Mirror secrets into nanobase API env if present
+API_ENV=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
+if [[ -f "$API_ENV" ]]; then
+  grep -q '^QG_SERVICE_JWT_SECRET=' "$API_ENV" || echo "QG_SERVICE_JWT_SECRET=${QG_JWT}" >>"$API_ENV"
+  grep -q '^QG_HMAC_SECRET=' "$API_ENV" || echo "QG_HMAC_SECRET=${QG_HMAC}" >>"$API_ENV"
+  grep -q '^QG_USE_INTERNAL_API=' "$API_ENV" || echo "QG_USE_INTERNAL_API=true" >>"$API_ENV"
+fi
 
 sudo tee "$UNIT" >/dev/null <<UNIT
 [Unit]

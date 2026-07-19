@@ -1,0 +1,500 @@
+{"category": "DML", "sql": "INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "INSERT INTO REPORTING.INVOICE VALUES (1)"}
+{"category": "DML", "sql": "  INSERT INTO reporting.invoice VALUES (1)  "}
+{"category": "DML", "sql": "INSERT  INTO  reporting.invoice  VALUES  (1)"}
+{"category": "DML", "sql": "/*x*/INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "UPDATE reporting.invoice SET total=0"}
+{"category": "DML", "sql": "UPDATE REPORTING.INVOICE SET TOTAL=0"}
+{"category": "DML", "sql": "  UPDATE reporting.invoice SET total=0  "}
+{"category": "DML", "sql": "UPDATE  reporting.invoice  SET  total=0"}
+{"category": "DML", "sql": "/*x*/UPDATE reporting.invoice SET total=0"}
+{"category": "DML", "sql": "UPDATE reporting.invoice SET total=0"}
+{"category": "DML", "sql": "DELETE FROM reporting.invoice"}
+{"category": "DML", "sql": "DELETE FROM REPORTING.INVOICE"}
+{"category": "DML", "sql": "  DELETE FROM reporting.invoice  "}
+{"category": "DML", "sql": "DELETE  FROM  reporting.invoice"}
+{"category": "DML", "sql": "/*x*/DELETE FROM reporting.invoice"}
+{"category": "DML", "sql": "DELETE FROM reporting.invoice"}
+{"category": "DML", "sql": "MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0"}
+{"category": "DML", "sql": "MERGE INTO REPORTING.INVOICE A USING REPORTING.INVOICE B ON A.ID=B.ID WHEN MATCHED THEN UPDATE SET TOTAL=0"}
+{"category": "DML", "sql": "  MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0  "}
+{"category": "DML", "sql": "MERGE  INTO  reporting.invoice  a  USING  reporting.invoice  b  ON  a.id=b.id  WHEN  MATCHED  THEN  UPDATE  SET  total=0"}
+{"category": "DML", "sql": "/*x*/MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0"}
+{"category": "DML", "sql": "MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0"}
+{"category": "DML", "sql": "WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH X AS (DELETE FROM REPORTING.INVOICE RETURNING *) SELECT * FROM X"}
+{"category": "DML", "sql": "  WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x  "}
+{"category": "DML", "sql": "WITH  x  AS  (DELETE  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  x"}
+{"category": "DML", "sql": "/*x*/WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH x AS (DELETE FROM reporting.invoice RETURNING *) Select * FROM x"}
+{"category": "DML", "sql": "WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH X AS (UPDATE REPORTING.INVOICE SET TOTAL=0 RETURNING *) SELECT * FROM X"}
+{"category": "DML", "sql": "  WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x  "}
+{"category": "DML", "sql": "WITH  x  AS  (UPDATE  reporting.invoice  SET  total=0  RETURNING  *)  SELECT  *  FROM  x"}
+{"category": "DML", "sql": "/*x*/WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) Select * FROM x"}
+{"category": "DML", "sql": "WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH X AS (INSERT INTO REPORTING.INVOICE SELECT * FROM REPORTING.INVOICE RETURNING *) SELECT * FROM X"}
+{"category": "DML", "sql": "  WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x  "}
+{"category": "DML", "sql": "WITH  x  AS  (INSERT  INTO  reporting.invoice  SELECT  *  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  x"}
+{"category": "DML", "sql": "/*x*/WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x"}
+{"category": "DML", "sql": "WITH x AS (INSERT INTO reporting.invoice Select * FROM reporting.invoice RETURNING *) Select * FROM x"}
+{"category": "DML", "sql": "INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "INSERT INTO REPORTING.INVOICE VALUES (1)"}
+{"category": "DML", "sql": "  INSERT INTO reporting.invoice VALUES (1)  "}
+{"category": "DML", "sql": "INSERT  INTO  reporting.invoice  VALUES  (1)"}
+{"category": "DML", "sql": "/*x*/INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "INSERT INTO reporting.invoice VALUES (1)"}
+{"category": "DML", "sql": "UPDATE reporting.invoice SET total=0"}
+{"category": "DML", "sql": "UPDATE REPORTING.INVOICE SET TOTAL=0"}
+{"category": "DDL", "sql": "DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "DROP TABLE REPORTING.INVOICE"}
+{"category": "DDL", "sql": "  DROP TABLE reporting.invoice  "}
+{"category": "DDL", "sql": "DROP  TABLE  reporting.invoice"}
+{"category": "DDL", "sql": "/*x*/DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "CREATE TABLE reporting.evil (id int)"}
+{"category": "DDL", "sql": "CREATE TABLE REPORTING.EVIL (ID INT)"}
+{"category": "DDL", "sql": "  CREATE TABLE reporting.evil (id int)  "}
+{"category": "DDL", "sql": "CREATE  TABLE  reporting.evil  (id  int)"}
+{"category": "DDL", "sql": "/*x*/CREATE TABLE reporting.evil (id int)"}
+{"category": "DDL", "sql": "CREATE TABLE reporting.evil (id int)"}
+{"category": "DDL", "sql": "ALTER TABLE reporting.invoice ADD COLUMN x int"}
+{"category": "DDL", "sql": "ALTER TABLE REPORTING.INVOICE ADD COLUMN X INT"}
+{"category": "DDL", "sql": "  ALTER TABLE reporting.invoice ADD COLUMN x int  "}
+{"category": "DDL", "sql": "ALTER  TABLE  reporting.invoice  ADD  COLUMN  x  int"}
+{"category": "DDL", "sql": "/*x*/ALTER TABLE reporting.invoice ADD COLUMN x int"}
+{"category": "DDL", "sql": "ALTER TABLE reporting.invoice ADD COLUMN x int"}
+{"category": "DDL", "sql": "TRUNCATE reporting.invoice"}
+{"category": "DDL", "sql": "TRUNCATE REPORTING.INVOICE"}
+{"category": "DDL", "sql": "  TRUNCATE reporting.invoice  "}
+{"category": "DDL", "sql": "TRUNCATE  reporting.invoice"}
+{"category": "DDL", "sql": "/*x*/TRUNCATE reporting.invoice"}
+{"category": "DDL", "sql": "TRUNCATE reporting.invoice"}
+{"category": "DDL", "sql": "CREATE INDEX idx ON reporting.invoice(id)"}
+{"category": "DDL", "sql": "CREATE INDEX IDX ON REPORTING.INVOICE(ID)"}
+{"category": "DDL", "sql": "  CREATE INDEX idx ON reporting.invoice(id)  "}
+{"category": "DDL", "sql": "CREATE  INDEX  idx  ON  reporting.invoice(id)"}
+{"category": "DDL", "sql": "/*x*/CREATE INDEX idx ON reporting.invoice(id)"}
+{"category": "DDL", "sql": "CREATE INDEX idx ON reporting.invoice(id)"}
+{"category": "DDL", "sql": "GRANT SELECT ON reporting.invoice TO public"}
+{"category": "DDL", "sql": "GRANT SELECT ON REPORTING.INVOICE TO PUBLIC"}
+{"category": "DDL", "sql": "  GRANT SELECT ON reporting.invoice TO public  "}
+{"category": "DDL", "sql": "GRANT  SELECT  ON  reporting.invoice  TO  public"}
+{"category": "DDL", "sql": "/*x*/GRANT SELECT ON reporting.invoice TO public"}
+{"category": "DDL", "sql": "GRANT Select ON reporting.invoice TO public"}
+{"category": "DDL", "sql": "REVOKE ALL ON reporting.invoice FROM public"}
+{"category": "DDL", "sql": "REVOKE ALL ON REPORTING.INVOICE FROM PUBLIC"}
+{"category": "DDL", "sql": "  REVOKE ALL ON reporting.invoice FROM public  "}
+{"category": "DDL", "sql": "REVOKE  ALL  ON  reporting.invoice  FROM  public"}
+{"category": "DDL", "sql": "/*x*/REVOKE ALL ON reporting.invoice FROM public"}
+{"category": "DDL", "sql": "REVOKE ALL ON reporting.invoice FROM public"}
+{"category": "DDL", "sql": "DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "DROP TABLE REPORTING.INVOICE"}
+{"category": "DDL", "sql": "  DROP TABLE reporting.invoice  "}
+{"category": "DDL", "sql": "DROP  TABLE  reporting.invoice"}
+{"category": "DDL", "sql": "/*x*/DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "DROP TABLE reporting.invoice"}
+{"category": "DDL", "sql": "CREATE TABLE reporting.evil (id int)"}
+{"category": "DDL", "sql": "CREATE TABLE REPORTING.EVIL (ID INT)"}
+{"category": "MULTI", "sql": "SELECT 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DROP TABLE REPORTING.INVOICE"}
+{"category": "MULTI", "sql": "  SELECT 1; DROP TABLE reporting.invoice  "}
+{"category": "MULTI", "sql": "SELECT  1;  DROP  TABLE  reporting.invoice"}
+{"category": "MULTI", "sql": "/*x*/SELECT 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "Select 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DELETE FROM REPORTING.INVOICE"}
+{"category": "MULTI", "sql": "  SELECT 1; DELETE FROM reporting.invoice  "}
+{"category": "MULTI", "sql": "SELECT  1;  DELETE  FROM  reporting.invoice"}
+{"category": "MULTI", "sql": "/*x*/SELECT 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "Select 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT id FROM reporting.invoice; UPDATE reporting.invoice SET total=0"}
+{"category": "MULTI", "sql": "SELECT ID FROM REPORTING.INVOICE; UPDATE REPORTING.INVOICE SET TOTAL=0"}
+{"category": "MULTI", "sql": "  SELECT id FROM reporting.invoice; UPDATE reporting.invoice SET total=0  "}
+{"category": "MULTI", "sql": "SELECT  id  FROM  reporting.invoice;  UPDATE  reporting.invoice  SET  total=0"}
+{"category": "MULTI", "sql": "/*x*/SELECT id FROM reporting.invoice; UPDATE reporting.invoice SET total=0"}
+{"category": "MULTI", "sql": "Select id FROM reporting.invoice; UPDATE reporting.invoice SET total=0"}
+{"category": "MULTI", "sql": "SELECT 1;; SELECT 2"}
+{"category": "MULTI", "sql": "SELECT 1;; SELECT 2"}
+{"category": "MULTI", "sql": "  SELECT 1;; SELECT 2  "}
+{"category": "MULTI", "sql": "SELECT  1;;  SELECT  2"}
+{"category": "MULTI", "sql": "/*x*/SELECT 1;; SELECT 2"}
+{"category": "MULTI", "sql": "Select 1;; Select 2"}
+{"category": "MULTI", "sql": "SELECT 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DROP TABLE REPORTING.INVOICE"}
+{"category": "MULTI", "sql": "  SELECT 1; DROP TABLE reporting.invoice  "}
+{"category": "MULTI", "sql": "SELECT  1;  DROP  TABLE  reporting.invoice"}
+{"category": "MULTI", "sql": "/*x*/SELECT 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "Select 1; DROP TABLE reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT 1; DELETE FROM REPORTING.INVOICE"}
+{"category": "MULTI", "sql": "  SELECT 1; DELETE FROM reporting.invoice  "}
+{"category": "MULTI", "sql": "SELECT  1;  DELETE  FROM  reporting.invoice"}
+{"category": "MULTI", "sql": "/*x*/SELECT 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "Select 1; DELETE FROM reporting.invoice"}
+{"category": "MULTI", "sql": "SELECT id FROM reporting.invoice; UPDATE reporting.invoice SET total=0"}
+{"category": "MULTI", "sql": "SELECT ID FROM REPORTING.INVOICE; UPDATE REPORTING.INVOICE SET TOTAL=0"}
+{"category": "MULTI", "sql": "  SELECT id FROM reporting.invoice; UPDATE reporting.invoice SET total=0  "}
+{"category": "MULTI", "sql": "SELECT  id  FROM  reporting.invoice;  UPDATE  reporting.invoice  SET  total=0"}
+{"category": "CTE", "sql": "WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted"}
+{"category": "CTE", "sql": "WITH DELETED AS (DELETE FROM REPORTING.INVOICE RETURNING *) SELECT * FROM DELETED"}
+{"category": "CTE", "sql": "  WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted  "}
+{"category": "CTE", "sql": "WITH  deleted  AS  (DELETE  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  deleted"}
+{"category": "CTE", "sql": "/*x*/WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted"}
+{"category": "CTE", "sql": "WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) Select * FROM deleted"}
+{"category": "CTE", "sql": "WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u"}
+{"category": "CTE", "sql": "WITH U AS (UPDATE REPORTING.INVOICE SET TOTAL=1 RETURNING ID) SELECT * FROM U"}
+{"category": "CTE", "sql": "  WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u  "}
+{"category": "CTE", "sql": "WITH  u  AS  (UPDATE  reporting.invoice  SET  total=1  RETURNING  id)  SELECT  *  FROM  u"}
+{"category": "CTE", "sql": "/*x*/WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u"}
+{"category": "CTE", "sql": "WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) Select * FROM u"}
+{"category": "CTE", "sql": "WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i"}
+{"category": "CTE", "sql": "WITH I AS (INSERT INTO REPORTING.INVOICE(ID) VALUES (1) RETURNING *) SELECT * FROM I"}
+{"category": "CTE", "sql": "  WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i  "}
+{"category": "CTE", "sql": "WITH  i  AS  (INSERT  INTO  reporting.invoice(id)  VALUES  (1)  RETURNING  *)  SELECT  *  FROM  i"}
+{"category": "CTE", "sql": "/*x*/WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i"}
+{"category": "CTE", "sql": "WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) Select * FROM i"}
+{"category": "CTE", "sql": "WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted"}
+{"category": "CTE", "sql": "WITH DELETED AS (DELETE FROM REPORTING.INVOICE RETURNING *) SELECT * FROM DELETED"}
+{"category": "CTE", "sql": "  WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted  "}
+{"category": "CTE", "sql": "WITH  deleted  AS  (DELETE  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  deleted"}
+{"category": "CTE", "sql": "/*x*/WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted"}
+{"category": "CTE", "sql": "WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) Select * FROM deleted"}
+{"category": "CTE", "sql": "WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u"}
+{"category": "CTE", "sql": "WITH U AS (UPDATE REPORTING.INVOICE SET TOTAL=1 RETURNING ID) SELECT * FROM U"}
+{"category": "CTE", "sql": "  WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u  "}
+{"category": "CTE", "sql": "WITH  u  AS  (UPDATE  reporting.invoice  SET  total=1  RETURNING  id)  SELECT  *  FROM  u"}
+{"category": "CTE", "sql": "/*x*/WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) SELECT * FROM u"}
+{"category": "CTE", "sql": "WITH u AS (UPDATE reporting.invoice SET total=1 RETURNING id) Select * FROM u"}
+{"category": "CTE", "sql": "WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i"}
+{"category": "CTE", "sql": "WITH I AS (INSERT INTO REPORTING.INVOICE(ID) VALUES (1) RETURNING *) SELECT * FROM I"}
+{"category": "CTE", "sql": "  WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i  "}
+{"category": "CTE", "sql": "WITH  i  AS  (INSERT  INTO  reporting.invoice(id)  VALUES  (1)  RETURNING  *)  SELECT  *  FROM  i"}
+{"category": "CTE", "sql": "/*x*/WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) SELECT * FROM i"}
+{"category": "CTE", "sql": "WITH i AS (INSERT INTO reporting.invoice(id) VALUES (1) RETURNING *) Select * FROM i"}
+{"category": "CTE", "sql": "WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted"}
+{"category": "CTE", "sql": "WITH DELETED AS (DELETE FROM REPORTING.INVOICE RETURNING *) SELECT * FROM DELETED"}
+{"category": "CTE", "sql": "  WITH deleted AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM deleted  "}
+{"category": "CTE", "sql": "WITH  deleted  AS  (DELETE  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  deleted"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE REPORTING.INVOICE"}
+{"category": "COMMENT", "sql": "  SELECT 1 /* */; DROP TABLE reporting.invoice  "}
+{"category": "COMMENT", "sql": "SELECT  1  /*  */;  DROP  TABLE  reporting.invoice"}
+{"category": "COMMENT", "sql": "/*x*/SELECT 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "Select 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "SELECT PG_SLEEP(1) -- COMMENT\n"}
+{"category": "COMMENT", "sql": "  SELECT pg_sleep(1) -- comment\n  "}
+{"category": "COMMENT", "sql": "SELECT  pg_sleep(1)  --  comment\n"}
+{"category": "COMMENT", "sql": "/*x*/SELECT pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "Select pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "SELECT 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1;--\nDELETE FROM REPORTING.INVOICE"}
+{"category": "COMMENT", "sql": "  SELECT 1;--\nDELETE FROM reporting.invoice  "}
+{"category": "COMMENT", "sql": "SELECT  1;--\nDELETE  FROM  reporting.invoice"}
+{"category": "COMMENT", "sql": "/*x*/SELECT 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "Select 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE REPORTING.INVOICE"}
+{"category": "COMMENT", "sql": "  SELECT 1 /* */; DROP TABLE reporting.invoice  "}
+{"category": "COMMENT", "sql": "SELECT  1  /*  */;  DROP  TABLE  reporting.invoice"}
+{"category": "COMMENT", "sql": "/*x*/SELECT 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "Select 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "SELECT PG_SLEEP(1) -- COMMENT\n"}
+{"category": "COMMENT", "sql": "  SELECT pg_sleep(1) -- comment\n  "}
+{"category": "COMMENT", "sql": "SELECT  pg_sleep(1)  --  comment\n"}
+{"category": "COMMENT", "sql": "/*x*/SELECT pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "Select pg_sleep(1) -- comment\n"}
+{"category": "COMMENT", "sql": "SELECT 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1;--\nDELETE FROM REPORTING.INVOICE"}
+{"category": "COMMENT", "sql": "  SELECT 1;--\nDELETE FROM reporting.invoice  "}
+{"category": "COMMENT", "sql": "SELECT  1;--\nDELETE  FROM  reporting.invoice"}
+{"category": "COMMENT", "sql": "/*x*/SELECT 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "Select 1;--\nDELETE FROM reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE reporting.invoice"}
+{"category": "COMMENT", "sql": "SELECT 1 /* */; DROP TABLE REPORTING.INVOICE"}
+{"category": "COMMENT", "sql": "  SELECT 1 /* */; DROP TABLE reporting.invoice  "}
+{"category": "COMMENT", "sql": "SELECT  1  /*  */;  DROP  TABLE  reporting.invoice"}
+{"category": "FUNCTION", "sql": "SELECT pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "SELECT PG_SLEEP(30)"}
+{"category": "FUNCTION", "sql": "  SELECT pg_sleep(30)  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "Select pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "SELECT pg_read_file('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "SELECT PG_READ_FILE('/ETC/PASSWD')"}
+{"category": "FUNCTION", "sql": "  SELECT pg_read_file('/etc/passwd')  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_read_file('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_read_file('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "Select pg_read_file('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "SELECT pg_ls_dir('.')"}
+{"category": "FUNCTION", "sql": "SELECT PG_LS_DIR('.')"}
+{"category": "FUNCTION", "sql": "  SELECT pg_ls_dir('.')  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_ls_dir('.')"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_ls_dir('.')"}
+{"category": "FUNCTION", "sql": "Select pg_ls_dir('.')"}
+{"category": "FUNCTION", "sql": "SELECT lo_import('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "SELECT LO_IMPORT('/ETC/PASSWD')"}
+{"category": "FUNCTION", "sql": "  SELECT lo_import('/etc/passwd')  "}
+{"category": "FUNCTION", "sql": "SELECT  lo_import('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT lo_import('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "Select lo_import('/etc/passwd')"}
+{"category": "FUNCTION", "sql": "SELECT dblink('host=x','select 1')"}
+{"category": "FUNCTION", "sql": "SELECT DBLINK('HOST=X','SELECT 1')"}
+{"category": "FUNCTION", "sql": "  SELECT dblink('host=x','select 1')  "}
+{"category": "FUNCTION", "sql": "SELECT  dblink('host=x','select  1')"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT dblink('host=x','select 1')"}
+{"category": "FUNCTION", "sql": "Select dblink('host=x','select 1')"}
+{"category": "FUNCTION", "sql": "SELECT set_config('app.tenant_id','x',false)"}
+{"category": "FUNCTION", "sql": "SELECT SET_CONFIG('APP.TENANT_ID','X',FALSE)"}
+{"category": "FUNCTION", "sql": "  SELECT set_config('app.tenant_id','x',false)  "}
+{"category": "FUNCTION", "sql": "SELECT  set_config('app.tenant_id','x',false)"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT set_config('app.tenant_id','x',false)"}
+{"category": "FUNCTION", "sql": "Select set_config('app.tenant_id','x',false)"}
+{"category": "FUNCTION", "sql": "SELECT pg_terminate_backend(1)"}
+{"category": "FUNCTION", "sql": "SELECT PG_TERMINATE_BACKEND(1)"}
+{"category": "FUNCTION", "sql": "  SELECT pg_terminate_backend(1)  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_terminate_backend(1)"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_terminate_backend(1)"}
+{"category": "FUNCTION", "sql": "Select pg_terminate_backend(1)"}
+{"category": "FUNCTION", "sql": "SELECT pg_cancel_backend(1)"}
+{"category": "FUNCTION", "sql": "SELECT PG_CANCEL_BACKEND(1)"}
+{"category": "FUNCTION", "sql": "  SELECT pg_cancel_backend(1)  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_cancel_backend(1)"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_cancel_backend(1)"}
+{"category": "FUNCTION", "sql": "Select pg_cancel_backend(1)"}
+{"category": "FUNCTION", "sql": "SELECT current_setting('secret')"}
+{"category": "FUNCTION", "sql": "SELECT CURRENT_SETTING('SECRET')"}
+{"category": "FUNCTION", "sql": "  SELECT current_setting('secret')  "}
+{"category": "FUNCTION", "sql": "SELECT  current_setting('secret')"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT current_setting('secret')"}
+{"category": "FUNCTION", "sql": "Select current_setting('secret')"}
+{"category": "FUNCTION", "sql": "SELECT pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "SELECT PG_SLEEP(30)"}
+{"category": "FUNCTION", "sql": "  SELECT pg_sleep(30)  "}
+{"category": "FUNCTION", "sql": "SELECT  pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "/*x*/SELECT pg_sleep(30)"}
+{"category": "FUNCTION", "sql": "Select pg_sleep(30)"}
+{"category": "FILE", "sql": "SELECT pg_sleep(30)"}
+{"category": "FILE", "sql": "SELECT PG_SLEEP(30)"}
+{"category": "FILE", "sql": "  SELECT pg_sleep(30)  "}
+{"category": "FILE", "sql": "SELECT  pg_sleep(30)"}
+{"category": "FILE", "sql": "/*x*/SELECT pg_sleep(30)"}
+{"category": "FILE", "sql": "Select pg_sleep(30)"}
+{"category": "FILE", "sql": "SELECT pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT PG_READ_FILE('/ETC/PASSWD')"}
+{"category": "FILE", "sql": "  SELECT pg_read_file('/etc/passwd')  "}
+{"category": "FILE", "sql": "SELECT  pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "/*x*/SELECT pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "Select pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT pg_ls_dir('.')"}
+{"category": "FILE", "sql": "SELECT PG_LS_DIR('.')"}
+{"category": "FILE", "sql": "  SELECT pg_ls_dir('.')  "}
+{"category": "FILE", "sql": "SELECT  pg_ls_dir('.')"}
+{"category": "FILE", "sql": "/*x*/SELECT pg_ls_dir('.')"}
+{"category": "FILE", "sql": "Select pg_ls_dir('.')"}
+{"category": "FILE", "sql": "SELECT lo_import('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT LO_IMPORT('/ETC/PASSWD')"}
+{"category": "FILE", "sql": "  SELECT lo_import('/etc/passwd')  "}
+{"category": "FILE", "sql": "SELECT  lo_import('/etc/passwd')"}
+{"category": "FILE", "sql": "/*x*/SELECT lo_import('/etc/passwd')"}
+{"category": "FILE", "sql": "Select lo_import('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT pg_sleep(30)"}
+{"category": "FILE", "sql": "SELECT PG_SLEEP(30)"}
+{"category": "FILE", "sql": "  SELECT pg_sleep(30)  "}
+{"category": "FILE", "sql": "SELECT  pg_sleep(30)"}
+{"category": "FILE", "sql": "/*x*/SELECT pg_sleep(30)"}
+{"category": "FILE", "sql": "Select pg_sleep(30)"}
+{"category": "FILE", "sql": "SELECT pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT PG_READ_FILE('/ETC/PASSWD')"}
+{"category": "FILE", "sql": "  SELECT pg_read_file('/etc/passwd')  "}
+{"category": "FILE", "sql": "SELECT  pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "/*x*/SELECT pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "Select pg_read_file('/etc/passwd')"}
+{"category": "FILE", "sql": "SELECT pg_ls_dir('.')"}
+{"category": "FILE", "sql": "SELECT PG_LS_DIR('.')"}
+{"category": "FILE", "sql": "  SELECT pg_ls_dir('.')  "}
+{"category": "FILE", "sql": "SELECT  pg_ls_dir('.')"}
+{"category": "SESSION", "sql": "SET ROLE postgres"}
+{"category": "SESSION", "sql": "SET ROLE POSTGRES"}
+{"category": "SESSION", "sql": "  SET ROLE postgres  "}
+{"category": "SESSION", "sql": "SET  ROLE  postgres"}
+{"category": "SESSION", "sql": "/*x*/SET ROLE postgres"}
+{"category": "SESSION", "sql": "SET ROLE postgres"}
+{"category": "SESSION", "sql": "RESET ALL"}
+{"category": "SESSION", "sql": "RESET ALL"}
+{"category": "SESSION", "sql": "  RESET ALL  "}
+{"category": "SESSION", "sql": "RESET  ALL"}
+{"category": "SESSION", "sql": "/*x*/RESET ALL"}
+{"category": "SESSION", "sql": "RESET ALL"}
+{"category": "SESSION", "sql": "SHOW ALL"}
+{"category": "SESSION", "sql": "SHOW ALL"}
+{"category": "SESSION", "sql": "  SHOW ALL  "}
+{"category": "SESSION", "sql": "SHOW  ALL"}
+{"category": "SESSION", "sql": "/*x*/SHOW ALL"}
+{"category": "SESSION", "sql": "SHOW ALL"}
+{"category": "SESSION", "sql": "LISTEN x"}
+{"category": "SESSION", "sql": "LISTEN X"}
+{"category": "SESSION", "sql": "  LISTEN x  "}
+{"category": "SESSION", "sql": "LISTEN  x"}
+{"category": "SESSION", "sql": "/*x*/LISTEN x"}
+{"category": "SESSION", "sql": "LISTEN x"}
+{"category": "SESSION", "sql": "NOTIFY x"}
+{"category": "SESSION", "sql": "NOTIFY X"}
+{"category": "SESSION", "sql": "  NOTIFY x  "}
+{"category": "SESSION", "sql": "NOTIFY  x"}
+{"category": "SESSION", "sql": "/*x*/NOTIFY x"}
+{"category": "SESSION", "sql": "NOTIFY x"}
+{"category": "SESSION", "sql": "VACUUM reporting.invoice"}
+{"category": "SESSION", "sql": "VACUUM REPORTING.INVOICE"}
+{"category": "SESSION", "sql": "  VACUUM reporting.invoice  "}
+{"category": "SESSION", "sql": "VACUUM  reporting.invoice"}
+{"category": "SESSION", "sql": "/*x*/VACUUM reporting.invoice"}
+{"category": "SESSION", "sql": "VACUUM reporting.invoice"}
+{"category": "SESSION", "sql": "ANALYZE reporting.invoice"}
+{"category": "SESSION", "sql": "ANALYZE REPORTING.INVOICE"}
+{"category": "SESSION", "sql": "  ANALYZE reporting.invoice  "}
+{"category": "SESSION", "sql": "ANALYZE  reporting.invoice"}
+{"category": "LOCK", "sql": "SELECT * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "SELECT * FROM REPORTING.INVOICE FOR UPDATE"}
+{"category": "LOCK", "sql": "  SELECT * FROM reporting.invoice FOR UPDATE  "}
+{"category": "LOCK", "sql": "SELECT  *  FROM  reporting.invoice  FOR  UPDATE"}
+{"category": "LOCK", "sql": "/*x*/SELECT * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "Select * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "SELECT * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "SELECT * FROM REPORTING.INVOICE FOR SHARE"}
+{"category": "LOCK", "sql": "  SELECT * FROM reporting.invoice FOR SHARE  "}
+{"category": "LOCK", "sql": "SELECT  *  FROM  reporting.invoice  FOR  SHARE"}
+{"category": "LOCK", "sql": "/*x*/SELECT * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "Select * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "SELECT id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "SELECT ID FROM REPORTING.INVOICE FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "  SELECT id FROM reporting.invoice FOR UPDATE NOWAIT  "}
+{"category": "LOCK", "sql": "SELECT  id  FROM  reporting.invoice  FOR  UPDATE  NOWAIT"}
+{"category": "LOCK", "sql": "/*x*/SELECT id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "Select id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "SELECT * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "SELECT * FROM REPORTING.INVOICE FOR UPDATE"}
+{"category": "LOCK", "sql": "  SELECT * FROM reporting.invoice FOR UPDATE  "}
+{"category": "LOCK", "sql": "SELECT  *  FROM  reporting.invoice  FOR  UPDATE"}
+{"category": "LOCK", "sql": "/*x*/SELECT * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "Select * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "SELECT * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "SELECT * FROM REPORTING.INVOICE FOR SHARE"}
+{"category": "LOCK", "sql": "  SELECT * FROM reporting.invoice FOR SHARE  "}
+{"category": "LOCK", "sql": "SELECT  *  FROM  reporting.invoice  FOR  SHARE"}
+{"category": "LOCK", "sql": "/*x*/SELECT * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "Select * FROM reporting.invoice FOR SHARE"}
+{"category": "LOCK", "sql": "SELECT id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "SELECT ID FROM REPORTING.INVOICE FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "  SELECT id FROM reporting.invoice FOR UPDATE NOWAIT  "}
+{"category": "LOCK", "sql": "SELECT  id  FROM  reporting.invoice  FOR  UPDATE  NOWAIT"}
+{"category": "LOCK", "sql": "/*x*/SELECT id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "Select id FROM reporting.invoice FOR UPDATE NOWAIT"}
+{"category": "LOCK", "sql": "SELECT * FROM reporting.invoice FOR UPDATE"}
+{"category": "LOCK", "sql": "SELECT * FROM REPORTING.INVOICE FOR UPDATE"}
+{"category": "LOCK", "sql": "  SELECT * FROM reporting.invoice FOR UPDATE  "}
+{"category": "LOCK", "sql": "SELECT  *  FROM  reporting.invoice  FOR  UPDATE"}
+{"category": "SCHEMA", "sql": "SELECT * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "SELECT * FROM PG_CATALOG.PG_USER"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM pg_catalog.pg_user  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "Select * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "SELECT * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "SELECT * FROM PG_SHADOW"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM pg_shadow  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  pg_shadow"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "Select * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "SELECT * FROM information_schema.tables"}
+{"category": "SCHEMA", "sql": "SELECT * FROM INFORMATION_SCHEMA.TABLES"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM information_schema.tables  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  information_schema.tables"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM information_schema.tables"}
+{"category": "SCHEMA", "sql": "Select * FROM information_schema.tables"}
+{"category": "SCHEMA", "sql": "SELECT * FROM pg_authid"}
+{"category": "SCHEMA", "sql": "SELECT * FROM PG_AUTHID"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM pg_authid  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  pg_authid"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM pg_authid"}
+{"category": "SCHEMA", "sql": "Select * FROM pg_authid"}
+{"category": "SCHEMA", "sql": "COPY reporting.invoice TO '/tmp/x'"}
+{"category": "SCHEMA", "sql": "COPY REPORTING.INVOICE TO '/TMP/X'"}
+{"category": "SCHEMA", "sql": "  COPY reporting.invoice TO '/tmp/x'  "}
+{"category": "SCHEMA", "sql": "COPY  reporting.invoice  TO  '/tmp/x'"}
+{"category": "SCHEMA", "sql": "/*x*/COPY reporting.invoice TO '/tmp/x'"}
+{"category": "SCHEMA", "sql": "COPY reporting.invoice TO '/tmp/x'"}
+{"category": "SCHEMA", "sql": "SELECT * INTO evil FROM reporting.invoice"}
+{"category": "SCHEMA", "sql": "SELECT * INTO EVIL FROM REPORTING.INVOICE"}
+{"category": "SCHEMA", "sql": "  SELECT * INTO evil FROM reporting.invoice  "}
+{"category": "SCHEMA", "sql": "SELECT  *  INTO  evil  FROM  reporting.invoice"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * INTO evil FROM reporting.invoice"}
+{"category": "SCHEMA", "sql": "Select * INTO evil FROM reporting.invoice"}
+{"category": "SCHEMA", "sql": "SELECT * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "SELECT * FROM PG_CATALOG.PG_USER"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM pg_catalog.pg_user  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "Select * FROM pg_catalog.pg_user"}
+{"category": "SCHEMA", "sql": "SELECT * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "SELECT * FROM PG_SHADOW"}
+{"category": "SCHEMA", "sql": "  SELECT * FROM pg_shadow  "}
+{"category": "SCHEMA", "sql": "SELECT  *  FROM  pg_shadow"}
+{"category": "SCHEMA", "sql": "/*x*/SELECT * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "Select * FROM pg_shadow"}
+{"category": "SCHEMA", "sql": "SELECT * FROM information_schema.tables"}
+{"category": "SCHEMA", "sql": "SELECT * FROM INFORMATION_SCHEMA.TABLES"}
+{"category": "UNICODE", "sql": "INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "INSERT INTO REPORTING.INVOICE VALUES (1)​"}
+{"category": "UNICODE", "sql": "  INSERT INTO reporting.invoice VALUES (1)​  "}
+{"category": "UNICODE", "sql": "INSERT  INTO  reporting.invoice  VALUES  (1)​"}
+{"category": "UNICODE", "sql": "/*x*/INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "UPDATE reporting.invoice SET total=0​"}
+{"category": "UNICODE", "sql": "UPDATE REPORTING.INVOICE SET TOTAL=0​"}
+{"category": "UNICODE", "sql": "  UPDATE reporting.invoice SET total=0​  "}
+{"category": "UNICODE", "sql": "UPDATE  reporting.invoice  SET  total=0​"}
+{"category": "UNICODE", "sql": "/*x*/UPDATE reporting.invoice SET total=0​"}
+{"category": "UNICODE", "sql": "UPDATE reporting.invoice SET total=0​"}
+{"category": "UNICODE", "sql": "DELETE FROM reporting.invoice​"}
+{"category": "UNICODE", "sql": "DELETE FROM REPORTING.INVOICE​"}
+{"category": "UNICODE", "sql": "  DELETE FROM reporting.invoice​  "}
+{"category": "UNICODE", "sql": "DELETE  FROM  reporting.invoice​"}
+{"category": "UNICODE", "sql": "/*x*/DELETE FROM reporting.invoice​"}
+{"category": "UNICODE", "sql": "DELETE FROM reporting.invoice​"}
+{"category": "UNICODE", "sql": "MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0​"}
+{"category": "UNICODE", "sql": "MERGE INTO REPORTING.INVOICE A USING REPORTING.INVOICE B ON A.ID=B.ID WHEN MATCHED THEN UPDATE SET TOTAL=0​"}
+{"category": "UNICODE", "sql": "  MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0​  "}
+{"category": "UNICODE", "sql": "MERGE  INTO  reporting.invoice  a  USING  reporting.invoice  b  ON  a.id=b.id  WHEN  MATCHED  THEN  UPDATE  SET  total=0​"}
+{"category": "UNICODE", "sql": "/*x*/MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0​"}
+{"category": "UNICODE", "sql": "MERGE INTO reporting.invoice a USING reporting.invoice b ON a.id=b.id WHEN MATCHED THEN UPDATE SET total=0​"}
+{"category": "UNICODE", "sql": "WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH X AS (DELETE FROM REPORTING.INVOICE RETURNING *) SELECT * FROM X​"}
+{"category": "UNICODE", "sql": "  WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x​  "}
+{"category": "UNICODE", "sql": "WITH  x  AS  (DELETE  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  x​"}
+{"category": "UNICODE", "sql": "/*x*/WITH x AS (DELETE FROM reporting.invoice RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH x AS (DELETE FROM reporting.invoice RETURNING *) Select * FROM x​"}
+{"category": "UNICODE", "sql": "WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH X AS (UPDATE REPORTING.INVOICE SET TOTAL=0 RETURNING *) SELECT * FROM X​"}
+{"category": "UNICODE", "sql": "  WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x​  "}
+{"category": "UNICODE", "sql": "WITH  x  AS  (UPDATE  reporting.invoice  SET  total=0  RETURNING  *)  SELECT  *  FROM  x​"}
+{"category": "UNICODE", "sql": "/*x*/WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH x AS (UPDATE reporting.invoice SET total=0 RETURNING *) Select * FROM x​"}
+{"category": "UNICODE", "sql": "WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH X AS (INSERT INTO REPORTING.INVOICE SELECT * FROM REPORTING.INVOICE RETURNING *) SELECT * FROM X​"}
+{"category": "UNICODE", "sql": "  WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x​  "}
+{"category": "UNICODE", "sql": "WITH  x  AS  (INSERT  INTO  reporting.invoice  SELECT  *  FROM  reporting.invoice  RETURNING  *)  SELECT  *  FROM  x​"}
+{"category": "UNICODE", "sql": "/*x*/WITH x AS (INSERT INTO reporting.invoice SELECT * FROM reporting.invoice RETURNING *) SELECT * FROM x​"}
+{"category": "UNICODE", "sql": "WITH x AS (INSERT INTO reporting.invoice Select * FROM reporting.invoice RETURNING *) Select * FROM x​"}
+{"category": "UNICODE", "sql": "INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "INSERT INTO REPORTING.INVOICE VALUES (1)​"}
+{"category": "UNICODE", "sql": "  INSERT INTO reporting.invoice VALUES (1)​  "}
+{"category": "UNICODE", "sql": "INSERT  INTO  reporting.invoice  VALUES  (1)​"}
+{"category": "UNICODE", "sql": "/*x*/INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "INSERT INTO reporting.invoice VALUES (1)​"}
+{"category": "UNICODE", "sql": "UPDATE reporting.invoice SET total=0​"}
+{"category": "UNICODE", "sql": "UPDATE REPORTING.INVOICE SET TOTAL=0​"}

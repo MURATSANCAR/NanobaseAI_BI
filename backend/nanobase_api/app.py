@@ -475,28 +475,50 @@ async def schema_refresh() -> JSONResponse:
 
 @app.post("/api/v1/bi/query/validate")
 @app.post("/api/v1/query/validate")
-async def proxy_query_validate(request: Request) -> JSONResponse:
+async def proxy_query_validate(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    """Portal-authenticated proxy — never expose Query Gateway without principal."""
+    _ = principal
     body = await request.json()
     if "datasource_id" not in body:
         body["datasource_id"] = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(f"{QG_BASE}/api/v1/query/validate", json=body)
-        return JSONResponse(r.json(), status_code=r.status_code)
+    from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+
+    qg = QueryGatewayClient(QG_BASE)
+    data = await qg.validate(
+        sql=str(body.get("sql") or ""),
+        datasource_id=str(body.get("datasource_id")),
+        tenant_id=principal.tenant_id,
+    )
+    status = 200 if data.get("ok") else 400
+    return JSONResponse(data, status_code=status)
 
 
 @app.post("/api/v1/bi/query/execute")
 @app.post("/api/v1/query/execute")
-async def proxy_query_execute(request: Request) -> JSONResponse:
+async def proxy_query_execute(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    """Portal-authenticated proxy — never expose Query Gateway without principal."""
     body = await request.json()
     if "datasource_id" not in body:
         body["datasource_id"] = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        r = await client.post(f"{QG_BASE}/api/v1/query/execute", json=body)
-        try:
-            data = r.json()
-        except Exception:
-            data = {"ok": False, "error": r.text[:400]}
-        return JSONResponse(data, status_code=r.status_code)
+    from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+
+    qg = QueryGatewayClient(QG_BASE)
+    try:
+        data = await qg.execute(
+            sql=str(body.get("sql") or ""),
+            datasource_id=str(body.get("datasource_id")),
+            tenant_id=principal.tenant_id,
+            explain=bool(body.get("explain")),
+        )
+        return JSONResponse(data, status_code=200 if data.get("ok") else 400)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=400)
 
 
 @app.post("/api/v1/bi/chat/stream")

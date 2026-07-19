@@ -37,3 +37,5 @@ sudo systemctl restart nanobase-query-gateway
 
 Owner credentials in `connection.local.json` stay for provisioning only; Gateway uses `neon-*.password` RO files.
 
+`deploy-neon-ro.sh` also syncs `bi_sources` (username + `secret_ref`) from `neon-ro.datasources.json` so Connection **Test** uses the same RO secrets as Query Gateway.
+

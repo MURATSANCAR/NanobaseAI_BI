@@ -20,6 +20,9 @@ if [[ "${PROVISION_RO_ROLES:-1}" == "1" ]]; then
   "${VENV}/bin/python" "${ROOT}/backend/scripts/provision_neon_ro_roles.py"
 fi
 
+log "Syncing bi_sources secret_ref/username from neon-ro map"
+"${VENV}/bin/python" "${ROOT}/backend/scripts/sync_bi_sources_from_neon_ro.py"
+
 sudo systemctl restart nanobase-query-gateway
 sleep 2
 curl -fsS http://127.0.0.1:8792/health | python3 -m json.tool

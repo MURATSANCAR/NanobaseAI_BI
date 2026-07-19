@@ -1,0 +1,8 @@
+{
+  "date": "2026-07-19",
+  "corpusSize": 500,
+  "approved": 0,
+  "rejected": 500,
+  "result": "PASS",
+  "runner": "query_gateway/tests/security/test_malicious_corpus.py"
+}

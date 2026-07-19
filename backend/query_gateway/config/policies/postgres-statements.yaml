@@ -1,0 +1,21 @@
+allowedRoots:
+  - SELECT
+  - UNION
+  - UNION_ALL
+  - WITH_SELECT
+forbiddenNodeTypes:
+  - Insert
+  - Update
+  - Delete
+  - Drop
+  - Create
+  - Alter
+  - TruncateTable
+  - Command
+  - Grant
+  - Copy
+  - Merge
+  - Replace
+forbidSelectInto: true
+forbidForUpdate: true
+forbidForShare: true

@@ -1,0 +1,15 @@
+policyVersion: "2026.07.1"
+interactiveMaxRows: 1000
+previewMaxRows: 100
+maxColumns: 100
+maxCellBytes: 16384
+maxPayloadBytes: 5242880
+statementTimeoutMs: 15000
+lockTimeoutMs: 1000
+explainTimeoutMs: 3000
+maxJoins: 8
+maxSubqueryDepth: 6
+maxCteCount: 10
+maxSqlBytes: 102400
+rejectWildcardSelect: true
+requireQualifiedTables: false

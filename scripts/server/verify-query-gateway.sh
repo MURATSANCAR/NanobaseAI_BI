@@ -7,6 +7,18 @@ ok() { printf 'OK  %s\n' "$*"; }
 bad() { printf 'FAIL %s\n' "$*"; fail=1; }
 
 curl -fsS "$BASE/health" >/dev/null && ok "health" || bad "health"
+curl -fsS "$BASE/health/live" >/dev/null && ok "health/live" || bad "health/live"
+curl -fsS "$BASE/health/ready" >/dev/null && ok "health/ready" || bad "health/ready"
+
+# Unauthenticated internal API must fail when auth enabled (or return structured reject)
+code=$(curl -sS -o /tmp/qg_int.json -w '%{http_code}' -X POST "$BASE/internal/v1/queries/validate" \
+  -H 'Content-Type: application/json' \
+  -d '{"executionId":"v1","datasourceId":"bi_reporting","sql":"DELETE FROM public.customers"}')
+if [[ "$code" == "401" || "$code" == "400" || "$code" == "403" || "$code" == "404" || "$code" == "503" ]]; then
+  ok "internal validate blocked without/against policy (http $code)"
+else
+  bad "internal validate unexpected $code"
+fi
 
 # SELECT allowed
 code=$(curl -sS -o /tmp/qg_ok.json -w '%{http_code}' -X POST "$BASE/api/v1/query/execute" \

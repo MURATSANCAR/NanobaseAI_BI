@@ -1,0 +1,57 @@
+allowed:
+  - COUNT
+  - SUM
+  - AVG
+  - MIN
+  - MAX
+  - ROUND
+  - CEIL
+  - FLOOR
+  - ABS
+  - COALESCE
+  - NULLIF
+  - LOWER
+  - UPPER
+  - TRIM
+  - LENGTH
+  - SUBSTRING
+  - CONCAT
+  - DATE_TRUNC
+  - EXTRACT
+  - CAST
+  - TO_CHAR
+  - TO_DATE
+  - GREATEST
+  - LEAST
+  - ROW_NUMBER
+  - RANK
+  - DENSE_RANK
+  - LAG
+  - LEAD
+  - NOW
+  - CURRENT_DATE
+  - CURRENT_TIMESTAMP
+controlled:
+  - REGEXP_REPLACE
+  - REGEXP_MATCHES
+  - GENERATE_SERIES
+  - JSONB_PATH_QUERY
+  - UNNEST
+  - ARRAY_AGG
+  - STRING_AGG
+  - PERCENTILE_CONT
+denied:
+  - PG_SLEEP
+  - PG_READ_FILE
+  - PG_LS_DIR
+  - PG_STAT_FILE
+  - LO_IMPORT
+  - LO_EXPORT
+  - DBLINK
+  - DBLINK_EXEC
+  - SET_CONFIG
+  - PG_TERMINATE_BACKEND
+  - PG_CANCEL_BACKEND
+  - PG_RELOAD_CONF
+  - CURRENT_SETTING
+defaultUserDefined: denied

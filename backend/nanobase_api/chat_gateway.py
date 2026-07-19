@@ -286,45 +286,90 @@ async def stream_chat_via_gateway(
         return
 
     yield _sse("status", {"phase": "validating", "sql": sql, "sql_source": sql_source}).encode()
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        vr = await client.post(
-            f"{QG_BASE}/api/v1/query/validate",
-            json={"datasource_id": datasource_id, "sql": sql},
+    from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+
+    qg = QueryGatewayClient(QG_BASE)
+    repair_attempts = 0
+    max_repairs = 2
+    safe_sql = sql
+    ej: dict = {}
+    explain_plan_text = None
+    while True:
+        vj = await qg.validate(
+            sql=safe_sql,
+            datasource_id=datasource_id,
+            execution_id=execution_id,
+            tenant_id=tenant_id,
         )
-        vj = vr.json()
-        if vr.status_code >= 400 or not vj.get("ok"):
+        if not vj.get("ok"):
+            code = vj.get("code") or "QUERY_POLICY_REJECTED"
+            msg = vj.get("message") or vj.get("error") or vj.get("detail") or "SQL rejected by gateway"
+            # Limited repair: strip trailing semicolon / comments once
+            if repair_attempts < max_repairs and code in (
+                "SQL_PARSE_FAILED",
+                "WILDCARD_NOT_ALLOWED",
+            ):
+                repair_attempts += 1
+                safe_sql = safe_sql.strip().rstrip(";").replace("select *", "select 1").replace("SELECT *", "SELECT 1")
+                continue
             yield _sse(
                 "error",
-                {"message": vj.get("error") or vj.get("detail") or "SQL rejected by gateway", "sql": sql},
+                {
+                    "message": msg,
+                    "code": code,
+                    "sql": safe_sql,
+                    "type": "QUERY_POLICY_REJECTED",
+                },
             ).encode()
             return
 
-        safe_sql = vj.get("sql") or sql
+        yield _sse("status", {"phase": "validated", "sql": vj.get("sql") or safe_sql}).encode()
+        safe_sql = vj.get("sql") or safe_sql
         yield _sse("status", {"phase": "executing", "sql": safe_sql, "via": "query_gateway"}).encode()
-        er = await client.post(
-            f"{QG_BASE}/api/v1/query/execute",
-            json={"datasource_id": datasource_id, "sql": safe_sql},
-        )
-        ej = er.json()
-        if er.status_code >= 400 or not ej.get("ok"):
+        try:
+            ej = await qg.execute(
+                sql=safe_sql,
+                datasource_id=datasource_id,
+                execution_id=execution_id,
+                tenant_id=tenant_id,
+            )
+        except Exception as e:
             yield _sse(
                 "error",
-                {"message": ej.get("detail") or ej.get("error") or "execute failed", "sql": safe_sql},
+                {
+                    "message": str(e),
+                    "code": "QUERY_POLICY_REJECTED",
+                    "sql": safe_sql,
+                    "type": "QUERY_POLICY_REJECTED",
+                },
             ).encode()
             return
+        if not ej.get("ok"):
+            yield _sse(
+                "error",
+                {
+                    "message": ej.get("detail") or ej.get("error") or "execute failed",
+                    "code": ej.get("code") or "QUERY_POLICY_REJECTED",
+                    "sql": safe_sql,
+                    "type": "QUERY_POLICY_REJECTED",
+                },
+            ).encode()
+            return
+        break
 
-        explain_plan_text = None
-        if with_explain:
-            yield _sse("status", {"phase": "gateway_explain"}).encode()
-            xr = await client.post(
-                f"{QG_BASE}/api/v1/query/execute",
-                json={"datasource_id": datasource_id, "sql": safe_sql, "explain": True},
+    if with_explain:
+        yield _sse("status", {"phase": "gateway_explain"}).encode()
+        try:
+            xj = await qg.execute(
+                sql=safe_sql,
+                datasource_id=datasource_id,
+                explain=True,
             )
-            if xr.status_code == 200:
-                xj = xr.json()
-                explain_plan_text = "\n".join(
-                    str(list(row.values())[0]) for row in (xj.get("rows") or []) if row
-                )
+            explain_plan_text = "\n".join(
+                str(list(row.values())[0]) for row in (xj.get("rows") or []) if row
+            )
+        except Exception:
+            explain_plan_text = None
 
     rows = ej.get("rows") or []
     cols = ej.get("columns") or []
