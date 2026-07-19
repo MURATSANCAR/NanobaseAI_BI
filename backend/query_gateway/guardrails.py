@@ -89,6 +89,13 @@ def validate_and_rewrite(
         if bad in f" {sql_l} ":
             return GuardResult(False, raw, f"forbidden clause: {bad.strip()}")
 
+    # CTE / subquery aliases are not physical tables — skip allowlist for them.
+    cte_aliases: set[str] = set()
+    for cte in tree.find_all(exp.CTE):
+        alias = cte.alias or getattr(cte, "alias_or_name", None)
+        if alias:
+            cte_aliases.add(_normalize_ident(str(alias)))
+
     tables: set[str] = set()
     for t in tree.find_all(exp.Table):
         name = _normalize_ident(t.name) if t.name else ""
@@ -103,6 +110,8 @@ def validate_and_rewrite(
         allowed_norm = {_normalize_ident(x) for x in allowed_tables}
         for tname in tables:
             bare = tname.split(".")[-1]
+            if bare in cte_aliases:
+                continue
             if tname not in allowed_norm and bare not in allowed_norm:
                 return GuardResult(False, raw, f"table not allowlisted: {tname}")
 

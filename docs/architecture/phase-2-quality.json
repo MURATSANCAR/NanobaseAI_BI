@@ -1,11 +1,13 @@
 {
-  "ts": "2026-07-19T09:55:15.944183+00:00",
+  "ts": "2026-07-19T12:33:18.601515+00:00",
   "collection": "bi_schema_bi_reporting",
+  "api_base": "http://127.0.0.1:8790",
+  "nl2sql_path": "nanobase_api /workflows/nl2sql-plan",
   "top_k": 6,
   "nl2sql": true,
-  "retrieval_pass": "20/20",
+  "retrieval_pass": "18/20",
   "sql_pass": "20/20",
-  "overall_score": 1.0,
+  "overall_score": 0.95,
   "pass_threshold": 0.8,
   "passed": true,
   "results": [
@@ -14,56 +16,60 @@
       "question": "Kaç müşteri var?",
       "retrieval_ok": true,
       "found_tables": [
+        "customer_addresses",
         "customers",
         "orders",
+        "sales_orders",
         "v_order_revenue"
       ],
       "expect_tables": [
         "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT COUNT(*) AS customer_count FROM customers;",
+      "sql": "SELECT COUNT(*) AS customer_count\nFROM customers",
       "score": 1.0,
-      "elapsed_s": 24.23,
+      "elapsed_s": 26.39,
       "error": null,
-      "top_hit": "Table analytics.customers\nRow count: 5\nPrimary key: []\nColumns:\n- customer_id integer\n- customer_name text\n- country text\n- segment text\n- created_at timestamp with time zone\nUse for NL2SQL over sales/customers/orders analytics."
+      "top_hit": "View public.customers datasource=bi_reporting\nDomain: sales / customers / orders analytics\nRow count: 5\nPrimary key: []\nColumns:\n- customer_id integer\n- customer_name text\n- country text\n- segment text\n- created_at timestamp with time zone"
     },
     {
       "id": "q02",
       "question": "Enterprise segmentindeki müşterileri listele",
       "retrieval_ok": true,
       "found_tables": [
+        "branches",
+        "customer_addresses",
         "customers",
-        "orders",
-        "v_order_revenue"
+        "v_invoice_open"
       ],
       "expect_tables": [
         "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT customer_name FROM customers WHERE segment = 'Enterprise' LIMIT 50;",
+      "sql": "SELECT customer_id, customer_name, country, segment, created_at\nFROM customers\nWHERE segment = 'Enterprise'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 13.12,
+      "elapsed_s": 28.67,
       "error": null,
-      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q03",
       "question": "Almanya'daki müşteri sayısı",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
-        "v_order_revenue"
+        "currency_rates",
+        "customer_addresses",
+        "customers"
       ],
       "expect_tables": [
         "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT COUNT(*) AS customer_count\nFROM customers\nWHERE country = 'Germany';",
+      "sql": "SELECT COUNT(*) AS customer_count\nFROM customers\nWHERE country = 'Almanya'",
       "score": 1.0,
-      "elapsed_s": 59.21,
+      "elapsed_s": 25.11,
       "error": null,
-      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+      "top_hit": "View public.customers datasource=bi_reporting\nDomain: sales / customers / orders analytics\nRow count: 5\nPrimary key: []\nColumns:\n- customer_id integer\n- customer_name text\n- country text\n- segment text\n- created_at timestamp with time zone"
     },
     {
       "id": "q04",
@@ -71,17 +77,18 @@
       "retrieval_ok": true,
       "found_tables": [
         "order_items",
-        "products"
+        "products",
+        "sales_order_items"
       ],
       "expect_tables": [
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT category, COUNT(product_id) AS product_count FROM products GROUP BY category LIMIT 50;",
+      "sql": "SELECT\n  p.category,\n  COUNT(p.product_id) AS product_count\nFROM\n  products p\nGROUP BY\n  p.category\nORDER BY\n  product_count DESC\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 17.35,
+      "elapsed_s": 26.95,
       "error": null,
-      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+      "top_hit": "View public.products datasource=bi_reporting\nDomain: sales / customers / orders analytics\nRow count: 5\nPrimary key: []\nColumns:\n- product_id integer\n- sku text\n- product_name text\n- category text\n- unit_price numeric"
     },
     {
       "id": "q05",
@@ -89,34 +96,36 @@
       "retrieval_ok": true,
       "found_tables": [
         "order_items",
-        "products"
+        "products",
+        "sales_order_items"
       ],
       "expect_tables": [
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT product_name, unit_price FROM products ORDER BY unit_price DESC LIMIT 1;",
+      "sql": "SELECT \n  p.product_name,\n  p.unit_price\nFROM products p\nORDER BY p.unit_price DESC\nLIMIT 1",
       "score": 1.0,
-      "elapsed_s": 18.05,
+      "elapsed_s": 22.49,
       "error": null,
-      "top_hit": "Column analytics.products.unit_price type=numeric nullable=NO samples=['1500.00', '2100.00', '3500.00', '890.50', '12000.00']"
+      "top_hit": "Column analytics.products.unit_price type=numeric nullable=NO samples=['1500.00', '2100.00', '3500.00', '890.50', '12000.00'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q06",
       "question": "SKU-100 ürününün adı nedir?",
       "retrieval_ok": true,
       "found_tables": [
-        "products"
+        "products",
+        "sales_order_items"
       ],
       "expect_tables": [
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT product_name FROM products WHERE sku = 'SKU-100' LIMIT 50;",
+      "sql": "SELECT product_name\nFROM products\nWHERE sku = 'SKU-100'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 36.55,
+      "elapsed_s": 22.25,
       "error": null,
-      "top_hit": "Column analytics.products.sku type=text nullable=NO samples=['SKU-100', 'SKU-200', 'SKU-300', 'SKU-400', 'SKU-500']"
+      "top_hit": "Column analytics.products.sku type=text nullable=NO samples=['SKU-100', 'SKU-200', 'SKU-300', 'SKU-400', 'SKU-500'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q07",
@@ -124,36 +133,39 @@
       "retrieval_ok": true,
       "found_tables": [
         "orders",
+        "sales_orders",
         "v_order_revenue"
       ],
       "expect_tables": [
         "orders"
       ],
       "sql_ok": true,
-      "sql": "SELECT COUNT(*) AS completed_order_count\nFROM orders\nWHERE status = 'Completed';",
+      "sql": "SELECT COUNT(*) AS completed_order_count\nFROM sales_orders\nWHERE status = 'Completed'",
       "score": 1.0,
-      "elapsed_s": 31.09,
+      "elapsed_s": 27.07,
       "error": null,
-      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q08",
       "question": "2026 yılı siparişlerini getir",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
+        "currency_rates",
+        "invoices",
         "orders",
-        "v_order_revenue"
+        "payments",
+        "sales_orders"
       ],
       "expect_tables": [
         "orders"
       ],
       "sql_ok": true,
-      "sql": "SELECT * FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2026 LIMIT 50;",
+      "sql": "SELECT * FROM sales_orders WHERE EXTRACT(YEAR FROM order_date) = 2026 LIMIT 50",
       "score": 1.0,
-      "elapsed_s": 30.91,
+      "elapsed_s": 29.54,
       "error": null,
-      "top_hit": "Column analytics.orders.order_date type=date nullable=NO samples=['2026-02-01', '2026-06-18', '2026-03-05', '2026-03-12', '2026-02-20']"
+      "top_hit": "Column analytics.orders.order_date type=date nullable=NO samples=['2026-02-01', '2026-06-18', '2026-03-05', '2026-03-12', '2026-02-20'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q09",
@@ -162,6 +174,7 @@
       "found_tables": [
         "customers",
         "orders",
+        "v_invoice_open",
         "v_order_revenue"
       ],
       "expect_tables": [
@@ -169,31 +182,33 @@
         "customers"
       ],
       "sql_ok": true,
-      "sql": "select the customer details (like customer_id and customer_name) to identify them. Since the question doesn't specify which columns to return, I'll return the customer ID and name. I will limit the results to 50 as per constraints.\\\",\\n    \\\"direct_response\\\": \\\"\\\",\\n    \\\"sql\\\": \\\"SELECT DISTINCT c.customer_id, c.customer_name\\\\nFROM customers c\\\\nJOIN orders o ON c.customer_id = o.customer_id\\\\nWHERE o.status = 'Pending'\\\\nLIMIT 50;",
+      "sql": "SELECT DISTINCT c.customer_id, c.customer_name\nFROM customers c\nJOIN sales_orders so ON c.customer_id = so.customer_id\nWHERE so.status = 'pending'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 36.33,
+      "elapsed_s": 38.56,
       "error": null,
-      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q10",
       "question": "Her siparişin toplam tutarı (order_items)",
       "retrieval_ok": true,
       "found_tables": [
+        "invoices",
         "order_items",
         "orders",
-        "v_order_revenue"
+        "sales_order_items",
+        "v_invoice_open"
       ],
       "expect_tables": [
         "order_items",
         "orders"
       ],
       "sql_ok": true,
-      "sql": "SELECT order_id, SUM(quantity * unit_price) AS total_amount FROM order_items GROUP BY order_id LIMIT 50;",
+      "sql": "SELECT\n  soi.order_id,\n  SUM(soi.quantity * soi.unit_price) AS total_order_amount\nFROM sales_order_items soi\nGROUP BY soi.order_id\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 27.97,
+      "elapsed_s": 29.95,
       "error": null,
-      "top_hit": "Column analytics.v_order_revenue.revenue type=numeric nullable=YES samples=[]"
+      "top_hit": "View public.order_items datasource=bi_reporting\nDomain: sales / customers / orders analytics\nRow count: 13\nPrimary key: []\nColumns:\n- order_item_id integer\n- order_id integer\n- product_id integer\n- quantity integer\n- unit_price numeric"
     },
     {
       "id": "q11",
@@ -201,25 +216,27 @@
       "retrieval_ok": true,
       "found_tables": [
         "order_items",
-        "products"
+        "products",
+        "sales_order_items"
       ],
       "expect_tables": [
         "order_items",
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT p.product_name, SUM(oi.quantity) AS total_quantity_sold\\\\nFROM order_items oi\\\\nJOIN products p ON oi.product_id = p.product_id\\\\nGROUP BY p.product_name\\\\nORDER BY total_quantity_sold DESC\\\\nLIMIT 1;",
+      "sql": "SELECT \n    p.product_id,\n    p.product_name,\n    SUM(oi.quantity) AS total_quantity_sold\nFROM sales_order_items oi\nJOIN products p ON oi.product_id = p.product_id\nJOIN sales_orders so ON oi.order_id = so.order_id\nWHERE so.status != 'cancelled'\nGROUP BY p.product_id, p.product_name\nORDER BY total_quantity_sold DESC\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 39.01,
+      "elapsed_s": 67.18,
       "error": null,
-      "top_hit": "Column analytics.order_items.product_id type=integer nullable=NO samples=['2', '4', '3', '5', '1']"
+      "top_hit": "View public.products datasource=bi_reporting\nDomain: sales / customers / orders analytics\nRow count: 5\nPrimary key: []\nColumns:\n- product_id integer\n- sku text\n- product_name text\n- category text\n- unit_price numeric"
     },
     {
       "id": "q12",
       "question": "Segment bazında toplam gelir",
-      "retrieval_ok": true,
+      "retrieval_ok": false,
       "found_tables": [
-        "customers",
+        "invoices",
+        "v_invoice_open",
         "v_order_revenue"
       ],
       "expect_tables": [
@@ -227,11 +244,11 @@
         "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT \\\\n    segment, \\\\n    SUM(revenue) AS total_revenue \\\\nFROM \\\\n    v_order_revenue \\\\nGROUP BY \\\\n    segment \\\\nLIMIT 50;",
-      "score": 1.0,
-      "elapsed_s": 20.03,
+      "sql": "SELECT\n    c.segment,\n    SUM(soi.quantity * soi.unit_price) AS total_revenue\nFROM customers c\nJOIN sales_orders so ON c.customer_id = so.customer_id\nJOIN sales_order_items soi ON so.order_id = soi.order_id\nWHERE so.status = 'completed'\nGROUP BY c.segment\nORDER BY total_revenue DESC\nLIMIT 50",
+      "score": 0.5,
+      "elapsed_s": 54.92,
       "error": null,
-      "top_hit": "Column analytics.v_order_revenue.segment type=text nullable=YES samples=[]"
+      "top_hit": "Column public.invoices.gross_amount type=numeric nullable=YES samples=[] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q13",
@@ -244,11 +261,11 @@
         "v_order_revenue"
       ],
       "sql_ok": true,
-      "sql": "SELECT country, SUM(revenue) AS total_revenue\nFROM v_order_revenue\nGROUP BY country\nLIMIT 50;",
+      "sql": "WITH order_revenue AS (\n    SELECT\n        customer_id,\n        SUM(quantity * unit_price) AS total_revenue\n    FROM order_items\n    GROUP BY customer_id\n)\nSELECT\n    c.country,\n    SUM(orv.total_revenue) AS total_country_revenue\nFROM order_revenue orv\nJOIN customers c ON orv.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY total_country_revenue DESC\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 18.78,
+      "elapsed_s": 50.71,
       "error": null,
-      "top_hit": "Column analytics.v_order_revenue.country type=text nullable=YES samples=[]"
+      "top_hit": "Column public.v_order_revenue.country type=text nullable=YES samples=[] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q14",
@@ -256,6 +273,7 @@
       "retrieval_ok": true,
       "found_tables": [
         "customers",
+        "invoices",
         "order_items",
         "orders",
         "v_order_revenue"
@@ -265,18 +283,17 @@
         "orders"
       ],
       "sql_ok": true,
-      "sql": "SELECT COUNT(order_id) AS order_count\nFROM v_order_revenue\nWHERE customer_name = 'Acme Holding';",
+      "sql": "SELECT COUNT(*) AS order_count\nFROM sales_orders so\nJOIN customers c ON so.customer_id = c.customer_id\nWHERE c.customer_name = 'Acme Holding'",
       "score": 1.0,
-      "elapsed_s": 36.56,
+      "elapsed_s": 29.22,
       "error": null,
-      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q15",
       "question": "Services kategorisindeki ürünler",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
         "order_items",
         "products"
       ],
@@ -284,110 +301,105 @@
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT product_id, sku, product_name, category, unit_price FROM products WHERE category = 'Services' LIMIT 50;",
+      "sql": "SELECT \n  p.product_id,\n  p.sku,\n  p.product_name,\n  p.category,\n  p.unit_price\nFROM products p\nWHERE p.category = 'Services'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 13.83,
+      "elapsed_s": 28.3,
       "error": null,
-      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q16",
       "question": "İptal edilen siparişler",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
         "orders",
-        "v_order_revenue"
+        "sales_orders",
+        "v_invoice_open"
       ],
       "expect_tables": [
         "orders"
       ],
       "sql_ok": true,
-      "sql": "select the relevant order details. Since the exact status string isn't specified, I will assume a standard value like 'Cancelled' or check for common variations. Given the simplicity, selecting order_id, customer_id, order_date, and status for records with status 'Cancelled' is appropriate. If 'Cancelled' yields no results, it might be 'Cancel' or 'canceled', but without schema constraints on enum values, 'Cancelled' is a safe standard guess for SQL generation in this context. I will limit the result to 50 rows.\\\",\\n    \\\"direct_response\\\": \\\"\\\",\\n    \\\"sql\\\": \\\"SELECT order_id, customer_id, order_date, status, currency FROM orders WHERE status = 'Cancelled' LIMIT 50;",
+      "sql": "SELECT \n    so.order_id,\n    so.customer_id,\n    so.order_date,\n    so.currency,\n    so.status\nFROM sales_orders so\nWHERE so.status = 'cancelled'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 45.65,
+      "elapsed_s": 36.96,
       "error": null,
-      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q17",
-      "question": "Ortalama sipariş kalem adedi",
+      "question": "2026 yılındaki toplam fatura tutarı",
       "retrieval_ok": true,
       "found_tables": [
-        "order_items",
-        "orders",
-        "products",
-        "v_order_revenue"
+        "invoices",
+        "payments",
+        "v_invoice_open"
       ],
       "expect_tables": [
-        "order_items"
+        "invoices"
       ],
       "sql_ok": true,
-      "sql": null,
+      "sql": "SELECT SUM(gross_amount) AS total_invoice_amount\nFROM invoices\nWHERE invoice_date >= '2026-01-01' AND invoice_date < '2027-01-01'",
       "score": 1.0,
-      "elapsed_s": 29.8,
+      "elapsed_s": 31.78,
       "error": null,
-      "top_hit": "Column analytics.v_order_revenue.customer_name type=text nullable=YES samples=[]"
+      "top_hit": "Column analytics.invoices.gross_amount type=numeric nullable=NO samples=['11905.00', '27500.00', '6300.00', '5343.00', '4200.00'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q18",
-      "question": "EUR para birimli siparişler",
+      "question": "Ödenmemiş faturaların kalan tutarı",
       "retrieval_ok": true,
       "found_tables": [
-        "order_items",
-        "orders",
-        "products",
-        "v_order_revenue"
+        "invoices",
+        "v_invoice_open"
       ],
       "expect_tables": [
-        "orders"
+        "invoices"
       ],
       "sql_ok": true,
-      "sql": "SELECT * FROM orders WHERE currency = 'EUR' LIMIT 50;",
+      "sql": "SELECT SUM(remaining_amount) AS total_unpaid_amount\nFROM invoices\nWHERE status = 'unpaid'",
       "score": 1.0,
-      "elapsed_s": 23.93,
+      "elapsed_s": 28.69,
       "error": null,
-      "top_hit": "Column analytics.orders.currency type=text nullable=NO samples=['TRY', 'EUR']"
+      "top_hit": "Column analytics.invoices.remaining_amount type=numeric nullable=NO samples=['4000.00', '7500.00', '12000.00', '5000.00', '0.00'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q19",
-      "question": "Müşteri başına sipariş sayısı",
-      "retrieval_ok": true,
+      "question": "Ankara'daki müşterilere ait gecikmiş faturalar",
+      "retrieval_ok": false,
       "found_tables": [
-        "customers",
-        "orders",
-        "v_order_revenue"
+        "customer_addresses",
+        "invoices",
+        "payments"
       ],
       "expect_tables": [
-        "customers",
-        "orders"
+        "invoices",
+        "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT c.customer_name, COUNT(o.order_id) AS order_count FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name ORDER BY order_count DESC LIMIT 50;",
-      "score": 1.0,
-      "elapsed_s": 32.71,
+      "sql": "WITH delayed_invoices AS (\n    SELECT\n        i.invoice_id,\n        i.invoice_date,\n        i.due_date,\n        i.gross_amount,\n        i.remaining_amount,\n        i.status,\n        c.customer_id,\n        c.customer_name,\n        ca.city\n    FROM invoices i\n    JOIN sales_orders so ON i.order_id = so.order_id\n    JOIN customers c ON so.customer_id = c.customer_id\n    JOIN customer_addresses ca ON c.customer_id = ca.customer_id\n    WHERE ca.city = 'Ankara'\n      AND ca.is_primary = true\n      AND i.status IN ('pending', 'overdue')\n      AND i.remaining_amount > 0\n      AND i.due_date < CURRENT_DATE\n)\nSELECT\n    invoice_id,\n    customer_name,\n    invoice_date,\n    due_date,\n    gross_amount,\n    remaining_amount,\n    status\nFROM delayed_invoices\nORDER BY due_date ASC\nLIMIT 50",
+      "score": 0.5,
+      "elapsed_s": 71.97,
       "error": null,
-      "top_hit": "Column analytics.orders.customer_id type=integer nullable=NO samples=['2', '4', '3', '5', '1']"
+      "top_hit": "Column analytics.customer_addresses.line1 type=text nullable=NO samples=['Çankaya Sk. 4', 'Maslak Cad. 1', 'Kadıköy 9', 'Damrak 2', 'Unter den Linden 5'] datasource=bi_reporting domain=sales / customers / orders analytics"
     },
     {
       "id": "q20",
-      "question": "Hardware ürünlerinin toplam satış adedi",
+      "question": "İptal edilmiş faturaları hariç tutarak toplam tutar",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
-        "order_items",
-        "products"
+        "invoices",
+        "v_invoice_open"
       ],
       "expect_tables": [
-        "products",
-        "order_items"
+        "invoices"
       ],
       "sql_ok": true,
-      "sql": "SELECT SUM(oi.quantity) AS total_quantity_sold\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nWHERE p.category = 'Hardware';",
+      "sql": "SELECT SUM(i.gross_amount) AS total_amount\nFROM invoices i\nWHERE i.status != 'cancelled'",
       "score": 1.0,
-      "elapsed_s": 51.84,
+      "elapsed_s": 34.14,
       "error": null,
-      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+      "top_hit": "Column analytics.invoices.gross_amount type=numeric nullable=NO samples=['11905.00', '27500.00', '6300.00', '5343.00', '4200.00'] datasource=bi_reporting domain=sales / customers / orders analytics"
     }
   ]
 }

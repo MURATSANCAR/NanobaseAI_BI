@@ -1,0 +1,193 @@
+{
+  "ts": "2026-07-19T12:19:24.759154+00:00",
+  "verdict": "PASS",
+  "mapping": {
+    "test_db": "bi_reporting :5435",
+    "ro_user": "bi_reporting_ro",
+    "meta_db": "bi_meta :5434",
+    "qwen": "nanobase-qwen36-35b-a3b-mtp",
+    "nl2sql_path": "nanobase_api (nl2sql-plan → query_gateway → result-explain)"
+  },
+  "flags": {
+    "SELECT_ALLOWED": true,
+    "UPDATE_DENIED": true,
+    "CREATE_DENIED": true
+  },
+  "tests": {
+    "dbgpt_version": {
+      "result": "PASS",
+      "note": "0.8.1"
+    },
+    "qwen_models": {
+      "result": "PASS",
+      "note": "nanobase-qwen36-35b-a3b-mtp"
+    },
+    "qwen_streaming": {
+      "result": "PASS",
+      "note": "SSE ok"
+    },
+    "bge_m3": {
+      "result": "PASS",
+      "note": "dim=1024"
+    },
+    "qdrant_up": {
+      "result": "PASS",
+      "note": ":6333"
+    },
+    "qdrant_detail": {
+      "result": "PASS",
+      "note": "status=green size=1024 dist=cosine points=100"
+    },
+    "qdrant_collections": {
+      "result": "PASS",
+      "note": "['bi_schema_erp', 'bi_schema_bi_reporting', 'bi_schema_sigorta', 'contract_nodes']"
+    },
+    "datasource_listed": {
+      "result": "PASS",
+      "note": "['bi_reporting', 'erp', 'sigorta']"
+    },
+    "meta_pg": {
+      "result": "PASS",
+      "note": "nanobase-bi-meta-db"
+    },
+    "reporting_pg": {
+      "result": "PASS",
+      "note": "nanobase-bi-reporting-db"
+    },
+    "ro_select": {
+      "result": "PASS",
+      "note": "8"
+    },
+    "ro_update": {
+      "result": "PASS",
+      "note": "ERROR:  permission denied for view invoices"
+    },
+    "ro_create": {
+      "result": "PASS",
+      "note": "ERROR:  permission denied for schema public\nLINE 1: CREATE TABLE unauthorized_test(id bigint);\n                     ^"
+    },
+    "nl2sql_chain": {
+      "result": "PASS",
+      "note": "4/4"
+    },
+    "turkish_explain": {
+      "result": "PASS",
+      "note": "reply text"
+    },
+    "followup_context": {
+      "result": "PASS",
+      "note": "Bunun ödenmemiş kısmı ne kadar?"
+    }
+  },
+  "nl2sql": [
+    {
+      "question": "2026 yılındaki toplam fatura tutarı nedir?",
+      "ok": true,
+      "sql": "SELECT SUM(gross_amount) AS total_invoice_amount FROM analytics.invoices WHERE EXTRACT(YEAR FROM invoice_date) = 2026 LIMIT 500",
+      "rows": [
+        {
+          "total_invoice_amount": "86748.00"
+        }
+      ],
+      "reply_head": "2026 yılındaki toplam fatura tutarı 86.748,00'dir.\n\nSQL:\nSELECT SUM(gross_amount) AS total_invoice_amount FROM analytics.invoices WHERE EXTRACT(YEAR FROM invoice_date) = 2026 LIMIT 500\n\nEXPLAIN:\nLimit  (cost=18.41..18.42 rows=1 width=32)\n  ->  Aggregate  (cost=18.41..18.42 rows=1",
+      "turkish_ok": true,
+      "elapsed_s": 56.53,
+      "retrieval": {
+        "collection": "bi_schema_bi_reporting",
+        "tables": [
+          "analytics.currency_rates",
+          "analytics.invoices",
+          "analytics.orders",
+          "analytics.payments",
+          "analytics.products",
+          "analytics.v_invoice_open"
+        ],
+        "hit_count": 12
+      },
+      "error": null
+    },
+    {
+      "question": "Bunun ödenmemiş kısmı ne kadar?",
+      "ok": true,
+      "sql": "SELECT SUM(remaining_amount) AS total_unpaid FROM analytics.invoices WHERE status IN ('open', 'partial', 'overdue') LIMIT 500",
+      "rows": [
+        {
+          "total_unpaid": "28500.00"
+        }
+      ],
+      "reply_head": "Ödenmemiş kısmın toplam tutarı 28.500,00 TL'dir.\n\nSQL:\nSELECT SUM(remaining_amount) AS total_unpaid FROM analytics.invoices WHERE status IN ('open', 'partial', 'overdue') LIMIT 500\n\nEXPLAIN:\nLimit  (cost=17.72..17.73 rows=1 width=32)\n  ->  Aggregate  (cost=17.72..17.73 rows=1 wid",
+      "turkish_ok": true,
+      "elapsed_s": 52.32,
+      "retrieval": {
+        "collection": "bi_schema_bi_reporting",
+        "tables": [
+          "analytics.currency_rates",
+          "analytics.invoices",
+          "analytics.order_items",
+          "analytics.payments",
+          "analytics.products",
+          "analytics.sales_order_items",
+          "analytics.v_invoice_open"
+        ],
+        "hit_count": 12
+      },
+      "error": null
+    },
+    {
+      "question": "Ankara'daki müşterilere ait gecikmiş faturaları göster.",
+      "ok": true,
+      "sql": "WITH open_invoices AS (SELECT i.invoice_id, i.order_id, i.gross_amount, i.remaining_amount, i.status, i.invoice_date, i.due_date, c.customer_name, ca.city FROM analytics.invoices AS i JOIN analytics.sales_orders AS so ON i.order_id = so.order_id JOIN analytics.customers AS c ON so.customer_id = c.customer_id JOIN analytics.customer_addresses AS ca ON c.customer_id = ca.customer_id WHERE ca.city = 'Ankara' AND ca.is_primary = TRUE AND i.status IN ('open', 'partial', 'overdue')) SELECT invoice_id, customer_name, invoice_date, due_date, gross_amount, remaining_amount, status FROM open_invoices ORDER BY due_date ASC LIMIT 50",
+      "rows": [
+        {
+          "invoice_id": 3,
+          "customer_name": "Beta Lojistik",
+          "invoice_date": "2026-02-21",
+          "due_date": "2026-03-21",
+          "gross_amount": "11905.00",
+          "remaining_amount": "5000.00",
+          "status": "partial"
+        }
+      ],
+      "reply_head": "Ankara'daki müşterilere ait gecikmiş veya açık kalan faturalar listelenmiştir. Örnek veri olarak 'Beta Lojistik' müşterisine ait, 21 Mart 2026 tarihinde son ödemeli ve 5.000,00 TL kalan borcu olan kısmi ödemeli (partial) bir fatura bulunmaktadır. Sorgu, Ankara'daki birincil adres",
+      "turkish_ok": true,
+      "elapsed_s": 130.96,
+      "retrieval": {
+        "collection": "bi_schema_bi_reporting",
+        "tables": [
+          "analytics.branches",
+          "analytics.customer_addresses",
+          "analytics.customers",
+          "analytics.invoices",
+          "analytics.orders",
+          "analytics.payments",
+          "analytics.v_invoice_open"
+        ],
+        "hit_count": 12
+      },
+      "error": null
+    },
+    {
+      "question": "İptal edilmiş faturaları hesaba katmadan toplam tutarı hesapla.",
+      "ok": true,
+      "sql": "SELECT SUM(gross_amount) AS total_amount FROM analytics.invoices WHERE status <> 'cancelled' LIMIT 500",
+      "rows": [
+        {
+          "total_amount": "86748.00"
+        }
+      ],
+      "reply_head": "İptal edilmiş faturalar hariç tutularak hesaplanan toplam tutar 86,748.00'dir.\n\nSQL:\nSELECT SUM(gross_amount) AS total_amount FROM analytics.invoices WHERE status <> 'cancelled' LIMIT 500\n\nEXPLAIN:\nLimit  (cost=18.39..18.41 rows=1 width=32)\n  ->  Aggregate  (cost=18.39..18.41 row",
+      "turkish_ok": true,
+      "elapsed_s": 69.05,
+      "retrieval": {
+        "collection": "bi_schema_bi_reporting",
+        "tables": [
+          "analytics.invoices",
+          "analytics.payments",
+          "analytics.v_invoice_open"
+        ],
+        "hit_count": 12
+      },
+      "error": null
+    }
+  ]
+}

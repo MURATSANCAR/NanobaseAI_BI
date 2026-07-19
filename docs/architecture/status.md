@@ -31,7 +31,7 @@ Portal: `https://portal.nanobase.ai/bi/` → `/bi-api` → `nanobase_api`.
 
 Shares, analytics/Superset dashboards — empty list stubs.
 
-**Live now:** budgets, alerts, dual workflows (`nl2sql-plan` / `result-explain`), rich reporting schema (invoices/payments/…), secrets file(+optional Vault).
+**Live now:** budgets, alerts, dual workflows, rich reporting schema, secrets file(+Vault opt), **Qdrant schema index for `bi_reporting` + `erp` + `sigorta`** (chat → retrieve → plan → Gateway).
 
 See [locked-architecture.md](locked-architecture.md).
 

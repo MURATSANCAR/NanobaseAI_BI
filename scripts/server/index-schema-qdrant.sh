@@ -21,15 +21,16 @@ for ds in $DS_LIST; do
   export BI_SCHEMA_DATASOURCE="$ds"
   export BI_SCHEMA_COLLECTION="bi_schema_${ds}"
   if [[ "$ds" == "bi_reporting" ]]; then
-    export BI_SCHEMA_SCHEMAS="${BI_SCHEMA_SCHEMAS:-analytics,public}"
+    export BI_SCHEMA_SCHEMAS="analytics,public"
     export BI_SCHEMA_SKIP_SAMPLES="${BI_SCHEMA_SKIP_SAMPLES:-0}"
     export BI_SCHEMA_SKIP_COUNTS="${BI_SCHEMA_SKIP_COUNTS:-0}"
   else
-    export BI_SCHEMA_SCHEMAS="${BI_SCHEMA_SCHEMAS:-public}"
+    # Force public-only for Neon DS (do not inherit analytics from prior loop)
+    export BI_SCHEMA_SCHEMAS="public"
     export BI_SCHEMA_SKIP_SAMPLES=1
     export BI_SCHEMA_SKIP_COUNTS=1
   fi
-  log "indexing $ds → $BI_SCHEMA_COLLECTION"
+  log "indexing $ds → $BI_SCHEMA_COLLECTION (schemas=$BI_SCHEMA_SCHEMAS)"
   "$PY" "${ROOT}/backend/scripts/schema_index_qdrant.py"
 done
 

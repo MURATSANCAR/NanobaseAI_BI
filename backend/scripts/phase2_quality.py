@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 import time
 import urllib.error
@@ -18,13 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
-OUT_DIR = Path(os.environ.get("PHASE2_OUT_DIR", "/data/nanobaseai/bi/frontend/docs/architecture"))
+ROOT = Path(os.environ.get("NANOBASE_ROOT", "/data/nanobaseai/bi/frontend"))
+OUT_DIR = Path(os.environ.get("PHASE2_OUT_DIR", str(ROOT / "docs/architecture")))
 QDRANT_URL = os.environ.get("QDRANT_URL", "http://127.0.0.1:6333").rstrip("/")
 COLLECTION = os.environ.get("BI_SCHEMA_COLLECTION", "bi_schema_bi_reporting")
 EMBED_URL = os.environ.get("BI_EMBED_URL", "http://127.0.0.1:8083/v1/embeddings")
-DBGPT_BASE = os.environ.get("DBGPT_BASE", "http://127.0.0.1:5670").rstrip("/")
-MODEL = os.environ.get("SMOKE_MODEL", "nanobase-qwen36-35b-a3b-mtp")
+API_BASE = os.environ.get("NANOBASE_API_BASE", "http://127.0.0.1:8790").rstrip("/")
 DB_NAME = os.environ.get("SMOKE_DB_NAME", "bi_reporting")
 PASS_THRESHOLD = float(os.environ.get("PHASE2_PASS_THRESHOLD", "0.80"))
 TOP_K = int(os.environ.get("PHASE2_TOP_K", "6"))
@@ -56,10 +54,10 @@ QUESTIONS: list[Q] = [
     Q("q14", "Acme Holding'in sipariş sayısı", ["customers", "orders"], ["select", "acme"]),
     Q("q15", "Services kategorisindeki ürünler", ["products"], ["select", "services", "category"]),
     Q("q16", "İptal edilen siparişler", ["orders"], ["select", "cancelled"]),
-    Q("q17", "Ortalama sipariş kalem adedi", ["order_items"], ["select", "avg", "quantity"]),
-    Q("q18", "EUR para birimli siparişler", ["orders"], ["select", "eur", "currency"]),
-    Q("q19", "Müşteri başına sipariş sayısı", ["customers", "orders"], ["select", "group", "count"]),
-    Q("q20", "Hardware ürünlerinin toplam satış adedi", ["products", "order_items"], ["select", "hardware", "quantity"]),
+    Q("q17", "2026 yılındaki toplam fatura tutarı", ["invoices"], ["select", "sum", "invoice"]),
+    Q("q18", "Ödenmemiş faturaların kalan tutarı", ["invoices"], ["select", "remaining", "sum"]),
+    Q("q19", "Ankara'daki müşterilere ait gecikmiş faturalar", ["invoices", "customers"], ["select", "ankara", "overdue"]),
+    Q("q20", "İptal edilmiş faturaları hariç tutarak toplam tutar", ["invoices"], ["select", "cancelled", "sum"]),
 ]
 
 
@@ -81,16 +79,23 @@ def _http_json(method: str, url: str, body: dict | None = None, headers: dict | 
 
 
 def _embed_key() -> str:
-    key = os.environ.get("BI_EMBED_API_KEY") or os.environ.get("CONTRACT_API_KEY") or ""
-    if key:
-        return key
-    import subprocess
-
-    line = subprocess.check_output(
-        ["sudo", "grep", "-E", "^CONTRACT_API_KEY=", "/etc/nanobaseai/contract.env"],
-        text=True,
-    ).strip()
-    return line.split("=", 1)[1].strip().strip('"').strip("'")
+    preferred = ("BI_EMBED_API_KEY", "EMBEDDING_API_KEY", "CONTRACT_API_KEY")
+    for k in preferred:
+        if os.environ.get(k):
+            return os.environ[k].strip()
+    parsed: dict[str, str] = {}
+    for env in (ROOT / "backend/.env", ROOT / "backend/nanobase_api.env", ROOT / "backend/contract.env"):
+        if not env.is_file():
+            continue
+        for line in env.read_text(encoding="utf-8").splitlines():
+            if "=" not in line or line.strip().startswith("#"):
+                continue
+            k, v = line.split("=", 1)
+            parsed[k.strip()] = v.strip().strip('"').strip("'")
+    for k in preferred:
+        if parsed.get(k):
+            return parsed[k]
+    raise RuntimeError("BI_EMBED_API_KEY not found")
 
 
 def embed_one(text: str, api_key: str) -> list[float]:
@@ -120,68 +125,27 @@ def retrieval_hit(q: Q, hits: list[dict[str, Any]]) -> tuple[bool, list[str]]:
     for h in hits:
         p = h.get("payload") or {}
         if p.get("table"):
-            tables.add(str(p["table"]).lower())
+            # payload may be "customers" or "analytics.customers"
+            raw = str(p["table"]).lower()
+            tables.add(raw)
+            tables.add(raw.split(".")[-1])
     missing = [t for t in q.expect_tables if t.lower() not in tables]
     return (len(missing) == 0, sorted(tables))
 
 
-def stream_nl2sql(question: str) -> str:
-    body = {
-        "user_input": question,
-        "conv_uid": f"phase2-{int(time.time() * 1000)}",
-        "chat_mode": "chat_with_db_execute",
-        "select_param": DB_NAME,
-        "model_name": MODEL,
-        "incremental": True,
-        "temperature": 0.1,
-        "max_new_tokens": 1024,
-    }
-    data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(
-        f"{DBGPT_BASE}/api/v1/chat/completions",
-        data=data,
-        method="POST",
-        headers={"Content-Type": "application/json", "Accept": "text/event-stream"},
+def plan_nl2sql(question: str) -> tuple[str | None, str]:
+    """Nanobase nl2sql-plan (no customer SQL execute — Gateway path)."""
+    plan = _http_json(
+        "POST",
+        f"{API_BASE}/api/v1/bi/workflows/nl2sql-plan",
+        {"question": question, "datasource_id": DB_NAME},
+        timeout=180,
     )
-    parts: list[str] = []
-    with urllib.request.urlopen(req, timeout=300) as resp:
-        while True:
-            line = resp.readline()
-            if not line:
-                break
-            text = line.decode("utf-8", errors="replace").strip()
-            if not text.startswith("data:"):
-                continue
-            payload = text[5:].strip()
-            if not payload or payload == "[DONE]":
-                continue
-            if payload.startswith("[SERVER_ERROR]"):
-                raise RuntimeError(payload)
-            try:
-                obj = json.loads(payload)
-            except json.JSONDecodeError:
-                continue
-            choices = obj.get("choices") or []
-            if not choices:
-                continue
-            msg = choices[0].get("delta") or choices[0].get("message") or {}
-            content = msg.get("content")
-            if isinstance(content, str) and content:
-                parts.append(content)
-    return "".join(parts)
-
-
-def extract_sql(text: str) -> str | None:
-    m = re.search(r'"sql"\s*:\s*"((?:\\.|[^"\\])*)"', text)
-    if m:
-        return bytes(m.group(1), "utf-8").decode("unicode_escape")
-    m = re.search(r"```sql\s*(.*?)```", text, re.I | re.S)
-    if m:
-        return m.group(1).strip()
-    m = re.search(r"(SELECT\b[\s\S]{8,800}?;)", text, re.I)
-    if m:
-        return m.group(1).strip()
-    return None
+    if plan.get("error"):
+        raise RuntimeError(str(plan["error"])[:300])
+    sql = plan.get("sql") or plan.get("executed_sql")
+    reply = json.dumps(plan, ensure_ascii=False)
+    return (str(sql) if sql else None, reply)
 
 
 def sql_ok(q: Q, sql: str | None, reply: str) -> bool:
@@ -213,8 +177,7 @@ def main() -> None:
         if RUN_NL2SQL:
             sql_run += 1
             try:
-                reply = stream_nl2sql(q.question)
-                sql = extract_sql(reply)
+                sql, reply = plan_nl2sql(q.question)
                 ok_sql = sql_ok(q, sql, reply)
                 if ok_sql:
                     sql_pass += 1
@@ -252,6 +215,8 @@ def main() -> None:
     summary = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "collection": COLLECTION,
+        "api_base": API_BASE,
+        "nl2sql_path": "nanobase_api /workflows/nl2sql-plan",
         "top_k": TOP_K,
         "nl2sql": RUN_NL2SQL,
         "retrieval_pass": f"{ret_pass}/{len(QUESTIONS)}",
