@@ -1,0 +1,6 @@
+# Optional hard expectations (filled/updated by run-smoke-tests.py --write-expected)
+datasource: bi_reporting
+notes: >
+  Soft expectations live in smoke-questions.yaml.
+  This file records last known-good retrieval tables per question after a PASS run.
+results: []

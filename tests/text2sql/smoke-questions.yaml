@@ -1,0 +1,87 @@
+# 20-question Text-to-SQL smoke suite (bi_reporting / analytics)
+# expect_tables: bare table names that retrieval should surface
+datasource: bi_reporting
+collection: bi_schema_bi_reporting
+pass_threshold: 0.80
+
+questions:
+  - id: q01
+    question: Kaç müşteri var?
+    expect_tables: [customers]
+    expect_sql_tokens: [select, count, customer]
+  - id: q02
+    question: Enterprise segmentindeki müşterileri listele
+    expect_tables: [customers]
+    expect_sql_tokens: [select, segment, enterprise]
+  - id: q03
+    question: Almanya'daki müşteri sayısı
+    expect_tables: [customers]
+    expect_sql_tokens: [select, country]
+  - id: q04
+    question: Ürün kategorilerine göre ürün sayısı
+    expect_tables: [products]
+    expect_sql_tokens: [select, category, count]
+  - id: q05
+    question: En pahalı ürün hangisi?
+    expect_tables: [products]
+    expect_sql_tokens: [select, unit_price]
+  - id: q06
+    question: SKU-100 ürününün adı nedir?
+    expect_tables: [products]
+    expect_sql_tokens: [select, sku]
+  - id: q07
+    question: Completed sipariş sayısı
+    expect_tables: [orders]
+    expect_sql_tokens: [select, completed, count]
+  - id: q08
+    question: 2026 yılı siparişlerini getir
+    expect_tables: [orders]
+    expect_sql_tokens: [select, order_date]
+  - id: q09
+    question: Pending siparişleri olan müşteriler
+    expect_tables: [orders, customers]
+    expect_sql_tokens: [select, pending]
+  - id: q10
+    question: Her siparişin toplam tutarı (order_items)
+    expect_tables: [order_items, orders]
+    expect_sql_tokens: [select, quantity, unit_price]
+  - id: q11
+    question: En çok satılan ürün (adet)
+    expect_tables: [order_items, products]
+    expect_sql_tokens: [select, sum, quantity]
+  - id: q12
+    question: Segment bazında toplam gelir
+    expect_tables: [v_order_revenue, customers]
+    expect_sql_tokens: [select, segment]
+  - id: q13
+    question: v_order_revenue üzerinden ülke bazında ciro
+    expect_tables: [v_order_revenue]
+    expect_sql_tokens: [select, country, revenue]
+  - id: q14
+    question: Acme Holding'in sipariş sayısı
+    expect_tables: [customers, orders]
+    expect_sql_tokens: [select, acme]
+  - id: q15
+    question: Services kategorisindeki ürünler
+    expect_tables: [products]
+    expect_sql_tokens: [select, services, category]
+  - id: q16
+    question: İptal edilen siparişler
+    expect_tables: [orders]
+    expect_sql_tokens: [select, cancelled]
+  - id: q17
+    question: 2026 yılındaki toplam fatura tutarı
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, sum, invoice]
+  - id: q18
+    question: Ödenmemiş faturaların kalan tutarı
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, remaining, sum]
+  - id: q19
+    question: Ankara'daki müşterilere ait gecikmiş faturalar
+    expect_tables: [invoices, customers]
+    expect_sql_tokens: [select, overdue]
+  - id: q20
+    question: İptal edilmiş faturaları hariç tutarak toplam tutar
+    expect_tables: [invoices]
+    expect_sql_tokens: [select, cancelled, sum]

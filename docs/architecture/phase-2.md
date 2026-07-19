@@ -1,24 +1,56 @@
-# Nanobase BI — Faz 2 schema index + quality
+# Nanobase BI — Faz 2 Schema Indexer
 
-## What ran (server)
+## Module
 
-1. Controlled scan → BGE-M3 → Qdrant:
-   - `bi_schema_bi_reporting` (200 points, analytics+public)
-   - `bi_schema_erp` (280 points)
-   - `bi_schema_sigorta` (213 points)
-2. 20-question gate on `bi_schema_bi_reporting`:
-   - retrieval hit-rate
-   - NL2SQL via **nanobase_api** `/workflows/nl2sql-plan` (Gateway path; DB-GPT execute yok)
-3. Pass threshold: overall ≥ 0.80
+```
+tools/schema-indexer/
+├── scanner/          # metadata + controlled profiling
+├── normalizer/       # TABLE / COLUMN / RELATIONSHIP docs
+├── fingerprint/      # SHA-256 skip / re-embed
+├── embedder/         # BGE-M3
+├── qdrant_writer/    # upsert + soft-delete
+└── cli/
+```
+
+## Pipeline
+
+```
+Test PostgreSQL (bi_reporting / nanobase_test alias)
+      ↓
+Metadata Scanner (tables, columns, PK/FK)
+      ↓
+Controlled profiling (COUNT, MIN/MAX date, status GROUP BY — never SELECT *)
+      ↓
+Normalizer → TABLE | COLUMN | RELATIONSHIP
+      ↓
+Fingerprint (SHA-256) → SKIP | RE-EMBED+UPSERT
+      ↓
+BGE-M3 → Qdrant
+      ↓
+Soft-delete stale keys → Scan Report
+```
 
 ## Commands
 
 ```bash
 # on server
-./scripts/server/run-phase2.sh
+SCHEMA_INDEX_RECREATE=1 ./scripts/server/run-phase2.sh bi_reporting
+
+# or directly
+PYTHONPATH=tools/schema-indexer \
+  backend/.venv/bin/python -m cli.main \
+  --datasource bi_reporting --schemas analytics,public --recreate
 ```
 
-## Acceptance (2026-07-19)
+## Smoke suite
 
-See [`phase-2-results.md`](phase-2-results.md): **overall 0.950 — PASS**
-(18/20 retrieval, 20/20 SQL plan; q12/q19 retrieval miss but SQL ok).
+```
+tests/text2sql/
+├── smoke-questions.yaml
+├── expected-results.yaml
+└── run-smoke-tests.py
+```
+
+## Acceptance
+
+See [`phase-2-results.md`](phase-2-results.md).

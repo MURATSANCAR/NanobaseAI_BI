@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Index Postgres datasources into Qdrant (bi_reporting / erp / sigorta).
+# Index Postgres datasources via tools/schema-indexer → Qdrant.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+INDEXER="${ROOT}/tools/schema-indexer"
 PY="${ROOT}/backend/.venv/bin/python"
 export SECRETS_ROOT="${SECRETS_ROOT:-/data/nanobaseai/bi/secrets}"
-export PHASE2_OUT_DIR="${ROOT}/docs/architecture"
+export PHASE2_OUT_DIR="${PHASE2_OUT_DIR:-${ROOT}/docs/architecture}"
 
-# Prefer backend/.env for embed key (avoid sudo)
 if [[ -f "${ROOT}/backend/.env" ]]; then
   set -a
   # shellcheck disable=SC1091
@@ -15,23 +15,26 @@ if [[ -f "${ROOT}/backend/.env" ]]; then
 fi
 
 DS_LIST="${1:-bi_reporting erp sigorta}"
+RECREATE_FLAG="${SCHEMA_INDEX_RECREATE:-}"
 log() { printf '[schema-index] %s\n' "$*"; }
 
 for ds in $DS_LIST; do
-  export BI_SCHEMA_DATASOURCE="$ds"
-  export BI_SCHEMA_COLLECTION="bi_schema_${ds}"
-  if [[ "$ds" == "bi_reporting" ]]; then
-    export BI_SCHEMA_SCHEMAS="analytics,public"
-    export BI_SCHEMA_SKIP_SAMPLES="${BI_SCHEMA_SKIP_SAMPLES:-0}"
-    export BI_SCHEMA_SKIP_COUNTS="${BI_SCHEMA_SKIP_COUNTS:-0}"
-  else
-    # Force public-only for Neon DS (do not inherit analytics from prior loop)
-    export BI_SCHEMA_SCHEMAS="public"
-    export BI_SCHEMA_SKIP_SAMPLES=1
-    export BI_SCHEMA_SKIP_COUNTS=1
+  extra=()
+  if [[ -n "$RECREATE_FLAG" ]]; then
+    extra+=(--recreate)
   fi
-  log "indexing $ds → $BI_SCHEMA_COLLECTION (schemas=$BI_SCHEMA_SCHEMAS)"
-  "$PY" "${ROOT}/backend/scripts/schema_index_qdrant.py"
+  if [[ "$ds" == "bi_reporting" || "$ds" == "nanobase_test" ]]; then
+    schemas="analytics,public"
+  else
+    schemas="public"
+    extra+=(--skip-samples --skip-profile)
+  fi
+  log "indexing $ds (schemas=$schemas) via schema-indexer"
+  PYTHONPATH="${INDEXER}" "$PY" -m cli.main \
+    --datasource "$ds" \
+    --schemas "$schemas" \
+    --out-dir "${PHASE2_OUT_DIR}" \
+    "${extra[@]+"${extra[@]}"}"
 done
 
 curl -sf http://127.0.0.1:6333/collections | python3 -c 'import sys,json; print([c["name"] for c in json.load(sys.stdin)["result"]["collections"]])'
