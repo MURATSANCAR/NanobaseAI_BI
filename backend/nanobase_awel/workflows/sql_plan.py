@@ -58,7 +58,9 @@ async def run_sql_plan(
     user = render_simple(user_tpl, context_blocks=context_blocks, question=req.question)
 
     try:
-        raw = await chat_completion(system, user, temperature=0.0, max_tokens=2048)
+        raw = await chat_completion(
+            system, user, temperature=0.0, max_tokens=1024, purpose="sql_plan"
+        )
         plan = parse_sql_plan(
             raw,
             prompt_version=req.generation.promptVersion,

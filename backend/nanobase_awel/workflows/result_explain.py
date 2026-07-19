@@ -49,7 +49,11 @@ async def run_result_explain(req: ResultExplanationRequest) -> ResultExplanation
     warnings: list[str] = []
 
     try:
-        raw = await chat_completion(system, user, temperature=0.1, max_tokens=800)
+        # Short timeout: under CPU contention prefer deterministic fallback
+        # over multi-minute Qwen stalls that surface as hard chat errors.
+        raw = await chat_completion(
+            system, user, temperature=0.1, max_tokens=800, timeout_s=25.0
+        )
         parsed = extract_json_object(raw)
         answer = str(parsed.get("answer") or "").strip()
         insights = parsed.get("insights") if isinstance(parsed.get("insights"), list) else []

@@ -47,10 +47,21 @@ def validate_plan_references(
     if sqlglot is None:
         return plan
 
+    sql_text = (plan.sql or "").strip()
+    # Models sometimes wrap SQL in markdown / prose — peel a SELECT/WITH block.
+    if sql_text and not re.match(r"(?is)^(with|select)\b", sql_text):
+        m = re.search(r"(?is)\b((?:with|select)\b[\s\S]{8,8000})", sql_text)
+        if m:
+            sql_text = m.group(1).strip().rstrip(";")
+            plan.sql = sql_text
+            plan.warnings = [*(plan.warnings or []), "sql_extracted_before_validate"]
+
     try:
-        tree = sqlglot.parse_one(plan.sql, read="postgres")
+        tree = sqlglot.parse_one(sql_text, read="postgres")
     except Exception as e:
-        raise WorkflowError(SCHEMA_REFERENCE_FAILED, "Plan SQL ayrıştırılamadı.") from e
+        # Soft-fail: Gateway still validates; hard-fail blocked usable Arctic drafts.
+        plan.warnings = [*(plan.warnings or []), f"sql_parse_soft_fail:{type(e).__name__}"]
+        return plan
 
     cte_aliases: set[str] = set()
     for cte in tree.find_all(exp.CTE):

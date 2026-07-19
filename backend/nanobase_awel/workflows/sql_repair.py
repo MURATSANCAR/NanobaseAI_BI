@@ -42,7 +42,9 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
         attempt=str(req.attempt),
         context=req.authorizedContext or req.schemaHint,
     )
-    raw = await chat_completion(system, user, temperature=0.0, max_tokens=2048)
+    raw = await chat_completion(
+        system, user, temperature=0.0, max_tokens=2048, purpose="sql_repair"
+    )
     plan = parse_sql_plan(
         raw,
         prompt_version=req.promptVersion,
