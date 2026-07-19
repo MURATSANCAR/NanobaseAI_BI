@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from nanobase_awel import PLAN_WORKFLOW
@@ -14,6 +15,10 @@ from nanobase_awel.operators.schema_reference_validator import validate_plan_ref
 from nanobase_awel.operators.structured_parser import parse_sql_plan
 from nanobase_awel.retrieval.authorized import build_sanitized_context, retrieve_authorized_schema
 
+# Arctic is faster/more reliable with compact schema context under CPU contention.
+_TEXT2SQL_COMPACT = bool((os.environ.get("TEXT2SQL_API_BASE") or "").strip())
+_TEXT2SQL_CONTEXT_CHARS = int(os.environ.get("TEXT2SQL_CONTEXT_CHARS", "4500"))
+
 
 async def run_sql_plan(
     req: SqlPlanningRequest,
@@ -25,11 +30,14 @@ async def run_sql_plan(
 
     retrieval = prefetched_retrieval or {"ok": False, "hits": [], "tables": [], "hint_extra": ""}
     if not skip_retrieval and not prefetched_retrieval:
+        max_docs = req.retrievalScope.maxDocuments
+        if _TEXT2SQL_COMPACT:
+            max_docs = min(max_docs or 30, 12)
         retrieval = await retrieve_authorized_schema(
             req.question,
             tenant_id=req.tenantId,
             datasource_id=req.datasourceId,
-            max_documents=req.retrievalScope.maxDocuments,
+            max_documents=max_docs,
             allowed_schemas=req.retrievalScope.allowedSchemas or None,
             fail_closed=False,
         )
@@ -46,6 +54,15 @@ async def run_sql_plan(
     except Exception:
         semantic_ctx = ""
 
+    # Prefetched retrieval from chat may be large; compact for Text2SQL models.
+    if _TEXT2SQL_COMPACT and retrieval.get("hits"):
+        retrieval = {
+            **retrieval,
+            "hits": (retrieval.get("hits") or [])[:12],
+            "hint_extra": str(retrieval.get("hint_extra") or hint)[:_TEXT2SQL_CONTEXT_CHARS],
+        }
+        hint = str(retrieval.get("hint_extra") or "")
+
     context_blocks = build_sanitized_context(
         question=req.question,
         schema_hint=req.schemaHint,
@@ -53,13 +70,21 @@ async def run_sql_plan(
         conversation_turns=req.conversationContext.recentTurns,
         semantic_context=semantic_ctx or None,
     )
+    if _TEXT2SQL_COMPACT and len(context_blocks) > _TEXT2SQL_CONTEXT_CHARS + 500:
+        context_blocks = context_blocks[: _TEXT2SQL_CONTEXT_CHARS + 500]
 
     system, user_tpl = sql_plan_prompts(dialect=req.dialect)
+    if _TEXT2SQL_COMPACT:
+        system = (
+            system
+            + "\nHard constraints: ONE PostgreSQL statement only. No semicolon chains. "
+            "JSON only with a single SELECT/WITH in sql."
+        )
     user = render_simple(user_tpl, context_blocks=context_blocks, question=req.question)
 
     try:
         raw = await chat_completion(
-            system, user, temperature=0.0, max_tokens=1024, purpose="sql_plan"
+            system, user, temperature=0.0, max_tokens=768, purpose="sql_plan"
         )
         plan = parse_sql_plan(
             raw,

@@ -33,15 +33,35 @@ def extract_json_object(text: str) -> dict[str, Any]:
     return {}
 
 
+def normalize_single_select_sql(sql: str | None) -> str | None:
+    """Keep a single SELECT/WITH statement (Gateway rejects ';')."""
+    if sql is None:
+        return None
+    text = str(sql).strip()
+    if not text:
+        return None
+    if text.startswith("```"):
+        text = re.sub(r"^```(?:sql|postgres)?\s*", "", text, flags=re.I)
+        text = re.sub(r"\s*```$", "", text)
+    m = re.search(r"(?is)\b((?:with|select)\b[\s\S]+)", text)
+    if m:
+        text = m.group(1).strip()
+    # Drop trailing prose / extra statements after the first terminator.
+    if ";" in text:
+        text = text.split(";", 1)[0].strip()
+    text = text.rstrip(";").strip()
+    return text or None
+
+
 def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadata_version: str = "") -> SqlPlan:
     parsed = extract_json_object(raw)
     if not parsed:
         # last chance: pull SELECT
-        m = re.search(r"(SELECT\b[\s\S]{8,4000})", raw or "", re.I)
-        if m:
+        extracted = normalize_single_select_sql(raw)
+        if extracted:
             return SqlPlan(
                 status=PlanStatus.PLANNED,
-                sql=m.group(1).strip().rstrip(";"),
+                sql=extracted,
                 dialect="postgres",
                 tables=[],
                 columns=[],
@@ -59,9 +79,7 @@ def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadat
     except ValueError:
         status = PlanStatus.PLANNED if parsed.get("sql") else PlanStatus.FAILED
 
-    sql = parsed.get("sql")
-    if sql is not None:
-        sql = str(sql).strip().rstrip(";") or None
+    sql = normalize_single_select_sql(parsed.get("sql") if parsed.get("sql") is not None else None)
 
     plan = SqlPlan(
         status=status,
