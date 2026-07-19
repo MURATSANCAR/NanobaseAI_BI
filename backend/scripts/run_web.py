@@ -12,9 +12,11 @@ if str(_SCRIPTS) not in sys.path:
 
 # Import before apply() so the class exists to patch.
 import dbgpt_serve.datasource.manages.connector_manager  # noqa: E402, F401
-from patch_connector_db_name import apply  # noqa: E402
+from patch_connector_db_name import apply as apply_connector_patch  # noqa: E402
+from patch_stream_generator import apply as apply_stream_patch  # noqa: E402
 
-apply()
+apply_connector_patch()
+apply_stream_patch()
 
 from dbgpt.cli.cli_scripts import main  # noqa: E402
 

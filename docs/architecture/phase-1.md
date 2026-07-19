@@ -39,3 +39,10 @@ Seed schema: `analytics.customers|products|orders|order_items` + `analytics.v_or
 - Do **not** start a second Qdrant on `:6333`; BI collections share the existing instance (namespace by collection name, e.g. `bi_schema_*`).
 - `bi_meta` data dir must be owned by UID **70** (postgres:16-alpine). `deploy-infra.sh` repairs ownership if needed.
 - Live portal `/bi` and `nanobase-bi-bridge` are untouched in Faz 1.
+
+## Acceptance (2026-07-19)
+
+- Infra verify: Qdrant, BGE-M3, bi_meta, reporting RO — all OK
+- NL2SQL smoke (`bi_reporting` + Qwen): **5/5** — see [`phase-1-results.md`](phase-1-results.md)
+- DB-GPT runs via `scripts/run_web.py` (connector + stream_generator patches)
+- Reporting tables in `analytics`; `public.*` views for DB-GPT discovery

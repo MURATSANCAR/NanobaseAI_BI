@@ -1,0 +1,97 @@
+{
+  "ts": "2026-07-19T09:28:10.666754+00:00",
+  "collection": "bi_schema_bi_reporting",
+  "chunks": 33,
+  "points_count": 33,
+  "vector_size": 1024,
+  "elapsed_s": 2.67,
+  "sample": [
+    {
+      "chunk_id": "4ce3a71587629565",
+      "kind": "column",
+      "schema": "analytics",
+      "table": "customers",
+      "column": "customer_id",
+      "text": "Column analytics.customers.customer_id type=integer nullable=NO samples=['2', '4', '3', '5', '1']",
+      "meta": {
+        "data_type": "integer",
+        "samples": [
+          "2",
+          "4",
+          "3",
+          "5",
+          "1"
+        ],
+        "pk": false
+      }
+    },
+    {
+      "chunk_id": "c2c937d5eed8bf1a",
+      "kind": "column",
+      "schema": "analytics",
+      "table": "customers",
+      "column": "customer_name",
+      "text": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']",
+      "meta": {
+        "data_type": "text",
+        "samples": [
+          "Beta Lojistik",
+          "Delta Enerji",
+          "Epsilon Soft",
+          "Acme Holding",
+          "Gamma Retail"
+        ],
+        "pk": false
+      }
+    },
+    {
+      "chunk_id": "7a81e88b08b2fd38",
+      "kind": "column",
+      "schema": "analytics",
+      "table": "customers",
+      "column": "country",
+      "text": "Column analytics.customers.country type=text nullable=NO samples=['DE', 'TR', 'NL']",
+      "meta": {
+        "data_type": "text",
+        "samples": [
+          "DE",
+          "TR",
+          "NL"
+        ],
+        "pk": false
+      }
+    },
+    {
+      "chunk_id": "720f7923fa48139f",
+      "kind": "column",
+      "schema": "analytics",
+      "table": "customers",
+      "column": "segment",
+      "text": "Column analytics.customers.segment type=text nullable=NO samples=['smb', 'enterprise', 'consumer']",
+      "meta": {
+        "data_type": "text",
+        "samples": [
+          "smb",
+          "enterprise",
+          "consumer"
+        ],
+        "pk": false
+      }
+    },
+    {
+      "chunk_id": "fbd28e78556189a3",
+      "kind": "column",
+      "schema": "analytics",
+      "table": "customers",
+      "column": "created_at",
+      "text": "Column analytics.customers.created_at type=timestamp with time zone nullable=NO samples=['2026-07-19 08:22:55.8826+00']",
+      "meta": {
+        "data_type": "timestamp with time zone",
+        "samples": [
+          "2026-07-19 08:22:55.8826+00"
+        ],
+        "pk": false
+      }
+    }
+  ]
+}

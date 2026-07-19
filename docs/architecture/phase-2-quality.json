@@ -1,0 +1,393 @@
+{
+  "ts": "2026-07-19T09:55:15.944183+00:00",
+  "collection": "bi_schema_bi_reporting",
+  "top_k": 6,
+  "nl2sql": true,
+  "retrieval_pass": "20/20",
+  "sql_pass": "20/20",
+  "overall_score": 1.0,
+  "pass_threshold": 0.8,
+  "passed": true,
+  "results": [
+    {
+      "id": "q01",
+      "question": "Kaç müşteri var?",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "customers"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT COUNT(*) AS customer_count FROM customers;",
+      "score": 1.0,
+      "elapsed_s": 24.23,
+      "error": null,
+      "top_hit": "Table analytics.customers\nRow count: 5\nPrimary key: []\nColumns:\n- customer_id integer\n- customer_name text\n- country text\n- segment text\n- created_at timestamp with time zone\nUse for NL2SQL over sales/customers/orders analytics."
+    },
+    {
+      "id": "q02",
+      "question": "Enterprise segmentindeki müşterileri listele",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "customers"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT customer_name FROM customers WHERE segment = 'Enterprise' LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 13.12,
+      "error": null,
+      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+    },
+    {
+      "id": "q03",
+      "question": "Almanya'daki müşteri sayısı",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "customers"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT COUNT(*) AS customer_count\nFROM customers\nWHERE country = 'Germany';",
+      "score": 1.0,
+      "elapsed_s": 59.21,
+      "error": null,
+      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+    },
+    {
+      "id": "q04",
+      "question": "Ürün kategorilerine göre ürün sayısı",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "products"
+      ],
+      "expect_tables": [
+        "products"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT category, COUNT(product_id) AS product_count FROM products GROUP BY category LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 17.35,
+      "error": null,
+      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+    },
+    {
+      "id": "q05",
+      "question": "En pahalı ürün hangisi?",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "products"
+      ],
+      "expect_tables": [
+        "products"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT product_name, unit_price FROM products ORDER BY unit_price DESC LIMIT 1;",
+      "score": 1.0,
+      "elapsed_s": 18.05,
+      "error": null,
+      "top_hit": "Column analytics.products.unit_price type=numeric nullable=NO samples=['1500.00', '2100.00', '3500.00', '890.50', '12000.00']"
+    },
+    {
+      "id": "q06",
+      "question": "SKU-100 ürününün adı nedir?",
+      "retrieval_ok": true,
+      "found_tables": [
+        "products"
+      ],
+      "expect_tables": [
+        "products"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT product_name FROM products WHERE sku = 'SKU-100' LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 36.55,
+      "error": null,
+      "top_hit": "Column analytics.products.sku type=text nullable=NO samples=['SKU-100', 'SKU-200', 'SKU-300', 'SKU-400', 'SKU-500']"
+    },
+    {
+      "id": "q07",
+      "question": "Completed sipariş sayısı",
+      "retrieval_ok": true,
+      "found_tables": [
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT COUNT(*) AS completed_order_count\nFROM orders\nWHERE status = 'Completed';",
+      "score": 1.0,
+      "elapsed_s": 31.09,
+      "error": null,
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+    },
+    {
+      "id": "q08",
+      "question": "2026 yılı siparişlerini getir",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT * FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2026 LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 30.91,
+      "error": null,
+      "top_hit": "Column analytics.orders.order_date type=date nullable=NO samples=['2026-02-01', '2026-06-18', '2026-03-05', '2026-03-12', '2026-02-20']"
+    },
+    {
+      "id": "q09",
+      "question": "Pending siparişleri olan müşteriler",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "orders",
+        "customers"
+      ],
+      "sql_ok": true,
+      "sql": "select the customer details (like customer_id and customer_name) to identify them. Since the question doesn't specify which columns to return, I'll return the customer ID and name. I will limit the results to 50 as per constraints.\\\",\\n    \\\"direct_response\\\": \\\"\\\",\\n    \\\"sql\\\": \\\"SELECT DISTINCT c.customer_id, c.customer_name\\\\nFROM customers c\\\\nJOIN orders o ON c.customer_id = o.customer_id\\\\nWHERE o.status = 'Pending'\\\\nLIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 36.33,
+      "error": null,
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+    },
+    {
+      "id": "q10",
+      "question": "Her siparişin toplam tutarı (order_items)",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "order_items",
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT order_id, SUM(quantity * unit_price) AS total_amount FROM order_items GROUP BY order_id LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 27.97,
+      "error": null,
+      "top_hit": "Column analytics.v_order_revenue.revenue type=numeric nullable=YES samples=[]"
+    },
+    {
+      "id": "q11",
+      "question": "En çok satılan ürün (adet)",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "products"
+      ],
+      "expect_tables": [
+        "order_items",
+        "products"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT p.product_name, SUM(oi.quantity) AS total_quantity_sold\\\\nFROM order_items oi\\\\nJOIN products p ON oi.product_id = p.product_id\\\\nGROUP BY p.product_name\\\\nORDER BY total_quantity_sold DESC\\\\nLIMIT 1;",
+      "score": 1.0,
+      "elapsed_s": 39.01,
+      "error": null,
+      "top_hit": "Column analytics.order_items.product_id type=integer nullable=NO samples=['2', '4', '3', '5', '1']"
+    },
+    {
+      "id": "q12",
+      "question": "Segment bazında toplam gelir",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "v_order_revenue",
+        "customers"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT \\\\n    segment, \\\\n    SUM(revenue) AS total_revenue \\\\nFROM \\\\n    v_order_revenue \\\\nGROUP BY \\\\n    segment \\\\nLIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 20.03,
+      "error": null,
+      "top_hit": "Column analytics.v_order_revenue.segment type=text nullable=YES samples=[]"
+    },
+    {
+      "id": "q13",
+      "question": "v_order_revenue üzerinden ülke bazında ciro",
+      "retrieval_ok": true,
+      "found_tables": [
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "v_order_revenue"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT country, SUM(revenue) AS total_revenue\nFROM v_order_revenue\nGROUP BY country\nLIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 18.78,
+      "error": null,
+      "top_hit": "Column analytics.v_order_revenue.country type=text nullable=YES samples=[]"
+    },
+    {
+      "id": "q14",
+      "question": "Acme Holding'in sipariş sayısı",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "order_items",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "customers",
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT COUNT(order_id) AS order_count\nFROM v_order_revenue\nWHERE customer_name = 'Acme Holding';",
+      "score": 1.0,
+      "elapsed_s": 36.56,
+      "error": null,
+      "top_hit": "Column analytics.customers.customer_name type=text nullable=NO samples=['Beta Lojistik', 'Delta Enerji', 'Epsilon Soft', 'Acme Holding', 'Gamma Retail']"
+    },
+    {
+      "id": "q15",
+      "question": "Services kategorisindeki ürünler",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "order_items",
+        "products"
+      ],
+      "expect_tables": [
+        "products"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT product_id, sku, product_name, category, unit_price FROM products WHERE category = 'Services' LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 13.83,
+      "error": null,
+      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+    },
+    {
+      "id": "q16",
+      "question": "İptal edilen siparişler",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "select the relevant order details. Since the exact status string isn't specified, I will assume a standard value like 'Cancelled' or check for common variations. Given the simplicity, selecting order_id, customer_id, order_date, and status for records with status 'Cancelled' is appropriate. If 'Cancelled' yields no results, it might be 'Cancel' or 'canceled', but without schema constraints on enum values, 'Cancelled' is a safe standard guess for SQL generation in this context. I will limit the result to 50 rows.\\\",\\n    \\\"direct_response\\\": \\\"\\\",\\n    \\\"sql\\\": \\\"SELECT order_id, customer_id, order_date, status, currency FROM orders WHERE status = 'Cancelled' LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 45.65,
+      "error": null,
+      "top_hit": "Column analytics.orders.status type=text nullable=NO samples=['completed', 'cancelled', 'pending', 'shipped']"
+    },
+    {
+      "id": "q17",
+      "question": "Ortalama sipariş kalem adedi",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "orders",
+        "products",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "order_items"
+      ],
+      "sql_ok": true,
+      "sql": null,
+      "score": 1.0,
+      "elapsed_s": 29.8,
+      "error": null,
+      "top_hit": "Column analytics.v_order_revenue.customer_name type=text nullable=YES samples=[]"
+    },
+    {
+      "id": "q18",
+      "question": "EUR para birimli siparişler",
+      "retrieval_ok": true,
+      "found_tables": [
+        "order_items",
+        "orders",
+        "products",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT * FROM orders WHERE currency = 'EUR' LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 23.93,
+      "error": null,
+      "top_hit": "Column analytics.orders.currency type=text nullable=NO samples=['TRY', 'EUR']"
+    },
+    {
+      "id": "q19",
+      "question": "Müşteri başına sipariş sayısı",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "orders",
+        "v_order_revenue"
+      ],
+      "expect_tables": [
+        "customers",
+        "orders"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT c.customer_name, COUNT(o.order_id) AS order_count FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_name ORDER BY order_count DESC LIMIT 50;",
+      "score": 1.0,
+      "elapsed_s": 32.71,
+      "error": null,
+      "top_hit": "Column analytics.orders.customer_id type=integer nullable=NO samples=['2', '4', '3', '5', '1']"
+    },
+    {
+      "id": "q20",
+      "question": "Hardware ürünlerinin toplam satış adedi",
+      "retrieval_ok": true,
+      "found_tables": [
+        "customers",
+        "order_items",
+        "products"
+      ],
+      "expect_tables": [
+        "products",
+        "order_items"
+      ],
+      "sql_ok": true,
+      "sql": "SELECT SUM(oi.quantity) AS total_quantity_sold\nFROM order_items oi\nJOIN products p ON oi.product_id = p.product_id\nWHERE p.category = 'Hardware';",
+      "score": 1.0,
+      "elapsed_s": 51.84,
+      "error": null,
+      "top_hit": "Column analytics.products.category type=text nullable=NO samples=['hardware', 'services', 'software']"
+    }
+  ]
+}
