@@ -234,9 +234,11 @@ from nanobase_api import semantic as semantic_mod  # noqa: E402
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
+from nanobase_api import workflows as workflows_mod  # noqa: E402
+from nanobase_api.secrets_resolver import secrets_status  # noqa: E402
 
 QG_BASE = os.environ.get("QUERY_GATEWAY_BASE", "http://127.0.0.1:8792").rstrip("/")
-app.version = "0.9.3"
+app.version = "0.9.5"
 
 
 @app.get("/health")
@@ -578,6 +580,57 @@ async def alerts_check_now(request: Request) -> JSONResponse:
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"checked": 0, "triggered": 0, "errors": [str(e)[:300]]}, status_code=500)
+
+
+@app.get("/api/v1/bi/secrets/status")
+async def secrets_status_api() -> JSONResponse:
+    return JSONResponse({"ok": True, **secrets_status()})
+
+
+@app.post("/api/v1/bi/workflows/nl2sql-plan")
+async def workflow_nl2sql_plan(request: Request) -> JSONResponse:
+    body = await request.json()
+    question = str(body.get("question") or "").strip()
+    if not question:
+        return JSONResponse({"error": "question required"}, status_code=400)
+    ds = str(body.get("datasource_id") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting")
+    from nanobase_api.chat_gateway import _schema_hint_for
+
+    try:
+        plan = await workflows_mod.nl2sql_plan(
+            question=question,
+            conversation_context=body.get("conversationContext") or body.get("conversation_context"),
+            datasource_context=body.get("datasourceContext")
+            or {"datasource_id": ds},
+            allowed_schemas=body.get("allowedSchemas") or body.get("allowed_schemas"),
+            allowed_tables=body.get("allowedTables") or body.get("allowed_tables"),
+            schema_hint=_schema_hint_for(ds),
+        )
+        return JSONResponse(plan)
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/workflows/result-explain")
+async def workflow_result_explain(request: Request) -> JSONResponse:
+    body = await request.json()
+    question = str(body.get("question") or "").strip()
+    sql = str(body.get("executedSql") or body.get("executed_sql") or "").strip()
+    columns = body.get("columns") or []
+    rows = body.get("rows") or []
+    if not question:
+        return JSONResponse({"error": "question required"}, status_code=400)
+    try:
+        out = await workflows_mod.result_explain(
+            question=question,
+            executed_sql=sql,
+            columns=list(columns),
+            rows=list(rows),
+            truncated=bool(body.get("truncated")),
+        )
+        return JSONResponse(out)
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:400]}, status_code=500)
 
 
 # Soft catch-all AFTER real routes (empty stubs for remaining FE SaaS paths)

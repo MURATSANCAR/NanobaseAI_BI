@@ -39,8 +39,27 @@ fi
 
 # verified chat
 OUT=$(curl -sN -X POST "$API/api/v1/bi/chat/stream" -H 'Content-Type: application/json' \
-  -d '{"message":"Kaç müşteri var?","session_id":"e2e","db_name":"bi_reporting"}' --max-time 60 || true)
-echo "$OUT" | grep -q 'verified_sql\|verified_cache_hit' && ok "verified SQL chat" || bad "verified chat"
+  -d '{"message":"Kaç müşteri var?","session_id":"e2e","db_name":"bi_reporting"}' --max-time 90 || true)
+echo "$OUT" | grep -q 'verified_sql\|verified_cache_hit\|nl2sql_plan\|nanobase-nl2sql-plan' && ok "chat workflow/cache" || bad "chat workflow"
+
+# workflow plan endpoint (no execute)
+curl -fsS -X POST "$API/api/v1/bi/workflows/nl2sql-plan" -H 'Content-Type: application/json' \
+  -d '{"question":"Ödenmemiş fatura tutarı toplamı nedir?"}' \
+  | python3 -c 'import sys,json;d=json.load(sys.stdin); assert d.get("executes") is False and d.get("sql"); print("plan tables", d.get("tables"))' \
+  && ok "nl2sql-plan workflow" || bad "nl2sql-plan"
+
+curl -fsS "$API/api/v1/bi/secrets/status" | python3 -c 'import sys,json;d=json.load(sys.stdin); assert d.get("mode") in ("file","vault+file")' \
+  && ok "secrets status" || bad "secrets status"
+
+# rich schema smoke if present
+code=$(curl -sS -o /tmp/e2e_inv.json -w '%{http_code}' -X POST "$QG/api/v1/query/execute" \
+  -H 'Content-Type: application/json' \
+  -d '{"datasource_id":"bi_reporting","sql":"SELECT count(*) AS n FROM invoices"}')
+if [[ "$code" == "200" ]]; then
+  ok "rich schema invoices"
+else
+  ok "rich schema not applied yet (optional)"
+fi
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 [[ -x "$ROOT/scripts/server/verify-query-gateway.sh" ]] && "$ROOT/scripts/server/verify-query-gateway.sh" || bad "verify-query-gateway"

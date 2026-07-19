@@ -31,5 +31,7 @@ Portal: `https://portal.nanobase.ai/bi/` → `/bi-api` → `nanobase_api`.
 
 Shares, analytics/Superset dashboards — empty list stubs.
 
-**Live now:** budgets (`bi_meta` + ERP `butce_planlari` sync), alerts (CRUD + check-now via Gateway).
-Text-to-SQL path (chat → Gateway → RO DB) is production.
+**Live now:** budgets, alerts, dual workflows (`nl2sql-plan` / `result-explain`), rich reporting schema (invoices/payments/…), secrets file(+optional Vault).
+
+See [locked-architecture.md](locked-architecture.md).
+

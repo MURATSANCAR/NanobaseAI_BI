@@ -64,9 +64,17 @@ class ExecuteRequest(BaseModel):
 def _password_from_cfg(cfg: dict[str, Any]) -> str:
     if cfg.get("password"):
         return str(cfg["password"])
-    pf = cfg.get("password_file")
-    if pf:
-        return Path(pf).read_text(encoding="utf-8").strip()
+    ref = cfg.get("secret_ref") or cfg.get("password_file")
+    if ref:
+        try:
+            from nanobase_api.secrets_resolver import resolve_secret
+
+            return resolve_secret(str(ref))
+        except Exception:
+            # fallback: treat as file path
+            p = Path(str(ref).removeprefix("file:"))
+            if p.is_file():
+                return p.read_text(encoding="utf-8").strip()
     return ""
 
 
@@ -84,15 +92,25 @@ def _load_datasources() -> dict[str, dict[str, Any]]:
     ds: dict[str, dict[str, Any]] = {}
 
     ro_file = SECRETS / "reporting-ro.password"
-    if ro_file.is_file():
-        ds["bi_reporting"] = {
+    if ro_file.is_file() or os.environ.get("REPORTING_RO_SECRET_REF"):
+        try:
+            from nanobase_api.secrets_resolver import resolve_secret
+
+            reporting_pw = resolve_secret(
+                os.environ.get("REPORTING_RO_SECRET_REF"),
+                default_file="reporting-ro.password",
+            )
+        except Exception:
+            reporting_pw = ro_file.read_text(encoding="utf-8").strip() if ro_file.is_file() else ""
+        if reporting_pw:
+            ds["bi_reporting"] = {
             "id": "bi_reporting",
             "driver": "postgresql",
             "host": os.environ.get("REPORTING_HOST", "127.0.0.1"),
             "port": int(os.environ.get("REPORTING_PORT", "5435")),
             "database": os.environ.get("REPORTING_DB", "bi_reporting"),
             "user": os.environ.get("REPORTING_RO_USER", "bi_reporting_ro"),
-            "password": ro_file.read_text(encoding="utf-8").strip(),
+            "password": reporting_pw,
             "sslmode": "disable",
             "dialect": "postgres",
             "allowed_tables": {
@@ -101,16 +119,46 @@ def _load_datasources() -> dict[str, dict[str, Any]]:
                 "orders",
                 "order_items",
                 "v_order_revenue",
+                "companies",
+                "branches",
+                "customer_addresses",
+                "sales_orders",
+                "sales_order_items",
+                "invoices",
+                "payments",
+                "currency_rates",
+                "returns",
+                "v_invoice_open",
                 "analytics.customers",
                 "analytics.products",
                 "analytics.orders",
                 "analytics.order_items",
                 "analytics.v_order_revenue",
+                "analytics.companies",
+                "analytics.branches",
+                "analytics.customer_addresses",
+                "analytics.sales_orders",
+                "analytics.sales_order_items",
+                "analytics.invoices",
+                "analytics.payments",
+                "analytics.currency_rates",
+                "analytics.returns",
+                "analytics.v_invoice_open",
                 "public.customers",
                 "public.products",
                 "public.orders",
                 "public.order_items",
                 "public.v_order_revenue",
+                "public.companies",
+                "public.branches",
+                "public.customer_addresses",
+                "public.sales_orders",
+                "public.sales_order_items",
+                "public.invoices",
+                "public.payments",
+                "public.currency_rates",
+                "public.returns",
+                "public.v_invoice_open",
             },
         }
 
