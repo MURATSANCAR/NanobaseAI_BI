@@ -125,9 +125,9 @@ export default function BiSemanticCatalogPage() {
   const versions = versionsQ.data?.versions || [];
 
   return (
-    <PageShell title="Semantic Catalog (Governance)" subtitle="Faz 7 — metric governance, dual review, versioning">
+    <PageShell pageId="biGlossary" titleKey="nav.biSemanticCatalog" subtitleKey="nav.hint.biSemanticCatalog">
       {(err || statusQ.error) && (
-        <ApiErrorBanner error={(err || String(statusQ.error)) as string} />
+        <ApiErrorBanner error={err ? new Error(err) : (statusQ.error as Error)} />
       )}
       {msg && (
         <pre className="mb-4 max-h-40 overflow-auto rounded border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
@@ -173,7 +173,7 @@ export default function BiSemanticCatalogPage() {
       <section className="mb-8">
         <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Metrics</h2>
         {metrics.length === 0 ? (
-          <EmptyState title="No metrics" description="Seed the unpaid invoice vertical slice to begin." />
+          <EmptyState titleKey="bi.queriesEmptyTitle" descriptionKey="bi.queriesEmptyHint" />
         ) : (
           <ul className="space-y-2">
             {metrics.map((m) => (
@@ -214,7 +214,7 @@ export default function BiSemanticCatalogPage() {
           Promotion queue
         </h2>
         {promos.length === 0 ? (
-          <EmptyState title="No promotions" description="Validate a metric and submit for review." />
+          <EmptyState titleKey="bi.queriesEmptyTitle" descriptionKey="bi.queriesEmptyHint" />
         ) : (
           <ul className="space-y-2">
             {promos.map((p) => (

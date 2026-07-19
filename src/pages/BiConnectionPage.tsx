@@ -66,7 +66,7 @@ const PRESETS: Record<string, Partial<BiConnectionUpsert>> = {
   },
   sap_hana_ro: {
     driver: 'hana',
-    deployment: 'on_premise',
+    deployment: 'local',
     host: '',
     port: 30015,
     database: 'PRD',
