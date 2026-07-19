@@ -27,6 +27,7 @@ async def validate_endpoint(
             user_id=body.userId,
             max_rows=limits.maxRows if limits else None,
             trace_id=auth.get("trace_id"),
+            parameters=body.parameters,
         )
     except GatewayError as e:
         e.execution_id = e.execution_id or body.executionId

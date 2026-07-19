@@ -20,6 +20,7 @@ import dagre from '@dagrejs/dagre';
 import { KeyRound, Link2, Maximize2, Table2 } from 'lucide-react';
 import type { BiSchemaGraphEdge, BiSchemaGraphNode } from '@/api/types';
 import { t } from '@/i18n';
+import { formatSchemaColumnType } from '@/utils/biSchemaColumnType';
 
 const NODE_WIDTH = 248;
 const HEADER_HEIGHT = 42;
@@ -30,7 +31,15 @@ type TableNodeData = {
   label: string;
   schema: string;
   fullName: string;
-  columns: Array<{ name: string; type: string; nullable?: boolean }>;
+  columns: Array<{
+    name: string;
+    type: string;
+    type_display?: string;
+    nullable?: boolean;
+    max_length?: number | null;
+    precision?: number | null;
+    scale?: number | null;
+  }>;
   primaryKey: string[];
   fkColumns: string[];
   highlight: string;
@@ -83,8 +92,11 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
         {data.columns.map((col: TableNodeData['columns'][number]) => {
           const isPk = pkSet.has(col.name);
           const isFk = fkSet.has(col.name);
-          const colHit = matchesHighlight(col.name, q) || matchesHighlight(col.type, q);
-          const shortType = col.type.replace(/\(\)/g, '').split(' ')[0];
+          const typeLabel = formatSchemaColumnType(col);
+          const colHit =
+            matchesHighlight(col.name, q) ||
+            matchesHighlight(col.type, q) ||
+            matchesHighlight(typeLabel, q);
 
           return (
             <div
@@ -92,6 +104,7 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
               className={`flex items-center gap-1.5 px-2.5 py-1 ${
                 colHit ? 'bg-amber-50' : isPk ? 'bg-indigo-50/60' : isFk ? 'bg-violet-50/50' : 'bg-white'
               }`}
+              title={`${col.name}: ${typeLabel}`}
             >
               <span className="flex w-4 shrink-0 justify-center">
                 {isPk ? (
@@ -103,7 +116,7 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
               <span className={`min-w-0 flex-1 truncate font-mono ${colHit ? 'font-semibold text-amber-900' : 'text-slate-800'}`}>
                 {col.name}
               </span>
-              <span className="shrink-0 truncate text-[10px] text-slate-400">{shortType}</span>
+              <span className="max-w-[7.5rem] shrink-0 truncate font-mono text-[10px] text-slate-500">{typeLabel}</span>
             </div>
           );
         })}

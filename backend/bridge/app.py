@@ -327,7 +327,15 @@ async def schema_get() -> dict[str, Any]:
                                 {
                                     "name": c.get("name") or c.get("column_name") or "col",
                                     "type": c.get("type") or c.get("column_type") or "text",
+                                    "type_display": c.get("type_display")
+                                    or c.get("type")
+                                    or c.get("column_type")
+                                    or "text",
                                     "nullable": c.get("nullable", True),
+                                    "max_length": c.get("max_length")
+                                    or c.get("character_maximum_length"),
+                                    "precision": c.get("precision") or c.get("numeric_precision"),
+                                    "scale": c.get("scale") or c.get("numeric_scale"),
                                 }
                             )
                         else:

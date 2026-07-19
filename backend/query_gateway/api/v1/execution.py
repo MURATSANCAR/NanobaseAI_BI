@@ -31,6 +31,7 @@ async def execute_endpoint(
             max_rows=limits.maxRows if limits else None,
             timeout_ms=limits.timeoutMs if limits else None,
             trace_id=auth.get("trace_id"),
+            parameters=body.parameters,
         )
         _executions[body.executionId] = {
             "executionId": body.executionId,

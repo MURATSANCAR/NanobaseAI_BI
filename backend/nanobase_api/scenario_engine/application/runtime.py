@@ -1,13 +1,20 @@
-"""Runtime helper: match → resolve params → cached compile → gateway-ready payload."""
+"""Runtime helper: match → resolve params → cached template → gateway-ready binds."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from nanobase_api.scenario_engine.application.followups import followup_suggestions
 from nanobase_api.scenario_engine.application.matcher import MatchResult, ScenarioMatcher
 from nanobase_api.scenario_engine.application.param_resolver import resolve_parameters
-from nanobase_api.scenario_engine.domain.status import is_retrieval_eligible
-from nanobase_api.scenario_engine.infrastructure.compiler import get_compiler, render_sql
+from nanobase_api.scenario_engine.domain.status import ScenarioStatus, is_retrieval_eligible
+from nanobase_api.scenario_engine.infrastructure.compiler import get_compiler
+from nanobase_api.scenario_engine.infrastructure.metrics import (
+    SCENARIO_CACHE_HIT,
+    SCENARIO_FALLBACK_AWEL,
+    SCENARIO_RUNTIME_FAILURES,
+    inc,
+)
 from nanobase_api.scenario_engine.infrastructure.redis_cache import (
     CachedPlan,
     cache_key,
@@ -24,7 +31,10 @@ def try_precompiled_scenario(
     dialect: str = "postgres",
     financial_critical: bool = False,
 ) -> dict[str, Any] | None:
-    """Return gateway-ready SQL payload or None to fall back to AWEL."""
+    """Return gateway-ready template + bind params, or None to fall back to AWEL.
+
+    Never string-concatenates parameters into SQL for the chat/execute path.
+    """
     store = get_scenario_store()
     matcher = ScenarioMatcher(store=store)
     match: MatchResult = matcher.match(
@@ -34,11 +44,17 @@ def try_precompiled_scenario(
         financial_critical=financial_critical,
     )
     if not match.matched or match.route == "AWEL" or not match.scenario_id:
-        store.record_usage(match.scenario_id or "_none", field="fallback_count")
+        inc(SCENARIO_FALLBACK_AWEL)
+        if match.scenario_id:
+            store.record_usage(match.scenario_id, field="fallback_count")
         return None
 
     inst = store.get_instance(match.scenario_id)
     if inst is None or not is_retrieval_eligible(inst.status):
+        inc(SCENARIO_RUNTIME_FAILURES)
+        return None
+    if inst.status == ScenarioStatus.STALE:
+        inc(SCENARIO_RUNTIME_FAILURES)
         return None
 
     params = resolve_parameters(question, inst.logical_plan)
@@ -55,10 +71,16 @@ def try_precompiled_scenario(
         policy_version=inst.policy_version,
     )
     cached = cache.get(key)
-    if cached is None:
+    if cached is not None:
+        inc(SCENARIO_CACHE_HIT)
+    else:
         comp = store.get_compilation(inst.id, dialect=dialect)
         if comp is None:
-            compiled = get_compiler(dialect).compile(inst.logical_plan)
+            try:
+                compiled = get_compiler(dialect).compile(inst.logical_plan)
+            except Exception:
+                inc(SCENARIO_RUNTIME_FAILURES)
+                return None
             sql_template = compiled.sql_template
             ast_fp = compiled.ast_fingerprint
             bind_params = compiled.bind_params
@@ -78,15 +100,13 @@ def try_precompiled_scenario(
         )
         cache.put(key, cached)
 
-    # Materialize for gateway clients that don't yet accept named binds —
-    # values are typed/validated; still must pass Query Gateway validate.
-    sql = render_sql(cached.sql_template, binds)
     store.record_usage(inst.id, field="execution_count")
 
     return {
-        "sql": sql,
+        "sql": cached.sql_template,  # template with :binds — Gateway executes with parameters
         "sqlTemplate": cached.sql_template,
         "bindParams": binds,
+        "parameters": binds,
         "scenarioId": inst.id,
         "scenarioCode": inst.scenario_code,
         "confidence": match.confidence,
@@ -96,4 +116,5 @@ def try_precompiled_scenario(
         "schemaVersion": inst.schema_version,
         "semanticVersion": inst.semantic_version,
         "sqlSource": "precompiled_scenario",
+        "followUps": followup_suggestions(inst.logical_plan),
     }

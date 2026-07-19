@@ -2744,6 +2744,14 @@
       0 1px 3px rgba(91, 33, 182, 0.1);
   }
 
+  .bi-schema-size-chip {
+    @apply shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums;
+    color: #0f766e;
+    background: linear-gradient(180deg, rgba(204, 251, 241, 0.95) 0%, rgba(153, 246, 228, 0.65) 100%);
+    border: 1px solid rgba(45, 212, 191, 0.35);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.85) inset;
+  }
+
   .bi-schema-ask-btn {
     @apply flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200;
     color: #5b21b6;

@@ -22,6 +22,12 @@ def _deterministic_vector(text: str, dim: int = 64) -> list[float]:
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
+    """Embed texts. Production requires BI_EMBED_URL unless deterministic embed allowed."""
+    allow_det = os.environ.get("SCENARIO_ALLOW_DETERMINISTIC_EMBED", "1").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     url = os.environ.get("BI_EMBED_URL", "").rstrip("/")
     if url:
         try:
@@ -39,10 +45,13 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             vectors = []
             for item in data.get("data") or []:
                 vectors.append(list(item.get("embedding") or []))
-            if len(vectors) == len(texts):
+            if len(vectors) == len(texts) and texts:
                 return vectors
-        except Exception:
-            pass
+        except Exception as e:
+            if not allow_det:
+                raise RuntimeError(f"BI_EMBED_URL failed: {e}") from e
+    elif not allow_det:
+        raise RuntimeError("BI_EMBED_URL required for scenario publish (set SCENARIO_ALLOW_DETERMINISTIC_EMBED=1 for dev)")
     return [_deterministic_vector(t) for t in texts]
 
 

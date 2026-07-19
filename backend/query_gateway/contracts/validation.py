@@ -22,6 +22,7 @@ class ValidateRequest(BaseModel):
     sql: str = Field(..., min_length=1)
     purpose: Optional[str] = "INTERACTIVE_ANALYSIS"
     limits: Optional[QueryLimits] = None
+    parameters: Optional[dict[str, Any]] = None
 
 
 class ValidateApproved(BaseModel):
@@ -48,3 +49,4 @@ class ExecuteRequest(BaseModel):
     sql: str = Field(..., min_length=1)
     purpose: Optional[str] = "INTERACTIVE_ANALYSIS"
     limits: Optional[QueryLimits] = None
+    parameters: Optional[dict[str, Any]] = None

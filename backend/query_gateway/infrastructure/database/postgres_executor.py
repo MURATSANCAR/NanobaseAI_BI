@@ -25,11 +25,32 @@ def execute_postgres_ro(
     run_explain: bool = True,
     settings: Settings | None = None,
     registry: PoolRegistry | None = None,
+    parameters: dict[str, Any] | None = None,
 ) -> tuple[list[str], list[dict[str, Any]], bool, int]:
     """Returns columns, rows, truncated, execution_time_ms."""
     settings = settings or get_settings()
     registry = registry or get_pool_registry()
     t0 = time.time()
+    from query_gateway.infrastructure.parser.bind_params import (
+        assert_binds_present,
+        extract_bind_names,
+        probe_sql_for_parse,
+        to_psycopg_sql,
+        validate_parameters,
+    )
+
+    bind_params = validate_parameters(parameters)
+    has_binds = bool(extract_bind_names(sql)) or bool(bind_params)
+    if has_binds:
+        assert_binds_present(sql, bind_params)
+        exec_sql = to_psycopg_sql(sql)
+        explain_sql = probe_sql_for_parse(sql, bind_params)
+        exec_args: dict[str, Any] | None = bind_params
+    else:
+        exec_sql = sql
+        explain_sql = sql
+        exec_args = None
+
     ds_id, conn = registry.get_postgres_conn(ds)
     try:
         conn.set_session(readonly=True, autocommit=False)
@@ -48,7 +69,7 @@ def execute_postgres_ro(
             if run_explain:
                 cur.execute(f"SET LOCAL statement_timeout = '{int(settings.explain_timeout_ms)}ms'")
                 try:
-                    cur.execute(f"EXPLAIN (FORMAT JSON) {sql}")
+                    cur.execute(f"EXPLAIN (FORMAT JSON) {explain_sql}")
                     explain_row = cur.fetchone()
                     plan = None
                     if explain_row:
@@ -76,7 +97,10 @@ def execute_postgres_ro(
                 cur.execute(f"SET LOCAL statement_timeout = '{int(timeout_ms)}ms'")
 
             try:
-                cur.execute(sql)
+                if exec_args is not None:
+                    cur.execute(exec_sql, exec_args)
+                else:
+                    cur.execute(exec_sql)
             except Exception as e:
                 conn.rollback()
                 msg = str(e).lower()

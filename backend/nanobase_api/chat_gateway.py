@@ -335,6 +335,8 @@ async def stream_chat_via_gateway(
     verified_meta: dict[str, Any] | None = None
     retrieval_meta: dict[str, Any] = {}
     semantic_meta: dict[str, Any] = {}
+    bind_parameters: dict[str, Any] | None = None
+    scenario_followups: list[str] = []
 
     # Precompiled scenario engine — before semantic metric / AWEL
     try:
@@ -350,14 +352,17 @@ async def stream_chat_via_gateway(
             tenant_id=tenant_id,
             datasource_id=datasource_id,
         )
-        if scenario_hit and scenario_hit.get("sql"):
-            sql = str(scenario_hit["sql"])
+        if scenario_hit and (scenario_hit.get("sqlTemplate") or scenario_hit.get("sql")):
+            sql = str(scenario_hit.get("sqlTemplate") or scenario_hit["sql"])
             sql_source = "precompiled_scenario"
+            bind_parameters = dict(scenario_hit.get("parameters") or scenario_hit.get("bindParams") or {})
+            scenario_followups = list(scenario_hit.get("followUps") or [])
             verified_meta = {
                 "id": scenario_hit.get("scenarioId"),
                 "sql": sql,
                 "source": "precompiled_scenario",
                 "logicalPlan": scenario_hit.get("logicalPlan"),
+                "parameters": bind_parameters,
             }
             if float(scenario_hit.get("confidence") or 0) >= 0.99:
                 inc(SCENARIO_EXACT_MATCH)
@@ -371,6 +376,8 @@ async def stream_chat_via_gateway(
                     "route": scenario_hit.get("route"),
                     "sql": sql,
                     "sql_source": sql_source,
+                    "followUps": scenario_followups,
+                    "has_bind_params": bool(bind_parameters),
                 },
             ).encode()
         else:
@@ -776,6 +783,7 @@ async def stream_chat_via_gateway(
             datasource_id=datasource_id,
             execution_id=execution_id,
             tenant_id=tenant_id,
+            parameters=bind_parameters,
         )
         if not vj.get("ok"):
             code = str(vj.get("code") or "QUERY_POLICY_REJECTED")
@@ -873,6 +881,7 @@ async def stream_chat_via_gateway(
                 datasource_id=datasource_id,
                 execution_id=execution_id,
                 tenant_id=tenant_id,
+                parameters=bind_parameters,
             )
         except Exception as e:
             yield _sse(
@@ -905,6 +914,7 @@ async def stream_chat_via_gateway(
                 sql=safe_sql,
                 datasource_id=datasource_id,
                 explain=True,
+                parameters=bind_parameters,
             )
             explain_plan_text = "\n".join(
                 str(list(row.values())[0]) for row in (xj.get("rows") or []) if row

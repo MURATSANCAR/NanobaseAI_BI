@@ -133,6 +133,108 @@ def invoice_analytics_snapshot() -> SchemaSnapshot:
     )
 
 
+def snapshot_from_pg(dsn: str, *, schemas: list[str] | None = None, datasource_id: str = "default") -> SchemaSnapshot:
+    """Build SchemaSnapshot from a live Postgres information_schema."""
+    import psycopg2
+    import psycopg2.extras
+
+    schemas = schemas or ["analytics", "public", "reporting"]
+    pg = dsn.replace("postgresql+psycopg2://", "postgresql://")
+    tables: list[TableSnap] = []
+    fks: list[dict[str, str]] = []
+    conn = psycopg2.connect(pg)
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT table_schema, table_name
+                FROM information_schema.tables
+                WHERE table_type = 'BASE TABLE'
+                  AND table_schema = ANY(%s)
+                ORDER BY 1, 2
+                """,
+                (schemas,),
+            )
+            for t in cur.fetchall():
+                schema, name = t["table_schema"], t["table_name"]
+                cur.execute(
+                    """
+                    SELECT column_name, data_type, is_nullable
+                    FROM information_schema.columns
+                    WHERE table_schema = %s AND table_name = %s
+                    ORDER BY ordinal_position
+                    """,
+                    (schema, name),
+                )
+                cols = [
+                    ColumnSnap(
+                        name=c["column_name"],
+                        data_type=c["data_type"],
+                        nullable=c["is_nullable"] == "YES",
+                    )
+                    for c in cur.fetchall()
+                ]
+                # PKs
+                cur.execute(
+                    """
+                    SELECT a.attname
+                    FROM pg_index i
+                    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+                    JOIN pg_class c ON c.oid = i.indrelid
+                    JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE i.indisprimary AND n.nspname = %s AND c.relname = %s
+                    """,
+                    (schema, name),
+                )
+                pks = {r["attname"] for r in cur.fetchall()}
+                for col in cols:
+                    if col.name in pks:
+                        col.is_pk = True
+                tables.append(TableSnap(schema=schema, name=name, columns=cols))
+
+            cur.execute(
+                """
+                SELECT
+                  nsp.nspname AS from_schema,
+                  rel.relname AS from_table,
+                  att.attname AS from_column,
+                  fnsp.nspname AS to_schema,
+                  frel.relname AS to_table,
+                  fatt.attname AS to_column
+                FROM pg_constraint con
+                JOIN pg_class rel ON rel.oid = con.conrelid
+                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                JOIN pg_class frel ON frel.oid = con.confrelid
+                JOIN pg_namespace fnsp ON fnsp.oid = frel.relnamespace
+                JOIN unnest(con.conkey) WITH ORDINALITY AS ck(attnum, ord) ON true
+                JOIN unnest(con.confkey) WITH ORDINALITY AS fk(attnum, ord) ON fk.ord = ck.ord
+                JOIN pg_attribute att ON att.attrelid = con.conrelid AND att.attnum = ck.attnum
+                JOIN pg_attribute fatt ON fatt.attrelid = con.confrelid AND fatt.attnum = fk.attnum
+                WHERE con.contype = 'f'
+                  AND nsp.nspname = ANY(%s)
+                """,
+                (schemas,),
+            )
+            for r in cur.fetchall():
+                fks.append(
+                    {
+                        "from": f"{r['from_schema']}.{r['from_table']}.{r['from_column']}",
+                        "to": f"{r['to_schema']}.{r['to_table']}.{r['to_column']}",
+                    }
+                )
+                # mark FK columns
+                fqn = f"{r['from_schema']}.{r['from_table']}"
+                for t in tables:
+                    if t.fqn == fqn:
+                        for c in t.columns:
+                            if c.name == r["from_column"]:
+                                c.is_fk = True
+                                c.fk_ref = f"{r['to_schema']}.{r['to_table']}.{r['to_column']}"
+    finally:
+        conn.close()
+    return SchemaSnapshot(tables=tables, foreign_keys=fks, datasource_id=datasource_id)
+
+
 def snapshot_from_dict(raw: dict[str, Any]) -> SchemaSnapshot:
     tables: list[TableSnap] = []
     for tname, tmeta in (raw.get("tables") or {}).items():

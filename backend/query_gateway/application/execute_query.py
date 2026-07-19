@@ -28,6 +28,7 @@ def execute_query(
     timeout_ms: int | None = None,
     settings: Settings | None = None,
     trace_id: str | None = None,
+    parameters: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
     t0 = time.time()
@@ -41,6 +42,7 @@ def execute_query(
         max_rows=max_rows,
         settings=settings,
         trace_id=trace_id,
+        parameters=parameters,
     )
     validation_ms = int((time.time() - t0) * 1000)
 
@@ -52,6 +54,7 @@ def execute_query(
     driver = (ds.get("driver") or "postgresql").lower()
     rows_limit = min(max_rows or settings.max_rows, settings.max_limit)
     timeout = min(timeout_ms or settings.statement_timeout_ms, 60_000)
+    bind_params = approved.get("parameters") or {}
 
     if driver in ("postgresql", "postgres"):
         cols, rows, truncated, exec_ms = execute_postgres_ro(
@@ -63,6 +66,7 @@ def execute_query(
             size_profile=str(ds.get("size_profile") or "medium"),
             run_explain=True,
             settings=settings,
+            parameters=bind_params or None,
         )
     elif driver == "oracle":
         cols, rows, truncated, exec_ms = execute_oracle_ro(

@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, KeyRound, Link2, MessageSquare, Table2 } from '
 import type { BiSchemaTable } from '@/api/types';
 import { useBiChatDockOptional } from '@/context/BiChatDockContext';
 import { t } from '@/i18n';
+import { formatSchemaColumnType, schemaColumnSizeHint } from '@/utils/biSchemaColumnType';
 
 type Props = {
   tables: BiSchemaTable[];
@@ -47,7 +48,7 @@ export default function BiSchemaTablesPanel({ tables }: Props) {
     <section className="bi-schema-panel">
       <div className="bi-schema-panel-header">
         <h2 className="text-sm font-semibold text-slate-800">{t('bi.schemaTablesTitle')}</h2>
-        <p className="mt-0.5 text-xs text-slate-500">{t('bi.schemaTablesSubtitle')}</p>
+        <p className="mt-0.5 text-xs text-slate-500">{t('bi.schemaTablesSubtitleSized')}</p>
       </div>
 
       <div className="bi-schema-table-grid">
@@ -95,14 +96,24 @@ export default function BiSchemaTablesPanel({ tables }: Props) {
                       const cols = fk.columns ?? fk.constrained_columns;
                       return Array.isArray(cols) && cols.includes(col.name);
                     });
+                    const typeLabel = formatSchemaColumnType(col);
+                    const sizeHint = schemaColumnSizeHint(col);
                     return (
                       <div
                         key={`${table.full_name}-${col.name}`}
                         className={clsx('bi-schema-col-row', isPk && 'is-pk', isFk && !isPk && 'is-fk')}
+                        title={`${col.name}: ${typeLabel}`}
                       >
                         <span className="bi-schema-col-order">{idx + 1}</span>
                         <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-800">{col.name}</span>
-                        <span className="bi-schema-type-pill">{col.type}</span>
+                        <span className="bi-schema-type-pill" title={typeLabel}>
+                          {typeLabel}
+                        </span>
+                        {sizeHint ? (
+                          <span className="bi-schema-size-chip" title={typeLabel}>
+                            {sizeHint}
+                          </span>
+                        ) : null}
                         <span className="hidden text-[10px] text-slate-400 sm:inline">
                           {col.nullable == null ? '' : col.nullable ? t('bi.nullableYes') : t('bi.nullableNo')}
                         </span>

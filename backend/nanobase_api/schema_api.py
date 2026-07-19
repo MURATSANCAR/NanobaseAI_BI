@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import psycopg2
 import psycopg2.extras
@@ -28,6 +28,95 @@ def _datasource_cfg(datasource_id: str) -> dict[str, Any] | None:
     from nanobase_api.infrastructure.datasource_registry import resolve_pg_connect_cfg
 
     return resolve_pg_connect_cfg(datasource_id)
+
+
+def format_column_type(
+    *,
+    data_type: str,
+    udt_name: str | None = None,
+    character_maximum_length: Optional[int] = None,
+    numeric_precision: Optional[int] = None,
+    numeric_scale: Optional[int] = None,
+    datetime_precision: Optional[int] = None,
+) -> str:
+    """Human-readable SQL type: varchar(50), numeric(18,2), timestamp(6), …"""
+    dt = (data_type or "text").strip().lower()
+    udt = (udt_name or "").strip().lower()
+    char_len = character_maximum_length
+    prec = numeric_precision
+    scale = numeric_scale
+    dt_prec = datetime_precision
+
+    if char_len is not None:
+        if "text" in dt or udt in ("text", "citext"):
+            return "citext" if udt == "citext" else "text"
+        if udt == "bpchar" or dt in ("character", "char"):
+            return f"char({int(char_len)})"
+        if udt == "varchar" or "varying" in dt or dt == "varchar":
+            return f"varchar({int(char_len)})"
+        return f"{udt or dt}({int(char_len)})"
+
+    if prec is not None and (udt == "numeric" or dt in ("numeric", "decimal") or "numeric" in dt):
+        if scale is not None and int(scale) > 0:
+            return f"numeric({int(prec)},{int(scale)})"
+        return f"numeric({int(prec)})"
+
+    if dt_prec is not None and any(x in dt for x in ("timestamp", "time", "interval")):
+        # Avoid noisy timestamp(6) without timezone label when udt is clearer
+        base = udt or dt.replace(" without time zone", "").replace(" with time zone", "tz")
+        if "timestamptz" in udt or "with time zone" in dt:
+            return f"timestamptz({int(dt_prec)})"
+        if "timestamp" in dt or udt.startswith("timestamp"):
+            return f"timestamp({int(dt_prec)})"
+        if "time" in dt:
+            return f"time({int(dt_prec)})"
+
+    if udt in ("int2", "int4", "int8", "bool", "uuid", "json", "jsonb", "bytea", "date"):
+        return {
+            "int2": "smallint",
+            "int4": "integer",
+            "int8": "bigint",
+            "bool": "boolean",
+        }.get(udt, udt)
+
+    return udt or dt
+
+
+def _column_payload(c: dict[str, Any]) -> dict[str, Any]:
+    char_len = c.get("character_maximum_length")
+    prec = c.get("numeric_precision")
+    scale = c.get("numeric_scale")
+    dt_prec = c.get("datetime_precision")
+    data_type = str(c.get("data_type") or "text")
+    udt = str(c.get("udt_name") or "") or None
+    # information_schema fills numeric_precision for ints too — only expose for numeric/decimal
+    is_numeric = (udt == "numeric") or data_type.lower() in ("numeric", "decimal")
+    max_length = int(char_len) if char_len is not None else None
+    precision = int(prec) if prec is not None and is_numeric else None
+    scale_i = int(scale) if scale is not None and is_numeric else None
+    datetime_prec = int(dt_prec) if dt_prec is not None else None
+    type_display = format_column_type(
+        data_type=data_type,
+        udt_name=udt,
+        character_maximum_length=max_length,
+        numeric_precision=precision,
+        numeric_scale=scale_i,
+        datetime_precision=datetime_prec,
+    )
+    return {
+        "name": c["column_name"],
+        "type": data_type,
+        "udt_name": udt,
+        "type_display": type_display,
+        "nullable": c.get("is_nullable") == "YES",
+        "max_length": max_length,
+        "character_maximum_length": max_length,
+        "precision": precision,
+        "numeric_precision": precision,
+        "scale": scale_i,
+        "numeric_scale": scale_i,
+        "datetime_precision": datetime_prec,
+    }
 
 
 def fetch_schema(datasource_id: str) -> dict[str, Any]:
@@ -62,7 +151,9 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                 sch, name = rel["table_schema"], rel["table_name"]
                 cur.execute(
                     """
-                    SELECT column_name, data_type, is_nullable
+                    SELECT column_name, data_type, udt_name, is_nullable,
+                           character_maximum_length, numeric_precision, numeric_scale,
+                           datetime_precision
                     FROM information_schema.columns
                     WHERE table_schema = %s AND table_name = %s
                     ORDER BY ordinal_position
@@ -70,14 +161,7 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                     """,
                     (sch, name),
                 )
-                cols = [
-                    {
-                        "name": c["column_name"],
-                        "type": c["data_type"],
-                        "nullable": c["is_nullable"] == "YES",
-                    }
-                    for c in cur.fetchall()
-                ]
+                cols = [_column_payload(c) for c in cur.fetchall()]
                 fq = f"{sch}.{name}" if sch != "public" else name
                 tables.append(
                     {
@@ -88,7 +172,14 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                         "columns": cols,
                     }
                 )
-                nodes.append({"id": fq, "label": fq, "type": "table"})
+                nodes.append(
+                    {
+                        "id": fq,
+                        "label": fq,
+                        "type": "table",
+                        "columns": cols,
+                    }
+                )
         return {
             "tables": tables,
             "dialect": "postgresql",

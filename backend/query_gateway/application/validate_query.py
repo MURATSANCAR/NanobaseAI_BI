@@ -45,8 +45,23 @@ def validate_query(
     max_rows: int | None = None,
     settings: Settings | None = None,
     trace_id: str | None = None,
+    parameters: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     settings = settings or get_settings()
+    from query_gateway.infrastructure.parser.bind_params import (
+        extract_bind_names,
+        probe_sql_for_parse,
+        validate_parameters,
+    )
+
+    bind_params = validate_parameters(parameters)
+    sql_template = sql
+    # Parse with typed literals when named binds present; keep template for execute.
+    parse_sql_text = (
+        probe_sql_for_parse(sql_template, bind_params)
+        if extract_bind_names(sql_template) or bind_params
+        else sql_template
+    )
     ds_map = load_datasources(settings)
     ds = ds_map.get(datasource_id)
     if not ds:
@@ -116,7 +131,7 @@ def validate_query(
     # HANA uses postgres sqlglot dialect for AST; policy is HANA-specific.
     parse_dialect = "postgres" if dialect == "hana" else dialect
     bundle = load_policy_bundle(settings, dialect=dialect if dialect != "odata" else "postgres")
-    parsed = parse_sql(sql, dialect=parse_dialect)
+    parsed = parse_sql(parse_sql_text, dialect=parse_dialect)
     cfg = dict(ds)
     if isinstance(cfg.get("allowed_tables"), set):
         cfg["allowed_tables"] = sorted(cfg["allowed_tables"])
@@ -136,9 +151,9 @@ def validate_query(
     ds_policy = policy_from_datasource_cfg(datasource_id, cfg, bundle)
     warnings = validate_parsed(parsed, ds_policy, bundle)
     if dialect == "oracle":
-        warnings.extend(enforce_oracle_sql_policy(sql, parsed))
+        warnings.extend(enforce_oracle_sql_policy(parse_sql_text, parsed))
     if dialect == "hana":
-        warnings.extend(enforce_hana_sql_policy(sql, parsed))
+        warnings.extend(enforce_hana_sql_policy(parse_sql_text, parsed))
 
     limit = min(max_rows or settings.max_rows, settings.max_limit)
     fp = fingerprint(
@@ -147,7 +162,9 @@ def validate_query(
         policy_version=ds_policy.policy_version,
         datasource_id=datasource_id,
     )
-    limited_sql = apply_limit(parsed.tree, max_limit=limit + 1, dialect=parse_dialect)
+    limited_probe = apply_limit(parsed.tree, max_limit=limit + 1, dialect=parse_dialect)
+    # Prefer original template for execution when binds are used
+    limited_sql = sql_template if bind_params or extract_bind_names(sql_template) else limited_probe
 
     audit = get_audit_logger()
     audit.record(
@@ -180,4 +197,7 @@ def validate_query(
         "warnings": warnings,
         "policyVersion": ds_policy.policy_version,
         "dialect": dialect,
+        "sqlTemplate": sql_template,
+        "parameters": bind_params,
+        "probeSql": limited_probe if bind_params or extract_bind_names(sql_template) else limited_sql,
     }

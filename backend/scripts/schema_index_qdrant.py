@@ -194,7 +194,9 @@ def scan(conn, schemas: tuple[str, ...]) -> list[SchemaChunk]:
         fq = f"{schema}.{name}"
         cur.execute(
             """
-            SELECT column_name, data_type, is_nullable
+            SELECT column_name, data_type, udt_name, is_nullable,
+                   character_maximum_length, numeric_precision, numeric_scale,
+                   datetime_precision
             FROM information_schema.columns
             WHERE table_schema=%s AND table_name=%s
             ORDER BY ordinal_position
@@ -239,9 +241,24 @@ def scan(conn, schemas: tuple[str, ...]) -> list[SchemaChunk]:
                     conn.rollback()
                     sample = None
 
+            try:
+                from nanobase_api.schema_api import format_column_type
+
+                type_display = format_column_type(
+                    data_type=str(c["data_type"] or ""),
+                    udt_name=str(c.get("udt_name") or "") or None,
+                    character_maximum_length=c.get("character_maximum_length"),
+                    numeric_precision=c.get("numeric_precision"),
+                    numeric_scale=c.get("numeric_scale"),
+                    datetime_precision=c.get("datetime_precision"),
+                )
+            except Exception:
+                type_display = str(c["data_type"] or "")
             col_text = (
-                f"Column {fq}.{c['column_name']} type={c['data_type']} "
+                f"Column {fq}.{c['column_name']} type={type_display} "
                 f"nullable={c['is_nullable']} "
+                f"max_length={c.get('character_maximum_length')} "
+                f"precision={c.get('numeric_precision')} scale={c.get('numeric_scale')} "
                 f"samples={sample or []} "
                 f"datasource={DATASOURCE} domain={domain}"
             )
@@ -257,12 +274,16 @@ def scan(conn, schemas: tuple[str, ...]) -> list[SchemaChunk]:
                     meta={
                         "datasource_id": DATASOURCE,
                         "data_type": c["data_type"],
+                        "type_display": type_display,
+                        "max_length": c.get("character_maximum_length"),
+                        "precision": c.get("numeric_precision"),
+                        "scale": c.get("numeric_scale"),
                         "samples": sample or [],
                         "pk": c["column_name"] in pks,
                     },
                 )
             )
-            col_lines.append(f"- {c['column_name']} {c['data_type']}")
+            col_lines.append(f"- {c['column_name']} {type_display}")
 
         table_text = (
             f"{'View' if ttype == 'VIEW' else 'Table'} {fq} datasource={DATASOURCE}\n"

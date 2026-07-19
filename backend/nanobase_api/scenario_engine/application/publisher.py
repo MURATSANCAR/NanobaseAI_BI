@@ -103,16 +103,38 @@ class AtomicPublisher:
             batch.status = ScenarioStatus.READY
             self.store.save_batch(batch)
 
-            # Embeddings then flip
+            # Qdrant first (with temporary PUBLISHED status on copies for payload filter),
+            # then atomic status flip — mismatch leaves active version unchanged.
             pub_paras = [p for p in paraphrases if p.scenario_id in {i.id for i in publishable}]
             for inst in publishable:
-                inst.transition_to(ScenarioStatus.PUBLISHED)
-                self.store.save_instance(inst)
+                if inst.status == ScenarioStatus.READY:
+                    inst.transition_to(ScenarioStatus.PUBLISHED)
             for p in pub_paras:
                 p.status = ScenarioStatus.PUBLISHED
-                self.store.save_paraphrase(p)
 
-            self.qdrant.publish(instances=publishable, paraphrases=pub_paras)
+            qres = self.qdrant.publish(instances=publishable, paraphrases=pub_paras)
+            upserted = int(qres.get("upserted") or 0)
+            require_qdrant = __import__("os").environ.get("SCENARIO_REQUIRE_QDRANT", "").lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+            if require_qdrant and pub_paras and upserted != len(pub_paras):
+                for inst in publishable:
+                    inst.status = ScenarioStatus.STALE
+                    self.store.save_instance(inst)
+                for p in pub_paras:
+                    p.status = ScenarioStatus.STALE
+                    self.store.save_paraphrase(p)
+                batch.status = ScenarioStatus.FAILED
+                batch.error = f"Qdrant publish mismatch: upserted={upserted} expected={len(pub_paras)}"
+                self.store.save_batch(batch)
+                return batch
+
+            for inst in publishable:
+                self.store.save_instance(inst)
+            for p in pub_paras:
+                self.store.save_paraphrase(p)
 
             # Atomic active version swap
             self.store.set_active_batch(tenant_id, datasource_id, batch.id)

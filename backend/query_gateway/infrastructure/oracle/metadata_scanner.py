@@ -170,6 +170,23 @@ def scan_oracle_metadata(
     }
 
 
+def _oracle_type_display(col: dict[str, Any]) -> str:
+    """VARCHAR2(50), NUMBER(18,2), DATE, …"""
+    dt = str(col.get("data_type") or "UNKNOWN").upper()
+    length = col.get("data_length")
+    prec = col.get("data_precision")
+    scale = col.get("data_scale")
+    if dt in ("VARCHAR2", "NVARCHAR2", "CHAR", "NCHAR", "RAW") and length is not None:
+        return f"{dt}({int(length)})"
+    if dt == "NUMBER":
+        if prec is not None and scale is not None and int(scale) > 0:
+            return f"NUMBER({int(prec)},{int(scale)})"
+        if prec is not None:
+            return f"NUMBER({int(prec)})"
+        return "NUMBER"
+    return dt
+
+
 def to_qdrant_documents(
     scan: dict[str, Any],
     *,
@@ -239,13 +256,15 @@ def to_qdrant_documents(
                 "object_type": "COLUMN",
                 "column_name": cname,
                 "oracle_data_type": str(col.get("data_type") or "").upper(),
+                "max_length": col.get("data_length"),
                 "precision": col.get("data_precision"),
                 "scale": col.get("data_scale"),
                 "nullable": col.get("nullable"),
                 "description": col_comments.get((owner, table, cname)),
                 "text": (
                     f"{owner}.{table}.{cname} "
-                    f"{col.get('data_type')} {col_comments.get((owner, table, cname)) or ''}"
+                    f"{_oracle_type_display(col)} "
+                    f"{col_comments.get((owner, table, cname)) or ''}"
                 ).strip(),
             }
         )

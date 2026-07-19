@@ -100,6 +100,76 @@ class SchemaScanService:
         await asyncio.to_thread(execute_schema_scan, scan_id, datasource_id, tenant_id)
 
 
+def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) -> None:
+    """Fire-and-forget scenario build (ARQ or thread)."""
+    import os
+    import threading
+
+    build_id = f"build-scan-{datasource_id}"[:64]
+
+    def _run() -> None:
+        from nanobase_api.scenario_engine.application.build_pipeline import start_build
+        from nanobase_api.scenario_engine.infrastructure.reporting_exec import reporting_dsn
+        from nanobase_api.scenario_engine.infrastructure.schema_snapshot import (
+            invoice_analytics_snapshot,
+            snapshot_from_pg,
+        )
+        from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+        store = get_scenario_store()
+        snap = None
+        dsn = reporting_dsn()
+        if dsn:
+            try:
+                snap = snapshot_from_pg(dsn, datasource_id=datasource_id)
+            except Exception:
+                snap = invoice_analytics_snapshot()
+        else:
+            snap = invoice_analytics_snapshot()
+        start_build(
+            tenant_id=tenant_id,
+            datasource_id=datasource_id,
+            store=store,
+            snapshot=snap,
+            auto_publish=True,
+            force=True,
+        )
+
+    settings = get_settings()
+    if settings.arq_enabled:
+        try:
+            import asyncio
+
+            async def _arq() -> None:
+                from arq import create_pool
+                from arq.connections import RedisSettings
+
+                redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+                try:
+                    await redis.enqueue_job(
+                        "run_scenario_build",
+                        build_id,
+                        datasource_id,
+                        tenant_id,
+                        True,
+                    )
+                finally:
+                    await redis.close()
+
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.ensure_future(_arq())
+                else:
+                    loop.run_until_complete(_arq())
+                return
+            except Exception:
+                pass
+        except Exception:
+            pass
+    threading.Thread(target=_run, name=f"scenario-build-{datasource_id}", daemon=True).start()
+
+
 def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> None:
     """Called by ARQ worker or inline task."""
     from nanobase_api.db import get_sync_engine
@@ -162,6 +232,18 @@ def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> Non
                 "points_count": report.get("points_count"),
             },
         )
+        # Production: enqueue scenario rebuild after successful schema scan
+        try:
+            _enqueue_scenario_build_after_scan(tenant_id=tenant_id, datasource_id=datasource_id)
+            audit.record(
+                tenant_id=tenant_id,
+                user_id=None,
+                action="SCENARIO_BUILD_ENQUEUED",
+                ok=True,
+                extra={"scan_id": scan_id, "datasource_id": datasource_id},
+            )
+        except Exception:
+            pass
     except Exception as e:
         scans.mark_failed(scan_id, str(e))
         audit.record(

@@ -342,7 +342,21 @@ export type BiBudgetSummary = {
   fx_missing?: Array<{ id?: string; name?: string; currency?: string }>;
 };
 
-export type BiSchemaColumn = { name: string; type: string; nullable?: boolean };
+export type BiSchemaColumn = {
+  name: string;
+  type: string;
+  /** Pretty type with length/precision, e.g. varchar(50), numeric(18,2). */
+  type_display?: string;
+  udt_name?: string | null;
+  nullable?: boolean;
+  max_length?: number | null;
+  character_maximum_length?: number | null;
+  precision?: number | null;
+  numeric_precision?: number | null;
+  scale?: number | null;
+  numeric_scale?: number | null;
+  datetime_precision?: number | null;
+};
 export type BiSchemaTable = {
   schema?: string;
   name: string;
@@ -359,7 +373,7 @@ export type BiSchema = {
   introspected_at?: string;
 };
 
-export type BiSchemaGraphColumn = { name: string; type: string; nullable?: boolean };
+export type BiSchemaGraphColumn = BiSchemaColumn;
 
 export type BiSchemaGraphNode = {
   id: string;

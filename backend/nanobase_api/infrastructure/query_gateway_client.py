@@ -78,25 +78,31 @@ class QueryGatewayClient:
         execution_id: str | None = None,
         tenant_id: str | None = None,
         client: httpx.AsyncClient | None = None,
+        parameters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not self.use_internal or not self.jwt_secret:
             # Legacy unauthenticated path
             async with httpx.AsyncClient(timeout=self.timeout_s) as c:
+                payload_legacy: dict[str, Any] = {"datasource_id": datasource_id, "sql": sql}
+                if parameters:
+                    payload_legacy["parameters"] = parameters
                 r = await (client or c).post(
                     f"{self.base}/api/v1/query/validate",
-                    json={"datasource_id": datasource_id, "sql": sql},
+                    json=payload_legacy,
                 )
                 r.raise_for_status()
                 return r.json()
 
         path = "/internal/v1/queries/validate"
-        payload = {
+        payload: dict[str, Any] = {
             "executionId": execution_id or str(uuid.uuid4()),
             "datasourceId": datasource_id,
             "tenantId": tenant_id,
             "sql": sql,
             "purpose": "INTERACTIVE_ANALYSIS",
         }
+        if parameters:
+            payload["parameters"] = parameters
         import json
 
         body = json.dumps(payload).encode("utf-8")
@@ -124,16 +130,20 @@ class QueryGatewayClient:
         tenant_id: str | None = None,
         explain: bool = False,
         client: httpx.AsyncClient | None = None,
+        parameters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not self.use_internal or not self.jwt_secret:
             async with httpx.AsyncClient(timeout=self.timeout_s) as c:
+                payload_legacy: dict[str, Any] = {
+                    "datasource_id": datasource_id,
+                    "sql": sql,
+                    "explain": explain,
+                }
+                if parameters:
+                    payload_legacy["parameters"] = parameters
                 r = await (client or c).post(
                     f"{self.base}/api/v1/query/execute",
-                    json={
-                        "datasource_id": datasource_id,
-                        "sql": sql,
-                        "explain": explain,
-                    },
+                    json=payload_legacy,
                 )
                 r.raise_for_status()
                 return r.json()
@@ -141,9 +151,16 @@ class QueryGatewayClient:
         if explain:
             # EXPLAIN still via legacy for display plans
             async with httpx.AsyncClient(timeout=self.timeout_s) as c:
+                payload_ex: dict[str, Any] = {
+                    "datasource_id": datasource_id,
+                    "sql": sql,
+                    "explain": True,
+                }
+                if parameters:
+                    payload_ex["parameters"] = parameters
                 r = await (client or c).post(
                     f"{self.base}/api/v1/query/execute",
-                    json={"datasource_id": datasource_id, "sql": sql, "explain": True},
+                    json=payload_ex,
                 )
                 r.raise_for_status()
                 return r.json()
@@ -156,6 +173,8 @@ class QueryGatewayClient:
             "sql": sql,
             "purpose": "INTERACTIVE_ANALYSIS",
         }
+        if parameters:
+            payload["parameters"] = parameters
         import json
 
         body = json.dumps(payload).encode("utf-8")

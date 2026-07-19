@@ -1,10 +1,11 @@
-"""In-memory scenario registry (tests + bootstrap; SQL repo can mirror later)."""
+"""Scenario registry: in-memory cache with optional SQL write-through."""
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from threading import RLock
-from typing import Any
+from typing import Any, Protocol
 
 from nanobase_api.scenario_engine.domain.scenario import (
     PublishBatch,
@@ -15,20 +16,57 @@ from nanobase_api.scenario_engine.domain.scenario import (
 from nanobase_api.scenario_engine.domain.status import ScenarioStatus, is_retrieval_eligible
 
 
+class ScenarioSqlPort(Protocol):
+    def tables_ready(self) -> bool: ...
+    def upsert_instance(self, inst: ScenarioInstance) -> None: ...
+    def upsert_paraphrase(self, p: ScenarioParaphrase) -> None: ...
+    def upsert_compilation(self, c: ScenarioCompilation) -> None: ...
+    def upsert_batch(self, b: PublishBatch) -> None: ...
+    def set_active_version(
+        self, tenant_id: str, datasource_id: str, batch_id: str, schema_version: str, semantic_version: str
+    ) -> None: ...
+    def save_usage(
+        self, scenario_id: str, usage: dict[str, Any], *, tenant_id: str, datasource_id: str
+    ) -> None: ...
+    def hydrate(self) -> dict[str, Any]: ...
+
+
 @dataclass
 class ScenarioStore:
     instances: dict[str, ScenarioInstance] = field(default_factory=dict)
     paraphrases: dict[str, ScenarioParaphrase] = field(default_factory=dict)
     compilations: dict[str, ScenarioCompilation] = field(default_factory=dict)
     batches: dict[str, PublishBatch] = field(default_factory=dict)
-    active_version: dict[tuple[str, str], str] = field(default_factory=dict)  # (tenant, ds) -> batch_id
+    active_version: dict[tuple[str, str], str] = field(default_factory=dict)
     builds: dict[str, dict[str, Any]] = field(default_factory=dict)
     usage: dict[str, dict[str, Any]] = field(default_factory=dict)
+    sql_repo: ScenarioSqlPort | None = None
+    backend: str = "memory"
     _lock: RLock = field(default_factory=RLock)
+    _hydrated: bool = False
+
+    def attach_sql(self, repo: ScenarioSqlPort, *, hydrate: bool = True) -> None:
+        self.sql_repo = repo
+        self.backend = "sql"
+        if hydrate and repo.tables_ready():
+            data = repo.hydrate()
+            with self._lock:
+                self.instances = dict(data.get("instances") or {})
+                self.paraphrases = dict(data.get("paraphrases") or {})
+                self.compilations = dict(data.get("compilations") or {})
+                self.batches = dict(data.get("batches") or {})
+                self.active_version = dict(data.get("active_version") or {})
+                self.usage = dict(data.get("usage") or {})
+                self._hydrated = True
 
     def save_instance(self, inst: ScenarioInstance) -> None:
         with self._lock:
             self.instances[inst.id] = inst
+        if self.sql_repo is not None:
+            try:
+                self.sql_repo.upsert_instance(inst)
+            except Exception:
+                pass
 
     def get_instance(self, scenario_id: str) -> ScenarioInstance | None:
         return self.instances.get(scenario_id)
@@ -52,6 +90,11 @@ class ScenarioStore:
     def save_paraphrase(self, p: ScenarioParaphrase) -> None:
         with self._lock:
             self.paraphrases[p.id] = p
+        if self.sql_repo is not None:
+            try:
+                self.sql_repo.upsert_paraphrase(p)
+            except Exception:
+                pass
 
     def find_by_normalized_hash(
         self, *, tenant_id: str, datasource_id: str, qhash: str
@@ -72,6 +115,11 @@ class ScenarioStore:
     def save_compilation(self, c: ScenarioCompilation) -> None:
         with self._lock:
             self.compilations[c.id] = c
+        if self.sql_repo is not None:
+            try:
+                self.sql_repo.upsert_compilation(c)
+            except Exception:
+                pass
 
     def get_compilation(self, scenario_id: str, dialect: str = "postgres") -> ScenarioCompilation | None:
         for c in self.compilations.values():
@@ -82,10 +130,27 @@ class ScenarioStore:
     def save_batch(self, b: PublishBatch) -> None:
         with self._lock:
             self.batches[b.id] = b
+        if self.sql_repo is not None:
+            try:
+                self.sql_repo.upsert_batch(b)
+            except Exception:
+                pass
 
     def set_active_batch(self, tenant_id: str, datasource_id: str, batch_id: str) -> None:
         with self._lock:
             self.active_version[(tenant_id, datasource_id)] = batch_id
+            batch = self.batches.get(batch_id)
+        if self.sql_repo is not None and batch is not None:
+            try:
+                self.sql_repo.set_active_version(
+                    tenant_id,
+                    datasource_id,
+                    batch_id,
+                    batch.schema_version,
+                    batch.semantic_version,
+                )
+            except Exception:
+                pass
 
     def get_active_batch_id(self, tenant_id: str, datasource_id: str) -> str | None:
         return self.active_version.get((tenant_id, datasource_id))
@@ -93,10 +158,9 @@ class ScenarioStore:
     def mark_stale_by_column(
         self, tenant_id: str, datasource_id: str, column_ref: str
     ) -> list[str]:
-        """Mark published scenarios that depend on column_ref as STALE."""
         stale_ids: list[str] = []
         with self._lock:
-            for inst in self.instances.values():
+            for inst in list(self.instances.values()):
                 if inst.tenant_id != tenant_id or inst.datasource_id != datasource_id:
                     continue
                 if inst.status != ScenarioStatus.PUBLISHED:
@@ -115,6 +179,16 @@ class ScenarioStore:
                     for p in self.paraphrases_for_scenario(inst.id):
                         if p.status == ScenarioStatus.PUBLISHED:
                             p.status = ScenarioStatus.STALE
+                            if self.sql_repo is not None:
+                                try:
+                                    self.sql_repo.upsert_paraphrase(p)
+                                except Exception:
+                                    pass
+                    if self.sql_repo is not None:
+                        try:
+                            self.sql_repo.upsert_instance(inst)
+                        except Exception:
+                            pass
         return stale_ids
 
     def suggested_questions(
@@ -156,6 +230,18 @@ class ScenarioStore:
             if latency_ms is not None:
                 prev = u.get("avg_latency_ms")
                 u["avg_latency_ms"] = latency_ms if prev is None else (prev + latency_ms) / 2
+            usage_snap = dict(u)
+            inst = self.instances.get(scenario_id)
+        if self.sql_repo is not None and inst is not None:
+            try:
+                self.sql_repo.save_usage(
+                    scenario_id,
+                    usage_snap,
+                    tenant_id=inst.tenant_id,
+                    datasource_id=inst.datasource_id,
+                )
+            except Exception:
+                pass
 
 
 _STORE: ScenarioStore | None = None
@@ -165,6 +251,7 @@ def get_scenario_store() -> ScenarioStore:
     global _STORE
     if _STORE is None:
         _STORE = ScenarioStore()
+        _try_attach_meta_sql(_STORE)
     return _STORE
 
 
@@ -172,3 +259,22 @@ def reset_scenario_store() -> ScenarioStore:
     global _STORE
     _STORE = ScenarioStore()
     return _STORE
+
+
+def _try_attach_meta_sql(store: ScenarioStore) -> None:
+    if os.environ.get("SCENARIO_SQL_DISABLED", "").lower() in ("1", "true", "yes"):
+        return
+    dsn = os.environ.get("NANOBASE_META_DSN")
+    if not dsn:
+        return
+    try:
+        from sqlalchemy import create_engine
+
+        from nanobase_api.scenario_engine.infrastructure.sql_scenario_repo import SqlScenarioRepository
+
+        engine = create_engine(dsn, pool_pre_ping=True, pool_size=3)
+        repo = SqlScenarioRepository(engine)
+        if repo.tables_ready():
+            store.attach_sql(repo, hydrate=True)
+    except Exception:
+        pass
