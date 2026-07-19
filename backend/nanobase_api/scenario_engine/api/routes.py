@@ -195,3 +195,37 @@ async def review_scenario(
 @router.get("/api/v1/query-scenarios/metrics")
 async def scenario_metrics() -> dict[str, Any]:
     return metrics_snapshot()
+
+
+@router.get("/api/v1/query-scenarios/metrics/prometheus")
+async def scenario_metrics_prometheus():
+    from fastapi.responses import PlainTextResponse
+
+    from nanobase_api.scenario_engine.infrastructure.prometheus import render_prometheus
+
+    return PlainTextResponse(render_prometheus(), media_type="text/plain; version=0.0.4")
+
+
+@router.get("/api/v1/query-scenarios/reviews")
+async def list_scenario_reviews(
+    datasource_id: str = Query(...),
+    tenant_id: str = Query(default="default"),
+) -> dict[str, Any]:
+    """Tier B scenarios awaiting review."""
+    store = get_scenario_store()
+    items = store.list_instances(
+        tenant_id=tenant_id, datasource_id=datasource_id, status=ScenarioStatus.READY_FOR_REVIEW
+    )
+    return {
+        "items": [
+            {
+                "scenarioId": i.id,
+                "scenarioCode": i.scenario_code,
+                "family": i.family,
+                "riskTier": i.risk_tier.value,
+                "canonicalQuestion": i.canonical_question,
+                "status": i.status.value,
+            }
+            for i in items
+        ]
+    }

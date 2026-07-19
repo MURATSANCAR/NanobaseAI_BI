@@ -102,7 +102,6 @@ class SchemaScanService:
 
 def _enqueue_scenario_build_after_scan(*, tenant_id: str, datasource_id: str) -> None:
     """Fire-and-forget scenario build (ARQ or thread)."""
-    import os
     import threading
 
     build_id = f"build-scan-{datasource_id}"[:64]

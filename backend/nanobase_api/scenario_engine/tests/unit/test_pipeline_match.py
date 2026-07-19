@@ -19,6 +19,7 @@ def test_invoice_build_publishes_tier_a():
         store=store,
         snapshot=invoice_analytics_snapshot(),
         auto_publish=True,
+        force=True,
     )
     assert result["status"] == "COMPLETED"
     published = store.list_instances(
@@ -36,6 +37,7 @@ def test_exact_match_previous_month():
         store=store,
         snapshot=invoice_analytics_snapshot(),
         auto_publish=True,
+        force=True,
     )
     matcher = ScenarioMatcher(store=store)
     # Use a generated canonical/paraphrase text
@@ -63,6 +65,7 @@ def test_runtime_resolves_sql():
         store=store,
         snapshot=invoice_analytics_snapshot(),
         auto_publish=True,
+        force=True,
     )
     published = store.list_instances(
         tenant_id="default", datasource_id="bi_reporting", status=ScenarioStatus.PUBLISHED
@@ -73,8 +76,10 @@ def test_runtime_resolves_sql():
         q, tenant_id="default", datasource_id="bi_reporting"
     )
     assert payload is not None
-    assert "SELECT" in payload["sql"].upper()
+    assert "SELECT" in payload["sqlTemplate"].upper()
+    assert ":period_start" in payload["sqlTemplate"]
     assert "precompiled_scenario" == payload["sqlSource"]
+    assert payload.get("followUps")
 
 
 def test_param_resolver_previous_month():
@@ -107,6 +112,7 @@ def test_stale_on_column_dependency():
         store=store,
         snapshot=invoice_analytics_snapshot(),
         auto_publish=True,
+        force=True,
     )
     stale = store.mark_stale_by_column(
         "default", "bi_reporting", "analytics.invoices.invoice_date"

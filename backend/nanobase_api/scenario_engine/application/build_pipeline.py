@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 from nanobase_api.scenario_engine import GENERATOR_VERSION
@@ -52,7 +52,7 @@ from nanobase_api.scenario_engine.infrastructure.validators import (
     validate_static_ast,
 )
 
-ExecuteFn = Callable[[str, dict[str, object] | None], list[dict[str, Any]]]
+ExecuteFn = Callable[[str, Optional[Dict[str, object]]], List[Dict[str, Any]]]
 
 
 def start_build(

@@ -90,6 +90,10 @@ type ChatMessage = {
   draftConfidence?: number;
   executionMode?: string;
   feedbackRating?: -1 | 0 | 1;
+  /** Precompiled scenario route badge */
+  scenarioSource?: boolean;
+  scenarioCode?: string;
+  followUps?: string[];
 };
 
 type FeedbackDraft = {
@@ -162,6 +166,9 @@ function applyAssistantResult(
       chatState: 'COMPLETED',
       executionMode:
         result.execution_mode || prov?.execution_mode || prevMsg.executionMode,
+      scenarioSource: prevMsg.scenarioSource,
+      scenarioCode: prevMsg.scenarioCode,
+      followUps: prevMsg.followUps,
     };
     return next;
   }
@@ -186,6 +193,7 @@ function statusLabelForMessage(m: ChatMessage): string {
     querying: 'bi.streamingQuerying',
     building: 'bi.streamingBuilding',
     finalizing: 'bi.streamingFinalizing',
+    scenario_hit: 'bi.streamingWorkingOnAnswer',
   };
   const key = phaseKey[phase] || 'bi.streamingThinking';
   return t(key);
@@ -265,7 +273,7 @@ const FALLBACK_SUGGESTION_KEYS = [
   'bi.chatSuggestion4',
 ] as const;
 
-type ChatSuggestionItem = { text: string; source: string; count: number };
+type ChatSuggestionItem = { text: string; source: string; count: number; category?: string };
 
 function intentIcon(intent: string) {
   switch (intent) {
@@ -784,6 +792,9 @@ export default function BiChatPanel({
               ev.payload?.plan && typeof ev.payload.plan === 'object'
                 ? (ev.payload.plan as Record<string, unknown>)
                 : null;
+            const followUps = Array.isArray(ev.payload?.followUps)
+              ? (ev.payload!.followUps as string[]).filter((x) => typeof x === 'string')
+              : undefined;
             setMessages((prev) =>
               prev.map((m) =>
                 m.jobId === id && m.streaming
@@ -803,6 +814,15 @@ export default function BiChatPanel({
                           : typeof plan?.sql === 'string'
                             ? String(plan.sql)
                             : m.draftSql,
+                      scenarioSource:
+                        ev.phase === 'scenario_hit' || ev.payload?.sql_source === 'precompiled_scenario'
+                          ? true
+                          : m.scenarioSource,
+                      scenarioCode:
+                        typeof ev.payload?.scenario_code === 'string'
+                          ? String(ev.payload.scenario_code)
+                          : m.scenarioCode,
+                      followUps: followUps?.length ? followUps : m.followUps,
                       ...(plan
                         ? {
                             draftTables: Array.isArray(plan.tables)
@@ -1224,6 +1244,11 @@ export default function BiChatPanel({
             )}
             {showLearnedSuggestions ? (
               <div className={clsx('flex flex-col gap-2', embedded ? 'w-full' : 'w-full max-w-md')}>
+                {learnedSuggestions.some((s) => s.source === 'scenario') && (
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                    Faturalar
+                  </p>
+                )}
                 {learnedSuggestions.slice(0, suggestionLimit).map((item) => (
                   <button
                     key={`${item.source}:${item.text}`}
@@ -1233,6 +1258,11 @@ export default function BiChatPanel({
                   >
                     <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
                     <span className="line-clamp-2">{item.text}</span>
+                    {item.source === 'scenario' ? (
+                      <span className="ml-auto shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                        hazır
+                      </span>
+                    ) : null}
                   </button>
                 ))}
               </div>
@@ -1284,17 +1314,27 @@ export default function BiChatPanel({
                 fullHeight && 'sm:max-w-[min(94%,52rem)] lg:max-w-[min(90%,56rem)]',
               )}
             >
-              {m.role === 'assistant' && m.meta?.intent && !m.streaming && (
+              {m.role === 'assistant' && (m.scenarioSource || (m.meta?.intent && !m.streaming)) && (
                 <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                  {(() => {
-                    const Icon = intentIcon(m.meta.intent);
-                    return (
-                      <span className="bi-pbi-type-chip bi-pbi-type-chip--compact">
-                        <Icon className="h-3 w-3" />
-                        {intentLabel(m.meta.intent)}
-                      </span>
-                    );
-                  })()}
+                  {m.scenarioSource ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200/80">
+                      Hazır senaryo
+                      {m.scenarioCode ? (
+                        <span className="font-normal text-emerald-700/80">· {m.scenarioCode}</span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  {m.meta?.intent && !m.streaming
+                    ? (() => {
+                        const Icon = intentIcon(m.meta.intent);
+                        return (
+                          <span className="bi-pbi-type-chip bi-pbi-type-chip--compact">
+                            <Icon className="h-3 w-3" />
+                            {intentLabel(m.meta.intent)}
+                          </span>
+                        );
+                      })()
+                    : null}
                 </div>
               )}
               <div className="min-w-0">
@@ -1349,6 +1389,20 @@ export default function BiChatPanel({
               )}
               {m.meta?.query_result && !m.meta.widgets?.length && !m.streaming && (
                 <BiChatResultHero meta={m.meta} />
+              )}
+              {m.role === 'assistant' && !m.streaming && (m.followUps?.length ?? 0) > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {m.followUps!.slice(0, 5).map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-violet-300 hover:bg-violet-50"
+                      onClick={() => sendMessage(q)}
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
               )}
               {m.meta?.action_preview?.preview?.requires_confirm &&
                 m.meta.action_preview.status === 'preview' &&

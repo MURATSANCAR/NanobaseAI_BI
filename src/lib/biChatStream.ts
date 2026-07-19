@@ -32,6 +32,7 @@ export type BiStreamEvent =
 export function mapPhaseToChatState(phase: string): ChatExecutionState {
   const p = phase.toLowerCase();
   if (p.includes('queued')) return 'SUBMITTING';
+  if (p.includes('scenario_hit') || p.includes('precompiled')) return 'GENERATING_SQL';
   if (p.includes('schema_retrieval')) return 'RETRIEVING_CONTEXT';
   if (p.includes('nl2sql') || p.includes('plan') || p.includes('verified') || p.includes('generating_sql'))
     return 'GENERATING_SQL';

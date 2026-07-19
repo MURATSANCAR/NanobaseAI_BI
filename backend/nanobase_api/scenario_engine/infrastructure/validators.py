@@ -8,7 +8,7 @@ import re
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any, Callable, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
 from nanobase_api.scenario_engine.domain.errors import ValidationError
@@ -19,7 +19,7 @@ from nanobase_api.scenario_engine.infrastructure.compiler import CompileResult, 
 _SENSITIVE = re.compile(r"(password|secret|token|iban|ssn|salary|private_key)", re.I)
 _DML = re.compile(r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|MERGE|GRANT|REVOKE)\b", re.I)
 
-ExecuteFn = Callable[[str, dict[str, object] | None], list[dict[str, Any]]]
+ExecuteFn = Callable[[str, Optional[Dict[str, object]]], List[Dict[str, Any]]]
 
 
 @dataclass
