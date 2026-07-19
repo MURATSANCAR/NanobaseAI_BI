@@ -1246,7 +1246,8 @@ export default function BiChatPanel({
               <div className={clsx('flex flex-col gap-2', embedded ? 'w-full' : 'w-full max-w-md')}>
                 {learnedSuggestions.some((s) => s.source === 'scenario') && (
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    Faturalar
+                    {learnedSuggestions.find((s) => s.source === 'scenario' && s.category)?.category ||
+                      t('bi.scenario.suggestionsCategory')}
                   </p>
                 )}
                 {learnedSuggestions.slice(0, suggestionLimit).map((item) => (
@@ -1260,7 +1261,7 @@ export default function BiChatPanel({
                     <span className="line-clamp-2">{item.text}</span>
                     {item.source === 'scenario' ? (
                       <span className="ml-auto shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
-                        hazır
+                        {t('bi.scenario.readyBadge')}
                       </span>
                     ) : null}
                   </button>

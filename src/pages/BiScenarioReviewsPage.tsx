@@ -4,8 +4,11 @@ import { useState } from 'react';
 import { PageShell } from '@/components/PageShell';
 import ApiErrorBanner from '@/components/ApiErrorBanner';
 import EmptyState from '@/components/EmptyState';
+import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
+import { api, isRunnerConfigured } from '@/api/client';
 import { useApiConfig } from '@/context/ApiContext';
-import { request } from '@/api/http';
+import { t } from '@/i18n';
+
 type ReviewItem = {
   scenarioId: string;
   scenarioCode: string;
@@ -18,26 +21,30 @@ type ReviewItem = {
 export default function BiScenarioReviewsPage() {
   const { config } = useApiConfig();
   const qc = useQueryClient();
-  const [datasourceId, setDatasourceId] = useState('bi_reporting');
+  const enabled = isRunnerConfigured(config);
   const [err, setErr] = useState<Error | null>(null);
+
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled,
+    staleTime: 30_000,
+  });
+
+  const datasourceId = sourcesQ.data?.active_id || sourcesQ.data?.sources?.[0]?.id || '';
 
   const reviewsQ = useQuery({
     queryKey: ['scenario-reviews', datasourceId, config],
     queryFn: async () => {
-      const raw = await request<{ items?: ReviewItem[] }>(
-        config,
-        `/api/v1/query-scenarios/reviews?datasource_id=${encodeURIComponent(datasourceId)}`,
-      );
-      return raw.items ?? [];
+      const raw = await api.bi.scenarios.reviews(config, datasourceId);
+      return (raw.items ?? []) as ReviewItem[];
     },
+    enabled: enabled && Boolean(datasourceId),
   });
 
   const reviewMut = useMutation({
     mutationFn: async ({ id, decision }: { id: string; decision: 'APPROVE' | 'REJECT' }) =>
-      request(config, `/api/v1/query-scenarios/${encodeURIComponent(id)}/review`, {
-        method: 'POST',
-        body: JSON.stringify({ decision }),
-      }),
+      api.bi.scenarios.review(config, id, decision),
     onSuccess: () => {
       setErr(null);
       void qc.invalidateQueries({ queryKey: ['scenario-reviews'] });
@@ -50,22 +57,18 @@ export default function BiScenarioReviewsPage() {
   return (
     <PageShell pageId="biSemanticCatalog" titleKey="nav.biScenarioReviews" subtitleKey="nav.hint.biScenarioReviews">
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <label className="text-sm text-slate-600">
-          Datasource
-          <input
-            className="mt-1 block w-56 rounded-md border border-slate-200 px-3 py-1.5 text-sm"
-            value={datasourceId}
-            onChange={(e) => setDatasourceId(e.target.value)}
-          />
-        </label>
+        <BiSourceSwitcher config={config} />
       </div>
-      <ApiErrorBanner error={err} />
+      <ApiErrorBanner error={err || (reviewsQ.error as Error | null)} />
+      {!datasourceId && enabled ? (
+        <EmptyState titleKey="bi.empty.noScenarioReviews" descriptionKey="bi.empty.noScenarioReviewsDesc" />
+      ) : null}
       {reviewsQ.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 className="h-4 w-4 animate-spin" /> Yükleniyor…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t('common.loading')}
         </div>
       ) : null}
-      {!reviewsQ.isLoading && items.length === 0 ? (
+      {datasourceId && !reviewsQ.isLoading && items.length === 0 ? (
         <EmptyState titleKey="bi.empty.noScenarioReviews" descriptionKey="bi.empty.noScenarioReviewsDesc" />
       ) : null}
       <ul className="space-y-3">
@@ -87,7 +90,7 @@ export default function BiScenarioReviewsPage() {
                 disabled={reviewMut.isPending}
                 onClick={() => reviewMut.mutate({ id: item.scenarioId, decision: 'APPROVE' })}
               >
-                <Check className="h-3.5 w-3.5" /> Onayla
+                <Check className="h-3.5 w-3.5" /> {t('bi.scenario.approve')}
               </button>
               <button
                 type="button"
@@ -95,7 +98,7 @@ export default function BiScenarioReviewsPage() {
                 disabled={reviewMut.isPending}
                 onClick={() => reviewMut.mutate({ id: item.scenarioId, decision: 'REJECT' })}
               >
-                <X className="h-3.5 w-3.5" /> Reddet
+                <X className="h-3.5 w-3.5" /> {t('bi.scenario.reject')}
               </button>
             </div>
           </li>

@@ -26,15 +26,23 @@ export default function BiSemanticCatalogPage() {
   const catalogEnabled = flags.enableSemanticCatalog;
   const queriesEnabled = catalogEnabled && isRunnerConfigured(config);
 
+  const sourcesQ = useQuery({
+    queryKey: ['bi-sources', config],
+    queryFn: () => api.bi.sources.list(config),
+    enabled: queriesEnabled,
+    staleTime: 30_000,
+  });
+  const datasourceId = sourcesQ.data?.active_id || sourcesQ.data?.sources?.[0]?.id || 'default';
+
   const statusQ = useQuery({
     queryKey: ['bi-catalog-gov-status', config],
     queryFn: () => api.bi.catalogGov.status(config),
     enabled: queriesEnabled,
   });
   const metricsQ = useQuery({
-    queryKey: ['bi-catalog-gov-metrics', config],
-    queryFn: () => api.bi.catalogGov.metrics(config),
-    enabled: queriesEnabled,
+    queryKey: ['bi-catalog-gov-metrics', datasourceId, config],
+    queryFn: () => api.bi.catalogGov.metrics(config, datasourceId),
+    enabled: queriesEnabled && Boolean(datasourceId),
   });
   const promosQ = useQuery({
     queryKey: ['bi-catalog-gov-promos', config],
@@ -42,9 +50,9 @@ export default function BiSemanticCatalogPage() {
     enabled: queriesEnabled,
   });
   const versionsQ = useQuery({
-    queryKey: ['bi-catalog-gov-versions', config],
-    queryFn: () => api.bi.catalogGov.versions(config),
-    enabled: queriesEnabled,
+    queryKey: ['bi-catalog-gov-versions', datasourceId, config],
+    queryFn: () => api.bi.catalogGov.versions(config, datasourceId),
+    enabled: queriesEnabled && Boolean(datasourceId),
   });
 
   const invalidate = () => {
@@ -56,7 +64,7 @@ export default function BiSemanticCatalogPage() {
   };
 
   const bootstrapMut = useMutation({
-    mutationFn: () => api.bi.catalogGov.bootstrapSlice(config, { datasourceId: 'default' }),
+    mutationFn: () => api.bi.catalogGov.bootstrapSlice(config, { datasourceId }),
     onSuccess: (r) => {
       setMsg(t('bi.catalog.seeded', { metric: String(r.metric_id) }));
       setErr(null);
@@ -111,6 +119,7 @@ export default function BiSemanticCatalogPage() {
     mutationFn: () =>
       api.bi.catalogGov.compile(config, {
         metric: 'unpaid_invoice_amount',
+        datasourceId,
         period: { from: '2026-01-01', to: '2027-01-01' },
       }),
     onSuccess: (r) => {

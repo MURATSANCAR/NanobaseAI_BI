@@ -49,6 +49,9 @@ export default function BiSourceSwitcher({ config, className, compact }: Props) 
       void qc.invalidateQueries({ queryKey: ['bi-kpi-suggestions'] });
       void qc.invalidateQueries({ queryKey: ['bi-analytics-source-widgets'] });
       void qc.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] });
+      void qc.invalidateQueries({ queryKey: ['bi-chat-suggestions'] });
+      void qc.invalidateQueries({ queryKey: ['scenario-reviews'] });
+      void qc.invalidateQueries({ queryKey: ['bi-catalog-gov'] });
     },
   });
 
