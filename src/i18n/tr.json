@@ -409,6 +409,7 @@
   "bi.analytics.emptyWidgetsHint": "Sohbette sorun, ardından Kontrol paneline ekle seçeneğini kullanın.",
   "bi.analytics.sourceWidgetsTitle": "Aktif kaynak KPI",
   "bi.analytics.sourceWidgetsEmpty": "Bu kaynak için henüz canlı widget yok.",
+  "bi.analytics.sourceCanvasHint": "Seçili veritabanından canlı KPI ve grafikler",
   "bi.analytics.supersetWidgetsTitle": "Superset paneli",
   "bi.analytics.exitFullscreen": "Tam ekrandan çık",
   "bi.analytics.fullscreen": "Tam ekran",

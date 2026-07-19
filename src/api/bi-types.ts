@@ -450,7 +450,7 @@ export type BiSourcesList = {
 
 export type BiConnectionUpsert = {
   label?: string;
-  deployment?: 'local' | 'cloud';
+  deployment?: 'local' | 'cloud' | 'onprem';
   driver?: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase' | 'hana' | 'odata';
   host?: string;
   port?: number;

@@ -20,6 +20,7 @@ import BiDashboardWidgetsPanel from '@/components/bi/BiDashboardWidgetsPanel';
 import BiLineageDrawer from '@/components/bi/BiLineageDrawer';
 import BiMorningBriefing from '@/components/bi/BiMorningBriefing';
 import BiNarrativeStrip from '@/components/bi/BiNarrativeStrip';
+import BiSourceAnalyticsCanvas from '@/components/bi/BiSourceAnalyticsCanvas';
 import BiSourceSwitcher from '@/components/bi/BiSourceSwitcher';
 import BiSupersetEmbed from '@/components/bi/BiSupersetEmbed';
 import type { LayoutOutletContext } from '@/components/Layout';
@@ -574,40 +575,30 @@ export default function BiSupersetPage() {
       >
         <div className="flex min-h-0 flex-1">
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
-            {embed ? (
-              <BiSupersetEmbed
-                key={`${embed.dashboardId}-${embed.embedUuid}-${embedNonce}`}
+            {/* Primary surface: filled KPIs/charts from the selected database */}
+            {activeSourceId ? (
+              <BiSourceAnalyticsCanvas
                 config={config}
-                embedUuid={embed.embedUuid}
-                dashboardId={embed.dashboardId}
-                analyticsUrl={embed.analyticsUrl}
-                guestToken={embed.token}
+                datasourceId={activeSourceId}
+                sourceLabel={activeSourceLabel}
                 className="min-h-0 flex-1"
               />
-            ) : (
+            ) : null}
+            {!activeSourceId ? (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
                 <div className="bi-pbi-tile bi-pbi-tile--3d max-w-sm p-8 text-center">
                   <div className="bi-pbi-tile-glow" aria-hidden />
-                  <div className="bi-pbi-tile-accent" data-visual="card" aria-hidden />
                   <div className="relative z-[1]">
-                  <Sparkles className="mx-auto mb-3 h-10 w-10 text-[#118DFF]/80" />
-                  <p className="text-sm text-[#605E5C]">
-                    {dashboardsQ.isLoading || statusQ.isLoading
-                      ? t('bi.analytics.loading')
-                      : t('bi.analytics.emptyEmbed')}
-                  </p>
-                  <button
-                    type="button"
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:brightness-105"
-                    onClick={() => openChat()}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    {t('bi.analytics.openChat')}
-                  </button>
+                    <Sparkles className="mx-auto mb-3 h-10 w-10 text-[#118DFF]/80" />
+                    <p className="text-sm text-[#605E5C]">
+                      {sourcesQ.isLoading || statusQ.isLoading
+                        ? t('bi.analytics.loading')
+                        : t('bi.analytics.emptyEmbed')}
+                    </p>
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
           {sidePanel === 'comments' && !narrow && (
             <div className="w-72 shrink-0 border-l border-slate-200 bg-white p-2">

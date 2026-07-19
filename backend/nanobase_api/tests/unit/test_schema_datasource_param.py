@@ -6,10 +6,10 @@ from nanobase_api.infrastructure.active_source import resolve_schema_datasource_
 def test_schema_datasource_id_honors_query_param():
     assert (
         resolve_schema_datasource_id(
-            query_datasource_id="erp",
-            memory_id="bi_reporting",
+            query_datasource_id="ds_a",
+            memory_id="ds_fallback",
         )
-        == "erp"
+        == "ds_a"
     )
 
 
@@ -18,9 +18,9 @@ def test_schema_datasource_id_falls_back_to_active():
         resolve_schema_datasource_id(
             query_datasource_id=None,
             body_datasource_id=None,
-            memory_id="sigorta",
+            memory_id="ds_b",
         )
-        == "sigorta"
+        == "ds_b"
     )
 
 
@@ -28,8 +28,8 @@ def test_schema_datasource_id_body_on_refresh():
     assert (
         resolve_schema_datasource_id(
             query_datasource_id=None,
-            body_datasource_id="sigorta",
-            memory_id="bi_reporting",
+            body_datasource_id="ds_b",
+            memory_id="ds_fallback",
         )
-        == "sigorta"
+        == "ds_b"
     )

@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-import json
-import os
 from pathlib import Path
 from typing import Any
 
 import psycopg2
 import psycopg2.extras
-
-SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
 
 
 def _pg_connect(cfg: dict[str, Any]):
