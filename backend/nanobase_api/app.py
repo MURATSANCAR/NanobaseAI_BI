@@ -298,7 +298,19 @@ def _scan_service() -> SchemaScanService:
 @app.get("/health")
 @app.get("/api/v1/bi/health/live")
 async def health_live() -> dict:
-    return {"status": "UP", "service": "nanobase_api"}
+    meta_ok = False
+    try:
+        with _meta_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+        meta_ok = True
+    except Exception:
+        meta_ok = False
+    return {
+        "status": "UP" if meta_ok else "DOWN",
+        "service": "nanobase_api",
+        "engine": "nanobase_api",
+        "meta": meta_ok,
+    }
 
 
 @app.get("/api/v1/bi/health/ready")

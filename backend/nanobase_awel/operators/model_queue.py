@@ -1,4 +1,8 @@
-"""Production LLM concurrency queue (AWEL-layer, used by llm_operator)."""
+"""Production LLM concurrency queue (AWEL-layer, used by llm_operator).
+
+Default MODEL_MAX_CONCURRENCY=1 so all LLM jobs run strictly one after another (FIFO).
+Waiting callers receive SSE phase=queued with a user-facing wait message.
+"""
 
 from __future__ import annotations
 
@@ -63,7 +67,7 @@ class ModelQueue:
     ) -> None:
         self.max_concurrency = max(
             1,
-            int(max_concurrency if max_concurrency is not None else os.environ.get("MODEL_MAX_CONCURRENCY", "2")),
+            int(max_concurrency if max_concurrency is not None else os.environ.get("MODEL_MAX_CONCURRENCY", "1")),
         )
         self.queue_limit = max(
             1,

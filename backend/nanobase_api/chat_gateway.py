@@ -329,13 +329,11 @@ async def stream_chat_via_gateway(
 
     # Faz 7: logical metric compile (never run legacy physical verified SQL as source of truth)
     try:
-        from nanobase_api.config import get_settings
         from nanobase_awel.retrieval.semantic import (
             retrieve_semantic_context,
             try_compile_resolved_metric,
         )
 
-        settings = get_settings()
         if settings.semantic_catalog_enabled:
             semantic_meta = await retrieve_semantic_context(
                 message, tenant_id=tenant_id, datasource_id=datasource_id

@@ -32,7 +32,7 @@ def main(argv: list[str] | None = None) -> int:
             {"concurrentPlanners": n, "status": "MEASURE_ON_LIVE_MODEL"}
             for n in (1, 2, 4, 8)
         ],
-        "MODEL_MAX_CONCURRENCY": int(os.environ.get("MODEL_MAX_CONCURRENCY", "2")),
+        "MODEL_MAX_CONCURRENCY": int(os.environ.get("MODEL_MAX_CONCURRENCY", "1")),
         "MODEL_QUEUE_LIMIT": int(os.environ.get("MODEL_QUEUE_LIMIT", "100")),
         "MODEL_QUEUE_TIMEOUT": int(os.environ.get("MODEL_QUEUE_TIMEOUT", "60")),
         "TENANT_QUEUE_LIMIT": int(os.environ.get("TENANT_QUEUE_LIMIT", "20")),
