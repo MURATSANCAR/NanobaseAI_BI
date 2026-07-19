@@ -13,6 +13,8 @@ import { t } from '@/i18n';
 import { localizeUserMessage } from '@/utils/backendLabels';
 import StatusBadge from '@/components/StatusBadge';
 import { sortByIsoDateDesc } from '@/utils/sort';
+import { ALERT_CREATE_INTENT } from '@/lib/alertChatIntent';
+import { showWebNotification } from '@/lib/webNotifications';
 
 const emptyForm = (): Partial<BiAlertRule> => ({
   title: '',
@@ -122,13 +124,29 @@ export default function BiAlertsPage() {
 
   const runDueMut = useMutation({
     mutationFn: () => api.bi.alerts.runDue(config),
-    onSuccess: () => {
+    onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ['bi-alerts'] });
-      setFlash(t('bi.alertsRunDone'));
+      const triggered = Number((res as { triggered?: number } | undefined)?.triggered || 0);
+      setFlash(
+        triggered > 0
+          ? t('bi.alertsRunTriggered', { checked: String((res as { checked?: number }).checked ?? 0), triggered: String(triggered) })
+          : t('bi.alertsRunDone'),
+      );
+      if (triggered > 0) {
+        showWebNotification({
+          title: t('bi.notify.alertFiredTitle'),
+          body: t('bi.notify.alertFiredBody', { count: String(triggered) }),
+          tag: 'bi-alert-check',
+        });
+      }
       window.setTimeout(() => setFlash(null), 4000);
     },
     onError: (err) => setFlash(localizeUserMessage((err as Error).message)),
   });
+
+  const askWithAi = (prompt: string) => {
+    openChat({ prompt, intent: ALERT_CREATE_INTENT });
+  };
 
   const delMut = useMutation({
     mutationFn: (id: string) => api.bi.alerts.delete(config, id),
@@ -166,7 +184,7 @@ export default function BiAlertsPage() {
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <button
           type="button"
-          onClick={() => openChat({ prompt: askPrompt })}
+          onClick={() => askWithAi(askPrompt)}
           className="btn-primary inline-flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
         >
           <Sparkles className="h-4 w-4" />
@@ -193,7 +211,7 @@ export default function BiAlertsPage() {
                 key={text}
                 type="button"
                 className="ai-pill max-w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
-                onClick={() => openChat({ prompt: text })}
+                onClick={() => askWithAi(text)}
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
                 <span className="line-clamp-2">{text}</span>
@@ -204,7 +222,7 @@ export default function BiAlertsPage() {
                 key={key}
                 type="button"
                 className="ai-pill max-w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
-                onClick={() => openChat({ prompt: t(key) })}
+                onClick={() => askWithAi(t(key))}
               >
                 <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
                 <span className="line-clamp-2">{t(key)}</span>
@@ -299,7 +317,7 @@ export default function BiAlertsPage() {
               <button
                 type="button"
                 className="btn-primary mt-2 inline-flex items-center gap-2 text-xs"
-                onClick={() => openChat({ prompt: askPrompt })}
+                onClick={() => askWithAi(askPrompt)}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 {t('bi.alertsAskAi')}
@@ -357,7 +375,7 @@ export default function BiAlertsPage() {
             titleKey="empty.bi.alerts.title"
             descriptionKey="empty.bi.alerts.description"
             ctaLabelKey="empty.bi.alerts.ctaAi"
-            onCtaClick={() => openChat({ prompt: askPrompt })}
+            onCtaClick={() => askWithAi(askPrompt)}
           >
             <button type="button" className="btn-secondary mt-3 inline-flex items-center gap-2" onClick={() => setForm(emptyForm())}>
               {t('bi.createAlert')}

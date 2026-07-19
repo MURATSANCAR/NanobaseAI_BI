@@ -1196,10 +1196,12 @@ export function createBiApi() {
           `/api/v1/bi/shares/${token}/views`,
         ),
     },
-    audit: (c: ApiConfig, limit = 100, action?: string) => {
+    audit: async (c: ApiConfig, limit = 100, action?: string) => {
       const q = new URLSearchParams({ limit: String(limit) });
       if (action) q.set('action', action);
-      return request<{ entries: unknown[] }>(c, `/api/v1/bi/audit?${q}`);
+      const raw = await request<{ entries?: unknown[] } | unknown[]>(c, `/api/v1/bi/audit?${q}`);
+      if (Array.isArray(raw)) return { entries: raw };
+      return { entries: Array.isArray(raw?.entries) ? raw.entries : [] };
     },
     publicShare: (baseUrl: string, token: string, opts?: { live?: boolean }) => {
       const q = opts?.live ? '?live=1' : '';

@@ -175,6 +175,7 @@ _REMOVE_PATHS = {
     "/api/v1/bi/budgets",
     "/api/v1/bi/budgets/summary",
     "/api/v1/bi/alerts",
+    "/api/v1/bi/audit",
     "/api/v1/bi/sources",
     "/api/v1/bi/sources/{source_id}",
     "/api/v1/bi/sources/{source_id}/activate",
@@ -1002,6 +1003,23 @@ async def budgets_sync_from_source(request: Request) -> JSONResponse:
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.get("/api/v1/bi/audit")
+async def audit_list_api(
+    limit: int = 100,
+    action: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """BI Audit page — recent bi_audit_events (replaces bridge empty stub)."""
+    from nanobase_api.infrastructure.audit_repo import AuditRepository
+
+    entries = AuditRepository(_meta_engine()).list_entries(
+        tenant_id=principal.tenant_id,
+        limit=limit,
+        action=action,
+    )
+    return {"entries": entries, "count": len(entries)}
 
 
 @app.get("/api/v1/bi/alerts")

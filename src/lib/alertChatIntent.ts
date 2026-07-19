@@ -14,3 +14,8 @@ export function withAlertCreateHint(userMessage: string): string {
   if (clean.includes('[İç talimat')) return clean;
   return `${clean}${INTERNAL_HINT}`;
 }
+
+/** Strip hidden setup instructions before showing a user bubble / history. */
+export function stripAlertCreateHint(text: string): string {
+  return (text || '').replace(/\n*\s*\[İç talimat[^\]]*\]/gi, '').trim();
+}

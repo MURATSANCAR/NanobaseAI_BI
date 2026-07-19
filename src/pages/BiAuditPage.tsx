@@ -45,6 +45,12 @@ export default function BiAuditPage() {
           columns={[
             { id: 'at', header: t('bi.createdAt'), mobilePrimary: true, cell: (r) => r.at?.slice(0, 19) ?? '—' },
             {
+              id: 'action',
+              header: t('bi.auditAction'),
+              mobileLabel: t('bi.auditAction'),
+              cell: (r) => r.action || '—',
+            },
+            {
               id: 'dur',
               header: t('bi.auditDuration'),
               mobileLabel: t('bi.auditDuration'),
@@ -52,10 +58,15 @@ export default function BiAuditPage() {
             },
             { id: 'rows', header: t('bi.auditRows'), mobileLabel: t('bi.auditRows'), cell: (r) => String(r.row_count ?? '—') },
             { id: 'ok', header: t('bi.auditOk'), mobileLabel: t('bi.auditOk'), cell: (r) => (r.ok ? '✓' : '✗') },
-            { id: 'sql', header: t('bi.sqlColumn'), mobileLabel: t('bi.sqlColumn'), cell: (r) => <code className="break-all text-xs">{r.sql?.slice(0, 60) ?? '—'}</code> },
+            {
+              id: 'sql',
+              header: t('bi.sqlColumn'),
+              mobileLabel: t('bi.sqlColumn'),
+              cell: (r) => <code className="break-all text-xs">{r.sql?.slice(0, 80) || r.error?.slice(0, 80) || '—'}</code>,
+            },
           ]}
           rows={entries}
-          rowKey={(r) => `${r.at}-${r.action}-${r.sql ?? ''}`}
+          rowKey={(r) => `${r.at}-${r.action}-${r.session_id ?? ''}-${r.sql ?? r.error ?? ''}`}
         />
       )}
     </PageShell>

@@ -48,7 +48,11 @@ import {
   showWebNotification,
   type NotifyPermission,
 } from '@/lib/webNotifications';
-import { ALERT_CREATE_INTENT, withAlertCreateHint } from '@/lib/alertChatIntent';
+import {
+  ALERT_CREATE_INTENT,
+  stripAlertCreateHint,
+  withAlertCreateHint,
+} from '@/lib/alertChatIntent';
 import { BiAnswerBlocks } from '@/components/BiWidgets';
 import BiChatWidgetPreview from '@/components/bi/BiChatWidgetPreview';
 import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
@@ -97,9 +101,10 @@ type FeedbackDraft = {
 function mapHistoryMessages(raw: unknown[]): ChatMessage[] {
   return raw.map((m) => {
     const msg = m as { role: string; content: string; meta?: BiChatResponse };
+    const role = msg.role === 'user' ? 'user' : 'assistant';
     return {
-      role: msg.role === 'user' ? 'user' : 'assistant',
-      content: msg.content,
+      role,
+      content: role === 'user' ? stripAlertCreateHint(msg.content) : msg.content,
       meta: msg.meta,
     };
   });
@@ -380,6 +385,7 @@ export default function BiChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prefilledRef = useRef<string | null>(null);
+  const sendIntentRef = useRef<string | undefined>(undefined);
   /** This mount owns the live send UI — remount reattach must not steal it. */
   const drivingSendRef = useRef(false);
   const pending = pendingCount > 0;
@@ -411,8 +417,13 @@ export default function BiChatPanel({
     if (initialMessage && prefilledRef.current !== `${sessionId}:${initialMessage}`) {
       prefilledRef.current = `${sessionId}:${initialMessage}`;
       setInput(initialMessage);
+      sendIntentRef.current = initialIntent;
     }
-  }, [initialMessage, sessionId]);
+  }, [initialIntent, initialMessage, sessionId]);
+
+  useEffect(() => {
+    if (initialIntent) sendIntentRef.current = initialIntent;
+  }, [initialIntent]);
 
   const scrollToBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -737,12 +748,20 @@ export default function BiChatPanel({
       const perm = await ensureNotifyPermission();
       setNotifyPerm(perm);
 
+      const intent = sendIntentRef.current;
+      sendIntentRef.current = undefined;
+      const apiMessage =
+        intent === ALERT_CREATE_INTENT ? withAlertCreateHint(payload) : payload;
+
       const context: Record<string, unknown> | undefined = opts?.prepared_sql
         ? {
             prepared_sql: opts.prepared_sql,
             ...(opts.template_id ? { template_id: opts.template_id } : {}),
+            ...(intent ? { intent } : {}),
           }
-        : undefined;
+        : intent
+          ? { intent }
+          : undefined;
       const optimistic = opts?.optimistic;
 
       const jobRef = { id: '' as string };
@@ -750,7 +769,7 @@ export default function BiChatPanel({
       const { jobId, promise, unsubscribe } = runBiChatJob(
         config,
         {
-          message: payload,
+          message: apiMessage,
           session_id: sessionId,
           dashboard_id: dashboardId,
           db_name: activeDbName,
