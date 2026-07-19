@@ -45,22 +45,36 @@ _orig_sources_list = bridge_mod._sources_list_payload
 _orig_health = bridge_mod.health
 
 
-def _sources_list_payload_overlay() -> dict:
+def _sources_list_payload_overlay(tenant_id: str | None = None) -> dict:
     base = _orig_sources_list()
     by_id = {s["id"]: s for s in (base.get("sources") or [])}
 
     try:
         with _meta_engine().connect() as conn:
-            rows = conn.execute(
-                text(
-                    """
-                    SELECT id, label, driver, dialect, host, port, database,
-                           username, ssl, secret_ref, tenant_id, project_id
-                    FROM bi_sources
-                    ORDER BY label
-                    """
-                )
-            ).mappings()
+            if tenant_id:
+                rows = conn.execute(
+                    text(
+                        """
+                        SELECT id, label, driver, dialect, host, port, database,
+                               username, ssl, secret_ref, tenant_id, project_id
+                        FROM bi_sources
+                        WHERE tenant_id = :tenant_id
+                        ORDER BY label
+                        """
+                    ),
+                    {"tenant_id": tenant_id},
+                ).mappings()
+            else:
+                rows = conn.execute(
+                    text(
+                        """
+                        SELECT id, label, driver, dialect, host, port, database,
+                               username, ssl, secret_ref, tenant_id, project_id
+                        FROM bi_sources
+                        ORDER BY label
+                        """
+                    )
+                ).mappings()
             for r in rows:
                 by_id[r["id"]] = {
                     "id": r["id"],
@@ -339,15 +353,11 @@ async def bi_status() -> dict:
 async def sources_list_api(
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
-    meta_list = _ds_service().list_sources(principal)
-    # Merge with overlay (builtin + neon/oracle maps) for FE continuity
-    overlay = _sources_list_payload_overlay()
-    by_id = {s["id"]: s for s in (overlay.get("sources") or [])}
-    for s in meta_list.get("sources") or []:
-        by_id[s["id"]] = s
+    # Tenant-scoped meta merge + shared builtins/maps from overlay
+    overlay = _sources_list_payload_overlay(tenant_id=principal.tenant_id)
     return {
         "active_id": overlay.get("active_id") or bridge_mod.ACTIVE_DB.get("id"),
-        "sources": list(by_id.values()),
+        "sources": overlay.get("sources") or [],
     }
 
 
