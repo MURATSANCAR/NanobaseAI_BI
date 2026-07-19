@@ -15,8 +15,12 @@ from nanobase_awel.operators.schema_reference_validator import validate_plan_ref
 from nanobase_awel.operators.structured_parser import parse_sql_plan
 from nanobase_awel.retrieval.authorized import build_sanitized_context, retrieve_authorized_schema
 
-# Arctic is faster/more reliable with compact schema context under CPU contention.
-_TEXT2SQL_COMPACT = bool((os.environ.get("TEXT2SQL_API_BASE") or "").strip())
+# Compact schema only when Arctic (R1) is the preferred planner — Qwen wants fuller JSON context.
+_TEXT2SQL_PREFER = (os.environ.get("TEXT2SQL_PREFER") or "chat").strip().lower()
+_TEXT2SQL_COMPACT = bool((os.environ.get("TEXT2SQL_API_BASE") or "").strip()) and _TEXT2SQL_PREFER in (
+    "arctic",
+    "text2sql",
+)
 _TEXT2SQL_CONTEXT_CHARS = int(os.environ.get("TEXT2SQL_CONTEXT_CHARS", "4500"))
 
 

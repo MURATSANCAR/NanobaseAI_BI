@@ -1,8 +1,8 @@
 """OpenAI-compatible LLM call (llama.cpp).
 
-SQL planning/repair prefer the lighter Arctic Text2SQL endpoint and do NOT
-hold the chat-model ModelQueue (so Qwen load cannot block Text2SQL).
-Chat/explain still go through ModelQueue → Qwen.
+SQL plan/repair default to the chat model (Qwen) which matches our JSON
+plan prompts. Optional Arctic Text2SQL is used as a fallback when configured.
+Explain/general always use the chat ModelQueue.
 """
 
 from __future__ import annotations
@@ -30,6 +30,8 @@ LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp")
 TEXT2SQL_BASE = (os.environ.get("TEXT2SQL_API_BASE") or "").rstrip("/")
 TEXT2SQL_MODEL = os.environ.get("TEXT2SQL_MODEL") or "arctic-text2sql"
 TEXT2SQL_KEY = os.environ.get("TEXT2SQL_API_KEY") or LLM_KEY
+# Prefer chat (Qwen) for JSON sql-plan; arctic is R1/CoT and often slower/noisier.
+TEXT2SQL_PREFER = (os.environ.get("TEXT2SQL_PREFER") or "chat").strip().lower()
 TEXT2SQL_FALLBACK = os.environ.get("TEXT2SQL_FALLBACK_TO_CHAT", "1").strip().lower() not in (
     "0",
     "false",
@@ -148,6 +150,26 @@ async def _via_chat_queue(
             await slot.release()
 
 
+async def _via_arctic(
+    system: str,
+    user: str,
+    *,
+    temperature: float,
+    max_tokens: int,
+    timeout_s: float,
+) -> str:
+    return await _call_endpoint(
+        system,
+        user,
+        base=TEXT2SQL_BASE,
+        model=TEXT2SQL_MODEL,
+        key=TEXT2SQL_KEY,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        timeout_s=timeout_s,
+    )
+
+
 async def chat_completion(
     system: str,
     user: str,
@@ -159,24 +181,22 @@ async def chat_completion(
 ) -> str:
     """LLM completion.
 
-    purpose=sql_plan|sql_repair → Arctic Text2SQL first (no chat queue).
-    purpose=general → ModelQueue + chat model (Qwen).
+    purpose=sql_plan|sql_repair → prefer chat model (JSON plan), Arctic optional fallback.
+    purpose=general → ModelQueue + chat model.
     """
-    use_text2sql = purpose in ("sql_plan", "sql_repair") and bool(TEXT2SQL_BASE)
+    chat_timeout = float(timeout_s) if timeout_s is not None else LLM_TIMEOUT_SEC
+    arctic_timeout = float(timeout_s) if timeout_s is not None else TEXT2SQL_TIMEOUT_SEC
+    use_sql_path = purpose in ("sql_plan", "sql_repair")
     last_err: Exception | None = None
 
-    if use_text2sql:
-        to = float(timeout_s) if timeout_s is not None else TEXT2SQL_TIMEOUT_SEC
+    if use_sql_path and TEXT2SQL_BASE and TEXT2SQL_PREFER in ("arctic", "text2sql"):
         try:
-            return await _call_endpoint(
+            return await _via_arctic(
                 system,
                 user,
-                base=TEXT2SQL_BASE,
-                model=TEXT2SQL_MODEL,
-                key=TEXT2SQL_KEY,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                timeout_s=to,
+                timeout_s=arctic_timeout,
             )
         except Exception as e:  # noqa: BLE001
             last_err = e
@@ -186,8 +206,6 @@ async def chat_completion(
                     "Text-to-SQL modeline erişilemiyor.",
                     retryable=True,
                 ) from e
-            # Fall back to chat model only when Arctic is unhealthy / failed.
-            # Still queued so we don't stampede Qwen.
 
     try:
         return await _via_chat_queue(
@@ -195,24 +213,37 @@ async def chat_completion(
             user,
             temperature=temperature,
             max_tokens=max_tokens,
-            timeout_s=float(timeout_s) if timeout_s is not None else LLM_TIMEOUT_SEC,
+            timeout_s=chat_timeout,
         )
     except WorkflowError:
         raise
     except Exception as e:
+        last_err = e
+        # Last-resort Arctic if chat failed and Arctic wasn't preferred first.
+        if use_sql_path and TEXT2SQL_BASE and TEXT2SQL_PREFER not in ("arctic", "text2sql"):
+            try:
+                return await _via_arctic(
+                    system,
+                    user,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout_s=arctic_timeout,
+                )
+            except Exception as e2:  # noqa: BLE001
+                last_err = e2
         raise WorkflowError(
             TEXT_TO_SQL_MODEL_UNAVAILABLE,
             "Text-to-SQL modeline erişilemiyor.",
             retryable=True,
-        ) from (last_err or e)
+        ) from last_err
 
 
 def _endpoints_for_purpose(purpose: str) -> list[tuple[str, str, str, float]]:
     """Test helper — ordered (base, model, key, timeout) candidates."""
     chat = (LLM_BASE, LLM_MODEL, LLM_KEY, LLM_TIMEOUT_SEC)
-    if purpose in ("sql_plan", "sql_repair") and TEXT2SQL_BASE:
-        primary = (TEXT2SQL_BASE, TEXT2SQL_MODEL, TEXT2SQL_KEY, TEXT2SQL_TIMEOUT_SEC)
-        if TEXT2SQL_FALLBACK and TEXT2SQL_BASE.rstrip("/") != LLM_BASE.rstrip("/"):
-            return [primary, chat]
-        return [primary]
-    return [chat]
+    arctic = (TEXT2SQL_BASE, TEXT2SQL_MODEL, TEXT2SQL_KEY, TEXT2SQL_TIMEOUT_SEC)
+    if purpose not in ("sql_plan", "sql_repair") or not TEXT2SQL_BASE:
+        return [chat]
+    if TEXT2SQL_PREFER in ("arctic", "text2sql"):
+        return [arctic, chat] if TEXT2SQL_FALLBACK else [arctic]
+    return [chat, arctic]

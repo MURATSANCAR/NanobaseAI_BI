@@ -50,7 +50,15 @@ def normalize_single_select_sql(sql: str | None) -> str | None:
     if ";" in text:
         text = text.split(";", 1)[0].strip()
     text = text.rstrip(";").strip()
-    return text or None
+    if not text:
+        return None
+    # Reject CoT prose that merely mentions WITH/SELECT (needs a FROM/clause shape).
+    if not re.search(r"(?is)\b(from|where|group\s+by|order\s+by|limit)\b", text):
+        if not re.match(r"(?is)^select\s+\d+", text):
+            return None
+    if "`" in text and " from " not in text.lower():
+        return None
+    return text
 
 
 def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadata_version: str = "") -> SqlPlan:
