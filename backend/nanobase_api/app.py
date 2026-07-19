@@ -466,13 +466,16 @@ async def bi_briefing(dashboard_id: str = "default", locale: str = "tr") -> dict
     }
 
 
-@app.get("/api/v1/bi/chat/suggestions")
+@app.get("/api/v1/bi/suggestions")
 async def chat_suggestions_api(
     datasource_id: str | None = None,
     limit: int = 6,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> dict:
-    """Quick suggestions for active (or given) datasource: learned + cold-start defaults."""
+    """Quick suggestions for active (or given) datasource: learned + cold-start defaults.
+
+    Not under /chat/... — that prefix collides with bridge GET /chat/{session_id}.
+    """
     from nanobase_api.suggestions import build_suggestions
 
     sid = _active_ds(datasource_id)
