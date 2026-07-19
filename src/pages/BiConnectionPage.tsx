@@ -11,7 +11,6 @@ import { useApiConfig } from '@/context/ApiContext';
 import { useAuth } from '@/context/AuthContext';
 import type { BiConnectionProfile, BiConnectionUpsert } from '@/api/types';
 import type { SchemaScan } from '@/api/contracts/datasource';
-import { request } from '@/api/http';
 import { formatBackendErrorText, localizeUserMessage } from '@/utils/backendLabels';
 import { t } from '@/i18n';
 import { getFeatureFlags } from '@/config/environment';
@@ -172,27 +171,55 @@ export default function BiConnectionPage() {
   });
 
   useEffect(() => {
-    if (scanQ.data?.status === 'COMPLETED') {
-      void qc.invalidateQueries({ queryKey: ['bi-schema'] });
-      void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
-      void qc.invalidateQueries({ queryKey: ['bi-status'] });
-      const ds = scanQ.data.datasourceId || selectedId;
-      if (ds) {
-        const bid = `build-scan-${ds}`.slice(0, 64);
-        setScenarioBuildId(bid);
-        setScenarioToast(t('bi.scenarioBuildPreparing') || 'Senaryolar hazırlanıyor…');
+    if (scanQ.data?.status !== 'COMPLETED') return;
+    void qc.invalidateQueries({ queryKey: ['bi-schema'] });
+    void qc.invalidateQueries({ queryKey: ['bi-schema-graph'] });
+    void qc.invalidateQueries({ queryKey: ['bi-status'] });
+    const ds = scanQ.data.datasourceId || selectedId;
+    if (!ds || !enabled) return;
+    const expectedId = `build-scan-${ds}`.slice(0, 64);
+    let cancelled = false;
+    setScenarioToast(t('bi.scenarioBuildPreparing'));
+    void (async () => {
+      try {
+        const existing = await api.bi.scenarios.buildStatus(config, ds, expectedId);
+        if (cancelled) return;
+        if (existing.status && existing.error !== 'NOT_FOUND') {
+          setScenarioBuildId(expectedId);
+          return;
+        }
+        const created = await api.bi.scenarios.startBuild(config, ds, {
+          async: true,
+          autoPublish: true,
+        });
+        if (cancelled) return;
+        setScenarioBuildId(String(created.buildId || created.id || expectedId));
+      } catch {
+        if (cancelled) return;
+        try {
+          const created = await api.bi.scenarios.startBuild(config, ds, {
+            async: true,
+            autoPublish: true,
+          });
+          if (!cancelled) setScenarioBuildId(String(created.buildId || created.id || expectedId));
+        } catch {
+          if (!cancelled) {
+            setScenarioBuildId(expectedId);
+            setScenarioToast(t('bi.scenarioBuildFailed'));
+          }
+        }
       }
-    }
-  }, [qc, scanQ.data?.status, scanQ.data?.datasourceId, selectedId]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [qc, scanQ.data?.status, scanQ.data?.datasourceId, selectedId, enabled, config]);
 
   const scenarioBuildQ = useQuery({
-    queryKey: ['scenario-build', scenarioBuildId, config],
-    queryFn: async () => {
-      const ds = selectedId || 'bi_reporting';
-      return request<{ status?: string; phase?: string; error?: string }>(
-        config,
-        `/api/v1/datasources/${encodeURIComponent(ds)}/scenario-builds/${encodeURIComponent(scenarioBuildId!)}`,
-      );
+    queryKey: ['scenario-build', scenarioBuildId, selectedId, config],
+    queryFn: () => {
+      const ds = selectedId || activeId || 'bi_reporting';
+      return api.bi.scenarios.buildStatus(config, ds, scenarioBuildId!);
     },
     enabled: Boolean(enabled && scenarioBuildId),
     refetchInterval: (q) => {
@@ -204,13 +231,31 @@ export default function BiConnectionPage() {
   useEffect(() => {
     const st = scenarioBuildQ.data?.status;
     if (st === 'COMPLETED') {
-      setScenarioToast(t('bi.scenarioBuildReady') || 'Senaryolar hazır');
+      setScenarioToast(t('bi.scenarioBuildReady'));
+      void qc.invalidateQueries({ queryKey: ['bi-chat-suggestions'] });
+      void qc.invalidateQueries({ queryKey: ['scenario-reviews'] });
     } else if (st === 'FAILED') {
-      setScenarioToast(t('bi.scenarioBuildFailed') || 'Senaryo derlemesi başarısız');
-    } else if (scenarioBuildId && (st === 'RUNNING' || st === 'QUEUED')) {
-      setScenarioToast(t('bi.scenarioBuildPreparing') || 'Senaryolar hazırlanıyor…');
+      setScenarioToast(t('bi.scenarioBuildFailed'));
+    } else if (scenarioBuildId && (!st || st === 'RUNNING' || st === 'QUEUED')) {
+      setScenarioToast(t('bi.scenarioBuildPreparing'));
     }
-  }, [scenarioBuildQ.data?.status, scenarioBuildId]);
+  }, [scenarioBuildQ.data?.status, scenarioBuildId, qc]);
+
+  const scenarioRebuildMut = useMutation({
+    mutationFn: async () => {
+      const ds = selectedId || activeId;
+      if (!ds) throw new Error(t('bi.scanSelectSource'));
+      const created = await api.bi.scenarios.startBuild(config, ds, {
+        async: true,
+        autoPublish: true,
+      });
+      return { ds, buildId: String(created.buildId || created.id || `build-scan-${ds}`.slice(0, 64)) };
+    },
+    onSuccess: ({ buildId }) => {
+      setScenarioBuildId(buildId);
+      setScenarioToast(t('bi.scenarioBuildPreparing'));
+    },
+  });
 
   useEffect(() => {
     if (!sources.length) return;
@@ -354,11 +399,18 @@ export default function BiConnectionPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-semibold text-slate-900">{s.label || id}</p>
-                  {active && (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
-                      {t('bi.sources.activeBadge')}
-                    </span>
-                  )}
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                    {active && (
+                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
+                        {t('bi.sources.activeBadge')}
+                      </span>
+                    )}
+                    {(s.managed || s.protected) && (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+                        {t('bi.sources.managedBadge')}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="mt-1 truncate font-mono text-[11px] text-slate-500">{s.supabase_url || s.host || id}</p>
                 {!active && (
@@ -675,6 +727,21 @@ export default function BiConnectionPage() {
                   {t('bi.scanSchema')}
                 </button>
               )}
+              {canScan && flags.useNanobaseBackend && selectedId && (
+                <button
+                  type="button"
+                  className="btn-secondary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
+                  disabled={scenarioRebuildMut.isPending}
+                  onClick={() => scenarioRebuildMut.mutate()}
+                >
+                  {scenarioRebuildMut.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {t('bi.scenarioRebuild')}
+                </button>
+              )}
               {canScan && !flags.useNanobaseBackend && (
                 <p className="w-full text-xs text-slate-500 sm:w-auto">{t('bi.scanLegacyUnavailable')}</p>
               )}
@@ -711,12 +778,17 @@ export default function BiConnectionPage() {
                   : t('bi.connectionTestFail')}
               </div>
             )}
-            {(testMut.isError || saveMut.isError || scanMut.isError || deleteMut.isError) && (
+            {(testMut.isError ||
+              saveMut.isError ||
+              scanMut.isError ||
+              deleteMut.isError ||
+              scenarioRebuildMut.isError) && (
               <div className="text-sm text-status-fail">
                 {localizeUserMessage((testMut.error as Error)?.message) ||
                   localizeUserMessage((saveMut.error as Error)?.message) ||
                   localizeUserMessage((scanMut.error as Error)?.message) ||
-                  localizeUserMessage((deleteMut.error as Error)?.message)}
+                  localizeUserMessage((deleteMut.error as Error)?.message) ||
+                  localizeUserMessage((scenarioRebuildMut.error as Error)?.message)}
               </div>
             )}
             {saveMut.isSuccess && <div className="text-sm text-status-ok">{t('bi.saveSuccess')}</div>}

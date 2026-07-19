@@ -257,9 +257,16 @@ export function createBiApi() {
       const suffix = qs.toString() ? `?${qs.toString()}` : '';
       return request<{
         datasource_id: string;
-        suggestions: Array<{ text: string; source: 'learned' | 'default' | string; count: number }>;
+        suggestions: Array<{
+          text: string;
+          source: 'learned' | 'default' | 'scenario' | string;
+          count: number;
+          category?: string;
+          scenarioCode?: string;
+        }>;
         learned_count?: number;
         default_count?: number;
+        scenario_count?: number;
       }>(c, `/api/v1/bi/suggestions${suffix}`);
     },
     alertSuggestions: (
@@ -625,6 +632,79 @@ export function createBiApi() {
             { method: 'POST', body: JSON.stringify(body) },
           ),
       },
+    },
+    /** Precompiled scenario engine — builds, review queue, suggested questions */
+    scenarios: {
+      startBuild: (
+        c: ApiConfig,
+        datasourceId: string,
+        body?: { tenantId?: string; autoPublish?: boolean; async?: boolean },
+      ) =>
+        request<{ buildId: string; status?: string; id?: string; phase?: string; error?: string }>(
+          c,
+          `/api/v1/datasources/${encodeURIComponent(datasourceId)}/scenario-builds`,
+          { method: 'POST', body: JSON.stringify(body || { async: true, autoPublish: true }) },
+        ),
+      buildStatus: (c: ApiConfig, datasourceId: string, buildId: string) =>
+        request<{
+          id?: string;
+          buildId?: string;
+          status?: string;
+          phase?: string;
+          error?: string;
+          datasourceId?: string;
+        }>(
+          c,
+          `/api/v1/datasources/${encodeURIComponent(datasourceId)}/scenario-builds/${encodeURIComponent(buildId)}`,
+        ),
+      suggestedQuestions: (
+        c: ApiConfig,
+        datasourceId: string,
+        opts?: { tenantId?: string; limit?: number },
+      ) => {
+        const qs = new URLSearchParams();
+        if (opts?.tenantId) qs.set('tenant_id', opts.tenantId);
+        if (opts?.limit != null) qs.set('limit', String(opts.limit));
+        const suffix = qs.toString() ? `?${qs.toString()}` : '';
+        return request<{
+          datasourceId: string;
+          questions: Array<{ question: string; category?: string; scenarioCode?: string }>;
+          categories?: Record<string, string[]>;
+        }>(
+          c,
+          `/api/v1/datasources/${encodeURIComponent(datasourceId)}/suggested-questions${suffix}`,
+        );
+      },
+      reviews: (c: ApiConfig, datasourceId: string, tenantId = 'default') =>
+        request<{
+          items: Array<{
+            scenarioId: string;
+            scenarioCode: string;
+            family: string;
+            riskTier: string;
+            canonicalQuestion: string;
+            status: string;
+          }>;
+        }>(
+          c,
+          `/api/v1/query-scenarios/reviews?datasource_id=${encodeURIComponent(datasourceId)}&tenant_id=${encodeURIComponent(tenantId)}`,
+        ),
+      review: (c: ApiConfig, scenarioId: string, decision: 'APPROVE' | 'REJECT') =>
+        request<{ scenarioId?: string; status?: string; error?: string }>(
+          c,
+          `/api/v1/query-scenarios/${encodeURIComponent(scenarioId)}/review`,
+          { method: 'POST', body: JSON.stringify({ decision }) },
+        ),
+      metrics: (c: ApiConfig) =>
+        request<Record<string, unknown>>(c, '/api/v1/query-scenarios/metrics'),
+      bootstrapInvoiceSlice: (
+        c: ApiConfig,
+        body?: { tenantId?: string; datasourceId?: string; autoPublish?: boolean },
+      ) =>
+        request<Record<string, unknown>>(c, '/api/v1/semantic/bootstrap/invoice-scenario-slice', {
+          method: 'POST',
+          body: JSON.stringify(body || {}),
+        }),
     },
     /** Faz 7 governance catalog (/api/v1/semantic/*) — dual-review, versions, compile */
     catalogGov: {
