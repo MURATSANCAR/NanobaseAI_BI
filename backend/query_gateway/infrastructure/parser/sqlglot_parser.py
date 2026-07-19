@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import sqlglot
 from sqlglot import exp
-from sqlglot.errors import ParseError
+from sqlglot.errors import ParseError, TokenError
 
 from query_gateway.domain.errors import (
     MULTIPLE_STATEMENTS_NOT_ALLOWED,
@@ -70,7 +70,8 @@ def parse_sql(sql: str, *, dialect: str = "postgres") -> ParsedQuery:
 
     try:
         trees = sqlglot.parse(raw, read=dialect)
-    except ParseError as e:
+    except (ParseError, TokenError) as e:
+        # LLM sometimes emits prose / truncated SQL; never 500 the validate path.
         raise GatewayError(SQL_PARSE_FAILED, "SQL ayrıştırılamadı.", status=400) from e
 
     if not trees or trees[0] is None:

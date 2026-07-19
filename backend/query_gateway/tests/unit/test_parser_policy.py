@@ -48,6 +48,16 @@ def test_reject_cte_delete():
         parse_sql("WITH x AS (DELETE FROM public.customers RETURNING *) SELECT * FROM x")
 
 
+def test_prose_sql_token_error_is_parse_failed_not_crash():
+    """LLM sometimes emits English prose mid-SQL; must map to 400 GatewayError."""
+    with pytest.raises(GatewayError) as ei:
+        parse_sql(
+            "SELECT 1 with alis_faturalari. If I use satin_alma_sipari then join"
+        )
+    assert ei.value.code == "SQL_PARSE_FAILED"
+    assert ei.value.status == 400
+
+
 def test_reject_pg_sleep():
     p = parse_sql("SELECT pg_sleep(1)")
     with pytest.raises(GatewayError) as ei:

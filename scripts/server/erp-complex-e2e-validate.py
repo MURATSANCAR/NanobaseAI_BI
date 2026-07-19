@@ -337,15 +337,36 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
         "MODEL_QUEUE_TIMEOUT",
         "MODEL_QUEUE_FULL",
     ) or (err and "Text-to-SQL modeline erişilemiyor" in str(err))
+    transport_fail = bool(
+        err
+        and (
+            "Internal Server Error" in str(err)
+            or "incomplete chunked" in str(err)
+            or "peer closed connection" in str(err)
+        )
+    )
     min_rows = int(prompt.get("expect_min_rows") or 0)
-    ok = (not hard_fail) and (clarify or (sql is not None) or len(rows) >= min_rows)
-    if min_rows > 0 and not clarify and len(rows) < min_rows and not hard_fail:
-        # soft fail: pipeline worked but empty/wrong SQL
-        ok = bool(sql) and err is None
-    status = "PASS" if ok and not hard_fail else ("HARD_FAIL" if hard_fail else "SOFT_FAIL")
     if clarify:
+        ok = True
         status = "CLARIFY"
-        ok = True  # not a hard system failure
+    elif hard_fail:
+        ok = False
+        status = "HARD_FAIL"
+    elif transport_fail:
+        ok = False
+        status = "SOFT_FAIL"
+    elif err:
+        ok = False
+        status = "SOFT_FAIL"
+    elif min_rows > 0 and len(rows) < min_rows:
+        ok = False
+        status = "SOFT_FAIL"
+    elif sql is None and len(rows) == 0:
+        ok = False
+        status = "SOFT_FAIL"
+    else:
+        ok = True
+        status = "PASS"
     print(
         f"  CHAT {status} {prompt['id']} {elapsed}s rows={len(rows)} "
         f"sql={'Y' if sql else 'N'} err={str(err)[:80] if err else None}"
