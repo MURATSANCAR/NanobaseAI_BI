@@ -175,6 +175,7 @@ def build_sanitized_context(
     schema_hint: str,
     retrieval: dict[str, Any],
     conversation_turns: list[dict[str, Any]] | None = None,
+    semantic_context: str | None = None,
 ) -> str:
     return sanitize_planning_context(
         question=question,
@@ -182,4 +183,5 @@ def build_sanitized_context(
         retrieved_hint=str(retrieval.get("hint_extra") or ""),
         conversation_turns=conversation_turns,
         untrusted_comments=retrieval.get("untrusted_comments") or [],
+        semantic_context=semantic_context,
     )

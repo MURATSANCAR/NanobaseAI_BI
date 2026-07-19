@@ -6,6 +6,7 @@ import AiOrb from './AiOrb';
 import { useAuth } from '@/context/AuthContext';
 import { useLocale } from '@/context/LocaleContext';
 import { BI_NAV_GROUPS, type NavGroupDef, type NavLinkDef } from '@/lib/navGroups';
+import { getFeatureFlags } from '@/config/environment';
 import { isModuleDashboard } from '@/lib/moduleRoutes';
 import { t, SUPPORTED_LOCALES, LOCALE_LABELS } from '@/i18n';
 
@@ -152,9 +153,21 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
-          {BI_NAV_GROUPS.map((group) => (
-            <NavSection key={group.titleKey} group={group} pathname={pathname} onClose={onClose} />
-          ))}
+          {BI_NAV_GROUPS.map((group) => {
+            const flags = getFeatureFlags();
+            const links = group.links.filter(
+              (l) => l.to !== '/bi/semantic-catalog' || flags.enableSemanticCatalog,
+            );
+            if (links.length === 0) return null;
+            return (
+              <NavSection
+                key={group.titleKey}
+                group={{ ...group, links }}
+                pathname={pathname}
+                onClose={onClose}
+              />
+            );
+          })}
         </nav>
 
         <div className="space-y-2 border-t border-white/60 p-3">

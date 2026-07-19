@@ -80,6 +80,27 @@ def require_tenant_match(principal: RequestPrincipal, resource_tenant_id: str) -
         )
 
 
+ROLE_BUSINESS_REVIEWER = "BUSINESS_REVIEWER"
+ROLE_TECHNICAL_REVIEWER = "TECHNICAL_REVIEWER"
+ROLE_SEMANTIC_PUBLISHER = "SEMANTIC_PUBLISHER"
+ROLE_ADMIN = "ADMIN"
+ROLE_DATA_ANALYST = "DATA_ANALYST"
+
+
+def require_roles(principal: RequestPrincipal, *roles: str) -> None:
+    """Require at least one of the given roles."""
+    if not (principal.roles & set(roles)):
+        raise ApiError(
+            "FORBIDDEN",
+            f"Gerekli roller: {', '.join(roles)}",
+            status_code=403,
+        )
+
+
+def has_role(principal: RequestPrincipal, role: str) -> bool:
+    return role in principal.roles
+
+
 def mint_dev_token(
     *,
     user_id: str,

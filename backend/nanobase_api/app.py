@@ -253,6 +253,9 @@ from fastapi.responses import JSONResponse, StreamingResponse  # noqa: E402
 
 from nanobase_api.chat_gateway import stream_chat_via_gateway  # noqa: E402
 from nanobase_api import semantic as semantic_mod  # noqa: E402
+from nanobase_api.semantic_catalog.api import router as semantic_catalog_router  # noqa: E402
+
+app.include_router(semantic_catalog_router)
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402

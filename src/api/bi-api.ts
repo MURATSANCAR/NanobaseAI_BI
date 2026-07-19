@@ -582,6 +582,91 @@ export function createBiApi() {
           ),
       },
     },
+    /** Faz 7 governance catalog (/api/v1/semantic/*) — dual-review, versions, compile */
+    catalogGov: {
+      status: (c: ApiConfig) =>
+        request<{
+          ok?: boolean;
+          enabled?: boolean;
+          contractVersion?: string;
+          metrics?: number;
+          candidates?: number;
+          promotions?: number;
+          versions?: number;
+        }>(c, '/api/v1/semantic/status'),
+      bootstrapSlice: (c: ApiConfig, body?: { datasourceId?: string; published?: boolean }) =>
+        request<{ ok: boolean; metric_id?: string; filter_id?: string; term_id?: string }>(
+          c,
+          '/api/v1/semantic/bootstrap/unpaid-invoice-slice',
+          { method: 'POST', body: JSON.stringify(body || {}) },
+        ),
+      metrics: (c: ApiConfig, datasourceId = 'default') =>
+        request<{ metrics: Array<Record<string, unknown>> }>(
+          c,
+          `/api/v1/semantic/metrics?datasource_id=${encodeURIComponent(datasourceId)}`,
+        ),
+      businessTerms: (c: ApiConfig, datasourceId = 'default') =>
+        request<{ businessTerms: Array<Record<string, unknown>> }>(
+          c,
+          `/api/v1/semantic/business-terms?datasource_id=${encodeURIComponent(datasourceId)}`,
+        ),
+      filterRules: (c: ApiConfig, datasourceId = 'default') =>
+        request<{ filterRules: Array<Record<string, unknown>> }>(
+          c,
+          `/api/v1/semantic/filter-rules?datasource_id=${encodeURIComponent(datasourceId)}`,
+        ),
+      promotions: (c: ApiConfig) =>
+        request<{ promotionRequests: Array<Record<string, unknown>> }>(
+          c,
+          '/api/v1/semantic/promotion-requests',
+        ),
+      versions: (c: ApiConfig, datasourceId = 'default') =>
+        request<{ versions: Array<Record<string, unknown>>; active: Record<string, unknown> | null }>(
+          c,
+          `/api/v1/semantic/versions?datasource_id=${encodeURIComponent(datasourceId)}`,
+        ),
+      validateMetric: (c: ApiConfig, metricId: string) =>
+        request<Record<string, unknown>>(c, `/api/v1/semantic/metrics/${encodeURIComponent(metricId)}/validate`, {
+          method: 'POST',
+        }),
+      submitReview: (c: ApiConfig, metricId: string) =>
+        request<{ ok: boolean; promotionRequest?: Record<string, unknown> }>(
+          c,
+          `/api/v1/semantic/metrics/${encodeURIComponent(metricId)}/submit-review`,
+          { method: 'POST' },
+        ),
+      review: (
+        c: ApiConfig,
+        promotionId: string,
+        body: { decision: string; role: string; comment?: string },
+      ) =>
+        request<Record<string, unknown>>(
+          c,
+          `/api/v1/semantic/promotion-requests/${encodeURIComponent(promotionId)}/reviews`,
+          { method: 'POST', body: JSON.stringify(body) },
+        ),
+      publish: (c: ApiConfig, promotionId: string, body?: { semanticVersion?: string; schemaVersion?: string }) =>
+        request<Record<string, unknown>>(
+          c,
+          `/api/v1/semantic/promotion-requests/${encodeURIComponent(promotionId)}/publish`,
+          { method: 'POST', body: JSON.stringify(body || {}) },
+        ),
+      rollback: (c: ApiConfig, versionId: string) =>
+        request<Record<string, unknown>>(
+          c,
+          `/api/v1/semantic/versions/${encodeURIComponent(versionId)}/rollback`,
+          { method: 'POST' },
+        ),
+      compile: (
+        c: ApiConfig,
+        body: { metric?: string; datasourceId?: string; period?: { from?: string; to?: string } },
+      ) =>
+        request<{ ok: boolean; sql?: string; logicalPlan?: Record<string, unknown>; astFingerprint?: string }>(
+          c,
+          '/api/v1/semantic/compile',
+          { method: 'POST', body: JSON.stringify(body) },
+        ),
+    },
     artifacts: {
       create: (
         c: ApiConfig,

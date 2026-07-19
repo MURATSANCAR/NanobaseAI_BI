@@ -1,0 +1,11 @@
+{
+  "unauthorizedPublish": 0,
+  "sameUserDualApprove": 0,
+  "draftInProductionRetrieval": 0,
+  "staleInProductionRetrieval": 0,
+  "autoPromoteOnFeedback": 0,
+  "crossTenantRetrieval": 0,
+  "criticalFindings": 0,
+  "highFindings": 0,
+  "evidence": "nanobase_api/semantic_catalog/tests + promotion-security-results.json"
+}

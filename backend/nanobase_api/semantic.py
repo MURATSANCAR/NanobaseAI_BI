@@ -20,54 +20,12 @@ def norm_question(q: str) -> str:
 
 
 def lookup_verified_sql(engine: Engine, question: str, datasource_id: str) -> Optional[dict[str, Any]]:
-    qn = norm_question(question)
-    with engine.connect() as conn:
-        row = conn.execute(
-            text(
-                """
-                SELECT id, question_display, sql_text, hit_count
-                FROM bi_verified_sql
-                WHERE datasource_id = :ds AND status = 'verified' AND question_norm = :qn
-                LIMIT 1
-                """
-            ),
-            {"ds": datasource_id, "qn": qn},
-        ).mappings().first()
-        if not row:
-            # soft contains match on short questions
-            rows = conn.execute(
-                text(
-                    """
-                    SELECT id, question_display, sql_text, hit_count, question_norm
-                    FROM bi_verified_sql
-                    WHERE datasource_id = :ds AND status = 'verified'
-                    ORDER BY hit_count DESC
-                    LIMIT 50
-                    """
-                ),
-                {"ds": datasource_id},
-            ).mappings().all()
-            for r in rows:
-                rn = r["question_norm"]
-                if qn == rn or qn in rn or rn in qn:
-                    row = r
-                    break
-        if not row:
-            return None
-        conn.execute(
-            text(
-                "UPDATE bi_verified_sql SET hit_count = hit_count + 1, updated_at = :now WHERE id = :id"
-            ),
-            {"now": datetime.now(timezone.utc), "id": row["id"]},
-        )
-        conn.commit()
-        return {
-            "id": row["id"],
-            "question": row["question_display"],
-            "sql": row["sql_text"],
-            "hit_count": int(row["hit_count"]) + 1,
-            "source": "verified_sql",
-        }
+    """Legacy physical SQL cache — disabled for production retrieval (Kural 4).
+
+    STALE/legacy rows are never returned. Prefer semantic_catalog logical plans.
+    """
+    _ = (engine, question, datasource_id)
+    return None
 
 
 def list_glossary(engine: Engine, tenant_id: str = "default") -> list[dict[str, Any]]:
@@ -157,6 +115,7 @@ def save_feedback(
 ) -> dict[str, Any]:
     fid = f"fb-{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
+    candidate_id = None
     with engine.begin() as conn:
         conn.execute(
             text(
@@ -180,33 +139,36 @@ def save_feedback(
                 "now": now,
             },
         )
-        verified_id = None
-        if promote_verified and rating == 1 and sql_text:
-            verified_id = f"vsql-{uuid.uuid5(uuid.NAMESPACE_URL, norm_question(question) + sql_text).hex[:12]}"
-            conn.execute(
-                text(
-                    """
-                    INSERT INTO bi_verified_sql
-                      (id, tenant_id, datasource_id, question_norm, question_display, sql_text, status, created_by, created_at, updated_at)
-                    VALUES
-                      (:id, :tenant, :ds, :qn, :qd, :sql, 'verified', 'feedback', :now, :now)
-                    ON CONFLICT (id) DO UPDATE SET
-                      sql_text = EXCLUDED.sql_text,
-                      status = 'verified',
-                      updated_at = EXCLUDED.updated_at
-                    """
-                ),
-                {
-                    "id": verified_id,
-                    "tenant": tenant_id,
-                    "ds": datasource_id,
-                    "qn": norm_question(question),
-                    "qd": question,
-                    "sql": sql_text,
-                    "now": now,
-                },
-            )
-    return {"ok": True, "feedback_id": fid, "verified_sql_id": verified_id}
+        # Kural 2: Feedback asla otomatik verified SQL yazmaz.
+        # promote_verified yalnız candidate üretimini tetikler (semantic_catalog).
+        if (promote_verified or rating == 1) and sql_text:
+            try:
+                from nanobase_api.semantic_catalog.application.services import (
+                    create_candidate_from_feedback,
+                )
+                from nanobase_api.semantic_catalog.infrastructure.catalog_store import (
+                    get_catalog_store,
+                )
+
+                cand = create_candidate_from_feedback(
+                    get_catalog_store(),
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                    question=question,
+                    logical_plan={"metric": None, "legacySqlFingerprint": True},
+                    user_id="feedback",
+                    sql_fingerprint=norm_question(question)[:64],
+                )
+                candidate_id = cand.id
+            except Exception:
+                candidate_id = None
+    return {
+        "ok": True,
+        "feedback_id": fid,
+        "verified_sql_id": None,
+        "candidate_id": candidate_id,
+        "auto_promote_disabled": True,
+    }
 
 
 def semantic_status(engine: Engine, tenant_id: str = "default") -> dict[str, Any]:

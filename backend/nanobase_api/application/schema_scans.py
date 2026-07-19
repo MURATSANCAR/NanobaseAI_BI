@@ -119,6 +119,38 @@ def execute_schema_scan(scan_id: str, datasource_id: str, tenant_id: str) -> Non
     try:
         report = indexer.run_scan(datasource_id=datasource_id)
         scans.mark_completed(scan_id, report)
+        # Faz 7: schema impact → STALE marking when snapshots provided
+        try:
+            from nanobase_api.semantic_catalog.infrastructure.catalog_store import get_catalog_store
+            from nanobase_api.semantic_catalog.infrastructure.schema_impact_analyzer import (
+                apply_schema_impact,
+            )
+
+            old_schema = report.get("previous_schema") or report.get("old_schema") or {}
+            new_schema = report.get("current_schema") or report.get("new_schema") or {}
+            if old_schema and new_schema:
+                impact = apply_schema_impact(
+                    get_catalog_store(),
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                    old_schema=old_schema,
+                    new_schema=new_schema,
+                    publish_lock_held=bool(report.get("publish_lock_held")),
+                )
+                if impact.stale_assets:
+                    audit.record(
+                        tenant_id=tenant_id,
+                        user_id=None,
+                        action="SEMANTIC_STALE_MARKED",
+                        ok=True,
+                        extra={
+                            "scan_id": scan_id,
+                            "stale": impact.stale_assets,
+                            "diffs": len(impact.diffs),
+                        },
+                    )
+        except Exception:
+            pass
         audit.record(
             tenant_id=tenant_id,
             user_id=None,

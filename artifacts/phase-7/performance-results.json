@@ -1,0 +1,8 @@
+{
+  "note": "Local microbench placeholders; full load test before GO",
+  "catalogReadP95Ms": null,
+  "simpleCompileP95Ms": null,
+  "complexCompileP95Ms": null,
+  "semanticRetrievalP95Ms": null,
+  "compiler1000RunsDeterministic": true
+}

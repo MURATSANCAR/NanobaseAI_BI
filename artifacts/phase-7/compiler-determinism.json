@@ -1,0 +1,6 @@
+{
+  "deterministic": true,
+  "astFingerprint": "5a328820326838a3340ef4aeee8adbade11bb36bbafd5d9939f9503c0cd594d7",
+  "mandatoryFilterApplied": true,
+  "sqlPreview": "SELECT\n    SUM(COALESCE(i.\"remaining_amount\", 0)) AS \"unpaid_invoice_amount\"\nFROM \"reporting\".\"invoice\" i\nWHERE i.\"status\" NOT IN ('CANCELLED', 'VOID');"
+}

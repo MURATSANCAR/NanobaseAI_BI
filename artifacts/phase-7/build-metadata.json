@@ -1,0 +1,17 @@
+{
+  "phase": 7,
+  "verdict": "SLICE_READY",
+  "go": false,
+  "notes": "Vertical slice unpaid_invoice_amount implemented with governance. Full GO requires 300 benchmark, 150 verified, soak/chaos/perf, SQL repo wiring.",
+  "checks": {
+    "domainStatusMachine": true,
+    "mandatoryFilter": true,
+    "compilerDeterminism1000": true,
+    "feedbackNotAutoPromote": true,
+    "dualApproval": true,
+    "unauthorizedPublishBlocked": true,
+    "schemaImpactStale": true,
+    "awelSemanticPriority": true,
+    "adminUiGated": true
+  }
+}

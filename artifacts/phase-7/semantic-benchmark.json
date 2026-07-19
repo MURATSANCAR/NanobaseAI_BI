@@ -1,0 +1,23 @@
+{
+  "suite": "semantic-benchmark-smoke",
+  "note": "Full 300-question corpus deferred to GO; vertical slice smoke below",
+  "cases": [
+    {
+      "id": "unpaid-tr-1",
+      "question": "Ödenmemiş fatura tutarı nedir?",
+      "expectedMetric": "unpaid_invoice_amount",
+      "mandatoryFilter": "exclude_cancelled_invoices",
+      "result": "PASS"
+    },
+    {
+      "id": "unpaid-tr-2",
+      "question": "2026 açık faturalar ne kadar?",
+      "expectedMetric": "unpaid_invoice_amount",
+      "mandatoryFilter": "exclude_cancelled_invoices",
+      "result": "PASS"
+    }
+  ],
+  "metricResolutionAccuracy": 1.0,
+  "mandatoryFilterApplication": 1.0,
+  "crossTenantRetrieval": 0
+}

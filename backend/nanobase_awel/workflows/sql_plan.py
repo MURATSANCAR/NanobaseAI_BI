@@ -35,11 +35,23 @@ async def run_sql_plan(
         )
 
     hint = req.retrievedSchema or str(retrieval.get("hint_extra") or "")
+    semantic_ctx = ""
+    try:
+        from nanobase_awel.retrieval.semantic import retrieve_semantic_context
+
+        sem = await retrieve_semantic_context(
+            req.question, tenant_id=req.tenantId, datasource_id=req.datasourceId
+        )
+        semantic_ctx = str(sem.get("hint_extra") or "")
+    except Exception:
+        semantic_ctx = ""
+
     context_blocks = build_sanitized_context(
         question=req.question,
         schema_hint=req.schemaHint,
         retrieval={**retrieval, "hint_extra": hint},
         conversation_turns=req.conversationContext.recentTurns,
+        semantic_context=semantic_ctx or None,
     )
 
     system, user_tpl = sql_plan_prompts()

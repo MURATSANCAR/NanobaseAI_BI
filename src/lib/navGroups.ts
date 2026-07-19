@@ -87,6 +87,13 @@ export const BI_NAV_GROUPS: NavGroupDef[] = [
         emojiKey: 'nav.biGlossary.emoji',
         hintKey: 'nav.hint.biGlossary',
       },
+      {
+        to: '/bi/semantic-catalog',
+        icon: BookOpen,
+        labelKey: 'nav.biSemanticCatalog',
+        emojiKey: 'nav.biSemanticCatalog.emoji',
+        hintKey: 'nav.hint.biSemanticCatalog',
+      },
     ],
   },
   {

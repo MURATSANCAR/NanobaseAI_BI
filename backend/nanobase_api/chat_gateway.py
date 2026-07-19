@@ -149,8 +149,70 @@ async def stream_chat_via_gateway(
     plan: dict[str, Any] | None = None
     verified_meta: dict[str, Any] | None = None
     retrieval_meta: dict[str, Any] = {}
+    semantic_meta: dict[str, Any] = {}
 
-    if meta_engine is not None:
+    # Faz 7: logical metric compile (never run legacy physical verified SQL as source of truth)
+    try:
+        from nanobase_api.config import get_settings
+        from nanobase_awel.retrieval.semantic import (
+            retrieve_semantic_context,
+            try_compile_resolved_metric,
+        )
+
+        settings = get_settings()
+        if settings.semantic_catalog_enabled:
+            semantic_meta = await retrieve_semantic_context(
+                message, tenant_id=tenant_id, datasource_id=datasource_id
+            )
+            metric_code = semantic_meta.get("resolvedMetric")
+            flag_ok = True
+            if metric_code and settings.semantic_metric_flags:
+                # If any metric flags set, require explicit enable for this metric
+                flag_ok = settings.semantic_metric_flags.get(metric_code, False) or not any(
+                    settings.semantic_metric_flags.values()
+                )
+                if metric_code in settings.semantic_metric_flags:
+                    flag_ok = bool(settings.semantic_metric_flags.get(metric_code))
+            if metric_code and flag_ok:
+                compiled = try_compile_resolved_metric(
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                    metric_code=metric_code,
+                )
+                if compiled and compiled.get("sql"):
+                    if settings.semantic_shadow_mode:
+                        yield _sse(
+                            "status",
+                            {
+                                "phase": "semantic_shadow",
+                                "metric": metric_code,
+                                "sql": compiled["sql"],
+                                "astFingerprint": compiled.get("astFingerprint"),
+                            },
+                        ).encode()
+                    else:
+                        sql = str(compiled["sql"])
+                        sql_source = "semantic_metric_compiler"
+                        verified_meta = {
+                            "id": metric_code,
+                            "sql": sql,
+                            "source": "semantic_compiler",
+                            "logicalPlan": compiled.get("logicalPlan"),
+                        }
+                        yield _sse(
+                            "status",
+                            {
+                                "phase": "semantic_metric_hit",
+                                "metric": metric_code,
+                                "sql": sql,
+                                "semantic_version": semantic_meta.get("semanticVersion"),
+                            },
+                        ).encode()
+    except Exception as e:
+        yield _sse("status", {"phase": "semantic_lookup_skip", "detail": str(e)[:200]}).encode()
+
+    # Legacy physical verified SQL lookup intentionally disabled (returns None).
+    if meta_engine is not None and not sql:
         try:
             from nanobase_api.semantic import lookup_verified_sql
 

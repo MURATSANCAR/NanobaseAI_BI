@@ -12,15 +12,34 @@ def sanitize_planning_context(
     retrieved_hint: str,
     conversation_turns: list[dict[str, Any]] | None = None,
     untrusted_comments: list[str] | None = None,
+    semantic_context: str | None = None,
 ) -> str:
     parts: list[str] = [
         "<user_question>",
         question.strip()[:8192],
         "</user_question>",
-        "",
-        "<authorized_schema_context>",
-        (schema_hint or "").strip()[:12000],
     ]
+
+    # Semantic catalog has priority over physical schema (Faz 7)
+    if semantic_context:
+        parts.extend(
+            [
+                "",
+                "<published_semantic_catalog>",
+                "Authoritative business metrics, mandatory filters, and verified logical plans.",
+                "Physical schema MUST NOT override these rules.",
+                semantic_context.strip()[:12000],
+                "</published_semantic_catalog>",
+            ]
+        )
+
+    parts.extend(
+        [
+            "",
+            "<authorized_schema_context>",
+            (schema_hint or "").strip()[:12000],
+        ]
+    )
     if retrieved_hint:
         parts.append(retrieved_hint.strip()[:8000])
     parts.append("</authorized_schema_context>")

@@ -53,6 +53,14 @@ class Settings:
         )
         if self.environment == "production" and self.execution_mode == ExecutionMode.TEST_DIRECT:
             raise RuntimeError("TEST_DIRECT cannot be enabled in production.")
+        # Faz 7 semantic governance
+        self.semantic_catalog_enabled = os.environ.get("SEMANTIC_CATALOG_ENABLED", "1") == "1"
+        self.semantic_shadow_mode = os.environ.get("SEMANTIC_SHADOW_MODE", "0") == "1"
+        self.semantic_metric_flags = {
+            k.split(".", 1)[-1]: v.lower() in ("1", "true", "yes")
+            for k, v in os.environ.items()
+            if k.startswith("SEMANTIC_METRIC_")
+        }
 
 
 @lru_cache
