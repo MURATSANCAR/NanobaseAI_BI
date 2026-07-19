@@ -47,9 +47,12 @@ GRANT CONNECT ON DATABASE bi_reporting TO bi_reporting_ro;
 GRANT USAGE ON SCHEMA analytics TO bi_reporting_ro;
 GRANT USAGE ON SCHEMA public TO bi_reporting_ro;
 GRANT SELECT ON ALL TABLES IN SCHEMA analytics TO bi_reporting_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO bi_reporting_ro;
 GRANT SELECT ON ALL SEQUENCES IN SCHEMA analytics TO bi_reporting_ro;
 ALTER DEFAULT PRIVILEGES IN SCHEMA analytics GRANT SELECT ON TABLES TO bi_reporting_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bi_reporting_ro;
 REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON ALL TABLES IN SCHEMA analytics FROM bi_reporting_ro;
+ALTER ROLE bi_reporting_ro SET search_path TO public, analytics;
 EOSQL
 
 echo "bi_reporting_ro role ready"

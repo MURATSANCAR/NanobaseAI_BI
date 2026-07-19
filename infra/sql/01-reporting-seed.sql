@@ -46,8 +46,7 @@ INSERT INTO customers (customer_name, country, segment) VALUES
     ('Beta Lojistik', 'TR', 'smb'),
     ('Gamma Retail', 'DE', 'consumer'),
     ('Delta Enerji', 'TR', 'enterprise'),
-    ('Epsilon Soft', 'NL', 'smb')
-ON CONFLICT DO NOTHING;
+    ('Epsilon Soft', 'NL', 'smb');
 
 INSERT INTO products (sku, product_name, category, unit_price) VALUES
     ('SKU-100', 'Analytics License', 'software', 12000.00),
@@ -99,3 +98,10 @@ JOIN customers c ON c.customer_id = o.customer_id
 JOIN order_items oi ON oi.order_id = o.order_id
 GROUP BY o.order_id, o.order_date, o.status, o.currency,
          c.customer_name, c.country, c.segment;
+
+-- Public aliases so DB-GPT schema discovery (public-only) works
+CREATE OR REPLACE VIEW public.customers AS SELECT * FROM analytics.customers;
+CREATE OR REPLACE VIEW public.products AS SELECT * FROM analytics.products;
+CREATE OR REPLACE VIEW public.orders AS SELECT * FROM analytics.orders;
+CREATE OR REPLACE VIEW public.order_items AS SELECT * FROM analytics.order_items;
+CREATE OR REPLACE VIEW public.v_order_revenue AS SELECT * FROM analytics.v_order_revenue;

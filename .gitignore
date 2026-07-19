@@ -9,6 +9,11 @@ configs/sources/local/
 configs/backend.env
 configs/.env.local
 
+# Infra secrets / local passwords
+infra/.env
+infra/secrets/
+*.password
+
 # DB-GPT backend
 backend/.venv/
 backend/.env
