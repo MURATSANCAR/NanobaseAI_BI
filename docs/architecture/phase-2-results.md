@@ -1,6 +1,6 @@
 # Faz 2 — Şema indeksi + kalite
 
-- Zaman: `2026-07-19T13:33:01.910484+00:00`
+- Zaman: `2026-07-19T13:54:09.305797+00:00`
 - Collection: `bi_schema_bi_reporting`
 - Retrieval: **15/20**
 - NL2SQL: **20/20**

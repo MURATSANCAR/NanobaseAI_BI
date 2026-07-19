@@ -1,5 +1,5 @@
 {
-  "ts": "2026-07-19T13:33:51.813493+00:00",
+  "ts": "2026-07-19T13:40:22.280922+00:00",
   "datasource_id": "bi_reporting",
   "collection": "bi_schema_bi_reporting",
   "schemas": [
@@ -8,11 +8,11 @@
   ],
   "tables_scanned": 30,
   "documents_total": 213,
-  "embedded": 35,
-  "skipped_unchanged": 178,
-  "upserted": 35,
+  "embedded": 0,
+  "skipped_unchanged": 213,
+  "upserted": 0,
   "soft_deleted": 0,
-  "elapsed_s": 4.34,
+  "elapsed_s": 0.72,
   "points_count": 213,
   "sample_docs": [
     {

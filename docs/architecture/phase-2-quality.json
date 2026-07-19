@@ -1,5 +1,5 @@
 {
-  "ts": "2026-07-19T13:33:01.910484+00:00",
+  "ts": "2026-07-19T13:54:09.305797+00:00",
   "collection": "bi_schema_bi_reporting",
   "retrieval_pass": "15/20",
   "sql_pass": "20/20",
@@ -14,7 +14,6 @@
       "found_tables": [
         "customer_addresses",
         "customers",
-        "invoices",
         "orders",
         "sales_orders"
       ],
@@ -24,7 +23,7 @@
       "sql_ok": true,
       "sql": "SELECT COUNT(*) AS customer_count\nFROM customers",
       "score": 1.0,
-      "elapsed_s": 23.62,
+      "elapsed_s": 24.19,
       "error": null
     },
     {
@@ -42,7 +41,7 @@
       "sql_ok": true,
       "sql": "SELECT customer_id, customer_name, country, segment, created_at\nFROM customers\nWHERE segment = 'Enterprise'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 27.18,
+      "elapsed_s": 29.1,
       "error": null
     },
     {
@@ -59,7 +58,7 @@
       "sql_ok": true,
       "sql": "SELECT COUNT(*) AS customer_count\nFROM customers\nWHERE country = 'Almanya'",
       "score": 1.0,
-      "elapsed_s": 25.38,
+      "elapsed_s": 25.53,
       "error": null
     },
     {
@@ -77,7 +76,7 @@
       "sql_ok": true,
       "sql": "SELECT\n  p.category,\n  COUNT(p.product_id) AS product_count\nFROM\n  products p\nGROUP BY\n  p.category\nORDER BY\n  product_count DESC\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 28.96,
+      "elapsed_s": 26.44,
       "error": null
     },
     {
@@ -93,9 +92,9 @@
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT \n  product_name, \n  unit_price \nFROM products \nORDER BY unit_price DESC \nLIMIT 1",
+      "sql": "SELECT product_name, unit_price\nFROM products\nORDER BY unit_price DESC\nLIMIT 1",
       "score": 1.0,
-      "elapsed_s": 26.88,
+      "elapsed_s": 28.59,
       "error": null
     },
     {
@@ -109,9 +108,9 @@
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT p.product_name\nFROM products p\nWHERE p.sku = 'SKU-100'\nLIMIT 50",
+      "sql": "SELECT p.product_name\nFROM products p\nWHERE p.sku = 'SKU-100'\nLIMIT 1",
       "score": 1.0,
-      "elapsed_s": 24.82,
+      "elapsed_s": 26.38,
       "error": null
     },
     {
@@ -119,7 +118,7 @@
       "question": "Completed sipariş sayısı",
       "retrieval_ok": true,
       "found_tables": [
-        "customers",
+        "invoices",
         "orders",
         "sales_orders"
       ],
@@ -129,7 +128,7 @@
       "sql_ok": true,
       "sql": "SELECT COUNT(*) AS completed_order_count\nFROM sales_orders\nWHERE status = 'Completed'",
       "score": 1.0,
-      "elapsed_s": 23.69,
+      "elapsed_s": 24.18,
       "error": null
     },
     {
@@ -138,9 +137,10 @@
       "retrieval_ok": true,
       "found_tables": [
         "customers",
+        "invoices",
         "orders",
-        "sales_orders",
-        "v_order_revenue"
+        "returns",
+        "sales_orders"
       ],
       "expect_tables": [
         "orders"
@@ -148,7 +148,7 @@
       "sql_ok": true,
       "sql": "SELECT * FROM sales_orders WHERE EXTRACT(YEAR FROM order_date) = 2026 LIMIT 50",
       "score": 1.0,
-      "elapsed_s": 28.02,
+      "elapsed_s": 28.3,
       "error": null
     },
     {
@@ -167,7 +167,7 @@
       "sql_ok": true,
       "sql": "SELECT DISTINCT c.customer_id, c.customer_name\nFROM customers c\nJOIN sales_orders so ON c.customer_id = so.customer_id\nWHERE so.status = 'pending'\nLIMIT 50",
       "score": 0.5,
-      "elapsed_s": 33.71,
+      "elapsed_s": 33.74,
       "error": null
     },
     {
@@ -187,7 +187,7 @@
       "sql_ok": true,
       "sql": "SELECT\n  soi.order_id,\n  SUM(soi.quantity * soi.unit_price) AS total_amount\nFROM sales_order_items soi\nGROUP BY soi.order_id\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 29.67,
+      "elapsed_s": 33.55,
       "error": null
     },
     {
@@ -195,6 +195,7 @@
       "question": "En çok satılan ürün (adet)",
       "retrieval_ok": false,
       "found_tables": [
+        "order_items",
         "sales_order_items"
       ],
       "expect_tables": [
@@ -204,7 +205,7 @@
       "sql_ok": true,
       "sql": "SELECT \n    p.product_id,\n    p.product_name,\n    SUM(oi.quantity) AS total_quantity_sold\nFROM sales_order_items oi\nJOIN products p ON oi.product_id = p.product_id\nJOIN sales_orders so ON oi.order_id = so.order_id\nWHERE so.status != 'cancelled'\nGROUP BY p.product_id, p.product_name\nORDER BY total_quantity_sold DESC\nLIMIT 50",
       "score": 0.5,
-      "elapsed_s": 51.56,
+      "elapsed_s": 53.11,
       "error": null
     },
     {
@@ -221,9 +222,9 @@
         "customers"
       ],
       "sql_ok": true,
-      "sql": "SELECT\n    c.segment,\n    SUM(soi.quantity * soi.unit_price) AS total_revenue\nFROM customers c\nJOIN sales_orders so ON c.customer_id = so.customer_id\nJOIN sales_order_items soi ON so.order_id = soi.order_id\nWHERE so.status = 'completed'\nGROUP BY c.segment\nORDER BY total_revenue DESC\nLIMIT 50",
+      "sql": "SELECT\n    c.segment,\n    SUM(soi.quantity * soi.unit_price) AS total_revenue\nFROM customers c\nJOIN sales_orders so ON c.customer_id = so.customer_id\nJOIN sales_order_items soi ON so.order_id = soi.order_id\nGROUP BY c.segment\nORDER BY total_revenue DESC\nLIMIT 50",
       "score": 0.5,
-      "elapsed_s": 40.85,
+      "elapsed_s": 39.22,
       "error": null
     },
     {
@@ -237,9 +238,9 @@
         "v_order_revenue"
       ],
       "sql_ok": true,
-      "sql": "WITH order_revenue AS (\n    SELECT\n        customer_id,\n        SUM(quantity * unit_price) AS total_revenue\n    FROM order_items\n    GROUP BY customer_id\n)\nSELECT\n    c.country,\n    SUM(orv.total_revenue) AS total_country_revenue\nFROM order_revenue orv\nJOIN customers c ON orv.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY total_country_revenue DESC\nLIMIT 50",
+      "sql": "SELECT\n    c.country,\n    SUM(soi.quantity * soi.unit_price) AS total_revenue\nFROM v_order_revenue v\nJOIN customers c ON v.customer_id = c.customer_id\nGROUP BY c.country\nORDER BY total_revenue DESC\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 44.09,
+      "elapsed_s": 119.15,
       "error": null
     },
     {
@@ -247,10 +248,10 @@
       "question": "Acme Holding'in sipariş sayısı",
       "retrieval_ok": false,
       "found_tables": [
+        "order_items",
         "orders",
         "sales_order_items",
-        "sales_orders",
-        "v_order_revenue"
+        "sales_orders"
       ],
       "expect_tables": [
         "customers",
@@ -259,7 +260,7 @@
       "sql_ok": true,
       "sql": "SELECT COUNT(*) AS order_count\nFROM sales_orders so\nJOIN customers c ON so.customer_id = c.customer_id\nWHERE c.customer_name = 'Acme Holding'",
       "score": 0.5,
-      "elapsed_s": 29.48,
+      "elapsed_s": 43.14,
       "error": null
     },
     {
@@ -267,16 +268,16 @@
       "question": "Services kategorisindeki ürünler",
       "retrieval_ok": true,
       "found_tables": [
-        "order_items",
-        "products"
+        "products",
+        "sales_order_items"
       ],
       "expect_tables": [
         "products"
       ],
       "sql_ok": true,
-      "sql": "SELECT \n  p.product_id,\n  p.sku,\n  p.product_name,\n  p.category,\n  p.unit_price\nFROM products p\nWHERE p.category = 'Services'\nLIMIT 50",
+      "sql": "SELECT \n  product_id,\n  sku,\n  product_name,\n  category,\n  unit_price\nFROM products\nWHERE category = 'Services'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 29.22,
+      "elapsed_s": 64.09,
       "error": null
     },
     {
@@ -294,7 +295,7 @@
       "sql_ok": true,
       "sql": "SELECT\n    so.order_id,\n    so.customer_id,\n    so.order_date,\n    so.currency,\n    so.status\nFROM\n    sales_orders so\nWHERE\n    so.status = 'cancelled'\nLIMIT 50",
       "score": 1.0,
-      "elapsed_s": 38.67,
+      "elapsed_s": 60.16,
       "error": null
     },
     {
@@ -303,16 +304,15 @@
       "retrieval_ok": true,
       "found_tables": [
         "invoices",
-        "orders",
         "payments"
       ],
       "expect_tables": [
         "invoices"
       ],
       "sql_ok": true,
-      "sql": "SELECT SUM(gross_amount) AS total_invoice_amount\nFROM invoices\nWHERE invoice_date >= '2026-01-01'\n  AND invoice_date < '2027-01-01'",
+      "sql": "SELECT SUM(gross_amount) AS total_invoice_amount\nFROM invoices\nWHERE invoice_date >= '2026-01-01' AND invoice_date < '2027-01-01'",
       "score": 1.0,
-      "elapsed_s": 29.53,
+      "elapsed_s": 27.22,
       "error": null
     },
     {
@@ -328,7 +328,7 @@
       "sql_ok": true,
       "sql": "SELECT SUM(remaining_amount) AS total_unpaid_amount\nFROM invoices\nWHERE status = 'unpaid'",
       "score": 1.0,
-      "elapsed_s": 27.8,
+      "elapsed_s": 27.85,
       "error": null
     },
     {
@@ -345,7 +345,7 @@
       "sql_ok": true,
       "sql": "WITH delayed_invoices AS (\n    SELECT\n        i.invoice_id,\n        i.order_id,\n        i.invoice_date,\n        i.due_date,\n        i.gross_amount,\n        i.remaining_amount,\n        i.status,\n        c.customer_id,\n        c.customer_name,\n        ca.city\n    FROM invoices i\n    JOIN sales_orders so ON i.order_id = so.order_id\n    JOIN customers c ON so.customer_id = c.customer_id\n    JOIN customer_addresses ca ON c.customer_id = ca.customer_id\n    WHERE ca.city = 'Ankara'\n      AND ca.is_primary = true\n      AND i.status IN ('pending', 'overdue')\n      AND i.remaining_amount > 0\n      AND i.due_date < CURRENT_DATE\n)\nSELECT\n    invoice_id,\n    customer_name,\n    invoice_date,\n    due_date,\n    gross_amount,\n    remaining_amount,\n    status\nFROM delayed_invoices\nORDER BY due_date ASC\nLIMIT 50",
       "score": 0.5,
-      "elapsed_s": 89.26,
+      "elapsed_s": 88.85,
       "error": null
     },
     {
@@ -361,7 +361,7 @@
       "sql_ok": true,
       "sql": "SELECT SUM(i.gross_amount) AS total_amount\nFROM invoices i\nWHERE i.status != 'cancelled'",
       "score": 1.0,
-      "elapsed_s": 52.9,
+      "elapsed_s": 24.12,
       "error": null
     }
   ]
