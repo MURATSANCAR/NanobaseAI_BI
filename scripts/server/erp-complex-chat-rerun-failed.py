@@ -10,8 +10,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 # Load helpers from e2e validator
-ns: dict = {"__name__": "erp_complex_e2e_validate"}
-exec((Path(__file__).resolve().parent / "erp-complex-e2e-validate.py").read_text(), ns)
+_e2e = Path(__file__).resolve().parent / "erp-complex-e2e-validate.py"
+ns: dict = {"__name__": "erp_complex_e2e_validate", "__file__": str(_e2e)}
+exec(_e2e.read_text(encoding="utf-8"), ns)
 run_chat = ns["run_chat"]
 qg_execute = ns["qg_execute"]
 qg_rows = ns["qg_rows"]
