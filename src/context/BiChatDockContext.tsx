@@ -10,11 +10,15 @@ import {
 } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import BiAnalyticsChatDock from '@/components/bi/BiAnalyticsChatDock';
+import BiNotifyOptIn from '@/components/bi/BiNotifyOptIn';
 import type { BiChatResponse } from '@/api/types';
+import { ALERT_CREATE_INTENT } from '@/lib/alertChatIntent';
 
 export type OpenBiChatOptions = {
   /** Prefill the composer (user can edit before send). */
   prompt?: string;
+  /** Hidden model hint — e.g. create_alert keeps SQL setup off-screen. */
+  intent?: typeof ALERT_CREATE_INTENT | string;
 };
 
 type BiChatDockContextValue = {
@@ -43,12 +47,14 @@ export function BiChatDockProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>();
+  const [pendingIntent, setPendingIntent] = useState<string | undefined>();
   const [dashboardId, setDashboardIdState] = useState<string | undefined>();
   const [sessionId] = useState(() => `bi-dock-${Date.now().toString(36)}`);
   const listenersRef = useRef(new Set<(resp: BiChatResponse) => void>());
 
   const openChat = useCallback((opts?: OpenBiChatOptions) => {
     if (opts?.prompt) setPendingPrompt(opts.prompt);
+    setPendingIntent(opts?.intent);
     setOpen(true);
   }, []);
 
@@ -110,16 +116,20 @@ export function BiChatDockProvider({ children }: { children: ReactNode }) {
     <BiChatDockContext.Provider value={value}>
       {children}
       {showDock ? (
-        <BiAnalyticsChatDock
-          open={open}
-          onOpenChange={setOpen}
-          pinned={pinned}
-          onPinnedChange={setPinned}
-          sessionId={sessionId}
-          dashboardId={dashboardId}
-          initialMessage={pendingPrompt}
-          onResponse={handleResponse}
-        />
+        <>
+          <BiNotifyOptIn />
+          <BiAnalyticsChatDock
+            open={open}
+            onOpenChange={setOpen}
+            pinned={pinned}
+            onPinnedChange={setPinned}
+            sessionId={sessionId}
+            dashboardId={dashboardId}
+            initialMessage={pendingPrompt}
+            initialIntent={pendingIntent}
+            onResponse={handleResponse}
+          />
+        </>
       ) : null}
     </BiChatDockContext.Provider>
   );

@@ -14,6 +14,7 @@ type BiAnalyticsChatDockProps = {
   sessionId: string;
   dashboardId?: string;
   initialMessage?: string;
+  initialIntent?: string;
   onResponse?: (resp: BiChatResponse) => void;
 };
 
@@ -25,6 +26,7 @@ export default function BiAnalyticsChatDock({
   sessionId,
   dashboardId,
   initialMessage,
+  initialIntent,
   onResponse,
 }: BiAnalyticsChatDockProps) {
   const panelRef = useRef<HTMLDivElement>(null);
@@ -148,6 +150,7 @@ export default function BiAnalyticsChatDock({
             autoFocus={open}
             fullHeight
             initialMessage={initialMessage}
+            initialIntent={initialIntent}
             className="h-full min-h-0"
             onResponse={handleResponse}
           />

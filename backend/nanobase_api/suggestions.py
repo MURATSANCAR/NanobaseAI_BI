@@ -48,26 +48,26 @@ _GENERIC = [
 # Threshold-alert chips (Alerts page) — scoped to datasource / project.
 _ALERT_DEFAULTS: dict[str, list[str]] = {
     "sigorta": [
-        "Açık hasar talebi sayısı bir sınırı aşarsa bana e-posta gönder",
-        "Günlük yeni poliçe adedi hedefin altına düşerse bana e-posta gönder",
-        "Reddedilen hasar oranı kritik eşiğin üstüne çıkarsa bana e-posta gönder",
+        "Açık hasar talebi sayısı bir sınırı aşarsa bana bildirim gönder",
+        "Günlük yeni poliçe adedi hedefin altına düşerse bana bildirim gönder",
+        "Reddedilen hasar oranı kritik eşiğin üstüne çıkarsa bana bildirim gönder",
     ],
     "erp": [
-        "Günlük fatura tutarı bir sınırın altına düşerse bana e-posta gönder",
-        "Stok bakiyesi kritik seviyenin altına düşerse bana e-posta gönder",
-        "Açık satış siparişi sayısı bir eşiği aşarsa bana e-posta gönder",
+        "Günlük fatura tutarı bir sınırın altına düşerse bana bildirim gönder",
+        "Stok bakiyesi kritik seviyenin altına düşerse bana bildirim gönder",
+        "Açık satış siparişi sayısı bir eşiği aşarsa bana bildirim gönder",
     ],
     "bi_reporting": [
-        "Günlük sipariş adedi bir sınırın altına düşerse bana e-posta gönder",
-        "Fatura brüt tutarı bir eşiği aşarsa bana e-posta gönder",
-        "Aktif müşteri sayısı beklenenin altına düşerse bana e-posta gönder",
+        "Günlük sipariş adedi bir sınırın altına düşerse bana bildirim gönder",
+        "Fatura brüt tutarı bir eşiği aşarsa bana bildirim gönder",
+        "Aktif müşteri sayısı beklenenin altına düşerse bana bildirim gönder",
     ],
 }
 
 _ALERT_GENERIC = [
-    "Önemli bir metrik bir sınırın altına düşerse bana e-posta gönder",
-    "Kritik bir gösterge eşiği aşarsa bana e-posta gönder",
-    "Günlük kayıt adedi beklenenin altına düşerse bana e-posta gönder",
+    "Önemli bir metrik bir sınırın altına düşerse bana bildirim gönder",
+    "Kritik bir gösterge eşiği aşarsa bana bildirim gönder",
+    "Günlük kayıt adedi beklenenin altına düşerse bana bildirim gönder",
 ]
 
 
@@ -198,6 +198,6 @@ def build_alert_suggestions(
         "ask_prompt": (
             texts[0]
             if texts
-            else "Seçili veri kaynağında önemli bir metrik eşiği aşarsa e-posta uyarısı oluştur"
+            else "Seçili veri kaynağında önemli bir metrik eşiği aşarsa bana bildirim gönder"
         ),
     }
