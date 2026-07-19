@@ -218,24 +218,13 @@ async def chat_completion(
     except WorkflowError:
         raise
     except Exception as e:
-        last_err = e
-        # Last-resort Arctic if chat failed and Arctic wasn't preferred first.
-        if use_sql_path and TEXT2SQL_BASE and TEXT2SQL_PREFER not in ("arctic", "text2sql"):
-            try:
-                return await _via_arctic(
-                    system,
-                    user,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    timeout_s=arctic_timeout,
-                )
-            except Exception as e2:  # noqa: BLE001
-                last_err = e2
+        # Do not chain Arctic after a chat timeout — doubles wait (~270s) and
+        # Arctic-R1 rarely produces our JSON plan format under load.
         raise WorkflowError(
             TEXT_TO_SQL_MODEL_UNAVAILABLE,
             "Text-to-SQL modeline erişilemiyor.",
             retryable=True,
-        ) from last_err
+        ) from e
 
 
 def _endpoints_for_purpose(purpose: str) -> list[tuple[str, str, str, float]]:
@@ -246,4 +235,4 @@ def _endpoints_for_purpose(purpose: str) -> list[tuple[str, str, str, float]]:
         return [chat]
     if TEXT2SQL_PREFER in ("arctic", "text2sql"):
         return [arctic, chat] if TEXT2SQL_FALLBACK else [arctic]
-    return [chat, arctic]
+    return [chat]

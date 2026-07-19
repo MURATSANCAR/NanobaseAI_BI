@@ -90,12 +90,26 @@ def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadat
         raise WorkflowError(OUTPUT_PARSE_FAILED, "LLM çıktısı JSON olarak ayrıştırılamadı.")
 
     status_raw = str(parsed.get("status") or "PLANNED").upper()
+    if status_raw in ("SUCCESS", "OK", "COMPLETE", "COMPLETED"):
+        status_raw = "PLANNED"
     try:
         status = PlanStatus(status_raw)
     except ValueError:
         status = PlanStatus.PLANNED if parsed.get("sql") else PlanStatus.FAILED
 
-    sql = normalize_single_select_sql(parsed.get("sql") if parsed.get("sql") is not None else None)
+    sql_raw = parsed.get("sql")
+    # Some models nest a second JSON plan inside the sql field.
+    if isinstance(sql_raw, str) and sql_raw.strip().startswith("{"):
+        nested = extract_json_object(sql_raw)
+        if nested.get("status") or nested.get("sql") is not None:
+            parsed = {**parsed, **nested}
+            status_raw = str(parsed.get("status") or status_raw).upper()
+            try:
+                status = PlanStatus(status_raw)
+            except ValueError:
+                status = PlanStatus.PLANNED if parsed.get("sql") else PlanStatus.FAILED
+            sql_raw = parsed.get("sql")
+    sql = normalize_single_select_sql(sql_raw if sql_raw is not None else None)
 
     plan = SqlPlan(
         status=status,

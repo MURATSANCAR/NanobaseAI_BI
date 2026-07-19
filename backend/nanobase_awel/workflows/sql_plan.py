@@ -15,13 +15,15 @@ from nanobase_awel.operators.schema_reference_validator import validate_plan_ref
 from nanobase_awel.operators.structured_parser import parse_sql_plan
 from nanobase_awel.retrieval.authorized import build_sanitized_context, retrieve_authorized_schema
 
-# Compact schema only when Arctic (R1) is the preferred planner — Qwen wants fuller JSON context.
+# Cap planning context to keep local LLM latency predictable under CPU contention.
 _TEXT2SQL_PREFER = (os.environ.get("TEXT2SQL_PREFER") or "chat").strip().lower()
-_TEXT2SQL_COMPACT = bool((os.environ.get("TEXT2SQL_API_BASE") or "").strip()) and _TEXT2SQL_PREFER in (
-    "arctic",
-    "text2sql",
+_TEXT2SQL_COMPACT = True  # always soft-cap; size via TEXT2SQL_CONTEXT_CHARS
+_TEXT2SQL_CONTEXT_CHARS = int(
+    os.environ.get(
+        "TEXT2SQL_CONTEXT_CHARS",
+        "4500" if _TEXT2SQL_PREFER in ("arctic", "text2sql") else "6500",
+    )
 )
-_TEXT2SQL_CONTEXT_CHARS = int(os.environ.get("TEXT2SQL_CONTEXT_CHARS", "4500"))
 
 
 async def run_sql_plan(
@@ -96,6 +98,26 @@ async def run_sql_plan(
             model_profile=req.generation.modelProfile,
             metadata_version=req.metadataVersion,
         )
+        # Model sometimes claims AMBIGUOUS even when retrieval tables exist.
+        tables_available = bool(retrieval.get("tables") or req.allowedTables)
+        if plan.status == PlanStatus.AMBIGUOUS and tables_available and not plan.sql:
+            retry_user = (
+                user
+                + "\n\nHARD REQUIREMENT: authorized_schema_context already lists tables. "
+                "Do NOT ask for schema. status must be PLANNED with a single PostgreSQL SELECT/WITH."
+            )
+            raw2 = await chat_completion(
+                system, retry_user, temperature=0.0, max_tokens=768, purpose="sql_plan"
+            )
+            plan2 = parse_sql_plan(
+                raw2,
+                prompt_version=req.generation.promptVersion,
+                model_profile=req.generation.modelProfile,
+                metadata_version=req.metadataVersion,
+            )
+            if plan2.status == PlanStatus.PLANNED and plan2.sql:
+                plan = plan2
+                plan.warnings = [*(plan.warnings or []), "ambiguous_retry_forced"]
     except WorkflowError:
         raise
     except Exception as e:

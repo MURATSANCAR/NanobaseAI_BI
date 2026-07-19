@@ -56,8 +56,10 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
             allowed_tables=set(req.allowedTables) or None,
             context_text=req.authorizedContext or req.schemaHint,
         )
+    dump = plan.model_dump()
+    dump.pop("workflow", None)
     return SqlRepairResult(
-        **plan.model_dump(),
+        **dump,
         workflow=REPAIR_WORKFLOW,
         attempt=req.attempt,
         previousErrorCode=req.gatewayError.code,

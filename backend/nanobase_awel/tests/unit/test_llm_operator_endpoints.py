@@ -28,15 +28,14 @@ def test_general_uses_chat_only(monkeypatch):
     assert eps[0][1] == "qwen"
 
 
-def test_sql_plan_prefers_chat_then_arctic(monkeypatch):
+def test_sql_plan_prefers_chat_only_by_default(monkeypatch):
     monkeypatch.setattr(lo, "TEXT2SQL_BASE", "http://127.0.0.1:8091/v1")
     monkeypatch.setattr(lo, "TEXT2SQL_MODEL", "arctic-text2sql")
     monkeypatch.setattr(lo, "TEXT2SQL_PREFER", "chat")
     monkeypatch.setattr(lo, "TEXT2SQL_FALLBACK", True)
     eps = lo._endpoints_for_purpose("sql_plan")
-    assert len(eps) == 2
+    assert len(eps) == 1
     assert eps[0][1] == "qwen"
-    assert eps[1][1] == "arctic-text2sql"
 
 
 def test_sql_plan_prefers_arctic_when_configured(monkeypatch):
