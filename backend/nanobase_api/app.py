@@ -94,10 +94,10 @@ def _sources_list_payload_overlay() -> dict:
             "deployment": "onprem",
         }
 
-    active = bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
+    active = os.environ.get("NANOBASE_ACTIVE_DB") or bridge_mod.ACTIVE_DB.get("id") or "bi_reporting"
     if active not in by_id:
         active = next(iter(by_id), "bi_reporting")
-        bridge_mod.ACTIVE_DB["id"] = active
+    bridge_mod.ACTIVE_DB["id"] = active
 
     return {"active_id": active, "sources": list(by_id.values())}
 
