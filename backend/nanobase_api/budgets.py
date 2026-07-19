@@ -294,10 +294,12 @@ def sync_from_erp_butce(
                         """
                         INSERT INTO bi_budgets (
                           id, tenant_id, fiscal_year, cost_center, kind, name, allocated, currency,
-                          committed, actuals_sql, status, scenario, version, locked, payload_json, created_at, updated_at
+                          committed, actuals_sql, owner, status, notes, scenario, version, locked,
+                          payload_json, created_at, updated_at
                         ) VALUES (
                           :id, :tenant, :fy, :cc, :kind, :name, :alloc, :cur,
-                          0, '', :status, 'base', 1, false, :payload, :now, :now
+                          0, '', 'erp-sync', :status, '', 'base', 1, false,
+                          :payload, :now, :now
                         )
                         """
                     ),
