@@ -13,6 +13,8 @@ from query_gateway.infrastructure.database.datasources import load_datasources
 from query_gateway.infrastructure.database.postgres_executor import execute_postgres_ro
 from query_gateway.infrastructure.oracle.executor import execute_oracle_ro
 from query_gateway.infrastructure.result.guard import guard_result
+from query_gateway.infrastructure.sap.hana.executor import execute_hana_ro
+from query_gateway.infrastructure.sap.odata.executor import execute_odata_ro
 
 
 def execute_query(
@@ -75,6 +77,34 @@ def execute_query(
             run_explain=True,
             settings=settings,
         )
+    elif driver == "hana":
+        ds_hana = dict(ds)
+        if ds_hana.get("ssl_validate") is False:
+            ds_hana["allow_insecure_tls"] = True
+            ds_hana["validate_certificate"] = False
+        cols, rows, truncated, exec_ms = execute_hana_ro(
+            ds_hana,
+            approved["normalizedSql"],
+            tenant_id=tenant_id,
+            user_id=user_id,
+            execution_id=execution_id,
+            timeout_ms=timeout,
+            max_rows=rows_limit,
+            size_profile=str(ds.get("size_profile") or "MEDIUM"),
+            run_explain=True,
+            settings=settings,
+        )
+    elif driver == "odata":
+        cols, rows, truncated, exec_ms = execute_odata_ro(
+            ds,
+            approved.get("plan") or approved["normalizedSql"],
+            tenant_id=tenant_id,
+            user_id=user_id,
+            execution_id=execution_id,
+            timeout_ms=timeout,
+            max_rows=rows_limit,
+            settings=settings,
+        )
     else:
         raise GatewayError(
             DATASOURCE_NOT_FOUND,
@@ -89,7 +119,7 @@ def execute_query(
         column_policies=ds.get("column_policies") or {},
         truncated=truncated,
         settings=settings,
-        preserve_decimal_strings=driver == "oracle",
+        preserve_decimal_strings=driver in ("oracle", "hana", "odata"),
     )
 
     gateway_ms = int((time.time() - t0) * 1000)

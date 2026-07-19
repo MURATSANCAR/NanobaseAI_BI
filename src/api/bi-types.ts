@@ -399,7 +399,7 @@ export type BiConnectionProfile = {
   active_id?: string | null;
   label: string;
   deployment: 'local' | 'cloud';
-  driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase';
+  driver: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase' | 'hana' | 'odata';
   host: string;
   port: number;
   database: string;
@@ -427,7 +427,7 @@ export type BiSourcesList = {
 export type BiConnectionUpsert = {
   label?: string;
   deployment?: 'local' | 'cloud';
-  driver?: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase';
+  driver?: 'postgresql' | 'mysql' | 'oracle' | 'sqlite' | 'supabase' | 'hana' | 'odata';
   host?: string;
   port?: number;
   database?: string;

@@ -1,0 +1,13 @@
+{
+  "status": "SKELETON",
+  "corpus": "tests/text2sql/sap-fi-150.yaml",
+  "targets": {
+    "FI": 150,
+    "SD": 100,
+    "MM": 100,
+    "Inventory": 50,
+    "total": 400
+  },
+  "offline_vertical_slice": "PASS",
+  "live": "PENDING"
+}

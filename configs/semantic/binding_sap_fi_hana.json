@@ -1,0 +1,31 @@
+{
+  "project_id": "sap_fi_hana",
+  "dialect": "hana",
+  "binding_version": "sap_fi_hana.v1",
+  "semantic_model_version": "sap_fi.v1",
+  "status": "draft",
+  "domain": "SAP_FI",
+  "measures": {
+    "open_receivable_amount": {
+      "entity": "open_receivable",
+      "domain": "SAP_FI",
+      "ledger": "0L",
+      "currencyPolicy": "COMPANY_CODE_CURRENCY",
+      "mandatoryRules": [
+        "posted_only",
+        "not_cleared",
+        "exclude_reversed_documents"
+      ],
+      "binding": {
+        "sourceType": "SAP_HANA_VIEW",
+        "schema": "NANOBASE_REPORTING",
+        "view": "CV_OPEN_RECEIVABLE",
+        "amountField": "OPEN_AMOUNT",
+        "currencyField": "COMPANY_CODE_CURRENCY",
+        "companyCodeField": "COMPANY_CODE",
+        "currencyPolicy": "COMPANY_CODE_CURRENCY",
+        "ledger": "0L"
+      }
+    }
+  }
+}

@@ -18,12 +18,14 @@ import { getFeatureFlags } from '@/config/environment';
 
 const dsService = createDatasourceService();
 
-const DRIVERS = ['postgresql', 'mysql', 'oracle', 'sqlite', 'supabase'] as const;
+const DRIVERS = ['postgresql', 'mysql', 'oracle', 'hana', 'odata', 'sqlite', 'supabase'] as const;
 
 const DRIVER_LABEL_KEYS: Record<(typeof DRIVERS)[number], string> = {
   postgresql: 'bi.driver.postgresql',
   mysql: 'bi.driver.mysql',
   oracle: 'bi.driver.oracle',
+  hana: 'bi.driver.hana',
+  odata: 'bi.driver.odata',
   sqlite: 'bi.driver.sqlite',
   supabase: 'bi.driver.supabase',
 };
@@ -60,6 +62,24 @@ const PRESETS: Record<string, Partial<BiConnectionUpsert>> = {
     username: 'ADMIN',
     ssl: true,
     connection_url: '',
+  },
+  sap_hana_ro: {
+    driver: 'hana',
+    deployment: 'on_premise',
+    host: '',
+    port: 30015,
+    database: 'PRD',
+    username: 'NANOBASE_HANA_RO',
+    ssl: true,
+  },
+  sap_s4_odata: {
+    driver: 'odata',
+    deployment: 'cloud',
+    host: '',
+    port: 443,
+    database: '',
+    username: 'NANOBASE_ODATA_RO',
+    ssl: true,
   },
 };
 

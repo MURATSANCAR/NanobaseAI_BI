@@ -1,0 +1,8 @@
+{
+  "corpus": "backend/query_gateway/tests/security/corpus/odata_malicious.jsonl",
+  "total": 600,
+  "rejected": 600,
+  "approved": 0,
+  "status": "PASS",
+  "suite": "test_odata_malicious_corpus.py"
+}

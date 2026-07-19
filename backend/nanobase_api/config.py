@@ -69,6 +69,13 @@ class Settings:
         ).upper()
         if self.oracle_execution_mode not in ("QUERY_GATEWAY", "PLAN_ONLY", "METADATA_ONLY"):
             self.oracle_execution_mode = "PLAN_ONLY"
+        # Faz 9 SAP rollout
+        self.sap_execution_enabled = os.environ.get("SAP_EXECUTION_ENABLED", "0") == "1"
+        self.sap_execution_mode = (os.environ.get("SAP_EXECUTION_MODE") or "PLAN_ONLY").upper()
+        if self.sap_execution_mode not in ("QUERY_GATEWAY", "PLAN_ONLY", "METADATA_ONLY"):
+            self.sap_execution_mode = "PLAN_ONLY"
+        self.sap_hana_execution_enabled = os.environ.get("SAP_HANA_EXECUTION_ENABLED", "0") == "1"
+        self.sap_fi_execution_enabled = os.environ.get("SAP_FI_EXECUTION_ENABLED", "0") == "1"
 
 
 @lru_cache

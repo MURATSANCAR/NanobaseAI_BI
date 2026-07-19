@@ -1,0 +1,9 @@
+{
+  "scenarios": [
+    {"name": "s4_unavailable", "expected": "SAP_SERVICE_UNAVAILABLE", "status": "CODED"},
+    {"name": "metadata_conflict", "expected": "SAP_METADATA_VERSION_CONFLICT", "status": "CODED"},
+    {"name": "workload_missing", "expected": "HANA_WORKLOAD_POLICY_MISSING", "status": "CODED"},
+    {"name": "no_raw_table_fallback", "expected": "no_fallback", "status": "CODED"}
+  ],
+  "live": "PENDING"
+}

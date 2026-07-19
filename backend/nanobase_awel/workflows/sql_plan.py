@@ -70,11 +70,20 @@ async def run_sql_plan(
     except Exception as e:
         raise WorkflowError(OUTPUT_PARSE_FAILED, f"Planlama başarısız: {e}") from e
 
-    # Force dialect from request for Oracle workflows
-    if (req.dialect or "").lower() == "oracle":
+    # Force dialect/workflow from request for specialized profiles
+    dialect_l = (req.dialect or "").lower()
+    if dialect_l == "oracle":
         plan.dialect = "oracle"
         plan.workflow = "nanobase-oracle-sql-plan-v1"
         plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-oracle"
+    elif dialect_l in ("odata", "s4_odata", "sap_odata"):
+        plan.dialect = "odata"
+        plan.workflow = "nanobase-s4-odata-plan-v1"
+        plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-s4-odata"
+    elif dialect_l in ("hana", "sap_hana"):
+        plan.dialect = "hana"
+        plan.workflow = "nanobase-hana-sql-plan-v1"
+        plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-hana"
     else:
         plan.workflow = PLAN_WORKFLOW
     plan.retrieval_used = bool(retrieval.get("hits") or hint)

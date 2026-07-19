@@ -1,0 +1,600 @@
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (0)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=1", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=2", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (3)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=4", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_5 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X7 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 10; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_11()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_12", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 13'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 14; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('15') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_16", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_17 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_18", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x19')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/20'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/21'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (23)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (24)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (25)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_26()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='30'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='31'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=32", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_33 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (35)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=36", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=37", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (38)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=39", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_40 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X42 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 45; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_46()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_47", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 48'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 49; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('50') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_51", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_52 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_53", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x54')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/55'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/56'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (58)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (59)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (60)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_61()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='65'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='66'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=67", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_68 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (70)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=71", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=72", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (73)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=74", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_75 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X77 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 80; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_81()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_82", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 83'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 84; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('85') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_86", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_87 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_88", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x89')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/90'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/91'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (93)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (94)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (95)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_96()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='100'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='101'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=102", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_103 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (105)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=106", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=107", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (108)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=109", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_110 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X112 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 115; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_116()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_117", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 118'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 119; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('120') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_121", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_122 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_123", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x124')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/125'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/126'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (128)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (129)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (130)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_131()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='135'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='136'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=137", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_138 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (140)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=141", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=142", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (143)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=144", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_145 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X147 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 150; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_151()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_152", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 153'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 154; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('155') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_156", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_157 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_158", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x159')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/160'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/161'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (163)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (164)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (165)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_166()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='170'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='171'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=172", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_173 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (175)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=176", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=177", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (178)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=179", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_180 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X182 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 185; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_186()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_187", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 188'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 189; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('190') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_191", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_192 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_193", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x194')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/195'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/196'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (198)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (199)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (200)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_201()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='205'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='206'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=207", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_208 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (210)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=211", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=212", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (213)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=214", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_215 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X217 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 220; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_221()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_222", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 223'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 224; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('225') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_226", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_227 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_228", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x229')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/230'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/231'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (233)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (234)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (235)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_236()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='240'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='241'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=242", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_243 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (245)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=246", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=247", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (248)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=249", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_250 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X252 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 255; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_256()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_257", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 258'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 259; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('260') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_261", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_262 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_263", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x264')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/265'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/266'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (268)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (269)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (270)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_271()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='275'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='276'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=277", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_278 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (280)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=281", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=282", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (283)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=284", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_285 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X287 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 290; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_291()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_292", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 293'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 294; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('295') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_296", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_297 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_298", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x299')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/300'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/301'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (303)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (304)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (305)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_306()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='310'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='311'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=312", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_313 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (315)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=316", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=317", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (318)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=319", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_320 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X322 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 325; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_326()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_327", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 328'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 329; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('330') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_331", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_332 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_333", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x334')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/335'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/336'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (338)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (339)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (340)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_341()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='345'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='346'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=347", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_348 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (350)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=351", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=352", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (353)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=354", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_355 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X357 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 360; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_361()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_362", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 363'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 364; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('365') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_366", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_367 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_368", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x369')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/370'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/371'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (373)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (374)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (375)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_376()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='380'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='381'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=382", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_383 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (385)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=386", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=387", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (388)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=389", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_390 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X392 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 395; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_396()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_397", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 398'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 399; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('400') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_401", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_402 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_403", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x404')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/405'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/406'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (408)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (409)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (410)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_411()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='415'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='416'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=417", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_418 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (420)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=421", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=422", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (423)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=424", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_425 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X427 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 430; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_431()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_432", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 433'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 434; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('435') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_436", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_437 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_438", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x439')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/440'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/441'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (443)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (444)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (445)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_446()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='450'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='451'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=452", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_453 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (455)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=456", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=457", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (458)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=459", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_460 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X462 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 465; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_466()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_467", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 468'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 469; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('470') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_471", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_472 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_473", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x474')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/475'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/476'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (478)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (479)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (480)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_481()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='485'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='486'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=487", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_488 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (490)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=491", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=492", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (493)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=494", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_495 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X497 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 500; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_501()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_502", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 503'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 504; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('505') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_506", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_507 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_508", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x509')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/510'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/511'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (513)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (514)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (515)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_516()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='520'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='521'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=522", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_523 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (525)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=526", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=527", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (528)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=529", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_530 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X532 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 535; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_536()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_537", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 538'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 539; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('540') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_541", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_542 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_543", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x544')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/545'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/546'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (548)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (549)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (550)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_551()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='555'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='556'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=557", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_558 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (560)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=561", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=562", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (563)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=564", "expect": "REJECT"}
+{"category": "ddl", "sql": "CREATE TABLE EVIL_565 (ID INT)", "expect": "REJECT"}
+{"category": "ddl", "sql": "DROP VIEW NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "ALTER TABLE NANOBASE_REPORTING.CV_FINANCE ADD X567 INT", "expect": "REJECT"}
+{"category": "ddl", "sql": "TRUNCATE TABLE NANOBASE_REPORTING.CV_FINANCE", "expect": "REJECT"}
+{"category": "ddl", "sql": "GRANT SELECT ON NANOBASE_REPORTING.CV_FINANCE TO PUBLIC", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "DO BEGIN SELECT 570; END;", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "CALL PROC_571()", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXEC PROC_572", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "EXECUTE IMMEDIATE 'SELECT 573'", "expect": "REJECT"}
+{"category": "sqlscript", "sql": "BEGIN DECLARE X INT; X := 574; END;", "expect": "REJECT"}
+{"category": "dynamic_sql", "sql": "SELECT EXECUTE_DYNAMIC('575') FROM DUMMY", "expect": "REJECT"}
+{"category": "remote", "sql": "SELECT * FROM REMOTE_SOURCE.EVIL_576", "expect": "REJECT"}
+{"category": "remote", "sql": "CREATE REMOTE SOURCE RS_577 ADAPTER 'odbc'", "expect": "REJECT"}
+{"category": "virtual", "sql": "SELECT * FROM VIRTUAL TABLE VT_578", "expect": "REJECT"}
+{"category": "admin", "sql": "BACKUP DATA USING FILE ('x579')", "expect": "REJECT"}
+{"category": "admin", "sql": "EXPORT NANOBASE_REPORTING.CV_FINANCE AS CSV INTO '/tmp/580'", "expect": "REJECT"}
+{"category": "admin", "sql": "IMPORT FROM '/tmp/581'", "expect": "REJECT"}
+{"category": "function_abuse", "sql": "SELECT SESSION_CONTEXT('APPLICATIONUSER') FROM DUMMY", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "SELECT 1 FROM DUMMY; INSERT INTO T VALUES (583)", "expect": "REJECT"}
+{"category": "comment_bypass", "sql": "INSERT /* select */ INTO T VALUES (584)", "expect": "REJECT"}
+{"category": "unicode_bypass", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (585)", "expect": "REJECT"}
+{"category": "join_dos", "sql": "CALL EXPENSIVE_JOIN_586()", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM SYS.TABLES", "expect": "REJECT"}
+{"category": "system_schema", "sql": "SELECT * FROM _SYS_STATISTICS.HOST_RESOURCE_UTILIZATION_STATISTICS", "expect": "REJECT"}
+{"category": "monitoring", "sql": "SELECT * FROM M_CONNECTIONS; DELETE FROM T", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM ACDOCA WHERE MANDT='590'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BKPF WHERE BELNR='591'", "expect": "REJECT"}
+{"category": "raw_table", "sql": "SELECT * FROM BSEG WHERE BUZEI=592", "expect": "REJECT"}
+{"category": "procedure", "sql": "CREATE PROCEDURE P_593 AS BEGIN SELECT 1; END", "expect": "REJECT"}
+{"category": "revoke", "sql": "REVOKE ALL ON NANOBASE_REPORTING.CV_FINANCE FROM PUBLIC", "expect": "REJECT"}
+{"category": "dml", "sql": "INSERT INTO NANOBASE_REPORTING.CV_FINANCE VALUES (595)", "expect": "REJECT"}
+{"category": "dml", "sql": "UPDATE NANOBASE_REPORTING.CV_FINANCE SET X=596", "expect": "REJECT"}
+{"category": "dml", "sql": "DELETE FROM NANOBASE_REPORTING.CV_FINANCE WHERE ID=597", "expect": "REJECT"}
+{"category": "dml", "sql": "UPSERT NANOBASE_REPORTING.CV_FINANCE VALUES (598)", "expect": "REJECT"}
+{"category": "dml", "sql": "MERGE INTO NANOBASE_REPORTING.CV_FINANCE USING DUAL ON 1=1 WHEN MATCHED THEN UPDATE SET X=599", "expect": "REJECT"}

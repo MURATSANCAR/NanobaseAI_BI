@@ -54,6 +54,15 @@ export default function BiBindingStewardPanel() {
     onError: (err) => setMsg(localizeUserMessage(String(err))),
   });
 
+  const installSapFiMut = useMutation({
+    mutationFn: () => api.bi.semantic.binding.installFixture(config, { fixture_name: 'binding_sap_fi_odata' }),
+    onSuccess: () => {
+      invalidate();
+      setMsg(t('bi.bindingSteward.installed'));
+    },
+    onError: (err) => setMsg(localizeUserMessage(String(err))),
+  });
+
   const enrichMut = useMutation({
     mutationFn: () => api.bi.semantic.binding.enrich(config),
     onSuccess: () => {
@@ -135,6 +144,7 @@ export default function BiBindingStewardPanel() {
   const tplPending = (templatesQ.data?.candidates || []).filter((c) => c.status === 'candidate');
   const busy =
     installMut.isPending ||
+    installSapFiMut.isPending ||
     enrichMut.isPending ||
     approveMut.isPending ||
     promoteMut.isPending ||
@@ -166,11 +176,22 @@ export default function BiBindingStewardPanel() {
           {installMut.isPending ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" /> : null}
           {t('bi.bindingSteward.installFixture')}
         </button>
+        <button
+          type="button"
+          className="btn-secondary text-xs"
+          disabled={busy}
+          onClick={() => installSapFiMut.mutate()}
+          title={t('bi.bindingSteward.sapFiHint')}
+        >
+          {installSapFiMut.isPending ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" /> : null}
+          {t('bi.bindingSteward.installSapFi')}
+        </button>
         <button type="button" className="btn-secondary text-xs" disabled={busy} onClick={() => enrichMut.mutate()}>
           {enrichMut.isPending ? <Loader2 className="mr-1 inline h-3.5 w-3.5 animate-spin" /> : null}
           {t('bi.bindingSteward.enrich')}
         </button>
       </div>
+      <p className="mt-2 text-[11px] text-slate-500">{t('bi.bindingSteward.sapFiHint')}</p>
 
       {viewsQ.data?.instruction ? (
         <p className="mt-3 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-950">

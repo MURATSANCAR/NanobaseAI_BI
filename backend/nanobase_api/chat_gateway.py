@@ -62,7 +62,13 @@ def _dialect_for_datasource(datasource_id: str) -> str:
     sid = (datasource_id or "").lower()
     if "oracle" in sid:
         return "oracle"
-    # Probe oracle secrets map
+    if "odata" in sid or "cds" in sid or "s4" in sid:
+        return "odata"
+    if "hana" in sid or sid.startswith("sap_"):
+        # Prefer odata when both sap + odata; hana id usually contains hana
+        if "hana" in sid:
+            return "hana"
+    # Probe secrets maps
     ora = SECRETS / "oracle-ro.datasources.json"
     if ora.is_file():
         try:
@@ -70,6 +76,19 @@ def _dialect_for_datasource(datasource_id: str) -> str:
             sources = raw.get("sources") or raw
             if datasource_id in sources:
                 return "oracle"
+        except Exception:
+            pass
+    sap = SECRETS / "sap-ro.datasources.json"
+    if sap.is_file():
+        try:
+            raw = json.loads(sap.read_text(encoding="utf-8"))
+            sources = raw.get("sources") or raw
+            cfg = sources.get(datasource_id) or {}
+            driver = str(cfg.get("driver") or cfg.get("databaseType") or "").lower()
+            if driver in ("odata", "cds", "cds_odata", "sap_s4hana_odata") or "odata" in driver:
+                return "odata"
+            if driver in ("hana", "sap_hana", "hdb") or "hana" in driver:
+                return "hana"
         except Exception:
             pass
     return "postgres"
@@ -379,7 +398,7 @@ async def stream_chat_via_gateway(
             yield _sse("error", {"message": "No SQL from sql-plan", "plan": plan}).encode()
             return
 
-    # Faz 8: Oracle execute gated by feature flag / ORACLE_EXECUTION_MODE
+    # Faz 8/9: Oracle / SAP execute gated by feature flags
     plan_dialect = _dialect_for_datasource(datasource_id)
     if plan_dialect == "oracle" and mode != ExecutionMode.PLAN_ONLY:
         if not settings.oracle_execution_enabled or settings.oracle_execution_mode == "PLAN_ONLY":
@@ -416,6 +435,51 @@ async def stream_chat_via_gateway(
                 reply=reply,
                 sql=sql,
                 execution_mode="ORACLE_PLAN_ONLY",
+                executed=False,
+            )
+            return
+
+    if plan_dialect in ("odata", "hana") and mode != ExecutionMode.PLAN_ONLY:
+        sap_blocked = (
+            not settings.sap_execution_enabled
+            or settings.sap_execution_mode in ("PLAN_ONLY", "METADATA_ONLY")
+            or (plan_dialect == "hana" and not settings.sap_hana_execution_enabled)
+        )
+        if sap_blocked:
+            reply = (
+                "SAP planı üretildi. SAP execution kapalı "
+                f"(SAP_EXECUTION_ENABLED={int(settings.sap_execution_enabled)}, "
+                f"SAP_EXECUTION_MODE={settings.sap_execution_mode}, "
+                f"SAP_HANA_EXECUTION_ENABLED={int(settings.sap_hana_execution_enabled)}).\n\nPlan/SQL:\n{sql}"
+            )
+            yield _sse(
+                "answer_delta",
+                {"type": "ANSWER_DELTA", "payload": {"text": reply}},
+            ).encode()
+            result = {
+                "session_id": session_id,
+                "reply": reply,
+                "intent": "query",
+                "sql": sql,
+                "sql_error": None,
+                "query_result": {"columns": [], "rows": []},
+                "widgets": [],
+                "answer_blocks": [{"type": "text", "text": reply}],
+                "engine": "nanobase_sap_plan_only",
+                "workflows": {"plan": plan, "explain": None},
+                "sql_source": sql_source,
+                "execution_id": execution_id,
+            }
+            yield _sse("final", result).encode()
+            _persist_conversation(
+                meta_engine,
+                tenant_id=tenant_id,
+                session_id=session_id,
+                datasource_id=datasource_id,
+                message=message,
+                reply=reply,
+                sql=sql,
+                execution_mode="SAP_PLAN_ONLY",
                 executed=False,
             )
             return

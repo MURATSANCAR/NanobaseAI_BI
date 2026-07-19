@@ -1,33 +1,40 @@
 {
   "sources": {
     "sap_hana_ro": {
-      "label": "SAP HANA (RO)",
+      "label": "SAP HANA Reporting (RO)",
       "driver": "hana",
+      "databaseType": "SAP_HANA",
+      "deploymentType": "ON_PREMISE",
       "host": "hana.example.com",
-      "port": 443,
-      "user": "REPORTING_RO",
+      "port": 30015,
+      "databaseName": "PRD",
+      "user": "NANOBASE_HANA_RO",
       "password_file": "/data/nanobaseai/bi/secrets/sap-hana.password",
       "encrypt": true,
-      "ssl_validate": false,
-      "allowed_tables": [
-        "sales_order",
-        "sflight",
-        "scarr"
-      ],
-      "comment": "Requires: uv pip install hdbcli"
+      "ssl_validate": true,
+      "allowedSchemas": ["NANOBASE_REPORTING"],
+      "allowedViews": ["NANOBASE_REPORTING.CV_FINANCE", "NANOBASE_REPORTING.CV_OPEN_RECEIVABLE"],
+      "workloadClass": "NANOBASE_INTERACTIVE_QUERY",
+      "sizeProfile": "MEDIUM",
+      "comment": "Requires: uv pip install hdbcli; SAP_HANA_EXECUTION_ENABLED=1"
     },
     "sap_cds_odata": {
-      "label": "SAP CDS OData (RO)",
+      "label": "S/4 Finance CDS (RO)",
       "driver": "odata",
-      "base_url": "https://host/sap/opu/odata/sap/API_SERVICE",
-      "user": "REPORTING_RO",
+      "databaseType": "SAP_S4HANA_ODATA",
+      "deploymentType": "PRIVATE_EDITION",
+      "base_url": "https://s4.example.internal/sap/opu/odata/sap/API_JOURNALENTRYITEM_SRV",
+      "odataVersion": "V4",
+      "communicationScenario": "APPROVED_SCENARIO",
+      "credentialSecretRef": "vault:sap-odata",
+      "user": "NANOBASE_ODATA_RO",
       "password_file": "/data/nanobaseai/bi/secrets/sap-odata.password",
       "verify_tls": true,
-      "allowed_entities": [
-        "A_SalesOrder",
-        "A_BusinessPartner"
-      ],
-      "comment": "Execute via Gateway sql field: A_SalesOrder?$select=SalesOrder&$top=10"
+      "allowedServices": ["API_JOURNALENTRYITEM_SRV"],
+      "allowedEntitySets": ["JournalEntryItem", "ReceivableItem"],
+      "allowedCompanyCodes": ["1000"],
+      "sourceStatus": "PUBLISHED",
+      "comment": "Logical plan preferred; legacy: ReceivableItem?$select=CompanyCode&$top=10"
     }
   }
 }

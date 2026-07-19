@@ -1,0 +1,8 @@
+{
+  "corpus": "backend/query_gateway/tests/security/corpus/hana_malicious.sql.jsonl",
+  "total": 600,
+  "rejected": 600,
+  "approved": 0,
+  "status": "PASS",
+  "suite": "test_hana_malicious_corpus.py"
+}

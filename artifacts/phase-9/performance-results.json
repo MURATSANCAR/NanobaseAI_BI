@@ -1,0 +1,7 @@
+{
+  "odata_metadata_parse_p95_ms": null,
+  "odata_policy_build_p95_ms": null,
+  "hana_validation_p95_ms": null,
+  "status": "PENDING_LIVE",
+  "note": "Offline builder/policy measured in unit suite; live network excluded"
+}

@@ -1,0 +1,7 @@
+{
+  "phase": 9,
+  "package": "backend/query_gateway/infrastructure/sap",
+  "vertical_slice": "SAP_FI_ODATA_open_receivable",
+  "offline_tests_passed": 1227,
+  "generated_at": "2026-07-19"
+}

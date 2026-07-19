@@ -16,6 +16,9 @@ from query_gateway.infrastructure.policy.engine import (
     policy_from_datasource_cfg,
     validate_parsed,
 )
+from query_gateway.infrastructure.sap.hana.parser_policy import enforce_hana_sql_policy
+from query_gateway.infrastructure.sap.hana.profile import build_hana_profile
+from query_gateway.infrastructure.sap.odata.executor import validate_odata_only
 
 
 def _resolve_dialect(ds: dict[str, Any]) -> str:
@@ -23,6 +26,10 @@ def _resolve_dialect(ds: dict[str, Any]) -> str:
     dialect = str(ds.get("dialect") or "").lower()
     if driver == "oracle" or dialect == "oracle":
         return "oracle"
+    if driver in ("hana", "sap_hana", "hdb") or dialect in ("hana", "sap_hana"):
+        return "hana"
+    if driver in ("odata", "cds", "cds_odata") or dialect == "odata":
+        return "odata"
     if driver.startswith("postgres") or dialect in ("postgres", "postgresql"):
         return "postgres"
     return dialect or "postgres"
@@ -57,32 +64,90 @@ def validate_query(
     if dialect == "oracle":
         # Fail-closed profile validation (forbidden users, SERVICE_NAME, owners)
         build_profile_from_datasource(ds)
+    if dialect == "hana":
+        # Sandbox may disable cert validation
+        if ds.get("ssl_validate") is False:
+            ds = dict(ds)
+            ds["allow_insecure_tls"] = True
+            ds["validate_certificate"] = False
+        build_hana_profile(ds)
 
-    bundle = load_policy_bundle(settings, dialect=dialect)
-    parsed = parse_sql(sql, dialect=dialect)
+    if dialect == "odata":
+        od = validate_odata_only(ds, sql)
+        bundle = load_policy_bundle(settings, dialect="postgres")
+        fp = fingerprint(
+            dialect="odata",
+            normalized_sql=od["normalizedSql"],
+            policy_version=bundle.policy_version,
+            datasource_id=datasource_id,
+        )
+        get_audit_logger().record(
+            {
+                "executionId": execution_id,
+                "event": "QUERY_VALIDATED",
+                "tenantId": tenant_id,
+                "userId": user_id,
+                "datasourceId": datasource_id,
+                "sqlFingerprint": fp,
+                "statementType": "ODATA_GET",
+                "tables": [od.get("plan", {}).get("entitySet")],
+                "policyVersion": bundle.policy_version,
+                "result": "APPROVED",
+                "traceId": trace_id,
+                "dialect": "odata",
+            }
+        )
+        return {
+            "executionId": execution_id,
+            "status": "APPROVED",
+            "statementType": "ODATA_GET",
+            "normalizedSql": od["normalizedSql"],
+            "sqlFingerprint": fp,
+            "schemas": [],
+            "tables": [od.get("plan", {}).get("entitySet")],
+            "columns": (od.get("plan") or {}).get("select") or [],
+            "functions": [],
+            "warnings": od.get("warnings") or [],
+            "policyVersion": bundle.policy_version,
+            "dialect": "odata",
+            "plan": od.get("plan"),
+        }
+
+    # HANA uses postgres sqlglot dialect for AST; policy is HANA-specific.
+    parse_dialect = "postgres" if dialect == "hana" else dialect
+    bundle = load_policy_bundle(settings, dialect=dialect if dialect != "odata" else "postgres")
+    parsed = parse_sql(sql, dialect=parse_dialect)
     cfg = dict(ds)
     if isinstance(cfg.get("allowed_tables"), set):
         cfg["allowed_tables"] = sorted(cfg["allowed_tables"])
+    if isinstance(cfg.get("allowed_views"), set):
+        cfg["allowed_tables"] = sorted(
+            set(cfg.get("allowed_tables") or []) | set(cfg["allowed_views"])
+        )
     # Oracle: also allow owner.table from allowed_owners when tables list uses uppercase
     if dialect == "oracle" and cfg.get("allowed_owners"):
         owners = {str(o).lower() for o in cfg["allowed_owners"]}
         schemas = set(cfg.get("allowed_schemas") or [])
         schemas |= owners
         cfg["allowed_schemas"] = sorted(schemas)
+    if dialect == "hana" and cfg.get("allowed_schemas"):
+        cfg["allowed_schemas"] = [str(s).lower() for s in cfg["allowed_schemas"]]
 
     ds_policy = policy_from_datasource_cfg(datasource_id, cfg, bundle)
     warnings = validate_parsed(parsed, ds_policy, bundle)
     if dialect == "oracle":
         warnings.extend(enforce_oracle_sql_policy(sql, parsed))
+    if dialect == "hana":
+        warnings.extend(enforce_hana_sql_policy(sql, parsed))
 
     limit = min(max_rows or settings.max_rows, settings.max_limit)
     fp = fingerprint(
-        dialect=parsed.dialect,
+        dialect=dialect,
         normalized_sql=parsed.normalized_sql,
         policy_version=ds_policy.policy_version,
         datasource_id=datasource_id,
     )
-    limited_sql = apply_limit(parsed.tree, max_limit=limit + 1, dialect=parsed.dialect)
+    limited_sql = apply_limit(parsed.tree, max_limit=limit + 1, dialect=parse_dialect)
 
     audit = get_audit_logger()
     audit.record(

@@ -61,7 +61,12 @@ def load_policy_bundle(
     pdir = _policy_dir()
     fn_raw: dict[str, Any] = {}
     dialect_l = (dialect or "postgres").lower()
-    fn_name = "oracle-functions.yaml" if dialect_l == "oracle" else "postgres-functions.yaml"
+    if dialect_l == "oracle":
+        fn_name = "oracle-functions.yaml"
+    elif dialect_l in ("hana", "sap_hana"):
+        fn_name = "hana-functions.yaml"
+    else:
+        fn_name = "postgres-functions.yaml"
     fn_path = pdir / fn_name
     if fn_path.is_file():
         fn_raw = yaml.safe_load(fn_path.read_text(encoding="utf-8")) or {}
@@ -74,6 +79,8 @@ def load_policy_bundle(
         limits.get("requireQualifiedTables", settings.require_qualified_tables)
     )
     if dialect_l == "oracle":
+        require_qualified = True
+    if dialect_l in ("hana", "sap_hana"):
         require_qualified = True
     return PolicyBundle(
         functions=FunctionPolicy(

@@ -1,0 +1,23 @@
+{
+  "phase": 9,
+  "primary_profile": "SAP_S4HANA_ODATA",
+  "secondary_profile": "SAP_HANA",
+  "vertical_slice": {
+    "domain": "FI",
+    "metric": "open_receivable_amount",
+    "ledger": "0L",
+    "companyCodes": ["1000"],
+    "binding": "configs/semantic/binding_sap_fi_odata.json",
+    "status": "OFFLINE_READY"
+  },
+  "forbidden": {
+    "rawTables": ["ACDOCA", "BKPF", "BSEG", "VBAK", "VBAP", "EKKO", "EKPO", "MARA", "MARC", "KNA1", "LFA1"],
+    "odataWrite": true,
+    "hanaSystemUser": true
+  },
+  "flags": {
+    "SAP_EXECUTION_ENABLED": "default_0",
+    "SAP_EXECUTION_MODE": "PLAN_ONLY",
+    "SAP_HANA_EXECUTION_ENABLED": "default_0"
+  }
+}

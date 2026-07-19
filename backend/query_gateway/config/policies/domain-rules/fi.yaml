@@ -1,0 +1,12 @@
+domain: FI
+mandatory_metric_fields:
+  - ledger
+  - company_code
+  - fiscal_year
+  - currency_policy
+  - posting_status
+mandatory_rules:
+  - exclude_reversed_documents
+  - exclude_unposted_documents
+default_ledger: "0L"
+currency_policy: COMPANY_CODE_CURRENCY

@@ -1,6 +1,12 @@
 /** Shared FE contracts (mapped onto /api/v1/bi/*). */
 
-export type DatabaseType = 'POSTGRESQL' | 'MYSQL' | 'SQLSERVER' | 'ORACLE' | 'SAP_HANA';
+export type DatabaseType =
+  | 'POSTGRESQL'
+  | 'MYSQL'
+  | 'SQLSERVER'
+  | 'ORACLE'
+  | 'SAP_HANA'
+  | 'SAP_S4HANA_ODATA';
 
 export type DatasourceStatus =
   | 'CREATED'

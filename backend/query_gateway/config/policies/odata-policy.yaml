@@ -1,0 +1,27 @@
+allowed_options:
+  - $select
+  - $filter
+  - $orderby
+  - $top
+  - $skiptoken
+  - $count
+  - $expand
+denied_options:
+  - $batch
+  - $apply
+  - $search
+  - $compute
+  - $levels
+  - $crossjoin
+denied_methods:
+  - POST
+  - PUT
+  - PATCH
+  - DELETE
+limits:
+  interactive_top: 100
+  max_top: 1000
+  max_expand_depth: 1
+  max_expand_nav: 2
+  max_pages: 10
+require_select: true

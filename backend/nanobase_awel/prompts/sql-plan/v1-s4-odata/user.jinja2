@@ -1,0 +1,8 @@
+{{ context_blocks }}
+
+Question: {{ question }}
+
+Return ONLY JSON with keys:
+status, sourceType, service, entitySet, select, filters, orderby, top, expand,
+assumptions, warnings, ambiguities, clarificationQuestion, confidence, dialect.
+dialect must be odata. sourceType must be SAP_ODATA.

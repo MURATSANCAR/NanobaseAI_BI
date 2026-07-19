@@ -254,47 +254,89 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
                     pw = resolve_password(cfg, settings) if cfg.get("secret_ref") or cfg.get("password") else ""
                 except Exception:
                     pw = str(cfg.get("password") or "")
-                if driver in ("hana", "sap_hana", "hdb"):
+                if driver in ("hana", "sap_hana", "hdb", "sap_hana_sql"):
                     if not (cfg.get("host") and (cfg.get("user") or cfg.get("username")) and pw):
                         continue
+                    views = (
+                        cfg.get("allowed_views")
+                        or cfg.get("allowedViews")
+                        or cfg.get("allowed_tables")
+                        or []
+                    )
+                    schemas = cfg.get("allowed_schemas") or cfg.get("allowedSchemas") or []
                     ds[str(sid)] = {
                         "id": str(sid),
                         "driver": "hana",
+                        "database_type": cfg.get("databaseType") or "SAP_HANA",
+                        "deployment_type": cfg.get("deploymentType") or cfg.get("deployment_type"),
                         "host": cfg["host"],
                         "port": int(cfg.get("port") or 443),
-                        "database": cfg.get("database") or "",
+                        "database": cfg.get("database") or cfg.get("databaseName") or "",
                         "user": cfg.get("user") or cfg.get("username"),
                         "password": pw,
                         "sslmode": "require",
-                        "dialect": sap_mod.HANA_SQLGLOT_DIALECT,
+                        "dialect": "hana",
                         "allowed_tables": _allowed_tables(cfg, sap_mod.DEFAULT_HANA_TABLES),
+                        "allowed_views": [str(v) for v in views],
+                        "allowed_schemas": [str(s) for s in schemas],
                         "encrypt": bool(cfg.get("encrypt", True)),
-                        "ssl_validate": bool(cfg.get("ssl_validate", False)),
+                        "ssl_validate": bool(cfg.get("ssl_validate", cfg.get("validateCertificate", False))),
+                        "allow_insecure_tls": bool(cfg.get("allow_insecure_tls", False)),
+                        "size_profile": str(cfg.get("size_profile") or cfg.get("sizeProfile") or "MEDIUM"),
+                        "workload_class": cfg.get("workload_class")
+                        or cfg.get("workloadClass")
+                        or "NANOBASE_INTERACTIVE_QUERY",
+                        "require_workload_class": bool(
+                            cfg.get("require_workload_class")
+                            if cfg.get("require_workload_class") is not None
+                            else True
+                        ),
                         "label": cfg.get("label") or sid,
                     }
-                elif driver in ("odata", "cds", "cds_odata"):
+                elif driver in ("odata", "cds", "cds_odata", "sap_s4hana_odata"):
                     base_url = (cfg.get("base_url") or cfg.get("url") or "").rstrip("/")
                     if not base_url:
                         continue
                     token = cfg.get("bearer_token")
                     if not token and cfg.get("token_file"):
                         token = Path(cfg["token_file"]).read_text(encoding="utf-8").strip()
+                    entities = (
+                        cfg.get("allowed_entity_sets")
+                        or cfg.get("allowedEntitySets")
+                        or cfg.get("allowed_entities")
+                        or cfg.get("allowed_tables")
+                        or []
+                    )
+                    services = cfg.get("allowed_services") or cfg.get("allowedServices") or []
                     ds[str(sid)] = {
                         "id": str(sid),
                         "driver": "odata",
+                        "database_type": cfg.get("databaseType") or "SAP_S4HANA_ODATA",
+                        "deployment_type": cfg.get("deploymentType") or cfg.get("deployment_type"),
                         "host": base_url,
                         "port": 443,
                         "database": "",
                         "base_url": base_url,
+                        "odata_version": cfg.get("odataVersion") or cfg.get("odata_version") or "V4",
+                        "communication_scenario": cfg.get("communicationScenario")
+                        or cfg.get("communication_scenario")
+                        or "",
+                        "credential_secret_ref": cfg.get("credentialSecretRef")
+                        or cfg.get("credential_secret_ref")
+                        or "",
                         "user": cfg.get("user") or cfg.get("username") or "",
                         "password": pw,
                         "bearer_token": token,
                         "sslmode": "require",
                         "verify_tls": bool(cfg.get("verify_tls", True)),
                         "dialect": "odata",
-                        "allowed_entities": set(
-                            cfg.get("allowed_entities") or cfg.get("allowed_tables") or []
-                        ),
+                        "allowed_entities": set(entities),
+                        "allowed_entity_sets": [str(e) for e in entities],
+                        "allowed_services": [str(s) for s in services],
+                        "allowed_company_codes": cfg.get("allowedCompanyCodes")
+                        or cfg.get("allowed_company_codes")
+                        or [],
+                        "source_status": cfg.get("sourceStatus") or cfg.get("source_status") or "PUBLISHED",
                         "label": cfg.get("label") or sid,
                     }
     return ds

@@ -1,0 +1,5 @@
+{
+  "status": "PENDING_HANA_ENABLEMENT",
+  "target_cases": 100,
+  "note": "Compare OData vs HANA fingerprints after SAP_HANA_EXECUTION_ENABLED=1 and FI GO"
+}

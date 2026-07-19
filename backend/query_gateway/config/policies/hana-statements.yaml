@@ -1,0 +1,24 @@
+# Catalog of forbidden HANA statement roots (enforced in parser_policy.py)
+forbidden_roots:
+  - INSERT
+  - UPDATE
+  - DELETE
+  - UPSERT
+  - MERGE
+  - CREATE
+  - ALTER
+  - DROP
+  - TRUNCATE
+  - CALL
+  - DO
+  - EXEC
+  - EXECUTE
+  - IMPORT
+  - EXPORT
+  - BACKUP
+  - RESTORE
+  - GRANT
+  - REVOKE
+allowed_roots:
+  - SELECT
+  - WITH

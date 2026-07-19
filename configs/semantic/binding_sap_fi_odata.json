@@ -1,0 +1,56 @@
+{
+  "project_id": "sap_fi_odata",
+  "dialect": "odata",
+  "binding_version": "sap_fi_odata.v1",
+  "semantic_model_version": "sap_fi.v1",
+  "status": "draft",
+  "domain": "SAP_FI",
+  "entities": {
+    "receivable_item": {
+      "sourceType": "SAP_ODATA",
+      "service": "API_JOURNALENTRYITEM_SRV",
+      "entitySet": "ReceivableItem",
+      "key": "AccountingDocument"
+    }
+  },
+  "measures": {
+    "open_receivable_amount": {
+      "entity": "receivable_item",
+      "domain": "SAP_FI",
+      "ledger": "0L",
+      "postingStatus": "POSTED",
+      "timeField": "PostingDate",
+      "currencyPolicy": "COMPANY_CODE_CURRENCY",
+      "mandatoryRules": [
+        "posted_only",
+        "not_cleared",
+        "exclude_reversed_documents"
+      ],
+      "filters": ["posted_only", "not_cleared"],
+      "binding": {
+        "sourceType": "SAP_ODATA",
+        "service": "API_JOURNALENTRYITEM_SRV",
+        "entitySet": "ReceivableItem",
+        "amountField": "AmountInCompanyCodeCurrency",
+        "currencyField": "CompanyCodeCurrency",
+        "companyCodeField": "CompanyCode",
+        "clearingStatusField": "ClearingStatus",
+        "reversalField": "IsReversed",
+        "postingStatusField": "PostingStatus",
+        "currencyPolicy": "COMPANY_CODE_CURRENCY",
+        "ledger": "0L"
+      }
+    }
+  },
+  "functional_validation": {
+    "metric": "open_receivable_amount",
+    "domain": "FI",
+    "validatedByRole": "SAP_FI_CONSULTANT",
+    "source": "APPROVED_AR_CDS",
+    "companyCodes": ["1000"],
+    "ledger": "0L",
+    "currencyPolicy": "COMPANY_CODE_CURRENCY",
+    "reversalPolicy": "EXCLUDE_REVERSED",
+    "status": "PENDING_APPROVAL"
+  }
+}

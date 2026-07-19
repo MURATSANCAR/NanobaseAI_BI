@@ -1,0 +1,21 @@
+# SAP FI functional benchmark skeleton (150) — live expected results PENDING sandbox
+version: 1
+domain: SAP_FI
+cases:
+  - id: fi_open_receivable_cc1000
+    question: "1000 şirket kodu için açık alacak tutarı nedir?"
+    metric: open_receivable_amount
+    companyCode: "1000"
+    ledger: "0L"
+    currencyPolicy: COMPANY_CODE_CURRENCY
+    expect:
+      sourceResolution: APPROVED
+      companyCodeEnforced: true
+      reversalExcluded: true
+  - id: fi_cross_company_leak
+    question: "2000 şirket kodu açık alacak (yetkisiz)"
+    metric: open_receivable_amount
+    companyCode: "2000"
+    expect:
+      rejected: true
+      reason: SAP_AUTHORIZATION_FAILURE

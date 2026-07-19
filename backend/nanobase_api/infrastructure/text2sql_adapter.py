@@ -40,6 +40,18 @@ class WorkflowTextToSqlAdapter:
                 promptVersion="sql-plan-v1-oracle",
                 modelProfile="qwen35b-text2sql-v1",
             )
+        elif dialect_l in ("odata", "s4_odata", "sap_odata"):
+            gen = GenerationConfig(
+                promptVersion="sql-plan-v1-s4-odata",
+                modelProfile="qwen35b-text2sql-v1",
+            )
+            dialect_l = "odata"
+        elif dialect_l in ("hana", "sap_hana"):
+            gen = GenerationConfig(
+                promptVersion="sql-plan-v1-hana",
+                modelProfile="qwen35b-text2sql-v1",
+            )
+            dialect_l = "hana"
 
         req = SqlPlanningRequest(
             executionId=execution_id,

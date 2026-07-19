@@ -1,0 +1,42 @@
+allowed:
+  - COUNT
+  - SUM
+  - AVG
+  - MIN
+  - MAX
+  - ROUND
+  - CEIL
+  - FLOOR
+  - ABS
+  - COALESCE
+  - NULLIF
+  - LOWER
+  - UPPER
+  - TRIM
+  - LENGTH
+  - SUBSTRING
+  - CONCAT
+  - TO_DATE
+  - TO_TIMESTAMP
+  - ADD_DAYS
+  - ADD_MONTHS
+  - YEAR
+  - MONTH
+  - DAYOFMONTH
+  - CURRENT_DATE
+  - ROW_NUMBER
+  - RANK
+  - DENSE_RANK
+  - LAG
+  - LEAD
+  - CAST
+  - IFNULL
+controlled:
+  - CONVERT_CURRENCY
+  - JSON_VALUE
+  - JSON_QUERY
+  - SERIES_GENERATE
+  - STRING_AGG
+denied:
+  - SESSION_CONTEXT
+  - EXECUTE_DYNAMIC
