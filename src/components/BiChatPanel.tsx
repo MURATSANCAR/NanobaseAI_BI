@@ -69,6 +69,7 @@ type ChatMessage = {
   jobId?: string;
   streamPhase?: string;
   queuePosition?: number;
+  queueMessage?: string;
   elapsedSec?: number;
   /** True once live tokens arrived — skip fake reveal on done. */
   liveTokens?: boolean;
@@ -142,6 +143,7 @@ function applyAssistantResult(
 function statusLabelForMessage(m: ChatMessage): string {
   const phase = m.streamPhase || 'thinking';
   if (phase === 'queued') {
+    if (m.queueMessage && m.queueMessage.trim()) return m.queueMessage;
     const pos = Math.max(1, m.queuePosition ?? 1);
     return t('bi.streamingQueued', { position: String(pos) });
   }
@@ -166,17 +168,20 @@ function BiChatStreamingSteps({
   tipIndex,
   phase,
   queuePosition,
+  queueMessage,
 }: {
   question: string;
   tipIndex: number;
   phase?: string;
   queuePosition?: number;
+  queueMessage?: string;
 }) {
   const steps = progressTipsForQuestion(question);
   const active = streamingStepProgress(tipIndex, steps.length);
   const queued = phase === 'queued';
   const label = queued
-    ? t('bi.streamingQueued', { position: String(Math.max(1, queuePosition ?? 1)) })
+    ? queueMessage?.trim() ||
+      t('bi.streamingQueued', { position: String(Math.max(1, queuePosition ?? 1)) })
     : steps[active] || t('bi.streamingThinking');
 
   return (
