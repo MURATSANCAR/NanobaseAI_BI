@@ -1,0 +1,11 @@
+{
+  "status": "PENDING_PREPROD_K8S",
+  "forbiddenFlows": [
+    {"from": "dbgpt", "to": "customer_postgresql", "expect": "fail"},
+    {"from": "awel", "to": "customer_db", "expect": "fail"},
+    {"from": "frontend", "to": "query_gateway", "expect": "fail"},
+    {"from": "public_internet", "to": "dbgpt", "expect": "fail"}
+  ],
+  "pass": false,
+  "note": "Run real connect tests per deploy/k8s/network/egress-deny-test.md"
+}

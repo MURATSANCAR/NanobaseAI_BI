@@ -1,0 +1,7 @@
+{
+  "status": "PENDING_EXTERNAL",
+  "critical": null,
+  "high": null,
+  "medium": null,
+  "note": "Replace with signed pen-test report before production GO"
+}

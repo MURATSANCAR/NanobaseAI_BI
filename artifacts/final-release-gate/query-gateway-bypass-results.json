@@ -1,0 +1,14 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "checks": [
+    "no_chat_with_db_execute",
+    "no_awel_customer_db_connect",
+    "plan_only_rollback_path",
+    "gateway_only_execution"
+  ],
+  "productionExecutionPathsOutsideGateway": 0,
+  "pass": true,
+  "pytestExitCode": 0,
+  "assertScriptExitCode": 0
+}

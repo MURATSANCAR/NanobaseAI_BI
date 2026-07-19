@@ -1,0 +1,54 @@
+{
+  "release": "1.0.0-rc.1",
+  "decision": "BLOCKED",
+  "signedAt": null,
+  "signers": [
+    {
+      "role": "Product Owner",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Engineering Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Security Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Platform/DevOps Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Data/AI Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "QA Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Operations Lead",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Business Owner",
+      "name": null,
+      "signed": false
+    },
+    {
+      "role": "Customer Technical Owner",
+      "name": null,
+      "signed": false
+    }
+  ],
+  "acceptedRisks": [],
+  "evidenceManifestHash": "sha256:39f26129798ca2bbc8302f0f2bc12cb0ba979881c30681e7010a42b9ce56ded3"
+}

@@ -1,0 +1,27 @@
+{
+  "profiles": [
+    {
+      "concurrentPlanners": 1,
+      "status": "MEASURE_ON_LIVE_MODEL"
+    },
+    {
+      "concurrentPlanners": 2,
+      "status": "MEASURE_ON_LIVE_MODEL"
+    },
+    {
+      "concurrentPlanners": 4,
+      "status": "MEASURE_ON_LIVE_MODEL"
+    },
+    {
+      "concurrentPlanners": 8,
+      "status": "MEASURE_ON_LIVE_MODEL"
+    }
+  ],
+  "MODEL_MAX_CONCURRENCY": 2,
+  "MODEL_QUEUE_LIMIT": 100,
+  "MODEL_QUEUE_TIMEOUT": 60,
+  "TENANT_QUEUE_LIMIT": 20,
+  "GLOBAL_QUEUE_LIMIT": 200,
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "pass": true
+}

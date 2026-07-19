@@ -1,0 +1,37 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "checks": {
+    "phase_evidence": "PASS",
+    "tenant_isolation": "PASS",
+    "query_gateway_bypass": "PASS",
+    "sql_security": "PASS",
+    "ai_adversarial": "PASS",
+    "quality_benchmark": "PASS",
+    "backup_restore": "PASS",
+    "rollback": "PASS",
+    "data_leakage": "PASS"
+  },
+  "functional": {
+    "critical_e2e": "PASS",
+    "postgres_execution": "PASS",
+    "oracle_execution": "N/A",
+    "sap_execution": "N/A",
+    "rollback": "PASS"
+  },
+  "hardNoGoAreas": [
+    "audit_integrity",
+    "backup_restore",
+    "critical_high_security",
+    "financial_accuracy",
+    "rollback",
+    "sap_functional",
+    "secret_security",
+    "sql_security",
+    "tenant_isolation"
+  ],
+  "nogoHits": [
+    "awaiting_uat_pentest_or_image_digests"
+  ],
+  "recommendedDecision": "BLOCKED"
+}

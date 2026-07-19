@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "mode": "drill",
+  "action": "QUERY_GATEWAY_TO_PLAN_ONLY",
+  "forbiddenRollback": "DB-GPT direct customer DB \u2014 NEVER",
+  "filesTouched": [
+    "dry-run:/etc/nanobase/bi-api.env",
+    "dry-run:/etc/nanobase/query-gateway.env"
+  ],
+  "assertNoChatDataExecute": true,
+  "duplicateExecution": 0,
+  "dataLoss": 0,
+  "crossTenantEvents": 0,
+  "pass": true,
+  "note": "Drill records intent; apply mode requires host sudo env files"
+}

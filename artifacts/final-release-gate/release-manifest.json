@@ -1,0 +1,82 @@
+{
+  "release": "1.0.0-rc.1",
+  "gitCommit": "75aae38c08743c9279f539e35f44784862958a62",
+  "createdAt": "2026-07-19T16:34:47Z",
+  "claimedConnectors": [
+    "postgres"
+  ],
+  "components": {
+    "frontend": {
+      "image": "registry/nanobase/frontend",
+      "digest": "pending-build"
+    },
+    "backend": {
+      "image": "registry/nanobase/backend",
+      "digest": "pending-build"
+    },
+    "queryGateway": {
+      "image": "registry/nanobase/query-gateway",
+      "digest": "pending-build"
+    },
+    "dbgpt": {
+      "version": "0.8.1",
+      "imageDigest": "pending-build"
+    },
+    "awel": {
+      "workflowVersion": "1.0.0",
+      "promptTreeHash": "df77670eebf8599e0c42ed2aa2b6b573b0e0086bf5cb1359a7f9bc3b5f61a69a",
+      "promptHashes": {
+        "result-explain/v1/system.jinja2": "f95bd0702f6b3e3b7ad3beb32cce762d3aff1daabb779cc27d945a6050b9c8e6",
+        "result-explain/v1/user.jinja2": "0b82a97b539fe9e0e0852fef31c3c214d59f3ab01487872a2b04682b6dc48a43",
+        "result-explain/v1-sap/system.jinja2": "41a19499bd01043b3548393a605588c645ac01e066dd468339e8488de95ae233",
+        "result-explain/v1-sap/user.jinja2": "69e2e4d170ebe1ca8b8faf0ca8a6d6f4df3c6b8f8b5381796d3037204186b0ef",
+        "sql-plan/v1/system.jinja2": "ecfc6b205008633a2eaff065ed3a50196bec733d803f182ac2659b3542ca5744",
+        "sql-plan/v1/user.jinja2": "c7394bc63789dacfea32a27ce5d812d19355fe9c7bcf9af370d8a5266c6cc49f",
+        "sql-plan/v1-hana/system.jinja2": "3ca19dee28d29a69e9523db06d478abce05694df6de2dcef22d3d35c0d0388c0",
+        "sql-plan/v1-hana/user.jinja2": "87d4e60f0df944648e846433711c6443abba5529fca5d577b06eb5d5955f002b",
+        "sql-plan/v1-oracle/system.jinja2": "79d89c384ba85850f02fefaaef0d8cd9b4af8f23e1f7c1c98dfc42de4e0d654b",
+        "sql-plan/v1-oracle/user.jinja2": "4277f019713987bfe1d6ef00b676c8db12c0217b7566ffc3598520f31a077d98",
+        "sql-plan/v1-s4-odata/system.jinja2": "d5a5628b043420e45b103f3bd996eb758746dd06353fc37c7fd792ac21478119",
+        "sql-plan/v1-s4-odata/user.jinja2": "369912fde68cfab5ec08c3ab9e979a298e1c6b5cbae032ce84bb9e0673705d2e",
+        "sql-repair/v1/system.jinja2": "2d2af8cfe0eaac3362cdcb968fc3d3d5cd6ab572059362f4b98648744636ce21",
+        "sql-repair/v1/user.jinja2": "6a283aad38fb60f5c59c91ebe5c72df21633a4ccfa7d0b3fa4aae2c20b94afc3",
+        "sql-repair/v1-hana/system.jinja2": "4a6e25e9e2bf6944ab49ae6357b3e4756ec1a0b78fe31a7431b39cec56e60dd0",
+        "sql-repair/v1-hana/user.jinja2": "8fc5a3190063ccb03afbc976a646a2abf64595feea85fd4b4fb72668449c75a3",
+        "sql-repair/v1-oracle/system.jinja2": "342a08a537e4b52aaa5dedd64be79f348e01f0924b0e7ac8933eb0eeff36e4d2",
+        "sql-repair/v1-oracle/user.jinja2": "58604edb35bd924d7648063e9916fb5f165036c4e2f88dc449d7ff8836ae2d8e",
+        "sql-repair/v1-s4-odata/system.jinja2": "a68ab53b8dad459abd6aa6cb9dea39c4989563885ccd38211fffa57cd510e72c",
+        "sql-repair/v1-s4-odata/user.jinja2": "acd7f53092b979b9336ad4c7c2b8b06eeba01eb051c071570c052d4d9342f380"
+      }
+    },
+    "model": {
+      "modelId": "nanobase-qwen36-35b-a3b-mtp",
+      "modelHash": "pin-before-freeze",
+      "llamaCppBuild": "pin-before-freeze"
+    },
+    "embedding": {
+      "modelId": "BAAI/bge-m3",
+      "modelHash": "pin-before-freeze"
+    },
+    "semanticCatalog": {
+      "version": "9.0.0",
+      "manifestHash": "c058b9b9971904fdfe844e237f955a3bc2dad5568863d22f26b088cc6368b5c9"
+    },
+    "queryPolicies": {
+      "postgres": "2026.07.1+84927e6ad346",
+      "oracle": "2026.07.1+cfea4a9becce",
+      "hana": "2026.07.1+2b34b4ccb202",
+      "odata": "2026.07.1+36f909583820"
+    }
+  },
+  "freezeRules": {
+    "noFeatureAdds": true,
+    "noPromptChanges": true,
+    "noModelProfileChanges": true,
+    "noSemanticMetricChanges": true,
+    "noPolicyChanges": true,
+    "noConnectorChanges": true,
+    "noDependencyUpdates": true,
+    "noTestDatasetChanges": true,
+    "fixesRequireNewRc": true
+  }
+}

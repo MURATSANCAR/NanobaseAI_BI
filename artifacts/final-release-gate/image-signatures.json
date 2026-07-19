@@ -1,0 +1,55 @@
+{
+  "generatedAt": "2026-07-19T16:34:47Z",
+  "policy": {
+    "rejectUnsigned": true,
+    "rejectUnknownRegistry": true,
+    "rejectTagOnlyDeploy": true,
+    "digestOnly": true,
+    "requireProvenance": true
+  },
+  "images": [
+    {
+      "name": "frontend",
+      "ref": "pending-build",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "backend",
+      "ref": "pending-build",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "queryGateway",
+      "ref": "pending-build",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "dbgpt",
+      "ref": "pending-build",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "modelHash",
+      "ref": "pin-before-freeze",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "embeddingHash",
+      "ref": "pin-before-freeze",
+      "signed": false,
+      "error": "digest-pending"
+    },
+    {
+      "name": "llamaCppBuild",
+      "ref": "pin-before-freeze",
+      "signed": false,
+      "error": "digest-pending"
+    }
+  ],
+  "pass": false
+}

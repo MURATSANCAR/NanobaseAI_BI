@@ -1,0 +1,10 @@
+{
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "component": "metadata-postgresql",
+  "file": "/Users/murat/Documents/NonobaseAI-BI/artifacts/final-release-gate/backups/bi_meta_20260719T163448Z.placeholder.json",
+  "sha256": "8f0a3ecd59c1b87a4a36bd59bb6c919a538bb68967ce5e4c5a2827989a60d658",
+  "status": "PASS_OFFLINE",
+  "detail": "pg_dump not installed",
+  "customerDbBackup": "out-of-scope",
+  "pass": true
+}

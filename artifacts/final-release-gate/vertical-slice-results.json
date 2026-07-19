@@ -1,0 +1,132 @@
+{
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "release": "1.0.0-rc.1",
+  "steps": [
+    {
+      "name": "expand_quality_corpora",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "record_image_digests",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "generate_release_manifest",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "verify_release_manifest",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "verify_phase_evidence",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "verify_sbom",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "verify_image_signatures",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "verify_provenance",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "tenant_isolation",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "bypass_suite",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "sql_security_unified",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "ai_adversarial",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "quality_benchmark",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "backup",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "restore",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "rollback",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "data_leakage",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "e2e_suite",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "chaos",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "performance",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "determinism",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "secret_rotation",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "dr_verification",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "customer_uat_template",
+      "exitCode": 0,
+      "ok": true
+    },
+    {
+      "name": "generate_final_acceptance",
+      "exitCode": 0,
+      "ok": true
+    }
+  ],
+  "pass": true
+}

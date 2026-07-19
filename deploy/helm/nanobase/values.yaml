@@ -1,0 +1,39 @@
+# Environment-specific values only in prod overlays:
+# hostname, secret refs, replicas, resources, endpoints, tenant rollout flags.
+# Code/prompts/policies MUST come from immutable image digests.
+
+global:
+  imageRegistry: registry.example.com/nanobase
+  digestOnly: true
+
+frontend:
+  image: frontend
+  digest: ""
+  replicas: 2
+
+backend:
+  image: backend
+  digest: ""
+  replicas: 2
+
+queryGateway:
+  image: query-gateway
+  digest: ""
+  replicas: 2
+
+podSecurity:
+  enforce: restricted
+
+networkPolicy:
+  enabled: true
+
+executionMode: PLAN_ONLY
+# Promote to QUERY_GATEWAY only after canary (§40–41)
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi

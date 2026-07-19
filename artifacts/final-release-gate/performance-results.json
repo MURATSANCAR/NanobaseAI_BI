@@ -1,0 +1,15 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "profile": "smoke",
+  "seconds": 2.0,
+  "ops": 18728330,
+  "connectionLeak": 0,
+  "taskLeak": 0,
+  "fdLeak": 0,
+  "memoryGrowth": 0,
+  "crossTenantResults": 0,
+  "maskingFailures": 0,
+  "uncontrolledCrash": 0,
+  "pass": true
+}

@@ -1,21 +1,2402 @@
-# SAP FI functional benchmark skeleton (150) — live expected results PENDING sandbox
-version: 1
-domain: SAP_FI
-cases:
-  - id: fi_open_receivable_cc1000
-    question: "1000 şirket kodu için açık alacak tutarı nedir?"
-    metric: open_receivable_amount
-    companyCode: "1000"
-    ledger: "0L"
-    currencyPolicy: COMPANY_CODE_CURRENCY
-    expect:
-      sourceResolution: APPROVED
-      companyCodeEnforced: true
-      reversalExcluded: true
-  - id: fi_cross_company_leak
-    question: "2000 şirket kodu açık alacak (yetkisiz)"
-    metric: open_receivable_amount
-    companyCode: "2000"
-    expect:
-      rejected: true
-      reason: SAP_AUTHORIZATION_FAILURE
+# SAP FI / CDS / OData Final Gate corpus (synthetic expected fingerprints)
+questions:
+  - id: sap-fi-0001
+    question: "open AR for company 0002 #1"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0001
+    criticalFinancial: false
+  - id: sap-fi-0002
+    question: "exclude reversed documents company 0003 #2"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0002
+    criticalFinancial: false
+  - id: sap-fi-0003
+    question: "ledger 0L balances company 0004 #3"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0003
+    criticalFinancial: false
+  - id: sap-fi-0004
+    question: "vendor payables company 0005 in TRY #4"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0004
+    criticalFinancial: false
+  - id: sap-fi-0005
+    question: "net sales company code 0006 #5"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0005
+    criticalFinancial: false
+  - id: sap-fi-0006
+    question: "open AR for company 0007 #6"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0006
+    criticalFinancial: false
+  - id: sap-fi-0007
+    question: "exclude reversed documents company 0008 #7"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0007
+    criticalFinancial: false
+  - id: sap-fi-0008
+    question: "ledger 0L balances company 0009 #8"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0008
+    criticalFinancial: false
+  - id: sap-fi-0009
+    question: "vendor payables company 0001 in TRY #9"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0009
+    criticalFinancial: false
+  - id: sap-fi-0010
+    question: "net sales company code 0002 #10"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0010
+    criticalFinancial: true
+  - id: sap-fi-0011
+    question: "open AR for company 0003 #11"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0011
+    criticalFinancial: false
+  - id: sap-fi-0012
+    question: "exclude reversed documents company 0004 #12"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0012
+    criticalFinancial: false
+  - id: sap-fi-0013
+    question: "ledger 0L balances company 0005 #13"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0013
+    criticalFinancial: false
+  - id: sap-fi-0014
+    question: "vendor payables company 0006 in TRY #14"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0014
+    criticalFinancial: false
+  - id: sap-fi-0015
+    question: "net sales company code 0007 #15"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0015
+    criticalFinancial: false
+  - id: sap-fi-0016
+    question: "open AR for company 0008 #16"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0016
+    criticalFinancial: false
+  - id: sap-fi-0017
+    question: "exclude reversed documents company 0009 #17"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0017
+    criticalFinancial: false
+  - id: sap-fi-0018
+    question: "ledger 0L balances company 0001 #18"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0018
+    criticalFinancial: false
+  - id: sap-fi-0019
+    question: "vendor payables company 0002 in TRY #19"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0019
+    criticalFinancial: false
+  - id: sap-fi-0020
+    question: "net sales company code 0003 #20"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0020
+    criticalFinancial: true
+  - id: sap-fi-0021
+    question: "open AR for company 0004 #21"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0021
+    criticalFinancial: false
+  - id: sap-fi-0022
+    question: "exclude reversed documents company 0005 #22"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0022
+    criticalFinancial: false
+  - id: sap-fi-0023
+    question: "ledger 0L balances company 0006 #23"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0023
+    criticalFinancial: false
+  - id: sap-fi-0024
+    question: "vendor payables company 0007 in TRY #24"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0024
+    criticalFinancial: false
+  - id: sap-fi-0025
+    question: "net sales company code 0008 #25"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0025
+    criticalFinancial: false
+  - id: sap-fi-0026
+    question: "open AR for company 0009 #26"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0026
+    criticalFinancial: false
+  - id: sap-fi-0027
+    question: "exclude reversed documents company 0001 #27"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0027
+    criticalFinancial: false
+  - id: sap-fi-0028
+    question: "ledger 0L balances company 0002 #28"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0028
+    criticalFinancial: false
+  - id: sap-fi-0029
+    question: "vendor payables company 0003 in TRY #29"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0029
+    criticalFinancial: false
+  - id: sap-fi-0030
+    question: "net sales company code 0004 #30"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0030
+    criticalFinancial: true
+  - id: sap-fi-0031
+    question: "open AR for company 0005 #31"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0031
+    criticalFinancial: false
+  - id: sap-fi-0032
+    question: "exclude reversed documents company 0006 #32"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0032
+    criticalFinancial: false
+  - id: sap-fi-0033
+    question: "ledger 0L balances company 0007 #33"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0033
+    criticalFinancial: false
+  - id: sap-fi-0034
+    question: "vendor payables company 0008 in TRY #34"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0034
+    criticalFinancial: false
+  - id: sap-fi-0035
+    question: "net sales company code 0009 #35"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0035
+    criticalFinancial: false
+  - id: sap-fi-0036
+    question: "open AR for company 0001 #36"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0036
+    criticalFinancial: false
+  - id: sap-fi-0037
+    question: "exclude reversed documents company 0002 #37"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0037
+    criticalFinancial: false
+  - id: sap-fi-0038
+    question: "ledger 0L balances company 0003 #38"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0038
+    criticalFinancial: false
+  - id: sap-fi-0039
+    question: "vendor payables company 0004 in TRY #39"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0039
+    criticalFinancial: false
+  - id: sap-fi-0040
+    question: "net sales company code 0005 #40"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0040
+    criticalFinancial: true
+  - id: sap-fi-0041
+    question: "open AR for company 0006 #41"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0041
+    criticalFinancial: false
+  - id: sap-fi-0042
+    question: "exclude reversed documents company 0007 #42"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0042
+    criticalFinancial: false
+  - id: sap-fi-0043
+    question: "ledger 0L balances company 0008 #43"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0043
+    criticalFinancial: false
+  - id: sap-fi-0044
+    question: "vendor payables company 0009 in TRY #44"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0044
+    criticalFinancial: false
+  - id: sap-fi-0045
+    question: "net sales company code 0001 #45"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0045
+    criticalFinancial: false
+  - id: sap-fi-0046
+    question: "open AR for company 0002 #46"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0046
+    criticalFinancial: false
+  - id: sap-fi-0047
+    question: "exclude reversed documents company 0003 #47"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0047
+    criticalFinancial: false
+  - id: sap-fi-0048
+    question: "ledger 0L balances company 0004 #48"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0048
+    criticalFinancial: false
+  - id: sap-fi-0049
+    question: "vendor payables company 0005 in TRY #49"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0049
+    criticalFinancial: false
+  - id: sap-fi-0050
+    question: "net sales company code 0006 #50"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0050
+    criticalFinancial: true
+  - id: sap-fi-0051
+    question: "open AR for company 0007 #51"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0051
+    criticalFinancial: false
+  - id: sap-fi-0052
+    question: "exclude reversed documents company 0008 #52"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0052
+    criticalFinancial: false
+  - id: sap-fi-0053
+    question: "ledger 0L balances company 0009 #53"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0053
+    criticalFinancial: false
+  - id: sap-fi-0054
+    question: "vendor payables company 0001 in TRY #54"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0054
+    criticalFinancial: false
+  - id: sap-fi-0055
+    question: "net sales company code 0002 #55"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0055
+    criticalFinancial: false
+  - id: sap-fi-0056
+    question: "open AR for company 0003 #56"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0056
+    criticalFinancial: false
+  - id: sap-fi-0057
+    question: "exclude reversed documents company 0004 #57"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0057
+    criticalFinancial: false
+  - id: sap-fi-0058
+    question: "ledger 0L balances company 0005 #58"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0058
+    criticalFinancial: false
+  - id: sap-fi-0059
+    question: "vendor payables company 0006 in TRY #59"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0059
+    criticalFinancial: false
+  - id: sap-fi-0060
+    question: "net sales company code 0007 #60"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0060
+    criticalFinancial: true
+  - id: sap-fi-0061
+    question: "open AR for company 0008 #61"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0061
+    criticalFinancial: false
+  - id: sap-fi-0062
+    question: "exclude reversed documents company 0009 #62"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0062
+    criticalFinancial: false
+  - id: sap-fi-0063
+    question: "ledger 0L balances company 0001 #63"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0063
+    criticalFinancial: false
+  - id: sap-fi-0064
+    question: "vendor payables company 0002 in TRY #64"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0064
+    criticalFinancial: false
+  - id: sap-fi-0065
+    question: "net sales company code 0003 #65"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0065
+    criticalFinancial: false
+  - id: sap-fi-0066
+    question: "open AR for company 0004 #66"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0066
+    criticalFinancial: false
+  - id: sap-fi-0067
+    question: "exclude reversed documents company 0005 #67"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0067
+    criticalFinancial: false
+  - id: sap-fi-0068
+    question: "ledger 0L balances company 0006 #68"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0068
+    criticalFinancial: false
+  - id: sap-fi-0069
+    question: "vendor payables company 0007 in TRY #69"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0069
+    criticalFinancial: false
+  - id: sap-fi-0070
+    question: "net sales company code 0008 #70"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0070
+    criticalFinancial: true
+  - id: sap-fi-0071
+    question: "open AR for company 0009 #71"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0071
+    criticalFinancial: false
+  - id: sap-fi-0072
+    question: "exclude reversed documents company 0001 #72"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0072
+    criticalFinancial: false
+  - id: sap-fi-0073
+    question: "ledger 0L balances company 0002 #73"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0073
+    criticalFinancial: false
+  - id: sap-fi-0074
+    question: "vendor payables company 0003 in TRY #74"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0074
+    criticalFinancial: false
+  - id: sap-fi-0075
+    question: "net sales company code 0004 #75"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0075
+    criticalFinancial: false
+  - id: sap-fi-0076
+    question: "open AR for company 0005 #76"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0076
+    criticalFinancial: false
+  - id: sap-fi-0077
+    question: "exclude reversed documents company 0006 #77"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0077
+    criticalFinancial: false
+  - id: sap-fi-0078
+    question: "ledger 0L balances company 0007 #78"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0078
+    criticalFinancial: false
+  - id: sap-fi-0079
+    question: "vendor payables company 0008 in TRY #79"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0079
+    criticalFinancial: false
+  - id: sap-fi-0080
+    question: "net sales company code 0009 #80"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0080
+    criticalFinancial: true
+  - id: sap-fi-0081
+    question: "open AR for company 0001 #81"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0081
+    criticalFinancial: false
+  - id: sap-fi-0082
+    question: "exclude reversed documents company 0002 #82"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0082
+    criticalFinancial: false
+  - id: sap-fi-0083
+    question: "ledger 0L balances company 0003 #83"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0083
+    criticalFinancial: false
+  - id: sap-fi-0084
+    question: "vendor payables company 0004 in TRY #84"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0084
+    criticalFinancial: false
+  - id: sap-fi-0085
+    question: "net sales company code 0005 #85"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0085
+    criticalFinancial: false
+  - id: sap-fi-0086
+    question: "open AR for company 0006 #86"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0086
+    criticalFinancial: false
+  - id: sap-fi-0087
+    question: "exclude reversed documents company 0007 #87"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0087
+    criticalFinancial: false
+  - id: sap-fi-0088
+    question: "ledger 0L balances company 0008 #88"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0088
+    criticalFinancial: false
+  - id: sap-fi-0089
+    question: "vendor payables company 0009 in TRY #89"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0089
+    criticalFinancial: false
+  - id: sap-fi-0090
+    question: "net sales company code 0001 #90"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0090
+    criticalFinancial: true
+  - id: sap-fi-0091
+    question: "open AR for company 0002 #91"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0091
+    criticalFinancial: false
+  - id: sap-fi-0092
+    question: "exclude reversed documents company 0003 #92"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0092
+    criticalFinancial: false
+  - id: sap-fi-0093
+    question: "ledger 0L balances company 0004 #93"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0093
+    criticalFinancial: false
+  - id: sap-fi-0094
+    question: "vendor payables company 0005 in TRY #94"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0094
+    criticalFinancial: false
+  - id: sap-fi-0095
+    question: "net sales company code 0006 #95"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0095
+    criticalFinancial: false
+  - id: sap-fi-0096
+    question: "open AR for company 0007 #96"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0096
+    criticalFinancial: false
+  - id: sap-fi-0097
+    question: "exclude reversed documents company 0008 #97"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0097
+    criticalFinancial: false
+  - id: sap-fi-0098
+    question: "ledger 0L balances company 0009 #98"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0098
+    criticalFinancial: false
+  - id: sap-fi-0099
+    question: "vendor payables company 0001 in TRY #99"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0099
+    criticalFinancial: false
+  - id: sap-fi-0100
+    question: "net sales company code 0002 #100"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0100
+    criticalFinancial: true
+  - id: sap-fi-0101
+    question: "open AR for company 0003 #101"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0101
+    criticalFinancial: false
+  - id: sap-fi-0102
+    question: "exclude reversed documents company 0004 #102"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0102
+    criticalFinancial: false
+  - id: sap-fi-0103
+    question: "ledger 0L balances company 0005 #103"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0103
+    criticalFinancial: false
+  - id: sap-fi-0104
+    question: "vendor payables company 0006 in TRY #104"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0104
+    criticalFinancial: false
+  - id: sap-fi-0105
+    question: "net sales company code 0007 #105"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0105
+    criticalFinancial: false
+  - id: sap-fi-0106
+    question: "open AR for company 0008 #106"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0106
+    criticalFinancial: false
+  - id: sap-fi-0107
+    question: "exclude reversed documents company 0009 #107"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0107
+    criticalFinancial: false
+  - id: sap-fi-0108
+    question: "ledger 0L balances company 0001 #108"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0108
+    criticalFinancial: false
+  - id: sap-fi-0109
+    question: "vendor payables company 0002 in TRY #109"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0109
+    criticalFinancial: false
+  - id: sap-fi-0110
+    question: "net sales company code 0003 #110"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0110
+    criticalFinancial: true
+  - id: sap-fi-0111
+    question: "open AR for company 0004 #111"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0111
+    criticalFinancial: false
+  - id: sap-fi-0112
+    question: "exclude reversed documents company 0005 #112"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0112
+    criticalFinancial: false
+  - id: sap-fi-0113
+    question: "ledger 0L balances company 0006 #113"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0113
+    criticalFinancial: false
+  - id: sap-fi-0114
+    question: "vendor payables company 0007 in TRY #114"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0114
+    criticalFinancial: false
+  - id: sap-fi-0115
+    question: "net sales company code 0008 #115"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0115
+    criticalFinancial: false
+  - id: sap-fi-0116
+    question: "open AR for company 0009 #116"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0116
+    criticalFinancial: false
+  - id: sap-fi-0117
+    question: "exclude reversed documents company 0001 #117"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0117
+    criticalFinancial: false
+  - id: sap-fi-0118
+    question: "ledger 0L balances company 0002 #118"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0118
+    criticalFinancial: false
+  - id: sap-fi-0119
+    question: "vendor payables company 0003 in TRY #119"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0119
+    criticalFinancial: false
+  - id: sap-fi-0120
+    question: "net sales company code 0004 #120"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0120
+    criticalFinancial: true
+  - id: sap-fi-0121
+    question: "open AR for company 0005 #121"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0121
+    criticalFinancial: false
+  - id: sap-fi-0122
+    question: "exclude reversed documents company 0006 #122"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0122
+    criticalFinancial: false
+  - id: sap-fi-0123
+    question: "ledger 0L balances company 0007 #123"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0123
+    criticalFinancial: false
+  - id: sap-fi-0124
+    question: "vendor payables company 0008 in TRY #124"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0124
+    criticalFinancial: false
+  - id: sap-fi-0125
+    question: "net sales company code 0009 #125"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0125
+    criticalFinancial: false
+  - id: sap-fi-0126
+    question: "open AR for company 0001 #126"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0126
+    criticalFinancial: false
+  - id: sap-fi-0127
+    question: "exclude reversed documents company 0002 #127"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0127
+    criticalFinancial: false
+  - id: sap-fi-0128
+    question: "ledger 0L balances company 0003 #128"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0128
+    criticalFinancial: false
+  - id: sap-fi-0129
+    question: "vendor payables company 0004 in TRY #129"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0129
+    criticalFinancial: false
+  - id: sap-fi-0130
+    question: "net sales company code 0005 #130"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0130
+    criticalFinancial: true
+  - id: sap-fi-0131
+    question: "open AR for company 0006 #131"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0131
+    criticalFinancial: false
+  - id: sap-fi-0132
+    question: "exclude reversed documents company 0007 #132"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0132
+    criticalFinancial: false
+  - id: sap-fi-0133
+    question: "ledger 0L balances company 0008 #133"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0133
+    criticalFinancial: false
+  - id: sap-fi-0134
+    question: "vendor payables company 0009 in TRY #134"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0134
+    criticalFinancial: false
+  - id: sap-fi-0135
+    question: "net sales company code 0001 #135"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0135
+    criticalFinancial: false
+  - id: sap-fi-0136
+    question: "open AR for company 0002 #136"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0136
+    criticalFinancial: false
+  - id: sap-fi-0137
+    question: "exclude reversed documents company 0003 #137"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0137
+    criticalFinancial: false
+  - id: sap-fi-0138
+    question: "ledger 0L balances company 0004 #138"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0138
+    criticalFinancial: false
+  - id: sap-fi-0139
+    question: "vendor payables company 0005 in TRY #139"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0139
+    criticalFinancial: false
+  - id: sap-fi-0140
+    question: "net sales company code 0006 #140"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0140
+    criticalFinancial: true
+  - id: sap-fi-0141
+    question: "open AR for company 0007 #141"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0141
+    criticalFinancial: false
+  - id: sap-fi-0142
+    question: "exclude reversed documents company 0008 #142"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0142
+    criticalFinancial: false
+  - id: sap-fi-0143
+    question: "ledger 0L balances company 0009 #143"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0143
+    criticalFinancial: false
+  - id: sap-fi-0144
+    question: "vendor payables company 0001 in TRY #144"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0144
+    criticalFinancial: false
+  - id: sap-fi-0145
+    question: "net sales company code 0002 #145"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0145
+    criticalFinancial: false
+  - id: sap-fi-0146
+    question: "open AR for company 0003 #146"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0146
+    criticalFinancial: false
+  - id: sap-fi-0147
+    question: "exclude reversed documents company 0004 #147"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0147
+    criticalFinancial: false
+  - id: sap-fi-0148
+    question: "ledger 0L balances company 0005 #148"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0148
+    criticalFinancial: false
+  - id: sap-fi-0149
+    question: "vendor payables company 0006 in TRY #149"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0149
+    criticalFinancial: false
+  - id: sap-fi-0150
+    question: "net sales company code 0007 #150"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0150
+    criticalFinancial: true
+  - id: sap-fi-0151
+    question: "open AR for company 0008 #151"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0151
+    criticalFinancial: false
+  - id: sap-fi-0152
+    question: "exclude reversed documents company 0009 #152"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0152
+    criticalFinancial: false
+  - id: sap-fi-0153
+    question: "ledger 0L balances company 0001 #153"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0153
+    criticalFinancial: false
+  - id: sap-fi-0154
+    question: "vendor payables company 0002 in TRY #154"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0154
+    criticalFinancial: false
+  - id: sap-fi-0155
+    question: "net sales company code 0003 #155"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0155
+    criticalFinancial: false
+  - id: sap-fi-0156
+    question: "open AR for company 0004 #156"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0156
+    criticalFinancial: false
+  - id: sap-fi-0157
+    question: "exclude reversed documents company 0005 #157"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0157
+    criticalFinancial: false
+  - id: sap-fi-0158
+    question: "ledger 0L balances company 0006 #158"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0158
+    criticalFinancial: false
+  - id: sap-fi-0159
+    question: "vendor payables company 0007 in TRY #159"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0159
+    criticalFinancial: false
+  - id: sap-fi-0160
+    question: "net sales company code 0008 #160"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0160
+    criticalFinancial: true
+  - id: sap-fi-0161
+    question: "open AR for company 0009 #161"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0161
+    criticalFinancial: false
+  - id: sap-fi-0162
+    question: "exclude reversed documents company 0001 #162"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0162
+    criticalFinancial: false
+  - id: sap-fi-0163
+    question: "ledger 0L balances company 0002 #163"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0163
+    criticalFinancial: false
+  - id: sap-fi-0164
+    question: "vendor payables company 0003 in TRY #164"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0164
+    criticalFinancial: false
+  - id: sap-fi-0165
+    question: "net sales company code 0004 #165"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0165
+    criticalFinancial: false
+  - id: sap-fi-0166
+    question: "open AR for company 0005 #166"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0166
+    criticalFinancial: false
+  - id: sap-fi-0167
+    question: "exclude reversed documents company 0006 #167"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0167
+    criticalFinancial: false
+  - id: sap-fi-0168
+    question: "ledger 0L balances company 0007 #168"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0168
+    criticalFinancial: false
+  - id: sap-fi-0169
+    question: "vendor payables company 0008 in TRY #169"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0169
+    criticalFinancial: false
+  - id: sap-fi-0170
+    question: "net sales company code 0009 #170"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0170
+    criticalFinancial: true
+  - id: sap-fi-0171
+    question: "open AR for company 0001 #171"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0171
+    criticalFinancial: false
+  - id: sap-fi-0172
+    question: "exclude reversed documents company 0002 #172"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0172
+    criticalFinancial: false
+  - id: sap-fi-0173
+    question: "ledger 0L balances company 0003 #173"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0173
+    criticalFinancial: false
+  - id: sap-fi-0174
+    question: "vendor payables company 0004 in TRY #174"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0174
+    criticalFinancial: false
+  - id: sap-fi-0175
+    question: "net sales company code 0005 #175"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0175
+    criticalFinancial: false
+  - id: sap-fi-0176
+    question: "open AR for company 0006 #176"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0176
+    criticalFinancial: false
+  - id: sap-fi-0177
+    question: "exclude reversed documents company 0007 #177"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0177
+    criticalFinancial: false
+  - id: sap-fi-0178
+    question: "ledger 0L balances company 0008 #178"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0178
+    criticalFinancial: false
+  - id: sap-fi-0179
+    question: "vendor payables company 0009 in TRY #179"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0179
+    criticalFinancial: false
+  - id: sap-fi-0180
+    question: "net sales company code 0001 #180"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0180
+    criticalFinancial: true
+  - id: sap-fi-0181
+    question: "open AR for company 0002 #181"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0181
+    criticalFinancial: false
+  - id: sap-fi-0182
+    question: "exclude reversed documents company 0003 #182"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0182
+    criticalFinancial: false
+  - id: sap-fi-0183
+    question: "ledger 0L balances company 0004 #183"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0183
+    criticalFinancial: false
+  - id: sap-fi-0184
+    question: "vendor payables company 0005 in TRY #184"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0184
+    criticalFinancial: false
+  - id: sap-fi-0185
+    question: "net sales company code 0006 #185"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0185
+    criticalFinancial: false
+  - id: sap-fi-0186
+    question: "open AR for company 0007 #186"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0186
+    criticalFinancial: false
+  - id: sap-fi-0187
+    question: "exclude reversed documents company 0008 #187"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0187
+    criticalFinancial: false
+  - id: sap-fi-0188
+    question: "ledger 0L balances company 0009 #188"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0188
+    criticalFinancial: false
+  - id: sap-fi-0189
+    question: "vendor payables company 0001 in TRY #189"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0189
+    criticalFinancial: false
+  - id: sap-fi-0190
+    question: "net sales company code 0002 #190"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0190
+    criticalFinancial: true
+  - id: sap-fi-0191
+    question: "open AR for company 0003 #191"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0191
+    criticalFinancial: false
+  - id: sap-fi-0192
+    question: "exclude reversed documents company 0004 #192"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0192
+    criticalFinancial: false
+  - id: sap-fi-0193
+    question: "ledger 0L balances company 0005 #193"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0193
+    criticalFinancial: false
+  - id: sap-fi-0194
+    question: "vendor payables company 0006 in TRY #194"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0194
+    criticalFinancial: false
+  - id: sap-fi-0195
+    question: "net sales company code 0007 #195"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0195
+    criticalFinancial: false
+  - id: sap-fi-0196
+    question: "open AR for company 0008 #196"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0196
+    criticalFinancial: false
+  - id: sap-fi-0197
+    question: "exclude reversed documents company 0009 #197"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0197
+    criticalFinancial: false
+  - id: sap-fi-0198
+    question: "ledger 0L balances company 0001 #198"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0198
+    criticalFinancial: false
+  - id: sap-fi-0199
+    question: "vendor payables company 0002 in TRY #199"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0199
+    criticalFinancial: false
+  - id: sap-fi-0200
+    question: "net sales company code 0003 #200"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0200
+    criticalFinancial: true
+  - id: sap-fi-0201
+    question: "open AR for company 0004 #201"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0201
+    criticalFinancial: false
+  - id: sap-fi-0202
+    question: "exclude reversed documents company 0005 #202"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0202
+    criticalFinancial: false
+  - id: sap-fi-0203
+    question: "ledger 0L balances company 0006 #203"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0203
+    criticalFinancial: false
+  - id: sap-fi-0204
+    question: "vendor payables company 0007 in TRY #204"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0204
+    criticalFinancial: false
+  - id: sap-fi-0205
+    question: "net sales company code 0008 #205"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0205
+    criticalFinancial: false
+  - id: sap-fi-0206
+    question: "open AR for company 0009 #206"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0206
+    criticalFinancial: false
+  - id: sap-fi-0207
+    question: "exclude reversed documents company 0001 #207"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0207
+    criticalFinancial: false
+  - id: sap-fi-0208
+    question: "ledger 0L balances company 0002 #208"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0208
+    criticalFinancial: false
+  - id: sap-fi-0209
+    question: "vendor payables company 0003 in TRY #209"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0209
+    criticalFinancial: false
+  - id: sap-fi-0210
+    question: "net sales company code 0004 #210"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0210
+    criticalFinancial: true
+  - id: sap-fi-0211
+    question: "open AR for company 0005 #211"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0211
+    criticalFinancial: false
+  - id: sap-fi-0212
+    question: "exclude reversed documents company 0006 #212"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0212
+    criticalFinancial: false
+  - id: sap-fi-0213
+    question: "ledger 0L balances company 0007 #213"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0213
+    criticalFinancial: false
+  - id: sap-fi-0214
+    question: "vendor payables company 0008 in TRY #214"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0214
+    criticalFinancial: false
+  - id: sap-fi-0215
+    question: "net sales company code 0009 #215"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0215
+    criticalFinancial: false
+  - id: sap-fi-0216
+    question: "open AR for company 0001 #216"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0216
+    criticalFinancial: false
+  - id: sap-fi-0217
+    question: "exclude reversed documents company 0002 #217"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0217
+    criticalFinancial: false
+  - id: sap-fi-0218
+    question: "ledger 0L balances company 0003 #218"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0218
+    criticalFinancial: false
+  - id: sap-fi-0219
+    question: "vendor payables company 0004 in TRY #219"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0219
+    criticalFinancial: false
+  - id: sap-fi-0220
+    question: "net sales company code 0005 #220"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0220
+    criticalFinancial: true
+  - id: sap-fi-0221
+    question: "open AR for company 0006 #221"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0221
+    criticalFinancial: false
+  - id: sap-fi-0222
+    question: "exclude reversed documents company 0007 #222"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0222
+    criticalFinancial: false
+  - id: sap-fi-0223
+    question: "ledger 0L balances company 0008 #223"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0223
+    criticalFinancial: false
+  - id: sap-fi-0224
+    question: "vendor payables company 0009 in TRY #224"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0224
+    criticalFinancial: false
+  - id: sap-fi-0225
+    question: "net sales company code 0001 #225"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0225
+    criticalFinancial: false
+  - id: sap-fi-0226
+    question: "open AR for company 0002 #226"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0226
+    criticalFinancial: false
+  - id: sap-fi-0227
+    question: "exclude reversed documents company 0003 #227"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0227
+    criticalFinancial: false
+  - id: sap-fi-0228
+    question: "ledger 0L balances company 0004 #228"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0228
+    criticalFinancial: false
+  - id: sap-fi-0229
+    question: "vendor payables company 0005 in TRY #229"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0229
+    criticalFinancial: false
+  - id: sap-fi-0230
+    question: "net sales company code 0006 #230"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0230
+    criticalFinancial: true
+  - id: sap-fi-0231
+    question: "open AR for company 0007 #231"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0231
+    criticalFinancial: false
+  - id: sap-fi-0232
+    question: "exclude reversed documents company 0008 #232"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0232
+    criticalFinancial: false
+  - id: sap-fi-0233
+    question: "ledger 0L balances company 0009 #233"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0233
+    criticalFinancial: false
+  - id: sap-fi-0234
+    question: "vendor payables company 0001 in TRY #234"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0234
+    criticalFinancial: false
+  - id: sap-fi-0235
+    question: "net sales company code 0002 #235"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0235
+    criticalFinancial: false
+  - id: sap-fi-0236
+    question: "open AR for company 0003 #236"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0236
+    criticalFinancial: false
+  - id: sap-fi-0237
+    question: "exclude reversed documents company 0004 #237"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0237
+    criticalFinancial: false
+  - id: sap-fi-0238
+    question: "ledger 0L balances company 0005 #238"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0238
+    criticalFinancial: false
+  - id: sap-fi-0239
+    question: "vendor payables company 0006 in TRY #239"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0239
+    criticalFinancial: false
+  - id: sap-fi-0240
+    question: "net sales company code 0007 #240"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0240
+    criticalFinancial: true
+  - id: sap-fi-0241
+    question: "open AR for company 0008 #241"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0241
+    criticalFinancial: false
+  - id: sap-fi-0242
+    question: "exclude reversed documents company 0009 #242"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0242
+    criticalFinancial: false
+  - id: sap-fi-0243
+    question: "ledger 0L balances company 0001 #243"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0243
+    criticalFinancial: false
+  - id: sap-fi-0244
+    question: "vendor payables company 0002 in TRY #244"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0244
+    criticalFinancial: false
+  - id: sap-fi-0245
+    question: "net sales company code 0003 #245"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0245
+    criticalFinancial: false
+  - id: sap-fi-0246
+    question: "open AR for company 0004 #246"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0246
+    criticalFinancial: false
+  - id: sap-fi-0247
+    question: "exclude reversed documents company 0005 #247"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0247
+    criticalFinancial: false
+  - id: sap-fi-0248
+    question: "ledger 0L balances company 0006 #248"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0248
+    criticalFinancial: false
+  - id: sap-fi-0249
+    question: "vendor payables company 0007 in TRY #249"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0249
+    criticalFinancial: false
+  - id: sap-fi-0250
+    question: "net sales company code 0008 #250"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0250
+    criticalFinancial: true
+  - id: sap-fi-0251
+    question: "open AR for company 0009 #251"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0251
+    criticalFinancial: false
+  - id: sap-fi-0252
+    question: "exclude reversed documents company 0001 #252"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0252
+    criticalFinancial: false
+  - id: sap-fi-0253
+    question: "ledger 0L balances company 0002 #253"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0253
+    criticalFinancial: false
+  - id: sap-fi-0254
+    question: "vendor payables company 0003 in TRY #254"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0254
+    criticalFinancial: false
+  - id: sap-fi-0255
+    question: "net sales company code 0004 #255"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0255
+    criticalFinancial: false
+  - id: sap-fi-0256
+    question: "open AR for company 0005 #256"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0256
+    criticalFinancial: false
+  - id: sap-fi-0257
+    question: "exclude reversed documents company 0006 #257"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0257
+    criticalFinancial: false
+  - id: sap-fi-0258
+    question: "ledger 0L balances company 0007 #258"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0258
+    criticalFinancial: false
+  - id: sap-fi-0259
+    question: "vendor payables company 0008 in TRY #259"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0259
+    criticalFinancial: false
+  - id: sap-fi-0260
+    question: "net sales company code 0009 #260"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0260
+    criticalFinancial: true
+  - id: sap-fi-0261
+    question: "open AR for company 0001 #261"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0261
+    criticalFinancial: false
+  - id: sap-fi-0262
+    question: "exclude reversed documents company 0002 #262"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0262
+    criticalFinancial: false
+  - id: sap-fi-0263
+    question: "ledger 0L balances company 0003 #263"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0263
+    criticalFinancial: false
+  - id: sap-fi-0264
+    question: "vendor payables company 0004 in TRY #264"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0264
+    criticalFinancial: false
+  - id: sap-fi-0265
+    question: "net sales company code 0005 #265"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0265
+    criticalFinancial: false
+  - id: sap-fi-0266
+    question: "open AR for company 0006 #266"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0266
+    criticalFinancial: false
+  - id: sap-fi-0267
+    question: "exclude reversed documents company 0007 #267"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0267
+    criticalFinancial: false
+  - id: sap-fi-0268
+    question: "ledger 0L balances company 0008 #268"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0268
+    criticalFinancial: false
+  - id: sap-fi-0269
+    question: "vendor payables company 0009 in TRY #269"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0269
+    criticalFinancial: false
+  - id: sap-fi-0270
+    question: "net sales company code 0001 #270"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0270
+    criticalFinancial: true
+  - id: sap-fi-0271
+    question: "open AR for company 0002 #271"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0271
+    criticalFinancial: false
+  - id: sap-fi-0272
+    question: "exclude reversed documents company 0003 #272"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0272
+    criticalFinancial: false
+  - id: sap-fi-0273
+    question: "ledger 0L balances company 0004 #273"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0273
+    criticalFinancial: false
+  - id: sap-fi-0274
+    question: "vendor payables company 0005 in TRY #274"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0274
+    criticalFinancial: false
+  - id: sap-fi-0275
+    question: "net sales company code 0006 #275"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0275
+    criticalFinancial: false
+  - id: sap-fi-0276
+    question: "open AR for company 0007 #276"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0276
+    criticalFinancial: false
+  - id: sap-fi-0277
+    question: "exclude reversed documents company 0008 #277"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0277
+    criticalFinancial: false
+  - id: sap-fi-0278
+    question: "ledger 0L balances company 0009 #278"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0278
+    criticalFinancial: false
+  - id: sap-fi-0279
+    question: "vendor payables company 0001 in TRY #279"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0279
+    criticalFinancial: false
+  - id: sap-fi-0280
+    question: "net sales company code 0002 #280"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0280
+    criticalFinancial: true
+  - id: sap-fi-0281
+    question: "open AR for company 0003 #281"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0281
+    criticalFinancial: false
+  - id: sap-fi-0282
+    question: "exclude reversed documents company 0004 #282"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0282
+    criticalFinancial: false
+  - id: sap-fi-0283
+    question: "ledger 0L balances company 0005 #283"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0283
+    criticalFinancial: false
+  - id: sap-fi-0284
+    question: "vendor payables company 0006 in TRY #284"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0284
+    criticalFinancial: false
+  - id: sap-fi-0285
+    question: "net sales company code 0007 #285"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0285
+    criticalFinancial: false
+  - id: sap-fi-0286
+    question: "open AR for company 0008 #286"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0286
+    criticalFinancial: false
+  - id: sap-fi-0287
+    question: "exclude reversed documents company 0009 #287"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0287
+    criticalFinancial: false
+  - id: sap-fi-0288
+    question: "ledger 0L balances company 0001 #288"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0288
+    criticalFinancial: false
+  - id: sap-fi-0289
+    question: "vendor payables company 0002 in TRY #289"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0289
+    criticalFinancial: false
+  - id: sap-fi-0290
+    question: "net sales company code 0003 #290"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0290
+    criticalFinancial: true
+  - id: sap-fi-0291
+    question: "open AR for company 0004 #291"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0291
+    criticalFinancial: false
+  - id: sap-fi-0292
+    question: "exclude reversed documents company 0005 #292"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0292
+    criticalFinancial: false
+  - id: sap-fi-0293
+    question: "ledger 0L balances company 0006 #293"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0293
+    criticalFinancial: false
+  - id: sap-fi-0294
+    question: "vendor payables company 0007 in TRY #294"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0294
+    criticalFinancial: false
+  - id: sap-fi-0295
+    question: "net sales company code 0008 #295"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0295
+    criticalFinancial: false
+  - id: sap-fi-0296
+    question: "open AR for company 0009 #296"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0296
+    criticalFinancial: false
+  - id: sap-fi-0297
+    question: "exclude reversed documents company 0001 #297"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0297
+    criticalFinancial: false
+  - id: sap-fi-0298
+    question: "ledger 0L balances company 0002 #298"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0298
+    criticalFinancial: false
+  - id: sap-fi-0299
+    question: "vendor payables company 0003 in TRY #299"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0299
+    criticalFinancial: false
+  - id: sap-fi-0300
+    question: "net sales company code 0004 #300"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0300
+    criticalFinancial: true
+  - id: sap-fi-0301
+    question: "open AR for company 0005 #301"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0301
+    criticalFinancial: false
+  - id: sap-fi-0302
+    question: "exclude reversed documents company 0006 #302"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0302
+    criticalFinancial: false
+  - id: sap-fi-0303
+    question: "ledger 0L balances company 0007 #303"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0303
+    criticalFinancial: false
+  - id: sap-fi-0304
+    question: "vendor payables company 0008 in TRY #304"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0304
+    criticalFinancial: false
+  - id: sap-fi-0305
+    question: "net sales company code 0009 #305"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0305
+    criticalFinancial: false
+  - id: sap-fi-0306
+    question: "open AR for company 0001 #306"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0306
+    criticalFinancial: false
+  - id: sap-fi-0307
+    question: "exclude reversed documents company 0002 #307"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0307
+    criticalFinancial: false
+  - id: sap-fi-0308
+    question: "ledger 0L balances company 0003 #308"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0308
+    criticalFinancial: false
+  - id: sap-fi-0309
+    question: "vendor payables company 0004 in TRY #309"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0309
+    criticalFinancial: false
+  - id: sap-fi-0310
+    question: "net sales company code 0005 #310"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0310
+    criticalFinancial: true
+  - id: sap-fi-0311
+    question: "open AR for company 0006 #311"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0311
+    criticalFinancial: false
+  - id: sap-fi-0312
+    question: "exclude reversed documents company 0007 #312"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0312
+    criticalFinancial: false
+  - id: sap-fi-0313
+    question: "ledger 0L balances company 0008 #313"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0313
+    criticalFinancial: false
+  - id: sap-fi-0314
+    question: "vendor payables company 0009 in TRY #314"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0314
+    criticalFinancial: false
+  - id: sap-fi-0315
+    question: "net sales company code 0001 #315"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0315
+    criticalFinancial: false
+  - id: sap-fi-0316
+    question: "open AR for company 0002 #316"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0316
+    criticalFinancial: false
+  - id: sap-fi-0317
+    question: "exclude reversed documents company 0003 #317"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0317
+    criticalFinancial: false
+  - id: sap-fi-0318
+    question: "ledger 0L balances company 0004 #318"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0318
+    criticalFinancial: false
+  - id: sap-fi-0319
+    question: "vendor payables company 0005 in TRY #319"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0319
+    criticalFinancial: false
+  - id: sap-fi-0320
+    question: "net sales company code 0006 #320"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0320
+    criticalFinancial: true
+  - id: sap-fi-0321
+    question: "open AR for company 0007 #321"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0321
+    criticalFinancial: false
+  - id: sap-fi-0322
+    question: "exclude reversed documents company 0008 #322"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0322
+    criticalFinancial: false
+  - id: sap-fi-0323
+    question: "ledger 0L balances company 0009 #323"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0323
+    criticalFinancial: false
+  - id: sap-fi-0324
+    question: "vendor payables company 0001 in TRY #324"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0324
+    criticalFinancial: false
+  - id: sap-fi-0325
+    question: "net sales company code 0002 #325"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0325
+    criticalFinancial: false
+  - id: sap-fi-0326
+    question: "open AR for company 0003 #326"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0326
+    criticalFinancial: false
+  - id: sap-fi-0327
+    question: "exclude reversed documents company 0004 #327"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0327
+    criticalFinancial: false
+  - id: sap-fi-0328
+    question: "ledger 0L balances company 0005 #328"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0328
+    criticalFinancial: false
+  - id: sap-fi-0329
+    question: "vendor payables company 0006 in TRY #329"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0329
+    criticalFinancial: false
+  - id: sap-fi-0330
+    question: "net sales company code 0007 #330"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0330
+    criticalFinancial: true
+  - id: sap-fi-0331
+    question: "open AR for company 0008 #331"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0331
+    criticalFinancial: false
+  - id: sap-fi-0332
+    question: "exclude reversed documents company 0009 #332"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0332
+    criticalFinancial: false
+  - id: sap-fi-0333
+    question: "ledger 0L balances company 0001 #333"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0333
+    criticalFinancial: false
+  - id: sap-fi-0334
+    question: "vendor payables company 0002 in TRY #334"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0334
+    criticalFinancial: false
+  - id: sap-fi-0335
+    question: "net sales company code 0003 #335"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0335
+    criticalFinancial: false
+  - id: sap-fi-0336
+    question: "open AR for company 0004 #336"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0336
+    criticalFinancial: false
+  - id: sap-fi-0337
+    question: "exclude reversed documents company 0005 #337"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0337
+    criticalFinancial: false
+  - id: sap-fi-0338
+    question: "ledger 0L balances company 0006 #338"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0338
+    criticalFinancial: false
+  - id: sap-fi-0339
+    question: "vendor payables company 0007 in TRY #339"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0339
+    criticalFinancial: false
+  - id: sap-fi-0340
+    question: "net sales company code 0008 #340"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0340
+    criticalFinancial: true
+  - id: sap-fi-0341
+    question: "open AR for company 0009 #341"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0341
+    criticalFinancial: false
+  - id: sap-fi-0342
+    question: "exclude reversed documents company 0001 #342"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0342
+    criticalFinancial: false
+  - id: sap-fi-0343
+    question: "ledger 0L balances company 0002 #343"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0343
+    criticalFinancial: false
+  - id: sap-fi-0344
+    question: "vendor payables company 0003 in TRY #344"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0344
+    criticalFinancial: false
+  - id: sap-fi-0345
+    question: "net sales company code 0004 #345"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0345
+    criticalFinancial: false
+  - id: sap-fi-0346
+    question: "open AR for company 0005 #346"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0346
+    criticalFinancial: false
+  - id: sap-fi-0347
+    question: "exclude reversed documents company 0006 #347"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0347
+    criticalFinancial: false
+  - id: sap-fi-0348
+    question: "ledger 0L balances company 0007 #348"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0348
+    criticalFinancial: false
+  - id: sap-fi-0349
+    question: "vendor payables company 0008 in TRY #349"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0349
+    criticalFinancial: false
+  - id: sap-fi-0350
+    question: "net sales company code 0009 #350"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0350
+    criticalFinancial: true
+  - id: sap-fi-0351
+    question: "open AR for company 0001 #351"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0351
+    criticalFinancial: false
+  - id: sap-fi-0352
+    question: "exclude reversed documents company 0002 #352"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0352
+    criticalFinancial: false
+  - id: sap-fi-0353
+    question: "ledger 0L balances company 0003 #353"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0353
+    criticalFinancial: false
+  - id: sap-fi-0354
+    question: "vendor payables company 0004 in TRY #354"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0354
+    criticalFinancial: false
+  - id: sap-fi-0355
+    question: "net sales company code 0005 #355"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0355
+    criticalFinancial: false
+  - id: sap-fi-0356
+    question: "open AR for company 0006 #356"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0356
+    criticalFinancial: false
+  - id: sap-fi-0357
+    question: "exclude reversed documents company 0007 #357"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0357
+    criticalFinancial: false
+  - id: sap-fi-0358
+    question: "ledger 0L balances company 0008 #358"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0358
+    criticalFinancial: false
+  - id: sap-fi-0359
+    question: "vendor payables company 0009 in TRY #359"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0359
+    criticalFinancial: false
+  - id: sap-fi-0360
+    question: "net sales company code 0001 #360"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0360
+    criticalFinancial: true
+  - id: sap-fi-0361
+    question: "open AR for company 0002 #361"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0361
+    criticalFinancial: false
+  - id: sap-fi-0362
+    question: "exclude reversed documents company 0003 #362"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0362
+    criticalFinancial: false
+  - id: sap-fi-0363
+    question: "ledger 0L balances company 0004 #363"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0363
+    criticalFinancial: false
+  - id: sap-fi-0364
+    question: "vendor payables company 0005 in TRY #364"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0364
+    criticalFinancial: false
+  - id: sap-fi-0365
+    question: "net sales company code 0006 #365"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0365
+    criticalFinancial: false
+  - id: sap-fi-0366
+    question: "open AR for company 0007 #366"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0366
+    criticalFinancial: false
+  - id: sap-fi-0367
+    question: "exclude reversed documents company 0008 #367"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0367
+    criticalFinancial: false
+  - id: sap-fi-0368
+    question: "ledger 0L balances company 0009 #368"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0368
+    criticalFinancial: false
+  - id: sap-fi-0369
+    question: "vendor payables company 0001 in TRY #369"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0369
+    criticalFinancial: false
+  - id: sap-fi-0370
+    question: "net sales company code 0002 #370"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0370
+    criticalFinancial: true
+  - id: sap-fi-0371
+    question: "open AR for company 0003 #371"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0371
+    criticalFinancial: false
+  - id: sap-fi-0372
+    question: "exclude reversed documents company 0004 #372"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0372
+    criticalFinancial: false
+  - id: sap-fi-0373
+    question: "ledger 0L balances company 0005 #373"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0373
+    criticalFinancial: false
+  - id: sap-fi-0374
+    question: "vendor payables company 0006 in TRY #374"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0374
+    criticalFinancial: false
+  - id: sap-fi-0375
+    question: "net sales company code 0007 #375"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0375
+    criticalFinancial: false
+  - id: sap-fi-0376
+    question: "open AR for company 0008 #376"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0376
+    criticalFinancial: false
+  - id: sap-fi-0377
+    question: "exclude reversed documents company 0009 #377"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0377
+    criticalFinancial: false
+  - id: sap-fi-0378
+    question: "ledger 0L balances company 0001 #378"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0378
+    criticalFinancial: false
+  - id: sap-fi-0379
+    question: "vendor payables company 0002 in TRY #379"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0379
+    criticalFinancial: false
+  - id: sap-fi-0380
+    question: "net sales company code 0003 #380"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0380
+    criticalFinancial: true
+  - id: sap-fi-0381
+    question: "open AR for company 0004 #381"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0381
+    criticalFinancial: false
+  - id: sap-fi-0382
+    question: "exclude reversed documents company 0005 #382"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0382
+    criticalFinancial: false
+  - id: sap-fi-0383
+    question: "ledger 0L balances company 0006 #383"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0383
+    criticalFinancial: false
+  - id: sap-fi-0384
+    question: "vendor payables company 0007 in TRY #384"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0384
+    criticalFinancial: false
+  - id: sap-fi-0385
+    question: "net sales company code 0008 #385"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0385
+    criticalFinancial: false
+  - id: sap-fi-0386
+    question: "open AR for company 0009 #386"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0386
+    criticalFinancial: false
+  - id: sap-fi-0387
+    question: "exclude reversed documents company 0001 #387"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0387
+    criticalFinancial: false
+  - id: sap-fi-0388
+    question: "ledger 0L balances company 0002 #388"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0388
+    criticalFinancial: false
+  - id: sap-fi-0389
+    question: "vendor payables company 0003 in TRY #389"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0389
+    criticalFinancial: false
+  - id: sap-fi-0390
+    question: "net sales company code 0004 #390"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0390
+    criticalFinancial: true
+  - id: sap-fi-0391
+    question: "open AR for company 0005 #391"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0391
+    criticalFinancial: false
+  - id: sap-fi-0392
+    question: "exclude reversed documents company 0006 #392"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0392
+    criticalFinancial: false
+  - id: sap-fi-0393
+    question: "ledger 0L balances company 0007 #393"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0393
+    criticalFinancial: false
+  - id: sap-fi-0394
+    question: "vendor payables company 0008 in TRY #394"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0394
+    criticalFinancial: false
+  - id: sap-fi-0395
+    question: "net sales company code 0009 #395"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0395
+    criticalFinancial: false
+  - id: sap-fi-0396
+    question: "open AR for company 0001 #396"
+    expectedMetric: fi_open_ar
+    expectedTables: ["I_OperationalAcctgDocItem"]
+    expectedResultFingerprint: sap-fp-0396
+    criticalFinancial: false
+  - id: sap-fi-0397
+    question: "exclude reversed documents company 0002 #397"
+    expectedMetric: fi_reversal
+    expectedTables: ["I_JournalEntry"]
+    expectedResultFingerprint: sap-fp-0397
+    criticalFinancial: false
+  - id: sap-fi-0398
+    question: "ledger 0L balances company 0003 #398"
+    expectedMetric: fi_ledger
+    expectedTables: ["I_GLAccountLineItem"]
+    expectedResultFingerprint: sap-fp-0398
+    criticalFinancial: false
+  - id: sap-fi-0399
+    question: "vendor payables company 0004 in TRY #399"
+    expectedMetric: fi_ap_try
+    expectedTables: ["I_SupplierInvoice"]
+    expectedResultFingerprint: sap-fp-0399
+    criticalFinancial: false
+  - id: sap-fi-0400
+    question: "net sales company code 0005 #400"
+    expectedMetric: fi_net_sales
+    expectedTables: ["I_JournalEntryItem"]
+    expectedResultFingerprint: sap-fp-0400
+    criticalFinancial: true

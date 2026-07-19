@@ -1,0 +1,8 @@
+{
+  "type": "metadata-backup-placeholder",
+  "reason": "pg_dump not installed",
+  "host": "127.0.0.1",
+  "port": 5434,
+  "db": "bi_meta",
+  "note": "Customer production DB backups are out of Nanobase scope"
+}

@@ -1,0 +1,54 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nanobase-default-deny
+  namespace: nanobase
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-api
+  namespace: nanobase
+spec:
+  podSelector:
+    matchLabels:
+      app: nanobase-api
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8790
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-dbgpt-to-customer-db
+  namespace: nanobase
+spec:
+  podSelector:
+    matchLabels:
+      app: dbgpt
+  policyTypes: ["Egress"]
+  egress:
+    # DNS only + internal model/qdrant — no customer DB CIDRs
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app: qdrant
+    - to:
+        - podSelector:
+            matchLabels:
+              app: qwen
+# Real egress deny tests must probe TCP connect from DB-GPT pod to customer PG/Oracle ports and expect failure.

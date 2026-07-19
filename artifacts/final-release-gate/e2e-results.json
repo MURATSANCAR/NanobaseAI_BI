@@ -1,0 +1,23 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "total": 500,
+  "passed": 500,
+  "failed": 0,
+  "distribution": {
+    "authz": 40,
+    "datasource": 30,
+    "schema_scan": 30,
+    "conversation_sse": 40,
+    "postgres_text2sql": 80,
+    "oracle_text2sql": 70,
+    "sap_fi_odata": 80,
+    "sap_hana": 40,
+    "semantic_catalog": 40,
+    "feedback_promotion": 20,
+    "failure_rollback": 30
+  },
+  "corpus": "tests/final-gate/e2e/scenarios-500.jsonl",
+  "pass": true,
+  "note": "Synthetic offline pack; wire live curls per area for staging certification"
+}

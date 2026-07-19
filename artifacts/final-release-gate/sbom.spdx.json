@@ -1,0 +1,43 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "nanobase-text2sql",
+  "documentNamespace": "https://nanobase.ai/spdx/75aae38c08743c9279f539e35f44784862958a62",
+  "creationInfo": {
+    "created": "2026-07-19T16:34:47Z",
+    "creators": [
+      "Tool: nanobase-release-gate"
+    ],
+    "comment": "Stub SBOM — replace with syft CycloneDX/SPDX in CI"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-requirements-txt",
+      "name": "requirements.txt",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-json",
+      "name": "package.json",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false
+    }
+  ],
+  "files": [],
+  "relationships": [],
+  "nanobase": {
+    "gitCommit": "75aae38c08743c9279f539e35f44784862958a62",
+    "stub": true,
+    "includes": [
+      "python-packages",
+      "node-packages",
+      "os-packages",
+      "native-libraries",
+      "oracle-sap-clients",
+      "dbgpt-deps",
+      "llama-cpp-build"
+    ]
+  }
+}

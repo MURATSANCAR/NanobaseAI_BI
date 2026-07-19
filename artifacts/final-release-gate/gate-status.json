@@ -1,0 +1,103 @@
+{
+  "status": "VERIFYING",
+  "release": "1.0.0-rc.1",
+  "updatedAt": "2026-07-19T16:34:51Z",
+  "history": [
+    {
+      "from": "NOT_STARTED",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:07Z",
+      "note": "vertical slice start"
+    },
+    {
+      "from": "PREPARING",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:07Z",
+      "note": "manifest generated"
+    },
+    {
+      "from": "PREPARING",
+      "to": "RELEASE_CANDIDATE_FROZEN",
+      "at": "2026-07-19T16:34:07Z",
+      "note": "RC freeze after manifest"
+    },
+    {
+      "from": "RELEASE_CANDIDATE_FROZEN",
+      "to": "VERIFYING",
+      "at": "2026-07-19T16:34:11Z",
+      "note": "acceptance recommended=NO_GO"
+    },
+    {
+      "from": "VERIFYING",
+      "to": "BLOCKED",
+      "at": "2026-07-19T16:34:11Z",
+      "note": "vertical slice complete"
+    },
+    {
+      "from": "BLOCKED",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:24Z",
+      "note": "vertical slice start"
+    },
+    {
+      "from": "PREPARING",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:24Z",
+      "note": "manifest generated"
+    },
+    {
+      "from": "PREPARING",
+      "to": "RELEASE_CANDIDATE_FROZEN",
+      "at": "2026-07-19T16:34:24Z",
+      "note": "RC freeze after manifest"
+    },
+    {
+      "from": "RELEASE_CANDIDATE_FROZEN",
+      "to": "GO",
+      "at": "2026-07-19T16:34:28Z",
+      "note": "acceptance recommended=GO"
+    },
+    {
+      "from": "GO",
+      "to": "VERIFYING",
+      "at": "2026-07-19T16:34:28Z",
+      "note": "vertical slice complete"
+    },
+    {
+      "from": "VERIFYING",
+      "to": "CUSTOMER_ACCEPTANCE",
+      "at": "2026-07-19T16:34:41Z",
+      "note": "acceptance recommended=BLOCKED"
+    },
+    {
+      "from": "CUSTOMER_ACCEPTANCE",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:47Z",
+      "note": "vertical slice start"
+    },
+    {
+      "from": "PREPARING",
+      "to": "PREPARING",
+      "at": "2026-07-19T16:34:47Z",
+      "note": "manifest generated"
+    },
+    {
+      "from": "PREPARING",
+      "to": "RELEASE_CANDIDATE_FROZEN",
+      "at": "2026-07-19T16:34:47Z",
+      "note": "RC freeze after manifest"
+    },
+    {
+      "from": "RELEASE_CANDIDATE_FROZEN",
+      "to": "CUSTOMER_ACCEPTANCE",
+      "at": "2026-07-19T16:34:50Z",
+      "note": "acceptance recommended=BLOCKED"
+    },
+    {
+      "from": "CUSTOMER_ACCEPTANCE",
+      "to": "VERIFYING",
+      "at": "2026-07-19T16:34:51Z",
+      "note": "vertical slice complete"
+    }
+  ]
+}

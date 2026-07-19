@@ -1,0 +1,21 @@
+{
+  "release": "1.0.0",
+  "rc": "1.0.0-rc.1",
+  "decision": "BLOCKED",
+  "signedAt": null,
+  "signers": [],
+  "acceptedRisks": [],
+  "evidenceManifestHash": "sha256:39f26129798ca2bbc8302f0f2bc12cb0ba979881c30681e7010a42b9ce56ded3",
+  "matrix": {
+    "phase_evidence": "PASS",
+    "tenant_isolation": "PASS",
+    "query_gateway_bypass": "PASS",
+    "sql_security": "PASS",
+    "ai_adversarial": "PASS",
+    "quality_benchmark": "PASS",
+    "backup_restore": "PASS",
+    "rollback": "PASS",
+    "data_leakage": "PASS"
+  },
+  "generatedAt": "2026-07-19T16:34:50Z"
+}

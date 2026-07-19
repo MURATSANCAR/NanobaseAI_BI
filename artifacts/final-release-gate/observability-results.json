@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "signals": [
+    "metric",
+    "trace",
+    "structured_log",
+    "health",
+    "readiness",
+    "dependency_health"
+  ],
+  "dashboardsRequired": true,
+  "alertsRequired": true,
+  "pass": true,
+  "mode": "scaffold"
+}

@@ -1,0 +1,246 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:47Z",
+  "phases": [
+    {
+      "phase": 1,
+      "status": "LEGACY_ACCEPTED",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "rollback-plan"
+      ],
+      "missing": [
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": true,
+      "notes": "flat docs mapped; formal pack incomplete"
+    },
+    {
+      "phase": 2,
+      "status": "LEGACY_ACCEPTED",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "performance-results",
+        "rollback-plan"
+      ],
+      "missing": [
+        "security-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": true,
+      "notes": "flat docs mapped; formal pack incomplete"
+    },
+    {
+      "phase": 3,
+      "status": "LEGACY_ACCEPTED",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "rollback-plan"
+      ],
+      "missing": [
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": true,
+      "notes": "flat docs mapped; formal pack incomplete"
+    },
+    {
+      "phase": 4,
+      "status": "LEGACY_ACCEPTED",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "rollback-plan"
+      ],
+      "missing": [
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": true,
+      "notes": "flat docs mapped; formal pack incomplete"
+    },
+    {
+      "phase": 5,
+      "status": "PARTIAL",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "rollback-plan"
+      ],
+      "missing": [
+        "performance-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": false,
+      "notes": ""
+    },
+    {
+      "phase": 6,
+      "status": "PARTIAL",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "security-results",
+        "rollback-plan"
+      ],
+      "missing": [
+        "verification",
+        "performance-results",
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": false,
+      "notes": ""
+    },
+    {
+      "phase": 7,
+      "status": "COMPLETE",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "missing": [],
+      "legacyAccepted": false,
+      "notes": ""
+    },
+    {
+      "phase": 8,
+      "status": "PARTIAL",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "rollback-plan"
+      ],
+      "missing": [
+        "chaos-results",
+        "build-metadata"
+      ],
+      "legacyAccepted": false,
+      "notes": "chaos/build-metadata incomplete; live PDB pending"
+    },
+    {
+      "phase": 9,
+      "status": "PENDING_LIVE",
+      "required": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "present": [
+        "acceptance",
+        "verification",
+        "security-results",
+        "performance-results",
+        "chaos-results",
+        "rollback-plan",
+        "build-metadata"
+      ],
+      "missing": [],
+      "legacyAccepted": false,
+      "notes": "live SAP / functional GO pending"
+    }
+  ],
+  "summary": {
+    "complete": 1,
+    "legacyAccepted": 4,
+    "partial": 3,
+    "pendingLive": 1,
+    "missing": 0,
+    "offlineGo": 0
+  }
+}

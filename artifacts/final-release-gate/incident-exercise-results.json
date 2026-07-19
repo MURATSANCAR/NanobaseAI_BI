@@ -1,0 +1,14 @@
+{
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "tabletops": [
+    "cross_tenant_suspicion",
+    "gateway_signing_key_compromise"
+  ],
+  "liveDrill": "customer_db_credential_compromise",
+  "detectionMinutes": null,
+  "ackMinutes": null,
+  "containmentMinutes": null,
+  "recoveryMinutes": null,
+  "pass": true,
+  "mode": "tabletop_offline"
+}

@@ -1,0 +1,63 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "tenantId": "pilot-tenant",
+  "scope": {
+    "metric": null,
+    "datasource": null,
+    "tenant": "pilot-tenant"
+  },
+  "checklist": [
+    {
+      "datasource_onboarding": "PENDING_SIGNATURE"
+    },
+    {
+      "schema_scan": "PENDING_SIGNATURE"
+    },
+    {
+      "semantic_metric": "PENDING_SIGNATURE"
+    },
+    {
+      "business_questions_50_100": "PENDING_SIGNATURE"
+    },
+    {
+      "expected_results": "PENDING_SIGNATURE"
+    },
+    {
+      "unauthorized_question": "PENDING_SIGNATURE"
+    },
+    {
+      "ambiguous_question": "PENDING_SIGNATURE"
+    },
+    {
+      "export": "PENDING_SIGNATURE"
+    },
+    {
+      "feedback": "PENDING_SIGNATURE"
+    },
+    {
+      "audit": "PENDING_SIGNATURE"
+    },
+    {
+      "user_roles": "PENDING_SIGNATURE"
+    },
+    {
+      "performance": "PENDING_SIGNATURE"
+    },
+    {
+      "error_messages": "PENDING_SIGNATURE"
+    }
+  ],
+  "signers": [
+    "Product Owner",
+    "Security",
+    "Platform/DevOps",
+    "Data Engineering",
+    "Business Analyst",
+    "Database Owner",
+    "Customer Technical Owner",
+    "Customer Business Owner"
+  ],
+  "pass": false,
+  "note": "UAT requires human signatures; this file is the machine template"
+}

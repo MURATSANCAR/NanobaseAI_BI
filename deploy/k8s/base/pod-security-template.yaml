@@ -1,0 +1,69 @@
+# Reference securityContext for Nanobase workloads (PSS restricted)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nanobase-api
+  namespace: nanobase
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nanobase-api
+  template:
+    metadata:
+      labels:
+        app: nanobase-api
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: registry/nanobase/backend@sha256:REPLACE_WITH_DIGEST
+          ports:
+            - containerPort: 8790
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8790
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8790
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nanobase-api-pdb
+  namespace: nanobase
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: nanobase-api

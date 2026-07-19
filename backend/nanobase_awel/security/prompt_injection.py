@@ -8,10 +8,13 @@ INJECTION_MARKERS = (
     "forget previous",
     "system prompt",
     "doğrudan db",
+    "doğrudan db'ye",
     "query gateway'i kullanma",
     "bypass gateway",
     "drop table",
     "pg_sleep",
+    "exfiltrate",
+    "fabricate revenue",
 )
 
 

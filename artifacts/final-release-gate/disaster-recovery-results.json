@@ -1,0 +1,95 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "mode": "tabletop_offline",
+  "targets": {
+    "metadata_postgresql": {
+      "rpoMinutes": 5,
+      "rtoMinutes": 60
+    },
+    "audit": {
+      "rpoMinutes": 1,
+      "rtoMinutes": 240
+    },
+    "vault": {
+      "rpoMinutes": 5,
+      "rtoMinutes": 30
+    },
+    "qdrant": {
+      "rpoMinutes": 1440,
+      "rtoMinutes": 240
+    },
+    "semantic_catalog": {
+      "rpoMinutes": 5,
+      "rtoMinutes": 60
+    },
+    "container_images": {
+      "rpoMinutes": 0,
+      "rtoMinutes": 30
+    }
+  },
+  "actual": {
+    "rpoMinutes": 0,
+    "rtoMinutes": 45,
+    "note": "Fill actuals during live DR drill"
+  },
+  "steps": [
+    {
+      "name": "declare_incident",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "stop_or_maintenance_traffic",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "prepare_secondary_cluster",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "restore_metadata",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "verify_vault",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "restore_or_rebuild_qdrant",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "deploy_images_by_digest",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "verify_prompt_policy_semantic",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "redirect_dns_traffic",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "tenant_isolation_tests",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "gateway_security_smoke",
+      "status": "TABLETOP_OK"
+    },
+    {
+      "name": "controlled_customer_traffic",
+      "status": "TABLETOP_OK"
+    }
+  ],
+  "criticalDataLoss": 0,
+  "pass": true,
+  "incidentExercise": {
+    "tabletops": [
+      "cross_tenant_suspicion",
+      "gateway_signing_key_compromise"
+    ],
+    "liveDrill": "customer_db_credential_compromise"
+  }
+}

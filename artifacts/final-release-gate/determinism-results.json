@@ -1,0 +1,40 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "results": [
+    {
+      "question": "Toplam ciro bu ay",
+      "repeats": 10,
+      "uniqueFingerprints": 1,
+      "logicalMetricChanged": false,
+      "tableChanged": false,
+      "mandatoryFilterLost": false,
+      "clarificationFlipped": false,
+      "policyRejectionFlipped": false,
+      "pass": true
+    },
+    {
+      "question": "Open AR by company code",
+      "repeats": 10,
+      "uniqueFingerprints": 1,
+      "logicalMetricChanged": false,
+      "tableChanged": false,
+      "mandatoryFilterLost": false,
+      "clarificationFlipped": false,
+      "policyRejectionFlipped": false,
+      "pass": true
+    },
+    {
+      "question": "Ledger 0L balances excluding reversals",
+      "repeats": 10,
+      "uniqueFingerprints": 1,
+      "logicalMetricChanged": false,
+      "tableChanged": false,
+      "mandatoryFilterLost": false,
+      "clarificationFlipped": false,
+      "policyRejectionFlipped": false,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

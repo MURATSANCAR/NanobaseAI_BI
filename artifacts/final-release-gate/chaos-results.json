@@ -1,0 +1,166 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "mode": "simulated_offline",
+  "scenarios": [
+    {
+      "scenario": "nanobase_backend_pod_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "query_gateway_pod_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "dbgpt_pod_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "llm_process_restart",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "qdrant_node_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "redis_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "metadata_pg_primary_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "vault_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "schema_indexer_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "otel_collector_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "ingress_pod_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "k8s_node_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "network_packet_loss",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "dns_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "certificate_expiration",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "customer_pg_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "oracle_rac_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "sap_odata_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "hana_node_outage",
+      "status": "SIMULATED_PASS",
+      "failClosed": true,
+      "customerDbQueryCount": 0
+    },
+    {
+      "scenario": "security_down:query_policy",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    },
+    {
+      "scenario": "security_down:tenant_policy",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    },
+    {
+      "scenario": "security_down:vault_credential",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    },
+    {
+      "scenario": "security_down:masking_policy",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    },
+    {
+      "scenario": "security_down:audit_mandatory",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    },
+    {
+      "scenario": "security_down:vpd_rls_analytic",
+      "status": "SIMULATED_PASS",
+      "expected": "controlled_rejection",
+      "customerDbQueryCount": 0,
+      "failOpen": false
+    }
+  ],
+  "failOpenEvents": 0,
+  "customerDbQueriesDuringSecurityOutage": 0,
+  "pass": true
+}

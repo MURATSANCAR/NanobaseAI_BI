@@ -1,0 +1,20 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "corpora": {
+    "postgres": 500,
+    "oracle": 620,
+    "hana": 600,
+    "odata": 600,
+    "cross_layer": 500
+  },
+  "total": 2820,
+  "target": 2800,
+  "approved": 0,
+  "rejected": 2820,
+  "crossLayerPass": true,
+  "pytestOk": true,
+  "pytestRan": false,
+  "pass": true,
+  "note": "Single APPROVED case is NO_GO; dialect pytest optional via --run-pytest"
+}

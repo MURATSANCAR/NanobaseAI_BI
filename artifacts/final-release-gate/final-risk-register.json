@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-07-19T16:34:50Z",
+  "release": "1.0.0-rc.1",
+  "risks": [
+    {
+      "id": "KR-LEGACY-PHASES",
+      "severity": "medium",
+      "description": "Phases 1–4 evidence LEGACY_ACCEPTED",
+      "conditionalAllowed": true
+    }
+  ],
+  "nogoHits": [
+    "awaiting_uat_pentest_or_image_digests"
+  ]
+}

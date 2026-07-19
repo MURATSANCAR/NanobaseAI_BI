@@ -1,0 +1,119 @@
+name: Final Production Release Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Release candidate version
+        required: true
+        default: 1.0.0-rc.1
+      claimed_connectors:
+        description: Comma-separated claimed connectors
+        required: true
+        default: postgres
+  push:
+    branches: [main, master]
+    paths:
+      - "tools/release-gate/**"
+      - "tests/final-gate/**"
+      - "backend/query_gateway/tests/security/**"
+      - ".github/workflows/release-gate.yml"
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    # Security failures must not be bypassable via continue-on-error
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test deps
+        run: |
+          python -m pip install -U pip
+          pip install pytest pyyaml || true
+
+      - name: Expand quality corpora
+        run: python tools/release-gate/expand_quality_corpora.py
+
+      - name: verify-release-manifest (generate+verify)
+        run: |
+          bash scripts/server/release-gate/record_image_digests.sh
+          python tools/release-gate/generate_release_manifest.py \
+            --release "${{ github.event.inputs.release || '1.0.0-rc.1' }}" \
+            --claimed-connectors "${{ github.event.inputs.claimed_connectors || 'postgres' }}"
+          python tools/release-gate/verify_release_manifest.py
+
+      - name: verify-phase-evidence
+        run: python tools/release-gate/verify_phase_evidence.py
+
+      - name: verify-sbom
+        run: python tools/release-gate/verify_sbom.py
+
+      - name: verify-image-signatures
+        run: python tools/release-gate/verify_image_signatures.py
+
+      - name: verify-provenance
+        run: python tools/release-gate/verify_provenance.py
+
+      - name: run-full-unit-suite (final-gate)
+        run: python -m pytest tests/final-gate -q --tb=line
+
+      - name: run-sql-security-corpus
+        env:
+          PYTHONPATH: backend
+        run: python tools/release-gate/run_sql_security_corpus.py --skip-pytest
+
+      - name: run-ai-adversarial-suite
+        run: python tools/release-gate/run_ai_adversarial.py
+
+      - name: run-quality-benchmark
+        run: python tools/release-gate/run_quality_benchmark.py --require-full
+
+      - name: run-tenant-isolation-suite
+        run: python tools/release-gate/run_tenant_isolation.py
+
+      - name: run-data-leakage-suite
+        run: python tools/release-gate/run_data_leakage.py
+
+      - name: run-bypass-suite
+        run: python tools/release-gate/run_bypass_suite.py
+
+      - name: run-e2e-suite
+        run: python tools/release-gate/run_e2e_suite.py
+
+      - name: run-performance-suite
+        run: python tools/release-gate/run_performance_suite.py --profile smoke
+
+      - name: run-chaos-suite
+        run: python tools/release-gate/run_chaos_suite.py
+
+      - name: run-backup-restore
+        run: |
+          bash scripts/server/release-gate/backup-metadata.sh
+          bash scripts/server/release-gate/restore-metadata.sh
+
+      - name: run-rollback-test
+        run: bash scripts/server/release-gate/rollback-plan-only.sh drill
+
+      - name: run-determinism
+        run: python tools/release-gate/run_determinism.py
+
+      - name: run-secret-rotation-drill
+        run: python tools/release-gate/run_secret_rotation_drill.py
+
+      - name: generate-final-acceptance
+        run: python tools/release-gate/generate_final_acceptance.py
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-release-gate
+          path: artifacts/final-release-gate/

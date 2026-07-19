@@ -1,0 +1,16 @@
+{
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "backup": "/Users/murat/Documents/NonobaseAI-BI/artifacts/final-release-gate/backups/bi_meta_20260719T163448Z.placeholder.json",
+  "status": "PASS_OFFLINE",
+  "detail": "verified placeholder backup checksum=8f0a3ecd59c1b87a\u2026; live restore pending bi_meta",
+  "checks": [
+    "checksum_ok",
+    "placeholder_verified"
+  ],
+  "postRestore": {
+    "tenantCount": "pending-live",
+    "e2eSmoke": "pending-live",
+    "manifestChecksum": "pending-live"
+  },
+  "pass": true
+}

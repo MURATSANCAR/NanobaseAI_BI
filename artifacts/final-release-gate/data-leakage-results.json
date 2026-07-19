@@ -1,0 +1,25 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "classes": [
+    "PUBLIC",
+    "INTERNAL",
+    "CONFIDENTIAL",
+    "RESTRICTED",
+    "PII",
+    "FINANCIAL",
+    "SECRET"
+  ],
+  "tests": [
+    "email",
+    "phone",
+    "iban",
+    "national_id",
+    "log_dlp"
+  ],
+  "unmaskedRestricted": 0,
+  "llmForbiddenRaw": 0,
+  "logForbiddenRaw": 0,
+  "gatewayMaskerImportable": true,
+  "pass": true
+}

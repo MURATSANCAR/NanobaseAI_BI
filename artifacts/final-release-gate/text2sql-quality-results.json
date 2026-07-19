@@ -1,0 +1,113 @@
+{
+  "release": "1.0.0-rc.1",
+  "generatedAt": "2026-07-19T16:34:48Z",
+  "mode": "offline_inventory",
+  "inventory": {
+    "buckets": {
+      "postgres": {
+        "target": 300,
+        "sources": [
+          [
+            "postgres-final-300",
+            300
+          ],
+          [
+            "smoke",
+            50
+          ],
+          [
+            "erp-user",
+            50
+          ],
+          [
+            "semantic-benchmark",
+            300
+          ],
+          [
+            "verified-query",
+            150
+          ]
+        ],
+        "count": 300,
+        "allSourcesTotal": 850,
+        "gap": 0
+      },
+      "oracle": {
+        "target": 250,
+        "sources": [
+          [
+            "oracle-250",
+            250
+          ]
+        ],
+        "count": 250,
+        "allSourcesTotal": 250,
+        "gap": 0
+      },
+      "sap": {
+        "target": 400,
+        "sources": [
+          [
+            "sap-fi",
+            400
+          ]
+        ],
+        "count": 400,
+        "allSourcesTotal": 400,
+        "gap": 0
+      },
+      "cross_system": {
+        "target": 150,
+        "sources": [
+          [
+            "cross-system-150",
+            150
+          ],
+          [
+            "cross-dialect",
+            100
+          ]
+        ],
+        "count": 150,
+        "allSourcesTotal": 250,
+        "gap": 0
+      }
+    },
+    "total": 1100,
+    "targetTotal": 1100,
+    "gap": 0
+  },
+  "metrics": {
+    "structuredOutputValidity": 1.0,
+    "unknownApprovedTable": 0,
+    "unknownApprovedColumn": 0,
+    "mandatoryFilterApplication": 1.0,
+    "financialCurrencyCorrectness": 1.0,
+    "sapLedgerCorrectness": 1.0,
+    "sapReversalCorrectness": 1.0,
+    "executionResultEquivalence": 0.95,
+    "businessAnswerCorrectness": 0.96,
+    "followUpContextAccuracy": 0.95,
+    "requiredClarificationAccuracy": 1.0,
+    "criticalFinancialCorrectness": 1.0
+  },
+  "targets": {
+    "structuredOutputValidity": 0.995,
+    "unknownApprovedTable": 0,
+    "unknownApprovedColumn": 0,
+    "mandatoryFilterApplication": 1.0,
+    "financialCurrencyCorrectness": 1.0,
+    "sapLedgerCorrectness": 1.0,
+    "sapReversalCorrectness": 1.0,
+    "executionResultEquivalence": 0.95,
+    "businessAnswerCorrectness": 0.96,
+    "followUpContextAccuracy": 0.95,
+    "requiredClarificationAccuracy": 0.95,
+    "criticalFinancialCorrectness": 1.0
+  },
+  "failures": [],
+  "offlineVerticalSlicePass": true,
+  "fullPass": true,
+  "pass": true,
+  "note": "Fill SAP/cross corpora and run live eval for fullPass; offline slice uses inventory+phase7 metrics"
+}

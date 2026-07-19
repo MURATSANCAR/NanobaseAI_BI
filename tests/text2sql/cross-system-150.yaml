@@ -1,0 +1,752 @@
+# Cross-system Final Gate corpus
+questions:
+  - id: cross-0001
+    question: "Compare PG vs Oracle vs SAP metric slice 1"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0001
+  - id: cross-0002
+    question: "Compare PG vs Oracle vs SAP metric slice 2"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0002
+  - id: cross-0003
+    question: "Compare PG vs Oracle vs SAP metric slice 3"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0003
+  - id: cross-0004
+    question: "Compare PG vs Oracle vs SAP metric slice 4"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0004
+  - id: cross-0005
+    question: "Compare PG vs Oracle vs SAP metric slice 5"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0005
+  - id: cross-0006
+    question: "Compare PG vs Oracle vs SAP metric slice 6"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0006
+  - id: cross-0007
+    question: "Compare PG vs Oracle vs SAP metric slice 7"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0007
+  - id: cross-0008
+    question: "Compare PG vs Oracle vs SAP metric slice 8"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0008
+  - id: cross-0009
+    question: "Compare PG vs Oracle vs SAP metric slice 9"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0009
+  - id: cross-0010
+    question: "Compare PG vs Oracle vs SAP metric slice 10"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0010
+  - id: cross-0011
+    question: "Compare PG vs Oracle vs SAP metric slice 11"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0011
+  - id: cross-0012
+    question: "Compare PG vs Oracle vs SAP metric slice 12"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0012
+  - id: cross-0013
+    question: "Compare PG vs Oracle vs SAP metric slice 13"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0013
+  - id: cross-0014
+    question: "Compare PG vs Oracle vs SAP metric slice 14"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0014
+  - id: cross-0015
+    question: "Compare PG vs Oracle vs SAP metric slice 15"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0015
+  - id: cross-0016
+    question: "Compare PG vs Oracle vs SAP metric slice 16"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0016
+  - id: cross-0017
+    question: "Compare PG vs Oracle vs SAP metric slice 17"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0017
+  - id: cross-0018
+    question: "Compare PG vs Oracle vs SAP metric slice 18"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0018
+  - id: cross-0019
+    question: "Compare PG vs Oracle vs SAP metric slice 19"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0019
+  - id: cross-0020
+    question: "Compare PG vs Oracle vs SAP metric slice 20"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0020
+  - id: cross-0021
+    question: "Compare PG vs Oracle vs SAP metric slice 21"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0021
+  - id: cross-0022
+    question: "Compare PG vs Oracle vs SAP metric slice 22"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0022
+  - id: cross-0023
+    question: "Compare PG vs Oracle vs SAP metric slice 23"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0023
+  - id: cross-0024
+    question: "Compare PG vs Oracle vs SAP metric slice 24"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0024
+  - id: cross-0025
+    question: "Compare PG vs Oracle vs SAP metric slice 25"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0025
+  - id: cross-0026
+    question: "Compare PG vs Oracle vs SAP metric slice 26"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0026
+  - id: cross-0027
+    question: "Compare PG vs Oracle vs SAP metric slice 27"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0027
+  - id: cross-0028
+    question: "Compare PG vs Oracle vs SAP metric slice 28"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0028
+  - id: cross-0029
+    question: "Compare PG vs Oracle vs SAP metric slice 29"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0029
+  - id: cross-0030
+    question: "Compare PG vs Oracle vs SAP metric slice 30"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0030
+  - id: cross-0031
+    question: "Compare PG vs Oracle vs SAP metric slice 31"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0031
+  - id: cross-0032
+    question: "Compare PG vs Oracle vs SAP metric slice 32"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0032
+  - id: cross-0033
+    question: "Compare PG vs Oracle vs SAP metric slice 33"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0033
+  - id: cross-0034
+    question: "Compare PG vs Oracle vs SAP metric slice 34"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0034
+  - id: cross-0035
+    question: "Compare PG vs Oracle vs SAP metric slice 35"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0035
+  - id: cross-0036
+    question: "Compare PG vs Oracle vs SAP metric slice 36"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0036
+  - id: cross-0037
+    question: "Compare PG vs Oracle vs SAP metric slice 37"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0037
+  - id: cross-0038
+    question: "Compare PG vs Oracle vs SAP metric slice 38"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0038
+  - id: cross-0039
+    question: "Compare PG vs Oracle vs SAP metric slice 39"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0039
+  - id: cross-0040
+    question: "Compare PG vs Oracle vs SAP metric slice 40"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0040
+  - id: cross-0041
+    question: "Compare PG vs Oracle vs SAP metric slice 41"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0041
+  - id: cross-0042
+    question: "Compare PG vs Oracle vs SAP metric slice 42"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0042
+  - id: cross-0043
+    question: "Compare PG vs Oracle vs SAP metric slice 43"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0043
+  - id: cross-0044
+    question: "Compare PG vs Oracle vs SAP metric slice 44"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0044
+  - id: cross-0045
+    question: "Compare PG vs Oracle vs SAP metric slice 45"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0045
+  - id: cross-0046
+    question: "Compare PG vs Oracle vs SAP metric slice 46"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0046
+  - id: cross-0047
+    question: "Compare PG vs Oracle vs SAP metric slice 47"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0047
+  - id: cross-0048
+    question: "Compare PG vs Oracle vs SAP metric slice 48"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0048
+  - id: cross-0049
+    question: "Compare PG vs Oracle vs SAP metric slice 49"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0049
+  - id: cross-0050
+    question: "Compare PG vs Oracle vs SAP metric slice 50"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0050
+  - id: cross-0051
+    question: "Compare PG vs Oracle vs SAP metric slice 51"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0051
+  - id: cross-0052
+    question: "Compare PG vs Oracle vs SAP metric slice 52"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0052
+  - id: cross-0053
+    question: "Compare PG vs Oracle vs SAP metric slice 53"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0053
+  - id: cross-0054
+    question: "Compare PG vs Oracle vs SAP metric slice 54"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0054
+  - id: cross-0055
+    question: "Compare PG vs Oracle vs SAP metric slice 55"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0055
+  - id: cross-0056
+    question: "Compare PG vs Oracle vs SAP metric slice 56"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0056
+  - id: cross-0057
+    question: "Compare PG vs Oracle vs SAP metric slice 57"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0057
+  - id: cross-0058
+    question: "Compare PG vs Oracle vs SAP metric slice 58"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0058
+  - id: cross-0059
+    question: "Compare PG vs Oracle vs SAP metric slice 59"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0059
+  - id: cross-0060
+    question: "Compare PG vs Oracle vs SAP metric slice 60"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0060
+  - id: cross-0061
+    question: "Compare PG vs Oracle vs SAP metric slice 61"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0061
+  - id: cross-0062
+    question: "Compare PG vs Oracle vs SAP metric slice 62"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0062
+  - id: cross-0063
+    question: "Compare PG vs Oracle vs SAP metric slice 63"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0063
+  - id: cross-0064
+    question: "Compare PG vs Oracle vs SAP metric slice 64"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0064
+  - id: cross-0065
+    question: "Compare PG vs Oracle vs SAP metric slice 65"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0065
+  - id: cross-0066
+    question: "Compare PG vs Oracle vs SAP metric slice 66"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0066
+  - id: cross-0067
+    question: "Compare PG vs Oracle vs SAP metric slice 67"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0067
+  - id: cross-0068
+    question: "Compare PG vs Oracle vs SAP metric slice 68"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0068
+  - id: cross-0069
+    question: "Compare PG vs Oracle vs SAP metric slice 69"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0069
+  - id: cross-0070
+    question: "Compare PG vs Oracle vs SAP metric slice 70"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0070
+  - id: cross-0071
+    question: "Compare PG vs Oracle vs SAP metric slice 71"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0071
+  - id: cross-0072
+    question: "Compare PG vs Oracle vs SAP metric slice 72"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0072
+  - id: cross-0073
+    question: "Compare PG vs Oracle vs SAP metric slice 73"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0073
+  - id: cross-0074
+    question: "Compare PG vs Oracle vs SAP metric slice 74"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0074
+  - id: cross-0075
+    question: "Compare PG vs Oracle vs SAP metric slice 75"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0075
+  - id: cross-0076
+    question: "Compare PG vs Oracle vs SAP metric slice 76"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0076
+  - id: cross-0077
+    question: "Compare PG vs Oracle vs SAP metric slice 77"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0077
+  - id: cross-0078
+    question: "Compare PG vs Oracle vs SAP metric slice 78"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0078
+  - id: cross-0079
+    question: "Compare PG vs Oracle vs SAP metric slice 79"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0079
+  - id: cross-0080
+    question: "Compare PG vs Oracle vs SAP metric slice 80"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0080
+  - id: cross-0081
+    question: "Compare PG vs Oracle vs SAP metric slice 81"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0081
+  - id: cross-0082
+    question: "Compare PG vs Oracle vs SAP metric slice 82"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0082
+  - id: cross-0083
+    question: "Compare PG vs Oracle vs SAP metric slice 83"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0083
+  - id: cross-0084
+    question: "Compare PG vs Oracle vs SAP metric slice 84"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0084
+  - id: cross-0085
+    question: "Compare PG vs Oracle vs SAP metric slice 85"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0085
+  - id: cross-0086
+    question: "Compare PG vs Oracle vs SAP metric slice 86"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0086
+  - id: cross-0087
+    question: "Compare PG vs Oracle vs SAP metric slice 87"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0087
+  - id: cross-0088
+    question: "Compare PG vs Oracle vs SAP metric slice 88"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0088
+  - id: cross-0089
+    question: "Compare PG vs Oracle vs SAP metric slice 89"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0089
+  - id: cross-0090
+    question: "Compare PG vs Oracle vs SAP metric slice 90"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0090
+  - id: cross-0091
+    question: "Compare PG vs Oracle vs SAP metric slice 91"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0091
+  - id: cross-0092
+    question: "Compare PG vs Oracle vs SAP metric slice 92"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0092
+  - id: cross-0093
+    question: "Compare PG vs Oracle vs SAP metric slice 93"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0093
+  - id: cross-0094
+    question: "Compare PG vs Oracle vs SAP metric slice 94"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0094
+  - id: cross-0095
+    question: "Compare PG vs Oracle vs SAP metric slice 95"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0095
+  - id: cross-0096
+    question: "Compare PG vs Oracle vs SAP metric slice 96"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0096
+  - id: cross-0097
+    question: "Compare PG vs Oracle vs SAP metric slice 97"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0097
+  - id: cross-0098
+    question: "Compare PG vs Oracle vs SAP metric slice 98"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0098
+  - id: cross-0099
+    question: "Compare PG vs Oracle vs SAP metric slice 99"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0099
+  - id: cross-0100
+    question: "Compare PG vs Oracle vs SAP metric slice 100"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0100
+  - id: cross-0101
+    question: "Compare PG vs Oracle vs SAP metric slice 101"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0101
+  - id: cross-0102
+    question: "Compare PG vs Oracle vs SAP metric slice 102"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0102
+  - id: cross-0103
+    question: "Compare PG vs Oracle vs SAP metric slice 103"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0103
+  - id: cross-0104
+    question: "Compare PG vs Oracle vs SAP metric slice 104"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0104
+  - id: cross-0105
+    question: "Compare PG vs Oracle vs SAP metric slice 105"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0105
+  - id: cross-0106
+    question: "Compare PG vs Oracle vs SAP metric slice 106"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0106
+  - id: cross-0107
+    question: "Compare PG vs Oracle vs SAP metric slice 107"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0107
+  - id: cross-0108
+    question: "Compare PG vs Oracle vs SAP metric slice 108"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0108
+  - id: cross-0109
+    question: "Compare PG vs Oracle vs SAP metric slice 109"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0109
+  - id: cross-0110
+    question: "Compare PG vs Oracle vs SAP metric slice 110"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0110
+  - id: cross-0111
+    question: "Compare PG vs Oracle vs SAP metric slice 111"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0111
+  - id: cross-0112
+    question: "Compare PG vs Oracle vs SAP metric slice 112"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0112
+  - id: cross-0113
+    question: "Compare PG vs Oracle vs SAP metric slice 113"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0113
+  - id: cross-0114
+    question: "Compare PG vs Oracle vs SAP metric slice 114"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0114
+  - id: cross-0115
+    question: "Compare PG vs Oracle vs SAP metric slice 115"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0115
+  - id: cross-0116
+    question: "Compare PG vs Oracle vs SAP metric slice 116"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0116
+  - id: cross-0117
+    question: "Compare PG vs Oracle vs SAP metric slice 117"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0117
+  - id: cross-0118
+    question: "Compare PG vs Oracle vs SAP metric slice 118"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0118
+  - id: cross-0119
+    question: "Compare PG vs Oracle vs SAP metric slice 119"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0119
+  - id: cross-0120
+    question: "Compare PG vs Oracle vs SAP metric slice 120"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0120
+  - id: cross-0121
+    question: "Compare PG vs Oracle vs SAP metric slice 121"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0121
+  - id: cross-0122
+    question: "Compare PG vs Oracle vs SAP metric slice 122"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0122
+  - id: cross-0123
+    question: "Compare PG vs Oracle vs SAP metric slice 123"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0123
+  - id: cross-0124
+    question: "Compare PG vs Oracle vs SAP metric slice 124"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0124
+  - id: cross-0125
+    question: "Compare PG vs Oracle vs SAP metric slice 125"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0125
+  - id: cross-0126
+    question: "Compare PG vs Oracle vs SAP metric slice 126"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0126
+  - id: cross-0127
+    question: "Compare PG vs Oracle vs SAP metric slice 127"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0127
+  - id: cross-0128
+    question: "Compare PG vs Oracle vs SAP metric slice 128"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0128
+  - id: cross-0129
+    question: "Compare PG vs Oracle vs SAP metric slice 129"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0129
+  - id: cross-0130
+    question: "Compare PG vs Oracle vs SAP metric slice 130"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0130
+  - id: cross-0131
+    question: "Compare PG vs Oracle vs SAP metric slice 131"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0131
+  - id: cross-0132
+    question: "Compare PG vs Oracle vs SAP metric slice 132"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0132
+  - id: cross-0133
+    question: "Compare PG vs Oracle vs SAP metric slice 133"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0133
+  - id: cross-0134
+    question: "Compare PG vs Oracle vs SAP metric slice 134"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0134
+  - id: cross-0135
+    question: "Compare PG vs Oracle vs SAP metric slice 135"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0135
+  - id: cross-0136
+    question: "Compare PG vs Oracle vs SAP metric slice 136"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0136
+  - id: cross-0137
+    question: "Compare PG vs Oracle vs SAP metric slice 137"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0137
+  - id: cross-0138
+    question: "Compare PG vs Oracle vs SAP metric slice 138"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0138
+  - id: cross-0139
+    question: "Compare PG vs Oracle vs SAP metric slice 139"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0139
+  - id: cross-0140
+    question: "Compare PG vs Oracle vs SAP metric slice 140"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0140
+  - id: cross-0141
+    question: "Compare PG vs Oracle vs SAP metric slice 141"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0141
+  - id: cross-0142
+    question: "Compare PG vs Oracle vs SAP metric slice 142"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0142
+  - id: cross-0143
+    question: "Compare PG vs Oracle vs SAP metric slice 143"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0143
+  - id: cross-0144
+    question: "Compare PG vs Oracle vs SAP metric slice 144"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0144
+  - id: cross-0145
+    question: "Compare PG vs Oracle vs SAP metric slice 145"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0145
+  - id: cross-0146
+    question: "Compare PG vs Oracle vs SAP metric slice 146"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0146
+  - id: cross-0147
+    question: "Compare PG vs Oracle vs SAP metric slice 147"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0147
+  - id: cross-0148
+    question: "Compare PG vs Oracle vs SAP metric slice 148"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0148
+  - id: cross-0149
+    question: "Compare PG vs Oracle vs SAP metric slice 149"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0149
+  - id: cross-0150
+    question: "Compare PG vs Oracle vs SAP metric slice 150"
+    expectedMetric: cross_revenue
+    expectedTables: ["orders", "bkpf"]
+    expectedResultFingerprint: cross-fp-0150

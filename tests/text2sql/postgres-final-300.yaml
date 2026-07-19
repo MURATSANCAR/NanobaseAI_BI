@@ -1,0 +1,1502 @@
+# PostgreSQL Final Gate quality corpus
+questions:
+  - id: pg-final-0001
+    question: "Toplam ciro ve adet — senaryo 1"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0001
+  - id: pg-final-0002
+    question: "Toplam ciro ve adet — senaryo 2"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0002
+  - id: pg-final-0003
+    question: "Toplam ciro ve adet — senaryo 3"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0003
+  - id: pg-final-0004
+    question: "Toplam ciro ve adet — senaryo 4"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0004
+  - id: pg-final-0005
+    question: "Toplam ciro ve adet — senaryo 5"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0005
+  - id: pg-final-0006
+    question: "Toplam ciro ve adet — senaryo 6"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0006
+  - id: pg-final-0007
+    question: "Toplam ciro ve adet — senaryo 7"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0007
+  - id: pg-final-0008
+    question: "Toplam ciro ve adet — senaryo 8"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0008
+  - id: pg-final-0009
+    question: "Toplam ciro ve adet — senaryo 9"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0009
+  - id: pg-final-0010
+    question: "Toplam ciro ve adet — senaryo 10"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0010
+  - id: pg-final-0011
+    question: "Toplam ciro ve adet — senaryo 11"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0011
+  - id: pg-final-0012
+    question: "Toplam ciro ve adet — senaryo 12"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0012
+  - id: pg-final-0013
+    question: "Toplam ciro ve adet — senaryo 13"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0013
+  - id: pg-final-0014
+    question: "Toplam ciro ve adet — senaryo 14"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0014
+  - id: pg-final-0015
+    question: "Toplam ciro ve adet — senaryo 15"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0015
+  - id: pg-final-0016
+    question: "Toplam ciro ve adet — senaryo 16"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0016
+  - id: pg-final-0017
+    question: "Toplam ciro ve adet — senaryo 17"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0017
+  - id: pg-final-0018
+    question: "Toplam ciro ve adet — senaryo 18"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0018
+  - id: pg-final-0019
+    question: "Toplam ciro ve adet — senaryo 19"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0019
+  - id: pg-final-0020
+    question: "Toplam ciro ve adet — senaryo 20"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0020
+  - id: pg-final-0021
+    question: "Toplam ciro ve adet — senaryo 21"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0021
+  - id: pg-final-0022
+    question: "Toplam ciro ve adet — senaryo 22"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0022
+  - id: pg-final-0023
+    question: "Toplam ciro ve adet — senaryo 23"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0023
+  - id: pg-final-0024
+    question: "Toplam ciro ve adet — senaryo 24"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0024
+  - id: pg-final-0025
+    question: "Toplam ciro ve adet — senaryo 25"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0025
+  - id: pg-final-0026
+    question: "Toplam ciro ve adet — senaryo 26"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0026
+  - id: pg-final-0027
+    question: "Toplam ciro ve adet — senaryo 27"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0027
+  - id: pg-final-0028
+    question: "Toplam ciro ve adet — senaryo 28"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0028
+  - id: pg-final-0029
+    question: "Toplam ciro ve adet — senaryo 29"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0029
+  - id: pg-final-0030
+    question: "Toplam ciro ve adet — senaryo 30"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0030
+  - id: pg-final-0031
+    question: "Toplam ciro ve adet — senaryo 31"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0031
+  - id: pg-final-0032
+    question: "Toplam ciro ve adet — senaryo 32"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0032
+  - id: pg-final-0033
+    question: "Toplam ciro ve adet — senaryo 33"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0033
+  - id: pg-final-0034
+    question: "Toplam ciro ve adet — senaryo 34"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0034
+  - id: pg-final-0035
+    question: "Toplam ciro ve adet — senaryo 35"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0035
+  - id: pg-final-0036
+    question: "Toplam ciro ve adet — senaryo 36"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0036
+  - id: pg-final-0037
+    question: "Toplam ciro ve adet — senaryo 37"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0037
+  - id: pg-final-0038
+    question: "Toplam ciro ve adet — senaryo 38"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0038
+  - id: pg-final-0039
+    question: "Toplam ciro ve adet — senaryo 39"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0039
+  - id: pg-final-0040
+    question: "Toplam ciro ve adet — senaryo 40"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0040
+  - id: pg-final-0041
+    question: "Toplam ciro ve adet — senaryo 41"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0041
+  - id: pg-final-0042
+    question: "Toplam ciro ve adet — senaryo 42"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0042
+  - id: pg-final-0043
+    question: "Toplam ciro ve adet — senaryo 43"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0043
+  - id: pg-final-0044
+    question: "Toplam ciro ve adet — senaryo 44"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0044
+  - id: pg-final-0045
+    question: "Toplam ciro ve adet — senaryo 45"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0045
+  - id: pg-final-0046
+    question: "Toplam ciro ve adet — senaryo 46"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0046
+  - id: pg-final-0047
+    question: "Toplam ciro ve adet — senaryo 47"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0047
+  - id: pg-final-0048
+    question: "Toplam ciro ve adet — senaryo 48"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0048
+  - id: pg-final-0049
+    question: "Toplam ciro ve adet — senaryo 49"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0049
+  - id: pg-final-0050
+    question: "Toplam ciro ve adet — senaryo 50"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0050
+  - id: pg-final-0051
+    question: "Toplam ciro ve adet — senaryo 51"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0051
+  - id: pg-final-0052
+    question: "Toplam ciro ve adet — senaryo 52"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0052
+  - id: pg-final-0053
+    question: "Toplam ciro ve adet — senaryo 53"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0053
+  - id: pg-final-0054
+    question: "Toplam ciro ve adet — senaryo 54"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0054
+  - id: pg-final-0055
+    question: "Toplam ciro ve adet — senaryo 55"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0055
+  - id: pg-final-0056
+    question: "Toplam ciro ve adet — senaryo 56"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0056
+  - id: pg-final-0057
+    question: "Toplam ciro ve adet — senaryo 57"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0057
+  - id: pg-final-0058
+    question: "Toplam ciro ve adet — senaryo 58"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0058
+  - id: pg-final-0059
+    question: "Toplam ciro ve adet — senaryo 59"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0059
+  - id: pg-final-0060
+    question: "Toplam ciro ve adet — senaryo 60"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0060
+  - id: pg-final-0061
+    question: "Toplam ciro ve adet — senaryo 61"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0061
+  - id: pg-final-0062
+    question: "Toplam ciro ve adet — senaryo 62"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0062
+  - id: pg-final-0063
+    question: "Toplam ciro ve adet — senaryo 63"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0063
+  - id: pg-final-0064
+    question: "Toplam ciro ve adet — senaryo 64"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0064
+  - id: pg-final-0065
+    question: "Toplam ciro ve adet — senaryo 65"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0065
+  - id: pg-final-0066
+    question: "Toplam ciro ve adet — senaryo 66"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0066
+  - id: pg-final-0067
+    question: "Toplam ciro ve adet — senaryo 67"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0067
+  - id: pg-final-0068
+    question: "Toplam ciro ve adet — senaryo 68"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0068
+  - id: pg-final-0069
+    question: "Toplam ciro ve adet — senaryo 69"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0069
+  - id: pg-final-0070
+    question: "Toplam ciro ve adet — senaryo 70"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0070
+  - id: pg-final-0071
+    question: "Toplam ciro ve adet — senaryo 71"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0071
+  - id: pg-final-0072
+    question: "Toplam ciro ve adet — senaryo 72"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0072
+  - id: pg-final-0073
+    question: "Toplam ciro ve adet — senaryo 73"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0073
+  - id: pg-final-0074
+    question: "Toplam ciro ve adet — senaryo 74"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0074
+  - id: pg-final-0075
+    question: "Toplam ciro ve adet — senaryo 75"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0075
+  - id: pg-final-0076
+    question: "Toplam ciro ve adet — senaryo 76"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0076
+  - id: pg-final-0077
+    question: "Toplam ciro ve adet — senaryo 77"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0077
+  - id: pg-final-0078
+    question: "Toplam ciro ve adet — senaryo 78"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0078
+  - id: pg-final-0079
+    question: "Toplam ciro ve adet — senaryo 79"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0079
+  - id: pg-final-0080
+    question: "Toplam ciro ve adet — senaryo 80"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0080
+  - id: pg-final-0081
+    question: "Toplam ciro ve adet — senaryo 81"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0081
+  - id: pg-final-0082
+    question: "Toplam ciro ve adet — senaryo 82"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0082
+  - id: pg-final-0083
+    question: "Toplam ciro ve adet — senaryo 83"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0083
+  - id: pg-final-0084
+    question: "Toplam ciro ve adet — senaryo 84"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0084
+  - id: pg-final-0085
+    question: "Toplam ciro ve adet — senaryo 85"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0085
+  - id: pg-final-0086
+    question: "Toplam ciro ve adet — senaryo 86"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0086
+  - id: pg-final-0087
+    question: "Toplam ciro ve adet — senaryo 87"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0087
+  - id: pg-final-0088
+    question: "Toplam ciro ve adet — senaryo 88"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0088
+  - id: pg-final-0089
+    question: "Toplam ciro ve adet — senaryo 89"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0089
+  - id: pg-final-0090
+    question: "Toplam ciro ve adet — senaryo 90"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0090
+  - id: pg-final-0091
+    question: "Toplam ciro ve adet — senaryo 91"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0091
+  - id: pg-final-0092
+    question: "Toplam ciro ve adet — senaryo 92"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0092
+  - id: pg-final-0093
+    question: "Toplam ciro ve adet — senaryo 93"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0093
+  - id: pg-final-0094
+    question: "Toplam ciro ve adet — senaryo 94"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0094
+  - id: pg-final-0095
+    question: "Toplam ciro ve adet — senaryo 95"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0095
+  - id: pg-final-0096
+    question: "Toplam ciro ve adet — senaryo 96"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0096
+  - id: pg-final-0097
+    question: "Toplam ciro ve adet — senaryo 97"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0097
+  - id: pg-final-0098
+    question: "Toplam ciro ve adet — senaryo 98"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0098
+  - id: pg-final-0099
+    question: "Toplam ciro ve adet — senaryo 99"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0099
+  - id: pg-final-0100
+    question: "Toplam ciro ve adet — senaryo 100"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0100
+  - id: pg-final-0101
+    question: "Toplam ciro ve adet — senaryo 101"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0101
+  - id: pg-final-0102
+    question: "Toplam ciro ve adet — senaryo 102"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0102
+  - id: pg-final-0103
+    question: "Toplam ciro ve adet — senaryo 103"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0103
+  - id: pg-final-0104
+    question: "Toplam ciro ve adet — senaryo 104"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0104
+  - id: pg-final-0105
+    question: "Toplam ciro ve adet — senaryo 105"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0105
+  - id: pg-final-0106
+    question: "Toplam ciro ve adet — senaryo 106"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0106
+  - id: pg-final-0107
+    question: "Toplam ciro ve adet — senaryo 107"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0107
+  - id: pg-final-0108
+    question: "Toplam ciro ve adet — senaryo 108"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0108
+  - id: pg-final-0109
+    question: "Toplam ciro ve adet — senaryo 109"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0109
+  - id: pg-final-0110
+    question: "Toplam ciro ve adet — senaryo 110"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0110
+  - id: pg-final-0111
+    question: "Toplam ciro ve adet — senaryo 111"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0111
+  - id: pg-final-0112
+    question: "Toplam ciro ve adet — senaryo 112"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0112
+  - id: pg-final-0113
+    question: "Toplam ciro ve adet — senaryo 113"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0113
+  - id: pg-final-0114
+    question: "Toplam ciro ve adet — senaryo 114"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0114
+  - id: pg-final-0115
+    question: "Toplam ciro ve adet — senaryo 115"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0115
+  - id: pg-final-0116
+    question: "Toplam ciro ve adet — senaryo 116"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0116
+  - id: pg-final-0117
+    question: "Toplam ciro ve adet — senaryo 117"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0117
+  - id: pg-final-0118
+    question: "Toplam ciro ve adet — senaryo 118"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0118
+  - id: pg-final-0119
+    question: "Toplam ciro ve adet — senaryo 119"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0119
+  - id: pg-final-0120
+    question: "Toplam ciro ve adet — senaryo 120"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0120
+  - id: pg-final-0121
+    question: "Toplam ciro ve adet — senaryo 121"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0121
+  - id: pg-final-0122
+    question: "Toplam ciro ve adet — senaryo 122"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0122
+  - id: pg-final-0123
+    question: "Toplam ciro ve adet — senaryo 123"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0123
+  - id: pg-final-0124
+    question: "Toplam ciro ve adet — senaryo 124"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0124
+  - id: pg-final-0125
+    question: "Toplam ciro ve adet — senaryo 125"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0125
+  - id: pg-final-0126
+    question: "Toplam ciro ve adet — senaryo 126"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0126
+  - id: pg-final-0127
+    question: "Toplam ciro ve adet — senaryo 127"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0127
+  - id: pg-final-0128
+    question: "Toplam ciro ve adet — senaryo 128"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0128
+  - id: pg-final-0129
+    question: "Toplam ciro ve adet — senaryo 129"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0129
+  - id: pg-final-0130
+    question: "Toplam ciro ve adet — senaryo 130"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0130
+  - id: pg-final-0131
+    question: "Toplam ciro ve adet — senaryo 131"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0131
+  - id: pg-final-0132
+    question: "Toplam ciro ve adet — senaryo 132"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0132
+  - id: pg-final-0133
+    question: "Toplam ciro ve adet — senaryo 133"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0133
+  - id: pg-final-0134
+    question: "Toplam ciro ve adet — senaryo 134"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0134
+  - id: pg-final-0135
+    question: "Toplam ciro ve adet — senaryo 135"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0135
+  - id: pg-final-0136
+    question: "Toplam ciro ve adet — senaryo 136"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0136
+  - id: pg-final-0137
+    question: "Toplam ciro ve adet — senaryo 137"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0137
+  - id: pg-final-0138
+    question: "Toplam ciro ve adet — senaryo 138"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0138
+  - id: pg-final-0139
+    question: "Toplam ciro ve adet — senaryo 139"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0139
+  - id: pg-final-0140
+    question: "Toplam ciro ve adet — senaryo 140"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0140
+  - id: pg-final-0141
+    question: "Toplam ciro ve adet — senaryo 141"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0141
+  - id: pg-final-0142
+    question: "Toplam ciro ve adet — senaryo 142"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0142
+  - id: pg-final-0143
+    question: "Toplam ciro ve adet — senaryo 143"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0143
+  - id: pg-final-0144
+    question: "Toplam ciro ve adet — senaryo 144"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0144
+  - id: pg-final-0145
+    question: "Toplam ciro ve adet — senaryo 145"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0145
+  - id: pg-final-0146
+    question: "Toplam ciro ve adet — senaryo 146"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0146
+  - id: pg-final-0147
+    question: "Toplam ciro ve adet — senaryo 147"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0147
+  - id: pg-final-0148
+    question: "Toplam ciro ve adet — senaryo 148"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0148
+  - id: pg-final-0149
+    question: "Toplam ciro ve adet — senaryo 149"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0149
+  - id: pg-final-0150
+    question: "Toplam ciro ve adet — senaryo 150"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0150
+  - id: pg-final-0151
+    question: "Toplam ciro ve adet — senaryo 151"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0151
+  - id: pg-final-0152
+    question: "Toplam ciro ve adet — senaryo 152"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0152
+  - id: pg-final-0153
+    question: "Toplam ciro ve adet — senaryo 153"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0153
+  - id: pg-final-0154
+    question: "Toplam ciro ve adet — senaryo 154"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0154
+  - id: pg-final-0155
+    question: "Toplam ciro ve adet — senaryo 155"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0155
+  - id: pg-final-0156
+    question: "Toplam ciro ve adet — senaryo 156"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0156
+  - id: pg-final-0157
+    question: "Toplam ciro ve adet — senaryo 157"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0157
+  - id: pg-final-0158
+    question: "Toplam ciro ve adet — senaryo 158"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0158
+  - id: pg-final-0159
+    question: "Toplam ciro ve adet — senaryo 159"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0159
+  - id: pg-final-0160
+    question: "Toplam ciro ve adet — senaryo 160"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0160
+  - id: pg-final-0161
+    question: "Toplam ciro ve adet — senaryo 161"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0161
+  - id: pg-final-0162
+    question: "Toplam ciro ve adet — senaryo 162"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0162
+  - id: pg-final-0163
+    question: "Toplam ciro ve adet — senaryo 163"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0163
+  - id: pg-final-0164
+    question: "Toplam ciro ve adet — senaryo 164"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0164
+  - id: pg-final-0165
+    question: "Toplam ciro ve adet — senaryo 165"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0165
+  - id: pg-final-0166
+    question: "Toplam ciro ve adet — senaryo 166"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0166
+  - id: pg-final-0167
+    question: "Toplam ciro ve adet — senaryo 167"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0167
+  - id: pg-final-0168
+    question: "Toplam ciro ve adet — senaryo 168"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0168
+  - id: pg-final-0169
+    question: "Toplam ciro ve adet — senaryo 169"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0169
+  - id: pg-final-0170
+    question: "Toplam ciro ve adet — senaryo 170"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0170
+  - id: pg-final-0171
+    question: "Toplam ciro ve adet — senaryo 171"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0171
+  - id: pg-final-0172
+    question: "Toplam ciro ve adet — senaryo 172"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0172
+  - id: pg-final-0173
+    question: "Toplam ciro ve adet — senaryo 173"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0173
+  - id: pg-final-0174
+    question: "Toplam ciro ve adet — senaryo 174"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0174
+  - id: pg-final-0175
+    question: "Toplam ciro ve adet — senaryo 175"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0175
+  - id: pg-final-0176
+    question: "Toplam ciro ve adet — senaryo 176"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0176
+  - id: pg-final-0177
+    question: "Toplam ciro ve adet — senaryo 177"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0177
+  - id: pg-final-0178
+    question: "Toplam ciro ve adet — senaryo 178"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0178
+  - id: pg-final-0179
+    question: "Toplam ciro ve adet — senaryo 179"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0179
+  - id: pg-final-0180
+    question: "Toplam ciro ve adet — senaryo 180"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0180
+  - id: pg-final-0181
+    question: "Toplam ciro ve adet — senaryo 181"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0181
+  - id: pg-final-0182
+    question: "Toplam ciro ve adet — senaryo 182"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0182
+  - id: pg-final-0183
+    question: "Toplam ciro ve adet — senaryo 183"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0183
+  - id: pg-final-0184
+    question: "Toplam ciro ve adet — senaryo 184"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0184
+  - id: pg-final-0185
+    question: "Toplam ciro ve adet — senaryo 185"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0185
+  - id: pg-final-0186
+    question: "Toplam ciro ve adet — senaryo 186"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0186
+  - id: pg-final-0187
+    question: "Toplam ciro ve adet — senaryo 187"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0187
+  - id: pg-final-0188
+    question: "Toplam ciro ve adet — senaryo 188"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0188
+  - id: pg-final-0189
+    question: "Toplam ciro ve adet — senaryo 189"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0189
+  - id: pg-final-0190
+    question: "Toplam ciro ve adet — senaryo 190"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0190
+  - id: pg-final-0191
+    question: "Toplam ciro ve adet — senaryo 191"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0191
+  - id: pg-final-0192
+    question: "Toplam ciro ve adet — senaryo 192"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0192
+  - id: pg-final-0193
+    question: "Toplam ciro ve adet — senaryo 193"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0193
+  - id: pg-final-0194
+    question: "Toplam ciro ve adet — senaryo 194"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0194
+  - id: pg-final-0195
+    question: "Toplam ciro ve adet — senaryo 195"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0195
+  - id: pg-final-0196
+    question: "Toplam ciro ve adet — senaryo 196"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0196
+  - id: pg-final-0197
+    question: "Toplam ciro ve adet — senaryo 197"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0197
+  - id: pg-final-0198
+    question: "Toplam ciro ve adet — senaryo 198"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0198
+  - id: pg-final-0199
+    question: "Toplam ciro ve adet — senaryo 199"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0199
+  - id: pg-final-0200
+    question: "Toplam ciro ve adet — senaryo 200"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0200
+  - id: pg-final-0201
+    question: "Toplam ciro ve adet — senaryo 201"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0201
+  - id: pg-final-0202
+    question: "Toplam ciro ve adet — senaryo 202"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0202
+  - id: pg-final-0203
+    question: "Toplam ciro ve adet — senaryo 203"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0203
+  - id: pg-final-0204
+    question: "Toplam ciro ve adet — senaryo 204"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0204
+  - id: pg-final-0205
+    question: "Toplam ciro ve adet — senaryo 205"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0205
+  - id: pg-final-0206
+    question: "Toplam ciro ve adet — senaryo 206"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0206
+  - id: pg-final-0207
+    question: "Toplam ciro ve adet — senaryo 207"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0207
+  - id: pg-final-0208
+    question: "Toplam ciro ve adet — senaryo 208"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0208
+  - id: pg-final-0209
+    question: "Toplam ciro ve adet — senaryo 209"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0209
+  - id: pg-final-0210
+    question: "Toplam ciro ve adet — senaryo 210"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0210
+  - id: pg-final-0211
+    question: "Toplam ciro ve adet — senaryo 211"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0211
+  - id: pg-final-0212
+    question: "Toplam ciro ve adet — senaryo 212"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0212
+  - id: pg-final-0213
+    question: "Toplam ciro ve adet — senaryo 213"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0213
+  - id: pg-final-0214
+    question: "Toplam ciro ve adet — senaryo 214"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0214
+  - id: pg-final-0215
+    question: "Toplam ciro ve adet — senaryo 215"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0215
+  - id: pg-final-0216
+    question: "Toplam ciro ve adet — senaryo 216"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0216
+  - id: pg-final-0217
+    question: "Toplam ciro ve adet — senaryo 217"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0217
+  - id: pg-final-0218
+    question: "Toplam ciro ve adet — senaryo 218"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0218
+  - id: pg-final-0219
+    question: "Toplam ciro ve adet — senaryo 219"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0219
+  - id: pg-final-0220
+    question: "Toplam ciro ve adet — senaryo 220"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0220
+  - id: pg-final-0221
+    question: "Toplam ciro ve adet — senaryo 221"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0221
+  - id: pg-final-0222
+    question: "Toplam ciro ve adet — senaryo 222"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0222
+  - id: pg-final-0223
+    question: "Toplam ciro ve adet — senaryo 223"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0223
+  - id: pg-final-0224
+    question: "Toplam ciro ve adet — senaryo 224"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0224
+  - id: pg-final-0225
+    question: "Toplam ciro ve adet — senaryo 225"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0225
+  - id: pg-final-0226
+    question: "Toplam ciro ve adet — senaryo 226"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0226
+  - id: pg-final-0227
+    question: "Toplam ciro ve adet — senaryo 227"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0227
+  - id: pg-final-0228
+    question: "Toplam ciro ve adet — senaryo 228"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0228
+  - id: pg-final-0229
+    question: "Toplam ciro ve adet — senaryo 229"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0229
+  - id: pg-final-0230
+    question: "Toplam ciro ve adet — senaryo 230"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0230
+  - id: pg-final-0231
+    question: "Toplam ciro ve adet — senaryo 231"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0231
+  - id: pg-final-0232
+    question: "Toplam ciro ve adet — senaryo 232"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0232
+  - id: pg-final-0233
+    question: "Toplam ciro ve adet — senaryo 233"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0233
+  - id: pg-final-0234
+    question: "Toplam ciro ve adet — senaryo 234"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0234
+  - id: pg-final-0235
+    question: "Toplam ciro ve adet — senaryo 235"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0235
+  - id: pg-final-0236
+    question: "Toplam ciro ve adet — senaryo 236"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0236
+  - id: pg-final-0237
+    question: "Toplam ciro ve adet — senaryo 237"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0237
+  - id: pg-final-0238
+    question: "Toplam ciro ve adet — senaryo 238"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0238
+  - id: pg-final-0239
+    question: "Toplam ciro ve adet — senaryo 239"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0239
+  - id: pg-final-0240
+    question: "Toplam ciro ve adet — senaryo 240"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0240
+  - id: pg-final-0241
+    question: "Toplam ciro ve adet — senaryo 241"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0241
+  - id: pg-final-0242
+    question: "Toplam ciro ve adet — senaryo 242"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0242
+  - id: pg-final-0243
+    question: "Toplam ciro ve adet — senaryo 243"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0243
+  - id: pg-final-0244
+    question: "Toplam ciro ve adet — senaryo 244"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0244
+  - id: pg-final-0245
+    question: "Toplam ciro ve adet — senaryo 245"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0245
+  - id: pg-final-0246
+    question: "Toplam ciro ve adet — senaryo 246"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0246
+  - id: pg-final-0247
+    question: "Toplam ciro ve adet — senaryo 247"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0247
+  - id: pg-final-0248
+    question: "Toplam ciro ve adet — senaryo 248"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0248
+  - id: pg-final-0249
+    question: "Toplam ciro ve adet — senaryo 249"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0249
+  - id: pg-final-0250
+    question: "Toplam ciro ve adet — senaryo 250"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0250
+  - id: pg-final-0251
+    question: "Toplam ciro ve adet — senaryo 251"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0251
+  - id: pg-final-0252
+    question: "Toplam ciro ve adet — senaryo 252"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0252
+  - id: pg-final-0253
+    question: "Toplam ciro ve adet — senaryo 253"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0253
+  - id: pg-final-0254
+    question: "Toplam ciro ve adet — senaryo 254"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0254
+  - id: pg-final-0255
+    question: "Toplam ciro ve adet — senaryo 255"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0255
+  - id: pg-final-0256
+    question: "Toplam ciro ve adet — senaryo 256"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0256
+  - id: pg-final-0257
+    question: "Toplam ciro ve adet — senaryo 257"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0257
+  - id: pg-final-0258
+    question: "Toplam ciro ve adet — senaryo 258"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0258
+  - id: pg-final-0259
+    question: "Toplam ciro ve adet — senaryo 259"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0259
+  - id: pg-final-0260
+    question: "Toplam ciro ve adet — senaryo 260"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0260
+  - id: pg-final-0261
+    question: "Toplam ciro ve adet — senaryo 261"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0261
+  - id: pg-final-0262
+    question: "Toplam ciro ve adet — senaryo 262"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0262
+  - id: pg-final-0263
+    question: "Toplam ciro ve adet — senaryo 263"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0263
+  - id: pg-final-0264
+    question: "Toplam ciro ve adet — senaryo 264"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0264
+  - id: pg-final-0265
+    question: "Toplam ciro ve adet — senaryo 265"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0265
+  - id: pg-final-0266
+    question: "Toplam ciro ve adet — senaryo 266"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0266
+  - id: pg-final-0267
+    question: "Toplam ciro ve adet — senaryo 267"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0267
+  - id: pg-final-0268
+    question: "Toplam ciro ve adet — senaryo 268"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0268
+  - id: pg-final-0269
+    question: "Toplam ciro ve adet — senaryo 269"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0269
+  - id: pg-final-0270
+    question: "Toplam ciro ve adet — senaryo 270"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0270
+  - id: pg-final-0271
+    question: "Toplam ciro ve adet — senaryo 271"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0271
+  - id: pg-final-0272
+    question: "Toplam ciro ve adet — senaryo 272"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0272
+  - id: pg-final-0273
+    question: "Toplam ciro ve adet — senaryo 273"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0273
+  - id: pg-final-0274
+    question: "Toplam ciro ve adet — senaryo 274"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0274
+  - id: pg-final-0275
+    question: "Toplam ciro ve adet — senaryo 275"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0275
+  - id: pg-final-0276
+    question: "Toplam ciro ve adet — senaryo 276"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0276
+  - id: pg-final-0277
+    question: "Toplam ciro ve adet — senaryo 277"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0277
+  - id: pg-final-0278
+    question: "Toplam ciro ve adet — senaryo 278"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0278
+  - id: pg-final-0279
+    question: "Toplam ciro ve adet — senaryo 279"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0279
+  - id: pg-final-0280
+    question: "Toplam ciro ve adet — senaryo 280"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0280
+  - id: pg-final-0281
+    question: "Toplam ciro ve adet — senaryo 281"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0281
+  - id: pg-final-0282
+    question: "Toplam ciro ve adet — senaryo 282"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0282
+  - id: pg-final-0283
+    question: "Toplam ciro ve adet — senaryo 283"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0283
+  - id: pg-final-0284
+    question: "Toplam ciro ve adet — senaryo 284"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0284
+  - id: pg-final-0285
+    question: "Toplam ciro ve adet — senaryo 285"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0285
+  - id: pg-final-0286
+    question: "Toplam ciro ve adet — senaryo 286"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0286
+  - id: pg-final-0287
+    question: "Toplam ciro ve adet — senaryo 287"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0287
+  - id: pg-final-0288
+    question: "Toplam ciro ve adet — senaryo 288"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0288
+  - id: pg-final-0289
+    question: "Toplam ciro ve adet — senaryo 289"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0289
+  - id: pg-final-0290
+    question: "Toplam ciro ve adet — senaryo 290"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0290
+  - id: pg-final-0291
+    question: "Toplam ciro ve adet — senaryo 291"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0291
+  - id: pg-final-0292
+    question: "Toplam ciro ve adet — senaryo 292"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0292
+  - id: pg-final-0293
+    question: "Toplam ciro ve adet — senaryo 293"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0293
+  - id: pg-final-0294
+    question: "Toplam ciro ve adet — senaryo 294"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0294
+  - id: pg-final-0295
+    question: "Toplam ciro ve adet — senaryo 295"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0295
+  - id: pg-final-0296
+    question: "Toplam ciro ve adet — senaryo 296"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0296
+  - id: pg-final-0297
+    question: "Toplam ciro ve adet — senaryo 297"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0297
+  - id: pg-final-0298
+    question: "Toplam ciro ve adet — senaryo 298"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0298
+  - id: pg-final-0299
+    question: "Toplam ciro ve adet — senaryo 299"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0299
+  - id: pg-final-0300
+    question: "Toplam ciro ve adet — senaryo 300"
+    expectedMetric: total_revenue
+    expectedTables: ["orders", "order_items"]
+    expectedResultFingerprint: pg-fp-0300
