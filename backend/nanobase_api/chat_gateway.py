@@ -766,13 +766,21 @@ async def stream_chat_via_gateway(
         yield _sse("done", result).encode()
         return
 
+    # Normalize LLM SQL escapes before Gateway validate (literal \n breaks sqlglot).
+    try:
+        from nanobase_awel.operators.structured_parser import normalize_single_select_sql
+
+        sql = normalize_single_select_sql(sql) or sql
+    except Exception:
+        pass
+
     yield _sse("status", {"phase": "validating", "sql": sql, "sql_source": sql_source}).encode()
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
     from nanobase_awel.workflows.sql_repair import is_repairable
 
     qg = QueryGatewayClient(QG_BASE)
     repair_attempts = 0
-    max_repairs = 2
+    max_repairs = 1
     last_error_code = ""
     safe_sql = sql
     ej: dict = {}

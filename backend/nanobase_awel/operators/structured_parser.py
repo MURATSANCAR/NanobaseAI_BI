@@ -43,6 +43,14 @@ def normalize_single_select_sql(sql: str | None) -> str | None:
     if text.startswith("```"):
         text = re.sub(r"^```(?:sql|postgres)?\s*", "", text, flags=re.I)
         text = re.sub(r"\s*```$", "", text)
+    # Models sometimes emit literal backslash-escapes instead of real newlines.
+    if "\\n" in text or "\\t" in text:
+        text = (
+            text.replace("\\r\\n", "\n")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace('\\"', '"')
+        )
     m = re.search(r"(?is)\b((?:with|select)\b[\s\S]+)", text)
     if m:
         text = m.group(1).strip()
