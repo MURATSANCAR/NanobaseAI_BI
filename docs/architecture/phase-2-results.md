@@ -1,10 +1,10 @@
 # Faz 2 — Şema indeksi + kalite
 
-- Zaman: `2026-07-19T12:33:18.601515+00:00`
+- Zaman: `2026-07-19T13:33:01.910484+00:00`
 - Collection: `bi_schema_bi_reporting`
-- Retrieval: **18/20**
+- Retrieval: **15/20**
 - NL2SQL: **20/20**
-- Overall: **0.95** (eş 0.8) → PASS
+- Overall: **0.875** (eş 0.8) → PASS
 
 | ID | Ret | SQL | Score | Soru |
 |----|-----|-----|-------|------|
@@ -16,12 +16,12 @@
 | `q06` | Y | True | 1.00 | SKU-100 ürününün adı nedir? |
 | `q07` | Y | True | 1.00 | Completed sipariş sayısı |
 | `q08` | Y | True | 1.00 | 2026 yılı siparişlerini getir |
-| `q09` | Y | True | 1.00 | Pending siparişleri olan müşteriler |
+| `q09` | N | True | 0.50 | Pending siparişleri olan müşteriler |
 | `q10` | Y | True | 1.00 | Her siparişin toplam tutarı (order_items) |
-| `q11` | Y | True | 1.00 | En çok satılan ürün (adet) |
+| `q11` | N | True | 0.50 | En çok satılan ürün (adet) |
 | `q12` | N | True | 0.50 | Segment bazında toplam gelir |
 | `q13` | Y | True | 1.00 | v_order_revenue üzerinden ülke bazında ciro |
-| `q14` | Y | True | 1.00 | Acme Holding'in sipariş sayısı |
+| `q14` | N | True | 0.50 | Acme Holding'in sipariş sayısı |
 | `q15` | Y | True | 1.00 | Services kategorisindeki ürünler |
 | `q16` | Y | True | 1.00 | İptal edilen siparişler |
 | `q17` | Y | True | 1.00 | 2026 yılındaki toplam fatura tutarı |

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from config import SAMPLE_ALLOWLIST, IndexerConfig
 from models import TableMeta
 from scanner.metadata import connect
