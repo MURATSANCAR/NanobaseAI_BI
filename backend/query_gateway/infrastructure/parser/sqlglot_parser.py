@@ -170,6 +170,9 @@ def parse_sql(sql: str, *, dialect: str = "postgres") -> ParsedQuery:
         if fn.this:
             functions.add(_norm(str(fn.this)).upper())
     for fn in tree.find_all(exp.Func):
+        # sqlglot models AND/OR (and other connectors) as Func — not real UDFs.
+        if isinstance(fn, exp.Connector):
+            continue
         functions.add(type(fn).__name__.upper())
 
     join_count = 0
