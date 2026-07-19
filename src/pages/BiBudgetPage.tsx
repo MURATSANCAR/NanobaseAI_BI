@@ -363,7 +363,7 @@ export default function BiBudgetPage() {
   const closeForm = () => setForm(null);
 
   const submitForm = () => {
-    if (!form?.name || form.allocated == null || form.locked) return;
+    if (!form?.name || form.allocated == null || form.locked || form.status === 'closed') return;
     saveMut.mutate({
       ...form,
       fiscal_year: form.fiscal_year ?? year,
@@ -426,6 +426,7 @@ export default function BiBudgetPage() {
     mutationFn: () => api.bi.budgets.downloadTemplate(config, year),
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
+  void templateMut;
 
   const importMut = useMutation({
     mutationFn: (file: File) => api.bi.budgets.importFile(config, file, year),
@@ -480,6 +481,7 @@ export default function BiBudgetPage() {
       }),
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
+  void exportMut;
 
   const narrativeQ = useQuery({
     queryKey: ['bi-budgets-narrative', config, year, scenarioFilter, reportingCurrency, getLocale()],
@@ -500,12 +502,14 @@ export default function BiBudgetPage() {
         scenario: scenarioFilter || 'base',
       }),
     onSuccess: (res) => {
+      const nextYear = year + 1;
+      setYear(nextYear);
       invalidate();
       showFlash(
         t('bi.budget.cloneDone', {
           created: String(res.created ?? 0),
           skipped: String(res.skipped ?? 0),
-          year: String(year + 1),
+          year: String(nextYear),
         }),
         true,
       );
@@ -548,6 +552,7 @@ export default function BiBudgetPage() {
     },
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
+  void alertMut;
 
   const approveMut = useMutation({
     mutationFn: (id: string) => api.bi.budgets.approve(config, id),
@@ -595,6 +600,7 @@ export default function BiBudgetPage() {
     },
     onError: (err) => showFlash(localizeUserMessage((err as Error).message), false),
   });
+  void sharePackMut;
 
   const transferMut = useMutation({
     mutationFn: () =>
@@ -734,6 +740,8 @@ export default function BiBudgetPage() {
     setForm((prev) => (prev ? { ...prev, actuals_sql: sqlForActualsTemplate(mode, actualsTemplates) } : prev));
   };
 
+  const formReadOnly = Boolean(form?.locked) || String(form?.status || '').toLowerCase() === 'closed';
+
   const formPanel = form ? (
     <div
       ref={formPanelRef}
@@ -757,7 +765,7 @@ export default function BiBudgetPage() {
           <button
             type="button"
             className="btn-primary inline-flex items-center gap-1.5 text-xs"
-            disabled={!form.name || form.allocated == null || saveMut.isPending || Boolean(form.locked)}
+            disabled={!form.name || form.allocated == null || saveMut.isPending || formReadOnly}
             onClick={submitForm}
           >
             {saveMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
@@ -767,6 +775,11 @@ export default function BiBudgetPage() {
       </div>
 
       <div className="space-y-4 p-4">
+      {formReadOnly ? (
+        <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+          {form.locked ? t('bi.budget.lockedHint') : t('bi.budget.closedHint')}
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <h3 className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">
@@ -778,7 +791,7 @@ export default function BiBudgetPage() {
               ref={nameInputRef}
               className="input-field"
               value={form.name ?? ''}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               placeholder={t('bi.budget.namePlaceholder')}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -788,7 +801,7 @@ export default function BiBudgetPage() {
               <select
                 className="input-field"
                 value={form.fiscal_year ?? year}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => setForm({ ...form, fiscal_year: Number(e.target.value) })}
               >
                 {yearOptions.map((y) => (
@@ -802,7 +815,7 @@ export default function BiBudgetPage() {
               <select
                 className="input-field"
                 value={form.kind ?? 'opex'}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => setForm({ ...form, kind: e.target.value })}
               >
                 <option value="opex">{t('bi.budget.kindOpex')}</option>
@@ -817,7 +830,7 @@ export default function BiBudgetPage() {
                 className="input-field"
                 type="number"
                 value={form.allocated ?? 0}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => setForm({ ...form, allocated: Number(e.target.value) })}
               />
             </Field>
@@ -825,7 +838,7 @@ export default function BiBudgetPage() {
               <select
                 className="input-field"
                 value={form.currency ?? 'TRY'}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => setForm({ ...form, currency: e.target.value })}
               >
                 {CURRENCIES.map((c) => (
@@ -849,7 +862,7 @@ export default function BiBudgetPage() {
               className="input-field"
               list="bi-budget-cost-centers"
               value={form.cost_center ?? ''}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setForm({ ...form, cost_center: e.target.value })}
               placeholder={t('bi.budget.costCenterPlaceholder')}
             />
@@ -866,7 +879,7 @@ export default function BiBudgetPage() {
               <input
                 className="input-field"
                 value={form.owner ?? ''}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 placeholder={t('bi.budget.ownerPlaceholder')}
                 onChange={(e) => setForm({ ...form, owner: e.target.value })}
               />
@@ -875,7 +888,7 @@ export default function BiBudgetPage() {
               <select
                 className="input-field"
                 value={form.status ?? 'draft'}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
                 <option value="draft">{t('bi.budget.statusDraft')}</option>
@@ -884,9 +897,7 @@ export default function BiBudgetPage() {
               </select>
             </Field>
           </div>
-          {form.locked ? (
-            <p className="rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900">{t('bi.budget.lockedHint')}</p>
-          ) : null}
+
         </div>
       </section>
 
@@ -898,7 +909,7 @@ export default function BiBudgetPage() {
           <select
             className="input-field"
             value={actualsMode === 'custom' ? 'custom' : actualsMode}
-            disabled={Boolean(form.locked)}
+            disabled={formReadOnly}
             onChange={(e) => applyActualsMode(e.target.value as BiBudgetActualsTemplateId)}
           >
             {actualsTemplates.map((tpl) => (
@@ -960,7 +971,7 @@ export default function BiBudgetPage() {
             <select
               className="input-field"
               value={form.scenario ?? 'base'}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setForm({ ...form, scenario: e.target.value })}
             >
               <option value="base">{t('bi.budget.scenarioBase')}</option>
@@ -973,7 +984,7 @@ export default function BiBudgetPage() {
               className="input-field"
               type="number"
               value={form.committed ?? 0}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setForm({ ...form, committed: Number(e.target.value) })}
             />
           </Field>
@@ -982,7 +993,7 @@ export default function BiBudgetPage() {
               <textarea
                 className="input-field min-h-[72px] font-mono text-sm"
                 value={form.actuals_sql ?? ''}
-                disabled={Boolean(form.locked)}
+                disabled={formReadOnly}
                 onChange={(e) => {
                   setActualsMode('custom');
                   setForm({ ...form, actuals_sql: e.target.value });
@@ -991,7 +1002,7 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className="btn-secondary mt-2 text-xs"
-                disabled={!form.actuals_sql?.trim() || validateSqlMut.isPending || Boolean(form.locked)}
+                disabled={!form.actuals_sql?.trim() || validateSqlMut.isPending || formReadOnly}
                 onClick={() => validateSqlMut.mutate(form.actuals_sql || '')}
               >
                 {validateSqlMut.isPending ? <Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> : null}
@@ -1003,7 +1014,7 @@ export default function BiBudgetPage() {
             <button
               type="button"
               className="text-xs font-medium text-violet-700 hover:underline"
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onClick={() => {
                 setAdvancedSqlOpen(true);
                 setActualsMode('custom');
@@ -1016,7 +1027,7 @@ export default function BiBudgetPage() {
             <textarea
               className="input-field min-h-[56px] font-mono text-sm"
               value={form.breakdown_sql ?? ''}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setForm({ ...form, breakdown_sql: e.target.value })}
               placeholder={t('bi.budget.breakdownSqlPlaceholder')}
             />
@@ -1034,7 +1045,7 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className="btn-secondary text-xs"
-                disabled={approveMut.isPending || Boolean(form.locked)}
+                disabled={approveMut.isPending || formReadOnly}
                 onClick={() => approveMut.mutate(form.id!)}
               >
                 {t('bi.budget.approve')}
@@ -1083,7 +1094,7 @@ export default function BiBudgetPage() {
                     className="input-field mt-0.5 px-1 py-1 text-xs"
                     type="number"
                     value={p.allocated}
-                    disabled={Boolean(form.locked)}
+                    disabled={formReadOnly}
                     onChange={(e) => {
                       const next = [...(periodsQ.data?.periods || [])];
                       if (!next.length) {
@@ -1100,8 +1111,17 @@ export default function BiBudgetPage() {
           <button
             type="button"
             className="btn-secondary text-xs"
-            disabled={savePeriodsMut.isPending || Boolean(form.locked) || !periodsQ.data?.periods}
-            onClick={() => savePeriodsMut.mutate(periodsQ.data!.periods)}
+            disabled={savePeriodsMut.isPending || formReadOnly}
+            onClick={() => {
+              const periods =
+                periodsQ.data?.periods ||
+                Array.from({ length: 12 }, (_, i) => ({
+                  period_index: i + 1,
+                  allocated: 0,
+                  actual: null as number | null,
+                }));
+              savePeriodsMut.mutate(periods);
+            }}
           >
             {t('bi.budget.savePeriods')}
           </button>
@@ -1118,20 +1138,20 @@ export default function BiBudgetPage() {
               className="input-field min-w-[8rem] flex-1"
               placeholder={t('bi.budget.commitmentDesc')}
               value={commitDesc}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setCommitDesc(e.target.value)}
             />
             <input
               className="input-field max-w-[7rem]"
               type="number"
               value={commitAmount}
-              disabled={Boolean(form.locked)}
+              disabled={formReadOnly}
               onChange={(e) => setCommitAmount(Number(e.target.value))}
             />
             <button
               type="button"
               className="btn-secondary text-xs"
-              disabled={saveCommitMut.isPending || !commitAmount || Boolean(form.locked)}
+              disabled={saveCommitMut.isPending || !commitAmount || formReadOnly}
               onClick={() => saveCommitMut.mutate()}
             >
               {t('bi.budget.addCommitment')}
@@ -1140,7 +1160,7 @@ export default function BiBudgetPage() {
           <ul className="space-y-1 text-[11px] text-slate-600">
             {(commitmentsQ.data?.commitments || []).slice(0, 24).map((c) => {
               const status = String(c.status || 'open').toLowerCase();
-              const busy = updateCommitStatusMut.isPending || Boolean(form.locked);
+              const busy = updateCommitStatusMut.isPending || formReadOnly;
               return (
               <li key={c.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span>
@@ -1229,7 +1249,7 @@ export default function BiBudgetPage() {
           <textarea
             className="input-field min-h-[64px]"
             value={form.notes ?? ''}
-            disabled={Boolean(form.locked)}
+            disabled={formReadOnly}
             placeholder={t('bi.budget.notesPlaceholder')}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
@@ -1240,7 +1260,7 @@ export default function BiBudgetPage() {
         <button
           type="button"
           className="btn-primary inline-flex items-center gap-2"
-          disabled={!form.name || form.allocated == null || saveMut.isPending || Boolean(form.locked)}
+          disabled={!form.name || form.allocated == null || saveMut.isPending || formReadOnly}
           onClick={submitForm}
         >
           {saveMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -1253,7 +1273,7 @@ export default function BiBudgetPage() {
           <button
             type="button"
             className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 text-xs font-medium text-status-fail hover:bg-red-50 disabled:opacity-40"
-            disabled={Boolean(form.locked) || delMut.isPending}
+            disabled={formReadOnly || delMut.isPending}
             onClick={() => {
               if (window.confirm(t('bi.budget.deleteConfirm'))) delMut.mutate(form.id!);
             }}
@@ -1341,27 +1361,19 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled={templateMut.isPending || !enabled}
-                onClick={() => templateMut.mutate()}
+                disabled
+                title={t('bi.budget.featurePending')}
               >
-                {templateMut.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Download className="h-3.5 w-3.5 text-violet-600" />
-                )}
+                <Download className="h-3.5 w-3.5 text-slate-400" />
                 {t('bi.budget.downloadTemplate')}
               </button>
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled={importMut.isPending || !enabled}
-                onClick={() => fileInputRef.current?.click()}
+                disabled
+                title={t('bi.budget.featurePending')}
               >
-                {importMut.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Upload className="h-3.5 w-3.5 text-violet-600" />
-                )}
+                <Upload className="h-3.5 w-3.5 text-slate-400" />
                 {t('bi.budget.uploadExcel')}
               </button>
             </ToolbarGroup>
@@ -1372,24 +1384,19 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled={exportMut.isPending || !enabled}
-                onClick={() => exportMut.mutate('pdf')}
+                disabled
+                title={t('bi.budget.featurePending')}
               >
-                {exportMut.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <FileText className="h-3.5 w-3.5 text-violet-600" />
-                )}
+                <FileText className="h-3.5 w-3.5 text-slate-400" />
                 {t('bi.budget.exportPdf')}
               </button>
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled={exportMut.isPending || !enabled}
-                title={t('bi.budget.exportExcelHint')}
-                onClick={() => exportMut.mutate('xlsx')}
+                disabled
+                title={t('bi.budget.featurePending')}
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-violet-600" />
+                <FileSpreadsheet className="h-3.5 w-3.5 text-slate-400" />
                 {t('bi.budget.exportExcel')}
               </button>
             </ToolbarGroup>
@@ -1435,14 +1442,10 @@ export default function BiBudgetPage() {
               <button
                 type="button"
                 className={toolbarBtn}
-                disabled={sharePackMut.isPending || !enabled}
-                onClick={() => sharePackMut.mutate()}
+                disabled
+                title={t('bi.budget.featurePending')}
               >
-                {sharePackMut.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Link2 className="h-3.5 w-3.5 text-violet-600" />
-                )}
+                <Link2 className="h-3.5 w-3.5 text-slate-400" />
                 {t('bi.budget.sharePack')}
               </button>
               <button
@@ -1664,10 +1667,19 @@ export default function BiBudgetPage() {
               ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
               : 'border-red-200 bg-red-50 text-red-900',
           )}
+          role="status"
         >
           {flash.text}
         </p>
       )}
+
+      {list.isError || summary.isError ? (
+        <p className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
+          {localizeUserMessage(
+            ((list.error || summary.error) as Error | undefined)?.message || t('bi.budget.loadError'),
+          )}
+        </p>
+      ) : null}
 
       {summary.data?.mixed_currency ? (
         <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -1898,15 +1910,21 @@ export default function BiBudgetPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card border-l-4 border-l-slate-300 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('bi.budget.kpiAllocated')}</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{money(totals?.allocated)}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
+            {money(totals?.allocated, reportingCurrency || undefined)}
+          </p>
         </div>
         <div className="card border-l-4 border-l-sky-400 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('bi.budget.kpiActual')}</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{money(totals?.actual)}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
+            {money(totals?.actual, reportingCurrency || undefined)}
+          </p>
         </div>
         <div className="card border-l-4 border-l-emerald-400 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('bi.budget.kpiRemaining')}</p>
-          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">{money(totals?.remaining)}</p>
+          <p className="mt-1 text-lg font-semibold tabular-nums text-slate-900">
+            {money(totals?.remaining, reportingCurrency || undefined)}
+          </p>
         </div>
         <div
           className={clsx(
@@ -1924,7 +1942,8 @@ export default function BiBudgetPage() {
             {watchCount}
           </p>
           <p className="mt-1 text-[11px] text-slate-500">
-            OPEX {money(opex?.remaining)} · CAPEX {money(capex?.remaining)}
+            {t('bi.budget.kindOpex')} {money(opex?.remaining, reportingCurrency || undefined)} ·{' '}
+            {t('bi.budget.kindCapex')} {money(capex?.remaining, reportingCurrency || undefined)}
           </p>
         </div>
       </div>
@@ -2066,7 +2085,7 @@ export default function BiBudgetPage() {
                   headerClassName: 'text-right',
                   className: 'whitespace-nowrap text-right',
                   cell: (r) => {
-                    const pct = r.used_pct ?? 0;
+                    const pct = r.used_pct;
                     const bar =
                       r.health === 'over'
                         ? 'bg-red-500'
@@ -2080,12 +2099,14 @@ export default function BiBudgetPage() {
                         <p className="tabular-nums text-xs font-medium text-slate-700">
                           {formatUsedPct(r.used_pct)}
                         </p>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className={clsx('h-full rounded-full', bar)}
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
+                        {pct != null ? (
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className={clsx('h-full rounded-full', bar)}
+                              style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
+                            />
+                          </div>
+                        ) : null}
                       </div>
                     );
                   },
@@ -2113,7 +2134,6 @@ export default function BiBudgetPage() {
                         name: r.name || r.id,
                         year: String(r.fiscal_year || year),
                       });
-                    const canAlert = Boolean(r.actuals_sql?.trim());
                     return (
                       <div className="flex flex-wrap gap-1">
                         <button
@@ -2141,12 +2161,8 @@ export default function BiBudgetPage() {
                         <button
                           type="button"
                           className="inline-flex min-h-9 items-center rounded-lg px-2 text-xs font-medium text-amber-800 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={!canAlert || alertMut.isPending}
-                          title={canAlert ? undefined : t('bi.budget.alertUnavailable')}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (canAlert) alertMut.mutate(r.id);
-                          }}
+                          disabled
+                          title={t('bi.budget.featurePending')}
                         >
                           {t('bi.budget.createAlert')}
                         </button>

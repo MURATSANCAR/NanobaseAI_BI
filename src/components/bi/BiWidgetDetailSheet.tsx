@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { BiCardWidget, BiTableWidget, BiVisualChart } from '@/components/bi/BiCharts';
 import type { BiWidget } from '@/api/types';
 import { t } from '@/i18n';
+import { biVisualTypeLabel, biWidgetTitle } from '@/utils/biFieldLabel';
 
 function isKpiWidget(widget: BiWidget) {
   return widget.type === 'kpi' || widget.type === 'metric' || widget.type === 'card';
@@ -48,12 +49,12 @@ export default function BiWidgetDetailSheet({
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-5">
           <div className="min-w-0">
             <h2 id={titleId} className="truncate text-base font-semibold text-slate-900">
-              {widget.title || widget.id}
+              {biWidgetTitle(widget)}
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {t('bi.analytics.widgetDetailMeta', {
                 rows: String(rowCount),
-                type: widget.type || 'widget',
+                type: biVisualTypeLabel(widget.type),
               })}
             </p>
           </div>

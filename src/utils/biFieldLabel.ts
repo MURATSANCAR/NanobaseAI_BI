@@ -72,10 +72,33 @@ function titleTr(word: string): string {
 export function biFieldLabel(column: string): string {
   const raw = (column || '').trim();
   if (!raw) return t('common.none');
-  const key = `bi.field.${raw}`;
+  const key = `bi.field.${raw.toLowerCase()}`;
   const translated = t(key);
   if (translated !== key) return translated;
+  // Also try exact casing key for legacy entries
+  const exact = t(`bi.field.${raw}`);
+  if (exact !== `bi.field.${raw}`) return exact;
   return humanizeColumnId(raw);
+}
+
+/** Chart / widget visual type chip (bar, kpi, donut…). */
+export function biVisualTypeLabel(type: string | undefined | null): string {
+  const raw = (type || 'chart').trim().toLowerCase() || 'chart';
+  const key = `bi.visual.${raw}`;
+  const translated = t(key);
+  if (translated !== key) return translated;
+  return biFieldLabel(raw);
+}
+
+/** Widget card title — prefers bi.widget.{id}, else API title. */
+export function biWidgetTitle(widget: { id?: string; title?: string } | null | undefined): string {
+  const id = (widget?.id || '').trim();
+  if (id) {
+    const key = `bi.widget.${id}`;
+    const translated = t(key);
+    if (translated !== key) return translated;
+  }
+  return (widget?.title || id || t('bi.visual.widget')).trim();
 }
 
 export function humanizeColumnId(column: string): string {

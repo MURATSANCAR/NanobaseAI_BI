@@ -1,4 +1,5 @@
 import clsx from 'clsx';
+import { biFieldLabel } from '@/utils/biFieldLabel';
 
 type Props = {
   columns: string[];
@@ -44,7 +45,7 @@ export default function DynamicResultTable({
             <tr>
               {cols.map((c) => (
                 <th key={c} className={clsx('whitespace-nowrap font-medium', compact ? 'px-2 py-1.5' : 'px-3 py-2')}>
-                  {c}
+                  {biFieldLabel(c)}
                 </th>
               ))}
             </tr>
@@ -79,7 +80,9 @@ export default function DynamicResultTable({
               <dl className="space-y-1">
                 {rest.map((c, ci) => (
                   <div key={c} className="grid grid-cols-[minmax(4.5rem,36%)_1fr] gap-2 text-xs">
-                    <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-500">{c}</dt>
+                    <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                      {biFieldLabel(c)}
+                    </dt>
                     <dd className="min-w-0 break-words text-right text-slate-700">{cellValue(row, c, ci + 1)}</dd>
                   </div>
                 ))}

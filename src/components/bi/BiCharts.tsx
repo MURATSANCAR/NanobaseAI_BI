@@ -47,6 +47,7 @@ import {
 } from '@/components/bi/biVisualTheme';
 import { isHorizontalBar, isStacked, normalizeVisualType } from '@/components/bi/biVisualTypes';
 import { t } from '@/i18n';
+import { biFieldLabel } from '@/utils/biFieldLabel';
 
 const CHART_H_DEFAULT = 220;
 
@@ -485,7 +486,7 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
           <Bar
             yAxisId="left"
             dataKey={yk}
-            name={yk}
+            name={biFieldLabel(yk)}
             fill={`url(#${pbiGradientId(widget.id, 0)})`}
             radius={[barRadius, barRadius, 0, 0]}
             animationDuration={animDuration}
@@ -499,7 +500,7 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
               yAxisId="right"
               type="monotone"
               dataKey={y2k}
-              name={y2k}
+              name={biFieldLabel(y2k)}
               stroke={lineStroke}
               strokeWidth={2.5}
               dot={{ r: 3, fill: '#fff', stroke: lineStroke, strokeWidth: 2 }}
@@ -578,8 +579,8 @@ export function BiScatterChartWidget({ widget, bubble = false, height = CHART_H_
       <ResponsiveContainer width="100%" height={height}>
         <ScatterChart margin={{ top: 8, right: 12, bottom: 8, left: 4 }}>
           <CartesianGrid {...PBI_GRID} />
-          <XAxis type="number" dataKey="x" name={xk} tick={PBI_AXIS} />
-          <YAxis type="number" dataKey="y" name={yk} tick={PBI_AXIS} width={44} domain={['auto', 'auto']} />
+          <XAxis type="number" dataKey="x" name={biFieldLabel(xk)} tick={PBI_AXIS} />
+          <YAxis type="number" dataKey="y" name={biFieldLabel(yk)} tick={PBI_AXIS} width={44} domain={['auto', 'auto']} />
           {bubble && <ZAxis type="number" dataKey="z" range={[60, 400]} />}
           <Tooltip content={<BiPbiTooltip />} cursor={{ strokeDasharray: '3 3' }} />
           <Scatter data={data} fill={fill} fillOpacity={0.85} />
@@ -613,7 +614,7 @@ export function BiWaterfallChartWidget({ widget, height = CHART_H_DEFAULT, varia
   // Closing total column
   if (data.length) {
     data.push({
-      name: 'Total',
+      name: t('bi.chart.total'),
       base: 0,
       rise: Math.abs(running),
       delta: running,
@@ -744,7 +745,7 @@ export function BiGaugeChartWidget({ widget, targetValue, height = 200, variant 
   const c0 = paletteColor(variant, 1);
   const c1 = paletteColor(variant, 0);
   const animDuration = chartAnimationDuration(variant);
-  const data = [{ name: 'value', value: pct, fill: `url(#${gradId})` }];
+  const data = [{ name: biFieldLabel('value'), value: pct, fill: `url(#${gradId})` }];
   const gaugeH = Math.max(140, Math.min(height, 220));
   return (
     <div className={clsx('bi-pbi-gauge flex h-full flex-col items-center justify-center py-1', chartVivid(variant) && 'bi-pbi-kpi-pulse')}>
@@ -987,7 +988,9 @@ export function BiMatrixWidget({ widget, maxHeight, onDatumClick }: { widget: Bi
                   const v = lookup.get(`${row}|${col}`) || 0;
                   return (
                     <div key={col} className="rounded-lg bg-[#F3F2F1] px-2 py-1.5">
-                      <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-[#605E5C]">{col}</dt>
+                      <dt className="truncate text-[10px] font-medium uppercase tracking-wide text-[#605E5C]">
+                        {biFieldLabel(col)}
+                      </dt>
                       <dd className="text-sm font-semibold tabular-nums text-[#252423]">{formatPbiNumber(v, widget.format)}</dd>
                     </div>
                   );
@@ -1013,11 +1016,13 @@ export function BiMatrixWidget({ widget, maxHeight, onDatumClick }: { widget: Bi
       <table className="bi-pbi-matrix w-full text-left text-xs">
         <thead className="sticky top-0 z-[1] bg-[#F3F2F1]">
           <tr>
-            <th className="bi-pbi-matrix-corner px-3 py-2">{rowKey}</th>
+            <th className="bi-pbi-matrix-corner px-3 py-2">{biFieldLabel(rowKey)}</th>
             {colSet.map((c) => (
-              <th key={c} className="px-3 py-2 text-right font-semibold text-[#605E5C]">{c}</th>
+              <th key={c} className="px-3 py-2 text-right font-semibold text-[#605E5C]">
+                {biFieldLabel(c)}
+              </th>
             ))}
-            <th className="px-3 py-2 text-right font-semibold text-[#252423]">Σ</th>
+            <th className="px-3 py-2 text-right font-semibold text-[#252423]">{t('bi.chart.total')}</th>
           </tr>
         </thead>
         <tbody>

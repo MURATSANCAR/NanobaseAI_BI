@@ -12,6 +12,8 @@ describe('biFieldLabel', () => {
   it('uses locale keys for known fields', () => {
     expect(biFieldLabel('bolge')).toBe('Bölge');
     expect(biFieldLabel('acente_sayisi')).toBe('Acente sayısı');
+    expect(biFieldLabel('label')).toBe('Kategori');
+    expect(biFieldLabel('value')).toBe('Değer');
   });
 
   it('localizes number formats', () => {

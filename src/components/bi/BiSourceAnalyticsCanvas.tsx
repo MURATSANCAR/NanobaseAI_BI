@@ -7,6 +7,7 @@ import BiWidgetDetailSheet from '@/components/bi/BiWidgetDetailSheet';
 import type { BiWidget } from '@/api/types';
 import { t } from '@/i18n';
 import { localizeUserMessage } from '@/utils/backendLabels';
+import { biVisualTypeLabel, biWidgetTitle } from '@/utils/biFieldLabel';
 
 type Props = {
   config: ApiConfig;
@@ -40,7 +41,7 @@ function WidgetTile({
           : 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid flex min-h-[17rem] w-full flex-col overflow-hidden p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:col-span-2 lg:col-span-2'
       }
       data-accent={accent}
-      aria-label={t('bi.analytics.openWidgetDetail', { title: widget.title || widget.id })}
+      aria-label={t('bi.analytics.openWidgetDetail', { title: biWidgetTitle(widget) })}
     >
       <div className="bi-pbi-tile-glow" aria-hidden />
       <div className="bi-pbi-tile-shine" aria-hidden />
@@ -48,10 +49,10 @@ function WidgetTile({
       <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-3.5 pb-3 pt-3.5 sm:px-4">
         <div className="mb-2 flex items-start justify-between gap-2">
           <h3 className="bi-pbi-tile-title min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 sm:text-xs">
-            {widget.title}
+            {biWidgetTitle(widget)}
           </h3>
           <span className="bi-pbi-type-chip bi-pbi-type-chip--compact shrink-0" data-accent={accent}>
-            {widget.type || 'chart'}
+            {biVisualTypeLabel(widget.type)}
           </span>
         </div>
         <div className="pointer-events-none min-h-0 flex-1">

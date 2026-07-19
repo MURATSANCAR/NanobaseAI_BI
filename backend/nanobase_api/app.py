@@ -210,6 +210,11 @@ app.include_router(semantic_catalog_router)
 app.include_router(analytics_router)
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
+from nanobase_api import budget_actuals as budget_actuals_mod  # noqa: E402
+from nanobase_api import budget_ops as budget_ops_mod  # noqa: E402
+from nanobase_api import budget_fx as budget_fx_mod  # noqa: E402
+from nanobase_api import budget_lines as budget_lines_mod  # noqa: E402
+from nanobase_api.infrastructure.budget_schema import ensure_budget_tables  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
 from nanobase_api import workflows as workflows_mod  # noqa: E402
 from nanobase_api.secrets_resolver import secrets_status  # noqa: E402
@@ -920,16 +925,33 @@ async def query_feedback(
 # ---------------------------------------------------------------------------
 
 
+def _budget_err(exc: Exception, *, status: int = 400) -> JSONResponse:
+    code = str(exc)
+    if code.startswith("bi_"):
+        return JSONResponse({"ok": False, "error": code, "code": code}, status_code=status)
+    return JSONResponse({"ok": False, "error": code[:400]}, status_code=500)
+
+
+@app.on_event("startup")
+async def _budget_schema_startup() -> None:
+    try:
+        ensure_budget_tables(_meta_engine())
+    except Exception:
+        pass
+
+
 @app.get("/api/v1/bi/budgets")
 async def budgets_list(
     fiscal_year: int | None = None,
     kind: str | None = None,
     status: str | None = None,
     scenario: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
 ) -> JSONResponse:
     try:
         items = budgets_mod.list_budgets(
             _meta_engine(),
+            tenant_id=principal.tenant_id,
             fiscal_year=fiscal_year,
             kind=kind,
             status=status,
@@ -942,12 +964,19 @@ async def budgets_list(
 
 @app.get("/api/v1/bi/budgets/summary")
 async def budgets_summary(
-    fiscal_year: int | None = None, scenario: str | None = None
+    fiscal_year: int | None = None,
+    scenario: str | None = None,
+    reporting_currency: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
 ) -> JSONResponse:
     try:
         return JSONResponse(
             budgets_mod.budget_summary(
-                _meta_engine(), fiscal_year=fiscal_year, scenario=scenario
+                _meta_engine(),
+                tenant_id=principal.tenant_id,
+                fiscal_year=fiscal_year,
+                scenario=scenario,
+                reporting_currency=reporting_currency,
             )
         )
     except Exception as e:
@@ -955,51 +984,479 @@ async def budgets_summary(
 
 
 @app.post("/api/v1/bi/budgets")
-async def budgets_upsert(request: Request) -> JSONResponse:
+async def budgets_upsert(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
     body = await request.json()
     try:
-        return JSONResponse(budgets_mod.upsert_budget(_meta_engine(), body))
+        return JSONResponse(
+            budgets_mod.upsert_budget(
+                _meta_engine(), body, tenant_id=principal.tenant_id, actor=principal.user_id
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
 
 
 @app.delete("/api/v1/bi/budgets/{budget_id}")
-async def budgets_delete(budget_id: str) -> JSONResponse:
+async def budgets_delete(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
     try:
-        budgets_mod.delete_budget(_meta_engine(), budget_id)
+        budgets_mod.delete_budget(_meta_engine(), budget_id, tenant_id=principal.tenant_id)
+        return JSONResponse({"ok": True})
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:300]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/validate-sql")
+async def budgets_validate_sql(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        result = await budget_actuals_mod.validate_budget_sql(
+            str(body.get("sql") or ""),
+            datasource_id=_active_ds(body.get("datasource_id")),
+            tenant_id=principal.tenant_id,
+        )
+        return JSONResponse(result)
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/refresh-actuals")
+async def budgets_refresh_all(
+    fiscal_year: int | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        result = await budget_actuals_mod.refresh_all(
+            _meta_engine(),
+            tenant_id=principal.tenant_id,
+            fiscal_year=fiscal_year,
+            datasource_id=_active_ds(),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/refresh-actuals")
+async def budgets_refresh_one(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        row = await budget_actuals_mod.refresh_one(
+            _meta_engine(),
+            budget_id,
+            tenant_id=principal.tenant_id,
+            datasource_id=_active_ds(),
+        )
+        return JSONResponse(row)
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/approve")
+async def budgets_approve(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        row = await budget_ops_mod.approve_budget(
+            _meta_engine(),
+            budget_id,
+            tenant_id=principal.tenant_id,
+            actor=principal.user_id,
+            datasource_id=_active_ds(),
+        )
+        return JSONResponse(row)
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/lock")
+async def budgets_lock(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        return JSONResponse(
+            budget_ops_mod.set_budget_locked(
+                _meta_engine(),
+                budget_id,
+                locked=True,
+                tenant_id=principal.tenant_id,
+                actor=principal.user_id,
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/unlock")
+async def budgets_unlock(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        return JSONResponse(
+            budget_ops_mod.set_budget_locked(
+                _meta_engine(),
+                budget_id,
+                locked=False,
+                tenant_id=principal.tenant_id,
+                actor=principal.user_id,
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.get("/api/v1/bi/budgets/{budget_id}/change-log")
+async def budgets_change_log(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(
+        {
+            "entries": budgets_mod.list_change_log(
+                _meta_engine(), budget_id, tenant_id=principal.tenant_id
+            )
+        }
+    )
+
+
+@app.get("/api/v1/bi/budgets/{budget_id}/history")
+async def budgets_history(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    # Shape-compatible empty until actuals history snapshots are wired
+    _ = (budget_id, principal)
+    return JSONResponse({"points": []})
+
+
+@app.get("/api/v1/bi/budgets/{budget_id}/breakdown")
+async def budgets_breakdown(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    _ = (budget_id, principal)
+    return JSONResponse({"rows": [], "columns": []})
+
+
+@app.get("/api/v1/bi/budgets/{budget_id}/periods")
+async def budgets_periods_get(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(
+        {
+            "periods": budget_lines_mod.list_periods(
+                _meta_engine(), budget_id, tenant_id=principal.tenant_id
+            )
+        }
+    )
+
+
+@app.put("/api/v1/bi/budgets/{budget_id}/periods")
+async def budgets_periods_put(
+    budget_id: str,
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        periods = budget_lines_mod.save_periods(
+            _meta_engine(),
+            budget_id,
+            list(body.get("periods") or []),
+            tenant_id=principal.tenant_id,
+        )
+        return JSONResponse({"periods": periods})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.get("/api/v1/bi/budgets/{budget_id}/commitments")
+async def budgets_commitments_get(
+    budget_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(
+        {
+            "commitments": budget_lines_mod.list_commitments(
+                _meta_engine(), budget_id, tenant_id=principal.tenant_id
+            )
+        }
+    )
+
+
+@app.post("/api/v1/bi/budgets/{budget_id}/commitments")
+async def budgets_commitments_post(
+    budget_id: str,
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        row = budget_lines_mod.save_commitment(
+            _meta_engine(), budget_id, body, tenant_id=principal.tenant_id
+        )
+        return JSONResponse(row)
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.delete("/api/v1/bi/budgets/{budget_id}/commitments/{commitment_id}")
+async def budgets_commitments_delete(
+    budget_id: str,
+    commitment_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    try:
+        budget_lines_mod.delete_commitment(
+            _meta_engine(), budget_id, commitment_id, tenant_id=principal.tenant_id
+        )
         return JSONResponse({"ok": True})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:300]}, status_code=500)
 
 
+@app.post("/api/v1/bi/budgets/transfer")
+async def budgets_transfer(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(
+            budget_ops_mod.transfer_allocated(
+                _meta_engine(),
+                tenant_id=principal.tenant_id,
+                from_budget_id=str(body.get("from_budget_id") or ""),
+                to_budget_id=str(body.get("to_budget_id") or ""),
+                amount=float(body.get("amount") or 0),
+                actor=principal.user_id,
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.post("/api/v1/bi/budgets/clone-year")
+async def budgets_clone_year(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(
+            budget_ops_mod.clone_budgets_year(
+                _meta_engine(),
+                tenant_id=principal.tenant_id,
+                from_year=int(body.get("from_year")),
+                to_year=int(body.get("to_year")),
+                copy_actuals_sql=bool(body.get("copy_actuals_sql", True)),
+                scenario=body.get("scenario"),
+                actor=principal.user_id,
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
+
+
+@app.get("/api/v1/bi/budgets/narrative")
+async def budgets_narrative(
+    fiscal_year: int,
+    locale: str = "en",
+    scenario: str | None = None,
+    reporting_currency: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(
+        budget_ops_mod.build_budget_narrative(
+            _meta_engine(),
+            tenant_id=principal.tenant_id,
+            fiscal_year=fiscal_year,
+            locale=locale,
+            scenario=scenario,
+            reporting_currency=reporting_currency,
+        )
+    )
+
+
+@app.get("/api/v1/bi/budgets/actuals-templates")
+async def budgets_actuals_templates(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    _ = principal
+    return JSONResponse(
+        {
+            "templates": [
+                {
+                    "id": "literal_zero",
+                    "kind": "demo",
+                    "label_key": "bi.budget.template.none",
+                    "sql": "SELECT 0 AS actual",
+                    "demo": True,
+                }
+            ]
+        }
+    )
+
+
+@app.get("/api/v1/bi/budgets/related-tables")
+async def budgets_related_tables(
+    limit: int = 16,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    _ = (limit, principal)
+    return JSONResponse({"tables": []})
+
+
+@app.get("/api/v1/bi/fx-rates")
+async def fx_rates_list(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(
+        {"rates": budget_fx_mod.list_fx_rates(_meta_engine(), tenant_id=principal.tenant_id)}
+    )
+
+
+@app.post("/api/v1/bi/fx-rates")
+async def fx_rates_upsert(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(
+            budget_fx_mod.upsert_fx_rate(
+                _meta_engine(), body, tenant_id=principal.tenant_id
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.get("/api/v1/bi/cost-centers")
+async def cost_centers_list(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    return JSONResponse(budget_lines_mod.list_cost_centers(_meta_engine(), tenant_id=principal.tenant_id))
+
+
+@app.post("/api/v1/bi/cost-centers")
+async def cost_centers_save(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    body = await request.json()
+    try:
+        return JSONResponse(
+            budget_lines_mod.save_cost_center(
+                _meta_engine(), body, tenant_id=principal.tenant_id
+            )
+        )
+    except ValueError as e:
+        return _budget_err(e)
+
+
+@app.get("/api/v1/bi/cost-centers/rollup")
+async def cost_centers_rollup(
+    fiscal_year: int,
+    scenario: str | None = None,
+    reporting_currency: str | None = None,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    # Minimal empty rollup shape (full hierarchy is a later phase)
+    summary = budgets_mod.budget_summary(
+        _meta_engine(),
+        tenant_id=principal.tenant_id,
+        fiscal_year=fiscal_year,
+        scenario=scenario,
+        reporting_currency=reporting_currency,
+    )
+    return JSONResponse(
+        {
+            "tree": [],
+            "flat": [],
+            "unassigned": summary.get("totals") or {},
+            "unassigned_count": int((summary.get("totals") or {}).get("count") or 0),
+            "reporting_currency": summary.get("reporting_currency"),
+            "fx_missing": summary.get("fx_missing") or [],
+        }
+    )
+
+
 @app.post("/api/v1/bi/budgets/sync-from-source")
-async def budgets_sync_from_source(request: Request) -> JSONResponse:
-    """Pull erp.butce_planlari via Query Gateway into bi_budgets."""
+async def budgets_sync_from_source(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    """Pull butce_planlari via authenticated Query Gateway into bi_budgets."""
     body = {}
     try:
         body = await request.json()
     except Exception:
         body = {}
     ds = str(body.get("datasource_id") or _active_ds())
+    fiscal_year = body.get("fiscal_year")
+    scenario = str(body.get("scenario") or "base")
+    do_refresh = bool(body.get("refresh"))
     sql = (
         "SELECT id, mali_yil, departman_kod, butce_kodu, kalem_adi, tur, "
         "planlanan_tutar, para_birimi FROM butce_planlari"
     )
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            r = await client.post(
-                f"{QG_BASE}/api/v1/query/execute",
-                json={"datasource_id": ds, "sql": sql, "max_limit": 500},
-            )
-            data = r.json()
-        if r.status_code >= 400 or not data.get("ok"):
+        from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
+
+        qg = QueryGatewayClient(QG_BASE)
+        data = await qg.execute(sql=sql, datasource_id=ds, tenant_id=principal.tenant_id)
+        if not data.get("ok"):
             return JSONResponse(
-                {"ok": False, "error": data.get("detail") or data.get("error") or "gateway failed"},
+                {"ok": False, "error": data.get("error") or "gateway failed"},
                 status_code=400,
             )
         result = budgets_mod.sync_from_erp_butce(
-            _meta_engine(), data.get("rows") or [], datasource_id=ds
+            _meta_engine(),
+            data.get("rows") or [],
+            tenant_id=principal.tenant_id,
+            datasource_id=ds,
+            fiscal_year=int(fiscal_year) if fiscal_year is not None else None,
+            scenario=scenario,
         )
+        if do_refresh:
+            refresh = await budget_actuals_mod.refresh_all(
+                _meta_engine(),
+                tenant_id=principal.tenant_id,
+                fiscal_year=int(fiscal_year) if fiscal_year is not None else result.get("fiscal_year"),
+                datasource_id=ds,
+            )
+            result["refresh"] = refresh
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
@@ -1204,7 +1661,22 @@ async def internal_result_explain(
         return JSONResponse({"code": "FAILED", "message": str(e)[:400]}, status_code=500)
 
 
-# Soft catch-all AFTER real routes (empty stubs for remaining FE SaaS paths)
+# Soft catch-all AFTER real routes — shape-compatible empties (no bare limited stubs)
 @app.api_route("/api/v1/bi/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def bi_limited(full_path: str) -> JSONResponse:
+    path = (full_path or "").strip().strip("/")
+    if path.startswith("budgets/import") or path.startswith("budgets/export") or path == "budgets/import-template":
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_feature_pending", "error": "Excel import/export is not enabled yet."},
+            status_code=501,
+        )
+    if path == "budgets/share-pack" or path.endswith("/create-alert"):
+        return JSONResponse(
+            {"ok": False, "code": "bi_budget_feature_pending", "created": False, "error": "Feature pending."},
+            status_code=501,
+        )
+    if path == "budgets/match-preview":
+        return JSONResponse({"fiscal_year": 0, "matches": [], "warnings": ["bi_budget_feature_pending"]})
+    if path.startswith("shares"):
+        return JSONResponse({"shares": []})
     return JSONResponse({"ok": True, "engine": "nanobase_api", "limited": True, "path": full_path})
