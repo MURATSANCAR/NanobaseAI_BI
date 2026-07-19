@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+import json
+import os
 import re
+from pathlib import Path
 from typing import Any
 
-from sqlalchemy.engine import Engine
+SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
 
-from nanobase_api.infrastructure.conversation_repo import ConversationRepository
-
-# First-boot / cold-start defaults per datasource (admin seed).
-# Learned questions from bi_query_plans / chat history override these over time.
+# Optional demo defaults (exact datasource id match only).
+# Custom sources: SECRETS/chat-suggestions.json → {"sources": {"my_ds": ["…"]}}
 _DEFAULTS: dict[str, list[str]] = {
     "sigorta": [
         "Hasar taleplerinin toplam sayısı kaç?",
@@ -51,22 +52,48 @@ def _norm(text: str) -> str:
 
 
 def defaults_for(datasource_id: str) -> list[str]:
-    sid = (datasource_id or "").strip().lower()
-    return list(_DEFAULTS.get(sid) or _GENERIC)
+    sid = (datasource_id or "").strip()
+    if not sid:
+        return list(_GENERIC)
+    path = SECRETS / "chat-suggestions.json"
+    if path.is_file():
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            specs = (raw.get("sources") or {}).get(sid)
+            if isinstance(specs, list) and specs:
+                return [str(x) for x in specs if str(x).strip()]
+        except (OSError, json.JSONDecodeError, TypeError):
+            pass
+    packs = dict(_DEFAULTS)
+    try:
+        from nanobase_api.infrastructure.datasource_registry import reporting_datasource_id
+
+        rid = reporting_datasource_id()
+        if rid != "bi_reporting" and "bi_reporting" in packs:
+            packs[rid] = packs.pop("bi_reporting")
+    except Exception:
+        pass
+    return list(packs.get(sid) or _GENERIC)
 
 
 def build_suggestions(
     *,
-    engine: Engine,
+    engine: Any = None,
     tenant_id: str,
     datasource_id: str,
     limit: int = 6,
+    question_repo: Any | None = None,
 ) -> dict[str, Any]:
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
     lim = max(1, min(int(limit or 6), 12))
-    sid = (datasource_id or "bi_reporting").strip() or "bi_reporting"
+    sid = prefer_datasource_id(datasource_id)
     defaults = defaults_for(sid)
-    repo = ConversationRepository(engine)
-    learned = repo.top_user_questions(
+    if question_repo is None:
+        from nanobase_api.infrastructure.conversation_repo import ConversationRepository
+
+        question_repo = ConversationRepository(engine)
+    learned = question_repo.top_user_questions(
         tenant_id=tenant_id,
         datasource_id=sid,
         limit=lim * 2,

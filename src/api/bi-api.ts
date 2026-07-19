@@ -247,6 +247,21 @@ export function createBiApi() {
     exportQuery: async (c: ApiConfig, sql: string, format: 'csv' | 'xlsx' | 'pdf') => {
       await bi.download(c, `/api/v1/bi/query/export?format=${format}`, `query.${format}`, sql);
     },
+    chatSuggestions: (
+      c: ApiConfig,
+      opts?: { datasourceId?: string; limit?: number },
+    ) => {
+      const qs = new URLSearchParams();
+      if (opts?.datasourceId) qs.set('datasource_id', opts.datasourceId);
+      if (opts?.limit != null) qs.set('limit', String(opts.limit));
+      const suffix = qs.toString() ? `?${qs.toString()}` : '';
+      return request<{
+        datasource_id: string;
+        suggestions: Array<{ text: string; source: 'learned' | 'default' | string; count: number }>;
+        learned_count?: number;
+        default_count?: number;
+      }>(c, `/api/v1/bi/suggestions${suffix}`);
+    },
     templates: (c: ApiConfig, opts?: { refresh?: boolean }) =>
       request<{
         templates: BiQueryTemplate[];

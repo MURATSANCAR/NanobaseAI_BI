@@ -44,21 +44,26 @@ class IndexerConfig:
 
     def pg_connect_kwargs(self) -> dict[str, Any]:
         ds = self.datasource_id
-        # Alias used in ChatGPT checklist → our reporting DB
-        if ds in ("nanobase_test", "bi_reporting"):
+        reporting_id = _reporting_datasource_id()
+        # Legacy checklist alias → configured reporting id
+        if ds == "nanobase_test":
+            ds = reporting_id
+        if ds == reporting_id:
             pw_path = self.secrets_root / "reporting-ro.password"
             pw = pw_path.read_text(encoding="utf-8").strip() if pw_path.is_file() else _env("REPORTING_RO_PASSWORD")
             return {
                 "host": _env("REPORTING_HOST", "127.0.0.1"),
                 "port": int(_env("REPORTING_PORT", "5435") or "5435"),
-                "dbname": _env("REPORTING_DB", "bi_reporting"),
-                "user": _env("REPORTING_RO_USER", "bi_reporting_ro"),
+                "dbname": _env("REPORTING_DB", reporting_id),
+                "user": _env("REPORTING_RO_USER", f"{reporting_id}_ro"),
                 "password": pw,
                 "sslmode": "disable",
                 "connect_timeout": 20,
             }
 
         neon_path = self.secrets_root / "neon-ro.datasources.json"
+        if not neon_path.is_file():
+            raise SystemExit(f"datasource not found: {ds} (no neon-ro map)")
         neon = json.loads(neon_path.read_text(encoding="utf-8"))
         cfg = (neon.get("sources") or {}).get(ds)
         if not isinstance(cfg, dict):

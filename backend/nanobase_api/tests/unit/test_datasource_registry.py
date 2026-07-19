@@ -70,3 +70,18 @@ def test_resolve_pg_cfg_from_neon_map(monkeypatch, tmp_path: Path):
     assert cfg is not None
     assert cfg["host"] == "h"
     assert reg.resolve_pg_connect_cfg("missing") is None
+
+
+def test_registered_ids_from_maps(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(reg, "SECRETS", tmp_path)
+    (tmp_path / "reporting-ro.password").write_text("x\n", encoding="utf-8")
+    monkeypatch.setenv("REPORTING_DATASOURCE_ID", "local_analytics")
+    (tmp_path / "neon-ro.datasources.json").write_text(
+        json.dumps({"sources": {"acme": {"host": "h"}, "beta": {"host": "h2"}}}),
+        encoding="utf-8",
+    )
+    ids = reg.registered_ro_datasource_ids()
+    assert ids == {"local_analytics", "acme", "beta"}
+    assert reg.is_registered_ro_datasource("acme")
+    assert reg.is_registered_ro_datasource("nanobase_test")  # alias → reporting id
+    assert not reg.is_registered_ro_datasource("erp")

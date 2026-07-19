@@ -466,6 +466,24 @@ async def bi_briefing(dashboard_id: str = "default", locale: str = "tr") -> dict
     }
 
 
+@app.get("/api/v1/bi/chat/suggestions")
+async def chat_suggestions_api(
+    datasource_id: str | None = None,
+    limit: int = 6,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """Quick suggestions for active (or given) datasource: learned + cold-start defaults."""
+    from nanobase_api.suggestions import build_suggestions
+
+    sid = _active_ds(datasource_id)
+    return build_suggestions(
+        engine=_meta_engine(),
+        tenant_id=principal.tenant_id,
+        datasource_id=sid,
+        limit=limit,
+    )
+
+
 @app.get("/api/v1/bi/model-queue/status")
 async def model_queue_status() -> dict:
     """Public queue depth for ops / UI (no secrets)."""
@@ -961,7 +979,9 @@ async def budgets_sync_from_source(request: Request) -> JSONResponse:
                 {"ok": False, "error": data.get("detail") or data.get("error") or "gateway failed"},
                 status_code=400,
             )
-        result = budgets_mod.sync_from_erp_butce(_meta_engine(), data.get("rows") or [])
+        result = budgets_mod.sync_from_erp_butce(
+            _meta_engine(), data.get("rows") or [], datasource_id=ds
+        )
         return JSONResponse(result)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)

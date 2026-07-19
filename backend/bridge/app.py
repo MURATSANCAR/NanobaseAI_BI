@@ -51,8 +51,10 @@ def _load_sources() -> dict[str, Any]:
 def _sources_list_payload() -> dict[str, Any]:
     raw = _load_sources()
     sources_map = raw.get("sources") or {}
-    active = raw.get("active_id") or ACTIVE_DB["id"]
-    ACTIVE_DB["id"] = str(active)
+    active = str(raw.get("active_id") or ACTIVE_DB.get("id") or "").strip()
+    if not active and sources_map:
+        active = sorted(str(k) for k in sources_map.keys())[0]
+    ACTIVE_DB["id"] = active
     items = []
     for sid, s in sources_map.items():
         items.append(

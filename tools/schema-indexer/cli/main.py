@@ -10,13 +10,13 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="schema-indexer", description="Nanobase Schema Indexer (Faz 2)")
     p.add_argument(
         "--datasource",
-        default="bi_reporting",
-        help="bi_reporting | nanobase_test | erp | sigorta",
+        default=None,
+        help="Datasource id (default: REPORTING_DATASOURCE_ID / any id in neon-ro map)",
     )
     p.add_argument(
         "--schemas",
         default=None,
-        help="Comma-separated schemas (default: analytics,public for reporting; public for neon)",
+        help="Comma-separated schemas (default: analytics,public for reporting; public otherwise)",
     )
     p.add_argument("--collection", default=None, help="Qdrant collection override")
     p.add_argument("--recreate", action="store_true", help="Drop+recreate collection before upsert")
@@ -33,13 +33,16 @@ def main(argv: list[str] | None = None) -> int:
     if str(pkg) not in sys.path:
         sys.path.insert(0, str(pkg))
 
-    from config import IndexerConfig
+    from config import IndexerConfig, _reporting_datasource_id
     from pipeline import run_index
 
-    ds = args.datasource
+    ds = args.datasource or _reporting_datasource_id()
+    reporting_id = _reporting_datasource_id()
+    if ds == "nanobase_test":
+        ds = reporting_id
     if args.schemas:
         schemas = tuple(s.strip() for s in args.schemas.split(",") if s.strip())
-    elif ds in ("bi_reporting", "nanobase_test"):
+    elif ds == reporting_id:
         schemas = ("analytics", "public")
     else:
         schemas = ("public",)

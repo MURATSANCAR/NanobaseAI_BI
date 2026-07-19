@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart3,
   Bell,
@@ -257,6 +257,8 @@ const FALLBACK_SUGGESTION_KEYS = [
   'bi.chatSuggestion4',
 ] as const;
 
+type ChatSuggestionItem = { text: string; source: string; count: number };
+
 function intentIcon(intent: string) {
   switch (intent) {
     case 'query':
@@ -322,6 +324,7 @@ export default function BiChatPanel({
   autoFocus,
 }: BiChatPanelProps) {
   const { config } = useApiConfig();
+  const queryClient = useQueryClient();
   const flags = getFeatureFlags();
   const { canBi } = useAuth();
   const showSqlPanel = flags.enableSqlPanel && canBi('sql.panel');
@@ -337,6 +340,17 @@ export default function BiChatPanel({
     staleTime: 60_000,
   });
   const activeDbName = sourcesQ.data?.active_id || undefined;
+  const suggestionLimit = embedded ? 3 : 6;
+  const suggestionsQ = useQuery({
+    queryKey: ['bi-chat-suggestions', config, activeDbName, suggestionLimit],
+    queryFn: () =>
+      api.bi.chatSuggestions(config, {
+        datasourceId: activeDbName,
+        limit: suggestionLimit,
+      }),
+    enabled: isRunnerConfigured(config) && Boolean(activeDbName),
+    staleTime: 30_000,
+  });
 
   const [warmTick, setWarmTick] = useState(0);
   useEffect(() => {
@@ -925,6 +939,7 @@ export default function BiChatPanel({
         setMessages((prev) => applyAssistantResult(prev, result, jobId));
         onResponse?.(result);
         void history.refetch();
+        void queryClient.invalidateQueries({ queryKey: ['bi-chat-suggestions'] });
         showWebNotification({
           title: t('bi.chat.notifyDoneTitle'),
           body: t('bi.chat.notifyDoneBody', { question: payload }),
@@ -965,7 +980,7 @@ export default function BiChatPanel({
         }
       }
     },
-    [activeDbName, config, dashboardId, history, input, onResponse, sessionId],
+    [activeDbName, config, dashboardId, history, input, onResponse, queryClient, sessionId],
   );
 
   const stopStreaming = useCallback(() => {
@@ -1063,8 +1078,11 @@ export default function BiChatPanel({
     setError(null);
   };
 
-  const suggestionLimit = embedded ? 3 : 6;
+  const learnedSuggestions: ChatSuggestionItem[] = (suggestionsQ.data?.suggestions ?? []).filter(
+    (s) => Boolean(s?.text?.trim()),
+  );
   const suggestionKeys = embedded ? FALLBACK_SUGGESTION_KEYS.slice(0, 3) : FALLBACK_SUGGESTION_KEYS;
+  const showLearnedSuggestions = learnedSuggestions.length > 0;
 
   return (
     <div
@@ -1175,9 +1193,27 @@ export default function BiChatPanel({
               </>
             )}
             {embedded && (
-              <p className="text-xs font-medium text-slate-600">{t('bi.analytics.chatSuggestions')}</p>
+              <p className="text-xs font-medium text-slate-600">
+                {showLearnedSuggestions && (suggestionsQ.data?.learned_count ?? 0) > 0
+                  ? t('bi.analytics.chatSuggestionsLearned')
+                  : t('bi.analytics.chatSuggestions')}
+              </p>
             )}
-            {(templates.data?.templates ?? []).length > 0 ? (
+            {showLearnedSuggestions ? (
+              <div className={clsx('flex flex-col gap-2', embedded ? 'w-full' : 'w-full max-w-md')}>
+                {learnedSuggestions.slice(0, suggestionLimit).map((item) => (
+                  <button
+                    key={`${item.source}:${item.text}`}
+                    type="button"
+                    className="ai-pill w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
+                    onClick={() => sendMessage(item.text)}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                    <span className="line-clamp-2">{item.text}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (templates.data?.templates ?? []).length > 0 ? (
               <BiQueryTemplateGrid
                 compact
                 limit={suggestionLimit}

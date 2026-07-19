@@ -241,20 +241,26 @@ def delete_budget(engine: Engine, budget_id: str) -> None:
 
 
 def sync_from_erp_butce(
-    engine: Engine, erp_rows: list[dict[str, Any]], *, tenant_id: str = "default"
+    engine: Engine,
+    erp_rows: list[dict[str, Any]],
+    *,
+    tenant_id: str = "default",
+    datasource_id: str = "source",
 ) -> dict[str, Any]:
-    """Upsert ERP butce_planlari rows into bi_budgets."""
+    """Upsert butce_planlari rows into bi_budgets (any budget-capable datasource)."""
     created = updated = 0
     now = datetime.now(timezone.utc)
+    ds = str(datasource_id or "source").strip() or "source"
     with engine.begin() as conn:
         for r in erp_rows:
             code = str(r.get("butce_kodu") or r.get("id"))
-            bid = f"erp-{code}-{r.get('mali_yil')}"
+            bid = f"{ds}-{code}-{r.get('mali_yil')}"
             payload = json.dumps(
                 {
                     "budget_code": code,
-                    "match_source": "erp.butce_planlari",
-                    "erp_id": r.get("id"),
+                    "match_source": f"{ds}.butce_planlari",
+                    "source_row_id": r.get("id"),
+                    "datasource_id": ds,
                 },
                 ensure_ascii=False,
             )

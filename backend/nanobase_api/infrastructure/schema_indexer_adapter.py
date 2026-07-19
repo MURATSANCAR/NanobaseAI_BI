@@ -16,7 +16,11 @@ class SchemaIndexerAdapter:
         s = get_settings()
         indexer = Path(s.schema_indexer_root)
         py = s.python_bin
-        if datasource_id in ("bi_reporting", "nanobase_test"):
+        from nanobase_api.infrastructure.datasource_registry import reporting_datasource_id
+
+        rid = reporting_datasource_id()
+        ds = rid if datasource_id == "nanobase_test" else datasource_id
+        if ds == rid:
             schemas = schemas or "analytics,public"
         else:
             schemas = schemas or "public"
@@ -28,7 +32,7 @@ class SchemaIndexerAdapter:
             "-m",
             "cli.main",
             "--datasource",
-            datasource_id,
+            ds,
             "--schemas",
             schemas,
             "--json",
@@ -46,7 +50,7 @@ class SchemaIndexerAdapter:
             raise RuntimeError((proc.stderr or proc.stdout or "indexer failed")[:800])
         # Prefer report file
         out_dir = Path(os.environ.get("PHASE2_OUT_DIR", "/data/nanobaseai/bi/frontend/docs/architecture"))
-        report_path = out_dir / f"schema-index-{datasource_id if datasource_id != 'nanobase_test' else 'bi_reporting'}.json"
+        report_path = out_dir / f"schema-index-{ds}.json"
         if report_path.is_file():
             return json.loads(report_path.read_text(encoding="utf-8"))
         # parse last JSON object from stdout

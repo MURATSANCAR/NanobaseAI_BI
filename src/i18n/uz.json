@@ -270,6 +270,7 @@
   "bi.analytics.chatDockTitle": "NanobaseAI yordamchisi",
   "bi.analytics.chatPlaceholder": "Savolingizni shu yerga yozing…",
   "bi.analytics.chatSuggestions": "Tezkor takliflar",
+  "bi.analytics.chatSuggestionsLearned": "Eng ko‘p so‘ralganlar",
   "bi.analytics.closeChat": "Yordamchini yopish",
   "bi.analytics.dashboards": "Panellar",
   "bi.analytics.embedError": "Koʻrsatish xatosi",

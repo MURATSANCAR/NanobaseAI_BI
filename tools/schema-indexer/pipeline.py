@@ -17,7 +17,10 @@ def run_index(cfg: IndexerConfig) -> ScanReport:
     t0 = time.time()
     errors: list[str] = []
 
-    ds = "bi_reporting" if cfg.datasource_id in ("nanobase_test", "bi_reporting") else cfg.datasource_id
+    from config import _reporting_datasource_id
+
+    reporting_id = _reporting_datasource_id()
+    ds = reporting_id if cfg.datasource_id == "nanobase_test" else cfg.datasource_id
     cfg.datasource_id = ds
     collection = cfg.resolved_collection()
 
@@ -80,7 +83,7 @@ def run_index(cfg: IndexerConfig) -> ScanReport:
         },
     }
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    if ds == "bi_reporting":
+    if ds == reporting_id:
         (cfg.out_dir / "phase-2-schema-index.json").write_text(
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )

@@ -270,6 +270,7 @@
   "bi.analytics.chatDockTitle": "Ассистент NanobaseAI",
   "bi.analytics.chatPlaceholder": "Введите вопрос здесь…",
   "bi.analytics.chatSuggestions": "Быстрые подсказки",
+  "bi.analytics.chatSuggestionsLearned": "Чаще всего спрашивают",
   "bi.analytics.closeChat": "Закрыть ассистента",
   "bi.analytics.dashboards": "Дашборды",
   "bi.analytics.embedError": "Ошибка отображения",

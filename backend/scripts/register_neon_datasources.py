@@ -182,11 +182,12 @@ def main() -> None:
     base = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_BASE
     sources = _load_sources()
     _wait_ready(base)
-    for sid in ("erp", "sigorta"):
-        src = sources.get(sid)
-        if not src:
-            raise SystemExit(f"missing source {sid}")
-        # Ensure password present
+    if not sources:
+        raise SystemExit("no sources in connection file / env")
+    for sid, src in sources.items():
+        if not isinstance(src, dict):
+            continue
+        src = {**src, "id": src.get("id") or sid}
         if not src.get("password"):
             raise SystemExit(f"{sid} password missing in local connection file")
         _upsert(base, src)
