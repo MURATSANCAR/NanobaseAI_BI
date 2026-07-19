@@ -8,11 +8,50 @@ from typing import Any
 from arq.connections import RedisSettings
 
 from nanobase_api.application.schema_scans import execute_schema_scan
+from nanobase_api.scenario_engine.application.staged_pipeline import STAGE_CHAIN
 
 
 async def run_schema_scan(ctx, scan_id: str, datasource_id: str, tenant_id: str) -> str:
     execute_schema_scan(scan_id, datasource_id, tenant_id)
     return scan_id
+
+
+async def _enqueue_next(
+    ctx,
+    current: str,
+    build_id: str,
+    datasource_id: str,
+    tenant_id: str,
+    auto_publish: bool = True,
+) -> None:
+    try:
+        idx = STAGE_CHAIN.index(current)
+    except ValueError:
+        return
+    if idx + 1 >= len(STAGE_CHAIN):
+        return
+    nxt = STAGE_CHAIN[idx + 1]
+    redis = ctx.get("redis")
+    if redis is None:
+        return
+    if nxt == "scenario_embedding_publish":
+        await redis.enqueue_job(
+            nxt,
+            build_id,
+            datasource_id,
+            tenant_id,
+            auto_publish,
+        )
+    else:
+        await redis.enqueue_job(nxt, build_id, datasource_id, tenant_id, auto_publish)
+
+
+def _should_continue(build: dict[str, Any]) -> bool:
+    if build.get("status") == "FAILED":
+        return False
+    if build.get("skipRemaining"):
+        return False
+    return True
 
 
 async def run_scenario_build(
@@ -22,92 +61,166 @@ async def run_scenario_build(
     tenant_id: str,
     auto_publish: bool = True,
 ) -> str:
-    """Full pipeline (compat) — also used as final orchestrator."""
-    from nanobase_api.scenario_engine.application.build_pipeline import start_build
-    from nanobase_api.scenario_engine.infrastructure.reporting_exec import reporting_dsn
-    from nanobase_api.scenario_engine.infrastructure.schema_snapshot import (
-        invoice_analytics_snapshot,
-        snapshot_from_pg,
-    )
+    """Orchestrator: only enqueue the stage chain (does not run work inline)."""
+    from nanobase_api.scenario_engine.application.staged_pipeline import ensure_build
     from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
 
     store = get_scenario_store()
-    snap = invoice_analytics_snapshot()
-    dsn = reporting_dsn()
-    if dsn:
-        try:
-            snap = snapshot_from_pg(dsn, datasource_id=datasource_id)
-        except Exception:
-            pass
-    result = start_build(
-        tenant_id=tenant_id,
-        datasource_id=datasource_id,
-        store=store,
-        snapshot=snap,
-        auto_publish=auto_publish,
-        force=True,
-    )
-    store.builds[build_id] = {**result, "id": build_id, "pipelineBuildId": result.get("id")}
+    ensure_build(store, build_id=build_id, tenant_id=tenant_id, datasource_id=datasource_id)
+    store.builds[build_id]["status"] = "QUEUED"
+    store.builds[build_id]["phase"] = "QUEUED"
+    redis = ctx.get("redis")
+    if redis is not None:
+        await redis.enqueue_job(
+            "scenario_discovery",
+            build_id,
+            datasource_id,
+            tenant_id,
+            auto_publish,
+        )
+    else:
+        # Fallback: sync full pipeline when redis missing in ctx
+        from nanobase_api.scenario_engine.application.staged_pipeline import run_staged_build
+
+        run_staged_build(
+            tenant_id=tenant_id,
+            datasource_id=datasource_id,
+            store=store,
+            auto_publish=auto_publish,
+            force=True,
+            build_id=build_id,
+        )
     return build_id
 
 
-async def scenario_discovery(ctx, build_id: str, datasource_id: str, tenant_id: str) -> dict[str, Any]:
-    from nanobase_api.scenario_engine.infrastructure.reporting_exec import reporting_dsn
-    from nanobase_api.scenario_engine.infrastructure.schema_snapshot import (
-        invoice_analytics_snapshot,
-        snapshot_from_pg,
-    )
-    from nanobase_api.scenario_engine.infrastructure.semantic_classifier import classify_schema
+async def scenario_discovery(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_discovery
     from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
 
     store = get_scenario_store()
-    snap = invoice_analytics_snapshot()
-    dsn = reporting_dsn()
-    if dsn:
-        try:
-            snap = snapshot_from_pg(dsn, datasource_id=datasource_id)
-        except Exception:
-            pass
-    clf = classify_schema(snap)
-    store.builds[build_id] = {
-        "id": build_id,
-        "phase": "DISCOVERY",
-        "schemaVersion": clf.schema_version,
-        "tenantId": tenant_id,
-        "datasourceId": datasource_id,
-        "status": "RUNNING",
-    }
-    return {"schemaVersion": clf.schema_version, "tables": len(clf.tables)}
+    result = stage_discovery(
+        build_id=build_id, tenant_id=tenant_id, datasource_id=datasource_id, store=store
+    )
+    if _should_continue(result):
+        await _enqueue_next(ctx, "scenario_discovery", build_id, datasource_id, tenant_id, auto_publish)
+    return {"phase": result.get("phase"), "status": result.get("status")}
 
 
 async def scenario_combination_generation(
-    ctx, build_id: str, datasource_id: str, tenant_id: str
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
 ) -> dict[str, Any]:
-    # Staged jobs ultimately call full build for consistency / idempotency
-    return {"delegated": "run_scenario_build", "buildId": build_id}
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_combination
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    store = get_scenario_store()
+    result = stage_combination(
+        build_id=build_id,
+        tenant_id=tenant_id,
+        datasource_id=datasource_id,
+        store=store,
+        force=True,
+    )
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_combination_generation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase"), "candidates": (result.get("counts") or {}).get("candidates")}
 
 
-async def scenario_sql_compilation(ctx, build_id: str, datasource_id: str, tenant_id: str) -> str:
-    return build_id
+async def scenario_sql_compilation(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_sql_compilation
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_sql_compilation(build_id=build_id, store=get_scenario_store())
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_sql_compilation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase")}
 
 
-async def scenario_static_validation(ctx, build_id: str, datasource_id: str, tenant_id: str) -> str:
-    return build_id
+async def scenario_static_validation(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_static_validation
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_static_validation(build_id=build_id, store=get_scenario_store())
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_static_validation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase")}
 
 
-async def scenario_execution_validation(ctx, build_id: str, datasource_id: str, tenant_id: str) -> str:
-    return build_id
+async def scenario_execution_validation(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_execution_validation
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_execution_validation(build_id=build_id, store=get_scenario_store())
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_execution_validation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase")}
 
 
-async def scenario_performance_validation(ctx, build_id: str, datasource_id: str, tenant_id: str) -> str:
-    return build_id
+async def scenario_performance_validation(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_performance_validation
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_performance_validation(build_id=build_id, store=get_scenario_store())
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_performance_validation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase")}
 
 
-async def scenario_question_generation(ctx, build_id: str, datasource_id: str, tenant_id: str) -> str:
-    return build_id
+async def scenario_question_generation(
+    ctx, build_id: str, datasource_id: str, tenant_id: str, auto_publish: bool = True
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_question_generation
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_question_generation(build_id=build_id, store=get_scenario_store())
+    if _should_continue(result):
+        await _enqueue_next(
+            ctx, "scenario_question_generation", build_id, datasource_id, tenant_id, auto_publish
+        )
+    return {"phase": result.get("phase"), "paraphrases": (result.get("counts") or {}).get("paraphrases")}
 
 
-async def scenario_embedding_publish(ctx, tenant_id: str, datasource_id: str) -> int:
+async def scenario_embedding_publish(
+    ctx,
+    build_id: str,
+    datasource_id: str,
+    tenant_id: str,
+    auto_publish: bool = True,
+) -> dict[str, Any]:
+    from nanobase_api.scenario_engine.application.staged_pipeline import stage_embedding_publish
+    from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+    result = stage_embedding_publish(
+        build_id=build_id,
+        tenant_id=tenant_id,
+        datasource_id=datasource_id,
+        store=get_scenario_store(),
+        auto_publish=auto_publish,
+    )
+    return {"phase": result.get("phase"), "status": result.get("status"), "batch": result.get("batch")}
+
+
+async def run_scenario_embedding_publish(ctx, tenant_id: str, datasource_id: str) -> int:
+    """Compat helper: republish embeddings for already-published scenarios."""
     from nanobase_api.scenario_engine.domain.status import ScenarioStatus
     from nanobase_api.scenario_engine.infrastructure.qdrant_publisher import ScenarioQdrantPublisher
     from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
@@ -123,10 +236,6 @@ async def scenario_embedding_publish(ctx, tenant_id: str, datasource_id: str) ->
         )
     result = ScenarioQdrantPublisher().publish(instances=instances, paraphrases=paraphrases)
     return int(result.get("upserted") or 0)
-
-
-async def run_scenario_embedding_publish(ctx, tenant_id: str, datasource_id: str) -> int:
-    return await scenario_embedding_publish(ctx, tenant_id, datasource_id)
 
 
 class WorkerSettings:

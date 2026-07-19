@@ -235,5 +235,153 @@ def run_explain_cost_check(execute_fn: ExecuteFn, sql_template: str, params: dic
         return ValidationResult("PERFORMANCE_EXPLAIN", True, {"mode": "skipped", "note": str(e)[:200]})
 
 
+def validate_gateway_template(
+    sql_template: str,
+    bind_params: list[str] | None = None,
+    *,
+    datasource_id: str | None = None,
+) -> ValidationResult:
+    """Mandatory Gateway validate(template, dummy binds). Fail → REJECT/FAILED."""
+    import os
+
+    dummy: dict[str, object] = {}
+    for name in bind_params or []:
+        if "limit" in name or name == "fetch_limit":
+            dummy[name] = 10
+        elif "status" in name:
+            dummy[name] = "open"
+        elif "start" in name or "end" in name or "date" in name:
+            dummy[name] = "2024-01-01"
+        else:
+            dummy[name] = "x"
+
+    # Prefer in-process guardrails (no network) when available
+    try:
+        from query_gateway.guardrails import validate_and_rewrite
+        from query_gateway.infrastructure.parser.bind_params import probe_sql_for_parse
+
+        probe = probe_sql_for_parse(sql_template, dummy)
+        result = validate_and_rewrite(probe, dialect="postgres", max_limit=1000)
+        if not result.ok:
+            return ValidationResult(
+                "GATEWAY_VALIDATE",
+                False,
+                {"error": result.error or "rejected", "mode": "in_process"},
+            )
+        missing = [n for n in (bind_params or []) if f":{n}" not in sql_template]
+        if missing:
+            return ValidationResult(
+                "GATEWAY_VALIDATE",
+                False,
+                {"error": f"missing binds in template: {missing}", "mode": "in_process"},
+            )
+        return ValidationResult("GATEWAY_VALIDATE", True, {"mode": "in_process", "dummy": dummy})
+    except ImportError:
+        pass
+    except Exception as e:
+        return ValidationResult("GATEWAY_VALIDATE", False, {"error": str(e), "mode": "in_process"})
+
+    # Optional HTTP to Query Gateway when configured
+    base = os.environ.get("QUERY_GATEWAY_URL") or os.environ.get("QG_BASE")
+    if base:
+        try:
+            import json
+            import urllib.request
+
+            ds = datasource_id or os.environ.get("SCENARIO_GATEWAY_DATASOURCE", "bi_reporting")
+            payload = json.dumps(
+                {"datasource_id": ds, "sql": sql_template, "parameters": dummy}
+            ).encode("utf-8")
+            req = urllib.request.Request(
+                f"{base.rstrip('/')}/api/v1/query/validate",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            ok = bool(data.get("ok"))
+            return ValidationResult(
+                "GATEWAY_VALIDATE",
+                ok,
+                {"mode": "http", "error": data.get("error"), "response": data},
+            )
+        except Exception as e:
+            return ValidationResult("GATEWAY_VALIDATE", False, {"error": str(e), "mode": "http"})
+
+    # Offline structural fallback (still fail-closed on DML)
+    if _DML.search(sql_template):
+        return ValidationResult("GATEWAY_VALIDATE", False, {"error": "DML forbidden", "mode": "offline"})
+    if "SELECT" not in sql_template.upper():
+        return ValidationResult("GATEWAY_VALIDATE", False, {"error": "not SELECT", "mode": "offline"})
+    return ValidationResult("GATEWAY_VALIDATE", True, {"mode": "offline", "dummy": dummy})
+
+
+def run_differential_for_plan(
+    plan: LogicalPlan,
+    compiled: CompileResult,
+    params: dict[str, object],
+    execute_fn: ExecuteFn,
+) -> ValidationResult:
+    """Differential SUM for SUM_MEASURE / GROUP_MEASURE before publish."""
+    family = plan.family
+    metric = (plan.metric_column or "gross_amount").split(".")[-1]
+    if family == "SUM_MEASURE":
+        try:
+            rows = execute_fn(compiled.sql_template, params)
+            total = float((rows[0] or {}).get("total") or (rows[0] or {}).get(metric) or 0) if rows else 0.0
+            # Rebuild detail rows with same filters via list projection of metric only
+            filter_parts = []
+            if plan.period and plan.date_column:
+                filter_parts.append(
+                    f'WHERE "{plan.date_column.split(".")[-1]}" >= :period_start '
+                    f'AND "{plan.date_column.split(".")[-1]}" < :period_end'
+                )
+            where = filter_parts[0] if filter_parts else ""
+            if "exclude_cancelled_invoices" in (plan.mandatory_filters or []):
+                where = (where + " AND " if where else "WHERE ") + '"status" <> :cancelled_status'
+                params = {**params, "cancelled_status": params.get("cancelled_status", "cancelled")}
+            detail_rows = execute_fn(
+                f'SELECT "{metric}" AS amount FROM {plan.physical_table or "analytics.invoices"} {where}',
+                params,
+            )
+            ref = sum(float(r.get("amount") or 0) for r in detail_rows)
+            ok = abs(ref - total) < 0.01
+            return ValidationResult(
+                "DIFFERENTIAL_SUM",
+                ok,
+                {"sqlTotal": total, "pythonTotal": ref, "family": family},
+            )
+        except Exception as e:
+            return ValidationResult("DIFFERENTIAL_SUM", False, {"error": str(e)})
+    if family == "GROUP_MEASURE":
+        try:
+            rows = execute_fn(compiled.sql_template, params)
+            sql_total = sum(float(r.get("metric") or r.get("total") or r.get(metric) or 0) for r in rows)
+            # Compare to ungrouped sum with same period filters
+            where = ""
+            if plan.period and plan.date_column:
+                dc = plan.date_column.split(".")[-1]
+                where = f'WHERE "{dc}" >= :period_start AND "{dc}" < :period_end'
+            if "exclude_cancelled_invoices" in (plan.mandatory_filters or []):
+                where = (where + " AND " if where else "WHERE ") + '"status" <> :cancelled_status'
+                params = {**params, "cancelled_status": params.get("cancelled_status", "cancelled")}
+            agg = execute_fn(
+                f'SELECT COALESCE(SUM("{metric}"),0) AS total FROM '
+                f'{plan.physical_table or "analytics.invoices"} {where}',
+                params,
+            )
+            ref = float((agg[0] or {}).get("total") or 0) if agg else 0.0
+            ok = abs(ref - sql_total) < 0.01
+            return ValidationResult(
+                "DIFFERENTIAL_SUM",
+                ok,
+                {"sqlTotal": sql_total, "pythonTotal": ref, "family": family},
+            )
+        except Exception as e:
+            return ValidationResult("DIFFERENTIAL_SUM", False, {"error": str(e)})
+    return ValidationResult("DIFFERENTIAL_SUM", True, {"skipped": True, "family": family})
+
+
 def new_run_id() -> str:
     return f"val-{uuid.uuid4().hex[:12]}"
