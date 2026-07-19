@@ -145,10 +145,9 @@ export default function BiAlertsPage() {
   });
 
   const items = sortByIsoDateDesc(a.data?.alerts ?? [], (r) => r.updated_at ?? r.created_at);
-  const alertChips =
-    (alertSuggestionsQ.data?.suggestions ?? [])
-      .map((s) => s.text?.trim())
-      .filter((text): text is string => Boolean(text)) || [];
+  const alertChips = (alertSuggestionsQ.data?.suggestions ?? [])
+    .map((s) => (s.text || '').trim())
+    .filter(Boolean);
   const askPrompt =
     alertSuggestionsQ.data?.ask_prompt?.trim() ||
     alertChips[0] ||
