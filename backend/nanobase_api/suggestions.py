@@ -144,11 +144,38 @@ def build_suggestions(
         if len(out) >= lim:
             break
 
+    # Precompiled scenario catalog chips (Faturalar etc.)
+    try:
+        from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
+
+        for item in get_scenario_store().suggested_questions(
+            tenant_id=tenant_id, datasource_id=sid, limit=lim
+        ):
+            q = str(item.get("question") or "").strip()
+            n = _norm(q)
+            if len(n) < 6 or n in seen:
+                continue
+            seen.add(n)
+            out.append(
+                {
+                    "text": q,
+                    "source": "scenario",
+                    "count": 0,
+                    "category": item.get("category"),
+                    "scenarioCode": item.get("scenarioCode"),
+                }
+            )
+            if len(out) >= lim:
+                break
+    except Exception:
+        pass
+
     return {
         "datasource_id": sid,
         "suggestions": out,
         "learned_count": sum(1 for s in out if s["source"] == "learned"),
         "default_count": sum(1 for s in out if s["source"] == "default"),
+        "scenario_count": sum(1 for s in out if s["source"] == "scenario"),
     }
 
 

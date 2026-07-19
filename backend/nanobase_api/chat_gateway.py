@@ -336,6 +336,48 @@ async def stream_chat_via_gateway(
     retrieval_meta: dict[str, Any] = {}
     semantic_meta: dict[str, Any] = {}
 
+    # Precompiled scenario engine — before semantic metric / AWEL
+    try:
+        from nanobase_api.scenario_engine.application.runtime import try_precompiled_scenario
+        from nanobase_api.scenario_engine.infrastructure.metrics import (
+            SCENARIO_FALLBACK_AWEL,
+            SCENARIO_EXACT_MATCH,
+            inc,
+        )
+
+        scenario_hit = try_precompiled_scenario(
+            message,
+            tenant_id=tenant_id,
+            datasource_id=datasource_id,
+        )
+        if scenario_hit and scenario_hit.get("sql"):
+            sql = str(scenario_hit["sql"])
+            sql_source = "precompiled_scenario"
+            verified_meta = {
+                "id": scenario_hit.get("scenarioId"),
+                "sql": sql,
+                "source": "precompiled_scenario",
+                "logicalPlan": scenario_hit.get("logicalPlan"),
+            }
+            if float(scenario_hit.get("confidence") or 0) >= 0.99:
+                inc(SCENARIO_EXACT_MATCH)
+            yield _sse(
+                "status",
+                {
+                    "phase": "scenario_hit",
+                    "scenario_id": scenario_hit.get("scenarioId"),
+                    "scenario_code": scenario_hit.get("scenarioCode"),
+                    "confidence": scenario_hit.get("confidence"),
+                    "route": scenario_hit.get("route"),
+                    "sql": sql,
+                    "sql_source": sql_source,
+                },
+            ).encode()
+        else:
+            inc(SCENARIO_FALLBACK_AWEL)
+    except Exception as e:
+        yield _sse("status", {"phase": "scenario_lookup_skip", "detail": str(e)[:200]}).encode()
+
     # Faz 7: logical metric compile (never run legacy physical verified SQL as source of truth)
     try:
         from nanobase_awel.retrieval.semantic import (
@@ -343,7 +385,7 @@ async def stream_chat_via_gateway(
             try_compile_resolved_metric,
         )
 
-        if settings.semantic_catalog_enabled:
+        if not sql and settings.semantic_catalog_enabled:
             semantic_meta = await retrieve_semantic_context(
                 message, tenant_id=tenant_id, datasource_id=datasource_id
             )

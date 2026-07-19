@@ -205,9 +205,11 @@ from nanobase_api.chat_gateway import stream_chat_via_gateway  # noqa: E402
 from nanobase_api import semantic as semantic_mod  # noqa: E402
 from nanobase_api.semantic_catalog.api import router as semantic_catalog_router  # noqa: E402
 from nanobase_api.analytics_api import router as analytics_router  # noqa: E402
+from nanobase_api.scenario_engine.api import router as scenario_engine_router  # noqa: E402
 
 app.include_router(semantic_catalog_router)
 app.include_router(analytics_router)
+app.include_router(scenario_engine_router)
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import budget_actuals as budget_actuals_mod  # noqa: E402
