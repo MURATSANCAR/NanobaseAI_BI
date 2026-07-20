@@ -67,12 +67,34 @@ def unwrap_select_star_subquery(sql: str) -> tuple[str, bool]:
 def extract_table_refs(sql: str) -> list[str]:
     """Best-effort physical table names from FROM/JOIN (no CTE aliases)."""
     text = sql or ""
+    # Drop comments so prose like "from the context" never becomes a table ref.
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    text = re.sub(r"--[^\n]*", " ", text)
+    # Mask function-internal FROM (EXTRACT/TRIM/SUBSTRING) — not table refs.
+    text = re.sub(
+        r"(?is)\b(extract|trim|substring)\s*\((?:[^()]|\([^()]*\))*?\bfrom\b",
+        lambda m: re.sub(r"(?i)\bfrom\b", "FRX", m.group(0)),
+        text,
+    )
+
     # CTE names to exclude
     cte_names: set[str] = set()
     for m in re.finditer(r"(?is)\bwith\s+([a-zA-Z_][\w]*)\s+as\s*\(", text):
         cte_names.add(m.group(1).lower())
     for m in re.finditer(r"(?is),\s*([a-zA-Z_][\w]*)\s+as\s*\(", text):
         cte_names.add(m.group(1).lower())
+
+    # First segment of schema.table; short left sides are treated as alias.column.
+    schema_like = {
+        "public",
+        "dbo",
+        "analytics",
+        "reporting",
+        "pg_catalog",
+        "information_schema",
+        "sys",
+        "sap",
+    }
 
     refs: list[str] = []
     for m in re.finditer(
@@ -83,6 +105,11 @@ def extract_table_refs(sql: str) -> list[str]:
         n = _norm_table(raw)
         if not n or _short(n) in cte_names:
             continue
+        if "." in n:
+            left, _right = n.split(".", 1)
+            if left not in schema_like and len(left) <= 4:
+                # f.fatura_tarihi / af.created_at — column ref, not schema.table
+                continue
         refs.append(n)
     # de-dupe preserve order
     out: list[str] = []

@@ -56,3 +56,30 @@ def test_extract_skips_cte_alias():
     assert any("faturalar" in r for r in refs)
     assert any("musteriler" in r for r in refs)
     assert not any(r == "sales" or r.endswith(".sales") for r in refs)
+
+
+def test_extract_ignores_extract_from_and_comments():
+    sql = """
+    SELECT SUM(f.genel_toplam)
+    FROM public.faturalar f
+    WHERE EXTRACT(YEAR FROM f.fatura_tarihi) = 2026
+      AND EXTRACT(YEAR FROM odeme_tarihi) = 2026
+    /* join from the context to line items */
+    """
+    refs = extract_table_refs(sql)
+    assert refs == ["public.faturalar"]
+    assert "fatura_tarihi" not in " ".join(refs)
+    assert "context" not in refs
+    assert "line" not in refs
+
+
+def test_extract_ignores_short_alias_columns():
+    sql = """
+    SELECT af.genel_toplam
+    FROM public.alis_faturalari af
+    JOIN public.butce_planlari bp ON bp.butce_kodu = af.butce_kodu
+    WHERE EXTRACT(YEAR FROM af.fatura_tarihi) = 2026
+    """
+    refs = extract_table_refs(sql)
+    assert set(refs) == {"public.alis_faturalari", "public.butce_planlari"}
+

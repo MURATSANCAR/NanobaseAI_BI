@@ -1,0 +1,35 @@
+[Unit]
+Description=Nanobase Arctic Text2SQL (llama.cpp :8091)
+After=network.target
+
+[Service]
+Type=simple
+User=nanobase
+Group=nanobase
+WorkingDirectory=/data/nanobaseai
+EnvironmentFile=/etc/nanobaseai/arctic-text2sql.env
+# Cap CPU so Arctic cannot contend with Qwen (8010) during BI chat.
+CPUAccounting=yes
+CPUQuota=800%
+ExecStart=/opt/nanobaseai/bin/llama-server \
+  --model ${MODEL_FILE} \
+  --alias ${MODEL_ALIAS} \
+  --host ${LLAMA_HOST} \
+  --port ${LLAMA_PORT} \
+  --ctx-size ${CTX_SIZE} \
+  --threads ${THREADS} \
+  --threads-batch ${THREADS_BATCH} \
+  --batch-size ${BATCH_SIZE} \
+  --ubatch-size ${UBATCH_SIZE} \
+  --parallel ${PARALLEL} \
+  --timeout 1800 \
+  --cache-type-k ${CACHE_TYPE_K} \
+  --cache-type-v ${CACHE_TYPE_V} \
+  --no-webui
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,93 @@
+{
+  "version": 3,
+  "description": "NanobaseAI QA+BI stack — auto-recovery manifest (systemd + HTTP)",
+  "log_file": "/data/logs/stack-watchdog.log",
+  "systemd_units": [
+    {
+      "name": "docker.service",
+      "required": true,
+      "boot": true
+    },
+    {
+      "name": "cron.service",
+      "required": true,
+      "boot": true
+    },
+    {
+      "name": "nginx.service",
+      "required": true,
+      "boot": true
+    },
+    {
+      "name": "nanobase-mobile-runner-api.service",
+      "required": true,
+      "boot": true
+    },
+    {
+      "name": "redis-server.service",
+      "required": false,
+      "boot": false,
+      "conditional": "docker_owns_6379"
+    },
+    {
+      "name": "nanobase-qwen36-35b-a3b-mtp.service",
+      "required": false,
+      "boot": true
+    },
+    {
+      "name": "nanobase-llm-8015-proxy.service",
+      "required": false,
+      "boot": true
+    },
+    {
+      "name": "nanobase-llm-docker-proxy.service",
+      "required": false,
+      "boot": false
+    },
+    {
+      "name": "nanobase-arctic-text2sql.service",
+      "required": false,
+      "boot": false,
+      "conditional": "text2sql_prefer_chat",
+      "note": "Keep off while BI TEXT2SQL_PREFER=chat (Qwen). Watchdog must not fight disable."
+    }
+  ],
+  "http_checks": [
+    {
+      "id": "runner_api",
+      "url": "http://127.0.0.1:8787/health",
+      "restart_unit": "nanobase-mobile-runner-api.service",
+      "timeout_sec": 15,
+      "required": true
+    },
+    {
+      "id": "llm_local",
+      "url": "http://127.0.0.1:8010/v1/models",
+      "restart_unit": "nanobase-qwen36-35b-a3b-mtp.service",
+      "timeout_sec": 15,
+      "required": false
+    },
+    {
+      "id": "llm_proxy",
+      "url": "http://127.0.0.1:8015/v1/models",
+      "restart_unit": "nanobase-llm-8015-proxy.service",
+      "timeout_sec": 10,
+      "required": false
+    },
+    {
+      "id": "arctic_text2sql",
+      "url": "http://127.0.0.1:8091/v1/models",
+      "restart_unit": "nanobase-arctic-text2sql.service",
+      "timeout_sec": 15,
+      "required": false,
+      "note": "Recover skipped when unit is disabled (prefer=chat)."
+    }
+  ],
+  "docker_stacks": [],
+  "stale_port_cleanup": [
+    {
+      "port": 8787,
+      "systemd_unit": "nanobase-mobile-runner-api.service"
+    }
+  ]
+}
