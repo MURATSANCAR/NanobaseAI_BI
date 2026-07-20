@@ -827,6 +827,62 @@ async def stream_chat_via_gateway(
     except Exception:
         pass
 
+    seed_reject: tuple[str, str] | None = None
+    try:
+        from nanobase_awel.operators.sql_shape_guard import guard_sql_shape
+
+        allowed = list((retrieval_meta or {}).get("tables") or []) or list(
+            (plan or {}).get("tables") or []
+        )
+        guarded = guard_sql_shape(sql, allowed_tables=allowed)
+        if guarded.warnings and isinstance(plan.get("warnings"), list):
+            plan["warnings"].extend(guarded.warnings)
+        elif guarded.warnings:
+            plan["warnings"] = list(guarded.warnings)
+        sql = guarded.sql
+        if guarded.blocked and guarded.code:
+            from nanobase_awel.workflows.sql_repair import is_repairable as _shape_repairable
+
+            code = str(guarded.code)
+            msg = str(guarded.message or "SQL shape rejected")
+            yield _sse(
+                "status",
+                {
+                    "phase": "sql_shape_guard",
+                    "type": "SQL_REJECTED",
+                    "code": code,
+                    "message": msg,
+                },
+            ).encode()
+            if _shape_repairable(code):
+                seed_reject = (code, msg)
+            else:
+                guide = _user_guide_reply(code, msg)
+                if guide:
+                    async for chunk in _yield_user_guidance(
+                        session_id=session_id,
+                        execution_id=execution_id,
+                        plan=plan,
+                        mode=mode,
+                        reply=guide,
+                        code=code,
+                        sql=sql,
+                    ):
+                        yield chunk
+                    return
+                yield _sse(
+                    "error",
+                    {
+                        "message": msg,
+                        "code": code,
+                        "sql": sql,
+                        "type": "QUERY_POLICY_REJECTED",
+                    },
+                ).encode()
+                return
+    except Exception:
+        seed_reject = None
+
     yield _sse("status", {"phase": "validating", "sql": sql, "sql_source": sql_source}).encode()
     from nanobase_api.infrastructure.query_gateway_client import QueryGatewayClient
     from nanobase_awel.workflows.sql_repair import is_repairable
@@ -835,18 +891,24 @@ async def stream_chat_via_gateway(
     repair_attempts = 0
     max_repairs = 2
     last_error_code = ""
+    conn_retried = False
     safe_sql = sql
     ej: dict = {}
     explain_plan_text = None
 
     while True:
-        vj = await qg.validate(
-            sql=safe_sql,
-            datasource_id=datasource_id,
-            execution_id=execution_id,
-            tenant_id=tenant_id,
-            parameters=bind_parameters,
-        )
+        if seed_reject:
+            code, msg = seed_reject
+            seed_reject = None
+            vj = {"ok": False, "code": code, "message": msg}
+        else:
+            vj = await qg.validate(
+                sql=safe_sql,
+                datasource_id=datasource_id,
+                execution_id=execution_id,
+                tenant_id=tenant_id,
+                parameters=bind_parameters,
+            )
         if not vj.get("ok"):
             code = str(vj.get("code") or "QUERY_POLICY_REJECTED")
             msg = vj.get("message") or vj.get("error") or vj.get("detail") or "SQL rejected by gateway"
@@ -926,6 +988,56 @@ async def stream_chat_via_gateway(
                         },
                     ).encode()
                     return
+                # Re-apply shape guard on repaired SQL
+                try:
+                    from nanobase_awel.operators.sql_shape_guard import guard_sql_shape
+
+                    g2 = guard_sql_shape(
+                        new_sql,
+                        allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                    )
+                    new_sql = g2.sql
+                    if g2.blocked and g2.code:
+                        code2 = str(g2.code)
+                        msg2 = str(g2.message or "")
+                        if not is_repairable(code2) or repair_attempts >= max_repairs:
+                            guide = _user_guide_reply(code2, msg2)
+                            if guide:
+                                async for chunk in _yield_user_guidance(
+                                    session_id=session_id,
+                                    execution_id=execution_id,
+                                    plan=plan,
+                                    mode=mode,
+                                    reply=guide,
+                                    code=code2,
+                                    sql=new_sql,
+                                ):
+                                    yield chunk
+                                return
+                            yield _sse(
+                                "error",
+                                {
+                                    "message": msg2,
+                                    "code": code2,
+                                    "sql": new_sql,
+                                    "type": "QUERY_POLICY_REJECTED",
+                                },
+                            ).encode()
+                            return
+                        safe_sql = new_sql
+                        seed_reject = (code2, msg2)
+                        yield _sse(
+                            "status",
+                            {
+                                "phase": "sql_shape_guard",
+                                "type": "SQL_REJECTED",
+                                "code": code2,
+                                "message": msg2,
+                            },
+                        ).encode()
+                        continue
+                except Exception:
+                    pass
                 safe_sql = new_sql
                 yield _sse(
                     "status",
@@ -1005,6 +1117,32 @@ async def stream_chat_via_gateway(
                 or ej.get("error")
                 or "execute failed"
             )
+            # One automatic retry for transient connection loss on read-only SELECT.
+            if code == "DATABASE_CONNECTION_LOST" and not conn_retried:
+                conn_retried = True
+                yield _sse(
+                    "status",
+                    {
+                        "phase": "execute_retry",
+                        "type": "STATUS",
+                        "code": code,
+                        "message": "Bağlantı koptu; sorgu bir kez yeniden deneniyor.",
+                    },
+                ).encode()
+                try:
+                    ej = await qg.execute(
+                        sql=safe_sql,
+                        datasource_id=datasource_id,
+                        execution_id=execution_id,
+                        tenant_id=tenant_id,
+                        parameters=bind_parameters,
+                    )
+                    if ej.get("ok"):
+                        break
+                    code = str(ej.get("code") or code)
+                    msg = ej.get("message") or ej.get("detail") or ej.get("error") or msg
+                except Exception as e2:
+                    msg = str(e2)
             yield _sse(
                 "status",
                 {
@@ -1075,6 +1213,46 @@ async def stream_chat_via_gateway(
                 if repair_box and repair_box[0] is not None:
                     new_sql = str(repair_box[0].get("sql") or "").strip()
                     if new_sql and new_sql != safe_sql:
+                        try:
+                            from nanobase_awel.operators.sql_shape_guard import guard_sql_shape
+
+                            g3 = guard_sql_shape(
+                                new_sql,
+                                allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                            )
+                            new_sql = g3.sql
+                            if g3.blocked and g3.code:
+                                code3 = str(g3.code)
+                                msg3 = str(g3.message or "")
+                                if not is_repairable(code3) or repair_attempts >= max_repairs:
+                                    guide = _user_guide_reply(code3, msg3)
+                                    if guide:
+                                        async for chunk in _yield_user_guidance(
+                                            session_id=session_id,
+                                            execution_id=execution_id,
+                                            plan=plan,
+                                            mode=mode,
+                                            reply=guide,
+                                            code=code3,
+                                            sql=new_sql,
+                                        ):
+                                            yield chunk
+                                        return
+                                    yield _sse(
+                                        "error",
+                                        {
+                                            "message": msg3,
+                                            "code": code3,
+                                            "sql": new_sql,
+                                            "type": "QUERY_POLICY_REJECTED",
+                                        },
+                                    ).encode()
+                                    return
+                                safe_sql = new_sql
+                                seed_reject = (code3, msg3)
+                                continue
+                        except Exception:
+                            pass
                         safe_sql = new_sql
                         yield _sse(
                             "status",

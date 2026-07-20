@@ -76,10 +76,15 @@ async def _raw_chat_completion(
         "stream": False,
     }
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    async with httpx.AsyncClient(timeout=timeout_s) as client:
-        r = await client.post(f"{base}/chat/completions", headers=headers, json=body)
-        r.raise_for_status()
-        data = r.json()
+    # Use a request that respects asyncio cancellation (client disconnect → task.cancel).
+    timeout = httpx.Timeout(timeout_s, connect=min(30.0, timeout_s))
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        try:
+            r = await client.post(f"{base}/chat/completions", headers=headers, json=body)
+            r.raise_for_status()
+            data = r.json()
+        except httpx.TimeoutException as e:
+            raise TimeoutError(f"llm_timeout:{base}:{timeout_s}s") from e
     return str((((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or "")
 
 

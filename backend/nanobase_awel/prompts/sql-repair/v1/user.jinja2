@@ -6,4 +6,7 @@ Attempt: {{ attempt }}
 Authorized context:
 {{ context }}
 
+If error is QUERY_COST_EXCEEDED or QUERY_TIMEOUT: rewrite with a date predicate and/or header totals from context.
+If error is WILDCARD_NOT_ALLOWED or TABLE_OR_VIEW_NOT_FOUND: project explicit columns and only authorized tables.
+
 Return ONLY JSON: status, sql, dialect, tables, columns, assumptions, warnings, confidence.

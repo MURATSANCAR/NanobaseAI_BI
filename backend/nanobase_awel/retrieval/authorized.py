@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 import httpx
@@ -165,7 +166,25 @@ async def retrieve_authorized_schema(
     hits = []
     lines = [f"Retrieved schema context for datasource '{datasource_id}' (Qdrant {coll}):"]
     seen_tables: set[str] = set()
+    # table_fq -> ordered unique column names (generic; filled from column hits + text)
+    table_cols: dict[str, list[str]] = {}
     untrusted_comments: list[str] = []
+
+    def _add_col(fq_name: str, col: str | None) -> None:
+        c = str(col or "").strip().strip('"')
+        if not fq_name or not c:
+            return
+        bucket = table_cols.setdefault(fq_name, [])
+        if c not in bucket:
+            bucket.append(c)
+
+    def _cols_from_table_text(fq_name: str, body: str) -> None:
+        """Parse 'Columns:\\n- name type' lines from table-level index docs."""
+        if not fq_name or not body:
+            return
+        for m in re.finditer(r"(?m)^\s*-\s+([A-Za-z_][\w]*)\b", body):
+            _add_col(fq_name, m.group(1))
+
     for hit in result:
         payload = hit.get("payload") or {}
         # Soft client-side tenant/datasource guard (fail closed for mismatches)
@@ -183,6 +202,17 @@ async def retrieve_authorized_schema(
         fq = f"{schema}.{table}" if schema and table else (table or "")
         if fq:
             seen_tables.add(str(fq))
+        col_name = payload.get("column")
+        if col_name:
+            _add_col(str(fq), str(col_name))
+        # Some indexers put columns[] on table docs
+        for extra in payload.get("columns") or []:
+            if isinstance(extra, str):
+                _add_col(str(fq), extra)
+            elif isinstance(extra, dict):
+                _add_col(str(fq), extra.get("name") or extra.get("column"))
+        if fq and str(kind or "").lower() in ("table", "view") and text:
+            _cols_from_table_text(str(fq), text)
         comment = payload.get("comment") or payload.get("description")
         if comment:
             untrusted_comments.append(str(comment)[:300])
@@ -191,19 +221,34 @@ async def retrieve_authorized_schema(
                 "score": score,
                 "kind": kind,
                 "table": fq,
-                "column": payload.get("column"),
+                "column": col_name,
                 "text": text,
                 "id": hit.get("id"),
             }
         )
         lines.append(f"- [{kind}] {fq} score={score:.3f}: {text[:220]}")
 
-    hint = "\n".join(lines) if hits else ""
+    # Dense per-table column block near the top of the hint so compact truncation keeps it.
+    col_block: list[str] = []
+    if table_cols:
+        col_block.append("Authorized columns by table (use these names; do not invent):")
+        for tname in sorted(table_cols.keys()):
+            cols = table_cols[tname][:48]
+            if cols:
+                col_block.append(f"  {tname}: {', '.join(cols)}")
+
+    if hits:
+        header = lines[:1]
+        hit_lines = lines[1:]
+        hint = "\n".join(header + col_block + hit_lines)
+    else:
+        hint = ""
     return {
         "ok": True,
         "collection": coll,
         "hits": hits[:max_documents],
         "tables": sorted(seen_tables),
+        "table_columns": {k: v[:48] for k, v in table_cols.items()},
         "hint_extra": hint,
         "untrusted_comments": untrusted_comments[:20],
         "filter": qfilter,

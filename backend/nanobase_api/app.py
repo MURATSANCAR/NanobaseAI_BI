@@ -5,6 +5,7 @@ Reuses the bridge route surface and overlays bi_meta datasources.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
@@ -819,17 +820,23 @@ async def chat_stream_gateway(
                     break
             if not acquired:
                 return
-            async for chunk in stream_chat_via_gateway(
+            agen = stream_chat_via_gateway(
                 message,
                 session_id,
                 ds,
                 meta_engine=_meta_engine(),
                 tenant_id=tenant_id,
                 user_id=user_id,
-            ):
-                if await request.is_disconnected():
-                    break
-                yield chunk
+            )
+            try:
+                async for chunk in agen:
+                    if await request.is_disconnected():
+                        break
+                    yield chunk
+            finally:
+                # Client disconnect / early exit: close generator so in-flight LLM httpx cancels.
+                with contextlib.suppress(Exception):
+                    await agen.aclose()
         except TimeoutError as e:
             yield (
                 "event: error\ndata: "

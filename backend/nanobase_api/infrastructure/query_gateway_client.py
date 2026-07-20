@@ -90,8 +90,14 @@ class QueryGatewayClient:
                     f"{self.base}/api/v1/query/validate",
                     json=payload_legacy,
                 )
-                r.raise_for_status()
-                return r.json()
+                if r.status_code >= 400:
+                    return {"ok": False, "status": "REJECTED", **_safe_json(r)}
+                data = r.json()
+                if "ok" not in data:
+                    data["ok"] = data.get("status") in ("APPROVED", "OK", True) or bool(
+                        data.get("sql") or data.get("normalizedSql")
+                    )
+                return data
 
         path = "/internal/v1/queries/validate"
         payload: dict[str, Any] = {
@@ -145,8 +151,25 @@ class QueryGatewayClient:
                     f"{self.base}/api/v1/query/execute",
                     json=payload_legacy,
                 )
-                r.raise_for_status()
-                return r.json()
+                if r.status_code >= 400:
+                    err = _safe_json(r)
+                    return {
+                        "ok": False,
+                        "status": "FAILED",
+                        "code": err.get("code") or f"HTTP_{r.status_code}",
+                        "message": err.get("message")
+                        or err.get("detail")
+                        or err.get("error")
+                        or r.text[:400],
+                        "detail": err.get("detail") or err.get("message"),
+                        "error": err.get("message") or err.get("detail") or err.get("error"),
+                        "raw": err,
+                        "http_status": r.status_code,
+                    }
+                data = r.json()
+                if "ok" not in data:
+                    data["ok"] = True
+                return data
 
         if explain:
             # EXPLAIN still via legacy for display plans
@@ -162,7 +185,19 @@ class QueryGatewayClient:
                     f"{self.base}/api/v1/query/execute",
                     json=payload_ex,
                 )
-                r.raise_for_status()
+                if r.status_code >= 400:
+                    err = _safe_json(r)
+                    return {
+                        "ok": False,
+                        "status": "FAILED",
+                        "code": err.get("code") or f"HTTP_{r.status_code}",
+                        "message": err.get("message")
+                        or err.get("detail")
+                        or err.get("error")
+                        or r.text[:400],
+                        "http_status": r.status_code,
+                        "raw": err,
+                    }
                 return r.json()
 
         path = "/internal/v1/queries/execute"
