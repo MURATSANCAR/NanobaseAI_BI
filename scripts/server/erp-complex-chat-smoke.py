@@ -12,8 +12,16 @@ from typing import Any
 import httpx
 
 API = "http://127.0.0.1:8790/api/v1/bi/chat/stream"
+QUEUE_STATUS = "http://127.0.0.1:8790/api/v1/bi/model-queue/status"
 DATASOURCE = "erp"
+# Soft budget for one prompt; we still wait for terminal done/error beyond this.
 TIMEOUT_S = 420.0
+# Never abandon a prompt and start the next one before this absolute cap.
+HARD_TIMEOUT_S = 900.0
+# After terminal SSE, wait until model queue is fully idle before POSTing the next prompt.
+QUEUE_IDLE_POLL_S = 2.0
+QUEUE_IDLE_MAX_WAIT_S = 600.0
+BETWEEN_PROMPTS_PAUSE_S = 1.0
 
 PROMPTS: list[dict[str, str]] = [
     {
@@ -195,7 +203,47 @@ def _score(events: list[tuple[str, dict[str, Any]]], wall_err: str | None) -> di
     }
 
 
+def wait_model_queue_idle(*, label: str = "") -> dict[str, Any]:
+    """Block until API reports active=0 and waiting=0 (or give up after max wait)."""
+    t0 = time.time()
+    last: dict[str, Any] = {}
+    while time.time() - t0 < QUEUE_IDLE_MAX_WAIT_S:
+        try:
+            with httpx.Client(timeout=10.0) as c:
+                r = c.get(QUEUE_STATUS)
+                r.raise_for_status()
+                last = r.json()
+        except Exception as e:  # noqa: BLE001
+            last = {"ok": False, "error": str(e), "active": -1, "waiting": -1}
+            time.sleep(QUEUE_IDLE_POLL_S)
+            continue
+        active = int(last.get("active") or 0)
+        waiting = int(last.get("waiting") or 0)
+        if active == 0 and waiting == 0:
+            elapsed = round(time.time() - t0, 1)
+            if label:
+                print(f"  queue idle ({elapsed}s wait){(' — ' + label) if label else ''}", flush=True)
+            return last
+        print(
+            f"  waiting model queue idle… active={active} waiting={waiting}"
+            f"{(' [' + label + ']') if label else ''}",
+            flush=True,
+        )
+        time.sleep(QUEUE_IDLE_POLL_S)
+    print(
+        f"  WARN: model queue still busy after {QUEUE_IDLE_MAX_WAIT_S}s "
+        f"(active={last.get('active')} waiting={last.get('waiting')}) — proceeding cautiously",
+        flush=True,
+    )
+    return last
+
+
 def run_one(prompt: dict[str, str]) -> dict[str, Any]:
+    """POST one prompt and block until a clear terminal SSE (done|error) arrives.
+
+    Does not return early on soft wall timeout — only HARD_TIMEOUT_S can force-stop,
+    and even then the caller must wait for queue idle before the next POST.
+    """
     body = {
         "message": prompt["message"],
         "db_name": DATASOURCE,
@@ -204,11 +252,14 @@ def run_one(prompt: dict[str, str]) -> dict[str, Any]:
     t0 = time.time()
     events: list[tuple[str, dict[str, Any]]] = []
     wall_err: str | None = None
+    terminal = False
     event_name = "message"
     data_buf: list[str] = []
+    soft_warned = False
 
+    # httpx read timeout must cover HARD_TIMEOUT; we gate logic ourselves.
     try:
-        with httpx.Client(timeout=httpx.Timeout(TIMEOUT_S, connect=30.0)) as client:
+        with httpx.Client(timeout=httpx.Timeout(HARD_TIMEOUT_S + 30.0, connect=30.0)) as client:
             with client.stream(
                 "POST",
                 API,
@@ -217,8 +268,16 @@ def run_one(prompt: dict[str, str]) -> dict[str, Any]:
             ) as resp:
                 resp.raise_for_status()
                 for line in resp.iter_lines():
-                    if time.time() - t0 > TIMEOUT_S:
-                        wall_err = f"TimeoutError: wall > {TIMEOUT_S}s"
+                    elapsed = time.time() - t0
+                    if elapsed > TIMEOUT_S and not soft_warned:
+                        soft_warned = True
+                        print(
+                            f"  … still waiting for terminal done/error "
+                            f"(soft budget {TIMEOUT_S}s exceeded, hard cap {HARD_TIMEOUT_S}s)",
+                            flush=True,
+                        )
+                    if elapsed > HARD_TIMEOUT_S:
+                        wall_err = f"TimeoutError: hard wall > {HARD_TIMEOUT_S}s (no terminal SSE)"
                         break
                     if line.startswith("event:"):
                         event_name = line.split(":", 1)[1].strip()
@@ -235,20 +294,33 @@ def run_one(prompt: dict[str, str]) -> dict[str, Any]:
                             payload = {"raw": blob[:400]}
                         if isinstance(payload, dict):
                             events.append((event_name, payload))
+                            ph = payload.get("phase")
+                            if ph:
+                                print(f"  phase={ph}", flush=True)
                         stop = event_name in {"done", "error"}
-                        event_name = "message"
                         if stop:
+                            terminal = True
+                            event_name = "message"
                             break
+                        event_name = "message"
     except Exception as exc:  # noqa: BLE001
         wall_err = f"{type(exc).__name__}: {exc}"[:500]
 
+    if not terminal and not wall_err:
+        wall_err = "IncompleteStream: connection closed without done/error"
+
     elapsed = round(time.time() - t0, 2)
     scored = _score(events, wall_err)
+    scored["terminal"] = terminal
+    scored["gaps"] = list(scored.get("gaps") or [])
+    if not terminal:
+        scored["gaps"].append("no_terminal_sse")
+        scored["hard_fail"] = True
     return {
         "id": prompt["id"],
         "title": prompt["title"],
         "elapsed_s": elapsed,
-        "ok": not scored["hard_fail"],
+        "ok": bool(terminal) and not scored["hard_fail"],
         **scored,
     }
 
@@ -257,14 +329,25 @@ def main() -> int:
     started = datetime.now(timezone.utc).isoformat()
     results: list[dict[str, Any]] = []
     print(f"# ERP complex chat smoke — {started} — ds={DATASOURCE}", flush=True)
+    print(
+        f"# gate: next prompt ONLY after terminal done/error + model-queue idle "
+        f"(soft={TIMEOUT_S}s hard={HARD_TIMEOUT_S}s)",
+        flush=True,
+    )
+
+    # Ensure nothing leftover is holding the model before we start.
+    wait_model_queue_idle(label="before P01")
+
     for i, p in enumerate(PROMPTS, 1):
         print(f"\n== [{i}/10] {p['id']} {p['title']} ==", flush=True)
         print(f"Q: {p['message'][:200]}", flush=True)
+        print("  POST chat/stream — waiting for clear result (done|error)…", flush=True)
         r = run_one(p)
         results.append(r)
         status = "FAIL" if r["hard_fail"] else ("WARN" if r["gaps"] else "PASS")
+        term = "terminal=Y" if r.get("terminal") else "terminal=N"
         print(
-            f"→ {status} {r['elapsed_s']}s events={r['event_count']} "
+            f"→ {status} {r['elapsed_s']}s {term} events={r['event_count']} "
             f"exec={r['executed']} rows={r['row_count']} gaps={r['gaps']}",
             flush=True,
         )
@@ -280,6 +363,11 @@ def main() -> int:
             print(f"REPLY: {r['reply_snip']}", flush=True)
         print(f"EVENTS: {r.get('event_names')}", flush=True)
 
+        # CRITICAL: do not POST the next prompt until this one fully released the model.
+        if i < len(PROMPTS):
+            wait_model_queue_idle(label=f"after {p['id']} before next")
+            time.sleep(BETWEEN_PROMPTS_PAUSE_S)
+
     gap_counts: dict[str, int] = {}
     for r in results:
         for g in r.get("gaps") or []:
@@ -288,6 +376,12 @@ def main() -> int:
         "started": started,
         "finished": datetime.now(timezone.utc).isoformat(),
         "datasource": DATASOURCE,
+        "gate": {
+            "next_prompt_requires_terminal_sse": True,
+            "next_prompt_requires_queue_idle": True,
+            "soft_timeout_s": TIMEOUT_S,
+            "hard_timeout_s": HARD_TIMEOUT_S,
+        },
         "prompts": [{"id": p["id"], "title": p["title"], "message": p["message"]} for p in PROMPTS],
         "results": results,
         "summary": {
@@ -295,6 +389,7 @@ def main() -> int:
             "pass": sum(1 for r in results if r.get("ok") and not r.get("gaps")),
             "warn": sum(1 for r in results if r.get("ok") and r.get("gaps")),
             "fail": sum(1 for r in results if r.get("hard_fail")),
+            "terminal": sum(1 for r in results if r.get("terminal")),
             "with_sql": sum(1 for r in results if r.get("sql")),
             "executed": sum(1 for r in results if r.get("executed")),
             "gap_counts": gap_counts,
