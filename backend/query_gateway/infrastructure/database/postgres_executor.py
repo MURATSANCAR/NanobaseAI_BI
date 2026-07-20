@@ -61,7 +61,15 @@ def _map_psycopg_error(exc: BaseException) -> GatewayError:
             retryable=True,
         )
 
-    if pgcode in ("42P01",) or "does not exist" in low and "relation" in low:
+    # Alias used without FROM entry (often LLM multi-CTE slip). Prefer precise code
+    # so chat repair can target it; 42P01 is also used for missing relations.
+    if "missing from-clause entry" in low:
+        return GatewayError(
+            "UNDEFINED_TABLE_ALIAS",
+            f"Tanımsız tablo alias'ı: {msg[:240]}",
+            status=400,
+        )
+    if pgcode in ("42P01",) or ("does not exist" in low and "relation" in low):
         return GatewayError(
             TABLE_OR_VIEW_NOT_FOUND,
             f"Tablo/view bulunamadı: {msg[:240]}",

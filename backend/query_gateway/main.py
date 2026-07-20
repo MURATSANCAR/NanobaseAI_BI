@@ -353,7 +353,12 @@ def create_app() -> FastAPI:
         except HTTPException:
             raise
         except Exception as e:
-            raise HTTPException(400, f"execution failed: {e}") from e
+            # Structured code so BI chat repair can retry (bare HTTP 400 was not repairable).
+            from query_gateway.infrastructure.database.postgres_executor import (
+                _map_psycopg_error,
+            )
+
+            raise _map_psycopg_error(e) from e
 
         return {
             "ok": True,
