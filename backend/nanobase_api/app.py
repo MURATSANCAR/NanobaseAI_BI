@@ -518,12 +518,15 @@ async def alert_suggestions_api(
 async def model_queue_status() -> dict:
     """Public queue depth for ops / UI (no secrets)."""
     from nanobase_awel.operators.model_queue import USER_WAIT_MESSAGE_TR, get_model_queue
+    from nanobase_api.infrastructure.chat_session_gate import get_chat_session_gate
 
     q = get_model_queue()
     st = q.stats()
+    sess = get_chat_session_gate().stats()
     return {
         "ok": True,
         **st,
+        "sessionGate": sess,
         "userWaitMessage": USER_WAIT_MESSAGE_TR,
         "saturated": st["waiting"] > 0 or st["active"] >= st["maxConcurrency"],
     }
@@ -757,7 +760,12 @@ async def chat_stream_gateway(
     request: Request,
     principal: RequestPrincipal = Depends(get_current_principal),
 ) -> StreamingResponse:
-    """Faz 6/7/3: verified cache | LLM → Query Gateway validate/execute/explain."""
+    """Faz 6/7/3: verified cache | LLM → Query Gateway validate/execute/explain.
+
+    Production rule: one in-flight stream per (tenant, session). The next message
+    waits with SSE phase=session_queued until the previous reaches done/error
+    (or the client disconnects and the lock is released).
+    """
     body = await request.json()
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
@@ -785,17 +793,63 @@ async def chat_stream_gateway(
     except Exception:
         pass
 
-    return StreamingResponse(
-        stream_chat_via_gateway(
-            message,
-            session_id,
-            ds,
-            meta_engine=_meta_engine(),
-            tenant_id=principal.tenant_id,
-            user_id=principal.user_id,
-        ),
-        media_type="text/event-stream",
-    )
+    request_id = str(uuid.uuid4())
+    tenant_id = principal.tenant_id
+    user_id = principal.user_id
+
+    async def _gated() -> Any:
+        from nanobase_api.infrastructure.chat_session_gate import get_chat_session_gate
+
+        gate = get_chat_session_gate()
+        acquired = False
+        try:
+            async for kind, payload in gate.acquire(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                request_id=request_id,
+            ):
+                if await request.is_disconnected():
+                    return
+                if kind == "waiting" and payload:
+                    yield (
+                        f"event: status\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                    ).encode()
+                elif kind == "acquired":
+                    acquired = True
+                    break
+            if not acquired:
+                return
+            async for chunk in stream_chat_via_gateway(
+                message,
+                session_id,
+                ds,
+                meta_engine=_meta_engine(),
+                tenant_id=tenant_id,
+                user_id=user_id,
+            ):
+                if await request.is_disconnected():
+                    break
+                yield chunk
+        except TimeoutError as e:
+            yield (
+                "event: error\ndata: "
+                + json.dumps({"message": str(e), "code": "SESSION_QUEUE_TIMEOUT"}, ensure_ascii=False)
+                + "\n\n"
+            ).encode()
+        except Exception as e:
+            yield (
+                "event: error\ndata: "
+                + json.dumps({"message": str(e)[:400], "code": "CHAT_STREAM_FAILED"}, ensure_ascii=False)
+                + "\n\n"
+            ).encode()
+        finally:
+            await gate.release(
+                tenant_id=tenant_id,
+                session_id=session_id,
+                request_id=request_id,
+            )
+
+    return StreamingResponse(_gated(), media_type="text/event-stream")
 
 
 # ---------------------------------------------------------------------------

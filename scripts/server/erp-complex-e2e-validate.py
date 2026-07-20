@@ -273,6 +273,24 @@ def phase_sql() -> dict[str, Any]:
     return {"ok": passed == len(results), "pass": passed, "total": len(results), "results": results}
 
 
+def wait_queue_idle(max_wait_s: float = 600.0) -> None:
+    t0 = time.time()
+    while time.time() - t0 < max_wait_s:
+        try:
+            req = urllib.request.Request(f"{API}/api/v1/bi/model-queue/status", method="GET")
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                st = json.loads(resp.read().decode())
+            if int(st.get("active") or 0) == 0 and int(st.get("waiting") or 0) == 0:
+                return
+            print(
+                f"  waiting queue idle… active={st.get('active')} waiting={st.get('waiting')}",
+                flush=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            print(f"  queue status err: {e}", flush=True)
+        time.sleep(2)
+
+
 def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
     if httpx is None:
         return {"id": prompt["id"], "ok": False, "error": "httpx missing"}
@@ -285,8 +303,10 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
     code = None
     clarify = False
     phases: list[str] = []
+    terminal = False
+    hard_s = 900.0
     try:
-        with httpx.Client(timeout=httpx.Timeout(280.0, connect=20.0)) as c:
+        with httpx.Client(timeout=httpx.Timeout(hard_s + 30.0, connect=20.0)) as c:
             with c.stream(
                 "POST",
                 CHAT,
@@ -300,6 +320,9 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
                 name = "message"
                 buf: list[str] = []
                 for line in r.iter_lines():
+                    if time.time() - t0 > hard_s:
+                        err = f"TimeoutError: hard wall > {hard_s}s (no terminal SSE)"
+                        break
                     if line.startswith("event:"):
                         name = line.split(":", 1)[1].strip()
                     elif line.startswith("data:"):
@@ -321,15 +344,20 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
                             rows = qr.get("rows") or []
                             err = data.get("sql_error")
                             clarify = bool(data.get("needs_clarification"))
+                            terminal = True
                             break
                         if name == "error":
                             err = data.get("message") or data.get("error")
                             code = data.get("code")
+                            terminal = True
                             break
                         name = "message"
     except Exception as e:  # noqa: BLE001
         err = str(e)
         code = type(e).__name__
+
+    if not terminal and not err:
+        err = "IncompleteStream: connection closed without done/error"
 
     elapsed = round(time.time() - t0, 1)
     hard_fail = code in (
@@ -343,10 +371,15 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
             "Internal Server Error" in str(err)
             or "incomplete chunked" in str(err)
             or "peer closed connection" in str(err)
+            or "IncompleteStream" in str(err)
+            or "hard wall" in str(err)
         )
     )
     min_rows = int(prompt.get("expect_min_rows") or 0)
-    if clarify:
+    if not terminal:
+        ok = False
+        status = "SOFT_FAIL"
+    elif clarify:
         ok = True
         status = "CLARIFY"
     elif hard_fail:
@@ -368,13 +401,14 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
         ok = True
         status = "PASS"
     print(
-        f"  CHAT {status} {prompt['id']} {elapsed}s rows={len(rows)} "
-        f"sql={'Y' if sql else 'N'} err={str(err)[:80] if err else None}"
+        f"  CHAT {status} {prompt['id']} {elapsed}s terminal={'Y' if terminal else 'N'} "
+        f"rows={len(rows)} sql={'Y' if sql else 'N'} err={str(err)[:80] if err else None}"
     )
     return {
         "id": prompt["id"],
-        "ok": ok and not hard_fail,
+        "ok": ok and not hard_fail and terminal,
         "hard_fail": hard_fail,
+        "terminal": terminal,
         "status": status,
         "elapsed_s": elapsed,
         "row_count": len(rows),
@@ -391,9 +425,12 @@ def run_chat(prompt: dict[str, Any]) -> dict[str, Any]:
 
 def phase_chat() -> dict[str, Any]:
     results = []
-    for p in CHAT_PROMPTS:
+    wait_queue_idle()
+    for i, p in enumerate(CHAT_PROMPTS):
         results.append(run_chat(p))
-        time.sleep(2)  # breathe between model calls
+        if i < len(CHAT_PROMPTS) - 1:
+            wait_queue_idle()
+            time.sleep(1)
     hard = sum(1 for r in results if r.get("hard_fail"))
     passed = sum(1 for r in results if r.get("ok"))
     return {

@@ -13,6 +13,8 @@ type TrackedJob = {
 
 type SessionJobs = {
   jobs: Map<string, TrackedJob>;
+  /** FIFO chain: next POST starts only after previous job settles (done/error/abort). */
+  chain: Promise<void>;
 };
 
 const sessions = new Map<string, SessionJobs>();
@@ -27,7 +29,7 @@ function nextJobId(): string {
 function sessionBucket(sessionId: string): SessionJobs {
   let bucket = sessions.get(sessionId);
   if (!bucket) {
-    bucket = { jobs: new Map() };
+    bucket = { jobs: new Map(), chain: Promise.resolve() };
     sessions.set(sessionId, bucket);
   }
   return bucket;
@@ -83,8 +85,9 @@ export function abortBiChatJob(sessionId: string, jobId?: string): void {
 }
 
 /**
- * Always starts a new stream for this message (FIFO on the server).
- * Does not attach a second prompt to an existing in-flight job.
+ * Enqueue a chat stream for this session.
+ * The HTTP POST starts only after the previous job in this session has settled
+ * (terminal done/error/abort) — matching production “one clear result at a time”.
  */
 export function runBiChatJob(
   config: ApiConfig,
@@ -104,21 +107,21 @@ export function runBiChatJob(
   const listeners = new Set<BiChatJobListener>();
   const abort = new AbortController();
 
-  const promise = streamBiChat(
-    config,
-    body,
-    (ev) => {
-      listeners.forEach((fn) => {
-        try {
-          fn(ev);
-        } catch {
-          /* ignore listener errors */
-        }
-      });
-    },
-    abort.signal,
-  )
-    .catch((err: unknown) => {
+  const runStream = () =>
+    streamBiChat(
+      config,
+      body,
+      (ev) => {
+        listeners.forEach((fn) => {
+          try {
+            fn(ev);
+          } catch {
+            /* ignore listener errors */
+          }
+        });
+      },
+      abort.signal,
+    ).catch((err: unknown) => {
       if (err instanceof DOMException && err.name === 'AbortError') {
         throw new Error('İstek durduruldu.');
       }
@@ -126,11 +129,42 @@ export function runBiChatJob(
         throw new Error('İstek durduruldu.');
       }
       throw err;
+    });
+
+  // Serialize POSTs: wait for prior job, then open the next stream.
+  const promise = bucket.chain
+    .catch(() => undefined)
+    .then(async () => {
+      if (abort.signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      // Notify UI that we were waiting behind a prior message in this session.
+      if (bucket.jobs.size > 1) {
+        listeners.forEach((fn) => {
+          try {
+            fn({
+              type: 'status',
+              phase: 'session_queued',
+              message:
+                'Önceki sorunuzun cevabı tamamlanıyor; bu mesaj sıraya alındı.',
+            });
+          } catch {
+            /* ignore */
+          }
+        });
+      }
+      return runStream();
     })
     .finally(() => {
       bucket.jobs.delete(jobId);
       if (bucket.jobs.size === 0) sessions.delete(sessionId);
     });
+
+  // Extend the chain so the next enqueue waits for this promise to settle.
+  bucket.chain = promise.then(
+    () => undefined,
+    () => undefined,
+  );
 
   const tracked: TrackedJob = { id: jobId, promise, listeners, abort };
   bucket.jobs.set(jobId, tracked);
