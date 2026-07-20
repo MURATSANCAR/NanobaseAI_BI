@@ -62,16 +62,29 @@ def analyze_explain_json(plan_json: Any, *, size_profile: str, settings: Setting
 
     if acc["cross_join"]:
         raise GatewayError(QUERY_COST_EXCEEDED, "EXPLAIN: cross join tespit edildi.", status=400)
+    # Unfiltered sequential scans on large estimates → force date/predicate narrowing.
+    filterless = [r for r in (acc["filterless_seq"] or []) if r]
+    if filterless and acc["plan_rows"] >= max(50_000.0, max_rows * 0.01):
+        rels = ", ".join(sorted(set(filterless))[:8])
+        raise GatewayError(
+            QUERY_COST_EXCEEDED,
+            (
+                f"EXPLAIN: filtresiz seq scan ({rels}), tahmini satır={int(acc['plan_rows'])}. "
+                "Tarih/predicate ekleyin veya üst belge toplam kolonlarını kullanın."
+            ),
+            status=400,
+            details=[{"filterless_seq": filterless, "plan_rows": acc["plan_rows"]}],
+        )
     if acc["plan_rows"] > max_rows:
         raise GatewayError(
             QUERY_COST_EXCEEDED,
-            "Sorgu tahmini satır sayısı eşiği aşıyor.",
+            "Sorgu tahmini satır sayısı eşiği aşıyor. Tarih aralığını daraltın.",
             status=400,
         )
     if acc["total_cost"] > max_cost:
         raise GatewayError(
             QUERY_COST_EXCEEDED,
-            "Sorgu tahmini maliyeti eşiği aşıyor.",
+            "Sorgu tahmini maliyeti eşiği aşıyor. Tarih filtresi veya daha az join kullanın.",
             status=400,
         )
     return acc

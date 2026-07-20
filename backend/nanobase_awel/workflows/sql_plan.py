@@ -10,6 +10,7 @@ from nanobase_awel.contracts.errors import OUTPUT_PARSE_FAILED, WorkflowError
 from nanobase_awel.contracts.planning import PlanStatus, SqlPlan, SqlPlanningRequest
 from nanobase_awel.operators.input_validator import validate_planning_request
 from nanobase_awel.operators.llm_operator import chat_completion
+from nanobase_awel.operators.planning_guidance import build_planning_guidance
 from nanobase_awel.operators.prompt_builder import render_simple, sql_plan_prompts
 from nanobase_awel.operators.schema_reference_validator import validate_plan_references
 from nanobase_awel.operators.structured_parser import parse_sql_plan
@@ -69,12 +70,18 @@ async def run_sql_plan(
         }
         hint = str(retrieval.get("hint_extra") or "")
 
+    guidance = build_planning_guidance(
+        req.question,
+        list(retrieval.get("tables") or []) + list(req.allowedTables or []),
+    )
+
     context_blocks = build_sanitized_context(
         question=req.question,
         schema_hint=req.schemaHint,
         retrieval={**retrieval, "hint_extra": hint},
         conversation_turns=req.conversationContext.recentTurns,
         semantic_context=semantic_ctx or None,
+        planning_guidance=guidance or None,
     )
     if _TEXT2SQL_COMPACT and len(context_blocks) > _TEXT2SQL_CONTEXT_CHARS + 500:
         context_blocks = context_blocks[: _TEXT2SQL_CONTEXT_CHARS + 500]
@@ -92,19 +99,41 @@ async def run_sql_plan(
         raw = await chat_completion(
             system, user, temperature=0.0, max_tokens=768, purpose="sql_plan"
         )
-        plan = parse_sql_plan(
-            raw,
-            prompt_version=req.generation.promptVersion,
-            model_profile=req.generation.modelProfile,
-            metadata_version=req.metadataVersion,
-        )
+        try:
+            plan = parse_sql_plan(
+                raw,
+                prompt_version=req.generation.promptVersion,
+                model_profile=req.generation.modelProfile,
+                metadata_version=req.metadataVersion,
+            )
+        except WorkflowError as pe:
+            if pe.code != OUTPUT_PARSE_FAILED:
+                raise
+            # One forced retry when the model returns prose / broken JSON under load.
+            retry_user = (
+                user
+                + "\n\nHARD REQUIREMENT: previous output was not valid JSON. "
+                "Reply with ONLY one JSON object: status=PLANNED and sql=single SELECT/WITH "
+                "(or status=AMBIGUOUS with clarificationQuestion). No markdown."
+            )
+            raw = await chat_completion(
+                system, retry_user, temperature=0.0, max_tokens=768, purpose="sql_plan"
+            )
+            plan = parse_sql_plan(
+                raw,
+                prompt_version=req.generation.promptVersion,
+                model_profile=req.generation.modelProfile,
+                metadata_version=req.metadataVersion,
+            )
+            plan.warnings = [*(plan.warnings or []), "parse_retry_forced"]
         # Model sometimes claims AMBIGUOUS even when retrieval tables exist.
         tables_available = bool(retrieval.get("tables") or req.allowedTables)
         if plan.status == PlanStatus.AMBIGUOUS and tables_available and not plan.sql:
             retry_user = (
                 user
                 + "\n\nHARD REQUIREMENT: authorized_schema_context already lists tables. "
-                "Do NOT ask for schema. status must be PLANNED with a single PostgreSQL SELECT/WITH."
+                "Do NOT ask for schema. status must be PLANNED with a single PostgreSQL SELECT/WITH "
+                "unless a date range is truly missing for a large fact scan — then ask only for dates."
             )
             raw2 = await chat_completion(
                 system, retry_user, temperature=0.0, max_tokens=768, purpose="sql_plan"
@@ -118,6 +147,9 @@ async def run_sql_plan(
             if plan2.status == PlanStatus.PLANNED and plan2.sql:
                 plan = plan2
                 plan.warnings = [*(plan.warnings or []), "ambiguous_retry_forced"]
+            elif plan2.status == PlanStatus.AMBIGUOUS and plan2.clarificationQuestion:
+                plan = plan2
+                plan.warnings = [*(plan.warnings or []), "ambiguous_date_clarification"]
     except WorkflowError:
         raise
     except Exception as e:

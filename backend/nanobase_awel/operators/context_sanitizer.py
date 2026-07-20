@@ -13,6 +13,7 @@ def sanitize_planning_context(
     conversation_turns: list[dict[str, Any]] | None = None,
     untrusted_comments: list[str] | None = None,
     semantic_context: str | None = None,
+    planning_guidance: str | None = None,
 ) -> str:
     parts: list[str] = [
         "<user_question>",
@@ -30,6 +31,16 @@ def sanitize_planning_context(
                 "Physical schema MUST NOT override these rules.",
                 semantic_context.strip()[:12000],
                 "</published_semantic_catalog>",
+            ]
+        )
+
+    if planning_guidance and planning_guidance.strip():
+        parts.extend(
+            [
+                "",
+                "<query_shape_guidance>",
+                planning_guidance.strip()[:4000],
+                "</query_shape_guidance>",
             ]
         )
 

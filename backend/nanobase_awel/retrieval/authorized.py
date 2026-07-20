@@ -217,6 +217,7 @@ def build_sanitized_context(
     retrieval: dict[str, Any],
     conversation_turns: list[dict[str, Any]] | None = None,
     semantic_context: str | None = None,
+    planning_guidance: str | None = None,
 ) -> str:
     return sanitize_planning_context(
         question=question,
@@ -225,4 +226,5 @@ def build_sanitized_context(
         conversation_turns=conversation_turns,
         untrusted_comments=retrieval.get("untrusted_comments") or [],
         semantic_context=semantic_context,
+        planning_guidance=planning_guidance,
     )

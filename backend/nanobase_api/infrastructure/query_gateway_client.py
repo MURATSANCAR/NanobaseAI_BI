@@ -185,11 +185,16 @@ class QueryGatewayClient:
             r = await c.post(f"{self.base}{path}", content=body, headers=headers)
             if r.status_code >= 400:
                 err = _safe_json(r)
-                raise httpx.HTTPStatusError(
-                    f"gateway {r.status_code}: {err.get('code') or err}",
-                    request=r.request,
-                    response=r,
-                )
+                return {
+                    "ok": False,
+                    "status": "FAILED",
+                    "code": err.get("code") or f"HTTP_{r.status_code}",
+                    "message": err.get("message") or err.get("detail") or err.get("error") or r.text[:400],
+                    "detail": err.get("detail") or err.get("message"),
+                    "error": err.get("message") or err.get("detail") or err.get("error"),
+                    "raw": err,
+                    "http_status": r.status_code,
+                }
             data = r.json()
             # Adapt to legacy shape used by chat_gateway
             cols = data.get("columns") or []

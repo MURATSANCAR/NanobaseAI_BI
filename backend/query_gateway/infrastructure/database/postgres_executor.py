@@ -3,15 +3,90 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from typing import Any
 
+import psycopg2
 import psycopg2.extras
 
 from query_gateway.config.settings import Settings, get_settings
-from query_gateway.domain.errors import DATABASE_UNAVAILABLE, QUERY_TIMEOUT, GatewayError
+from query_gateway.domain.errors import (
+    COLUMN_NOT_FOUND,
+    DATABASE_CONNECTION_LOST,
+    DATABASE_PERMISSION_DENIED,
+    DATABASE_UNAVAILABLE,
+    QUERY_TIMEOUT,
+    TABLE_OR_VIEW_NOT_FOUND,
+    GatewayError,
+)
 from query_gateway.infrastructure.database.explain_parser import analyze_explain_json
 from query_gateway.infrastructure.database.pool_registry import PoolRegistry, get_pool_registry
+
+log = logging.getLogger("query_gateway.postgres_executor")
+
+
+def _map_psycopg_error(exc: BaseException) -> GatewayError:
+    """Classify DB errors: timeout vs connection vs SQL vs unavailable."""
+    msg = str(exc)
+    low = msg.lower()
+    pgcode = getattr(exc, "pgcode", None) or ""
+
+    if (
+        "timeout" in low
+        or "canceling statement" in low
+        or "query_canceled" in low
+        or pgcode == "57014"
+    ):
+        return GatewayError(
+            QUERY_TIMEOUT,
+            f"Sorgu zaman aşımı: {msg[:240]}",
+            status=408,
+            retryable=True,
+        )
+
+    # Connection-class
+    if isinstance(exc, (psycopg2.OperationalError, psycopg2.InterfaceError)) or pgcode in (
+        "08000",
+        "08003",
+        "08006",
+        "57P01",
+        "57P02",
+        "57P03",
+    ):
+        return GatewayError(
+            DATABASE_CONNECTION_LOST,
+            f"Veritabanı bağlantısı koptu/erişilemedi: {msg[:240]}",
+            status=503,
+            retryable=True,
+        )
+
+    if pgcode in ("42P01",) or "does not exist" in low and "relation" in low:
+        return GatewayError(
+            TABLE_OR_VIEW_NOT_FOUND,
+            f"Tablo/view bulunamadı: {msg[:240]}",
+            status=400,
+        )
+    if pgcode in ("42703",) or ("column" in low and "does not exist" in low):
+        return GatewayError(
+            COLUMN_NOT_FOUND,
+            f"Kolon bulunamadı: {msg[:240]}",
+            status=400,
+        )
+    if pgcode in ("42501",) or "permission denied" in low:
+        return GatewayError(
+            DATABASE_PERMISSION_DENIED,
+            f"Yetki reddedildi: {msg[:240]}",
+            status=403,
+        )
+
+    # Remaining SQL/runtime errors — not "database unavailable"
+    return GatewayError(
+        "SQL_EXECUTION_FAILED",
+        f"Sorgu çalıştırılamadı: {msg[:320]}",
+        status=400,
+        retryable=False,
+    )
 
 
 def execute_postgres_ro(
@@ -82,18 +157,19 @@ def execute_postgres_ro(
                     raise
                 except Exception as e:
                     conn.rollback()
-                    if "timeout" in str(e).lower() or "canceling" in str(e).lower():
-                        raise GatewayError(
-                            QUERY_TIMEOUT,
-                            "EXPLAIN zaman aşımı.",
-                            status=408,
-                            retryable=True,
-                        ) from e
-                    raise GatewayError(
-                        QUERY_TIMEOUT if "cancel" in str(e).lower() else DATABASE_UNAVAILABLE,
-                        "EXPLAIN başarısız.",
-                        status=400,
-                    ) from e
+                    mapped = _map_psycopg_error(e)
+                    if mapped.code == QUERY_TIMEOUT:
+                        mapped.message = f"EXPLAIN zaman aşımı: {str(e)[:200]}"
+                    elif mapped.code == "SQL_EXECUTION_FAILED":
+                        # EXPLAIN SQL errors — keep as parse/exec, not UNAVAILABLE
+                        mapped.message = f"EXPLAIN başarısız: {str(e)[:240]}"
+                    log.warning(
+                        "explain_failed code=%s ds=%s err=%s",
+                        mapped.code,
+                        ds.get("id") or ds_id,
+                        str(e)[:200],
+                    )
+                    raise mapped from e
                 cur.execute(f"SET LOCAL statement_timeout = '{int(timeout_ms)}ms'")
 
             try:
@@ -103,14 +179,14 @@ def execute_postgres_ro(
                     cur.execute(exec_sql)
             except Exception as e:
                 conn.rollback()
-                msg = str(e).lower()
-                if "timeout" in msg or "canceling statement" in msg:
-                    raise GatewayError(QUERY_TIMEOUT, "Sorgu zaman aşımı.", status=408, retryable=True) from e
-                raise GatewayError(
-                    DATABASE_UNAVAILABLE,
-                    "Sorgu çalıştırılamadı.",
-                    status=400,
-                ) from e
+                mapped = _map_psycopg_error(e)
+                log.warning(
+                    "execute_failed code=%s ds=%s err=%s",
+                    mapped.code,
+                    ds.get("id") or ds_id,
+                    str(e)[:240],
+                )
+                raise mapped from e
 
             if cur.description is None:
                 conn.rollback()
@@ -133,11 +209,22 @@ def execute_postgres_ro(
             conn.rollback()
         except Exception:
             pass
-        raise GatewayError(
-            DATABASE_UNAVAILABLE,
-            "Veritabanı kullanılamıyor.",
-            status=503,
-            retryable=True,
-        ) from e
+        mapped = _map_psycopg_error(e)
+        if mapped.code not in (
+            QUERY_TIMEOUT,
+            DATABASE_CONNECTION_LOST,
+            TABLE_OR_VIEW_NOT_FOUND,
+            COLUMN_NOT_FOUND,
+            DATABASE_PERMISSION_DENIED,
+            "SQL_EXECUTION_FAILED",
+        ):
+            mapped = GatewayError(
+                DATABASE_UNAVAILABLE,
+                f"Veritabanı kullanılamıyor: {str(e)[:240]}",
+                status=503,
+                retryable=True,
+            )
+        log.error("postgres_ro_outer code=%s err=%s", mapped.code, str(e)[:240])
+        raise mapped from e
     finally:
         registry.put_postgres_conn(ds_id, conn)

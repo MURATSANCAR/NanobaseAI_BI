@@ -780,11 +780,12 @@ async def stream_chat_via_gateway(
 
     qg = QueryGatewayClient(QG_BASE)
     repair_attempts = 0
-    max_repairs = 1
+    max_repairs = 2
     last_error_code = ""
     safe_sql = sql
     ej: dict = {}
     explain_plan_text = None
+
     while True:
         vj = await qg.validate(
             sql=safe_sql,
@@ -849,6 +850,19 @@ async def stream_chat_via_gateway(
                 repaired = repair_box[0]
                 new_sql = str(repaired.get("sql") or "").strip()
                 if not new_sql or new_sql == safe_sql:
+                    guide = _user_guide_reply(code, str(msg))
+                    if guide:
+                        async for chunk in _yield_user_guidance(
+                            session_id=session_id,
+                            execution_id=execution_id,
+                            plan=plan,
+                            mode=mode,
+                            reply=guide,
+                            code=code,
+                            sql=safe_sql,
+                        ):
+                            yield chunk
+                        return
                     yield _sse(
                         "error",
                         {
@@ -869,6 +883,19 @@ async def stream_chat_via_gateway(
                     {"type": "SQL_GENERATED", "payload": {"sql": safe_sql, "sql_source": "repair"}},
                 ).encode()
                 continue
+            guide = _user_guide_reply(code, str(msg))
+            if guide:
+                async for chunk in _yield_user_guidance(
+                    session_id=session_id,
+                    execution_id=execution_id,
+                    plan=plan,
+                    mode=mode,
+                    reply=guide,
+                    code=code,
+                    sql=safe_sql,
+                ):
+                    yield chunk
+                return
             yield _sse(
                 "error",
                 {
@@ -892,22 +919,140 @@ async def stream_chat_via_gateway(
                 parameters=bind_parameters,
             )
         except Exception as e:
+            code = "QUERY_POLICY_REJECTED"
+            msg = str(e)
+            guide = _user_guide_reply(code, msg)
+            if guide:
+                async for chunk in _yield_user_guidance(
+                    session_id=session_id,
+                    execution_id=execution_id,
+                    plan=plan,
+                    mode=mode,
+                    reply=guide,
+                    code=code,
+                    sql=safe_sql,
+                ):
+                    yield chunk
+                return
             yield _sse(
                 "error",
                 {
-                    "message": str(e),
-                    "code": "QUERY_POLICY_REJECTED",
+                    "message": msg,
+                    "code": code,
                     "sql": safe_sql,
                     "type": "QUERY_POLICY_REJECTED",
                 },
             ).encode()
             return
         if not ej.get("ok"):
+            code = str(ej.get("code") or "QUERY_POLICY_REJECTED")
+            msg = (
+                ej.get("message")
+                or ej.get("detail")
+                or ej.get("error")
+                or "execute failed"
+            )
+            yield _sse(
+                "status",
+                {
+                    "phase": "execute_failed",
+                    "type": "EXECUTE_FAILED",
+                    "code": code,
+                    "message": msg,
+                },
+            ).encode()
+            if (
+                repair_attempts < max_repairs
+                and is_repairable(code)
+                and code != last_error_code
+            ):
+                repair_attempts += 1
+                last_error_code = code
+                yield _sse(
+                    "status",
+                    {
+                        "phase": "repairing_sql",
+                        "type": "STATUS",
+                        "attempt": repair_attempts,
+                        "workflow": "nanobase-sql-repair-v1",
+                        "after": "execute",
+                    },
+                ).encode()
+                repair_box = []
+                try:
+                    async for chunk in _await_llm_with_queue_sse(
+                        _engine_adapter.repair_sql(
+                            question=message,
+                            datasource_id=datasource_id,
+                            previous_sql=safe_sql,
+                            error_code=code,
+                            error_message=str(msg)[:500],
+                            attempt=repair_attempts,
+                            authorized_context=authorized_context,
+                            schema_hint=_schema_hint_for(datasource_id),
+                            allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                            tenant_id=tenant_id,
+                            execution_id=execution_id,
+                        ),
+                        tenant_id=tenant_id,
+                        user_id=user_id,
+                        request_id=f"{execution_id}-repair-exec-{repair_attempts}",
+                        out=repair_box,
+                    ):
+                        yield chunk
+                except Exception as e:
+                    guide = _user_guide_reply(code, str(msg))
+                    if guide:
+                        async for chunk in _yield_user_guidance(
+                            session_id=session_id,
+                            execution_id=execution_id,
+                            plan=plan,
+                            mode=mode,
+                            reply=guide,
+                            code=code,
+                            sql=safe_sql,
+                        ):
+                            yield chunk
+                        return
+                    yield _sse(
+                        "error",
+                        {"message": str(e), "code": code, "type": "QUERY_POLICY_REJECTED"},
+                    ).encode()
+                    return
+                if repair_box and repair_box[0] is not None:
+                    new_sql = str(repair_box[0].get("sql") or "").strip()
+                    if new_sql and new_sql != safe_sql:
+                        safe_sql = new_sql
+                        yield _sse(
+                            "status",
+                            {"phase": "sql_repaired", "type": "SQL_REPAIRED", "sql": safe_sql},
+                        ).encode()
+                        yield _sse(
+                            "sql_generated",
+                            {
+                                "type": "SQL_GENERATED",
+                                "payload": {"sql": safe_sql, "sql_source": "repair"},
+                            },
+                        ).encode()
+                        continue
+            guide = _user_guide_reply(code, str(msg))
+            if guide:
+                async for chunk in _yield_user_guidance(
+                    session_id=session_id,
+                    execution_id=execution_id,
+                    plan=plan,
+                    mode=mode,
+                    reply=guide,
+                    code=code,
+                    sql=safe_sql,
+                ):
+                    yield chunk
+                return
             yield _sse(
                 "error",
                 {
-                    "message": ej.get("detail") or ej.get("error") or "execute failed",
-                    "code": ej.get("code") or "QUERY_POLICY_REJECTED",
+                    "message": msg,
+                    "code": code,
                     "sql": safe_sql,
                     "type": "QUERY_POLICY_REJECTED",
                 },
