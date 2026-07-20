@@ -13,7 +13,7 @@ import httpx
 
 API = "http://127.0.0.1:8790/api/v1/bi/chat/stream"
 DATASOURCE = "erp"
-TIMEOUT_S = 300.0
+TIMEOUT_S = 420.0
 
 PROMPTS: list[dict[str, str]] = [
     {

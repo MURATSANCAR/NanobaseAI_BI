@@ -39,7 +39,7 @@ _LINE_INTENT = re.compile(
 )
 _HAS_DATE = re.compile(
     r"(?i)\b(20\d{2}|son\s+\d+|last\s+\d+|ay|yıl|yil|quarter|q[1-4]|between|"
-    r"tarih|date|month|year|hafta|week)\b"
+    r"tarih|date|month|year|hafta|week|mali\s+yıl|mali\s+yil)\b"
 )
 
 
@@ -78,39 +78,53 @@ def build_planning_guidance(
 
     bullets: list[str] = []
 
-    if wants_totals and not wants_lines and header_tables and line_tables:
-        bullets.append(
-            "Question is aggregate/total-oriented and header tables are available: "
-            "prefer header-level amount columns (e.g. genel_toplam / total) with GROUP BY. "
-            f"Do NOT join line tables ({', '.join(line_tables[:6])}) unless line attributes are required."
-        )
-    elif wants_lines and line_tables:
-        bullets.append(
-            "Line/product attributes are required — line tables may be used, but always constrain "
-            "them with a date/time predicate via join to the header date column."
-        )
+    bullets.append(
+        "Bias to PLANNED SQL. Use status=AMBIGUOUS only when a critical join key or metric "
+        "cannot be inferred at all — not for polite confirmation of years/periods already stated."
+    )
 
-    if line_tables and not has_date:
+    if has_date:
         bullets.append(
-            "Large/line fact tables are in scope but the question has no explicit time window. "
-            "Either (a) add a tight date filter from context (e.g. current year / last 12 months) "
-            "in SQL assumptions, or (b) set status=AMBIGUOUS and ask the user for a date range "
-            "before scanning those tables. Never full-scan line tables without a date predicate."
+            "A time window is already present in the user question (year, 'son N …', mali yıl, etc.). "
+            "Encode it directly in SQL (EXTRACT/YEAR, date literals, INTERVAL). "
+            "Do NOT ask the user to restate start/end dates."
         )
     elif line_tables:
         bullets.append(
-            "When querying line/fact tables, require an explicit date predicate "
+            "Large/line fact tables are in scope and no time window was stated. "
+            "Prefer a reasonable default in assumptions (e.g. current calendar year or last 12 months) "
+            "and PLANNED SQL. Ask AMBIGUOUS for dates only if no safe default exists."
+        )
+
+    if wants_totals and not wants_lines and header_tables and line_tables:
+        bullets.append(
+            "Aggregate/total question with header tables available: prefer header amount columns "
+            "(names the user mentioned such as genel_toplam, or obvious total/amount columns) "
+            f"with GROUP BY. Do NOT join line tables ({', '.join(line_tables[:6])}) unless line "
+            "attributes are required."
+        )
+    elif wants_lines and line_tables:
+        bullets.append(
+            "Line/product attributes are required — line tables may be used with a date predicate "
+            "via the header date column."
+        )
+
+    if line_tables:
+        bullets.append(
+            "When querying line/fact tables, always include a date/time predicate "
             "(WHERE/JOIN on header date). Prefer LIMIT for ranked lists."
         )
 
-    bullets.append("Never use SELECT *. Project only needed columns.")
     bullets.append(
-        "If the request cannot be answered safely without a narrower period, "
-        "prefer AMBIGUOUS + clarificationQuestion over an unbounded scan."
+        "If the user names a column on an authorized table (e.g. genel_toplam), use it. "
+        "Missing column metadata in the retrieval snippet is NOT a reason for AMBIGUOUS — "
+        "state an assumption and proceed."
+    )
+    bullets.append(
+        "Never use SELECT * and never wrap a CTE as SELECT * FROM (WITH ...). "
+        "Project only needed columns."
     )
 
-    if not bullets:
-        return ""
     return "Derived from retrieved tables + question intent (not a static catalog):\n- " + "\n- ".join(
         bullets
     )
