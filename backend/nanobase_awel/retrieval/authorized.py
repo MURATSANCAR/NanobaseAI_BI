@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any
+import unicodedata
+from typing import Any, Iterable
 
 import httpx
 
@@ -18,6 +19,74 @@ EMBED_KEY = (
     or os.environ.get("OPENAI_API_KEY")
     or "nanobase-local"
 )
+
+
+def _fold_ident(s: str) -> str:
+    """ASCII-fold for index matching (müşteri ↔ musteri) without synonym catalogs."""
+    text = unicodedata.normalize("NFKD", (s or "").strip().lower())
+    return "".join(ch for ch in text if not unicodedata.combining(ch))
+
+
+def _bare_table(name: str) -> str:
+    t = (name or "").strip().strip('"').lower()
+    return t.rsplit(".", 1)[-1] if t else ""
+
+
+def parse_missing_tables_from_error(message: str) -> list[str]:
+    """Extract table identifiers from TABLE_OR_VIEW_NOT_FOUND-style messages."""
+    msg = message or ""
+    found: list[str] = []
+    for m in re.finditer(
+        r"(?:referans[ıi]|table|relation|view)\s*:?\s*"
+        r"([a-zA-Z_][\w]*(?:\.[a-zA-Z_][\w]*)?)",
+        msg,
+        flags=re.I,
+    ):
+        found.append(m.group(1))
+    # Also capture `public.foo` / "foo" tokens after the Turkish phrase.
+    for m in re.finditer(r"\b((?:[a-zA-Z_][\w]*\.)?[a-zA-Z_][\w]*)\b", msg):
+        tok = m.group(1)
+        if "." in tok or tok.lower() in {t.lower() for t in found}:
+            if tok not in found:
+                found.append(tok)
+    # De-dupe preserve order; drop noise words
+    noise = {
+        "yetkisiz",
+        "veya",
+        "bilinmeyen",
+        "tablo",
+        "referansı",
+        "referansi",
+        "yalnızca",
+        "yalnizca",
+        "yetkili",
+        "şema",
+        "sema",
+        "bağlamındaki",
+        "baglamindaki",
+        "tabloları",
+        "tablolari",
+        "kullanın",
+        "kullanin",
+        "does",
+        "not",
+        "exist",
+        "relation",
+        "table",
+        "view",
+    }
+    out: list[str] = []
+    seen: set[str] = set()
+    for t in found:
+        b = _bare_table(t)
+        if not b or b in noise or len(b) < 3:
+            continue
+        key = t.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(t)
+    return out[:12]
 
 
 def collection_for(datasource_id: str) -> str:
