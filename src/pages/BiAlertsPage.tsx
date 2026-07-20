@@ -41,8 +41,14 @@ function conditionLabel(condition: string | undefined): string {
   return t('bi.alertCondGt');
 }
 
+function alertChannels(
+  channels: BiAlertRule['channels'] | unknown,
+): Array<{ type: string; to?: string; secret_ref?: string; url?: string }> {
+  return Array.isArray(channels) ? channels : [];
+}
+
 function recipientSummary(r: BiAlertRule): string {
-  const fromChannels = (r.channels || [])
+  const fromChannels = alertChannels(r.channels)
     .filter((c) => c.type === 'email' && c.to)
     .map((c) => String(c.to));
   if (fromChannels.length) return fromChannels.join(', ');
@@ -331,8 +337,9 @@ export default function BiAlertsPage() {
               className="btn-primary"
               disabled={!canSaveManual}
               onClick={() => {
-                const channels = form.channels?.length
-                  ? form.channels
+                const existing = alertChannels(form.channels);
+                const channels = existing.length
+                  ? existing
                   : form.recipient
                     ? form.recipient
                         .split(',')

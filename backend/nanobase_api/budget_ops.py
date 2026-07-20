@@ -81,11 +81,6 @@ def create_alert_from_budget(
         "budget_id": bid,
         "budget_fingerprint": fp,
         "budget_threshold_pct": pct,
-        "channels": {
-            "budget_id": bid,
-            "budget_fingerprint": fp,
-            "budget_threshold_pct": pct,
-        },
     }
     saved = alerts_mod.save_alert(engine, entry, tenant_id=tenant_id)
     return {**saved, "created": True}

@@ -12,6 +12,13 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 
+def _normalize_channels(raw: Any) -> list[dict[str, Any]]:
+    """Notification channels are a list; legacy rows may store budget meta as a dict."""
+    if isinstance(raw, list):
+        return [c for c in raw if isinstance(c, dict)]
+    return []
+
+
 def _row_to_alert(r: Any) -> dict[str, Any]:
     try:
         meta = json.loads(r["payload_json"] or "{}")
@@ -35,7 +42,7 @@ def _row_to_alert(r: Any) -> dict[str, Any]:
         "budget_id": meta.get("budget_id"),
         "budget_fingerprint": meta.get("budget_fingerprint"),
         "budget_threshold_pct": meta.get("budget_threshold_pct"),
-        "channels": meta,
+        "channels": _normalize_channels(meta.get("channels")),
     }
 
 
@@ -57,7 +64,18 @@ def list_alerts(engine: Engine, *, tenant_id: str = "default") -> list[dict[str,
 def save_alert(engine: Engine, body: dict[str, Any], *, tenant_id: str = "default") -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     aid = str(body.get("id") or f"al-{uuid.uuid4().hex[:10]}")
-    payload = dict(body.get("channels") or {})
+    channels_in = body.get("channels")
+    payload: dict[str, Any] = {}
+    if isinstance(channels_in, list):
+        payload["channels"] = [c for c in channels_in if isinstance(c, dict)]
+    elif isinstance(channels_in, dict):
+        # Legacy: callers stuffed budget meta into "channels".
+        for key in ("budget_id", "budget_fingerprint", "budget_threshold_pct"):
+            if channels_in.get(key) is not None:
+                payload[key] = channels_in[key]
+        nested = channels_in.get("channels")
+        if isinstance(nested, list):
+            payload["channels"] = [c for c in nested if isinstance(c, dict)]
     for key in ("budget_id", "budget_fingerprint", "budget_threshold_pct"):
         if body.get(key) is not None:
             payload[key] = body[key]
