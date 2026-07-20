@@ -36,6 +36,17 @@ def test_guard_allows_known_and_unwraps():
     assert "select *" not in r.sql.lower().split("from")[0]
 
 
+def test_guard_allows_table_named_in_question():
+    sql = "SELECT d.ad, sb.miktar FROM public.depolar d JOIN public.stok_bakiyeleri sb ON sb.depo_id=d.id"
+    r = guard_sql_shape(
+        sql,
+        allowed_tables=["public.faturalar"],
+        question="stok_bakiyeleri + urunler + depolar: net stok",
+    )
+    assert not r.blocked
+    assert any("depolar" in w for w in r.warnings)
+
+
 def test_extract_skips_cte_alias():
     sql = """
     WITH sales AS (SELECT id FROM public.faturalar)

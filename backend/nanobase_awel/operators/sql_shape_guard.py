@@ -110,6 +110,7 @@ def guard_sql_shape(
     sql: str,
     *,
     allowed_tables: Iterable[str] | None = None,
+    question: str | None = None,
 ) -> ShapeGuardResult:
     """Sanitize / soft-block SQL before Gateway validate."""
     warnings: list[str] = []
@@ -139,9 +140,20 @@ def guard_sql_shape(
             )
 
     allowed = {_norm_table(t) for t in (allowed_tables or []) if t}
+    # Tables explicitly named in the user question are treated as in-scope even if
+    # retrieval missed them (generic; no static catalog).
+    qlow = (question or "").lower()
     if allowed:
         refs = extract_table_refs(text)
-        bad = [r for r in refs if not _allowlist_match(r, allowed)]
+        bad: list[str] = []
+        for r in refs:
+            if _allowlist_match(r, allowed):
+                continue
+            short = _short(r)
+            if qlow and short and re.search(rf"(?<![a-z0-9_]){re.escape(short)}(?![a-z0-9_])", qlow):
+                warnings.append(f"table_mentioned_in_question:{short}")
+                continue
+            bad.append(r)
         if bad:
             return ShapeGuardResult(
                 sql=text,

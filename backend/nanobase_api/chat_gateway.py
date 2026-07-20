@@ -834,7 +834,7 @@ async def stream_chat_via_gateway(
         allowed = list((retrieval_meta or {}).get("tables") or []) or list(
             (plan or {}).get("tables") or []
         )
-        guarded = guard_sql_shape(sql, allowed_tables=allowed)
+        guarded = guard_sql_shape(sql, allowed_tables=allowed, question=message)
         if guarded.warnings and isinstance(plan.get("warnings"), list):
             plan["warnings"].extend(guarded.warnings)
         elif guarded.warnings:
@@ -995,6 +995,7 @@ async def stream_chat_via_gateway(
                     g2 = guard_sql_shape(
                         new_sql,
                         allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                        question=message,
                     )
                     new_sql = g2.sql
                     if g2.blocked and g2.code:
@@ -1219,6 +1220,7 @@ async def stream_chat_via_gateway(
                             g3 = guard_sql_shape(
                                 new_sql,
                                 allowed_tables=list((retrieval_meta or {}).get("tables") or []),
+                                question=message,
                             )
                             new_sql = g3.sql
                             if g3.blocked and g3.code:
