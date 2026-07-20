@@ -159,6 +159,59 @@ def _dialect_for_datasource(datasource_id: str) -> str:
     return "postgres"
 
 
+def _user_guide_reply(code: str, message: str | None = None) -> str | None:
+    try:
+        from nanobase_awel.operators.planning_guidance import user_guidance_for_gateway_error
+
+        return user_guidance_for_gateway_error(code, message)
+    except Exception:
+        return None
+
+
+async def _yield_user_guidance(
+    *,
+    session_id: str,
+    execution_id: str,
+    plan: dict[str, Any],
+    mode: Any,
+    reply: str,
+    code: str,
+    sql: str | None,
+) -> AsyncIterator[bytes]:
+    """Soft-fail with guidance instead of a hard error (cost/timeout/unavailable)."""
+    yield _sse(
+        "status",
+        {
+            "phase": "user_guidance",
+            "type": "USER_GUIDANCE",
+            "code": code,
+            "message": reply,
+        },
+    ).encode()
+    result = _with_provenance(
+        {
+            "session_id": session_id,
+            "reply": reply,
+            "intent": "clarify",
+            "sql": sql,
+            "sql_error": f"{code}: {reply}",
+            "needs_clarification": True,
+            "query_result": {"columns": [], "rows": []},
+            "widgets": [],
+            "answer_blocks": [{"type": "text", "text": reply}],
+            "engine": "nanobase_awel",
+            "workflows": {"plan": plan},
+            "execution_id": execution_id,
+            "gateway_code": code,
+        },
+        plan,
+        executed=False,
+        execution_mode=getattr(mode, "value", str(mode)),
+    )
+    yield _sse("completed", {"type": "COMPLETED", "payload": {"guidance": True, "code": code}}).encode()
+    yield _sse("done", result).encode()
+
+
 def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
