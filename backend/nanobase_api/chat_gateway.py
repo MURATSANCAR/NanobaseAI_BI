@@ -175,6 +175,8 @@ def _normalize_gateway_error(code: str, message: str | None) -> tuple[str, str]:
     c = str(code or "QUERY_POLICY_REJECTED")
     if "missing from-clause entry" in low:
         return "UNDEFINED_TABLE_ALIAS", msg
+    if "cannot cast" in low:
+        return "QUERY_TYPE_CONVERSION_FAILED", msg
     if c.startswith("HTTP_") or c in ("INTERNAL_ERROR", "REJECTED"):
         if "column" in low and "does not exist" in low:
             return "COLUMN_NOT_FOUND", msg
@@ -185,6 +187,48 @@ def _normalize_gateway_error(code: str, message: str | None) -> tuple[str, str]:
         if "execution failed" in low:
             return "SQL_EXECUTION_FAILED", msg
     return c, msg
+
+
+async def _expand_retrieval_for_missing_tables(
+    *,
+    code: str,
+    message: str,
+    retrieval_meta: dict[str, Any],
+    authorized_context: str,
+    message_question: str,
+    datasource_id: str,
+    tenant_id: str,
+    schema_hint: str,
+) -> tuple[dict[str, Any], str, bool]:
+    """Index-backed table expand on TABLE_OR_VIEW_NOT_FOUND (no static catalogs)."""
+    if code not in ("TABLE_OR_VIEW_NOT_FOUND", "SCHEMA_REFERENCE_FAILED"):
+        return retrieval_meta, authorized_context, False
+    try:
+        from nanobase_awel.retrieval.authorized import (
+            expand_tables_from_index,
+            parse_missing_tables_from_error,
+            build_sanitized_context,
+        )
+
+        missing = parse_missing_tables_from_error(message)
+        if not missing:
+            return retrieval_meta, authorized_context, False
+        expanded = await expand_tables_from_index(
+            missing,
+            tenant_id=tenant_id or "default",
+            datasource_id=datasource_id,
+            existing=retrieval_meta,
+        )
+        if not expanded.get("expanded_tables"):
+            return retrieval_meta, authorized_context, False
+        new_ctx = build_sanitized_context(
+            question=message_question,
+            schema_hint=schema_hint or "",
+            retrieval=expanded,
+        )
+        return expanded, new_ctx or authorized_context, True
+    except Exception:
+        return retrieval_meta, authorized_context, False
 
 
 async def _yield_user_guidance(
@@ -847,13 +891,20 @@ async def stream_chat_via_gateway(
         pass
 
     seed_reject: tuple[str, str] | None = None
+    did_schema_expand = False
     try:
         from nanobase_awel.operators.sql_shape_guard import guard_sql_shape
 
         allowed = list((retrieval_meta or {}).get("tables") or []) or list(
             (plan or {}).get("tables") or []
         )
-        guarded = guard_sql_shape(sql, allowed_tables=allowed, question=message)
+        col_map = (retrieval_meta or {}).get("table_columns") or None
+        guarded = guard_sql_shape(
+            sql,
+            allowed_tables=allowed,
+            question=message,
+            table_columns=col_map,
+        )
         if guarded.warnings and isinstance(plan.get("warnings"), list):
             plan["warnings"].extend(guarded.warnings)
         elif guarded.warnings:
@@ -873,9 +924,54 @@ async def stream_chat_via_gateway(
                     "message": msg,
                 },
             ).encode()
-            if _shape_repairable(code):
+            if code in ("TABLE_OR_VIEW_NOT_FOUND", "SCHEMA_REFERENCE_FAILED") and not did_schema_expand:
+                retrieval_meta, authorized_context, did_exp = await _expand_retrieval_for_missing_tables(
+                    code=code,
+                    message=msg,
+                    retrieval_meta=retrieval_meta or {},
+                    authorized_context=authorized_context,
+                    message_question=message,
+                    datasource_id=datasource_id,
+                    tenant_id=tenant_id or "default",
+                    schema_hint=_schema_hint_for(datasource_id),
+                )
+                if did_exp:
+                    did_schema_expand = True
+                    yield _sse(
+                        "status",
+                        {
+                            "phase": "schema_expand",
+                            "type": "STATUS",
+                            "expanded_tables": list(retrieval_meta.get("expanded_tables") or []),
+                        },
+                    ).encode()
+                    g_exp = guard_sql_shape(
+                        sql,
+                        allowed_tables=list(retrieval_meta.get("tables") or []),
+                        question=message,
+                        table_columns=retrieval_meta.get("table_columns") or None,
+                    )
+                    sql = g_exp.sql
+                    if g_exp.warnings:
+                        plan.setdefault("warnings", []).extend(list(g_exp.warnings))
+                    if not g_exp.blocked:
+                        code = ""
+                        msg = ""
+                    else:
+                        code = str(g_exp.code or code)
+                        msg = str(g_exp.message or msg)
+                        yield _sse(
+                            "status",
+                            {
+                                "phase": "sql_shape_guard",
+                                "type": "SQL_REJECTED",
+                                "code": code,
+                                "message": msg,
+                            },
+                        ).encode()
+            if code and _shape_repairable(code):
                 seed_reject = (code, msg)
-            else:
+            elif code:
                 guide = _user_guide_reply(code, msg)
                 if guide:
                     async for chunk in _yield_user_guidance(
@@ -932,6 +1028,30 @@ async def stream_chat_via_gateway(
             code = str(vj.get("code") or "QUERY_POLICY_REJECTED")
             msg = vj.get("message") or vj.get("error") or vj.get("detail") or "SQL rejected by gateway"
             code, msg = _normalize_gateway_error(code, str(msg))
+            if (
+                code in ("TABLE_OR_VIEW_NOT_FOUND", "SCHEMA_REFERENCE_FAILED")
+                and not did_schema_expand
+            ):
+                retrieval_meta, authorized_context, did_exp = await _expand_retrieval_for_missing_tables(
+                    code=code,
+                    message=str(msg),
+                    retrieval_meta=retrieval_meta or {},
+                    authorized_context=authorized_context,
+                    message_question=message,
+                    datasource_id=datasource_id,
+                    tenant_id=tenant_id or "default",
+                    schema_hint=_schema_hint_for(datasource_id),
+                )
+                if did_exp:
+                    did_schema_expand = True
+                    yield _sse(
+                        "status",
+                        {
+                            "phase": "schema_expand",
+                            "type": "STATUS",
+                            "expanded_tables": list(retrieval_meta.get("expanded_tables") or []),
+                        },
+                    ).encode()
             err_fp = f"{code}|{str(msg)[:160]}"
             yield _sse(
                 "status",
@@ -1017,6 +1137,7 @@ async def stream_chat_via_gateway(
                         new_sql,
                         allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                         question=message,
+                        table_columns=(retrieval_meta or {}).get("table_columns") or None,
                     )
                     new_sql = g2.sql
                     if g2.blocked and g2.code:
@@ -1244,6 +1365,7 @@ async def stream_chat_via_gateway(
                                 new_sql,
                                 allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                                 question=message,
+                                table_columns=(retrieval_meta or {}).get("table_columns") or None,
                             )
                             new_sql = g3.sql
                             if g3.blocked and g3.code:

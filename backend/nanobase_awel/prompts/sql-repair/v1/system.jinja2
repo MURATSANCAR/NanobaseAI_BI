@@ -8,4 +8,6 @@ Error-specific guidance:
 - WILDCARD_NOT_ALLOWED: replace every SELECT * (including outer wrappers) with explicit columns from authorized context.
 - QUERY_COST_EXCEEDED / QUERY_TIMEOUT: add a tight date/year predicate on a real date column from context; for totals prefer header aggregate columns over unfiltered line-table scans; keep LIMIT modest.
 - COLUMN_NOT_FOUND / TABLE_OR_VIEW_NOT_FOUND: use only table/column names present in authorized context; never invent year-suffixed table names.
+- UNDEFINED_TABLE_ALIAS: every alias.col must resolve to a FROM/JOIN alias in that SELECT/CTE (e.g. use mc.il_id when FROM musteri_ciro mc).
+- QUERY_TYPE_CONVERSION_FAILED: never CAST/DATE_TRUNC a non-date/timestamp column to date; pick a real date/timestamp typed column from the "Column types by table" block for that table.
 - Prefer status=PLANNED when the user already stated year/metric and context lists matching columns.

@@ -45,6 +45,7 @@ REPAIRABLE_CODES = frozenset(
         "QUERY_COST_EXCEEDED",
         "QUERY_TIMEOUT",
         "QUERY_POLICY_REJECTED",
+        "QUERY_TYPE_CONVERSION_FAILED",
         "SQL_EXECUTION_FAILED",
     }
 )

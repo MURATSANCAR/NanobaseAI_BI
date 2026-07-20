@@ -284,11 +284,79 @@ def find_undefined_table_aliases(sql: str) -> list[str]:
     return out
 
 
+def rewrite_order_by_select_aliases(sql: str) -> tuple[str, bool]:
+    """Rewrite ``ORDER BY alias`` to ordinal when alias is a SELECT output alias.
+
+    Fixes Postgres errors like ``column "toplam_deger" does not exist`` when the
+    name is only a select-list alias (common LLM slip in CTEs).
+    """
+    try:
+        import sqlglot
+        from sqlglot import exp
+    except ImportError:  # pragma: no cover
+        return sql, False
+
+    text = (sql or "").strip()
+    if not text or not re.search(r"(?is)\border\s+by\b", text):
+        return text, False
+    try:
+        tree = sqlglot.parse_one(text, read="postgres")
+    except Exception:
+        return text, False
+
+    changed = False
+    for select in tree.find_all(exp.Select):
+        alias_to_ord: dict[str, int] = {}
+        for i, proj in enumerate(select.expressions or [], start=1):
+            alias = None
+            if isinstance(proj, exp.Alias):
+                alias = proj.alias
+            elif hasattr(proj, "alias_or_name"):
+                # bare column projected as itself is fine for ORDER BY name
+                continue
+            if not alias:
+                continue
+            alias_to_ord[str(alias).strip('"').lower()] = i
+        if not alias_to_ord or not select.args.get("order"):
+            continue
+        order = select.args["order"]
+        expressions = list(getattr(order, "expressions", None) or [])
+        new_exprs = []
+        for ordered in expressions:
+            # ordered is usually Ordered(this=col, desc=...)
+            this = getattr(ordered, "this", ordered)
+            name = None
+            if isinstance(this, exp.Column) and not this.table:
+                name = str(this.name or "").lower()
+            elif isinstance(this, exp.Identifier):
+                name = str(this.this or "").lower()
+            if name and name in alias_to_ord:
+                ordinal = exp.Literal.number(alias_to_ord[name])
+                if isinstance(ordered, exp.Ordered):
+                    ordered.set("this", ordinal)
+                    new_exprs.append(ordered)
+                else:
+                    new_exprs.append(exp.Ordered(this=ordinal))
+                changed = True
+            else:
+                new_exprs.append(ordered)
+        if changed:
+            order.set("expressions", new_exprs)
+
+    if not changed:
+        return text, False
+    try:
+        return tree.sql(dialect="postgres"), True
+    except Exception:
+        return text, False
+
+
 def guard_sql_shape(
     sql: str,
     *,
     allowed_tables: Iterable[str] | None = None,
     question: str | None = None,
+    table_columns: dict[str, list[str]] | None = None,
 ) -> ShapeGuardResult:
     """Sanitize / soft-block SQL before Gateway validate."""
     warnings: list[str] = []
@@ -300,6 +368,11 @@ def guard_sql_shape(
     if did_unwrap:
         text = unwrapped
         warnings.append("unwrapped_select_star_subquery")
+
+    rewritten, did_order = rewrite_order_by_select_aliases(text)
+    if did_order:
+        text = rewritten
+        warnings.append("rewrote_order_by_select_alias")
 
     # Still has bare SELECT * projection at top level (not COUNT(*))
     if re.search(r"(?is)^\s*select\s+\*", text) or re.search(r"(?is)^\s*with\b[\s\S]+\)\s*select\s+\*", text):
@@ -361,5 +434,25 @@ def guard_sql_shape(
                 "(ör. m.il_id yazdıysanız FROM ... AS m olmalı)."
             ),
         )
+
+    if table_columns:
+        try:
+            from nanobase_awel.operators.schema_reference_validator import find_unknown_columns
+
+            unknown = find_unknown_columns(text, dict(table_columns))
+        except Exception:
+            unknown = []
+        if unknown:
+            fq, col, sample = unknown[0]
+            sample_s = ", ".join(sample[:12]) if sample else "(none)"
+            return ShapeGuardResult(
+                sql=text,
+                warnings=warnings,
+                blocked=True,
+                code="COLUMN_NOT_FOUND",
+                message=(
+                    f"Kolon bulunamadı: {fq}.{col}. Bu tabloda bilinen kolonlar: {sample_s}"
+                ),
+            )
 
     return ShapeGuardResult(sql=text, warnings=warnings)

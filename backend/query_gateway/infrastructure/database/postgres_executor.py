@@ -17,6 +17,7 @@ from query_gateway.domain.errors import (
     DATABASE_PERMISSION_DENIED,
     DATABASE_UNAVAILABLE,
     QUERY_TIMEOUT,
+    QUERY_TYPE_CONVERSION_FAILED,
     TABLE_OR_VIEW_NOT_FOUND,
     GatewayError,
 )
@@ -67,6 +68,12 @@ def _map_psycopg_error(exc: BaseException) -> GatewayError:
         return GatewayError(
             "UNDEFINED_TABLE_ALIAS",
             f"Tanımsız tablo alias'ı: {msg[:240]}",
+            status=400,
+        )
+    if pgcode in ("42804", "42846") or "cannot cast" in low:
+        return GatewayError(
+            QUERY_TYPE_CONVERSION_FAILED,
+            f"Tip dönüşümü başarısız: {msg[:240]}",
             status=400,
         )
     if pgcode in ("42P01",) or ("does not exist" in low and "relation" in low):

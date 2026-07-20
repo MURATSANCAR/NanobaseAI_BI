@@ -175,6 +175,11 @@ async def run_sql_plan(
 
     allowed = set(req.allowedTables) | set(retrieval.get("tables") or [])
     if plan.status == PlanStatus.PLANNED:
-        plan = validate_plan_references(plan, allowed_tables=allowed or None, context_text=context_blocks)
+        plan = validate_plan_references(
+            plan,
+            allowed_tables=allowed or None,
+            context_text=context_blocks,
+            table_columns=retrieval.get("table_columns") or None,
+        )
 
     return plan

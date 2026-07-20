@@ -44,6 +44,24 @@ TEXT2SQL_TIMEOUT_SEC = float(os.environ.get("TEXT2SQL_TIMEOUT_SEC", "90"))
 HEALTH_TIMEOUT_SEC = float(os.environ.get("LLM_HEALTH_TIMEOUT_SEC", "3"))
 
 
+def _compact_user_prompt(user: str, *, ratio: float = 0.5) -> str:
+    """Truncate authorized schema context once under model/queue pressure."""
+    text = user or ""
+    start_tag = "<authorized_schema_context>"
+    end_tag = "</authorized_schema_context>"
+    s = text.find(start_tag)
+    e = text.find(end_tag)
+    if s >= 0 and e > s:
+        inner = text[s + len(start_tag) : e]
+        keep = max(800, int(len(inner) * max(0.25, min(ratio, 0.9))))
+        if len(inner) > keep:
+            inner = inner[:keep] + "\n…[truncated for retry]…"
+            return text[: s + len(start_tag)] + inner + text[e:]
+    if len(text) > 6000:
+        return text[:3000] + "\n…[truncated for retry]…\n" + text[-2000:]
+    return text
+
+
 async def _probe_models(base: str, key: str) -> bool:
     try:
         headers = {"Authorization": f"Bearer {key}"}
@@ -212,6 +230,17 @@ async def chat_completion(
                     retryable=True,
                 ) from e
 
+    def _should_compact_retry(exc: BaseException) -> bool:
+        if not use_sql_path:
+            return False
+        if isinstance(exc, WorkflowError):
+            return exc.code in {
+                TEXT_TO_SQL_MODEL_UNAVAILABLE,
+                "MODEL_QUEUE_TIMEOUT",
+                "MODEL_QUEUE_FULL",
+            }
+        return isinstance(exc, (TimeoutError, httpx.TimeoutException, RuntimeError))
+
     try:
         return await _via_chat_queue(
             system,
@@ -220,11 +249,28 @@ async def chat_completion(
             max_tokens=max_tokens,
             timeout_s=chat_timeout,
         )
-    except WorkflowError:
-        raise
     except Exception as e:
-        # Do not chain Arctic after a chat timeout — doubles wait (~270s) and
-        # Arctic-R1 rarely produces our JSON plan format under load.
+        # One compact-context retry for sql_plan/sql_repair under load/queue pressure.
+        if _should_compact_retry(e):
+            compact = _compact_user_prompt(user, ratio=0.45)
+            if compact != user:
+                try:
+                    return await _via_chat_queue(
+                        system,
+                        compact,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        timeout_s=chat_timeout,
+                    )
+                except Exception as e2:  # noqa: BLE001
+                    raise WorkflowError(
+                        TEXT_TO_SQL_MODEL_UNAVAILABLE,
+                        "Text-to-SQL modeline erişilemiyor.",
+                        retryable=True,
+                    ) from e2
+        if isinstance(e, WorkflowError):
+            raise
+        # Do not chain Arctic after a chat timeout — doubles wait (~270s).
         raise WorkflowError(
             TEXT_TO_SQL_MODEL_UNAVAILABLE,
             "Text-to-SQL modeline erişilemiyor.",

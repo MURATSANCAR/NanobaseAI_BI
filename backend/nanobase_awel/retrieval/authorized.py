@@ -36,10 +36,15 @@ def parse_missing_tables_from_error(message: str) -> list[str]:
     """Extract table identifiers from TABLE_OR_VIEW_NOT_FOUND-style messages."""
     msg = message or ""
     found: list[str] = []
-    m = re.search(r"referans[ıi]\s*:\s*([^.]+)", msg, flags=re.I)
+    # Allow schema.table (dots); stop at ", " list separators handled below.
+    m = re.search(
+        r"referans[ıi]\s*:\s*([A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*)",
+        msg,
+        flags=re.I,
+    )
     if m:
         for part in re.split(r"[,;]", m.group(1)):
-            t = part.strip().strip('"').strip("'")
+            t = part.strip().strip('"').strip("'").rstrip(".")
             if t and re.match(r"^[A-Za-z_][\w.]{1,120}$", t):
                 found.append(t)
     if not found:
