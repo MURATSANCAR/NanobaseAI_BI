@@ -168,6 +168,25 @@ def _user_guide_reply(code: str, message: str | None = None) -> str | None:
         return None
 
 
+def _normalize_gateway_error(code: str, message: str | None) -> tuple[str, str]:
+    """Map legacy/HTTP execute failures into repairable AWEL codes."""
+    msg = str(message or "")
+    low = msg.lower()
+    c = str(code or "QUERY_POLICY_REJECTED")
+    if "missing from-clause entry" in low:
+        return "UNDEFINED_TABLE_ALIAS", msg
+    if c.startswith("HTTP_") or c in ("INTERNAL_ERROR", "REJECTED"):
+        if "column" in low and "does not exist" in low:
+            return "COLUMN_NOT_FOUND", msg
+        if "relation" in low and "does not exist" in low:
+            return "TABLE_OR_VIEW_NOT_FOUND", msg
+        if "syntax error" in low:
+            return "SQL_PARSE_FAILED", msg
+        if "execution failed" in low:
+            return "SQL_EXECUTION_FAILED", msg
+    return c, msg
+
+
 async def _yield_user_guidance(
     *,
     session_id: str,
@@ -890,7 +909,7 @@ async def stream_chat_via_gateway(
     qg = QueryGatewayClient(QG_BASE)
     repair_attempts = 0
     max_repairs = 2
-    last_error_code = ""
+    last_error_fp = ""
     conn_retried = False
     safe_sql = sql
     ej: dict = {}
@@ -912,6 +931,8 @@ async def stream_chat_via_gateway(
         if not vj.get("ok"):
             code = str(vj.get("code") or "QUERY_POLICY_REJECTED")
             msg = vj.get("message") or vj.get("error") or vj.get("detail") or "SQL rejected by gateway"
+            code, msg = _normalize_gateway_error(code, str(msg))
+            err_fp = f"{code}|{str(msg)[:160]}"
             yield _sse(
                 "status",
                 {"phase": "sql_rejected", "type": "SQL_REJECTED", "code": code, "message": msg},
@@ -919,10 +940,10 @@ async def stream_chat_via_gateway(
             if (
                 repair_attempts < max_repairs
                 and is_repairable(code)
-                and code != last_error_code
+                and err_fp != last_error_fp
             ):
                 repair_attempts += 1
-                last_error_code = code
+                last_error_fp = err_fp
                 yield _sse(
                     "status",
                     {
@@ -1118,6 +1139,7 @@ async def stream_chat_via_gateway(
                 or ej.get("error")
                 or "execute failed"
             )
+            code, msg = _normalize_gateway_error(code, str(msg))
             # One automatic retry for transient connection loss on read-only SELECT.
             if code == "DATABASE_CONNECTION_LOST" and not conn_retried:
                 conn_retried = True
@@ -1153,13 +1175,14 @@ async def stream_chat_via_gateway(
                     "message": msg,
                 },
             ).encode()
+            err_fp = f"{code}|{str(msg)[:160]}"
             if (
                 repair_attempts < max_repairs
                 and is_repairable(code)
-                and code != last_error_code
+                and err_fp != last_error_fp
             ):
                 repair_attempts += 1
-                last_error_code = code
+                last_error_fp = err_fp
                 yield _sse(
                     "status",
                     {

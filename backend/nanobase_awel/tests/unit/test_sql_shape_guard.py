@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from nanobase_awel.operators.sql_shape_guard import (
     extract_table_refs,
+    find_undefined_table_aliases,
     guard_sql_shape,
     unwrap_select_star_subquery,
 )
+from nanobase_awel.workflows.sql_repair import is_repairable
 
 
 def test_unwrap_select_star_from_with():
@@ -82,4 +84,64 @@ def test_extract_ignores_short_alias_columns():
     """
     refs = extract_table_refs(sql)
     assert set(refs) == {"public.alis_faturalari", "public.butce_planlari"}
+
+
+def test_unwrap_select_star_with_trailing_limit():
+    sql = """
+    SELECT * FROM (
+      WITH x AS (SELECT id FROM public.customers)
+      SELECT id FROM x LIMIT 50
+    ) AS q LIMIT 1000
+    """
+    out, ok = unwrap_select_star_subquery(sql)
+    assert ok
+    assert out.lower().lstrip().startswith("with")
+    assert "limit 1000" not in out.lower().split("from")[0]
+
+
+def test_undefined_alias_in_cte_blocked():
+    # M05-style slip: m.il_id but FROM only exposes mc
+    sql = """
+    WITH musteri_ciro AS (
+      SELECT m.id, m.il_id, m.unvan
+      FROM public.musteriler AS m
+    ),
+    province_dist AS (
+      SELECT m.il_id, SUM(mc.toplam_ciro) AS il_ciro
+      FROM musteri_ciro AS mc
+      GROUP BY m.il_id
+    )
+    SELECT il_id, il_ciro FROM province_dist
+    """
+    bad = find_undefined_table_aliases(sql)
+    assert "m" in bad
+    r = guard_sql_shape(sql, allowed_tables=["public.musteriler"])
+    assert r.blocked
+    assert r.code == "UNDEFINED_TABLE_ALIAS"
+    assert is_repairable("UNDEFINED_TABLE_ALIAS")
+
+
+def test_correlated_subquery_alias_not_false_positive():
+    sql = """
+    SELECT f.id
+    FROM public.faturalar AS f
+    WHERE EXISTS (
+      SELECT 1 FROM public.musteriler AS m WHERE m.id = f.musteri_id
+    )
+    """
+    assert find_undefined_table_aliases(sql) == []
+    r = guard_sql_shape(
+        sql, allowed_tables=["public.faturalar", "public.musteriler"]
+    )
+    assert not r.blocked
+
+
+def test_valid_multi_alias_passes():
+    sql = """
+    SELECT mc.il_id, SUM(mc.toplam_ciro) AS il_ciro
+    FROM musteri_ciro AS mc
+    GROUP BY mc.il_id
+    """
+    # CTE name only — no physical tables; allowlist empty skips table check
+    assert find_undefined_table_aliases(sql) == []
 
