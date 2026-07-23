@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
+import { BarChart3 } from 'lucide-react';
 import { BiVisualChart } from '@/components/bi/BiCharts';
-import BiPbiTile from '@/components/bi/BiPbiTile';
 import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
 import { isCompactVisual, widgetVisualType } from '@/components/bi/biVisualTypes';
 import { api } from '@/api/client';
@@ -19,7 +19,7 @@ type Props = {
   onPin?: (selection: { dashboardId: number; vizType: string }) => void | Promise<void>;
 };
 
-/** Preview tiles; pin CTA adds the result to a chosen NanobaseAI dashboard. */
+/** Rich chat answer visuals (charts/tables) — not a dashboard staging preview. */
 export default function BiChatWidgetPreview({
   widgets,
   dashboardId,
@@ -41,10 +41,11 @@ export default function BiChatWidgetPreview({
   if (!widgets.length) return null;
 
   return (
-    <div className="bi-chat-widget-preview bi-fluent-canvas mt-3 rounded-xl border border-[#E1DFDD]/80 p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <span className="bi-pbi-type-chip">
-          {t('bi.chatWidgetsPreview', { count: String(widgets.length) })}
+    <div className="bi-chat-answer-visual mt-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-100 to-violet-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-700 ring-1 ring-sky-200/70">
+          <BarChart3 className="h-3 w-3 text-sky-600" aria-hidden />
+          {t('bi.result.answerBadge')}
         </span>
         {onPin ? (
           <BiPinToDashboardControl
@@ -58,29 +59,38 @@ export default function BiChatWidgetPreview({
           />
         ) : null}
       </div>
-      <div className="bi-analytics-canvas-stage grid grid-cols-1 gap-4 min-[480px]:grid-cols-2">
+
+      <div className="grid grid-cols-1 gap-3">
         {widgets.slice(0, 3).map((widget, index) => {
           const visual = widgetVisualType(widget);
           const compact = isCompactVisual(visual);
-          const wide = visual === 'table' || visual === 'matrix';
           const displayTitle = biWidgetTitle(widget, locale, templates);
+          const accents = [
+            'from-sky-50 via-white to-cyan-50 border-sky-200/70',
+            'from-violet-50 via-white to-fuchsia-50 border-violet-200/70',
+            'from-emerald-50 via-white to-teal-50 border-emerald-200/70',
+            'from-amber-50 via-white to-orange-50 border-amber-200/70',
+          ] as const;
+          const shell = accents[index % accents.length]!;
           return (
-            <BiPbiTile
+            <div
               key={widget.id}
-              visualType={visual}
-              accentIndex={index}
-              title={displayTitle}
-              compact
-              kpi={compact}
-              className={clsx('bi-chat-preview-tile', wide && 'min-[480px]:col-span-2')}
-              bodyClassName={compact ? 'p-2' : 'p-2 pt-1'}
+              className={clsx(
+                'overflow-hidden rounded-2xl border bg-gradient-to-br p-3 shadow-sm sm:p-4',
+                shell,
+              )}
             >
-              <BiVisualChart
-                widget={widget}
-                variant="preview"
-                containerHeight={compact ? 72 : 140}
-              />
-            </BiPbiTile>
+              <p className="mb-2 truncate text-xs font-bold uppercase tracking-wide text-slate-600">
+                {displayTitle}
+              </p>
+              <div className={clsx('min-h-0', compact ? 'min-h-[5.5rem]' : 'min-h-[11rem]')}>
+                <BiVisualChart
+                  widget={widget}
+                  variant="preview"
+                  containerHeight={compact ? 96 : 180}
+                />
+              </div>
+            </div>
           );
         })}
       </div>

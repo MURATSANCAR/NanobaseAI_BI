@@ -1,4 +1,5 @@
 import type { BiWidget, BiWidgetData, BiChatResponse } from '@/api/types';
+import { normalizeResultColumns } from '@/utils/biChatSanitize';
 
 const TIME_HINT = /(date|time|tarih|gun|gün|ay|yil|yıl|week|hafta|month|year|period|donem|dönem)/i;
 
@@ -53,7 +54,7 @@ export function widgetsFromQueryResult(opts: {
   sql?: string | null;
   title?: string | null;
 }): BiWidget[] {
-  const cols = [...(opts.data?.columns ?? [])].map(String).filter(Boolean);
+  const cols = normalizeResultColumns(opts.data?.columns);
   const rows = (opts.data?.rows ?? []).filter(
     (r): r is Record<string, unknown> => !!r && typeof r === 'object' && !Array.isArray(r),
   );

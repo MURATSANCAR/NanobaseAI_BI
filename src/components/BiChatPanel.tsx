@@ -17,6 +17,7 @@ import {
   Send,
   Sparkles,
   Square,
+  Check,
   ThumbsDown,
   ThumbsUp,
   Trash2,
@@ -41,7 +42,12 @@ import {
   isBiChatJobPending,
   runBiChatJob,
 } from '@/lib/biChatRunner';
-import { progressTipsForQuestion, streamingStepProgress } from '@/lib/biChatProgressTips';
+import {
+  progressTipsForQuestion,
+  STREAMING_STEP_COLORS,
+  streamingStepProgress,
+  tipIndexForStreamPhase,
+} from '@/lib/biChatProgressTips';
 import { ensureChatWidgets } from '@/lib/biChatWidgets';
 import {
   ensureNotifyPermission,
@@ -57,7 +63,7 @@ import {
 import { BiAnswerBlocks } from '@/components/BiWidgets';
 import BiChatWidgetPreview from '@/components/bi/BiChatWidgetPreview';
 import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
-import BiChatResultHero, { isHeroScalarResult } from '@/components/bi/BiChatResultHero';
+import BiChatResultHero, { isChatKpiAnswer, isHeroScalarResult } from '@/components/bi/BiChatResultHero';
 import BiExportMenu from '@/components/bi/BiExportMenu';
 import BiLineageDrawer from '@/components/bi/BiLineageDrawer';
 import BiProvePanel from '@/components/bi/BiProvePanel';
@@ -207,12 +213,14 @@ function BiChatStreamingSteps({
   phase,
   queuePosition,
   queueMessage,
+  elapsedSec,
 }: {
   question: string;
   tipIndex: number;
   phase?: string;
   queuePosition?: number;
   queueMessage?: string;
+  elapsedSec?: number;
 }) {
   const steps = progressTipsForQuestion(question);
   const active = streamingStepProgress(tipIndex, steps.length);
@@ -221,32 +229,95 @@ function BiChatStreamingSteps({
     ? queueMessage?.trim() ||
       t('bi.streamingQueued', { position: String(Math.max(1, queuePosition ?? 1)) })
     : steps[active] || t('bi.streamingThinking');
+  const accent = STREAMING_STEP_COLORS[active % STREAMING_STEP_COLORS.length]!;
+  const pct = Math.round(((active + (queued ? 0 : 0.35)) / Math.max(1, steps.length)) * 100);
+  // Show a sliding window of steps so long lists stay readable.
+  const windowSize = 6;
+  const windowStart = Math.max(0, Math.min(active - 2, steps.length - windowSize));
+  const visible = steps
+    .map((text, i) => ({ text, i }))
+    .slice(windowStart, windowStart + windowSize);
 
   return (
-    <div className="space-y-3" aria-live="polite" aria-busy="true">
-      <p
-        key={`${queued ? 'q' : 's'}-${active}-${label.slice(0, 32)}`}
-        className="bi-chat-status-line flex items-start gap-2 text-sm font-medium leading-snug text-violet-900"
-      >
-        <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-violet-600" aria-hidden />
-        <span>{label}</span>
-      </p>
-      {!queued && steps.length > 1 ? (
-        <div className="flex items-center gap-1.5 px-0.5" aria-hidden>
-          {steps.map((_, i) => (
-            <span
-              key={i}
-              className={clsx(
-                'h-1 rounded-full transition-all duration-500',
-                i < active && 'w-1 bg-emerald-400',
-                i === active && 'w-4 bg-violet-500',
-                i > active && 'w-1 bg-slate-200',
-              )}
-            />
-          ))}
-        </div>
+    <div
+      className="bi-chat-streaming-steps space-y-3 rounded-2xl border border-white/70 bg-gradient-to-br from-sky-50 via-violet-50 to-amber-50 p-3.5 shadow-sm"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <p
+          key={`${queued ? 'q' : 's'}-${active}-${label.slice(0, 32)}`}
+          className={clsx(
+            'bi-chat-status-line flex min-w-0 flex-1 items-start gap-2 text-sm font-semibold leading-snug',
+            accent.text,
+          )}
+        >
+          <span
+            className={clsx(
+              'mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white',
+              accent.dot,
+            )}
+          >
+            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+          </span>
+          <span className="min-w-0">{label}</span>
+        </p>
+        <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-600 ring-1 ring-slate-200/80">
+          {t('bi.chat.progressTip.stepOf', {
+            current: String(Math.min(steps.length, active + 1)),
+            total: String(steps.length),
+          })}
+          {typeof elapsedSec === 'number' && elapsedSec > 0 ? ` · ${Math.round(elapsedSec)}s` : ''}
+        </span>
+      </div>
+
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/80 ring-1 ring-slate-200/70" aria-hidden>
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-sky-500 via-violet-500 to-amber-400 transition-all duration-700 ease-out"
+          style={{ width: `${Math.min(96, Math.max(8, pct))}%` }}
+        />
+      </div>
+
+      {!queued ? (
+        <ol className="space-y-1.5" aria-hidden>
+          {visible.map(({ text, i }) => {
+            const color = STREAMING_STEP_COLORS[i % STREAMING_STEP_COLORS.length]!;
+            const done = i < active;
+            const current = i === active;
+            return (
+              <li
+                key={i}
+                className={clsx(
+                  'flex items-start gap-2 rounded-xl px-2 py-1.5 text-xs leading-snug transition-all duration-300',
+                  current && clsx(color.soft, 'ring-1', color.ring, 'font-semibold', color.text),
+                  done && 'text-emerald-700',
+                  !done && !current && 'text-slate-400',
+                )}
+              >
+                <span
+                  className={clsx(
+                    'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+                    done && 'bg-emerald-500 text-white',
+                    current && clsx(color.dot, 'text-white'),
+                    !done && !current && 'bg-slate-200 text-slate-500',
+                  )}
+                >
+                  {done ? (
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                  ) : current ? (
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  ) : (
+                    <span className="text-[9px] font-bold">{i + 1}</span>
+                  )}
+                </span>
+                <span className="min-w-0">{text}</span>
+              </li>
+            );
+          })}
+        </ol>
       ) : null}
-      <p className="text-xs leading-snug text-slate-500">{t('bi.chat.progressTip.readySoon')}</p>
+
+      <p className="text-[11px] leading-snug text-slate-500">{t('bi.chat.progressTip.readySoon')}</p>
     </div>
   );
 }
@@ -406,6 +477,8 @@ export default function BiChatPanel({
   const sendIntentRef = useRef<string | undefined>(undefined);
   /** This mount owns the live send UI — remount reattach must not steal it. */
   const drivingSendRef = useRef(false);
+  /** After local clear, ignore server history until the next send / session change. */
+  const suppressHistoryRef = useRef(false);
   const pending = pendingCount > 0;
   const activeJobIds = Object.keys(jobProgress);
   const showWaitBanner = activeJobIds.length > 0;
@@ -420,15 +493,38 @@ export default function BiChatPanel({
     refetchOnMount: 'always',
   });
 
+  // Reset local timeline when the session changes so empty history cannot keep
+  // the previous conversation on screen.
+  useEffect(() => {
+    suppressHistoryRef.current = false;
+    setMessages([]);
+    setError(null);
+    setLastFailedText(null);
+  }, [sessionId]);
+
   useEffect(() => {
     // Live/background job owns the timeline until it settles.
     if (pending || isBiChatJobPending(sessionId) || drivingSendRef.current) return;
+    if (suppressHistoryRef.current) return;
     const raw = history.data?.messages ?? [];
-    if (!raw.length) {
-      setMessages([]);
-      return;
-    }
-    setMessages(mapHistoryMessages(raw));
+    // Bridge/DB-GPT history is often empty while nanobase already rendered the
+    // answer locally — never wipe a live timeline just because history is empty.
+    if (!raw.length) return;
+    setMessages((prev) => {
+      const mapped = mapHistoryMessages(raw);
+      const localRich = prev.some(
+        (m) =>
+          Boolean(m.meta?.query_result) ||
+          (m.meta?.widgets?.length ?? 0) > 0 ||
+          Boolean(m.streaming),
+      );
+      const histRich = mapped.some(
+        (m) => Boolean(m.meta?.query_result) || (m.meta?.widgets?.length ?? 0) > 0,
+      );
+      // Prefer the just-rendered local answer over text-only server history.
+      if (localRich && !histRich) return prev;
+      return mapped;
+    });
   }, [history.data, sessionId, pending]);
 
   useEffect(() => {
@@ -459,7 +555,7 @@ export default function BiChatPanel({
     return () => window.clearTimeout(id);
   }, [autoFocus, sessionId]);
 
-  /** Advance friendly progress steps one-at-a-time (ChatGPT-style cadence). */
+  /** Advance friendly progress steps one-at-a-time (keeps long waits feeling alive). */
   useEffect(() => {
     if (!showWaitBanner) return;
     const id = window.setInterval(() => {
@@ -473,13 +569,21 @@ export default function BiChatPanel({
           }
           const tips = progressTipsForQuestion(job.question);
           const maxIdx = Math.max(0, tips.length - 1);
-          const advanced = Math.min(job.tipIndex + 1, maxIdx);
+          // At the end of the list, pulse the last few steps so long waits stay lively.
+          let advanced: number;
+          if (job.tipIndex >= maxIdx) {
+            const base = Math.max(0, maxIdx - 2);
+            const pulse = Math.floor(Date.now() / 1200) % 3;
+            advanced = base + pulse;
+          } else {
+            advanced = job.tipIndex + 1;
+          }
           next[jobId] = advanced === job.tipIndex ? job : { ...job, tipIndex: advanced };
           if (advanced !== job.tipIndex) changed = true;
         }
         return changed ? next : prev;
       });
-    }, 1800);
+    }, 1200);
     return () => window.clearInterval(id);
   }, [showWaitBanner]);
 
@@ -498,7 +602,11 @@ export default function BiChatPanel({
         if (cancelled) return;
         try {
           const snap = await api.bi.chatHistory(config, sessionId);
-          setMessages(mapHistoryMessages(snap.messages ?? []));
+          const mapped = mapHistoryMessages(snap.messages ?? []);
+          // Keep local timeline when server history is empty/stubbed.
+          if (mapped.length) {
+            setMessages(mapped);
+          }
           const lastAssistant = [...(snap.messages ?? [])]
             .reverse()
             .find((m) => (m as { role?: string }).role === 'assistant' && (m as { meta?: BiChatResponse }).meta);
@@ -530,12 +638,15 @@ export default function BiChatPanel({
           const snap = await api.bi.chatHistory(config, sessionId);
           if (cancelled) return;
           if (snap.pending) {
-            setMessages(ensureStreamingBubble(mapHistoryMessages(snap.messages ?? [])));
+            const mappedPending = mapHistoryMessages(snap.messages ?? []);
+            setMessages((prev) =>
+              ensureStreamingBubble(mappedPending.length ? mappedPending : prev),
+            );
             return;
           }
           window.clearInterval(poll);
           const mapped = mapHistoryMessages(snap.messages ?? []);
-          setMessages(mapped);
+          if (mapped.length) setMessages(mapped);
           const lastAssistant = [...mapped].reverse().find((m) => m.role === 'assistant' && m.meta);
           if (lastAssistant?.meta) onResponse?.(lastAssistant.meta);
           setPendingCount(0);
@@ -771,6 +882,7 @@ export default function BiChatPanel({
       setInput('');
       setError(null);
       setLastFailedText(null);
+      suppressHistoryRef.current = false;
       drivingSendRef.current = true;
       setPendingCount((n) => n + 1);
 
@@ -871,11 +983,16 @@ export default function BiChatPanel({
                   : m,
               ),
             );
-            // Tip cadence is timer-driven; only track phase so we pause while queued.
+            // Track phase + jump tip index forward so long SQL work lands mid-checklist.
             setJobProgress((prev) => {
               const job = prev[id];
-              if (!job || job.phase === ev.phase) return prev;
-              return { ...prev, [id]: { ...job, phase: ev.phase } };
+              if (!job) return prev;
+              if (job.phase === ev.phase) return prev;
+              const tips = progressTipsForQuestion(job.question);
+              const mapped = tipIndexForStreamPhase(ev.phase, tips.length);
+              const tipIndex =
+                mapped == null ? job.tipIndex : Math.max(job.tipIndex, mapped);
+              return { ...prev, [id]: { ...job, phase: ev.phase, tipIndex } };
             });
             return;
           }
@@ -1157,6 +1274,7 @@ export default function BiChatPanel({
   const clearChat = () => {
     abortBiChatJob(sessionId);
     setJobProgress({});
+    suppressHistoryRef.current = true;
     setMessages([]);
     setInput('');
     setLastFailedText(null);
@@ -1394,6 +1512,7 @@ export default function BiChatPanel({
                         phase={m.streamPhase}
                         queuePosition={m.queuePosition}
                         queueMessage={m.queueMessage}
+                        elapsedSec={m.elapsedSec}
                       />
                     );
                   }
@@ -1407,19 +1526,21 @@ export default function BiChatPanel({
                   }
                   const raw = m.content;
                   if (!raw) return null;
-                  // Hero KPI owns the answer — skip weak "1 row / ready" chatter.
+                  // Hero KPI owns the answer — hide redundant status / SQL chatter.
                   if (
                     m.role === 'assistant' &&
                     !m.streaming &&
                     m.meta &&
-                    isHeroScalarResult(m.meta) &&
-                    /^(ready|query_result_ready|\d+\s+satır|\d+\s+row)/i.test(raw.trim())
+                    isHeroScalarResult(m.meta)
                   ) {
                     return null;
                   }
+                  const display =
+                    m.role === 'assistant' ? assistantDisplayText(raw, m.streaming) : raw;
+                  if (!display.trim()) return null;
                   return (
                     <p className="whitespace-pre-wrap break-anywhere leading-relaxed">
-                      {m.role === 'assistant' ? assistantDisplayText(raw, m.streaming) : raw}
+                      {display}
                       {m.streaming && !!m.content && (
                         <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-violet-500 align-text-bottom" aria-hidden />
                       )}
@@ -1433,9 +1554,76 @@ export default function BiChatPanel({
                 !m.streaming && (
                 <div className="mt-3"><BiAnswerBlocks blocks={m.meta.answer_blocks} /></div>
               )}
-              {m.meta?.query_result && !m.meta.widgets?.length && !m.streaming && (
-                <BiChatResultHero meta={m.meta} />
-              )}
+              {(() => {
+                if (!m.meta || m.streaming) return null;
+                const kpiAnswer = isChatKpiAnswer(m.meta);
+                const questionTitle = [...messages]
+                  .slice(0, i)
+                  .reverse()
+                  .find((x) => x.role === 'user')?.content;
+                if (kpiAnswer && m.meta.query_result) {
+                  return (
+                    <>
+                      <BiChatResultHero meta={m.meta} title={questionTitle} />
+                      <div className="mt-2 flex w-full justify-end">
+                        <BiPinToDashboardControl
+                          compact
+                          pinning={pinningKey === messagePinKey(m)}
+                          pinned={Boolean(pinnedKeys[messagePinKey(m)])}
+                          pinnedDashboardId={
+                            pinnedBoardByKey[messagePinKey(m)] ||
+                            Number(m.meta.analytics?.dashboard_id || 0) ||
+                            null
+                          }
+                          preferredDashboardId={dashboardId}
+                          preferredVizType="kpi"
+                          onPin={(sel) => void pinToDashboard(m, sel)}
+                        />
+                      </div>
+                    </>
+                  );
+                }
+                if (m.meta.widgets && m.meta.widgets.length > 0) {
+                  return (
+                    <BiChatWidgetPreview
+                      widgets={m.meta.widgets}
+                      dashboardId={dashboardId}
+                      pinned={Boolean(pinnedKeys[messagePinKey(m)])}
+                      pinnedDashboardId={
+                        pinnedBoardByKey[messagePinKey(m)] ||
+                        Number(m.meta.analytics?.dashboard_id || 0) ||
+                        null
+                      }
+                      pinning={pinningKey === messagePinKey(m)}
+                      onPin={(sel) => void pinToDashboard(m, sel)}
+                    />
+                  );
+                }
+                if (m.meta.query_result) {
+                  return (
+                    <>
+                      <BiChatResultHero meta={m.meta} title={questionTitle} />
+                      {pickExportSql(m.meta) ? (
+                        <div className="mt-2 flex w-full justify-end">
+                          <BiPinToDashboardControl
+                            pinning={pinningKey === messagePinKey(m)}
+                            pinned={Boolean(pinnedKeys[messagePinKey(m)])}
+                            pinnedDashboardId={
+                              pinnedBoardByKey[messagePinKey(m)] ||
+                              Number(m.meta.analytics?.dashboard_id || 0) ||
+                              null
+                            }
+                            preferredDashboardId={dashboardId}
+                            preferredVizType="table"
+                            onPin={(sel) => void pinToDashboard(m, sel)}
+                          />
+                        </div>
+                      ) : null}
+                    </>
+                  );
+                }
+                return null;
+              })()}
               {m.role === 'assistant' && !m.streaming && (m.followUps?.length ?? 0) > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {m.followUps!.slice(0, 5).map((q) => (
@@ -1483,39 +1671,6 @@ export default function BiChatPanel({
                         {t('bi.confirm.dismiss')}
                       </button>
                     </div>
-                  </div>
-                )}
-              {m.meta?.widgets && m.meta.widgets.length > 0 && !m.streaming && (
-                <BiChatWidgetPreview
-                  widgets={m.meta.widgets}
-                  dashboardId={dashboardId}
-                  pinned={Boolean(pinnedKeys[messagePinKey(m)])}
-                  pinnedDashboardId={
-                    pinnedBoardByKey[messagePinKey(m)] ||
-                    Number(m.meta.analytics?.dashboard_id || 0) ||
-                    null
-                  }
-                  pinning={pinningKey === messagePinKey(m)}
-                  onPin={(sel) => void pinToDashboard(m, sel)}
-                />
-              )}
-              {m.role === 'assistant' &&
-                !m.streaming &&
-                pickExportSql(m.meta) &&
-                !(m.meta?.widgets && m.meta.widgets.length > 0) && (
-                  <div className="mt-2 flex w-full justify-end">
-                    <BiPinToDashboardControl
-                      pinning={pinningKey === messagePinKey(m)}
-                      pinned={Boolean(pinnedKeys[messagePinKey(m)])}
-                      pinnedDashboardId={
-                        pinnedBoardByKey[messagePinKey(m)] ||
-                        Number(m.meta?.analytics?.dashboard_id || 0) ||
-                        null
-                      }
-                      preferredDashboardId={dashboardId}
-                      preferredVizType="table"
-                      onPin={(sel) => void pinToDashboard(m, sel)}
-                    />
                   </div>
                 )}
               {showSqlPanel && (m.draftSql || pickExportSql(m.meta)) && (

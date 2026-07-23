@@ -115,20 +115,48 @@ class ConversationRepository:
         conversation_id: str,
         limit: int = 6,
     ) -> list[dict[str, Any]]:
+        return self.list_messages(
+            tenant_id=tenant_id,
+            conversation_id=conversation_id,
+            limit=limit,
+        )
+
+    def list_messages(
+        self,
+        *,
+        tenant_id: str,
+        conversation_id: str,
+        limit: int = 200,
+    ) -> list[dict[str, Any]]:
+        lim = max(1, min(int(limit or 200), 500))
         with self._engine.connect() as conn:
             rows = conn.execute(
                 text(
                     """
-                    SELECT role, content FROM bi_conversation_messages
+                    SELECT role, content, sql_text, datasource_id, created_at
+                    FROM bi_conversation_messages
                     WHERE tenant_id = :t AND conversation_id = :cid
                     ORDER BY created_at DESC
                     LIMIT :lim
                     """
                 ),
-                {"t": tenant_id, "cid": conversation_id, "lim": limit},
+                {"t": tenant_id, "cid": conversation_id, "lim": lim},
             ).mappings().all()
-        # chronological
-        return [{"role": r["role"], "content": r["content"]} for r in reversed(list(rows))]
+        out: list[dict[str, Any]] = []
+        for r in reversed(list(rows)):
+            item: dict[str, Any] = {
+                "role": r["role"],
+                "content": r["content"] or "",
+            }
+            sql_text = (r.get("sql_text") or "").strip()
+            if sql_text and str(r.get("role") or "") != "user":
+                item["meta"] = {
+                    "sql": sql_text,
+                    "session_id": conversation_id,
+                    "db_name": r.get("datasource_id"),
+                }
+            out.append(item)
+        return out
 
     def top_user_questions(
         self,

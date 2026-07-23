@@ -75,7 +75,14 @@ def widgets_from_query_result(
     title: str | None = None,
 ) -> list[dict[str, Any]]:
     """Build one chart/KPI/table widget from executed chat result rows."""
-    cols = [str(c) for c in (columns or []) if str(c).strip()]
+    cols: list[str] = []
+    for c in columns or []:
+        if isinstance(c, dict):
+            name = str(c.get("name") or "").strip()
+        else:
+            name = str(c or "").strip()
+        if name and name not in cols:
+            cols.append(name)
     clean_rows = [r for r in (rows or []) if isinstance(r, dict)]
     if not cols and clean_rows:
         cols = [str(k) for k in clean_rows[0].keys()]

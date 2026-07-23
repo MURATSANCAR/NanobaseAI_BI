@@ -1531,7 +1531,17 @@ async def stream_chat_via_gateway(
             explain_plan_text = None
 
     rows = ej.get("rows") or []
-    cols = ej.get("columns") or []
+    raw_cols = ej.get("columns") or []
+    cols: list[str] = []
+    for c in raw_cols:
+        if isinstance(c, dict):
+            name = str(c.get("name") or "").strip()
+        else:
+            name = str(c or "").strip()
+        if name and name not in cols:
+            cols.append(name)
+    if not cols and isinstance(rows, list) and rows and isinstance(rows[0], dict):
+        cols = [str(k) for k in rows[0].keys()]
 
     # Prepared / compiled SQL already skipped NL→SQL LLM; skip answer LLM too
     # (deterministic summary is enough — Qwen explain was the remaining 10–25s).
@@ -1548,7 +1558,7 @@ async def stream_chat_via_gateway(
         )
         from nanobase_awel.operators.result_summarizer import summarize_result
 
-        col_names = [str(c.get("name") if isinstance(c, dict) else c) for c in cols]
+        col_names = cols
         summary = summarize_result(
             col_names, rows, truncated=bool(ej.get("truncated")), max_sample=100
         )
@@ -1614,11 +1624,9 @@ async def stream_chat_via_gateway(
                 "warnings": ["explain_failed"],
             }
 
-    reply = explained.get("answer") or ""
-    if explain_plan_text:
-        reply = f"{reply}\n\nSQL:\n{safe_sql}\n\nEXPLAIN:\n{explain_plan_text}"
-    else:
-        reply = f"{reply}\n\nSQL:\n{safe_sql}"
+    # Operator-facing reply must never include SQL text or EXPLAIN plans.
+    # SQL / explain stay on structured fields (sql, explain) for tooling only.
+    reply = str(explained.get("answer") or "").strip()
 
     chart_title = (message or "").replace("\n", " ").strip()[:80] or "Chat sonucu"
     widgets = widgets_from_query_result(

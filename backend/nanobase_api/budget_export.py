@@ -15,11 +15,39 @@ from nanobase_api.budgets import budget_summary, list_budgets
 
 _EXPORTS_DIR = Path("/tmp/nanobase-budget-exports")
 
+# NanobaseAI brand palette (portal accent + BI status tokens)
+_BRAND = {
+    "navy": (15, 23, 42),  # #0F172A
+    "violet": (124, 58, 237),  # #7C3AED
+    "violet_muted": (139, 92, 246),  # #8B5CF6
+    "blue": (37, 99, 235),  # #2563EB
+    "indigo": (79, 70, 229),  # #4F46E5
+    "surface": (245, 243, 255),  # #F5F3FF
+    "white": (255, 255, 255),
+    "slate": (71, 85, 105),  # #475569
+    "slate_dark": (30, 41, 59),  # #1E293B
+    "line": (226, 232, 240),  # #E2E8F0
+    "zebra": (248, 250, 252),  # #F8FAFC
+    "ok": (5, 150, 105),  # #059669
+    "ok_bg": (209, 250, 229),  # #D1FAE5
+    "watch": (217, 119, 6),  # #D97706
+    "watch_bg": (254, 243, 199),  # #FEF3C7
+    "over": (220, 38, 38),  # #DC2626
+    "over_bg": (254, 226, 226),  # #FEE2E2
+    "amber_bg": (255, 251, 235),  # #FFFBEB
+    "amber_border": (251, 191, 36),  # #FBBF24
+}
+
 _LABELS: dict[str, dict[str, str]] = {
     "en": {
+        "brand": "NanobaseAI",
+        "brand_tag": "Business Intelligence",
         "title": "Budget board pack",
         "subtitle": "Fiscal year {year}",
         "meta": "Generated {generated} · {count} lines · {scenario}{currency_note}",
+        "meta_generated": "Generated",
+        "meta_lines": "{count} lines",
+        "meta_scenario": "Scenario",
         "mixed_currency": "Mixed currencies — totals may be incomplete without FX.",
         "fx_missing": "{count} line(s) omitted due to missing FX rates.",
         "board_note": "Board pack export — read-only snapshot.",
@@ -58,11 +86,18 @@ _LABELS: dict[str, dict[str, str]] = {
         "sheet_monthly": "Monthly",
         "sheet_commitments": "Commitments",
         "sheet_scenario": "Scenario: {scenario}",
+        "footer": "NanobaseAI · Confidential board pack · Page {page}",
+        "showing_of": "Showing {shown} of {total} lines",
     },
     "tr": {
+        "brand": "NanobaseAI",
+        "brand_tag": "İş Zekâsı",
         "title": "Bütçe yönetim paketi",
         "subtitle": "Mali yıl {year}",
         "meta": "Oluşturulma {generated} · {count} kalem · {scenario}{currency_note}",
+        "meta_generated": "Oluşturulma",
+        "meta_lines": "{count} kalem",
+        "meta_scenario": "Senaryo",
         "mixed_currency": "Karma para birimleri — FX olmadan toplamlar eksik olabilir.",
         "fx_missing": "{count} kalem eksik kur nedeniyle atlandı.",
         "board_note": "Yönetim paketi dışa aktarımı — salt okunur anlık görüntü.",
@@ -101,6 +136,8 @@ _LABELS: dict[str, dict[str, str]] = {
         "sheet_monthly": "Aylık",
         "sheet_commitments": "Taahhütler",
         "sheet_scenario": "Senaryo: {scenario}",
+        "footer": "NanobaseAI · Gizli yönetim paketi · Sayfa {page}",
+        "showing_of": "{total} kalemden {shown} gösteriliyor",
     },
 }
 
@@ -215,6 +252,58 @@ def display_budget_lines(
     return out
 
 
+def _health_colors(health: str | None) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    if health == "ok":
+        return _BRAND["ok_bg"], _BRAND["ok"]
+    if health == "watch":
+        return _BRAND["watch_bg"], _BRAND["watch"]
+    if health == "over":
+        return _BRAND["over_bg"], _BRAND["over"]
+    return _BRAND["zebra"], _BRAND["slate"]
+
+
+def _resolve_pdf_fonts() -> tuple[str, Path | None, Path | None]:
+    """Return (family, regular_ttf, bold_ttf). family is Helvetica when no TTF found."""
+    regular = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
+    bold = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+    if not regular.is_file():
+        regular = Path("/usr/share/fonts/dejavu/DejaVuSans.ttf")
+        bold = Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf")
+    if not regular.is_file():
+        for candidate in (
+            Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+            Path("/Library/Fonts/Arial Unicode.ttf"),
+            Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+        ):
+            if candidate.is_file():
+                return "DejaVu", candidate, candidate
+        return "Helvetica", None, None
+    return "DejaVu", regular, bold if bold.is_file() else regular
+
+
+def _pdf_text(value: Any, *, font_family: str) -> str:
+    s = str(value or "")
+    if font_family != "Helvetica":
+        return s
+    return (
+        s.replace("ı", "i")
+        .replace("İ", "I")
+        .replace("ğ", "g")
+        .replace("Ğ", "G")
+        .replace("ü", "u")
+        .replace("Ü", "U")
+        .replace("ş", "s")
+        .replace("Ş", "S")
+        .replace("ö", "o")
+        .replace("Ö", "O")
+        .replace("ç", "c")
+        .replace("Ç", "C")
+        .replace("·", "-")
+        .encode("latin-1", "replace")
+        .decode("latin-1")
+    )
+
+
 def build_budget_pdf(
     engine: Engine,
     *,
@@ -251,52 +340,92 @@ def build_budget_pdf(
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     currency_note = f" · {report_ccy}" if report_ccy else ""
 
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    # Prefer Unicode TTF so TR labels / envelope names render; fall back to latinized Helvetica.
-    font_family = "Helvetica"
-    regular = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-    bold = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
-    if not regular.is_file():
-        regular = Path("/usr/share/fonts/dejavu/DejaVuSans.ttf")
-        bold = Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf")
-    if regular.is_file():
+    font_family, regular, bold = _resolve_pdf_fonts()
+
+    def _txt(value: Any) -> str:
+        return _pdf_text(value, font_family=font_family)
+
+    class BudgetPdf(FPDF):
+        def header(self) -> None:
+            # Soft page wash
+            self.set_fill_color(*_BRAND["surface"])
+            self.rect(0, 0, 210, 297, style="F")
+            # Top brand bar
+            self.set_fill_color(*_BRAND["navy"])
+            self.rect(0, 0, 210, 28, style="F")
+            # Accent ribbon (violet → indigo → blue)
+            band_w = 210 / 3
+            for i, color in enumerate((_BRAND["violet"], _BRAND["indigo"], _BRAND["blue"])):
+                self.set_fill_color(*color)
+                self.rect(i * band_w, 28, band_w + 0.2, 3.2, style="F")
+            # Brand pill
+            self.set_fill_color(*_BRAND["violet"])
+            self.rect(12, 7.5, 38, 13, style="F", round_corners=True, corner_radius=3)
+            self.set_xy(12, 9.5)
+            self.set_text_color(*_BRAND["white"])
+            self.set_font(font_family, "B", 9)
+            self.cell(38, 9, _txt(_label(loc, "brand")), align="C")
+            # Tagline + year chip on the right
+            self.set_xy(54, 8)
+            self.set_font(font_family, "", 8)
+            self.set_text_color(203, 213, 225)
+            self.cell(80, 6, _txt(_label(loc, "brand_tag")), align="L")
+            self.set_fill_color(*_BRAND["blue"])
+            self.rect(158, 8, 40, 12, style="F", round_corners=True, corner_radius=3)
+            self.set_xy(158, 9.5)
+            self.set_text_color(*_BRAND["white"])
+            self.set_font(font_family, "B", 9)
+            self.cell(40, 9, _txt(str(fiscal_year)), align="C")
+            self.set_y(38)
+            self.set_text_color(*_BRAND["slate_dark"])
+
+        def footer(self) -> None:
+            self.set_y(-16)
+            self.set_draw_color(*_BRAND["violet"])
+            self.set_line_width(0.4)
+            self.line(12, self.get_y(), 198, self.get_y())
+            self.set_y(-13)
+            self.set_font(font_family, "", 7.5)
+            self.set_text_color(*_BRAND["slate"])
+            self.cell(
+                0,
+                8,
+                _txt(_label(loc, "footer", page=self.page_no())),
+                align="C",
+            )
+
+    pdf = BudgetPdf(format="A4")
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_margins(12, 38, 12)
+
+    # Register Unicode fonts before the first page so header/footer can use them.
+    if regular is not None:
         try:
             pdf.add_font("DejaVu", "", str(regular))
-            pdf.add_font("DejaVu", "B", str(bold if bold.is_file() else regular))
+            pdf.add_font("DejaVu", "B", str(bold or regular))
             font_family = "DejaVu"
         except Exception:
             font_family = "Helvetica"
 
-    def _txt(value: Any) -> str:
-        s = str(value or "")
-        if font_family != "Helvetica":
-            return s
-        return (
-            s.replace("ı", "i")
-            .replace("İ", "I")
-            .replace("ğ", "g")
-            .replace("Ğ", "G")
-            .replace("ü", "u")
-            .replace("Ü", "U")
-            .replace("ş", "s")
-            .replace("Ş", "S")
-            .replace("ö", "o")
-            .replace("Ö", "O")
-            .replace("ç", "c")
-            .replace("Ç", "C")
-            .replace("·", "-")
-            .encode("latin-1", "replace")
-            .decode("latin-1")
-        )
+    pdf.add_page()
 
-    pdf.set_font(font_family, "B", 16)
-    pdf.cell(0, 10, _txt(_label(loc, "title")), ln=True)
-    pdf.set_font(font_family, size=11)
-    pdf.cell(0, 8, _txt(_label(loc, "subtitle", year=fiscal_year)), ln=True)
-    pdf.set_font(font_family, size=9)
-    pdf.multi_cell(
+    # —— Hero title block ——
+    pdf.set_fill_color(*_BRAND["white"])
+    pdf.set_draw_color(*_BRAND["line"])
+    pdf.set_line_width(0.3)
+    pdf.rect(12, 38, 186, 28, style="DF", round_corners=True, corner_radius=4)
+    pdf.set_xy(16, 41)
+    pdf.set_font(font_family, "B", 18)
+    pdf.set_text_color(*_BRAND["navy"])
+    pdf.cell(0, 9, _txt(_label(loc, "title")), ln=True)
+    pdf.set_x(16)
+    pdf.set_font(font_family, "", 10)
+    pdf.set_text_color(*_BRAND["violet"])
+    pdf.cell(0, 6, _txt(_label(loc, "subtitle", year=fiscal_year)), ln=True)
+    pdf.set_x(16)
+    pdf.set_font(font_family, "", 8)
+    pdf.set_text_color(*_BRAND["slate"])
+    pdf.cell(
         0,
         5,
         _txt(
@@ -309,29 +438,69 @@ def build_budget_pdf(
                 currency_note=currency_note,
             )
         ),
+        ln=True,
     )
-    pdf.ln(2)
+    pdf.set_y(72)
+
+    # —— Warning banners ——
+    def _warn_banner(message: str) -> None:
+        y = pdf.get_y()
+        pdf.set_fill_color(*_BRAND["amber_bg"])
+        pdf.set_draw_color(*_BRAND["amber_border"])
+        pdf.rect(12, y, 186, 9, style="DF", round_corners=True, corner_radius=2.5)
+        pdf.set_xy(16, y + 1.5)
+        pdf.set_font(font_family, "", 8)
+        pdf.set_text_color(*_BRAND["watch"])
+        pdf.cell(178, 6, _txt(message), ln=True)
+        pdf.set_y(y + 11)
 
     if summary.get("mixed_currency"):
-        pdf.multi_cell(0, 5, _txt(_label(loc, "mixed_currency")))
+        _warn_banner(_label(loc, "mixed_currency"))
     fx_missing = summary.get("fx_missing") or []
     if fx_missing:
-        pdf.multi_cell(0, 5, _txt(_label(loc, "fx_missing", count=len(fx_missing))))
+        _warn_banner(_label(loc, "fx_missing", count=len(fx_missing)))
 
-    for key, val in (
-        ("kpi_allocated", totals.get("allocated")),
-        ("kpi_actual", totals.get("actual")),
-        ("kpi_remaining", totals.get("remaining")),
-        ("kpi_watch", summary.get("budget_watch_count") or 0),
-    ):
-        pdf.set_font(font_family, size=10)
-        pdf.cell(50, 6, _txt(_label(loc, key)), border=0)
-        pdf.cell(0, 6, _txt(_money(val) if key != "kpi_watch" else str(int(val or 0))), ln=True)
+    # —— KPI cards ——
+    kpi_specs = (
+        ("kpi_allocated", totals.get("allocated"), _BRAND["violet"], _money),
+        ("kpi_actual", totals.get("actual"), _BRAND["blue"], _money),
+        ("kpi_remaining", totals.get("remaining"), _BRAND["ok"], _money),
+        ("kpi_watch", summary.get("budget_watch_count") or 0, _BRAND["watch"], lambda v: str(int(v or 0))),
+    )
+    card_w, card_h, gap = 44.5, 24, 2.7
+    start_x, start_y = 12.0, pdf.get_y() + 1
+    for i, (key, val, accent, fmt) in enumerate(kpi_specs):
+        x = start_x + i * (card_w + gap)
+        pdf.set_fill_color(*_BRAND["white"])
+        pdf.set_draw_color(*_BRAND["line"])
+        pdf.rect(x, start_y, card_w, card_h, style="DF", round_corners=True, corner_radius=3.5)
+        # Left accent bar
+        pdf.set_fill_color(*accent)
+        pdf.rect(x, start_y, 2.2, card_h, style="F", round_corners=("TOP_LEFT", "BOTTOM_LEFT"), corner_radius=3.5)
+        # Top accent chip
+        pdf.set_fill_color(*accent)
+        pdf.rect(x + 6, start_y + 3.5, 14, 2.2, style="F", round_corners=True, corner_radius=1)
+        pdf.set_xy(x + 5, start_y + 7)
+        pdf.set_font(font_family, "", 7.5)
+        pdf.set_text_color(*_BRAND["slate"])
+        pdf.cell(card_w - 8, 5, _txt(_label(loc, key)), ln=True)
+        pdf.set_x(x + 5)
+        pdf.set_font(font_family, "B", 12)
+        pdf.set_text_color(*accent)
+        pdf.cell(card_w - 8, 8, _txt(fmt(val)), ln=False)
+    pdf.set_y(start_y + card_h + 8)
 
-    pdf.ln(4)
+    # —— Section header ——
+    y = pdf.get_y()
+    pdf.set_fill_color(*_BRAND["violet"])
+    pdf.rect(12, y + 1, 2.5, 8, style="F", round_corners=True, corner_radius=1)
+    pdf.set_xy(17, y)
     pdf.set_font(font_family, "B", 12)
-    pdf.cell(0, 8, _txt(_label(loc, "section_lines")), ln=True)
-    pdf.set_font(font_family, "B", 8)
+    pdf.set_text_color(*_BRAND["navy"])
+    pdf.cell(0, 10, _txt(_label(loc, "section_lines")), ln=True)
+    pdf.ln(1)
+
+    # —— Table ——
     headers = [
         _label(loc, "col_name"),
         _label(loc, "col_kind"),
@@ -339,25 +508,118 @@ def build_budget_pdf(
         _label(loc, "col_actual"),
         _label(loc, "col_health"),
     ]
-    widths = [70, 25, 30, 30, 25]
-    for h, w in zip(headers, widths):
-        pdf.cell(w, 6, _txt(h)[:20], border=1)
-    pdf.ln()
-    pdf.set_font(font_family, size=8)
+    widths = [72, 24, 32, 32, 26]
+    row_h = 7.2
+
+    def _draw_table_header() -> None:
+        pdf.set_fill_color(*_BRAND["navy"])
+        pdf.set_text_color(*_BRAND["white"])
+        pdf.set_font(font_family, "B", 8)
+        x0 = pdf.get_x()
+        y0 = pdf.get_y()
+        # Full header background with rounded top
+        pdf.rect(x0, y0, sum(widths), row_h + 0.4, style="F", round_corners=("TOP_LEFT", "TOP_RIGHT"), corner_radius=2.5)
+        # Violet underline under header
+        pdf.set_fill_color(*_BRAND["violet"])
+        pdf.rect(x0, y0 + row_h + 0.2, sum(widths), 1.1, style="F")
+        pdf.set_xy(x0, y0)
+        for h, w in zip(headers, widths):
+            pdf.cell(w, row_h, _txt(h)[:22], align="C")
+        pdf.ln(row_h + 1.4)
+
+    _draw_table_header()
+
     if not items:
+        pdf.set_fill_color(*_BRAND["white"])
+        pdf.set_draw_color(*_BRAND["line"])
+        y = pdf.get_y()
+        pdf.rect(12, y, sum(widths), 12, style="DF", round_corners=True, corner_radius=2)
+        pdf.set_xy(16, y + 3)
+        pdf.set_font(font_family, "", 9)
+        pdf.set_text_color(*_BRAND["slate"])
         pdf.cell(0, 6, _txt(_label(loc, "empty")), ln=True)
     else:
-        for b in items[:80]:
+        shown = items[:80]
+        for idx, b in enumerate(shown):
+            if pdf.get_y() > 265:
+                pdf.add_page()
+                _draw_table_header()
+
+            health = b.get("health")
+            health_bg, health_fg = _health_colors(health if isinstance(health, str) else None)
+            zebra = _BRAND["zebra"] if idx % 2 == 0 else _BRAND["white"]
             vals = [
-                str(b.get("name") or "")[:36],
-                _kind_label(loc, str(b.get("kind") or "")),
-                _money(b.get("allocated")),
-                _money(b.get("actual")),
-                _health_label(loc, b.get("health")),
+                (str(b.get("name") or "")[:38], "L", zebra, _BRAND["slate_dark"]),
+                (_kind_label(loc, str(b.get("kind") or "")), "C", zebra, _BRAND["slate"]),
+                (_money(b.get("allocated")), "R", zebra, _BRAND["slate_dark"]),
+                (_money(b.get("actual")), "R", zebra, _BRAND["slate_dark"]),
+                (_health_label(loc, health if isinstance(health, str) else None), "C", health_bg, health_fg),
             ]
-            for v, w in zip(vals, widths):
-                pdf.cell(w, 6, _txt(v)[:40], border=1)
-            pdf.ln()
+            x0 = pdf.l_margin
+            y0 = pdf.get_y()
+            # Row background
+            pdf.set_fill_color(*zebra)
+            pdf.rect(x0, y0, sum(widths), row_h, style="F")
+            # Kind tint chip background strip
+            kind = str(b.get("kind") or "").lower()
+            kind_accent = {
+                "opex": _BRAND["violet_muted"],
+                "capex": _BRAND["blue"],
+                "other": _BRAND["slate"],
+            }.get(kind, _BRAND["slate"])
+            # Draw cells
+            pdf.set_xy(x0, y0)
+            pdf.set_font(font_family, "", 7.5)
+            for i, (v, align, bg, fg) in enumerate(vals):
+                w = widths[i]
+                if i == 4:
+                    # Health badge pill
+                    pdf.set_fill_color(*bg)
+                    badge_w = w - 4
+                    badge_x = pdf.get_x() + 2
+                    pdf.rect(badge_x, y0 + 1.2, badge_w, row_h - 2.4, style="F", round_corners=True, corner_radius=2)
+                    pdf.set_text_color(*fg)
+                    pdf.set_font(font_family, "B", 7)
+                    pdf.set_xy(badge_x, y0 + 1.2)
+                    pdf.cell(badge_w, row_h - 2.4, _txt(v)[:16], align="C")
+                    pdf.set_xy(x0 + sum(widths[: i + 1]), y0)
+                    pdf.set_font(font_family, "", 7.5)
+                elif i == 1:
+                    pdf.set_text_color(*kind_accent)
+                    pdf.set_font(font_family, "B", 7)
+                    pdf.cell(w, row_h, _txt(v)[:18], align=align)
+                    pdf.set_font(font_family, "", 7.5)
+                else:
+                    pdf.set_text_color(*fg)
+                    pdf.cell(w, row_h, _txt(v)[:40], align=align)
+            pdf.ln(row_h)
+            # Subtle bottom rule
+            pdf.set_draw_color(*_BRAND["line"])
+            pdf.set_line_width(0.15)
+            pdf.line(x0, pdf.get_y(), x0 + sum(widths), pdf.get_y())
+
+        if len(items) > len(shown):
+            pdf.ln(3)
+            pdf.set_font(font_family, "", 8)
+            pdf.set_text_color(*_BRAND["slate"])
+            pdf.cell(
+                0,
+                6,
+                _txt(_label(loc, "showing_of", shown=len(shown), total=len(items))),
+                ln=True,
+            )
+
+    # —— Board note ——
+    pdf.ln(6)
+    y = pdf.get_y()
+    if y < 270:
+        pdf.set_fill_color(237, 233, 254)  # soft violet
+        pdf.set_draw_color(*_BRAND["violet_muted"])
+        pdf.rect(12, y, 186, 10, style="DF", round_corners=True, corner_radius=2.5)
+        pdf.set_xy(16, y + 2)
+        pdf.set_font(font_family, "", 8)
+        pdf.set_text_color(*_BRAND["violet"])
+        pdf.cell(178, 6, _txt(_label(loc, "board_note")), ln=True)
 
     path = _export_path("pdf")
     out = pdf.output()

@@ -168,6 +168,8 @@ _REMOVE_PATHS = {
     "/api/v1/bi/{full_path:path}",
     "/api/v1/bi/chat/stream",
     "/api/v1/bi/chat",
+    "/api/v1/bi/chat/{session_id}",
+    "/api/v1/bi/chat/{session_id}/pending",
     "/api/v1/bi/glossary",
     "/api/v1/bi/semantic/metrics",
     "/api/v1/bi/semantic/joins",
@@ -835,6 +837,41 @@ async def proxy_query_execute(
         return JSONResponse(data, status_code=200 if data.get("ok") else 400)
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=400)
+
+
+@app.get("/api/v1/bi/chat/{session_id}")
+async def chat_history_api(
+    session_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """Conversation timeline from bi_meta (not DB-GPT bridge stub)."""
+    from nanobase_api.infrastructure.conversation_repo import ConversationRepository
+
+    sid = (session_id or "").strip()
+    if not sid:
+        return {"session_id": session_id, "messages": [], "pending": False}
+    try:
+        msgs = ConversationRepository(_meta_engine()).list_messages(
+            tenant_id=principal.tenant_id,
+            conversation_id=sid,
+            limit=200,
+        )
+    except Exception:
+        msgs = []
+    return {
+        "session_id": sid,
+        "messages": msgs,
+        "pending": False,
+    }
+
+
+@app.get("/api/v1/bi/chat/{session_id}/pending")
+async def chat_pending_api(
+    session_id: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    _ = principal
+    return {"session_id": session_id, "pending": False}
 
 
 @app.post("/api/v1/bi/chat/stream")

@@ -311,34 +311,51 @@ def build_import_template(*, fiscal_year: int | None = None) -> Path:
 
     samples = [
         {
-            "Kalem adı": "Bulut altyapı (IaaS/PaaS)",
+            "Kalem adı": "Bulut altyapı (AWS/Azure/GCP IaaS-PaaS)",
             "Mali yıl": year,
             "Senaryo": "base",
             "Bütçe türü": "OPEX",
             "Maliyet merkezi": "IT-OPEX",
-            "Planlanan": 1800000,
+            "Planlanan": 2880000,
             "Para birimi": "TRY",
             "Taahhüt": 0,
             "Durum": "Taslak",
             "Sorumlu": "",
-            "Notlar": "Örnek — alış faturaları (alis_faturalari) ile eşlenir",
+            "Notlar": "ERP alis_faturalari — Sync from source ile eşlenir",
             "Gerçekleşen SQL": (
                 f"SELECT COALESCE(SUM(genel_toplam),0) AS amount FROM alis_faturalari "
                 f"WHERE butce_kodu = 'IT-CLOUD' AND EXTRACT(YEAR FROM fatura_tarihi) = {year}"
             ),
         },
         {
-            "Kalem adı": "Sunucu / network donanımı",
+            "Kalem adı": "Siber güvenlik (EDR, SIEM, SOC, WAF)",
             "Mali yıl": year,
             "Senaryo": "base",
-            "Bütçe türü": "CAPEX",
-            "Maliyet merkezi": "IT-CAPEX",
-            "Planlanan": 2500000,
+            "Bütçe türü": "OPEX",
+            "Maliyet merkezi": "IT-OPEX",
+            "Planlanan": 864000,
             "Para birimi": "TRY",
             "Taahhüt": 0,
             "Durum": "Taslak",
             "Sorumlu": "",
-            "Notlar": "Örnek — CAPEX alış faturaları",
+            "Notlar": "MSSP + Fortinet aylık/çeyrek faturaları",
+            "Gerçekleşen SQL": (
+                f"SELECT COALESCE(SUM(genel_toplam),0) AS amount FROM alis_faturalari "
+                f"WHERE butce_kodu = 'IT-SEC' AND EXTRACT(YEAR FROM fatura_tarihi) = {year}"
+            ),
+        },
+        {
+            "Kalem adı": "Sunucu / storage / network donanımı",
+            "Mali yıl": year,
+            "Senaryo": "base",
+            "Bütçe türü": "CAPEX",
+            "Maliyet merkezi": "IT-CAPEX",
+            "Planlanan": 3360000,
+            "Para birimi": "TRY",
+            "Taahhüt": 0,
+            "Durum": "Taslak",
+            "Sorumlu": "",
+            "Notlar": "CAPEX — Dell/Cisco alış faturaları",
             "Gerçekleşen SQL": (
                 f"SELECT COALESCE(SUM(genel_toplam),0) AS amount FROM alis_faturalari "
                 f"WHERE butce_kodu = 'IT-HW' AND EXTRACT(YEAR FROM fatura_tarihi) = {year}"
@@ -361,8 +378,9 @@ def build_import_template(*, fiscal_year: int | None = None) -> Path:
         cell.font = header_font
     # Even split samples across 12 months
     monthly_samples = [
-        ("Bulut altyapı (IaaS/PaaS)", "OPEX", "IT-OPEX", 1800000),
-        ("Sunucu / network donanımı", "CAPEX", "IT-CAPEX", 2500000),
+        ("Bulut altyapı (AWS/Azure/GCP IaaS-PaaS)", "OPEX", "IT-OPEX", 2880000),
+        ("Siber güvenlik (EDR, SIEM, SOC, WAF)", "OPEX", "IT-OPEX", 864000),
+        ("Sunucu / storage / network donanımı", "CAPEX", "IT-CAPEX", 3360000),
     ]
     for ri, (name, kind, cc, total) in enumerate(monthly_samples, start=2):
         monthly.cell(row=ri, column=1, value=name)
@@ -384,13 +402,13 @@ def build_import_template(*, fiscal_year: int | None = None) -> Path:
         cell.font = header_font
     commits.append(
         [
-            "Bulut altyapı (IaaS/PaaS)",
+            "Bulut altyapı (AWS/Azure/GCP IaaS-PaaS)",
             year,
             "base",
             "OPEX",
             "IT-OPEX",
-            "AWS yıllık reserved commitment",
-            200000,
+            "AWS / Azure reserved capacity commitment",
+            480000,
             "TRY",
             "Açık",
             f"{year}-12-31",

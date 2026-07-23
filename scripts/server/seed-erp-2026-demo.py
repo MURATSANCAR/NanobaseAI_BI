@@ -365,7 +365,7 @@ def seed_po_2026(cur, suppliers: list[int], products: list[int], branches: list[
             INSERT INTO alis_faturalari
               (fatura_no, tedarikci_id, siparis_id, sube_id, butce_kodu, departman_kod,
                durum, fatura_tarihi, vade_tarihi, ara_toplam, kdv_toplam, genel_toplam)
-            SELECT %s, tedarikci_id, %s, sube_id, %s, 'IT', 'acik',
+            SELECT %s, tedarikci_id, %s, sube_id, %s, 'IT-CAPEX', 'acik',
                    siparis_tarihi + 20, siparis_tarihi + 50,
                    100000, 20000, 120000
             FROM satin_alma_siparisleri WHERE id=%s

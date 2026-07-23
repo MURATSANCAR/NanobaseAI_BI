@@ -11,7 +11,8 @@ Operator configs for the NanobaseAI BI stack. The FE talks to the runner API; th
 | `schemas/erp.catalog.json` | Live ERP table/column catalog (slim) |
 | `schemas/sigorta.catalog.json` | Live Sigorta table/column catalog (slim) |
 | `schemas/schema_tr_erp*.json` | Text2SQL test schema fixtures |
-| `seeds/neon-erp-seed.sql` | ERP DDL + demo seed (Neon 512MB-oriented) |
+| `seeds/neon-erp-seed.sql` | ERP DDL + demo seed (Neon 512MB-oriented; BT OPEX/CAPEX dahil) |
+| `seeds/neon-erp-bt-budget-patch.sql` | Non-destructive BT bütçe plan + AP fatura zenginleştirme |
 | `seeds/neon-sigorta-seed*.sql` | Sigorta DDL + demo seed parts |
 | `semantic/binding_erp_*.json` | Certified semantic bindings for ERP |
 | `bi.backend.env.example` | Standalone BI runner env template |
@@ -60,6 +61,11 @@ cd backend && ./scripts/start.sh
 # Example — password from Vault / Neon console, not from git
 psql "postgresql://neondb_owner:***@ep-….neon.tech/neondb?sslmode=require" \
   -f configs/seeds/neon-erp-seed.sql
+
+# BT bütçe verisini canlı ERP'ye ekle (diğer tabloları silmez)
+set -a && source configs/sources/local/neon-dsns.env && set +a
+psql "$BI_ERP_DATABASE_URL" -f configs/seeds/neon-erp-bt-budget-patch.sql
+# Sonra UI: /bi/budget → Sync from source (fiscal year 2026, refresh)
 ```
 
 Runner still owns SQL execution; this repo holds FE + operator reference configs.
