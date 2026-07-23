@@ -437,10 +437,21 @@ def remember_scenario_paraphrase(
     question: str,
     scenario_id: str | None,
 ) -> None:
-    """Attach user wording as scenario paraphrase so exact hash hits next time."""
+    """Attach user wording as scenario paraphrase so exact hash hits next time.
+
+    Only when detected period/family/entity agree with the scenario — otherwise a
+    wrong fast-path hit would poison future exact matches.
+    """
     if not scenario_id or not (question or "").strip():
         return
     try:
+        from nanobase_api.scenario_engine.application.intent_slots import (
+            detect_family,
+            detect_period,
+            entity_score,
+            family_compatible,
+            period_compatible,
+        )
         from nanobase_api.scenario_engine.domain.scenario import ScenarioParaphrase
         from nanobase_api.scenario_engine.domain.status import ScenarioStatus
         from nanobase_api.scenario_engine.infrastructure.store import get_scenario_store
@@ -448,6 +459,15 @@ def remember_scenario_paraphrase(
         store = get_scenario_store()
         inst = store.get_instance(scenario_id)
         if inst is None:
+            return
+        plan = inst.logical_plan
+        q_period = detect_period(question)
+        q_family = detect_family(question)
+        if not period_compatible(q_period, plan.period):
+            return
+        if not family_compatible(q_family, inst.family):
+            return
+        if entity_score(question, plan.entity, plan.physical_table) < 0.3:
             return
         # Avoid dupes via hash index
         qh = question_hash(question)

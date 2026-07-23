@@ -104,7 +104,7 @@ class ScenarioMatcher:
         q_period = detect_period(q)
         q_family = detect_family(q)
 
-        # 1) Exact normalized hash
+        # 1) Exact normalized hash (still respect period/family gates — blocks poisoned learns)
         qh = question_hash(q)
         para = self.store.find_by_normalized_hash(
             tenant_id=tenant_id, datasource_id=datasource_id, qhash=qh
@@ -114,16 +114,23 @@ class ScenarioMatcher:
             if inst and is_retrieval_eligible(inst.status):
                 if schema_version and inst.schema_version != schema_version:
                     return MatchResult(matched=False, route="AWEL", detail={"reason": "schema_mismatch"})
-                self.store.record_usage(inst.id, field="match_count")
-                return MatchResult(
-                    matched=True,
-                    scenario_id=inst.id,
-                    scenario_code=inst.scenario_code,
-                    confidence=0.99,
-                    route="PRECOMPILED_SCENARIO",
-                    logical_plan=inst.logical_plan.to_dict(),
-                    detail={"matchType": "exact"},
+                plan = inst.logical_plan
+                slots_ok = period_compatible(q_period, plan.period) and family_compatible(
+                    q_family, inst.family
                 )
+                if slots_ok:
+                    self.store.record_usage(inst.id, field="match_count")
+                    return MatchResult(
+                        matched=True,
+                        scenario_id=inst.id,
+                        scenario_code=inst.scenario_code,
+                        confidence=0.99,
+                        route="PRECOMPILED_SCENARIO",
+                        logical_plan=plan.to_dict(),
+                        detail={"matchType": "exact"},
+                    )
+                # fall through to fuzzy/intent — do not trust conflicting learned paraphrase
+
 
         # 2) Verified paraphrase / canonical fuzzy with slot gates
         published = self.store.list_instances(
@@ -167,8 +174,10 @@ class ScenarioMatcher:
                 slot_completeness=1.0 if plan.period else 0.8,
             )
             # Boost when all slots lock
-            if q_period and q_family and per >= 1.0 and fam >= 1.0 and ent >= 0.4:
-                score = min(1.0, score + 0.08)
+            if q_period and q_family and per >= 1.0 and fam >= 1.0 and ent >= 0.3:
+                score = min(1.0, score + 0.22)
+            elif q_family and fam >= 1.0 and ent >= 0.4 and (q_period is None or per >= 1.0):
+                score = min(1.0, score + 0.22)
 
             if best is None or score > best.confidence:
                 best = MatchResult(
@@ -282,7 +291,9 @@ class ScenarioMatcher:
                 family=1.0,
                 slot_completeness=1.0 if plan.period else 0.85,
             )
-            if q_period and per >= 1.0 and ent >= 0.45:
+            if q_period and per >= 1.0 and ent >= 0.3:
+                score = min(1.0, score + 0.22)
+            elif ent >= 0.45:
                 score = min(1.0, score + 0.1)
             if best is None or score > best.confidence:
                 best = MatchResult(

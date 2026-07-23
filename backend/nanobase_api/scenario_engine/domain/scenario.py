@@ -21,8 +21,9 @@ def normalize_question(text: str) -> str:
     s = unicodedata.normalize("NFKD", s)
     s = "".join(c for c in s if not unicodedata.combining(c))
     s = s.lower()
+    s = re.sub(r"[^\w\s]", " ", s, flags=re.UNICODE)
     s = re.sub(r"\s+", " ", s)
-    return s
+    return s.strip()
 
 
 def question_hash(text: str) -> str:

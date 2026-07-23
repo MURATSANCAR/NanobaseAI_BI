@@ -41,6 +41,13 @@ def test_entity_prefers_specific_table_tokens():
     assert alis >= 0.35
 
 
+def test_entity_generic_fatura_not_forced_to_alis():
+    q = "bugünkü faturaları getir"
+    alis = entity_score(q, "alis_faturalari", "public.alis_faturalari")
+    inv = entity_score(q, "invoice", "public.faturalar")
+    assert inv > alis
+
+
 def test_period_hard_gate():
     assert period_compatible(PeriodKind.YEAR_TO_DATE, "YEAR_TO_DATE")
     assert not period_compatible(PeriodKind.YEAR_TO_DATE, "TODAY")
@@ -164,3 +171,64 @@ def test_matcher_generic_other_table_mtd_sum():
     )
     assert m.matched
     assert m.scenario_code == "komisyon_odemeleri.sum.tutar.month_to_date"
+
+
+def test_matcher_ignores_poisoned_exact_paraphrase():
+    store = ScenarioStore()
+    inv = ScenarioInstance(
+        id="scn-inv-today",
+        tenant_id="default",
+        datasource_id="erp",
+        scenario_code="invoice.list.today.lim25",
+        family="LIST_ENTITY",
+        logical_plan=LogicalPlan(
+            family="LIST_ENTITY",
+            entity="invoice",
+            period="TODAY",
+            physical_table="public.faturalar",
+            limit=25,
+        ),
+        schema_version="1",
+        semantic_version="1",
+        risk_tier=RiskTier.A,
+        status=ScenarioStatus.PUBLISHED,
+        canonical_question="Bugüne ait faturaları getir.",
+    )
+    alis = ScenarioInstance(
+        id="scn-alis-ytd",
+        tenant_id="default",
+        datasource_id="erp",
+        scenario_code="alis_faturalari.count.year_to_date",
+        family="COUNT_ENTITY",
+        logical_plan=LogicalPlan(
+            family="COUNT_ENTITY",
+            entity="alis_faturalari",
+            period="YEAR_TO_DATE",
+            physical_table="public.alis_faturalari",
+            limit=1,
+        ),
+        schema_version="1",
+        semantic_version="1",
+        risk_tier=RiskTier.A,
+        status=ScenarioStatus.PUBLISHED,
+        canonical_question="Yıl başından bugüne olan kaç alis faturalari var?",
+    )
+    store.save_instance(inv)
+    store.save_instance(alis)
+    poison_q = "yıl başından bugüne kadar ne kadar alış faturamız var"
+    store.save_paraphrase(
+        ScenarioParaphrase(
+            id="par-poison",
+            scenario_id=inv.id,
+            language="tr",
+            tenant_id="default",
+            datasource_id="erp",
+            text=poison_q,
+            status=ScenarioStatus.PUBLISHED,
+        )
+    )
+    m = ScenarioMatcher(store=store).match(
+        poison_q, tenant_id="default", datasource_id="erp"
+    )
+    assert m.matched
+    assert m.scenario_code == "alis_faturalari.count.year_to_date"
