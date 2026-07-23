@@ -49,8 +49,15 @@ _ENTITY_SYNONYMS = {
 }
 
 _VERBS_LIST = ("getir", "göster", "listele", "çıkar", "ver", "bul")
-_VERBS_SUM = ("toplamını getir", "toplamı nedir", "tutarı nedir", "ne kadar")
-_VERBS_COUNT = ("kaç tane", "sayısı nedir", "adet nedir", "kaç adet")
+_VERBS_SUM = ("toplamını getir", "toplamı nedir", "tutarı nedir", "tutarı ne kadar")
+_VERBS_COUNT = (
+    "kaç tane",
+    "sayısı nedir",
+    "adet nedir",
+    "kaç adet",
+    "ne kadar",
+    "kaç",
+)
 
 _PERIOD_PHRASE = {
     PeriodKind.TODAY.value: "bugüne",
@@ -289,6 +296,16 @@ def _expand_variants(plan: LogicalPlan, base: list[str]) -> list[str]:
             if adj:
                 out.append(f"{adj.capitalize()} {v} {singular}?")
                 out.append(f"{adj.capitalize()} {plural} {v}?")
+        if prep:
+            # Natural TR: "… kadar ne kadar X var / kaç X'imiz var"
+            out.append(f"{prep.capitalize()} kadar ne kadar {singular} var?")
+            out.append(f"{prep.capitalize()} kadar ne kadar {plural} var?")
+            out.append(f"{prep.capitalize()} kadar kaç {singular} var?")
+            out.append(f"{prep.capitalize()} kadar kaç {singular}mız var?")
+            out.append(f"{prep.capitalize()} kadar kaç {singular}miz var?")
+            for syn in synonyms or ():
+                out.append(f"{prep.capitalize()} kadar ne kadar {syn} var?")
+                out.append(f"{prep.capitalize()} kadar kaç {syn} var?")
 
     if plan.family == "TOP_N":
         n = plan.top_n or 10

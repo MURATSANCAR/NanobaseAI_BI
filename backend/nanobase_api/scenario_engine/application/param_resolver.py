@@ -13,9 +13,12 @@ from nanobase_api.scenario_engine.domain.period import PeriodKind, resolve_perio
 
 _TZ = ZoneInfo("Europe/Istanbul")
 
+# Most specific first (YTD/MTD before bare "bugün")
 _PERIOD_PATTERNS: list[tuple[re.Pattern[str], PeriodKind]] = [
-    (re.compile(r"\bbug[uü]n(e|ki|ün)?\b", re.I), PeriodKind.TODAY),
-    (re.compile(r"\bd[uü]n(e|ki|ün)?\b", re.I), PeriodKind.YESTERDAY),
+    (re.compile(r"\by[ıi]l\s+başından(\s+bug[uü]ne)?(\s+kadar)?\b", re.I), PeriodKind.YEAR_TO_DATE),
+    (re.compile(r"\bay\s+başından(\s+bug[uü]ne)?(\s+kadar)?\b", re.I), PeriodKind.MONTH_TO_DATE),
+    (re.compile(r"\byil\s+basindan(\s+bugune)?(\s+kadar)?\b", re.I), PeriodKind.YEAR_TO_DATE),
+    (re.compile(r"\bay\s+basindan(\s+bugune)?(\s+kadar)?\b", re.I), PeriodKind.MONTH_TO_DATE),
     (re.compile(r"\bbu hafta(ki|ya)?\b", re.I), PeriodKind.CURRENT_WEEK),
     (re.compile(r"\bge[cç]en hafta(ki|ya)?\b", re.I), PeriodKind.PREVIOUS_WEEK),
     (re.compile(r"\bbu ay(ki|a|ın)?\b", re.I), PeriodKind.CURRENT_MONTH),
@@ -24,6 +27,8 @@ _PERIOD_PATTERNS: list[tuple[re.Pattern[str], PeriodKind]] = [
     (re.compile(r"\bge[cç]en y[ıi]l(ki|a|ın)?\b", re.I), PeriodKind.PREVIOUS_YEAR),
     (re.compile(r"\bbu [cç]eyrek\b", re.I), PeriodKind.CURRENT_QUARTER),
     (re.compile(r"\bge[cç]en [cç]eyrek\b", re.I), PeriodKind.PREVIOUS_QUARTER),
+    (re.compile(r"\bd[uü]n(e|ki|ün)?\b", re.I), PeriodKind.YESTERDAY),
+    (re.compile(r"\bbug[uü]n(e|ki|ün)?\b", re.I), PeriodKind.TODAY),
 ]
 
 _CITY_RE = re.compile(
