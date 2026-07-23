@@ -76,9 +76,11 @@ export default function BiSupersetPage() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [browserFullscreen, setBrowserFullscreen] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
-  const [sidePanel, setSidePanel] = useState<'comments' | 'widgets' | 'none'>(() =>
-    searchParams.get('comments') === '1' ? 'comments' : 'widgets',
-  );
+  const [sidePanel, setSidePanel] = useState<'comments' | 'widgets' | 'none'>(() => {
+    if (searchParams.get('comments') === '1') return 'comments';
+    if (searchParams.get('widgets') === '1') return 'widgets';
+    return 'none';
+  });
   const [lineageOpen, setLineageOpen] = useState(() => Boolean(searchParams.get('metric')));
   const [artifactBanner, setArtifactBanner] = useState<string | null>(null);
   const [anomalyBanner, setAnomalyBanner] = useState<string | null>(
@@ -586,9 +588,15 @@ export default function BiSupersetPage() {
             ) : null}
             {!activeSourceId ? (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-                <div className="bi-pbi-tile bi-pbi-tile--3d max-w-sm p-8 text-center">
+                <div className="bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--pro max-w-sm p-8 text-center" data-accent={0}>
+                  <div className="bi-pbi-tile-depth" aria-hidden />
+                  <div className="bi-pbi-tile-rim bi-pbi-tile-rim--x" aria-hidden />
+                  <div className="bi-pbi-tile-rim bi-pbi-tile-rim--y" aria-hidden />
+                  <div className="bi-pbi-tile-bevel" aria-hidden />
                   <div className="bi-pbi-tile-glow" aria-hidden />
-                  <div className="relative z-[1]">
+                  <div className="bi-pbi-tile-shine" aria-hidden />
+                  <div className="bi-pbi-tile-specular" aria-hidden />
+                  <div className="bi-pbi-tile-face relative z-[1]">
                     <Sparkles className="mx-auto mb-3 h-10 w-10 text-[#118DFF]/80" />
                     <p className="text-sm text-[#605E5C]">
                       {sourcesQ.isLoading || statusQ.isLoading

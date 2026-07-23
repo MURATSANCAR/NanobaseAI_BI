@@ -138,7 +138,7 @@ export default function BiSourceAnalyticsCanvas({
             {t('bi.analytics.sourceWidgetsEmpty')}
           </p>
         ) : (
-          <div className="bi-analytics-canvas-stage grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
+          <div className="bi-analytics-canvas-stage grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4 lg:gap-7">
             {widgets.map((w, i) => (
               <WidgetTile key={w.id} widget={w} index={i} onOpen={setSelected} />
             ))}
