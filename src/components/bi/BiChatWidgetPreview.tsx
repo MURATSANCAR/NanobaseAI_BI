@@ -58,7 +58,7 @@ export default function BiChatWidgetPreview({
           />
         ) : null}
       </div>
-      <div className="grid grid-cols-1 gap-3 min-[480px]:grid-cols-2">
+      <div className="bi-analytics-canvas-stage grid grid-cols-1 gap-4 min-[480px]:grid-cols-2">
         {widgets.slice(0, 3).map((widget, index) => {
           const visual = widgetVisualType(widget);
           const compact = isCompactVisual(visual);

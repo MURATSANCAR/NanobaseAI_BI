@@ -37,16 +37,17 @@ function WidgetTile({
       onClick={() => onOpen(widget)}
       className={
         kpi
-          ? 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--kpi flex min-h-[9.5rem] w-full flex-col overflow-hidden p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
-          : 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid flex min-h-[17rem] w-full flex-col overflow-hidden p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:col-span-2 lg:col-span-2'
+          ? 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--kpi flex min-h-[9.5rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+          : 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid flex min-h-[17rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:col-span-2 lg:col-span-2'
       }
       data-accent={accent}
       aria-label={t('bi.analytics.openWidgetDetail', { title: biWidgetTitle(widget) })}
     >
+      <div className="bi-pbi-tile-depth" aria-hidden />
       <div className="bi-pbi-tile-glow" aria-hidden />
       <div className="bi-pbi-tile-shine" aria-hidden />
       <div className="bi-pbi-tile-accent" data-visual={widget.type || 'card'} aria-hidden />
-      <div className="relative z-[1] flex min-h-0 flex-1 flex-col px-3.5 pb-3 pt-3.5 sm:px-4">
+      <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl px-3.5 pb-3 pt-3.5 sm:px-4">
         <div className="mb-2 flex items-start justify-between gap-2">
           <h3 className="bi-pbi-tile-title min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 sm:text-xs">
             {biWidgetTitle(widget)}
@@ -132,7 +133,7 @@ export default function BiSourceAnalyticsCanvas({
             {t('bi.analytics.sourceWidgetsEmpty')}
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          <div className="bi-analytics-canvas-stage grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-5 lg:grid-cols-4 lg:gap-6">
             {widgets.map((w, i) => (
               <WidgetTile key={w.id} widget={w} index={i} onOpen={setSelected} />
             ))}

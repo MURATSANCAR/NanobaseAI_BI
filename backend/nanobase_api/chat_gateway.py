@@ -16,6 +16,7 @@ from typing import Any, AsyncIterator, Awaitable, Optional
 import httpx
 from sqlalchemy.engine import Engine
 
+from nanobase_api.chat_widgets import widgets_from_query_result
 from nanobase_api.config import ExecutionMode, get_settings
 from nanobase_api.infrastructure.text2sql_adapter import WorkflowTextToSqlAdapter
 from nanobase_api.workflows import DEFAULT_SCHEMA_HINT
@@ -605,6 +606,50 @@ async def stream_chat_via_gateway(
                 ).encode()
         except Exception as e:
             yield _sse("status", {"phase": "verified_lookup_skip", "detail": str(e)[:200]}).encode()
+
+    # Learned cache: exact / similar prior successful questions (skip NL→SQL LLM)
+    if meta_engine is not None and not sql:
+        try:
+            from nanobase_api.infrastructure.learned_query_cache import lookup as learned_lookup
+
+            hit = learned_lookup(
+                meta_engine,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+                question=message,
+            )
+            if hit and hit.sql:
+                sql = hit.sql
+                sql_source = "learned_cache"
+                verified_meta = {
+                    "id": hit.id,
+                    "sql": sql,
+                    "source": "learned_cache",
+                    "match": hit.match,
+                    "score": hit.score,
+                    "prior_question": hit.question,
+                }
+                yield _sse(
+                    "status",
+                    {
+                        "phase": "learned_cache_hit",
+                        "learned_id": hit.id,
+                        "match": hit.match,
+                        "score": hit.score,
+                        "prior_question": hit.question[:200],
+                        "sql": sql,
+                        "sql_source": sql_source,
+                    },
+                ).encode()
+                yield _sse(
+                    "sql_generated",
+                    {
+                        "type": "SQL_GENERATED",
+                        "payload": {"sql": sql, "sql_source": sql_source},
+                    },
+                ).encode()
+        except Exception as e:
+            yield _sse("status", {"phase": "learned_lookup_skip", "detail": str(e)[:200]}).encode()
 
     conversation_turns: list[dict[str, Any]] = []
     if meta_engine is not None:
@@ -1490,6 +1535,7 @@ async def stream_chat_via_gateway(
         "precompiled_scenario",
         "verified_sql",
         "semantic_metric_compiler",
+        "learned_cache",
     }
     if sql_source in _fast_answer_sources:
         from nanobase_awel.operators.answer_fidelity_validator import (
@@ -1569,6 +1615,14 @@ async def stream_chat_via_gateway(
     else:
         reply = f"{reply}\n\nSQL:\n{safe_sql}"
 
+    chart_title = (message or "").replace("\n", " ").strip()[:80] or "Chat sonucu"
+    widgets = widgets_from_query_result(
+        columns=cols,
+        rows=rows if isinstance(rows, list) else [],
+        sql=safe_sql,
+        title=chart_title,
+    )
+
     yield _sse(
         "answer_delta",
         {"type": "ANSWER_DELTA", "payload": {"text": reply[:500]}},
@@ -1582,7 +1636,7 @@ async def stream_chat_via_gateway(
             "sql": safe_sql,
             "sql_error": None,
             "query_result": {"columns": cols, "rows": rows},
-            "widgets": [],
+            "widgets": widgets,
             "answer_blocks": [
                 {"type": "text", "text": reply},
                 {"type": "table", "columns": cols, "rows": rows},
@@ -1617,6 +1671,31 @@ async def stream_chat_via_gateway(
         execution_mode=mode.value,
         executed=True,
     )
+    # Learn successful Q→SQL for next exact/similar asks (skip LLM)
+    try:
+        from nanobase_api.infrastructure.learned_query_cache import (
+            remember as learned_remember,
+            remember_scenario_paraphrase,
+        )
+
+        if meta_engine is not None and safe_sql and rows is not None:
+            learned_remember(
+                meta_engine,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+                question=message,
+                sql=safe_sql,
+                sql_source=sql_source,
+            )
+        if sql_source == "precompiled_scenario" and verified_meta:
+            remember_scenario_paraphrase(
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+                question=message,
+                scenario_id=str(verified_meta.get("id") or "") or None,
+            )
+    except Exception:
+        pass
     try:
         from nanobase_api.infrastructure.audit_repo import AuditRepository
 
@@ -1627,7 +1706,11 @@ async def stream_chat_via_gateway(
                 action="QUERY_COMPLETED",
                 ok=True,
                 session_id=session_id,
-                extra={"datasource_id": datasource_id, "execution_id": execution_id},
+                extra={
+                    "datasource_id": datasource_id,
+                    "execution_id": execution_id,
+                    "sql_source": sql_source,
+                },
             )
     except Exception:
         pass

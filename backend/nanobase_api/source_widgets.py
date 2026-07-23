@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -246,6 +247,7 @@ _ALLOWED_TYPES = frozenset(
 )
 
 _TYPE_OVERRIDES_PATH = SECRETS / "source-widget-types.json"
+_PINNED_WIDGETS_PATH = SECRETS / "source-widgets-pinned.json"
 
 
 def _widget_specs_for(datasource_id: str) -> list[dict[str, Any]]:
@@ -272,6 +274,98 @@ def _widget_specs_for(datasource_id: str) -> list[dict[str, Any]]:
     except Exception:
         pass
     return list(packs.get(sid) or [])
+
+
+def _load_pinned_widgets() -> dict[str, list[dict[str, Any]]]:
+    if not _PINNED_WIDGETS_PATH.is_file():
+        return {}
+    try:
+        raw = json.loads(_PINNED_WIDGETS_PATH.read_text(encoding="utf-8"))
+        sources = raw.get("sources") if isinstance(raw, dict) else None
+        if not isinstance(sources, dict):
+            return {}
+        out: dict[str, list[dict[str, Any]]] = {}
+        for sid, specs in sources.items():
+            if not isinstance(specs, list):
+                continue
+            clean = [s for s in specs if isinstance(s, dict) and str(s.get("id") or "").strip()]
+            if clean:
+                out[str(sid)] = clean
+        return out
+    except (OSError, json.JSONDecodeError, TypeError):
+        return {}
+
+
+def _save_pinned_widgets(data: dict[str, list[dict[str, Any]]]) -> None:
+    SECRETS.mkdir(parents=True, exist_ok=True)
+    payload = {"sources": data, "updated_at": datetime.now(timezone.utc).isoformat()}
+    tmp = _PINNED_WIDGETS_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(_PINNED_WIDGETS_PATH)
+
+
+def _pinned_specs_for(datasource_id: str) -> list[dict[str, Any]]:
+    sid = str(datasource_id or "").strip()
+    if not sid:
+        return []
+    return list(_load_pinned_widgets().get(sid) or [])
+
+
+def pin_chat_widget(
+    *,
+    datasource_id: str,
+    sql: str,
+    title: str,
+    widget_type: str = "table",
+    x_key: str | None = None,
+    y_key: str | None = None,
+    value_key: str | None = None,
+    label_key: str | None = None,
+    widget_id: str | None = None,
+) -> dict[str, Any]:
+    """Persist a chat result as a live source-canvas widget (survives refresh)."""
+    from nanobase_api.infrastructure.active_source import prefer_datasource_id
+
+    sid = prefer_datasource_id(datasource_id)
+    safe_sql = str(sql or "").strip()
+    if not safe_sql:
+        raise ValueError("sql_required")
+    wtype = str(widget_type or "table").strip().lower() or "table"
+    if wtype not in _ALLOWED_TYPES:
+        wtype = "table"
+    label = str(title or "").replace("\n", " ").strip()[:120] or "Chat sonucu"
+    wid = str(widget_id or "").strip()
+    if not wid:
+        digest = hashlib.sha1(f"{sid}|{safe_sql}|{label}|{wtype}".encode("utf-8")).hexdigest()[:12]
+        wid = f"chat_{digest}"
+
+    spec: dict[str, Any] = {
+        "id": wid,
+        "type": wtype,
+        "title": label,
+        "sql": safe_sql,
+        "source": "chat",
+    }
+    if x_key:
+        spec["x_key"] = str(x_key)
+    if y_key:
+        spec["y_key"] = str(y_key)
+    if value_key:
+        spec["value_key"] = str(value_key)
+    if label_key:
+        spec["label_key"] = str(label_key)
+    if wtype in {"kpi", "card", "metric"} and not spec.get("value_key"):
+        spec["value_key"] = "value"
+        spec["format"] = "number"
+
+    pinned = _load_pinned_widgets()
+    bucket = list(pinned.get(sid) or [])
+    bucket = [s for s in bucket if str(s.get("id")) != wid]
+    bucket.insert(0, spec)
+    # Cap growth so chat pins don't unbounded-grow the canvas.
+    pinned[sid] = bucket[:40]
+    _save_pinned_widgets(pinned)
+    return {"ok": True, "datasource_id": sid, "widget": spec}
 
 
 def _load_type_overrides() -> dict[str, dict[str, str]]:
@@ -322,10 +416,25 @@ def save_widget_type(
         raise ValueError("bi_widget_id_required")
     if wtype not in _ALLOWED_TYPES:
         raise ValueError("bi_widget_type_invalid")
-    # Ensure widget exists in pack for this source
+    # Ensure widget exists in pack or chat-pinned list for this source
     known = {str(s.get("id")) for s in _widget_specs_for(sid)}
+    known |= {str(s.get("id")) for s in _pinned_specs_for(sid)}
     if known and wid not in known:
         raise ValueError("bi_widget_not_found")
+
+    # Chat-pinned widgets store type on the spec itself.
+    pinned = _load_pinned_widgets()
+    pinned_bucket = list(pinned.get(sid) or [])
+    pinned_hit = False
+    for spec in pinned_bucket:
+        if str(spec.get("id")) == wid:
+            spec["type"] = wtype
+            pinned_hit = True
+            break
+    if pinned_hit:
+        pinned[sid] = pinned_bucket
+        _save_pinned_widgets(pinned)
+        return {"ok": True, "datasource_id": sid, "widget_id": wid, "type": wtype}
 
     overrides = _load_type_overrides()
     bucket = dict(overrides.get(sid) or {})
@@ -344,7 +453,17 @@ async def build_source_widgets(
     from nanobase_api.infrastructure.active_source import prefer_datasource_id
 
     sid = prefer_datasource_id(datasource_id)
-    specs = _widget_specs_for(sid)
+    # Chat-pinned widgets first so newly added charts appear at the top of the canvas.
+    specs = list(_pinned_specs_for(sid)) + list(_widget_specs_for(sid))
+    seen_ids: set[str] = set()
+    deduped: list[dict[str, Any]] = []
+    for spec in specs:
+        wid = str(spec.get("id") or "").strip()
+        if not wid or wid in seen_ids:
+            continue
+        seen_ids.add(wid)
+        deduped.append(spec)
+    specs = deduped
     type_overrides = _load_type_overrides().get(sid) or {}
     widgets: list[dict[str, Any]] = []
     errors: list[dict[str, str]] = []
@@ -384,6 +503,7 @@ async def build_source_widgets(
                     "value_key": spec.get("value_key"),
                     "x_key": spec.get("x_key"),
                     "y_key": spec.get("y_key"),
+                    "label_key": spec.get("label_key"),
                     "refreshed_at": None,
                     "data": {
                         "columns": columns,

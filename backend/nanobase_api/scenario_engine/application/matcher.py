@@ -16,8 +16,20 @@ _ENTITY_TOKENS = {
     "faturaları": "invoice",
     "müşteri": "customer",
     "musteri": "customer",
+    "müşteriler": "customer",
+    "musteriler": "customer",
+    "cari": "customer",
     "ürün": "product",
     "urun": "product",
+    "ürünler": "product",
+    "sipariş": "order",
+    "siparis": "order",
+    "ödeme": "payment",
+    "odeme": "payment",
+    "stok": "stock",
+    "şube": "branch",
+    "sube": "branch",
+    "personel": "staff",
 }
 
 _PERIOD_TOKENS = {

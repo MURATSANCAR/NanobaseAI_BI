@@ -111,7 +111,18 @@ export default function BiSharesPage() {
     }
   };
 
-  const canCreate = shareEnabled && activeDashId != null && !createMut.isPending;
+  const createShare = () => {
+    if (!shareEnabled) {
+      setCreateError(t('bi.sharesDisabledTitle'));
+      return;
+    }
+    if (activeDashId == null) {
+      setCreateError(t('bi.shareNoDashboards'));
+      return;
+    }
+    setCreateError(null);
+    createMut.mutate(activeDashId);
+  };
 
   return (
     <PageShell pageId="biShares" titleKey="bi.sharesTitle" subtitleKey="bi.sharesSubtitle">
@@ -188,9 +199,15 @@ export default function BiSharesPage() {
         <button
           type="button"
           className="btn-primary flex min-h-11 w-full items-center justify-center gap-2 sm:w-auto"
-          onClick={() => activeDashId != null && createMut.mutate(activeDashId)}
-          disabled={!canCreate}
-          title={!shareEnabled ? t('bi.sharesDisabledTitle') : undefined}
+          onClick={createShare}
+          disabled={!shareEnabled || createMut.isPending}
+          title={
+            !shareEnabled
+              ? t('bi.sharesDisabledTitle')
+              : activeDashId == null
+                ? t('bi.shareNoDashboards')
+                : undefined
+          }
         >
           <Link2 className="h-4 w-4" /> {t('bi.createShare')}
         </button>
@@ -199,10 +216,23 @@ export default function BiSharesPage() {
       {!shareRows.length && !shares.isLoading ? (
         <EmptyState
           emoji="🔗"
-          titleKey={shareEnabled ? 'empty.bi.shares.title' : 'bi.sharesDisabledTitle'}
+          titleKey={
+            !shareEnabled
+              ? 'bi.sharesDisabledTitle'
+              : !dashboards.length
+                ? 'bi.shareNoDashboards'
+                : 'empty.bi.shares.title'
+          }
           descriptionKey={shareEnabled ? 'empty.bi.shares.description' : 'bi.sharesDisabledBody'}
-          ctaLabelKey={shareEnabled ? 'empty.bi.shares.cta' : undefined}
-          onCtaClick={shareEnabled ? () => activeDashId != null && createMut.mutate(activeDashId) : undefined}
+          ctaLabelKey={
+            !shareEnabled
+              ? undefined
+              : dashboards.length
+                ? 'empty.bi.shares.cta'
+                : 'nav.biDashboard'
+          }
+          ctaTo={!shareEnabled ? undefined : dashboards.length ? undefined : '/bi'}
+          onCtaClick={shareEnabled && dashboards.length ? createShare : undefined}
         />
       ) : (
         <ResponsiveTable<BiShareLink & { token_hash?: string }>

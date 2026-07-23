@@ -94,6 +94,8 @@ class PostgresLogicalPlanCompiler:
     def _where_base(self, plan: LogicalPlan, alias: str) -> tuple[list[str], list[str]]:
         parts: list[str] = []
         binds: list[str] = []
+        status_col = (plan.extra or {}).get("status_column") or "status"
+        unpaid_col = (plan.extra or {}).get("unpaid_predicate_column") or "remaining_amount"
         if plan.period and plan.date_column:
             dc = _col(alias, plan.date_column)
             parts.append(f"{dc} >= :period_start")
@@ -101,18 +103,19 @@ class PostgresLogicalPlanCompiler:
             binds.extend(["period_start", "period_end"])
         if plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters:
             if plan.status_filter != "cancelled":
-                parts.append(f'{alias}."status" <> :cancelled_status')
+                parts.append(f'{alias}."{status_col}" <> :cancelled_status')
                 binds.append("cancelled_status")
         if plan.status_filter == "cancelled":
-            parts.append(f'{alias}."status" = :status_value')
+            parts.append(f'{alias}."{status_col}" = :status_value')
             binds.append("status_value")
         elif plan.status_filter in ("open", "partial", "paid"):
-            parts.append(f'{alias}."status" = :status_value')
+            parts.append(f'{alias}."{status_col}" = :status_value')
             binds.append("status_value")
         if plan.status_filter == "unpaid" or (plan.extra or {}).get("unpaid_predicate"):
-            parts.append(f'{alias}."remaining_amount" > 0')
+            parts.append(f'{alias}."{unpaid_col}" > 0')
+        elif (plan.extra or {}).get("unpaid_predicate_column") and plan.family == "AGING":
+            parts.append(f'{alias}."{unpaid_col}" > 0')
         if plan.family == "AGING" and plan.aging_bucket == "OVERDUE":
-            # due_date before today start
             dc = _col(alias, plan.date_column or "due_date")
             parts.append(f"{dc} < :period_start")
             if "period_start" not in binds:
@@ -120,13 +123,47 @@ class PostgresLogicalPlanCompiler:
         return parts, binds
 
     def _compile_list(self, plan: LogicalPlan, table: str, alias: str) -> tuple[str, list[str]]:
-        cols = plan.projection or ["invoice_id", "invoice_date", "gross_amount", "status", "currency"]
+        cols = plan.projection or []
+        if not cols:
+            # Fallback: first few safe-looking names from date/id patterns
+            cols = ["id"] if "invoice" not in table else [
+                "invoice_id",
+                "invoice_date",
+                "gross_amount",
+                "status",
+                "currency",
+            ]
         # Strip joined-only columns from base select unless join present
-        base_cols = [c for c in cols if c != "customer_name"]
+        join_only = {"customer_name", "musteri_adi"}
+        base_cols = [c for c in cols if c not in join_only]
+        if not base_cols:
+            base_cols = cols[:4] or ["id"]
         select_cols = ", ".join(_col(alias, c) for c in base_cols)
         joins = self._join_sql(plan, alias)
-        if "customer_name" in cols and joins:
-            select_cols += ', c."customer_name"'
+        # Related name columns: resolve alias from join_edges target table
+        name_cols = [c for c in cols if c in join_only or c.endswith("_adi") or c.endswith("_name")]
+        if name_cols and joins:
+            edges = (plan.extra or {}).get("join_edges") or []
+            alias_map = {plan.physical_table or "": alias}
+            used = {alias}
+            for e in edges:
+                to_table = e["to"]
+                to_alias = to_table.split(".")[-1][:1]
+                if to_alias in used:
+                    to_alias = to_table.split(".")[-1][:3]
+                if "customer_addresses" in to_table:
+                    to_alias = "a"
+                elif to_table.endswith((".customers", ".musteriler", ".cariler")):
+                    to_alias = "c"
+                elif "sales_orders" in to_table or to_table.endswith(".siparisler"):
+                    to_alias = "o"
+                used.add(to_alias)
+                alias_map[to_table] = to_alias
+            for nc in name_cols:
+                # Prefer last hop table
+                if edges:
+                    ta = alias_map.get(edges[-1]["to"], "c")
+                    select_cols += f', {ta}."{nc}"'
         where_parts, binds = self._where_base(plan, alias)
         where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
         sort_field = plan.sort.field if plan.sort else base_cols[0]
@@ -163,10 +200,12 @@ class PostgresLogicalPlanCompiler:
         return sql.strip(), binds
 
     def _compile_top_n(self, plan: LogicalPlan, table: str, alias: str) -> tuple[str, list[str]]:
-        cols = plan.projection or ["invoice_id", "invoice_date", "gross_amount", "status", "currency"]
-        select_cols = ", ".join(_col(alias, c) for c in cols if c != "customer_name")
+        cols = plan.projection or []
+        if not cols:
+            metric_name = (plan.metric_column or "gross_amount").split(".")[-1]
+            cols = [metric_name]
+        select_cols = ", ".join(_col(alias, c) for c in cols if c not in ("customer_name", "musteri_adi"))
         where_parts, binds = self._where_base(plan, alias)
-        # TOP_N often has no period; still ok
         where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
         metric = (plan.metric_column or "gross_amount").split(".")[-1]
         binds.append("fetch_limit")
@@ -184,15 +223,21 @@ class PostgresLogicalPlanCompiler:
         joins = self._join_sql(plan, alias)
         where_parts, binds = self._where_base(plan, alias)
         where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
-        dim_col = (plan.extra or {}).get("dimension_column", "analytics.customer_addresses.city")
+        dim_col = (plan.extra or {}).get("dimension_column", "")
+        status_col = (plan.extra or {}).get("status_column") or "status"
         binds.append("fetch_limit")
-        if plan.dimension == "status" or str(dim_col).endswith(".status"):
+        if plan.dimension == "status" or str(dim_col).endswith((".status", ".durum")):
+            dim_name = status_col if not str(dim_col).endswith(".durum") else "durum"
+            if str(dim_col).endswith(".durum"):
+                dim_name = "durum"
+            elif str(dim_col).endswith(".status"):
+                dim_name = "status"
             sql = (
-                f'SELECT {alias}."status" AS "status", '
+                f'SELECT {alias}."{dim_name}" AS "status", '
                 f'COALESCE(SUM({_col(alias, metric)}), 0) AS "total_amount"\n'
                 f"FROM {_qi(table)} {alias}\n"
                 f"{where_sql}\n"
-                f'GROUP BY {alias}."status"\n'
+                f'GROUP BY {alias}."{dim_name}"\n'
                 f'ORDER BY "total_amount" DESC\n'
                 f"LIMIT :fetch_limit"
             )
@@ -231,23 +276,28 @@ class PostgresLogicalPlanCompiler:
 
     def _compile_compare(self, plan: LogicalPlan, table: str, alias: str) -> tuple[str, list[str]]:
         metric = plan.metric_column or "gross_amount"
-        # Two bind pairs: current and previous — resolved at runtime into union
+        dc = _col(alias, plan.date_column or "invoice_date")
+        status_filter = ""
+        binds = ["period_start", "period_end", "compare_start", "compare_end"]
+        if plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters:
+            status_col = (plan.extra or {}).get("status_column") or "status"
+            status_filter = f'\n  AND {alias}."{status_col}" <> :cancelled_status'
+            binds.append("cancelled_status")
         sql = (
             f'SELECT \'current\' AS "period_label", '
             f'COALESCE(SUM({_col(alias, metric)}), 0) AS "total_amount"\n'
             f"FROM {_qi(table)} {alias}\n"
-            f'WHERE {_col(alias, plan.date_column or "invoice_date")} >= :period_start\n'
-            f'  AND {_col(alias, plan.date_column or "invoice_date")} < :period_end\n'
-            f'  AND {alias}."status" <> :cancelled_status\n'
+            f"WHERE {dc} >= :period_start\n"
+            f"  AND {dc} < :period_end"
+            f"{status_filter}\n"
             f"UNION ALL\n"
             f'SELECT \'previous\' AS "period_label", '
             f'COALESCE(SUM({_col(alias, metric)}), 0) AS "total_amount"\n'
             f"FROM {_qi(table)} {alias}\n"
-            f'WHERE {_col(alias, plan.date_column or "invoice_date")} >= :compare_start\n'
-            f'  AND {_col(alias, plan.date_column or "invoice_date")} < :compare_end\n'
-            f'  AND {alias}."status" <> :cancelled_status'
+            f"WHERE {dc} >= :compare_start\n"
+            f"  AND {dc} < :compare_end"
+            f"{status_filter}"
         )
-        binds = ["period_start", "period_end", "compare_start", "compare_end", "cancelled_status"]
         return sql.strip(), binds
 
     def _join_sql(self, plan: LogicalPlan, alias: str) -> str:
@@ -271,9 +321,9 @@ class PostgresLogicalPlanCompiler:
             # Prefer known aliases
             if "customer_addresses" in to_table:
                 to_alias = "a"
-            elif "customers" in to_table:
+            elif to_table.endswith((".customers", ".musteriler", ".cariler")):
                 to_alias = "c"
-            elif "sales_orders" in to_table:
+            elif "sales_orders" in to_table or to_table.endswith((".siparisler", ".satis_siparisleri")):
                 to_alias = "o"
             used.add(to_alias)
             alias_map[to_table] = to_alias

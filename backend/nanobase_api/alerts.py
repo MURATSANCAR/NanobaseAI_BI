@@ -43,6 +43,7 @@ def _row_to_alert(r: Any) -> dict[str, Any]:
         "budget_fingerprint": meta.get("budget_fingerprint"),
         "budget_threshold_pct": meta.get("budget_threshold_pct"),
         "channels": _normalize_channels(meta.get("channels")),
+        "rule": meta.get("rule") if isinstance(meta.get("rule"), dict) else None,
     }
 
 
@@ -66,6 +67,19 @@ def save_alert(engine: Engine, body: dict[str, Any], *, tenant_id: str = "defaul
     aid = str(body.get("id") or f"al-{uuid.uuid4().hex[:10]}")
     channels_in = body.get("channels")
     payload: dict[str, Any] = {}
+    if body.get("id"):
+        with engine.connect() as conn:
+            prev = conn.execute(
+                text("SELECT payload_json FROM bi_alerts WHERE id = :id"),
+                {"id": aid},
+            ).mappings().first()
+            if prev:
+                try:
+                    prev_meta = json.loads(prev["payload_json"] or "{}")
+                except Exception:
+                    prev_meta = {}
+                if isinstance(prev_meta, dict):
+                    payload = dict(prev_meta)
     if isinstance(channels_in, list):
         payload["channels"] = [c for c in channels_in if isinstance(c, dict)]
     elif isinstance(channels_in, dict):
@@ -79,6 +93,11 @@ def save_alert(engine: Engine, body: dict[str, Any], *, tenant_id: str = "defaul
     for key in ("budget_id", "budget_fingerprint", "budget_threshold_pct"):
         if body.get(key) is not None:
             payload[key] = body[key]
+    rule_in = body.get("rule")
+    if isinstance(rule_in, dict):
+        payload["rule"] = rule_in
+    elif "rule" in body and rule_in is None:
+        payload.pop("rule", None)
     vals = {
         "id": aid,
         "tenant": tenant_id,

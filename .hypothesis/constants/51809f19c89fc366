@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/infrastructure/datasource_registry.py
+# hypothesis_version: 6.141.1
+
+[443, 1522, 5432, '********', '127.0.0.1', '5435', 'REPORTING_DB', 'REPORTING_HOST', 'REPORTING_LABEL', 'REPORTING_PORT', 'REPORTING_RO_USER', 'SECRETS_ROOT', 'base_url', 'bi_reporting', 'cds', 'cds_odata', 'cloud', 'database', 'dbname', 'default', 'deployment', 'dialect', 'disable', 'driver', 'hana', 'hdb', 'host', 'id', 'label', 'managed', 'nanobase_test', 'neondb', 'odata', 'onprem', 'oracle', 'password', 'password_file', 'password_masked', 'port', 'postgresql', 'project_id', 'protected', 'sap_hana', 'secret_ref', 'service_name', 'sources', 'ssl', 'sslmode', 'tenant_id', 'token_file', 'url', 'user', 'username', 'utf-8']

@@ -13,6 +13,12 @@ _ENTITY_PLURAL = {
     "payment": "ödemeleri",
     "stock": "stokları",
     "finance": "finans kayıtlarını",
+    "invoice_line": "fatura kalemlerini",
+    "product_category": "ürün kategorilerini",
+    "brand": "markaları",
+    "branch": "şubeleri",
+    "staff": "personeli",
+    "price_list_item": "fiyat listesi kalemlerini",
 }
 
 _ENTITY_SINGULAR = {
@@ -23,14 +29,23 @@ _ENTITY_SINGULAR = {
     "payment": "ödeme",
     "stock": "stok",
     "finance": "finans kaydı",
+    "invoice_line": "fatura kalemi",
+    "product_category": "ürün kategorisi",
+    "brand": "marka",
+    "branch": "şube",
+    "staff": "personel",
+    "price_list_item": "fiyat listesi kalemi",
 }
 
 _ENTITY_SYNONYMS = {
     "invoice": ("fatura", "faturalar", "satış faturası", "satis faturasi"),
-    "customer": ("müşteri", "musteri", "cari"),
-    "product": ("ürün", "urun", "malzeme"),
-    "order": ("sipariş", "siparis"),
+    "customer": ("müşteri", "musteri", "cari", "müşteriler"),
+    "product": ("ürün", "urun", "malzeme", "ürünler"),
+    "order": ("sipariş", "siparis", "satış siparişi"),
     "payment": ("ödeme", "odeme", "tahsilat"),
+    "stock": ("stok", "stok bakiyesi", "envanter"),
+    "branch": ("şube", "sube"),
+    "staff": ("personel", "çalışan"),
 }
 
 _VERBS_LIST = ("getir", "göster", "listele", "çıkar", "ver", "bul")
@@ -54,7 +69,7 @@ _PERIOD_PHRASE = {
 
 _PERIOD_ADJ = {
     PeriodKind.TODAY.value: "bugünkü",
-    PeriodKind.YESTERDAY.value: "dünkü",
+    PeriodKind.YESTERDAY.value: "dünki",
     PeriodKind.CURRENT_WEEK.value: "bu haftaki",
     PeriodKind.PREVIOUS_WEEK.value: "geçen haftaki",
     PeriodKind.CURRENT_MONTH.value: "bu ayki",
@@ -68,12 +83,35 @@ _PERIOD_ADJ = {
 }
 
 
+def _humanize_table(entity: str) -> tuple[str, str]:
+    """Fallback singular/plural from entity/table code."""
+    raw = (entity or "kayit").replace("_", " ").strip()
+    # crude TR plural: append -lar/-ler if not already plural-looking
+    if raw.endswith(("lar", "ler", "ları", "leri")):
+        plural = raw
+        singular = raw
+        for suf in ("ları", "leri", "lar", "ler"):
+            if raw.endswith(suf):
+                singular = raw[: -len(suf)] or raw
+                break
+    else:
+        singular = raw
+        plural = f"{raw} kayıtları"
+    return singular, plural
+
+
 def _plural(entity: str) -> str:
-    return _ENTITY_PLURAL.get(entity, f"{entity} kayıtları")
+    if entity in _ENTITY_PLURAL:
+        return _ENTITY_PLURAL[entity]
+    _, plural = _humanize_table(entity)
+    return plural
 
 
 def _singular(entity: str) -> str:
-    return _ENTITY_SINGULAR.get(entity, entity)
+    if entity in _ENTITY_SINGULAR:
+        return _ENTITY_SINGULAR[entity]
+    singular, _ = _humanize_table(entity)
+    return singular
 
 
 def _base_questions(plan: LogicalPlan) -> list[str]:
@@ -83,7 +121,25 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
     period = plan.period
     questions: list[str] = []
 
-    if plan.family in ("LIST_ENTITY", "STATUS_FILTER") and period and not plan.status_filter:
+    if plan.family == "COUNT_ENTITY" and not period:
+        questions.extend(
+            [
+                f"Kaç {singular} var?",
+                f"{singular.capitalize()} sayısı nedir?",
+                f"Toplam {singular} adedi nedir?",
+                f"{plural.capitalize()} kaç tane?",
+            ]
+        )
+    elif plan.family in ("LIST_ENTITY", "STATUS_FILTER") and not period and not plan.status_filter:
+        questions.extend(
+            [
+                f"{plural.capitalize()} getir.",
+                f"{plural.capitalize()} listele.",
+                f"{plural.capitalize()} göster.",
+                f"Son {plural} getir.",
+            ]
+        )
+    elif plan.family in ("LIST_ENTITY", "STATUS_FILTER") and period and not plan.status_filter:
         prep = _PERIOD_PHRASE.get(period, period.lower())
         adj = _PERIOD_ADJ.get(period, prep)
         questions.extend(
@@ -137,8 +193,15 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
         questions.extend(
             [
                 f"{adj.capitalize()} {plural} toplamı nedir?",
-                f"{adj.capitalize()} fatura tutarı toplamını getir.",
+                f"{adj.capitalize()} {singular} tutarı toplamını getir.",
                 f"{adj.capitalize()} satış tutarı nedir?",
+            ]
+        )
+    elif plan.family == "SUM_MEASURE":
+        questions.extend(
+            [
+                f"{plural.capitalize()} toplamı nedir?",
+                f"{singular.capitalize()} tutarı toplamını getir.",
             ]
         )
     elif plan.family == "TOP_N":
@@ -154,22 +217,22 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
         dim = "şehirlere" if "city" in (plan.dimension or "") else "duruma"
         questions.extend(
             [
-                f"{dim.capitalize()} göre satış tutarı nedir?",
-                f"{dim.capitalize()} göre fatura toplamını göster.",
+                f"{dim.capitalize()} göre {singular} tutarı nedir?",
+                f"{dim.capitalize()} göre {plural} toplamını göster.",
             ]
         )
     elif plan.family == "COMPARE_PERIOD":
         questions.extend(
             [
-                "Bu ay ile geçen ay fatura tutarlarını karşılaştır.",
-                "Bu ay ve geçen ay satışları karşılaştır.",
+                f"Bu ay ile geçen ay {singular} tutarlarını karşılaştır.",
+                f"Bu ay ve geçen ay {plural} karşılaştır.",
             ]
         )
     elif plan.family == "TIME_TREND":
         questions.extend(
             [
-                "Aylara göre fatura toplamlarını göster.",
-                "Aylık fatura toplamlarını getir.",
+                f"Aylara göre {singular} toplamlarını göster.",
+                f"Aylık {singular} toplamlarını getir.",
             ]
         )
     else:
@@ -189,6 +252,14 @@ def _expand_variants(plan: LogicalPlan, base: list[str]) -> list[str]:
     adj = _PERIOD_ADJ.get(period or "", "")
     prep = _PERIOD_PHRASE.get(period or "", "")
 
+    if plan.family == "COUNT_ENTITY" and not period:
+        for v in _VERBS_COUNT:
+            out.append(f"{v.capitalize()} {singular}?")
+            out.append(f"{plural.capitalize()} {v}?")
+        for syn in synonyms or (singular,):
+            out.append(f"Kaç {syn} var?")
+            out.append(f"{syn.capitalize()} sayısı nedir?")
+
     if plan.family in ("LIST_ENTITY", "STATUS_FILTER", "AGING"):
         for verb in _VERBS_LIST:
             out.append(f"{plural.capitalize()} {verb}.")
@@ -207,11 +278,13 @@ def _expand_variants(plan: LogicalPlan, base: list[str]) -> list[str]:
             if adj:
                 out.append(f"{adj.capitalize()} {plural} {v}?")
                 out.append(f"{adj.capitalize()} {singular} {v}?")
+            else:
+                out.append(f"{plural.capitalize()} {v}?")
         for syn in synonyms:
             if adj:
                 out.append(f"{adj.capitalize()} {syn} toplamı nedir?")
 
-    if plan.family == "COUNT_ENTITY":
+    if plan.family == "COUNT_ENTITY" and period:
         for v in _VERBS_COUNT:
             if adj:
                 out.append(f"{adj.capitalize()} {v} {singular}?")

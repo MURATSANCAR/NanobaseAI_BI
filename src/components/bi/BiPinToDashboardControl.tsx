@@ -76,7 +76,7 @@ export default function BiPinToDashboardControl({
 
   const selectedTitle =
     boards.find((b) => Number(b.id) === Number(pinnedDashboardId || selectedId))?.title ||
-    t('bi.pinBoardFallback');
+    t('bi.pinCanvasFallback');
 
   if (pinned) {
     return (
@@ -85,14 +85,9 @@ export default function BiPinToDashboardControl({
           <LayoutDashboard className="h-3 w-3" />
           {t('bi.pinSuccessNamed', { name: selectedTitle })}
         </span>
-        {pinnedDashboardId ? (
-          <Link
-            to={`/bi?dashboard=${pinnedDashboardId}`}
-            className="text-[11px] font-semibold text-violet-700 hover:underline"
-          >
-            {t('bi.pinOpenBoard')}
-          </Link>
-        ) : null}
+        <Link to="/bi" className="text-[11px] font-semibold text-violet-700 hover:underline">
+          {t('bi.pinOpenCanvas')}
+        </Link>
       </div>
     );
   }
@@ -106,12 +101,6 @@ export default function BiPinToDashboardControl({
     );
   }
 
-  if (!boards.length) {
-    return (
-      <p className="text-[11px] text-amber-800">{t('bi.pinNoBoards')}</p>
-    );
-  }
-
   return (
     <div
       className={
@@ -120,23 +109,25 @@ export default function BiPinToDashboardControl({
           : 'flex w-full max-w-md flex-col gap-2 sm:ml-auto sm:items-end'
       }
     >
-      <label className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-          {t('bi.pinSelectBoard')}
-        </span>
-        <select
-          className="input-field min-w-[10rem] flex-1 py-1.5 text-xs"
-          value={selectedId || ''}
-          disabled={pinning}
-          onChange={(e) => setSelectedId(Number(e.target.value))}
-        >
-          {boards.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.title || `#${b.id}`}
-            </option>
-          ))}
-        </select>
-      </label>
+      {boards.length > 0 ? (
+        <label className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+            {t('bi.pinSelectBoard')}
+          </span>
+          <select
+            className="input-field min-w-[10rem] flex-1 py-1.5 text-xs"
+            value={selectedId || ''}
+            disabled={pinning}
+            onChange={(e) => setSelectedId(Number(e.target.value))}
+          >
+            {boards.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.title || `#${b.id}`}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <label className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           {t('bi.pinSelectWidget')}
@@ -157,9 +148,9 @@ export default function BiPinToDashboardControl({
       <button
         type="button"
         className="inline-flex items-center justify-center gap-1.5 rounded-full bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-700 disabled:opacity-60"
-        disabled={pinning || !selectedId}
+        disabled={pinning}
         onClick={() => {
-          if (selectedId > 0) void onPin({ dashboardId: selectedId, vizType: selectedViz });
+          void onPin({ dashboardId: selectedId > 0 ? selectedId : 0, vizType: selectedViz });
         }}
       >
         {pinning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LayoutDashboard className="h-3.5 w-3.5" />}

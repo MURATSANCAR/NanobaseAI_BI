@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 from nanobase_api.config import get_settings
 from nanobase_api.infrastructure.superset_client import SupersetError, get_superset_client
-from nanobase_api.source_widgets import build_source_widgets, save_widget_type
+from nanobase_api.source_widgets import build_source_widgets, pin_chat_widget, save_widget_type
 
 router = APIRouter(tags=["analytics"])
 
@@ -172,12 +172,7 @@ async def analytics_dashboard_charts(dashboard_id: int) -> Any:
 
 @router.post("/api/v1/bi/analytics/dashboards/{dashboard_id}/pin")
 async def analytics_pin(dashboard_id: int, request: Request) -> Any:
-    client = get_superset_client()
-    if not client.configured():
-        return JSONResponse(
-            status_code=503,
-            content={"error": "analytics_disabled", "message": "Analytics engine is not enabled"},
-        )
+    """Pin chat SQL to the native source canvas (always) and optionally Superset."""
     try:
         body = await request.json()
     except Exception:
@@ -190,12 +185,81 @@ async def analytics_pin(dashboard_id: int, request: Request) -> Any:
         )
     title = str((body or {}).get("title") or "NanobaseAI Chart")
     viz_type = str((body or {}).get("viz_type") or "table")
+    sid = _resolve_source_id(request, str((body or {}).get("datasource_id") or "").strip() or None)
+
+    widget_payload = (body or {}).get("widgets")
+    first_widget: dict[str, Any] = {}
+    if isinstance(widget_payload, list) and widget_payload and isinstance(widget_payload[0], dict):
+        first_widget = widget_payload[0]
+
+    canvas_widget = None
     try:
-        return await client.pin_sql_chart(
+        pinned = pin_chat_widget(
+            datasource_id=sid,
+            sql=str(first_widget.get("sql") or sql),
+            title=str(first_widget.get("title") or title),
+            widget_type=str(first_widget.get("type") or viz_type or "table"),
+            x_key=str(first_widget.get("x_key") or "") or None,
+            y_key=str(first_widget.get("y_key") or "") or None,
+            value_key=str(first_widget.get("value_key") or "") or None,
+            label_key=str(first_widget.get("label_key") or "") or None,
+            widget_id=str(first_widget.get("id") or "") or None,
+        )
+        canvas_widget = pinned.get("widget")
+    except ValueError as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": str(e), "message": str(e)},
+        )
+
+    client = get_superset_client()
+    if not client.configured():
+        return {
+            "action": "pin_canvas",
+            "dashboard_id": int(dashboard_id or 0),
+            "datasource_id": sid,
+            "widget": canvas_widget,
+            "count": 1,
+        }
+
+    try:
+        out = await client.pin_sql_chart(
             int(dashboard_id), sql=sql, title=title, viz_type=viz_type
         )
+        if isinstance(out, dict):
+            out = dict(out)
+            out["widget"] = canvas_widget
+            out["datasource_id"] = sid
+            out.setdefault("action", "pin")
+            return out
+        return {
+            "action": "pin",
+            "dashboard_id": int(dashboard_id),
+            "widget": canvas_widget,
+            "datasource_id": sid,
+            "result": out,
+        }
     except SupersetError as e:
-        return _err(e)
+        # Native canvas pin already succeeded — do not fail the operator flow.
+        return {
+            "action": "pin_canvas",
+            "dashboard_id": int(dashboard_id or 0),
+            "datasource_id": sid,
+            "widget": canvas_widget,
+            "count": 1,
+            "superset_error": e.code,
+            "message": e.message,
+        }
+    except Exception as e:
+        return {
+            "action": "pin_canvas",
+            "dashboard_id": int(dashboard_id or 0),
+            "datasource_id": sid,
+            "widget": canvas_widget,
+            "count": 1,
+            "superset_error": "superset_unreachable",
+            "message": str(e)[:240],
+        }
 
 
 @router.delete("/api/v1/bi/analytics/dashboards/{dashboard_id}/charts/{chart_id}")

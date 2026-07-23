@@ -168,12 +168,14 @@ export default function BiSupersetPage() {
         qc.invalidateQueries({ queryKey: ['bi-analytics-charts'] });
         qc.invalidateQueries({ queryKey: ['bi-analytics-datasets'] });
         qc.invalidateQueries({ queryKey: ['bi-analytics-dashboard-charts'] });
+        qc.invalidateQueries({ queryKey: ['bi-analytics-source-widgets'] });
         // Force embed remount so newly pinned charts appear without manual refresh.
         if (resp.intent === 'pin' || resp.intent === 'pin_dashboard' || resp.analytics?.guest) {
+          if (embed?.dashboardId) void refreshEmbed();
         }
       }
     },
-    [dashboardsQ.data?.dashboards, openDashboard, qc, setEmbedFromGuest],
+    [dashboardsQ.data?.dashboards, embed?.dashboardId, openDashboard, qc, refreshEmbed, setEmbedFromGuest],
   );
 
   useEffect(() => registerOnResponse(onChatResponse), [registerOnResponse, onChatResponse]);
@@ -376,9 +378,9 @@ export default function BiSupersetPage() {
         >
           <Menu className="h-4 w-4" />
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           <Sparkles className="hidden h-4 w-4 shrink-0 text-violet-600 sm:block" />
-          <div className="min-w-0">
+          <div className="min-w-0 max-w-[10rem] sm:max-w-[14rem] lg:max-w-none">
             <p className="truncate text-sm font-semibold text-slate-900">{t('bi.analytics.title')}</p>
             <p className="truncate text-[11px] text-slate-500">
               {embed?.title || t('bi.analytics.subtitle')}
@@ -387,16 +389,19 @@ export default function BiSupersetPage() {
           <BiSourceSwitcher config={config} compact className="hidden min-w-0 md:flex" />
         </div>
 
-        <div className="relative min-w-0">
+        <div className="relative min-w-[12rem] max-w-[min(100%,22rem)] shrink-0 sm:min-w-[16rem] sm:max-w-md md:max-w-lg">
           <button
             type="button"
-            className="inline-flex max-w-[9.5rem] items-center gap-1.5 rounded-xl border border-[#E1DFDD] bg-white/90 px-2 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-[#118DFF]/40 hover:bg-[#118DFF]/5 sm:max-w-xs sm:px-3 sm:py-1.5 sm:text-sm"
+            className="inline-flex w-full max-w-full items-center gap-1.5 rounded-xl border border-[#E1DFDD] bg-white/90 px-2.5 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:border-[#118DFF]/40 hover:bg-[#118DFF]/5 sm:px-3 sm:py-1.5 sm:text-sm"
             onClick={() => setPickerOpen((v) => !v)}
             aria-expanded={pickerOpen}
+            title={embed?.title || t('bi.analytics.selectDashboard')}
           >
             <LayoutDashboard className="h-3.5 w-3.5 shrink-0 text-violet-600" />
-            <span className="truncate">{embed?.title || t('bi.analytics.selectDashboard')}</span>
-            {pickerDashboards.length > 1 && (
+            <span className="min-w-0 flex-1 truncate text-left">
+              {embed?.title || t('bi.analytics.selectDashboard')}
+            </span>
+            {pickerDashboards.length > 0 && (
               <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">
                 {pickerDashboards.length}
               </span>
@@ -407,32 +412,33 @@ export default function BiSupersetPage() {
           {pickerOpen && (
             <>
               <button type="button" className="fixed inset-0 z-30" aria-label={t('bi.analytics.closeChat')} onClick={() => setPickerOpen(false)} />
-              <div className="absolute right-0 z-40 mt-2 w-[min(calc(100vw-2rem),16rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xl sm:w-64">
-                <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                  <span className="text-xs font-semibold text-slate-700">
+              <div className="absolute right-0 z-40 mt-2 w-[min(calc(100vw-1.5rem),24rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-xl sm:w-[min(100vw-2rem,28rem)]">
+                <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
+                  <span className="min-w-0 truncate text-xs font-semibold text-slate-700">
                     {activeSourceLabel || t('bi.analytics.dashboards')}
                   </span>
                   <button
                     type="button"
-                    className="rounded p-1 text-slate-500 hover:bg-slate-100"
+                    className="shrink-0 rounded p-1 text-slate-500 hover:bg-slate-100"
                     onClick={() => qc.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] })}
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <ul className="max-h-56 overflow-y-auto py-1 text-sm">
+                <ul className="max-h-72 overflow-y-auto py-1 text-sm">
                   {pickerDashboards.map((d) => (
                     <li key={d.id}>
                       <button
                         type="button"
                         className={clsx(
-                          'w-full px-3 py-2 text-left transition hover:bg-violet-50',
+                          'w-full px-3 py-2.5 text-left transition hover:bg-violet-50',
                           embed?.dashboardId === Number(d.id) && 'bg-violet-50/80 font-medium text-violet-900',
                         )}
                         onClick={() => openDashboard(Number(d.id), d.title)}
+                        title={d.title}
                       >
-                        <span className="line-clamp-1">{d.title}</span>
-                        <span className="mt-0.5 flex items-center gap-2 text-[10px] text-slate-400">
+                        <span className="block truncate">{d.title || `Dashboard ${d.id}`}</span>
+                        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-slate-400">
                           <span>#{d.id}</span>
                           <span>
                             {Number(d.chart_count || 0) > 0

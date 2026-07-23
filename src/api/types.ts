@@ -15,6 +15,7 @@ export type {
   BiGlossaryEntry,
   BiShareLink,
   BiAlertRule,
+  BiAlertStructuredRule,
   BiBudgetEnvelope,
   BiBudgetImportResult,
   BiBudgetSummary,

@@ -258,6 +258,7 @@ def get_scenario_store() -> ScenarioStore:
 def reset_scenario_store() -> ScenarioStore:
     global _STORE
     _STORE = ScenarioStore()
+    _try_attach_meta_sql(_STORE)
     return _STORE
 
 

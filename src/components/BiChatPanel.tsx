@@ -42,6 +42,7 @@ import {
   runBiChatJob,
 } from '@/lib/biChatRunner';
 import { progressTipsForQuestion, streamingStepProgress } from '@/lib/biChatProgressTips';
+import { ensureChatWidgets } from '@/lib/biChatWidgets';
 import {
   ensureNotifyPermission,
   getNotifyPermission,
@@ -141,38 +142,39 @@ function applyAssistantResult(
   result: BiChatResponse,
   jobId?: string,
 ): ChatMessage[] {
-  const content = localizeUserMessage(result.reply || '');
+  const normalized = ensureChatWidgets(result);
+  const content = localizeUserMessage(normalized.reply || '');
   const next = [...prev];
   const idx = jobId
     ? next.findIndex((m) => m.jobId === jobId && m.role === 'assistant')
     : next.findIndex((m) => m.streaming);
   if (idx >= 0) {
     const prevMsg = next[idx]!;
-    const prov = result.provenance;
-    const plan = result.workflows?.plan;
+    const prov = normalized.provenance;
+    const plan = normalized.workflows?.plan;
     next[idx] = {
       role: 'assistant',
       content,
-      meta: result,
+      meta: normalized,
       jobId,
-      draftSql: result.sql || prevMsg.draftSql,
+      draftSql: normalized.sql || prevMsg.draftSql,
       draftTables: prov?.selected_tables || plan?.tables || prevMsg.draftTables,
       draftColumns: prov?.columns || plan?.columns || prevMsg.draftColumns,
       draftAssumptions: prov?.assumptions || plan?.assumptions || prevMsg.draftAssumptions,
-      draftWarnings: prov?.warnings || result.warnings || plan?.warnings || prevMsg.draftWarnings,
+      draftWarnings: prov?.warnings || normalized.warnings || plan?.warnings || prevMsg.draftWarnings,
       draftDialect: prov?.dialect || plan?.dialect || prevMsg.draftDialect,
       draftConfidence:
         prov?.confidence ?? plan?.confidence ?? prevMsg.draftConfidence,
       chatState: 'COMPLETED',
       executionMode:
-        result.execution_mode || prov?.execution_mode || prevMsg.executionMode,
+        normalized.execution_mode || prov?.execution_mode || prevMsg.executionMode,
       scenarioSource: prevMsg.scenarioSource,
       scenarioCode: prevMsg.scenarioCode,
       followUps: prevMsg.followUps,
     };
     return next;
   }
-  return [...next, { role: 'assistant', content, meta: result, chatState: 'COMPLETED' }];
+  return [...next, { role: 'assistant', content, meta: normalized, chatState: 'COMPLETED' }];
 }
 
 function statusLabelForMessage(m: ChatMessage): string {
@@ -574,22 +576,23 @@ export default function BiChatPanel({
           (msg.meta?.widgets?.[0]?.title as string | undefined) ||
           (msg.content || '').replace(/\s+/g, ' ').trim().slice(0, 80) ||
           t('bi.pinToDashboard');
+        // Native canvas pin works without Superset boards.
         if (!Number.isFinite(dashId) || dashId <= 0) {
-          // Never create a second board with the same title — reuse if present.
-          const boards = await api.bi.analytics.dashboards(config);
-          const needle = title.trim().toLowerCase();
-          const match = (boards.dashboards || []).find(
-            (d) => String(d.title || '').trim().toLowerCase() === needle,
-          );
-          if (match?.id) {
-            dashId = Number(match.id);
-          } else {
-            const created = await api.bi.analytics.createDashboard(config, { title });
-            dashId = Number(created.id || 0);
+          try {
+            const boards = await api.bi.analytics.dashboards(config);
+            const needle = title.trim().toLowerCase();
+            const match = (boards.dashboards || []).find(
+              (d) => String(d.title || '').trim().toLowerCase() === needle,
+            );
+            if (match?.id) {
+              dashId = Number(match.id);
+            } else if ((boards.dashboards || []).length > 0) {
+              const created = await api.bi.analytics.createDashboard(config, { title });
+              dashId = Number(created.id || 0);
+            }
+          } catch {
+            dashId = 0;
           }
-        }
-        if (!Number.isFinite(dashId) || dashId <= 0) {
-          throw new Error('analytics_not_configured');
         }
         const vizType = (selection.vizType || '').trim() || undefined;
         const widgets = (msg.meta?.widgets || [])
@@ -602,18 +605,23 @@ export default function BiChatPanel({
             y_key: w.y_key,
             value_key: w.value_key,
             label_key: w.label_key,
+            id: w.id,
           }));
-        const out = await api.bi.analytics.pin(config, dashId, {
+        const pinDashId = Number.isFinite(dashId) && dashId > 0 ? dashId : 0;
+        const out = await api.bi.analytics.pin(config, pinDashId, {
           sql,
           title,
           viz_type: vizType || widgets[0]?.type || 'table',
           widgets: widgets.length ? widgets : undefined,
         });
-        const resolvedDash = Number(out.dashboard_id || dashId);
+        const resolvedDash = Number(out.dashboard_id || pinDashId);
         setPinnedKeys((prev) => ({ ...prev, [key]: true }));
         if (Number.isFinite(resolvedDash) && resolvedDash > 0) {
           setPinnedBoardByKey((prev) => ({ ...prev, [key]: resolvedDash }));
         }
+        void queryClient.invalidateQueries({ queryKey: ['bi-analytics-source-widgets'] });
+        void queryClient.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] });
+        void queryClient.invalidateQueries({ queryKey: ['bi-analytics-charts'] });
         const nextMeta: BiChatResponse = {
           session_id: msg.meta?.session_id || sessionId,
           reply: msg.meta?.reply || msg.content,
@@ -623,7 +631,7 @@ export default function BiChatPanel({
           ...(msg.meta || {}),
           analytics: {
             ...(msg.meta?.analytics || {}),
-            dashboard_id: resolvedDash,
+            dashboard_id: resolvedDash > 0 ? resolvedDash : undefined,
             embed_uuid: out.embed_uuid,
             ...(out.guest?.token &&
             out.guest.dashboard_id &&
@@ -653,7 +661,7 @@ export default function BiChatPanel({
         setPinningKey(null);
       }
     },
-    [config, dashboardId, onResponse, sessionId],
+    [config, dashboardId, onResponse, queryClient, sessionId],
   );
 
   const confirmAction = useCallback(

@@ -395,8 +395,10 @@ export function createBiApi() {
     },
     alerts: {
       list: (c: ApiConfig) => request<{ alerts: BiAlertRule[] }>(c, '/api/v1/bi/alerts'),
-      save: (c: ApiConfig, body: Partial<BiAlertRule> & { title: string; sql: string; column: string; threshold: number }) =>
-        request<BiAlertRule>(c, '/api/v1/bi/alerts', { method: 'POST', body: JSON.stringify(body) }),
+      save: (
+        c: ApiConfig,
+        body: Partial<BiAlertRule> & { title: string; sql: string; column: string; threshold: number; rule?: BiAlertRule['rule'] },
+      ) => request<BiAlertRule>(c, '/api/v1/bi/alerts', { method: 'POST', body: JSON.stringify(body) }),
       delete: (c: ApiConfig, id: string) =>
         request<void>(c, `/api/v1/bi/alerts/${id}`, { method: 'DELETE' }),
       runDue: (c: ApiConfig) =>

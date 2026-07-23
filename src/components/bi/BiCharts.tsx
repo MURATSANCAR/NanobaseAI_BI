@@ -121,13 +121,16 @@ function BiChartFrame({
 }) {
   if (empty) {
     return (
-      <div className="bi-chart-empty" style={{ height, minHeight: height }}>
+      <div className="bi-chart-empty bi-chart-frame--well" style={{ height, minHeight: height }}>
         <p>{t('bi.chartNotEnoughData')}</p>
       </div>
     );
   }
   return (
-    <div className="bi-chart-frame" style={{ height, minHeight: height, width: '100%' }}>
+    <div
+      className="bi-chart-frame bi-chart-frame--well"
+      style={{ height, minHeight: height, width: '100%' }}
+    >
       {children}
     </div>
   );

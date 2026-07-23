@@ -1,0 +1,4 @@
+# file: /Users/murat/Documents/NonobaseAI-BI/backend/nanobase_api/scenario_engine/infrastructure/reporting_exec.py
+# hypothesis_version: 6.141.1
+
+[5432, '-', '/', '127.0.0.1', 'BI_REPORTING_DSN', 'REPORTING_DSN', 'SECRETS_ROOT', '_', 'bi_reporting', 'database', 'dbname', 'file:', 'host', 'password', 'password_file', 'port', 'postgres', 'postgresql://', 'prefer', 'reporting', 'require', 'secret_ref', 'ssl', 'sslmode', 'user', 'username', 'utf-8']

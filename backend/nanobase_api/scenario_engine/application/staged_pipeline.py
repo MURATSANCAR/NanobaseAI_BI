@@ -20,7 +20,9 @@ from nanobase_api.scenario_engine.application.param_resolver import resolve_para
 from nanobase_api.scenario_engine.application.publisher import AtomicPublisher
 from nanobase_api.scenario_engine.infrastructure.baselines import apply_baseline_sql, assert_scenario_baseline
 from nanobase_api.scenario_engine.infrastructure.combination import (
+    combination_mode,
     new_scenario_id,
+    plan_all_table_combinations,
     plan_invoice_combinations,
 )
 from nanobase_api.scenario_engine.infrastructure.compiler import get_compiler
@@ -37,7 +39,11 @@ from nanobase_api.scenario_engine.infrastructure.question_grammar import (
     generate_questions,
 )
 from nanobase_api.scenario_engine.infrastructure.relationship_graph import build_relationship_graph
-from nanobase_api.scenario_engine.infrastructure.reporting_exec import make_reporting_execute_fn, reporting_dsn
+from nanobase_api.scenario_engine.infrastructure.reporting_exec import (
+    datasource_ro_dsn,
+    make_reporting_execute_fn,
+    reporting_dsn,
+)
 from nanobase_api.scenario_engine.infrastructure.schema_snapshot import (
     SchemaSnapshot,
     invoice_analytics_snapshot,
@@ -133,13 +139,15 @@ def stage_discovery(
     try:
         snap = snapshot
         if snap is None:
-            snap = invoice_analytics_snapshot()
-            dsn = reporting_dsn()
+            dsn = datasource_ro_dsn(datasource_id) or reporting_dsn()
             if dsn:
                 try:
                     snap = snapshot_from_pg(dsn, datasource_id=datasource_id)
                 except Exception:
-                    pass
+                    snap = None
+            if snap is None:
+                # Last resort: invoice analytics fixture (dev / unit)
+                snap = invoice_analytics_snapshot()
         snap.datasource_id = datasource_id
         classification = classify_schema(snap)
         graph = build_relationship_graph(snap)
@@ -147,6 +155,7 @@ def stage_discovery(
         b["workspace"]["classification"] = classification
         b["workspace"]["graph"] = graph
         b["workspace"]["snapshot"] = snap
+        b["workspace"]["snapshotTableCount"] = len(snap.tables)
         b["schemaVersion"] = classification.schema_version
         return _set_phase(store, build_id, "DISCOVERY")
     except Exception as e:
@@ -186,7 +195,12 @@ def stage_combination(
                 b["skipRemaining"] = True
                 return b
 
-        planned = plan_invoice_combinations(classification, graph)
+        planned = []
+        mode = combination_mode()
+        if mode in ("invoice", "both"):
+            planned.extend(plan_invoice_combinations(classification, graph))
+        if mode in ("all_tables", "both", ""):
+            planned.extend(plan_all_table_combinations(classification, graph))
         # Domain rollout extras (customer…finance) when unlocked
         try:
             from nanobase_api.scenario_engine.application.seeds.domain_rollout import (
@@ -197,6 +211,17 @@ def stage_combination(
         except Exception:
             pass
 
+        # Dedupe by scenario_code (invoice + all_tables may overlap)
+        dedup: list = []
+        seen_codes: set[str] = set()
+        for p in planned:
+            if p.scenario_code in seen_codes:
+                continue
+            seen_codes.add(p.scenario_code)
+            dedup.append(p)
+        planned = dedup
+        b["workspace"]["combinationMode"] = mode
+        b["workspace"]["plannedCount"] = len(planned)
         prop = validate_period_properties(now=datetime.now(ZoneInfo("Europe/Istanbul")))
         if not prop.passed:
             raise RuntimeError(f"Period property tests failed: {prop.detail}")
@@ -325,7 +350,16 @@ def stage_execution_validation(
     if b.get("status") == "FAILED" or b.get("skipRemaining"):
         return b
     try:
-        live_fn = execute_fn if execute_fn is not None else make_reporting_execute_fn()
+        ds_id = str(b.get("datasourceId") or "")
+        offline = os.environ.get("SCENARIO_OFFLINE_VALIDATION", "").lower() in ("1", "true", "yes")
+        if offline:
+            live_fn = execute_fn  # None → structural offline pass in validators
+        else:
+            live_fn = (
+                execute_fn
+                if execute_fn is not None
+                else make_reporting_execute_fn(datasource_id=ds_id or None)
+            )
         require_live = os.environ.get("SCENARIO_REQUIRE_LIVE_VALIDATION", "").lower() in (
             "1",
             "true",
@@ -334,12 +368,19 @@ def stage_execution_validation(
         if require_live and live_fn is None:
             raise RuntimeError("SCENARIO_REQUIRE_LIVE_VALIDATION set but no reporting DSN")
 
-        if live_fn is not None:
+        mode = str((b.get("workspace") or {}).get("combinationMode") or combination_mode())
+        if live_fn is not None and mode in ("invoice", "both") and ds_id in (
+            "",
+            "bi_reporting",
+            "reporting",
+        ):
             apply_baseline_sql()
             meta = run_metamorphic_invoice_checks(live_fn)
             b["metamorphic"] = meta.detail
             if not meta.passed:
                 raise RuntimeError(f"Metamorphic checks failed: {meta.detail}")
+        else:
+            b["metamorphic"] = {"skipped": True, "reason": "non_invoice_build_or_offline"}
 
         passed_ids: list[str] = []
         for sid in b["workspace"].get("staticPassedIds") or []:
@@ -406,7 +447,16 @@ def stage_performance_validation(
     if b.get("status") == "FAILED" or b.get("skipRemaining"):
         return b
     try:
-        live_fn = execute_fn if execute_fn is not None else make_reporting_execute_fn()
+        ds_id = str(b.get("datasourceId") or "")
+        offline = os.environ.get("SCENARIO_OFFLINE_VALIDATION", "").lower() in ("1", "true", "yes")
+        if offline:
+            live_fn = execute_fn
+        else:
+            live_fn = (
+                execute_fn
+                if execute_fn is not None
+                else make_reporting_execute_fn(datasource_id=ds_id or None)
+            )
         passed_ids: list[str] = []
         for sid in b["workspace"].get("executionPassedIds") or []:
             inst = store.get_instance(sid)

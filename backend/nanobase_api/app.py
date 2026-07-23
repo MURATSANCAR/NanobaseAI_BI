@@ -176,6 +176,7 @@ _REMOVE_PATHS = {
     "/api/v1/bi/budgets",
     "/api/v1/bi/budgets/summary",
     "/api/v1/bi/alerts",
+    "/api/v1/bi/shares",
     "/api/v1/bi/audit",
     "/api/v1/bi/sources",
     "/api/v1/bi/sources/{source_id}",
@@ -222,6 +223,7 @@ from nanobase_api import budget_import as budget_import_mod  # noqa: E402
 from nanobase_api import budget_export as budget_export_mod  # noqa: E402
 from nanobase_api import budget_match as budget_match_mod  # noqa: E402
 from nanobase_api import budget_shares as budget_shares_mod  # noqa: E402
+from nanobase_api import shares as shares_mod  # noqa: E402
 from nanobase_api.infrastructure.budget_schema import ensure_budget_tables  # noqa: E402
 from nanobase_api import alerts as alerts_mod  # noqa: E402
 from nanobase_api import workflows as workflows_mod  # noqa: E402
@@ -1720,26 +1722,14 @@ async def budgets_sync_from_source(
         return JSONResponse({"ok": False, "error": str(e)[:400]}, status_code=500)
 
 
-def _resolve_budget_pack_share(token: str, *, password: str | None = None, unlock: bool = False) -> dict:
-    entry = budget_shares_mod.get_share(token)
-    if not entry:
-        raise KeyError("share_not_found")
-    if entry.get("password_hash"):
-        if not unlock:
-            return {
-                "locked": True,
-                "requires_password": True,
-                "password_protected": True,
-                "type": entry.get("resource_type"),
-                "resource_type": entry.get("resource_type"),
-                "resource_id": entry.get("resource_id"),
-            }
-        import hashlib
+def _share_meta(entry: dict) -> dict:
+    return {
+        "expires_at": entry.get("expires_at"),
+        "view_count": int(entry.get("view_count") or 0),
+    }
 
-        expected = str(entry.get("password_hash") or "")
-        got = hashlib.sha256((password or "").encode("utf-8")).hexdigest()
-        if not password or got != expected:
-            raise PermissionError("share_password_invalid")
+
+def _resolve_budget_pack_from_entry(entry: dict) -> dict:
     parsed = budget_ops_mod.decode_budget_pack_resource_id(str(entry.get("resource_id") or ""))
     pack = budget_ops_mod.build_budget_pack_share_payload(
         _meta_engine(),
@@ -1750,35 +1740,231 @@ def _resolve_budget_pack_share(token: str, *, password: str | None = None, unloc
         locale=parsed.get("locale") or "en",
     )
     pack["locked"] = False
-    pack["share"] = {
-        "expires_at": entry.get("expires_at"),
-        "view_count": 0,
-    }
+    pack["type"] = "budget_pack"
+    pack["resource_type"] = "budget_pack"
+    pack["share"] = _share_meta(entry)
     return pack
 
 
-@app.get("/api/v1/bi/public/{token}")
-async def bi_public_share(token: str) -> JSONResponse:
+async def _resolve_superset_share(entry: dict) -> dict:
+    from nanobase_api.infrastructure.superset_client import SupersetError, get_superset_client
+
+    client = get_superset_client()
+    if not client.configured():
+        raise RuntimeError("analytics_disabled")
     try:
-        return JSONResponse(_resolve_budget_pack_share(token, unlock=False))
-    except KeyError:
+        dash_id = int(str(entry.get("resource_id") or "0"))
+    except Exception as e:
+        raise ValueError("share_resource_invalid") from e
+    if dash_id <= 0:
+        raise ValueError("share_resource_invalid")
+    guest = await client.mint_guest_token(dash_id)
+    title = f"Dashboard {dash_id}"
+    try:
+        for d in await client.list_dashboards():
+            if int(d.get("id") or 0) == dash_id:
+                title = str(d.get("title") or title)
+                break
+    except SupersetError:
+        pass
+    return {
+        "ok": True,
+        "locked": False,
+        "type": "superset_dashboard",
+        "resource_type": "superset_dashboard",
+        "resource_id": str(dash_id),
+        "resource": {
+            "id": dash_id,
+            "title": title,
+            "embed_uuid": guest.get("embed_uuid"),
+            "analytics_url": guest.get("analytics_url") or client.public_url,
+            "token": guest.get("token"),
+        },
+        "share": _share_meta(entry),
+    }
+
+
+def _resolve_chat_answer_share(entry: dict) -> dict:
+    payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
+    return {
+        "ok": True,
+        "locked": False,
+        "type": str(entry.get("resource_type") or "chat_answer"),
+        "resource_type": str(entry.get("resource_type") or "chat_answer"),
+        "resource_id": str(entry.get("resource_id") or ""),
+        "title": str(payload.get("title") or ""),
+        "answer_md": str(payload.get("answer_md") or ""),
+        "sql_fingerprint": payload.get("sql_fingerprint"),
+        "artifact": payload or None,
+        "share": _share_meta(entry),
+    }
+
+
+async def _resolve_public_share(
+    token: str,
+    *,
+    password: str | None = None,
+    unlock: bool = False,
+    bump: bool = True,
+    request: Request | None = None,
+) -> dict:
+    entry = shares_mod.get_share(token)
+    if not entry:
+        raise KeyError("share_not_found")
+    if entry.get("password_hash") and not unlock:
+        return {
+            "locked": True,
+            "requires_password": True,
+            "password_protected": True,
+            "type": entry.get("resource_type"),
+            "resource_type": entry.get("resource_type"),
+            "resource_id": entry.get("resource_id"),
+            "share": _share_meta(entry),
+        }
+    if unlock and not shares_mod.verify_password(entry, password):
+        raise PermissionError("share_password_invalid")
+
+    ip = None
+    ua = None
+    if request is not None:
+        ip = request.client.host if request.client else None
+        ua = request.headers.get("user-agent")
+    try:
+        updated = shares_mod.record_view(token, ip=ip, user_agent=ua, bump=bump)
+        if updated:
+            entry = updated
+    except PermissionError:
+        raise
+
+    rtype = str(entry.get("resource_type") or "")
+    if rtype == "budget_pack":
+        return _resolve_budget_pack_from_entry(entry)
+    if rtype == "superset_dashboard":
+        return await _resolve_superset_share(entry)
+    if rtype in ("chat_answer", "query_result"):
+        return _resolve_chat_answer_share(entry)
+    # Generic: expose stored payload if present
+    payload = entry.get("payload") if isinstance(entry.get("payload"), dict) else {}
+    return {
+        "ok": True,
+        "locked": False,
+        "type": rtype,
+        "resource_type": rtype,
+        "resource_id": str(entry.get("resource_id") or ""),
+        "resource": payload.get("resource") if isinstance(payload.get("resource"), dict) else payload,
+        "share": _share_meta(entry),
+    }
+
+
+@app.get("/api/v1/bi/shares")
+async def bi_shares_list(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if not get_settings().public_share_enabled:
         return JSONResponse(
-            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
-            status_code=404,
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled", "shares": []},
+            status_code=403,
         )
+    return JSONResponse({"shares": shares_mod.list_shares(tenant_id=principal.tenant_id)})
 
 
-@app.post("/api/v1/bi/public/{token}/unlock")
-async def bi_public_share_unlock(token: str, request: Request) -> JSONResponse:
-    body = {}
+@app.post("/api/v1/bi/shares", status_code=201)
+async def bi_shares_create(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if not get_settings().public_share_enabled:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled"},
+            status_code=403,
+        )
+    body: dict = {}
     try:
         body = await request.json()
     except Exception:
         body = {}
+    resource_type = str(body.get("resource_type") or "").strip()
+    resource_id = str(body.get("resource_id") or "").strip()
+    if not resource_type or not resource_id:
+        return JSONResponse(
+            {"ok": False, "code": "share_resource_invalid", "error": "share_resource_invalid"},
+            status_code=400,
+        )
+    ttl_raw = body.get("ttl_hours")
+    try:
+        ttl_hours = float(ttl_raw) if ttl_raw is not None else 168.0
+    except Exception:
+        ttl_hours = 168.0
+    password = body.get("password")
+    password_s = str(password).strip() if password else None
+    payload = body.get("payload") if isinstance(body.get("payload"), dict) else None
+    # chat_answer convenience: accept answer fields at top level
+    if resource_type in ("chat_answer", "query_result") and payload is None:
+        payload = {
+            "kind": resource_type,
+            "answer_md": body.get("answer_md"),
+            "sql_fingerprint": body.get("sql_fingerprint"),
+            "title": body.get("title"),
+            "chart_spec": body.get("chart_spec"),
+            "provenance": body.get("provenance"),
+            "masked_columns": body.get("masked_columns"),
+        }
+    share = shares_mod.create_share(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        ttl_hours=ttl_hours,
+        password=password_s or None,
+        tenant_id=principal.tenant_id,
+        max_views=body.get("max_views"),
+        payload=payload,
+    )
+    return JSONResponse(share, status_code=201)
+
+
+@app.delete("/api/v1/bi/shares/{token}")
+async def bi_shares_delete(
+    token: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    if not get_settings().public_share_enabled:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled"},
+            status_code=403,
+        )
+    ok = shares_mod.delete_share(token, tenant_id=principal.tenant_id)
+    if not ok:
+        return JSONResponse(
+            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
+            status_code=404,
+        )
+    return JSONResponse({"ok": True})
+
+
+@app.get("/api/v1/bi/shares/{token}/views")
+async def bi_shares_views(
+    token: str,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> JSONResponse:
+    data = shares_mod.list_views(token, tenant_id=principal.tenant_id)
+    if not data:
+        return JSONResponse(
+            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
+            status_code=404,
+        )
+    return JSONResponse(data)
+
+
+@app.get("/api/v1/bi/public/{token}")
+async def bi_public_share(token: str, request: Request, live: int = 0) -> JSONResponse:
+    if not get_settings().public_share_enabled:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled"},
+            status_code=403,
+        )
     try:
         return JSONResponse(
-            _resolve_budget_pack_share(
-                token, password=str(body.get("password") or ""), unlock=True
+            await _resolve_public_share(
+                token, unlock=False, bump=not bool(live), request=request
             )
         )
     except KeyError:
@@ -1786,10 +1972,69 @@ async def bi_public_share_unlock(token: str, request: Request) -> JSONResponse:
             {"ok": False, "code": "share_not_found", "error": "share_not_found"},
             status_code=404,
         )
-    except PermissionError:
+    except PermissionError as e:
+        code = str(e) or "share_view_limit"
         return JSONResponse(
-            {"ok": False, "code": "share_password_invalid", "error": "share_password_invalid"},
+            {"ok": False, "code": code, "error": code},
             status_code=403,
+        )
+    except ValueError as e:
+        code = str(e) or "share_resource_invalid"
+        return JSONResponse(
+            {"ok": False, "code": code, "error": code},
+            status_code=400,
+        )
+    except RuntimeError as e:
+        code = str(e) or "analytics_disabled"
+        return JSONResponse(
+            {"ok": False, "code": code, "error": code},
+            status_code=503,
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_failed", "error": str(e)[:300]},
+            status_code=500,
+        )
+
+
+@app.post("/api/v1/bi/public/{token}/unlock")
+async def bi_public_share_unlock(token: str, request: Request) -> JSONResponse:
+    if not get_settings().public_share_enabled:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_disabled", "error": "public_share_disabled"},
+            status_code=403,
+        )
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    try:
+        return JSONResponse(
+            await _resolve_public_share(
+                token,
+                password=str(body.get("password") or ""),
+                unlock=True,
+                bump=True,
+                request=request,
+            )
+        )
+    except KeyError:
+        return JSONResponse(
+            {"ok": False, "code": "share_not_found", "error": "share_not_found"},
+            status_code=404,
+        )
+    except PermissionError as e:
+        code = str(e) or "share_password_invalid"
+        status = 403
+        return JSONResponse(
+            {"ok": False, "code": code, "error": code},
+            status_code=status,
+        )
+    except Exception as e:
+        return JSONResponse(
+            {"ok": False, "code": "public_share_failed", "error": str(e)[:300]},
+            status_code=500,
         )
 
 
@@ -1995,7 +2240,4 @@ async def internal_result_explain(
 # Soft catch-all AFTER real routes — shape-compatible empties (no bare limited stubs)
 @app.api_route("/api/v1/bi/{full_path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
 async def bi_limited(full_path: str) -> JSONResponse:
-    path = (full_path or "").strip().strip("/")
-    if path.startswith("shares"):
-        return JSONResponse({"shares": []})
     return JSONResponse({"ok": True, "engine": "nanobase_api", "limited": True, "path": full_path})

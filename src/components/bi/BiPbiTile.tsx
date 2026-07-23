@@ -34,25 +34,29 @@ export default function BiPbiTile({
   return (
     <div
       className={clsx(
-        'bi-pbi-tile overflow-hidden p-0',
+        'bi-pbi-tile p-0',
+        threeD ? 'bi-pbi-tile--3d' : 'overflow-hidden',
         kpi && 'bi-pbi-tile--kpi',
-        threeD && 'bi-pbi-tile--3d',
         compact && 'bi-pbi-tile--compact',
         className,
       )}
       data-accent={accent}
     >
+      {threeD ? <div className="bi-pbi-tile-depth" aria-hidden /> : null}
       <div className="bi-pbi-tile-glow" aria-hidden />
+      <div className="bi-pbi-tile-shine" aria-hidden />
       <div className="bi-pbi-tile-accent" data-visual={visual} aria-hidden />
-      {(title || subtitle) && (
-        <div className={clsx('bi-pbi-tile-header', compact && 'px-3 py-2')}>
-          <div className="min-w-0 flex-1">
-            {title ? <p className="bi-pbi-tile-title">{title}</p> : null}
-            {subtitle ? <p className="bi-pbi-tile-subtitle">{subtitle}</p> : null}
+      <div className="relative z-[1] overflow-hidden rounded-2xl">
+        {(title || subtitle) && (
+          <div className={clsx('bi-pbi-tile-header', compact && 'px-3 py-2')}>
+            <div className="min-w-0 flex-1">
+              {title ? <p className="bi-pbi-tile-title">{title}</p> : null}
+              {subtitle ? <p className="bi-pbi-tile-subtitle">{subtitle}</p> : null}
+            </div>
           </div>
-        </div>
-      )}
-      <div className={clsx('bi-pbi-tile-body', compact ? 'p-2' : 'p-3', bodyClassName)}>{children}</div>
+        )}
+        <div className={clsx('bi-pbi-tile-body', compact ? 'p-2' : 'p-3', bodyClassName)}>{children}</div>
+      </div>
     </div>
   );
 }

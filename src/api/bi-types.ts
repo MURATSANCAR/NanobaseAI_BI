@@ -254,6 +254,21 @@ export type BiShareLink = {
   view_log?: Array<{ at: string; ip?: string; user_agent?: string }>;
 };
 
+/** Visual table/field rule compiled to alert SQL (stored in payload). */
+export type BiAlertStructuredRule = {
+  table: string;
+  schema?: string;
+  tableName?: string;
+  aggregate: 'count' | 'count_distinct' | 'sum' | 'avg' | 'min' | 'max' | string;
+  measureColumn?: string;
+  filters: Array<{
+    id?: string;
+    column: string;
+    op: string;
+    value?: string;
+  }>;
+};
+
 export type BiAlertRule = {
   id: string;
   title: string;
@@ -271,6 +286,8 @@ export type BiAlertRule = {
   channels?: Array<{ type: string; to?: string; secret_ref?: string; url?: string }>;
   slack_secret_ref?: string;
   teams_secret_ref?: string;
+  /** Optional structured builder definition; when present, UI can re-edit without SQL. */
+  rule?: BiAlertStructuredRule | null;
 };
 
 export type BiBudgetEnvelope = {

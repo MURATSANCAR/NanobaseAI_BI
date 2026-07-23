@@ -108,3 +108,49 @@ def test_local_guest_jwt_mint():
     )
     assert claims["type"] == "guest"
     assert claims["resources"][0]["id"] == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+
+def test_pin_writes_canvas_when_superset_disabled(tmp_path, monkeypatch):
+    monkeypatch.delenv("BI_SUPERSET_ENABLED", raising=False)
+    monkeypatch.setenv("SECRETS_ROOT", str(tmp_path))
+    from nanobase_api.config import get_settings
+    from nanobase_api.infrastructure.superset_client import reset_superset_client_for_tests
+
+    get_settings.cache_clear()
+    reset_superset_client_for_tests()
+
+    import importlib
+
+    import nanobase_api.source_widgets as sw
+
+    importlib.reload(sw)
+    import nanobase_api.analytics_api as analytics_api
+
+    importlib.reload(analytics_api)
+
+    app = FastAPI()
+    app.include_router(analytics_api.router)
+    c = TestClient(app)
+    r = c.post(
+        "/api/v1/bi/analytics/dashboards/0/pin",
+        json={
+            "sql": "SELECT city, n FROM t",
+            "title": "Cities",
+            "viz_type": "bar",
+            "widgets": [
+                {
+                    "id": "chat_test1",
+                    "type": "bar",
+                    "title": "Cities",
+                    "sql": "SELECT city, n FROM t",
+                    "x_key": "city",
+                    "y_key": "n",
+                }
+            ],
+        },
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["action"] == "pin_canvas"
+    assert body["widget"]["id"] == "chat_test1"
+    assert (tmp_path / "source-widgets-pinned.json").is_file()
