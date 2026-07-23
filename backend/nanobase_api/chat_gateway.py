@@ -419,6 +419,8 @@ async def stream_chat_via_gateway(
     meta_engine: Engine | None = None,
     tenant_id: str = "default",
     user_id: str | None = None,
+    prepared_sql: str | None = None,
+    template_id: str | None = None,
 ) -> AsyncIterator[bytes]:
     settings = get_settings()
     mode = settings.execution_mode
@@ -454,52 +456,77 @@ async def stream_chat_via_gateway(
     bind_parameters: dict[str, Any] | None = None
     scenario_followups: list[str] = []
 
-    # Precompiled scenario engine — before semantic metric / AWEL
-    try:
-        from nanobase_api.scenario_engine.application.runtime import try_precompiled_scenario
-        from nanobase_api.scenario_engine.infrastructure.metrics import (
-            SCENARIO_FALLBACK_AWEL,
-            SCENARIO_EXACT_MATCH,
-            inc,
-        )
-
-        scenario_hit = try_precompiled_scenario(
-            message,
-            tenant_id=tenant_id,
-            datasource_id=datasource_id,
-        )
-        if scenario_hit and (scenario_hit.get("sqlTemplate") or scenario_hit.get("sql")):
-            sql = str(scenario_hit.get("sqlTemplate") or scenario_hit["sql"])
-            sql_source = "precompiled_scenario"
-            bind_parameters = dict(scenario_hit.get("parameters") or scenario_hit.get("bindParams") or {})
-            scenario_followups = list(scenario_hit.get("followUps") or [])
-            verified_meta = {
-                "id": scenario_hit.get("scenarioId"),
+    # FE template / prepared-script fast path: skip schema retrieval + LLM plan.
+    prepared = (prepared_sql or "").strip()
+    if prepared:
+        sql = prepared
+        sql_source = "prepared_sql"
+        verified_meta = {
+            "id": template_id or "prepared",
+            "sql": sql,
+            "source": "prepared_sql",
+        }
+        yield _sse(
+            "status",
+            {
+                "phase": "prepared_sql_hit",
+                "type": "STATUS",
+                "template_id": template_id,
                 "sql": sql,
-                "source": "precompiled_scenario",
-                "logicalPlan": scenario_hit.get("logicalPlan"),
-                "parameters": bind_parameters,
-            }
-            if float(scenario_hit.get("confidence") or 0) >= 0.99:
-                inc(SCENARIO_EXACT_MATCH)
-            yield _sse(
-                "status",
-                {
-                    "phase": "scenario_hit",
-                    "scenario_id": scenario_hit.get("scenarioId"),
-                    "scenario_code": scenario_hit.get("scenarioCode"),
-                    "confidence": scenario_hit.get("confidence"),
-                    "route": scenario_hit.get("route"),
+            },
+        ).encode()
+        yield _sse(
+            "sql_generated",
+            {"type": "SQL_GENERATED", "payload": {"sql": sql, "sql_source": sql_source}},
+        ).encode()
+
+    # Precompiled scenario engine — before semantic metric / AWEL
+    if not sql:
+        try:
+            from nanobase_api.scenario_engine.application.runtime import try_precompiled_scenario
+            from nanobase_api.scenario_engine.infrastructure.metrics import (
+                SCENARIO_FALLBACK_AWEL,
+                SCENARIO_EXACT_MATCH,
+                inc,
+            )
+
+            scenario_hit = try_precompiled_scenario(
+                message,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+            )
+            if scenario_hit and (scenario_hit.get("sqlTemplate") or scenario_hit.get("sql")):
+                sql = str(scenario_hit.get("sqlTemplate") or scenario_hit["sql"])
+                sql_source = "precompiled_scenario"
+                bind_parameters = dict(scenario_hit.get("parameters") or scenario_hit.get("bindParams") or {})
+                scenario_followups = list(scenario_hit.get("followUps") or [])
+                verified_meta = {
+                    "id": scenario_hit.get("scenarioId"),
                     "sql": sql,
-                    "sql_source": sql_source,
-                    "followUps": scenario_followups,
-                    "has_bind_params": bool(bind_parameters),
-                },
-            ).encode()
-        else:
-            inc(SCENARIO_FALLBACK_AWEL)
-    except Exception as e:
-        yield _sse("status", {"phase": "scenario_lookup_skip", "detail": str(e)[:200]}).encode()
+                    "source": "precompiled_scenario",
+                    "logicalPlan": scenario_hit.get("logicalPlan"),
+                    "parameters": bind_parameters,
+                }
+                if float(scenario_hit.get("confidence") or 0) >= 0.99:
+                    inc(SCENARIO_EXACT_MATCH)
+                yield _sse(
+                    "status",
+                    {
+                        "phase": "scenario_hit",
+                        "scenario_id": scenario_hit.get("scenarioId"),
+                        "scenario_code": scenario_hit.get("scenarioCode"),
+                        "confidence": scenario_hit.get("confidence"),
+                        "route": scenario_hit.get("route"),
+                        "sql": sql,
+                        "sql_source": sql_source,
+                        "followUps": scenario_followups,
+                        "has_bind_params": bool(bind_parameters),
+                    },
+                ).encode()
+            else:
+                inc(SCENARIO_FALLBACK_AWEL)
+        except Exception as e:
+            yield _sse("status", {"phase": "scenario_lookup_skip", "detail": str(e)[:200]}).encode()
 
     # Faz 7: logical metric compile (never run legacy physical verified SQL as source of truth)
     try:
@@ -1456,45 +1483,85 @@ async def stream_chat_via_gateway(
     rows = ej.get("rows") or []
     cols = ej.get("columns") or []
 
-    yield _sse(
-        "status",
-        {"phase": "generating_answer", "workflow": "nanobase-result-explain-v1"},
-    ).encode()
-    explain_box: list[Any] = []
-    try:
-        async for chunk in _await_llm_with_queue_sse(
-            _engine_adapter.explain_result(
-                question=message,
-                executed_sql=safe_sql,
-                columns=cols,
-                rows=rows,
-                truncated=bool(ej.get("truncated")),
-                datasource_id=datasource_id,
-                tenant_id=tenant_id,
-                execution_id=execution_id,
-            ),
-            tenant_id=tenant_id,
-            user_id=user_id,
-            request_id=f"{execution_id}-explain",
-            out=explain_box,
-        ):
-            yield chunk
-        if explain_box and explain_box[0] is not None:
-            explained = explain_box[0]
-        else:
-            explained = {
-                "workflow": "nanobase-result-explain-v1",
-                "answer": f"Sonuç alındı ({len(rows)} satır).",
-                "insights": [],
-                "warnings": ["explain_queued_or_failed"],
-            }
-    except Exception as e:
+    # Prepared / compiled SQL already skipped NL→SQL LLM; skip answer LLM too
+    # (deterministic summary is enough — Qwen explain was the remaining 10–25s).
+    _fast_answer_sources = {
+        "prepared_sql",
+        "precompiled_scenario",
+        "verified_sql",
+        "semantic_metric_compiler",
+    }
+    if sql_source in _fast_answer_sources:
+        from nanobase_awel.operators.answer_fidelity_validator import (
+            deterministic_fallback_answer,
+        )
+        from nanobase_awel.operators.result_summarizer import summarize_result
+
+        col_names = [str(c.get("name") if isinstance(c, dict) else c) for c in cols]
+        summary = summarize_result(
+            col_names, rows, truncated=bool(ej.get("truncated")), max_sample=100
+        )
+        answer = deterministic_fallback_answer(
+            summary=summary,
+            columns=col_names,
+            rows=rows,
+            truncated=bool(ej.get("truncated")),
+        )
         explained = {
             "workflow": "nanobase-result-explain-v1",
-            "answer": f"Sonuç alındı ({len(rows)} satır). Açıklama üretilemedi: {e}",
+            "answer": answer,
             "insights": [],
-            "warnings": ["explain_failed"],
+            "warnings": ["deterministic_fast_path", f"sql_source={sql_source}"],
         }
+        yield _sse(
+            "status",
+            {
+                "phase": "generating_answer",
+                "workflow": "nanobase-result-explain-v1",
+                "fast_path": True,
+                "sql_source": sql_source,
+            },
+        ).encode()
+    else:
+        yield _sse(
+            "status",
+            {"phase": "generating_answer", "workflow": "nanobase-result-explain-v1"},
+        ).encode()
+        explain_box: list[Any] = []
+        try:
+            async for chunk in _await_llm_with_queue_sse(
+                _engine_adapter.explain_result(
+                    question=message,
+                    executed_sql=safe_sql,
+                    columns=cols,
+                    rows=rows,
+                    truncated=bool(ej.get("truncated")),
+                    datasource_id=datasource_id,
+                    tenant_id=tenant_id,
+                    execution_id=execution_id,
+                ),
+                tenant_id=tenant_id,
+                user_id=user_id,
+                request_id=f"{execution_id}-explain",
+                out=explain_box,
+            ):
+                yield chunk
+            if explain_box and explain_box[0] is not None:
+                explained = explain_box[0]
+            else:
+                explained = {
+                    "workflow": "nanobase-result-explain-v1",
+                    "answer": f"Sonuç alındı ({len(rows)} satır).",
+                    "insights": [],
+                    "warnings": ["explain_queued_or_failed"],
+                }
+        except Exception as e:
+            explained = {
+                "workflow": "nanobase-result-explain-v1",
+                "answer": f"Sonuç alındı ({len(rows)} satır). Açıklama üretilemedi: {e}",
+                "insights": [],
+                "warnings": ["explain_failed"],
+            }
 
     reply = explained.get("answer") or ""
     if explain_plan_text:

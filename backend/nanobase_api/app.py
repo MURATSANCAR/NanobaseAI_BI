@@ -771,6 +771,9 @@ async def chat_stream_gateway(
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
     ds = str(body.get("db_name") or _active_ds())
+    ctx = body.get("context") if isinstance(body.get("context"), dict) else {}
+    prepared_sql = str(ctx.get("prepared_sql") or body.get("prepared_sql") or "").strip() or None
+    template_id = str(ctx.get("template_id") or body.get("template_id") or "").strip() or None
     if not message:
 
         async def _err():
@@ -789,7 +792,11 @@ async def chat_stream_gateway(
             action="QUESTION_SUBMITTED",
             ok=True,
             session_id=session_id,
-            extra={"datasource_id": ds},
+            extra={
+                "datasource_id": ds,
+                "prepared_sql": bool(prepared_sql),
+                "template_id": template_id,
+            },
         )
     except Exception:
         pass
@@ -827,6 +834,8 @@ async def chat_stream_gateway(
                 meta_engine=_meta_engine(),
                 tenant_id=tenant_id,
                 user_id=user_id,
+                prepared_sql=prepared_sql,
+                template_id=template_id,
             )
             try:
                 async for chunk in agen:
