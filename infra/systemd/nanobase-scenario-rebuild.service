@@ -1,0 +1,28 @@
+[Unit]
+Description=Nanobase scenario pool rebuild (oneshot)
+After=network-online.target nanobase-bi-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=administrator
+WorkingDirectory=/data/nanobaseai/bi/frontend/backend
+EnvironmentFile=-/data/nanobaseai/bi/frontend/backend/.env
+EnvironmentFile=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
+Environment=PATH=/data/nanobaseai/bi/frontend/backend/.venv/bin:/usr/bin
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+Environment=SCENARIO_REBUILD_DATASOURCES=erp,sigorta
+Environment=SCENARIO_COMBINATION_MODE=both
+Environment=SCENARIO_COMBINATION_SCALE=full
+Environment=SCENARIO_MAX_COMBINATIONS=8000
+Environment=SCENARIO_OFFLINE_VALIDATION=1
+Environment=SCENARIO_REQUIRE_LIVE_VALIDATION=0
+Environment=SCENARIO_SQL_DISABLED=0
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=7200
+ExecStart=/data/nanobaseai/bi/frontend/backend/.venv/bin/python /data/nanobaseai/bi/frontend/backend/scripts/run_scenario_pool_rebuild.py
+
+[Install]
+WantedBy=multi-user.target

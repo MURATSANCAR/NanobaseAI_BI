@@ -1,0 +1,16 @@
+[Unit]
+Description=Schedule Nanobase scenario pool rebuild (recurring)
+
+[Timer]
+# After boot, then keep rebuilding on a fixed cadence so the question pool
+# refreshes continuously as schemas / grammar evolve.
+OnBootSec=20min
+OnUnitActiveSec=6h
+# Nightly anchor (Europe/Istanbul wall clock via systemd local timezone)
+OnCalendar=*-*-* 02:15:00
+AccuracySec=5min
+Persistent=true
+Unit=nanobase-scenario-rebuild.service
+
+[Install]
+WantedBy=timers.target
