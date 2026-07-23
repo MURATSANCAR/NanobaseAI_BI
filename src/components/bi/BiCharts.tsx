@@ -43,7 +43,6 @@ import {
   PBI_NEGATIVE,
   PBI_POSITIVE,
   PBI_TOOLTIP,
-  pbiGradientId,
   pbiPalette,
 } from '@/components/bi/biVisualTheme';
 import { isHorizontalBar, isStacked, normalizeVisualType } from '@/components/bi/biVisualTypes';
@@ -208,26 +207,6 @@ type ChartProps = {
   containerHeight?: number;
 };
 
-function BarGradientDefs({ widgetId, count = 1, vivid = false }: { widgetId: string; count?: number; vivid?: boolean }) {
-  const palette = pbiPalette(vivid);
-  return (
-    <defs>
-      {Array.from({ length: Math.max(1, count) }).map((_, i) => {
-        const c0 = palette[i % palette.length];
-        const c1 = palette[(i + 3) % palette.length];
-        return (
-          <linearGradient key={i} id={pbiGradientId(widgetId, i)} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={c0} stopOpacity={1} />
-            <stop offset="45%" stopColor={c0} stopOpacity={0.95} />
-            <stop offset="55%" stopColor={c1} stopOpacity={0.88} />
-            <stop offset="100%" stopColor={c1} stopOpacity={0.65} />
-          </linearGradient>
-        );
-      })}
-    </defs>
-  );
-}
-
 function chartAnimationDuration(variant?: BiChartVariant) {
   return variant === 'preview' ? PBI_CHART_ANIMATION.duration : PBI_ANIMATION.duration;
 }
@@ -291,9 +270,9 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
   const stacked = isStacked(vtype);
   const xk = key(widget, 'x');
   const yk = key(widget, 'y');
-  const vivid = chartVivid(variant);
   const animDuration = chartAnimationDuration(variant);
   const barRadius = PBI_BAR_RADIUS;
+  // Solid fills only — CSS transform on 3D tiles breaks SVG url(#gradient) paint.
 
   if (!rowCount(widget)) {
     return <BiChartFrame height={height} empty />;
@@ -309,7 +288,6 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={data} layout={layout as 'horizontal' | 'vertical'} margin={chartMarginWithLabels(showLabels)}>
-          <BarGradientDefs widgetId={widget.id} count={series.length} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           {horizontal ? (
             <>
@@ -329,7 +307,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
               key={s}
               dataKey={s}
               stackId="a"
-              fill={`url(#${pbiGradientId(widget.id, i)})`}
+              fill={paletteColor(variant, i)}
               radius={i === series.length - 1 ? [barRadius, barRadius, 0, 0] : undefined}
               animationDuration={animDuration}
             >
@@ -351,7 +329,6 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={data} layout="vertical" margin={chartMarginWithLabels(showLabels)}>
-          <BarGradientDefs widgetId={widget.id} count={data.length} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           <XAxis type="number" tick={PBI_AXIS} />
           <YAxis type="category" dataKey="name" tick={PBI_AXIS} width={96} />
@@ -359,6 +336,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
           {targetValue != null && <ReferenceLine x={targetValue} stroke="#E66C37" strokeDasharray="5 5" strokeWidth={1.5} />}
           <Bar
             dataKey={yk}
+            fill={paletteColor(variant, 0)}
             radius={[0, barRadius, barRadius, 0]}
             animationDuration={animDuration}
             onClick={(d) => {
@@ -368,7 +346,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
             style={{ cursor: onDatumClick ? 'pointer' : 'default' }}
           >
             {data.map((_, i) => (
-              <Cell key={i} fill={`url(#${pbiGradientId(widget.id, i)})`} />
+              <Cell key={i} fill={paletteColor(variant, i)} />
             ))}
             {showLabels ? <ChartValueLabels dataKey={yk} position="right" /> : null}
           </Bar>
@@ -382,7 +360,6 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={chartMarginWithLabels(showLabels)}>
-        <BarGradientDefs widgetId={widget.id} count={data.length} vivid={vivid} />
         <CartesianGrid {...PBI_GRID} />
         <XAxis dataKey={xk} tick={PBI_AXIS} interval={0} angle={-16} textAnchor="end" height={48} tickFormatter={(v) => truncateAxisLabel(v)} />
         <YAxis tick={PBI_AXIS} width={44} />
@@ -390,6 +367,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
         {targetValue != null && <ReferenceLine y={targetValue} stroke="#E66C37" strokeDasharray="5 5" strokeWidth={1.5} />}
         <Bar
           dataKey={yk}
+          fill={paletteColor(variant, 0)}
           radius={[barRadius, barRadius, 0, 0]}
           animationDuration={animDuration}
           onClick={(d) => {
@@ -399,7 +377,7 @@ export function BiBarChartWidget({ widget, targetValue, onDatumClick, height = C
           style={{ cursor: onDatumClick ? 'pointer' : 'default' }}
         >
           {data.map((_, i) => (
-            <Cell key={i} fill={`url(#${pbiGradientId(widget.id, i)})`} />
+            <Cell key={i} fill={paletteColor(variant, i)} />
           ))}
           {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
         </Bar>
@@ -413,7 +391,6 @@ export function BiLineChartWidget({ widget, targetValue, onDatumClick, height = 
   const data = chartRows(widget);
   const xk = key(widget, 'x');
   const yk = key(widget, 'y');
-  const vivid = chartVivid(variant);
   const animDuration = chartAnimationDuration(variant);
   const stroke = paletteColor(variant, 0);
   const barRadius = PBI_BAR_RADIUS;
@@ -424,12 +401,11 @@ export function BiLineChartWidget({ widget, targetValue, onDatumClick, height = 
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={data} margin={chartMarginWithLabels(true)}>
-            <BarGradientDefs widgetId={widget.id} vivid={vivid} />
             <CartesianGrid {...PBI_GRID} />
             <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} />
             <YAxis tick={PBI_AXIS} width={44} />
             <Tooltip content={<BiPbiTooltip />} cursor={PBI_TOOLTIP.cursor} />
-            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
+            <Bar dataKey={yk} fill={stroke} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
               <ChartValueLabels dataKey={yk} position="top" />
             </Bar>
           </BarChart>
@@ -471,7 +447,6 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
   const data = chartRows(widget);
   const xk = key(widget, 'x');
   const yk = key(widget, 'y');
-  const vivid = chartVivid(variant);
   const animDuration = chartAnimationDuration(variant);
   const stroke = paletteColor(variant, 0);
   const barRadius = PBI_BAR_RADIUS;
@@ -482,12 +457,11 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
       <BiChartFrame height={height}>
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={data} margin={chartMarginWithLabels(true)}>
-            <BarGradientDefs widgetId={widget.id} vivid={vivid} />
             <CartesianGrid {...PBI_GRID} />
             <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} />
             <YAxis tick={PBI_AXIS} width={44} />
             <Tooltip content={<BiPbiTooltip />} cursor={PBI_TOOLTIP.cursor} />
-            <Bar dataKey={yk} fill={`url(#${pbiGradientId(widget.id, 0)})`} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
+            <Bar dataKey={yk} fill={stroke} radius={[barRadius, barRadius, 0, 0]} animationDuration={animDuration}>
               <ChartValueLabels dataKey={yk} position="top" />
             </Bar>
           </BarChart>
@@ -499,12 +473,6 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
         <AreaChart data={data} margin={chartMarginWithLabels(showLabels)}>
-        <defs>
-          <linearGradient id={pbiGradientId(widget.id, 0)} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={stroke} stopOpacity={vivid ? 0.45 : 0.35} />
-            <stop offset="100%" stopColor={stroke} stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
         <CartesianGrid {...PBI_GRID} />
         <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} interval="preserveStartEnd" />
         <YAxis tick={PBI_AXIS} width={44} />
@@ -514,7 +482,8 @@ export function BiAreaChartWidget({ widget, height = CHART_H_DEFAULT, variant }:
           dataKey={yk}
           stroke={stroke}
           strokeWidth={2}
-          fill={`url(#${pbiGradientId(widget.id, 0)})`}
+          fill={stroke}
+          fillOpacity={chartVivid(variant) ? 0.28 : 0.18}
           animationDuration={animDuration}
         >
           {showLabels ? <ChartValueLabels dataKey={yk} position="top" /> : null}
@@ -530,8 +499,8 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
   const xk = key(widget, 'x');
   const yk = key(widget, 'y');
   const y2k = key(widget, 'y2');
-  const vivid = chartVivid(variant);
   const animDuration = chartAnimationDuration(variant);
+  const barFill = paletteColor(variant, 0);
   const lineStroke = paletteColor(variant, 2);
   const barRadius = PBI_BAR_RADIUS;
   const hasLine = cols(widget).includes(y2k) && data.some((r) => coerceNumber(r[y2k]) !== 0);
@@ -544,7 +513,6 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
     <BiChartFrame height={height}>
       <ResponsiveContainer width="100%" height={height}>
         <ComposedChart data={data} margin={margin}>
-          <BarGradientDefs widgetId={widget.id} vivid={vivid} />
           <CartesianGrid {...PBI_GRID} />
           <XAxis dataKey={xk} tick={PBI_AXIS} tickFormatter={(v) => truncateAxisLabel(v)} interval={0} angle={-16} textAnchor="end" height={48} />
           <YAxis yAxisId="left" tick={PBI_AXIS} width={44} />
@@ -555,7 +523,7 @@ export function BiComboChartWidget({ widget, onDatumClick, height = CHART_H_DEFA
             yAxisId="left"
             dataKey={yk}
             name={biFieldLabel(yk)}
-            fill={`url(#${pbiGradientId(widget.id, 0)})`}
+            fill={barFill}
             radius={[barRadius, barRadius, 0, 0]}
             animationDuration={animDuration}
             onClick={(d) => {
@@ -827,23 +795,21 @@ export function BiGaugeChartWidget({ widget, targetValue, height = 200, variant 
   const value = Number(raw) || 0;
   const max = targetValue ?? widget.max_value ?? Math.max(value * 1.2, 100);
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
-  const gradId = pbiGradientId(widget.id, 0);
-  const c0 = paletteColor(variant, 1);
-  const c1 = paletteColor(variant, 0);
+  const fill = paletteColor(variant, 0);
   const animDuration = chartAnimationDuration(variant);
-  const data = [{ name: biFieldLabel('value'), value: pct, fill: `url(#${gradId})` }];
+  const data = [{ name: biFieldLabel('value'), value: pct }];
   const gaugeH = Math.max(140, Math.min(height, 220));
   return (
     <div className={clsx('bi-pbi-gauge flex h-full flex-col items-center justify-center py-1', chartVivid(variant) && 'bi-pbi-kpi-pulse')}>
       <ResponsiveContainer width="100%" height={gaugeH}>
         <RadialBarChart cx="50%" cy="72%" innerRadius="68%" outerRadius="100%" barSize={16} data={data} startAngle={200} endAngle={-20}>
-          <defs>
-            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor={c0} />
-              <stop offset="100%" stopColor={c1} />
-            </linearGradient>
-          </defs>
-          <RadialBar background={{ fill: '#F0EEEC' }} dataKey="value" cornerRadius={8} animationDuration={animDuration} />
+          <RadialBar
+            background={{ fill: '#F0EEEC' }}
+            dataKey="value"
+            fill={fill}
+            cornerRadius={8}
+            animationDuration={animDuration}
+          />
         </RadialBarChart>
       </ResponsiveContainer>
       <div className="bi-pbi-gauge-value -mt-20 text-center">
@@ -873,13 +839,16 @@ function KpiSparkline({ widget, variant }: { widget: BiWidget; variant?: BiChart
     <div className="bi-pbi-sparkline mt-3 h-10 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id={pbiGradientId(widget.id, 99)} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={stroke} stopOpacity={chartVivid(variant) ? 0.4 : 0.3} />
-              <stop offset="100%" stopColor={stroke} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area type="monotone" dataKey="v" stroke={stroke} strokeWidth={1.5} fill={`url(#${pbiGradientId(widget.id, 99)})`} dot={false} animationDuration={chartAnimationDuration(variant)} />
+          <Area
+            type="monotone"
+            dataKey="v"
+            stroke={stroke}
+            strokeWidth={1.5}
+            fill={stroke}
+            fillOpacity={chartVivid(variant) ? 0.28 : 0.18}
+            dot={false}
+            animationDuration={chartAnimationDuration(variant)}
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>

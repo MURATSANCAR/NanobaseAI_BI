@@ -65,3 +65,19 @@ def test_list_and_sum_combos_are_cartesian():
     assert len(sum_qs) >= 40
     # SUM must not emit COUNT tails
     assert "toplam fatura sayisi" not in sum_n
+
+
+def test_every_family_has_at_least_50_user_combos():
+    from nanobase_api.scenario_engine.infrastructure.question_grammar import MIN_USER_COMBOS
+
+    plans = [
+        LogicalPlan(family="COUNT_ENTITY", entity="customer"),
+        LogicalPlan(family="LIST_ENTITY", entity="invoice"),
+        LogicalPlan(family="SUM_MEASURE", entity="invoice"),
+        LogicalPlan(family="TOP_N", entity="invoice_line", top_n=10),
+        LogicalPlan(family="STATUS_FILTER", entity="invoice", status_filter="unpaid"),
+        LogicalPlan(family="COUNT_ENTITY", entity="invoice", period="TODAY"),
+    ]
+    for plan in plans:
+        qs = generate_questions(plan, expand=True)
+        assert len(qs) >= MIN_USER_COMBOS, (plan.family, len(qs))

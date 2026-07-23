@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, RefreshCw, Table2 } from 'lucide-react';
 import { api, type ApiConfig } from '@/api/client';
@@ -37,18 +37,23 @@ function WidgetTile({
       onClick={() => onOpen(widget)}
       className={
         kpi
-          ? 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--kpi flex min-h-[9.5rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
-          : 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid flex min-h-[17rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:col-span-2 lg:col-span-2'
+          ? 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--kpi bi-pbi-tile--pro flex min-h-[10rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400'
+          : 'bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--pro flex min-h-[18rem] w-full flex-col p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:col-span-2 lg:col-span-2'
       }
       data-accent={accent}
+      style={{ '--tile-stagger': String(index % 6) } as CSSProperties}
       aria-label={t('bi.analytics.openWidgetDetail', { title: biWidgetTitle(widget) })}
     >
       <div className="bi-pbi-tile-depth" aria-hidden />
+      <div className="bi-pbi-tile-rim bi-pbi-tile-rim--x" aria-hidden />
+      <div className="bi-pbi-tile-rim bi-pbi-tile-rim--y" aria-hidden />
+      <div className="bi-pbi-tile-bevel" aria-hidden />
       <div className="bi-pbi-tile-glow" aria-hidden />
       <div className="bi-pbi-tile-shine" aria-hidden />
+      <div className="bi-pbi-tile-specular" aria-hidden />
       <div className="bi-pbi-tile-accent" data-visual={widget.type || 'card'} aria-hidden />
-      <div className="relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl px-3.5 pb-3 pt-3.5 sm:px-4">
-        <div className="mb-2 flex items-start justify-between gap-2">
+      <div className="bi-pbi-tile-face relative z-[1] flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl px-3.5 pb-3 pt-3.5 sm:px-4">
+        <div className="mb-2.5 flex items-start justify-between gap-2">
           <h3 className="bi-pbi-tile-title min-w-0 flex-1 truncate text-[11px] font-bold uppercase tracking-wide text-slate-700 sm:text-xs">
             {biWidgetTitle(widget)}
           </h3>
@@ -56,14 +61,14 @@ function WidgetTile({
             {biVisualTypeLabel(widget.type)}
           </span>
         </div>
-        <div className="pointer-events-none min-h-0 flex-1">
+        <div className="bi-pbi-tile-chart pointer-events-none min-h-0 flex-1">
           {kpi ? (
             <BiCardWidget widget={widget} kpi variant="tile" />
           ) : (
             <BiVisualChart widget={widget} variant="tile" height={232} />
           )}
         </div>
-        <p className="mt-2 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500/90">
+        <p className="bi-pbi-tile-cta mt-2.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500/90">
           <Table2 className="h-3 w-3" aria-hidden />
           {t('bi.analytics.viewData')}
         </p>

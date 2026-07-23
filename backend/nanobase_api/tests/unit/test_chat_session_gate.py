@@ -53,3 +53,30 @@ async def test_session_gate_different_sessions_parallel():
 
     await asyncio.wait_for(asyncio.gather(one("s1"), one("s2")), timeout=2.0)
     assert got.is_set()
+
+
+@pytest.mark.asyncio
+async def test_session_gate_reclaims_stale_owner():
+    gate = reset_chat_session_gate_for_tests()
+    gate._stale_owner_s = 0.05  # type: ignore[attr-defined]
+
+    async def hang():
+        async for kind, _ in gate.acquire(tenant_id="t", session_id="s", request_id="stuck"):
+            if kind == "acquired":
+                # Never release — simulate hung stream / lost disconnect
+                await asyncio.sleep(10)
+                return
+
+    async def next_msg():
+        await asyncio.sleep(0.08)  # past stale window
+        async for kind, _ in gate.acquire(tenant_id="t", session_id="s", request_id="next"):
+            if kind == "acquired":
+                await gate.release(tenant_id="t", session_id="s", request_id="next")
+                return "ok"
+        return "fail"
+
+    task = asyncio.create_task(hang())
+    assert await asyncio.wait_for(next_msg(), timeout=5.0) == "ok"
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task

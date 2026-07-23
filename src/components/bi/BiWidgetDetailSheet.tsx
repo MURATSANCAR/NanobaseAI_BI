@@ -144,10 +144,14 @@ export default function BiWidgetDetailSheet({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
-          <div className="bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid overflow-visible p-3" data-accent={0}>
+          <div className="bi-pbi-tile bi-pbi-tile--3d bi-pbi-tile--vivid bi-pbi-tile--pro overflow-visible p-3" data-accent={0}>
             <div className="bi-pbi-tile-depth" aria-hidden />
+            <div className="bi-pbi-tile-rim bi-pbi-tile-rim--x" aria-hidden />
+            <div className="bi-pbi-tile-rim bi-pbi-tile-rim--y" aria-hidden />
+            <div className="bi-pbi-tile-bevel" aria-hidden />
             <div className="bi-pbi-tile-shine" aria-hidden />
-            <div className="relative z-[1] overflow-hidden rounded-xl">
+            <div className="bi-pbi-tile-specular" aria-hidden />
+            <div className="bi-pbi-tile-face relative z-[1] overflow-hidden rounded-xl">
               {kpi ? (
                 <BiCardWidget widget={draft} kpi variant="preview" />
               ) : (

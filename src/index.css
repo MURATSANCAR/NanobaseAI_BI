@@ -2319,7 +2319,7 @@
       0 0 0 1px rgba(148, 163, 184, 0.14),
       inset 0 2px 4px rgba(15, 23, 42, 0.045),
       inset 0 10px 24px rgba(15, 23, 42, 0.035);
-    transform: translateZ(1px);
+    /* No transform here — it breaks Recharts SVG url(#gradient) fills inside 3D tiles. */
   }
 
   .bi-chart-frame--well {
@@ -2462,9 +2462,7 @@
       0 3px 0 var(--tile-edge, rgba(17, 141, 255, 0.5));
   }
 
-  .bi-pbi-tile--3d .bi-chart-frame {
-    transform: translateZ(8px);
-  }
+  /* Chart SVGs stay untransformed so paint fills remain visible in 3D tiles. */
 
   .bi-pbi-tile--vivid {
     border-color: rgba(255, 255, 255, 0.9);

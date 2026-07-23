@@ -36,10 +36,14 @@ function SourceWidgetCard({
         aria-label={t('bi.analytics.openWidgetDetail', { title: widget.title || widget.id })}
       >
         <div className="bi-pbi-tile-depth" aria-hidden />
+        <div className="bi-pbi-tile-rim bi-pbi-tile-rim--x" aria-hidden />
+        <div className="bi-pbi-tile-rim bi-pbi-tile-rim--y" aria-hidden />
+        <div className="bi-pbi-tile-bevel" aria-hidden />
         <div className="bi-pbi-tile-glow" aria-hidden />
         <div className="bi-pbi-tile-shine" aria-hidden />
+        <div className="bi-pbi-tile-specular" aria-hidden />
         <div className="bi-pbi-tile-accent" data-visual={widget.type || 'card'} aria-hidden />
-        <div className="relative z-[1] overflow-hidden rounded-2xl">
+        <div className="bi-pbi-tile-face relative z-[1] overflow-hidden rounded-2xl">
           <div className="border-b border-white/40 px-2.5 py-1.5">
             <p className="truncate text-xs font-semibold text-slate-800">{widget.title}</p>
           </div>

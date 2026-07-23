@@ -42,11 +42,19 @@ export default function BiPbiTile({
       )}
       data-accent={accent}
     >
-      {threeD ? <div className="bi-pbi-tile-depth" aria-hidden /> : null}
+      {threeD ? (
+        <>
+          <div className="bi-pbi-tile-depth" aria-hidden />
+          <div className="bi-pbi-tile-rim bi-pbi-tile-rim--x" aria-hidden />
+          <div className="bi-pbi-tile-rim bi-pbi-tile-rim--y" aria-hidden />
+          <div className="bi-pbi-tile-bevel" aria-hidden />
+        </>
+      ) : null}
       <div className="bi-pbi-tile-glow" aria-hidden />
       <div className="bi-pbi-tile-shine" aria-hidden />
+      <div className="bi-pbi-tile-specular" aria-hidden />
       <div className="bi-pbi-tile-accent" data-visual={visual} aria-hidden />
-      <div className="relative z-[1] overflow-hidden rounded-2xl">
+      <div className="bi-pbi-tile-face relative z-[1] overflow-hidden rounded-2xl">
         {(title || subtitle) && (
           <div className={clsx('bi-pbi-tile-header', compact && 'px-3 py-2')}>
             <div className="min-w-0 flex-1">

@@ -9,6 +9,8 @@ type TrackedJob = {
   promise: Promise<BiChatResponse>;
   listeners: Set<BiChatJobListener>;
   abort: AbortController;
+  startedAt: number;
+  fastPath: boolean;
 };
 
 type SessionJobs = {
@@ -18,6 +20,9 @@ type SessionJobs = {
 };
 
 const sessions = new Map<string, SessionJobs>();
+
+/** Max time a new job waits for a prior in-flight stream before aborting it. */
+const PRIOR_JOB_WAIT_MS = 45_000;
 
 let jobSeq = 0;
 
@@ -40,7 +45,7 @@ export function isBiChatJobPending(sessionId: string): boolean {
 }
 
 export function biChatJobCount(sessionId: string): number {
-  return (sessions.get(sessionId)?.jobs.size ?? 0);
+  return sessions.get(sessionId)?.jobs.size ?? 0;
 }
 
 export function subscribeBiChatJob(sessionId: string, listener: BiChatJobListener): () => void {
@@ -84,10 +89,40 @@ export function abortBiChatJob(sessionId: string, jobId?: string): void {
   }
 }
 
+function waitWithTimeout(p: Promise<unknown>, ms: number): Promise<'ok' | 'timeout'> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve('timeout');
+      }
+    }, ms);
+    p.then(
+      () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve('ok');
+        }
+      },
+      () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve('ok');
+        }
+      },
+    );
+  });
+}
+
 /**
  * Enqueue a chat stream for this session.
  * The HTTP POST starts only after the previous job in this session has settled
  * (terminal done/error/abort) — matching production “one clear result at a time”.
+ *
+ * Fast-path (prepared_sql) aborts stuck prior jobs so Hazır chips are never blocked forever.
  */
 export function runBiChatJob(
   config: ApiConfig,
@@ -100,12 +135,22 @@ export function runBiChatJob(
     context?: Record<string, unknown>;
   },
   listener?: BiChatJobListener,
+  opts?: { fastPath?: boolean },
 ): { jobId: string; promise: Promise<BiChatResponse>; unsubscribe: () => void; abort: () => void } {
   const sessionId = body.session_id;
   const bucket = sessionBucket(sessionId);
   const jobId = nextJobId();
   const listeners = new Set<BiChatJobListener>();
   const abort = new AbortController();
+  const fastPath = Boolean(opts?.fastPath || body.context?.prepared_sql);
+
+  // Prepared / Hazır chips must not sit behind a hung NL2SQL stream.
+  if (fastPath && bucket.jobs.size > 0) {
+    for (const job of bucket.jobs.values()) {
+      job.abort.abort();
+    }
+    bucket.chain = Promise.resolve();
+  }
 
   const runStream = () =>
     streamBiChat(
@@ -131,27 +176,40 @@ export function runBiChatJob(
       throw err;
     });
 
-  // Serialize POSTs: wait for prior job, then open the next stream.
-  const promise = bucket.chain
-    .catch(() => undefined)
+  // Serialize POSTs: wait for prior job (with timeout), then open the next stream.
+  const prior = bucket.chain.catch(() => undefined);
+  const promise = prior
     .then(async () => {
       if (abort.signal.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
-      // Notify UI that we were waiting behind a prior message in this session.
+
+      // If something is still tracked (race), wait briefly then force-abort.
       if (bucket.jobs.size > 1) {
         listeners.forEach((fn) => {
           try {
             fn({
               type: 'status',
               phase: 'session_queued',
-              message:
-                'Önceki sorunuzun cevabı tamamlanıyor; bu mesaj sıraya alındı.',
+              message: 'Önceki sorunuzun cevabı tamamlanıyor; bu mesaj sıraya alındı.',
             });
           } catch {
             /* ignore */
           }
         });
+        const others = [...bucket.jobs.values()].filter((j) => j.id !== jobId);
+        if (others.length) {
+          const wait = waitWithTimeout(Promise.allSettled(others.map((j) => j.promise)), PRIOR_JOB_WAIT_MS);
+          const outcome = await wait;
+          if (outcome === 'timeout') {
+            for (const j of others) j.abort.abort();
+            bucket.chain = Promise.resolve();
+          }
+        }
+      }
+
+      if (abort.signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
       }
       return runStream();
     })
@@ -166,7 +224,14 @@ export function runBiChatJob(
     () => undefined,
   );
 
-  const tracked: TrackedJob = { id: jobId, promise, listeners, abort };
+  const tracked: TrackedJob = {
+    id: jobId,
+    promise,
+    listeners,
+    abort,
+    startedAt: Date.now(),
+    fastPath,
+  };
   bucket.jobs.set(jobId, tracked);
 
   let unsubscribe = () => undefined;

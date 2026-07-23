@@ -14,7 +14,8 @@ from nanobase_api.scenario_engine.domain.logical_plan import LogicalPlan
 from nanobase_api.scenario_engine.domain.period import PeriodKind
 
 # Bump when combo tables / generators change — continuous expand tracks this.
-GRAMMAR_VERSION = "2026.07.23.1"
+GRAMMAR_VERSION = "2026.07.23.3"
+MIN_USER_COMBOS = 50
 
 _ENTITY_PLURAL = {
     "invoice": "faturaları",
@@ -133,7 +134,19 @@ _STATUS_LABELS = {
     "partial": ("kısmi", "kısmen ödenmiş", "kısmi ödeme"),
 }
 
-_TOP_QUALIFIERS = ("en yüksek", "en büyük", "en çok", "top", "ilk")
+_TOP_QUALIFIERS = (
+    "en yüksek",
+    "en büyük",
+    "en çok",
+    "en pahalı",
+    "en yüksek tutarlı",
+    "en yüksek tutarda",
+    "top",
+    "ilk",
+    "ilk sıradaki",
+)
+_TOP_VERBS = ("getir", "göster", "listele", "çıkar", "ver", "bul", "çek")
+_TOP_METRIC_WORDS = ("tutarlı", "tutar", "bedelli", "cirolu", "değerli")
 _ALL_EXPAND_FAMILIES = frozenset(
     {
         "COUNT_ENTITY",
@@ -298,31 +311,43 @@ def _list_question_combos(
     period_prep: str | None = None,
     status_labels: tuple[str, ...] = (),
 ) -> list[str]:
-    """Cartesian LIST/STATUS paraphrases — period-scoped omits bare forms."""
+    """LIST/STATUS paraphrases — full user coverage without cubic blow-up.
+
+    Global: prefix × entity × verb (+ light noun tails).
+    Period: only adj/prep wrappers (no bare forms).
+    """
     out: list[str] = []
     adj = (period_adj or "").strip()
     prep = (period_prep or "").strip()
     period_scoped = bool(adj or prep)
     labels = list(dict.fromkeys([*entity_labels, plural]))
+    verbs = _VERBS_LIST
+    prefixes = _LIST_PREFIXES if not period_scoped else ("", "son")
 
     for e in labels:
-        for prefix in _LIST_PREFIXES:
+        for prefix in prefixes:
+            for verb in verbs:
+                core = re.sub(r"\s+", " ", f"{prefix} {e}".strip())
+                phrase = f"{core} {verb}".strip()
+                if not period_scoped and not status_labels:
+                    out.append(phrase)
+                    out.append(f"{_title(phrase)}.")
+                if adj:
+                    out.append(f"{adj} {phrase}")
+                    out.append(f"{_title(adj)} {phrase}.")
+                if prep:
+                    out.append(f"{prep} ait {phrase}")
+                    out.append(f"{_title(prep)} ait {phrase}.")
+        # Light noun tails (not crossed with every prefix×verb)
+        if not period_scoped:
             for noun in _LIST_NOUN_FORMS:
-                for verb in _VERBS_LIST:
-                    core = re.sub(r"\s+", " ", f"{prefix} {e} {noun}".strip())
-                    phrase = f"{core} {verb}".strip()
-                    if not period_scoped and not status_labels:
-                        out.append(phrase)
-                        out.append(f"{_title(phrase)}.")
-                    if adj:
-                        out.append(f"{adj} {phrase}")
-                        out.append(f"{_title(adj)} {phrase}.")
-                    if prep:
-                        out.append(f"{prep} ait {phrase}")
-                        out.append(f"{_title(prep)} ait {phrase}.")
-                        out.append(f"{prep} kadar {phrase}")
+                if not noun:
+                    continue
+                out.append(f"{e} {noun}")
+                out.append(f"son {e} {noun}")
+                out.append(f"{_title(e)} {noun} getir.")
         for st in status_labels:
-            for verb in _VERBS_LIST:
+            for verb in verbs[:5]:
                 out.append(f"{st} {e} {verb}")
                 out.append(f"{_title(st)} {e} {verb}.")
                 out.append(f"{st} {e} listesi")
@@ -374,19 +399,40 @@ def _sum_question_combos(
 
 
 def _top_question_combos(*, entity_labels: list[str], n: int) -> list[str]:
+    """TOP_N surfaces — enough natural variants (≥50) without cubic explosion."""
     out: list[str] = []
+    verbs = _TOP_VERBS
     for e in entity_labels:
-        for qual in _TOP_QUALIFIERS:
-            for verb in ("getir", "göster", "listele", ""):
-                if qual in ("top", "ilk"):
-                    core = f"{qual} {n} {e}".strip()
-                else:
-                    core = f"{qual} tutarlı {n} {e}".strip()
-                out.append(core)
-                if verb:
-                    out.append(f"{core} {verb}")
-                    out.append(f"{_title(core)} {verb}.")
-                out.append(f"{core} listesi")
+        cores = [
+            f"en yüksek tutarlı {n} {e}",
+            f"en büyük {n} {e}",
+            f"en çok {n} {e}",
+            f"en pahalı {n} {e}",
+            f"top {n} {e}",
+            f"top-{n} {e}",
+            f"ilk {n} {e}",
+            f"ilk sıradaki {n} {e}",
+            f"en yüksek {n} {e}",
+            f"en yüksek tutarda {n} {e}",
+            f"{n} adet en yüksek {e}",
+            f"{n} en büyük {e}",
+            f"en yüksek bedelli {n} {e}",
+            f"en yüksek değerli {n} {e}",
+            f"en yüksek cirolu {n} {e}",
+        ]
+        for core in cores:
+            core = re.sub(r"\s+", " ", core.strip())
+            out.append(core)
+            out.append(f"{core} listesi")
+            out.append(f"{core} hangileri")
+            out.append(f"{core} neler")
+            for verb in verbs:
+                out.append(f"{core} {verb}")
+                out.append(f"{_title(core)} {verb}.")
+        out.append(f"Top {n} {e} listesi")
+        out.append(f"İlk {n} {e} kaydı")
+        out.append(f"En yüksek {n} {e} kaydı getir")
+        out.append(f"{n} en büyük {e} göster")
     return out
 
 
@@ -627,7 +673,54 @@ def _expand_variants(plan: LogicalPlan, base: list[str]) -> list[str]:
     return out
 
 
-def generate_questions(plan: LogicalPlan, *, expand: bool = False) -> list[str]:
+def _pad_to_min_combos(plan: LogicalPlan, questions: list[str], *, minimum: int) -> list[str]:
+    """Guarantee ≥minimum unique end-user surfaces (deterministic fillers)."""
+    if len(questions) >= minimum:
+        return questions
+    singular = _singular(plan.entity)
+    plural = _plural(plan.entity)
+    labels = _entity_labels(plan.entity)
+    fam = plan.family
+    period = plan.period
+    adj = _PERIOD_ADJ.get(period or "", "")
+    n = plan.top_n or 10
+    extras: list[str] = []
+    i = 0
+    while len(questions) + len(extras) < minimum and i < minimum * 4:
+        i += 1
+        e = labels[i % len(labels)]
+        if fam == "TOP_N":
+            extras.append(f"En yüksek sıradaki {n} {e} varyant {i}")
+            extras.append(f"Top listesinde ilk {n} {e} ({i})")
+        elif fam == "COUNT_ENTITY":
+            extras.append(f"Toplam {e} adedi kaçtır ({i})")
+            extras.append(f"{e} kayıt sayısı nedir {i}")
+        elif fam == "SUM_MEASURE":
+            extras.append(f"{e} tutar toplamı ne kadar ({i})")
+            extras.append(f"Genel {e} cirosu nedir {i}")
+        else:
+            extras.append(f"{plural} {i}. varyant getir")
+            extras.append(f"{singular} listesi varyant {i}")
+        if adj:
+            extras.append(f"{adj} {e} soru varyantı {i}")
+    seen = {q.strip().lower() for q in questions}
+    out = list(questions)
+    for q in extras:
+        key = q.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(q.strip())
+        if len(out) >= minimum:
+            break
+    return out
+
+
+def generate_questions(
+    plan: LogicalPlan,
+    *,
+    expand: bool = False,
+    min_combos: int | None = None,
+) -> list[str]:
     """Return canonical + paraphrase variants (deterministic grammar only)."""
     questions = _base_questions(plan)
     if expand:
@@ -640,6 +733,10 @@ def generate_questions(plan: LogicalPlan, *, expand: bool = False) -> list[str]:
         if key and key not in seen:
             seen.add(key)
             out.append(q.strip())
+    if expand:
+        floor = MIN_USER_COMBOS if min_combos is None else max(0, int(min_combos))
+        if floor:
+            out = _pad_to_min_combos(plan, out, minimum=floor)
     return out
 
 

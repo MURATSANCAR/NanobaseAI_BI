@@ -951,6 +951,7 @@ export default function BiChatPanel({
             );
           }
         },
+        { fastPath: Boolean(opts?.prepared_sql) },
       );
       jobRef.id = jobId;
 
@@ -1154,6 +1155,8 @@ export default function BiChatPanel({
   );
 
   const clearChat = () => {
+    abortBiChatJob(sessionId);
+    setJobProgress({});
     setMessages([]);
     setInput('');
     setLastFailedText(null);
