@@ -212,6 +212,8 @@ export type BiQueryTemplate = {
   prompt_ru?: string;
   prompt_uz?: string;
   sql_hint?: string | null;
+  bind_params?: Record<string, unknown> | null;
+  scenarioCode?: string | null;
   category?: string;
   widget_type?: string;
   source?: string;

@@ -1,0 +1,14 @@
+[Unit]
+Description=Schedule Nanobase continuous paraphrase expand
+
+[Timer]
+# Keep end-user language combinations fresh as grammar evolves.
+# Lighter than full scenario rebuild — runs often.
+OnBootSec=25min
+OnUnitActiveSec=2h
+AccuracySec=5min
+Persistent=true
+Unit=nanobase-paraphrase-expand.service
+
+[Install]
+WantedBy=timers.target

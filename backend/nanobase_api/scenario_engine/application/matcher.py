@@ -106,30 +106,38 @@ class ScenarioMatcher:
 
         # 1) Exact normalized hash (still respect period/family gates — blocks poisoned learns)
         qh = question_hash(q)
-        para = self.store.find_by_normalized_hash(
+        exact_paras = self.store.find_all_by_normalized_hash(
             tenant_id=tenant_id, datasource_id=datasource_id, qhash=qh
         )
-        if para is not None:
+        exact_hits = []
+        for para in exact_paras:
             inst = self.store.get_instance(para.scenario_id)
-            if inst and is_retrieval_eligible(inst.status):
-                if schema_version and inst.schema_version != schema_version:
-                    return MatchResult(matched=False, route="AWEL", detail={"reason": "schema_mismatch"})
-                plan = inst.logical_plan
-                slots_ok = period_compatible(q_period, plan.period) and family_compatible(
-                    q_family, inst.family
-                )
-                if slots_ok:
-                    self.store.record_usage(inst.id, field="match_count")
-                    return MatchResult(
-                        matched=True,
-                        scenario_id=inst.id,
-                        scenario_code=inst.scenario_code,
-                        confidence=0.99,
-                        route="PRECOMPILED_SCENARIO",
-                        logical_plan=plan.to_dict(),
-                        detail={"matchType": "exact"},
-                    )
-                # fall through to fuzzy/intent — do not trust conflicting learned paraphrase
+            if not inst or not is_retrieval_eligible(inst.status):
+                continue
+            if schema_version and inst.schema_version != schema_version:
+                continue
+            plan = inst.logical_plan
+            if not (
+                period_compatible(q_period, plan.period)
+                and family_compatible(q_family, inst.family)
+            ):
+                continue
+            # Prefer global (no period) when question has no period cue.
+            rank = 0 if not plan.period else 1
+            exact_hits.append((rank, inst))
+        if exact_hits:
+            exact_hits.sort(key=lambda x: x[0])
+            inst = exact_hits[0][1]
+            self.store.record_usage(inst.id, field="match_count")
+            return MatchResult(
+                matched=True,
+                scenario_id=inst.id,
+                scenario_code=inst.scenario_code,
+                confidence=0.99,
+                route="PRECOMPILED_SCENARIO",
+                logical_plan=inst.logical_plan.to_dict(),
+                detail={"matchType": "exact", "exactCandidates": len(exact_hits)},
+            )
 
 
         # 2) Verified paraphrase / canonical fuzzy with slot gates

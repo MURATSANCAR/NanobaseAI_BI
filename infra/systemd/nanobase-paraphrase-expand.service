@@ -1,0 +1,22 @@
+[Unit]
+Description=Nanobase continuous paraphrase expand (oneshot)
+After=network-online.target nanobase-bi-api.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=administrator
+WorkingDirectory=/data/nanobaseai/bi/frontend/backend
+EnvironmentFile=-/data/nanobaseai/bi/frontend/backend/.env
+EnvironmentFile=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
+Environment=PATH=/data/nanobaseai/bi/frontend/backend/.venv/bin:/usr/bin
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+Environment=SCENARIO_REBUILD_DATASOURCES=erp,sigorta
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=3600
+ExecStart=/data/nanobaseai/bi/frontend/backend/.venv/bin/python /data/nanobaseai/bi/frontend/backend/scripts/run_paraphrase_expand.py
+
+[Install]
+WantedBy=multi-user.target

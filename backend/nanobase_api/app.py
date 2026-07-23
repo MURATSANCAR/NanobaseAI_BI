@@ -187,6 +187,7 @@ _REMOVE_PATHS = {
     "/api/v1/bi/analytics/charts",
     "/api/v1/bi/analytics/datasets",
     "/api/v1/bi/briefing",
+    "/api/v1/bi/templates",
 }
 _app_routes = list(app.router.routes)
 for _route in _app_routes:
@@ -517,6 +518,84 @@ async def alert_suggestions_api(
     return build_alert_suggestions(datasource_id=sid, limit=limit)
 
 
+@app.get("/api/v1/bi/templates")
+async def bi_templates_api(
+    refresh: bool = False,
+    datasource_id: str | None = None,
+    limit: int = 24,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """Prepared chat templates with sql_hint from published scenarios."""
+    from nanobase_api.query_templates import build_query_templates
+
+    _ = refresh  # always resolved from live scenario store
+    sid = _active_ds(datasource_id)
+    return build_query_templates(
+        tenant_id=principal.tenant_id,
+        datasource_id=sid,
+        limit=limit,
+    )
+
+
+@app.post("/api/v1/bi/templates/refresh")
+async def bi_templates_refresh_api(
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    from nanobase_api.query_templates import build_query_templates
+
+    sid = _active_ds()
+    return build_query_templates(
+        tenant_id=principal.tenant_id,
+        datasource_id=sid,
+        limit=24,
+    )
+
+
+@app.post("/api/v1/bi/templates/warm")
+async def bi_templates_warm_api(
+    request: Request,
+    principal: RequestPrincipal = Depends(get_current_principal),
+) -> dict:
+    """Best-effort warm: return sql_hint payloads so FE can skip Text2SQL on click."""
+    from nanobase_api.query_templates import build_query_templates
+
+    body = {}
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    sid = _active_ds()
+    pack = build_query_templates(
+        tenant_id=principal.tenant_id,
+        datasource_id=sid,
+        limit=48,
+    )
+    wanted = body.get("template_ids") if isinstance(body, dict) else None
+    wanted_set = {str(x) for x in wanted} if isinstance(wanted, list) else None
+    lim = int((body or {}).get("limit") or 6)
+    lim = max(1, min(lim, 12))
+    results = []
+    for tpl in pack.get("templates") or []:
+        tid = str(tpl.get("id") or "")
+        if wanted_set is not None and tid not in wanted_set:
+            continue
+        sql = str(tpl.get("sql_hint") or "").strip()
+        if not sql:
+            continue
+        results.append(
+            {
+                "template_id": tid,
+                "ok": True,
+                "sql": sql,
+                "result": None,
+                "duration_ms": 0,
+            }
+        )
+        if len(results) >= lim:
+            break
+    return {"results": results, "warmed": len(results), "ttl_sec": 300}
+
+
 @app.get("/api/v1/bi/model-queue/status")
 async def model_queue_status() -> dict:
     """Public queue depth for ops / UI (no secrets)."""
@@ -776,6 +855,8 @@ async def chat_stream_gateway(
     ctx = body.get("context") if isinstance(body.get("context"), dict) else {}
     prepared_sql = str(ctx.get("prepared_sql") or body.get("prepared_sql") or "").strip() or None
     template_id = str(ctx.get("template_id") or body.get("template_id") or "").strip() or None
+    prepared_params_raw = ctx.get("prepared_params") or ctx.get("bind_params") or body.get("prepared_params")
+    prepared_params = prepared_params_raw if isinstance(prepared_params_raw, dict) else None
     if not message:
 
         async def _err():
@@ -838,6 +919,7 @@ async def chat_stream_gateway(
                 user_id=user_id,
                 prepared_sql=prepared_sql,
                 template_id=template_id,
+                prepared_params=prepared_params,
             )
             try:
                 async for chunk in agen:

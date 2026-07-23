@@ -34,10 +34,14 @@ def test_build_suggestions_defaults_without_history():
     assert out["datasource_id"] == "sigorta"
     assert len(out["suggestions"]) == 3
     assert out["learned_count"] == 0
-    assert all(s["source"] == "default" for s in out["suggestions"])
+    assert all(s["source"] in ("default", "scenario") for s in out["suggestions"])
 
 
-def test_build_suggestions_prefers_learned():
+def test_build_suggestions_includes_learned_when_no_prepared(monkeypatch):
+    monkeypatch.setattr(
+        "nanobase_api.suggestions.resolve_prepared_sql",
+        lambda *_a, **_k: None,
+    )
     out = build_suggestions(
         tenant_id="default",
         datasource_id="sigorta",
@@ -49,17 +53,43 @@ def test_build_suggestions_prefers_learned():
             ]
         ),
     )
-    assert out["suggestions"][0]["text"] == "Kaç poliçe var?"
-    assert out["suggestions"][0]["source"] == "learned"
-    assert out["learned_count"] == 2
-    assert out["default_count"] == 2
+    texts = [s["text"] for s in out["suggestions"]]
+    assert "Kaç poliçe var?" in texts
+    assert out["learned_count"] >= 1
+
+
+def test_build_suggestions_prefers_prepared_sql(monkeypatch):
+    monkeypatch.setattr(
+        "nanobase_api.suggestions.resolve_prepared_sql",
+        lambda question, **_k: (
+            {
+                "sql_hint": "SELECT 1",
+                "bind_params": {},
+                "scenarioCode": "demo.count",
+            }
+            if "müşteri" in question.lower() or "musteri" in question.lower() or "poliçe" in question.lower()
+            else None
+        ),
+    )
+    out = build_suggestions(
+        tenant_id="default",
+        datasource_id="erp",
+        limit=3,
+        question_repo=_FakeRepo(
+            [
+                {"question": "Uzun ve hazır olmayan karmaşık sorgu metni burada", "count": 99},
+            ]
+        ),
+    )
+    assert out["prepared_count"] >= 1
+    assert all(s.get("sql_hint") for s in out["suggestions"][: out["prepared_count"]])
 
 
 def test_alert_defaults_per_datasource():
     sigorta = alert_defaults_for("sigorta")
     erp = alert_defaults_for("erp")
     assert any("hasar" in q.lower() for q in sigorta)
-    assert any("fatura" in q.lower() or "stok" in q.lower() for q in erp)
+    assert any("fatura" in q.lower() or "stok" in q.lower() or "sipariş" in q.lower() for q in erp)
     assert "satış" not in " ".join(sigorta).lower() or "poliçe" in " ".join(sigorta).lower()
 
 

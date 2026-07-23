@@ -51,7 +51,9 @@ def test_entity_generic_fatura_not_forced_to_alis():
 def test_period_hard_gate():
     assert period_compatible(PeriodKind.YEAR_TO_DATE, "YEAR_TO_DATE")
     assert not period_compatible(PeriodKind.YEAR_TO_DATE, "TODAY")
-    assert period_compatible(None, "TODAY")
+    # Bare questions must not steal period-scoped scenarios
+    assert not period_compatible(None, "TODAY")
+    assert period_compatible(None, None)
 
 
 def test_matcher_natural_ytd_count_not_invoice_today():

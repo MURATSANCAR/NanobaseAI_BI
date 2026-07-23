@@ -99,15 +99,24 @@ class ScenarioStore:
     def find_by_normalized_hash(
         self, *, tenant_id: str, datasource_id: str, qhash: str
     ) -> ScenarioParaphrase | None:
-        for p in self.paraphrases.values():
+        hits = self.find_all_by_normalized_hash(
+            tenant_id=tenant_id, datasource_id=datasource_id, qhash=qhash
+        )
+        return hits[0] if hits else None
+
+    def find_all_by_normalized_hash(
+        self, *, tenant_id: str, datasource_id: str, qhash: str
+    ) -> list[ScenarioParaphrase]:
+        return [
+            p
+            for p in self.paraphrases.values()
             if (
                 p.tenant_id == tenant_id
                 and p.datasource_id == datasource_id
                 and p.normalized_hash == qhash
                 and is_retrieval_eligible(p.status)
-            ):
-                return p
-        return None
+            )
+        ]
 
     def paraphrases_for_scenario(self, scenario_id: str) -> list[ScenarioParaphrase]:
         return [p for p in self.paraphrases.values() if p.scenario_id == scenario_id]

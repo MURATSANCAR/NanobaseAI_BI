@@ -121,6 +121,39 @@ async def resolve_scenario(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
     return {"matched": True, **payload}
 
 
+@router.post("/api/v1/query-scenarios/refresh-paraphrases")
+async def refresh_paraphrases(body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
+    """Continuously expand all end-user grammar combinations onto published scenarios."""
+    from nanobase_api.scenario_engine.application.paraphrase_refresh import (
+        expand_paraphrases_continuous,
+        refresh_paraphrases_from_grammar,
+    )
+
+    families = body.get("families")
+    fam_set = {str(x) for x in families} if isinstance(families, list) else None
+    tenant_id = str(body.get("tenantId") or "default")
+    datasource_id = str(body.get("datasourceId") or "erp")
+    purge = bool(body.get("purgePeriodless", True))
+
+    # Optional narrow path when only adding (tests / incremental)
+    if body.get("limitScenarios") is not None and not purge:
+        return await asyncio.to_thread(
+            refresh_paraphrases_from_grammar,
+            tenant_id=tenant_id,
+            datasource_id=datasource_id,
+            families=fam_set,
+            limit_scenarios=int(body["limitScenarios"]),
+        )
+
+    return await asyncio.to_thread(
+        expand_paraphrases_continuous,
+        tenant_id=tenant_id,
+        datasource_id=datasource_id,
+        families=fam_set,
+        purge_periodless=purge,
+    )
+
+
 @router.post("/api/v1/semantic/bootstrap/invoice-scenario-slice")
 async def bootstrap_invoice_slice(body: dict[str, Any] = Body(default={})) -> dict[str, Any]:
     return seed_invoice_scenario_slice(

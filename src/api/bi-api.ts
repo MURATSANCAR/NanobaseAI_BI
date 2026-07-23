@@ -263,10 +263,13 @@ export function createBiApi() {
           count: number;
           category?: string;
           scenarioCode?: string;
+          sql_hint?: string;
+          bind_params?: Record<string, unknown>;
         }>;
         learned_count?: number;
         default_count?: number;
         scenario_count?: number;
+        prepared_count?: number;
       }>(c, `/api/v1/bi/suggestions${suffix}`);
     },
     alertSuggestions: (

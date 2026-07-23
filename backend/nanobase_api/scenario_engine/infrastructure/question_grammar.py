@@ -1,9 +1,20 @@
-"""Deterministic Turkish question templates for scenarios (5k–20k via expansion)."""
+"""Deterministic Turkish question templates for scenarios (5k–20k via expansion).
+
+Surface language is generated combinatorially from family × entity synonyms ×
+verbs/tails × period wrappers — never hand-picked one-off phrases. Bump
+GRAMMAR_VERSION when combo tables change so continuous expand jobs re-fill.
+"""
 
 from __future__ import annotations
 
+import re
+from typing import Any
+
 from nanobase_api.scenario_engine.domain.logical_plan import LogicalPlan
 from nanobase_api.scenario_engine.domain.period import PeriodKind
+
+# Bump when combo tables / generators change — continuous expand tracks this.
+GRAMMAR_VERSION = "2026.07.23.1"
 
 _ENTITY_PLURAL = {
     "invoice": "faturaları",
@@ -48,8 +59,17 @@ _ENTITY_SYNONYMS = {
     "staff": ("personel", "çalışan"),
 }
 
-_VERBS_LIST = ("getir", "göster", "listele", "çıkar", "ver", "bul")
-_VERBS_SUM = ("toplamını getir", "toplamı nedir", "tutarı nedir", "tutarı ne kadar")
+_VERBS_LIST = ("getir", "göster", "listele", "çıkar", "ver", "bul", "çek", "aç")
+_VERBS_SUM = (
+    "toplamını getir",
+    "toplamı nedir",
+    "toplamı ne kadar",
+    "tutarı nedir",
+    "tutarı ne kadar",
+    "tutarı toplamını getir",
+    "cirosu nedir",
+    "cirosu ne kadar",
+)
 _VERBS_COUNT = (
     "kaç tane",
     "sayısı nedir",
@@ -57,6 +77,75 @@ _VERBS_COUNT = (
     "kaç adet",
     "ne kadar",
     "kaç",
+)
+
+# Combinatorial COUNT surface forms (not one-off static phrases).
+_COUNT_PREFIXES = ("", "toplam", "genel", "mevcut")
+_COUNT_TAIL_FORMS = (
+    "sayısı",
+    "adedi",
+    "adet",
+    "sayısı nedir",
+    "adedi nedir",
+    "adet nedir",
+    "sayısı kaç",
+    "adedi kaç",
+    "sayısı ne",
+    "adedi ne",
+    "sayısı ne kadar",
+    "adedi ne kadar",
+)
+_COUNT_EXISTENCE_FORMS = (
+    "kaç {e} var",
+    "kaç tane {e} var",
+    "kaç adet {e} var",
+    "ne kadar {e} var",
+    "{e} kaç tane",
+    "{e} kaç adet",
+    "{e} sayısı kaç",
+    "{e} adedi kaç",
+)
+
+# LIST / STATUS combinatorial surfaces
+_LIST_PREFIXES = ("", "son", "tüm", "bütün", "güncel")
+_LIST_NOUN_FORMS = ("", "listesi", "kayıtları", "kayıt listesi")
+
+# SUM combinatorial surfaces (amount — never "sayısı/adedi")
+_SUM_PREFIXES = ("", "toplam", "genel")
+_SUM_TAIL_FORMS = (
+    "tutarı",
+    "toplamı",
+    "cirosu",
+    "tutarı nedir",
+    "toplamı nedir",
+    "cirosu nedir",
+    "tutarı ne kadar",
+    "toplamı ne kadar",
+    "tutarı toplamı",
+    "tutar toplamı nedir",
+)
+
+_STATUS_LABELS = {
+    "unpaid": ("ödenmemiş", "açık", "bakiyeli", "ödenmeyen"),
+    "cancelled": ("iptal", "iptal edilen", "iptal edilmiş", "iptalli"),
+    "paid": ("ödenmiş", "kapalı", "tahsil edilmiş", "ödendi"),
+    "open": ("açık", "bekleyen", "işlemdeki"),
+    "partial": ("kısmi", "kısmen ödenmiş", "kısmi ödeme"),
+}
+
+_TOP_QUALIFIERS = ("en yüksek", "en büyük", "en çok", "top", "ilk")
+_ALL_EXPAND_FAMILIES = frozenset(
+    {
+        "COUNT_ENTITY",
+        "LIST_ENTITY",
+        "SUM_MEASURE",
+        "STATUS_FILTER",
+        "AGING",
+        "TOP_N",
+        "GROUP_MEASURE",
+        "COMPARE_PERIOD",
+        "TIME_TREND",
+    }
 )
 
 _PERIOD_PHRASE = {
@@ -121,6 +210,198 @@ def _singular(entity: str) -> str:
     return singular
 
 
+def _entity_labels(entity: str) -> list[str]:
+    """Singular + synonym labels used in COUNT / LIST surface forms."""
+    singular = _singular(entity)
+    labels: list[str] = []
+    seen: set[str] = set()
+    for label in (singular, *(_ENTITY_SYNONYMS.get(entity) or ())):
+        key = (label or "").strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        labels.append(label.strip())
+    return labels or [singular]
+
+
+def _title(s: str) -> str:
+    s = (s or "").strip()
+    return s[:1].upper() + s[1:] if s else s
+
+
+def _count_question_combos(
+    *,
+    entity_labels: list[str],
+    period_adj: str | None = None,
+    period_prep: str | None = None,
+) -> list[str]:
+    """Cartesian COUNT paraphrases for an entity (optional period wrappers).
+
+    When a period wrapper is present, only period-scoped surfaces are emitted so
+    bare forms like "toplam fatura sayısı" stay on count.all (not count.today).
+    """
+    out: list[str] = []
+    adj = (period_adj or "").strip()
+    prep = (period_prep or "").strip()
+    period_scoped = bool(adj or prep)
+
+    for e in entity_labels:
+        for prefix in _COUNT_PREFIXES:
+            for tail in _COUNT_TAIL_FORMS:
+                core = re.sub(r"\s+", " ", f"{prefix} {e} {tail}".strip())
+                if not period_scoped:
+                    out.append(core)
+                    out.append(f"{core}?")
+                if adj:
+                    out.append(f"{adj} {core}")
+                    out.append(f"{_title(adj)} {core}?")
+                if prep:
+                    out.append(f"{prep} kadar {core}")
+                    out.append(f"{_title(prep)} kadar {core}?")
+                    out.append(f"{prep} ait {core}")
+                    out.append(f"{_title(prep)} ait {core}?")
+
+        for tmpl in _COUNT_EXISTENCE_FORMS:
+            phrase = tmpl.format(e=e)
+            if not period_scoped:
+                out.append(phrase)
+                out.append(f"{_title(phrase)}?")
+            if adj:
+                out.append(f"{adj} {phrase}")
+                out.append(f"{_title(adj)} {phrase}?")
+            if prep:
+                out.append(f"{prep} kadar {phrase}")
+                out.append(f"{_title(prep)} kadar {phrase}?")
+
+        if not period_scoped:
+            out.append(f"Kaç {e} mevcut?")
+            out.append(f"Toplam kaç {e} var?")
+            out.append(f"Toplam {e} sayısı")
+            out.append(f"Toplam {e} sayısı nedir?")
+            out.append(f"Toplam {e} adedi")
+            out.append(f"Toplam {e} adedi nedir?")
+        if adj:
+            out.append(f"{_title(adj)} toplam {e} sayısı")
+            out.append(f"{_title(adj)} toplam kaç {e} var?")
+        if prep:
+            out.append(f"{_title(prep)} kadar toplam {e} sayısı")
+            out.append(f"{_title(prep)} kadar toplam kaç {e} var?")
+
+    return out
+
+
+def _list_question_combos(
+    *,
+    entity_labels: list[str],
+    plural: str,
+    period_adj: str | None = None,
+    period_prep: str | None = None,
+    status_labels: tuple[str, ...] = (),
+) -> list[str]:
+    """Cartesian LIST/STATUS paraphrases — period-scoped omits bare forms."""
+    out: list[str] = []
+    adj = (period_adj or "").strip()
+    prep = (period_prep or "").strip()
+    period_scoped = bool(adj or prep)
+    labels = list(dict.fromkeys([*entity_labels, plural]))
+
+    for e in labels:
+        for prefix in _LIST_PREFIXES:
+            for noun in _LIST_NOUN_FORMS:
+                for verb in _VERBS_LIST:
+                    core = re.sub(r"\s+", " ", f"{prefix} {e} {noun}".strip())
+                    phrase = f"{core} {verb}".strip()
+                    if not period_scoped and not status_labels:
+                        out.append(phrase)
+                        out.append(f"{_title(phrase)}.")
+                    if adj:
+                        out.append(f"{adj} {phrase}")
+                        out.append(f"{_title(adj)} {phrase}.")
+                    if prep:
+                        out.append(f"{prep} ait {phrase}")
+                        out.append(f"{_title(prep)} ait {phrase}.")
+                        out.append(f"{prep} kadar {phrase}")
+        for st in status_labels:
+            for verb in _VERBS_LIST:
+                out.append(f"{st} {e} {verb}")
+                out.append(f"{_title(st)} {e} {verb}.")
+                out.append(f"{st} {e} listesi")
+                if adj:
+                    out.append(f"{adj} {st} {e} {verb}")
+                if prep:
+                    out.append(f"{prep} ait {st} {e} {verb}")
+
+    return out
+
+
+def _sum_question_combos(
+    *,
+    entity_labels: list[str],
+    period_adj: str | None = None,
+    period_prep: str | None = None,
+) -> list[str]:
+    """Cartesian SUM paraphrases (tutar/ciro — never count tails)."""
+    out: list[str] = []
+    adj = (period_adj or "").strip()
+    prep = (period_prep or "").strip()
+    period_scoped = bool(adj or prep)
+
+    for e in entity_labels:
+        for prefix in _SUM_PREFIXES:
+            for tail in _SUM_TAIL_FORMS:
+                core = re.sub(r"\s+", " ", f"{prefix} {e} {tail}".strip())
+                if not period_scoped:
+                    out.append(core)
+                    out.append(f"{core}?")
+                if adj:
+                    out.append(f"{adj} {core}")
+                    out.append(f"{_title(adj)} {core}?")
+                if prep:
+                    out.append(f"{prep} kadar {core}")
+                    out.append(f"{_title(prep)} kadar {core}?")
+                    out.append(f"{prep} ait {core}")
+        for v in _VERBS_SUM:
+            if not period_scoped:
+                out.append(f"{e} {v}")
+                out.append(f"{_title(e)} {v}?")
+            if adj:
+                out.append(f"{adj} {e} {v}")
+                out.append(f"{_title(adj)} {e} {v}?")
+            if prep:
+                out.append(f"{prep} kadar {e} {v}")
+
+    return out
+
+
+def _top_question_combos(*, entity_labels: list[str], n: int) -> list[str]:
+    out: list[str] = []
+    for e in entity_labels:
+        for qual in _TOP_QUALIFIERS:
+            for verb in ("getir", "göster", "listele", ""):
+                if qual in ("top", "ilk"):
+                    core = f"{qual} {n} {e}".strip()
+                else:
+                    core = f"{qual} tutarlı {n} {e}".strip()
+                out.append(core)
+                if verb:
+                    out.append(f"{core} {verb}")
+                    out.append(f"{_title(core)} {verb}.")
+                out.append(f"{core} listesi")
+    return out
+
+
+def estimate_combo_space(plan: LogicalPlan) -> dict[str, Any]:
+    """How many unique end-user surfaces this plan expands to (deterministic)."""
+    qs = generate_questions(plan, expand=True)
+    return {
+        "grammarVersion": GRAMMAR_VERSION,
+        "family": plan.family,
+        "entity": plan.entity,
+        "period": plan.period,
+        "uniqueQuestions": len(qs),
+    }
+
+
 def _base_questions(plan: LogicalPlan) -> list[str]:
     entity = plan.entity
     plural = _plural(entity)
@@ -134,6 +415,7 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
                 f"Kaç {singular} var?",
                 f"{singular.capitalize()} sayısı nedir?",
                 f"Toplam {singular} adedi nedir?",
+                f"Toplam {singular} sayısı",
                 f"{plural.capitalize()} kaç tane?",
             ]
         )
@@ -189,10 +471,13 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
         )
     elif plan.family == "COUNT_ENTITY" and period:
         adj = _PERIOD_ADJ.get(period, period.lower())
+        prep = _PERIOD_PHRASE.get(period, period.lower())
         questions.extend(
             [
                 f"{adj.capitalize()} kaç {singular} var?",
                 f"{adj.capitalize()} {singular} sayısı nedir?",
+                f"{adj.capitalize()} toplam {singular} sayısı",
+                f"{prep.capitalize()} kadar kaç {singular} var?",
             ]
         )
     elif plan.family == "SUM_MEASURE" and period:
@@ -249,88 +534,95 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
 
 
 def _expand_variants(plan: LogicalPlan, base: list[str]) -> list[str]:
-    """Template expansion + limited synonym lists (no LLM)."""
+    """Full combinatorial expansion for every supported family (no LLM)."""
     out = list(base)
     entity = plan.entity
-    synonyms = _ENTITY_SYNONYMS.get(entity, ())
+    labels = _entity_labels(entity)
     plural = _plural(entity)
     singular = _singular(entity)
     period = plan.period
-    adj = _PERIOD_ADJ.get(period or "", "")
-    prep = _PERIOD_PHRASE.get(period or "", "")
+    adj = _PERIOD_ADJ.get(period or "", "") or None
+    prep = _PERIOD_PHRASE.get(period or "", "") or None
+    status_labels = _STATUS_LABELS.get(plan.status_filter or "", ())
 
-    if plan.family == "COUNT_ENTITY" and not period:
+    if plan.family == "COUNT_ENTITY":
+        out.extend(
+            _count_question_combos(
+                entity_labels=labels,
+                period_adj=adj,
+                period_prep=prep,
+            )
+        )
         for v in _VERBS_COUNT:
-            out.append(f"{v.capitalize()} {singular}?")
-            out.append(f"{plural.capitalize()} {v}?")
-        for syn in synonyms or (singular,):
-            out.append(f"Kaç {syn} var?")
-            out.append(f"{syn.capitalize()} sayısı nedir?")
+            if not period:
+                out.append(f"{v.capitalize()} {singular}?")
+                out.append(f"{plural.capitalize()} {v}?")
+            elif adj:
+                out.append(f"{_title(adj)} {v} {singular}?")
+                out.append(f"{_title(adj)} {plural} {v}?")
 
     if plan.family in ("LIST_ENTITY", "STATUS_FILTER", "AGING"):
-        for verb in _VERBS_LIST:
-            out.append(f"{plural.capitalize()} {verb}.")
-            if adj:
-                out.append(f"{adj.capitalize()} {plural} {verb}.")
-            if prep:
-                out.append(f"{prep.capitalize()} ait {plural} {verb}.")
-        for syn in synonyms:
-            for verb in _VERBS_LIST[:4]:
-                out.append(f"{syn.capitalize()} {verb}.")
-                if adj:
-                    out.append(f"{adj.capitalize()} {syn} {verb}.")
+        out.extend(
+            _list_question_combos(
+                entity_labels=labels,
+                plural=plural,
+                period_adj=adj,
+                period_prep=prep,
+                status_labels=status_labels
+                if plan.family in ("STATUS_FILTER", "LIST_ENTITY")
+                else (),
+            )
+        )
+        if plan.family == "AGING":
+            for e in labels:
+                for verb in _VERBS_LIST:
+                    out.append(f"vadesi geçen {e} {verb}")
+                    out.append(f"vadesi geçmiş {e} {verb}")
+                    out.append(f"gecikmiş {e} {verb}")
 
     if plan.family == "SUM_MEASURE":
-        for v in _VERBS_SUM:
-            if adj:
-                out.append(f"{adj.capitalize()} {plural} {v}?")
-                out.append(f"{adj.capitalize()} {singular} {v}?")
-            else:
-                out.append(f"{plural.capitalize()} {v}?")
-        for syn in synonyms:
-            if adj:
-                out.append(f"{adj.capitalize()} {syn} toplamı nedir?")
-
-    if plan.family == "COUNT_ENTITY" and period:
-        for v in _VERBS_COUNT:
-            if adj:
-                out.append(f"{adj.capitalize()} {v} {singular}?")
-                out.append(f"{adj.capitalize()} {plural} {v}?")
-        if prep:
-            # Natural TR: "… kadar ne kadar X var / kaç X'imiz var"
-            out.append(f"{prep.capitalize()} kadar ne kadar {singular} var?")
-            out.append(f"{prep.capitalize()} kadar ne kadar {plural} var?")
-            out.append(f"{prep.capitalize()} kadar kaç {singular} var?")
-            out.append(f"{prep.capitalize()} kadar kaç {singular}mız var?")
-            out.append(f"{prep.capitalize()} kadar kaç {singular}miz var?")
-            for syn in synonyms or ():
-                out.append(f"{prep.capitalize()} kadar ne kadar {syn} var?")
-                out.append(f"{prep.capitalize()} kadar kaç {syn} var?")
+        out.extend(
+            _sum_question_combos(
+                entity_labels=labels,
+                period_adj=adj,
+                period_prep=prep,
+            )
+        )
 
     if plan.family == "TOP_N":
-        n = plan.top_n or 10
-        for syn in synonyms or (singular,):
-            out.append(f"En büyük {n} {syn}.")
-            out.append(f"İlk {n} {syn} getir.")
-            out.append(f"Top-{n} {syn} listesi.")
+        out.extend(_top_question_combos(entity_labels=labels, n=plan.top_n or 10))
 
     if plan.family == "GROUP_MEASURE":
-        dim = "şehre" if "city" in (plan.dimension or "") else "statuse"
-        for verb in ("göster", "getir", "listele"):
-            out.append(f"{dim.capitalize()} göre kırılım {verb}.")
-            out.append(f"{dim.capitalize()} göre toplam {verb}.")
+        dims = (
+            ("şehirlere", "şehre", "ile")
+            if "city" in (plan.dimension or "")
+            else ("duruma", "statuse", "durumuna")
+        )
+        for dim in dims:
+            for e in labels:
+                for verb in ("göster", "getir", "listele", "kırılım göster"):
+                    out.append(f"{dim} göre {e} tutarı {verb}")
+                    out.append(f"{dim} göre {e} toplamını {verb}")
+                    out.append(f"{_title(dim)} göre {e} {verb}.")
 
-    if plan.status_filter:
-        st_map = {
-            "unpaid": ("ödenmemiş", "açık", "bakiyeli"),
-            "cancelled": ("iptal", "iptal edilen", "iptal edilmiş"),
-            "paid": ("ödenmiş", "kapalı", "tahsil edilmiş"),
-            "open": ("açık", "bekleyen"),
-            "partial": ("kısmi", "kısmen ödenmiş"),
-        }
-        for label in st_map.get(plan.status_filter, ()):
-            for verb in _VERBS_LIST[:4]:
-                out.append(f"{label.capitalize()} {plural} {verb}.")
+    if plan.family == "COMPARE_PERIOD":
+        for e in labels:
+            for left, right in (
+                ("bu ay", "geçen ay"),
+                ("bu yıl", "geçen yıl"),
+                ("bu hafta", "geçen hafta"),
+            ):
+                out.append(f"{left} ile {right} {e} tutarlarını karşılaştır")
+                out.append(f"{left} ve {right} {e} karşılaştır")
+                out.append(f"{left} vs {right} {e} toplamı")
+
+    if plan.family == "TIME_TREND":
+        for e in labels:
+            for grain in ("aylık", "haftalık", "günlük", "çeyreklik"):
+                for verb in ("göster", "getir", "listele"):
+                    out.append(f"{grain} {e} toplamlarını {verb}")
+                    out.append(f"{grain} {e} trendini {verb}")
+                    out.append(f"aylara göre {e} toplamlarını {verb}")
 
     return out
 
@@ -354,3 +646,7 @@ def generate_questions(plan: LogicalPlan, *, expand: bool = False) -> list[str]:
 def canonical_question(plan: LogicalPlan) -> str:
     qs = generate_questions(plan, expand=False)
     return qs[0] if qs else f"{_plural(plan.entity)} getir."
+
+
+def supported_expand_families() -> frozenset[str]:
+    return _ALL_EXPAND_FAMILIES

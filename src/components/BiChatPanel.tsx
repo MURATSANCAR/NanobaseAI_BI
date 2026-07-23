@@ -275,7 +275,15 @@ const FALLBACK_SUGGESTION_KEYS = [
   'bi.chatSuggestion4',
 ] as const;
 
-type ChatSuggestionItem = { text: string; source: string; count: number; category?: string };
+type ChatSuggestionItem = {
+  text: string;
+  source: string;
+  count: number;
+  category?: string;
+  scenarioCode?: string;
+  sql_hint?: string;
+  bind_params?: Record<string, unknown>;
+};
 
 function intentIcon(intent: string) {
   switch (intent) {
@@ -750,7 +758,12 @@ export default function BiChatPanel({
   const sendMessage = useCallback(
     async (
       text?: string,
-      opts?: { prepared_sql?: string | null; template_id?: string; optimistic?: BiChatResponse },
+      opts?: {
+        prepared_sql?: string | null;
+        prepared_params?: Record<string, unknown> | null;
+        template_id?: string;
+        optimistic?: BiChatResponse;
+      },
     ) => {
       const payload = (text ?? input).trim();
       // Allow consecutive prompts — server FIFO queue + separate stream per message.
@@ -772,6 +785,7 @@ export default function BiChatPanel({
       const context: Record<string, unknown> | undefined = opts?.prepared_sql
         ? {
             prepared_sql: opts.prepared_sql,
+            ...(opts.prepared_params ? { prepared_params: opts.prepared_params } : {}),
             ...(opts.template_id ? { template_id: opts.template_id } : {}),
             ...(intent ? { intent } : {}),
           }
@@ -1115,11 +1129,28 @@ export default function BiChatPanel({
           : undefined;
       void sendMessage(prompt, {
         prepared_sql: sql,
+        prepared_params: template.bind_params ?? null,
         template_id: template.id,
         optimistic,
       });
     },
     [sendMessage, sessionId],
+  );
+
+  const sendSuggestion = useCallback(
+    (item: ChatSuggestionItem) => {
+      const sql = item.sql_hint?.trim() || null;
+      if (sql) {
+        void sendMessage(item.text, {
+          prepared_sql: sql,
+          prepared_params: item.bind_params ?? null,
+          template_id: item.scenarioCode || `suggestion:${item.source}`,
+        });
+        return;
+      }
+      void sendMessage(item.text);
+    },
+    [sendMessage],
   );
 
   const clearChat = () => {
@@ -1258,22 +1289,25 @@ export default function BiChatPanel({
                       t('bi.scenario.suggestionsCategory')}
                   </p>
                 )}
-                {learnedSuggestions.slice(0, suggestionLimit).map((item) => (
+                {learnedSuggestions.slice(0, suggestionLimit).map((item) => {
+                  const ready = Boolean(item.sql_hint?.trim());
+                  return (
                   <button
                     key={`${item.source}:${item.text}`}
                     type="button"
                     className="ai-pill w-full justify-start px-3 py-2 text-left text-sm normal-case tracking-normal"
-                    onClick={() => sendMessage(item.text)}
+                    onClick={() => sendSuggestion(item)}
                   >
                     <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
                     <span className="line-clamp-2">{item.text}</span>
-                    {item.source === 'scenario' ? (
+                    {ready ? (
                       <span className="ml-auto shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
                         {t('bi.scenario.readyBadge')}
                       </span>
                     ) : null}
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : (templates.data?.templates ?? []).length > 0 ? (
               <BiQueryTemplateGrid

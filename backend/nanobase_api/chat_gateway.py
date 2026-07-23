@@ -422,6 +422,7 @@ async def stream_chat_via_gateway(
     user_id: str | None = None,
     prepared_sql: str | None = None,
     template_id: str | None = None,
+    prepared_params: dict[str, Any] | None = None,
 ) -> AsyncIterator[bytes]:
     settings = get_settings()
     mode = settings.execution_mode
@@ -462,10 +463,13 @@ async def stream_chat_via_gateway(
     if prepared:
         sql = prepared
         sql_source = "prepared_sql"
+        if isinstance(prepared_params, dict) and prepared_params:
+            bind_parameters = dict(prepared_params)
         verified_meta = {
             "id": template_id or "prepared",
             "sql": sql,
             "source": "prepared_sql",
+            "parameters": bind_parameters or {},
         }
         yield _sse(
             "status",
@@ -474,6 +478,7 @@ async def stream_chat_via_gateway(
                 "type": "STATUS",
                 "template_id": template_id,
                 "sql": sql,
+                "has_bind_params": bool(bind_parameters),
             },
         ).encode()
         yield _sse(

@@ -136,6 +136,33 @@ def main() -> int:
                 result = _rebuild_one(tenant_id=tenant_id, datasource_id=ds)
                 if str(result.get("status") or "").upper() == "FAILED":
                     failures += 1
+                    continue
+                # After SQL scenarios publish, refill all end-user language combos.
+                try:
+                    from nanobase_api.scenario_engine.application.paraphrase_refresh import (
+                        expand_paraphrases_continuous,
+                    )
+                    from nanobase_api.scenario_engine.infrastructure.store import (
+                        get_scenario_store,
+                    )
+
+                    print(f"EXPAND paraphrases datasource={ds}", flush=True)
+                    exp = expand_paraphrases_continuous(
+                        tenant_id=tenant_id,
+                        datasource_id=ds,
+                        store=get_scenario_store(),
+                        purge_periodless=True,
+                    )
+                    ref = exp.get("refresh") or {}
+                    print(
+                        f"  paraphrase_added={ref.get('paraphrases_added')} "
+                        f"grammar={exp.get('grammarVersion')} "
+                        f"coverage={exp.get('coverage')}",
+                        flush=True,
+                    )
+                except Exception:
+                    failures += 1
+                    traceback.print_exc()
             except Exception:
                 failures += 1
                 traceback.print_exc()

@@ -272,8 +272,9 @@ def family_score(question_family: str | None, scenario_family: str) -> float:
 
 
 def period_compatible(question_period: PeriodKind | None, scenario_period: str | None) -> bool:
+    """Bare questions (no period cue) only match global/all scenarios."""
     if question_period is None:
-        return True
+        return not scenario_period
     if not scenario_period:
         return False
     return scenario_period == question_period.value
