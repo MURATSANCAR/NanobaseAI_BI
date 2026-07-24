@@ -18,29 +18,21 @@ function classifyQuestion(question: string): TipKind {
 }
 
 /**
- * Ordered, user-facing progress steps while the assistant works.
- * Many small steps keep long analyses from feeling frozen.
- * Never expose technical internals (SQL, schema engines, etc.).
+ * Fixed checklist aligned to real stream phases.
+ * Steps only advance when the backend phase changes — never by a fake timer.
  */
 export function progressTipsForQuestion(question: string): string[] {
   const hint = hintFromQuestion(question);
   const kind = classifyQuestion(question);
   const core = [
-    t('bi.chat.progressTip.understand', { hint }),
-    t('bi.chat.progressTip.intent'),
-    t('bi.chat.progressTip.schema'),
-    t('bi.chat.progressTip.relate'),
-    t('bi.chat.progressTip.plan', { hint }),
-    t('bi.chat.progressTip.analyze'),
-    t('bi.chat.progressTip.sql'),
-    t('bi.chat.progressTip.refine'),
-    t('bi.chat.progressTip.validate'),
-    t('bi.chat.progressTip.run'),
-    t('bi.chat.progressTip.verify'),
-    t('bi.chat.progressTip.compose'),
-    t('bi.chat.progressTip.polish'),
-    t('bi.chat.progressTip.wait', { hint }),
-    t('bi.chat.progressTip.almost'),
+    t('bi.chat.progressTip.understand', { hint }), // 0 preparing / thinking
+    t('bi.chat.progressTip.schema'), // 1 schema_retrieval
+    t('bi.chat.progressTip.plan', { hint }), // 2 planning / plan_ready
+    t('bi.chat.progressTip.sql'), // 3 generating_sql
+    t('bi.chat.progressTip.validate'), // 4 validating / repairing
+    t('bi.chat.progressTip.run'), // 5 executing / querying
+    t('bi.chat.progressTip.compose'), // 6 generating_answer
+    t('bi.chat.progressTip.almost'), // 7 finalizing
   ];
   if (kind === 'chart') {
     return [t('bi.chat.progressTip.chart'), ...core];
@@ -54,45 +46,60 @@ export function progressTipsForQuestion(question: string): string[] {
   return core;
 }
 
-/** Map backend phases to a friendly step index (never expose phase names). */
+/**
+ * Map backend status phase → checklist index.
+ * Returns null when the phase should not move the tip (unknown / skip noise).
+ */
 export function tipIndexForStreamPhase(phase: string | undefined, total: number): number | null {
   if (!phase || total <= 0) return null;
-  const order = [
-    'queued',
-    'preparing',
-    'thinking',
-    'reading_schema',
-    'planning',
-    'generating_sql',
-    'querying',
-    'building',
-    'composing',
-    'finalizing',
-    'scenario_hit',
-  ];
-  const idx = order.indexOf(phase);
-  if (idx < 0) return null;
-  if (phase === 'queued') return 0;
-  // Stretch long-running middle phases across more of the checklist.
-  const phaseTarget: Record<string, number> = {
-    preparing: 0.05,
-    thinking: 0.12,
-    reading_schema: 0.22,
-    planning: 0.35,
-    generating_sql: 0.55,
-    scenario_hit: 0.45,
-    querying: 0.72,
-    building: 0.82,
-    composing: 0.9,
-    finalizing: 0.97,
+
+  // Core indices assume the 8-step base list; kind-prefix shifts by +1 when present.
+  const prefix = total > 8 ? 1 : 0;
+  const at = (coreIdx: number) => Math.min(total - 1, prefix + coreIdx);
+
+  const map: Record<string, number> = {
+    queued: 0,
+    preparing: at(0),
+    thinking: at(0),
+    user_guidance: at(0),
+
+    schema_retrieval: at(1),
+    schema_retrieval_done: at(1),
+    reading_schema: at(1),
+    schema_expand: at(1),
+
+    planning: at(2),
+    plan_ready: at(2),
+    semantic_shadow: at(2),
+    semantic_metric_hit: at(2),
+    verified_cache_hit: at(2),
+    learned_cache_hit: at(2),
+
+    generating_sql: at(3),
+    scenario_hit: at(3),
+    prepared_sql_hit: at(3),
+    sql_generated: at(3),
+
+    validating: at(4),
+    validated: at(4),
+    repairing_sql: at(4),
+    sql_repaired: at(4),
+    sql_shape_guard: at(4),
+
+    executing: at(5),
+    execute_retry: at(5),
+    querying: at(5),
+    gateway_explain: at(5),
+    building: at(5),
+
+    generating_answer: at(6),
+    composing: at(6),
+
+    finalizing: at(7),
   };
-  const ratio = phaseTarget[phase];
-  if (typeof ratio === 'number') {
-    return Math.min(total - 1, Math.max(0, Math.round(ratio * (total - 1))));
-  }
-  const workIdx = Math.max(0, idx - 1);
-  const maxWork = Math.max(1, order.length - 2);
-  return Math.min(total - 1, Math.round((workIdx / maxWork) * (total - 1)));
+
+  if (phase in map) return map[phase]!;
+  return null;
 }
 
 /** How far through the step list we are (does not wrap backward). */

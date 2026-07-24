@@ -66,7 +66,6 @@ import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
 import BiChatResultHero, { isChatKpiAnswer, isHeroScalarResult } from '@/components/bi/BiChatResultHero';
 import BiExportMenu from '@/components/bi/BiExportMenu';
 import BiLineageDrawer from '@/components/bi/BiLineageDrawer';
-import BiProvePanel from '@/components/bi/BiProvePanel';
 import BiScenarioSliders from '@/components/bi/BiScenarioSliders';
 import BiQueryTemplateGrid from '@/components/bi/BiQueryTemplateGrid';
 import BiVoiceInput from '@/components/bi/BiVoiceInput';
@@ -230,13 +229,8 @@ function BiChatStreamingSteps({
       t('bi.streamingQueued', { position: String(Math.max(1, queuePosition ?? 1)) })
     : steps[active] || t('bi.streamingThinking');
   const accent = STREAMING_STEP_COLORS[active % STREAMING_STEP_COLORS.length]!;
-  const pct = Math.round(((active + (queued ? 0 : 0.35)) / Math.max(1, steps.length)) * 100);
-  // Show a sliding window of steps so long lists stay readable.
-  const windowSize = 6;
-  const windowStart = Math.max(0, Math.min(active - 2, steps.length - windowSize));
-  const visible = steps
-    .map((text, i) => ({ text, i }))
-    .slice(windowStart, windowStart + windowSize);
+  const pct = Math.round(((active + (queued ? 0 : 0.2)) / Math.max(1, steps.length - 1 || 1)) * 100);
+  const visible = steps.map((text, i) => ({ text, i }));
 
   return (
     <div
@@ -555,37 +549,8 @@ export default function BiChatPanel({
     return () => window.clearTimeout(id);
   }, [autoFocus, sessionId]);
 
-  /** Advance friendly progress steps one-at-a-time (keeps long waits feeling alive). */
-  useEffect(() => {
-    if (!showWaitBanner) return;
-    const id = window.setInterval(() => {
-      setJobProgress((prev) => {
-        const next: typeof prev = {};
-        let changed = false;
-        for (const [jobId, job] of Object.entries(prev)) {
-          if (job.phase === 'queued') {
-            next[jobId] = job;
-            continue;
-          }
-          const tips = progressTipsForQuestion(job.question);
-          const maxIdx = Math.max(0, tips.length - 1);
-          // At the end of the list, pulse the last few steps so long waits stay lively.
-          let advanced: number;
-          if (job.tipIndex >= maxIdx) {
-            const base = Math.max(0, maxIdx - 2);
-            const pulse = Math.floor(Date.now() / 1200) % 3;
-            advanced = base + pulse;
-          } else {
-            advanced = job.tipIndex + 1;
-          }
-          next[jobId] = advanced === job.tipIndex ? job : { ...job, tipIndex: advanced };
-          if (advanced !== job.tipIndex) changed = true;
-        }
-        return changed ? next : prev;
-      });
-    }, 1200);
-    return () => window.clearInterval(id);
-  }, [showWaitBanner]);
+  // Tip index advances only from real stream phase events (see status handler).
+  // No fake timer — stuck on the current step until the backend moves on.
 
   // Reattach after navigation: client job(s) still running, or server still processing.
   useEffect(() => {
@@ -1010,10 +975,27 @@ export default function BiChatPanel({
             setMessages((prev) =>
               prev.map((m) =>
                 m.jobId === id && m.streaming
-                  ? { ...m, draftSql: ev.sql, chatState: 'GENERATING_SQL' }
+                  ? {
+                      ...m,
+                      draftSql: ev.sql,
+                      streamPhase: 'generating_sql',
+                      chatState: 'GENERATING_SQL',
+                    }
                   : m,
               ),
             );
+            setJobProgress((prev) => {
+              const job = prev[id];
+              if (!job) return prev;
+              const tips = progressTipsForQuestion(job.question);
+              const mapped = tipIndexForStreamPhase('generating_sql', tips.length);
+              const tipIndex =
+                mapped == null ? job.tipIndex : Math.max(job.tipIndex, mapped);
+              return {
+                ...prev,
+                [id]: { ...job, phase: 'generating_sql', tipIndex },
+              };
+            });
             return;
           }
           if (ev.type === 'answer_delta') {
@@ -1030,6 +1012,18 @@ export default function BiChatPanel({
                 };
               }),
             );
+            setJobProgress((prev) => {
+              const job = prev[id];
+              if (!job) return prev;
+              const tips = progressTipsForQuestion(job.question);
+              const mapped = tipIndexForStreamPhase('composing', tips.length);
+              const tipIndex =
+                mapped == null ? job.tipIndex : Math.max(job.tipIndex, mapped);
+              return {
+                ...prev,
+                [id]: { ...job, phase: 'composing', tipIndex },
+              };
+            });
             return;
           }
           if (ev.type === 'completed') {
@@ -1852,13 +1846,6 @@ export default function BiChatPanel({
                   <div className="flex flex-wrap justify-end gap-2">
                     <BiExportMenu sql={pickExportSql(m.meta)} />
                   </div>
-                  <BiProvePanel
-                    config={config}
-                    answerMd={String(m.content || '')}
-                    sql={pickExportSql(m.meta) || undefined}
-                    sqlFingerprint={m.meta?.provenance?.sql_fingerprint}
-                    provenance={m.meta?.provenance as Record<string, unknown> | undefined}
-                  />
                   {m.meta?.provenance?.metric ? (
                     <>
                       <BiLineageDrawer config={config} metricId={String(m.meta.provenance.metric)} />

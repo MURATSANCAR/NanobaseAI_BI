@@ -67,6 +67,25 @@ def _plan_list_count_sum(
         PeriodKind.PREVIOUS_MONTH,
         PeriodKind.CURRENT_YEAR,
     )
+    # All-time SUM (no period) — covers short asks like "sipariş toplamları".
+    if amount_col:
+        out.append(
+            PlannedScenario(
+                scenario_code=f"{entity}.sum.all",
+                family=ScenarioFamily.SUM_MEASURE,
+                logical_plan=LogicalPlan(
+                    family=ScenarioFamily.SUM_MEASURE.value,
+                    entity=entity,
+                    aggregation="SUM",
+                    metric_column=amount_col,
+                    physical_table=table_fqn,
+                    date_column=biz_date,
+                    limit=1,
+                ),
+                risk_tier=risk,
+                category=category,
+            )
+        )
     if not biz_date:
         return out
     proj = projection or [biz_date.split(".")[-1]]
@@ -177,7 +196,16 @@ def plan_unlocked_domain_combinations(
                 )
             )
 
-    # product / order / stock — smoke generators
+    # product / order / stock — include SUM when a measure column exists
+    _amount_pref = (
+        "ara_toplam",
+        "toplam_tutar",
+        "net_tutar",
+        "brut_tutar",
+        "gross_amount",
+        "tutar",
+        "amount",
+    )
     for entity, category in (
         ("product", "Ürünler"),
         ("order", "Siparişler"),
@@ -190,12 +218,22 @@ def plan_unlocked_domain_combinations(
             continue
         biz = ent.dates.get("businessDate") or ent.dates.get("createdAt")
         proj = [c.name for c in projectable_columns(ent)[:6]]
+        measures = measure_columns(ent)
+        amt = None
+        # Prefer known amount names even if role classification missed them.
+        by_name = {c.name.lower(): c for c in ent.columns}
+        for pref in _amount_pref:
+            if pref in by_name:
+                amt = by_name[pref].fqn
+                break
+        if amt is None and measures:
+            amt = measures[0].fqn
         out.extend(
             _plan_list_count_sum(
                 entity=entity,
                 table_fqn=ent.fqn,
                 biz_date=biz,
-                amount_col=None,
+                amount_col=amt,
                 category=category,
                 risk=RiskTier.B,
                 projection=proj or None,

@@ -807,7 +807,7 @@
   "bi.chat.progressTip.metric": "Looking up the numbers for: {hint}…",
   "bi.chat.progressTip.plan": "Planning how to answer: {hint}…",
   "bi.chat.progressTip.polish": "Simplifying and double-checking the answer…",
-  "bi.chat.progressTip.readySoon": "This can take a little while — steps keep moving so you know we are still working.",
+  "bi.chat.progressTip.readySoon": "We stay on this step until it finishes; we move forward only when real progress happens.",
   "bi.chat.progressTip.refine": "Tightening the analysis steps…",
   "bi.chat.progressTip.relate": "Matching related tables and fields…",
   "bi.chat.progressTip.run": "Working with your data…",

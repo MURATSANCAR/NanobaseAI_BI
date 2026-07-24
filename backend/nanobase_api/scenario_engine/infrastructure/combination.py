@@ -699,7 +699,24 @@ def plan_all_table_combinations(
         due_date = table.dates.get("dueDate")
         projection = _default_projection(table)
         amounts = measure_columns(table)
-        primary_amount = amounts[0] if amounts else None
+        _amount_pref = (
+            "ara_toplam",
+            "toplam_tutar",
+            "net_tutar",
+            "brut_tutar",
+            "gross_amount",
+            "tespit_tutari",
+            "tutar",
+            "amount",
+        )
+        by_amt = {c.name.lower(): c for c in amounts}
+        primary_amount = None
+        for pref in _amount_pref:
+            if pref in by_amt:
+                primary_amount = by_amt[pref]
+                break
+        if primary_amount is None and amounts:
+            primary_amount = amounts[0]
         remaining = next(
             (
                 c
@@ -744,6 +761,27 @@ def plan_all_table_combinations(
                         sort=SortSpec(field=sort_col, direction="DESC"),
                         limit=lim,
                         physical_table=table_fqn,
+                    ),
+                    risk_tier=RiskTier.A,
+                    category=category,
+                )
+            )
+
+        # Global SUM (no period) — "sipariş toplamları", "fatura toplamı"
+        if primary_amount:
+            _add(
+                PlannedScenario(
+                    scenario_code=_id_suffix(entity, "sum", "all"),
+                    family=ScenarioFamily.SUM_MEASURE,
+                    logical_plan=LogicalPlan(
+                        family=ScenarioFamily.SUM_MEASURE.value,
+                        entity=entity,
+                        aggregation="SUM",
+                        metric=primary_amount.name,
+                        metric_column=primary_amount.fqn,
+                        physical_table=table_fqn,
+                        date_column=biz_date,
+                        limit=1,
                     ),
                     risk_tier=RiskTier.A,
                     category=category,

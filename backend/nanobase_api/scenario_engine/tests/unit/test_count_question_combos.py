@@ -61,6 +61,9 @@ def test_list_and_sum_combos_are_cartesian():
     assert any("fatura" in n and "listele" in n for n in list_n)
     assert any("son" in n and "fatura" in n for n in list_n)
     assert any("toplam fatura tutari" in n or "fatura toplami" in n for n in sum_n)
+    order_sum = LogicalPlan(family="SUM_MEASURE", entity="order", physical_table="satis_siparisleri")
+    order_n = {normalize_question(q) for q in generate_questions(order_sum, expand=True)}
+    assert any("siparis toplamlari" in n for n in order_n)
     assert len(list_qs) >= 80
     assert len(sum_qs) >= 40
     # SUM must not emit COUNT tails

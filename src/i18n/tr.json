@@ -807,7 +807,7 @@
   "bi.chat.progressTip.metric": "Sayılar kontrol ediliyor: {hint}…",
   "bi.chat.progressTip.plan": "Yanıt planlanıyor: {hint}…",
   "bi.chat.progressTip.polish": "Yanıt sadeleştirilip kontrol ediliyor…",
-  "bi.chat.progressTip.readySoon": "Bu işlem biraz sürebilir — adımlar ilerliyor, sistem çalışmaya devam ediyor.",
+  "bi.chat.progressTip.readySoon": "Bu adım bitene kadar burada kalırız; sonraki adıma gerçek ilerleme olunca geçilir.",
   "bi.chat.progressTip.refine": "Analiz adımları sıkılaştırılıyor…",
   "bi.chat.progressTip.relate": "İlgili tablolar ve alanlar eşleştiriliyor…",
   "bi.chat.progressTip.run": "Verileriniz üzerinde çalışılıyor…",

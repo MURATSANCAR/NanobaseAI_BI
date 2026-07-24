@@ -59,6 +59,9 @@ _COLUMN_OVERRIDES: dict[str, ColumnRole] = {
     "net_tutar": ColumnRole.AMOUNT,
     "kalan_tutar": ColumnRole.AMOUNT,
     "toplam_tutar": ColumnRole.AMOUNT,
+    "ara_toplam": ColumnRole.AMOUNT,
+    "genel_toplam": ColumnRole.AMOUNT,
+    "satis_tutari": ColumnRole.AMOUNT,
     "alis_fiyat": ColumnRole.AMOUNT,
     "birim_fiyat": ColumnRole.AMOUNT,
     "bakiye": ColumnRole.AMOUNT,
@@ -236,7 +239,20 @@ def _classify_column_role(col: ColumnSnap) -> ColumnRole:
         if n in ("updated_at", "guncelleme_tarihi") or n.startswith("updated"):
             return ColumnRole.UPDATED_AT
         return ColumnRole.DATE
-    if any(k in n for k in ("amount", "price", "total", "balance", "tutar", "fiyat", "bakiye")):
+    if any(
+        k in n
+        for k in (
+            "amount",
+            "price",
+            "total",
+            "toplam",
+            "balance",
+            "tutar",
+            "fiyat",
+            "bakiye",
+            "ciro",
+        )
+    ):
         return ColumnRole.AMOUNT
     if "qty" in n or "quantity" in n or "miktar" in n:
         return ColumnRole.QUANTITY

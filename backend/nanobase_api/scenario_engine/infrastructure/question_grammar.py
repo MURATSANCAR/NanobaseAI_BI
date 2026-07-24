@@ -116,9 +116,11 @@ _SUM_PREFIXES = ("", "toplam", "genel")
 _SUM_TAIL_FORMS = (
     "tutarı",
     "toplamı",
+    "toplamları",
     "cirosu",
     "tutarı nedir",
     "toplamı nedir",
+    "toplamları nedir",
     "cirosu nedir",
     "tutarı ne kadar",
     "toplamı ne kadar",
@@ -539,7 +541,11 @@ def _base_questions(plan: LogicalPlan) -> list[str]:
         questions.extend(
             [
                 f"{plural.capitalize()} toplamı nedir?",
+                f"{plural.capitalize()} toplamları",
+                f"{singular.capitalize()} toplamları",
                 f"{singular.capitalize()} tutarı toplamını getir.",
+                f"Toplam {singular} tutarı",
+                f"Toplam {plural} tutarı",
             ]
         )
     elif plan.family == "TOP_N":
