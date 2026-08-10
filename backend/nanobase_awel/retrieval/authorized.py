@@ -19,6 +19,21 @@ EMBED_KEY = (
     or os.environ.get("OPENAI_API_KEY")
     or "nanobase-local"
 )
+# Column docs are one-per-column; complete the full column list for the
+# top-ranked tables so guards never treat a partial list as exhaustive.
+COLUMN_COMPLETE_TABLES = int(os.environ.get("BI_RETRIEVAL_COMPLETE_TABLES", "8"))
+
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _client() -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            timeout=httpx.Timeout(30.0, connect=10.0),
+        )
+    return _shared_client
 
 
 def _fold_ident(s: str) -> str:
@@ -208,20 +223,76 @@ def collection_for(datasource_id: str) -> str:
 
 
 async def _embed(text: str) -> list[float]:
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        r = await client.post(
-            EMBED_URL,
-            headers={"Authorization": f"Bearer {EMBED_KEY}", "Content-Type": "application/json"},
-            json={"texts": [text]},
-        )
-        r.raise_for_status()
-        data = r.json()
+    headers = {"Authorization": f"Bearer {EMBED_KEY}", "Content-Type": "application/json"}
+    client = _client()
+    r = await client.post(EMBED_URL, headers=headers, json={"texts": [text]}, timeout=60.0)
+    if r.status_code in (400, 404, 415, 422):
+        # OpenAI-compatible embedders expect {"input": ...}; retry transparently
+        # instead of failing open into an empty schema context.
+        r = await client.post(EMBED_URL, headers=headers, json={"input": [text]}, timeout=60.0)
+    r.raise_for_status()
+    data = r.json()
     vectors = data.get("embeddings") or data.get("data")
     if isinstance(vectors, list) and vectors and isinstance(vectors[0], dict):
         vectors = [v["embedding"] for v in sorted(vectors, key=lambda x: x.get("index", 0))]
     if not vectors:
         raise RuntimeError("empty embedding")
     return list(vectors[0])
+
+
+async def _complete_table_columns(
+    *,
+    coll: str,
+    tenant_id: str,
+    datasource_id: str,
+    tables: list[str],
+    table_cols: dict[str, list[str]],
+    table_types: dict[str, dict[str, str]],
+) -> list[str]:
+    """Stage 2 of retrieval: scroll ALL docs of the selected tables so their
+    column lists are exhaustive. Returns the fq tables actually completed."""
+    bare = sorted({_bare_table(t) for t in tables if _bare_table(t)})
+    if not bare:
+        return []
+    qfilter = build_qdrant_filter(tenant_id=tenant_id, datasource_id=datasource_id) or {
+        "must": []
+    }
+    qfilter = {"must": list(qfilter.get("must") or []) + [{"key": "table", "match": {"any": bare}}]}
+    body: dict[str, Any] = {
+        "limit": 1024,
+        "with_payload": True,
+        "with_vector": False,
+        "filter": qfilter,
+    }
+    try:
+        client = _client()
+        sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/scroll", json=body)
+        if sr.status_code >= 400:
+            # Legacy collections may lack a payload index for match-any — plain scroll.
+            body.pop("filter", None)
+            body["limit"] = 512
+            sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/scroll", json=body)
+        if sr.status_code >= 400:
+            return []
+        points = (sr.json().get("result") or {}).get("points") or []
+    except Exception:
+        return []
+
+    scratch_tables: set[str] = set()
+    wanted = set(bare)
+    for pt in points:
+        payload = pt.get("payload") or {}
+        if _bare_table(str(payload.get("table") or "")) not in wanted:
+            continue
+        _ingest_payload(
+            payload,
+            datasource_id=datasource_id,
+            tenant_id=tenant_id,
+            seen_tables=scratch_tables,
+            table_cols=table_cols,
+            table_types=table_types,
+        )
+    return sorted(fq for fq in scratch_tables if _bare_table(fq) in wanted)
 
 
 def build_qdrant_filter(
@@ -298,36 +369,36 @@ async def retrieve_authorized_schema(
         }
         if qfilter:
             body["filter"] = qfilter
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            cr = await client.get(f"{QDRANT_URL}/collections/{coll}")
-            if cr.status_code >= 400:
-                if fail_closed:
-                    raise WorkflowError(
-                        SCHEMA_RETRIEVAL_UNAVAILABLE,
-                        "Schema koleksiyonu bulunamadı.",
-                        retryable=True,
-                    )
-                return {"ok": False, "collection": coll, "hits": [], "tables": [], "hint_extra": ""}
+        client = _client()
+        cr = await client.get(f"{QDRANT_URL}/collections/{coll}")
+        if cr.status_code >= 400:
+            if fail_closed:
+                raise WorkflowError(
+                    SCHEMA_RETRIEVAL_UNAVAILABLE,
+                    "Schema koleksiyonu bulunamadı.",
+                    retryable=True,
+                )
+            return {"ok": False, "collection": coll, "hits": [], "tables": [], "hint_extra": ""}
+        sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
+        # If filter unsupported, retry without filter (legacy collections)
+        if sr.status_code >= 400 and "filter" in body:
+            body.pop("filter", None)
             sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
-            # If filter unsupported, retry without filter (legacy collections)
-            if sr.status_code >= 400 and "filter" in body:
-                body.pop("filter", None)
-                sr = await client.post(f"{QDRANT_URL}/collections/{coll}/points/search", json=body)
-            sr.raise_for_status()
-            result = sr.json().get("result") or []
-            # Neon/Postgres index has no status payload — drop status clause on empty hits
-            if not result and isinstance(body.get("filter"), dict):
-                must = list((body["filter"].get("must") or []))
-                stripped = [m for m in must if m.get("key") != "status"]
-                if len(stripped) < len(must):
-                    body["filter"] = {"must": stripped} if stripped else None
-                    if body["filter"] is None:
-                        body.pop("filter", None)
-                    sr = await client.post(
-                        f"{QDRANT_URL}/collections/{coll}/points/search", json=body
-                    )
-                    sr.raise_for_status()
-                    result = sr.json().get("result") or []
+        sr.raise_for_status()
+        result = sr.json().get("result") or []
+        # Neon/Postgres index has no status payload — drop status clause on empty hits
+        if not result and isinstance(body.get("filter"), dict):
+            must = list((body["filter"].get("must") or []))
+            stripped = [m for m in must if m.get("key") != "status"]
+            if len(stripped) < len(must):
+                body["filter"] = {"must": stripped} if stripped else None
+                if body["filter"] is None:
+                    body.pop("filter", None)
+                sr = await client.post(
+                    f"{QDRANT_URL}/collections/{coll}/points/search", json=body
+                )
+                sr.raise_for_status()
+                result = sr.json().get("result") or []
     except WorkflowError:
         raise
     except Exception as e:
@@ -371,6 +442,29 @@ async def retrieve_authorized_schema(
         ingested["id"] = hit.get("id")
         hits.append(ingested)
 
+    # Stage 2: exhaustively fetch column docs of the top-ranked tables. Vector
+    # top-K alone returns a per-column subset that downstream guards would
+    # otherwise mistake for the full column list.
+    ranked: list[str] = []
+    for h in hits:
+        t = str(h.get("table") or "")
+        if t and t not in ranked:
+            ranked.append(t)
+    columns_complete: list[str] = []
+    if ranked:
+        try:
+            columns_complete = await _complete_table_columns(
+                coll=coll,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+                tables=ranked[:COLUMN_COMPLETE_TABLES],
+                table_cols=table_cols,
+                table_types=table_types,
+            )
+            seen_tables.update(columns_complete)
+        except Exception:
+            columns_complete = []
+
     hint = _build_hint(
         datasource_id=datasource_id,
         coll=coll,
@@ -383,10 +477,11 @@ async def retrieve_authorized_schema(
         "collection": coll,
         "hits": hits[:max_documents],
         "tables": sorted(seen_tables),
-        "table_columns": {k: v[:48] for k, v in table_cols.items()},
+        "table_columns": {k: v[:64] for k, v in table_cols.items()},
         "table_column_types": {
-            k: dict(list(v.items())[:48]) for k, v in table_types.items()
+            k: dict(list(v.items())[:64]) for k, v in table_types.items()
         },
+        "columns_complete": columns_complete,
         "hint_extra": hint,
         "untrusted_comments": untrusted_comments[:20],
         "filter": qfilter,
@@ -498,10 +593,15 @@ async def expand_tables_from_index(
         "collection": coll,
         "hits": slim_hits,
         "tables": sorted(seen_tables),
-        "table_columns": {k: v[:48] for k, v in table_cols.items()},
+        "table_columns": {k: v[:64] for k, v in table_cols.items()},
         "table_column_types": {
-            k: dict(list(v.items())[:48]) for k, v in table_types.items()
+            k: dict(list(v.items())[:64]) for k, v in table_types.items()
         },
+        # Expanded tables were ingested from a full scroll — column lists are
+        # exhaustive for them too.
+        "columns_complete": sorted(
+            set(base.get("columns_complete") or []) | set(expanded)
+        ),
         "hint_extra": hint,
         "expanded_tables": expanded,
         "filter": qfilter,

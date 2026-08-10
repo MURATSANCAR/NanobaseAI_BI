@@ -32,7 +32,9 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
     if req.attempt > 2:
         raise WorkflowError(REPAIR_LIMIT_EXCEEDED, "Maksimum 2 repair denemesi.")
 
-    system, user_tpl = sql_repair_prompts()
+    # Dialect MUST flow into the repair prompt — repairing an Oracle/HANA error
+    # with the PostgreSQL prompt regenerates LIMIT/ILIKE and can never converge.
+    system, user_tpl = sql_repair_prompts(dialect=req.dialect)
     user = render_simple(
         user_tpl,
         question=req.question,
@@ -50,11 +52,23 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
         prompt_version=req.promptVersion,
         model_profile=req.modelProfile,
     )
+    # Stamp dialect from the request like run_sql_plan does — never trust the
+    # model's own dialect claim on the repair path.
+    dialect_l = (req.dialect or "postgres").lower().replace("postgresql", "postgres")
+    if dialect_l in ("odata", "s4_odata", "sap_odata"):
+        plan.dialect = "odata"
+    elif dialect_l in ("hana", "sap_hana"):
+        plan.dialect = "hana"
+    elif dialect_l == "oracle":
+        plan.dialect = "oracle"
+    else:
+        plan.dialect = "postgres"
     if plan.status == PlanStatus.PLANNED:
         plan = validate_plan_references(
             plan,
             allowed_tables=set(req.allowedTables) or None,
             context_text=req.authorizedContext or req.schemaHint,
+            dialect=plan.dialect,
         )
     dump = plan.model_dump()
     dump.pop("workflow", None)

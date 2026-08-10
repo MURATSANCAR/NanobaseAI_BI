@@ -7,8 +7,11 @@ Explain/general always use the chat ModelQueue.
 
 from __future__ import annotations
 
+import inspect
+import json
 import os
-from typing import Any
+import time
+from typing import Any, Callable
 
 import httpx
 
@@ -42,6 +45,34 @@ TEXT2SQL_FALLBACK = os.environ.get("TEXT2SQL_FALLBACK_TO_CHAT", "1").strip().low
 LLM_TIMEOUT_SEC = float(os.environ.get("LLM_TIMEOUT_SEC", "90"))
 TEXT2SQL_TIMEOUT_SEC = float(os.environ.get("TEXT2SQL_TIMEOUT_SEC", "90"))
 HEALTH_TIMEOUT_SEC = float(os.environ.get("LLM_HEALTH_TIMEOUT_SEC", "3"))
+# Health probe result is cached; a per-completion GET /models round trip adds
+# latency (and a spurious 3s failure mode) while the exclusive model slot is held.
+HEALTH_CACHE_SEC = float(os.environ.get("LLM_HEALTH_CACHE_SEC", "30"))
+# llama.cpp defaults repeat_penalty to 1.1 which corrupts long SQL with repeated
+# column tokens even at temperature 0. Pin greedy-friendly sampling.
+SAMPLER_PIN = os.environ.get("LLM_SAMPLER_PIN", "1").strip().lower() not in (
+    "0",
+    "false",
+    "no",
+    "off",
+)
+LLM_REPEAT_PENALTY = float(os.environ.get("LLM_REPEAT_PENALTY", "1.0"))
+
+_shared_client: httpx.AsyncClient | None = None
+_probe_cache: dict[str, tuple[float, bool]] = {}
+
+# Delta callback: called with each streamed content chunk (may be sync or async).
+DeltaCallback = Callable[[str], Any]
+
+
+def _client() -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            timeout=httpx.Timeout(LLM_TIMEOUT_SEC, connect=10.0),
+        )
+    return _shared_client
 
 
 def _compact_user_prompt(user: str, *, ratio: float = 0.5) -> str:
@@ -55,6 +86,11 @@ def _compact_user_prompt(user: str, *, ratio: float = 0.5) -> str:
         inner = text[s + len(start_tag) : e]
         keep = max(800, int(len(inner) * max(0.25, min(ratio, 0.9))))
         if len(inner) > keep:
+            # Cut at a line boundary — a mid-line cut leaves a half column list
+            # that reads as authoritative and invites invented identifiers.
+            cut = inner.rfind("\n", 0, keep)
+            if cut > 400:
+                keep = cut
             inner = inner[:keep] + "\n…[truncated for retry]…"
             return text[: s + len(start_tag)] + inner + text[e:]
     if len(text) > 6000:
@@ -63,13 +99,32 @@ def _compact_user_prompt(user: str, *, ratio: float = 0.5) -> str:
 
 
 async def _probe_models(base: str, key: str) -> bool:
+    now = time.monotonic()
+    cached = _probe_cache.get(base)
+    if cached and (now - cached[0]) < HEALTH_CACHE_SEC:
+        return cached[1]
     try:
         headers = {"Authorization": f"Bearer {key}"}
-        async with httpx.AsyncClient(timeout=HEALTH_TIMEOUT_SEC) as client:
-            r = await client.get(f"{base.rstrip('/')}/models", headers=headers)
-            return r.status_code < 500
+        r = await _client().get(
+            f"{base.rstrip('/')}/models", headers=headers, timeout=HEALTH_TIMEOUT_SEC
+        )
+        ok = r.status_code < 500
     except Exception:
-        return False
+        ok = False
+    _probe_cache[base] = (now, ok)
+    return ok
+
+
+async def _emit_delta(on_delta: DeltaCallback | None, chunk: str) -> None:
+    if on_delta is None or not chunk:
+        return
+    try:
+        res = on_delta(chunk)
+        if inspect.isawaitable(res):
+            await res
+    except Exception:
+        # Delivery to the UI must never fail the completion itself.
+        pass
 
 
 async def _raw_chat_completion(
@@ -82,7 +137,10 @@ async def _raw_chat_completion(
     temperature: float,
     max_tokens: int,
     timeout_s: float,
+    meta: dict[str, Any] | None = None,
+    on_delta: DeltaCallback | None = None,
 ) -> str:
+    stream = on_delta is not None
     body: dict[str, Any] = {
         "model": model,
         "messages": [
@@ -91,19 +149,59 @@ async def _raw_chat_completion(
         ],
         "temperature": temperature,
         "max_tokens": max_tokens,
-        "stream": False,
+        "stream": stream,
     }
+    if SAMPLER_PIN:
+        body["top_p"] = 1.0
+        body["repeat_penalty"] = LLM_REPEAT_PENALTY
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     # Use a request that respects asyncio cancellation (client disconnect → task.cancel).
     timeout = httpx.Timeout(timeout_s, connect=min(30.0, timeout_s))
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        try:
-            r = await client.post(f"{base}/chat/completions", headers=headers, json=body)
+    client = _client()
+    finish_reason: str | None = None
+    try:
+        if stream:
+            parts: list[str] = []
+            async with client.stream(
+                "POST",
+                f"{base}/chat/completions",
+                headers=headers,
+                json=body,
+                timeout=timeout,
+            ) as r:
+                r.raise_for_status()
+                async for line in r.aiter_lines():
+                    line = (line or "").strip()
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if payload == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(payload)
+                    except Exception:
+                        continue
+                    choice = (chunk.get("choices") or [{}])[0]
+                    finish_reason = choice.get("finish_reason") or finish_reason
+                    delta = str(((choice.get("delta") or {}).get("content")) or "")
+                    if delta:
+                        parts.append(delta)
+                        await _emit_delta(on_delta, delta)
+            content = "".join(parts)
+        else:
+            r = await client.post(
+                f"{base}/chat/completions", headers=headers, json=body, timeout=timeout
+            )
             r.raise_for_status()
             data = r.json()
-        except httpx.TimeoutException as e:
-            raise TimeoutError(f"llm_timeout:{base}:{timeout_s}s") from e
-    return str((((data.get("choices") or [{}])[0].get("message") or {}).get("content")) or "")
+            choice = (data.get("choices") or [{}])[0]
+            finish_reason = choice.get("finish_reason")
+            content = str(((choice.get("message") or {}).get("content")) or "")
+    except httpx.TimeoutException as e:
+        raise TimeoutError(f"llm_timeout:{base}:{timeout_s}s") from e
+    if meta is not None:
+        meta["finish_reason"] = finish_reason
+    return content
 
 
 async def _call_endpoint(
@@ -117,6 +215,8 @@ async def _call_endpoint(
     max_tokens: int,
     timeout_s: float,
     require_healthy: bool = True,
+    meta: dict[str, Any] | None = None,
+    on_delta: DeltaCallback | None = None,
 ) -> str:
     if require_healthy and not await _probe_models(base, key):
         raise RuntimeError(f"llm_unhealthy:{base}")
@@ -129,6 +229,8 @@ async def _call_endpoint(
         temperature=temperature,
         max_tokens=max_tokens,
         timeout_s=timeout_s,
+        meta=meta,
+        on_delta=on_delta,
     )
 
 
@@ -139,6 +241,8 @@ async def _via_chat_queue(
     temperature: float,
     max_tokens: int,
     timeout_s: float,
+    meta: dict[str, Any] | None = None,
+    on_delta: DeltaCallback | None = None,
 ) -> str:
     queue = get_model_queue()
     sink = progress_sink.get()
@@ -163,6 +267,8 @@ async def _via_chat_queue(
             temperature=temperature,
             max_tokens=max_tokens,
             timeout_s=timeout_s,
+            meta=meta,
+            on_delta=on_delta,
         )
     except ModelQueueFullError as e:
         raise WorkflowError(e.code, e.message, retryable=True) from e
@@ -180,6 +286,8 @@ async def _via_arctic(
     temperature: float,
     max_tokens: int,
     timeout_s: float,
+    meta: dict[str, Any] | None = None,
+    on_delta: DeltaCallback | None = None,
 ) -> str:
     return await _call_endpoint(
         system,
@@ -190,6 +298,8 @@ async def _via_arctic(
         temperature=temperature,
         max_tokens=max_tokens,
         timeout_s=timeout_s,
+        meta=meta,
+        on_delta=on_delta,
     )
 
 
@@ -201,11 +311,14 @@ async def chat_completion(
     max_tokens: int = 2048,
     timeout_s: float | None = None,
     purpose: str = "general",
+    meta: dict[str, Any] | None = None,
+    on_delta: DeltaCallback | None = None,
 ) -> str:
     """LLM completion.
 
     purpose=sql_plan|sql_repair → prefer chat model (JSON plan), Arctic optional fallback.
     purpose=general → ModelQueue + chat model.
+    meta (optional dict) receives finish_reason; on_delta streams content chunks.
     """
     chat_timeout = float(timeout_s) if timeout_s is not None else LLM_TIMEOUT_SEC
     arctic_timeout = float(timeout_s) if timeout_s is not None else TEXT2SQL_TIMEOUT_SEC
@@ -220,6 +333,8 @@ async def chat_completion(
                 temperature=temperature,
                 max_tokens=max_tokens,
                 timeout_s=arctic_timeout,
+                meta=meta,
+                on_delta=on_delta,
             )
         except Exception as e:  # noqa: BLE001
             last_err = e
@@ -248,6 +363,8 @@ async def chat_completion(
             temperature=temperature,
             max_tokens=max_tokens,
             timeout_s=chat_timeout,
+            meta=meta,
+            on_delta=on_delta,
         )
     except Exception as e:
         # One compact-context retry for sql_plan/sql_repair under load/queue pressure.
@@ -261,6 +378,8 @@ async def chat_completion(
                         temperature=temperature,
                         max_tokens=max_tokens,
                         timeout_s=chat_timeout,
+                        meta=meta,
+                        on_delta=on_delta,
                     )
                 except Exception as e2:  # noqa: BLE001
                     raise WorkflowError(

@@ -9,28 +9,53 @@ from typing import Any
 from nanobase_awel.contracts.errors import OUTPUT_PARSE_FAILED, WorkflowError
 from nanobase_awel.contracts.planning import PlanStatus, SqlPlan
 
+try:
+    import sqlglot
+except ImportError:  # pragma: no cover
+    sqlglot = None
+
 
 def extract_json_object(text: str) -> dict[str, Any]:
     text = (text or "").strip()
     if not text:
         return {}
-    # strip markdown fences
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
+    # strip markdown fences anywhere ("Here is the plan:\n```json ..." included)
+    if "```" in text:
+        text = re.sub(r"```(?:json|sql)?\s*", "", text, flags=re.I)
+    text = text.strip()
     try:
         data = json.loads(text)
         return data if isinstance(data, dict) else {}
     except Exception:
         pass
-    m = re.search(r"\{[\s\S]*\}", text)
-    if m:
+    # Balanced scan: try to decode from each "{" instead of one greedy
+    # first-{ .. last-} span (which breaks on prose containing braces or
+    # multiple JSON objects).
+    decoder = json.JSONDecoder()
+    idx = text.find("{")
+    while idx != -1:
         try:
-            data = json.loads(m.group(0))
-            return data if isinstance(data, dict) else {}
+            data, _end = decoder.raw_decode(text, idx)
+            if isinstance(data, dict):
+                return data
         except Exception:
-            return {}
+            pass
+        idx = text.find("{", idx + 1)
     return {}
+
+
+def _cut_at_semicolon_outside_strings(text: str) -> str:
+    """Split at the first ';' that is not inside a quoted literal/identifier."""
+    in_single = False
+    in_double = False
+    for i, ch in enumerate(text):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == ";" and not in_single and not in_double:
+            return text[:i]
+    return text
 
 
 def normalize_single_select_sql(sql: str | None) -> str | None:
@@ -44,7 +69,9 @@ def normalize_single_select_sql(sql: str | None) -> str | None:
         text = re.sub(r"^```(?:sql|postgres)?\s*", "", text, flags=re.I)
         text = re.sub(r"\s*```$", "", text)
     # Models sometimes emit literal backslash-escapes instead of real newlines.
-    if "\\n" in text or "\\t" in text:
+    # Only unwrap when the text has no real newlines — otherwise the escapes
+    # belong to string literals inside otherwise well-formed SQL.
+    if ("\\n" in text or "\\t" in text) and "\n" not in text:
         text = (
             text.replace("\\r\\n", "\n")
             .replace("\\n", "\n")
@@ -54,9 +81,10 @@ def normalize_single_select_sql(sql: str | None) -> str | None:
     m = re.search(r"(?is)\b((?:with|select)\b[\s\S]+)", text)
     if m:
         text = m.group(1).strip()
-    # Drop trailing prose / extra statements after the first terminator.
+    # Drop trailing prose / extra statements after the first terminator
+    # (';' inside quoted literals is not a terminator).
     if ";" in text:
-        text = text.split(";", 1)[0].strip()
+        text = _cut_at_semicolon_outside_strings(text).strip()
     text = text.rstrip(";").strip()
     if not text:
         return None
@@ -69,11 +97,28 @@ def normalize_single_select_sql(sql: str | None) -> str | None:
     return text
 
 
+def _sql_parses(sql: str) -> bool:
+    """Salvaged free-text SQL must at least parse — a truncated completion
+    (finish_reason=length) otherwise flows downstream as a 'PLANNED' query."""
+    if sqlglot is None:  # pragma: no cover
+        return True
+    try:
+        sqlglot.parse_one(sql, read="postgres")
+        return True
+    except Exception:
+        return False
+
+
 def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadata_version: str = "") -> SqlPlan:
     parsed = extract_json_object(raw)
     if not parsed:
         # last chance: pull SELECT
         extracted = normalize_single_select_sql(raw)
+        if extracted and not _sql_parses(extracted):
+            raise WorkflowError(
+                OUTPUT_PARSE_FAILED,
+                "LLM çıktısı JSON değil ve içindeki SQL bütün değil (muhtemelen kesilmiş).",
+            )
         if extracted:
             return SqlPlan(
                 status=PlanStatus.PLANNED,
@@ -92,6 +137,9 @@ def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadat
     status_raw = str(parsed.get("status") or "PLANNED").upper()
     if status_raw in ("SUCCESS", "OK", "COMPLETE", "COMPLETED"):
         status_raw = "PLANNED"
+    if status_raw in ("ERROR", "FAIL", "FAILURE"):
+        # A model-declared error must not silently run just because sql is set.
+        status_raw = "FAILED"
     try:
         status = PlanStatus(status_raw)
     except ValueError:
@@ -123,9 +171,11 @@ def parse_sql_plan(raw: str, *, prompt_version: str, model_profile: str, metadat
         ambiguities=parsed.get("ambiguities") if isinstance(parsed.get("ambiguities"), list) else [],
         clarificationQuestion=parsed.get("clarificationQuestion") or parsed.get("clarification_question"),
         confidence=parsed.get("confidence"),
-        promptVersion=str(parsed.get("promptVersion") or prompt_version),
-        modelProfile=str(parsed.get("modelProfile") or model_profile),
-        metadataVersion=str(parsed.get("metadataVersion") or metadata_version),
+        # Provenance is stamped by the pipeline; model-supplied values are
+        # untrusted and must never overwrite audit metadata.
+        promptVersion=prompt_version,
+        modelProfile=model_profile,
+        metadataVersion=metadata_version,
     )
 
     if plan.status == PlanStatus.PLANNED:

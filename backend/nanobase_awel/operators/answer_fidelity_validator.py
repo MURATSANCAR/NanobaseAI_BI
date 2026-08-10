@@ -80,14 +80,28 @@ def validate_answer_fidelity(
     *,
     summary: dict[str, Any],
     rows: list[dict[str, Any]],
+    question: str = "",
+    sql: str = "",
 ) -> tuple[bool, list[str]]:
-    """Return (ok, problems). Small integers used in prose (e.g. '2 satır') allowed if ≤ rowCount."""
+    """Return (ok, problems). Small integers used in prose (e.g. '2 satır') allowed if ≤ rowCount.
+
+    Numbers echoed from the question or the executed SQL (years, thresholds,
+    LIMIT values) are legitimate — flagging them nuked correct answers like
+    "2025 yılında toplam ciro ..." into the deterministic fallback.
+    """
     allowed = allowed_numbers_from_summary(summary, rows)
+    if question:
+        allowed |= set(extract_numbers(question))
+    if sql:
+        allowed |= set(extract_numbers(sql))
     problems: list[str] = []
     row_count = int(summary.get("rowCount") or 0)
     for n in extract_numbers(answer):
         if n <= max(row_count, 20) and n == int(n) and n <= 1000:
             # likely counting language — allow if not a huge invented total
+            continue
+        if 1900 <= n <= 2100 and n == int(n):
+            # calendar years in prose ("2025 yılında") are not invented totals
             continue
         if not numbers_compatible(n, allowed):
             problems.append(f"invented_number:{n}")

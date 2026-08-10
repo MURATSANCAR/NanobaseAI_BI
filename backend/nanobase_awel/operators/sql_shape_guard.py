@@ -92,8 +92,53 @@ def unwrap_select_star_subquery(sql: str) -> tuple[str, bool]:
     return text, False
 
 
+def _table_refs_sqlglot(sql: str) -> list[str] | None:
+    """AST-based physical table refs; None when sqlglot can't parse.
+
+    Replaces regex extraction as primary: the regex mishandles nested
+    ``EXTRACT(... FROM CAST(...))`` (extracts ``cast`` as a table), flags table
+    functions (``FROM generate_series(...)``), and silently skips short-schema
+    refs like ``erp.fatura``.
+    """
+    try:
+        import sqlglot
+        from sqlglot import exp
+    except ImportError:  # pragma: no cover
+        return None
+    text = (sql or "").strip()
+    if not text:
+        return []
+    try:
+        tree = sqlglot.parse_one(text, read="postgres")
+    except Exception:
+        return None
+    cte_names: set[str] = set()
+    for cte in tree.find_all(exp.CTE):
+        alias = cte.alias or getattr(cte, "alias_or_name", None)
+        if alias:
+            cte_names.add(str(alias).strip('"').lower())
+    refs: list[str] = []
+    seen: set[str] = set()
+    for t in tree.find_all(exp.Table):
+        # FROM func(...) parses as Table(this=Func) — a table function, not a ref.
+        if isinstance(t.this, exp.Func):
+            continue
+        name = (t.name or "").strip('"').lower()
+        if not name or name in cte_names:
+            continue
+        schema = (t.db or "").strip('"').lower()
+        fq = f"{schema}.{name}" if schema else name
+        if fq not in seen:
+            seen.add(fq)
+            refs.append(fq)
+    return refs
+
+
 def extract_table_refs(sql: str) -> list[str]:
     """Best-effort physical table names from FROM/JOIN (no CTE aliases)."""
+    ast_refs = _table_refs_sqlglot(sql)
+    if ast_refs is not None:
+        return ast_refs
     text = sql or ""
     # Drop comments so prose like "from the context" never becomes a table ref.
     text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
@@ -195,6 +240,71 @@ def _select_scope_spans(text: str) -> list[tuple[int, int, int]]:
     return spans
 
 
+_FROM_CLAUSE_END = re.compile(
+    r"(?is)^(where|group\s+by|order\s+by|having|limit|offset|fetch|window|qualify|"
+    r"union|intersect|except|join|inner|left|right|full|cross|natural|on|using)\b"
+)
+
+_RELATION_WITH_ALIAS = re.compile(
+    r"(?is)^\s*((?:\"?[a-zA-Z_][\w]*\"?\.)?\"?[a-zA-Z_][\w]*\"?)"
+    r"(?:\s+(?:as\s+)?(\"?[a-zA-Z_][\w]*\"?))?\s*$"
+)
+
+
+def _register_relation(aliases: set[str], rel: str, alias_raw: str | None) -> None:
+    if alias_raw:
+        aliases.add(alias_raw.replace('"', "").lower())
+    short = _short(rel)
+    if short and short not in _NON_ALIAS_LEFT:
+        aliases.add(short.lower())
+    # schema.table also exposes table short name
+    if "." in rel:
+        aliases.add(rel.lower())
+
+
+def _comma_join_relations(
+    fragment: str, *, base_depth: int, depths: list[int], abs_start: int, aliases: set[str]
+) -> None:
+    """Register ``FROM a x, b y`` comma-list relations (LLMs emit these routinely;
+    only the first relation used to be registered → false UNDEFINED_TABLE_ALIAS)."""
+    for fm in re.finditer(r"(?is)\bfrom\s+", fragment):
+        kw_at = abs_start + fm.start()
+        if kw_at >= len(depths) or depths[kw_at] != base_depth:
+            continue
+        i = fm.end()
+        # Find the end of this FROM clause at the same paren depth.
+        while i < len(fragment):
+            abs_i = abs_start + i
+            if abs_i < len(depths) and depths[abs_i] == base_depth and _FROM_CLAUSE_END.match(
+                fragment[i : i + 12]
+            ):
+                break
+            i += 1
+        clause = fragment[fm.end() : i]
+        # Split on top-level commas within the clause.
+        parts: list[str] = []
+        buf: list[str] = []
+        depth0 = 0
+        for ch in clause:
+            if ch == "(":
+                depth0 += 1
+            elif ch == ")":
+                depth0 -= 1
+            if ch == "," and depth0 == 0:
+                parts.append("".join(buf))
+                buf = []
+            else:
+                buf.append(ch)
+        parts.append("".join(buf))
+        for part in parts[1:]:  # first relation is handled by the FROM/JOIN regex
+            pm = _RELATION_WITH_ALIAS.match(part)
+            if pm:
+                alias2 = pm.group(2)
+                if alias2 and _FROM_CLAUSE_END.match(alias2):
+                    alias2 = None
+                _register_relation(aliases, pm.group(1).replace('"', ""), alias2)
+
+
 def _aliases_in_scope(fragment: str, *, base_depth: int, depths: list[int], abs_start: int) -> set[str]:
     """FROM/JOIN relation names + aliases at the select's own depth (not nested)."""
     aliases: set[str] = set()
@@ -208,15 +318,10 @@ def _aliases_in_scope(fragment: str, *, base_depth: int, depths: list[int], abs_
         if rel_at >= len(depths) or depths[rel_at] != base_depth:
             continue
         rel = m.group(1).replace('"', "")
-        alias_raw = m.group(2)
-        if alias_raw:
-            aliases.add(alias_raw.replace('"', "").lower())
-        short = _short(rel)
-        if short and short not in _NON_ALIAS_LEFT:
-            aliases.add(short.lower())
-        # schema.table also exposes table short name
-        if "." in rel:
-            aliases.add(rel.lower())
+        _register_relation(aliases, rel, m.group(2))
+    _comma_join_relations(
+        fragment, base_depth=base_depth, depths=depths, abs_start=abs_start, aliases=aliases
+    )
     return aliases
 
 
@@ -357,8 +462,17 @@ def guard_sql_shape(
     allowed_tables: Iterable[str] | None = None,
     question: str | None = None,
     table_columns: dict[str, list[str]] | None = None,
+    complete_tables: Iterable[str] | None = None,
+    dialect: str = "postgres",
 ) -> ShapeGuardResult:
-    """Sanitize / soft-block SQL before Gateway validate."""
+    """Sanitize / soft-block SQL before Gateway validate.
+
+    ``complete_tables``: tables whose column list in ``table_columns`` is known
+    to be exhaustive. When provided, COLUMN_NOT_FOUND hard-blocks only for those
+    tables; misses on partially-retrieved tables become soft warnings (the
+    Gateway owns the real catalog). When omitted, the caller vouches for
+    completeness and the legacy hard-block behavior applies.
+    """
     warnings: list[str] = []
     text = (sql or "").strip()
     if not text:
@@ -439,20 +553,35 @@ def guard_sql_shape(
         try:
             from nanobase_awel.operators.schema_reference_validator import find_unknown_columns
 
-            unknown = find_unknown_columns(text, dict(table_columns))
+            unknown = find_unknown_columns(text, dict(table_columns), dialect=dialect)
         except Exception:
             unknown = []
         if unknown:
-            fq, col, sample = unknown[0]
-            sample_s = ", ".join(sample[:12]) if sample else "(none)"
-            return ShapeGuardResult(
-                sql=text,
-                warnings=warnings,
-                blocked=True,
-                code="COLUMN_NOT_FOUND",
-                message=(
-                    f"Kolon bulunamadı: {fq}.{col}. Bu tabloda bilinen kolonlar: {sample_s}"
-                ),
-            )
+            if complete_tables is None:
+                complete = None
+            else:
+                complete = {_norm_table(t) for t in complete_tables if t}
+                complete |= {_short(t) for t in complete}
+            hard: list[tuple[str, str, list[str]]] = []
+            for fq, col, sample in unknown:
+                if complete is None or _norm_table(fq) in complete or _short(fq) in complete:
+                    hard.append((fq, col, sample))
+                else:
+                    # Partial retrieval must not be enforced as exhaustive —
+                    # that blocks valid SQL and steers repairs to a
+                    # wrong-but-retrieved column (silent wrong answers).
+                    warnings.append(f"column_not_in_retrieval:{fq}.{col}")
+            if hard:
+                fq, col, sample = hard[0]
+                sample_s = ", ".join(sample[:12]) if sample else "(none)"
+                return ShapeGuardResult(
+                    sql=text,
+                    warnings=warnings,
+                    blocked=True,
+                    code="COLUMN_NOT_FOUND",
+                    message=(
+                        f"Kolon bulunamadı: {fq}.{col}. Bu tabloda bilinen kolonlar: {sample_s}"
+                    ),
+                )
 
     return ShapeGuardResult(sql=text, warnings=warnings)

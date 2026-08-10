@@ -30,9 +30,18 @@ def _expand_table_keys(allowed: set[str]) -> set[str]:
     return expanded
 
 
+_SQLGLOT_READ = {"postgres": "postgres", "oracle": "oracle"}
+
+
+def _read_dialect(dialect: str | None) -> str:
+    return _SQLGLOT_READ.get((dialect or "postgres").lower(), "postgres")
+
+
 def find_unknown_columns(
     sql: str,
     table_columns: dict[str, list[str]] | None,
+    *,
+    dialect: str = "postgres",
 ) -> list[tuple[str, str, list[str]]]:
     """Return (table_fq, bad_column, allowed_sample) for physical-table column misses.
 
@@ -45,7 +54,7 @@ def find_unknown_columns(
     if not sql_text:
         return []
     try:
-        tree = sqlglot.parse_one(sql_text, read="postgres")
+        tree = sqlglot.parse_one(sql_text, read=_read_dialect(dialect))
     except Exception:
         return []
 
@@ -109,21 +118,44 @@ def find_unknown_columns(
     return bad
 
 
+_TRUSTED_HARVEST_TAGS = (
+    ("<authorized_schema_context>", "</authorized_schema_context>"),
+    ("<published_semantic_catalog>", "</published_semantic_catalog>"),
+)
+
+
+def _harvest_scope(context_text: str) -> str:
+    """Identifiers may only be harvested from schema/semantic blocks. Harvesting
+    the whole prompt lets a question mentioning ``secret.tbl`` self-authorize it."""
+    text = context_text or ""
+    scoped: list[str] = []
+    for start_tag, end_tag in _TRUSTED_HARVEST_TAGS:
+        s = text.find(start_tag)
+        e = text.find(end_tag)
+        if s >= 0 and e > s:
+            scoped.append(text[s + len(start_tag) : e])
+    # Plain contexts without block tags (unit tests, direct API use) keep the
+    # old whole-text behavior.
+    return "\n".join(scoped) if scoped else text
+
+
 def validate_plan_references(
     plan: SqlPlan,
     *,
     allowed_tables: set[str] | None,
     context_text: str,
     table_columns: dict[str, list[str]] | None = None,
+    dialect: str = "postgres",
 ) -> SqlPlan:
     if plan.status != PlanStatus.PLANNED or not plan.sql:
         return plan
 
+    harvest_text = _harvest_scope(context_text)
     allowed = {_norm(t) for t in (allowed_tables or set())}
-    # also harvest identifiers from context
-    for m in re.finditer(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\b", context_text.lower()):
+    # also harvest identifiers from the trusted context blocks
+    for m in re.finditer(r"\b([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\b", harvest_text.lower()):
         allowed.add(m.group(1))
-    for m in re.finditer(r"-\s*([a-z_][a-z0-9_]*)\(", context_text.lower()):
+    for m in re.finditer(r"-\s*([a-z_][a-z0-9_]*)\(", harvest_text.lower()):
         allowed.add(m.group(1))
     allowed = _expand_table_keys(allowed)
 
@@ -140,7 +172,7 @@ def validate_plan_references(
             plan.warnings = [*(plan.warnings or []), "sql_extracted_before_validate"]
 
     try:
-        tree = sqlglot.parse_one(sql_text, read="postgres")
+        tree = sqlglot.parse_one(sql_text, read=_read_dialect(dialect))
     except Exception as e:
         # Soft-fail: Gateway still validates; hard-fail blocked usable Arctic drafts.
         plan.warnings = [*(plan.warnings or []), f"sql_parse_soft_fail:{type(e).__name__}"]
@@ -174,15 +206,15 @@ def validate_plan_references(
                 )
 
     cols = table_columns
-    if cols is None and context_text:
+    if cols is None and harvest_text:
         # Best-effort harvest "table: col1, col2" lines from authorized hint.
         cols = {}
         for m in re.finditer(
             r"(?m)^\s{0,4}((?:[a-z_][\w]*\.)?[a-z_][\w]*)\s*:\s*([a-z_][\w,\s]+)$",
-            context_text.lower(),
+            harvest_text.lower(),
         ):
             cols[m.group(1)] = [c.strip() for c in m.group(2).split(",") if c.strip()]
-    unknown = find_unknown_columns(sql_text, cols)
+    unknown = find_unknown_columns(sql_text, cols, dialect=dialect)
     if unknown:
         fq, col, _sample = unknown[0]
         # Soft warn here so chat shape-guard can hard-block with repairable COLUMN_NOT_FOUND
