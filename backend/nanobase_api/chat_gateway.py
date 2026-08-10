@@ -123,8 +123,29 @@ def _schema_hint_for(datasource_id: str) -> str:
     )
 
 
+_DIALECT_CACHE: dict[str, tuple[float, str]] = {}
+_DIALECT_CACHE_TTL = float(os.environ.get("BI_DIALECT_CACHE_SEC", "30"))
+
+
 def _dialect_for_datasource(datasource_id: str) -> str:
-    """Resolve dialect from Query Gateway registry / secrets maps."""
+    """Resolve dialect from Query Gateway registry / secrets maps.
+
+    Cached with a short TTL — this is called ~4× per chat request and used to
+    re-read + parse secrets JSON files from disk on the event loop every time.
+    """
+    import time as _time
+
+    key = datasource_id or ""
+    cached = _DIALECT_CACHE.get(key)
+    now = _time.monotonic()
+    if cached and (now - cached[0]) < _DIALECT_CACHE_TTL:
+        return cached[1]
+    dialect = _resolve_dialect_uncached(datasource_id)
+    _DIALECT_CACHE[key] = (now, dialect)
+    return dialect
+
+
+def _resolve_dialect_uncached(datasource_id: str) -> str:
     sid = (datasource_id or "").lower()
     if "oracle" in sid:
         return "oracle"
@@ -232,6 +253,33 @@ async def _expand_retrieval_for_missing_tables(
         return retrieval_meta, authorized_context, False
 
 
+async def _ensure_repair_context(
+    *,
+    authorized_context: str,
+    retrieval_meta: dict[str, Any] | None,
+    message: str,
+    tenant_id: str,
+    datasource_id: str,
+) -> tuple[str, dict[str, Any]]:
+    """Cached/verified SQL skips planning, so repairs used to run with an empty
+    authorized context and invent identifiers. Backfill retrieval lazily."""
+    meta = dict(retrieval_meta or {})
+    if authorized_context.strip():
+        return authorized_context, meta
+    try:
+        from nanobase_awel.retrieval.authorized import retrieve_authorized_schema
+
+        if not meta.get("hits"):
+            meta = await retrieve_authorized_schema(
+                message, tenant_id=tenant_id or "default", datasource_id=datasource_id
+            )
+        hint = str(meta.get("hint_extra") or "")
+        ctx = f"{_schema_hint_for(datasource_id)}\n{hint}".strip()
+        return ctx or authorized_context, meta
+    except Exception:
+        return authorized_context, meta
+
+
 async def _yield_user_guidance(
     *,
     session_id: str,
@@ -280,6 +328,26 @@ def _sse(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _sink_event_sse(st: dict[str, Any], stats: dict[str, int] | None) -> str:
+    """Map a progress-sink item to its SSE frame. ``phase=token`` items carry
+    streamed answer text (FE contract: event `token`, payload `{"t": ...}`)."""
+    if st.get("phase") == "token":
+        if stats is not None:
+            stats["tokens"] = stats.get("tokens", 0) + 1
+        return _sse("token", {"t": str(st.get("delta") or "")})
+    return _sse(
+        "status",
+        {
+            "type": "STATUS",
+            "phase": st.get("phase") or "queued",
+            "position": st.get("position"),
+            "queue_depth": st.get("queue_depth"),
+            "message": st.get("message"),
+            "elapsed_sec": st.get("elapsed_sec"),
+        },
+    )
+
+
 async def _await_llm_with_queue_sse(
     coro: Awaitable[Any],
     *,
@@ -287,8 +355,10 @@ async def _await_llm_with_queue_sse(
     user_id: str | None,
     request_id: str,
     out: list[Any],
+    stats: dict[str, int] | None = None,
 ) -> AsyncIterator[bytes]:
-    """Run an LLM-backed awaitable while streaming queue wait status to the client."""
+    """Run an LLM-backed awaitable while streaming queue wait status (and any
+    answer tokens the workflow emits) to the client."""
     sink: asyncio.Queue = asyncio.Queue()
     tokens = (
         model_queue_mod.progress_sink.set(sink),
@@ -301,33 +371,13 @@ async def _await_llm_with_queue_sse(
         while not task.done():
             try:
                 st = await asyncio.wait_for(sink.get(), timeout=0.5)
-                yield _sse(
-                    "status",
-                    {
-                        "type": "STATUS",
-                        "phase": st.get("phase") or "queued",
-                        "position": st.get("position"),
-                        "queue_depth": st.get("queue_depth"),
-                        "message": st.get("message"),
-                        "elapsed_sec": st.get("elapsed_sec"),
-                    },
-                ).encode()
+                yield _sink_event_sse(st, stats).encode()
             except asyncio.TimeoutError:
                 continue
         while True:
             try:
                 st = sink.get_nowait()
-                yield _sse(
-                    "status",
-                    {
-                        "type": "STATUS",
-                        "phase": st.get("phase") or "queued",
-                        "position": st.get("position"),
-                        "queue_depth": st.get("queue_depth"),
-                        "message": st.get("message"),
-                        "elapsed_sec": st.get("elapsed_sec"),
-                    },
-                ).encode()
+                yield _sink_event_sse(st, stats).encode()
             except asyncio.QueueEmpty:
                 break
         try:
@@ -356,7 +406,7 @@ async def _await_llm_with_queue_sse(
                 pass
 
 
-def _persist_conversation(
+async def _persist_conversation(
     meta_engine: Engine | None,
     *,
     tenant_id: str,
@@ -368,8 +418,36 @@ def _persist_conversation(
     execution_mode: str,
     executed: bool,
 ) -> None:
+    """Sync SQLAlchemy writes (3-4 meta-DB round trips) — run off the event
+    loop so they never stall other users' SSE streams."""
     if meta_engine is None:
         return
+    await asyncio.to_thread(
+        _persist_conversation_sync,
+        meta_engine,
+        tenant_id=tenant_id,
+        session_id=session_id,
+        message=message,
+        datasource_id=datasource_id,
+        reply=reply,
+        sql=sql,
+        execution_mode=execution_mode,
+        executed=executed,
+    )
+
+
+def _persist_conversation_sync(
+    meta_engine: Engine,
+    *,
+    tenant_id: str,
+    session_id: str,
+    message: str,
+    datasource_id: str,
+    reply: str | None = None,
+    sql: str | None = None,
+    execution_mode: str,
+    executed: bool,
+) -> None:
     try:
         from nanobase_api.infrastructure.conversation_repo import ConversationRepository
 
@@ -439,7 +517,7 @@ async def stream_chat_via_gateway(
         },
     ).encode()
 
-    _persist_conversation(
+    await _persist_conversation(
         meta_engine,
         tenant_id=tenant_id,
         session_id=session_id,
@@ -496,7 +574,8 @@ async def stream_chat_via_gateway(
                 inc,
             )
 
-            scenario_hit = try_precompiled_scenario(
+            scenario_hit = await asyncio.to_thread(
+                try_precompiled_scenario,
                 message,
                 tenant_id=tenant_id,
                 datasource_id=datasource_id,
@@ -597,7 +676,7 @@ async def stream_chat_via_gateway(
         try:
             from nanobase_api.semantic import lookup_verified_sql
 
-            verified_meta = lookup_verified_sql(meta_engine, message, datasource_id)
+            verified_meta = await asyncio.to_thread(lookup_verified_sql, meta_engine, message, datasource_id)
             if verified_meta and verified_meta.get("sql"):
                 sql = str(verified_meta["sql"])
                 sql_source = "verified_sql"
@@ -617,7 +696,8 @@ async def stream_chat_via_gateway(
         try:
             from nanobase_api.infrastructure.learned_query_cache import lookup as learned_lookup
 
-            hit = learned_lookup(
+            hit = await asyncio.to_thread(
+                learned_lookup,
                 meta_engine,
                 tenant_id=tenant_id,
                 datasource_id=datasource_id,
@@ -661,8 +741,10 @@ async def stream_chat_via_gateway(
         try:
             from nanobase_api.infrastructure.conversation_repo import ConversationRepository
 
-            hist = ConversationRepository(meta_engine).list_recent_messages(
-                tenant_id=tenant_id, conversation_id=session_id, limit=6
+            hist = await asyncio.to_thread(
+                lambda: ConversationRepository(meta_engine).list_recent_messages(
+                    tenant_id=tenant_id, conversation_id=session_id, limit=6
+                )
             )
             conversation_turns = hist
         except Exception:
@@ -830,7 +912,7 @@ async def stream_chat_via_gateway(
             )
             yield _sse("final", result).encode()
             yield _sse("done", result).encode()
-            _persist_conversation(
+            await _persist_conversation(
                 meta_engine,
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -882,7 +964,7 @@ async def stream_chat_via_gateway(
             )
             yield _sse("final", result).encode()
             yield _sse("done", result).encode()
-            _persist_conversation(
+            await _persist_conversation(
                 meta_engine,
                 tenant_id=tenant_id,
                 session_id=session_id,
@@ -934,7 +1016,8 @@ async def stream_chat_via_gateway(
             from nanobase_api.infrastructure.audit_repo import AuditRepository
 
             if meta_engine is not None:
-                AuditRepository(meta_engine).record(
+                await asyncio.to_thread(
+                    AuditRepository(meta_engine).record,
                     tenant_id=tenant_id,
                     user_id=user_id,
                     action="SQL_EXECUTION_BLOCKED",
@@ -944,7 +1027,7 @@ async def stream_chat_via_gateway(
                 )
         except Exception:
             pass
-        _persist_conversation(
+        await _persist_conversation(
             meta_engine,
             tenant_id=tenant_id,
             session_id=session_id,
@@ -981,6 +1064,8 @@ async def stream_chat_via_gateway(
             allowed_tables=allowed,
             question=message,
             table_columns=col_map,
+            complete_tables=list((retrieval_meta or {}).get("columns_complete") or []),
+            dialect=_dialect_for_datasource(datasource_id),
         )
         if guarded.warnings and isinstance(plan.get("warnings"), list):
             plan["warnings"].extend(guarded.warnings)
@@ -1027,6 +1112,8 @@ async def stream_chat_via_gateway(
                         allowed_tables=list(retrieval_meta.get("tables") or []),
                         question=message,
                         table_columns=retrieval_meta.get("table_columns") or None,
+                        complete_tables=list(retrieval_meta.get("columns_complete") or []),
+                        dialect=_dialect_for_datasource(datasource_id),
                     )
                     sql = g_exp.sql
                     if g_exp.warnings:
@@ -1081,12 +1168,13 @@ async def stream_chat_via_gateway(
 
     qg = QueryGatewayClient(QG_BASE)
     repair_attempts = 0
-    max_repairs = 2
+    max_repairs = max(0, int(os.environ.get("TEXT2SQL_REPAIR_MAX", "2")))
     last_error_fp = ""
     conn_retried = False
     safe_sql = sql
     ej: dict = {}
     explain_plan_text = None
+    explain_stats: dict[str, int] = {}
 
     while True:
         if seed_reject:
@@ -1151,6 +1239,13 @@ async def stream_chat_via_gateway(
                     },
                 ).encode()
                 repair_box: list[Any] = []
+                authorized_context, retrieval_meta = await _ensure_repair_context(
+                    authorized_context=authorized_context,
+                    retrieval_meta=retrieval_meta,
+                    message=message,
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                )
                 try:
                     async for chunk in _await_llm_with_queue_sse(
                         _engine_adapter.repair_sql(
@@ -1165,6 +1260,7 @@ async def stream_chat_via_gateway(
                             allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                             tenant_id=tenant_id,
                             execution_id=execution_id,
+                            dialect=_dialect_for_datasource(datasource_id),
                         ),
                         tenant_id=tenant_id,
                         user_id=user_id,
@@ -1215,6 +1311,8 @@ async def stream_chat_via_gateway(
                         allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                         question=message,
                         table_columns=(retrieval_meta or {}).get("table_columns") or None,
+                        complete_tables=list((retrieval_meta or {}).get("columns_complete") or []),
+                        dialect=_dialect_for_datasource(datasource_id),
                     )
                     new_sql = g2.sql
                     if g2.blocked and g2.code:
@@ -1392,6 +1490,13 @@ async def stream_chat_via_gateway(
                     },
                 ).encode()
                 repair_box = []
+                authorized_context, retrieval_meta = await _ensure_repair_context(
+                    authorized_context=authorized_context,
+                    retrieval_meta=retrieval_meta,
+                    message=message,
+                    tenant_id=tenant_id,
+                    datasource_id=datasource_id,
+                )
                 try:
                     async for chunk in _await_llm_with_queue_sse(
                         _engine_adapter.repair_sql(
@@ -1406,6 +1511,7 @@ async def stream_chat_via_gateway(
                             allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                             tenant_id=tenant_id,
                             execution_id=execution_id,
+                            dialect=_dialect_for_datasource(datasource_id),
                         ),
                         tenant_id=tenant_id,
                         user_id=user_id,
@@ -1443,6 +1549,8 @@ async def stream_chat_via_gateway(
                                 allowed_tables=list((retrieval_meta or {}).get("tables") or []),
                                 question=message,
                                 table_columns=(retrieval_meta or {}).get("table_columns") or None,
+                                complete_tables=list((retrieval_meta or {}).get("columns_complete") or []),
+                                dialect=_dialect_for_datasource(datasource_id),
                             )
                             new_sql = g3.sql
                             if g3.blocked and g3.code:
@@ -1605,6 +1713,7 @@ async def stream_chat_via_gateway(
                 user_id=user_id,
                 request_id=f"{execution_id}-explain",
                 out=explain_box,
+                stats=explain_stats,
             ):
                 yield chunk
             if explain_box and explain_box[0] is not None:
@@ -1627,6 +1736,7 @@ async def stream_chat_via_gateway(
     # Operator-facing reply must never include SQL text or EXPLAIN plans.
     # SQL / explain stay on structured fields (sql, explain) for tooling only.
     reply = str(explained.get("answer") or "").strip()
+    streamed_tokens = int(explain_stats.get("tokens", 0) or 0)
 
     chart_title = (message or "").replace("\n", " ").strip()[:80] or "Chat sonucu"
     widgets = widgets_from_query_result(
@@ -1636,10 +1746,11 @@ async def stream_chat_via_gateway(
         title=chart_title,
     )
 
-    yield _sse(
-        "answer_delta",
-        {"type": "ANSWER_DELTA", "payload": {"text": reply[:500]}},
-    ).encode()
+    if not streamed_tokens:
+        yield _sse(
+            "answer_delta",
+            {"type": "ANSWER_DELTA", "payload": {"text": reply[:500]}},
+        ).encode()
 
     result = _with_provenance(
         {
@@ -1650,9 +1761,17 @@ async def stream_chat_via_gateway(
             "sql_error": None,
             "query_result": {"columns": cols, "rows": rows},
             "widgets": widgets,
+            # Full rows live in query_result; duplicating them here doubled the
+            # done-payload (up to 1000 rows serialized twice). The FE renders
+            # this block only when query_result is absent and shows ≤50 rows.
             "answer_blocks": [
                 {"type": "text", "text": reply},
-                {"type": "table", "columns": cols, "rows": rows},
+                {
+                    "type": "table",
+                    "columns": cols,
+                    "rows": (rows or [])[:50],
+                    "truncated_preview": bool(rows and len(rows) > 50),
+                },
             ],
             "engine": "nanobase_gateway",
             "workflows": {
@@ -1673,7 +1792,7 @@ async def stream_chat_via_gateway(
         execution_mode=mode.value,
         extra_warnings=[str(w) for w in (explained.get("warnings") or [])],
     )
-    _persist_conversation(
+    await _persist_conversation(
         meta_engine,
         tenant_id=tenant_id,
         session_id=session_id,
@@ -1692,7 +1811,8 @@ async def stream_chat_via_gateway(
         )
 
         if meta_engine is not None and safe_sql and rows is not None:
-            learned_remember(
+            await asyncio.to_thread(
+                learned_remember,
                 meta_engine,
                 tenant_id=tenant_id,
                 datasource_id=datasource_id,
@@ -1701,7 +1821,8 @@ async def stream_chat_via_gateway(
                 sql_source=sql_source,
             )
         if sql_source == "precompiled_scenario" and verified_meta:
-            remember_scenario_paraphrase(
+            await asyncio.to_thread(
+                remember_scenario_paraphrase,
                 tenant_id=tenant_id,
                 datasource_id=datasource_id,
                 question=message,
@@ -1713,7 +1834,8 @@ async def stream_chat_via_gateway(
         from nanobase_api.infrastructure.audit_repo import AuditRepository
 
         if meta_engine is not None:
-            AuditRepository(meta_engine).record(
+            await asyncio.to_thread(
+                AuditRepository(meta_engine).record,
                 tenant_id=tenant_id,
                 user_id=user_id,
                 action="QUERY_COMPLETED",

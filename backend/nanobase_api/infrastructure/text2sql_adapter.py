@@ -86,14 +86,21 @@ class WorkflowTextToSqlAdapter:
         allowed_tables: list[str] | None = None,
         tenant_id: str = "default",
         execution_id: str = "",
+        dialect: str = "postgres",
     ) -> dict[str, Any]:
         if not is_repairable(error_code):
             return {"ok": False, "status": "FAILED", "sql": "", "code": error_code}
+        dialect_l = (dialect or "postgres").lower().replace("postgresql", "postgres")
+        if dialect_l in ("s4_odata", "sap_odata"):
+            dialect_l = "odata"
+        elif dialect_l == "sap_hana":
+            dialect_l = "hana"
         req = SqlRepairRequest(
             executionId=execution_id,
             tenantId=tenant_id,
             datasourceId=datasource_id,
             question=question,
+            dialect=dialect_l,
             previousSql=previous_sql,
             gatewayError=GatewayErrorSafe(code=error_code, safeMessage=error_message[:500]),
             attempt=attempt,

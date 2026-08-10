@@ -13,6 +13,8 @@ tenacity>=8.2.0
 arq>=0.26.0
 redis>=5.0.0
 sse-starlette>=2.0.0
+# Required by FastAPI Form/File endpoints (budgets/import) at route registration
+python-multipart>=0.0.9
 hypothesis>=6.100.0
 sqlglot>=25.0.0
 openpyxl>=3.1.0

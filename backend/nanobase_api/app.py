@@ -986,7 +986,18 @@ async def chat_stream_gateway(
                 request_id=request_id,
             )
 
-    return StreamingResponse(_gated(), media_type="text/event-stream")
+    return StreamingResponse(
+        _gated(),
+        media_type="text/event-stream",
+        headers={
+            # Without this, nginx vhosts that don't set proxy_buffering off
+            # buffer the whole SSE stream — the UI shows a dead spinner until
+            # the entire generation completes.
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

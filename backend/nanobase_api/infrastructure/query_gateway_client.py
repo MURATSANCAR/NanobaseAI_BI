@@ -12,6 +12,20 @@ from typing import Any
 import httpx
 import jwt
 
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _shared() -> httpx.AsyncClient:
+    """One keep-alive client per process — a chat request makes 3-4 gateway
+    calls and paid a fresh TCP+TLS handshake for each."""
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            timeout=httpx.Timeout(60.0, connect=10.0),
+        )
+    return _shared_client
+
 
 class QueryGatewayClient:
     def __init__(
@@ -82,22 +96,22 @@ class QueryGatewayClient:
     ) -> dict[str, Any]:
         if not self.use_internal or not self.jwt_secret:
             # Legacy unauthenticated path
-            async with httpx.AsyncClient(timeout=self.timeout_s) as c:
-                payload_legacy: dict[str, Any] = {"datasource_id": datasource_id, "sql": sql}
-                if parameters:
-                    payload_legacy["parameters"] = parameters
-                r = await (client or c).post(
-                    f"{self.base}/api/v1/query/validate",
-                    json=payload_legacy,
+            payload_legacy: dict[str, Any] = {"datasource_id": datasource_id, "sql": sql}
+            if parameters:
+                payload_legacy["parameters"] = parameters
+            r = await (client or _shared()).post(
+                f"{self.base}/api/v1/query/validate",
+                json=payload_legacy,
+                timeout=self.timeout_s,
+            )
+            if r.status_code >= 400:
+                return {"ok": False, "status": "REJECTED", **_safe_json(r)}
+            data = r.json()
+            if "ok" not in data:
+                data["ok"] = data.get("status") in ("APPROVED", "OK", True) or bool(
+                    data.get("sql") or data.get("normalizedSql")
                 )
-                if r.status_code >= 400:
-                    return {"ok": False, "status": "REJECTED", **_safe_json(r)}
-                data = r.json()
-                if "ok" not in data:
-                    data["ok"] = data.get("status") in ("APPROVED", "OK", True) or bool(
-                        data.get("sql") or data.get("normalizedSql")
-                    )
-                return data
+            return data
 
         path = "/internal/v1/queries/validate"
         payload: dict[str, Any] = {
@@ -113,19 +127,16 @@ class QueryGatewayClient:
 
         body = json.dumps(payload).encode("utf-8")
         headers = self._headers("POST", path, body, "query.validate")
-        own = client is None
-        c = client or httpx.AsyncClient(timeout=self.timeout_s)
-        try:
-            r = await c.post(f"{self.base}{path}", content=body, headers=headers)
-            if r.status_code >= 400:
-                return {"ok": False, "status": "REJECTED", **_safe_json(r)}
-            data = r.json()
-            data["ok"] = data.get("status") == "APPROVED"
-            data["sql"] = data.get("normalizedSql") or sql
-            return data
-        finally:
-            if own:
-                await c.aclose()
+        c = client or _shared()
+        r = await c.post(
+            f"{self.base}{path}", content=body, headers=headers, timeout=self.timeout_s
+        )
+        if r.status_code >= 400:
+            return {"ok": False, "status": "REJECTED", **_safe_json(r)}
+        data = r.json()
+        data["ok"] = data.get("status") == "APPROVED"
+        data["sql"] = data.get("normalizedSql") or sql
+        return data
 
     async def execute(
         self,
@@ -139,66 +150,66 @@ class QueryGatewayClient:
         parameters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if not self.use_internal or not self.jwt_secret:
-            async with httpx.AsyncClient(timeout=self.timeout_s) as c:
-                payload_legacy: dict[str, Any] = {
-                    "datasource_id": datasource_id,
-                    "sql": sql,
-                    "explain": explain,
+            payload_legacy: dict[str, Any] = {
+                "datasource_id": datasource_id,
+                "sql": sql,
+                "explain": explain,
+            }
+            if parameters:
+                payload_legacy["parameters"] = parameters
+            r = await (client or _shared()).post(
+                f"{self.base}/api/v1/query/execute",
+                json=payload_legacy,
+                timeout=self.timeout_s,
+            )
+            if r.status_code >= 400:
+                err = _safe_json(r)
+                return {
+                    "ok": False,
+                    "status": "FAILED",
+                    "code": err.get("code") or f"HTTP_{r.status_code}",
+                    "message": err.get("message")
+                    or err.get("detail")
+                    or err.get("error")
+                    or r.text[:400],
+                    "detail": err.get("detail") or err.get("message"),
+                    "error": err.get("message") or err.get("detail") or err.get("error"),
+                    "raw": err,
+                    "http_status": r.status_code,
                 }
-                if parameters:
-                    payload_legacy["parameters"] = parameters
-                r = await (client or c).post(
-                    f"{self.base}/api/v1/query/execute",
-                    json=payload_legacy,
-                )
-                if r.status_code >= 400:
-                    err = _safe_json(r)
-                    return {
-                        "ok": False,
-                        "status": "FAILED",
-                        "code": err.get("code") or f"HTTP_{r.status_code}",
-                        "message": err.get("message")
-                        or err.get("detail")
-                        or err.get("error")
-                        or r.text[:400],
-                        "detail": err.get("detail") or err.get("message"),
-                        "error": err.get("message") or err.get("detail") or err.get("error"),
-                        "raw": err,
-                        "http_status": r.status_code,
-                    }
-                data = r.json()
-                if "ok" not in data:
-                    data["ok"] = True
-                return data
+            data = r.json()
+            if "ok" not in data:
+                data["ok"] = True
+            return data
 
         if explain:
             # EXPLAIN still via legacy for display plans
-            async with httpx.AsyncClient(timeout=self.timeout_s) as c:
-                payload_ex: dict[str, Any] = {
-                    "datasource_id": datasource_id,
-                    "sql": sql,
-                    "explain": True,
+            payload_ex: dict[str, Any] = {
+                "datasource_id": datasource_id,
+                "sql": sql,
+                "explain": True,
+            }
+            if parameters:
+                payload_ex["parameters"] = parameters
+            r = await (client or _shared()).post(
+                f"{self.base}/api/v1/query/execute",
+                json=payload_ex,
+                timeout=self.timeout_s,
+            )
+            if r.status_code >= 400:
+                err = _safe_json(r)
+                return {
+                    "ok": False,
+                    "status": "FAILED",
+                    "code": err.get("code") or f"HTTP_{r.status_code}",
+                    "message": err.get("message")
+                    or err.get("detail")
+                    or err.get("error")
+                    or r.text[:400],
+                    "http_status": r.status_code,
+                    "raw": err,
                 }
-                if parameters:
-                    payload_ex["parameters"] = parameters
-                r = await (client or c).post(
-                    f"{self.base}/api/v1/query/execute",
-                    json=payload_ex,
-                )
-                if r.status_code >= 400:
-                    err = _safe_json(r)
-                    return {
-                        "ok": False,
-                        "status": "FAILED",
-                        "code": err.get("code") or f"HTTP_{r.status_code}",
-                        "message": err.get("message")
-                        or err.get("detail")
-                        or err.get("error")
-                        or r.text[:400],
-                        "http_status": r.status_code,
-                        "raw": err,
-                    }
-                return r.json()
+            return r.json()
 
         path = "/internal/v1/queries/execute"
         payload = {
@@ -214,44 +225,41 @@ class QueryGatewayClient:
 
         body = json.dumps(payload).encode("utf-8")
         headers = self._headers("POST", path, body, "query.execute")
-        own = client is None
-        c = client or httpx.AsyncClient(timeout=self.timeout_s)
-        try:
-            r = await c.post(f"{self.base}{path}", content=body, headers=headers)
-            if r.status_code >= 400:
-                err = _safe_json(r)
-                return {
-                    "ok": False,
-                    "status": "FAILED",
-                    "code": err.get("code") or f"HTTP_{r.status_code}",
-                    "message": err.get("message") or err.get("detail") or err.get("error") or r.text[:400],
-                    "detail": err.get("detail") or err.get("message"),
-                    "error": err.get("message") or err.get("detail") or err.get("error"),
-                    "raw": err,
-                    "http_status": r.status_code,
-                }
-            data = r.json()
-            # Adapt to legacy shape used by chat_gateway
-            cols = data.get("columns") or []
-            if cols and isinstance(cols[0], dict):
-                col_names = [c.get("name") for c in cols]
-            else:
-                col_names = cols
+        c = client or _shared()
+        r = await c.post(
+            f"{self.base}{path}", content=body, headers=headers, timeout=self.timeout_s
+        )
+        if r.status_code >= 400:
+            err = _safe_json(r)
             return {
-                "ok": data.get("status") == "SUCCESS",
-                "sql": data.get("normalizedSql") or sql,
-                "columns": col_names,
-                "rows": data.get("rows") or [],
-                "row_count": data.get("rowCount") or 0,
-                "truncated": data.get("truncated") or False,
-                "elapsed_ms": data.get("executionTimeMs") or data.get("gatewayTimeMs"),
-                "executionId": data.get("executionId"),
-                "policyVersion": data.get("policyVersion"),
-                "raw": data,
+                "ok": False,
+                "status": "FAILED",
+                "code": err.get("code") or f"HTTP_{r.status_code}",
+                "message": err.get("message") or err.get("detail") or err.get("error") or r.text[:400],
+                "detail": err.get("detail") or err.get("message"),
+                "error": err.get("message") or err.get("detail") or err.get("error"),
+                "raw": err,
+                "http_status": r.status_code,
             }
-        finally:
-            if own:
-                await c.aclose()
+        data = r.json()
+        # Adapt to legacy shape used by chat_gateway
+        cols = data.get("columns") or []
+        if cols and isinstance(cols[0], dict):
+            col_names = [c.get("name") for c in cols]
+        else:
+            col_names = cols
+        return {
+            "ok": data.get("status") == "SUCCESS",
+            "sql": data.get("normalizedSql") or sql,
+            "columns": col_names,
+            "rows": data.get("rows") or [],
+            "row_count": data.get("rowCount") or 0,
+            "truncated": data.get("truncated") or False,
+            "elapsed_ms": data.get("executionTimeMs") or data.get("gatewayTimeMs"),
+            "executionId": data.get("executionId"),
+            "policyVersion": data.get("policyVersion"),
+            "raw": data,
+        }
 
 
 def _safe_json(r: httpx.Response) -> dict[str, Any]:
