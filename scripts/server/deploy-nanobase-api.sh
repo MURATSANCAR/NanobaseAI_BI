@@ -109,7 +109,7 @@ EnvironmentFile=-${ROOT}/backend/.env
 EnvironmentFile=${ENV_FILE}
 Environment=PATH=${VENV}/bin:/usr/bin
 Environment=PYTHONPATH=${ROOT}/backend
-ExecStart=${VENV}/bin/uvicorn nanobase_api.app:app --host 127.0.0.1 --port 8790
+ExecStart=${VENV}/bin/uvicorn nanobase_api.app:app --host 127.0.0.1 --port 8790 --workers 2
 Restart=on-failure
 RestartSec=5
 

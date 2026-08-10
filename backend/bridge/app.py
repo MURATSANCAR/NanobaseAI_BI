@@ -41,6 +41,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# One shared client (keepalive) instead of a client per request; closed on shutdown.
+_HTTP_LIMITS = httpx.Limits(max_connections=20, max_keepalive_connections=10)
+_STREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=300.0, write=30.0, pool=30.0)
+_http_client: Optional[httpx.AsyncClient] = None
+
+
+def get_http_client() -> httpx.AsyncClient:
+    global _http_client
+    if _http_client is None or _http_client.is_closed:
+        _http_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0), limits=_HTTP_LIMITS)
+    return _http_client
+
+
+@app.on_event("shutdown")
+async def _close_http_client() -> None:
+    global _http_client
+    if _http_client is not None and not _http_client.is_closed:
+        await _http_client.aclose()
+    _http_client = None
+
 
 def _load_sources() -> dict[str, Any]:
     if SOURCES_FILE.is_file():
@@ -78,21 +98,28 @@ def _sources_list_payload() -> dict[str, Any]:
     return {"active_id": ACTIVE_DB["id"], "sources": items}
 
 
+def _active_db_id() -> str:
+    """Resolve the active datasource from the sources file (shared across
+    uvicorn workers); fall back to the in-process value."""
+    active = str(_load_sources().get("active_id") or ACTIVE_DB.get("id") or "").strip()
+    if active:
+        ACTIVE_DB["id"] = active
+    return active
+
+
 async def _dbgpt_json(method: str, path: str, *, json_body: Any = None, timeout: float = 120.0) -> Any:
     url = f"{DBGPT_BASE}{path}"
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.request(method, url, json=json_body)
-        resp.raise_for_status()
-        if not resp.content:
-            return None
-        return resp.json()
+    resp = await get_http_client().request(method, url, json=json_body, timeout=timeout)
+    resp.raise_for_status()
+    if not resp.content:
+        return None
+    return resp.json()
 
 
 async def _probe(url: str, headers: Optional[dict[str, str]] = None) -> bool:
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            r = await client.get(url, headers=headers or {})
-            return r.status_code < 500
+        r = await get_http_client().get(url, headers=headers or {}, timeout=3.0)
+        return r.status_code < 500
     except Exception:
         return False
 
@@ -229,11 +256,12 @@ async def openai_embeddings(request: Request) -> JSONResponse:
     headers = {"Content-Type": "application/json"}
     if EMBED_KEY:
         headers["Authorization"] = f"Bearer {EMBED_KEY}"
-    async with httpx.AsyncClient(timeout=60.0) as client:
-        r = await client.post(EMBED_URL, headers=headers, json={"texts": texts})
-        if r.status_code >= 400:
-            return JSONResponse({"error": r.text[:400]}, status_code=r.status_code)
-        data = r.json()
+    r = await get_http_client().post(
+        EMBED_URL, headers=headers, json={"texts": texts}, timeout=60.0
+    )
+    if r.status_code >= 400:
+        return JSONResponse({"error": r.text[:400]}, status_code=r.status_code)
+    data = r.json()
     vectors = data.get("embeddings") or []
     return JSONResponse(
         {
@@ -310,7 +338,7 @@ async def connection_test() -> dict[str, Any]:
 
 @app.get("/api/v1/bi/schema")
 async def schema_get() -> dict[str, Any]:
-    db = ACTIVE_DB["id"]
+    db = _active_db_id()
     tables: list[dict[str, Any]] = []
     try:
         data = await _dbgpt_json("GET", f"/api/v1/editor/db/tables?db_name={db}")
@@ -349,7 +377,7 @@ async def schema_get() -> dict[str, Any]:
 @app.post("/api/v1/bi/schema/refresh")
 async def schema_refresh() -> dict[str, Any]:
     try:
-        await _dbgpt_json("POST", "/api/v1/chat/db/refresh", json_body={"db_name": ACTIVE_DB["id"]})
+        await _dbgpt_json("POST", "/api/v1/chat/db/refresh", json_body={"db_name": _active_db_id()})
     except Exception:
         pass
     schema = await schema_get()
@@ -538,40 +566,41 @@ async def _stream_dbgpt_chat(message: str, session_id: str, db_name: str) -> Asy
     sql: Optional[str] = None
 
     try:
-        async with httpx.AsyncClient(timeout=None) as client:
-            async with client.stream("POST", url, json=body) as resp:
-                if resp.status_code >= 400:
-                    text = await resp.aread()
-                    msg = text.decode(errors="replace")[:800]
-                    yield _sse("error", {"message": f"DB-GPT HTTP {resp.status_code}: {msg}"}).encode()
-                    return
+        async with get_http_client().stream(
+            "POST", url, json=body, timeout=_STREAM_TIMEOUT
+        ) as resp:
+            if resp.status_code >= 400:
+                text = await resp.aread()
+                msg = text.decode(errors="replace")[:800]
+                yield _sse("error", {"message": f"DB-GPT HTTP {resp.status_code}: {msg}"}).encode()
+                return
 
-                yield _sse("status", {"phase": "generating_sql"}).encode()
-                buffer = ""
-                async for chunk in resp.aiter_text():
-                    buffer += chunk
-                    while "\n" in buffer:
-                        line, buffer = buffer.split("\n", 1)
-                        line = line.strip()
-                        if not line.startswith("data:"):
-                            continue
-                        payload = line[5:].strip()
-                        if not payload or payload == "[DONE]":
-                            continue
-                        try:
-                            obj = json.loads(payload)
-                        except json.JSONDecodeError:
-                            continue
-                        content = ""
-                        choices = obj.get("choices") or []
-                        if choices:
-                            msg_obj = choices[0].get("message") or choices[0].get("delta") or {}
-                            content = str(msg_obj.get("content") or "")
-                        if content:
-                            reply_parts.append(content)
-                            yield _sse("token", {"t": content}).encode()
-                        if "```sql" in content.lower() or content.strip().upper().startswith("SELECT"):
-                            sql = (sql or "") + content
+            yield _sse("status", {"phase": "generating_sql"}).encode()
+            buffer = ""
+            async for chunk in resp.aiter_text():
+                buffer += chunk
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if not payload or payload == "[DONE]":
+                        continue
+                    try:
+                        obj = json.loads(payload)
+                    except json.JSONDecodeError:
+                        continue
+                    content = ""
+                    choices = obj.get("choices") or []
+                    if choices:
+                        msg_obj = choices[0].get("message") or choices[0].get("delta") or {}
+                        content = str(msg_obj.get("content") or "")
+                    if content:
+                        reply_parts.append(content)
+                        yield _sse("token", {"t": content}).encode()
+                    if "```sql" in content.lower() or content.strip().upper().startswith("SELECT"):
+                        sql = (sql or "") + content
 
         reply = "".join(reply_parts).strip() or "No response from DB-GPT."
         result = _empty_chat_result(session_id, reply, sql=sql)
@@ -588,7 +617,7 @@ async def chat_stream(request: Request) -> StreamingResponse:
     body = await request.json()
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
-    db_name = str(ACTIVE_DB.get("id") or "").strip()
+    db_name = _active_db_id()
     if not db_name:
         return {"ok": False, "error": "no active datasource"}
     if not message:
@@ -611,7 +640,7 @@ async def chat(request: Request) -> JSONResponse:
     message = str(body.get("message") or "").strip()
     session_id = str(body.get("session_id") or uuid.uuid4())
     reply_parts: list[str] = []
-    async for chunk in _stream_dbgpt_chat(message, session_id, ACTIVE_DB["id"]):
+    async for chunk in _stream_dbgpt_chat(message, session_id, _active_db_id()):
         text = chunk.decode()
         if "event: token" in text:
             try:

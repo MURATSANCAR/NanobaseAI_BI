@@ -26,14 +26,31 @@ mkdir -p "$DBGPT_HOME"
 export BRIDGE_PORT="${BRIDGE_PORT:-8787}"
 export DBGPT_PORT="${DBGPT_PORT:-5670}"
 
-# Prefer local :8010, else remote public proxy :8015 (MobilTest LLM-SERVER.md)
-if curl -sf --connect-timeout 1 "http://127.0.0.1:8010/v1/models" >/dev/null 2>&1; then
-  export OPENAI_API_BASE="${OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
-elif curl -sf --connect-timeout 2 "http://38.247.162.28:8015/v1/models" >/dev/null 2>&1; then
-  export OPENAI_API_BASE="${OPENAI_API_BASE:-http://38.247.162.28:8015/v1}"
+# Local LLM :8010 required. Remote proxy :8015 (MobilTest LLM-SERVER.md) is
+# opt-in only via ALLOW_REMOTE_LLM_FALLBACK=1 — never fall back silently.
+if [[ -n "${OPENAI_API_BASE:-}" ]]; then
+  export OPENAI_API_BASE
+  echo "info: using preset OPENAI_API_BASE=${OPENAI_API_BASE}"
+elif curl -sf --connect-timeout 1 "http://127.0.0.1:8010/v1/models" >/dev/null 2>&1; then
+  export OPENAI_API_BASE="http://127.0.0.1:8010/v1"
+elif [[ "${ALLOW_REMOTE_LLM_FALLBACK:-0}" == "1" ]] \
+  && curl -sf --connect-timeout 2 "http://38.247.162.28:8015/v1/models" >/dev/null 2>&1; then
+  {
+    echo "############################################################"
+    echo "# WARNING: local LLM :8010 is DOWN."
+    echo "# ALLOW_REMOTE_LLM_FALLBACK=1 set — routing LLM traffic to"
+    echo "# the REMOTE PUBLIC proxy http://38.247.162.28:8015/v1."
+    echo "# Prompts/results leave this host. Unset the flag to forbid."
+    echo "############################################################"
+  } >&2
+  export OPENAI_API_BASE="http://38.247.162.28:8015/v1"
 else
-  export OPENAI_API_BASE="${OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
-  echo "warn: LLM not reachable on :8010 or :8015 — starting anyway (chat will fail until LLM is up)" >&2
+  {
+    echo "error: local LLM not reachable on http://127.0.0.1:8010/v1."
+    echo "  Start the local LLM, or set OPENAI_API_BASE explicitly,"
+    echo "  or set ALLOW_REMOTE_LLM_FALLBACK=1 to allow the remote proxy :8015."
+  } >&2
+  exit 1
 fi
 export OPENAI_API_KEY="${OPENAI_API_KEY:-nanobase-local}"
 export LLM_MODEL_NAME="${LLM_MODEL_NAME:-nanobase-qwen36-35b-a3b-mtp}"
@@ -95,7 +112,7 @@ export BI_SOURCES_FILE="${BI_SOURCES_FILE:-$SOURCES_JSON}"
 echo "Starting BI bridge on :${BRIDGE_PORT} → $DBGPT_BASE"
 (
   cd "$ROOT"
-  exec python -m uvicorn bridge.app:app --host 0.0.0.0 --port "${BRIDGE_PORT}"
+  exec python -m uvicorn bridge.app:app --host 0.0.0.0 --port "${BRIDGE_PORT}" --workers 2
 ) >"$DBGPT_HOME/bridge.log" 2>&1 &
 echo $! >"$DBGPT_HOME/bridge.pid"
 disown || true
