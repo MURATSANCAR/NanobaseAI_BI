@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2, RefreshCw, Table2 } from 'lucide-react';
 import { api, type ApiConfig } from '@/api/client';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { BiCardWidget, BiVisualChart } from '@/components/bi/BiCharts';
 import BiWidgetDetailSheet from '@/components/bi/BiWidgetDetailSheet';
 import type { BiWidget } from '@/api/types';
@@ -62,11 +63,13 @@ function WidgetTile({
           </span>
         </div>
         <div className="bi-pbi-tile-chart pointer-events-none min-h-0 flex-1">
-          {kpi ? (
-            <BiCardWidget widget={widget} kpi variant="tile" />
-          ) : (
-            <BiVisualChart widget={widget} variant="tile" height={232} />
-          )}
+          <ErrorBoundary compact>
+            {kpi ? (
+              <BiCardWidget widget={widget} kpi variant="tile" />
+            ) : (
+              <BiVisualChart widget={widget} variant="tile" height={232} />
+            )}
+          </ErrorBoundary>
         </div>
         <p className="bi-pbi-tile-cta mt-2.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500/90">
           <Table2 className="h-3 w-3" aria-hidden />

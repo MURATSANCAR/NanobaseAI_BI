@@ -68,6 +68,10 @@ export default function BiSupersetPage() {
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const viewerRef = useRef<HTMLDivElement>(null);
+  /** Sources whose board auto-create already ran this mount (success or fail). */
+  const createAttemptedSourcesRef = useRef<Set<string>>(new Set());
+  /** True while a board create request is in flight. */
+  const creatingBoardRef = useRef(false);
   const dashboardFromUrl = searchParams.get('dashboard');
   const anomalyFromUrl = searchParams.get('anomaly');
   const artifactFromUrl = searchParams.get('artifact');
@@ -300,6 +304,13 @@ export default function BiSupersetPage() {
           await openDashboard(Number(existing.id), existing.title || wantedTitle);
           return;
         }
+        // Guard: create at most once per source per mount, and never while a
+        // create is already in flight (refetch races double-created boards).
+        if (createAttemptedSourcesRef.current.has(activeSourceId) || creatingBoardRef.current) {
+          return;
+        }
+        createAttemptedSourcesRef.current.add(activeSourceId);
+        creatingBoardRef.current = true;
         const created = await api.bi.analytics.createDashboard(config, { title: wantedTitle });
         if (cancelled) return;
         await qc.invalidateQueries({ queryKey: ['bi-analytics-dashboards'] });
@@ -326,6 +337,8 @@ export default function BiSupersetPage() {
         if (!cancelled) {
           setOpenError(exc instanceof Error ? exc.message : String(exc));
         }
+      } finally {
+        creatingBoardRef.current = false;
       }
     };
     void run();

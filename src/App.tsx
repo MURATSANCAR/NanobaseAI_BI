@@ -1,5 +1,6 @@
-import { Suspense, lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { Suspense, lazy, type ReactNode } from 'react';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Layout from '@/components/Layout';
 import { RequirePortalSession } from '@/components/RequireAuth';
 import { t } from '@/i18n';
@@ -29,10 +30,17 @@ function RouteFallback() {
   );
 }
 
+/** Page-crash containment; the key resets the boundary on navigation. */
+function RoutedErrorBoundary({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<RouteFallback />}>
+        <RoutedErrorBoundary>
         <Routes>
           <Route path="/" element={<Navigate to="/bi" replace />} />
           <Route path="login" element={<Navigate to="/bi" replace />} />
@@ -66,6 +74,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/bi" replace />} />
         </Routes>
+        </RoutedErrorBoundary>
       </Suspense>
     </BrowserRouter>
   );

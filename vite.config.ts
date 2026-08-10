@@ -30,5 +30,45 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined;
+          // Charting stack (recharts + its d3/victory dependency tree).
+          if (
+            id.includes('/recharts/') ||
+            id.includes('/recharts-scale/') ||
+            id.includes('/victory-vendor/') ||
+            id.includes('/d3-') ||
+            id.includes('/internmap/') ||
+            id.includes('/delaunator/') ||
+            id.includes('/robust-predicates/')
+          ) {
+            return 'recharts';
+          }
+          // Schema graph stack.
+          if (id.includes('/@xyflow/') || id.includes('/dagre/')) {
+            return 'flow';
+          }
+          // Core framework vendor kept together and stable across releases.
+          // clsx is pinned here too: it is imported by nearly every component,
+          // and without an explicit assignment rollup hosts it inside the
+          // recharts chunk — poisoning the entry with a 500 kB preload.
+          if (
+            id.includes('/react/') ||
+            id.includes('/react-dom/') ||
+            id.includes('/scheduler/') ||
+            id.includes('/react-router/') ||
+            id.includes('/react-router-dom/') ||
+            id.includes('/@remix-run/') ||
+            id.includes('/@tanstack/') ||
+            id.includes('/clsx/')
+          ) {
+            return 'react-vendor';
+          }
+          return undefined;
+        },
+      },
+    },
   },
 });

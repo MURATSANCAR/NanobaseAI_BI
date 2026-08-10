@@ -42,7 +42,9 @@ export default function Layout() {
 
           <div
             className={[
-              'ai-module-shell relative flex min-h-0 min-w-0 flex-1 flex-col border border-white/80 bg-gradient-to-br from-sky-50/30 via-white/40 to-indigo-50/30 shadow-2xl backdrop-blur-xl',
+              // Solid translucent surface (no backdrop-blur): blurring the full
+              // app shell over the ambient layer forced continuous compositing.
+              'ai-module-shell relative flex min-h-0 min-w-0 flex-1 flex-col border border-white/80 bg-gradient-to-br from-sky-50/80 via-white/85 to-indigo-50/80 shadow-2xl',
               isBiCanvas ? 'rounded-none sm:rounded-2xl lg:rounded-3xl' : 'rounded-2xl sm:rounded-3xl',
             ].join(' ')}
           >

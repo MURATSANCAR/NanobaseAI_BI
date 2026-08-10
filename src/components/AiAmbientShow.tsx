@@ -237,9 +237,14 @@ function FloatingOrb({
 type Props = {
   variant?: AiAmbientVariant;
   intensity?: 'subtle' | 'full';
+  /**
+   * Opt-in for the legacy infinite animations. Default is a STATIC scene —
+   * identical gradients/blobs/mesh, zero continuous compositing work at idle.
+   */
+  animated?: boolean;
 };
 
-export default function AiAmbientShow({ variant = 'test', intensity = 'full' }: Props) {
+export default function AiAmbientShow({ variant = 'test', intensity = 'full', animated = false }: Props) {
   const cfg = VARIANTS[variant];
   const subtle = intensity === 'subtle';
 
@@ -248,6 +253,7 @@ export default function AiAmbientShow({ variant = 'test', intensity = 'full' }: 
       className={clsx(
         'pointer-events-none fixed inset-0 z-0 overflow-hidden motion-reduce:opacity-40',
         subtle && 'opacity-70',
+        !animated && 'ai-ambient-static',
       )}
       aria-hidden
     >

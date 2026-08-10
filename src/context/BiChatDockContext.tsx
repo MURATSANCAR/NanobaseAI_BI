@@ -1,5 +1,7 @@
 import {
   createContext,
+  lazy,
+  Suspense,
   useCallback,
   useContext,
   useEffect,
@@ -8,11 +10,42 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import BiAnalyticsChatDock from '@/components/bi/BiAnalyticsChatDock';
+import { MessageSquare, Sparkles } from 'lucide-react';
 import BiNotifyOptIn from '@/components/bi/BiNotifyOptIn';
 import type { BiChatResponse } from '@/api/types';
 import { ALERT_CREATE_INTENT } from '@/lib/alertChatIntent';
+import { t } from '@/i18n';
+
+// Heavy dock (BiChatPanel → charts) stays out of the entry bundle: it is
+// fetched + mounted only after the operator opens the chat for the first time.
+const BiAnalyticsChatDock = lazy(() => import('@/components/bi/BiAnalyticsChatDock'));
+
+/** Lightweight launcher shown before the dock chunk is ever needed. Must stay
+ *  visually identical to the FAB rendered inside BiAnalyticsChatDock. */
+function BiChatDockFab({ onOpen }: { onOpen: () => void }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <button
+      type="button"
+      onClick={onOpen}
+      className="bi-chat-fab relative fixed z-[80] flex items-center gap-2 rounded-full bg-gradient-to-br from-violet-600 to-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))]"
+      aria-label={t('bi.analytics.openChat')}
+      data-testid="bi-analytics-chat-fab"
+    >
+      <span className="relative inline-flex">
+        <MessageSquare className="h-5 w-5" />
+        <span className="bi-chat-fab-ping" aria-hidden />
+      </span>
+      <span className="hidden sm:inline">{t('bi.analytics.openChat')}</span>
+      <span className="bi-chat-fab-spark" aria-hidden>
+        <Sparkles className="h-3 w-3" />
+      </span>
+    </button>,
+    document.body,
+  );
+}
 
 export type OpenBiChatOptions = {
   /** Prefill the composer (user can edit before send). */
@@ -45,6 +78,8 @@ export function BiChatDockProvider({ children }: { children: ReactNode }) {
   const showDock = isBiDockPath(location.pathname);
 
   const [open, setOpen] = useState(false);
+  /** Once true the dock chunk stays mounted so chat state survives close. */
+  const [everOpened, setEverOpened] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState<string | undefined>();
   const [pendingIntent, setPendingIntent] = useState<string | undefined>();
@@ -55,7 +90,13 @@ export function BiChatDockProvider({ children }: { children: ReactNode }) {
   const openChat = useCallback((opts?: OpenBiChatOptions) => {
     if (opts?.prompt) setPendingPrompt(opts.prompt);
     setPendingIntent(opts?.intent);
+    setEverOpened(true);
     setOpen(true);
+  }, []);
+
+  const handleOpenChange = useCallback((next: boolean) => {
+    if (next) setEverOpened(true);
+    setOpen(next);
   }, []);
 
   const closeChat = useCallback(() => {
@@ -118,17 +159,23 @@ export function BiChatDockProvider({ children }: { children: ReactNode }) {
       {showDock ? (
         <>
           <BiNotifyOptIn />
-          <BiAnalyticsChatDock
-            open={open}
-            onOpenChange={setOpen}
-            pinned={pinned}
-            onPinnedChange={setPinned}
-            sessionId={sessionId}
-            dashboardId={dashboardId}
-            initialMessage={pendingPrompt}
-            initialIntent={pendingIntent}
-            onResponse={handleResponse}
-          />
+          {everOpened ? (
+            <Suspense fallback={null}>
+              <BiAnalyticsChatDock
+                open={open}
+                onOpenChange={handleOpenChange}
+                pinned={pinned}
+                onPinnedChange={setPinned}
+                sessionId={sessionId}
+                dashboardId={dashboardId}
+                initialMessage={pendingPrompt}
+                initialIntent={pendingIntent}
+                onResponse={handleResponse}
+              />
+            </Suspense>
+          ) : (
+            <BiChatDockFab onOpen={() => openChat()} />
+          )}
         </>
       ) : null}
     </BiChatDockContext.Provider>

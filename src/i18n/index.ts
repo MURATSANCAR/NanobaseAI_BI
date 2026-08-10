@@ -1,24 +1,16 @@
-import en from './en.json';
-import tr from './tr.json';
-import ru from './ru.json';
-import uz from './uz.json';
-import helpEn from './help-en.json';
-import helpTr from './help-tr.json';
-import helpRu from './help-ru.json';
-import helpUz from './help-uz.json';
-
 /** All known locale codes (legacy ru/uz kept for stored prefs / old docs). */
 export type Locale = 'en' | 'tr' | 'ru' | 'uz';
 export type PortalLocale = Locale;
 /** Locales offered in the UI and used for new generation. */
 export type ActiveLocale = 'en' | 'tr';
 
-const bundles: Record<Locale, Record<string, string>> = {
-  en: { ...en, ...helpEn },
-  tr: { ...tr, ...helpTr },
-  ru: { ...ru, ...helpRu },
-  uz: { ...uz, ...helpUz },
-};
+/**
+ * Locale dictionaries are loaded on demand (dynamic import) so the entry
+ * bundle no longer ships every translation. Only tr/en are ever loaded;
+ * ru/uz stay on disk but out of the import graph.
+ */
+const bundles: Partial<Record<ActiveLocale, Record<string, string>>> = {};
+const bundleLoads: Partial<Record<ActiveLocale, Promise<void>>> = {};
 
 const listeners = new Set<(locale: ActiveLocale) => void>();
 
@@ -37,6 +29,50 @@ export function normalizeActiveLocale(locale: string | null | undefined): Active
   const code = String(locale || '').trim().toLowerCase().slice(0, 2);
   if (code === 'tr' || code === 'en') return code;
   return 'en';
+}
+
+async function importBundle(locale: ActiveLocale): Promise<Record<string, string>> {
+  if (locale === 'tr') {
+    const [main, help] = await Promise.all([import('./tr.json'), import('./help-tr.json')]);
+    return { ...(main.default as Record<string, string>), ...(help.default as Record<string, string>) };
+  }
+  const [main, help] = await Promise.all([import('./en.json'), import('./help-en.json')]);
+  return { ...(main.default as Record<string, string>), ...(help.default as Record<string, string>) };
+}
+
+/**
+ * Ensure the dictionary for `locale` is loaded (idempotent). Also kicks off a
+ * non-blocking load of the English bundle, which acts as the fallback for
+ * keys missing from the active locale.
+ */
+export function loadLocale(locale: Locale | string): Promise<ActiveLocale> {
+  const next = normalizeActiveLocale(locale);
+  let pending = bundleLoads[next];
+  if (!pending) {
+    pending = importBundle(next).then((dict) => {
+      bundles[next] = dict;
+    });
+    bundleLoads[next] = pending;
+    pending.catch(() => {
+      // Allow a retry on transient chunk-load failures.
+      if (!bundles[next]) delete bundleLoads[next];
+    });
+  }
+  // Warm the English fallback dictionary in the background.
+  if (next !== 'en' && !bundleLoads.en) {
+    const enLoad = importBundle('en').then((dict) => {
+      bundles.en = dict;
+    });
+    bundleLoads.en = enLoad;
+    enLoad.catch(() => {
+      if (!bundles.en) delete bundleLoads.en;
+    });
+  }
+  return pending.then(() => next);
+}
+
+export function isLocaleLoaded(locale: ActiveLocale): boolean {
+  return Boolean(bundles[locale]);
 }
 
 function readStoredLocale(): ActiveLocale | null {
@@ -60,6 +96,9 @@ export function setLocale(locale: Locale | string): void {
   } catch {
     /* ignore — tests / private mode */
   }
+  // Keep the dictionary in sync for callers that set locale directly
+  // (e.g. AuthContext applying the profile locale).
+  void loadLocale(next);
   listeners.forEach((listener) => listener(next));
 }
 
@@ -81,7 +120,7 @@ export function tLocale(locale: Locale | string, key: string, vars?: Record<stri
   const requested = String(locale || '').trim().toLowerCase().slice(0, 2) as Locale;
   const loc: ActiveLocale =
     requested === 'tr' || requested === 'en' ? requested : normalizeActiveLocale(requested);
-  let text = bundles[loc][key] ?? bundles.en[key] ?? key;
+  let text = bundles[loc]?.[key] ?? bundles.en?.[key] ?? key;
   if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       text = text.replace(`{${k}}`, String(v));

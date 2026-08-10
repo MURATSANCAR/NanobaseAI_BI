@@ -940,6 +940,24 @@
     opacity: 0.6;
   }
 
+  /* Static ambient scene (default): same visuals, no infinite loops — zero
+     continuous compositing/paint work while the app idles. */
+  .ai-ambient-static .ai-aurora,
+  .ai-ambient-static .ai-aurora-reverse,
+  .ai-ambient-static .ai-orb-pulse,
+  .ai-ambient-static .ai-neural-line,
+  .ai-ambient-static .ai-neural-node,
+  .ai-ambient-static .ai-sparkle,
+  .ai-ambient-static .ai-scanline,
+  .ai-ambient-static .animate-float,
+  .ai-ambient-static .animate-float-slow,
+  .ai-ambient-static .animate-float-delayed,
+  .ai-ambient-static .animate-orbit,
+  .ai-ambient-static .animate-orbit-reverse,
+  .ai-ambient-static .animate-sparkle {
+    animation: none !important;
+  }
+
   .ai-hero-orb {
     animation: heroGlow 3s ease-in-out infinite;
   }
@@ -3905,6 +3923,7 @@
     .ai-aurora-reverse,
     .ai-floating-orb,
     .ai-float-word,
+    .ai-orb-pulse,
     .ai-neural-line,
     .ai-neural-node,
     .ai-sparkle,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -24,7 +24,7 @@ import {
   User,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { api, isRunnerConfigured } from '@/api/client';
+import { api, isRunnerConfigured, type ApiConfig } from '@/api/client';
 import { submitQueryFeedback } from '@/api/services';
 import { getFeatureFlags } from '@/config/environment';
 import type { ChatExecutionState } from '@/api/contracts/datasource';
@@ -33,7 +33,7 @@ import { useAuth } from '@/context/AuthContext';
 import { t } from '@/i18n';
 import { brandText } from '@/utils/brand';
 import { stripSqlFromChatText } from '@/utils/biChatSanitize';
-import { mapPhaseToChatState, revealText } from '@/lib/biChatStream';
+import { mapPhaseToChatState } from '@/lib/biChatStream';
 import { localizeUserMessage } from '@/utils/backendLabels';
 import {
   abortBiChatJob,
@@ -73,8 +73,13 @@ import type { BiChatResponse, BiQueryTemplate } from '@/api/types';
 import { getTemplateWarm, warmTemplatesInBackground } from '@/lib/biTemplateWarm';
 
 type ChatMessage = {
+  /** Stable identity for list rendering (uuid, or `${sessionId}-idx-N` for hydrated history). */
+  id: string;
   role: 'user' | 'assistant';
   content: string;
+  /** User question this assistant answer belongs to — stored at creation so
+   *  rows never back-scan the timeline per render. */
+  questionTitle?: string;
   meta?: BiChatResponse;
   failed?: boolean;
   streaming?: boolean;
@@ -108,14 +113,37 @@ type FeedbackDraft = {
   comment: string;
 };
 
-function mapHistoryMessages(raw: unknown[]): ChatMessage[] {
-  return raw.map((m) => {
+function newMessageId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {
+    /* fall through */
+  }
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const messagePinKey = (msg: ChatMessage) =>
+  msg.jobId || `${msg.role}-${(msg.meta?.sql || msg.content || '').slice(0, 48)}`;
+
+const msgFeedbackKey = (m: ChatMessage, index: number) => m.jobId || `idx-${index}`;
+
+function mapHistoryMessages(raw: unknown[], sessionId: string): ChatMessage[] {
+  let lastUserContent: string | undefined;
+  return raw.map((m, index) => {
     const msg = m as { role: string; content: string; meta?: BiChatResponse };
     const role = msg.role === 'user' ? 'user' : 'assistant';
+    const content = role === 'user' ? stripAlertCreateHint(msg.content) : msg.content;
+    const questionTitle = role === 'assistant' ? lastUserContent : undefined;
+    if (role === 'user') lastUserContent = content;
     return {
+      // Stable across refetches so React reuses row DOM/state.
+      id: `${sessionId}-idx-${index}`,
       role,
-      content: role === 'user' ? stripAlertCreateHint(msg.content) : msg.content,
+      content,
       meta: msg.meta,
+      questionTitle,
     };
   });
 }
@@ -131,11 +159,13 @@ function ensureStreamingBubble(prev: ChatMessage[], jobId?: string): ChatMessage
     return [
       ...prev,
       {
+        id: jobId ? `job-${jobId}` : newMessageId(),
         role: 'assistant',
         content: '',
         streaming: true,
         jobId,
         streamPhase: 'thinking',
+        questionTitle: last.content,
       },
     ];
   }
@@ -158,10 +188,12 @@ function applyAssistantResult(
     const prov = normalized.provenance;
     const plan = normalized.workflows?.plan;
     next[idx] = {
+      id: prevMsg.id,
       role: 'assistant',
       content,
       meta: normalized,
       jobId,
+      questionTitle: prevMsg.questionTitle,
       draftSql: normalized.sql || prevMsg.draftSql,
       draftTables: prov?.selected_tables || plan?.tables || prevMsg.draftTables,
       draftColumns: prov?.columns || plan?.columns || prevMsg.draftColumns,
@@ -179,7 +211,10 @@ function applyAssistantResult(
     };
     return next;
   }
-  return [...next, { role: 'assistant', content, meta: normalized, chatState: 'COMPLETED' }];
+  return [
+    ...next,
+    { id: newMessageId(), role: 'assistant', content, meta: normalized, chatState: 'COMPLETED' },
+  ];
 }
 
 function statusLabelForMessage(m: ChatMessage): string {
@@ -404,6 +439,607 @@ function isSqlLookingQuick(text: string): boolean {
   return /\bSELECT\b/i.test(text) && /\bFROM\b/i.test(text);
 }
 
+type JobProgressEntry = { question: string; tipIndex: number; startedAt: number; phase?: string };
+
+type MessageRowProps = {
+  message: ChatMessage;
+  index: number;
+  /** Progress entry for this message's job (streaming placeholders only). */
+  job?: JobProgressEntry;
+  dashboardId?: string;
+  fullHeight?: boolean;
+  showSqlPanel: boolean;
+  enableFeedback: boolean;
+  enableTestExecution: boolean;
+  pinning: boolean;
+  pinned: boolean;
+  pinnedBoardId: number | null;
+  confirming: boolean;
+  feedbackBusy: boolean;
+  /** Non-null only when the draft targets this row. */
+  feedbackDraft: FeedbackDraft | null;
+  config: ApiConfig;
+  onSend: (text: string) => void;
+  onPin: (msg: ChatMessage, target?: { dashboardId?: number; vizType?: string } | number) => void;
+  onConfirm: (msg: ChatMessage) => void;
+  onDismissConfirm: (msg: ChatMessage) => void;
+  onBeginFeedback: (msg: ChatMessage, index: number, rating: -1 | 0 | 1) => void;
+  onSubmitFeedback: (msg: ChatMessage, index: number) => void;
+  onFeedbackComment: (comment: string) => void;
+  onCancelFeedback: () => void;
+};
+
+/** One transcript row. Memoized so streaming/typing only re-renders the rows
+ *  whose message object (or targeted UI state) actually changed. */
+const MessageRow = memo(function MessageRow({
+  message: m,
+  index,
+  job,
+  dashboardId,
+  fullHeight,
+  showSqlPanel,
+  enableFeedback,
+  enableTestExecution,
+  pinning,
+  pinned,
+  pinnedBoardId,
+  confirming,
+  feedbackBusy,
+  feedbackDraft,
+  config,
+  onSend,
+  onPin,
+  onConfirm,
+  onDismissConfirm,
+  onBeginFeedback,
+  onSubmitFeedback,
+  onFeedbackComment,
+  onCancelFeedback,
+}: MessageRowProps) {
+  // Heavy derivations (31 brand regexes + SQL strip) run once per content
+  // change instead of on every parent render.
+  const exportSql = useMemo(() => pickExportSql(m.meta), [m.meta]);
+  const heroScalar = useMemo(
+    () => Boolean(m.meta && !m.streaming && isHeroScalarResult(m.meta)),
+    [m.meta, m.streaming],
+  );
+  const kpiAnswer = useMemo(() => Boolean(m.meta && isChatKpiAnswer(m.meta)), [m.meta]);
+  const displayText = useMemo(
+    () => (m.role === 'assistant' ? assistantDisplayText(m.content, m.streaming) : m.content || ''),
+    [m.content, m.role, m.streaming],
+  );
+  const questionTitle = m.questionTitle;
+
+  return (
+    <div className={clsx('flex gap-2.5 animate-slide-up sm:gap-3', m.role === 'user' ? 'flex-row-reverse' : 'flex-row')}>
+      <div className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', m.role === 'user' ? 'bg-gradient-to-br from-violet-600 to-blue-600 text-white' : 'bg-violet-100 text-violet-600')}>
+        {m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+      </div>
+      <div
+        className={clsx(
+          'min-w-0 w-full max-w-[min(100%,40rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:max-w-[min(92%,42rem)] sm:px-4 lg:max-w-[min(88%,48rem)]',
+          m.role === 'user'
+            ? 'rounded-tr-md bg-gradient-to-br from-violet-600 to-blue-600 text-white'
+            : 'rounded-tl-md border border-[#E1DFDD] bg-white/95 text-[#252423] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_8px_rgba(15,23,42,0.06)]',
+          m.failed && m.role === 'user' && 'ring-2 ring-status-fail/40',
+          fullHeight && 'sm:max-w-[min(94%,52rem)] lg:max-w-[min(90%,56rem)]',
+        )}
+      >
+        {m.role === 'assistant' && (m.scenarioSource || (m.meta?.intent && !m.streaming)) && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {m.scenarioSource ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200/80">
+                Hazır senaryo
+                {m.scenarioCode ? (
+                  <span className="font-normal text-emerald-700/80">· {m.scenarioCode}</span>
+                ) : null}
+              </span>
+            ) : null}
+            {m.meta?.intent && !m.streaming
+              ? (() => {
+                  const Icon = intentIcon(m.meta.intent);
+                  return (
+                    <span className="bi-pbi-type-chip bi-pbi-type-chip--compact">
+                      <Icon className="h-3 w-3" />
+                      {intentLabel(m.meta.intent)}
+                    </span>
+                  );
+                })()
+              : null}
+          </div>
+        )}
+        <div className="min-w-0">
+          {(() => {
+            if (m.streaming && !m.content && job) {
+              return (
+                <BiChatStreamingSteps
+                  question={job.question}
+                  tipIndex={job.tipIndex}
+                  phase={m.streamPhase}
+                  queuePosition={m.queuePosition}
+                  queueMessage={m.queueMessage}
+                  elapsedSec={m.elapsedSec}
+                />
+              );
+            }
+            if (m.streaming && !m.content) {
+              return (
+                <p className="whitespace-pre-wrap break-anywhere leading-relaxed">
+                  {statusLabelForMessage(m)}
+                  <Loader2 className="ml-1 inline h-3.5 w-3.5 animate-spin" />
+                </p>
+              );
+            }
+            if (!m.content) return null;
+            // Hero KPI owns the answer — hide redundant status / SQL chatter.
+            if (m.role === 'assistant' && heroScalar) {
+              return null;
+            }
+            if (!displayText.trim()) return null;
+            return (
+              <p className="whitespace-pre-wrap break-anywhere leading-relaxed">
+                {displayText}
+                {m.streaming && !!m.content && (
+                  <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-violet-500 align-text-bottom" aria-hidden />
+                )}
+              </p>
+            );
+          })()}
+        </div>
+        {m.meta?.answer_blocks &&
+          m.meta.answer_blocks.length > 0 &&
+          !m.meta.query_result &&
+          !m.streaming && (
+          <div className="mt-3"><BiAnswerBlocks blocks={m.meta.answer_blocks} /></div>
+        )}
+        {(() => {
+          if (!m.meta || m.streaming) return null;
+          if (kpiAnswer && m.meta.query_result) {
+            return (
+              <>
+                <BiChatResultHero meta={m.meta} title={questionTitle} />
+                <div className="mt-2 flex w-full justify-end">
+                  <BiPinToDashboardControl
+                    compact
+                    pinning={pinning}
+                    pinned={pinned}
+                    pinnedDashboardId={pinnedBoardId}
+                    preferredDashboardId={dashboardId}
+                    preferredVizType="kpi"
+                    onPin={(sel) => onPin(m, sel)}
+                  />
+                </div>
+              </>
+            );
+          }
+          if (m.meta.widgets && m.meta.widgets.length > 0) {
+            return (
+              <BiChatWidgetPreview
+                widgets={m.meta.widgets}
+                dashboardId={dashboardId}
+                pinned={pinned}
+                pinnedDashboardId={pinnedBoardId}
+                pinning={pinning}
+                onPin={(sel) => onPin(m, sel)}
+              />
+            );
+          }
+          if (m.meta.query_result) {
+            return (
+              <>
+                <BiChatResultHero meta={m.meta} title={questionTitle} />
+                {exportSql ? (
+                  <div className="mt-2 flex w-full justify-end">
+                    <BiPinToDashboardControl
+                      pinning={pinning}
+                      pinned={pinned}
+                      pinnedDashboardId={pinnedBoardId}
+                      preferredDashboardId={dashboardId}
+                      preferredVizType="table"
+                      onPin={(sel) => onPin(m, sel)}
+                    />
+                  </div>
+                ) : null}
+              </>
+            );
+          }
+          return null;
+        })()}
+        {m.role === 'assistant' && !m.streaming && (m.followUps?.length ?? 0) > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {m.followUps!.slice(0, 5).map((q) => (
+              <button
+                key={q}
+                type="button"
+                className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-violet-300 hover:bg-violet-50"
+                onClick={() => onSend(q)}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+        {m.meta?.action_preview?.preview?.requires_confirm &&
+          m.meta.action_preview.status === 'preview' &&
+          !m.streaming &&
+          !m.meta.action_preview.confirmed && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-slate-800">
+              <p className="font-semibold text-amber-950">{t('bi.confirm.title')}</p>
+              <p className="mt-1 text-slate-600">
+                {t('bi.confirm.body', {
+                  action: String(m.meta.action_preview.preview.action || ''),
+                })}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary h-8 px-3 text-xs"
+                  disabled={confirming}
+                  onClick={() => onConfirm(m)}
+                >
+                  {confirming ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    t('bi.confirm.approve')
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary h-8 px-3 text-xs"
+                  disabled={confirming}
+                  onClick={() => onDismissConfirm(m)}
+                >
+                  {t('bi.confirm.dismiss')}
+                </button>
+              </div>
+            </div>
+          )}
+        {showSqlPanel && (m.draftSql || exportSql) && (
+            <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs text-slate-700">
+              <summary className="cursor-pointer font-semibold text-slate-800">
+                SQL
+                {m.draftDialect ? ` · ${m.draftDialect}` : ''}
+                {m.executionMode ? ` · ${m.executionMode}` : ''}
+              </summary>
+              <div className="mt-2 space-y-1.5 text-[11px] text-slate-600">
+                {m.draftDialect || m.meta?.provenance?.dialect ? (
+                  <p>
+                    <span className="font-medium text-slate-700">{t('bi.provenance.dialect')}: </span>
+                    {m.draftDialect || m.meta?.provenance?.dialect}
+                  </p>
+                ) : null}
+                {m.draftConfidence != null || m.meta?.provenance?.confidence != null ? (
+                  <p>
+                    <span className="font-medium text-slate-700">{t('bi.provenance.confidence')}: </span>
+                    {(m.draftConfidence ?? m.meta?.provenance?.confidence ?? 0).toFixed(2)}
+                  </p>
+                ) : null}
+                <p>
+                  <span className="font-medium text-slate-700">
+                    {m.meta?.provenance?.executed ||
+                    (m.executionMode &&
+                      !String(m.executionMode).includes('PLAN_ONLY') &&
+                      m.executionMode !== 'PLAN_ONLY')
+                      ? t('bi.provenance.executed')
+                      : t('bi.provenance.notExecuted')}
+                  </span>
+                </p>
+                {(m.draftTables?.length || m.meta?.provenance?.selected_tables?.length) ? (
+                  <p>
+                    <span className="font-medium text-slate-700">{t('bi.provenance.tables')}: </span>
+                    {(m.draftTables || m.meta?.provenance?.selected_tables || []).join(', ')}
+                  </p>
+                ) : null}
+                {(m.draftColumns?.length || m.meta?.provenance?.columns?.length) ? (
+                  <p>
+                    <span className="font-medium text-slate-700">{t('bi.provenance.columns')}: </span>
+                    {(m.draftColumns || m.meta?.provenance?.columns || []).join(', ')}
+                  </p>
+                ) : null}
+                {(m.draftAssumptions?.length || m.meta?.provenance?.assumptions?.length) ? (
+                  <div>
+                    <p className="font-medium text-slate-700">{t('bi.provenance.assumptions')}</p>
+                    <ul className="mt-0.5 list-disc pl-4">
+                      {(m.draftAssumptions || m.meta?.provenance?.assumptions || []).map((a) => (
+                        <li key={a}>{a}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+                {(m.draftWarnings?.length ||
+                  m.meta?.provenance?.warnings?.length ||
+                  m.meta?.warnings?.length) ? (
+                  <div>
+                    <p className="font-medium text-amber-800">{t('bi.provenance.warnings')}</p>
+                    <ul className="mt-0.5 list-disc pl-4 text-amber-800">
+                      {(
+                        m.draftWarnings ||
+                        m.meta?.provenance?.warnings ||
+                        m.meta?.warnings ||
+                        []
+                      ).map((w) => (
+                        <li key={w}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] text-slate-800">
+                {m.draftSql || exportSql}
+              </pre>
+              {enableTestExecution ? (
+                <p className="mt-2 text-[11px] text-amber-700">
+                  Test çalıştırma bu ortamda açıktır (prod’da kapalı).
+                </p>
+              ) : null}
+            </details>
+          )}
+        {m.role === 'assistant' && !m.streaming && enableFeedback && m.meta && (
+          <div className="mt-2 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className={clsx(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-emerald-50',
+                  m.feedbackRating === 1 && 'border-emerald-400 bg-emerald-50 text-emerald-700',
+                  feedbackDraft?.rating === 1 && 'border-emerald-400 bg-emerald-50',
+                )}
+                aria-label={t('bi.feedback.correct')}
+                disabled={m.feedbackRating != null || feedbackBusy}
+                onClick={() => onBeginFeedback(m, index, 1)}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+                {t('bi.feedback.correct')}
+              </button>
+              <button
+                type="button"
+                className={clsx(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-amber-50',
+                  m.feedbackRating === 0 && 'border-amber-400 bg-amber-50 text-amber-800',
+                  feedbackDraft?.rating === 0 && 'border-amber-400 bg-amber-50',
+                )}
+                aria-label={t('bi.feedback.partial')}
+                disabled={m.feedbackRating != null || feedbackBusy}
+                onClick={() => onBeginFeedback(m, index, 0)}
+              >
+                <Minus className="h-3.5 w-3.5" />
+                {t('bi.feedback.partial')}
+              </button>
+              <button
+                type="button"
+                className={clsx(
+                  'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-rose-50',
+                  m.feedbackRating === -1 && 'border-rose-400 bg-rose-50 text-rose-700',
+                  feedbackDraft?.rating === -1 && 'border-rose-400 bg-rose-50',
+                )}
+                aria-label={t('bi.feedback.wrong')}
+                disabled={m.feedbackRating != null || feedbackBusy}
+                onClick={() => onBeginFeedback(m, index, -1)}
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+                {t('bi.feedback.wrong')}
+              </button>
+              {m.feedbackRating != null ? (
+                <span className="text-[11px] text-slate-500">{t('bi.feedback.saved')}</span>
+              ) : null}
+            </div>
+            {feedbackDraft && m.feedbackRating == null ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-2">
+                <label className="mb-1 block text-[11px] font-medium text-slate-600">
+                  {feedbackDraft.rating === 1
+                    ? t('bi.feedback.commentOptional')
+                    : t('bi.feedback.commentRequired')}
+                </label>
+                <textarea
+                  className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800"
+                  rows={2}
+                  value={feedbackDraft.comment}
+                  onChange={(e) => onFeedbackComment(e.target.value)}
+                  placeholder={t('bi.feedback.commentPlaceholder')}
+                  disabled={feedbackBusy}
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-primary text-xs"
+                    disabled={feedbackBusy}
+                    onClick={() => onSubmitFeedback(m, index)}
+                  >
+                    {t('bi.feedback.submit')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs"
+                    disabled={feedbackBusy}
+                    onClick={onCancelFeedback}
+                  >
+                    {t('bi.feedback.cancel')}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+        {m.role === 'assistant' && !m.streaming && exportSql && (
+          <div className="mt-2 flex w-full max-w-lg flex-col items-stretch gap-2 self-end sm:max-w-md">
+            <div className="flex flex-wrap justify-end gap-2">
+              <BiExportMenu sql={exportSql} />
+            </div>
+            {m.meta?.provenance?.metric ? (
+              <>
+                <BiLineageDrawer config={config} metricId={String(m.meta.provenance.metric)} />
+                <BiScenarioSliders
+                  config={config}
+                  metricId={String(m.meta.provenance.metric)}
+                />
+              </>
+            ) : null}
+          </div>
+        )}
+        {m.meta?.schedule && !m.streaming && (
+          <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2.5 text-xs text-slate-700">
+            <p className="font-semibold text-violet-900">{t('bi.scheduleCreated')}</p>
+            <p className="mt-1">{m.meta.schedule.subject}</p>
+            <p className="mt-1 font-mono text-[11px] text-slate-500">
+              {m.meta.schedule.run_at?.slice(0, 16)?.replace('T', ' ')}
+              {m.meta.schedule.local_time ? ` · ${m.meta.schedule.local_time}` : ''}
+              {' · '}
+              {m.meta.schedule.recurrence === 'daily'
+                ? t('bi.scheduleRecurrenceDaily')
+                : m.meta.schedule.recurrence === 'weekly'
+                  ? t('bi.scheduleRecurrenceWeekly')
+                  : t('bi.scheduleRecurrenceOnce')}
+            </p>
+            {m.meta.schedule.recipient && (
+              <p className="mt-1 text-slate-600">{m.meta.schedule.recipient}</p>
+            )}
+            <Link
+              to="/bi/schedules"
+              className="mt-2 inline-block font-medium text-violet-700 hover:underline"
+            >
+              {t('bi.wow.manageSchedules')}
+            </Link>
+          </div>
+        )}
+        {m.meta?.alert && !m.streaming && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-slate-700">
+            <p className="font-semibold text-amber-900">{t('bi.alertCreated')}</p>
+            <p className="mt-1">{m.meta.alert.title}</p>
+            <p className="mt-1 font-mono text-[11px] text-slate-500">
+              {m.meta.alert.column} {m.meta.alert.condition} {m.meta.alert.threshold}
+              {m.meta.alert.last_value != null ? ` · last ${m.meta.alert.last_value}` : ''}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <Link to="/bi/alerts" className="font-medium text-amber-800 hover:underline">
+                {t('bi.wow.alertStripManage')}
+              </Link>
+              <Link to="/bi/schedules" className="font-medium text-amber-800 hover:underline">
+                {t('bi.alertIncludeInMorningMail')}
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
+type BiChatComposerProps = {
+  pending: boolean;
+  embedded?: boolean;
+  autoFocus?: boolean;
+  sessionId: string;
+  /** Prefill from openChat({prompt}) — applied once per session+text. */
+  prefill?: string;
+  showEmptyHint: boolean;
+  /** Increment to clear the draft (e.g. chat cleared). */
+  resetSignal: number;
+  onSend: (text: string) => void;
+  onStop: () => void;
+};
+
+/** Composer owns the draft text so typing never re-renders the transcript. */
+const BiChatComposer = memo(function BiChatComposer({
+  pending,
+  embedded,
+  autoFocus,
+  sessionId,
+  prefill,
+  showEmptyHint,
+  resetSignal,
+  onSend,
+  onStop,
+}: BiChatComposerProps) {
+  const [input, setInput] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const prefilledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prefill && prefilledRef.current !== `${sessionId}:${prefill}`) {
+      prefilledRef.current = `${sessionId}:${prefill}`;
+      setInput(prefill);
+    }
+  }, [prefill, sessionId]);
+
+  useEffect(() => {
+    if (resetSignal > 0) setInput('');
+  }, [resetSignal]);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const id = window.setTimeout(() => textareaRef.current?.focus(), 80);
+    return () => window.clearTimeout(id);
+  }, [autoFocus, sessionId]);
+
+  const submit = () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput('');
+    onSend(text);
+  };
+
+  return (
+    <div
+      className={clsx(
+        'relative z-20 shrink-0 border-t border-violet-200/80 bg-white p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:p-3',
+        embedded && 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      )}
+    >
+      {showEmptyHint && (
+        <p className="mb-2 text-center text-[11px] font-medium text-violet-700">{t('bi.analytics.typeBelow')}</p>
+      )}
+      <div className="flex items-end gap-2 rounded-xl border border-violet-300/80 bg-white p-2 shadow-sm focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-400/25">
+        <BiVoiceInput
+          onTranscript={(text) => {
+            const trimmed = text.trim();
+            if (!trimmed) return;
+            setInput('');
+            onSend(trimmed);
+          }}
+        />
+        <span className="sr-only" aria-live="polite">
+          {pending ? t('bi.voiceSentHint') : ''}
+        </span>
+        <textarea
+          ref={textareaRef}
+          className="max-h-[100px] min-h-[44px] flex-1 resize-none border-0 bg-transparent px-2 py-2 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-sm"
+          rows={1}
+          placeholder={embedded ? t('bi.analytics.chatPlaceholder') : t('bi.chatPlaceholder')}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              submit();
+            }
+          }}
+        />
+        {pending ? (
+          <button
+            type="button"
+            className="btn-secondary h-11 w-11 shrink-0 rounded-lg p-0 text-rose-700 sm:h-10 sm:w-10"
+            aria-label="Durdur"
+            title="Durdur"
+            onClick={onStop}
+          >
+            <Square className="h-3.5 w-3.5 fill-current" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="btn-primary h-11 w-11 shrink-0 rounded-lg p-0 sm:h-10 sm:w-10"
+            disabled={!input.trim()}
+            onClick={submit}
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      {!embedded && <p className="mt-2 hidden text-center text-[11px] text-slate-400 sm:block">{t('bi.chatSendHint')}</p>}
+    </div>
+  );
+});
+
 export default function BiChatPanel({
   sessionId,
   dashboardId,
@@ -454,21 +1090,22 @@ export default function BiChatPanel({
     });
   }, [config, embedded, templates.data?.templates]);
 
-  const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [lastFailedText, setLastFailedText] = useState<string | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [notifyPerm, setNotifyPerm] = useState<NotifyPermission>(() => getNotifyPermission());
-  const [jobProgress, setJobProgress] = useState<
-    Record<string, { question: string; tipIndex: number; startedAt: number; phase?: string }>
-  >({});
+  const [jobProgress, setJobProgress] = useState<Record<string, JobProgressEntry>>({});
   const [feedbackDraft, setFeedbackDraft] = useState<FeedbackDraft | null>(null);
   const [feedbackBusy, setFeedbackBusy] = useState(false);
+  /** Incremented to clear the composer draft (chat cleared). */
+  const [composerReset, setComposerReset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prefilledRef = useRef<string | null>(null);
   const sendIntentRef = useRef<string | undefined>(undefined);
+  /** Mirror so submit handlers stay referentially stable while typing. */
+  const feedbackDraftRef = useRef<FeedbackDraft | null>(null);
+  feedbackDraftRef.current = feedbackDraft;
   /** This mount owns the live send UI — remount reattach must not steal it. */
   const drivingSendRef = useRef(false);
   /** After local clear, ignore server history until the next send / session change. */
@@ -505,7 +1142,7 @@ export default function BiChatPanel({
     // answer locally — never wipe a live timeline just because history is empty.
     if (!raw.length) return;
     setMessages((prev) => {
-      const mapped = mapHistoryMessages(raw);
+      const mapped = mapHistoryMessages(raw, sessionId);
       const localRich = prev.some(
         (m) =>
           Boolean(m.meta?.query_result) ||
@@ -524,7 +1161,7 @@ export default function BiChatPanel({
   useEffect(() => {
     if (initialMessage && prefilledRef.current !== `${sessionId}:${initialMessage}`) {
       prefilledRef.current = `${sessionId}:${initialMessage}`;
-      setInput(initialMessage);
+      // Composer applies the text prefill; keep the hidden intent here.
       sendIntentRef.current = initialIntent;
     }
   }, [initialIntent, initialMessage, sessionId]);
@@ -533,7 +1170,26 @@ export default function BiChatPanel({
     if (initialIntent) sendIntentRef.current = initialIntent;
   }, [initialIntent]);
 
-  const scrollToBottom = useCallback(() => {
+  /** Only auto-follow the stream while the operator is already near the bottom. */
+  const nearBottomRef = useRef(true);
+  const lastAutoScrollRef = useRef(0);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+    };
+    onScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToBottom = useCallback((force = false) => {
+    if (!force && !nearBottomRef.current) return;
+    const now = Date.now();
+    if (!force && now - lastAutoScrollRef.current < 100) return;
+    lastAutoScrollRef.current = now;
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     });
@@ -542,12 +1198,6 @@ export default function BiChatPanel({
   useEffect(() => {
     scrollToBottom();
   }, [messages, pending, scrollToBottom]);
-
-  useEffect(() => {
-    if (!autoFocus) return;
-    const id = window.setTimeout(() => textareaRef.current?.focus(), 80);
-    return () => window.clearTimeout(id);
-  }, [autoFocus, sessionId]);
 
   // Tip index advances only from real stream phase events (see status handler).
   // No fake timer — stuck on the current step until the backend moves on.
@@ -560,14 +1210,16 @@ export default function BiChatPanel({
     if (settled) {
       setPendingCount((n) => Math.max(n, biChatJobCount(sessionId)));
       setMessages((prev) =>
-        ensureStreamingBubble(prev.length ? prev : mapHistoryMessages(history.data?.messages ?? [])),
+        ensureStreamingBubble(
+          prev.length ? prev : mapHistoryMessages(history.data?.messages ?? [], sessionId),
+        ),
       );
       let cancelled = false;
       void settled.finally(async () => {
         if (cancelled) return;
         try {
           const snap = await api.bi.chatHistory(config, sessionId);
-          const mapped = mapHistoryMessages(snap.messages ?? []);
+          const mapped = mapHistoryMessages(snap.messages ?? [], sessionId);
           // Keep local timeline when server history is empty/stubbed.
           if (mapped.length) {
             setMessages(mapped);
@@ -593,7 +1245,9 @@ export default function BiChatPanel({
 
     setPendingCount((n) => Math.max(n, 1));
     setMessages((prev) =>
-      ensureStreamingBubble(prev.length ? prev : mapHistoryMessages(history.data?.messages ?? [])),
+      ensureStreamingBubble(
+        prev.length ? prev : mapHistoryMessages(history.data?.messages ?? [], sessionId),
+      ),
     );
 
     let cancelled = false;
@@ -603,14 +1257,14 @@ export default function BiChatPanel({
           const snap = await api.bi.chatHistory(config, sessionId);
           if (cancelled) return;
           if (snap.pending) {
-            const mappedPending = mapHistoryMessages(snap.messages ?? []);
+            const mappedPending = mapHistoryMessages(snap.messages ?? [], sessionId);
             setMessages((prev) =>
               ensureStreamingBubble(mappedPending.length ? mappedPending : prev),
             );
             return;
           }
           window.clearInterval(poll);
-          const mapped = mapHistoryMessages(snap.messages ?? []);
+          const mapped = mapHistoryMessages(snap.messages ?? [], sessionId);
           if (mapped.length) setMessages(mapped);
           const lastAssistant = [...mapped].reverse().find((m) => m.role === 'assistant' && m.meta);
           if (lastAssistant?.meta) onResponse?.(lastAssistant.meta);
@@ -633,9 +1287,6 @@ export default function BiChatPanel({
   const [pinningKey, setPinningKey] = useState<string | null>(null);
   const [pinnedKeys, setPinnedKeys] = useState<Record<string, boolean>>({});
   const [pinnedBoardByKey, setPinnedBoardByKey] = useState<Record<string, number>>({});
-
-  const messagePinKey = (msg: ChatMessage) =>
-    msg.jobId || `${msg.role}-${(msg.meta?.sql || msg.content || '').slice(0, 48)}`;
 
   const pinToDashboard = useCallback(
     async (
@@ -831,9 +1482,11 @@ export default function BiChatPanel({
     );
   }, []);
 
+  const refetchHistory = history.refetch;
+
   const sendMessage = useCallback(
     async (
-      text?: string,
+      text: string,
       opts?: {
         prepared_sql?: string | null;
         prepared_params?: Record<string, unknown> | null;
@@ -841,10 +1494,9 @@ export default function BiChatPanel({
         optimistic?: BiChatResponse;
       },
     ) => {
-      const payload = (text ?? input).trim();
+      const payload = text.trim();
       // Allow consecutive prompts — server FIFO queue + separate stream per message.
       if (!payload) return;
-      setInput('');
       setError(null);
       setLastFailedText(null);
       suppressHistoryRef.current = false;
@@ -872,7 +1524,53 @@ export default function BiChatPanel({
       const optimistic = opts?.optimistic;
 
       const jobRef = { id: '' as string };
-      let sawLiveTokens = false;
+      // Streaming deltas are buffered and flushed once per animation frame:
+      // one setMessages touching ONLY the streaming bubble instead of a full
+      // timeline rebuild per token.
+      let deltaBuffer = '';
+      let deltaReset = false;
+      let deltaFlushScheduled = false;
+      const flushDeltas = () => {
+        deltaFlushScheduled = false;
+        const id = jobRef.id;
+        if (!id || (!deltaBuffer && !deltaReset)) return;
+        const chunk = deltaBuffer;
+        const reset = deltaReset;
+        deltaBuffer = '';
+        deltaReset = false;
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.jobId === id && m.streaming);
+          if (idx < 0) return prev;
+          const msg = prev[idx]!;
+          const next = [...prev];
+          next[idx] = {
+            ...msg,
+            content: reset ? chunk : `${msg.content || ''}${chunk}`,
+            liveTokens: true,
+            streamPhase: 'composing',
+            chatState: 'GENERATING_ANSWER',
+          };
+          return next;
+        });
+        setJobProgress((prev) => {
+          const job = prev[id];
+          // Bail out when the phase is unchanged — no state churn per token.
+          if (!job || job.phase === 'composing') return prev;
+          const tips = progressTipsForQuestion(job.question);
+          const mapped = tipIndexForStreamPhase('composing', tips.length);
+          const tipIndex = mapped == null ? job.tipIndex : Math.max(job.tipIndex, mapped);
+          return { ...prev, [id]: { ...job, phase: 'composing', tipIndex } };
+        });
+      };
+      const scheduleDeltaFlush = () => {
+        if (deltaFlushScheduled) return;
+        deltaFlushScheduled = true;
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(flushDeltas);
+        } else {
+          window.setTimeout(flushDeltas, 50);
+        }
+      };
       const { jobId, promise, unsubscribe } = runBiChatJob(
         config,
         {
@@ -986,7 +1684,7 @@ export default function BiChatPanel({
             );
             setJobProgress((prev) => {
               const job = prev[id];
-              if (!job) return prev;
+              if (!job || job.phase === 'generating_sql') return prev;
               const tips = progressTipsForQuestion(job.question);
               const mapped = tipIndexForStreamPhase('generating_sql', tips.length);
               const tipIndex =
@@ -999,31 +1697,8 @@ export default function BiChatPanel({
             return;
           }
           if (ev.type === 'answer_delta') {
-            sawLiveTokens = true;
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (!(m.jobId === id && m.streaming)) return m;
-                return {
-                  ...m,
-                  content: `${m.content || ''}${ev.text}`,
-                  liveTokens: true,
-                  streamPhase: 'composing',
-                  chatState: 'GENERATING_ANSWER',
-                };
-              }),
-            );
-            setJobProgress((prev) => {
-              const job = prev[id];
-              if (!job) return prev;
-              const tips = progressTipsForQuestion(job.question);
-              const mapped = tipIndexForStreamPhase('composing', tips.length);
-              const tipIndex =
-                mapped == null ? job.tipIndex : Math.max(job.tipIndex, mapped);
-              return {
-                ...prev,
-                [id]: { ...job, phase: 'composing', tipIndex },
-              };
-            });
+            deltaBuffer += ev.text;
+            scheduleDeltaFlush();
             return;
           }
           if (ev.type === 'completed') {
@@ -1046,20 +1721,13 @@ export default function BiChatPanel({
             return;
           }
           if (ev.type === 'token') {
-            sawLiveTokens = true;
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (!(m.jobId === id && m.streaming)) return m;
-                const nextContent = ev.reset ? ev.t : `${m.content || ''}${ev.t}`;
-                return {
-                  ...m,
-                  content: nextContent,
-                  liveTokens: true,
-                  streamPhase: 'composing',
-                  chatState: 'GENERATING_ANSWER',
-                };
-              }),
-            );
+            if (ev.reset) {
+              deltaBuffer = ev.t;
+              deltaReset = true;
+            } else {
+              deltaBuffer += ev.t;
+            }
+            scheduleDeltaFlush();
           }
         },
         { fastPath: Boolean(opts?.prepared_sql) },
@@ -1080,42 +1748,36 @@ export default function BiChatPanel({
 
       setMessages((prev) => [
         ...prev,
-        { role: 'user', content: payload },
+        { id: newMessageId(), role: 'user', content: payload },
         optimistic
           ? {
+              id: `job-${jobId}`,
               role: 'assistant',
               content: localizeUserMessage(optimistic.reply || t('bi.result.heroReady')),
               meta: optimistic,
               jobId,
+              questionTitle: payload,
             }
           : {
+              id: `job-${jobId}`,
               role: 'assistant',
               content: '',
               streaming: true,
               jobId,
               streamPhase: context?.prepared_sql ? 'querying' : 'queued',
               queuePosition: Math.max(1, biChatJobCount(sessionId)),
+              questionTitle: payload,
             },
       ]);
+      scrollToBottom(true);
 
       try {
         const result = await promise;
 
-        if (!sawLiveTokens && !optimistic) {
-          await revealText(result.reply || '', (partial) => {
-            setMessages((prev) => {
-              const next = [...prev];
-              const idx = next.findIndex((m) => m.streaming && m.jobId === jobId);
-              if (idx < 0) return next;
-              next[idx] = { role: 'assistant', content: partial, streaming: true, jobId };
-              return next;
-            });
-          });
-        }
-
+        // No fake typewriter — the full reply lands in one paint.
         setMessages((prev) => applyAssistantResult(prev, result, jobId));
         onResponse?.(result);
-        void history.refetch();
+        void refetchHistory();
         void queryClient.invalidateQueries({ queryKey: ['bi-chat-suggestions'] });
         showWebNotification({
           title: t('bi.chat.notifyDoneTitle'),
@@ -1157,7 +1819,7 @@ export default function BiChatPanel({
         }
       }
     },
-    [activeDbName, config, dashboardId, history, input, onResponse, queryClient, sessionId],
+    [activeDbName, config, dashboardId, refetchHistory, onResponse, queryClient, scrollToBottom, sessionId],
   );
 
   const stopStreaming = useCallback(() => {
@@ -1171,28 +1833,26 @@ export default function BiChatPanel({
     drivingSendRef.current = false;
   }, [sessionId]);
 
-  const msgFeedbackKey = (m: ChatMessage, index: number) => m.jobId || `idx-${index}`;
-
-  const beginFeedback = useCallback((msg: ChatMessage, index: number, rating: -1 | 0 | 1) => {
-    if (!flags.enableFeedback || msg.feedbackRating != null) return;
-    setFeedbackDraft({ msgKey: msgFeedbackKey(msg, index), rating, comment: '' });
-    setError(null);
-  }, []);
+  const beginFeedback = useCallback(
+    (msg: ChatMessage, index: number, rating: -1 | 0 | 1) => {
+      if (!flags.enableFeedback || msg.feedbackRating != null) return;
+      setFeedbackDraft({ msgKey: msgFeedbackKey(msg, index), rating, comment: '' });
+      setError(null);
+    },
+    [flags.enableFeedback],
+  );
 
   const submitFeedbackDraft = useCallback(
     async (msg: ChatMessage, index: number) => {
-      if (!flags.enableFeedback || !feedbackDraft || msg.feedbackRating != null) return;
-      if (feedbackDraft.msgKey !== msgFeedbackKey(msg, index)) return;
-      const { rating, comment } = feedbackDraft;
+      const draft = feedbackDraftRef.current;
+      if (!flags.enableFeedback || !draft || msg.feedbackRating != null) return;
+      if (draft.msgKey !== msgFeedbackKey(msg, index)) return;
+      const { rating, comment } = draft;
       if (rating !== 1 && comment.trim().length < 5) {
         setError(t('bi.feedback.commentRequired'));
         return;
       }
-      const question =
-        [...messages]
-          .slice(0, index >= 0 ? index : messages.length)
-          .reverse()
-          .find((m) => m.role === 'user')?.content || '';
+      const question = msg.questionTitle || '';
       setFeedbackBusy(true);
       try {
         await submitQueryFeedback(config, {
@@ -1215,7 +1875,7 @@ export default function BiChatPanel({
         setFeedbackBusy(false);
       }
     },
-    [activeDbName, config, feedbackDraft, flags.enableFeedback, messages, sessionId],
+    [activeDbName, config, flags.enableFeedback, sessionId],
   );
 
   const sendTemplate = useCallback(
@@ -1265,12 +1925,49 @@ export default function BiChatPanel({
     [sendMessage],
   );
 
+  // Stable handlers so memoized rows / the composer skip re-renders.
+  const handleComposerSend = useCallback(
+    (text: string) => {
+      void sendMessage(text);
+    },
+    [sendMessage],
+  );
+
+  const handlePin = useCallback(
+    (msg: ChatMessage, target?: { dashboardId?: number; vizType?: string } | number) => {
+      void pinToDashboard(msg, target);
+    },
+    [pinToDashboard],
+  );
+
+  const handleConfirm = useCallback(
+    (msg: ChatMessage) => {
+      void confirmAction(msg);
+    },
+    [confirmAction],
+  );
+
+  const handleSubmitFeedback = useCallback(
+    (msg: ChatMessage, index: number) => {
+      void submitFeedbackDraft(msg, index);
+    },
+    [submitFeedbackDraft],
+  );
+
+  const handleFeedbackComment = useCallback((comment: string) => {
+    setFeedbackDraft((d) => (d ? { ...d, comment } : d));
+  }, []);
+
+  const handleCancelFeedback = useCallback(() => {
+    setFeedbackDraft(null);
+  }, []);
+
   const clearChat = () => {
     abortBiChatJob(sessionId);
     setJobProgress({});
     suppressHistoryRef.current = true;
     setMessages([]);
-    setInput('');
+    setComposerReset((n) => n + 1);
     setLastFailedText(null);
     setError(null);
   };
@@ -1457,452 +2154,40 @@ export default function BiChatPanel({
         )}
 
         <div className="space-y-4">
-        {messages.map((m, i) => (
-          <div key={i} className={clsx('flex gap-2.5 animate-slide-up sm:gap-3', m.role === 'user' ? 'flex-row-reverse' : 'flex-row')}>
-            <div className={clsx('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', m.role === 'user' ? 'bg-gradient-to-br from-violet-600 to-blue-600 text-white' : 'bg-violet-100 text-violet-600')}>
-              {m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-            </div>
-            <div
-              className={clsx(
-                'min-w-0 w-full max-w-[min(100%,40rem)] rounded-2xl px-3.5 py-2.5 text-sm shadow-sm sm:max-w-[min(92%,42rem)] sm:px-4 lg:max-w-[min(88%,48rem)]',
-                m.role === 'user'
-                  ? 'rounded-tr-md bg-gradient-to-br from-violet-600 to-blue-600 text-white'
-                  : 'rounded-tl-md border border-[#E1DFDD] bg-white/95 text-[#252423] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_2px_8px_rgba(15,23,42,0.06)]',
-                m.failed && m.role === 'user' && 'ring-2 ring-status-fail/40',
-                fullHeight && 'sm:max-w-[min(94%,52rem)] lg:max-w-[min(90%,56rem)]',
-              )}
-            >
-              {m.role === 'assistant' && (m.scenarioSource || (m.meta?.intent && !m.streaming)) && (
-                <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                  {m.scenarioSource ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 ring-1 ring-emerald-200/80">
-                      Hazır senaryo
-                      {m.scenarioCode ? (
-                        <span className="font-normal text-emerald-700/80">· {m.scenarioCode}</span>
-                      ) : null}
-                    </span>
-                  ) : null}
-                  {m.meta?.intent && !m.streaming
-                    ? (() => {
-                        const Icon = intentIcon(m.meta.intent);
-                        return (
-                          <span className="bi-pbi-type-chip bi-pbi-type-chip--compact">
-                            <Icon className="h-3 w-3" />
-                            {intentLabel(m.meta.intent)}
-                          </span>
-                        );
-                      })()
-                    : null}
-                </div>
-              )}
-              <div className="min-w-0">
-                {(() => {
-                  if (m.streaming && !m.content && m.jobId && jobProgress[m.jobId]) {
-                    const job = jobProgress[m.jobId]!;
-                    return (
-                      <BiChatStreamingSteps
-                        question={job.question}
-                        tipIndex={job.tipIndex}
-                        phase={m.streamPhase}
-                        queuePosition={m.queuePosition}
-                        queueMessage={m.queueMessage}
-                        elapsedSec={m.elapsedSec}
-                      />
-                    );
-                  }
-                  if (m.streaming && !m.content) {
-                    return (
-                      <p className="whitespace-pre-wrap break-anywhere leading-relaxed">
-                        {statusLabelForMessage(m)}
-                        <Loader2 className="ml-1 inline h-3.5 w-3.5 animate-spin" />
-                      </p>
-                    );
-                  }
-                  const raw = m.content;
-                  if (!raw) return null;
-                  // Hero KPI owns the answer — hide redundant status / SQL chatter.
-                  if (
-                    m.role === 'assistant' &&
-                    !m.streaming &&
-                    m.meta &&
-                    isHeroScalarResult(m.meta)
-                  ) {
-                    return null;
-                  }
-                  const display =
-                    m.role === 'assistant' ? assistantDisplayText(raw, m.streaming) : raw;
-                  if (!display.trim()) return null;
-                  return (
-                    <p className="whitespace-pre-wrap break-anywhere leading-relaxed">
-                      {display}
-                      {m.streaming && !!m.content && (
-                        <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-violet-500 align-text-bottom" aria-hidden />
-                      )}
-                    </p>
-                  );
-                })()}
-              </div>
-              {m.meta?.answer_blocks &&
-                m.meta.answer_blocks.length > 0 &&
-                !m.meta.query_result &&
-                !m.streaming && (
-                <div className="mt-3"><BiAnswerBlocks blocks={m.meta.answer_blocks} /></div>
-              )}
-              {(() => {
-                if (!m.meta || m.streaming) return null;
-                const kpiAnswer = isChatKpiAnswer(m.meta);
-                const questionTitle = [...messages]
-                  .slice(0, i)
-                  .reverse()
-                  .find((x) => x.role === 'user')?.content;
-                if (kpiAnswer && m.meta.query_result) {
-                  return (
-                    <>
-                      <BiChatResultHero meta={m.meta} title={questionTitle} />
-                      <div className="mt-2 flex w-full justify-end">
-                        <BiPinToDashboardControl
-                          compact
-                          pinning={pinningKey === messagePinKey(m)}
-                          pinned={Boolean(pinnedKeys[messagePinKey(m)])}
-                          pinnedDashboardId={
-                            pinnedBoardByKey[messagePinKey(m)] ||
-                            Number(m.meta.analytics?.dashboard_id || 0) ||
-                            null
-                          }
-                          preferredDashboardId={dashboardId}
-                          preferredVizType="kpi"
-                          onPin={(sel) => void pinToDashboard(m, sel)}
-                        />
-                      </div>
-                    </>
-                  );
-                }
-                if (m.meta.widgets && m.meta.widgets.length > 0) {
-                  return (
-                    <BiChatWidgetPreview
-                      widgets={m.meta.widgets}
-                      dashboardId={dashboardId}
-                      pinned={Boolean(pinnedKeys[messagePinKey(m)])}
-                      pinnedDashboardId={
-                        pinnedBoardByKey[messagePinKey(m)] ||
-                        Number(m.meta.analytics?.dashboard_id || 0) ||
-                        null
-                      }
-                      pinning={pinningKey === messagePinKey(m)}
-                      onPin={(sel) => void pinToDashboard(m, sel)}
-                    />
-                  );
-                }
-                if (m.meta.query_result) {
-                  return (
-                    <>
-                      <BiChatResultHero meta={m.meta} title={questionTitle} />
-                      {pickExportSql(m.meta) ? (
-                        <div className="mt-2 flex w-full justify-end">
-                          <BiPinToDashboardControl
-                            pinning={pinningKey === messagePinKey(m)}
-                            pinned={Boolean(pinnedKeys[messagePinKey(m)])}
-                            pinnedDashboardId={
-                              pinnedBoardByKey[messagePinKey(m)] ||
-                              Number(m.meta.analytics?.dashboard_id || 0) ||
-                              null
-                            }
-                            preferredDashboardId={dashboardId}
-                            preferredVizType="table"
-                            onPin={(sel) => void pinToDashboard(m, sel)}
-                          />
-                        </div>
-                      ) : null}
-                    </>
-                  );
-                }
-                return null;
-              })()}
-              {m.role === 'assistant' && !m.streaming && (m.followUps?.length ?? 0) > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {m.followUps!.slice(0, 5).map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-700 hover:border-violet-300 hover:bg-violet-50"
-                      onClick={() => sendMessage(q)}
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {m.meta?.action_preview?.preview?.requires_confirm &&
-                m.meta.action_preview.status === 'preview' &&
-                !m.streaming &&
-                !m.meta.action_preview.confirmed && (
-                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-xs text-slate-800">
-                    <p className="font-semibold text-amber-950">{t('bi.confirm.title')}</p>
-                    <p className="mt-1 text-slate-600">
-                      {t('bi.confirm.body', {
-                        action: String(m.meta.action_preview.preview.action || ''),
-                      })}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="btn-primary h-8 px-3 text-xs"
-                        disabled={confirmingJobId === (m.jobId || 'confirm')}
-                        onClick={() => void confirmAction(m)}
-                      >
-                        {confirmingJobId === (m.jobId || 'confirm') ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          t('bi.confirm.approve')
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary h-8 px-3 text-xs"
-                        disabled={confirmingJobId === (m.jobId || 'confirm')}
-                        onClick={() => dismissConfirm(m)}
-                      >
-                        {t('bi.confirm.dismiss')}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              {showSqlPanel && (m.draftSql || pickExportSql(m.meta)) && (
-                  <details className="mt-3 rounded-lg border border-slate-200 bg-slate-50/90 px-3 py-2 text-xs text-slate-700">
-                    <summary className="cursor-pointer font-semibold text-slate-800">
-                      SQL
-                      {m.draftDialect ? ` · ${m.draftDialect}` : ''}
-                      {m.executionMode ? ` · ${m.executionMode}` : ''}
-                    </summary>
-                    <div className="mt-2 space-y-1.5 text-[11px] text-slate-600">
-                      {m.draftDialect || m.meta?.provenance?.dialect ? (
-                        <p>
-                          <span className="font-medium text-slate-700">{t('bi.provenance.dialect')}: </span>
-                          {m.draftDialect || m.meta?.provenance?.dialect}
-                        </p>
-                      ) : null}
-                      {m.draftConfidence != null || m.meta?.provenance?.confidence != null ? (
-                        <p>
-                          <span className="font-medium text-slate-700">{t('bi.provenance.confidence')}: </span>
-                          {(m.draftConfidence ?? m.meta?.provenance?.confidence ?? 0).toFixed(2)}
-                        </p>
-                      ) : null}
-                      <p>
-                        <span className="font-medium text-slate-700">
-                          {m.meta?.provenance?.executed ||
-                          (m.executionMode &&
-                            !String(m.executionMode).includes('PLAN_ONLY') &&
-                            m.executionMode !== 'PLAN_ONLY')
-                            ? t('bi.provenance.executed')
-                            : t('bi.provenance.notExecuted')}
-                        </span>
-                      </p>
-                      {(m.draftTables?.length || m.meta?.provenance?.selected_tables?.length) ? (
-                        <p>
-                          <span className="font-medium text-slate-700">{t('bi.provenance.tables')}: </span>
-                          {(m.draftTables || m.meta?.provenance?.selected_tables || []).join(', ')}
-                        </p>
-                      ) : null}
-                      {(m.draftColumns?.length || m.meta?.provenance?.columns?.length) ? (
-                        <p>
-                          <span className="font-medium text-slate-700">{t('bi.provenance.columns')}: </span>
-                          {(m.draftColumns || m.meta?.provenance?.columns || []).join(', ')}
-                        </p>
-                      ) : null}
-                      {(m.draftAssumptions?.length || m.meta?.provenance?.assumptions?.length) ? (
-                        <div>
-                          <p className="font-medium text-slate-700">{t('bi.provenance.assumptions')}</p>
-                          <ul className="mt-0.5 list-disc pl-4">
-                            {(m.draftAssumptions || m.meta?.provenance?.assumptions || []).map((a) => (
-                              <li key={a}>{a}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                      {(m.draftWarnings?.length ||
-                        m.meta?.provenance?.warnings?.length ||
-                        m.meta?.warnings?.length) ? (
-                        <div>
-                          <p className="font-medium text-amber-800">{t('bi.provenance.warnings')}</p>
-                          <ul className="mt-0.5 list-disc pl-4 text-amber-800">
-                            {(
-                              m.draftWarnings ||
-                              m.meta?.provenance?.warnings ||
-                              m.meta?.warnings ||
-                              []
-                            ).map((w) => (
-                              <li key={w}>{w}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-                    </div>
-                    <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-[11px] text-slate-800">
-                      {m.draftSql || pickExportSql(m.meta)}
-                    </pre>
-                    {flags.enableTestExecution ? (
-                      <p className="mt-2 text-[11px] text-amber-700">
-                        Test çalıştırma bu ortamda açıktır (prod’da kapalı).
-                      </p>
-                    ) : null}
-                  </details>
-                )}
-              {m.role === 'assistant' && !m.streaming && flags.enableFeedback && m.meta && (
-                <div className="mt-2 space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      className={clsx(
-                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-emerald-50',
-                        m.feedbackRating === 1 && 'border-emerald-400 bg-emerald-50 text-emerald-700',
-                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
-                          feedbackDraft.rating === 1 &&
-                          'border-emerald-400 bg-emerald-50',
-                      )}
-                      aria-label={t('bi.feedback.correct')}
-                      disabled={m.feedbackRating != null || feedbackBusy}
-                      onClick={() => beginFeedback(m, i, 1)}
-                    >
-                      <ThumbsUp className="h-3.5 w-3.5" />
-                      {t('bi.feedback.correct')}
-                    </button>
-                    <button
-                      type="button"
-                      className={clsx(
-                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-amber-50',
-                        m.feedbackRating === 0 && 'border-amber-400 bg-amber-50 text-amber-800',
-                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
-                          feedbackDraft.rating === 0 &&
-                          'border-amber-400 bg-amber-50',
-                      )}
-                      aria-label={t('bi.feedback.partial')}
-                      disabled={m.feedbackRating != null || feedbackBusy}
-                      onClick={() => beginFeedback(m, i, 0)}
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                      {t('bi.feedback.partial')}
-                    </button>
-                    <button
-                      type="button"
-                      className={clsx(
-                        'inline-flex h-8 items-center gap-1.5 rounded-lg border px-2 text-[11px] text-slate-600 hover:bg-rose-50',
-                        m.feedbackRating === -1 && 'border-rose-400 bg-rose-50 text-rose-700',
-                        feedbackDraft?.msgKey === msgFeedbackKey(m, i) &&
-                          feedbackDraft.rating === -1 &&
-                          'border-rose-400 bg-rose-50',
-                      )}
-                      aria-label={t('bi.feedback.wrong')}
-                      disabled={m.feedbackRating != null || feedbackBusy}
-                      onClick={() => beginFeedback(m, i, -1)}
-                    >
-                      <ThumbsDown className="h-3.5 w-3.5" />
-                      {t('bi.feedback.wrong')}
-                    </button>
-                    {m.feedbackRating != null ? (
-                      <span className="text-[11px] text-slate-500">{t('bi.feedback.saved')}</span>
-                    ) : null}
-                  </div>
-                  {feedbackDraft?.msgKey === msgFeedbackKey(m, i) && m.feedbackRating == null ? (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-2">
-                      <label className="mb-1 block text-[11px] font-medium text-slate-600">
-                        {feedbackDraft.rating === 1
-                          ? t('bi.feedback.commentOptional')
-                          : t('bi.feedback.commentRequired')}
-                      </label>
-                      <textarea
-                        className="w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800"
-                        rows={2}
-                        value={feedbackDraft.comment}
-                        onChange={(e) =>
-                          setFeedbackDraft((d) => (d ? { ...d, comment: e.target.value } : d))
-                        }
-                        placeholder={t('bi.feedback.commentPlaceholder')}
-                        disabled={feedbackBusy}
-                      />
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          type="button"
-                          className="btn-primary text-xs"
-                          disabled={feedbackBusy}
-                          onClick={() => void submitFeedbackDraft(m, i)}
-                        >
-                          {t('bi.feedback.submit')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-secondary text-xs"
-                          disabled={feedbackBusy}
-                          onClick={() => setFeedbackDraft(null)}
-                        >
-                          {t('bi.feedback.cancel')}
-                        </button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-              {m.role === 'assistant' && !m.streaming && pickExportSql(m.meta) && (
-                <div className="mt-2 flex w-full max-w-lg flex-col items-stretch gap-2 self-end sm:max-w-md">
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <BiExportMenu sql={pickExportSql(m.meta)} />
-                  </div>
-                  {m.meta?.provenance?.metric ? (
-                    <>
-                      <BiLineageDrawer config={config} metricId={String(m.meta.provenance.metric)} />
-                      <BiScenarioSliders
-                        config={config}
-                        metricId={String(m.meta.provenance.metric)}
-                      />
-                    </>
-                  ) : null}
-                </div>
-              )}
-              {m.meta?.schedule && !m.streaming && (
-                <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2.5 text-xs text-slate-700">
-                  <p className="font-semibold text-violet-900">{t('bi.scheduleCreated')}</p>
-                  <p className="mt-1">{m.meta.schedule.subject}</p>
-                  <p className="mt-1 font-mono text-[11px] text-slate-500">
-                    {m.meta.schedule.run_at?.slice(0, 16)?.replace('T', ' ')}
-                    {m.meta.schedule.local_time ? ` · ${m.meta.schedule.local_time}` : ''}
-                    {' · '}
-                    {m.meta.schedule.recurrence === 'daily'
-                      ? t('bi.scheduleRecurrenceDaily')
-                      : m.meta.schedule.recurrence === 'weekly'
-                        ? t('bi.scheduleRecurrenceWeekly')
-                        : t('bi.scheduleRecurrenceOnce')}
-                  </p>
-                  {m.meta.schedule.recipient && (
-                    <p className="mt-1 text-slate-600">{m.meta.schedule.recipient}</p>
-                  )}
-                  <Link
-                    to="/bi/schedules"
-                    className="mt-2 inline-block font-medium text-violet-700 hover:underline"
-                  >
-                    {t('bi.wow.manageSchedules')}
-                  </Link>
-                </div>
-              )}
-              {m.meta?.alert && !m.streaming && (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2.5 text-xs text-slate-700">
-                  <p className="font-semibold text-amber-900">{t('bi.alertCreated')}</p>
-                  <p className="mt-1">{m.meta.alert.title}</p>
-                  <p className="mt-1 font-mono text-[11px] text-slate-500">
-                    {m.meta.alert.column} {m.meta.alert.condition} {m.meta.alert.threshold}
-                    {m.meta.alert.last_value != null ? ` · last ${m.meta.alert.last_value}` : ''}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-3">
-                    <Link to="/bi/alerts" className="font-medium text-amber-800 hover:underline">
-                      {t('bi.wow.alertStripManage')}
-                    </Link>
-                    <Link to="/bi/schedules" className="font-medium text-amber-800 hover:underline">
-                      {t('bi.alertIncludeInMorningMail')}
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const pinKey = messagePinKey(m);
+          const fbKey = msgFeedbackKey(m, i);
+          return (
+            <MessageRow
+              key={m.id}
+              message={m}
+              index={i}
+              job={m.jobId ? jobProgress[m.jobId] : undefined}
+              dashboardId={dashboardId}
+              fullHeight={fullHeight}
+              showSqlPanel={Boolean(showSqlPanel)}
+              enableFeedback={Boolean(flags.enableFeedback)}
+              enableTestExecution={Boolean(flags.enableTestExecution)}
+              pinning={pinningKey === pinKey}
+              pinned={Boolean(pinnedKeys[pinKey])}
+              pinnedBoardId={
+                pinnedBoardByKey[pinKey] || Number(m.meta?.analytics?.dashboard_id || 0) || null
+              }
+              confirming={confirmingJobId === (m.jobId || 'confirm')}
+              feedbackBusy={feedbackBusy}
+              feedbackDraft={feedbackDraft?.msgKey === fbKey ? feedbackDraft : null}
+              config={config}
+              onSend={handleComposerSend}
+              onPin={handlePin}
+              onConfirm={handleConfirm}
+              onDismissConfirm={dismissConfirm}
+              onBeginFeedback={beginFeedback}
+              onSubmitFeedback={handleSubmitFeedback}
+              onFeedbackComment={handleFeedbackComment}
+              onCancelFeedback={handleCancelFeedback}
+            />
+          );
+        })}
 
         {error && (
           <div className="mx-1 rounded-xl border border-status-fail/30 bg-red-50/80 px-4 py-3 text-sm">
@@ -1917,64 +2202,17 @@ export default function BiChatPanel({
         </div>
       </div>
 
-      <div
-        className={clsx(
-          'relative z-20 shrink-0 border-t border-violet-200/80 bg-white p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:p-3',
-          embedded && 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-        )}
-      >
-        {embedded && messages.length === 0 && !pending && (
-          <p className="mb-2 text-center text-[11px] font-medium text-violet-700">{t('bi.analytics.typeBelow')}</p>
-        )}
-        <div className="flex items-end gap-2 rounded-xl border border-violet-300/80 bg-white p-2 shadow-sm focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-400/25">
-          <BiVoiceInput
-            onTranscript={(text) => {
-              const trimmed = text.trim();
-              if (!trimmed) return;
-              setInput(trimmed);
-              void sendMessage(trimmed);
-            }}
-          />
-          <span className="sr-only" aria-live="polite">
-            {pending ? t('bi.voiceSentHint') : ''}
-          </span>
-          <textarea
-            ref={textareaRef}
-            className="max-h-[100px] min-h-[44px] flex-1 resize-none border-0 bg-transparent px-2 py-2 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 sm:text-sm"
-            rows={1}
-            placeholder={embedded ? t('bi.analytics.chatPlaceholder') : t('bi.chatPlaceholder')}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-              }
-            }}
-          />
-          {pending ? (
-            <button
-              type="button"
-              className="btn-secondary h-11 w-11 shrink-0 rounded-lg p-0 text-rose-700 sm:h-10 sm:w-10"
-              aria-label="Durdur"
-              title="Durdur"
-              onClick={stopStreaming}
-            >
-              <Square className="h-3.5 w-3.5 fill-current" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-primary h-11 w-11 shrink-0 rounded-lg p-0 sm:h-10 sm:w-10"
-              disabled={!input.trim()}
-              onClick={() => sendMessage()}
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-        {!embedded && <p className="mt-2 hidden text-center text-[11px] text-slate-400 sm:block">{t('bi.chatSendHint')}</p>}
-      </div>
+      <BiChatComposer
+        pending={pending}
+        embedded={embedded}
+        autoFocus={autoFocus}
+        sessionId={sessionId}
+        prefill={initialMessage}
+        showEmptyHint={Boolean(embedded && messages.length === 0 && !pending)}
+        resetSignal={composerReset}
+        onSend={handleComposerSend}
+        onStop={stopStreaming}
+      />
     </div>
   );
 }

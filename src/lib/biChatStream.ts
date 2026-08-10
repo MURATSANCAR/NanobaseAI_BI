@@ -133,17 +133,14 @@ export async function streamBiChat(
   return result;
 }
 
-/** Reveal text progressively for smoother UX when backend returns full reply at once. */
+/**
+ * Reveal the full reply immediately. The old fake typewriter re-rendered the
+ * transcript ~83×/s for zero information gain; callers now get one paint.
+ * Kept exported (same call shape) for API compatibility.
+ */
 export async function revealText(
   text: string,
   onChunk: (partial: string) => void,
-  chunkSize = 3,
-  delayMs = 12,
 ): Promise<void> {
-  let i = 0;
-  while (i < text.length) {
-    i = Math.min(text.length, i + chunkSize);
-    onChunk(text.slice(0, i));
-    if (i < text.length) await new Promise((r) => setTimeout(r, delayMs));
-  }
+  onChunk(text);
 }

@@ -1,7 +1,8 @@
+import { lazy, Suspense } from 'react';
 import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart3 } from 'lucide-react';
-import { BiVisualChart } from '@/components/bi/BiCharts';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import BiPinToDashboardControl from '@/components/bi/BiPinToDashboardControl';
 import { isCompactVisual, widgetVisualType } from '@/components/bi/biVisualTypes';
 import { api } from '@/api/client';
@@ -9,6 +10,11 @@ import { useApiConfig } from '@/context/ApiContext';
 import type { BiWidget } from '@/api/types';
 import { getLocale, t } from '@/i18n';
 import { biWidgetTitle } from '@/lib/biWidgetTitle';
+
+// Charts (recharts) load on demand — transcripts without visuals skip the chunk.
+const BiVisualChart = lazy(() =>
+  import('@/components/bi/BiCharts').then((m) => ({ default: m.BiVisualChart })),
+);
 
 type Props = {
   widgets: BiWidget[];
@@ -84,11 +90,15 @@ export default function BiChatWidgetPreview({
                 {displayTitle}
               </p>
               <div className={clsx('min-h-0', compact ? 'min-h-[5.5rem]' : 'min-h-[11rem]')}>
-                <BiVisualChart
-                  widget={widget}
-                  variant="preview"
-                  containerHeight={compact ? 96 : 180}
-                />
+                <ErrorBoundary compact>
+                  <Suspense fallback={<div style={{ height: compact ? 96 : 180 }} aria-hidden />}>
+                    <BiVisualChart
+                      widget={widget}
+                      variant="preview"
+                      containerHeight={compact ? 96 : 180}
+                    />
+                  </Suspense>
+                </ErrorBoundary>
               </div>
             </div>
           );
