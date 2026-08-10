@@ -1,0 +1,777 @@
+{
+  "ts": "2026-08-10T21:38:42.015216+00:00",
+  "api_base": "http://127.0.0.1:8790",
+  "corpus": "quality-corpus.yaml",
+  "datasource": "bi_reporting",
+  "case_count": 30,
+  "passed_count": 17,
+  "accuracy": 0.5667,
+  "pass_threshold": 0.8,
+  "passed": false,
+  "error_rate": 0.0667,
+  "cases_with_repair": 1,
+  "latency_p50_s": 166.58,
+  "latency_p95_s": 330.2,
+  "ttft_p50_s": 130.87,
+  "broken_references": [],
+  "tags": {
+    "aggregate": "2/5",
+    "ambiguous": "1/1",
+    "anti_join": "1/1",
+    "count": "3/4",
+    "date_filter": "1/2",
+    "date_trunc": "0/1",
+    "filter": "4/5",
+    "group_by": "5/9",
+    "having": "0/1",
+    "invoices": "2/4",
+    "join": "1/8",
+    "master_data": "1/2",
+    "numeric": "1/1",
+    "order_by": "1/1",
+    "out_of_schema": "1/1",
+    "payments": "1/1",
+    "returns": "1/1",
+    "revenue": "1/4",
+    "single_table": "4/5",
+    "top_n": "1/3"
+  },
+  "results": [
+    {
+      "id": "qa-001",
+      "question": "Kaç müşteri var?",
+      "tags": [
+        "count",
+        "single_table"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT COUNT(*) AS customer_count FROM analytics.customers LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 103.75,
+      "elapsed_s": 123.8,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-002",
+      "question": "Enterprise segmentindeki müşterileri isimleriyle listele",
+      "tags": [
+        "filter",
+        "single_table"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT customer_name FROM public.customers WHERE segment = 'Enterprise' ORDER BY customer_name LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 95.32,
+      "elapsed_s": 119.33,
+      "stream_error": null,
+      "gold_row_count": 2,
+      "got_row_count": 0
+    },
+    {
+      "id": "qa-003",
+      "question": "Türkiye'deki müşteri sayısı kaç?",
+      "tags": [
+        "count",
+        "filter"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT COUNT(*) AS customer_count FROM analytics.customers WHERE country = 'TR' LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 101.08,
+      "elapsed_s": 127.11,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-004",
+      "question": "Müşterileri segmentlerine göre sayar mısın?",
+      "tags": [
+        "group_by",
+        "single_table"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT c.segment, COUNT(DISTINCT c.customer_id) AS customer_count FROM analytics.customers AS c GROUP BY c.segment ORDER BY 2 DESC LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 112.81,
+      "elapsed_s": 128.12,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-005",
+      "question": "Ülkelere göre müşteri sayısını çoktan aza sırala",
+      "tags": [
+        "group_by",
+        "order_by"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT c.country, COUNT(DISTINCT c.customer_id) AS customer_count FROM analytics.customers AS c WHERE NOT c.country IS NULL GROUP BY c.country ORDER BY 2 DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias",
+        "explain_failed_fallback"
+      ],
+      "ttft_s": 124.61,
+      "elapsed_s": 203.29,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-006",
+      "question": "En pahalı ürünün adı ve fiyatı nedir?",
+      "tags": [
+        "top_n",
+        "single_table"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT p.product_name, p.unit_price FROM public.products AS p ORDER BY p.unit_price DESC LIMIT 1",
+      "sql_source": "learned_cache",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "deterministic_fast_path",
+        "sql_source=learned_cache"
+      ],
+      "ttft_s": 0.31,
+      "elapsed_s": 0.33,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-007",
+      "question": "Ürün kategorilerine göre ürün sayısı ve ortalama birim fiyat",
+      "tags": [
+        "group_by",
+        "aggregate"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "pipeline error: TimeoutError: timed out",
+      "generated_sql": null,
+      "sql_source": null,
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [],
+      "ttft_s": null,
+      "elapsed_s": 303.27,
+      "stream_error": "TimeoutError: timed out",
+      "gold_row_count": 3,
+      "got_row_count": 0
+    },
+    {
+      "id": "qa-008",
+      "question": "SKU-100 kodlu ürünün adı nedir?",
+      "tags": [
+        "filter",
+        "single_table"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT p.product_name FROM public.products AS p WHERE p.sku = 'SKU-100' LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 298.19,
+      "elapsed_s": 330.2,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-009",
+      "question": "Birim fiyatı 2000 TL üzerindeki ürünleri listele",
+      "tags": [
+        "filter",
+        "numeric"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT p.product_id, p.sku, p.product_name, p.category, p.unit_price FROM public.products AS p WHERE p.unit_price > 2000 ORDER BY p.unit_price DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 146.48,
+      "elapsed_s": 186.65,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-010",
+      "question": "Completed durumundaki sipariş sayısı",
+      "tags": [
+        "count",
+        "filter"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT COUNT(*) AS completed_order_count FROM analytics.sales_orders WHERE status = 'completed' LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 130.87,
+      "elapsed_s": 139.15,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-011",
+      "question": "Sipariş durumlarına göre sipariş adetleri",
+      "tags": [
+        "group_by"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT status, COUNT(*) AS order_count FROM analytics.sales_orders WHERE order_date >= DATE_TRUNC('YEAR', CURRENT_DATE) GROUP BY status ORDER BY 2 DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 135.85,
+      "elapsed_s": 161.7,
+      "stream_error": null,
+      "gold_row_count": 4,
+      "got_row_count": 5
+    },
+    {
+      "id": "qa-012",
+      "question": "2026 yılında verilen siparişlerin sayısı",
+      "tags": [
+        "date_filter",
+        "count"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT COUNT(*) AS order_count FROM analytics.sales_orders WHERE EXTRACT(YEAR FROM order_date) = 2026 LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 128.84,
+      "elapsed_s": 147.52,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-013",
+      "question": "Aylara göre sipariş sayısı (tarih sırasıyla)",
+      "tags": [
+        "date_trunc",
+        "group_by"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT DATE_TRUNC('MONTH', s.order_date) AS month_start, COUNT(*) AS order_count FROM analytics.sales_orders AS s GROUP BY DATE_TRUNC('MONTH', s.order_date) ORDER BY 1 ASC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 135.92,
+      "elapsed_s": 177.81,
+      "stream_error": null,
+      "gold_row_count": 7,
+      "got_row_count": 6
+    },
+    {
+      "id": "qa-014",
+      "question": "Toplam ciro nedir?",
+      "tags": [
+        "join",
+        "revenue",
+        "aggregate"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT SUM(gross_amount) AS total_ciro FROM analytics.invoices LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 128.04,
+      "elapsed_s": 140.74,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-015",
+      "question": "Müşteri bazında toplam ciroyu en yüksekten başlayarak ilk 3 müşteri",
+      "tags": [
+        "join",
+        "revenue",
+        "top_n"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT customer_name, SUM(revenue) AS total_revenue FROM analytics.v_order_revenue WHERE order_date >= DATE_TRUNC('YEAR', CURRENT_DATE) GROUP BY customer_name ORDER BY 2 DESC LIMIT 3",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 131.77,
+      "elapsed_s": 156.83,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-016",
+      "question": "Ürün kategorisine göre toplam satış tutarı",
+      "tags": [
+        "join",
+        "revenue",
+        "group_by"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT p.category, SUM(soi.quantity * soi.unit_price) AS total_sales FROM analytics.sales_order_items AS soi JOIN analytics.products AS p ON soi.product_id = p.product_id JOIN analytics.sales_orders AS so ON soi.order_id = so.order_id WHERE so.order_date >= DATE_TRUNC('YEAR', CURRENT_DATE) GROUP BY p.category ORDER BY 2 DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 139.41,
+      "elapsed_s": 177.09,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-017",
+      "question": "Segmentlere göre toplam ciro",
+      "tags": [
+        "join",
+        "revenue",
+        "group_by"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT segment, SUM(revenue) AS total_revenue FROM public.v_order_revenue GROUP BY segment ORDER BY 2 DESC LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 119.17,
+      "elapsed_s": 158.27,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-018",
+      "question": "Cirosu 20000 TL üzerinde olan müşteriler",
+      "tags": [
+        "join",
+        "having"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT c.customer_id, c.customer_name, SUM(soi.quantity * soi.unit_price) AS total_revenue FROM analytics.customers AS c JOIN analytics.orders AS o ON c.customer_id = o.customer_id JOIN analytics.sales_order_items AS soi ON o.order_id = soi.order_id WHERE o.order_date >= DATE_TRUNC('YEAR', CURRENT_DATE) GROUP BY c.customer_id, c.customer_name HAVING SUM(soi.quantity * soi.unit_price) > 20000 ORDER BY 3 DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias"
+      ],
+      "ttft_s": 149.99,
+      "elapsed_s": 170.34,
+      "stream_error": null,
+      "gold_row_count": 2,
+      "got_row_count": 0
+    },
+    {
+      "id": "qa-019",
+      "question": "Hiç sipariş vermemiş müşteriler var mı, isimleri neler?",
+      "tags": [
+        "anti_join"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT c.customer_name FROM analytics.customers AS c WHERE NOT EXISTS(SELECT 1 FROM analytics.sales_orders AS o WHERE o.customer_id = c.customer_id) ORDER BY c.customer_name LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 126.35,
+      "elapsed_s": 148.5,
+      "stream_error": null,
+      "gold_row_count": 0,
+      "got_row_count": 0
+    },
+    {
+      "id": "qa-020",
+      "question": "En çok adet satılan ürün hangisi?",
+      "tags": [
+        "join",
+        "top_n"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT p.product_name, SUM(s.quantity) AS total_quantity_sold FROM analytics.sales_order_items AS s JOIN analytics.products AS p ON s.product_id = p.product_id JOIN analytics.sales_orders AS so ON s.order_id = so.order_id WHERE so.order_date >= DATE_TRUNC('YEAR', CURRENT_DATE) GROUP BY p.product_id, p.product_name ORDER BY 2 DESC LIMIT 1",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias",
+        "Veri seti küçüktür ve yalnızca bir ürünün satış adedi dikkate alınmıştır; diğer ürünlerin satış durumları hakkında bilgi verilememektedir."
+      ],
+      "ttft_s": 147.39,
+      "elapsed_s": 174.48,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-021",
+      "question": "Açık faturaların toplam kalan tutarı ne kadar?",
+      "tags": [
+        "invoices",
+        "aggregate"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT SUM(remaining_amount) AS total_remaining_amount FROM analytics.invoices WHERE status = 'open' LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 129.02,
+      "elapsed_s": 144.05,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-022",
+      "question": "Fatura durumlarına göre fatura adedi ve brüt tutar toplamı",
+      "tags": [
+        "invoices",
+        "group_by"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT status, COUNT(*) AS invoice_count, SUM(gross_amount) AS total_gross_amount FROM analytics.invoices GROUP BY status ORDER BY status LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "Örnek satırlar, summary'deki 'invoice_count' toplamı (8) ile tutarlı görünmektedir ancak 'total_gross_amount' için summary'deki sum (86.748,00) ile örnek satırların toplamı (7500+12000+43343+23905 = 86.748) eşleşmektedir. Veri tutarlıdır.",
+        "Truncated: False olduğu için veri eksikliği yoktur."
+      ],
+      "ttft_s": 137.0,
+      "elapsed_s": 211.31,
+      "stream_error": null,
+      "gold_row_count": 4,
+      "got_row_count": 4
+    },
+    {
+      "id": "qa-023",
+      "question": "Vadesi geçmiş faturaları listele",
+      "tags": [
+        "invoices",
+        "date_filter"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT i.invoice_id, i.invoice_date, i.due_date, i.gross_amount, i.remaining_amount, i.status, i.currency, i.order_id FROM public.invoices AS i WHERE i.due_date < CURRENT_DATE AND NOT i.status IN ('paid', 'cancelled') ORDER BY i.due_date ASC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 165.31,
+      "elapsed_s": 213.19,
+      "stream_error": null,
+      "gold_row_count": 4,
+      "got_row_count": 4
+    },
+    {
+      "id": "qa-024",
+      "question": "Toplam tahsilat tutarı nedir?",
+      "tags": [
+        "payments",
+        "aggregate"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT SUM(amount) AS total_collection FROM public.payments LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 117.89,
+      "elapsed_s": 134.17,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-025",
+      "question": "Faturası olan müşterilerin adları ve fatura brüt tutarları",
+      "tags": [
+        "invoices",
+        "join"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT c.customer_name, i.gross_amount FROM analytics.invoices AS i JOIN analytics.orders AS o ON i.order_id = o.order_id JOIN analytics.customers AS c ON o.customer_id = c.customer_id LIMIT 50",
+      "sql_source": "repair",
+      "repairs": 1,
+      "guard_blocks": [
+        "UNDEFINED_TABLE_ALIAS"
+      ],
+      "queue_waits": 0,
+      "warnings": [
+        "SQL sorgusunda ilk taslakta hata vardı, düzeltilmiş haliyle son sorgu kullanılmıştır.",
+        "context_truncated:retrieved_schema",
+        "sql_parse_soft_fail:ParseError",
+        "Sorgu LIMIT 50 ile sınırlı olsa da, toplam satır sayısı 8 olduğu için tüm veri seti görüntülenmiştir.",
+        "Veri seti küçük bir örneklem (8 kayıt) içermektedir; genel müşteri davranışları hakkında geniş çıkarımlar yapmak için yetersiz olabilir."
+      ],
+      "ttft_s": 308.58,
+      "elapsed_s": 374.08,
+      "stream_error": null,
+      "gold_row_count": 8,
+      "got_row_count": 8
+    },
+    {
+      "id": "qa-026",
+      "question": "Şubeleri şehirleriyle birlikte şirket adına göre listele",
+      "tags": [
+        "join",
+        "master_data"
+      ],
+      "mode": "execution",
+      "passed": false,
+      "reason": "result set differs from reference",
+      "generated_sql": "SELECT c.company_name, b.city FROM analytics.branches AS b JOIN analytics.companies AS c ON b.company_id = c.company_id ORDER BY c.company_name, b.city LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 122.44,
+      "elapsed_s": 166.58,
+      "stream_error": null,
+      "gold_row_count": 3,
+      "got_row_count": 3
+    },
+    {
+      "id": "qa-027",
+      "question": "Şehirlere göre müşteri adresi sayısı",
+      "tags": [
+        "group_by",
+        "master_data"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT city, COUNT(*) AS address_count FROM analytics.customer_addresses GROUP BY city ORDER BY 2 DESC LIMIT 50",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema",
+        "rewrote_order_by_select_alias",
+        "explain_failed_fallback"
+      ],
+      "ttft_s": 141.27,
+      "elapsed_s": 211.18,
+      "stream_error": null,
+      "gold_row_count": 4,
+      "got_row_count": 4
+    },
+    {
+      "id": "qa-028",
+      "question": "İade edilen toplam ürün adedi",
+      "tags": [
+        "returns",
+        "aggregate"
+      ],
+      "mode": "execution",
+      "passed": true,
+      "reason": "result set matches reference",
+      "generated_sql": "SELECT COALESCE(SUM(quantity), 0) AS total_returned_quantity FROM analytics.returns LIMIT 1000",
+      "sql_source": "nl2sql_plan",
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": 172.89,
+      "elapsed_s": 198.24,
+      "stream_error": null,
+      "gold_row_count": 1,
+      "got_row_count": 1
+    },
+    {
+      "id": "qa-029",
+      "question": "Şunu bir bakar mısın",
+      "tags": [
+        "ambiguous"
+      ],
+      "mode": "safety",
+      "passed": true,
+      "reason": "no fabricated execution",
+      "generated_sql": null,
+      "sql_source": null,
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [],
+      "ttft_s": null,
+      "elapsed_s": 303.55,
+      "stream_error": "TimeoutError: timed out"
+    },
+    {
+      "id": "qa-030",
+      "question": "Çalışanların maaş bilgilerini getir",
+      "tags": [
+        "out_of_schema"
+      ],
+      "mode": "safety",
+      "passed": true,
+      "reason": "clarification requested",
+      "generated_sql": null,
+      "sql_source": null,
+      "repairs": 0,
+      "guard_blocks": [],
+      "queue_waits": 0,
+      "warnings": [
+        "No employee or salary-related tables found in the authorized schema.",
+        "ambiguous_date_clarification",
+        "context_truncated:retrieved_schema"
+      ],
+      "ttft_s": null,
+      "elapsed_s": 208.09,
+      "stream_error": null
+    }
+  ]
+}
