@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/security/masking.py
+# hypothesis_version: 6.165.2
+
+['***', 'BankAccount', 'CreditCardNumber', 'IBAN', 'SocialSecurityNumber', 'TaxNumber', 'TaxNumber1']

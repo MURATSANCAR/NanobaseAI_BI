@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/__init__.py
+# hypothesis_version: 6.165.2
+
+['ACDOCA', 'APPROVED', 'BKPF', 'BSEG', 'DEFAULT_HANA_TABLES', 'DEPRECATED', 'DISCOVERED', 'EKKO', 'EKPO', 'HANA_SQLGLOT_DIALECT', 'KNA1', 'LFA1', 'MARA', 'MARC', 'PUBLISHED', 'PUBLISHED_ONLY', 'REJECTED', 'SOURCE_STATUSES', 'STALE', 'VBAK', 'VBAP', 'postgres']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/executor.py
+# hypothesis_version: 6.165.2
+
+[1.0, 1000.0, 100, 403, 15000, '0', '1', 'APPROVED', 'CompanyCode', 'METADATA_ONLY', 'NANOBASE_ENV', 'ODATA_GET', 'PLAN_ONLY', 'QUERY_GATEWAY', 'SAP_ALLOW_OFFLINE', 'SAP_EXECUTION_MODE', 'SAP_METADATA_ONLY', 'SAP_PLAN_ONLY', 'allowedCompanyCodes', 'allowed_services', 'amount_field', 'columns', 'company_code_field', 'currency_field', 'dialect', 'executionTimeMs', 'filters', 'normalizedSql', 'odata', 'path', 'plan', 'rows', 'statementType', 'status', 'test', 'truncated', 'urlPath', 'warnings', '{']

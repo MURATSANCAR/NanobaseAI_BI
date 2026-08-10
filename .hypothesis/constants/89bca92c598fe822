@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/result_normalizer.py
+# hypothesis_version: 6.165.2
+
+['.', '@', 'Amount', 'BOOLEAN', 'CONTROLLED_LIST', 'Collection(', 'DATE', 'DECIMAL', 'E', 'Edm.Boolean', 'Edm.Date', 'Edm.DateTimeOffset', 'Edm.Decimal', 'Edm.Double', 'Edm.Guid', 'Edm.Int16', 'Edm.Int32', 'Edm.Int64', 'Edm.Single', 'Edm.String', 'Edm.TimeOfDay', 'FLOAT', 'INTEGER', 'OFFSET_DATETIME', 'STRING', 'TIME', 'UUID', '__', 'f']

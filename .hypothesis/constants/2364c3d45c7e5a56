@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/result_summarizer.py
+# hypothesis_version: 6.165.2
+
+[100, 'columns', 'count', 'max', 'min', 'name', 'numericStatistics', 'rowCount', 'sampleRows', 'sum', 'truncated']

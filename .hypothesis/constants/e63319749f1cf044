@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/workflows/result_explain.py
+# hypothesis_version: 6.165.2
+
+[0.1, 25.0, 100, 800, 'answer', 'columns', 'fidelity_fallback', 'insights', 'kesil', 'name', 'numericStatistics', 'rowCount', 'sampleRows', 'truncat', 'truncated', 'warnings']

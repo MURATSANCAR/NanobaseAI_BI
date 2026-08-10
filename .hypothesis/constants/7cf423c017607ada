@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/semantic/sap_metric_compiler.py
+# hypothesis_version: 6.165.2
+
+[100, 400, 'FI', 'SAP_FI', 'SAP_METRIC_INVALID', 'code', 'currencyPolicy', 'domain', 'filters', 'ledger', 'mandatoryRules', 'mandatory_rules', 'metric', 'not_cleared', 'plan', 'posted_only']

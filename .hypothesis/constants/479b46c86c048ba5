@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/audit/logger.py
+# hypothesis_version: 6.165.2
+
+[503, 1000, 'Audit yazılamadı.', 'a', 'audit %s', 'logs', 'password', 'query_gateway.audit', 'raw_sql', 'rows', 'sql', 'utf-8']

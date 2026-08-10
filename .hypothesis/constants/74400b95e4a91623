@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/database/explain_parser.py
+# hypothesis_version: 6.165.2
+
+[0.01, 50000.0, 400, ', ', 'CROSS', 'Filter', 'Index Cond', 'Join Filter', 'Join Type', 'Nested Loop', 'Node Type', 'Plan', 'Plan Rows', 'Plans', 'Relation Name', 'Seq Scan', 'Total Cost', 'cross_join', 'filterless_seq', 'large', 'medium', 'plan_rows', 'small', 'total_cost', 'true', 'very_large']

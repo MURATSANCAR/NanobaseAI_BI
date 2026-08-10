@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/semantic/cds_binding.py
+# hypothesis_version: 6.165.2
+
+[100, 400, 'CompanyCode', 'EQ', 'FI', 'SAP_BINDING_INVALID', 'SAP_FI', 'SAP_ODATA', 'amountField', 'clearingStatusField', 'companyCodeField', 'currencyField', 'domain', 'entitySet', 'entity_set', 'ledger', 'mandatoryRules', 'mandatory_rules', 'not_cleared', 'posted_only', 'postingStatusField', 'reversalField', 'service', 'sourceType', 'source_type']

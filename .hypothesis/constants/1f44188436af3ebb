@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/contracts/datasource.py
+# hypothesis_version: 6.165.2
+
+[30015, '/', 'MEDIUM', 'ON_PREMISE', 'PRIVATE_EDITION', 'PUBLISHED', 'SAP_HANA', 'SAP_S4HANA_ODATA', 'V4', 'allowedSchemas', 'allowedServices', 'allowedViews', 'allowed_entities', 'allowed_entity_sets', 'allowed_schemas', 'allowed_services', 'allowed_tables', 'allowed_views', 'base_url', 'bearer_token', 'credentialSecretRef', 'database', 'databaseName', 'database_type', 'deploymentType', 'deployment_type', 'encrypt', 'host', 'id', 'label', 'odataVersion', 'odata_version', 'password', 'port', 'sizeProfile', 'size_profile', 'sourceStatus', 'source_status', 'ssl_validate', 'user', 'validate_certificate', 'verify_tls', 'workloadClass', 'workload_class']

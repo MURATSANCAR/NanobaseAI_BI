@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/budget_actuals.py
+# hypothesis_version: 6.165.2
+
+[200, 300, ';', 'APPROVED', 'actual', 'actual_error', 'actuals_at', 'actuals_sql', 'approved', 'bi_budget_not_found', 'bi_reporting', 'bid', 'code', 'columns', 'default', 'error', 'errors', 'id', 'lim', 'literal', 'message', 'name', 'ok', 'payload', 'query_gateway', 'recorded_at', 'refresh', 'refreshed', 'rows', 'sample', 'source', 'sql', 'status', 'tenant', '{}']

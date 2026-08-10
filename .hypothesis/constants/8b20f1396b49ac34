@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/model_queue.py
+# hypothesis_version: 6.165.2
+
+[1.0, '100', '120', '2', '20', 'GLOBAL_QUEUE_LIMIT', 'MODEL_QUEUE_FULL', 'MODEL_QUEUE_LIMIT', 'MODEL_QUEUE_TIMEOUT', 'TENANT_QUEUE_FULL', 'TENANT_QUEUE_LIMIT', 'acquired', 'active', 'default', 'elapsed_sec', 'maxConcurrency', 'message', 'model_queue_request', 'model_queue_tenant', 'model_queue_user', 'phase', 'position', 'queueLimit', 'queueTimeoutSec', 'queue_depth', 'queued', 'tenantLimit', 'waiting']

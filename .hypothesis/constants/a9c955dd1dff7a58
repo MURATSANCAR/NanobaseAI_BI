@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/hana/parser_policy.py
+# hypothesis_version: 6.165.2
+
+[400, 403, '.', '/\\*.*?\\*/|--.*?$', 'ABS', 'ADD_DAYS', 'ADD_MONTHS', 'AVG', 'CAST', 'CEIL', 'COALESCE', 'CONCAT', 'CONVERT_CURRENCY', 'COUNT', 'CURRENT_DATE', 'CV_', 'DAYOFMONTH', 'DENSE_RANK', 'EXECUTE_DYNAMIC', 'Empty SQL.', 'FLOOR', 'IFNULL', 'JSON_QUERY', 'JSON_VALUE', 'LAG', 'LEAD', 'LENGTH', 'LOWER', 'MAX', 'MIN', 'MONTH', 'NANOBASE', 'NULLIF', 'RANK', 'ROUND', 'ROW_NUMBER', 'SELECT', 'SERIES_GENERATE', 'SESSION_CONTEXT', 'STRING_AGG', 'SUBSTRING', 'SUM', 'SYS_', 'TO_DATE', 'TO_TIMESTAMP', 'TRIM', 'UPPER', 'V_', 'WITH', 'XSJS', 'YEAR', '_SYS', 'tables']

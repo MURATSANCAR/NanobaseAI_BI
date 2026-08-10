@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/alerts.py
+# hypothesis_version: 6.165.2
+
+[30.0, 400, '<', '<=', '=', '==', '>', '>=', 'SELECT 1 AS c', 'active', 'budget_fingerprint', 'budget_id', 'budget_threshold_pct', 'c', 'channels', 'checked', 'col', 'column', 'column_name', 'cond', 'condition', 'created_at', 'datasource_id', 'default', 'eq', 'errors', 'gt', 'gte', 'id', 'last_triggered_at', 'last_value', 'lt', 'lte', 'now', 'ok', 'payload', 'payload_json', 'recip', 'recipient', 'rows', 'rule', 'sql', 'status', 'tenant', 'thr', 'threshold', 'title', 'trig', 'triggered', 'updated_at', 'v', '{}']

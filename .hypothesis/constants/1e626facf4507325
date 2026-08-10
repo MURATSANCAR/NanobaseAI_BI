@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/chat_widgets.py
+# hypothesis_version: 6.165.2
+
+[0.5, 0.7, ',', 'Chat sonucu', '^\\d{4}-\\d{2}', 'bar', 'columns', 'data', 'id', 'kpi', 'label', 'label_key', 'line', 'multi_card', 'name', 'number', 'pie', 'row_count', 'rows', 'sql', 'table', 'title', 'type', 'utf-8', 'value', 'value_key']

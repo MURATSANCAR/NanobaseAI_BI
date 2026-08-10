@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/executor.py
+# hypothesis_version: 6.165.2
+
+[403, 503, 1000, 'PLAN_ONLY', 'QUERY_GATEWAY', 'id', 'medium', 'name', 'password', 'requireVpd', 'require_vpd', 'timeout', 'type', 'type_name', 'user']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/budget_fx.py
+# hypothesis_version: 6.165.2
+
+[1.0, '+00:00', 'TRY', 'Z', 'as_of', 'bi_fx_rate_invalid', 'default', 'fr', 'from_currency', 'id', 'rate', 'tenant', 'to', 'to_currency']

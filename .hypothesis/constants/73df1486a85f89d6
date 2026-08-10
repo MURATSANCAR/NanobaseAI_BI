@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/infrastructure/text2sql_adapter.py
+# hypothesis_version: 6.165.2
+
+[500, 'FAILED', 'attempt', 'code', 'content', 'default', 'hana', 'odata', 'ok', 'oracle', 'postgres', 'postgresql', 'previousErrorCode', 'qwen35b-text2sql-v1', 'role', 's4_odata', 'sap_hana', 'sap_odata', 'sql', 'sql-plan-v1-hana', 'sql-plan-v1-oracle', 'sql-plan-v1-s4-odata', 'status', 'user']

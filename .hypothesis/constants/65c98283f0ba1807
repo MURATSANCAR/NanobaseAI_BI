@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/policy_engine.py
+# hypothesis_version: 6.165.2
+
+[100, 400, 403, 1000, '$apply', '$batch', '$compute', '$count', '$crossjoin', '$expand', '$filter', '$levels', '$orderby', '$search', '$select', '$top', '(', '*', ',', '..', '/', '1', '://', ';', '?', 'EQ', 'Empty OData path.', 'GET', 'HEAD', 'Invalid entitySet.', 'ODATA', 'PUBLISHED', 'SAP_ODATA', 'Too many filters.', '^[A-Za-z0-9_./$-]+$', 'asc', 'desc', 'http', 'https', 'odata.', 'true']

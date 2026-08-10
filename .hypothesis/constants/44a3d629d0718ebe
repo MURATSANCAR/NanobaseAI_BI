@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/config.py
+# hypothesis_version: 6.165.2
+
+[',', '/', '0', '1', '100', '120', '20', '30', 'ARQ_ENABLED', 'AUTH_MODE', 'BI_SUPERSET_ENABLED', 'BI_SUPERSET_PASSWORD', 'BI_SUPERSET_URL', 'BI_SUPERSET_USERNAME', 'DEV_TENANT_ID', 'DEV_USER_ID', 'HS256', 'JWT_ALGORITHM', 'JWT_SECRET', 'METADATA_ONLY', 'MODEL_QUEUE_LIMIT', 'MODEL_QUEUE_TIMEOUT', 'NANOBASE_ENV', 'NANOBASE_META_DSN', 'NANOBASE_PYTHON', 'PLAN_ONLY', 'QUERY_GATEWAY', 'QUERY_GATEWAY_BASE', 'REDIS_URL', 'SAP_EXECUTION_MODE', 'SCHEMA_INDEXER_ROOT', 'SECRETS_ROOT', 'SEMANTIC_METRIC_', 'SEMANTIC_SHADOW_MODE', 'TENANT_QUEUE_LIMIT', 'TEST_DIRECT', 'auto', 'default', 'dev', 'dev-user', 'http://0.0.0.0:8080/', 'jwt', 'on', 'postgresql://', 'production', 'true', 'yes']

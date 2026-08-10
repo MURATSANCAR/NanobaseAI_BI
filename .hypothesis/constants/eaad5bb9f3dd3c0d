@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/auth/principal.py
+# hypothesis_version: 6.165.2
+
+[401, 403, '.', 'ADMIN', 'BUSINESS_REVIEWER', 'DATA_ANALYST', 'DATA_ENGINEER', 'FORBIDDEN', 'SEMANTIC_PUBLISHER', 'TECHNICAL_REVIEWER', 'TENANT_ACCESS_DENIED', 'UNAUTHORIZED', 'admin', 'developer', 'manager', 'portal_role', 'qa', 'role', 'roles', 'sub', 'tenant_id']

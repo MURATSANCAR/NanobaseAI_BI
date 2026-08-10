@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/semantic/fiscal_calendar.py
+# hypothesis_version: 6.165.2
+
+[400, '3rd quarter', 'CALENDAR', 'CALENDAR_QUARTER', 'K4', 'SAP_FISCAL_AMBIGUOUS', 'SAP_PERIOD', 'SPECIAL_PERIOD', 'V3', 'birinci çeyrek', 'dördüncü çeyrek', 'fiscalPeriod', 'fiscalPeriodFrom', 'fiscalPeriodTo', 'fiscalPeriods', 'fiscalYear', 'fiscalYearVariant', 'ikinci çeyrek', 'kind', 'p', 'q1', 'q2', 'q3', 'q4', 'special', 'third quarter', 'ucuncu ceyrek', 'özel', 'üçüncü çeyrek']

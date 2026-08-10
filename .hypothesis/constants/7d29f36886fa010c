@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/infrastructure/query_gateway_client.py
+# hypothesis_version: 6.165.2
+
+[10.0, 60.0, 400, 500, '/', '1', 'APPROVED', 'Authorization', 'Content-Type', 'FAILED', 'HS256', 'INTERACTIVE_ANALYSIS', 'INTERNAL_ERROR', 'OK', 'POST', 'QG_HMAC_SECRET', 'QG_JWT_AUDIENCE', 'QG_JWT_ISSUER', 'QG_USE_INTERNAL_API', 'QUERY_GATEWAY_BASE', 'REJECTED', 'SUCCESS', 'X-Body-SHA256', 'X-Request-Id', 'X-Signature', 'X-Timestamp', 'X-Trace-Id', 'application/json', 'aud', 'code', 'columns', 'datasourceId', 'datasource_id', 'detail', 'elapsed_ms', 'error', 'executionId', 'executionTimeMs', 'exp', 'explain', 'gatewayTimeMs', 'http_status', 'iat', 'iss', 'jti', 'message', 'name', 'nanobase-backend', 'normalizedSql', 'ok', 'parameters', 'policyVersion', 'purpose', 'query.execute', 'query.validate', 'raw', 'rowCount', 'row_count', 'rows', 'scope', 'sql', 'status', 'sub', 'tenantId', 'true', 'truncated', 'utf-8', 'yes']

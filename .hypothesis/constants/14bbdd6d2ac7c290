@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/query_builder.py
+# hypothesis_version: 6.165.2
+
+[400, ' and ', ' or ', '$count', '$expand', '$filter', '$format', '$orderby', '$select', '$top', "'", "''", ',', ",'$() /", '/', 'CONTAINS', 'EQ', 'GE', 'GET', 'GT', 'IN', 'LE', 'LT', 'NE', 'STARTSWITH', 'entitySet', 'false', 'json', 'method', 'null', 'path', 'plan', 'query', 'service', 'top', 'true', 'url', 'warnings']

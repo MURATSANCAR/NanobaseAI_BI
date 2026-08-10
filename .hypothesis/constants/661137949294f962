@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/main.py
+# hypothesis_version: 6.165.2
+
+[60.0, 1000.0, 400, 404, 503, 1000, '%(\\1)s', '*', ',', '/health', '/metrics', '1.0.0', '50000', '?', 'BEGIN', 'GET ', 'PORTAL_CORS_ORIGINS', 'QG requests', 'QG_MAX_CELLS', 'allowed_entities', 'allowed_tables', 'columns', 'database', 'datasource_id', 'datasources', 'dialect', 'driver', 'dsn', 'elapsed_ms', 'error', 'explain', 'faz5', 'hana', 'hana_driver', 'host', 'id', 'isoformat', 'label', 'max_limit', 'odata', 'odata_query', 'odata_ready', 'ok', 'oracle', 'oracle_driver', 'parameters', 'password', 'plan', 'port', 'postgresql', 'query_gateway', 'replace', 'route', 'row_count', 'rows', 'service', 'service_name', 'shutdown', 'sql', 'sql rejected', 'sslmode', 'status', 'tables', 'timeout_s', 'truncated', 'user', 'utf-8', 'version']

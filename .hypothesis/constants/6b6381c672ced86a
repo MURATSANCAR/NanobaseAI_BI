@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/config/settings.py
+# hypothesis_version: 6.165.2
+
+[5.0, 100, 120, 600, 1000, 1024, 1800, 3000, 8792, 15000, 50000, 250000, 1000000, 5000000, 10000000, '/', '1', '1000', '15', '2026.07.1', '8792', 'QG_AUDIT_REQUIRED', 'QG_AUTH_REQUIRED', 'QG_HMAC_SECRET', 'QG_MAX_LIMIT', 'QG_MAX_ROWS', 'QG_POLICY_VERSION', 'QG_REJECT_WILDCARD', 'QG_REPLAY_REQUIRED', 'QG_VAULT_FAIL_CLOSED', 'QUERY_GATEWAY_PORT', 'REDIS_URL', 'SECRETS_ROOT', 'Settings', 'VAULT_ADDR', 'VAULT_TOKEN', 'nanobase-backend', 'on', 'true', 'yes']

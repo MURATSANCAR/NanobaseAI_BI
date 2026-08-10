@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/rac.py
+# hypothesis_version: 6.165.2
+
+[409, 1521, 'Advanced RAC/FAN', 'DATABASE_UNAVAILABLE', 'THIN', 'init', 'process', 'rule', 'when']

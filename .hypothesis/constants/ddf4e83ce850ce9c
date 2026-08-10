@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/vault/secret_store.py
+# hypothesis_version: 6.165.2
+
+[503, 'file:', 'password', 'password_file', 'secret/', 'secret_ref', 'utf-8', 'vault:']

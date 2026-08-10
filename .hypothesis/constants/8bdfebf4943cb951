@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/workflows/result_explain.py
+# hypothesis_version: 6.165.2
+
+[0.1, 100, 800, '\x08', '"', '"answer"\\s*:\\s*"', '/', '25', '90', 'EXPLAIN_TIMEOUT_SEC', '\\', 'answer', 'b', 'columns', 'delta', 'f', 'fidelity_fallback', 'insights', 'kesil', 'n', 'name', 'numericStatistics', 'phase', 'r', 'rowCount', 'sampleRows', 't', 'token', 'truncat', 'truncated', 'u', 'warnings']

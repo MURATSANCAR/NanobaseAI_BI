@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/infrastructure/chat_session_gate.py
+# hypothesis_version: 6.165.2
+
+[2.0, 30.0, 120.0, 1800.0, '120', 'acquired', 'busy_sessions', 'elapsed_sec', 'message', 'phase', 'position', 'session_queued', 'stale_owner_s', 'tracked', 'waiting']

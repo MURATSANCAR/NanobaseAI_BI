@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/hana/result_normalizer.py
+# hypothesis_version: 6.165.2
+
+[4096, 'BIGINT', 'BLOB', 'BLOB rejected', 'CLOB', 'DATE', 'DATETIME', 'DECIMAL', 'DOUBLE', 'FLOAT', 'INTEGER', 'LIMITED_STRING', 'NCLOB', 'NVARCHAR', 'REAL', 'REJECTED', 'RESTRICTED_BINARY', 'SECONDDATE', 'SMALLDECIMAL', 'SMALLINT', 'STRING', 'TIME', 'TIMESTAMP', 'TINYINT', 'VARBINARY', 'VARCHAR', 'f', 'isoformat', 'length', 'replace', 'restricted', 'utf-8']

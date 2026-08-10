@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/context_sanitizer.py
+# hypothesis_version: 6.165.2
+
+[4000, 8000, 8192, 12000, '</user_question>', '<user_question>']

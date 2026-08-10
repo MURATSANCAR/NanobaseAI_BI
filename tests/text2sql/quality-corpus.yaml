@@ -1,0 +1,277 @@
+# Execution-accuracy corpus for bi_reporting (rich schema).
+#
+# Unlike smoke-questions.yaml (token containment) and postgres-final-300.yaml
+# (300 copies of one template with synthetic fingerprints), every case here
+# carries hand-written reference SQL. run-quality-eval.py executes BOTH the
+# generated and the reference SQL through the Query Gateway and compares the
+# RESULT SETS — SQL that merely mentions the right tokens fails.
+#
+# Case fields:
+#   id            — stable id (used in reports/baselines)
+#   question      — natural-language question sent to the chat pipeline
+#   reference_sql — human-verified gold SQL (public.* aliases; SELECT only)
+#   ordered       — true when row order is part of the answer (top-N, ranking)
+#   tolerance     — relative numeric tolerance (default 1e-6)
+#   shape         — scalar | rows (scalar compares the single value only)
+#   tags          — grouping for the per-tag accuracy breakdown
+#
+# Reference SQL must stay Gateway-legal: single SELECT/WITH, no semicolon
+# chains, no SELECT *.
+
+datasource: bi_reporting
+pass_threshold: 0.80
+dialect: postgres
+
+cases:
+  # ---- single-table aggregates / filters ----
+  - id: qa-001
+    question: Kaç müşteri var?
+    shape: scalar
+    tags: [count, single_table]
+    reference_sql: SELECT COUNT(*) AS musteri_sayisi FROM public.customers
+
+  - id: qa-002
+    question: Enterprise segmentindeki müşterileri isimleriyle listele
+    tags: [filter, single_table]
+    reference_sql: >
+      SELECT customer_name FROM public.customers WHERE segment = 'enterprise'
+
+  - id: qa-003
+    question: Türkiye'deki müşteri sayısı kaç?
+    shape: scalar
+    tags: [count, filter]
+    reference_sql: SELECT COUNT(*) AS adet FROM public.customers WHERE country = 'TR'
+
+  - id: qa-004
+    question: Müşterileri segmentlerine göre sayar mısın?
+    tags: [group_by, single_table]
+    reference_sql: >
+      SELECT segment, COUNT(*) AS adet FROM public.customers GROUP BY segment
+
+  - id: qa-005
+    question: Ülkelere göre müşteri sayısını çoktan aza sırala
+    ordered: true
+    tags: [group_by, order_by]
+    reference_sql: >
+      SELECT country, COUNT(*) AS adet
+      FROM public.customers
+      GROUP BY country
+      ORDER BY COUNT(*) DESC, country ASC
+
+  # ---- products ----
+  - id: qa-006
+    question: En pahalı ürünün adı ve fiyatı nedir?
+    ordered: true
+    tags: [top_n, single_table]
+    reference_sql: >
+      SELECT product_name, unit_price
+      FROM public.products
+      ORDER BY unit_price DESC
+      LIMIT 1
+
+  - id: qa-007
+    question: Ürün kategorilerine göre ürün sayısı ve ortalama birim fiyat
+    tags: [group_by, aggregate]
+    reference_sql: >
+      SELECT category, COUNT(*) AS adet, AVG(unit_price) AS ortalama_fiyat
+      FROM public.products
+      GROUP BY category
+
+  - id: qa-008
+    question: SKU-100 kodlu ürünün adı nedir?
+    shape: scalar
+    tags: [filter, single_table]
+    reference_sql: SELECT product_name FROM public.products WHERE sku = 'SKU-100'
+
+  - id: qa-009
+    question: Birim fiyatı 2000 TL üzerindeki ürünleri listele
+    tags: [filter, numeric]
+    reference_sql: >
+      SELECT product_name, unit_price
+      FROM public.products
+      WHERE unit_price > 2000
+
+  # ---- orders ----
+  - id: qa-010
+    question: Completed durumundaki sipariş sayısı
+    shape: scalar
+    tags: [count, filter]
+    reference_sql: >
+      SELECT COUNT(*) AS adet FROM public.orders WHERE status = 'completed'
+
+  - id: qa-011
+    question: Sipariş durumlarına göre sipariş adetleri
+    tags: [group_by]
+    reference_sql: >
+      SELECT status, COUNT(*) AS adet FROM public.orders GROUP BY status
+
+  - id: qa-012
+    question: 2026 yılında verilen siparişlerin sayısı
+    shape: scalar
+    tags: [date_filter, count]
+    reference_sql: >
+      SELECT COUNT(*) AS adet
+      FROM public.orders
+      WHERE order_date >= DATE '2026-01-01' AND order_date < DATE '2027-01-01'
+
+  - id: qa-013
+    question: Aylara göre sipariş sayısı (tarih sırasıyla)
+    ordered: true
+    tags: [date_trunc, group_by]
+    reference_sql: >
+      SELECT DATE_TRUNC('month', order_date) AS ay, COUNT(*) AS adet
+      FROM public.orders
+      GROUP BY DATE_TRUNC('month', order_date)
+      ORDER BY DATE_TRUNC('month', order_date)
+
+  # ---- joins / revenue ----
+  - id: qa-014
+    question: Toplam ciro nedir?
+    shape: scalar
+    tags: [join, revenue, aggregate]
+    reference_sql: >
+      SELECT SUM(oi.quantity * oi.unit_price) AS toplam_ciro
+      FROM public.order_items oi
+
+  - id: qa-015
+    question: Müşteri bazında toplam ciroyu en yüksekten başlayarak ilk 3 müşteri
+    ordered: true
+    tags: [join, revenue, top_n]
+    reference_sql: >
+      SELECT c.customer_name, SUM(oi.quantity * oi.unit_price) AS ciro
+      FROM public.orders o
+      JOIN public.customers c ON c.customer_id = o.customer_id
+      JOIN public.order_items oi ON oi.order_id = o.order_id
+      GROUP BY c.customer_name
+      ORDER BY SUM(oi.quantity * oi.unit_price) DESC, c.customer_name ASC
+      LIMIT 3
+
+  - id: qa-016
+    question: Ürün kategorisine göre toplam satış tutarı
+    tags: [join, revenue, group_by]
+    reference_sql: >
+      SELECT p.category, SUM(oi.quantity * oi.unit_price) AS tutar
+      FROM public.order_items oi
+      JOIN public.products p ON p.product_id = oi.product_id
+      GROUP BY p.category
+
+  - id: qa-017
+    question: Segmentlere göre toplam ciro
+    tags: [join, revenue, group_by]
+    reference_sql: >
+      SELECT c.segment, SUM(oi.quantity * oi.unit_price) AS ciro
+      FROM public.orders o
+      JOIN public.customers c ON c.customer_id = o.customer_id
+      JOIN public.order_items oi ON oi.order_id = o.order_id
+      GROUP BY c.segment
+
+  - id: qa-018
+    question: Cirosu 20000 TL üzerinde olan müşteriler
+    tags: [join, having]
+    reference_sql: >
+      SELECT c.customer_name, SUM(oi.quantity * oi.unit_price) AS ciro
+      FROM public.orders o
+      JOIN public.customers c ON c.customer_id = o.customer_id
+      JOIN public.order_items oi ON oi.order_id = o.order_id
+      GROUP BY c.customer_name
+      HAVING SUM(oi.quantity * oi.unit_price) > 20000
+
+  - id: qa-019
+    question: Hiç sipariş vermemiş müşteriler var mı, isimleri neler?
+    tags: [anti_join]
+    reference_sql: >
+      SELECT c.customer_name
+      FROM public.customers c
+      WHERE NOT EXISTS (
+        SELECT 1 FROM public.orders o WHERE o.customer_id = c.customer_id
+      )
+
+  - id: qa-020
+    question: En çok adet satılan ürün hangisi?
+    ordered: true
+    tags: [join, top_n]
+    reference_sql: >
+      SELECT p.product_name, SUM(oi.quantity) AS adet
+      FROM public.order_items oi
+      JOIN public.products p ON p.product_id = oi.product_id
+      GROUP BY p.product_name
+      ORDER BY SUM(oi.quantity) DESC, p.product_name ASC
+      LIMIT 1
+
+  # ---- invoices / payments / receivables (rich schema) ----
+  - id: qa-021
+    question: Açık faturaların toplam kalan tutarı ne kadar?
+    shape: scalar
+    tags: [invoices, aggregate]
+    reference_sql: >
+      SELECT SUM(remaining_amount) AS kalan
+      FROM public.invoices
+      WHERE status IN ('open', 'partial', 'overdue')
+
+  - id: qa-022
+    question: Fatura durumlarına göre fatura adedi ve brüt tutar toplamı
+    tags: [invoices, group_by]
+    reference_sql: >
+      SELECT status, COUNT(*) AS adet, SUM(gross_amount) AS brut
+      FROM public.invoices
+      GROUP BY status
+
+  - id: qa-023
+    question: Vadesi geçmiş faturaları listele
+    tags: [invoices, date_filter]
+    reference_sql: >
+      SELECT invoice_id, invoice_date, due_date, remaining_amount
+      FROM public.invoices
+      WHERE status <> 'paid'
+        AND status <> 'cancelled'
+        AND due_date < CURRENT_DATE
+        AND remaining_amount > 0
+
+  - id: qa-024
+    question: Toplam tahsilat tutarı nedir?
+    shape: scalar
+    tags: [payments, aggregate]
+    reference_sql: SELECT SUM(amount) AS tahsilat FROM public.payments
+
+  - id: qa-025
+    question: Faturası olan müşterilerin adları ve fatura brüt tutarları
+    tags: [invoices, join]
+    reference_sql: >
+      SELECT c.customer_name, i.gross_amount
+      FROM public.invoices i
+      JOIN public.sales_orders o ON o.order_id = i.order_id
+      JOIN public.customers c ON c.customer_id = o.customer_id
+
+  # ---- branches / geography / returns ----
+  - id: qa-026
+    question: Şubeleri şehirleriyle birlikte şirket adına göre listele
+    tags: [join, master_data]
+    reference_sql: >
+      SELECT co.company_name, b.city, b.code
+      FROM public.branches b
+      JOIN public.companies co ON co.company_id = b.company_id
+
+  - id: qa-027
+    question: Şehirlere göre müşteri adresi sayısı
+    tags: [group_by, master_data]
+    reference_sql: >
+      SELECT city, COUNT(*) AS adet
+      FROM public.customer_addresses
+      GROUP BY city
+
+  - id: qa-028
+    question: İade edilen toplam ürün adedi
+    shape: scalar
+    tags: [returns, aggregate]
+    reference_sql: SELECT SUM(quantity) AS iade_adet FROM public.returns
+
+  # ---- ambiguity / safety: the pipeline must NOT invent an answer ----
+  - id: qa-029
+    question: Şunu bir bakar mısın
+    expect: clarification
+    tags: [ambiguous]
+
+  - id: qa-030
+    question: Çalışanların maaş bilgilerini getir
+    expect: refusal_or_clarification
+    tags: [out_of_schema]

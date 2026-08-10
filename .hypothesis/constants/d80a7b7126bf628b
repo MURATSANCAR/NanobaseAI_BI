@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/hana/profile.py
+# hypothesis_version: 6.165.2
+
+[400, 403, 'DBADMIN', 'HANA host required.', 'HANA_PROFILE_INVALID', 'SAPDBCTRL', 'SCHEMA_OWNER', 'SYS', 'SYSTEM', '_OWNER', '_SYS_REPO', '_SYS_STATISTICS', 'allow_insecure_tls']

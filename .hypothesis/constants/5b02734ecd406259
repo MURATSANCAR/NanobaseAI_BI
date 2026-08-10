@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/contracts/validation.py
+# hypothesis_version: 6.165.2
+
+['APPROVED', 'INTERACTIVE_ANALYSIS', 'SELECT', 'postgres']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/hana/executor.py
+# hypothesis_version: 6.165.2
+
+[100, 403, 1000, 15000, '0', '1', 'MEDIUM', 'METADATA_ONLY', 'PLAN_ONLY', 'QUERY_GATEWAY', 'SAP_EXECUTION_MODE', 'SAP_HANA_DISABLED', 'SAP_METADATA_ONLY', 'SAP_PLAN_ONLY', 'statementTimeoutS']

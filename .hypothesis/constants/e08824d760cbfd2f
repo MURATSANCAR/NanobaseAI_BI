@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/__init__.py
+# hypothesis_version: 6.165.2
+
+['1', 'EXPLAIN_WORKFLOW', 'HANA_PLAN_WORKFLOW', 'HANA_REPAIR_WORKFLOW', 'ORACLE_PLAN_WORKFLOW', 'PLAN_WORKFLOW', 'REPAIR_WORKFLOW', 'SAP_EXPLAIN_WORKFLOW', 'WORKFLOW_VERSION', 'nanobase-sql-plan-v1']

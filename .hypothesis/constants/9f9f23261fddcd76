@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/input_validator.py
+# hypothesis_version: 6.165.2
+
+[8192, 'Soru boş olamaz.', 'hana', 'odata', 'oracle', 'postgres', 'postgresql', 'previousSql gerekli.', 's4_odata', 'sap_hana', 'sap_odata', 'utf-8']

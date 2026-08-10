@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/sql_shape_guard.py
+# hypothesis_version: 6.165.2
+
+['"', '""', '"(?:[^"]|"")*"', "''", "'(?:[^']|'')*'", '(', '(?i)\\bfrom\\b', '(?is)\\bfrom\\s+', '(?is)\\border\\s+by\\b', '(?is)\\bselect\\b', '(?is)^\\s*select\\s+\\*', '(none)', ')', ',', ', ', '--[^\\n]*', '.', '/\\*.*?\\*/', ';', 'Boş SQL.', 'COLUMN_NOT_FOUND', 'FRX', 'SQL_PARSE_FAILED', 'WILDCARD_NOT_ALLOWED', '[', ']', '`', 'alias_or_name', 'analytics', 'array', 'date', 'dbo', 'expressions', 'information_schema', 'interval', 'json', 'jsonb', 'order', 'pg_catalog', 'postgres', 'public', 'reporting', 'row', 'sap', 'sys', 'this', 'time', 'timestamp']

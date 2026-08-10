@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/hana/error_mapper.py
+# hypothesis_version: 6.165.2
+
+[400, 504, 'HANA_TIMEOUT', 'limit', 'memory', 'timeout']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/synonym_resolver.py
+# hypothesis_version: 6.165.2
+
+[400, 'DB_LINK', 'MATERIALIZED VIEW', 'PUBLIC', 'Synonym hedefi boş.', 'Synonym çözülemedi.', 'TABLE', 'TABLE_NAME', 'TABLE_OWNER', 'VIEW', 'db_link', 'table_name', 'table_owner']

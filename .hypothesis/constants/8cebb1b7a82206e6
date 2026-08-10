@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/client.py
+# hypothesis_version: 6.165.2
+
+[15.0, 30.0, 100, 400, 503, 1000, '$select', '/', '/$metadata', '@odata.nextLink', 'Accept', 'Authorization', 'GET', '__next', 'application/json', 'columns', 'd', 'executionTimeMs', 'method', 'odata.nextLink', 'pages', 'path', 'plan', 'query', 'results', 'row_count', 'rows', 'truncated', 'url', 'urlPath', 'value', 'warnings']

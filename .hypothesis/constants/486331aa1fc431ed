@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/api/v1/validation.py
+# hypothesis_version: 6.165.2
+
+['/internal/v1', '/queries/validate', 'internal-queries', 'trace_id']

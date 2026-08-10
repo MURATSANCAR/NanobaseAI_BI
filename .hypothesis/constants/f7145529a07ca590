@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/contracts/repair.py
+# hypothesis_version: 6.165.2
+
+['default', 'postgres', 'qwen35b-text2sql-v1', 'sql-repair-v1']

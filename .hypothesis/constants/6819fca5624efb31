@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/scenario_engine/application/param_resolver.py
+# hypothesis_version: 6.165.2
+
+[100, 'AGING', 'COMPARE_PERIOD', 'Europe/Istanbul', '\\bbu [cç]eyrek\\b', '\\bbu ay(ki|a|ın)?\\b', '\\bbu hafta(ki|ya)?\\b', '\\bd[uü]n(e|ki|ün)?\\b', 'agustos', 'aralik', 'aralık', 'açık', 'ağustos', 'cancelled', 'cancelled_status', 'city', 'compare_end', 'compare_start', 'ekim', 'eylul', 'eylül', 'fetch_limit', 'haziran', 'i', 'iptal', 'istanbul', 'i̇', 'kasim', 'kasım', 'mart', 'mayis', 'mayıs', 'nisan', 'ocak', 'odenmemis', 'overdue', 'period_end', 'period_start', 'status_value', 'subat', 'temmuz', 'unpaid', 'vadesi gecen', 'vadesi geçen', 'ödenmemiş', 'İstanbul', 'şubat']

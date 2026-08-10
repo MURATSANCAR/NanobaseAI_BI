@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/parser_policy.py
+# hypothesis_version: 6.165.2
+
+[400, 'DBMS_', 'DBMS_ALERT', 'DBMS_BACKUP_RESTORE', 'DBMS_JAVA', 'DBMS_JOB', 'DBMS_LDAP', 'DBMS_LOCK', 'DBMS_PIPE', 'DBMS_RLS', 'DBMS_SCHEDULER', 'DBMS_SQL', 'DBMS_SYS_SQL', 'DBMS_XPLAN', 'DBMS_XSLPROCESSOR', 'JSON_TABLE', 'PIVOT', 'UNPIVOT', 'UTL_', 'UTL_FILE', 'UTL_HTTP', 'UTL_INADDR', 'UTL_TCP']

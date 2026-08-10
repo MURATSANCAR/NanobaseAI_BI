@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/profile.py
+# hypothesis_version: 6.165.2
+
+[400, 1521, 15000, '.', 'ADMIN', 'AUDSYS', 'CDB$ROOT', 'CTXSYS', 'DBSNMP', 'GSMADMIN_INTERNAL', 'MDSYS', 'NANOBASE_REPORTING', 'ORDSYS', 'REQUIRE', 'SYS', 'SYSBACKUP', 'SYSDG', 'SYSKM', 'SYSTEM', 'THICK', 'THIN', 'WMSYS', 'XDB', 'allowSid', 'allow_sid', 'allowedOwners', 'allowed_owners', 'allowed_tables', 'callTimeoutMs', 'call_timeout_ms', 'connectionMode', 'connection_mode', 'containerName', 'container_name', 'database', 'databaseUniqueName', 'database_unique_name', 'dsn', 'host', 'id', 'medium', 'metadataPassword', 'metadataUser', 'metadata_password', 'metadata_user', 'password', 'planPassword', 'planUser', 'plan_password', 'plan_user', 'port', 'service', 'serviceName', 'service_name', 'sid', 'size_profile', 'sslMode', 'ssl_mode', 'sslmode', 'user', 'username', 'walletSecretRef', 'wallet_secret_ref']

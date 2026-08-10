@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/semantic/reversal_policy.py
+# hypothesis_version: 6.165.2
+
+[400, 'ClearingStatus', 'EQ', 'FI', 'IsReversed', 'OPEN', 'POSTED', 'PostingStatus', 'SAP_FI', 'domain', 'mandatoryRules', 'mandatory_rules', 'not_cleared', 'posted_only']

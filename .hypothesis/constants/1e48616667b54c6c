@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/api/v1/health.py
+# hypothesis_version: 6.165.2
+
+['/health/live', '/health/ready', 'DEGRADED', 'DOWN', 'UP', 'activePools', 'checks', 'datasources', 'health', 'policy', 'policyVersion', 'query_gateway', 'redis', 'secretsRoot', 'service', 'status']

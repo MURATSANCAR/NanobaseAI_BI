@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/shares.py
+# hypothesis_version: 6.165.2
+
+[-200, -100, 168, 200, 240, '*.json', '+00:00', '..', '/', '/tmp', 'SECRETS_ROOT', 'Z', 'at', 'bi-shares', 'budget-shares', 'created_at', 'default', 'expires_at', 'ip', 'max_views', 'password_hash', 'password_protected', 'payload', 'resource_id', 'resource_type', 'share_view_limit', 'superset_dashboard', 'tenant_id', 'token', 'token_hash', 'user_agent', 'utf-8', 'view_count', 'views']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/metadata_scanner.py
+# hypothesis_version: 6.165.2
+
+[', ', '8.0.0', 'ACTIVE', 'CHAR', 'COLUMN', 'NCHAR', 'NUMBER', 'NVARCHAR2', 'ORACLE', 'RAW', 'SYNONYM', 'TABLE', 'UNKNOWN', 'VALID', 'VARCHAR2', '_', 'allowed_owners', 'chain', 'column_comments', 'column_name', 'columns', 'comments', 'constraints', 'container_name', 'data_length', 'data_precision', 'data_scale', 'data_type', 'database_type', 'database_unique_name', 'datasource_id', 'description', 'document_type', 'materialized_views', 'max_length', 'nullable', 'object_name', 'object_type', 'objects', 'oracle_data_type', 'owner', 'policies', 'precision', 'resolved_object', 'resolved_owner', 'resolved_type', 'scale', 'schema_version', 'semantic_version', 'status', 'synonym_name', 'synonyms', 'table_comments', 'table_name', 'tenant_id', 'text']

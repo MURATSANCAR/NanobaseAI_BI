@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/database/pool_registry.py
+# hypothesis_version: 6.165.2
+
+[503, 'Bağlantı alınamadı.', 'RESET ALL', 'database', 'host', 'id', 'password', 'port', 'prefer', 'psycopg2 yok.', 'sslmode', 'user']

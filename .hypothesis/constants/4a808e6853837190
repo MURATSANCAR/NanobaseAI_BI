@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/error_mapper.py
+# hypothesis_version: 6.165.2
+
+[400, 401, 403, 408, 409, 429, 503, 904, 942, 1005, 1012, 1013, 1017, 1031, 1045, 1555, 1722, 1830, 1861, 3113, 3114, 3700, 3701, 12505, 12514, 12541, 12543, 12545, 28000, 28001, 65011, 65040, ':', 'CANCEL', 'COLUMN_NOT_FOUND', 'CONTAINER', 'DATE FORMAT', 'INVALID IDENTIFIER', 'INVALID NUMBER', 'Kolon bulunamadı.', 'LISTENER', 'NOT CONNECTED', 'ORA-', 'RESOURCE MANAGER', 'SNAPSHOT', 'TIMED OUT', 'TIMEOUT', 'TNS', 'args', 'code']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/sap.py
+# hypothesis_version: 6.165.2
+
+[1000, '$', '$select', '$select is required', '$top', '(', '..', '/', '1', '://', ';', '?', 'DEFAULT_HANA_TABLES', 'HANA_SQLGLOT_DIALECT', 'PUBLISHED', 'absolute url denied', 'allow_insecure_tls', 'allowed_entities', 'allowed_entity_sets', 'columns', 'execute_hana', 'execute_odata', 'http', 'invalid entity path', 'row_count', 'rows', 'ssl_validate', 'truncated', 'url', 'urlPath', 'validate_certificate', 'validate_odata_path']

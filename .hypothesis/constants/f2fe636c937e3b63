@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/contracts/planning.py
+# hypothesis_version: 6.165.2
+
+[0.5, 1.0, 8192, 'AMBIGUOUS', 'BUSINESS_TERM', 'COLUMN', 'FAILED', 'INSUFFICIENT_CONTEXT', 'PLANNED', 'RELATIONSHIP', 'TABLE', 'UNSUPPORTED', 'VERIFIED_SQL', 'ambiguities', 'assumptions', 'columns', 'confidence', 'default', 'dialect', 'executes', 'functions', 'metadataVersion', 'modelProfile', 'nanobase-sql-plan-v1', 'postgres', 'promptVersion', 'qwen35b-text2sql-v1', 'retrieval_used', 'sql', 'sql-plan-v1', 'status', 'tables', 'tr', 'warnings', 'workflow']

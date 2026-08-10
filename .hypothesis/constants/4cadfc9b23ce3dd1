@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/contracts/query.py
+# hypothesis_version: 6.165.2
+
+[100, 'CONTAINS', 'EQ', 'GE', 'GT', 'IN', 'LE', 'LT', 'NE', 'SAP_ODATA', 'STARTSWITH', 'count', 'entitySet', 'entity_set', 'expand', 'field', 'filters', 'operator', 'orderBy', 'orderby', 'select', 'service', 'sourceType', 'source_type', 'top', 'value']

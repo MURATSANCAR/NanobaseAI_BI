@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/result/masking.py
+# hypothesis_version: 6.165.2
+
+['*', '**', '***', '****', ':', '@', 'EMAIL', 'FULL', 'HASH', 'IBAN', 'IDENTITY_NUMBER', 'LAST_FOUR', 'MASK', 'NULLIFY', 'PARTIAL', 'PHONE', '\\D', 'email', 'iban', 'identity', 'phone', 'tc', 'tel', 'utf-8']

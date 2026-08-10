@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/auth/__init__.py
+# hypothesis_version: 6.165.2
+
+['ROLE_ADMIN', 'ROLE_DATA_ANALYST', 'ROLE_DATA_ENGINEER', 'RequestPrincipal', 'mint_dev_token', 'require_roles', 'require_source_admin', 'require_tenant_match', 'verify_jwt']

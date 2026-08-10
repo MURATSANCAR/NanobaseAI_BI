@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/sap/odata/metadata_parser.py
+# hypothesis_version: 6.165.2
+
+[',', ';', 'Amount', 'Decimal', 'EntitySet', 'EntityType', 'Key', 'MaxLength', 'Name', 'Navigation', 'NavigationProperty', 'Nullable', 'Partner', 'Precision', 'Property', 'PropertyRef', 'Scale', 'Type', 'V4', 'amount', 'amountFields', 'currency', 'currencyFields', 'currency|Curr', 'edm', 'edm4', 'edmx', 'entitySets', 'entityType', 'entityTypes', 'false', 'fingerprint', 'keys', 'maxLength', 'name', 'nullable', 'odataVersion', 'partner', 'precision', 'properties', 'sap', 'sap:label', 'sap:semantics', 'sap:unit', 'scale', 'serviceName', 'status', 'true', 'type', 'unit', 'unitFields', 'utf-8', '|', '}']

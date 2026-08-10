@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/scenario_engine/domain/scenario.py
+# hypothesis_version: 6.165.2
+
+[100, 5000, 1048576, '1.0.0', '2026.07.1', 'Faturalar', 'LOW', 'NFKD', 'PENDING', '[^\\w\\s]', '\\s+', 'astFingerprint', 'bindParams', 'canonicalQuestion', 'category', 'cgiosuCGIOSU', 'checksum', 'classification', 'code', 'datasourceId', 'default', 'description', 'dialect', 'embeddingId', 'error', 'estimatedRows', 'family', 'generatorVersion', 'id', 'joinCount', 'language', 'logicalPlan', 'maxPayloadBytes', 'maxRows', 'normalizedText', 'optionalSlots', 'policyVersion', 'requiredSlots', 'riskTier', 'scenarioCode', 'scenarioCount', 'scenarioId', 'schemaVersion', 'semanticVersion', 'sqlTemplate', 'status', 'tenantId', 'text', 'timeoutMs', 'utf-8', 'validationStatus', 'version', 'çğıöşüÇĞİÖŞÜ']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/api/v1/execution.py
+# hypothesis_version: 6.165.2
+
+[500, '/internal/v1', '/queries/execute', 'UNKNOWN', 'event', 'executionId', 'internal-queries', 'result', 'rowCount', 'sqlFingerprint', 'status', 'traceId', 'trace_id']

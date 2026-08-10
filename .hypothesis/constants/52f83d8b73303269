@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/infrastructure/audit_repo.py
+# hypothesis_version: 6.165.2
+
+[100, 128, 500, 2000, '***', 'CHAT', 'EXPORT', 'QUERY_COMPLETED', 'QUERY_FAILED', 'QUESTION_SUBMITTED', 'SCHEMA_REFRESH', 'act', 'action', 'at', 'chat', 'created_at', 'duration_ms', 'error', 'export', 'extra_json', 'isoformat', 'lim', 'nanobase_api', 'ok', 'query', 'query_export', 'row_count', 'rows', 'schema.scan', 'schema_refresh', 'session_id', 'source', 'sql', 'sql_fingerprint', 'sql_preview', 'tenant', 'tenant_id', 'user_id', '…']

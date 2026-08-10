@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/analytics_api.py
+# hypothesis_version: 6.165.2
+
+[240, 300, 400, 500, 503, '/', 'NanobaseAI Chart', 'NanobaseAI Panel', 'QUERY_GATEWAY_BASE', 'action', 'analytics', 'analytics_disabled', 'chart_ids', 'charts', 'code', 'count', 'dashboard_count', 'dashboard_id', 'dashboards', 'datasets', 'datasource_id', 'detail', 'enabled', 'error', 'health', 'id', 'invalid_layout', 'label_key', 'message', 'ok', 'pin', 'pin requires sql', 'pin_canvas', 'result', 'sql', 'sql_required', 'superset_error', 'superset_unreachable', 'table', 'title', 'type', 'url', 'value_key', 'viz_type', 'widget', 'widgets', 'x_key', 'y_key']

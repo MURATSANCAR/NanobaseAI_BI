@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/budget_lines.py
+# hypothesis_version: 6.165.2
+
+[256, 'TRY', 'active', 'actual', 'alloc', 'allocated', 'amount', 'bid', 'cancelled', 'code', 'comm', 'cost_centers', 'created_at', 'cur', 'currency', 'default', 'desc', 'description', 'due', 'due_date', 'id', 'idx', 'name', 'now', 'open', 'parent', 'parent_id', 'period_index', 'released', 'status', 't', 'tenant', 'tree', 'updated_at']

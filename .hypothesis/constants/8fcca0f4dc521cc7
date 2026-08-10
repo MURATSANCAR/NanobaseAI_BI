@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/suggestions.py
+# hypothesis_version: 6.165.2
+
+[120, 240, 'Kaç fatura var?', 'Kaç müşteri var?', 'SECRETS_ROOT', 'Son 5 kaydı listele', '\\s+', 'ask_prompt', 'bi_reporting', 'bindParams', 'bind_params', 'category', 'count', 'datasource_id', 'default', 'default_count', 'erp', 'learned', 'learned_count', 'parameters', 'postgres', 'prepared_count', 'question', 'scenario', 'scenarioCode', 'scenarioId', 'scenario_count', 'sigorta', 'source', 'sources', 'sql', 'sqlTemplate', 'sql_hint', 'suggestions', 'text', 'utf-8']

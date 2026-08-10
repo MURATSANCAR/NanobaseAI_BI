@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/database/postgres_executor.py
+# hypothesis_version: 6.165.2
+
+[200, 240, 400, 403, 408, 503, 1000, '08000', '08003', '08006', '42501', '42703', '42804', '42846', '42P01', '57014', '57P01', '57P02', '57P03', 'BEGIN', 'SQL_EXECUTION_FAILED', 'canceling statement', 'cannot cast', 'column', 'does not exist', 'id', 'medium', 'permission denied', 'pgcode', 'query_canceled', 'relation', 'timeout']

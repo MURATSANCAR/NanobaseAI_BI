@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/security/prompt_injection.py
+# hypothesis_version: 6.165.2
+
+['bypass gateway', 'doğrudan db', "doğrudan db'ye", 'drop table', 'exfiltrate', 'fabricate revenue', 'forget previous', 'pg_sleep', 'system prompt']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/plan_guard.py
+# hypothesis_version: 6.165.2
+
+[400, 503, 4000, 'CARTESIAN', 'COLLECTION ITERATOR', 'FULL', 'MERGE JOIN CARTESIAN', 'PARALLEL', 'PQ', 'REMOTE', 'TABLE ACCESS', 'filterless_full', 'large', 'max_cost', 'max_depth', 'max_rows', 'medium', 'operations', 'small', 'text', 'very_large']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/workflows/sql_repair.py
+# hypothesis_version: 6.165.2
+
+[2048, '_NOT_FOUND', 'hana', 'odata', 'oracle', 'postgres', 'postgresql', 's4_odata', 'sap_hana', 'sap_odata', 'sql_repair', 'workflow']

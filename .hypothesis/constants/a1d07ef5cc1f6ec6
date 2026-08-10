@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/auth/service_token.py
+# hypothesis_version: 6.165.2
+
+[401, 403, 503, 'Gerekli scope yok.', 'HS256', 'aud', 'exp', 'iat', 'iss', 'jti', 'nanobase-backend', 'scope', 'sub']

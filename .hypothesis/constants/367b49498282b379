@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/domain/errors.py
+# hypothesis_version: 6.165.2
+
+[400, 'AUDIT_WRITE_FAILED', 'COLUMN_NOT_ALLOWED', 'COLUMN_NOT_FOUND', 'DATABASE_UNAVAILABLE', 'DATASOURCE_NOT_FOUND', 'DATASOURCE_NOT_READY', 'FUNCTION_NOT_ALLOWED', 'INTERNAL_ERROR', 'QUERY_COST_EXCEEDED', 'QUERY_TIMEOUT', 'SCHEMA_NOT_ALLOWED', 'SQL_PARSE_FAILED', 'TABLE_NOT_ALLOWED', 'VAULT_UNAVAILABLE', 'WILDCARD_NOT_ALLOWED', 'code', 'details', 'executionId', 'message', 'policyVersion', 'retryable', 'traceId']

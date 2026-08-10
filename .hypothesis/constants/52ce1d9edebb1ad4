@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/oracle/result_normalizer.py
+# hypothesis_version: 6.165.2
+
+[1024, 'BFILE', 'BLOB', 'CURSOR', 'DECIMAL', 'INTEGER', 'LIMITED_STRING', 'LOB', 'LONG RAW', 'REF CURSOR', 'SDO_GEOMETRY', 'XMLTYPE', '__name__', 'f', 'name', 'read', 'rejected', 'replace', 'truncated', 'type', 'utf-8', 'value']
