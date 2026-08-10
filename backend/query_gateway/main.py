@@ -164,7 +164,6 @@ def create_app() -> FastAPI:
         explain: bool,
         parameters: dict[str, Any] | None = None,
     ):
-        import psycopg2
         import psycopg2.extras
         import re
 
@@ -173,19 +172,15 @@ def create_app() -> FastAPI:
         bind = dict(parameters or {})
         if bind:
             exec_sql = re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"%(\1)s", exec_sql)
-        conn = psycopg2.connect(
-            host=ds["host"],
-            port=ds["port"],
-            dbname=ds["database"],
-            user=ds["user"],
-            password=ds["password"],
-            sslmode=ds.get("sslmode") or "prefer",
-            connect_timeout=10,
-        )
+        # Pooled (shared with the internal path); transaction-scoped settings so
+        # nothing leaks into the pool — put_postgres_conn rolls back on return.
+        registry = get_pool_registry()
+        ds_id, conn = registry.get_postgres_conn(ds)
         try:
-            conn.set_session(readonly=True, autocommit=True)
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-                cur.execute(f"SET statement_timeout = '{int(timeout_s * 1000)}'")
+                cur.execute("BEGIN")
+                cur.execute("SET TRANSACTION READ ONLY")
+                cur.execute(f"SET LOCAL statement_timeout = '{int(timeout_s * 1000)}'")
                 if bind and not explain:
                     cur.execute(exec_sql, bind)
                 else:
@@ -197,7 +192,7 @@ def create_app() -> FastAPI:
                 rows_raw, truncated = _cap_rows(cols, rows_raw)
                 return cols, _serialize_rows(rows_raw), truncated
         finally:
-            conn.close()
+            registry.put_postgres_conn(ds_id, conn)
 
     def _execute_oracle(ds: dict[str, Any], sql: str, *, timeout_s: float, explain: bool):
         try:

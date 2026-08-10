@@ -66,3 +66,34 @@ def test_replay(settings: Settings):
     check_and_store_replay(store, settings, "abc")
     with pytest.raises(GatewayError):
         check_and_store_replay(store, settings, "abc")
+
+
+class _RedisLikeNoneOnNxMiss:
+    """redis-py semantics: SET ... NX returns None (not False) when blocked."""
+
+    def __init__(self) -> None:
+        self.keys: set[str] = set()
+
+    def set(self, name: str, value: str, nx: bool = False, ex: int | None = None):
+        if nx and name in self.keys:
+            return None
+        self.keys.add(name)
+        return True
+
+
+def test_replay_real_redis_none_semantics(settings: Settings):
+    store = _RedisLikeNoneOnNxMiss()
+    check_and_store_replay(store, settings, "abc")
+    with pytest.raises(GatewayError):
+        check_and_store_replay(store, settings, "abc")
+
+
+def test_replay_async_real_redis_none_semantics(settings: Settings):
+    import asyncio
+
+    from query_gateway.infrastructure.redis.replay_guard import check_and_store_replay_async
+
+    store = _RedisLikeNoneOnNxMiss()
+    asyncio.run(check_and_store_replay_async(store, settings, "xyz"))
+    with pytest.raises(GatewayError):
+        asyncio.run(check_and_store_replay_async(store, settings, "xyz"))

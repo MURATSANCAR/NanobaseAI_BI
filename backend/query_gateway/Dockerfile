@@ -13,4 +13,4 @@ ENV PYTHONPATH=/app
 ENV QUERY_GATEWAY_PORT=8792
 USER 10001
 EXPOSE 8792
-CMD ["uvicorn", "query_gateway.app:app", "--host", "0.0.0.0", "--port", "8792"]
+CMD ["uvicorn", "query_gateway.app:app", "--host", "0.0.0.0", "--port", "8792", "--workers", "2"]

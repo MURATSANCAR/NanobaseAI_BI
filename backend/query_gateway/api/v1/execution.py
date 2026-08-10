@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
 from typing import Any
 
 from fastapi import APIRouter
@@ -12,11 +14,24 @@ from query_gateway.infrastructure.audit.logger import get_audit_logger
 
 router = APIRouter(prefix="/internal/v1", tags=["internal-queries"])
 
-_executions: dict[str, dict[str, Any]] = {}
+# Bounded per-process registry of recent executions (oldest evicted past the cap).
+_EXECUTIONS_MAX = 500
+_executions: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_executions_lock = threading.Lock()
 
 
+def _remember_execution(execution_id: str, entry: dict[str, Any]) -> None:
+    with _executions_lock:
+        _executions[execution_id] = entry
+        _executions.move_to_end(execution_id)
+        while len(_executions) > _EXECUTIONS_MAX:
+            _executions.popitem(last=False)
+
+
+# Plain def: blocking DB drivers (psycopg2/oracledb/hdbcli) must run in the
+# FastAPI threadpool, not on the event loop.
 @router.post("/queries/execute")
-async def execute_endpoint(
+def execute_endpoint(
     body: ExecuteRequest,
     auth: dict = AuthExecute,
 ) -> dict[str, Any]:
@@ -33,13 +48,16 @@ async def execute_endpoint(
             trace_id=auth.get("trace_id"),
             parameters=body.parameters,
         )
-        _executions[body.executionId] = {
-            "executionId": body.executionId,
-            "status": result.get("status"),
-            "rowCount": result.get("rowCount"),
-            "sqlFingerprint": result.get("sqlFingerprint"),
-            "traceId": auth.get("trace_id"),
-        }
+        _remember_execution(
+            body.executionId,
+            {
+                "executionId": body.executionId,
+                "status": result.get("status"),
+                "rowCount": result.get("rowCount"),
+                "sqlFingerprint": result.get("sqlFingerprint"),
+                "traceId": auth.get("trace_id"),
+            },
+        )
         return result
     except GatewayError as e:
         e.execution_id = e.execution_id or body.executionId
@@ -48,7 +66,7 @@ async def execute_endpoint(
 
 
 @router.get("/queries/{execution_id}")
-async def get_execution(
+def get_execution(
     execution_id: str,
     auth: dict = AuthExecute,
 ) -> dict[str, Any]:
@@ -56,7 +74,7 @@ async def get_execution(
     if found:
         return found
     # fallback: scan recent audit memory
-    for ev in reversed(get_audit_logger()._memory):
+    for ev in reversed(get_audit_logger().recent_events()):
         if ev.get("executionId") == execution_id:
             return {
                 "executionId": execution_id,

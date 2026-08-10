@@ -16,22 +16,24 @@ from query_gateway.infrastructure.auth.request_signature import verify_request_s
 from query_gateway.infrastructure.auth.service_token import validate_service_token
 from query_gateway.infrastructure.redis.replay_guard import (
     InMemoryReplayStore,
-    check_and_store_replay,
+    check_and_store_replay_async,
 )
 
 _replay_store: object | None = None
 
 
-def get_replay_store():
+async def get_replay_store():
     global _replay_store
     settings = get_settings()
     if _replay_store is not None:
         return _replay_store
     try:
-        import redis
+        from redis import asyncio as aioredis
 
-        client = redis.Redis.from_url(settings.redis_url, socket_timeout=1, decode_responses=True)
-        client.ping()
+        client = aioredis.Redis.from_url(
+            settings.redis_url, socket_timeout=1, decode_responses=True
+        )
+        await client.ping()
         _replay_store = client
     except Exception:
         if settings.replay_required and settings.auth_required:
@@ -96,7 +98,9 @@ def internal_auth(required_scope: str) -> Callable:
             signature=x_signature or "",
             body=body,
         )
-        check_and_store_replay(get_replay_store(), settings, x_request_id or "")
+        await check_and_store_replay_async(
+            await get_replay_store(), settings, x_request_id or ""
+        )
         return {"trace_id": x_trace_id or x_request_id or "", "request_id": x_request_id or ""}
 
     return _dep

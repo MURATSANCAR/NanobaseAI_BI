@@ -12,8 +12,10 @@ from query_gateway.domain.errors import GatewayError
 router = APIRouter(prefix="/internal/v1", tags=["internal-queries"])
 
 
+# Plain def: sqlglot parsing + audit file writes are blocking; run in the
+# FastAPI threadpool, not on the event loop.
 @router.post("/queries/validate")
-async def validate_endpoint(
+def validate_endpoint(
     body: ValidateRequest,
     auth: dict = AuthValidate,
 ) -> dict[str, Any]:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Protocol
 
 from query_gateway.config.settings import Settings
@@ -48,7 +49,41 @@ def check_and_store_replay(
         return
     key = f"replay:{request_id}"
     ok = store.set(key, "1", nx=True, ex=settings.replay_ttl_s)
-    if ok is False:
+    # redis-py returns None (not False) when NX blocks the write — `is False`
+    # only ever fired for the in-memory store, so real-Redis replays passed.
+    if not ok:
+        raise GatewayError(
+            REPLAY_REQUEST_DETECTED,
+            "Tekrarlayan istek tespit edildi.",
+            status=409,
+        )
+
+
+async def check_and_store_replay_async(
+    store: RedisLike | None,
+    settings: Settings,
+    request_id: str,
+) -> None:
+    """Async twin of check_and_store_replay: awaits redis.asyncio stores,
+    accepts sync stores (InMemoryReplayStore) unchanged. Same keys/TTL/errors."""
+    if not request_id:
+        raise GatewayError(REPLAY_REQUEST_DETECTED, "Request ID gerekli.", status=401)
+    if store is None:
+        if settings.replay_required:
+            raise GatewayError(
+                REPLAY_REQUEST_DETECTED,
+                "Replay koruması kullanılamıyor.",
+                status=503,
+                retryable=True,
+            )
+        return
+    key = f"replay:{request_id}"
+    ok = store.set(key, "1", nx=True, ex=settings.replay_ttl_s)
+    if inspect.isawaitable(ok):
+        ok = await ok
+    # redis-py returns None (not False) on an NX miss — treat any falsy result
+    # as a replayed request id.
+    if not ok:
         raise GatewayError(
             REPLAY_REQUEST_DETECTED,
             "Tekrarlayan istek tespit edildi.",

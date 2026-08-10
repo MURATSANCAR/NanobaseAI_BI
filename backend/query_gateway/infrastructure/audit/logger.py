@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+from collections import deque
 from pathlib import Path
 from typing import Any
 
@@ -12,12 +14,21 @@ from query_gateway.domain.errors import AUDIT_WRITE_FAILED, GatewayError
 
 _log = logging.getLogger("query_gateway.audit")
 
+_MEMORY_MAX = 1000
+
 
 class AuditLogger:
     def __init__(self, settings: Settings | None = None) -> None:
         self.settings = settings or get_settings()
         self._path = self.settings.secrets_root.parent / "logs" / "query-gateway-audit.jsonl"
-        self._memory: list[dict[str, Any]] = []
+        # Bounded: deque drops oldest events past _MEMORY_MAX.
+        self._memory: deque[dict[str, Any]] = deque(maxlen=_MEMORY_MAX)
+        self._memory_lock = threading.Lock()
+
+    def recent_events(self) -> list[dict[str, Any]]:
+        """Snapshot for linear-scan readers (deque cannot be iterated while mutated)."""
+        with self._memory_lock:
+            return list(self._memory)
 
     def record(self, event: dict[str, Any]) -> None:
         # strip dangerous keys
@@ -27,7 +38,8 @@ class AuditLogger:
             if k.lower() not in ("sql", "password", "rows", "raw_sql")
         }
         _log.info("audit %s", json.dumps(safe, default=str))
-        self._memory.append(safe)
+        with self._memory_lock:
+            self._memory.append(safe)
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             with self._path.open("a", encoding="utf-8") as f:
