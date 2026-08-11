@@ -13,6 +13,30 @@ from nanobase_api.scenario_engine.domain.logical_plan import LogicalPlan
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+class CompilerColumnUnknown(ValidationError):
+    """A required physical column is not known for this plan.
+
+    Root cause of 219/777 broken PUBLISHED erp scenarios found 2026-08-11:
+    when discovery didn't record ``status_column`` in ``plan.extra``, the
+    compiler silently fell back to a hardcoded English ``"status"`` and
+    emitted ``t."status" <> :cancelled_status`` against tables whose real
+    column is Turkish (``durum``) — SQL that fails on every execution.
+    Silently DROPPING the filter instead would be worse (cancelled rows would
+    leak into financial answers), so the only correct behavior is refusing to
+    compile: the scenario is rejected and the question falls back to the LLM
+    path, which is safe."""
+
+
+def _require_status_column(plan: LogicalPlan) -> str:
+    col = (plan.extra or {}).get("status_column")
+    if not col:
+        raise CompilerColumnUnknown(
+            f"status_column unknown for plan {getattr(plan, 'scenario_code', '')!r} "
+            f"(table={getattr(plan, 'physical_table', '')!r}) — refusing to guess 'status'"
+        )
+    return str(col)
+
+
 def _qi(name: str) -> str:
     parts = name.replace('"', "").split(".")
     for p in parts:
@@ -94,7 +118,6 @@ class PostgresLogicalPlanCompiler:
     def _where_base(self, plan: LogicalPlan, alias: str) -> tuple[list[str], list[str]]:
         parts: list[str] = []
         binds: list[str] = []
-        status_col = (plan.extra or {}).get("status_column") or "status"
         unpaid_col = (plan.extra or {}).get("unpaid_predicate_column") or "remaining_amount"
         if plan.period and plan.date_column:
             dc = _col(alias, plan.date_column)
@@ -103,12 +126,15 @@ class PostgresLogicalPlanCompiler:
             binds.extend(["period_start", "period_end"])
         if plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters:
             if plan.status_filter != "cancelled":
+                status_col = _require_status_column(plan)
                 parts.append(f'{alias}."{status_col}" <> :cancelled_status')
                 binds.append("cancelled_status")
         if plan.status_filter == "cancelled":
+            status_col = _require_status_column(plan)
             parts.append(f'{alias}."{status_col}" = :status_value')
             binds.append("status_value")
         elif plan.status_filter in ("open", "partial", "paid"):
+            status_col = _require_status_column(plan)
             parts.append(f'{alias}."{status_col}" = :status_value')
             binds.append("status_value")
         if plan.status_filter == "unpaid" or (plan.extra or {}).get("unpaid_predicate"):
@@ -224,14 +250,16 @@ class PostgresLogicalPlanCompiler:
         where_parts, binds = self._where_base(plan, alias)
         where_sql = (" WHERE " + " AND ".join(where_parts)) if where_parts else ""
         dim_col = (plan.extra or {}).get("dimension_column", "")
-        status_col = (plan.extra or {}).get("status_column") or "status"
         binds.append("fetch_limit")
         if plan.dimension == "status" or str(dim_col).endswith((".status", ".durum")):
-            dim_name = status_col if not str(dim_col).endswith(".durum") else "durum"
+            # A concrete dimension_column names the real column directly;
+            # otherwise the plan must know its status column — never guess.
             if str(dim_col).endswith(".durum"):
                 dim_name = "durum"
             elif str(dim_col).endswith(".status"):
                 dim_name = "status"
+            else:
+                dim_name = _require_status_column(plan)
             sql = (
                 f'SELECT {alias}."{dim_name}" AS "status", '
                 f'COALESCE(SUM({_col(alias, metric)}), 0) AS "total_amount"\n'
@@ -280,7 +308,7 @@ class PostgresLogicalPlanCompiler:
         status_filter = ""
         binds = ["period_start", "period_end", "compare_start", "compare_end"]
         if plan.mandatory_filters and "exclude_cancelled_invoices" in plan.mandatory_filters:
-            status_col = (plan.extra or {}).get("status_column") or "status"
+            status_col = _require_status_column(plan)
             status_filter = f'\n  AND {alias}."{status_col}" <> :cancelled_status'
             binds.append("cancelled_status")
         sql = (
@@ -446,10 +474,12 @@ class ODataLogicalPlanCompiler:
             filters.append(f"{col} ge :period_start and {col} lt :period_end")
             binds.extend(["period_start", "period_end"])
         if plan.status_filter:
-            filters.append(f"status eq :status_value")
+            status_prop = _require_status_column(plan)
+            filters.append(f"{status_prop} eq :status_value")
             binds.append("status_value")
         if "exclude_cancelled_invoices" in (plan.mandatory_filters or []) and plan.status_filter != "cancelled":
-            filters.append("status ne :cancelled_status")
+            status_prop = _require_status_column(plan)
+            filters.append(f"{status_prop} ne :cancelled_status")
             binds.append("cancelled_status")
         qs = [f"$top={plan.limit or plan.top_n or 100}"]
         if filters:

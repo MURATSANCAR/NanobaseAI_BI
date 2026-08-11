@@ -273,11 +273,28 @@ def stage_sql_compilation(
     try:
         compiler = get_compiler(dialect)
         compilations: list[str] = []
+        rejected: list[dict[str, Any]] = []
         for sid in b["workspace"].get("instanceIds") or []:
             inst = store.get_instance(sid)
             if inst is None:
                 continue
-            compiled = compiler.compile(inst.logical_plan)
+            # Per-scenario failure isolation: one uncompilable plan must
+            # reject THAT scenario, not kill the whole build. (Historically a
+            # missing status_column fell back to a hardcoded 'status' column
+            # and compiled into broken SQL instead — 219/777 published erp
+            # scenarios failed on the live schema because of it. Refusing to
+            # compile + rejecting is the safe behavior: the question simply
+            # keeps falling back to the LLM path.)
+            try:
+                compiled = compiler.compile(inst.logical_plan)
+            except Exception as ce:  # noqa: BLE001 — isolate to this scenario
+                try:
+                    inst.transition_to(ScenarioStatus.REJECTED)
+                    store.save_instance(inst)
+                except Exception:
+                    pass
+                rejected.append({"id": sid, "reason": f"{type(ce).__name__}: {str(ce)[:200]}"})
+                continue
             comp = ScenarioCompilation(
                 id=f"cmp-{uuid.uuid4().hex[:12]}",
                 scenario_id=sid,
@@ -291,6 +308,11 @@ def stage_sql_compilation(
             compilations.append(comp.id)
             b["workspace"].setdefault("compiled", {})[sid] = compiled
         b["counts"]["compilations"] = len(compilations)
+        b["counts"]["compileRejected"] = len(rejected)
+        if rejected:
+            b["compileRejections"] = rejected[:50]
+        if not compilations:
+            return _fail(store, build_id, "sql_compilation: no scenario compiled")
         return _set_phase(store, build_id, "COMPILED")
     except Exception as e:
         return _fail(store, build_id, f"sql_compilation: {e}")

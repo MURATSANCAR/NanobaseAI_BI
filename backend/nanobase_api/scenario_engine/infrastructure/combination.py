@@ -55,6 +55,53 @@ def _id_suffix(*parts: str) -> str:
     return ".".join(p.lower().replace(" ", "_") for p in parts if p)
 
 
+def _stamp_status_columns(
+    plans: list[PlannedScenario], status_by_table: dict[str, str | None]
+) -> list[PlannedScenario]:
+    """Contract rule: a plan may carry a status predicate ONLY with the real,
+    classified status column stamped into ``extra.status_column``.
+
+    Generation used to attach ``exclude_cancelled_invoices`` broadly and stamp
+    the column only on the STATUS_FILTER branch; the compiler then guessed a
+    hardcoded English ``"status"`` for everything else — 219/777 published erp
+    scenarios shipped broken SQL against Turkish-columned tables (``durum``).
+    The compiler now refuses to guess (CompilerColumnUnknown), so generation
+    must produce contract-complete plans:
+
+    - status column known  → stamp its real name on every status-bearing plan
+    - unknown + status_filter variant → drop the plan (inexpressible)
+    - unknown + only exclude_cancelled → strip the filter (a table with no
+      classified status column has no representable cancelled state; keeping
+      the filter would force a guess, which is the exact bug class this fixes)
+    """
+    kept: list[PlannedScenario] = []
+    for p in plans:
+        plan = p.logical_plan
+        needs_status = bool(
+            (plan.mandatory_filters and _EXCLUDE_CANCELLED in plan.mandatory_filters)
+            or plan.status_filter
+        )
+        if not needs_status:
+            kept.append(p)
+            continue
+        scol = (plan.extra or {}).get("status_column") or status_by_table.get(
+            plan.physical_table
+        )
+        if scol:
+            extra = dict(plan.extra or {})
+            extra["status_column"] = str(scol)
+            plan.extra = extra
+            kept.append(p)
+        elif plan.status_filter:
+            continue
+        else:
+            plan.mandatory_filters = [
+                f for f in (plan.mandatory_filters or []) if f != _EXCLUDE_CANCELLED
+            ]
+            kept.append(p)
+    return kept
+
+
 def _default_projection(table: ClassifiedTable) -> list[str]:
     preferred = []
     for role in (
@@ -635,6 +682,10 @@ def plan_invoice_combinations(
         )
 
     # Cap at 2000 — prune lowest-priority Tier B period×status first if needed
+    out = _stamp_status_columns(
+        out, {table: status_col.name if status_col else None}
+    )
+
     max_n = int(os.environ.get("SCENARIO_MAX_COMBINATIONS", "2000"))
     if len(out) > max_n:
         tier_a = [p for p in out if p.risk_tier == RiskTier.A]
@@ -1050,6 +1101,14 @@ def plan_all_table_combinations(
                         category=category,
                     )
                 )
+
+    status_by_table = {
+        t.fqn: next(
+            (c.name for c in t.columns if c.role == ColumnRole.STATUS), None
+        )
+        for t in classification.tables
+    }
+    out = _stamp_status_columns(out, status_by_table)
 
     max_n = int(os.environ.get("SCENARIO_MAX_COMBINATIONS", "8000"))
     if len(out) > max_n:

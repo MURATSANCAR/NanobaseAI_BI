@@ -63,6 +63,11 @@ def test_no_sum_on_identifier():
         period="TODAY",
         date_column="analytics.invoices.invoice_date",
         mandatory_filters=["exclude_cancelled_invoices"],
+        # status_column must be explicit since the 2026-08-11 fix — the
+        # compiler refuses to guess it (that guess produced 219 broken
+        # published erp scenarios). This test is about the SUM-on-identifier
+        # static rule, so provide a valid one.
+        extra={"status_column": "status"},
     )
     compiled = PostgresLogicalPlanCompiler().compile(plan)
     static = validate_static_ast(plan, compiled)
