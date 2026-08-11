@@ -97,13 +97,13 @@ cases:
     shape: scalar
     tags: [count, filter]
     reference_sql: >
-      SELECT COUNT(*) AS adet FROM public.orders WHERE status = 'completed'
+      SELECT COUNT(*) AS adet FROM public.sales_orders WHERE status = 'completed'
 
   - id: qa-011
     question: Sipariş durumlarına göre sipariş adetleri
     tags: [group_by]
     reference_sql: >
-      SELECT status, COUNT(*) AS adet FROM public.orders GROUP BY status
+      SELECT status, COUNT(*) AS adet FROM public.sales_orders GROUP BY status
 
   - id: qa-012
     question: 2026 yılında verilen siparişlerin sayısı
@@ -111,7 +111,7 @@ cases:
     tags: [date_filter, count]
     reference_sql: >
       SELECT COUNT(*) AS adet
-      FROM public.orders
+      FROM public.sales_orders
       WHERE order_date >= DATE '2026-01-01' AND order_date < DATE '2027-01-01'
 
   - id: qa-013
@@ -120,61 +120,68 @@ cases:
     tags: [date_trunc, group_by]
     reference_sql: >
       SELECT DATE_TRUNC('month', order_date) AS ay, COUNT(*) AS adet
-      FROM public.orders
+      FROM public.sales_orders
       GROUP BY DATE_TRUNC('month', order_date)
       ORDER BY DATE_TRUNC('month', order_date)
 
   # ---- joins / revenue ----
+  # Canonical sales model is sales_orders/sales_order_items (analytics.* "rich"
+  # schema); orders/order_items is the superseded Phase-1 seed — excluded from
+  # retrieval (tools/schema-indexer/config.py LEGACY_TABLES) so the pipeline
+  # always answers from the same tables these references check against.
+  # No implicit date window: planning_guidance.py no longer defaults
+  # unstated-period aggregates to "current year" (see that file for why), so
+  # these are deliberately all-time totals.
   - id: qa-014
     question: Toplam ciro nedir?
     shape: scalar
     tags: [join, revenue, aggregate]
     reference_sql: >
-      SELECT SUM(oi.quantity * oi.unit_price) AS toplam_ciro
-      FROM public.order_items oi
+      SELECT SUM(quantity * unit_price) AS toplam_ciro
+      FROM public.sales_order_items
 
   - id: qa-015
     question: Müşteri bazında toplam ciroyu en yüksekten başlayarak ilk 3 müşteri
     ordered: true
     tags: [join, revenue, top_n]
     reference_sql: >
-      SELECT c.customer_name, SUM(oi.quantity * oi.unit_price) AS ciro
-      FROM public.orders o
+      SELECT c.customer_name, SUM(soi.quantity * soi.unit_price) AS ciro
+      FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
-      JOIN public.order_items oi ON oi.order_id = o.order_id
+      JOIN public.sales_order_items soi ON soi.order_id = o.order_id
       GROUP BY c.customer_name
-      ORDER BY SUM(oi.quantity * oi.unit_price) DESC, c.customer_name ASC
+      ORDER BY SUM(soi.quantity * soi.unit_price) DESC, c.customer_name ASC
       LIMIT 3
 
   - id: qa-016
     question: Ürün kategorisine göre toplam satış tutarı
     tags: [join, revenue, group_by]
     reference_sql: >
-      SELECT p.category, SUM(oi.quantity * oi.unit_price) AS tutar
-      FROM public.order_items oi
-      JOIN public.products p ON p.product_id = oi.product_id
+      SELECT p.category, SUM(soi.quantity * soi.unit_price) AS tutar
+      FROM public.sales_order_items soi
+      JOIN public.products p ON p.product_id = soi.product_id
       GROUP BY p.category
 
   - id: qa-017
     question: Segmentlere göre toplam ciro
     tags: [join, revenue, group_by]
     reference_sql: >
-      SELECT c.segment, SUM(oi.quantity * oi.unit_price) AS ciro
-      FROM public.orders o
+      SELECT c.segment, SUM(soi.quantity * soi.unit_price) AS ciro
+      FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
-      JOIN public.order_items oi ON oi.order_id = o.order_id
+      JOIN public.sales_order_items soi ON soi.order_id = o.order_id
       GROUP BY c.segment
 
   - id: qa-018
     question: Cirosu 20000 TL üzerinde olan müşteriler
     tags: [join, having]
     reference_sql: >
-      SELECT c.customer_name, SUM(oi.quantity * oi.unit_price) AS ciro
-      FROM public.orders o
+      SELECT c.customer_name, SUM(soi.quantity * soi.unit_price) AS ciro
+      FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
-      JOIN public.order_items oi ON oi.order_id = o.order_id
+      JOIN public.sales_order_items soi ON soi.order_id = o.order_id
       GROUP BY c.customer_name
-      HAVING SUM(oi.quantity * oi.unit_price) > 20000
+      HAVING SUM(soi.quantity * soi.unit_price) > 20000
 
   - id: qa-019
     question: Hiç sipariş vermemiş müşteriler var mı, isimleri neler?
@@ -183,7 +190,7 @@ cases:
       SELECT c.customer_name
       FROM public.customers c
       WHERE NOT EXISTS (
-        SELECT 1 FROM public.orders o WHERE o.customer_id = c.customer_id
+        SELECT 1 FROM public.sales_orders o WHERE o.customer_id = c.customer_id
       )
 
   - id: qa-020
@@ -191,11 +198,11 @@ cases:
     ordered: true
     tags: [join, top_n]
     reference_sql: >
-      SELECT p.product_name, SUM(oi.quantity) AS adet
-      FROM public.order_items oi
-      JOIN public.products p ON p.product_id = oi.product_id
+      SELECT p.product_name, SUM(soi.quantity) AS adet
+      FROM public.sales_order_items soi
+      JOIN public.products p ON p.product_id = soi.product_id
       GROUP BY p.product_name
-      ORDER BY SUM(oi.quantity) DESC, p.product_name ASC
+      ORDER BY SUM(soi.quantity) DESC, p.product_name ASC
       LIMIT 1
 
   # ---- invoices / payments / receivables (rich schema) ----

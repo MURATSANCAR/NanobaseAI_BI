@@ -90,10 +90,21 @@ def build_planning_guidance(
             "Do NOT ask the user to restate start/end dates."
         )
     elif line_tables:
+        # Do NOT default to "current calendar year" (or any other silent
+        # window) when the question states none — that changes the answer's
+        # meaning ("toplam ciro" -> "this year's ciro") without telling the
+        # user. The Gateway's own cost guard (QUERY_COST_EXCEEDED, repairable)
+        # already rejects genuinely too-expensive unbounded scans and the
+        # repair/clarification path asks for a date range only when the query
+        # actually needs one — that is the real safety net, not a guess here.
         bullets.append(
             "Large/line fact tables are in scope and no time window was stated. "
-            "Prefer a reasonable default in assumptions (e.g. current calendar year or last 12 months) "
-            "and PLANNED SQL. Ask AMBIGUOUS for dates only if no safe default exists."
+            "Answer the question as asked, over ALL time, with no date filter — "
+            "do not invent a default period. If the resulting query is too "
+            "expensive, the gateway will reject it and you will get a chance "
+            "to add a date range then. PLANNED SQL; use AMBIGUOUS only when a "
+            "date range is unavoidable to answer at all (e.g. 'yearly trend' "
+            "with no years named)."
         )
 
     if wants_totals and not wants_lines and header_tables and line_tables:

@@ -17,6 +17,7 @@ from nanobase_awel.operators.llm_operator import chat_completion
 from nanobase_awel.operators.prompt_builder import render_simple, sql_repair_prompts
 from nanobase_awel.operators.schema_reference_validator import validate_plan_references
 from nanobase_awel.operators.structured_parser import parse_sql_plan
+from nanobase_awel.workflows.sql_plan import DIALECT_CASE_INSENSITIVE_RULE, normalize_dialect
 
 
 def is_repairable(code: str) -> bool:
@@ -32,9 +33,11 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
     if req.attempt > 2:
         raise WorkflowError(REPAIR_LIMIT_EXCEEDED, "Maksimum 2 repair denemesi.")
 
+    dialect_norm = normalize_dialect(req.dialect)
     # Dialect MUST flow into the repair prompt — repairing an Oracle/HANA error
     # with the PostgreSQL prompt regenerates LIMIT/ILIKE and can never converge.
     system, user_tpl = sql_repair_prompts(dialect=req.dialect)
+    system = system + f"\n{DIALECT_CASE_INSENSITIVE_RULE[dialect_norm]}"
     user = render_simple(
         user_tpl,
         question=req.question,

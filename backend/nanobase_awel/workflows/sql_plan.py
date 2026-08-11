@@ -38,8 +38,31 @@ _DIALECT_STMT_RULE = {
     "odata": "ONE logical OData query plan only",
 }
 
+# Enum/status/segment columns are frequently filtered with a differently-cased
+# literal than what's stored (question says "Enterprise", column holds
+# 'enterprise') — exact equality then silently returns zero rows. Exported
+# for reuse by the repair workflow.
+DIALECT_CASE_INSENSITIVE_RULE = {
+    "postgres": (
+        "For equality filters on categorical/status/enum-like text columns, use ILIKE "
+        "(or LOWER(col) = LOWER('value')) — never assume the exact stored casing."
+    ),
+    "oracle": (
+        "For equality filters on categorical/status/enum-like text columns, wrap both sides "
+        "in UPPER() (e.g. UPPER(col) = UPPER('value')) — never assume the exact stored casing."
+    ),
+    "hana": (
+        "For equality filters on categorical/status/enum-like text columns, wrap both sides "
+        "in UPPER() (e.g. UPPER(col) = UPPER('value')) — never assume the exact stored casing."
+    ),
+    "odata": (
+        "For equality filters on categorical/status/enum-like text properties, use a "
+        "case-insensitive comparison (tolower(prop) eq tolower('value'))."
+    ),
+}
 
-def _normalize_dialect(dialect: str | None) -> str:
+
+def normalize_dialect(dialect: str | None) -> str:
     d = (dialect or "postgres").strip().lower().replace("postgresql", "postgres")
     if d in ("odata", "s4_odata", "sap_odata"):
         return "odata"
@@ -140,13 +163,14 @@ async def run_sql_plan(
         context_blocks = context_blocks[: _TEXT2SQL_CONTEXT_CHARS * 3]
         truncated_blocks.append("tail_overflow")
 
-    dialect_norm = _normalize_dialect(req.dialect)
+    dialect_norm = normalize_dialect(req.dialect)
     system, user_tpl = sql_plan_prompts(dialect=req.dialect)
     if _TEXT2SQL_COMPACT:
         system = (
             system
             + f"\nHard constraints: {_DIALECT_STMT_RULE[dialect_norm]}. No semicolon chains. "
-            "JSON only with a single SELECT/WITH in sql."
+            "JSON only with a single SELECT/WITH in sql. "
+            f"{DIALECT_CASE_INSENSITIVE_RULE[dialect_norm]}"
         )
     user = render_simple(user_tpl, context_blocks=context_blocks, question=req.question)
 

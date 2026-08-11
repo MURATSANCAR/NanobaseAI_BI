@@ -4,7 +4,7 @@ import json
 import time
 from datetime import datetime, timezone
 
-from config import IndexerConfig
+from config import LEGACY_TABLES, IndexerConfig
 from embedder import BgeM3Embedder
 from models import ScanReport
 from normalizer import normalize_documents
@@ -25,6 +25,15 @@ def run_index(cfg: IndexerConfig) -> ScanReport:
     collection = cfg.resolved_collection()
 
     tables, relationships = scan_metadata(cfg)
+    legacy = LEGACY_TABLES.get(ds) or frozenset()
+    if legacy:
+        tables = [t for t in tables if (t.schema_name, t.table_name) not in legacy]
+        relationships = [
+            r
+            for r in relationships
+            if (r.from_schema, r.from_table) not in legacy
+            and (r.to_schema, r.to_table) not in legacy
+        ]
     tables = apply_controlled_profiling(cfg, tables)
     docs = normalize_documents(ds, tables, relationships)
 

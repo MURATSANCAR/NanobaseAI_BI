@@ -15,6 +15,30 @@ def _reporting_datasource_id() -> str:
     return _env("REPORTING_DATASOURCE_ID", "bi_reporting") or "bi_reporting"
 
 
+# bi_reporting carries two generations of the same sales domain: the original
+# Phase-1 seed (orders/order_items, analytics + public alias) and the later
+# "rich" schema (sales_orders/sales_order_items/invoices/...). Both are live
+# tables with real (different) rows, so retrieval — once it actually works —
+# finds and answers from either one. docs/architecture/locked-architecture.md
+# already calls the original pair "legacy orders" when describing the rich
+# schema; this excludes them from the retrieval index so generated SQL
+# consistently targets the canonical sales_orders/sales_order_items model
+# instead of silently answering from whichever layer scored higher.
+# customers/products are shared master data used by BOTH generations — kept.
+LEGACY_TABLES: dict[str, frozenset[tuple[str, str]]] = {
+    "bi_reporting": frozenset(
+        {
+            ("analytics", "orders"),
+            ("analytics", "order_items"),
+            ("analytics", "v_order_revenue"),
+            ("public", "orders"),
+            ("public", "order_items"),
+            ("public", "v_order_revenue"),
+        }
+    ),
+}
+
+
 @dataclass
 class IndexerConfig:
     datasource_id: str = field(default_factory=_reporting_datasource_id)
