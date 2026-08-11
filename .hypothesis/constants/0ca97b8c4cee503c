@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/application/seed_total_revenue_slice.py
+# hypothesis_version: 6.165.2
+
+['=', 'Ciro', 'SUM', 'Toplam Ciro', 'Toplam Satılan Adet', 'ZERO', 'bi_reporting', 'bt', 'completed', 'default', 'filter_id', 'fr', 'line_total', 'met', 'metric_id', 'quantity', 'quantity_metric_id', 'revenue', 'satis geliri', 'satış geliri', 'term_id', 'toplam satis', 'toplam satış', 'total_quantity_sold', 'total_revenue']
