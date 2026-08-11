@@ -132,13 +132,20 @@ cases:
   # No implicit date window: planning_guidance.py no longer defaults
   # unstated-period aggregates to "current year" (see that file for why), so
   # these are deliberately all-time totals.
+  # "Ciro"/"satılan" restricts to status='completed': pending orders haven't
+  # been fulfilled and cancelled/returned ones were reversed, so neither is
+  # realized revenue — the pipeline reaches this same convention on its own
+  # (verified live: it emits `WHERE status ILIKE 'completed'` unprompted,
+  # stated as an assumption) and it is the correct accounting definition.
   - id: qa-014
     question: Toplam ciro nedir?
     shape: scalar
     tags: [join, revenue, aggregate]
     reference_sql: >
-      SELECT SUM(quantity * unit_price) AS toplam_ciro
-      FROM public.sales_order_items
+      SELECT SUM(soi.quantity * soi.unit_price) AS toplam_ciro
+      FROM public.sales_order_items soi
+      JOIN public.sales_orders so ON so.order_id = soi.order_id
+      WHERE so.status = 'completed'
 
   - id: qa-015
     question: Müşteri bazında toplam ciroyu en yüksekten başlayarak ilk 3 müşteri
@@ -149,6 +156,7 @@ cases:
       FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
       JOIN public.sales_order_items soi ON soi.order_id = o.order_id
+      WHERE o.status = 'completed'
       GROUP BY c.customer_name
       ORDER BY SUM(soi.quantity * soi.unit_price) DESC, c.customer_name ASC
       LIMIT 3
@@ -160,6 +168,8 @@ cases:
       SELECT p.category, SUM(soi.quantity * soi.unit_price) AS tutar
       FROM public.sales_order_items soi
       JOIN public.products p ON p.product_id = soi.product_id
+      JOIN public.sales_orders so ON so.order_id = soi.order_id
+      WHERE so.status = 'completed'
       GROUP BY p.category
 
   - id: qa-017
@@ -170,6 +180,7 @@ cases:
       FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
       JOIN public.sales_order_items soi ON soi.order_id = o.order_id
+      WHERE o.status = 'completed'
       GROUP BY c.segment
 
   - id: qa-018
@@ -180,6 +191,7 @@ cases:
       FROM public.sales_orders o
       JOIN public.customers c ON c.customer_id = o.customer_id
       JOIN public.sales_order_items soi ON soi.order_id = o.order_id
+      WHERE o.status = 'completed'
       GROUP BY c.customer_name
       HAVING SUM(soi.quantity * soi.unit_price) > 20000
 
@@ -201,6 +213,8 @@ cases:
       SELECT p.product_name, SUM(soi.quantity) AS adet
       FROM public.sales_order_items soi
       JOIN public.products p ON p.product_id = soi.product_id
+      JOIN public.sales_orders so ON so.order_id = soi.order_id
+      WHERE so.status = 'completed'
       GROUP BY p.product_name
       ORDER BY SUM(soi.quantity) DESC, p.product_name ASC
       LIMIT 1

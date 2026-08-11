@@ -19,19 +19,23 @@ _LINE_SUFFIXES = (
     "_detay",
     "_details",
 )
-_HEADER_HINTS = (
-    "fatura",
-    "faturalar",
-    "invoice",
-    "siparis",
-    "order",
-    "po",
-    "yevmiye_fis",
-    "journal",
-)
+# Split by business domain, not just "has a header amount column": invoicing
+# (billing/AR — invoice date issued, amount owed) is a distinct concept from
+# sales/orders (revenue recognized). Both can carry a ready-made total column,
+# so a plain "prefer header amount" heuristic picks whichever is retrieved
+# first — historically invoices.gross_amount for a bare "toplam ciro" ask.
+_INVOICE_HEADER_HINTS = ("fatura", "faturalar", "invoice")
+_ORDER_HEADER_HINTS = ("siparis", "order", "po", "yevmiye_fis", "journal")
+_HEADER_HINTS = _INVOICE_HEADER_HINTS + _ORDER_HEADER_HINTS
 _TOTAL_INTENT = re.compile(
     r"(?i)\b(ciro|toplam|genel[_\s]?toplam|yıllık|yillik|yoy|karşılaştır|karsilastir|"
     r"revenue|sum|aggregate|gider|tahsilat|bütçe|butce|kullanım|kullanim)\b"
+)
+# Explicit billing/AR intent — only then should invoice header amounts answer
+# a "ciro"/"toplam" question; otherwise "ciro" means realized sales revenue.
+_INVOICE_INTENT = re.compile(
+    r"(?i)\b(fatura|faturaland[ıi]|invoice|tahsilat|alacak|ödenmemiş|odenmemis|"
+    r"vadesi|vade\s*tarih|overdue|kalan\s*tutar|remaining)\b"
 )
 _LINE_INTENT = re.compile(
     r"(?i)\b(ürün|urun|sku|kategori|marka|marj|margin|birim[_\s]?fiyat|kalem|"
@@ -60,6 +64,14 @@ def _looks_header(name: str) -> bool:
     return any(h in name for h in _HEADER_HINTS)
 
 
+def _looks_invoice_header(name: str) -> bool:
+    return not _is_line_table(name) and any(h in name for h in _INVOICE_HEADER_HINTS)
+
+
+def _looks_order_header(name: str) -> bool:
+    return not _is_line_table(name) and any(h in name for h in _ORDER_HEADER_HINTS)
+
+
 def build_planning_guidance(
     question: str,
     tables: Iterable[str] | None,
@@ -71,10 +83,13 @@ def build_planning_guidance(
 
     line_tables = sorted({n for n in names if _is_line_table(n)})
     header_tables = sorted({n for n in names if _looks_header(n)})
+    invoice_headers = sorted({n for n in names if _looks_invoice_header(n)})
+    order_headers = sorted({n for n in names if _looks_order_header(n)})
     q = question or ""
     wants_totals = bool(_TOTAL_INTENT.search(q))
     wants_lines = bool(_LINE_INTENT.search(q))
     has_date = bool(_HAS_DATE.search(q))
+    wants_invoice = bool(_INVOICE_INTENT.search(q))
 
     bullets: list[str] = []
 
@@ -107,12 +122,32 @@ def build_planning_guidance(
             "with no years named)."
         )
 
+    # "Ciro"/"revenue"/"toplam" without an explicit billing/AR word means
+    # realized sales revenue, not invoiced/billed amount — invoices.gross_amount
+    # and orders.genel_toplam answer different business questions even though
+    # both are ready-made "header total" columns retrieval treats alike.
+    if wants_totals and invoice_headers and order_headers and not wants_invoice:
+        bullets.append(
+            f"Both a billing/invoice table ({', '.join(invoice_headers[:3])}) and an order/sales "
+            f"table ({', '.join(order_headers[:3])}) are in scope. The question does not mention "
+            "invoicing/billing (fatura, tahsilat, vade, kalan tutar) — 'ciro'/'toplam'/'revenue' "
+            "here means realized SALES revenue. Compute it from the order/sales tables "
+            f"({', '.join(order_headers[:3])}), NOT from the invoice table's amount columns "
+            "(gross_amount/remaining_amount answer a billing question, not a sales-revenue one)."
+        )
+
     if wants_totals and not wants_lines and header_tables and line_tables:
+        avoid = order_headers if (invoice_headers and not wants_invoice) else []
+        prefer_note = (
+            f" Prefer order/sales header amounts over invoice amounts here ({', '.join(avoid[:3])})."
+            if avoid
+            else ""
+        )
         bullets.append(
             "Aggregate/total question with header tables available: prefer header amount columns "
             "(names the user mentioned such as genel_toplam, or obvious total/amount columns) "
-            f"with GROUP BY. Do NOT join line tables ({', '.join(line_tables[:6])}) unless line "
-            "attributes are required."
+            f"with GROUP BY.{prefer_note} Do NOT join line tables ({', '.join(line_tables[:6])}) "
+            "unless line attributes are required."
         )
     elif wants_lines and line_tables:
         bullets.append(
