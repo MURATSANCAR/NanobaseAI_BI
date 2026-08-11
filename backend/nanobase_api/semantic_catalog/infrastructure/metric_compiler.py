@@ -41,6 +41,18 @@ class CompileRequest:
     joins: list[JoinRule] = field(default_factory=list)
     period: dict[str, str] | None = None
     dimension_filters: dict[str, Any] = field(default_factory=dict)
+    # Plain column names on metric.source.table to GROUP BY (breakdown
+    # questions: "segmentlere göre ciro"). Deliberately NOT a join/dimension
+    # object — every dimension this compiler groups by must already be a
+    # column on the metric's own source (a pre-joined view), same constraint
+    # as metric.source itself. Validated against ALLOWED_IDENT (no arbitrary
+    # SQL) before use.
+    group_by: list[str] = field(default_factory=list)
+    # Ranking questions ("ilk 3 müşteri", "en çok satılan ürün"): order by the
+    # aggregate value and cap the row count. limit=None means an unranked full
+    # breakdown (still ordered by the aggregate, descending, for readability).
+    limit: int | None = None
+    order_desc: bool = True
     dialect: str = "postgres"
 
 
@@ -147,11 +159,47 @@ class MetricCompiler:
             else:
                 where_parts.append(f'{alias}."{cname}" = {_sql_literal(value)}')
 
-        sql_parts = [f"SELECT\n    {select_expr}", from_sql]
+        # GROUP BY dimension columns — plain columns on the metric's own
+        # source table (a pre-joined view), same constraint as metric.source.
+        # _quote_ident's identifier regex rejects anything that isn't a bare
+        # column/qualified-column name, so this can't become injection even
+        # if a caller ever passed something other than the resolver's
+        # hardcoded dimension-code → column mapping.
+        group_cols_sql: list[str] = []
+        for col in req.group_by:
+            cname = col.split(".")[-1].replace('"', "")
+            # _quote_ident already returns the fully quoted/uppercased form
+            # for the target dialect ("segment" / SEGMENT) — do not re-wrap it.
+            group_cols_sql.append(f"{alias}.{_quote_ident(cname, dialect=dialect)}")
+
+        select_cols = list(group_cols_sql) + [select_expr]
+        sql_parts = [f"SELECT\n    " + ",\n    ".join(select_cols), from_sql]
         if join_sql_parts:
             sql_parts.extend(join_sql_parts)
         if where_parts:
             sql_parts.append("WHERE " + "\n  AND ".join(where_parts))
+        if group_cols_sql:
+            sql_parts.append("GROUP BY " + ", ".join(group_cols_sql))
+        # Rank/breakdown ordering: by the aggregate value, not a dimension —
+        # "en yüksek"/"ilk N" questions mean "highest metric value first".
+        # A tie-break on the first group-by column is required for genuine
+        # determinism: Postgres makes no ordering guarantee among rows with
+        # an equal aggregate value without a secondary sort key, and "same
+        # logical plan in, byte-identical rows out" is the entire point of
+        # compiling this instead of asking the LLM.
+        if group_cols_sql or req.limit is not None:
+            order_dir = "DESC" if req.order_desc else "ASC"
+            order_parts = [f"{agg}({expr}) {order_dir}"]
+            if group_cols_sql:
+                order_parts.append(f"{group_cols_sql[0]} ASC")
+            sql_parts.append("ORDER BY " + ", ".join(order_parts))
+        if req.limit is not None:
+            limit_n = int(req.limit)
+            if dialect == "oracle":
+                sql_parts.append(f"FETCH FIRST {limit_n} ROWS ONLY")
+            else:
+                sql_parts.append(f"LIMIT {limit_n}")
+
         sql = "\n".join(sql_parts)
         if dialect != "oracle":
             sql += ";"
@@ -161,6 +209,11 @@ class MetricCompiler:
             logical["period"] = dict(req.period)
         if req.dimension_filters:
             logical["dimensionFilters"] = dict(req.dimension_filters)
+        if req.group_by:
+            logical["groupBy"] = list(req.group_by)
+        if req.limit is not None:
+            logical["limit"] = req.limit
+            logical["orderDesc"] = req.order_desc
         logical["dialect"] = dialect
 
         fingerprint = self.ast_fingerprint(sql, dialect=dialect)

@@ -638,6 +638,9 @@ async def stream_chat_via_gateway(
                     tenant_id=tenant_id,
                     datasource_id=datasource_id,
                     metric_code=metric_code,
+                    group_by=semantic_meta.get("resolvedGroupBy") or None,
+                    limit=semantic_meta.get("resolvedLimit"),
+                    order_desc=semantic_meta.get("resolvedOrderDesc", True),
                 )
                 if compiled and compiled.get("sql"):
                     if settings.semantic_shadow_mode:

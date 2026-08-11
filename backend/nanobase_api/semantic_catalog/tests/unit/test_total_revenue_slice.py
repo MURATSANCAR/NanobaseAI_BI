@@ -80,3 +80,84 @@ def test_metric_scoped_to_its_own_tenant_and_datasource(store):
             datasource_id="erp",
             metric_code="total_revenue",
         )
+
+
+def test_group_by_breakdown_is_deterministic_and_tie_broken(store):
+    """qa-016/017 shape: 'segmentlere göre ciro' — a dimensional breakdown
+    with no ranking. Two independent compiles of the same request must be
+    byte-identical, and Postgres gives no ordering guarantee among tied
+    aggregate values without the tie-break column."""
+    seed_total_revenue_slice(store, tenant_id="default", datasource_id="bi_reporting", published=True)
+    r1 = compile_metric_sql(
+        store,
+        tenant_id="default",
+        datasource_id="bi_reporting",
+        metric_code="total_revenue",
+        group_by=["segment"],
+    )
+    r2 = compile_metric_sql(
+        store,
+        tenant_id="default",
+        datasource_id="bi_reporting",
+        metric_code="total_revenue",
+        group_by=["segment"],
+    )
+    assert r1["sql"] == r2["sql"]
+    assert '"segment"' in r1["sql"]
+    assert "GROUP BY" in r1["sql"]
+    assert "ORDER BY" in r1["sql"]
+    assert '"segment" ASC' in r1["sql"]  # tie-break
+    assert "LIMIT" not in r1["sql"]
+
+
+def test_ranked_top_n_breakdown(store):
+    """qa-015 shape: 'ilk 3 müşteri' — GROUP BY + ORDER BY aggregate DESC + LIMIT."""
+    seed_total_revenue_slice(store, tenant_id="default", datasource_id="bi_reporting", published=True)
+    result = compile_metric_sql(
+        store,
+        tenant_id="default",
+        datasource_id="bi_reporting",
+        metric_code="total_revenue",
+        group_by=["customer_name"],
+        limit=3,
+    )
+    assert '"customer_name"' in result["sql"]
+    assert "ORDER BY SUM" in result["sql"]
+    assert "DESC" in result["sql"]
+    assert "LIMIT 3" in result["sql"]
+    assert result["logicalPlan"]["limit"] == 3
+
+
+def test_total_quantity_sold_metric(store):
+    """qa-020 shape: 'en çok adet satılan ürün' — a DIFFERENT metric
+    (SUM(quantity), not SUM(line_total)) grouped by product, top-1."""
+    ids = seed_total_revenue_slice(store, tenant_id="default", datasource_id="bi_reporting", published=True)
+    assert "quantity_metric_id" in ids
+    result = compile_metric_sql(
+        store,
+        tenant_id="default",
+        datasource_id="bi_reporting",
+        metric_code="total_quantity_sold",
+        group_by=["product_name"],
+        limit=1,
+    )
+    assert 'SUM(COALESCE(v."quantity", 0))' in result["sql"]
+    assert '"product_name"' in result["sql"]
+    assert "LIMIT 1" in result["sql"]
+    # Must not be confused with the revenue metric's column.
+    assert "line_total" not in result["sql"]
+
+
+def test_group_by_rejects_non_identifier_column(store):
+    """Defense in depth: even though the only real caller is the resolver's
+    hardcoded dimension->column map, group_by must reject anything that
+    isn't a plain identifier (the compiler's only other injection guard)."""
+    seed_total_revenue_slice(store, tenant_id="default", datasource_id="bi_reporting", published=True)
+    with pytest.raises(Exception):
+        compile_metric_sql(
+            store,
+            tenant_id="default",
+            datasource_id="bi_reporting",
+            metric_code="total_revenue",
+            group_by=["segment; DROP TABLE customers"],
+        )

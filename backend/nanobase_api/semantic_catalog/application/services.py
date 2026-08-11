@@ -208,6 +208,9 @@ def compile_metric_sql(
     metric_code: str,
     period: dict[str, str] | None = None,
     dimension_filters: dict[str, Any] | None = None,
+    group_by: list[str] | None = None,
+    limit: int | None = None,
+    order_desc: bool = True,
 ) -> dict[str, Any]:
     metric = store.get_metric_by_code(tenant_id, datasource_id, metric_code)
     if not metric or metric.status != AssetStatus.PUBLISHED:
@@ -225,6 +228,9 @@ def compile_metric_sql(
             filters=filters,
             period=period,
             dimension_filters=dimension_filters or {},
+            group_by=list(group_by or []),
+            limit=limit,
+            order_desc=order_desc,
         )
     )
     # Ensure mandatory cancelled filter applied for unpaid slice
