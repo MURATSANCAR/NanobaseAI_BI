@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/scenario_engine/api/routes.py
+# hypothesis_version: 6.165.2
+
+[100, 'APPROVE', 'AWEL', 'Genel', 'INVALID_DECISION', 'NOT_FOUND', 'QUEUED', 'REDIS_URL', 'REJECT', 'arq_enabled', 'async', 'autoPublish', 'bi_reporting', 'buildId', 'canonicalQuestion', 'categories', 'category', 'datasourceId', 'decision', 'default', 'detail', 'dialect', 'erp', 'error', 'families', 'family', 'id', 'items', 'limitScenarios', 'matched', 'passed', 'phase', 'postgres', 'purgePeriodless', 'question', 'questions', 'riskTier', 'route', 'run_scenario_build', 'scenario-engine', 'scenarioCode', 'scenarioId', 'static', 'status', 'tenantId']
