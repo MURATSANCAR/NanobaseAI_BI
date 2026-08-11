@@ -51,6 +51,7 @@ BI_REPORTING_TABLES = {
     "currency_rates",
     "returns",
     "v_invoice_open",
+    "v_sales_revenue_lines",
     "analytics.customers",
     "analytics.products",
     "analytics.orders",
@@ -66,6 +67,7 @@ BI_REPORTING_TABLES = {
     "analytics.currency_rates",
     "analytics.returns",
     "analytics.v_invoice_open",
+    "analytics.v_sales_revenue_lines",
     "public.customers",
     "public.products",
     "public.orders",
@@ -81,6 +83,7 @@ BI_REPORTING_TABLES = {
     "public.currency_rates",
     "public.returns",
     "public.v_invoice_open",
+    "public.v_sales_revenue_lines",
 }
 
 
