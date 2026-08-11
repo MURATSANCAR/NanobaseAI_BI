@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/infrastructure/qdrant_publisher.py
+# hypothesis_version: 6.165.2
+
+['BUSINESS_TERM', 'FILTER_RULE', 'METRIC', 'PUBLISHED', '_', '_-', 'checksum', 'code', 'collection', 'datasource_id', 'documentCount', 'document_type', 'error', 'language', 'manifestSha256', 'ok', 'schema_version', 'semantic_version', 'status', 'tenant_id', 'text', 'tr']

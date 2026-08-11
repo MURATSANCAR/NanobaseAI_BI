@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/infrastructure/metric_compiler.py
+# hypothesis_version: 6.165.2
+
+['\n  AND ', '!=', '"', "'", "''", ', ', '.', ';', '<', '<=', '<>', '=', '>', '>=', 'FALSE', 'IN', 'IS_NOT_NULL', 'IS_NULL', 'NOT_IN', 'NULL', 'TRUE', 'WHERE ', 'ZERO', '\\s+', 'astFingerprint', 'dialect', 'dimensionFilters', 'from', 'logicalPlan', 'oracle', 'period', 'postgres', 'postgresql', 'sql', 't', 'to', 'utf-8']

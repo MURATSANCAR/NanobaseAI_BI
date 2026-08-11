@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/application/seed_unpaid_slice.py
+# hypothesis_version: 6.165.2
+
+['CANCELLED', 'DOCUMENT_CURRENCY', 'NOT_IN', 'SUM', 'VOID', 'ZERO', 'açık fatura', 'bt', 'default', 'filter_id', 'fr', 'kalan fatura', 'met', 'metric_id', 'remaining_amount', 'reporting.invoice', 'term_id', 'Ödenmemiş Fatura', 'ödenmeyen fatura']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/infrastructure/catalog_store.py
+# hypothesis_version: 6.165.2
+
+['.', 'active_version', 'auto', 'business_terms', 'candidate', 'candidates', 'filter', 'filters', 'memory', 'metric', 'metrics', 'promotion', 'promotions', 'sql', 'term', 'verified', 'verified_queries', 'version', 'versions']

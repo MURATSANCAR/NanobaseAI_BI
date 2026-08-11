@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/metric.py
+# hypothesis_version: 6.165.2
+
+['AVG', 'BASE_CURRENCY', 'CALENDAR', 'COUNT', 'COUNT_DISTINCT', 'DOCUMENT_CURRENCY', 'Europe/Istanbul', 'IGNORE', 'MAX', 'MIN', 'MONTH', 'NONE', 'REJECT', 'SUM', 'TRY', 'ZERO', 'aggregation', 'amountField', 'baseCurrency', 'bool', 'calendarType', 'char', 'city', 'code', 'column', 'conversionPolicy', 'currency', 'currencyField', 'currencyPolicy', 'datasourceId', 'date', 'defaultFilters', 'defaultGranularity', 'description', 'email', 'field', 'filters', 'id', 'isFinancial', 'metric', 'name', 'nullPolicy', 'rateDatePolicy', 'rateSource', 'roundingScale', 'sourceExpression', 'status', 'table', 'tenantId', 'text', 'time', 'timeField', 'timestamp', 'timezone', 'uuid', 'version']

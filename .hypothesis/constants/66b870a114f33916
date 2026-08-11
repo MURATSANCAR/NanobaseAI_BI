@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/semantic_version.py
+# hypothesis_version: 6.165.2
+
+[',', '.', ':', 'MAJOR', 'MINOR', 'PATCH', 'assets', 'code', 'datasourceId', 'id', 'isActive', 'manifestSha256', 'publishedAt', 'publishedBy', 'schemaVersion', 'semanticVersion', 'sha256', 'status', 'tenantId', 'type', 'utf-8', 'version']

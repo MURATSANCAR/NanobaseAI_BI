@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/filter_rule.py
+# hypothesis_version: 6.165.2
+
+['code', 'datasourceId', 'description', 'expression', 'field', 'id', 'mandatory', 'operator', 'status', 'tenantId', 'values', 'version']

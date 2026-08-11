@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/join_rule.py
+# hypothesis_version: 6.165.2
+
+['FULL', 'HIGH', 'INNER', 'LEFT', 'LOW', 'MANY_TO_MANY', 'MANY_TO_ONE', 'MEDIUM', 'ONE_TO_MANY', 'ONE_TO_ONE', 'RIGHT', 'cardinality', 'code', 'column', 'conditions', 'datasourceId', 'fromTable', 'id', 'joinRuleCode', 'joinType', 'left', 'name', 'operator', 'relationship', 'right', 'source', 'status', 'table', 'tenantId', 'toTable', 'version']

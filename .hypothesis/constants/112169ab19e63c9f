@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/planning_guidance.py
+# hypothesis_version: 6.165.2
+
+['\n- ', '"', '.', 'DATABASE_UNAVAILABLE', 'QUERY_COST_EXCEEDED', 'QUERY_TIMEOUT', 'WILDCARD_NOT_ALLOWED', '_details', '_detay', '_hareket', '_hareketleri', '_items', '_kalem', '_kalemleri', '_lines', 'fatura', 'faturalar', 'invoice', 'journal', 'order', 'po', 'siparis', 'yevmiye_fis']

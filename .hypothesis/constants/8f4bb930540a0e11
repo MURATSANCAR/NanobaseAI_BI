@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/retrieval/semantic.py
+# hypothesis_version: 6.165.2
+
+[300, 'MANDATORY', 'businessTerms', 'code', 'error', 'filterRules', 'hint_extra', 'mandatory', 'metrics', 'ok', 'optional', 'resolvedMetric', 'retrievalHits', 'semanticVersion', 'total_revenue']

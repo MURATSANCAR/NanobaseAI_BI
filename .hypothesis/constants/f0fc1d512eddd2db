@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/promotion.py
+# hypothesis_version: 6.165.2
+
+['ADMIN', 'APPROVE', 'AWAITING', 'BASELINE_COMPARE', 'BUSINESS_REVIEWER', 'CANDIDATE', 'DEPENDENCY_ANALYSIS', 'FAILED', 'GATEWAY_VALIDATION', 'PUBLISHED', 'READY_TO_PUBLISH', 'REJECT', 'REJECTED', 'SEMANTIC_CONSISTENCY', 'SEMANTIC_PUBLISHER', 'TECHNICAL_REVIEWER', 'TECHNICAL_VALIDATION', 'TEST_EXECUTION', 'assetId', 'assetType', 'comment', 'createdBy', 'datasourceId', 'decision', 'id', 'phase', 'requiresDualApproval', 'reviewerUserId', 'reviews', 'role', 'status', 'tenantId']

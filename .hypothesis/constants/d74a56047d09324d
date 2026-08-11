@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/normalize.py
+# hypothesis_version: 6.165.2
+
+['NFKD', '[\\s\\-]+', '[^\\w\\s-]', '_', 'c', 'g', 'i', 'o', 's', 'u', 'Ç', 'Ö', 'Ü', 'ç', 'ö', 'ü', 'Ğ', 'ğ', 'İ', 'ı', 'Ş', 'ş']

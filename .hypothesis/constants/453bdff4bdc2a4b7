@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/dependency.py
+# hypothesis_version: 6.165.2
+
+['; ', 'BUSINESS_TERM', 'COLUMN', 'CURRENCY_POLICY', 'DIMENSION', 'FILTER', 'JOIN', 'METRIC', 'TABLE', 'conditions', 'fromTable', 'joinType', 'toTable']

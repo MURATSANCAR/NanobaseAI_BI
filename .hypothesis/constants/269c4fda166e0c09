@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/verified_query.py
+# hypothesis_version: 6.165.2
+
+[0.1, 0.15, 0.2, 0.25, 1.0, 'AWEL_HIGH_CONFIDENCE', 'BENCHMARK', 'BUSINESS_ANALYST', 'DATA_ENGINEER', 'REPEATED_SUCCESS', 'SHADOW', 'USER_FEEDBACK', 'candidateScore', 'compiledSql', 'datasourceId', 'dialect', 'dimensions', 'executionId', 'filters', 'id', 'logicalPlan', 'metric', 'normalizedIntent', 'period', 'question', 'schemaVersion', 'semanticVersion', 'source', 'sqlFingerprint', 'status', 'tenantId', 'utf-8', 'verifiedQuestionId', 'version']

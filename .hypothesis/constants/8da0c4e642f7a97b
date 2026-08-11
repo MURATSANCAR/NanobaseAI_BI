@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/infrastructure/schema_impact_analyzer.py
+# hypothesis_version: 6.165.2
+
+['COLUMN_ADDED', 'COLUMN_REMOVED', 'COLUMN_RENAMED', 'COMMENT_CHANGED', 'CRITICAL', 'FK_CHANGED', 'HIGH', 'LOW', 'MEDIUM', 'METRIC', 'NONE', 'NULLABILITY_CHANGED', 'TABLE_ADDED', 'TABLE_REMOVED', 'TYPE_CHANGED', 'VIEW_CHANGED', 'columns', 'comment', 'detail', 'diffs', 'error', 'impact', 'kind', 'locked', 'nullable', 'ref', 'staleAssets', 'type']

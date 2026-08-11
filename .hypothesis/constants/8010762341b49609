@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/domain/errors.py
+# hypothesis_version: 6.165.2
+
+['FORBIDDEN', 'SEMANTIC_CONFLICT', 'VALIDATION_FAILED']
