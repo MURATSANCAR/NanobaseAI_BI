@@ -7,8 +7,10 @@ when a user asks again (exact or highly similar wording), chat skips NL→SQL LL
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import threading
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -144,6 +146,19 @@ _MEM: dict[tuple[str, str, str], dict[str, Any]] = {}  # (tenant, ds, qhash) →
 _MEM_BY_DS: dict[tuple[str, str], list[dict[str, Any]]] = {}
 _SCHEMA_READY = False
 
+# BUG (fixed): _MEM/_MEM_BY_DS used to be write-through-only — populated by
+# remember()/_bump_hit() and additively hydrated once per (tenant, datasource)
+# per process lifetime. A row corrected or deleted directly in Postgres (e.g.
+# an operator fixing a bad learned answer) was invisible to any already-running
+# worker: it kept serving the stale in-memory copy to every user, across both
+# uvicorn workers, until someone thought to restart the service. Exact-match
+# lookups now always re-verify against the DB (a single indexed read — cheap
+# next to the multi-minute LLM path this cache exists to skip); the fuzzy
+# "similar" bucket is periodically re-synced (evicting rows Postgres no
+# longer has) instead of being trusted forever.
+_DS_HYDRATED_AT: dict[tuple[str, str], float] = {}
+HYDRATE_TTL_SEC = float(os.environ.get("BI_LEARNED_CACHE_TTL_SEC", "60"))
+
 
 def _periods_compatible(a: str, b: str) -> bool:
     pa, pb = _period_key(a), _period_key(b)
@@ -235,7 +250,45 @@ def _mem_put(row: dict[str, Any]) -> None:
         del bucket[800:]  # cap per datasource in memory
 
 
+def _mem_evict(tenant_id: str, datasource_id: str, question_hash: str) -> None:
+    with _LOCK:
+        _MEM.pop((tenant_id, datasource_id, question_hash), None)
+        bucket = _MEM_BY_DS.get((tenant_id, datasource_id))
+        if bucket:
+            bucket[:] = [r for r in bucket if r.get("question_hash") != question_hash]
+
+
+def _fetch_exact(
+    engine: Engine, tenant_id: str, datasource_id: str, question_hash: str
+) -> Optional[dict[str, Any]]:
+    """Single indexed read (ux_bi_learned_qhash) — the source of truth for
+    exact-match lookups; deliberately not trusted from memory alone."""
+    from sqlalchemy import text
+
+    ensure_schema(engine)
+    with engine.connect() as conn:
+        row = (
+            conn.execute(
+                text(
+                    """
+                    SELECT id, tenant_id, datasource_id, question, normalized_question,
+                           question_hash, sql_text, sql_source, hit_count, success_count
+                    FROM bi_learned_queries
+                    WHERE tenant_id = :t AND datasource_id = :ds AND question_hash = :qh
+                    """
+                ),
+                {"t": tenant_id, "ds": datasource_id, "qh": question_hash},
+            )
+            .mappings()
+            .first()
+        )
+    return dict(row) if row else None
+
+
 def _hydrate_ds(engine: Engine, tenant_id: str, datasource_id: str, *, limit: int = 500) -> None:
+    """(Re)sync the in-process fuzzy-match bucket for (tenant, datasource) from
+    Postgres, evicting entries Postgres no longer has — a plain additive
+    hydrate could never notice rows deleted or changed outside the app."""
     from sqlalchemy import text
 
     ensure_schema(engine)
@@ -253,8 +306,21 @@ def _hydrate_ds(engine: Engine, tenant_id: str, datasource_id: str, *, limit: in
             ),
             {"t": tenant_id, "ds": datasource_id, "lim": limit},
         ).mappings()
-        for r in rows:
-            _mem_put(dict(r))
+        fresh = [dict(r) for r in rows]
+
+    fresh_hashes = {r["question_hash"] for r in fresh}
+    ds_key = (tenant_id, datasource_id)
+    with _LOCK:
+        stale = _MEM_BY_DS.get(ds_key) or []
+        for r in stale:
+            qh = r.get("question_hash")
+            if qh and qh not in fresh_hashes:
+                _MEM.pop((tenant_id, datasource_id, qh), None)
+        _MEM_BY_DS[ds_key] = []
+    for r in fresh:
+        _mem_put(r)
+    with _LOCK:
+        _DS_HYDRATED_AT[ds_key] = time.monotonic()
 
 
 def remember(
@@ -342,26 +408,34 @@ def lookup(
     question: str,
     similar_threshold: float = 0.55,
 ) -> Optional[LearnedHit]:
-    """Exact hash first, then high-overlap similar question with compatible periods."""
+    """Exact hash first, then high-overlap similar question with compatible periods.
+
+    Exact-match always re-verifies against Postgres (see _fetch_exact) instead
+    of trusting the in-process cache indefinitely — a single indexed lookup is
+    negligible next to the multi-minute LLM path this cache exists to skip,
+    and it is what makes externally-corrected/deleted rows actually take
+    effect without a service restart.
+    """
     q = (question or "").strip()
     if not q:
         return None
     norm = normalize_question(q)
     qh = question_hash(q)
-    key = (tenant_id, datasource_id, qh)
+    ds_key = (tenant_id, datasource_id)
 
-    with _LOCK:
-        row = _MEM.get(key)
-        bucket = list(_MEM_BY_DS.get((tenant_id, datasource_id)) or [])
-
-    if row is None and engine is not None:
+    row: Optional[dict[str, Any]] = None
+    if engine is not None:
         try:
-            _hydrate_ds(engine, tenant_id, datasource_id)
-            with _LOCK:
-                row = _MEM.get(key)
-                bucket = list(_MEM_BY_DS.get((tenant_id, datasource_id)) or [])
+            row = _fetch_exact(engine, tenant_id, datasource_id, qh)
         except Exception:
             row = None
+        if row is not None:
+            _mem_put(row)
+        else:
+            _mem_evict(tenant_id, datasource_id, qh)
+    else:
+        with _LOCK:
+            row = _MEM.get((tenant_id, datasource_id, qh))
 
     if row and row.get("sql_text"):
         _bump_hit(engine, row)
@@ -374,7 +448,20 @@ def lookup(
             hit_count=int(row.get("hit_count") or 1),
         )
 
-    # Similar: require period compatibility + high token overlap
+    # Similar: require period compatibility + high token overlap. The fuzzy
+    # bucket is periodically re-synced from Postgres (TTL) rather than hydrated
+    # once and trusted forever — see _hydrate_ds's eviction of stale rows.
+    if engine is not None:
+        last = _DS_HYDRATED_AT.get(ds_key, 0.0)
+        if (time.monotonic() - last) > HYDRATE_TTL_SEC:
+            try:
+                _hydrate_ds(engine, tenant_id, datasource_id)
+            except Exception:
+                pass
+
+    with _LOCK:
+        bucket = list(_MEM_BY_DS.get(ds_key) or [])
+
     best: Optional[dict[str, Any]] = None
     best_score = 0.0
     for cand in bucket:
