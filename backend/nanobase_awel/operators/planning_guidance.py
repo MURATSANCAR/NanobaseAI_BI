@@ -27,19 +27,28 @@ _LINE_SUFFIXES = (
 _INVOICE_HEADER_HINTS = ("fatura", "faturalar", "invoice")
 _ORDER_HEADER_HINTS = ("siparis", "order", "po", "yevmiye_fis", "journal")
 _HEADER_HINTS = _INVOICE_HEADER_HINTS + _ORDER_HEADER_HINTS
+# No trailing \b on the Turkish stems below (ciro, toplam, fatura, ürün,
+# kategori, ...): agglutinative suffixes sit directly against the root with
+# no character-class boundary in between ("toplamı", "faturaların",
+# "kategorisine"), so a closing \b would silently fail to match almost every
+# real inflected form — only the bare, unsuffixed form would ever match. A
+# leading \b still blocks matching mid-word. ASCII loanwords (revenue, sum,
+# invoice, ...) keep the full \b since they're not Turkish-suffixed in
+# practice and a closing boundary avoids matching them as substrings of an
+# unrelated longer word.
 _TOTAL_INTENT = re.compile(
     r"(?i)\b(ciro|toplam|genel[_\s]?toplam|yıllık|yillik|yoy|karşılaştır|karsilastir|"
-    r"revenue|sum|aggregate|gider|tahsilat|bütçe|butce|kullanım|kullanim)\b"
+    r"gider|tahsilat|bütçe|butce|kullanım|kullanim)|\b(revenue|sum|aggregate)\b"
 )
 # Explicit billing/AR intent — only then should invoice header amounts answer
 # a "ciro"/"toplam" question; otherwise "ciro" means realized sales revenue.
 _INVOICE_INTENT = re.compile(
-    r"(?i)\b(fatura|faturaland[ıi]|invoice|tahsilat|alacak|ödenmemiş|odenmemis|"
-    r"vadesi|vade\s*tarih|overdue|kalan\s*tutar|remaining)\b"
+    r"(?i)\b(fatura|tahsilat|alacak|ödenmemiş|odenmemis|vadesi|vade\s*tarih|kalan\s*tutar)"
+    r"|\b(invoice|overdue|remaining)\b"
 )
 _LINE_INTENT = re.compile(
     r"(?i)\b(ürün|urun|sku|kategori|marka|marj|margin|birim[_\s]?fiyat|kalem|"
-    r"fiyat\s*list|iskonto|stok|depo|line\s*item|product)\b"
+    r"fiyat\s*list|iskonto|stok|depo)|\b(line\s*item|product)\b"
 )
 _HAS_DATE = re.compile(
     r"(?i)\b(20\d{2}|son\s+\d+|last\s+\d+|ay|yıl|yil|quarter|q[1-4]|between|"
@@ -156,9 +165,34 @@ def build_planning_guidance(
         )
 
     if line_tables:
+        # This used to unconditionally say "always include a date/time
+        # predicate" regardless of has_date — directly contradicting the
+        # no-silent-default-window bullet above whenever the question stated
+        # no period, and a likely source of the inconsistency chased all
+        # session as "LLM variance". Gate it on has_date so the two
+        # instructions never disagree.
+        if has_date:
+            bullets.append(
+                "When querying line/fact tables, encode the date/time predicate already stated "
+                "in the question via the header date column (join on it). Prefer LIMIT for ranked lists."
+            )
+        else:
+            bullets.append(
+                "When querying line/fact tables, prefer LIMIT for ranked lists. Do not add a date "
+                "predicate the question did not ask for."
+            )
+
+    if wants_totals and order_headers and not wants_invoice:
+        # "ciro"/"satılan" means realized sales — pending orders aren't
+        # fulfilled yet and cancelled/returned ones were reversed, so neither
+        # is revenue. The model reaches this on its own sometimes (seen live:
+        # it emits WHERE status ILIKE 'completed' unprompted with that exact
+        # reasoning) but not reliably — make it a rule, not a lucky guess.
         bullets.append(
-            "When querying line/fact tables, always include a date/time predicate "
-            "(WHERE/JOIN on header date). Prefer LIMIT for ranked lists."
+            f"Sales/revenue aggregates over order tables ({', '.join(order_headers[:3])}) must "
+            "filter to completed orders only (status = 'completed' or the equivalent value in "
+            "the retrieved schema) unless the question explicitly asks about a different or "
+            "every status — pending, cancelled and returned orders are not realized revenue."
         )
 
     bullets.append(

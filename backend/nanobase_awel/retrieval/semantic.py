@@ -3,7 +3,33 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
+
+_UNPAID_INVOICE_INTENT = re.compile(
+    # No trailing \b on the Turkish stems: agglutinative suffixes ("faturaların",
+    # "faturası") sit directly against the root with no boundary, so \b there
+    # would silently stop matching almost every real inflected form. A leading
+    # \b still blocks matching mid-word. Faithful to the original plain
+    # substring check this replaced (`x in q for x in (...)`), just de-duped.
+    r"(?i)\b(ödenmemiş|odenmemis|açık\s*fatura|acik\s*fatura|kalan\s*fatura)|\bunpaid\b"
+)
+_REVENUE_INTENT = re.compile(
+    r"(?i)\b(ciro|satış\s*geliri|satis\s*geliri|toplam\s*satış|toplam\s*satis)|\brevenue\b"
+)
+# _DIMENSION_OR_RANK_HINT below has the same no-trailing-\b rationale: these
+# stems are near-always suffixed in real phrasing ("segmentlere", "kategorisine",
+# "müşteriye") — a closing \b would silently fail to match almost every one.
+# MetricCompiler only compiles a single scalar aggregate (no GROUP BY, no
+# ranking) — resolving total_revenue for a dimensional/ranked question would
+# silently return the wrong-shaped answer disguised as "verified truth".
+# Only bare asks ("Toplam ciro nedir?") may resolve; anything mentioning a
+# breakdown or ranking must fall through to the LLM plan path.
+_DIMENSION_OR_RANK_HINT = re.compile(
+    r"(?i)\b(göre|gore|bazında|bazinda|kırılım|kirilim|segment|kategori|"
+    r"müşteri|musteri|ürün|urun|şehir|sehir)|\b(ilk\s*\d+|en\s*yüksek|en\s*yuksek|"
+    r"en\s*çok|en\s*cok|top\s*\d+)\b"
+)
 
 
 def format_semantic_context_block(payload: dict[str, Any]) -> str:
@@ -58,12 +84,16 @@ async def retrieve_semantic_context(
             for t in store.list_published_terms(tenant_id, datasource_id)
             if t.status == AssetStatus.PUBLISHED
         ]
-        # Intent hint: unpaid invoice keywords
-        q = (question or "").lower()
+        # Intent hint: keyword-matched, deliberately conservative — a wrong
+        # resolution silently serves the wrong metric as "verified truth".
+        q = question or ""
         resolved_metric = None
-        if any(x in q for x in ("ödenmemiş", "odenmemis", "açık fatura", "unpaid", "kalan fatura")):
+        if _UNPAID_INVOICE_INTENT.search(q):
             if any(m.get("code") == "unpaid_invoice_amount" for m in metrics):
                 resolved_metric = "unpaid_invoice_amount"
+        elif _REVENUE_INTENT.search(q) and not _DIMENSION_OR_RANK_HINT.search(q):
+            if any(m.get("code") == "total_revenue" for m in metrics):
+                resolved_metric = "total_revenue"
         payload = {
             "ok": True,
             "semanticVersion": active.version if active else None,
