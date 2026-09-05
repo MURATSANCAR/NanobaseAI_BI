@@ -1,0 +1,7 @@
+{{ context_blocks }}
+
+Question: {{ question }}
+
+Return ONLY JSON with keys:
+status, sql, dialect, tables, columns, functions, assumptions, warnings, ambiguities, clarificationQuestion, confidence.
+dialect must be mssql. sql must be T-SQL (TOP N, never LIMIT). confidence is 0..1.
