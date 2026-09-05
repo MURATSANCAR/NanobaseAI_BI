@@ -56,6 +56,10 @@ def validate_and_rewrite(
 ) -> GuardResult:
     """Allow only single SELECT/WITH; enforce table allowlist + LIMIT."""
     dialect = sqlglot_dialect(dialect)
+    # "*" (or a set containing "*") = every table in the datasource's allowed schemas;
+    # schema confinement is enforced by validate_query's policy layer.
+    if allowed_tables == "*" or (isinstance(allowed_tables, (set, list, tuple)) and "*" in allowed_tables):
+        allowed_tables = None
     raw = (sql or "").strip().rstrip(";")
     if not raw:
         return GuardResult(False, "", "empty SQL")

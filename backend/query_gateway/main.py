@@ -328,6 +328,27 @@ def create_app() -> FastAPI:
                 cols, rows, truncated = _execute_oracle(
                     ds, exec_sql if body.parameters else guard.sql, timeout_s=timeout_s, explain=body.explain
                 )
+            elif driver in ("mssql", "sqlserver"):
+                from query_gateway.infrastructure.database.mssql_executor import (
+                    execute_mssql_ro,
+                    showplan_text,
+                )
+
+                if body.explain:
+                    plan_rows = showplan_text(ds, guard.sql, settings=settings, timeout_ms=int(timeout_s * 1000))
+                    cols, rows, truncated = ["QUERY PLAN"], plan_rows, False
+                else:
+                    cols, dict_rows, truncated, _ms = execute_mssql_ro(
+                        ds,
+                        guard.sql,
+                        tenant_id=None,
+                        timeout_ms=int(timeout_s * 1000),
+                        max_rows=settings.max_rows,
+                        size_profile=str(ds.get("size_profile") or "large"),
+                        run_explain=True,
+                        settings=settings,
+                    )
+                    rows = _serialize_rows(dict_rows)
             elif driver == "hana":
                 cols, rows, truncated = sap_mod.execute_hana(
                     ds,

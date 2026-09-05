@@ -233,3 +233,31 @@ def execute_mssql_ro(
         except Exception:
             discard = True
         _release(ds_id, conn, discard=discard)
+
+
+def showplan_text(ds: dict[str, Any], sql: str, *, settings: Settings | None = None, timeout_ms: int = 15_000) -> list[dict[str, Any]]:
+    """Legacy explain=True shape: one row per plan line under the key "QUERY PLAN"."""
+    settings = settings or get_settings()
+    ds_id, conn = _acquire(ds, settings=settings, timeout_ms=timeout_ms)
+    discard = False
+    try:
+        cur = conn.cursor()
+        cur.execute("SET SHOWPLAN_ALL ON")
+        cur.execute(sql)
+        rows = list(cur.fetchall() or [])
+        cur.execute("SET SHOWPLAN_ALL OFF")
+        out = []
+        for r in rows:
+            txt = r.get("StmtText") if isinstance(r, dict) else (r[0] if r else "")
+            est = r.get("EstimateRows") if isinstance(r, dict) else None
+            out.append({"QUERY PLAN": f"{txt}" + (f"  (rows={int(est)})" if est else "")})
+        return out
+    except Exception as e:  # noqa: BLE001
+        discard = True
+        raise _map_error(e) from e
+    finally:
+        try:
+            conn.rollback()
+        except Exception:
+            discard = True
+        _release(ds_id, conn, discard=discard)
