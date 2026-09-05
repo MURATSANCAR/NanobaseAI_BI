@@ -25,6 +25,16 @@ FORBIDDEN_TYPES = (
 )
 
 
+def sqlglot_dialect(dialect: str | None) -> str:
+    """Gateway dialect name → sqlglot dialect name (SQL Server is "tsql" in sqlglot)."""
+    d = (dialect or "postgres").lower()
+    if d in ("mssql", "sqlserver", "sql_server", "mssqlserver"):
+        return "tsql"
+    if d in ("postgresql",):
+        return "postgres"
+    return d
+
+
 @dataclass
 class GuardResult:
     ok: bool
@@ -45,6 +55,7 @@ def validate_and_rewrite(
     max_limit: int = 500,
 ) -> GuardResult:
     """Allow only single SELECT/WITH; enforce table allowlist + LIMIT."""
+    dialect = sqlglot_dialect(dialect)
     raw = (sql or "").strip().rstrip(";")
     if not raw:
         return GuardResult(False, "", "empty SQL")

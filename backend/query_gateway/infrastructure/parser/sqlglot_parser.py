@@ -56,6 +56,9 @@ def _norm(name: str) -> str:
 
 
 def parse_sql(sql: str, *, dialect: str = "postgres") -> ParsedQuery:
+    from query_gateway.guardrails import sqlglot_dialect
+
+    dialect = sqlglot_dialect(dialect)
     raw = (sql or "").strip().rstrip(";")
     if not raw:
         raise GatewayError(SQL_PARSE_FAILED, "Boş SQL.", status=400)
@@ -225,6 +228,9 @@ def parse_sql(sql: str, *, dialect: str = "postgres") -> ParsedQuery:
 
 
 def apply_limit(tree: exp.Expression, *, max_limit: int, dialect: str) -> str:
+    from query_gateway.guardrails import sqlglot_dialect
+
+    dialect = sqlglot_dialect(dialect)
     """Rewrite AST to enforce LIMIT max_limit (caller may pass maxRows+1)."""
     rewritten: exp.Expression = tree
     if isinstance(rewritten, exp.Union):
