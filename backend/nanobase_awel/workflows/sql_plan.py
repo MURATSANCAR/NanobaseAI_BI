@@ -36,6 +36,11 @@ _DIALECT_STMT_RULE = {
     "oracle": "ONE Oracle SELECT statement only (FETCH FIRST; never LIMIT)",
     "hana": "ONE SAP HANA SELECT statement only",
     "odata": "ONE logical OData query plan only",
+    "mssql": (
+        "ONE Microsoft SQL Server (T-SQL) SELECT statement only: cap rows with TOP N (never LIMIT); "
+        "use ISNULL/COALESCE, GETDATE(), DATEADD/DATEDIFF/DATEPART/YEAR/MONTH, CONVERT/CAST; "
+        "always schema-qualify tables (dbo.TABLE); use [brackets] only for identifiers with special characters"
+    ),
 }
 
 # Enum/status/segment columns are frequently filtered with a differently-cased
@@ -59,6 +64,10 @@ DIALECT_CASE_INSENSITIVE_RULE = {
         "For equality filters on categorical/status/enum-like text properties, use a "
         "case-insensitive comparison (tolower(prop) eq tolower('value'))."
     ),
+    "mssql": (
+        "Text comparisons follow the database collation (usually case-insensitive); when unsure, "
+        "wrap both sides in UPPER() (UPPER(col) = UPPER('value')) — never assume the stored casing."
+    ),
 }
 
 
@@ -68,6 +77,8 @@ def normalize_dialect(dialect: str | None) -> str:
         return "odata"
     if d in ("hana", "sap_hana"):
         return "hana"
+    if d in ("mssql", "tsql", "sqlserver", "sql_server", "mssqlserver"):
+        return "mssql"
     return d if d in _DIALECT_STMT_RULE else "postgres"
 
 
@@ -270,6 +281,10 @@ async def run_sql_plan(
         plan.dialect = "hana"
         plan.workflow = "nanobase-hana-sql-plan-v1"
         plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-hana"
+    elif dialect_l in ("mssql", "tsql", "sqlserver"):
+        plan.dialect = "mssql"
+        plan.workflow = "nanobase-mssql-sql-plan-v1"
+        plan.promptVersion = req.generation.promptVersion or "sql-plan-v1-mssql"
     else:
         plan.workflow = PLAN_WORKFLOW
     plan.retrieval_used = bool(retrieval.get("hits") or hint)

@@ -26,6 +26,8 @@ def _resolve_dialect(ds: dict[str, Any]) -> str:
     dialect = str(ds.get("dialect") or "").lower()
     if driver == "oracle" or dialect == "oracle":
         return "oracle"
+    if driver in ("mssql", "sqlserver", "tsql") or dialect in ("mssql", "tsql", "sqlserver"):
+        return "mssql"
     if driver in ("hana", "sap_hana", "hdb") or dialect in ("hana", "sap_hana"):
         return "hana"
     if driver in ("odata", "cds", "cds_odata") or dialect == "odata":
@@ -129,7 +131,8 @@ def validate_query(
         }
 
     # HANA uses postgres sqlglot dialect for AST; policy is HANA-specific.
-    parse_dialect = "postgres" if dialect == "hana" else dialect
+    # SQL Server parses/writes as sqlglot "tsql" (TOP N instead of LIMIT).
+    parse_dialect = "postgres" if dialect == "hana" else ("tsql" if dialect == "mssql" else dialect)
     bundle = load_policy_bundle(settings, dialect=dialect if dialect != "odata" else "postgres")
     parsed = parse_sql(parse_sql_text, dialect=parse_dialect)
     cfg = dict(ds)
@@ -145,7 +148,7 @@ def validate_query(
         schemas = set(cfg.get("allowed_schemas") or [])
         schemas |= owners
         cfg["allowed_schemas"] = sorted(schemas)
-    if dialect == "hana" and cfg.get("allowed_schemas"):
+    if dialect in ("hana", "mssql") and cfg.get("allowed_schemas"):
         cfg["allowed_schemas"] = [str(s).lower() for s in cfg["allowed_schemas"]]
 
     ds_policy = policy_from_datasource_cfg(datasource_id, cfg, bundle)

@@ -142,6 +142,7 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
         ("neon-ro.datasources.json", "postgres"),
         ("oracle-ro.datasources.json", "oracle"),
         ("sap-ro.datasources.json", "sap"),
+        ("mssql-ro.datasources.json", "mssql"),
     ):
         path = secrets / map_name
         if not path.is_file():
@@ -177,6 +178,37 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
                         "column_policies": cfg.get("column_policies") or {},
                         "size_profile": cfg.get("size_profile") or "medium",
                     }
+            elif loader == "mssql":
+                try:
+                    pw = resolve_password(cfg, settings)
+                except Exception:
+                    continue
+                user = cfg.get("user") or cfg.get("username")
+                if not pw or not user or not cfg.get("host") or not cfg.get("database"):
+                    continue
+                raw_tables = cfg.get("allowed_tables")
+                allowed_mssql: Any
+                if raw_tables in (None, "*"):
+                    allowed_mssql = "*"
+                else:
+                    allowed_mssql = {str(x).lower() for x in raw_tables}
+                schemas_mssql = {str(x).lower() for x in (cfg.get("allowed_schemas") or ["dbo"])}
+                ds[str(sid)] = {
+                    "id": str(sid),
+                    "driver": "mssql",
+                    "dialect": "mssql",
+                    "host": cfg["host"],
+                    "port": int(cfg.get("port") or 1433),
+                    "database": cfg["database"],
+                    "user": user,
+                    "password": pw,
+                    "tds_version": str(cfg.get("tds_version") or "7.4"),
+                    "allowed_tables": allowed_mssql,
+                    "allowed_schemas": schemas_mssql,
+                    "table_patterns": list(cfg.get("table_patterns") or []),
+                    "column_policies": cfg.get("column_policies") or cfg.get("columnPolicies") or {},
+                    "size_profile": cfg.get("size_profile") or cfg.get("sizeProfile") or "large",
+                }
             elif loader == "oracle":
                 try:
                     pw = resolve_password(cfg, settings)

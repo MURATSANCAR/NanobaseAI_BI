@@ -65,6 +65,8 @@ def load_policy_bundle(
         fn_name = "oracle-functions.yaml"
     elif dialect_l in ("hana", "sap_hana"):
         fn_name = "hana-functions.yaml"
+    elif dialect_l in ("mssql", "tsql", "sqlserver"):
+        fn_name = "mssql-functions.yaml"
     else:
         fn_name = "postgres-functions.yaml"
     fn_path = pdir / fn_name
@@ -81,6 +83,8 @@ def load_policy_bundle(
     if dialect_l == "oracle":
         require_qualified = True
     if dialect_l in ("hana", "sap_hana"):
+        require_qualified = True
+    if dialect_l in ("mssql", "tsql", "sqlserver"):
         require_qualified = True
     return PolicyBundle(
         functions=FunctionPolicy(

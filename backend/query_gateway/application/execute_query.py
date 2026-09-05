@@ -10,6 +10,7 @@ from query_gateway.config.settings import Settings, get_settings
 from query_gateway.domain.errors import DATASOURCE_NOT_FOUND, GatewayError
 from query_gateway.infrastructure.audit.logger import get_audit_logger
 from query_gateway.infrastructure.database.datasources import load_datasources
+from query_gateway.infrastructure.database.mssql_executor import execute_mssql_ro
 from query_gateway.infrastructure.database.postgres_executor import execute_postgres_ro
 from query_gateway.infrastructure.oracle.executor import execute_oracle_ro
 from query_gateway.infrastructure.result.guard import guard_result
@@ -64,6 +65,18 @@ def execute_query(
             timeout_ms=timeout,
             max_rows=rows_limit,
             size_profile=str(ds.get("size_profile") or "medium"),
+            run_explain=True,
+            settings=settings,
+            parameters=bind_params or None,
+        )
+    elif driver in ("mssql", "sqlserver"):
+        cols, rows, truncated, exec_ms = execute_mssql_ro(
+            ds,
+            approved["normalizedSql"],
+            tenant_id=tenant_id,
+            timeout_ms=timeout,
+            max_rows=rows_limit,
+            size_profile=str(ds.get("size_profile") or "large"),
             run_explain=True,
             settings=settings,
             parameters=bind_params or None,
@@ -123,7 +136,7 @@ def execute_query(
         column_policies=ds.get("column_policies") or {},
         truncated=truncated,
         settings=settings,
-        preserve_decimal_strings=driver in ("oracle", "hana", "odata"),
+        preserve_decimal_strings=driver in ("oracle", "hana", "odata", "mssql"),
     )
 
     gateway_ms = int((time.time() - t0) * 1000)

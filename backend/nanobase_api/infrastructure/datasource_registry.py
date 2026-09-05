@@ -50,6 +50,7 @@ def registered_ro_datasource_ids() -> set[str]:
         *PG_RO_MAPS,
         "oracle-ro.datasources.json",
         "sap-ro.datasources.json",
+        "mssql-ro.datasources.json",
     ):
         path = SECRETS / map_name
         if not path.is_file():
@@ -196,6 +197,37 @@ def merge_gateway_ro_sources(by_id: dict[str, dict[str, Any]]) -> set[str]:
         except (OSError, json.JSONDecodeError, TypeError, ValueError):
             pass
 
+    mssql_map = SECRETS / "mssql-ro.datasources.json"
+    if mssql_map.is_file():
+        try:
+            raw = json.loads(mssql_map.read_text(encoding="utf-8"))
+            for sid, cfg in (raw.get("sources") or raw).items():
+                if not isinstance(cfg, dict) or not cfg.get("host"):
+                    continue
+                sid_s = str(sid)
+                managed.add(sid_s)
+                entry = _mark_managed(
+                    {
+                        "id": sid_s,
+                        "label": cfg.get("label") or sid_s,
+                        "driver": "mssql",
+                        "dialect": "mssql",
+                        "host": cfg.get("host") or "",
+                        "port": int(cfg.get("port") or 1433),
+                        "database": cfg.get("database") or "",
+                        "username": cfg.get("user") or cfg.get("username") or "",
+                        "ssl": bool(cfg.get("encrypt", False)),
+                        "secret_ref": cfg.get("password_file") or f"file:{SECRETS}/mssql-{sid_s}.password",
+                        "tenant_id": "default",
+                        "project_id": "default",
+                        "password_masked": "********",
+                        "deployment": "on_prem",
+                    }
+                )
+                by_id[sid_s] = {**by_id.get(sid_s, {}), **entry}
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            pass
+
     sap_map = SECRETS / "sap-ro.datasources.json"
     if sap_map.is_file():
         try:
@@ -284,3 +316,17 @@ def resolve_pg_connect_cfg(datasource_id: str) -> dict[str, Any] | None:
                 "sslmode": "disable",
             }
     return None
+
+
+def resolve_mssql_connect_cfg(datasource_id: str) -> dict[str, Any] | None:
+    """SQL Server connect cfg (schema scan) from mssql-ro.datasources.json."""
+    sid = str(datasource_id or "").strip()
+    path = SECRETS / "mssql-ro.datasources.json"
+    if not sid or not path.is_file():
+        return None
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    cfg = (raw.get("sources") or raw).get(sid)
+    return cfg if isinstance(cfg, dict) and cfg.get("host") else None

@@ -165,6 +165,14 @@ def _resolve_dialect_uncached(datasource_id: str) -> str:
                 return "oracle"
         except Exception:
             pass
+    mssql = SECRETS / "mssql-ro.datasources.json"
+    if mssql.is_file():
+        try:
+            raw = json.loads(mssql.read_text(encoding="utf-8"))
+            if datasource_id in (raw.get("sources") or raw):
+                return "mssql"
+        except Exception:
+            pass
     sap = SECRETS / "sap-ro.datasources.json"
     if sap.is_file():
         try:
