@@ -51,6 +51,29 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO bi_ro;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO bi_ro;
 ```
 
+### Microsoft SQL Server (örn. Logo ERP)
+
+```bash
+./add-datasource.sh --type mssql --id logo --label "Logo ERP" \
+  --host 192.168.0.155 --port 1433 --database LOGO_DB --user 'DOMAIN\\bi_ro' \
+  --schemas dbo --patterns "LG_411_01_%,LG_411_[A-Z]%,L_CAPIFIRM,L_CAPIPERIOD"
+```
+
+`--patterns` taranacak tablo desenleridir (T-SQL LIKE): ERP veritabanlarında binlerce firma/dönem
+tablosu bulunur; yalnız kullanılan firma/dönem indekslenmelidir. Gateway T-SQL üretir (TOP N),
+SHOWPLAN ile filtresiz büyük taramaları engeller, yalnız SELECT çalıştırır ve her işlemi geri alır.
+İsteğe bağlı iş anlamı ipuçları: `secrets/mssql-schema-hints.json` (örnek: `configs/mssql-schema-hints.example.json`).
+
+Sadece okuma yetkili SQL Server hesabı (sysadmin/db_owner hesabı **kullanmayın**):
+
+```sql
+USE [master]; CREATE LOGIN [nanobase_ro] WITH PASSWORD = '<güçlü-şifre>', CHECK_POLICY = ON;
+USE [LOGO_DB]; CREATE USER [nanobase_ro] FOR LOGIN [nanobase_ro];
+ALTER ROLE db_datareader ADD MEMBER [nanobase_ro];
+GRANT SHOWPLAN TO [nanobase_ro];        -- maliyet koruması için plan görüntüleme
+GRANT VIEW DEFINITION TO [nanobase_ro]; -- şema taraması için
+```
+
 Oracle / SAP kaynakları için `secrets/oracle-ro.datasources.json` ve
 `secrets/sap-ro.datasources.json` biçimleri `configs/*.datasources.json.example` dosyalarındadır.
 
