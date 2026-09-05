@@ -53,6 +53,16 @@ _NON_ALIAS_LEFT = _SCHEMA_LIKE | {
 }
 
 
+
+def _parse_any_dialect(sql_text: str):
+    """Parse as PostgreSQL first, then T-SQL (TOP N etc.) — plans may target SQL Server."""
+    import sqlglot as _sg
+
+    try:
+        return _sg.parse_one(sql_text, read="postgres")
+    except Exception:
+        return _sg.parse_one(sql_text, read="tsql")
+
 def _norm_table(name: str) -> str:
     t = (name or "").strip().strip('"').strip("`").strip("[").strip("]").lower()
     if "." in t:
@@ -109,7 +119,7 @@ def _table_refs_sqlglot(sql: str) -> list[str] | None:
     if not text:
         return []
     try:
-        tree = sqlglot.parse_one(text, read="postgres")
+        tree = _parse_any_dialect(text)
     except Exception:
         return None
     cte_names: set[str] = set()
@@ -405,7 +415,7 @@ def rewrite_order_by_select_aliases(sql: str) -> tuple[str, bool]:
     if not text or not re.search(r"(?is)\border\s+by\b", text):
         return text, False
     try:
-        tree = sqlglot.parse_one(text, read="postgres")
+        tree = _parse_any_dialect(text)
     except Exception:
         return text, False
 

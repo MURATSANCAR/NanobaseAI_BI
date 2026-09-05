@@ -15,6 +15,16 @@ except ImportError:  # pragma: no cover
     sqlglot = None
 
 
+
+def _parse_any_dialect(sql_text: str):
+    """Parse as PostgreSQL first, then T-SQL (TOP N etc.) — plans may target SQL Server."""
+    import sqlglot as _sg
+
+    try:
+        return _sg.parse_one(sql_text, read="postgres")
+    except Exception:
+        return _sg.parse_one(sql_text, read="tsql")
+
 def extract_json_object(text: str) -> dict[str, Any]:
     text = (text or "").strip()
     if not text:
@@ -103,7 +113,7 @@ def _sql_parses(sql: str) -> bool:
     if sqlglot is None:  # pragma: no cover
         return True
     try:
-        sqlglot.parse_one(sql, read="postgres")
+        _parse_any_dialect(sql)
         return True
     except Exception:
         return False

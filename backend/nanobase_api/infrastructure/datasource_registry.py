@@ -330,3 +330,34 @@ def resolve_mssql_connect_cfg(datasource_id: str) -> dict[str, Any] | None:
         return None
     cfg = (raw.get("sources") or raw).get(sid)
     return cfg if isinstance(cfg, dict) and cfg.get("host") else None
+
+
+def dialect_for_datasource(datasource_id: str) -> str:
+    """Dialect from the secrets maps (mssql / oracle / sap) — postgres otherwise."""
+    sid = str(datasource_id or "").strip()
+    if not sid:
+        return "postgres"
+    if resolve_mssql_connect_cfg(sid):
+        return "mssql"
+    for map_name, dialect in (("oracle-ro.datasources.json", "oracle"),):
+        path = SECRETS / map_name
+        if path.is_file():
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                if sid in (raw.get("sources") or raw):
+                    return dialect
+            except (OSError, json.JSONDecodeError):
+                pass
+    sap = SECRETS / "sap-ro.datasources.json"
+    if sap.is_file():
+        try:
+            raw = json.loads(sap.read_text(encoding="utf-8"))
+            cfg = (raw.get("sources") or raw).get(sid) or {}
+            drv = str(cfg.get("driver") or "").lower()
+            if "odata" in drv:
+                return "odata"
+            if "hana" in drv or drv == "hdb":
+                return "hana"
+        except (OSError, json.JSONDecodeError):
+            pass
+    return "postgres"
