@@ -266,4 +266,5 @@ class WorkerSettings:
     ]
     redis_settings = RedisSettings.from_dsn(os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0"))
     max_jobs = 2
-    job_timeout = 900
+    # Schema scans of ERP databases can exceed 15 min (embedding thousands of column docs).
+    job_timeout = int(os.environ.get("ARQ_JOB_TIMEOUT_S", "3600"))

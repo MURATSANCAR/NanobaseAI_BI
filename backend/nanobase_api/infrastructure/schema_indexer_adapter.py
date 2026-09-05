@@ -53,7 +53,8 @@ class SchemaIndexerAdapter:
             env=env,
             capture_output=True,
             text=True,
-            timeout=600,
+            # ERP schemas (thousands of columns) embed for a long time on a CPU embedding service.
+            timeout=int(os.environ.get("SCHEMA_INDEXER_TIMEOUT_S", "3600")),
         )
         if proc.returncode != 0:
             raise RuntimeError((proc.stderr or proc.stdout or "indexer failed")[:800])
