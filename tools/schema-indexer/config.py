@@ -66,6 +66,43 @@ class IndexerConfig:
     def resolved_collection(self) -> str:
         return self.collection or f"bi_schema_{self.datasource_id}"
 
+    # --- driver detection (postgres default; mssql via secrets map) ---------
+
+    def _mssql_map_entry(self) -> dict[str, Any] | None:
+        path = self.secrets_root / "mssql-ro.datasources.json"
+        if not path.is_file():
+            return None
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        cfg = (raw.get("sources") or raw).get(self.datasource_id)
+        return cfg if isinstance(cfg, dict) and cfg.get("host") else None
+
+    @property
+    def driver(self) -> str:
+        return "mssql" if self._mssql_map_entry() else "postgres"
+
+    def mssql_connect_cfg(self) -> dict[str, Any]:
+        cfg = self._mssql_map_entry()
+        if not cfg:
+            raise SystemExit(f"datasource not found in mssql-ro map: {self.datasource_id}")
+        pw = cfg.get("password") or ""
+        if not pw and cfg.get("password_file"):
+            pw = Path(cfg["password_file"]).read_text(encoding="utf-8").strip()
+        if not pw and cfg.get("secret_ref", "").startswith("file:"):
+            pw = Path(cfg["secret_ref"][5:]).read_text(encoding="utf-8").strip()
+        return {
+            "host": cfg["host"],
+            "port": int(cfg.get("port") or 1433),
+            "database": cfg.get("database") or "master",
+            "user": cfg.get("user") or cfg.get("username") or "",
+            "password": pw,
+            "tds_version": cfg.get("tds_version") or "7.4",
+            "table_patterns": list(cfg.get("table_patterns") or []),
+            "allowed_schemas": list(cfg.get("allowed_schemas") or ["dbo"]),
+        }
+
     def pg_connect_kwargs(self) -> dict[str, Any]:
         ds = self.datasource_id
         reporting_id = _reporting_datasource_id()

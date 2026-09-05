@@ -64,6 +64,8 @@ async def run_sql_repair(req: SqlRepairRequest) -> SqlRepairResult:
         plan.dialect = "hana"
     elif dialect_l == "oracle":
         plan.dialect = "oracle"
+    elif dialect_l in ("mssql", "tsql", "sqlserver"):
+        plan.dialect = "mssql"
     else:
         plan.dialect = "postgres"
     if plan.status == PlanStatus.PLANNED:

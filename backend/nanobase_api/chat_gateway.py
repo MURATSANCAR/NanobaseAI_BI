@@ -92,6 +92,24 @@ def _schema_hint_for(datasource_id: str) -> str:
             "Only SELECT/WITH. Owner-qualify (NANOBASE_REPORTING.*). "
             "Use FETCH FIRST n ROWS ONLY. No LIMIT, ILIKE, hints, DB links, or PL/SQL."
         )
+    if dialect == "mssql":
+        base = (
+            f"Microsoft SQL Server datasource '{datasource_id}'. Only SELECT/WITH (T-SQL). "
+            "Row caps with TOP N (never LIMIT). Schema-qualify as dbo.TABLE. DATE_ columns are DATETIME: "
+            "filter with half-open ranges (>= 'YYYY-01-01' AND < 'YYYY+1-01-01')."
+        )
+        hints_path = SECRETS / "mssql-schema-hints.json"
+        if hints_path.is_file():
+            try:
+                raw = json.loads(hints_path.read_text(encoding="utf-8"))
+                extra = raw.get(datasource_id) if isinstance(raw, dict) else None
+                if isinstance(extra, str) and extra.strip():
+                    return base + "\n" + extra.strip()
+                if isinstance(extra, list):
+                    return base + "\n" + "\n".join(str(x) for x in extra)
+            except Exception:
+                pass
+        return base
     if _HINTS_CACHE is None:
         _HINTS_CACHE = {}
         hints_path = SECRETS / "neon-schema-hints.json"

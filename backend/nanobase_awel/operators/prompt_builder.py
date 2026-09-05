@@ -42,6 +42,16 @@ def sql_plan_prompts(*, dialect: str = "postgres") -> tuple[str, str]:
             "Return ONLY JSON. dialect must be odata."
         )
         return system, user_tpl
+    if dialect_l in ("mssql", "tsql", "sqlserver"):
+        system = _read("sql-plan/v1-mssql/system.jinja2") or (
+            "You are nanobase-mssql-sql-plan-v1. Output valid JSON only. Single T-SQL SELECT; "
+            "TOP N for row caps, never LIMIT; schema-qualify tables (dbo.TABLE)."
+        )
+        user_tpl = _read("sql-plan/v1-mssql/user.jinja2") or (
+            "{{ context_blocks }}\n\nQuestion: {{ question }}\n\n"
+            "Return ONLY JSON. dialect must be mssql."
+        )
+        return system, user_tpl
     if dialect_l in ("hana", "sap_hana"):
         system = _read("sql-plan/v1-hana/system.jinja2") or (
             "You are nanobase-hana-sql-plan-v1. Output valid JSON only. HANA SELECT only."
@@ -85,6 +95,17 @@ def sql_repair_prompts(*, dialect: str = "postgres") -> tuple[str, str]:
             "Gateway error: {{ error_code }} — {{ error_message }}\n"
             "Attempt: {{ attempt }}\nAuthorized context:\n{{ context }}\n\n"
             "Return ONLY JSON. dialect must be odata."
+        )
+        return system, user_tpl
+    if dialect_l in ("mssql", "tsql", "sqlserver"):
+        system = _read("sql-repair/v1-mssql/system.jinja2") or (
+            "You are nanobase-mssql-sql-repair-v1. Fix T-SQL (TOP N, never LIMIT). Output JSON only."
+        )
+        user_tpl = _read("sql-repair/v1-mssql/user.jinja2") or (
+            "Question: {{ question }}\nPrevious SQL:\n{{ previous_sql }}\n"
+            "Gateway error: {{ error_code }} — {{ error_message }}\n"
+            "Attempt: {{ attempt }}\nAuthorized context:\n{{ context }}\n\n"
+            "Return ONLY JSON. dialect must be mssql."
         )
         return system, user_tpl
     if dialect_l in ("hana", "sap_hana"):

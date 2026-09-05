@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy to $SECRETS_ROOT/mssql-schema-hints.json. Key = datasource id from mssql-ro.datasources.json. Value = list of hint lines injected into the SQL planning prompt (T-SQL). Keep it short: the most-used tables, their meaning, the mandatory filters.",
+  "logo": [
+    "ERP şeması (Logo): tablolar LG_<firma>_<dönem>_<TABLO> (dönemlik) ve LG_<firma>_<TABLO> (firma geneli) biçimindedir. Yalnız bağlamda verilen tablo adlarını kullanın; firma/dönem numarasını asla tahmin etmeyin.",
+    "dbo.LG_411_01_INVOICE: fatura başlıkları. Satış faturaları TRCODE IN (7,8,9); alış faturaları TRCODE IN (1,4). İptal hariç: CANCELLED=0. Tutar: NETTOTAL (KDV dahil net), GROSSTOTAL, TOTALVAT. Tarih: DATE_ (DATETIME). Cari: CLIENTREF → dbo.LG_411_CLCARD.LOGICALREF.",
+    "dbo.LG_411_01_STLINE: fatura/irsaliye satırları (malzeme hareketleri). Malzeme: STOCKREF → dbo.LG_411_ITEMS.LOGICALREF. Fatura: INVOICEREF → LG_411_01_INVOICE.LOGICALREF. Miktar AMOUNT, birim fiyat PRICE, satır tutarı TOTAL. Satış satırları TRCODE IN (7,8) AND LINETYPE=0 AND CANCELLED=0. Büyük tablo: her zaman DATE_ ile filtreleyin.",
+    "dbo.LG_411_CLCARD: cari kartlar. CODE cari kodu, DEFINITION_ unvan, CARDTYPE 1=alıcı 2=satıcı 3=alıcı+satıcı, CITY şehir, ACTIVE 0=aktif.",
+    "dbo.LG_411_ITEMS: malzeme kartları. CODE malzeme kodu, NAME malzeme adı, STGRPCODE grup kodu, CARDTYPE 1=ticari mal, ACTIVE 0=aktif.",
+    "dbo.LG_411_01_ORFICHE / dbo.LG_411_01_ORFLINE: siparişler (TRCODE 2=satış siparişi, 1=satınalma). ORFLINE.ORDFICHEREF → ORFICHE.LOGICALREF, AMOUNT sipariş miktarı, SHIPPEDAMOUNT sevk edilen.",
+    "dbo.LG_411_01_CLFLINE: cari hesap hareketleri (borç/alacak). AMOUNT tutar, SIGN 0=borç 1=alacak, DATE_ tarih, CLIENTREF cari, CANCELLED=0.",
+    "Toplam ciro/satış soruları için önce fatura başlığı (INVOICE.NETTOTAL, TRCODE IN (7,8,9), CANCELLED=0) kullanın; ürün/malzeme bazında kırılım gerekiyorsa STLINE.TOTAL. Yıl/ay kırılımı: YEAR(DATE_), MONTH(DATE_). Sıralı ilk N için SELECT TOP N ... ORDER BY.",
+    "Türkçe karakterli değerlerde karşılaştırma collation'a göre büyük/küçük harf duyarsızdır; LIKE N'%...%' kullanın."
+  ]
+}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from query_gateway.config.settings import Settings, get_settings
-from query_gateway.domain.errors import DATASOURCE_NOT_FOUND, GatewayError
+from query_gateway.domain.errors import DATASOURCE_NOT_FOUND, SCHEMA_NOT_ALLOWED, GatewayError
 from query_gateway.infrastructure.audit.logger import get_audit_logger
 from query_gateway.infrastructure.database.datasources import load_datasources
 from query_gateway.infrastructure.oracle.parser_policy import enforce_oracle_sql_policy
@@ -153,6 +153,19 @@ def validate_query(
 
     ds_policy = policy_from_datasource_cfg(datasource_id, cfg, bundle)
     warnings = validate_parsed(parsed, ds_policy, bundle)
+    if dialect == "mssql":
+        # allowed_tables="*" still confines queries to the configured schemas (dbo by default).
+        allowed_schemas = {str(x).lower() for x in (cfg.get("allowed_schemas") or [])}
+        bad = sorted({str(sch).lower() for sch in (parsed.schemas or []) if str(sch).lower() not in allowed_schemas})
+        if allowed_schemas and bad:
+            raise GatewayError(
+                SCHEMA_NOT_ALLOWED,
+                f"Şema izinli değil: {', '.join(bad)} (izinli: {', '.join(sorted(allowed_schemas))}).",
+                status=403,
+                execution_id=execution_id,
+                trace_id=trace_id,
+                policy_version=bundle.policy_version,
+            )
     if dialect == "oracle":
         warnings.extend(enforce_oracle_sql_policy(parse_sql_text, parsed))
     if dialect == "hana":

@@ -23,7 +23,16 @@ class SchemaIndexerAdapter:
         if ds == rid:
             schemas = schemas or "analytics,public"
         else:
-            schemas = schemas or "public"
+            try:
+                from nanobase_api.infrastructure.datasource_registry import resolve_mssql_connect_cfg
+
+                mssql_cfg = resolve_mssql_connect_cfg(ds)
+            except Exception:
+                mssql_cfg = None
+            if mssql_cfg:
+                schemas = schemas or ",".join(mssql_cfg.get("allowed_schemas") or ["dbo"])
+            else:
+                schemas = schemas or "public"
         env = os.environ.copy()
         env["PYTHONPATH"] = str(indexer)
         env.setdefault("SECRETS_ROOT", s.secrets_root)
