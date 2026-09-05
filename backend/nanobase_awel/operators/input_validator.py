@@ -14,7 +14,7 @@ def validate_planning_request(req: SqlPlanningRequest) -> None:
     if not req.datasourceId:
         raise WorkflowError(VALIDATION_ERROR, "datasourceId gerekli.")
     if req.dialect not in ("postgres", "postgresql"):
-        if req.dialect not in ("oracle", "hana", "odata", "s4_odata", "sap_odata", "sap_hana"):
+        if req.dialect not in ("oracle", "hana", "odata", "s4_odata", "sap_odata", "sap_hana", "mssql", "tsql", "sqlserver"):
             raise WorkflowError(VALIDATION_ERROR, "Desteklenmeyen dialect.")
 
 

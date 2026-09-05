@@ -30,7 +30,7 @@ def _expand_table_keys(allowed: set[str]) -> set[str]:
     return expanded
 
 
-_SQLGLOT_READ = {"postgres": "postgres", "oracle": "oracle"}
+_SQLGLOT_READ = {"postgres": "postgres", "oracle": "oracle", "mssql": "tsql", "tsql": "tsql", "sqlserver": "tsql"}
 
 
 def _read_dialect(dialect: str | None) -> str:
