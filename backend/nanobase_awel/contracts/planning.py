@@ -24,7 +24,7 @@ class RetrievalScope(BaseModel):
 
 class GenerationConfig(BaseModel):
     promptVersion: str = "sql-plan-v1"
-    modelProfile: str = "qwen35b-text2sql-v1"
+    modelProfile: str = "nanobaseai-bi-text2sql-v1"
 
 
 class ConversationContext(BaseModel):
@@ -67,7 +67,7 @@ class SqlPlan(BaseModel):
     clarificationQuestion: Optional[str] = None
     confidence: Optional[float] = None
     promptVersion: str = "sql-plan-v1"
-    modelProfile: str = "qwen35b-text2sql-v1"
+    modelProfile: str = "nanobaseai-bi-text2sql-v1"
     metadataVersion: str = ""
     workflow: str = "nanobase-sql-plan-v1"
     executes: bool = False

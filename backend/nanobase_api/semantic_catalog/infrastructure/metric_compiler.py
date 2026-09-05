@@ -14,6 +14,11 @@ from nanobase_api.semantic_catalog.domain.metric import Metric
 
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
+TimeGrain = str  # "day" | "week" | "month" | "quarter" | "year"
+TIME_GRAINS: tuple[str, ...] = ("day", "week", "month", "quarter", "year")
+_ORACLE_TRUNC_FMT = {"day": "DD", "week": "IW", "month": "MM", "quarter": "Q", "year": "YYYY"}
+PERIOD_ALIAS = "period"
+
 
 def _quote_ident(parts: str, *, dialect: str = "postgres") -> str:
     """Quote schema.table or column — Postgres quoted; Oracle unquoted uppercase."""
@@ -53,6 +58,11 @@ class CompileRequest:
     # breakdown (still ordered by the aggregate, descending, for readability).
     limit: int | None = None
     order_desc: bool = True
+    # Time-series questions ("aylık ciro", forecasting history): bucket the
+    # metric's own time field with date_trunc and ORDER BY period ASC.
+    # Requires metric.time. Rows come back oldest→newest, one per bucket
+    # (buckets with no rows are absent — SeriesBundleBuilder fills them).
+    time_grain: TimeGrain | None = None
     dialect: str = "postgres"
 
 
@@ -172,14 +182,37 @@ class MetricCompiler:
             # for the target dialect ("segment" / SEGMENT) — do not re-wrap it.
             group_cols_sql.append(f"{alias}.{_quote_ident(cname, dialect=dialect)}")
 
-        select_cols = list(group_cols_sql) + [select_expr]
+        # Time grain (series): bucket expression comes first in SELECT/GROUP BY
+        # and dictates ORDER BY period ASC — time order, never rank order.
+        period_expr: str | None = None
+        if req.time_grain is not None:
+            grain = str(req.time_grain).lower()
+            if grain not in TIME_GRAINS:
+                raise ValidationError(f"Geçersiz time_grain: {req.time_grain}")
+            if not metric.time or not metric.time.time_field:
+                raise ValidationError("time_grain için metric.time.time_field zorunludur.")
+            tcol = metric.time.time_field.split(".")[-1]
+            if dialect == "oracle":
+                period_expr = f"TRUNC({alias}.{tcol.upper()}, '{_ORACLE_TRUNC_FMT[grain]}')"
+                period_select = f"{period_expr} AS {PERIOD_ALIAS.upper()}"
+            else:
+                period_expr = f"date_trunc('{grain}', {alias}.\"{tcol}\")"
+                period_select = f'{period_expr} AS "{PERIOD_ALIAS}"'
+            select_cols = [period_select] + list(group_cols_sql) + [select_expr]
+            group_sql_cols = [period_expr] + list(group_cols_sql)
+        else:
+            select_cols = list(group_cols_sql) + [select_expr]
+            group_sql_cols = list(group_cols_sql)
         sql_parts = [f"SELECT\n    " + ",\n    ".join(select_cols), from_sql]
         if join_sql_parts:
             sql_parts.extend(join_sql_parts)
         if where_parts:
             sql_parts.append("WHERE " + "\n  AND ".join(where_parts))
-        if group_cols_sql:
-            sql_parts.append("GROUP BY " + ", ".join(group_cols_sql))
+        if group_sql_cols:
+            sql_parts.append("GROUP BY " + ", ".join(group_sql_cols))
+        if period_expr is not None:
+            order_parts = [f"{period_expr} ASC"] + [f"{g} ASC" for g in group_cols_sql]
+            sql_parts.append("ORDER BY " + ", ".join(order_parts))
         # Rank/breakdown ordering: by the aggregate value, not a dimension —
         # "en yüksek"/"ilk N" questions mean "highest metric value first".
         # A tie-break on the first group-by column is required for genuine
@@ -187,7 +220,7 @@ class MetricCompiler:
         # an equal aggregate value without a secondary sort key, and "same
         # logical plan in, byte-identical rows out" is the entire point of
         # compiling this instead of asking the LLM.
-        if group_cols_sql or req.limit is not None:
+        elif group_cols_sql or req.limit is not None:
             order_dir = "DESC" if req.order_desc else "ASC"
             order_parts = [f"{agg}({expr}) {order_dir}"]
             if group_cols_sql:
@@ -214,6 +247,9 @@ class MetricCompiler:
         if req.limit is not None:
             logical["limit"] = req.limit
             logical["orderDesc"] = req.order_desc
+        if req.time_grain is not None:
+            logical["timeGrain"] = str(req.time_grain).lower()
+            logical["periodAlias"] = PERIOD_ALIAS
         logical["dialect"] = dialect
 
         fingerprint = self.ast_fingerprint(sql, dialect=dialect)

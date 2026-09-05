@@ -17,7 +17,7 @@ class ResultExplanationRequest(BaseModel):
     truncated: bool = False
     language: str = "tr"
     promptVersion: str = "result-explain-v1"
-    modelProfile: str = "qwen35b-result-explain-v1"
+    modelProfile: str = "nanobaseai-bi-explain-v1"
 
 
 class ResultExplanation(BaseModel):

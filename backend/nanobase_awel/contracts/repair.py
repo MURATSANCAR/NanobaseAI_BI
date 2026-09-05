@@ -26,7 +26,7 @@ class SqlRepairRequest(BaseModel):
     allowedTables: list[str] = Field(default_factory=list)
     schemaHint: str = ""
     promptVersion: str = "sql-repair-v1"
-    modelProfile: str = "qwen35b-text2sql-v1"
+    modelProfile: str = "nanobaseai-bi-text2sql-v1"
 
 
 class SqlRepairResult(SqlPlan):
