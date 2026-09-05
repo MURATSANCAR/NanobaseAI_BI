@@ -1,74 +1,56 @@
-# NanobaseAI BI Frontend
+# NanobaseAI BI
 
-Standalone BI module extracted from the Nanobase QA portal. React + Vite app for analytics, Text2SQL chat, schema management, and Superset embed.
+Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz,
+FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi.
 
-## Development
+## Müşteri kurulumu (önerilen)
+
+```bash
+cd deploy/compose && ./install.sh
+```
+
+Ayrıntı: [deploy/compose/README.md](deploy/compose/README.md) — tek komutla kurulum,
+uzak veritabanı bağlama (`add-datasource.sh`), LLM seçenekleri, işletim ve sorun giderme.
+
+## Geliştirme
 
 ```bash
 npm install
 cp .env.example .env
-# Backend stack (DB-GPT + bridge on :8787)
-cd backend && ./scripts/setup.sh && ./scripts/start-stack.sh && cd ..
-npm run dev
+cd backend && ./scripts/setup.sh && cp .env.example .env && ./scripts/start-stack.sh && cd ..
+npm run dev            # http://127.0.0.1:5174/bi/
 ```
 
-Dev server: **http://127.0.0.1:5174/bi/** — proxies `/api` and `/health` to the bridge (`:8787` → DB-GPT `:5670`).
+| Servis | Port |
+|---|---|
+| Web (Vite dev) | 5174 |
+| API (`nanobase_api`) | 8790 |
+| Query Gateway | 8792 |
+| LLM (OpenAI uyumlu) | 8010 yerel / harici GPU sunucusu |
+| Gömme servisi | 8083 |
+| Meta DB (Postgres) | 5434 |
 
-## Portal path (production)
+LLM model takma adı: `nanobaseai-bi-llm` (bkz. `deploy/llm-server/`).
 
-BI opens same-origin at **https://portal.nanobase.ai/bi** (not a separate subdomain by default).
+## Yapı
 
-| Piece | Role |
-|-------|------|
-| Vite `base` | `/bi/` ([vite.config.ts](vite.config.ts)) |
-| Nginx | [deploy/nginx/portal-bi-path.conf](deploy/nginx/portal-bi-path.conf) |
-| Portal hub | MobilTest `VITE_BI_APP_ORIGIN=` (empty) → `/bi` links stay on portal |
+| Dizin | İçerik |
+|---|---|
+| `src/` | React + Vite arayüz |
+| `backend/nanobase_api` | API, chat gateway, semantic katalog, senaryo motoru |
+| `backend/nanobase_awel` | LLM operatörleri, planlama/onarım/açıklama iş akışları |
+| `backend/query_gateway` | Müşteri SQL'inin tek çalışma noktası (salt-okunur, izin listeli) |
+| `tools/schema-indexer` | Şema tarama ve gömme |
+| `deploy/compose` | Müşteri kurulum paketi (Docker) |
+| `deploy/llm-server` | GPU sunucusu için LLM servis tanımı |
+| `docs/architecture` | Kilitli mimari, tasarım ve plan belgeleri |
 
-## Backend (DB-GPT)
+## Yapılandırma
 
-See [`backend/README.md`](backend/README.md).
+| Değişken | Amaç |
+|---|---|
+| `VITE_API_BASE` | Aynı origin proxy kullanılmıyorsa API adresi |
+| `VITE_BASE` | Uygulama alt yolu (varsayılan `/bi/`, müşteri paketinde `/`) |
 
-```bash
-cd backend && ./scripts/setup.sh && cp .env.example .env && ./scripts/start-stack.sh
-```
-
-| Service | Port |
-|---------|------|
-| DB-GPT | 5670 |
-| BI bridge (`/api/v1/bi/*`) | 8787 |
-| LLM (Qwen llama.cpp) | 8010 local / 8015 public proxy |
-
-LLM credentials (MobilTest `docs/LLM-SERVER.md`): key `nanobase-local`, model `nanobase-qwen36-35b-a3b-mtp`.
-
-Neon ERP/Sigorta: `configs/sources/local/connection.local.json` (gitignored) → `./scripts/register-neon-sources.sh`.
-
-## Configuration
-
-| Variable | Purpose |
-|----------|---------|
-| `VITE_API_BASE` | Bridge origin when not using same-origin proxy. Empty = Vite/nginx → `/api`. |
-| `VITE_BASE` | Asset/router base. Default `/bi/`. |
-
-## Data sources (ERP + Sigorta)
-
-Operator configs live under [`configs/`](configs/README.md):
-
-- **Connection profiles** (Neon hosts + Vault `secret_ref`): `configs/sources/connection.example.json`
-- Local passwords: `configs/sources/local/` (gitignored)
-- **Schema catalogs**, seeds, semantic bindings — unchanged
-
-## Routes
-
-App routes under `/bi/*` (with Vite base `/bi/`):
-
-- `/bi` — dashboard canvas
-- `/bi/chat`, `/bi/budget`, `/bi/sources`, `/bi/connection`, `/bi/schema`, `/bi/settings`
-- `/bi/public/:token` — public guest embed
-
-## Production deploy
-
-1. `npm run build` → `dist/` with `/bi/` asset paths  
-2. Sync to `/data/nanobaseai/bi/portal/dist`  
-3. Apply [deploy/nginx/portal-bi-path.conf](deploy/nginx/portal-bi-path.conf) (or merge `/bi/` locations into portal `:443`)  
-4. Run `backend/scripts/start-stack.sh` on the server (LLM on `:8010`)  
-5. Rebuild portal hub with `VITE_BI_APP_ORIGIN=` so home BI card opens `/bi`
+Operatör yapılandırmaları [`configs/`](configs/README.md) altındadır (bağlantı profilleri,
+şema katalogları, semantic bağlamalar). Parolalar depoya girmez; `secrets/` veya Vault.

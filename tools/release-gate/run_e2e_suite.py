@@ -43,7 +43,7 @@ def generate_scenarios(release: str) -> list[dict]:
                     "semanticVersion": "9.0.0",
                     "policyVersion": "2026.07.1",
                     "promptVersion": "1.0.0",
-                    "modelProfile": "nanobase-qwen36-35b-a3b-mtp",
+                    "modelProfile": "nanobaseai-bi-llm",
                     "passed": True,
                     "mode": "synthetic_offline",
                 }

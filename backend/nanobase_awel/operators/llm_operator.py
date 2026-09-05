@@ -28,7 +28,7 @@ from nanobase_awel.operators.model_queue import (
 
 LLM_BASE = os.environ.get("OPENAI_API_BASE", "http://127.0.0.1:8010/v1").rstrip("/")
 LLM_KEY = os.environ.get("OPENAI_API_KEY", "nanobase-local")
-LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp")
+LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobaseai-bi-llm")
 
 TEXT2SQL_BASE = (os.environ.get("TEXT2SQL_API_BASE") or "").rstrip("/")
 TEXT2SQL_MODEL = os.environ.get("TEXT2SQL_MODEL") or "arctic-text2sql"

@@ -26,7 +26,7 @@ mkdir -p "$DBGPT_HOME"
 export BRIDGE_PORT="${BRIDGE_PORT:-8787}"
 export DBGPT_PORT="${DBGPT_PORT:-5670}"
 
-# Local LLM :8010 required. Remote proxy :8015 (MobilTest LLM-SERVER.md) is
+# Local LLM :8010 required. Remote proxy :8015 is
 # opt-in only via ALLOW_REMOTE_LLM_FALLBACK=1 — never fall back silently.
 if [[ -n "${OPENAI_API_BASE:-}" ]]; then
   export OPENAI_API_BASE
@@ -53,7 +53,7 @@ else
   exit 1
 fi
 export OPENAI_API_KEY="${OPENAI_API_KEY:-nanobase-local}"
-export LLM_MODEL_NAME="${LLM_MODEL_NAME:-nanobase-qwen36-35b-a3b-mtp}"
+export LLM_MODEL_NAME="${LLM_MODEL_NAME:-nanobaseai-bi-llm}"
 export EMBEDDING_MODEL_API_URL="${EMBEDDING_MODEL_API_URL:-${OPENAI_API_BASE}/embeddings}"
 
 # Bridge extras

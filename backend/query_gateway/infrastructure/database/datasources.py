@@ -138,6 +138,7 @@ def load_datasources(settings: Settings | None = None) -> dict[str, dict[str, An
             }
 
     for map_name, loader in (
+        ("postgres-ro.datasources.json", "postgres"),
         ("neon-ro.datasources.json", "postgres"),
         ("oracle-ro.datasources.json", "oracle"),
         ("sap-ro.datasources.json", "sap"),

@@ -37,7 +37,7 @@ PORT="${DBGPT_PORT:-5670}"
 
 echo "DBGPT_HOME=$DBGPT_HOME"
 echo "OPENAI_API_BASE=${OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
-echo "LLM_MODEL_NAME=${LLM_MODEL_NAME:-nanobase-qwen36-35b-a3b-mtp}"
+echo "LLM_MODEL_NAME=${LLM_MODEL_NAME:-nanobaseai-bi-llm}"
 echo "Starting DB-GPT on http://127.0.0.1:${PORT} (config: $CONFIG)"
 
 # run_web.py applies Neon dual-db connector patch (ext_config.database)

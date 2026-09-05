@@ -9,6 +9,29 @@ from typing import Any
 
 SECRETS = Path(os.environ.get("SECRETS_ROOT", "/data/nanobaseai/bi/secrets"))
 
+# Generic PostgreSQL RO map (customer installs) + legacy name kept for existing servers.
+PG_RO_MAPS: tuple[str, ...] = ("postgres-ro.datasources.json", "neon-ro.datasources.json")
+
+
+def _load_pg_map_sources() -> dict[str, dict]:
+    """Merge every PostgreSQL RO map under SECRETS (first file wins per id)."""
+    merged: dict[str, dict] = {}
+    for map_name in PG_RO_MAPS:
+        path = SECRETS / map_name
+        if not path.is_file():
+            continue
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        sources = raw.get("sources") if isinstance(raw, dict) else None
+        if not isinstance(sources, dict):
+            continue
+        for sid, cfg in sources.items():
+            if isinstance(cfg, dict):
+                merged.setdefault(str(sid), cfg)
+    return merged
+
 
 def reporting_datasource_id() -> str:
     """Product default id for the optional local reporting RO database.
@@ -24,7 +47,7 @@ def registered_ro_datasource_ids() -> set[str]:
     if local_reporting_entry():
         ids.add(reporting_datasource_id())
     for map_name in (
-        "neon-ro.datasources.json",
+        *PG_RO_MAPS,
         "oracle-ro.datasources.json",
         "sap-ro.datasources.json",
     ):
@@ -97,11 +120,10 @@ def merge_gateway_ro_sources(by_id: dict[str, dict[str, Any]]) -> set[str]:
         by_id.setdefault(sid, reporting)
         by_id[sid] = {**by_id[sid], **{k: reporting[k] for k in ("managed", "protected")}}
 
-    neon = SECRETS / "neon-ro.datasources.json"
-    if neon.is_file():
+    pg_sources = _load_pg_map_sources()
+    if pg_sources:
         try:
-            raw = json.loads(neon.read_text(encoding="utf-8"))
-            for sid, cfg in (raw.get("sources") or {}).items():
+            for sid, cfg in pg_sources.items():
                 if not isinstance(cfg, dict) or not cfg.get("host"):
                     continue
                 sid_s = str(sid)
@@ -246,15 +268,9 @@ def resolve_pg_connect_cfg(datasource_id: str) -> dict[str, Any] | None:
     if not sid:
         return None
 
-    neon = SECRETS / "neon-ro.datasources.json"
-    if neon.is_file():
-        try:
-            raw = json.loads(neon.read_text(encoding="utf-8"))
-            cfg = (raw.get("sources") or {}).get(sid)
-            if isinstance(cfg, dict) and cfg.get("host"):
-                return cfg
-        except (OSError, json.JSONDecodeError):
-            pass
+    cfg = _load_pg_map_sources().get(sid)
+    if isinstance(cfg, dict) and cfg.get("host"):
+        return cfg
 
     if sid == reporting_datasource_id():
         ro = SECRETS / "reporting-ro.password"

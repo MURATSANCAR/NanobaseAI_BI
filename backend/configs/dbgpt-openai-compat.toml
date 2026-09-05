@@ -21,7 +21,7 @@ persist_path = "pilot/data"
 
 [models]
 [[models.llms]]
-name = "${env:LLM_MODEL_NAME:-nanobase-qwen36-35b-a3b-mtp}"
+name = "${env:LLM_MODEL_NAME:-nanobaseai-bi-llm}"
 provider = "${env:LLM_MODEL_PROVIDER:-proxy/openai}"
 api_base = "${env:OPENAI_API_BASE:-http://127.0.0.1:8010/v1}"
 api_key = "${env:OPENAI_API_KEY:-nanobase-local}"

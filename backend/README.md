@@ -9,14 +9,14 @@ FE (:5174/bi or portal/bi) → bridge :8787 → DB-GPT :5670 → LLM :8010/:8015
 ## Prerequisites
 
 - Python **3.11** (`brew install python@3.11`) + [uv](https://docs.astral.sh/uv/)
-- LLM OpenAI-compatible API (MobilTest [LLM-SERVER.md](https://github.com/)):
+- LLM OpenAI-compatible API (llama.cpp server, see `deploy/compose/README.md`):
 
 | | |
 |--|--|
 | Local (server) | `http://127.0.0.1:8010/v1` |
 | Remote proxy | `http://38.247.162.28:8015/v1` |
 | Key | `nanobase-local` |
-| Model | `nanobase-qwen36-35b-a3b-mtp` |
+| Model | `nanobaseai-bi-llm` |
 
 ## Setup
 

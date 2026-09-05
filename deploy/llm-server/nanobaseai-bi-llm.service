@@ -1,0 +1,35 @@
+[Unit]
+Description=NanobaseAI BI LLM (CUDA, MTP speculative decoding)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nanobaseai
+Group=nanobaseai
+Environment=CUDA_VISIBLE_DEVICES=0
+Environment=LD_LIBRARY_PATH=/opt/nanobaseai/llm/bin:/usr/local/cuda/lib64
+EnvironmentFile=/etc/nanobaseai/nanobaseai-bi-llm.env
+WorkingDirectory=/opt/nanobaseai
+ExecStart=/opt/nanobaseai/llm/bin/llama-server \
+  --model ${MODEL_FILE} \
+  -md ${DRAFT_FILE} --spec-type draft-mtp --spec-draft-n-max ${MTP_N_MAX} \
+  --alias ${MODEL_ALIAS} \
+  --host ${LLAMA_HOST} --port ${LLAMA_PORT} \
+  --api-key-file /etc/nanobaseai/nanobaseai-bi-llm.key \
+  -ngl 999 --n-cpu-moe ${N_CPU_MOE} \
+  -c ${CTX_SIZE} -np ${PARALLEL} \
+  -t ${THREADS} -b ${BATCH} -ub ${UBATCH} \
+  --flash-attn on \
+  --cache-type-k ${CACHE_TYPE_K} --cache-type-v ${CACHE_TYPE_V} \
+  --temp 0 --top-k 1 \
+  --jinja --reasoning off --reasoning-budget 0 \
+  --chat-template-kwargs '{"reasoning_effort":"none","enable_thinking":false}' \
+  --metrics
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=900
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

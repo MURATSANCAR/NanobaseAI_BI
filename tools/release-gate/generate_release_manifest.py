@@ -94,7 +94,7 @@ def build_manifest(release: str, claimed_connectors: list[str]) -> dict:
                 "promptHashes": prompt_hashes,
             },
             "model": {
-                "modelId": "nanobase-qwen36-35b-a3b-mtp",
+                "modelId": "nanobaseai-bi-llm",
                 "modelHash": digests.get("modelHash", "pin-before-freeze"),
                 "llamaCppBuild": digests.get("llamaCppBuild", "pin-before-freeze"),
             },

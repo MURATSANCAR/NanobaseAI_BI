@@ -22,7 +22,7 @@ DOCKER=(sudo docker)
 mkdir -p "${DATA_ROOT}/superset-pg" "${DATA_ROOT}/superset-home" "$SECRETS"
 chmod +x "${COMPOSE_DIR}/docker-entrypoint.sh"
 
-# Prefer live stack secrets (mobile-qa / prior compose) over regenerating.
+# Prefer live stack secrets (prior compose) over regenerating.
 EXISTING_ENV="${SUPERSET_EXISTING_ENV:-/data/nanobaseai-mobile/configs/superset-bi.env}"
 GUEST_SECRET_FILE="${SECRETS}/superset-guest.jwt"
 DB_PW_FILE="${SECRETS}/superset-db.password"
@@ -82,7 +82,7 @@ GUEST_TOKEN_JWT_AUDIENCE=${GUEST_AUD}
 EOF
 chmod 600 "$ENV_SS"
 
-# If Superset already healthy on :8089, skip recreate (avoid clobbering mobile-qa stack).
+# If the analytics service is already healthy on :8089, skip recreate.
 if curl -fsS -o /dev/null "http://127.0.0.1:8089/login/" 2>/dev/null; then
   log "Superset already up on :8089 — wiring API only"
   SKIP_COMPOSE=1

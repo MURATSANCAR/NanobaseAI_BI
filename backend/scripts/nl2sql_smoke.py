@@ -16,7 +16,7 @@ from pathlib import Path
 
 DEFAULT_BASE = os.environ.get("DBGPT_BASE", "http://127.0.0.1:5670")
 DB_NAME = os.environ.get("SMOKE_DB_NAME", "bi_reporting")
-MODEL = os.environ.get("SMOKE_MODEL", "nanobase-qwen36-35b-a3b-mtp")
+MODEL = os.environ.get("SMOKE_MODEL", "nanobaseai-bi-llm")
 OUT_DIR = Path(os.environ.get("SMOKE_OUT_DIR", "/data/nanobaseai/bi/frontend/docs/architecture"))
 
 

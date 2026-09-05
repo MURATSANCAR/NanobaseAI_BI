@@ -28,14 +28,14 @@ ENV_FILE=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
 # Keep operator overlays (Superset, embed key, etc.) across redeploys
 PRESERVE_ENV="$(mktemp)"
 if [[ -f "$ENV_FILE" ]]; then
-  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|BI_SOURCES_FILE)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
+  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
 fi
 umask 077
 cat > "$ENV_FILE" <<EOF
 NANOBASE_API_PORT=8790
 NANOBASE_META_DSN=postgresql+psycopg2://bi_meta:${META_PW_ENC}@127.0.0.1:5434/bi_meta
 DBGPT_BASE=http://127.0.0.1:5670
-LLM_MODEL_NAME=nanobase-qwen36-35b-a3b-mtp
+LLM_MODEL_NAME=nanobaseai-bi-llm
 NANOBASE_ACTIVE_DB=bi_reporting
 QUERY_GATEWAY_BASE=http://127.0.0.1:8792
 PYTHONPATH=${ROOT}/backend
@@ -50,7 +50,7 @@ SECRETS_ROOT=${SECRETS}
 BI_EMBED_URL=http://127.0.0.1:8083/v1/embeddings
 QDRANT_URL=http://127.0.0.1:6333
 # chat = Qwen :8010 for sql-plan/repair. stack-watchdog keeps Arctic :8091
-# disabled while prefer=chat (see mobile-qa nanobase-stack-services.json).
+# disabled while prefer=chat.
 TEXT2SQL_PREFER=chat
 TEXT2SQL_FALLBACK_TO_CHAT=1
 LLM_TIMEOUT_SEC=300
@@ -72,7 +72,6 @@ fi
 if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
   for cand in \
     "${ROOT}/backend/.env" \
-    /data/nanobaseai/mobile-qa/contract-intelligence/embedding-service/.env \
     /data/nanobaseai/bi/secrets/embed-api.key; do
     if [[ -f "$cand" ]]; then
       BI_EMBED_API_KEY="$(grep -E '^(BI_EMBED_API_KEY|API_KEY|OPENAI_API_KEY)=' "$cand" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '\"\r')"

@@ -406,7 +406,7 @@ async def bi_status() -> dict:
         "auth_mode": settings.auth_mode.value,
         "execution_mode": settings.execution_mode.value,
         "active_source": active,
-        "llm_model": os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp"),
+        "llm_model": os.environ.get("LLM_MODEL_NAME", "nanobaseai-bi-llm"),
         "model_queue": __import__(
             "nanobase_awel.operators.model_queue", fromlist=["get_model_queue"]
         )

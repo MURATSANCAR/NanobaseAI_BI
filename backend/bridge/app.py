@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 DBGPT_BASE = os.environ.get("DBGPT_BASE", "http://127.0.0.1:5670").rstrip("/")
 LLM_BASE = os.environ.get("OPENAI_API_BASE", "http://127.0.0.1:8010/v1").rstrip("/")
 LLM_KEY = os.environ.get("OPENAI_API_KEY", "nanobase-local")
-LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobase-qwen36-35b-a3b-mtp")
+LLM_MODEL = os.environ.get("LLM_MODEL_NAME", "nanobaseai-bi-llm")
 EMBED_URL = os.environ.get("BI_EMBED_URL", "http://127.0.0.1:8083/v1/embeddings")
 EMBED_KEY = os.environ.get("BI_EMBED_API_KEY", "")
 BRIDGE_PORT = int(os.environ.get("BRIDGE_PORT", "8789"))
@@ -32,7 +32,7 @@ SOURCES_FILE = Path(
 )
 ACTIVE_DB = {"id": (os.environ.get("NANOBASE_ACTIVE_DB") or "").strip()}
 
-app = FastAPI(title="Nanobase BI → DB-GPT bridge", version="0.2.0")
+app = FastAPI(title="NanobaseAI BI API", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("PORTAL_CORS_ORIGINS", "*").split(","),
@@ -140,7 +140,7 @@ async def health() -> dict[str, Any]:
         "llm": llm_ok,
         "dbgpt_base": DBGPT_BASE,
         "llm_base": LLM_BASE,
-        "engine": "dbgpt",
+        "engine": "nanobaseai-bi",
     }
 
 
@@ -151,7 +151,7 @@ async def bi_status() -> dict[str, Any]:
     return {
         "ok": True,
         "status": "ready" if h["dbgpt"] and h["llm"] else ("degraded" if h["dbgpt"] else "down"),
-        "engine": "dbgpt",
+        "engine": "nanobaseai-bi",
         "dbgpt": h["dbgpt"],
         "llm": h["llm"],
         "llm_model": LLM_MODEL,
@@ -176,7 +176,7 @@ async def portal_bootstrap() -> dict[str, Any]:
 @app.get("/api/v1/portal/runtime-config")
 async def runtime_config() -> dict[str, Any]:
     return {
-        "apiKey": "dbgpt-bridge-local",
+        "apiKey": "nanobaseai-bi-local",
         "apiKeyConfigured": True,
         "authMode": "bearer",
         "portalAutoLogin": True,
@@ -195,11 +195,11 @@ async def portal_login(request: Request) -> dict[str, Any]:
         pass
     user = str(body.get("username") or body.get("email") or "bi-local")
     return {
-        "token": "dbgpt-bridge-local",
-        "access_token": "dbgpt-bridge-local",
-        "api_key": "dbgpt-bridge-local",
+        "token": "nanobaseai-bi-local",
+        "access_token": "nanobaseai-bi-local",
+        "api_key": "nanobaseai-bi-local",
         "user": {"id": "local", "username": user, "role": "admin", "roles": ["admin"]},
-        "session": {"id": "local", "token": "dbgpt-bridge-local"},
+        "session": {"id": "local", "token": "nanobaseai-bi-local"},
     }
 
 
@@ -210,7 +210,7 @@ async def portal_logout() -> dict[str, Any]:
 
 @app.post("/api/v1/portal/session")
 async def portal_session_create() -> dict[str, Any]:
-    return {"ok": True, "token": "dbgpt-bridge-local"}
+    return {"ok": True, "token": "nanobaseai-bi-local"}
 
 
 @app.delete("/api/v1/portal/session")
@@ -237,8 +237,8 @@ async def llm_status() -> dict[str, Any]:
         "ok": ok,
         "model": LLM_MODEL,
         "api_base": LLM_BASE,
-        "engine": "llama.cpp",
-        "via": "dbgpt",
+        "engine": "nanobaseai-bi-llm",
+        "via": "nanobaseai-bi",
     }
 
 
@@ -331,7 +331,7 @@ async def connection_save(request: Request) -> dict[str, Any]:
 async def connection_test() -> dict[str, Any]:
     try:
         await _dbgpt_json("GET", "/api/v1/chat/db/list")
-        return {"ok": True, "message": "OK (DB-GPT datasource registry)", "dialect": "postgresql"}
+        return {"ok": True, "message": "OK (NanobaseAI BI datasource registry)", "dialect": "postgresql"}
     except Exception as e:
         return {"ok": False, "message": str(e), "dialect": "postgresql"}
 
@@ -488,7 +488,7 @@ async def list_empty() -> list[Any]:
 
 @app.get("/api/v1/bi/budgets/summary")
 async def budget_summary() -> dict[str, Any]:
-    return {"years": [], "totals": {}, "engine": "dbgpt"}
+    return {"years": [], "totals": {}, "engine": "nanobaseai-bi"}
 
 
 @app.get("/api/v1/bi/briefing")
@@ -521,7 +521,7 @@ async def semantic_empty() -> list[Any]:
 
 @app.get("/api/v1/bi/semantic/status")
 async def semantic_status() -> dict[str, Any]:
-    return {"ok": True, "enabled": False, "engine": "dbgpt", "message": "Semantic layer via DB-GPT chat/schema."}
+    return {"ok": True, "enabled": False, "engine": "nanobaseai-bi", "message": "Semantic layer via NanobaseAI BI chat/schema."}
 
 
 # ---------------------------------------------------------------------------
@@ -572,7 +572,7 @@ async def _stream_dbgpt_chat(message: str, session_id: str, db_name: str) -> Asy
             if resp.status_code >= 400:
                 text = await resp.aread()
                 msg = text.decode(errors="replace")[:800]
-                yield _sse("error", {"message": f"DB-GPT HTTP {resp.status_code}: {msg}"}).encode()
+                yield _sse("error", {"message": f"NanobaseAI BI engine HTTP {resp.status_code}: {msg}"}).encode()
                 return
 
             yield _sse("status", {"phase": "generating_sql"}).encode()
@@ -602,12 +602,12 @@ async def _stream_dbgpt_chat(message: str, session_id: str, db_name: str) -> Asy
                     if "```sql" in content.lower() or content.strip().upper().startswith("SELECT"):
                         sql = (sql or "") + content
 
-        reply = "".join(reply_parts).strip() or "No response from DB-GPT."
+        reply = "".join(reply_parts).strip() or "No response from NanobaseAI BI engine."
         result = _empty_chat_result(session_id, reply, sql=sql)
         yield _sse("status", {"phase": "finalizing"}).encode()
         yield _sse("done", result).encode()
     except httpx.HTTPError as e:
-        yield _sse("error", {"message": f"DB-GPT unreachable at {DBGPT_BASE}: {e}"}).encode()
+        yield _sse("error", {"message": f"NanobaseAI BI engine unreachable: {e}"}).encode()
     except Exception as e:
         yield _sse("error", {"message": str(e)}).encode()
 
@@ -668,7 +668,7 @@ async def bi_stub(full_path: str, request: Request) -> JSONResponse:
     """Graceful degradation for remaining BI SaaS routes not in DB-GPT."""
     if request.method == "GET":
         return JSONResponse([])
-    return JSONResponse({"ok": True, "engine": "dbgpt", "limited": True, "path": full_path})
+    return JSONResponse({"ok": True, "engine": "nanobaseai-bi", "limited": True, "path": full_path})
 
 
 def main() -> None:
