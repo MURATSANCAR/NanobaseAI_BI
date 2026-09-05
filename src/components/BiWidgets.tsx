@@ -1,8 +1,11 @@
 import clsx from 'clsx';
+import { Suspense, lazy } from 'react';
 import DynamicResultTable from '@/components/DynamicResultTable';
 import type { BiAnswerBlock } from '@/api/types';
 import { t } from '@/i18n';
 import { sanitizeChatDisplayValue, stripSqlFromChatText } from '@/utils/biChatSanitize';
+
+const BiForecastChart = lazy(() => import('@/components/bi/BiForecastChart'));
 
 export function BiAnswerBlocks({ blocks }: { blocks: BiAnswerBlock[] }) {
   if (!blocks.length) return null;
@@ -75,6 +78,11 @@ export function BiAnswerBlocks({ blocks }: { blocks: BiAnswerBlock[] }) {
                 </div>
               ))}
             </div>
+          )}
+          {block.type === 'forecast' && block.forecast && (
+            <Suspense fallback={<div className="h-[260px] animate-pulse rounded-lg bg-surface-overlay/40" />}>
+              <BiForecastChart data={block.forecast} />
+            </Suspense>
           )}
           {block.type === 'table' && block.columns && block.rows && (
             <div className="bi-pbi-matrix overflow-auto rounded-lg border border-[#E1DFDD]">

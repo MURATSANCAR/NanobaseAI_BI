@@ -674,6 +674,35 @@ async def stream_chat_via_gateway(
     except Exception as e:
         yield _sse("status", {"phase": "semantic_lookup_skip", "detail": str(e)[:200]}).encode()
 
+    # Forecasting V1 (plan Faz 5.2): deterministic forecast branch. Resolved
+    # intent → governed series → SeriesBundle → Forecast API. Never falls back
+    # to the LLM plan path: unresolved forecasts are declined visibly.
+    if not sql and os.environ.get("FORECAST_CHAT_ENABLED", "true").lower() in ("1", "true", "yes"):
+        try:
+            from nanobase_awel.retrieval.forecast_intent import resolve_forecast_intent
+
+            fc_intent = resolve_forecast_intent(message)
+        except Exception as e:  # noqa: BLE001
+            fc_intent = None
+            yield _sse("status", {"phase": "forecast_intent_skip", "detail": str(e)[:200]}).encode()
+        if fc_intent is not None:
+            from nanobase_api.application.forecast_chat import stream_forecast
+
+            async for chunk in stream_forecast(
+                intent=fc_intent,
+                message=message,
+                session_id=session_id,
+                datasource_id=datasource_id,
+                tenant_id=tenant_id,
+                execution_id=execution_id,
+                execution_mode=mode.value,
+                sse=_sse,
+                with_provenance=_with_provenance,
+                meta_engine=meta_engine,
+            ):
+                yield chunk
+            return
+
     # Legacy physical verified SQL lookup intentionally disabled (returns None).
     if meta_engine is not None and not sql:
         try:
