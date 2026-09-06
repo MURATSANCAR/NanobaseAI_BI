@@ -1,0 +1,613 @@
+name: "dbo_LG_411_01_ORFICHE"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_01_ORFICHE"
+primary_key: "LOGICALREF"
+properties:
+  "displayName": "dbo.LG_411_01_ORFICHE"
+columns:
+  - name: "CANCELLED"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CANCELLED"
+  - name: "CLIENTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CLIENTREF"
+  - name: "DATE_"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "DATE_"
+  - name: "FICHENO"
+    type: "VARCHAR"
+    properties:
+      "displayName": "FICHENO"
+  - name: "LOGICALREF"
+    type: "INTEGER"
+    not_null: true
+    is_primary_key: true
+    properties:
+      "displayName": "LOGICALREF"
+  - name: "NETTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "NETTOTAL"
+  - name: "SALESMANREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "SALESMANREF"
+  - name: "STATUS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "STATUS"
+  - name: "TRCODE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TRCODE"
+  - name: "ACCEPTEINVPUBLIC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ACCEPTEINVPUBLIC"
+  - name: "ACCOUNTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ACCOUNTREF"
+  - name: "ACTRENTING"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ACTRENTING"
+  - name: "ADDDISCOUNTS"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDDISCOUNTS"
+  - name: "ADDDISCOUNTSVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDDISCOUNTSVAT"
+  - name: "ADDEXPENSES"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDEXPENSES"
+  - name: "ADDEXPENSESVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDEXPENSESVAT"
+  - name: "ADVANCEPAYM"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADVANCEPAYM"
+  - name: "AFFECTCOLLATRL"
+    type: "SMALLINT"
+    properties:
+      "displayName": "AFFECTCOLLATRL"
+  - name: "AFFECTRISK"
+    type: "SMALLINT"
+    properties:
+      "displayName": "AFFECTRISK"
+  - name: "ALTNR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ALTNR"
+  - name: "APPROVE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "APPROVE"
+  - name: "APPROVEDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "APPROVEDATE"
+  - name: "ATAXEXCEPTCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ATAXEXCEPTCODE"
+  - name: "ATAXEXCEPTREASON"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ATAXEXCEPTREASON"
+  - name: "BRANCH"
+    type: "SMALLINT"
+    properties:
+      "displayName": "BRANCH"
+  - name: "CAMPAIGNCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "CAMPAIGNCODE"
+  - name: "CANTCREDEDUCT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CANTCREDEDUCT"
+  - name: "CAPIBLOCK_CREADEDDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "CAPIBLOCK_CREADEDDATE"
+  - name: "CAPIBLOCK_CREATEDBY"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_CREATEDBY"
+  - name: "CAPIBLOCK_CREATEDHOUR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_CREATEDHOUR"
+  - name: "CAPIBLOCK_CREATEDMIN"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_CREATEDMIN"
+  - name: "CAPIBLOCK_CREATEDSEC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_CREATEDSEC"
+  - name: "CAPIBLOCK_MODIFIEDBY"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_MODIFIEDBY"
+  - name: "CAPIBLOCK_MODIFIEDDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "CAPIBLOCK_MODIFIEDDATE"
+  - name: "CAPIBLOCK_MODIFIEDHOUR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_MODIFIEDHOUR"
+  - name: "CAPIBLOCK_MODIFIEDMIN"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_MODIFIEDMIN"
+  - name: "CAPIBLOCK_MODIFIEDSEC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CAPIBLOCK_MODIFIEDSEC"
+  - name: "CENTERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CENTERREF"
+  - name: "CHECKAMOUNT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CHECKAMOUNT"
+  - name: "CHECKPRICE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CHECKPRICE"
+  - name: "CHECKTOTAL"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CHECKTOTAL"
+  - name: "CMAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMAMOUNT"
+  - name: "CMBEGDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "CMBEGDATE"
+  - name: "CMCANDEDUCT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CMCANDEDUCT"
+  - name: "CMDEDUCTPART1"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CMDEDUCTPART1"
+  - name: "CMDEDUCTPART2"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CMDEDUCTPART2"
+  - name: "CMDEVIRODEMEBAKIYE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMDEVIRODEMEBAKIYE"
+  - name: "CMENDDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "CMENDDATE"
+  - name: "CMEXP"
+    type: "VARCHAR"
+    properties:
+      "displayName": "CMEXP"
+  - name: "CMPAIDTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMPAIDTOTAL"
+  - name: "CMPAYMENTTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMPAYMENTTOTAL"
+  - name: "CMPRICE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMPRICE"
+  - name: "CMSHIPPEDAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMSHIPPEDAMOUNT"
+  - name: "CMSHIPPEDTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMSHIPPEDTOTAL"
+  - name: "CMTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMTOTAL"
+  - name: "CMTYPE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CMTYPE"
+  - name: "CMVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CMVAT"
+  - name: "COMMITMENT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "COMMITMENT"
+  - name: "CONTACTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CONTACTREF"
+  - name: "CUSTORDNO"
+    type: "VARCHAR"
+    properties:
+      "displayName": "CUSTORDNO"
+  - name: "CYPHCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "CYPHCODE"
+  - name: "DEDUCTIONPART1"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEDUCTIONPART1"
+  - name: "DEDUCTIONPART2"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEDUCTIONPART2"
+  - name: "DEFAULTFICHE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEFAULTFICHE"
+  - name: "DELIVERYCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DELIVERYCODE"
+  - name: "DEPARTMENT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEPARTMENT"
+  - name: "DEVIR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEVIR"
+  - name: "DLVCLIENT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DLVCLIENT"
+  - name: "DOCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DOCODE"
+  - name: "DOCTRACKINGNR"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DOCTRACKINGNR"
+  - name: "EINVOICE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "EINVOICE"
+  - name: "EINVOICETYP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "EINVOICETYP"
+  - name: "EXTENREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "EXTENREF"
+  - name: "FACTORYNR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "FACTORYNR"
+  - name: "FCSTATUSREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "FCSTATUSREF"
+  - name: "GENEXCTYP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "GENEXCTYP"
+  - name: "GENEXP1"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP1"
+  - name: "GENEXP2"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP2"
+  - name: "GENEXP3"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP3"
+  - name: "GENEXP4"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP4"
+  - name: "GENEXP5"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP5"
+  - name: "GENEXP6"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GENEXP6"
+  - name: "GLOBALID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GLOBALID"
+  - name: "GROSSTOTAL"
+    type: "FLOAT8"
+    properties:
+      "displayName": "GROSSTOTAL"
+  - name: "GUID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GUID"
+  - name: "INSTEADOFDESP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "INSTEADOFDESP"
+  - name: "LASTREVISION"
+    type: "SMALLINT"
+    properties:
+      "displayName": "LASTREVISION"
+  - name: "LEASINGREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "LEASINGREF"
+  - name: "LINEEXCTYP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "LINEEXCTYP"
+  - name: "NOTIFYCRDREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "NOTIFYCRDREF"
+  - name: "OFFALTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "OFFALTREF"
+  - name: "OFFERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "OFFERREF"
+  - name: "ONLYONEPAYLINE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ONLYONEPAYLINE"
+  - name: "OPSTAT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "OPSTAT"
+  - name: "ORGDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "ORGDATE"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ORGLOGICREF"
+  - name: "ORGLOGOID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ORGLOGOID"
+  - name: "PAYDEFREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PAYDEFREF"
+  - name: "PAYERID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "PAYERID"
+  - name: "PAYERMICRO"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PAYERMICRO"
+  - name: "PAYERTYPE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PAYERTYPE"
+  - name: "PAYMENTTYPE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PAYMENTTYPE"
+  - name: "POFFERBEGDT"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "POFFERBEGDT"
+  - name: "POFFERENDDT"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "POFFERENDDT"
+  - name: "PRINTCNT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PRINTCNT"
+  - name: "PRINTDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "PRINTDATE"
+  - name: "PROJECTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PROJECTREF"
+  - name: "PUBLICBNACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PUBLICBNACCREF"
+  - name: "RECHASH"
+    type: "VARCHAR"
+    properties:
+      "displayName": "RECHASH"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "RECSTATUS"
+  - name: "RECVREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "RECVREF"
+  - name: "REPORTNET"
+    type: "FLOAT8"
+    properties:
+      "displayName": "REPORTNET"
+  - name: "REPORTRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "REPORTRATE"
+  - name: "REVISNR"
+    type: "VARCHAR"
+    properties:
+      "displayName": "REVISNR"
+  - name: "SENDCNT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SENDCNT"
+  - name: "SHIPINFOREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "SHIPINFOREF"
+  - name: "SHPAGNCOD"
+    type: "VARCHAR"
+    properties:
+      "displayName": "SHPAGNCOD"
+  - name: "SHPTYPCOD"
+    type: "VARCHAR"
+    properties:
+      "displayName": "SHPTYPCOD"
+  - name: "SITEID"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SITEID"
+  - name: "SLSACTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "SLSACTREF"
+  - name: "SLSCUSTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "SLSCUSTREF"
+  - name: "SLSOPPRREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "SLSOPPRREF"
+  - name: "SOURCECOSTGRP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SOURCECOSTGRP"
+  - name: "SOURCEINDEX"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SOURCEINDEX"
+  - name: "SPECODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "SPECODE"
+  - name: "TAXFREECHX"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TAXFREECHX"
+  - name: "TEXTINC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TEXTINC"
+  - name: "TIME_"
+    type: "INTEGER"
+    properties:
+      "displayName": "TIME_"
+  - name: "TOTALADDTAX"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALADDTAX"
+  - name: "TOTALDISCOUNTED"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALDISCOUNTED"
+  - name: "TOTALDISCOUNTS"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALDISCOUNTS"
+  - name: "TOTALEXADDTAX"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALEXADDTAX"
+  - name: "TOTALEXPENSES"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALEXPENSES"
+  - name: "TOTALEXPENSESVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALEXPENSESVAT"
+  - name: "TOTALPROMOTIONS"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALPROMOTIONS"
+  - name: "TOTALVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TOTALVAT"
+  - name: "TRADINGGRP"
+    type: "VARCHAR"
+    properties:
+      "displayName": "TRADINGGRP"
+  - name: "TRANSFERWITHPAY"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TRANSFERWITHPAY"
+  - name: "TRCURR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TRCURR"
+  - name: "TRNET"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TRNET"
+  - name: "TRRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TRRATE"
+  - name: "TYP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TYP"
+  - name: "UPDCURR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "UPDCURR"
+  - name: "UPDTRCURR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "UPDTRCURR"
+  - name: "VATEXCEPTCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "VATEXCEPTCODE"
+  - name: "VATEXCEPTREASON"
+    type: "VARCHAR"
+    properties:
+      "displayName": "VATEXCEPTREASON"
+  - name: "WFLOWCRDREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "WFLOWCRDREF"
+  - name: "WFSTATUS"
+    type: "INTEGER"
+    properties:
+      "displayName": "WFSTATUS"
+  - name: "WITHPAYTRANS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "WITHPAYTRANS"
+  - name: "dbo_LG_411_01_ORFLINE"
+    type: "dbo_LG_411_01_ORFLINE"
+    relationship: "Dbo.lg_411_01_orflineOrdficherefDbo.lg_411_01_orficheLogicalref"
+  - name: "dbo_LG_411_CLCARD"
+    type: "dbo_LG_411_CLCARD"
+    relationship: "Dbo.lg_411_01_orficheClientrefDbo.lg_411_clcardLogicalref"

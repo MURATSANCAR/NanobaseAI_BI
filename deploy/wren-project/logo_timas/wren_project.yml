@@ -1,0 +1,7 @@
+schema_version: 5
+name: logo_timas
+version: '1.0'
+catalog: wrenai
+schema: public
+data_source: mssql
+profile: logo-tunnel
