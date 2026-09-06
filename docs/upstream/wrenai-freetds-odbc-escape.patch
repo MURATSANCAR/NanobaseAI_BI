@@ -26,10 +26,10 @@ index 0f87cea..50a4465 100644
  
  def _register_mssql_output_converters(connection) -> None:
 diff --git a/core/wren/tests/unit/test_mssql_connection.py b/core/wren/tests/unit/test_mssql_connection.py
-index 7869dd7..80970c6 100644
+index 7869dd7..d58dbb2 100644
 --- a/core/wren/tests/unit/test_mssql_connection.py
 +++ b/core/wren/tests/unit/test_mssql_connection.py
-@@ -378,3 +378,56 @@ def test_mssql_query_preserves_duplicate_column_names() -> None:
+@@ -378,3 +378,54 @@ def test_mssql_query_preserves_duplicate_column_names() -> None:
      assert table.column_names == ["a", "a"]
      assert table.column(0).to_pylist() == [1, 3]
      assert table.column(1).to_pylist() == [2, 4]
@@ -82,7 +82,5 @@ index 7869dd7..80970c6 100644
 +    raw = _raw_conn_str(fake.connect.call_args)
 +    assert "DATABASE={my db};" not in raw  # inner spaces do not need quoting
 +    assert "DATABASE=my db;" in raw
-+    assert "PWD={p;w}}d}" in raw  # ';' forces braces, '}' is doubled
-+    parts = _parse_conn_str(fake.connect.call_args)
-+    assert parts["PWD"] == "p;w}d"
-+    assert parts["UID"] == "dom\\user"
++    assert "UID=dom\\user;" in raw  # backslash needs no quoting
++    assert raw.endswith("PWD={p;w}}d}")  # ';' forces braces, '}' is doubled

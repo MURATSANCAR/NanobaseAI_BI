@@ -1,0 +1,54 @@
+# Upstream report — Canner/WrenAI (`core/wren`, wrenai 0.13.4)
+
+Bu Mac'te GitHub kimliği yok; aşağıdaki iki kaydı sen açarsın. Yama: `wrenai-freetds-odbc-escape.patch`
+(`git apply` ile `main` üzerine uygulanır; `core/wren/tests/unit/test_mssql_connection.py` 20/20 geçti — sunucu venv'inde koşuldu).
+
+---
+
+## Issue 1 — mssql: `_escape_odbc_value` braces every ODBC attribute; FreeTDS fails with HY001
+
+**Title:** `mssql connector: unconditional `{}` quoting of ODBC values breaks FreeTDS (HY001 Memory allocation failure)`
+
+**Environment:** wrenai 0.13.4 (`pip install 'wrenai[mssql]'`), Ubuntu 24.04, unixODBC 2.3.12, FreeTDS 1.3.17 (`tdsodbc`), SQL Server 2019.
+
+**Repro**
+
+```json
+{"datasource":"mssql","host":"127.0.0.1","port":"14330","database":"LOGO_DB","user":"u","password":"p",
+ "driver":"FreeTDS","tds_version":"7.4","kwargs":{"ClientCharset":"UTF-8"}}
+```
+
+```
+$ wren query --mdl target/mdl.json --connection-file conn.json --sql 'SELECT TOP 1 "DATE_" FROM "dbo_LG_411_01_INVOICE"'
+Error: ('HY001', '[HY001] [FreeTDS][SQL Server]Memory allocation failure (0) (SQLDriverConnect)')
+```
+
+The connector builds (`wren/connector/mssql.py::_connect_mssql_pyodbc`, `_escape_odbc_value` at L483):
+
+```
+DRIVER={FreeTDS};SERVER=127.0.0.1,14330;DATABASE={LOGO_DB};UID={u};PWD={p};TDS_Version={7.4};ClientCharset={UTF-8}
+```
+
+Passing the same string with `TDS_Version=7.4;ClientCharset=UTF-8` (no braces) to `pyodbc.connect` works. Microsoft's ODBC
+Driver 18 strips braces on every attribute; FreeTDS only does so where it expects quoting (DRIVER/DATABASE/UID/PWD), so
+`TDS_Version={7.4}` becomes an invalid version and `ClientCharset={UTF-8}` an unknown charset → HY001. Verified by
+brute-force: braced DRIVER/DATABASE/UID/PWD are fine, braced TDS_Version or ClientCharset alone reproduce the failure.
+
+**Fix (patch attached):** quote a value only when it needs it (contains `;`, `{`, `}`, or leading/trailing whitespace,
+or starts with `{`), which is the ODBC rule and keeps both drivers working. Two unit tests added to
+`tests/unit/test_mssql_connection.py` (`test_plain_values_are_not_braced`, `test_values_needing_quotes_are_braced`).
+
+**Workaround until released:** a `.pth`-loaded shim that replaces `wren.connector.mssql._escape_odbc_value`
+(we ship it as `tools/wren/sitecustomize.py`, installed as `nanobaseai_odbc_shim.pth`).
+
+---
+
+## Issue 2 — `wrenai[mcp]` extra resolves to `mcp` 2.x, `wren serve mcp` crashes at import
+
+**Title:** `wren serve mcp: mcp>=2 (FastMCP renamed to mcpserve) breaks startup — pin mcp<2 in the [mcp] extra`
+
+`core/wren/pyproject.toml` declares `mcp = ["mcp[cli]>=1.19"]`; a fresh install today pulls `mcp 2.x`, and
+`wren serve mcp --transport http` exits with the migration notice
+(`…/v2/migration/#fastmcp-renamed-to-mcpserve … or pin 'mcp<2' to keep running v1 code`). `pip install 'mcp<2'`
+(1.29.1) fixes it: server starts, 17 tools listed, `run_sql` works over Streamable HTTP. Suggest `mcp[cli]>=1.19,<2`
+until the server is ported to the v2 API.
