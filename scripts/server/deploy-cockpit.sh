@@ -20,7 +20,9 @@ if sudo grep -q 'location /timas/ ' "$SITE"; then
   log "nginx block already present in $SITE"
 else
   log "inserting /timas block into $SITE (before the /bi block)"
-  sudo cp "$SITE" "${SITE}.bak-$(date +%Y%m%d%H%M%S)"
+  # Backup OUTSIDE sites-enabled: nginx includes sites-enabled/* and a copy there = duplicate upstreams.
+  sudo mkdir -p /etc/nginx/backups
+  sudo cp "$SITE" "/etc/nginx/backups/$(basename "$SITE").bak-$(date +%Y%m%d%H%M%S)"
   BLOCK=$(cat <<NGX
     # TİMAŞ Finans & Bütçe Masası (apps/cockpit) — https://portal.nanobase.ai/timas/
     # Static build under ${DIST}; /timas/api/* → semantic engine UI service (${WREN_UI}, loopback only).
