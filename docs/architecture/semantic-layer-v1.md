@@ -224,8 +224,35 @@ kullanıcıların söylediği ama katalogda olmayan bir sözcük → `/api/v1/se
 → bir kişi ilgili kolonu tarif eder → HUMAN_ANNOTATION kanıtı sertifikalanır → aynı soru doğru SQL ile
 cevaplanır. Kod tarafında hiçbir tanım yok.
 
+### Canlı ölçüm (üretim köprüsü, 2026-09-07)
+
+Aynı 50 soru üretimdeki köprüye soruldu (300 profil, 38 sertifikalı kavram, gerçek ERP):
+
+| | Düzeltmelerden önce | Sonra |
+|---|---|---|
+| OK | 37 | **41** |
+| EKSİK | 12 | **9** |
+| RİSK | 1 | **0** |
+
+Cevapların 4'ü doğrudan katalogdan (LLM'e hiç gitmeden), 19'u modelden sertifikalı kısıtlarla, 27'si
+bilinçli red. Kalan 9 EKSİK'in tamamı ya portalde tanımlanmayı bekleyen bir terim
+(*para, grubu, zararına, sepet, internetten*) ya da karşılığı olmayan bir niteleyici — puan değil,
+iş kuyruğu.
+
+Üretimin kendisi, dört tablolu yerel fikstürün gizlediği yedi hatayı gösterdi. En önemlisi: **belgelenmiş
+bir kodun anlamı, aynı kolon adını taşıyan alakasız bir tabloya bağlanıyordu**, bu yüzden bir terimin
+kanıtı üç tabloya bölünüyor ve hiçbiri kapıyı geçemiyordu; düzeltilince "toptan" ve "perakende"
+sertifikalandı. Diğerleri: prompt 300 tabloyu taşıyordu (modelin bağlamına sığmıyordu), "bu ay" kapsam
+dışı sayılıyordu, "toptan" `-an` ekinden ötürü sıfat-fiil sanılıyordu, tazelik taraması tablo başına
+sütun sayısı kadar tam tarama yapıyordu (boru hattı saatlerden 24 saniyeye indi), `--skip-profile`
+sondaki sondada çöküyordu — yani "kataloğu düzelt, yeniden sertifikala" yolu hiç çalışmamıştı — ve
+watchdog durum dosyasına yazamadığı için kesintinin ne kadar sürdüğünü hiç söyleyemiyordu.
+
+Gerileme kapısı ilk gerçek işini de yaptı: bir düzeltmenin yan etkisiyle "Geçen aya göre daha mı
+iyiyiz?" cevaplanamaz olmuştu (datif ek dönemi gizliyordu); bir sonraki turda yakalandı.
+
 Deterministik dilim (LLM yok, yalnız katalog): cevapladığı her soru doğru; cevaplamadıkları ya modele
-düşer ya da portalde tanımlanacak terim olarak listelenir. 68 test.
+düşer ya da portalde tanımlanacak terim olarak listelenir. 77 test.
 
 
 ## 9. Faz 8 — SuperSonic A/B (uygulandı)
