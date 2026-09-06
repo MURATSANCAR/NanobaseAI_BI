@@ -7,7 +7,17 @@ import { Thinking } from './Thinking';
 
 type Msg =
   | { role: 'user'; text: string; at: string }
-  | { role: 'assistant'; text: string; sql?: string; result?: SqlResult; error?: string; at: string; pending?: boolean };
+  | {
+      role: 'assistant';
+      text: string;
+      sql?: string;
+      result?: SqlResult;
+      error?: string;
+      at: string;
+      pending?: boolean;
+      semantic?: SemanticTrace;
+      queryId?: string;
+    };
 
 const SUGGESTIONS = [
   '2026 kanal bazında net ciro',
