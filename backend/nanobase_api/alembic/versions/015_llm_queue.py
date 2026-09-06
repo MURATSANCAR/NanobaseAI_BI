@@ -30,6 +30,7 @@ def upgrade() -> None:
             worker VARCHAR(128)
         );
         CREATE INDEX IF NOT EXISTS ix_sl_llm_queue_order ON sl_llm_queue (status, enqueued_at);
+        ALTER TABLE sl_schema_profile ADD COLUMN IF NOT EXISTS time_window_json JSONB;
         """
     )
 

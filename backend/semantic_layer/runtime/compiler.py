@@ -186,6 +186,10 @@ class DeterministicCompiler:
             return None, "ambiguous temporal term"
         if q.conflicts:
             return None, "conflicting filters on " + ", ".join(q.conflicts)
+        if q.out_of_scope:
+            return None, "period outside the data window: " + ", ".join(q.out_of_scope)
+        if q.unhandled:
+            return None, "qualifiers with no certified meaning: " + ", ".join(q.unhandled)
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
         if not metrics:
             return None, "no certified metric"
@@ -336,6 +340,8 @@ Kurallar:
 - "## İş kuralları" bölümündeki varsayılan filtrelere ve tanımlara mutlaka uy.
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
+- KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
+- KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
 _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
@@ -455,6 +461,8 @@ class ExistingCompiler:
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
+            "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
             "## Şema bağlamı\n" + self.schema_context(q, recalled),
         ]

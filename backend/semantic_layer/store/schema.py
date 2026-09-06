@@ -142,6 +142,7 @@ sl_schema_profile = sa.Table(
     sa.Column("context_json", sa.JSON(), nullable=False, default=dict),
     sa.Column("row_count", sa.Integer()),
     sa.Column("description", sa.Text()),
+    sa.Column("time_window_json", sa.JSON()),
     sa.Column("scanned_at", sa.DateTime(timezone=True), nullable=False),
     sa.UniqueConstraint("datasource_id", "table_pattern", name="uq_sl_schema_profile"),
 )

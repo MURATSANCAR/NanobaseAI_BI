@@ -238,6 +238,8 @@ class Runtime:
             semantic["queue"] = queued
         if not compiled.sql:
             reason = "; ".join(compiled.explain)[:500]
+            if sq.out_of_scope:
+                reason = next((e for e in sq.explanation if "kapsamı dışında" in e), reason)
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
             return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         sql = strip_trailing_semicolon(compiled.sql)

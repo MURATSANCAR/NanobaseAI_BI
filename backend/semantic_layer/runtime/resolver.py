@@ -20,7 +20,22 @@ from semantic_layer.models import (
     SemanticType,
     TemporalSlot,
 )
-from semantic_layer.normalize import METRIC_VOCAB_S, MODIFIERS_S, STOPWORDS_S, fold, stem, tokenize
+from semantic_layer.normalize import (
+    METRIC_VOCAB_S,
+    MODIFIERS_S,
+    STOPWORDS_S,
+    cardinal,
+    derived_forms,
+    fold,
+    is_domain_candidate,
+    is_light_verb,
+    is_negative,
+    is_participle,
+    short_root,
+    stem,
+    tokenize,
+    verb_root,
+)
 from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -32,6 +47,24 @@ _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money
 _AVG_WORDS = frozenset(stem(w) for w in "ortalama ortalamasi".split())
 # A comparison cue turns several value sets on one column into a pivot instead of a contradiction.
 _COMPARE_CUE = re.compile(r"\b(karsilastir|karsilastirma|kiyasla|kiyaslama|vs|ayri ayri|yan yana|ikisini)\b")
+# "kaç fatura", "fatura sayısı", "kaç tane" — the question asks how many rows, not how much value.
+_COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariyla|sayi)\b")
+# A movement word turns one number into a series: the answer has to be broken down over time.
+_TREND_CUE = re.compile(r"\b(?:artis|artiyor|artan|azalis|azaliyor|dusus|dusuyor|duserken|buyume|buyuyor|kuculuyor|gerileme|trend|gidisat|seyir|ay ay|gun gun|yil yil|hafta hafta|zaman icinde|zamanla)\w{0,6}\b")
+# Ranking cues that make a following number a top-N rather than a value.
+_RANK_CUE = frozenset("en ilk top bastaki basta".split())
+_WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
+# "payı yüzde kaç" asks for a share: a plain total is a different answer, not a rounder one.
+_SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzdelik)\b")
+
+
+def _parse_condition(key: str) -> Optional[tuple[tuple[str, str], set[str]]]:
+    """'INVOICE.TRCODE IN (7, 8, 9)' → (('INVOICE', 'TRCODE'), {'7', '8', '9'})."""
+    m = re.match(r"^(\w+)\.(\w+)\s+IN\s+\((.*)\)$", key.strip())
+    if not m:
+        return None
+    ent, col, vals = m.groups()
+    return (ent, col.upper()), {v.strip().strip("'") for v in vals.split(",") if v.strip()}
 
 
 class SemanticResolver:
@@ -95,7 +128,8 @@ class SemanticResolver:
             if any(k in consumed for k in range(i, j)):
                 continue
             phrase = " ".join(qf.tokens[i:j])
-            for entity, column, raw in self._value_index.get(phrase, []):
+            found_values = self._value_index.get(phrase) or self._value_index.get(" ".join(stem(t) for t in qf.tokens[i:j])) or []
+            for entity, column, raw in found_values:
                 literal.setdefault((entity, column), []).append((i, j, raw))
                 consumed.update(range(i, j))
                 break
@@ -148,6 +182,15 @@ class SemanticResolver:
                 slot.explain["role"] = "group_by"
                 sq.explanation.append(f"'{slot.term}' hem filtre hem kırılım: sorulan değerler bu kolonda")
 
+        # 4a) people ask with verbs ("ne kadar sattık?"), the catalog is keyed on nouns ("satış tutarı").
+        #     When nothing else supplied a measure, a verb root that uniquely prefixes one certified term
+        #     bridges the two — reported as INFERRED so the answer says how it got there.
+        if not any(s_.semantic_type == SemanticType.METRIC for s_ in hits):
+            inferred = self._from_verb(qf, index, consumed)
+            if inferred is not None:
+                hits.append(inferred)
+                sq.slots = hits
+
         # 4b) composed metric: certified measure column + aggregation word, when no certified metric matched
         #     ("iade tutarı" = 'iade' filtresi + 'satış tutarı' ölçü kolonu → SUM(INVOICE.NETTOTAL))
         if not any(s_.semantic_type == SemanticType.METRIC for s_ in hits) and (sq.filters or sq.group_by):
@@ -155,6 +198,46 @@ class SemanticResolver:
             if composed is not None:
                 hits.append(composed)
                 sq.slots = hits
+
+        # 4c) a word the index does not carry verbatim: try its derivational base ("kârlılığımız" → "kâr")
+        #     and then a certified term that contains it and belongs to exactly one concept ("alım"
+        #     occurs only inside "mal alım"). Both are INFERRED, never certified by this step.
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or not is_domain_candidate(tok) or is_participle(tok):
+                continue
+            slot = self._backoff(tok, k, index)
+            if slot is not None:
+                hits.append(slot)
+                consumed.add(k)
+        sq.slots = hits
+
+        # 4d) "kaç fatura kestik?" — a count question over an entity someone has already named in the
+        #     catalog. The key column comes from the profile, so no table or column is written here.
+        if not any(s_.semantic_type == SemanticType.METRIC for s_ in hits) and _COUNT_CUE.search(fold(question)):
+            counted = self._count_metric(qf, hits, consumed)
+            if counted is not None:
+                hits.append(counted)
+                sq.slots = hits
+
+        # 4e) "hangi müşteri …" — the interrogative names the breakdown. The label column is the
+        #     certified COLUMN concept of that entity whose own term contains the word that was used.
+        which = self._which_breakdown(qf, hits, consumed)
+        if which is not None and which not in sq.group_by:
+            hits.append(which)
+            sq.group_by.append(which)
+            sq.slots = hits
+
+        # 4f) "en yüksek beş kanal" — a written-out number after a ranking cue is a top-N.
+        if qf.limit is None:
+            for k, tok in enumerate(qf.tokens):
+                n = cardinal(tok)
+                if n is None or n < 2 or n > 1000 or re.fullmatch(r"(19|20)\d\d", tok):
+                    continue
+                if {fold(x) for x in qf.tokens[max(0, k - 3) : k]} & _RANK_CUE:
+                    qf.limit = n
+                    consumed.add(k)
+                    sq.explanation.append(f"'{tok}' sıralama sayısı olarak okundu → ilk {n}")
+                    break
 
         # 5) temporal
         sq.temporal = list(qf.temporal)
@@ -164,6 +247,15 @@ class SemanticResolver:
             sq.explanation.append(f"dönem belirtilmedi → varsayılan {self.default_temporal.primitive} uygulandı")
         for t in sq.temporal:
             sq.explanation.append(describe(t))
+        if not sq.grain and _TREND_CUE.search(fold(question)):
+            sq.grain = "MONTH"
+            sq.explanation.append("soru bir gidişat soruyor → sonuç ay ay kırılacak")
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or not (_TREND_CUE.fullmatch(fold(tok)) or _COUNT_CUE.fullmatch(fold(tok))):
+                continue
+            if is_participle(tok) and self._modifies_a_noun(qf.tokens, k, consumed):
+                continue            # "artan ürünler" narrows the subject; it is not just a trend cue
+            consumed.add(k)         # a cue that shaped the query is accounted for, not missing
 
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
@@ -176,7 +268,22 @@ class SemanticResolver:
                 continue
             if tok.upper() in self.column_names or _GROUP_MARKERS.fullmatch(st) or _GROUP_MARKERS.fullmatch(tok):
                 continue
-            if len(tok) < 3:
+            if st in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
+                continue
+            if is_participle(tok) or is_negative(tok):
+                # A participle is grammar, but an attributive one narrows the subject ("bekleyen
+                # siparişler"): dropping it would answer a wider question than the one that was asked.
+                if is_light_verb(tok) or not self._modifies_a_noun(qf.tokens, k, consumed):
+                    if tok not in sq.ignored:
+                        sq.ignored.append(tok)
+                elif tok not in sq.unhandled:
+                    sq.unhandled.append(tok)
+                    sq.explanation.append(f"'{tok}' konuyu daraltıyor ama katalogda karşılığı yok; yok sayılırsa daha geniş bir soru cevaplanmış olur")
+                continue
+            if not is_domain_candidate(tok):
+                # an inflected verb, a pronoun or a question particle says nothing about the catalog
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
                 continue
             if tok not in sq.unresolved:
                 sq.unresolved.append(tok)
@@ -186,6 +293,27 @@ class SemanticResolver:
         for s_ in hits:
             if s_.semantic_type == SemanticType.DIMENSION_VALUE and s_.mapping and s_.mapping.column:
                 by_col.setdefault((s_.mapping.entity, s_.mapping.column.upper()), set()).add(frozenset(s_.mapping.values))
+        for s_ in hits:
+            if s_.semantic_type != SemanticType.METRIC or not s_.mapping:
+                continue
+            for key in (s_.mapping.extra or {}).get("conditions") or []:
+                scope = _parse_condition(key)
+                if scope is None:
+                    continue
+                col_key, scope_values = scope
+                for f in hits:
+                    if f.semantic_type != SemanticType.DIMENSION_VALUE or not f.mapping or not f.mapping.column:
+                        continue
+                    if (f.mapping.entity, f.mapping.column.upper()) != col_key:
+                        continue
+                    if (f.mapping.operator or "IN").upper() == "IN" and not (set(f.mapping.values) & scope_values):
+                        label = f"{col_key[0]}.{col_key[1]}"
+                        if label not in sq.conflicts:
+                            sq.conflicts.append(label)
+                            sq.explanation.append(
+                                f"'{f.term}' filtresi '{s_.term}' ölçüsünün kapsamıyla ({key}) kesişmiyor: "
+                                "birlikte sorulursa sonuç her zaman boş çıkar"
+                            )
         comparison = bool(_COMPARE_CUE.search(fold(question)))
         for (entity, column), sets in by_col.items():
             if len(sets) > 1 and not comparison:
@@ -194,12 +322,43 @@ class SemanticResolver:
             elif len(sets) > 1:
                 sq.explanation.append(f"karşılaştırma istendi: {entity}.{column} üzerinde " + " / ".join(", ".join(sorted(x)) for x in sets) + " ayrı sütunlara açılacak")
 
+        # 8) does this deployment even hold the period being asked about? The window is measured, so the
+        #    answer is "there is no data for 2019 here", not an empty result set that looks like zero sales.
+        entity = self._primary_entity(hits) or next((s_.mapping.entity for s_ in hits if s_.mapping), None)
+        prof = self.by_entity.get(entity or "")
+        window = prof.time_window if prof else None
+        if window and sq.temporal:
+            from datetime import date as _date
+
+            try:
+                first, last = _date.fromisoformat(window[0]), _date.fromisoformat(window[1])
+            except Exception:  # noqa: BLE001
+                first = last = None
+            for t in sq.temporal:
+                if first and last and t.start and t.end and (t.end <= first or t.start > last):
+                    sq.out_of_scope.append(t.text)
+                    sq.explanation.append(
+                        f"'{t.text}' bu veri kaynağının kapsamı dışında: {entity} verisi {window[0]} – {window[1]} arasını içeriyor"
+                    )
+
+        # 9) a share question needs a denominator. When no certified ratio supplies one, answering with
+        #    the plain total would quietly replace "what percent" with "how much".
+        if _SHARE_CUE.search(fold(question)) and not any(
+            s_.semantic_type == SemanticType.METRIC and s_.mapping and "/" in (s_.mapping.formula or "") for s_ in hits
+        ):
+            cue = next((t for t in qf.tokens if _SHARE_CUE.fullmatch(stem(t)) or _SHARE_CUE.fullmatch(fold(t))), "pay")
+            if cue not in sq.unhandled:
+                sq.unhandled.append(cue)
+                sq.explanation.append(f"'{cue}' bir oran istiyor; katalogda paydayı veren sertifikalı bir oran ölçüsü yok")
+
         sq.limit = qf.limit
         sq.order_desc = qf.order_desc
         for s in hits:
             sq.explanation.append(self._why(s))
         if sq.unresolved:
             sq.explanation.append("katalogda karşılığı olmayan terimler: " + ", ".join(sq.unresolved))
+        if sq.unhandled:
+            sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
         return sq
 
     def explain_term(self, term: str) -> dict[str, Any]:
@@ -270,11 +429,177 @@ class SemanticResolver:
                     documented = [str(v) for v in (concept.explain.get("documented_values") or [])]
                     for raw in dict.fromkeys(observed + documented):
                         token = " ".join(tokenize(raw))   # same shape the question tokens have ("E-TICARET" → "e ticaret")
-                        if len(token) >= 3 and not token.isdigit() and token not in STOPWORDS_S and not token.isnumeric():
-                            values.setdefault(token, []).append((m.entity, col.name, raw))
+                        if len(token) < 3 or token.isdigit() or token in STOPWORDS_S or token.isnumeric():
+                            continue
+                        # people inflect the value they say ("Kitapçılar bu ay …"), so the stemmed shape
+                        # is indexed beside the literal one and the lookup tries both.
+                        for form in dict.fromkeys([token, " ".join(stem(t) for t in tokenize(raw))]):
+                            entry = (m.entity, col.name, raw)
+                            if entry not in values.setdefault(form, []):
+                                values[form].append(entry)
         self._value_index = values
         self._measure_columns = measures
         self._cache_key = key
+
+    def _from_verb(self, qf: Any, index: dict[str, list[tuple[Concept, list[Mapping]]]], consumed: set[int]) -> Optional[ResolvedSlot]:
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed:
+                continue
+            root = verb_root(tok)
+            if not root or is_negative(tok):
+                continue        # "satmayan" is the opposite of "satış": bridging it would invert the answer
+            matches = [
+                (key, senses) for key, senses in index.items()
+                if key.split()[0].startswith(root) and any(c.semantic_type == SemanticType.METRIC for c, _ in senses)
+            ]
+            if not matches:
+                continue
+            # Turkish forms a noun from a verb with -ış/-im/-ma ("sat" → "satış"): that nominalisation is
+            # the term the catalog is keyed on, so it wins over an unrelated word sharing the prefix.
+            nominal = [m for m in matches if m[0].split()[0] in {root + suf for suf in ("", "is", "im", "um", "ma", "me", "gi", "ki")}]
+            if nominal:
+                matches = nominal
+            if len(matches) > 1:
+                # several keys may be names of the same measure ("satış" and "satış tutarı"); that is not
+                # ambiguity. Different measures are.
+                concepts = {c.id for _, senses in matches for c, _ in senses if c.semantic_type == SemanticType.METRIC}
+                if len(concepts) > 1:
+                    continue                 # genuinely different measures: say nothing rather than guess
+                matches = [min(matches, key=lambda m: (len(m[0].split()), len(m[0])))]
+            key, senses = matches[0]
+            slot = self._slot_from_senses(key, tok, senses, (k, k + 1))
+            if slot is None or slot.semantic_type != SemanticType.METRIC:
+                continue
+            slot.status = "INFERRED"
+            slot.confidence = min(slot.confidence, 0.7)
+            slot.explain["why"] = f"'{tok}' fiilinin kökü ({root}) yalnız '{key}' ölçüsüyle eşleşiyor"
+            consumed.add(k)
+            return slot
+        return None
+
+    @staticmethod
+    def _modifies_a_noun(tokens: list[str], k: int, consumed: Optional[set[int]] = None) -> bool:
+        """Is the participle at k attached to a following noun ("bekleyen siparişler") rather than
+        standing as the sentence's predicate ("iadeler artıyor mu")?
+
+        A word the resolver already placed counts as a noun: it is part of the subject being narrowed.
+        """
+        for i in range(k + 1, min(k + 4, len(tokens))):
+            nxt = tokens[i]
+            if consumed is not None and i in consumed:
+                return True
+            f = fold(nxt)
+            if cardinal(nxt) is not None or f in STOPWORDS_S or f in MODIFIERS_S:
+                continue
+            return is_domain_candidate(nxt) and not is_participle(nxt)
+        return False
+
+    def _backoff(self, tok: str, k: int, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[ResolvedSlot]:
+        """Second-chance lookup for a single word: derivational base first, then a unique certified
+        term that contains it. Never certifies anything — the slot is marked INFERRED and damped."""
+        st = stem(tok)
+        if {fold(tok), st} & (STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S):
+            return None         # a generic word ("sayı", "toplam") must not select one specific concept
+        for key in derived_forms(tok):
+            senses = index.get(key)
+            slot = self._slot_from_senses(key, tok, senses, (k, k + 1)) if senses else None
+            if slot is not None:
+                slot.status = "INFERRED"
+                slot.confidence = min(slot.confidence, 0.7)
+                slot.explain["why"] = f"'{tok}' türetilmiş biçim; kökü '{key}' katalogda sertifikalı"
+                return slot
+        bases = {st} | set(derived_forms(tok))
+        matches = [(key, senses) for key, senses in index.items() if bases & set(key.split())]
+        if not matches:
+            return None
+        concepts = {c.id for _, senses in matches for c, _ in senses}
+        if len({key for key, _ in matches}) == 1:
+            concepts = {next(iter(concepts))}      # one term, several senses — ranking picks the sense
+        if len(concepts) > 1:
+            # several certified terms contain the word but mean different things — one of them is a
+            # measure only when the rest are not; otherwise stay silent rather than pick a sense.
+            metrics = {c.id for _, senses in matches for c, _ in senses if c.semantic_type == SemanticType.METRIC}
+            entities = {m.entity for _, senses in matches for _, maps in senses for m in maps}
+            if len(metrics) != 1 or len(entities) != 1:
+                return None
+            matches = [(key, [(c, maps) for c, maps in senses if c.id in metrics]) for key, senses in matches
+                       if any(c.id in metrics for c, _ in senses)]
+        key, senses = min(matches, key=lambda m: (len(m[0].split()), len(m[0])))
+        slot = self._slot_from_senses(key, tok, senses, (k, k + 1))
+        if slot is None:
+            return None
+        slot.status = "INFERRED"
+        slot.confidence = min(slot.confidence, 0.65)
+        slot.explain["why"] = f"'{tok}' katalogda yalnız '{key}' teriminin içinde geçiyor"
+        return slot
+
+    def _entity_of_word(self, token: str, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[str]:
+        """Which entity does this word name? Answered from certified terms only: "sipariş" points at the
+        table the certified concept "sipariş sayısı" maps to. Nothing is derived from table names."""
+        bases = {stem(token)} | set(derived_forms(token))
+        owners = {m.entity for key, senses in index.items() if bases & set(key.split())
+                  for _, maps in senses for m in maps}
+        return next(iter(owners)) if len(owners) == 1 else None
+
+    def _count_metric(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int]) -> Optional[ResolvedSlot]:
+        index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        entity = None
+        for k, tok in enumerate(qf.tokens):
+            if not is_domain_candidate(tok):
+                continue
+            entity = self._entity_of_word(tok, index)
+            if entity:
+                break
+        entity = entity or self._primary_entity(hits)
+        prof = self.by_entity.get(entity or "")
+        if prof is None:
+            return None
+        key = next((c.name for c in prof.columns if c.is_primary_key), None)
+        formula = f"COUNT(DISTINCT {entity}.{key})" if key else f"COUNT(*)"
+        m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, formula=formula)
+        return ResolvedSlot(
+            term="kayıt sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED", mapping=m, confidence=0.75,
+            explain={"why": f"soru adet soruyor → {entity} kayıtları {('anahtar ' + key) if key else 'satır'} üzerinden sayıldı"},
+        )
+
+    def _which_breakdown(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int]) -> Optional[ResolvedSlot]:
+        """"Hangi müşteri …" → group by the entity's label column, chosen from certified COLUMN concepts."""
+        index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        for k, tok in enumerate(qf.tokens):
+            if fold(tok) not in _WHICH:
+                continue
+            for nxt_i in range(k + 1, min(k + 4, len(qf.tokens))):
+                nxt = qf.tokens[nxt_i]
+                if not is_domain_candidate(nxt):
+                    continue
+                entity = self._entity_of_word(nxt, index)
+                if not entity:
+                    break
+                bases = {stem(nxt)} | set(derived_forms(nxt))
+                best = None
+                for key, senses in index.items():
+                    for c, maps in senses:
+                        if c.semantic_type != SemanticType.COLUMN:
+                            continue
+                        for m in maps:
+                            prof = self.by_entity.get(m.entity)
+                            col = prof.column(m.column) if prof and m.column else None
+                            if col is None or m.entity != entity or col.is_primary_key or col.sensitive:
+                                continue
+                            if not bases & set(key.split()):
+                                continue
+                            rank = (0 if not self.conventions.is_scope_column(m.entity, col.name) else 1, len(key))
+                            if best is None or rank < best[0]:
+                                best = (rank, c, m, key)
+                if best is None:
+                    break
+                _, c, m, key = best
+                consumed.add(nxt_i)
+                return ResolvedSlot(term=nxt, semantic_type=SemanticType.COLUMN, status="INFERRED", concept_id=c.id,
+                                    mapping=m, confidence=min(c.confidence, 0.7),
+                                    explain={"why": f"'{tok} {nxt}' kırılım istiyor → sertifikalı '{key}' kolonu ({m.entity}.{m.column})", "role": "group_by"},
+                                    span=(nxt_i, nxt_i + 1))
+        return None
 
     def _compose_metric(self, qf: Any, hits: list[ResolvedSlot], primary: Optional[str], consumed: set[int]) -> Optional[ResolvedSlot]:
         entity = primary or next((s_.mapping.entity for s_ in hits if s_.mapping), None)

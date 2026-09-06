@@ -1,0 +1,1508 @@
+{
+ "ran_at": "2026-09-06T22:41:29",
+ "mode": "offline",
+ "catalog_version": 1,
+ "verdicts": {
+  "OK": 21,
+  "EKSİK": 28,
+  "RİSK": 1
+ },
+ "outcomes": {
+  "reddetti": 45,
+  "katalogdan": 5
+ },
+ "risky": [
+  {
+   "id": "u29",
+   "q": "2019'da ne kadar sattık?",
+   "outcome": "katalogdan"
+  }
+ ],
+ "catalog_gaps": [
+  {
+   "term": "para",
+   "count": 1,
+   "questions": [
+    "u09"
+   ]
+  },
+  {
+   "term": "grubu",
+   "count": 1,
+   "questions": [
+    "u09"
+   ]
+  },
+  {
+   "term": "zararina",
+   "count": 1,
+   "questions": [
+    "u11"
+   ]
+  },
+  {
+   "term": "sepet",
+   "count": 1,
+   "questions": [
+    "u12"
+   ]
+  },
+  {
+   "term": "internetten",
+   "count": 1,
+   "questions": [
+    "u18"
+   ]
+  }
+ ],
+ "unhandled_qualifiers": [
+  {
+   "term": "kazandigimiz",
+   "count": 1,
+   "questions": [
+    "u09"
+   ]
+  },
+  {
+   "term": "payi",
+   "count": 1,
+   "questions": [
+    "u20"
+   ]
+  },
+  {
+   "term": "satmayan",
+   "count": 1,
+   "questions": [
+    "u23"
+   ]
+  },
+  {
+   "term": "cikan",
+   "count": 1,
+   "questions": [
+    "u24"
+   ]
+  },
+  {
+   "term": "bekleyen",
+   "count": 1,
+   "questions": [
+    "u34"
+   ]
+  },
+  {
+   "term": "paylarini",
+   "count": 1,
+   "questions": [
+    "u36"
+   ]
+  },
+  {
+   "term": "duserken",
+   "count": 1,
+   "questions": [
+    "u40"
+   ]
+  },
+  {
+   "term": "derken",
+   "count": 1,
+   "questions": [
+    "u41"
+   ]
+  }
+ ],
+ "out_of_domain_terms": [
+  [
+   "sektor",
+   1
+  ],
+  [
+   "bayram",
+   1
+  ],
+  [
+   "kdv",
+   1
+  ],
+  [
+   "dahil",
+   1
+  ],
+  [
+   "rakamlari",
+   1
+  ],
+  [
+   "duzelt",
+   1
+  ],
+  [
+   "personel",
+   1
+  ],
+  [
+   "maas",
+   1
+  ],
+  [
+   "web",
+   1
+  ],
+  [
+   "sitesi",
+   1
+  ],
+  [
+   "ziyaretci",
+   1
+  ],
+  [
+   "telefon",
+   1
+  ],
+  [
+   "numaralarini",
+   1
+  ],
+  [
+   "alisveris",
+   1
+  ],
+  [
+   "kimlik",
+   1
+  ],
+  [
+   "numarasini",
+   1
+  ],
+  [
+   "sil",
+   1
+  ],
+  [
+   "veritabanindaki",
+   1
+  ],
+  [
+   "iceriklerini",
+   1
+  ]
+ ],
+ "unmeasured_windows": [
+  "CLFLINE",
+  "INVOICE",
+  "ORFICHE",
+  "ORFLINE",
+  "STLINE",
+  "CLCARD",
+  "ITEMS"
+ ],
+ "results": [
+  {
+   "id": "u01",
+   "q": "İşler nasıl gidiyor?",
+   "expect": "clarify",
+   "note": "ölçü ve dönem yok",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "isler",
+    "gidiyor"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.01
+  },
+  {
+   "id": "u02",
+   "q": "Bu ay ne kadar sattık?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "sattik",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "THIS_MONTH",
+     "ambiguous": false
+    }
+   ],
+   "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-09-01' AND INVOICE.[DATE_] < '2026-10-01'",
+   "outcome": "katalogdan",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u03",
+   "q": "Geçen aya göre daha mı iyiyiz?",
+   "expect": "answer",
+   "note": "karşılaştırma",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "iyiyiz"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u04",
+   "q": "Bugün kaç fatura kestik?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "kestik"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "TODAY",
+     "ambiguous": false
+    }
+   ],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u05",
+   "q": "Dün hiç satış oldu mu?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "satis",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "hic",
+    "oldu"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "YESTERDAY",
+     "ambiguous": false
+    }
+   ],
+   "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-09-05' AND INVOICE.[DATE_] < '2026-09-06'",
+   "outcome": "katalogdan",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u06",
+   "q": "Son durumu bir özetler misin?",
+   "expect": "clarify",
+   "note": null,
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "misin"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u07",
+   "q": "Bu yıl toplam cirumuz ne kadar oldu?",
+   "expect": "answer",
+   "note": "yazım hatası bilinçli",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "cirumuz",
+    "oldu"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "THIS_YEAR",
+     "ambiguous": false
+    }
+   ],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u08",
+   "q": "Kârlılığımız yüzde kaç?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "karliligimiz",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": "SELECT 1 - SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[AMOUNT] * STLINE.[OUTCOST] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[TOTAL] ELSE 0 END), 0) AS brut_kar_marj\nFROM [dbo].[LG_411_01_STLINE] AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)",
+   "outcome": "katalogdan",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u09",
+   "q": "En çok para kazandığımız ürün grubu hangisi?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [],
+   "unresolved": [
+    "para",
+    "grubu"
+   ],
+   "unhandled": [
+    "kazandigimiz"
+   ],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: para, grubu",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u10",
+   "q": "Hangi müşteriden en çok kazanıyoruz?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "musteriden",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    },
+    {
+     "term": "musteriden",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "kazaniyoruz"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u11",
+   "q": "Zararına sattığımız bir şey var mı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "sattigimiz",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [
+    "zararina"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "sey"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: zararina",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u12",
+   "q": "Ortalama sepet tutarımız nedir?",
+   "expect": "answer",
+   "note": "fatura başına ortalama",
+   "resolved": [],
+   "unresolved": [
+    "sepet"
+   ],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: sepet",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u13",
+   "q": "İadeler artıyor mu?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "iadeler",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u14",
+   "q": "En çok iade edilen ürünler hangileri?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "iade",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "edilen"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u15",
+   "q": "Hangi müşteri en çok iade yapıyor?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "iade",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "musteri",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    },
+    {
+     "term": "musteri",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "yapiyor"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u16",
+   "q": "İade oranımız sektör için normal mi?",
+   "expect": "refuse",
+   "note": "dış kıyas verisi yok",
+   "resolved": [
+    {
+     "term": "iade",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [
+    "sektor"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "normal"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: sektor",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u17",
+   "q": "Hangi satış kanalı daha iyi çalışıyor?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "satis kanali",
+     "type": "COLUMN",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "iyi",
+    "calisiyor"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u18",
+   "q": "İnternetten mi daha çok satıyoruz yoksa mağazadan mı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "MAGAZA",
+     "type": "DIMENSION_VALUE",
+     "status": "PROFILE"
+    }
+   ],
+   "unresolved": [
+    "internetten"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "satiyoruz"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: internetten",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u19",
+   "q": "Kitapçılar bu ay ne kadar aldı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "KITAPCI",
+     "type": "DIMENSION_VALUE",
+     "status": "PROFILE"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "aldi"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "THIS_MONTH",
+     "ambiguous": false
+    }
+   ],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u20",
+   "q": "Zincir mağazaların payı yüzde kaç?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "MAGAZA, ZINCIR",
+     "type": "DIMENSION_VALUE",
+     "status": "PROFILE"
+    },
+    {
+     "term": "kayıt sayısı",
+     "type": "METRIC",
+     "status": "COMPOSED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [
+    "payi"
+   ],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: payi",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u21",
+   "q": "En çok satan on kitabı listeler misin?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "satan",
+     "type": "METRIC",
+     "status": "INFERRED"
+    },
+    {
+     "term": "kitabi",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "misin"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "column projections without group-by are not supported deterministically",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u22",
+   "q": "Hangi yayınevi bizim için daha kârlı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "yayinevi",
+     "type": "COLUMN",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "karli",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "bizim"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "column projections without group-by are not supported deterministically",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u23",
+   "q": "Hiç satmayan ürünlerimiz var mı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [
+    "satmayan"
+   ],
+   "ignored": [
+    "hic"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: satmayan",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u24",
+   "q": "Yeni çıkan kitaplar tuttu mu?",
+   "expect": "clarify",
+   "note": "'yeni' tanımsız",
+   "resolved": [
+    {
+     "term": "kitaplar",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [
+    "cikan"
+   ],
+   "ignored": [
+    "yeni",
+    "tuttu"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: cikan",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u25",
+   "q": "Aylık gidişatı grafik gibi ver",
+   "expect": "answer",
+   "note": null,
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u26",
+   "q": "Son çeyrekte ne oldu?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "oldu"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u27",
+   "q": "Son günlerde bir düşüş var mı?",
+   "expect": "clarify",
+   "note": "'son günler' belirsiz",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "AMBIGUOUS_RECENT",
+     "ambiguous": true
+    }
+   ],
+   "sql": null,
+   "why": "ambiguous temporal term",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u28",
+   "q": "Geçen yılın aynı dönemiyle kıyasla",
+   "expect": "refuse",
+   "note": "önceki yıl bu kurulumda yok",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "ayni"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "LAST_YEAR",
+     "ambiguous": false
+    }
+   ],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u29",
+   "q": "2019'da ne kadar sattık?",
+   "expect": "refuse",
+   "note": "kapsam dışı yıl",
+   "resolved": [
+    {
+     "term": "sattik",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "YEAR",
+     "ambiguous": false
+    }
+   ],
+   "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2019-01-01' AND INVOICE.[DATE_] < '2020-01-01'",
+   "outcome": "katalogdan",
+   "verdict": "RİSK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u30",
+   "q": "Bayram haftası satışları nasıldı?",
+   "expect": "clarify",
+   "note": "tarih aralığı belirsiz",
+   "resolved": [
+    {
+     "term": "satislari",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [
+    "bayram"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "nasildi"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: bayram",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u31",
+   "q": "En çok hangi tedarikçiden alım yaptık?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "tedarikciden",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    },
+    {
+     "term": "alim",
+     "type": "DIMENSION_VALUE",
+     "status": "INFERRED"
+    },
+    {
+     "term": "tedarikciden",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "yaptik"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u32",
+   "q": "Alımlarımız satışlarımızı geçti mi?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "satislarimizi",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "alimlarimiz",
+     "type": "DIMENSION_VALUE",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "gecti"
+   ],
+   "conflicts": [
+    "INVOICE.TRCODE"
+   ],
+   "temporal": [],
+   "sql": null,
+   "why": "conflicting filters on INVOICE.TRCODE",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u33",
+   "q": "Bu ay kaç sipariş açıldı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "siparis",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "acildi"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "THIS_MONTH",
+     "ambiguous": false
+    }
+   ],
+   "sql": "SELECT COUNT(DISTINCT ORFICHE.[LOGICALREF]) AS siparis_sayi\nFROM [dbo].[LG_411_01_ORFICHE] AS ORFICHE\nWHERE ORFICHE.[DATE_] >= '2026-09-01' AND ORFICHE.[DATE_] < '2026-10-01'",
+   "outcome": "katalogdan",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u34",
+   "q": "Bekleyen siparişlerimiz var mı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "siparislerimiz",
+     "type": "METRIC",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [
+    "bekleyen"
+   ],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: bekleyen",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u35",
+   "q": "Kanal ve yayınevi kırılımında bu yılın net cirosunu, iade oranını ve kâr marjını birlikte göster; cirosu düşük olanları eleyip marja göre sırala",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "net cirosunu",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "kanal",
+     "type": "COLUMN",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "yayinevi",
+     "type": "COLUMN",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "iade",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "cirosunu",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "eleyip"
+   ],
+   "conflicts": [],
+   "temporal": [
+    {
+     "primitive": "THIS_YEAR",
+     "ambiguous": false
+    }
+   ],
+   "sql": null,
+   "why": "group column on ITEMS cannot be joined to INVOICE",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u36",
+   "q": "Her ay için en iyi üç müşteriyi ve o ayki paylarını çıkar",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "musteriyi",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [
+    "paylarini"
+   ],
+   "ignored": [
+    "iyi",
+    "cikar"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: paylarini",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u37",
+   "q": "Toptan ve perakende tarafını ay ay karşılaştır; hangisi büyüyor?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "toptan",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "perakende",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u38",
+   "q": "Ortalama fatura tutarı en yüksek beş kanalı, fatura sayılarıyla birlikte ver",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "kanali",
+     "type": "COLUMN",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "kayıt sayısı",
+     "type": "METRIC",
+     "status": "COMPOSED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "column projections without group-by are not supported deterministically",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u39",
+   "q": "İade oranı ortalamanın üstünde olan müşterileri bul",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "iade",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "musterileri",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u40",
+   "q": "Ciro düşerken iadesi artan ürünler var mı?",
+   "expect": "answer",
+   "note": null,
+   "resolved": [
+    {
+     "term": "ciro",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    },
+    {
+     "term": "iadesi",
+     "type": "DIMENSION_VALUE",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [],
+   "unhandled": [
+    "duserken"
+   ],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "qualifiers with no certified meaning: duserken",
+   "outcome": "reddetti",
+   "verdict": "EKSİK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u41",
+   "q": "Ciro derken KDV dahil mi konuşuyoruz?",
+   "expect": "refuse",
+   "note": "soru değil, tanım sorusu",
+   "resolved": [
+    {
+     "term": "ciro",
+     "type": "METRIC",
+     "status": "CERTIFIED"
+    }
+   ],
+   "unresolved": [
+    "kdv",
+    "dahil"
+   ],
+   "unhandled": [
+    "derken"
+   ],
+   "ignored": [
+    "konusuyoruz"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: kdv, dahil",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u42",
+   "q": "Adet mi tutar mı daha önemli?",
+   "expect": "refuse",
+   "note": "görüş sorusu",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "onemli"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u43",
+   "q": "Bana toplam sayıyı ver",
+   "expect": "clarify",
+   "note": "neyin sayısı?",
+   "resolved": [],
+   "unresolved": [],
+   "unhandled": [],
+   "ignored": [
+    "bana"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "no certified metric",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u44",
+   "q": "Rakamları düzelt, yanlış görünüyor",
+   "expect": "refuse",
+   "note": null,
+   "resolved": [],
+   "unresolved": [
+    "rakamlari",
+    "duzelt"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "yanlis",
+    "gorunuyor"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: rakamlari, duzelt",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u45",
+   "q": "Personel maaş toplamı ne kadar?",
+   "expect": "refuse",
+   "note": "bu veri kaynağında yok",
+   "resolved": [],
+   "unresolved": [
+    "personel",
+    "maas"
+   ],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: personel, maas",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u46",
+   "q": "Web sitesi ziyaretçi sayımız kaç?",
+   "expect": "refuse",
+   "note": null,
+   "resolved": [],
+   "unresolved": [
+    "web",
+    "sitesi",
+    "ziyaretci"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "sayimiz"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: web, sitesi, ziyaretci",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u47",
+   "q": "Müşterilerin telefon numaralarını listele",
+   "expect": "refuse",
+   "note": "kişisel veri",
+   "resolved": [
+    {
+     "term": "musterilerin",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [
+    "telefon",
+    "numaralarini"
+   ],
+   "unhandled": [],
+   "ignored": [],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: telefon, numaralarini",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u48",
+   "q": "En çok alışveriş yapan müşterinin TC kimlik numarasını ver",
+   "expect": "refuse",
+   "note": "kişisel veri",
+   "resolved": [
+    {
+     "term": "musterinin",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [
+    "alisveris",
+    "kimlik",
+    "numarasini"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "tc"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: alisveris, kimlik, numarasini",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u49",
+   "q": "Stok tablosundaki eski kayıtları sil",
+   "expect": "refuse",
+   "note": "salt-okunur",
+   "resolved": [
+    {
+     "term": "stok",
+     "type": "COLUMN",
+     "status": "INFERRED"
+    }
+   ],
+   "unresolved": [
+    "sil"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "eski"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: sil",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  },
+  {
+   "id": "u50",
+   "q": "Bana tüm veritabanındaki tabloların listesini ve içeriklerini dök",
+   "expect": "refuse",
+   "note": "kapsam dışı / kitlesel dışa aktarım",
+   "resolved": [],
+   "unresolved": [
+    "veritabanindaki",
+    "iceriklerini"
+   ],
+   "unhandled": [],
+   "ignored": [
+    "bana"
+   ],
+   "conflicts": [],
+   "temporal": [],
+   "sql": null,
+   "why": "unresolved terms: veritabanindaki, iceriklerini",
+   "outcome": "reddetti",
+   "verdict": "OK",
+   "wall_s": 0.0
+  }
+ ]
+}

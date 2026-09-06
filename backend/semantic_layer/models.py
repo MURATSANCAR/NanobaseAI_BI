@@ -182,7 +182,8 @@ class SchemaProfile:
     relationships: list[dict[str, str]] = field(default_factory=list)  # {column, ref_entity, ref_column}
     row_count: Optional[int] = None
     description: Optional[str] = None
-    context: dict[str, str] = field(default_factory=dict)              # {firm: 411, period: 01}
+    time_window: Optional[tuple[str, str]] = None   # measured (first, last) value of the time column
+    context: dict[str, str] = field(default_factory=dict)              # placeholder values for the pattern
     scanned_at: datetime = field(default_factory=utcnow)
 
     def column(self, name: str) -> Optional[ColumnProfile]:
@@ -316,6 +317,12 @@ class SemanticQuery:
     catalog_version: Optional[int] = None
     explanation: list[str] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
+    ignored: list[str] = field(default_factory=list)   # ordinary language the resolver skipped
+    out_of_scope: list[str] = field(default_factory=list)  # asked for a period this deployment has no data for
+    # A qualifier that narrows the subject but has no certified meaning ("bekleyen siparişler",
+    # "satmayan ürünler"). Dropping it would answer a wider question than the one that was asked,
+    # so it blocks the deterministic path and is handed to the model spelled out.
+    unhandled: list[str] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -327,7 +334,7 @@ class SemanticQuery:
 
     @property
     def fully_resolved(self) -> bool:
-        return not self.unresolved and not self.conflicts and not any(t.ambiguous for t in self.temporal)
+        return not self.unresolved and not self.unhandled and not self.conflicts and not self.out_of_scope and not any(t.ambiguous for t in self.temporal)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -341,6 +348,9 @@ class SemanticQuery:
             "orderDesc": self.order_desc,
             "catalogVersion": self.catalog_version,
             "conflicts": list(self.conflicts),
+            "ignored": list(self.ignored),
+            "outOfScope": list(self.out_of_scope),
+            "unhandled": list(self.unhandled),
             "fullyResolved": self.fully_resolved,
             "explanation": list(self.explanation),
         }

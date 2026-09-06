@@ -65,6 +65,25 @@ class Profiler:
                 out.setdefault(str(k).upper(), []).append(v)
         return out
 
+    def _time_window(self, schema: str, table: str, columns: list[ColumnProfile]) -> Optional[tuple[str, str]]:
+        """The period this table actually holds. One query, and it is what lets the system say "there is
+        no 2019 data here" instead of returning an empty result as if it were an answer."""
+        time_cols = [c for c in columns if any(t in c.data_type.lower() for t in ("date", "time", "timestamp"))]
+        if not time_cols or not getattr(self.c, "supports_execution", False):
+            return None
+        col = time_cols[0].name
+        q = getattr(self.c, "q", lambda x: f'"{x}"')
+        target = f"{q(schema)}.{q(table)}" if schema and getattr(self.c, "dialect", "") != "sqlite" else q(table)
+        try:
+            _, rows, _ = self.c.execute(f"SELECT MIN({q(col)}) AS a, MAX({q(col)}) AS b FROM {target}", 1)
+        except Exception as e:  # noqa: BLE001
+            log.debug("time window probe failed %s.%s: %s", table, col, e)
+            return None
+        if not rows:
+            return None
+        values = [str(v)[:10] for v in rows[0].values() if v is not None]
+        return (values[0], values[1]) if len(values) == 2 else None
+
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
         """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
         catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
@@ -134,6 +153,7 @@ class Profiler:
                 _mark_sentinels(cp, [str(v) for v in sample.get(cp.name.upper(), []) if v is not None])
                 cols.append(cp)
             desc = self.c.table_description(table) if hasattr(self.c, "table_description") else None
+            window = self._time_window(sch, table, cols) if is_deep else None
             out.append(
                 SchemaProfile(
                     datasource_id=datasource_id,
@@ -146,6 +166,7 @@ class Profiler:
                     relationships=rels,
                     row_count=self.c.row_count(sch, table),
                     description=desc,
+                    time_window=window,
                     context=dict(lt.context),
                 )
             )

@@ -63,7 +63,8 @@ def test_profiler_on_sqlite_fixture(profiles):
 
 def test_resolver_uses_only_certified_and_explains(catalog, profiles):
     r = SemanticResolver(catalog, TENANT, DS, profiles)
-    sq = r.resolve("Son 30 günde toptan satış ne kadar?", today=date(2026, 9, 6))
+    # inside the window the fixture actually covers (the data ends in July 2026)
+    sq = r.resolve("Son 30 günde toptan satış ne kadar?", today=date(2026, 7, 20))
     kinds = {(s.explain.get("normalized"), s.semantic_type, s.status) for s in sq.slots}
     assert ("toptan", "DIMENSION_VALUE", "CERTIFIED") in kinds and ("satis", "METRIC", "CERTIFIED") in kinds
     assert sq.unresolved == [] and sq.temporal[0].primitive == "LAST_N_DAYS" and sq.fully_resolved
@@ -73,6 +74,11 @@ def test_resolver_uses_only_certified_and_explains(catalog, profiles):
     # candidates never resolve
     catalog.upsert_concept(TENANT, DS, "bolgesel", SemanticType.DIMENSION_VALUE, mapping=Mapping(concept_id="", entity="CLCARD", table_pattern="LG_{n0}_CLCARD", column="CITY", operator="IN", values=["İstanbul"]), status=ConceptStatus.CANDIDATE)
     assert "bolgesel" in r.resolve("bölgesel satış").unresolved
+
+    # a period this deployment holds no data for is refused with the window, not answered with zero
+    outside = r.resolve("2019'da toptan satış ne kadar?", today=date(2026, 7, 20))
+    assert outside.out_of_scope and not outside.fully_resolved
+    assert any("kapsamı dışında" in line for line in outside.explanation)
 
 
 def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
@@ -157,3 +163,68 @@ def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_conn
     assert st["status"]["CERTIFIED"] >= 8 and st["queries"]["total"] >= 3
     ex = client.get("/api/v1/semantic/explain", params={"term": "toptan"}).json()
     assert ex["certified"][0]["mappings"][0]["values"] == ["8"]
+
+
+def test_ordinary_speech_never_becomes_a_catalog_gap(catalog, profiles):
+    """Turkish inflection is grammar: a verb, a pronoun or a case ending must not be reported as a term
+    the catalog is missing, and it must not stop an otherwise answerable question."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Bu ay ne kadar sattık?", today=date(2026, 7, 20))
+    assert sq.unresolved == [] and sq.fully_resolved
+    assert any(s.semantic_type == SemanticType.METRIC for s in sq.slots)
+    for q, word in [("Geçen aya göre toptan satış", "aya"), ("Cirosunu ay ay ver", "cirosunu"),
+                    ("Satışlarımızı göster", "satislarimizi")]:
+        assert word not in r.resolve(q, today=date(2026, 7, 20)).unresolved, q
+
+
+def test_negation_never_bridges_to_the_measure_it_negates(catalog, profiles):
+    """"satmayan" is the opposite of "satış": reading it as the sales measure would invert the answer."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Hiç satmayan ürünlerimiz var mı?", today=date(2026, 7, 20))
+    assert not any(s.semantic_type == SemanticType.METRIC for s in sq.slots)
+    assert "satmayan" in sq.unhandled and not sq.fully_resolved
+
+
+def test_qualifier_without_meaning_blocks_instead_of_widening(catalog, profiles):
+    """"bekleyen siparişler" narrows the subject; dropping the qualifier would answer a wider question."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Bekleyen toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
+    assert "bekleyen" in sq.unhandled and not sq.fully_resolved
+    c = DeterministicCompiler(profiles, {}, "tsql")
+    assert c.compile(sq, catalog) is None and "bekleyen" in c.plan(sq)[1]
+    # the same word as a predicate carries no restriction, so it is only grammar
+    assert "artiyor" not in r.resolve("İadeler artıyor mu?", today=date(2026, 7, 20)).unhandled
+
+
+def test_filter_contradicting_the_measure_scope_is_refused(catalog, profiles):
+    """A filter disjoint from the measure's own scope yields an always-empty answer, which reads as a
+    real zero. Saying so is the answer; an empty result set is not."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("İade satış tutarı ne kadar?", today=date(2026, 7, 20))
+    assert sq.conflicts and not sq.fully_resolved
+    assert any("boş" in e for e in sq.explanation)
+
+
+def test_share_question_needs_a_certified_denominator(catalog, profiles):
+    """"payı yüzde kaç" asks for a ratio; answering with the plain total replaces the question."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Toptan satışın payı yüzde kaç?", today=date(2026, 7, 20))
+    assert sq.unhandled and not sq.fully_resolved
+
+
+def test_count_question_uses_the_profiled_key(catalog, profiles, logo_db):
+    """"kaç fatura" counts rows over the entity's own key column, taken from the profile."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Bu ay kaç toptan fatura var?", today=date(2026, 7, 20))
+    metric = next((s for s in sq.slots if s.semantic_type == SemanticType.METRIC), None)
+    assert metric is not None and metric.mapping.formula.startswith("COUNT(")
+    c = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite", default_filters=default_filters_provider(catalog, TENANT, DS))
+    out = c.compile(sq, catalog)
+    assert out is not None, c.plan(sq)[1]
+    logo_db.execute(out.sql).fetchall()
+
+
+def test_written_number_after_a_ranking_cue_is_a_top_n(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    assert r.resolve("En yüksek beş kanalı ver", today=date(2026, 7, 20)).limit == 5
+    assert r.resolve("Zararına sattığımız bir şey var mı?", today=date(2026, 7, 20)).limit is None

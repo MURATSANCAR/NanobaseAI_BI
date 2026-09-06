@@ -21,7 +21,9 @@ from semantic_layer.runtime.temporal import parse_temporal
 
 _CODE_HINT = re.compile(r"\b([A-Z][A-Z0-9_]{2,})\s*(?:=|:)?\s*((?:\d+\s*(?:,|/|ve|veya)\s*)*\d+)\b")
 _EXPLICIT = re.compile(r"((?:[a-z]+\s+){0,3}[a-z]+)\s*\(\s*([a-z][a-z0-9_]{2,})\s*((?:\d+\s*(?:,|/|ve|veya)\s*)*\d+)\s*\)")
-_LIMIT = re.compile(r"\b(?:ilk|en cok satan|en cok|en fazla|en az|top|en yuksek|en dusuk)\s+(\d{1,3})\b|\b(\d{1,3})\s+(?:musteri|kitap|urun|tedarikci|cari|kanal|yayinevi|kayit|satir)\b")
+# A ranking cue followed by a number is a top-N. The noun after the number is deliberately not
+# enumerated: which nouns a customer ranks by is their data's business, not this parser's.
+_LIMIT = re.compile(r"\b(?:ilk|en cok satan|en cok|en fazla|en az|top|en yuksek|en dusuk|bastaki|basta)\s+(?:\w+\s+)?(\d{1,3})\b|\b(\d{1,3})\s+(?:\w+)\s+(?:listele|goster|ver|getir|sirala)\b")
 
 GENERIC_S = frozenset(
     stem(w)
