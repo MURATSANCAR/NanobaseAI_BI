@@ -71,22 +71,11 @@ export async function graphql<T>(query: string, variables?: Record<string, unkno
   return data.data as T;
 }
 
-/** Motor durumu: bağlı veri kaynağı ve deploy edilmiş modeller. */
+/** Motor durumu: bağlı veri kaynağı ve deploy edilmiş modeller.
+ *  Yeni hat (WrenAI core engine + köprü): GET /api/v1/engine. Eski wren-ui GraphQL'e düşüş yok. */
 export async function engineStatus(): Promise<{ dataSource: string; models: number; deployed: boolean }> {
-  const d = await graphql<{
-    settings: { dataSource: { type: string; properties: { displayName?: string } } };
-    listModels: { id: number }[];
-  }>('query { settings { dataSource { type properties } } listModels { id } }');
-  // SELECT 1 model olmadan da geçer; gerçek deploy kontrolü modele dokunmalı.
-  let deployed = true;
-  try {
-    await runSql('SELECT "LOGICALREF" FROM dbo_LG_411_01_INVOICE LIMIT 1', 1);
-  } catch {
-    deployed = false;
-  }
-  return {
-    dataSource: d.settings.dataSource.properties?.displayName ?? d.settings.dataSource.type,
-    models: d.listModels.length,
-    deployed,
-  };
+  const res = await fetch(`${BASE}/api/v1/engine`);
+  const d = (await res.json().catch(() => ({}))) as { dataSource?: string; models?: number; deployed?: boolean; error?: string };
+  if (!res.ok) throw new WrenError(String(d.error ?? `HTTP ${res.status}`), undefined, res.status);
+  return { dataSource: d.dataSource ?? 'mssql', models: Number(d.models ?? 0), deployed: Boolean(d.deployed) };
 }

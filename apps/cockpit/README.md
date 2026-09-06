@@ -17,9 +17,24 @@ cd apps/cockpit && npm install && npm run dev      # http://localhost:5180
 `VITE_DATA_MODE=fixture` ile motor olmadan (gerçek Logo rakamlarından alınmış önbellekle) çalışır;
 `auto` (varsayılan) önce canlıyı dener, olmazsa önbelleğe düşer ve üst çubukta **ÖNBELLEK** yazar.
 
-## Üretim
+## Üretim (WrenAI main / open-core hattı, 2026-09-06)
 
-`npm run build` → `dist/`. Reverse proxy'de `/api/*` → `wren-ui:3000`, geri kalan → `dist/`.
+Motor artık **WrenAI `main`** (`pip install 'wrenai[mssql,memory]'`, sürüm 0.13.4 = `core/wren`) — legacy
+`v1-final` Docker yığını (wren-ui / wren-ai-service / ibis) kullanılmaz. Cockpit sözleşmesini
+(`/api/v1/run_sql`, `/api/v1/ask`, `/api/v1/engine`) `backend/wren_bridge` (FastAPI :8794) sunar: engine
+süreç içinde (DataFusion + MDL, FreeTDS ODBC ile SQL Server), NL→SQL orkestrasyonu bizim LLM'de
+(kurallar → anımsanan soru→SQL çiftleri → şema bağlamı → SQL → dry_run → run_sql → özet).
+
+```bash
+# proje (legacy MDL + bilgi kayıtlarından üretildi): /data/nanobaseai/bi/wren-project/logo_timas
+python3 tools/wren/legacy_to_project.py --mdl mdl-legacy.json --knowledge knowledge-legacy.json --out logo_timas --profile logo-tunnel
+./scripts/server/deploy-wren-bridge.sh      # context build + memory index + smoke + systemd nanobase-wren-bridge
+./scripts/server/switch-timas-api.sh bridge # nginx /timas/api/ → :8794  (legacy: ... legacy)
+VITE_BASE=/timas/ VITE_WREN_BASE=/timas npm run build && rsync dist/ nanobase:/data/nanobaseai/bi/cockpit/dist/
+```
+
+Ajanlar için MCP: `cd /data/nanobaseai/bi/wren-project/logo_timas && wren serve mcp --transport http --port 8090`
+(araçlar: run_sql, dry_run, dry_plan, get_mdl, describe_schema, get_instructions, recall_queries, get_context).
 
 ## Veri kuralları (Logo, firma 411 = 2026)
 

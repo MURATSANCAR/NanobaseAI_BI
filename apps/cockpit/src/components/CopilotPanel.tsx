@@ -41,7 +41,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
       if (a.sql) result = await runSql(a.sql, 50);
       const text =
         a.summary?.trim() ||
-        (result ? `${result.totalRows} satır döndü.` : 'Motor bu soru için SQL üretmedi.');
+        (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
       setMsgs((m) => [...m.slice(0, -1), { role: 'assistant', text, sql: a.sql, result, at: now() }]);
     } catch (e) {
       const msg = e instanceof WrenError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
