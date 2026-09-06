@@ -90,8 +90,17 @@ def run_pipeline(
     t0 = time.perf_counter()
     report: dict[str, Any] = {}
     project_dir = project_dir or settings.project_dir
+    connector = None
     if skip_profile:
         profiles = store.list_profiles(settings.datasource_id)
+        if probe:
+            # Re-certifying on stored profiles still has to confront the catalog with the data — that
+            # is what the probe is for. Without a connector the whole run used to die at the last step.
+            try:
+                connector = build_connector(settings, project_dir=project_dir, connection_file=connection_file, enum_probe=enum_probe)
+            except Exception as e:  # noqa: BLE001
+                log.warning("probe skipped: no connector (%s)", str(e)[:200])
+                report["probe"] = {"skipped": f"no connector: {str(e)[:200]}"}
     else:
         connector = build_connector(settings, project_dir=project_dir, connection_file=connection_file, enum_probe=enum_probe)
         profiles = run_profile(store, settings, connector)

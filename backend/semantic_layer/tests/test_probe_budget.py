@@ -55,3 +55,24 @@ def test_type_codes_are_not_mistaken_for_keys():
     flag = ColumnProfile(name="CANCELLED", data_type="smallint", distinct_count=2, top_values=[("0", 1), ("1", 1)])
     assert not _key_shaped(code, 1_700_000) and not _key_shaped(flag, 1_700_000)
     assert _key_shaped(key, 1_700_000)
+
+
+def test_recertifying_on_stored_profiles_still_probes(store, settings, monkeypatch, profiles):
+    """Re-running certification without re-profiling is the normal move after a catalog fix. It used to
+    die at the last step, because skipping the profile also skipped building the connector the probe
+    needs — so the run that fixes a catalog was the one that could not finish."""
+    from semantic_layer import pipeline as pl
+
+    for p in profiles:
+        store.upsert_profile(p)
+    built: list[str] = []
+
+    def _fake_connector(*a, **k):
+        built.append("yes")
+        raise RuntimeError("no database here")
+
+    monkeypatch.setattr(pl, "build_connector", _fake_connector)
+    report = pl.run_pipeline(store, settings, skip_profile=True, probe=True, note="recertify")
+    assert built, "the probe's connector is built even when the profile step is skipped"
+    assert "no connector" in str(report.get("probe")), "and a probe that cannot run says so"
+    assert report.get("certify"), "certification still completes"
