@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, RotateCcw } from 'lucide-react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 import { ask, runSql, type SqlResult, WrenError } from '../lib/wren';
 
@@ -16,8 +16,9 @@ const SUGGESTIONS = [
 
 const now = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-export function CopilotPanel({ engineOk }: { engineOk: boolean | null }) {
+export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null; inputRef?: RefObject<HTMLInputElement> }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [wide, setWide] = useState(false);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [threadId, setThreadId] = useState<string | undefined>();
@@ -51,7 +52,7 @@ export function CopilotPanel({ engineOk }: { engineOk: boolean | null }) {
   }
 
   return (
-    <aside className="card flex h-full min-h-[560px] w-full flex-col overflow-hidden lg:w-[330px] lg:shrink-0">
+    <aside className={clsx('card flex h-full min-h-[560px] w-full flex-col overflow-hidden lg:shrink-0', wide ? 'lg:w-[560px]' : 'lg:w-[330px]')}>
       <div className="flex items-center gap-3 border-b border-line px-4 py-3">
         <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">
           <Bot size={18} />
@@ -66,11 +67,11 @@ export function CopilotPanel({ engineOk }: { engineOk: boolean | null }) {
             {engineOk ? 'Logo ERP modelleri canlı' : engineOk === false ? 'Model deploy bekliyor' : 'Bağlantı kontrol ediliyor'}
           </div>
         </div>
-        <button className="text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
+        <button type="button" className="text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
           <RotateCcw size={15} />
         </button>
-        <button className="text-ink-faint hover:text-ink" title="Genişlet">
-          <Maximize2 size={15} />
+        <button type="button" className="text-ink-faint hover:text-ink" title={wide ? 'Daralt' : 'Genişlet'} aria-pressed={wide} onClick={() => setWide((v) => !v)}>
+          {wide ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
       </div>
 
@@ -91,7 +92,7 @@ export function CopilotPanel({ engineOk }: { engineOk: boolean | null }) {
             </div>
           </div>
         )}
-        {msgs.map((m, i) => (m.role === 'user' ? <UserBubble key={i} m={m} /> : <AssistantCard key={i} m={m} />))}
+        {msgs.map((m, i) => (m.role === 'user' ? <UserBubble key={i} m={m} /> : <AssistantCard key={i} m={m} wide={wide} />))}
       </div>
 
       {msgs.length > 0 && (
@@ -113,6 +114,7 @@ export function CopilotPanel({ engineOk }: { engineOk: boolean | null }) {
       >
         <div className="flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 focus-within:border-brand">
           <input
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Finansal veriyle konuş…"
@@ -141,10 +143,10 @@ function UserBubble({ m }: { m: Extract<Msg, { role: 'user' }> }) {
   );
 }
 
-function AssistantCard({ m }: { m: Extract<Msg, { role: 'assistant' }> }) {
+function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wide?: boolean }) {
   const [showSql, setShowSql] = useState(false);
-  const cols = m.result?.columns.slice(0, 5) ?? [];
-  const rows = m.result?.records.slice(0, 8) ?? [];
+  const cols = m.result?.columns.slice(0, wide ? 8 : 5) ?? [];
+  const rows = m.result?.records.slice(0, wide ? 20 : 8) ?? [];
   return (
     <div className="rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">

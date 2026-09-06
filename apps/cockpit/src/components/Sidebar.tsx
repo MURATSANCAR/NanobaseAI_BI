@@ -1,18 +1,8 @@
-import { BookOpen, Boxes, Factory, Landmark, LineChart, Settings, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { BookOpen, Landmark } from 'lucide-react';
 import clsx from 'clsx';
 
-type Item = { label: string; icon: LucideIcon; active?: boolean };
-
-const ITEMS: Item[] = [
-  { label: 'Finans & Bütçe Masası', icon: Landmark, active: true },
-  { label: 'Satış & Kanal Masası', icon: LineChart },
-  { label: 'Yayınevi & Külliyat', icon: BookOpen },
-  { label: 'Cari & Tahsilat', icon: Wallet },
-  { label: 'Müşteri & Bayi Atlası', icon: Users },
-  { label: 'Stok & Lojistik', icon: Boxes },
-  { label: 'Satınalma & Matbaa', icon: Factory },
-];
-
+/** Tek masa: Finans & Bütçe. Diğer masalar (satış/kanal, yayınevi, cari, stok, satınalma) veri modeli
+ *  ve doğrulanmış sorguları hazır olduğunda eklenir — çalışmayan bağlantı gösterilmez. */
 export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; modelCount: number | null }) {
   return (
     <aside className="hidden lg:flex w-[236px] shrink-0 flex-col bg-rail border-r border-line px-4 py-5">
@@ -30,24 +20,14 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
       </div>
 
       <div className="eyebrow mt-8 px-2">Masa & Çalışma Alanları</div>
-      <nav className="mt-3 flex flex-col gap-1">
-        {ITEMS.map(({ label, icon: Icon, active }) => (
-          <a
-            key={label}
-            href="#"
-            onClick={(e) => e.preventDefault()}
-            className={clsx(
-              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition',
-              active ? 'bg-brand text-white shadow-card' : 'text-ink hover:bg-white/70',
-            )}
-          >
-            <Icon size={16} strokeWidth={2} className={active ? 'text-white' : 'text-ink-muted'} />
-            <span className="truncate">{label}</span>
-          </a>
-        ))}
+      <nav className="mt-3 flex flex-col gap-1" aria-label="Masalar">
+        <span className="flex items-center gap-3 rounded-xl bg-brand px-3 py-2.5 text-[13px] font-medium text-white shadow-card" aria-current="page">
+          <Landmark size={16} strokeWidth={2} className="text-white" />
+          <span className="truncate">Finans &amp; Bütçe Masası</span>
+        </span>
       </nav>
 
-      <div className="mt-auto space-y-3">
+      <div className="mt-auto">
         <div className="card p-3">
           <div className="flex items-center gap-2 text-xs font-semibold">
             <span className={clsx('h-2 w-2 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-brand-accent' : 'bg-ink-faint')} />
@@ -57,9 +37,6 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
             {modelCount != null ? `${modelCount} Logo modeli` : 'Logo ERP modelleri'} · salt-okunur
           </div>
         </div>
-        <a href="#" onClick={(e) => e.preventDefault()} className="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-ink hover:text-brand">
-          <Settings size={16} className="text-ink-muted" /> Sistem & Ayarlar
-        </a>
       </div>
     </aside>
   );

@@ -2,10 +2,24 @@ import { Calendar, Database, Search } from 'lucide-react';
 import clsx from 'clsx';
 import { dateTr } from '../lib/format';
 
-export function TopBar({ lastDate, live, engineOk }: { lastDate: string; live: boolean; engineOk: boolean | null }) {
+export function TopBar({
+  lastDate,
+  live,
+  engineOk,
+  periodLabel,
+  onSearch,
+}: {
+  lastDate: string;
+  live: boolean;
+  engineOk: boolean | null;
+  /** "2026 · Ocak–Ağustos (YTD)" — veri kesitinden türetilir */
+  periodLabel: string;
+  /** Arama = Copilot'a soru: girişe odaklanır */
+  onSearch: () => void;
+}) {
   return (
     <header className="flex flex-wrap items-center gap-3 px-6 pt-5">
-      <button className="chip h-9 px-3" aria-label="Ara">
+      <button type="button" className="chip h-9 px-3 hover:border-brand hover:text-brand" aria-label="Copilot'a soru sor" title="Copilot'a soru sor" onClick={onSearch}>
         <Search size={14} />
       </button>
 
@@ -26,7 +40,7 @@ export function TopBar({ lastDate, live, engineOk }: { lastDate: string; live: b
 
       <div className="chip h-9 gap-2 border-ink/30">
         <Calendar size={14} />
-        <span className="font-semibold text-ink">2026 · Ocak–Ağustos (YTD)</span>
+        <span className="font-semibold text-ink">{periodLabel}</span>
       </div>
 
       <div className="ml-auto flex items-center gap-3">

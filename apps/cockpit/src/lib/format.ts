@@ -24,6 +24,15 @@ export function pct(ratio: number | null | undefined, digits = 1): string {
 }
 
 export const MONTHS_TR = ['OCA', 'ŞUB', 'MAR', 'NİS', 'MAY', 'HAZ', 'TEM', 'AĞU', 'EYL', 'EKİ', 'KAS', 'ARA'];
+export const MONTHS_TR_LONG = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+/** "2026-08-17" → { year: 2026, month: 8 } (kesit tarihi yoksa null) */
+export function ymOf(iso: string | null | undefined): { year: number; month: number } | null {
+  if (!iso || iso.length < 7) return null;
+  const y = Number(iso.slice(0, 4));
+  const m = Number(iso.slice(5, 7));
+  return Number.isFinite(y) && m >= 1 && m <= 12 ? { year: y, month: m } : null;
+}
 
 export function dateTr(iso: string | null | undefined): string {
   if (!iso) return '—';

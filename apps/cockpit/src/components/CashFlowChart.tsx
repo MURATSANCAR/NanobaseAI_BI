@@ -3,7 +3,7 @@ import { Info } from 'lucide-react';
 import { MONTHS_TR, tl } from '../lib/format';
 import type { Monthly } from '../lib/metrics';
 
-export function CashFlowChart({ monthly, live }: { monthly: Monthly[]; live: boolean }) {
+export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthly[]; live: boolean; partialMonth?: string | null }) {
   const data = monthly.map((m) => ({
     ay: MONTHS_TR[m.month - 1],
     net: m.sales - m.returns,
@@ -62,7 +62,7 @@ export function CashFlowChart({ monthly, live }: { monthly: Monthly[]; live: boo
         <div className="mt-4 flex items-start gap-2 rounded-xl bg-page px-3 py-2 text-[12px] text-ink-muted">
           <Info size={14} className="mt-0.5 shrink-0 text-brand" />
           <span>
-            En dar ay <b className="text-ink">{worst.ay}</b>: ciro − alım farkı {tl(worst.fark)}. Ağustos verisi kesit tarihine kadar kısmi.
+            En dar ay <b className="text-ink">{worst.ay}</b>: ciro − alım farkı {tl(worst.fark)}.{partialMonth ? ` ${partialMonth} verisi kesit tarihine kadar kısmi.` : ''}
           </span>
         </div>
       )}

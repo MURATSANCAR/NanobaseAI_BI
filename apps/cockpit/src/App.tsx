@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { AlertTriangle, BadgePercent, Percent, ShoppingCart, TrendingUp, Undo2 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -8,20 +9,27 @@ import { ChannelMix } from './components/ChannelMix';
 import { CopilotPanel } from './components/CopilotPanel';
 import { useCockpit, useEngine } from './hooks/useCockpit';
 import { derive } from './lib/metrics';
-import { dateTr, MONTHS_TR, num, pct, tl } from './lib/format';
+import { dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
 
 export default function App() {
   const cockpit = useCockpit();
   const engine = useEngine();
   const engineOk = engine.isPending ? null : Boolean(engine.data?.deployed);
   const d = cockpit.data;
+  const copilotInput = useRef<HTMLInputElement>(null);
+  const ym = ymOf(d?.summary.lastDate);
+  const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]} (YTD)` : 'Veri kesiti bekleniyor';
+  const focusCopilot = () => {
+    copilotInput.current?.focus();
+    copilotInput.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   return (
     <div className="flex min-h-screen">
       <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar lastDate={d?.summary.lastDate ?? ''} live={d?.source === 'live'} engineOk={engineOk} />
+        <TopBar lastDate={d?.summary.lastDate ?? ''} live={d?.source === 'live'} engineOk={engineOk} periodLabel={periodLabel} onSearch={focusCopilot} />
 
         <div className="flex flex-1 flex-col gap-5 px-6 pb-8 pt-5 lg:flex-row">
           <main className="min-w-0 flex-1 space-y-5">
@@ -38,7 +46,7 @@ export default function App() {
             {d && <Dashboard d={d} engineOk={engineOk} />}
           </main>
 
-          <CopilotPanel engineOk={engineOk} />
+          <CopilotPanel engineOk={engineOk} inputRef={copilotInput} />
         </div>
       </div>
     </div>
@@ -48,12 +56,15 @@ export default function App() {
 function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpit>['data']>; engineOk: boolean | null }) {
   const k = derive(d);
   const lastMonthName = k.lastMonth ? MONTHS_TR[k.lastMonth - 1] : '—';
+  const ym = ymOf(d.summary.lastDate);
+  const year = ym?.year ?? new Date().getFullYear();
+  const untilMonth = ym ? MONTHS_TR_LONG[ym.month - 1] : '—';
   return (
     <>
       <section className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold tracking-wider text-white">MALİ ATLAS 2026</span>
+            <span className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold tracking-wider text-white">MALİ ATLAS {year}</span>
             <span className="text-[11px] text-ink-muted">
               Kaynak: Logo Tiger (MSSQL) · veri kesiti {dateTr(d.summary.lastDate)} · {d.source === 'live' ? 'canlı sorgu' : 'önbellek'}
             </span>
@@ -62,13 +73,8 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
             Finansal Durum &amp;<br />Nakit Görünümü
           </h1>
           <p className="mt-2 max-w-[520px] text-[13px] text-ink-muted">
-            2026 Ocak–Ağustos gerçekleşmeleri: satış, iade, iskonto, satınalma ve yayınevi kârlılığı tek ekranda. Her rakam fatura ve hareket satırlarından doğrudan hesaplanır.
+            {year} Ocak–{untilMonth} gerçekleşmeleri: satış, iade, iskonto, satınalma ve yayınevi kârlılığı tek ekranda. Her rakam fatura ve hareket satırlarından doğrudan hesaplanır.
           </p>
-        </div>
-        <div className="card flex items-center gap-2 p-2">
-          <Seg active label="Gerçekleşen" />
-          <Seg label="Bütçe karşılaştırma" hint="yakında" />
-          <Seg label="Tahmin" hint="2025 modeli gerekli" />
         </div>
       </section>
 
@@ -107,7 +113,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         />
       </section>
 
-      <CashFlowChart monthly={d.monthly} live={d.source === 'live'} />
+      <CashFlowChart monthly={d.monthly} live={d.source === 'live'} partialMonth={ym ? MONTHS_TR_LONG[ym.month - 1] : null} />
 
       <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
         <ImprintTable rows={d.imprints} />
@@ -115,7 +121,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           <ChannelMix channels={d.channels} total={k.channelTotal} />
           <section className="card p-5">
             <h2 className="font-display text-[20px] font-semibold leading-tight">Satınalma &amp; Hizmet</h2>
-            <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), 2026 YTD</p>
+            <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), {year} YTD</p>
             <div className="mt-3 flex items-end gap-2">
               <ShoppingCart size={18} className="mb-1 text-brand" />
               <span className="font-display text-[28px] font-semibold leading-none">{tl(d.summary.purchases)}</span>
@@ -128,18 +134,5 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         </div>
       </div>
     </>
-  );
-}
-
-function Seg({ label, active, hint }: { label: string; active?: boolean; hint?: string }) {
-  return (
-    <button
-      className={`rounded-xl px-3 py-1.5 text-[12px] font-semibold ${active ? 'bg-page text-brand-deep border border-brand/40' : 'text-ink-muted'}`}
-      title={hint}
-      disabled={!active}
-    >
-      {label}
-      {hint && <span className="ml-1 text-[10px] font-normal text-ink-faint">· {hint}</span>}
-    </button>
   );
 }
