@@ -193,7 +193,9 @@ class SemanticResolver:
 
         # 4b) composed metric: certified measure column + aggregation word, when no certified metric matched
         #     ("iade tutarı" = 'iade' filtresi + 'satış tutarı' ölçü kolonu → SUM(INVOICE.NETTOTAL))
-        if not any(s_.semantic_type == SemanticType.METRIC for s_ in hits) and (sq.filters or sq.group_by):
+        # The composition is anchored on a certified column, so any resolved slot is enough to say which
+        # entity it belongs to — requiring a filter or a breakdown as well only refused good questions.
+        if not any(s_.semantic_type == SemanticType.METRIC for s_ in hits) and hits:
             composed = self._compose_metric(qf, hits, primary, consumed)
             if composed is not None:
                 hits.append(composed)
@@ -617,6 +619,11 @@ class SemanticResolver:
             column, source_term = found
             m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, formula=f"{agg}({entity}.{column})", extra={"composed_from": source_term})
             phrase = " ".join(qf.tokens[max(0, k - 1) : k + 1])
+            # the column this measure is built from is no longer a column being asked for: it *is* the
+            # measure, and leaving it in place would read as a projection nobody requested
+            for src in [x for x in hits if x.semantic_type == SemanticType.COLUMN and x.mapping
+                        and x.mapping.entity == entity and (x.mapping.column or "").upper() == column.upper()]:
+                hits.remove(src)
             return ResolvedSlot(
                 term=phrase,
                 semantic_type=SemanticType.METRIC,

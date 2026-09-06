@@ -288,3 +288,36 @@ def test_documented_basis_travels_with_the_mapping(catalog, profiles):
     sq = r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
     block = ExistingCompiler(FakeLlm([""]), profiles, {}).catalog_block(sq)
     assert "KDV hariç" in block and "INVOICE.NETTOTAL" in block
+
+
+def test_a_gap_closes_through_one_description_from_the_portal(catalog, profiles, logo_db):
+    """The whole loop the portal exists for: a word users say that nothing covers, a person describing
+    the column it belongs to, and the same question answered — with no definition written in code."""
+    from semantic_layer.candidates.generator import CandidateGenerator
+    from semantic_layer.conventions import Conventions
+    from semantic_layer.models import Annotation
+
+    conv = Conventions.from_profiles(profiles)
+    q = "Ortalama sepet tutarımız nedir?"
+
+    def ask():
+        r = SemanticResolver(catalog, TENANT, DS, profiles, conventions=conv)
+        c = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite",
+                                  default_filters=default_filters_provider(catalog, TENANT, DS), conventions=conv)
+        sq = r.resolve(q, today=date(2026, 7, 20))
+        return sq, c.compile(sq, catalog)
+
+    sq, out = ask()
+    assert out is None and "sepet" in sq.unresolved       # the gap the portal would show
+
+    text = "Sepet tutarı: bir faturanın net toplamıdır. Ortalama sepet, fatura başına ortalama tutardır."
+    ann = catalog.add_annotation(Annotation(datasource_id=DS, table_pattern="LG_{n0}_{n1}_INVOICE", column="NETTOTAL", text=text, author="portal"))
+    gen = CandidateGenerator(catalog, TENANT, DS, profiles, conv)
+    assert gen.ingest_annotation("LG_{n0}_{n1}_INVOICE", "NETTOTAL", text, f"annotation:{ann.id}")["created"] >= 1
+    gen.attach_profile_evidence()
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+
+    sq, out = ask()
+    assert out is not None, sq.to_dict()
+    assert "AVG" in out.sql and "NETTOTAL" in out.sql and sq.unresolved == []
+    logo_db.execute(out.sql).fetchall()
