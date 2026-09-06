@@ -37,3 +37,8 @@ body {
   background: #e3cfc3;
   border-radius: 999px;
 }
+
+@keyframes splash-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}

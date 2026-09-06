@@ -27,7 +27,24 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
         </span>
       </nav>
 
-      <div className="mt-auto">
+      {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
+      <div className="mt-5 flex min-h-0 flex-1 flex-col">
+        <div className="relative flex-1 overflow-hidden rounded-2xl border border-line bg-[#F4EEE9] shadow-card" style={{ minHeight: 260 }}>
+          <img
+            src={`${import.meta.env.BASE_URL}zeki-ai.gif`}
+            alt="Zeki AI — Timaş Yayın Grubu"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ objectPosition: '27.5% 50%' }}
+            draggable={false}
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#F4EEE9] via-[#F4EEE9]/90 to-transparent px-3 pb-2.5 pt-8">
+            <div className="font-display text-[15px] font-semibold leading-none tracking-tight text-ink">Zeki AI</div>
+            <div className="mt-1 text-[9px] font-semibold tracking-[0.18em] text-brand">TİMAŞ YAYIN GRUBU</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
         <div className="card p-3">
           <div className="flex items-center gap-2 text-xs font-semibold">
             <span className={clsx('h-2 w-2 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-brand-accent' : 'bg-ink-faint')} />

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, Percent, ShoppingCart, TrendingUp, Undo2 } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -9,6 +9,7 @@ import { ChannelMix } from './components/ChannelMix';
 import { CopilotPanel } from './components/CopilotPanel';
 import { useCockpit, useEngine } from './hooks/useCockpit';
 import { InfoTip } from './components/InfoTip';
+import { Splash } from './components/Splash';
 import { derive } from './lib/metrics';
 import { dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
 
@@ -18,6 +19,8 @@ export default function App() {
   const engineOk = engine.isPending ? null : Boolean(engine.data?.deployed);
   const d = cockpit.data;
   const copilotInput = useRef<HTMLInputElement>(null);
+  const [splash, setSplash] = useState(true);
+  const closeSplash = useCallback(() => setSplash(false), []);
   const ym = ymOf(d?.summary.lastDate);
   const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]} (YTD)` : 'Veri kesiti bekleniyor';
   const focusCopilot = () => {
@@ -27,6 +30,7 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen">
+      {splash && <Splash onDone={closeSplash} />}
       <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} />
 
       <div className="flex min-w-0 flex-1 flex-col">
