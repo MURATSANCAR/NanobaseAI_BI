@@ -238,6 +238,8 @@ class AskIn(BaseModel):
     sampleSize: int | None = 50
     # yalnız /api/v1/ask_agent: True ise ajan wren_store_query ile knowledge/sql'e yazabilir (varsayılan kapalı)
     store: bool | None = False
+    # A/B "birebir recall dışlama": bu nl'e eşit doğrulanmış çift recall'dan düşülür (ask + ask_agent)
+    excludeNl: str | None = None
 
 
 # --- endpoints ----------------------------------------------------------------------
@@ -333,15 +335,23 @@ def _rules() -> str:
     return content or ""
 
 
-def _recall(question: str) -> list[dict]:
+def _norm_nl(s: str | None) -> str:
+    return " ".join((s or "").split()).strip().lower()
+
+
+def _recall(question: str, exclude_nl: str | None = None) -> list[dict]:
     try:
         from wren.memory.index_backend import get_index
 
         idx = get_index(PROJECT, str(PROJECT / ".wren" / "memory"))
-        return list(idx.search(question, limit=RECALL_LIMIT) or [])
+        items = list(idx.search(question, limit=RECALL_LIMIT + (1 if exclude_nl else 0)) or [])
     except Exception as e:  # noqa: BLE001
         log.warning("recall failed: %s", e)
         return []
+    if exclude_nl:
+        ex = _norm_nl(exclude_nl)
+        items = [r for r in items if _norm_nl(r.get("nl_query") or r.get("nl")) != ex]
+    return items[:RECALL_LIMIT]
 
 
 _store: Any = None
@@ -487,9 +497,9 @@ def _extract_sql(text: str) -> str | None:
     return sql
 
 
-def _build_messages(question: str, thread: list[dict[str, str]]) -> list[dict[str, str]]:
+def _build_messages(question: str, thread: list[dict[str, str]], exclude_nl: str | None = None) -> list[dict[str, str]]:
     rules = _rules()
-    recalled = _recall(question)
+    recalled = _recall(question, exclude_nl)
     schema = _schema_context(question, recalled)
     examples = "\n\n".join(
         f"Soru: {r.get('nl_query') or r.get('nl') or ''}\nSQL:\n{r.get('sql_query') or r.get('sql') or ''}" for r in recalled if (r.get("sql_query") or r.get("sql"))
@@ -532,7 +542,7 @@ def ask(body: AskIn) -> dict:
     repairs = 0
     try:
         t = time.perf_counter()
-        messages = _build_messages(q, thread)
+        messages = _build_messages(q, thread, body.excludeNl)
         timings["context_ms"] = int((time.perf_counter() - t) * 1000)
         t = time.perf_counter()
         text = _llm(messages)
@@ -583,6 +593,7 @@ def ask(body: AskIn) -> dict:
             "latency_ms": int((time.perf_counter() - t0) * 1000),
             "repairs": repairs,
             "timings": timings,
+            "recallExcluded": bool(body.excludeNl),
         }
     except HTTPException:
         raise
@@ -603,30 +614,78 @@ def generate_summary(body: dict) -> dict:
 # araçlarını sırayla kullanır. Köprünün varsayılan yolu değişmez; POST /api/v1/ask_agent ile denenir.
 
 _agents: dict[bool, Any] = {}
+_AGENT_TOOLS_KEEP = {"wren_query", "wren_dry_plan"}  # recall/fetch_context/list_models dışarı: çiftler + model indeksi istemde
+AGENT_QUERY_BUDGET = int(os.environ.get("WREN_AGENT_QUERY_BUDGET", "3"))
+AGENT_STEP_BUDGET = int(os.environ.get("WREN_AGENT_STEP_BUDGET", "6"))
+AGENT_TSQL_HINT = ("Türkçe cevap ver. Hedef veritabanı SQL Server (T-SQL): LIMIT yerine TOP kullan, "
+                   "GROUP BY içinde takma ad kullanma, ay kırılımı için DATEFROMPARTS(YEAR(x), MONTH(x), 1).")
+AGENT_CONTRACT = (
+    "Sözleşme: Cevabı YALNIZ final_sql(sql) aracıyla ver — düzyazı cevap sayılmaz. "
+    "wren_dry_plan serbest (DB'siz plan kontrolü). wren_query en fazla {q} kez ve yalnız keşif için; sonuç kümesi cevap değildir. "
+    "Doğrulanmış çiftlerden biri soruyla eşleşiyorsa onu aynen ya da uyarlayarak final_sql ile ver; keşfe ancak eşleşen çift yoksa çık. "
+    "Toplam en fazla {s} adım. Soru bu projede olmayan veriyi (2025 ve öncesi) istiyorsa final_sql çağırma, tek cümleyle açıkla."
+)
+
+
+def _agent_short_rules() -> str:
+    """Ajana kısa kural seti (knowledge/agent-short.md, ~8 satır). knowledge/rules/ dışında tutulur ki
+    load_rules onu /api/v1/ask istemine karıştırmasın. Yoksa tam kurallara düşer."""
+    p = PROJECT / "knowledge" / "agent-short.md"
+    try:
+        return p.read_text(encoding="utf-8").strip()
+    except OSError:
+        log.warning("knowledge/agent-short.md yok — ajan tam kurallarla çalışıyor")
+        return _rules()
+
+
+def _agent_message(question: str, exclude_nl: str | None) -> tuple[str, int]:
+    """Kullanıcı mesajı: soru + ilk RECALL_LIMIT doğrulanmış çift + model/görünüm/küp indeksi."""
+    recalled = _recall(question, exclude_nl)
+    pairs = "\n\n".join(
+        f"Soru: {r.get('nl_query') or r.get('nl') or ''}\nSQL:\n{r.get('sql_query') or r.get('sql') or ''}"
+        for r in recalled if (r.get("sql_query") or r.get("sql"))
+    )
+    msg = (f"Soru: {question}\n\n## Doğrulanmış soru→SQL çiftleri (önce bunlara bak)\n{pairs or '(yok)'}"
+           f"\n\n## Modeller / görünümler / küpler\n{_model_index()}")
+    return msg, len(recalled)
 
 
 def _pydantic_agent(store: bool = False):
-    """WrenToolkit + A40 modeli (OpenAI uyumlu uç). `store` bayrağına göre iki ayrı ajan önbelleklenir:
-    store=False → wren_store_query aracı yok (varsayılan; deneysel uç knowledge/sql'e yazmasın),
-    store=True  → ajan doğruladığı çifti kendisi saklayabilir."""
+    """WrenToolkit + A40 modeli. Toolset: wren_query + wren_dry_plan (+ store ise wren_store_query) ve bizim final_sql.
+    `store` bayrağına göre iki ayrı ajan önbelleklenir (varsayılan kapalı: knowledge/sql'e yazmaz)."""
     if store not in _agents:
-        from pydantic_ai import Agent
+        from pydantic_ai import Agent, RunContext
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
+        from pydantic_ai.toolsets import FunctionToolset
         from wren_pydantic import WrenToolkit
 
         toolkit = WrenToolkit.from_project(str(PROJECT))
-        model = OpenAIChatModel(
-            LLM_MODEL,
-            provider=OpenAIProvider(base_url=LLM_BASE, api_key=LLM_KEY or "x"),
-        )
+        base = toolkit.toolset(include_memory_write=store)
+        keep = _AGENT_TOOLS_KEEP | ({"wren_store_query"} if store else set())
+        try:
+            base = base.filtered(lambda ctx, td: td.name in keep)
+        except AttributeError:
+            for k in list(getattr(base, "tools", {})):
+                if k not in keep:
+                    del base.tools[k]
+
+        final = FunctionToolset()
+
+        @final.tool
+        def final_sql(ctx: RunContext[dict], sql: str) -> str:
+            """Nihai cevap SQL'i (T-SQL, tek SELECT). Tam bir kez çağrılır; çağrıdan sonra dur."""
+            ctx.deps["final_sql"] = sql.strip()
+            return "kaydedildi — başka araç çağırma, dur."
+
+        model = OpenAIChatModel(LLM_MODEL, provider=OpenAIProvider(base_url=LLM_BASE, api_key=LLM_KEY or "x"))
         _agents[store] = Agent(
             model,
-            instructions=toolkit.instructions() + "\n\nTürkçe cevap ver. Hedef veritabanı SQL Server (T-SQL): LIMIT yerine TOP kullan, "
-            "GROUP BY içinde takma ad kullanma, ay kırılımı için DATEFROMPARTS(YEAR(x), MONTH(x), 1).",
-            toolsets=[toolkit.toolset(include_memory_write=store)],
+            deps_type=dict,
+            instructions=_agent_short_rules() + "\n\n" + AGENT_CONTRACT.format(q=AGENT_QUERY_BUDGET, s=AGENT_STEP_BUDGET) + "\n\n" + AGENT_TSQL_HINT,
+            toolsets=[base, final],
         )
-        log.info("pydantic-ai agent ready: project=%s model=%s store=%s", PROJECT, LLM_MODEL, store)
+        log.info("pydantic-ai agent ready: project=%s model=%s store=%s tools=%s+final_sql", PROJECT, LLM_MODEL, store, sorted(keep))
     return _agents[store]
 
 
@@ -678,35 +737,51 @@ class _TraceView:
         return self._usage
 
 
-def _agent_run_traced(agent, question: str, *, request_limit: int) -> tuple[str, str, list, Any]:
-    """Ajanı çalıştırır; (status, output, messages, usage) döner. status: OK | LIMIT."""
+def _agent_run_traced(agent, message: str, deps: dict, *, request_limit: int) -> tuple[str, str, list, Any]:
+    """Ajanı çalıştırır; (status, output, messages, usage). Bitiş koşulu kodda, modelde değil:
+    final_sql çağrıldı → OK (döngü kapanır) · wren_query > AGENT_QUERY_BUDGET → QUERY_BUDGET ·
+    LLM isteği > AGENT_STEP_BUDGET → LOOP · sert tavan → LIMIT · döngü bitti ama final_sql yok → NO_SQL."""
     import asyncio
 
     from pydantic_ai.exceptions import UsageLimitExceeded
+    from pydantic_ai.messages import ToolCallPart
     from pydantic_ai.usage import UsageLimits
 
+    def _nq(msgs) -> int:
+        return sum(1 for m in msgs for p in getattr(m, "parts", []) if isinstance(p, ToolCallPart) and p.tool_name == "wren_query")
+
     async def _go():
-        msgs: list = []
-        usage = None
-        async with agent.iter(question, usage_limits=UsageLimits(request_limit=request_limit)) as run:
+        status, output, msgs, usage = "OK", "", [], None
+        async with agent.iter(message, deps=deps, usage_limits=UsageLimits(request_limit=request_limit)) as run:
             try:
                 async for _node in run:
-                    pass
+                    msgs = list(run.all_messages())
+                    if deps.get("final_sql"):
+                        break
+                    if _nq(msgs) > AGENT_QUERY_BUDGET:
+                        status = "QUERY_BUDGET"
+                        break
+                    u = run.usage()
+                    if (getattr(u, "requests", 0) or 0) > AGENT_STEP_BUDGET:
+                        status = "LOOP"
+                        break
             except UsageLimitExceeded as e:
                 log.warning("ask_agent: %s", e)
-                try:
-                    msgs = list(run.all_messages())
-                except Exception:  # noqa: BLE001
-                    msgs = list(getattr(getattr(run, "ctx", None), "state", None).message_history or [])  # type: ignore[union-attr]
-                try:
-                    usage = run.usage()
-                except Exception:  # noqa: BLE001
-                    usage = None
-                return "LIMIT", "", msgs, usage
-            result = run.result
-            msgs = list(result.all_messages()) if result is not None else list(run.all_messages())
-            usage = result.usage() if result is not None else run.usage()
-            return "OK", str(result.output) if result is not None else "", msgs, usage
+                status = "LIMIT"
+            try:
+                msgs = list(run.all_messages())
+            except Exception:  # noqa: BLE001
+                pass
+            try:
+                usage = run.usage()
+            except Exception:  # noqa: BLE001
+                usage = None
+            res = getattr(run, "result", None)
+            if res is not None:
+                output = str(res.output)
+            if status == "OK" and not deps.get("final_sql"):
+                status = "NO_SQL"
+        return status, output, msgs, usage
 
     return asyncio.run(_go())
 
@@ -720,22 +795,58 @@ def ask_agent(body: AskIn) -> dict:
     if not q:
         raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
     try:
-        # Kilit YOK: toolkit from_project ile kendi motorunu kurar; köprü motoru serbest kalır. Aksi halde
-        # 40–120 s süren ajan döngüsü boyunca watchdog'un run_sql sağlık sorgusu kilitte bekler, 30 s'de
-        # düşer ve nanobase-wren-watchdog birimi yeniden başlatır.
-        # agent.iter: istek limiti aşılsa bile o ana kadarki mesajlar (araç izi, son SQL) elde kalır;
-        # 502 yerine status=LIMIT ile döneriz — A/B ve hata ayıklama için iz kaybolmaz.
-        status, output, msgs, usage_obj = _agent_run_traced(_pydantic_agent(bool(body.store)), q, request_limit=10)
-        tools, sql, usage = _agent_trace(_TraceView(msgs, usage_obj))
+        # Kilit YOK: toolkit kendi motorunu kurar; köprü motoru watchdog için serbest kalır.
+        deps: dict = {}
+        message, n_pairs = _agent_message(q, body.excludeNl)
+        status, output, msgs, usage_obj = _agent_run_traced(
+            _pydantic_agent(bool(body.store)), message, deps, request_limit=AGENT_STEP_BUDGET + 2
+        )
+        tools, _last_query_sql, usage = _agent_trace(_TraceView(msgs, usage_obj))
+        sql = deps.get("final_sql")
+        repairs, row_count, explanation = 0, None, None
+        if sql and status == "OK":
+            # runtime: dry_run → tek onarım → limitli koşu; sonuç kullanıcıya, modele değil
+            error: str | None = None
+            for attempt in range(2):
+                try:
+                    with _engine_lock:
+                        engine().dry_run(sql)
+                    error = None
+                    break
+                except Exception as e:  # noqa: BLE001
+                    error = str(e)[:1500]
+                    log.warning("ask_agent dry_run failed (attempt %d) q=%r err=%s", attempt + 1, q[:80], error[:300])
+                    if attempt == 1:
+                        break
+                    repairs += 1
+                    fix = _llm([
+                        {"role": "system", "content": _agent_short_rules() + "\n\n" + AGENT_TSQL_HINT},
+                        {"role": "user", "content": f"Soru: {q}\n\nBu SQL motor doğrulamasında hata verdi:\n```sql\n{sql}\n```\nHata: {error}\n\nDüzeltilmiş SQL'i tek bir ```sql``` bloğunda ver."},
+                    ])
+                    sql2 = _extract_sql(fix)
+                    if not sql2:
+                        break
+                    sql = sql2
+            if error:
+                status, explanation = "SQL_INVALID", f"Üretilen SQL doğrulanamadı: {error[:300]}"
+            else:
+                result = run_sql(sql, int(body.sampleSize or 50))
+                row_count = result["totalRows"]
+        log.info("ask_agent %s q=%r tools=%s repairs=%d pairs=%d", status, q[:60], tools, repairs, n_pairs)
         return {
             "id": uuid.uuid4().hex,
             "type": "AGENT",
             "status": status,
             "summary": output,
+            "explanation": explanation,
             "sql": sql,
+            "rowCount": row_count,
+            "repairs": repairs,
             "toolCalls": tools,
             "usage": usage,
             "store": bool(body.store),
+            "recallExcluded": bool(body.excludeNl),
+            "recalledPairs": n_pairs,
             "threadId": body.threadId or uuid.uuid4().hex,
             "latency_ms": int((time.perf_counter() - t0) * 1000),
         }
