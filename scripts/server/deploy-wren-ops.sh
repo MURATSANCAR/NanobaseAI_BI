@@ -67,10 +67,9 @@ sudo -E tee /data/nanobaseai/bi/backup-wren-project.sh >/dev/null <<SH
 #!/usr/bin/env bash
 set -euo pipefail
 ts=\$(date +%Y%m%d)
-tar -czf ${BACKUP}/wren-project-\${ts}.tgz -C "$(dirname "${PROJECT}")" "$(basename "${PROJECT}")" --exclude='.wren' --exclude='target'
-cp -f /data/nanobaseai/bi/secrets/wren-logo-connection.json ${BACKUP}/wren-logo-connection-\${ts}.json.enc 2>/dev/null || true
+# dışlamalar yol argümanlarından ÖNCE gelmeli (tar konumsal); sırlar yedeğe girmez (secrets/ ayrı)
+tar --exclude='.wren' --exclude='target' -czf ${BACKUP}/wren-project-\${ts}.tgz -C "$(dirname "${PROJECT}")" "$(basename "${PROJECT}")"
 find ${BACKUP} -name 'wren-project-*.tgz' -mtime +14 -delete
-find ${BACKUP} -name 'wren-logo-connection-*' -mtime +14 -delete
 ls -la ${BACKUP} | tail -3
 SH
 sudo chmod 755 /data/nanobaseai/bi/backup-wren-project.sh
