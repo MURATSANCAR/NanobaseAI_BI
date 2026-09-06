@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -44,9 +45,29 @@ MAX_ROWS = int(os.environ.get("WREN_MAX_ROWS", "500"))
 CONTEXT_ITEMS = int(os.environ.get("WREN_CONTEXT_ITEMS", "40"))
 RECALL_LIMIT = int(os.environ.get("WREN_RECALL_LIMIT", "4"))
 
-app = FastAPI(title="NanobaseAI BI Wren bridge", version="0.1.0")
+from contextlib import asynccontextmanager
+
+
+def _warm() -> None:
+    try:
+        engine()
+        _memory_store().get_context(manifest(), "ciro", limit=1)
+        log.info("wren bridge warm: engine + memory ready")
+    except Exception:  # noqa: BLE001
+        log.exception("wren bridge warm-up failed")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    if os.environ.get("WREN_BRIDGE_WARM", "1") == "1":
+        threading.Thread(target=_warm, name="wren-warm", daemon=True).start()
+    yield
+
+
+app = FastAPI(title="NanobaseAI BI Wren bridge", version="0.1.0", lifespan=lifespan)
 
 _engine: Any = None
+_engine_lock = threading.Lock()  # one pyodbc/DataFusion session per process: serialize engine calls (FastAPI runs sync handlers in a threadpool)
 _manifest: dict | None = None
 _data_source: str = ""
 _threads: dict[str, list[dict[str, str]]] = {}
@@ -114,7 +135,8 @@ def _normalize(v: Any) -> Any:
 
 def run_sql(sql: str, limit: int) -> dict:
     limit = max(1, min(int(limit or MAX_ROWS), MAX_ROWS))
-    table = engine().query(sql, limit + 1)
+    with _engine_lock:
+        table = engine().query(sql, limit + 1)
     rows = [{k: _normalize(x) for k, x in r.items()} for r in table.to_pylist()]
     truncated = len(rows) > limit
     rows = rows[:limit]
@@ -156,7 +178,8 @@ def engine_status() -> dict:
     try:
         first = m["models"][0]["name"]
         pk = m["models"][0].get("primaryKey") or m["models"][0]["columns"][0]["name"]
-        engine().query(f'SELECT "{pk}" FROM "{first}"', 1)
+        with _engine_lock:
+            engine().query(f'SELECT "{pk}" FROM "{first}"', 1)
     except Exception as e:  # noqa: BLE001
         log.warning("engine probe failed: %s", e)
         deployed = False
@@ -197,28 +220,63 @@ def _recall(question: str) -> list[dict]:
         return []
 
 
-def _schema_context(question: str) -> str:
-    m = manifest()
-    try:
+_store: Any = None
+
+
+def _memory_store():
+    """One MemoryStore per process: the embedding model load (~15 s on CPU) happens once, at warm-up."""
+    global _store
+    if _store is None:
         from wren.memory.store import MemoryStore
 
-        store = MemoryStore(path=str(PROJECT / ".wren" / "memory"))
-        ctx = store.get_context(m, question, limit=CONTEXT_ITEMS)
-        if isinstance(ctx, dict) and ctx.get("schema"):
-            return str(ctx["schema"])
-        if isinstance(ctx, dict) and ctx.get("items"):
-            return "\n".join(_fmt_item(i) for i in ctx["items"])
+        _store = MemoryStore(path=str(PROJECT / ".wren" / "memory"))
+    return _store
+
+
+def _model_index() -> str:
+    """Compact model list (name → physical table, primary key, column count): the LLM must know every model name."""
+    lines = []
+    for m in manifest().get("models", []):
+        tr = m.get("tableReference") or {}
+        lines.append(f'- "{m["name"]}" → {tr.get("schema", "")}.{tr.get("table", "")} · pk {m.get("primaryKey") or "-"} · {len(m.get("columns", []))} kolon')
+    return "\n".join(lines)
+
+
+def _schema_context(question: str, recalled: list[dict] | None = None) -> str:
+    """Semantic schema retrieval (WrenAI memory: LanceDB over MDL items) + the columns the recalled
+    SQL pairs reference. Only these items reach the LLM — never the full 1.6k-column schema."""
+    m = manifest()
+    picked: dict[str, dict[str, str]] = {}  # model → {column: type}
+
+    def add(model: str, col: str, typ: str = "") -> None:
+        if model and col:
+            picked.setdefault(model, {})[col] = typ
+
+    try:
+        ctx = _memory_store().get_context(m, question, limit=CONTEXT_ITEMS)
+        for r in (ctx.get("results") or []) if isinstance(ctx, dict) else []:
+            if r.get("item_type") == "column":
+                add(str(r.get("model_name") or ""), str(r.get("item_name") or ""), str(r.get("data_type") or ""))
+            elif r.get("item_type") == "model":
+                picked.setdefault(str(r.get("item_name") or r.get("model_name") or ""), {})
     except Exception as e:  # noqa: BLE001
-        log.warning("get_context unavailable (%s) — falling back to full schema", e)
-    from wren.memory import schema_indexer
-
-    return schema_indexer.describe_schema(m)
-
-
-def _fmt_item(i: dict) -> str:
-    parts = [str(i.get("item_type") or i.get("type") or ""), str(i.get("model_name") or ""), str(i.get("name") or "")]
-    desc = i.get("description") or i.get("text") or ""
-    return " ".join(p for p in parts if p) + (f" — {desc}" if desc else "")
+        log.warning("get_context unavailable (%s) — using recalled SQL columns only", e)
+    # columns referenced by recalled, verified SQL pairs (exact names, highest signal)
+    col_types = {mm["name"]: {c["name"]: str(c.get("type") or "") for c in mm.get("columns", [])} for mm in m.get("models", [])}
+    for r in recalled or []:
+        sql = str(r.get("sql_query") or r.get("sql") or "")
+        for model in col_types:
+            if model in sql:
+                for col in re.findall(r'"([A-Za-z_][A-Za-z0-9_]*)"', sql):
+                    if col in col_types[model]:
+                        add(model, col, col_types[model][col])
+    lines = []
+    for model, cols in picked.items():
+        if model not in col_types:
+            continue
+        shown = ", ".join(f'"{c}" {t}'.strip() for c, t in sorted(cols.items()))
+        lines.append(f'"{model}": {shown or "(ilgili kolon bulunamadı)"}')
+    return "\n".join(lines) or "(bağlam bulunamadı — model listesine bak)"
 
 
 def _model_names() -> list[str]:
@@ -265,12 +323,12 @@ def _extract_sql(text: str) -> str | None:
 def _build_messages(question: str, thread: list[dict[str, str]]) -> list[dict[str, str]]:
     rules = _rules()
     recalled = _recall(question)
-    schema = _schema_context(question)
+    schema = _schema_context(question, recalled)
     examples = "\n\n".join(
         f"Soru: {r.get('nl_query') or r.get('nl') or ''}\nSQL:\n{r.get('sql_query') or r.get('sql') or ''}" for r in recalled if (r.get("sql_query") or r.get("sql"))
     )
     ctx = [
-        "## Modeller\n" + ", ".join(f'"{n}"' for n in _model_names()),
+        "## Modeller\n" + _model_index(),
         "## İş kuralları\n" + (rules or "(yok)"),
         "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
         "## Şema bağlamı (soruyla ilgili model/kolonlar)\n" + schema,
@@ -314,7 +372,8 @@ def ask(body: AskIn) -> dict:
         error: str | None = None
         for attempt in range(2):
             try:
-                engine().dry_run(sql)
+                with _engine_lock:
+                    engine().dry_run(sql)
                 error = None
                 break
             except Exception as e:  # noqa: BLE001
