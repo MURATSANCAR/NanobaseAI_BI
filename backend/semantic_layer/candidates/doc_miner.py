@@ -201,6 +201,23 @@ def _metric_facts(text: str, source: str, entities: Iterable[str] = ()) -> list[
     return out
 
 
+_UNIT = re.compile(r"`?([A-Z_][A-Z0-9_]*)`?\s*(?:kolonu|alanı)?[^.\n]{0,40}?\[unit\]\s*([^.\[\n]{2,60})")
+_UNIT_PHRASE = re.compile(r"`?([A-Z_][A-Z0-9_]*)`?[^.\n]{0,40}?(KDV\s+(?:dahil|hariç)|birim\s+\w+|satır\s+\w+)", re.I)
+
+
+def _unit_facts(text: str, source: str, entities: Iterable[str] = ()) -> list[DocFact]:
+    """'NETTOTAL … [unit] TL, KDV dahil' / 'STLINE.TOTAL KDV hariç' → the basis a measure is expressed in.
+    Two measures with different bases must not be summed or divided without the operator saying so."""
+    out: list[DocFact] = []
+    for rx in (_UNIT, _UNIT_PHRASE):
+        for m in rx.finditer(text):
+            column, unit = m.group(1).upper(), " ".join(m.group(2).split())[:60]
+            if len(column) < 3:
+                continue
+            out.append(DocFact("unit", unit.lower(), source, _entity_in(text[: m.start()], entities), column, (), m.group(0)[:100], extra={"unit": unit}))
+    return out
+
+
 def mine_text(text: str, source: str, entity_hint: Optional[str] = None, conventions: Any = None) -> list[DocFact]:
     """Documentation → facts. Which columns carry value glosses and which words name an entity is
     read from the profile (`conventions`), never from a built-in list of customer column names."""
@@ -215,11 +232,12 @@ def mine_text(text: str, source: str, entity_hint: Optional[str] = None, convent
     facts.extend(_column_values_facts(text, source, entity_hint, entities))
     facts.extend(_column_alias_facts(text, source))
     facts.extend(_metric_facts(text, source, entities))
+    facts.extend(_unit_facts(text, source, entities))
     # de-dup
     seen = set()
     out = []
     for f in facts:
-        k = (f.kind, f.term, f.entity, f.column, f.values, f.operator, tuple(f.extra.get("documented_values") or ()))
+        k = (f.kind, f.term, f.entity, f.column, f.values, f.operator, tuple(f.extra.get("documented_values") or ()), f.extra.get("unit"))
         if k not in seen and f.term and not f.term.isdigit():
             seen.add(k)
             out.append(f)

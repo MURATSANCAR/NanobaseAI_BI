@@ -39,6 +39,7 @@ from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
 from semantic_layer.runtime.guardrails import physicalize_sql, referenced_tables, strip_trailing_semicolon, validate_sql
+from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
 
@@ -49,11 +50,13 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime
 class Runtime:
     """Process-wide state: store, profiles, resolver, compilers, DB connector, recall index."""
 
-    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None):
+    def __init__(self, settings: SemanticSettings, *, store: Optional[CatalogStore] = None, connector: Optional[Connector] = None, llm=None, queue: Optional[LlmQueue] = None):
         self.settings = settings
         self.store = store or open_store(settings.store_dsn)
         self.connector = connector
-        self.llm = llm
+        # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
+        self.queue = queue or LlmQueue.from_env(self.store.engine)
+        self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         self._engine_lock = threading.Lock()
         self.threads: dict[str, list[dict[str, str]]] = {}
         self.profiles = self.store.list_profiles(settings.datasource_id)
@@ -196,7 +199,13 @@ class Runtime:
         timings["compile_ms"] = int((time.perf_counter() - t) * 1000)
         if compiled.llm_ms:
             timings["llm_ms"] = compiled.llm_ms
+        queued = {}
+        if isinstance(self.llm, QueuedLlm) and self.llm.last_wait_ms:
+            timings["queue_wait_ms"] = self.llm.last_wait_ms
+            queued = {"waitedMs": self.llm.last_wait_ms, "aheadOnArrival": self.llm.last_ahead}
         semantic = {"query": sq.to_dict(), "compiler": compiled.compiler, "certified": compiled.certified, "explain": compiled.explain, "catalogVersion": compiled.catalog_version}
+        if queued:
+            semantic["queue"] = queued
         if not compiled.sql:
             reason = "; ".join(compiled.explain)[:500]
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
@@ -469,6 +478,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/semantic/certify")
     def certify(body: dict[str, Any] | None = None) -> dict[str, Any]:
         return rt().certify(note=str((body or {}).get("note") or "api certify"))
+
+    @app.get("/api/v1/llm/queue")
+    def llm_queue() -> dict[str, Any]:
+        """Who is using the model and who is waiting — the cockpit shows this instead of a spinner."""
+        r = rt()
+        return r.queue.status()
 
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:

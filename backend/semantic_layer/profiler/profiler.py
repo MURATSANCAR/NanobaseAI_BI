@@ -21,13 +21,19 @@ _SKIP_TYPES = ("date", "time", "timestamp", "binary", "blob", "clob", "image", "
 _MAX_CODE_WIDTH = 32
 
 
-def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool) -> bool:
-    """Shape-only test: not a key, not a reference, not a wide/opaque type."""
+def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool, sample: list[Any] | None = None) -> bool:
+    """Shape-only test: not a key, not a reference, not a wide/opaque type. When the declared type says
+    nothing useful (an unsized TEXT), the row sample decides: short values that repeat are a code list."""
     if is_key or is_ref:
         return False
     dt = str(col.get("data_type") or "").lower()
     if any(t in dt for t in _SKIP_TYPES):
-        return False
+        values = [str(v) for v in (sample or []) if v is not None]
+        if not values or any(t in dt for t in ("date", "time", "binary", "blob", "image", "json", "xml")):
+            return False
+        short = all(len(v) <= _MAX_CODE_WIDTH for v in values)
+        repeating = len(set(values)) <= max(2, len(values) // 2)
+        return short and repeating
     if dt.startswith(("varchar", "nvarchar", "char", "nchar")):
         m = re.search(r"\((\d+)\)", dt)
         return int(m.group(1)) <= _MAX_CODE_WIDTH if m else True  # unsized (MDL import): let the probe decide
@@ -35,16 +41,43 @@ def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool) -> bool:
 
 
 class Profiler:
-    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: int = 300):
+    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: int = 300, sample_rows: int = 20):
         self.c = connector
         self.enum_max_distinct = enum_max_distinct
         self.top_n = top_n
         self.max_tables = max_tables
+        self.sample_rows = sample_rows
 
-    def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None) -> list[SchemaProfile]:
+    def _sample(self, schema: str, table: str) -> dict[str, list[Any]]:
+        """column (upper) → the values seen in a bounded row sample; empty when sampling is unavailable."""
+        if self.sample_rows <= 0 or not hasattr(self.c, "sample_rows"):
+            return {}
+        try:
+            rows = self.c.sample_rows(schema, table, self.sample_rows) or []
+        except Exception as e:  # noqa: BLE001
+            log.debug("sample failed %s.%s: %s", schema, table, e)
+            return {}
+        out: dict[str, list[Any]] = {}
+        for row in rows:
+            for k, v in row.items():
+                out.setdefault(str(k).upper(), []).append(v)
+        return out
+
+    def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
+        """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
+        catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
         tables = self.c.list_tables(schema, like)[: self.max_tables]
         names = [logical_table(t, sch) for sch, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
+        deep: Optional[set[str]] = None
+        if deep_limit is not None and len(tables) > deep_limit:
+            counts = {t: self.c.row_count(sch, t) for sch, t in tables}
+            refs: dict[str, int] = {}
+            for fk in fks:
+                refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1
+            ranked = rank_tables(counts, refs)
+            deep = {name for name, _ in ranked[:deep_limit]}
+            log.info("profiling %d/%d tables deeply (volume + centrality)", len(deep), len(tables))
         fks = self.c.foreign_keys(schema)
         fk_by_table: dict[str, list[dict[str, str]]] = {}
         for fk in fks:
@@ -53,13 +86,19 @@ class Profiler:
         for (sch, table), lt in zip(tables, names):
             entity = entity_by_pattern.get(lt.table_pattern, lt.entity)
             pk = self.c.primary_keys(sch, table)
+            is_deep = deep is None or table in deep
+            sample = self._sample(sch, table) if is_deep else {}
             cols: list[ColumnProfile] = []
             rels: list[dict[str, str]] = []
             for col in self.c.columns(sch, table):
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")), description=col.get("description"))
-                reason = sensitivity.name_is_sensitive(cp.name)
+                observed = [v for v in sample.get(cp.name.upper(), []) if v is not None and str(v) != ""]
+                reason = sensitivity.name_is_sensitive(cp.name) or sensitivity.values_are_sensitive([str(v) for v in observed])
                 if reason:
                     cp.sensitive, cp.sensitivity_reason = True, reason
+                seen = sample.get(cp.name.upper(), [])
+                if seen:
+                    cp.null_ratio = round(sum(1 for v in seen if v is None) / len(seen), 3)
                 fk = next((f for f in fk_by_table.get(table.upper(), []) if f["column"].upper() == col["name"].upper()), None)
                 if fk:
                     ref_lt = logical_table(fk["ref_table"], sch)
@@ -67,7 +106,7 @@ class Profiler:
                     cp.ref_column = fk["ref_column"]
                 if cp.ref_entity:
                     rels.append({"column": cp.name, "ref_entity": cp.ref_entity, "ref_column": cp.ref_column or ""})
-                if not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity)):
+                if is_deep and not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity), sample=sample.get(cp.name.upper())):
                     try:
                         hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
                         top = self.c.top_values(sch, table, col["name"], self.enum_max_distinct + 1)
@@ -84,7 +123,7 @@ class Profiler:
                             cp.distinct_count = hint if hint is not None else len(top)
                     except Exception as e:  # noqa: BLE001
                         log.debug("top_values failed %s.%s: %s", table, col["name"], e)
-                _mark_sentinels(cp)
+                _mark_sentinels(cp, [str(v) for v in sample.get(cp.name.upper(), []) if v is not None])
                 cols.append(cp)
             desc = self.c.table_description(table) if hasattr(self.c, "table_description") else None
             out.append(
@@ -118,20 +157,48 @@ class Profiler:
 _ABSENT_MARKERS = ("0", "-1", "")
 
 
-def _mark_sentinels(col: ColumnProfile) -> None:
+def _mark_sentinels(col: ColumnProfile, sample: list[str] | None = None) -> None:
+    """A reference column stores 0/-1 for "unset"; a measure filled by a later process reads 0 until then.
+    Either counted as data corrupts averages, ratios and joins — so mark them, from the value inventory
+    when there is one and otherwise from the row sample."""
     if col.ref_entity:
         col.sentinel_values = [v for v in _ABSENT_MARKERS if v != ""]
         return
-    if col.top_values and not col.is_primary_key:
-        total = sum(n for _, n in col.top_values) or 1
-        for value, n in col.top_values:
-            # a dominant zero in a numeric column is a filled-in-later marker, not a measurement
-            if value in ("0", "") and n / total >= 0.25 and any(t in col.data_type.lower() for t in ("int", "float", "decimal", "numeric", "money", "real")):
-                col.sentinel_values.append(value)
+    if col.is_primary_key or not _is_numeric_type(col.data_type):
+        return
+    pairs = col.top_values or [(v, 1) for v in (sample or [])]
+    if not pairs:
+        return
+    total = sum(n for _, n in pairs) or 1
+    for value in ("0", "0.0", ""):
+        hits = sum(n for v, n in pairs if str(v).strip() in (value, "0", "0.0") and value != "")
+        if value and hits / total >= 0.25 and value not in col.sentinel_values:
+            col.sentinel_values.append("0")
+            break
+
+
+def _is_numeric_type(data_type: str) -> bool:
+    return any(t in (data_type or "").lower() for t in ("int", "float", "decimal", "numeric", "money", "real", "double"))
 
 
 def column_index(profiles: list[SchemaProfile]) -> dict[str, set[str]]:
     return {p.entity: {c.name.upper() for c in p.columns} for p in profiles}
+
+
+def rank_tables(rows: dict[str, Optional[int]], references: dict[str, int]) -> list[tuple[str, float]]:
+    """Which tables deserve the expensive treatment, decided from the data world itself: volume says the
+    table is used, and being referenced by other tables says it is central. Both are normalised so neither
+    a huge log table nor a tiny lookup dominates."""
+    import math
+
+    scored = []
+    max_ref = max(references.values() or [1]) or 1
+    for name, count in rows.items():
+        volume = math.log10(max(1, count or 1)) / 8.0            # 10^8 rows ≈ 1.0
+        centrality = references.get(name, 0) / max_ref
+        scored.append((name, round(min(1.0, volume) * 0.5 + centrality * 0.5, 4)))
+    scored.sort(key=lambda x: -x[1])
+    return scored
 
 
 def infer_links(profiles: list[SchemaProfile], connector: Connector, *, sample: int = 40, min_overlap: float = 0.9) -> int:

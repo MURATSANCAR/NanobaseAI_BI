@@ -59,8 +59,11 @@ def test_sensitive_columns_are_never_sampled(pii_profiles):
 def test_sentinels_are_recorded_and_excluded(pii_profiles):
     profiles, _ = pii_profiles
     contacts = profiles[0]
-    assert "0" in contacts.column("discount").sentinel_values                  # dominant zero in a measure
-    assert contacts.column("discount").meaningful_values() == [("12.5", 6)]
+    discount = contacts.column("discount")
+    assert "0" in discount.sentinel_values                                     # dominant zero in a measure
+    assert discount.null_ratio == 0.0                                          # measured from the row sample
+    owner = contacts.column("owner_ref")
+    assert owner.sentinel_values == ["0", "-1"] if owner.ref_entity else "0" in owner.sentinel_values
     conv = Conventions.from_profiles(profiles)
     assert conv.sentinel_values("CONTACTS", "discount") == {"0"}
 

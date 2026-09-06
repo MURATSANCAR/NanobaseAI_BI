@@ -1,0 +1,112 @@
+"""The shared model is handed out in arrival order: nobody is rejected, nobody overtakes."""
+
+from __future__ import annotations
+
+import threading
+import time
+
+import pytest
+import sqlalchemy as sa
+
+from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
+from semantic_layer.store import schema as S
+from semantic_layer.store.catalog_store import open_store
+
+
+class SlowLlm:
+    """A model that can only do one thing at a time — exactly what the queue exists to protect."""
+
+    def __init__(self, delay: float = 0.15):
+        self.delay = delay
+        self.concurrent = 0
+        self.max_concurrent = 0
+        self.order: list[str] = []
+        self._lock = threading.Lock()
+        self.model = "slow"
+
+    def chat(self, messages, **_):
+        with self._lock:
+            self.concurrent += 1
+            self.max_concurrent = max(self.max_concurrent, self.concurrent)
+        try:
+            time.sleep(self.delay)
+            text = messages[-1]["content"]
+            self.order.append(text)
+            return f"ok:{text}"
+        finally:
+            with self._lock:
+                self.concurrent -= 1
+
+
+@pytest.fixture
+def queue_store(tmp_path):
+    store = open_store(f"sqlite:///{tmp_path}/queue.db")
+    return store
+
+
+def _ask(llm, text, results, idx):
+    results[idx] = llm.chat([{"role": "user", "content": text}])
+
+
+def test_requests_are_serialised_and_ordered(queue_store):
+    llm = SlowLlm()
+    queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
+    client = QueuedLlm(llm, queue)
+    results: dict[int, str] = {}
+    threads = []
+    for i in range(4):
+        t = threading.Thread(target=_ask, args=(client, f"soru-{i}", results, i))
+        threads.append(t)
+        t.start()
+        time.sleep(0.05)          # arrival order is the queue order
+    for t in threads:
+        t.join(timeout=20)
+    assert len(results) == 4 and all(v.startswith("ok:") for v in results.values())
+    assert llm.max_concurrent == 1, "model was called concurrently despite the queue"
+    assert llm.order == [f"soru-{i}" for i in range(4)], "requests were not served in arrival order"
+
+
+def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
+    llm = SlowLlm(delay=0.3)
+    queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
+    client = QueuedLlm(llm, queue)
+    results: dict[int, str] = {}
+    a = threading.Thread(target=_ask, args=(client, "uzun", results, 0))
+    a.start()
+    time.sleep(0.05)
+    status = queue.status()
+    assert status["running"] == 1
+    b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1))
+    b.start()
+    time.sleep(0.05)
+    waiting = queue.status()
+    assert waiting["waiting"] == 1 and waiting["queue"][0]["position"] == 1   # told where they are in line
+    a.join(timeout=20)
+    b.join(timeout=20)
+    assert results[1] == "ok:beklesin"                                        # waited, did not fail
+    assert client.last_wait_ms > 0
+
+
+def test_a_dead_worker_does_not_block_the_line(queue_store):
+    queue = LlmQueue(queue_store.engine, slots=1, lease_seconds=0, poll_seconds=0.02)
+    with queue_store.engine.begin() as conn:                                  # a ticket left RUNNING by a crash
+        conn.execute(S.sl_llm_queue.insert().values(
+            id="ghost", tenant_id="t", datasource_id="d", purpose="nl2sql", status="RUNNING",
+            enqueued_at=sa.func.now(), started_at=sa.func.now(), heartbeat_at=None, worker="dead",
+        ))
+    llm = SlowLlm(delay=0.01)
+    assert QueuedLlm(llm, queue).chat([{"role": "user", "content": "devam"}]) == "ok:devam"
+    with queue_store.engine.connect() as conn:
+        ghost = conn.execute(sa.select(S.sl_llm_queue.c.status).where(S.sl_llm_queue.c.id == "ghost")).scalar()
+    assert ghost == "ABANDONED"
+
+
+def test_catalog_answers_never_take_a_ticket(queue_store, profiles):
+    """A question the catalog can answer must not queue behind a model call."""
+    from semantic_layer.runtime.compiler import DeterministicCompiler
+    queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
+    before = queue.status()
+    comp = DeterministicCompiler(profiles, {}, "sqlite")
+    assert comp is not None and before["waiting"] == 0
+    with queue_store.engine.connect() as conn:
+        assert conn.execute(sa.select(sa.func.count()).select_from(S.sl_llm_queue)).scalar() == 0

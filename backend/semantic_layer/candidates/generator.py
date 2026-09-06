@@ -97,6 +97,12 @@ class CandidateGenerator:
                     if any(ref in (m.formula or "") for m in self.store.list_mappings(mc.id)):
                         self.store.add_evidence(Evidence(mc.id, evidence_type, f.source, support_count=1, weight=weight, payload={"snippet": f.snippet}))
                         evidence += 1
+            elif f.kind == "unit":
+                prof = self.by_entity.get(entity or "")
+                col = prof.column(f.column) if prof and f.column else None
+                if col is not None and not col.unit:
+                    col.unit = str(f.extra.get("unit") or f.term)[:60]
+                    evidence += 1
             elif f.kind == "column_values":
                 # value inventory documented for a column that already has a certified/candidate name
                 if not entity or not f.column:

@@ -26,6 +26,7 @@ class Connector(Protocol):
     def primary_keys(self, schema: str, table: str) -> list[str]: ...
     def foreign_keys(self, schema: str) -> list[dict[str, str]]: ...
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]: ...
+    def sample_rows(self, schema: str, table: str, limit: int) -> list[dict[str, Any]]: ...
     def row_count(self, schema: str, table: str) -> Optional[int]: ...
     def execute(self, sql: str, limit: int) -> tuple[list[dict[str, str]], list[dict[str, Any]], bool]: ...
     def dry_run(self, sql: str) -> None: ...
@@ -78,6 +79,14 @@ class _DbApiBase:
         truncated = len(raw) > limit
         rows = [{c["name"]: _norm(v) for c, v in zip(cols, r)} for r in raw[:limit]]
         return cols, rows, truncated
+
+    def sample_rows(self, schema: str, table: str, limit: int = 20) -> list[dict[str, Any]]:
+        """A handful of real rows — the cheapest way to see what a column actually holds.
+        One query per table; values are inspected in memory and never stored verbatim."""
+        target = f"{self.q(schema)}.{self.q(table)}" if schema and self.dialect != "sqlite" else self.q(table)
+        sql = f"SELECT TOP {int(limit)} * FROM {target}" if self.dialect == "tsql" else f"SELECT * FROM {target} LIMIT {int(limit)}"
+        cols, rows, _ = self.execute(sql, limit)
+        return rows
 
     def close(self) -> None:
         if self._conn is not None:
@@ -389,11 +398,14 @@ class ModelFileConnector:
     def row_count(self, schema: str, table: str) -> Optional[int]:
         return None
 
+    def sample_rows(self, schema: str, table: str, limit: int = 20) -> list[dict[str, Any]]:
+        return []          # offline: no rows to look at
+
     def execute(self, sql: str, limit: int):
-        raise RuntimeError("MDLConnector is offline — no execution")
+        raise RuntimeError("ModelFileConnector is offline — no execution")
 
     def dry_run(self, sql: str) -> None:
-        raise RuntimeError("MDLConnector is offline — no dry run")
+        raise RuntimeError("ModelFileConnector is offline — no dry run")
 
     def close(self) -> None:
         self._closed = True

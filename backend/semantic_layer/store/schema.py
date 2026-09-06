@@ -161,5 +161,24 @@ sl_schema_annotation = sa.Table(
 )
 
 
+sl_llm_queue = sa.Table(
+    "sl_llm_queue",
+    metadata,
+    sa.Column("id", sa.String(64), primary_key=True),
+    sa.Column("tenant_id", sa.String(64), nullable=False),
+    sa.Column("datasource_id", sa.String(128), nullable=False),
+    sa.Column("user_id", sa.String(128)),
+    sa.Column("purpose", sa.String(64), nullable=False),
+    sa.Column("question", sa.Text()),
+    sa.Column("status", sa.String(16), nullable=False, server_default="WAITING"),  # WAITING | RUNNING | DONE | ABANDONED
+    sa.Column("enqueued_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("started_at", sa.DateTime(timezone=True)),
+    sa.Column("finished_at", sa.DateTime(timezone=True)),
+    sa.Column("heartbeat_at", sa.DateTime(timezone=True)),
+    sa.Column("worker", sa.String(128)),
+    sa.Index("ix_sl_llm_queue_order", "status", "enqueued_at"),
+)
+
+
 def create_all(engine: sa.Engine) -> None:
     metadata.create_all(engine)

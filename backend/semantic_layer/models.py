@@ -160,6 +160,7 @@ class ColumnProfile:
     sensitive: bool = False               # personal data: never sampled, never shown, never sent to a model
     sensitivity_reason: Optional[str] = None
     sentinel_values: list[str] = field(default_factory=list)  # values that mean "absent" (0 on a reference, …)
+    unit: Optional[str] = None            # documented unit/basis ("KDV dahil", "birim maliyet"): guards mixing
 
     def is_enum(self) -> bool:
         return bool(self.top_values) and (self.distinct_count or 0) <= 64

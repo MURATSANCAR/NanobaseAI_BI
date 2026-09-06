@@ -19,7 +19,7 @@ from typing import Iterable, Optional
 _NAME_PATTERNS = [
     r"tckn|tc_?kimlik|kimlik_?no|vergi_?no|vkn|ssn|social_?security|national_?id|passport|pasaport",
     r"e_?mail|eposta|email_?addr|mail_?addr",
-    r"tel(no|nrs|efon)?\b|phone|gsm|mobile|cep_?tel|faks|fax",
+    r"tel(no|nrs|efon)?\d*|phone|gsm|mobile|cep_?tel|faks|fax",
     r"iban|bank_?acc|hesap_?no|card_?no|kart_?no|credit_?card|ccnum",
     r"adres|address|street|posta_?kodu|zip_?code|postcode",
     r"dogum|birth_?date|birthday|dob\b",
