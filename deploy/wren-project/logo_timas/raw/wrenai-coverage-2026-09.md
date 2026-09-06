@@ -123,7 +123,6 @@ Cockpit hâlâ varsayılanı kullanıyor; ajan modu A/B için hazır.
 | 6 | `memory load` / `forget` | **Tamam.** Test projesinde: `load --dry-run` 47 çift, `load --upsert` 47 yükledi, `forget --source user` 8 çift sildi. Yeni müşteriye aktarım yolu doğrulandı |
 | 7 | Küpleri fiilen sorgulamak | **Tamam (sınırlı).** Köprüye `GET /api/v1/cubes` + `POST /api/v1/cube` eklendi (MCP `query_cube` ile aynı kod yolu: `_build_cube_query` + `wren_core.cube_query_to_sql`). Toplam ölçüler doğru: net_ciro **848.110.178,82** = DB. Kırılımlı küp sorgusu SQL Server'da hâlâ upstream hatası (Issue 3) |
 
-`is_hidden`: **kullanılmıyor — kalıcı karar.** Mekanizma denendi (51 kolon: kredi kartı, IBAN, vergi no, telefon,
-e-posta, açık adres, teknik anahtarlar) ve motorun onları sembol tablosundan çıkardığı doğrulandı, ardından
-kullanıcı talimatıyla **tamamı geri alındı**. Gerekçe: sistemi kullananlar zaten ham veriye erişimi olan kişiler.
-Tüm 1.629 kolon açık; retrieval kalitesi gizlemeyle değil, bellek (`get_context`) ve kolon açıklamalarıyla sağlanır.
+`is_hidden`: WrenAI'nin belgelediği erişim denetimi yöntemi kolonu **modelden çıkarmak**; `is_hidden` motor-içi bir bayrak olarak
+tanımlı. Retrieval için gerek yok (bellek zaten ilgili dilimi getiriyor). PII kolonları (vergi no, telefon, banka) için anlamlı olurdu
+ama "tüm kolonlar açık" kararıyla çelişiyor — dokunulmadı.
