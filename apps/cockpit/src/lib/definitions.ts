@@ -1,7 +1,7 @@
 /**
  * Ekrandaki her göstergenin "nasıl hesaplandığı" — bilgi (i) alanları bunu gösterir.
  * Kaynak: Logo Tiger LOGO_DB, firma 411 = 2026 (LG_411_01_INVOICE, LG_411_01_STLINE, LG_411_CLCARD, LG_411_ITEMS).
- * Rakamlar 2026-09-06'da motordan bağımsız ham T-SQL ile doğrulandı (docs/architecture/wrenai-mainline-2026-09.md).
+ * Rakamlar motordan bağımsız ham T-SQL ile doğrulandı; karşılıkları semantik katalogda sertifikalıdır.
  */
 export type MetricInfo = {
   title: string;

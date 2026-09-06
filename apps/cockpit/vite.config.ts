@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Geliştirmede /api → wren-ui (GraphQL + REST). Sunucuda wren-ui 127.0.0.1:3000'e bağlı;
+// Geliştirmede /api → semantic bridge (REST). Sunucuda köprü 127.0.0.1:8795'e bağlı;
 // Mac'ten:  ssh -N -L 3000:127.0.0.1:3000 nanobase
-const WREN_UI_URL = process.env.WREN_UI_URL ?? 'http://127.0.0.1:3000';
+const ENGINE_URL = process.env.ENGINE_URL ?? 'http://127.0.0.1:8795';
 
 // Üretimde alt yol altında servis edilir (portal.nanobase.ai/timas/): VITE_BASE=/timas/ npm run build
 const BASE = process.env.VITE_BASE ?? '/';
@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     port: 5180,
     proxy: {
-      '/api': { target: WREN_UI_URL, changeOrigin: true },
+      '/api': { target: ENGINE_URL, changeOrigin: true },
     },
   },
   build: { outDir: 'dist', sourcemap: false },

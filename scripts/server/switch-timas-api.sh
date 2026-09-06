@@ -1,14 +1,12 @@
 #!/usr/bin/env bash
-# Point https://portal.nanobase.ai/timas/api/ at the WrenAI main-line bridge (:8794) or back at the legacy wren-ui (:3000).
-# Usage: switch-timas-api.sh semantic|bridge|legacy   (semantic = WrenAI-free Semantic Layer bridge :8795)
+# Point https://portal.nanobase.ai/timas/api/ at the Semantic Bridge (:8795).
+# Usage: switch-timas-api.sh semantic [--port N]
 set -euo pipefail
-TARGET="${1:-bridge}"
+TARGET="${1:-semantic}"
 SITE="${PORTAL_SITE:-/etc/nginx/sites-enabled/portal.nanobase.ai}"
 case "$TARGET" in
-  bridge) UP="127.0.0.1:${WREN_BRIDGE_PORT:-8794}" ;;
   semantic) UP="127.0.0.1:${SEMANTIC_BRIDGE_PORT:-8795}" ;;
-  legacy) UP="127.0.0.1:3000" ;;
-  *) echo "usage: $0 bridge|legacy" >&2; exit 2 ;;
+  *) echo "usage: $0 semantic" >&2; exit 2 ;;
 esac
 log() { printf '[switch-timas-api] %s\n' "$*"; }
 curl -fsS -m 10 "http://${UP}/health" >/dev/null 2>&1 || curl -fsS -m 10 -o /dev/null "http://${UP}/" || { echo "[switch-timas-api] ERROR: ${UP} not answering" >&2; exit 1; }

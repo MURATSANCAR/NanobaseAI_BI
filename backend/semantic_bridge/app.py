@@ -1,4 +1,4 @@
-"""Semantic Bridge — the cockpit contract (/api/v1/ask, /run_sql, /engine, /generate_summary) without WrenAI.
+"""Semantic Bridge — the cockpit contract (/api/v1/ask, /run_sql, /engine, /generate_summary).
 
     USER → Qwen-free Resolver → CERTIFIED catalog → DeterministicCompiler → SQL Server
                            └─ MISS / complex → ExistingCompiler (Qwen + certified facts) → dry-run → SQL Server

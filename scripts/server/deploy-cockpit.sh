@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # Host the TİMAŞ cockpit (apps/cockpit) at https://portal.nanobase.ai/timas/
 #   static build  → /data/nanobaseai/bi/cockpit/dist   (rsync apps/cockpit/dist/ there first;
-#                   build with: VITE_BASE=/timas/ VITE_WREN_BASE=/timas npm run build)
-#   /timas/api/*  → wren-ui 127.0.0.1:3000/api/*        (semantic engine UI service, docker, loopback only)
+#                   build with: VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build)
+#   /timas/api/*  → semantic bridge 127.0.0.1:8795/api/*  (loopback only)
 # Idempotent: inserts the location block into the portal nginx site once, then nginx -t + reload.
 set -euo pipefail
 SITE="${PORTAL_SITE:-/etc/nginx/sites-enabled/portal.nanobase.ai}"
 DIST="${COCKPIT_DIST:-/data/nanobaseai/bi/cockpit/dist}"
-WREN_UI="${WREN_UI_UPSTREAM:-127.0.0.1:3000}"
+ENGINE="${ENGINE_UPSTREAM:-127.0.0.1:8795}"
 
 log() { printf '[deploy-cockpit] %s\n' "$*"; }
 die() { printf '[deploy-cockpit] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [[ -f "${DIST}/index.html" ]] || die "missing ${DIST}/index.html — rsync apps/cockpit/dist first"
 grep -q '/timas/assets/' "${DIST}/index.html" || die "dist was not built with VITE_BASE=/timas/"
-curl -fsS -m 10 -o /dev/null "http://${WREN_UI}/" || die "wren-ui not reachable at ${WREN_UI}"
+curl -fsS -m 10 "http://${ENGINE}/health" >/dev/null || die "semantic bridge not reachable at ${ENGINE}"
 
 if sudo grep -q 'location /timas/ ' "$SITE"; then
   log "nginx block already present in $SITE"
@@ -25,12 +25,12 @@ else
   sudo cp "$SITE" "/etc/nginx/backups/$(basename "$SITE").bak-$(date +%Y%m%d%H%M%S)"
   BLOCK=$(cat <<NGX
     # TİMAŞ Finans & Bütçe Masası (apps/cockpit) — https://portal.nanobase.ai/timas/
-    # Static build under ${DIST}; /timas/api/* → semantic engine UI service (${WREN_UI}, loopback only).
+    # Static build under ${DIST}; /timas/api/* → semantic bridge (${ENGINE}, loopback only).
     location = /timas {
         return 302 /timas/;
     }
     location /timas/api/ {
-        proxy_pass http://${WREN_UI}/api/;
+        proxy_pass http://${ENGINE}/api/;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;

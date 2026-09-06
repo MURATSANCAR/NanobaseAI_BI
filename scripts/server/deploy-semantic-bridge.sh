@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Semantic Layer V1 (WrenAI-free) for the TİMAŞ cockpit:
+# Semantic Layer V1 for the TİMAŞ cockpit:
 #   package  : backend/semantic_layer (catalog + evidence engine + history miner + resolver + compilers)
 #   service  : backend/semantic_bridge (FastAPI :8795) — cockpit contract (/api/v1/ask, /run_sql, /engine) + /api/v1/semantic/*
 #   store    : bi_meta PostgreSQL (sl_* tables, alembic 014) — shared with nanobase_api portal pages
@@ -78,7 +78,7 @@ PYTHONPATH="${ROOT}/backend" "${VENV}/bin/python" -m semantic_layer.cli status
 log "writing ${UNIT}"
 sudo tee "$UNIT" >/dev/null <<UNITEOF
 [Unit]
-Description=NanobaseAI Semantic Bridge (:${PORT}) — WrenAI-free cockpit NL→SQL
+Description=NanobaseAI Semantic Bridge (:${PORT}) — cockpit NL→SQL
 After=network-online.target
 Wants=network-online.target
 

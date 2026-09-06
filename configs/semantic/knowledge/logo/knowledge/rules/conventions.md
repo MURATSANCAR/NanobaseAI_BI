@@ -1,6 +1,6 @@
 # Katalog kuralları — enrich-context (2026-09-06)
 
-Bu dosya `wren skills get enrich-context` gap_catalog başlıklarıyla yazılmıştır; `logo-erp.md`'deki kurallar değiştirilmemiştir.
+Kolon/enum/varsayılan filtre boşluklarını kapatmak için yazılmıştır; `logo-erp.md`'deki kurallar değiştirilmemiştir.
 
 ## Default filters
 - Belge/hareket modellerinde (INVOICE, STLINE, ORFICHE, ORFLINE, CLFLINE) `CANCELLED = 0` varsayılan filtredir; iptal belgeleri yalnız açıkça sorulursa dahil et.

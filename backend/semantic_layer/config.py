@@ -46,9 +46,7 @@ class SemanticSettings:
 
     @classmethod
     def from_env(cls) -> "SemanticSettings":
-        # SEMANTIC_KNOWLEDGE_DIR is the name going forward; the older variables stay readable so an
-        # existing deployment keeps working until its directory is renamed.
-        project = _env("SEMANTIC_KNOWLEDGE_DIR") or _env("SEMANTIC_PROJECT_DIR") or _env("WREN_PROJECT")
+        project = _env("SEMANTIC_KNOWLEDGE_DIR") or _env("SEMANTIC_PROJECT_DIR")
         dsn = _env("SEMANTIC_STORE_DSN") or _env("NANOBASE_META_DSN")
         if not dsn:
             dsn = "sqlite:///" + str(Path(_env("SEMANTIC_STORE_PATH", ".semantic_layer.db")).resolve())
@@ -63,7 +61,7 @@ class SemanticSettings:
             tenant_id=_env("SEMANTIC_TENANT_ID", "default"),
             datasource_id=_env("SEMANTIC_DATASOURCE_ID", "logo"),
             project_dir=Path(project).resolve() if project else None,
-            connection_file=_env("SEMANTIC_CONNECTION_FILE") or _env("WREN_CONNECTION_FILE"),
+            connection_file=_env("SEMANTIC_CONNECTION_FILE"),
             llm_base=_env("OPENAI_API_BASE", "http://172.17.0.1:8020/v1").rstrip("/"),
             llm_key=_env("OPENAI_API_KEY", ""),
             llm_model=_env("LLM_MODEL_NAME", "nanobaseai-bi-llm"),

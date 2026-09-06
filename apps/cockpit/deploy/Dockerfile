@@ -1,4 +1,4 @@
-# Yönetim kokpiti — statik derleme + nginx; /api/* wren-ui'ye iletilir.
+# Yönetim kokpiti — statik derleme + nginx; /api/* semantic bridge'e (:8795) iletilir.
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./

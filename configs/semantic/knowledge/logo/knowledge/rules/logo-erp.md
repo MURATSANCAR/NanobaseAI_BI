@@ -1,4 +1,4 @@
-# Logo ERP iş kuralları (legacy WrenAI instructions'tan taşındı)
+# Logo ERP iş kuralları (operatör tarafından doğrulandı)
 
 ## Kural 1
 Fatura türleri (dbo_LG_411_01_INVOICE.TRCODE): 7 perakende satış, 8 toptan satış, 9 verilen hizmet = SATIŞ; 2 perakende satış iadesi, 3 toptan satış iadesi = SATIŞ İADESİ; 1 mal alım, 4 alınan hizmet = SATINALMA; 6 alım iadesi. Ciro/satış sorularında TRCODE IN (7,8,9), net ciro = satış − iade (TRCODE IN (2,3)). Her zaman CANCELLED = 0 filtrele. Tutar kolonu NETTOTAL (KDV dahil net), tarih DATE_.

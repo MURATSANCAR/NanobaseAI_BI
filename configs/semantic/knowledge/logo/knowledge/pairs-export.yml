@@ -203,7 +203,7 @@ pairs:
     AND i."TRCODE" IN (2,3,7,8,9) GROUP BY 1 ORDER BY net_ciro DESC
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: 'Kanal bazında brüt kâr marjı: satış hareket satırlarında (TRCODE 7,8, LINETYPE
@@ -227,7 +227,7 @@ pairs:
     BY CAST("DATE_" AS DATE) ORDER BY 1
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: En çok satan 10 kitap hangileri (adet)?
@@ -238,7 +238,7 @@ pairs:
     LIMIT 10
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: 2026 iskonto oranı nedir?
@@ -249,7 +249,7 @@ pairs:
     0 AND "TRCODE" IN (7,8) AND "DATE_" >= ''2026-01-01''
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: 2026 ay bazında açılan sipariş sayısı ve toplam sipariş tutarı (sipariş fişleri)
@@ -284,7 +284,7 @@ pairs:
     IN (2,3,7,8,9) AND "DATE_" >= ''2026-08-01'' AND "DATE_" < ''2026-09-01''
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: 2026 yılında aylık net satış tutarı nedir?
@@ -328,7 +328,7 @@ pairs:
     IN (2,3,7,8,9)
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: 2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro
@@ -391,7 +391,7 @@ pairs:
     (2,3) GROUP BY c."CODE", c."DEFINITION_" ORDER BY iade_tutari DESC LIMIT 10
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'
 - nl: Yayınevi bazında net ciro ve brüt kâr marjı nedir?
@@ -405,6 +405,6 @@ pairs:
     DESC
 
     '
-  source: legacy-wren-ui
+  source: imported
   datasource: logo-tunnel
   created_at: '2026-09-06T06:14:11.121971+00:00'

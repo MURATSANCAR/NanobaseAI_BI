@@ -7,7 +7,7 @@
  *  - Her sorgu CANCELLED = 0 filtreler.
  * SQL, semantik motorun model adlarıyla yazılır (dbo_LG_411_01_INVOICE ...).
  */
-import { runSql } from './wren';
+import { runSql } from './engine';
 import fixture from '../fixtures/cockpit.json';
 
 export type Monthly = { month: number; sales: number; returns: number; purchases: number };
