@@ -59,7 +59,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         </div>
         <div className="min-w-0 flex-1 leading-tight">
           <div className="flex items-center gap-2">
-            <span className="font-display text-[15px] font-semibold">Finans Copilotu</span>
+            <span className="font-display text-[15px] font-semibold">Timaş Finans</span>
             <span className="rounded-md bg-page px-1.5 py-0.5 text-[10px] font-bold text-ink-muted">NL→SQL</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-ink-muted">
@@ -151,7 +151,7 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
     <div className="rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">
         {m.pending ? <Loader2 size={12} className="animate-spin text-brand" /> : <Bot size={12} className="text-brand" />}
-        Copilot · {m.at}
+        Timaş Finans · {m.at}
       </div>
       <p className={clsx('mt-1.5 text-[13px] leading-snug', m.error && 'text-brand-accent')}>{m.text}</p>
       {m.error && <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-page p-2 text-[10px] text-ink-muted">{m.error}</pre>}

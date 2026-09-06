@@ -14,12 +14,12 @@ export function TopBar({
   engineOk: boolean | null;
   /** "2026 · Ocak–Ağustos (YTD)" — veri kesitinden türetilir */
   periodLabel: string;
-  /** Arama = Copilot'a soru: girişe odaklanır */
+  /** Arama = Timaş Finans'a soru: girişe odaklanır */
   onSearch: () => void;
 }) {
   return (
     <header className="flex flex-wrap items-center gap-3 px-6 pt-5">
-      <button type="button" className="chip h-9 px-3 hover:border-brand hover:text-brand" aria-label="Copilot'a soru sor" title="Copilot'a soru sor" onClick={onSearch}>
+      <button type="button" className="chip h-9 px-3 hover:border-brand hover:text-brand" aria-label="Timaş Finans'a soru sor" title="Timaş Finans'a soru sor" onClick={onSearch}>
         <Search size={14} />
       </button>
 
