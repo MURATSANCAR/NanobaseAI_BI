@@ -9,9 +9,9 @@ set -euo pipefail
 export SYSTEMD_BUS_TIMEOUT="${SYSTEMD_BUS_TIMEOUT:-300}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VENV="${SEMANTIC_VENV:-/data/nanobaseai/bi/frontend/backend/.venv}"
-PROJECT="${SEMANTIC_PROJECT_DIR:-/data/nanobaseai/bi/wren-project/logo_timas}"   # knowledge/ + models/ import only
+KNOWLEDGE="${SEMANTIC_KNOWLEDGE_DIR:-${ROOT}/configs/semantic/knowledge/logo}"   # operator docs + validated pairs
 SECRETS="${SECRETS_ROOT:-/data/nanobaseai/bi/secrets}"
-CONN_FILE="${SEMANTIC_CONNECTION_FILE:-${SECRETS}/wren-logo-connection.json}"
+CONN_FILE="${SEMANTIC_CONNECTION_FILE:-${SECRETS}/logo-mssql-connection.json}"
 API_ENV="${NANOBASE_API_ENV:-/data/nanobaseai/bi/frontend/backend/nanobase_api.env}"
 ENV_FILE="${SEMANTIC_BRIDGE_ENV:-/data/nanobaseai/bi/frontend/backend/nanobase_semantic_bridge.env}"
 UNIT=/etc/systemd/system/nanobase-semantic-bridge.service
@@ -22,7 +22,7 @@ log() { printf '[deploy-semantic-bridge] %s\n' "$*"; }
 die() { printf '[deploy-semantic-bridge] ERROR: %s\n' "$*" >&2; exit 1; }
 
 [[ -x "${VENV}/bin/python" ]] || die "missing venv ${VENV}"
-[[ -f "$CONN_FILE" ]] || die "missing connection file ${CONN_FILE} (see deploy-wren-bridge.sh step 1)"
+[[ -f "$CONN_FILE" ]] || die "missing connection file ${CONN_FILE} — write it from ${SECRETS}/mssql-ro.datasources.json (mode 600)"
 
 # --- 0. deps + migration (sl_* tables in bi_meta) ------------------------------------------------
 log "installing deps"
@@ -43,7 +43,7 @@ cat > "$ENV_FILE" <<ENV
 SEMANTIC_STORE_DSN=${NANOBASE_META_DSN}
 SEMANTIC_TENANT_ID=default
 SEMANTIC_DATASOURCE_ID=logo
-SEMANTIC_PROJECT_DIR=${PROJECT}
+SEMANTIC_KNOWLEDGE_DIR=${KNOWLEDGE}
 SEMANTIC_CONNECTION_FILE=${CONN_FILE}
 # Operator scope for this deployment (all optional; empty = whole schema, connector defaults):
 SEMANTIC_SCHEMA=${SEMANTIC_SCHEMA:-dbo}

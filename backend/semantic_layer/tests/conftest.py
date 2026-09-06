@@ -16,7 +16,7 @@ from semantic_layer.profiler.profiler import Profiler
 from semantic_layer.store.catalog_store import open_store
 
 ROOT = Path(__file__).resolve().parents[3]
-PROJECT = ROOT / "deploy" / "wren-project" / "logo_timas"
+PROJECT = ROOT / "configs" / "semantic" / "knowledge" / "logo"
 ENUM_PROBE = ROOT / "artifacts" / "timas" / "apply-all.json"
 
 TENANT, DS = "t1", "logo"

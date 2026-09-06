@@ -3,7 +3,7 @@
 
 Offline (no LLM, no DB):
   PYTHONPATH=backend python3 tests/text2sql/semantic-coldstart-eval.py --store sqlite:////tmp/sl.db \
-      --project deploy/wren-project/logo_timas --enum-probe artifacts/timas/apply-all.json --out /tmp/coldstart.json
+      --project configs/semantic/knowledge/logo --enum-probe artifacts/timas/apply-all.json --out /tmp/coldstart.json
 With the bridge (recall OFF, executes SQL and compares with truth):
   ... --bridge http://127.0.0.1:8795 --truth artifacts/timas/complex-truth.json
 

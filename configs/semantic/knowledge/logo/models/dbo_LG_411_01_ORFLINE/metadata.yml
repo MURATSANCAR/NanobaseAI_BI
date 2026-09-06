@@ -1,0 +1,779 @@
+name: "dbo_LG_411_01_ORFLINE"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_01_ORFLINE"
+primary_key: "LOGICALREF"
+properties:
+  "description": "Sipariş fişi satırı. ORDFICHEREF → dbo_LG_411_01_ORFICHE, STOCKREF → dbo_LG_411_ITEMS; AMOUNT adet, TOTAL satır brüt tutarı."
+  "displayName": "dbo.LG_411_01_ORFLINE"
+columns:
+  - name: "AMOUNT"
+    type: "FLOAT8"
+    properties:
+      "description": "Sipariş adedi [unit] adet"
+      "displayName": "AMOUNT"
+  - name: "CANCELLED"
+    type: "SMALLINT"
+    properties:
+      "description": "[enum] 0 · 1 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
+      "displayName": "CANCELLED"
+  - name: "CLIENTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CLIENTREF"
+  - name: "CLOSED"
+    type: "SMALLINT"
+    properties:
+      "description": "[enum] 0 · 1 farklı değer"
+      "displayName": "CLOSED"
+  - name: "DATE_"
+    type: "TIMESTAMP"
+    properties:
+      "description": "Sipariş satır tarihi sipariş satır tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
+      "displayName": "DATE_"
+  - name: "DUEDATE"
+    type: "TIMESTAMP"
+    properties:
+      "description": "Planlanan teslim tarihi [time] gün hassasiyeti, TZ yok [magic] 1899-12-30 = boş tarih"
+      "displayName": "DUEDATE"
+  - name: "LINETYPE"
+    type: "SMALLINT"
+    properties:
+      "description": "[enum] 0, 2, 4, 1 · 4 farklı değer"
+      "displayName": "LINETYPE"
+  - name: "LOGICALREF"
+    type: "INTEGER"
+    not_null: true
+    is_primary_key: true
+    properties:
+      "displayName": "LOGICALREF"
+  - name: "ORDFICHEREF"
+    type: "INTEGER"
+    properties:
+      "description": "Sipariş fişi referansı → dbo_LG_411_01_ORFICHE"
+      "displayName": "ORDFICHEREF"
+  - name: "PRICE"
+    type: "FLOAT8"
+    properties:
+      "description": "Birim fiyat [unit] TL / adet"
+      "displayName": "PRICE"
+  - name: "SHIPPEDAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "description": "Sevk edilen adet [unit] adet; açık sipariş = AMOUNT > SHIPPEDAMOUNT"
+      "displayName": "SHIPPEDAMOUNT"
+  - name: "STOCKREF"
+    type: "INTEGER"
+    properties:
+      "description": "Malzeme referansı"
+      "displayName": "STOCKREF"
+  - name: "TOTAL"
+    type: "FLOAT8"
+    properties:
+      "description": "Satır brüt tutarı [unit] TL, satır brüt (iskonto öncesi); sipariş tutarı için ORFICHE.NETTOTAL"
+      "displayName": "TOTAL"
+  - name: "TRCODE"
+    type: "SMALLINT"
+    properties:
+      "description": "[enum] 1 · 1 farklı değer"
+      "displayName": "TRCODE"
+  - name: "ACCOUNTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ACCOUNTREF"
+  - name: "ADDTAXACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ADDTAXACCREF"
+  - name: "ADDTAXAMNTISUPD"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ADDTAXAMNTISUPD"
+  - name: "ADDTAXAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDTAXAMOUNT"
+  - name: "ADDTAXCENTERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ADDTAXCENTERREF"
+  - name: "ADDTAXCONVFACT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDTAXCONVFACT"
+  - name: "ADDTAXDISCAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDTAXDISCAMOUNT"
+  - name: "ADDTAXEFFECTKDV"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ADDTAXEFFECTKDV"
+  - name: "ADDTAXINLINENET"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ADDTAXINLINENET"
+  - name: "ADDTAXRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDTAXRATE"
+  - name: "ADDTAXREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ADDTAXREF"
+  - name: "ADDTAXVATMATRAH"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ADDTAXVATMATRAH"
+  - name: "AFFECTCOLLATRL"
+    type: "SMALLINT"
+    properties:
+      "displayName": "AFFECTCOLLATRL"
+  - name: "AFFECTRISK"
+    type: "SMALLINT"
+    properties:
+      "displayName": "AFFECTRISK"
+  - name: "ALTPROMFLAG"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ALTPROMFLAG"
+  - name: "ATAXEXCEPTCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ATAXEXCEPTCODE"
+  - name: "ATAXEXCEPTREASON"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ATAXEXCEPTREASON"
+  - name: "BILLEDITEM"
+    type: "INTEGER"
+    properties:
+      "displayName": "BILLEDITEM"
+  - name: "BOMREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "BOMREF"
+  - name: "BOMREVREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "BOMREVREF"
+  - name: "BOMTYPE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "BOMTYPE"
+  - name: "BRANCH"
+    type: "SMALLINT"
+    properties:
+      "displayName": "BRANCH"
+  - name: "CALCTYPE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CALCTYPE"
+  - name: "CAMPAIGNREFS1"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPAIGNREFS1"
+  - name: "CAMPAIGNREFS2"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPAIGNREFS2"
+  - name: "CAMPAIGNREFS3"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPAIGNREFS3"
+  - name: "CAMPAIGNREFS4"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPAIGNREFS4"
+  - name: "CAMPAIGNREFS5"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPAIGNREFS5"
+  - name: "CAMPPAYDEFREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CAMPPAYDEFREF"
+  - name: "CAMPPOINT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CAMPPOINT"
+  - name: "CAMPPOINTS1"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CAMPPOINTS1"
+  - name: "CAMPPOINTS2"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CAMPPOINTS2"
+  - name: "CAMPPOINTS3"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CAMPPOINTS3"
+  - name: "CAMPPOINTS4"
+    type: "FLOAT8"
+    properties:
+      "displayName": "CAMPPOINTS4"
+  - name: "CANDEDUCT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CANDEDUCT"
+  - name: "CENTERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CENTERREF"
+  - name: "CMPGLINEREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CMPGLINEREF"
+  - name: "CMPGLINEREFS1"
+    type: "INTEGER"
+    properties:
+      "displayName": "CMPGLINEREFS1"
+  - name: "CMPGLINEREFS2"
+    type: "INTEGER"
+    properties:
+      "displayName": "CMPGLINEREFS2"
+  - name: "CMPGLINEREFS3"
+    type: "INTEGER"
+    properties:
+      "displayName": "CMPGLINEREFS3"
+  - name: "CMPGLINEREFS4"
+    type: "INTEGER"
+    properties:
+      "displayName": "CMPGLINEREFS4"
+  - name: "CONDITIONREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "CONDITIONREF"
+  - name: "CPACODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "CPACODE"
+  - name: "CPSTFLAG"
+    type: "SMALLINT"
+    properties:
+      "displayName": "CPSTFLAG"
+  - name: "DEDUCTCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DEDUCTCODE"
+  - name: "DEDUCTIONPART1"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEDUCTIONPART1"
+  - name: "DEDUCTIONPART2"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEDUCTIONPART2"
+  - name: "DELVRYCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DELVRYCODE"
+  - name: "DEMFICHEREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "DEMFICHEREF"
+  - name: "DEMPEGGEDAMNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DEMPEGGEDAMNT"
+  - name: "DEMTRANSREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "DEMTRANSREF"
+  - name: "DEPARTMENT"
+    type: "SMALLINT"
+    properties:
+      "description": "Departman; bu kurulumda kullanılmıyor [magic] 0 = tanımsız"
+      "displayName": "DEPARTMENT"
+  - name: "DETLINE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DETLINE"
+  - name: "DEVIR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DEVIR"
+  - name: "DISCPER"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISCPER"
+  - name: "DISTCOST"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTCOST"
+  - name: "DISTDISC"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTDISC"
+  - name: "DISTDISCVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTDISCVAT"
+  - name: "DISTEXP"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTEXP"
+  - name: "DISTEXPVAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTEXPVAT"
+  - name: "DISTPROM"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTPROM"
+  - name: "DISTRESERVED"
+    type: "FLOAT8"
+    properties:
+      "displayName": "DISTRESERVED"
+  - name: "DORESERVE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "DORESERVE"
+  - name: "DRAFTSTOCKNAME"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DRAFTSTOCKNAME"
+  - name: "DRAFTSTOCKNAME2"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DRAFTSTOCKNAME2"
+  - name: "DRAFTSTOCKNAME3"
+    type: "VARCHAR"
+    properties:
+      "displayName": "DRAFTSTOCKNAME3"
+  - name: "DREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "DREF"
+  - name: "EUVATSTATUS"
+    type: "INTEGER"
+    properties:
+      "displayName": "EUVATSTATUS"
+  - name: "EXADDTAXAMNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "EXADDTAXAMNT"
+  - name: "EXADDTAXCONVF"
+    type: "FLOAT8"
+    properties:
+      "displayName": "EXADDTAXCONVF"
+  - name: "EXADDTAXRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "EXADDTAXRATE"
+  - name: "EXIMAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "EXIMAMOUNT"
+  - name: "EXTENREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "EXTENREF"
+  - name: "FACTORYNR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "FACTORYNR"
+  - name: "FAREGREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "FAREGREF"
+  - name: "FCTYP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "FCTYP"
+  - name: "GLOBALID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GLOBALID"
+  - name: "GLOBTRANS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "GLOBTRANS"
+  - name: "GROSSUINFO1"
+    type: "FLOAT8"
+    properties:
+      "displayName": "GROSSUINFO1"
+  - name: "GROSSUINFO2"
+    type: "FLOAT8"
+    properties:
+      "displayName": "GROSSUINFO2"
+  - name: "GTIPCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GTIPCODE"
+  - name: "GUID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "GUID"
+  - name: "INUSE"
+    type: "SMALLINT"
+    properties:
+      "displayName": "INUSE"
+  - name: "ITEMASGREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ITEMASGREF"
+  - name: "ITMDISC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ITMDISC"
+  - name: "LINEEXP"
+    type: "VARCHAR"
+    properties:
+      "displayName": "LINEEXP"
+  - name: "LINENET"
+    type: "FLOAT8"
+    properties:
+      "displayName": "LINENET"
+  - name: "LINENO_"
+    type: "SMALLINT"
+    properties:
+      "displayName": "LINENO_"
+  - name: "NETDISCAMNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "NETDISCAMNT"
+  - name: "NETDISCFLAG"
+    type: "SMALLINT"
+    properties:
+      "displayName": "NETDISCFLAG"
+  - name: "NETDISCPERC"
+    type: "FLOAT8"
+    properties:
+      "displayName": "NETDISCPERC"
+  - name: "OFFERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "OFFERREF"
+  - name: "OFFTRANSREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "OFFTRANSREF"
+  - name: "ONVEHICLE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ONVEHICLE"
+  - name: "OPERATIONREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "OPERATIONREF"
+  - name: "ORDEREDAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ORDEREDAMOUNT"
+  - name: "ORDERPARAM"
+    type: "SMALLINT"
+    properties:
+      "displayName": "ORDERPARAM"
+  - name: "ORGAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ORGAMOUNT"
+  - name: "ORGDUEDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "ORGDUEDATE"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ORGLOGICREF"
+  - name: "ORGLOGOID"
+    type: "VARCHAR"
+    properties:
+      "displayName": "ORGLOGOID"
+  - name: "ORGPRICE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "ORGPRICE"
+  - name: "PARENTLNREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PARENTLNREF"
+  - name: "PARENTSTOCKREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PARENTSTOCKREF"
+  - name: "PAYDEFREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PAYDEFREF"
+  - name: "POINTCAMPREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "POINTCAMPREF"
+  - name: "POINTCAMPREFS1"
+    type: "INTEGER"
+    properties:
+      "displayName": "POINTCAMPREFS1"
+  - name: "POINTCAMPREFS2"
+    type: "INTEGER"
+    properties:
+      "displayName": "POINTCAMPREFS2"
+  - name: "POINTCAMPREFS3"
+    type: "INTEGER"
+    properties:
+      "displayName": "POINTCAMPREFS3"
+  - name: "POINTCAMPREFS4"
+    type: "INTEGER"
+    properties:
+      "displayName": "POINTCAMPREFS4"
+  - name: "PRACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PRACCREF"
+  - name: "PRCENTERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PRCENTERREF"
+  - name: "PRCLISTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PRCLISTREF"
+  - name: "PRCURR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PRCURR"
+  - name: "PREVLINENO"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PREVLINENO"
+  - name: "PREVLINEREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PREVLINEREF"
+  - name: "PRIORITY"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PRIORITY"
+  - name: "PROJECTREF"
+    type: "INTEGER"
+    properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
+      "displayName": "PROJECTREF"
+  - name: "PROMCLASITEMREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PROMCLASITEMREF"
+  - name: "PROMREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PROMREF"
+  - name: "PRPRICE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "PRPRICE"
+  - name: "PRRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "PRRATE"
+  - name: "PRVATACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PRVATACCREF"
+  - name: "PRVATCENREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PRVATCENREF"
+  - name: "PUBLICCOUNTRYREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "PUBLICCOUNTRYREF"
+  - name: "PURCHOFFCAPTION"
+    type: "VARCHAR"
+    properties:
+      "displayName": "PURCHOFFCAPTION"
+  - name: "PURCHOFFNR"
+    type: "SMALLINT"
+    properties:
+      "displayName": "PURCHOFFNR"
+  - name: "REASONFORNOTSHP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "REASONFORNOTSHP"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "RECSTATUS"
+  - name: "REFLVATACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "REFLVATACCREF"
+  - name: "REFLVATOTHACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "REFLVATOTHACCREF"
+  - name: "REPORTRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "REPORTRATE"
+  - name: "RESERVEAMOUNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "RESERVEAMOUNT"
+  - name: "RESERVEDATE"
+    type: "TIMESTAMP"
+    properties:
+      "displayName": "RESERVEDATE"
+  - name: "ROUTINGREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "ROUTINGREF"
+  - name: "RPRICE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "RPRICE"
+  - name: "SALESMANREF"
+    type: "INTEGER"
+    properties:
+      "description": "Satış temsilcisi referansı [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
+      "displayName": "SALESMANREF"
+  - name: "SHIPPEDAMNTSUGG"
+    type: "FLOAT8"
+    properties:
+      "displayName": "SHIPPEDAMNTSUGG"
+  - name: "SITEID"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SITEID"
+  - name: "SOURCECOSTGRP"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SOURCECOSTGRP"
+  - name: "SOURCEINDEX"
+    type: "SMALLINT"
+    properties:
+      "displayName": "SOURCEINDEX"
+  - name: "SPECODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "SPECODE"
+  - name: "SPECODE2"
+    type: "VARCHAR"
+    properties:
+      "displayName": "SPECODE2"
+  - name: "STATUS"
+    type: "SMALLINT"
+    properties:
+      "description": "[enum] 4, 2 · 2 farklı değer"
+      "displayName": "STATUS"
+  - name: "TEXTINC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TEXTINC"
+  - name: "TIME_"
+    type: "INTEGER"
+    properties:
+      "displayName": "TIME_"
+  - name: "TRCURR"
+    type: "SMALLINT"
+    properties:
+      "description": "Belge para birimi kodu [enum] 0=TL (yerel para), diğerleri döviz; TL karşılığı için NETTOTAL/AMOUNT kullan, TRNET'i toplama"
+      "displayName": "TRCURR"
+  - name: "TRGFLAG"
+    type: "SMALLINT"
+    properties:
+      "displayName": "TRGFLAG"
+  - name: "TRRATE"
+    type: "FLOAT8"
+    properties:
+      "displayName": "TRRATE"
+  - name: "UINFO1"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO1"
+  - name: "UINFO2"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO2"
+  - name: "UINFO3"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO3"
+  - name: "UINFO4"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO4"
+  - name: "UINFO5"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO5"
+  - name: "UINFO6"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO6"
+  - name: "UINFO7"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO7"
+  - name: "UINFO8"
+    type: "FLOAT8"
+    properties:
+      "displayName": "UINFO8"
+  - name: "UNDERDEDUCTLIMIT"
+    type: "SMALLINT"
+    properties:
+      "displayName": "UNDERDEDUCTLIMIT"
+  - name: "UOMREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "UOMREF"
+  - name: "USREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "USREF"
+  - name: "VARIANTREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "VARIANTREF"
+  - name: "VAT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "VAT"
+  - name: "VATACCREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "VATACCREF"
+  - name: "VATAMNT"
+    type: "FLOAT8"
+    properties:
+      "displayName": "VATAMNT"
+  - name: "VATCENTERREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "VATCENTERREF"
+  - name: "VATEXCEPTCODE"
+    type: "VARCHAR"
+    properties:
+      "displayName": "VATEXCEPTCODE"
+  - name: "VATEXCEPTREASON"
+    type: "VARCHAR"
+    properties:
+      "displayName": "VATEXCEPTREASON"
+  - name: "VATINC"
+    type: "SMALLINT"
+    properties:
+      "displayName": "VATINC"
+  - name: "VATMATRAH"
+    type: "FLOAT8"
+    properties:
+      "displayName": "VATMATRAH"
+  - name: "WFSTATUS"
+    type: "INTEGER"
+    properties:
+      "displayName": "WFSTATUS"
+  - name: "WITHPAYTRANS"
+    type: "SMALLINT"
+    properties:
+      "displayName": "WITHPAYTRANS"
+  - name: "WSREF"
+    type: "INTEGER"
+    properties:
+      "displayName": "WSREF"
+  - name: "dbo_LG_411_01_ORFICHE"
+    type: "dbo_LG_411_01_ORFICHE"
+    relationship: "Dbo.lg_411_01_orflineOrdficherefDbo.lg_411_01_orficheLogicalref"
+  - name: "dbo_LG_411_ITEMS"
+    type: "dbo_LG_411_ITEMS"
+    relationship: "Dbo.lg_411_01_orflineStockrefDbo.lg_411_itemsLogicalref"

@@ -72,6 +72,7 @@ def run_pipeline(
     enum_probe: Optional[Path] = None,
     skip_profile: bool = False,
     llm=None,
+    use_intugle: bool = False,
     note: str = "",
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
@@ -85,6 +86,14 @@ def run_pipeline(
             profiles = run_profile(store, settings, connector)
         finally:
             connector.close()
+    if use_intugle:
+        from semantic_layer.profiler import intugle_adapter
+
+        ir = intugle_adapter.run(profiles)
+        if ir.ran:
+            for p in profiles:
+                store.upsert_profile(p)
+        report["intugle"] = ir.to_dict()
     conventions = Conventions.from_profiles(profiles)
     report["profile"] = profile_summary(profiles)
     report["mine"] = run_mine(store, settings, profiles, project_dir, conventions)
@@ -94,6 +103,10 @@ def run_pipeline(
     if llm is not None:
         unresolved = store.list_unresolved_terms(settings.tenant_id, settings.datasource_id)
         report["llm"] = gen.llm_candidates(llm, list(unresolved)[:20])
+    if use_intugle and report.get("intugle", {}).get("ran"):
+        from semantic_layer.profiler import intugle_adapter
+
+        report["intugle"]["evidence"] = intugle_adapter.attach_evidence(store, settings.tenant_id, settings.datasource_id, profiles, intugle_adapter.IntugleReport(available=True, ran=True)).evidence
     engine = EvidenceEngine(store, min_support=settings.min_support, threshold=settings.certify_threshold)
     report["certify"] = engine.run(settings.tenant_id, settings.datasource_id, profiles, note=note)
     report["elapsed_ms"] = int((time.perf_counter() - t0) * 1000)

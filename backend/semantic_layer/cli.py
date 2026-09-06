@@ -56,7 +56,7 @@ def main(argv=None) -> int:
     ap.add_argument("-v", "--verbose", action="store_true")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init-db")
-    p = sub.add_parser("pipeline"); p.add_argument("--llm", action="store_true"); p.add_argument("--skip-profile", action="store_true"); p.add_argument("--note", default="")
+    p = sub.add_parser("pipeline"); p.add_argument("--llm", action="store_true"); p.add_argument("--skip-profile", action="store_true"); p.add_argument("--intugle", action="store_true", help="use Intugle for link/glossary discovery when installed"); p.add_argument("--note", default="")
     sub.add_parser("profile")
     sub.add_parser("mine")
     sub.add_parser("docs")
@@ -89,7 +89,10 @@ def main(argv=None) -> int:
             from semantic_layer.candidates.llm_client import LlmClient
 
             llm = LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout)
-        _dump(pl.run_pipeline(store, s, enum_probe=Path(args.enum_probe) if args.enum_probe else None, skip_profile=args.skip_profile, llm=llm, note=args.note))
+        import os as _os
+
+        use_intugle = args.intugle or _os.environ.get("SEMANTIC_INTUGLE", "").lower() in ("1", "true", "yes")
+        _dump(pl.run_pipeline(store, s, enum_probe=Path(args.enum_probe) if args.enum_probe else None, skip_profile=args.skip_profile, llm=llm, use_intugle=use_intugle, note=args.note))
         return 0
     if args.cmd == "profile":
         c = pl.build_connector(s, enum_probe=Path(args.enum_probe) if args.enum_probe else None)

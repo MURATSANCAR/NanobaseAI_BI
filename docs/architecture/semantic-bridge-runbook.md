@@ -10,9 +10,9 @@ Kural: **her adım geri alınabilir**, kesme (nginx anahtarı) en sona ve ayrı 
 | SSH | `ssh nanobase-direct 'hostname'` → `NanobaseAI` | `nanobase` alias'ı ProxyJump (`a40legal`) üzerinden **kopuk**; `nanobase-direct` veya `nanobase-cm` kullanın |
 | Repo | `/data/nanobaseai/bi/frontend` (bu depo) güncel mi | deploy script `ROOT` olarak kendi konumunu kullanır |
 | Venv | `/data/nanobaseai/bi/frontend/backend/.venv` | nanobase_api ile **paylaşımlı** — bağımlılık çakışması riski (aşağıya bak) |
-| Bağlantı dosyası | `/data/nanobaseai/bi/secrets/wren-logo-connection.json` (mod 600) | MSSQL/FreeTDS; wren köprüsüyle aynı dosya |
+| Bağlantı dosyası | `/data/nanobaseai/bi/secrets/logo-mssql-connection.json` (mod 600) | MSSQL/FreeTDS salt-okunur kullanıcı |
 | Meta DB | `bi_meta` PostgreSQL 127.0.0.1:5434 erişilebilir | alembic 014 buraya yazar |
-| Mevcut hat | `:8794` sağlıklı (geri dönüş hedefi) | `curl -s 127.0.0.1:8794/health` |
+| Kapsam | `SEMANTIC_TABLE_LIKE` bilinçli verilmiş | boş bırakılırsa tüm şema taranır (aşağıya bak) |
 
 ## 1. Kapsam kararı (dağıtımdan önce cevaplanmalı)
 
