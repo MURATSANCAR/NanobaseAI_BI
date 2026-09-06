@@ -48,6 +48,7 @@ class Profiler:
         self.top_n = top_n
         self.max_tables = max_tables
         self.sample_rows = sample_rows
+        self.truncated: list[str] = []
 
     def _sample(self, schema: str, table: str) -> dict[str, list[Any]]:
         """column (upper) → the values seen in a bounded row sample; empty when sampling is unavailable."""
@@ -67,7 +68,11 @@ class Profiler:
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
         """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
         catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
-        tables = self.c.list_tables(schema, like)[: self.max_tables]
+        discovered = self.c.list_tables(schema, like)
+        tables = discovered[: self.max_tables]
+        if len(discovered) > len(tables):
+            self.truncated = [t for _, t in discovered[self.max_tables:]]
+            log.warning("scope matched %d tables; profiling the first %d — %d left out (raise max_tables or narrow the scope)", len(discovered), len(tables), len(self.truncated))
         names = [logical_table(t, sch) for sch, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
         deep: Optional[set[str]] = None

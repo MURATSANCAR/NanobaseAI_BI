@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Semantic Bridge watchdog every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=nanobase-semantic-watchdog.service
+
+[Install]
+WantedBy=timers.target

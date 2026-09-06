@@ -49,8 +49,13 @@ Ayrıntılı kurulum/doğrulama/geri dönüş: `docs/architecture/semantic-bridg
 
 ```bash
 # gölge mod: SuperSonic cevabı değiştirmeden yanında ölçülür
-SUPERSONIC_BASE=http://127.0.0.1:9080 SUPERSONIC_DATASETS=INVOICE=7,STLINE=8 SUPERSONIC_MODE=shadow \
-  systemctl restart nanobase-semantic-bridge
+# (birim env dosyasından okur; komut satırı ön eki servise ULAŞMAZ)
+sudo tee -a /etc/nanobase/semantic-bridge.env >/dev/null <<'ENV'
+SUPERSONIC_BASE=http://127.0.0.1:9080
+SUPERSONIC_DATASETS=INVOICE=7,STLINE=8
+SUPERSONIC_MODE=shadow
+ENV
+sudo systemctl restart nanobase-semantic-bridge
 curl -s http://127.0.0.1:8795/api/v1/semantic/ab | head -c 400      # örnek sayısı, uyuşma oranı, gecikme
 
 # ölçüm koşusu (aynı SemanticQuery, üç derleyici, gerçek sonuç karşılaştırması)

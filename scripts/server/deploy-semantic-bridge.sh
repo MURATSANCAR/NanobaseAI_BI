@@ -197,8 +197,10 @@ ExecStart=${VENV}/bin/python -m semantic_layer.cli pipeline --llm --note nightly
 ExecStartPost=-/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:${PORT}/api/v1/semantic/reload
 WORKEREOF
 sudo cp "${ROOT}/infra/systemd/nanobase-semantic-worker.timer" /etc/systemd/system/
+# Watchdog: a port check is not health — this one asks the bridge a real question every five minutes.
+sudo cp "${ROOT}/infra/systemd/nanobase-semantic-watchdog.service" "${ROOT}/infra/systemd/nanobase-semantic-watchdog.timer" /etc/systemd/system/
 sudo -E systemctl daemon-reload
-sudo -E systemctl enable --now nanobase-semantic-bridge.service nanobase-semantic-worker.timer
+sudo -E systemctl enable --now nanobase-semantic-bridge.service nanobase-semantic-worker.timer nanobase-semantic-watchdog.timer
 sudo -E systemctl restart nanobase-semantic-bridge.service
 sleep 3
 
@@ -208,6 +210,23 @@ curl -fsS -m 20 "http://127.0.0.1:${PORT}/api/v1/engine" | head -c 400; echo
 ASK="$(curl -fsS -m 240 -H 'Content-Type: application/json' -d '{"question":"2026 toplam net ciro nedir?","sampleSize":5}' "http://127.0.0.1:${PORT}/api/v1/ask")"
 echo "$ASK" | head -c 700; echo
 echo "$ASK" | grep -q '"type": *"TEXT_TO_SQL"' || die "ask smoke did not produce SQL — inspect journalctl -u nanobase-semantic-bridge"
+
+# The portal page runs inside nanobase_api, which loads its own env file: give it the same catalog
+# coordinates, otherwise /bi/semantic-layer can read nothing and its pipeline action always fails.
+if [[ -f "$API_ENV" ]] && ! grep -q '^SEMANTIC_STORE_DSN=' "$API_ENV"; then
+  log "adding SEMANTIC_* coordinates to ${API_ENV} (restart nanobase-bi-api to apply)"
+  umask 077
+  {
+    echo ""
+    echo "# Semantic Layer (portal page reads the same catalog as the bridge)"
+    echo "SEMANTIC_STORE_DSN=${NANOBASE_META_DSN}"
+    echo "SEMANTIC_TENANT_ID=${SEMANTIC_TENANT_ID:-default}"
+    echo "SEMANTIC_DATASOURCE_ID=${SEMANTIC_DATASOURCE_ID:-logo}"
+    echo "SEMANTIC_KNOWLEDGE_DIR=${KNOWLEDGE}"
+    echo "SEMANTIC_SCHEMA=${SEMANTIC_SCHEMA:-dbo}"
+    echo "SEMANTIC_TABLE_LIKE=${SEMANTIC_TABLE_LIKE:-}"
+  } >> "$API_ENV"
+fi
 
 log "bridge is up on :${PORT}; traffic is NOT switched yet"
 log "next: verification gates in docs/architecture/semantic-bridge-runbook.md, then ./scripts/server/switch-timas-api.sh semantic"
