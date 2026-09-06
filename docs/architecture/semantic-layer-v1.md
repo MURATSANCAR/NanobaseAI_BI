@@ -175,6 +175,59 @@ Gate politikası (uygulanan): `SEMANTIC_GATE_MODE=multi_source` — `validated �
 modda tek başına geçemez.
 
 
+## 8. Faz 9 — Son kullanıcı turu (2026-09-06)
+
+Sistemi ve tabloları bilmeyen birinin yazacağı 50 soru (`tests/text2sql/enduser-50.yaml`) hazırlandı ve
+koşuldu (`tests/text2sql/enduser-eval.py`). Amaç puan değil, **eksik listesi**: her soru sistemin ne
+yaptığına göre sınıflanır, çözümlenemeyen her terim toplanır.
+
+İlk turda 50 sorunun 50'si reddedildi ve "eksik" listesi tamamen gürültüydü: Türkçe çekim ekleri
+(`cirosunu`, `kitabı`, `mağazaların`), türetmeler (`kârlılığımız`), sıfat-fiiller (`satan`, `bekleyen`)
+ve zamirler katalogda olmayan iş terimi sayılıyordu. Bunların tümü **dil düzeyinde** çözüldü
+(`normalize.py`): iyelik+hâl ekleri zinciri, ünsüz yumuşaması geri alma, türetme eklerinde geri çekilme,
+sıfat-fiil/zarf-fiil/olumsuzluk/koşaç ve sayı sözcükleri. Hiçbirinde müşteriye özgü sözcük yok.
+
+Turun asıl çıktısı **üç sessiz yanlış cevap** oldu — hepsi sorulandan başka bir soruyu cevaplıyordu:
+
+| Bulgu | Neden tehlikeli | Kapanış |
+|---|---|---|
+| `satmayan` → satış ölçüsüne köprüleniyordu | cevabı tersine çeviriyor | olumsuz çekim köprülenmez |
+| kullanıcı filtresi ölçünün kendi kapsamıyla çelişiyordu | her zaman boş sonuç, gerçek sıfır gibi okunur | çelişki tespit edilip reddedilir |
+| "payı yüzde kaç" düz toplamla cevaplanıyordu | oran sorusuna mutlak sayı | paydası olmayan oran reddedilir |
+
+Ayrıca **karşılanamayan niteliyeci** diye yeni bir sınıf eklendi: konuyu daraltan ama katalogda karşılığı
+olmayan sözcük ("bekleyen siparişler", "satmayan ürünler"). Gramer diye atılırsa daha geniş bir soru
+cevaplanmış olur; artık deterministik yolu durdurur ve modele açıkça yazılı gider.
+
+Bu turda kapatılan diğer maddeler:
+
+- **Dönem kapsamı** — her varlığın ilk/son tarihi ölçülür (`sl_schema_profile.time_window_json`,
+  Alembic `016`). Bu kurulumda INVOICE `2026-01-01 … 2026-08-17`; "2019'da ne kadar sattık?" artık
+  boş sonuç yerine kapsam dışı diye reddediliyor. Penceresi ölçülemeyen varlıklar portalde uyarı olarak
+  görünür — kontrolün kapalı olduğu yer saklanmaz.
+- **Fan-out** — başlık düzeyi bir ölçü satır tablosuna bağlanınca satır başına tekrarlanır; join yönünden
+  tespit edilip reddedilir (şişmiş rakam üretmek yerine).
+- **Katalog denetimi** — modelin yazdığı SQL, sorunun sertifikalı okumasıyla karşılaştırılır; aynı kolonu
+  sertifikalı kümeyle kesişmeyen değerlere kısıtlıyorsa çalıştırılmaz (`runtime/audit.py`).
+- **Ölçü bazı** — bir kolonun dokümante edilmiş bazı ("KDV hariç", "birim maliyet") eşlemesiyle birlikte
+  prompta taşınır; farklı bazdaki kolonlar tek toplamda birleştirilmez.
+- **Gerileme kapısı** — her yeni katalog, 50 soruluk korpusla bir önceki kabul edilen katalogla
+  karşılaştırılır; eskiden cevaplanan bir soru cevaplanmaz olduysa ya da eskiden reddedilen bir soru
+  cevaplanır olduysa dağıtım durur (`deploy-semantic-bridge.sh`, `SEMANTIC_GATE_STRICT`).
+- **Profil bütçesi** — derin profil aşamasının duvar saati var; aşılırsa kalan tablolar kataloglanır ama
+  sondalanmaz ve hangileri olduğu loglanır (kısmi tarama tam tarama gibi görünmez).
+- **Katalog önbelleği** — sürüm numarası yerine (sürüm, sertifikalı sayısı, son yazım) parmak izine
+  bakılır; portaldan yapılan insan sertifikasyonu ve yarım kalmış bir yeniden kurulum artık görünür.
+
+**Portal döngüsü uçtan uca kanıtlandı** (`test_a_gap_closes_through_one_description_from_the_portal`):
+kullanıcıların söylediği ama katalogda olmayan bir sözcük → `/api/v1/semantic/gaps` ile portalde listelenir
+→ bir kişi ilgili kolonu tarif eder → HUMAN_ANNOTATION kanıtı sertifikalanır → aynı soru doğru SQL ile
+cevaplanır. Kod tarafında hiçbir tanım yok.
+
+Deterministik dilim (LLM yok, yalnız katalog): cevapladığı her soru doğru; cevaplamadıkları ya modele
+düşer ya da portalde tanımlanacak terim olarak listelenir. 68 test.
+
+
 ## 9. Faz 8 — SuperSonic A/B (uygulandı)
 
 **Arayüz bizde kalır:** SuperSonic'in kendi web arayüzü / chat / agent yüzeyleri kullanılmaz, kuruluma
