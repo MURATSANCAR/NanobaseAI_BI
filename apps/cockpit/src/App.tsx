@@ -92,7 +92,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         <KpiCard
           label="İade Oranı (tutar)"
           value={pct(k.returnRate)}
-          sub={`${tl(d.summary.returns)} satış iadesi · ${lastMonthName} ayı net ${tl(k.lastNet)}${k.momChange != null ? ` (${k.momChange >= 0 ? '+' : ''}${pct(k.momChange, 0).slice(1)} aylık)` : ''}`}
+          sub={`${tl(d.summary.returns)} satış iadesi · ${lastMonthName} ayı net ${tl(k.lastNet)}${k.momChange != null ? ` (önceki aya göre ${k.momChange >= 0 ? '+' : '−'}${pct(Math.abs(k.momChange), 0)})` : ''}`}
           icon={Undo2}
           tone={k.returnRate != null && k.returnRate > 0.1 ? 'bad' : 'neutral'}
           progress={k.returnRate != null ? Math.min(k.returnRate / 0.2, 1) : 0}

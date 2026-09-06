@@ -77,9 +77,10 @@ export async function engineStatus(): Promise<{ dataSource: string; models: numb
     settings: { dataSource: { type: string; properties: { displayName?: string } } };
     listModels: { id: number }[];
   }>('query { settings { dataSource { type properties } } listModels { id } }');
+  // SELECT 1 model olmadan da geçer; gerçek deploy kontrolü modele dokunmalı.
   let deployed = true;
   try {
-    await runSql('SELECT 1 AS ok');
+    await runSql('SELECT "LOGICALREF" FROM dbo_LG_411_01_INVOICE LIMIT 1', 1);
   } catch {
     deployed = false;
   }
