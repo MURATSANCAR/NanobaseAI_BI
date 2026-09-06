@@ -199,6 +199,7 @@ export function ResultChart({
             axisLine={false}
             tickLine={false}
             width={wide ? 120 : 84}
+            interval={0}
             tickFormatter={(v) => truncate(v, wide ? 18 : 12)}
           />
           <Tooltip formatter={tip} contentStyle={TOOLTIP} labelStyle={{ fontWeight: 700 }} cursor={{ fill: '#F4DCD3', opacity: 0.4 }} />
