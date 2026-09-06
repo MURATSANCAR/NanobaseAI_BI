@@ -11,7 +11,5 @@ sql: "SELECT TOP 15\n    it.\"CODE\" AS stok_kodu,\n    it.\"NAME\" AS kitap_adi
   , it.\"NAME\", COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)')\nORDER BY SUM(sl.\"\
   AMOUNT\") DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

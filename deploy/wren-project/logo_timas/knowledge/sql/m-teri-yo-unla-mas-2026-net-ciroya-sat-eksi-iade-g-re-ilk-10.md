@@ -18,7 +18,5 @@ sql: "WITH customer_net AS (\n    SELECT \n        c.\"CODE\" AS cari_kodu,\n   
   \    (kumulatif_ciro / NULLIF(toplam_net_ciro, 0)) * 100 AS kumulatif_pay_yuzde\n\
   FROM ranked\nORDER BY net_ciro DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

@@ -109,3 +109,20 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 - `/api/v1/ask` (varsayılan): tek atış istem + `dry_run` doğrulama + tek onarım turu → ~25-40 sn, kampanyada 10/10.
 - `/api/v1/ask_agent` (yeni): WrenAI'nin resmi araç döngüsü, kendi kendine çift saklıyor → ~55 sn, daha fazla LLM turu.
 Cockpit hâlâ varsayılanı kullanıyor; ajan modu A/B için hazır.
+
+
+## 8. Onaylanan 7 madde — sonuç (2026-09-06, üçüncü tur)
+
+| # | Madde | Sonuç |
+|---|---|---|
+| 1 | İlişki kolonları | **Çalışmıyor — upstream hatası.** 8 handle eklendi, manifeste girdi, ama planlayıcı genişletmiyor: tanımlayıcı doğrudan SQL Server'a geçiyor. Eklenenler geri alındı, bulgu `docs/upstream` Issue 4 olarak yazıldı. Legacy wren-ui'nin ürettiği handle'lar da aynı şekilde çalışmıyor. JOIN'ler elle yazılmaya devam ediyor |
+| 2 | View'leri kullandırmak | **Tamam.** `v_monthly_sales` T-SQL `DATEFROMPARTS` yüzünden planlanmıyordu, lehçe-nötr `EXTRACT` ile yeniden yazıldı. Üç görünüm de çalışıyor, rakamlar DB ile birebir. İstem görünümleri öneriyor, doğrulanmış üç çift görünümlü sürüme yükseltildi. Test: aylık, kanal ve yayınevi soruları artık görünüm kullanıyor |
+| 3 | `memory export` | **Tamam.** İndeksteki çiftler dosyaya döküldü; 9 yinelenen (slug farkı) temizlendi, 19 tekil çift, indeks senkron |
+| 4 | MCP `--allow-write` + istemci kaydı | **Tamam.** Unit `--allow-write` ile çalışıyor, araç sayısı 17 → **18** (`store_query`). `mcp<2` sabitlemesi betiğe kalıcı eklendi. İstemci kaydı: `docs/architecture/wren-mcp-client-setup.md` |
+| 5 | `statement_timeout` | **Tamam.** Profilde `statement_timeout: "120"` (ODBC değerleri string olmalı; int verilince pydantic hatası). Köprü ve MCP yeniden başlatıldı |
+| 6 | `memory load` / `forget` | **Tamam.** Test projesinde: `load --dry-run` 47 çift, `load --upsert` 47 yükledi, `forget --source user` 8 çift sildi. Yeni müşteriye aktarım yolu doğrulandı |
+| 7 | Küpleri fiilen sorgulamak | **Tamam (sınırlı).** Köprüye `GET /api/v1/cubes` + `POST /api/v1/cube` eklendi (MCP `query_cube` ile aynı kod yolu: `_build_cube_query` + `wren_core.cube_query_to_sql`). Toplam ölçüler doğru: net_ciro **848.110.178,82** = DB. Kırılımlı küp sorgusu SQL Server'da hâlâ upstream hatası (Issue 3) |
+
+`is_hidden`: WrenAI'nin belgelediği erişim denetimi yöntemi kolonu **modelden çıkarmak**; `is_hidden` motor-içi bir bayrak olarak
+tanımlı. Retrieval için gerek yok (bellek zaten ilgili dilimi getiriyor). PII kolonları (vergi no, telefon, banka) için anlamlı olurdu
+ama "tüm kolonlar açık" kararıyla çelişiyor — dokunulmadı.

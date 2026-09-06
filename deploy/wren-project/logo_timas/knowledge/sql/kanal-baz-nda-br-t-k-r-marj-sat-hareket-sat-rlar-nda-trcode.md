@@ -13,7 +13,5 @@ sql: "SELECT \n    COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)') AS kanal,\n   
   GROUP BY COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)')\nHAVING SUM(s.\"TOTAL\")\
   \ > 10000000\nORDER BY brut_kar_marji_yuzde DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

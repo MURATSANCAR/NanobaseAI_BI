@@ -1,12 +1,14 @@
 name: "v_monthly_sales"
 properties:
-  description: "Ay bazında satış, satış iadesi, alım tutarları ve satış fatura sayısı (fatura başlığı, CANCELLED = 0)"
+  description: "Ay bazinda satis, iade, net ciro, alim ve satis fatura sayisi (fatura basligi, CANCELLED = 0). Lehce-notr EXTRACT kullanir, SQL Server'da calisir."
 statement: |
-  SELECT DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1) AS ay,
+  SELECT EXTRACT(YEAR FROM "DATE_") AS yil,
+    EXTRACT(MONTH FROM "DATE_") AS ay,
     SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS satis,
     SUM(CASE WHEN "TRCODE" IN (2,3) THEN "NETTOTAL" ELSE 0 END) AS iade,
     SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) - SUM(CASE WHEN "TRCODE" IN (2,3) THEN "NETTOTAL" ELSE 0 END) AS net_ciro,
     SUM(CASE WHEN "TRCODE" IN (1,4) THEN "NETTOTAL" ELSE 0 END) AS alim,
     SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN 1 ELSE 0 END) AS satis_fatura_sayisi
-  FROM dbo_LG_411_01_INVOICE WHERE "CANCELLED" = 0
-  GROUP BY DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1)
+  FROM dbo_LG_411_01_INVOICE
+  WHERE "CANCELLED" = 0
+  GROUP BY EXTRACT(YEAR FROM "DATE_"), EXTRACT(MONTH FROM "DATE_")

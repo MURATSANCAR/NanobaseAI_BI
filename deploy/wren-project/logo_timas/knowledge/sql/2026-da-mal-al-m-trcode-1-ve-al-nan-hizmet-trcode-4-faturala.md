@@ -12,7 +12,5 @@ sql: "SELECT TOP 10\n    \"CLCARD\".\"DEFINITION_\" AS \"CARI_UNVANI\",\n    SUM
   \    AND \"INVOICE\".\"DATE_\" < '2027-01-01'\nGROUP BY \"CLCARD\".\"DEFINITION_\"\
   \nORDER BY SUM(\"INVOICE\".\"NETTOTAL\") DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

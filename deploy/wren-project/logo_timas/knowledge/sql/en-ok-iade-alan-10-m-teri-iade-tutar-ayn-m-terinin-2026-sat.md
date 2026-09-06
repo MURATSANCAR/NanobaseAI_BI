@@ -16,7 +16,5 @@ sql: "SELECT TOP 10\n    c.\"CODE\" AS cari_kodu,\n    c.\"DEFINITION_\" AS unva
   HAVING SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE 0 END) > 1000000\n\
   ORDER BY iade_tutari DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

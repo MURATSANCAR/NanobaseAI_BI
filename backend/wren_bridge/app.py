@@ -285,12 +285,38 @@ def _memory_store():
 
 
 def _model_index() -> str:
-    """Compact model list (name → physical table, primary key, column count): the LLM must know every model name."""
-    lines = []
-    for m in manifest().get("models", []):
-        tr = m.get("tableReference") or {}
-        lines.append(f'- "{m["name"]}" → {tr.get("schema", "")}.{tr.get("table", "")} · pk {m.get("primaryKey") or "-"} · {len(m.get("columns", []))} kolon')
+    """Modeller + hazır görünümler + küpler. Görünüm varsa LLM ham SQL yazmak yerine onu kullanır."""
+    m = manifest()
+    lines = ["### Modeller (fiziksel tablolar)"]
+    for mod in m.get("models", []):
+        tr = mod.get("tableReference") or {}
+        lines.append(f'- "{mod["name"]}" → {tr.get("schema", "")}.{tr.get("table", "")} · pk {mod.get("primaryKey") or "-"} · {len(mod.get("columns", []))} kolon')
+    views = m.get("views", []) or []
+    if views:
+        lines.append("")
+        lines.append("### Hazır görünümler — iş kuralları içine gömülü, ÖNCE bunları dene")
+        for v in views:
+            desc = (v.get("properties") or {}).get("description") or ""
+            cols = _view_columns(v)
+            lines.append(f'- {v["name"]}({cols}) — {desc}')
+    cubes = m.get("cubes", []) or []
+    if cubes:
+        lines.append("")
+        lines.append("### Küpler (yönetilen ölçüler; toplamlar için SQL yazmaya gerek yok)")
+        for c in cubes:
+            ms = ", ".join(x.get("name", "") for x in c.get("measures", []) or [])
+            lines.append(f'- {c.get("name")} (kaynak {c.get("baseObject")}): {ms}')
     return "\n".join(lines)
+
+
+_VIEW_COL = re.compile(r"\bAS\s+([A-Za-zÇĞİÖŞÜçğıöşü_][A-Za-z0-9ÇĞİÖŞÜçğıöşü_]*)", re.I)
+
+
+def _view_columns(view: dict) -> str:
+    """Görünüm ifadesindeki AS takma adları — LLM kolon adlarını bilsin."""
+    stmt = str(view.get("statement") or "")
+    names = [n for n in _VIEW_COL.findall(stmt)]
+    return ", ".join(dict.fromkeys(names))
 
 
 def _schema_context(question: str, recalled: list[dict] | None = None) -> str:
@@ -341,6 +367,8 @@ Kurallar:
 - Tarih kırılımı: ay için DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1); gün için CAST("DATE_" AS DATE).
 - İş kurallarına (TRCODE, LINETYPE, CANCELLED = 0 vb.) mutlaka uy.
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
+- Soru aylık/kanal/yayınevi kırılımıysa ÖNCE hazır görünümü kullan (v_monthly_sales, v_channel_net, v_imprint_perf): kurallar içine gömülüdür, daha kısa ve daha güvenlidir.
+- Görünüm sorgularında CANCELLED/TRCODE filtresini TEKRAR yazma; görünüm bunları zaten uygular.
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma. Soru veriyle cevaplanamıyorsa tek satır: NO_SQL: <neden>."""
 
 
@@ -543,3 +571,57 @@ def ask_agent(body: AskIn) -> dict:
     except Exception as e:  # noqa: BLE001
         log.exception("ask_agent failed")
         raise HTTPException(status_code=502, detail={"code": _err_code(e), "message": str(e)[:800]}) from e
+
+# --- Küp sorgusu: yönetilen ölçüler (MCP query_cube ile aynı kod yolu) ----------------
+
+
+class CubeIn(BaseModel):
+    cube: str
+    measures: list[str]
+    dimensions: list[str] = Field(default_factory=list)
+    time_dimension: str | None = None
+    filters: list[str] = Field(default_factory=list)
+    limit: int | None = None
+    sql_only: bool = False
+
+
+@app.get("/api/v1/cubes")
+def list_cubes() -> dict:
+    """Projedeki küpler ve ölçüleri — LLM ve cockpit bunu görür."""
+    m = manifest()
+    out = []
+    for c in m.get("cubes", []) or []:
+        out.append({
+            "name": c.get("name"),
+            "baseObject": c.get("baseObject"),
+            "measures": [x.get("name") for x in c.get("measures", []) or []],
+            "dimensions": [x.get("name") for x in c.get("dimensions", []) or []],
+            "timeDimensions": [x.get("name") for x in c.get("timeDimensions", []) or []],
+            "description": (c.get("properties") or {}).get("description"),
+        })
+    return {"cubes": out}
+
+
+@app.post("/api/v1/cube")
+def cube_query(body: CubeIn) -> dict:
+    """Yapısal küp sorgusu → yönetilen ölçüler. Not: SQL Server'da kırılımlı (dimension /
+    time_dimension) sorgular upstream hatası nedeniyle düşebilir; ölçü toplamları çalışır."""
+    from wren.cube_cli import _build_cube_query
+    from wren_core import cube_query_to_sql
+
+    if not body.measures:
+        raise HTTPException(status_code=422, detail={"code": "NO_MEASURE", "message": "En az bir ölçü gerekir."})
+    limit = max(1, min(int(body.limit or 200), MAX_ROWS))
+    try:
+        q = _build_cube_query(body.cube, ",".join(body.measures), ",".join(body.dimensions), body.time_dimension, body.filters, limit, None)
+        sql = cube_query_to_sql(json.dumps(q), json.dumps(manifest()))
+        if body.sql_only:
+            return {"sql": sql}
+        out = run_sql(sql, limit)
+        out["sql"] = sql
+        out["cube"] = body.cube
+        return out
+    except HTTPException:
+        raise
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail={"code": _err_code(e), "message": str(e)[:600]}) from e

@@ -15,7 +15,5 @@ sql: "SELECT \n    DATEFROMPARTS(YEAR(i.\"DATE_\"), MONTH(i.\"DATE_\"), 1) AS ay
   GROUP BY \n    DATEFROMPARTS(YEAR(i.\"DATE_\"), MONTH(i.\"DATE_\"), 1),\n    COALESCE(NULLIF(c.\"\
   SPECODE2\", ''), '(boş)')\nORDER BY \n    ay,\n    kanal"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

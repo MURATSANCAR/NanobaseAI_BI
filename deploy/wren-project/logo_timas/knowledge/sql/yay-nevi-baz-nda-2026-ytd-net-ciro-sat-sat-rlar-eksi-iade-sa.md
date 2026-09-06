@@ -18,7 +18,5 @@ sql: "SELECT \n    COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)') AS yayinevi,\n
   \ ''), '(boş)')\nHAVING SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) THEN sl.\"TOTAL\" ELSE\
   \ -sl.\"TOTAL\" END) > 20000000\nORDER BY brut_kar_marji DESC"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---

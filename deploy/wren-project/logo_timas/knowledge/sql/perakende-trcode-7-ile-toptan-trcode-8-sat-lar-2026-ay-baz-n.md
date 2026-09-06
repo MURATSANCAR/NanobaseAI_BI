@@ -17,7 +17,5 @@ sql: "SELECT \n    DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay,\n 
   \  AND \"DATE_\" < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"\
   DATE_\"), 1)\nORDER BY 1"
 source: user
-tags:
-- verified-2026-09-06
-- campaign
+created_at: '2026-09-06T06:41:10.363569+00:00'
 ---
