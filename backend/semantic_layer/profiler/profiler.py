@@ -75,6 +75,12 @@ class Profiler:
             log.warning("scope matched %d tables; profiling the first %d — %d left out (raise max_tables or narrow the scope)", len(discovered), len(tables), len(self.truncated))
         names = [logical_table(t, sch) for sch, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
+        fks = self.c.foreign_keys(schema)
+        fk_by_table: dict[str, list[dict[str, str]]] = {}
+        for fk in fks:
+            fk_by_table.setdefault(fk["table"].upper(), []).append(fk)
+        # Which tables earn the expensive treatment (value inventories, row samples): the ones that carry
+        # data and that other tables point at. The rest are still catalogued, just not probed.
         deep: Optional[set[str]] = None
         if deep_limit is not None and len(tables) > deep_limit:
             counts = {t: self.c.row_count(sch, t) for sch, t in tables}
@@ -84,10 +90,6 @@ class Profiler:
             ranked = rank_tables(counts, refs)
             deep = {name for name, _ in ranked[:deep_limit]}
             log.info("profiling %d/%d tables deeply (volume + centrality)", len(deep), len(tables))
-        fks = self.c.foreign_keys(schema)
-        fk_by_table: dict[str, list[dict[str, str]]] = {}
-        for fk in fks:
-            fk_by_table.setdefault(fk["table"].upper(), []).append(fk)
         out: list[SchemaProfile] = []
         for (sch, table), lt in zip(tables, names):
             entity = entity_by_pattern.get(lt.table_pattern, lt.entity)
