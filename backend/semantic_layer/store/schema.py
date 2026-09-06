@@ -30,6 +30,10 @@ sl_concept = sa.Table(
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     sa.Index("ix_sl_concept_lookup", "tenant_id", "datasource_id", "normalized_term", "status"),
     sa.Index("ix_sl_concept_type", "tenant_id", "datasource_id", "semantic_type"),
+    # One row per sense. The store looks a concept up before inserting it, which holds inside one
+    # process and not between two: the nightly timer and a hand-run pipeline can both pass the lookup.
+    # The evidence for a term would then split across two rows and neither would reach the gate.
+    sa.Index("uq_sl_concept_sense", "tenant_id", "datasource_id", "normalized_term", "semantic_type", "sense_id", unique=True),
 )
 
 sl_mapping = sa.Table(

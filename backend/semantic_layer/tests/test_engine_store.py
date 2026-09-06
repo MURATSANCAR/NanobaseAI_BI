@@ -158,3 +158,23 @@ def test_documented_value_lands_on_the_table_that_holds_it(store, profiles):
     assert chosen != "APPROVAL", "a table whose inventory cannot hold the value is not what the doc means"
     assert chosen in {"INVOICE", "STLINE"} and "8" in {v for v, _ in store.list_profiles(DS) and next(
         p for p in all_profiles if p.entity == chosen).column("TRCODE").top_values}
+
+
+def test_two_processes_cannot_create_the_same_sense_twice(store, profiles):
+    """The store looks a concept up before inserting it, which holds inside one process and not between
+    two — the nightly timer and a hand-run pipeline overlap exactly this way. Two rows for one sense
+    would split the term's evidence and neither half would reach the gate."""
+    from semantic_layer.models import Mapping, SemanticType
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    m = Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, column="TRCODE", operator="IN", values=["4"])
+    first, created = store.upsert_concept(TENANT, DS, "kargo", SemanticType.DIMENSION_VALUE, mapping=m)
+    assert created
+    # the same insert arriving again, as a second process would issue it
+    again, created_again = store.upsert_concept(TENANT, DS, "kargo", SemanticType.DIMENSION_VALUE,
+                                                mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, column="TRCODE", operator="IN", values=["4"]))
+    assert again.id == first.id and not created_again
+    rows = [c for c in store.find_concepts(TENANT, DS, normalized_term="kargo") if c.semantic_type == SemanticType.DIMENSION_VALUE]
+    assert len(rows) == 1, [c.sense_id for c in rows]

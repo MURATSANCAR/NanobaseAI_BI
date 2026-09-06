@@ -193,29 +193,42 @@ class CatalogStore:
                 status=status,
                 synonyms=list(synonyms or []),
             )
-            with self.engine.begin() as conn:
-                conn.execute(
-                    S.sl_concept.insert().values(
-                        id=concept.id,
-                        tenant_id=tenant_id,
-                        datasource_id=datasource_id,
-                        term=term,
-                        normalized_term=norm,
-                        semantic_type=semantic_type,
-                        domain=domain,
-                        sense_id=sense,
-                        status=status,
-                        confidence=0.0,
-                        version=1,
-                        synonyms_json=list(synonyms or []),
-                        explain_json={},
-                        created_at=concept.created_at,
-                        updated_at=concept.updated_at,
-                    )
-                )
-                if mapping is not None:
-                    mapping.concept_id = concept.id
-                    conn.execute(S.sl_mapping.insert().values(**self._mapping_values(mapping)))
+            values = dict(
+                id=concept.id,
+                tenant_id=tenant_id,
+                datasource_id=datasource_id,
+                term=term,
+                normalized_term=norm,
+                semantic_type=semantic_type,
+                domain=domain,
+                sense_id=sense,
+                status=status,
+                confidence=0.0,
+                version=1,
+                synonyms_json=list(synonyms or []),
+                explain_json={},
+                created_at=concept.created_at,
+                updated_at=concept.updated_at,
+            )
+            try:
+                with self.engine.begin() as conn:
+                    conn.execute(S.sl_concept.insert().values(**values))
+                    if mapping is not None:
+                        mapping.concept_id = concept.id
+                        conn.execute(S.sl_mapping.insert().values(**self._mapping_values(mapping)))
+            except sa.exc.IntegrityError:
+                # Another process created this sense between our lookup and our insert — the nightly
+                # timer and a hand-run pipeline overlap in exactly this way. Take theirs; two rows for
+                # one sense would split the term's evidence and neither half would reach the gate.
+                self._invalidate(tenant_id, datasource_id)
+                again = [c for c in self.find_concepts(tenant_id, datasource_id, normalized_term=norm, semantic_type=semantic_type) if c.sense_id == sense]
+                if not again:
+                    raise
+                if mapping is not None and not any(m.key() == mapping.key() for m in self.list_mappings(again[0].id)):
+                    mapping.concept_id = again[0].id
+                    with self.engine.begin() as conn:
+                        conn.execute(S.sl_mapping.insert().values(**self._mapping_values(mapping)))
+                return again[0], False
             self._invalidate(tenant_id, datasource_id)
             return concept, True
 
