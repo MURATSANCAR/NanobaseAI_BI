@@ -29,12 +29,12 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
 
       {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
       <div className="mt-5 flex min-h-0 flex-1 flex-col">
-        <div className="relative flex-1 overflow-hidden rounded-2xl border border-line bg-[#F4EEE9] shadow-card" style={{ minHeight: 260 }}>
+        <div className="relative flex-1 overflow-hidden rounded-2xl border border-line bg-[#F4EEE9] shadow-card" style={{ minHeight: 260, maxHeight: 440 }}>
           <img
             src={`${import.meta.env.BASE_URL}zeki-ai.gif`}
             alt="Zeki AI — Timaş Yayın Grubu"
             className="absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: '27.5% 50%' }}
+            style={{ objectPosition: '36% 50%' }}
             draggable={false}
           />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#F4EEE9] via-[#F4EEE9]/90 to-transparent px-3 pb-2.5 pt-8">

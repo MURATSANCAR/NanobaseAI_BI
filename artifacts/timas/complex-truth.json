@@ -1,0 +1,807 @@
+{
+ "cx-01": [
+  {
+   "ay": 1,
+   "kanal": "DAGITICI",
+   "net": 7561917.15,
+   "pay": 11.418103970375634
+  },
+  {
+   "ay": 1,
+   "kanal": "E-TICARET",
+   "net": 28443697.5,
+   "pay": 42.94851277984625
+  },
+  {
+   "ay": 1,
+   "kanal": "KITAPCI",
+   "net": 30221818.289999995,
+   "pay": 45.63338324977812
+  },
+  {
+   "ay": 2,
+   "kanal": "DAGITICI",
+   "net": 23009903.23,
+   "pay": 22.048987084557933
+  },
+  {
+   "ay": 2,
+   "kanal": "E-TICARET",
+   "net": 26994044.540000003,
+   "pay": 25.86674674261295
+  },
+  {
+   "ay": 2,
+   "kanal": "KITAPCI",
+   "net": 54354148.78,
+   "pay": 52.08426617282911
+  },
+  {
+   "ay": 3,
+   "kanal": "DAGITICI",
+   "net": 18942708.81,
+   "pay": 18.16074175370203
+  },
+  {
+   "ay": 3,
+   "kanal": "E-TICARET",
+   "net": 35059119.61,
+   "pay": 33.611856875149876
+  },
+  {
+   "ay": 3,
+   "kanal": "KITAPCI",
+   "net": 50303981.70000001,
+   "pay": 48.22740137114809
+  },
+  {
+   "ay": 4,
+   "kanal": "DAGITICI",
+   "net": 16966921.46,
+   "pay": 17.215130911450167
+  },
+  {
+   "ay": 4,
+   "kanal": "E-TICARET",
+   "net": 22559781.309999995,
+   "pay": 22.8898088260106
+  },
+  {
+   "ay": 4,
+   "kanal": "KITAPCI",
+   "net": 59031487.390000015,
+   "pay": 59.89506026253923
+  },
+  {
+   "ay": 5,
+   "kanal": "DAGITICI",
+   "net": 14940775.069999998,
+   "pay": 26.538101439601945
+  },
+  {
+   "ay": 5,
+   "kanal": "E-TICARET",
+   "net": 13550597.540000001,
+   "pay": 24.06884049849635
+  },
+  {
+   "ay": 5,
+   "kanal": "KITAPCI",
+   "net": 27807964.040000003,
+   "pay": 49.3930580619017
+  },
+  {
+   "ay": 6,
+   "kanal": "DAGITICI",
+   "net": 9270688.43,
+   "pay": 9.958978957769919
+  },
+  {
+   "ay": 6,
+   "kanal": "E-TICARET",
+   "net": 21045307.909999996,
+   "pay": 22.607790156904105
+  },
+  {
+   "ay": 6,
+   "kanal": "KITAPCI",
+   "net": 62772747.68999999,
+   "pay": 67.43323088532597
+  },
+  {
+   "ay": 7,
+   "kanal": "DAGITICI",
+   "net": 14225593.21,
+   "pay": 17.39677291278666
+  },
+  {
+   "ay": 7,
+   "kanal": "E-TICARET",
+   "net": 27417043.08,
+   "pay": 33.528870491499795
+  },
+  {
+   "ay": 7,
+   "kanal": "KITAPCI",
+   "net": 40128812.24999999,
+   "pay": 49.07435659571354
+  },
+  {
+   "ay": 8,
+   "kanal": "DAGITICI",
+   "net": 20779947.79,
+   "pay": 28.3301475134419
+  },
+  {
+   "ay": 8,
+   "kanal": "E-TICARET",
+   "net": 17802943.080000002,
+   "pay": 24.27147597899762
+  },
+  {
+   "ay": 8,
+   "kanal": "KITAPCI",
+   "net": 34766348.769999996,
+   "pay": 47.39837650756047
+  }
+ ],
+ "cx-02": [
+  {
+   "yayinevi": "Ç",
+   "net": 76797811.55223005,
+   "sold": 221675.0,
+   "ret": 15290.0,
+   "ret_rate": 0.06897485056952746,
+   "margin": 0.9232902407647025
+  },
+  {
+   "yayinevi": "Genç Timaş",
+   "net": 229903019.94,
+   "sold": 889443.0,
+   "ret": 76002.0,
+   "ret_rate": 0.08544898324007272,
+   "margin": 0.9088003292835315
+  },
+  {
+   "yayinevi": "G",
+   "net": 43861639.18000001,
+   "sold": 212946.0,
+   "ret": 14336.0,
+   "ret_rate": 0.06732223192734309,
+   "margin": 0.9034220953542677
+  },
+  {
+   "yayinevi": "İlk Genç T",
+   "net": 230147044.69999996,
+   "sold": 1352811.0,
+   "ret": 89607.0,
+   "ret_rate": 0.06623763408192275,
+   "margin": 0.8961805442874708
+  },
+  {
+   "yayinevi": "Timaş Çocu",
+   "net": 429305276.4500001,
+   "sold": 2843838.0,
+   "ret": 244425.0,
+   "ret_rate": 0.08594898865547193,
+   "margin": 0.894528231034755
+  },
+  {
+   "yayinevi": "Eğlenceli ",
+   "net": 31318872.72999998,
+   "sold": 232952.0,
+   "ret": 37427.0,
+   "ret_rate": 0.1606639994505306,
+   "margin": 0.8909577620384538
+  },
+  {
+   "yayinevi": "Timaş Yayı",
+   "net": 146780103.50999993,
+   "sold": 627474.0,
+   "ret": 83080.0,
+   "ret_rate": 0.13240389243219639,
+   "margin": 0.8851070495307392
+  },
+  {
+   "yayinevi": "Sufi Kitap",
+   "net": 25951030.77,
+   "sold": 156966.0,
+   "ret": 11487.0,
+   "ret_rate": 0.07318145330835978,
+   "margin": 0.8805343751704809
+  },
+  {
+   "yayinevi": "T",
+   "net": 41842083.35000006,
+   "sold": 155932.0,
+   "ret": 23995.0,
+   "ret_rate": 0.15388117897545084,
+   "margin": 0.8619835000198153
+  },
+  {
+   "yayinevi": "Timaş Tari",
+   "net": 36606274.95000001,
+   "sold": 108959.0,
+   "ret": 20885.0,
+   "ret_rate": 0.19167760350223478,
+   "margin": 0.8618787841470436
+  },
+  {
+   "yayinevi": "Timaş İnan",
+   "net": 38300636.08999998,
+   "sold": 127993.0,
+   "ret": 11409.0,
+   "ret_rate": 0.0891376872172697,
+   "margin": 0.8501828320680364
+  },
+  {
+   "yayinevi": "Gülce Çocu",
+   "net": 46302896.10999999,
+   "sold": 201387.0,
+   "ret": 17437.0,
+   "ret_rate": 0.0865845362411675,
+   "margin": 0.8386685627454916
+  },
+  {
+   "yayinevi": "Mavi Kirpi",
+   "net": 49822997.37000002,
+   "sold": 150796.0,
+   "ret": 29556.0,
+   "ret_rate": 0.19599989389638983,
+   "margin": 0.7609647246259132
+  },
+  {
+   "yayinevi": "Yuzu",
+   "net": 22847052.12,
+   "sold": 113032.0,
+   "ret": 16759.0,
+   "ret_rate": 0.1482677471866374,
+   "margin": 0.5443254133191271
+  },
+  {
+   "yayinevi": "Bi Kutu Oy",
+   "net": 48127914.43999999,
+   "sold": 201351.0,
+   "ret": 1946.0,
+   "ret_rate": 0.009664714851180277,
+   "margin": 0.5358258737057886
+  }
+ ],
+ "cx-03": [
+  {
+   "CODE": "12001.01.DO008",
+   "DEFINITION_": "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+   "kanal": "ZINCIR",
+   "iade": 5929122.05,
+   "satis": 81321130.96000001
+  },
+  {
+   "CODE": "12001.01.C29100",
+   "DEFINITION_": "DMS KİTAP YAYIN DAĞITIM PAZARLAMA VE ORGANİZASYON TİCARET LİMİTED ŞİRKETİ",
+   "kanal": "KITAPCI",
+   "iade": 5573096.67,
+   "satis": 15055120.34
+  },
+  {
+   "CODE": "12001.01.C10096",
+   "DEFINITION_": "PENGUEN KİTAP KASET BASIM YAYIM PAZARLAMA TİCARET A.Ş.",
+   "kanal": "ZINCIR",
+   "iade": 2695862.2199999997,
+   "satis": 8974369.3
+  },
+  {
+   "CODE": "12001.01.C28652",
+   "DEFINITION_": "KİTAPLİFE YAYIMCILIK DAĞITIM ÖZEL EĞİTİM SAN.TİC.LTD.ŞTİ.",
+   "kanal": "KITAPCI",
+   "iade": 2093865.4,
+   "satis": 5375936.24
+  },
+  {
+   "CODE": "12001.01.C10469",
+   "DEFINITION_": "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+   "kanal": "E-TICARET",
+   "iade": 1532772.6400000001,
+   "satis": 50576025.83
+  },
+  {
+   "CODE": "12001.01.BO010",
+   "DEFINITION_": "BORA YAYINCILIK DAĞITIM PAZ.SAN.TİC.LTD.ŞTİ.",
+   "kanal": "DAGITICI",
+   "iade": 1429282.68,
+   "satis": 9045697.9
+  },
+  {
+   "CODE": "12001.01.C28223",
+   "DEFINITION_": "İBRAHİM ÖZ - SİNADA KİTABEVİ",
+   "kanal": "KITAPCI",
+   "iade": 1422596.25,
+   "satis": 2239716.25
+  },
+  {
+   "CODE": "12001.01.DE044",
+   "DEFINITION_": "DERYA DAĞITIM A.Ş",
+   "kanal": "DAGITICI",
+   "iade": 1417416.58,
+   "satis": 10378770.3
+  },
+  {
+   "CODE": "12001.01.C27791",
+   "DEFINITION_": "BİRİNCİ KİTAP KIRTASİYE EĞİTİM YAYIN DAĞITIM TURİZM TİCARET LİMİTED ŞİRKETİ",
+   "kanal": "KITAPCI",
+   "iade": 1415892.25,
+   "satis": 2286638.75
+  },
+  {
+   "CODE": "12001.01.YU004",
+   "DEFINITION_": "YUNUS EMRE KİT.KIR.VE BİLG. HİZ.PAZ.TİC.LTD.ŞTİ",
+   "kanal": "KITAPCI",
+   "iade": 1271721.95,
+   "satis": 1515400.2
+  }
+ ],
+ "cx-04": [
+  {
+   "ay": 1,
+   "disc_rate": 0.45512476851225425,
+   "avg_inv": 12064.737847719134
+  },
+  {
+   "ay": 2,
+   "disc_rate": 0.4483875202760511,
+   "avg_inv": 11509.229917736102
+  },
+  {
+   "ay": 3,
+   "disc_rate": 0.4625293293558812,
+   "avg_inv": 14003.008381424692
+  },
+  {
+   "ay": 4,
+   "disc_rate": 0.4646323563901718,
+   "avg_inv": 13010.7926422392
+  },
+  {
+   "ay": 5,
+   "disc_rate": 0.4594747617546835,
+   "avg_inv": 12635.662909894498
+  },
+  {
+   "ay": 6,
+   "disc_rate": 0.4672480651938061,
+   "avg_inv": 12783.82713289498
+  },
+  {
+   "ay": 7,
+   "disc_rate": 0.4563168331339457,
+   "avg_inv": 12740.343671790424
+  },
+  {
+   "ay": 8,
+   "disc_rate": 0.46578170384386125,
+   "avg_inv": 19203.3717609788
+  }
+ ],
+ "cx-05": [
+  {
+   "CODE": "15201.01.6764",
+   "NAME": "ÇOK ŞIK HAYALLER",
+   "yayinevi": "İlk Genç T",
+   "adet": 18934.0,
+   "tutar": 3692130.0
+  },
+  {
+   "CODE": "15201.01.6756",
+   "NAME": "MÜDÜRÜN UÇAN PERUĞU",
+   "yayinevi": "Timaş Çocu",
+   "adet": 15897.0,
+   "tutar": 3497340.0
+  },
+  {
+   "CODE": "15201.01.6334",
+   "NAME": "ANNE TERLİĞİ",
+   "yayinevi": "Timaş Çocu",
+   "adet": 10752.0,
+   "tutar": 2682900.0
+  },
+  {
+   "CODE": "15201.01.3836",
+   "NAME": "BİLİNÇLİ GENÇ OLMAK",
+   "yayinevi": "T",
+   "adet": 10552.0,
+   "tutar": 2633000.0
+  },
+  {
+   "CODE": "15201.01.6476",
+   "NAME": "YILDIZLARA YAKIN",
+   "yayinevi": "İlk Genç T",
+   "adet": 7982.0,
+   "tutar": 1672720.0
+  },
+  {
+   "CODE": "15201.01.3985",
+   "NAME": "İÇİMDEKİ MÜZİK",
+   "yayinevi": "G",
+   "adet": 7855.0,
+   "tutar": 2590855.0
+  },
+  {
+   "CODE": "15201.01.6181",
+   "NAME": "İYİLİK TİMİ",
+   "yayinevi": "İlk Genç T",
+   "adet": 7570.0,
+   "tutar": 1585300.0
+  },
+  {
+   "CODE": "15701.02.0092",
+   "NAME": "TEMMUZ BÜLTEN 2026",
+   "yayinevi": "Timaş Yayı",
+   "adet": 7550.0,
+   "tutar": 16500.0
+  },
+  {
+   "CODE": "15201.01.6777",
+   "NAME": "SARIL KALBİNE",
+   "yayinevi": "Timaş İnan",
+   "adet": 7425.0,
+   "tutar": 2041875.0
+  },
+  {
+   "CODE": "15201.01.6388",
+   "NAME": "HAPI YUTTUK ECZANESİ",
+   "yayinevi": "Timaş Çocu",
+   "adet": 7413.0,
+   "tutar": 1326340.0
+  },
+  {
+   "CODE": "15201.01.6533",
+   "NAME": "UÇAN ANNE TERLİĞİ",
+   "yayinevi": "Timaş Çocu",
+   "adet": 7357.0,
+   "tutar": 1834250.0
+  },
+  {
+   "CODE": "15201.01.6622",
+   "NAME": "ŞİFAYI KAPTIK HASTANESİ",
+   "yayinevi": "Timaş Çocu",
+   "adet": 7117.0,
+   "tutar": 1278005.0
+  },
+  {
+   "CODE": "15201.01.6585",
+   "NAME": "TOP YUTAN ORMANI",
+   "yayinevi": "Timaş Çocu",
+   "adet": 6366.0,
+   "tutar": 1396520.0
+  },
+  {
+   "CODE": "15201.01.4529",
+   "NAME": "KİRAZ AĞACI İLE ARAMIZDAKİ MESAFE",
+   "yayinevi": "Genç Timaş",
+   "adet": 5748.0,
+   "tutar": 1666370.0
+  },
+  {
+   "CODE": "15201.01.5800",
+   "NAME": "ÇANTAMDAN FİL ÇIKTI",
+   "yayinevi": "Timaş Çocu",
+   "adet": 5587.0,
+   "tutar": 1004380.0
+  }
+ ],
+ "cx-06": [
+  {
+   "CODE": "32001.01.Gİ006",
+   "DEFINITION_": "GİRİŞİM KAĞIT SAN. TİC. A.Ş.",
+   "tutar": 34419024.85999999,
+   "n": 271,
+   "ilk": "2026-01-06 00:00:00",
+   "son": "2026-08-07 00:00:00"
+  },
+  {
+   "CODE": "32001.01.UÇ002",
+   "DEFINITION_": "UÇAN KİTAP YAYINLARI SANAYİ TİCARET LİMİTED ŞİRKETİ",
+   "tutar": 27171902.89,
+   "n": 8,
+   "ilk": "2026-01-02 00:00:00",
+   "son": "2026-08-12 00:00:00"
+  },
+  {
+   "CODE": "32001.01.YU026",
+   "DEFINITION_": "YUZU KİTAP YAYINCILIK A.Ş.\r\n",
+   "tutar": 21477508.25,
+   "n": 7,
+   "ilk": "2026-01-02 00:00:00",
+   "son": "2026-07-31 00:00:00"
+  },
+  {
+   "CODE": "32001.01.WP001",
+   "DEFINITION_": "WPC MATBAACILIK SAN.VE TİC.A.Ş.",
+   "tutar": 19676992.71,
+   "n": 265,
+   "ilk": "2026-01-05 00:00:00",
+   "son": "2026-08-07 00:00:00"
+  },
+  {
+   "CODE": "32001.01.Mİ022",
+   "DEFINITION_": "MİNİK AKADEMİ EĞİTİCİ OYUNCAK VE YAYINCILIK A.Ş.",
+   "tutar": 19177513.02,
+   "n": 42,
+   "ilk": "2026-01-09 00:00:00",
+   "son": "2026-07-08 00:00:00"
+  },
+  {
+   "CODE": "32001.01.ÇI004",
+   "DEFINITION_": "ÇINAR MATBAACILIK VE YAY.SAN.TİC.LTD.ŞTİ.",
+   "tutar": 18574262.169999998,
+   "n": 117,
+   "ilk": "2026-01-05 00:00:00",
+   "son": "2026-08-07 00:00:00"
+  },
+  {
+   "CODE": "32001.01.Gİ008",
+   "DEFINITION_": "GİZA İÇ VE DIŞ TİC. LTD. ŞTİ.",
+   "tutar": 18292416.59,
+   "n": 78,
+   "ilk": "2026-01-07 00:00:00",
+   "son": "2026-08-03 00:00:00"
+  },
+  {
+   "CODE": "32001.01.Sİ039",
+   "DEFINITION_": "SİBERBOOK TEKNOLOJİ ANONİM ŞİRKETİ",
+   "tutar": 17224896.78,
+   "n": 4,
+   "ilk": "2026-04-30 00:00:00",
+   "son": "2026-07-31 00:00:00"
+  },
+  {
+   "CODE": "32001.01.LA005",
+   "DEFINITION_": "LACiVERT YAYINCILIK SANAYI VE TICARET ANONIM SIRKETI",
+   "tutar": 14826084.5,
+   "n": 4,
+   "ilk": "2026-01-02 00:00:00",
+   "son": "2026-07-31 00:00:00"
+  },
+  {
+   "CODE": "32001.01.AN039",
+   "DEFINITION_": "ANANAS YAYINCILIK REKLAM ORG. VE TİC. LTD. ŞTİ",
+   "tutar": 14431353.0,
+   "n": 28,
+   "ilk": "2026-01-19 00:00:00",
+   "son": "2026-08-12 00:00:00"
+  }
+ ],
+ "cx-07": [
+  {
+   "CODE": "12001.01.DO008",
+   "DEFINITION_": "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+   "kanal": "ZINCIR",
+   "net": 75392008.91,
+   "pay": 8.889417396819644,
+   "kum": 8.889417396819644
+  },
+  {
+   "CODE": "12001.01.Kİ027",
+   "DEFINITION_": "KİTAPYURDU YAYINCILIK VE İLETİŞİM A.Ş.",
+   "kanal": "E-TICARET",
+   "net": 70962599.88,
+   "pay": 8.367148972643333,
+   "kum": 17.256566369462977
+  },
+  {
+   "CODE": "12001.01.D-001",
+   "DEFINITION_": "D-MARKET ELEKTRONİK HİZMETLER VE TİC.A.Ş.",
+   "kanal": "E-TICARET",
+   "net": 63644956.13000001,
+   "pay": 7.504330875666609,
+   "kum": 24.760897245129584
+  },
+  {
+   "CODE": "12001.01.C10469",
+   "DEFINITION_": "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+   "kanal": "E-TICARET",
+   "net": 49043253.19,
+   "pay": 5.7826546129611085,
+   "kum": 30.543551858090694
+  },
+  {
+   "CODE": "12001.01.BA104",
+   "DEFINITION_": "BAŞARI DAĞITIM KİT.KIRT.YAY.TİC.AŞ.",
+   "kanal": "DAGITICI",
+   "net": 25723470.7,
+   "pay": 3.033035878114531,
+   "kum": 33.57658773620523
+  },
+  {
+   "CODE": "12001.01.KA095",
+   "DEFINITION_": "KALITIM BASIM YAYIM DAĞ.BİLGİ SİST.GIDA SAN.VE TİC.LTD.ŞTİ",
+   "kanal": "DAGITICI",
+   "net": 21022102.73,
+   "pay": 2.4787009714633657,
+   "kum": 36.055288707668595
+  },
+  {
+   "CODE": "12001.01.C28445",
+   "DEFINITION_": "ÜNİTE KİTAP YAY.EĞT.HİZM.PAZ.TİC.LTD.ŞTİ.",
+   "kanal": "KITAPCI",
+   "net": 18249786.830000002,
+   "pay": 2.151819203126896,
+   "kum": 38.207107910795486
+  },
+  {
+   "CODE": "12001.01.TE035",
+   "DEFINITION_": "TEKROM TEKNOLOJİ A.Ş. ",
+   "kanal": "(boş)",
+   "net": 16979373.529999938,
+   "pay": 2.0020256871635125,
+   "kum": 40.209133597958996
+  },
+  {
+   "CODE": "12001.01.C27594",
+   "DEFINITION_": "İBRAHİMOĞULLARI BİLGİ TEKNOLOJİLERİ ELEKT.TİC.VE SAN.LTD.ŞTİ.",
+   "kanal": "KITAPCI",
+   "net": 14768714.0,
+   "pay": 1.7413684163394159,
+   "kum": 41.950502014298415
+  },
+  {
+   "CODE": "12001.01.C27758",
+   "DEFINITION_": "OFEL TURİZM HİZMETLERI A.Ş.",
+   "kanal": "KITAPCI",
+   "net": 12805002.97,
+   "pay": 1.5098286650476416,
+   "kum": 43.46033067934605
+  }
+ ],
+ "cx-08": [
+  {
+   "kanal": "DAGITICI",
+   "costed_rev": 176314100.91,
+   "cost": 19304912.35899517,
+   "margin": 0.8905084036990926
+  },
+  {
+   "kanal": "ZINCIR",
+   "costed_rev": 133105649.88000008,
+   "cost": 15934061.082930602,
+   "margin": 0.8802901221901867
+  },
+  {
+   "kanal": "KITAPCI",
+   "costed_rev": 603527910.8499997,
+   "cost": 72916879.51192534,
+   "margin": 0.8791822578524491
+  },
+  {
+   "kanal": "KURUM",
+   "costed_rev": 31103271.32,
+   "cost": 4965800.818635341,
+   "margin": 0.8403447416335839
+  },
+  {
+   "kanal": "E-TICARET",
+   "costed_rev": 270951730.4000002,
+   "cost": 45063393.16875993,
+   "margin": 0.8336847928513547
+  },
+  {
+   "kanal": "MAGAZA",
+   "costed_rev": 11239189.309999999,
+   "cost": 2339015.2967351186,
+   "margin": 0.7918875434677487
+  },
+  {
+   "kanal": "(boş)",
+   "costed_rev": 22982506.530000564,
+   "cost": 5702161.097722774,
+   "margin": 0.7518912443131748
+  }
+ ],
+ "cx-09": [
+  {
+   "ay": 1,
+   "n7": 5879,
+   "t7": 5458129.010000002,
+   "n8": 3053,
+   "t8": 101598649.53999999,
+   "pay7": 5.098349757881824
+  },
+  {
+   "ay": 2,
+   "n7": 8042,
+   "t7": 5951605.399999993,
+   "n8": 4106,
+   "t8": 133487255.88999999,
+   "pay7": 4.268254448537163
+  },
+  {
+   "ay": 3,
+   "n7": 5879,
+   "t7": 5036773.119999998,
+   "n8": 2986,
+   "t8": 118979798.5,
+   "pay7": 4.061371036310545
+  },
+  {
+   "ay": 4,
+   "n7": 6860,
+   "t7": 6010032.210000001,
+   "n8": 2947,
+   "t8": 120247154.17000003,
+   "pay7": 4.760150596031358
+  },
+  {
+   "ay": 5,
+   "n7": 4917,
+   "t7": 4401725.439999998,
+   "n8": 2090,
+   "t8": 84082304.39,
+   "pay7": 4.97459874788345
+  },
+  {
+   "ay": 6,
+   "n7": 7706,
+   "t7": 6768252.780000003,
+   "n8": 2310,
+   "t8": 120744156.94,
+   "pay7": 5.307916927350189
+  },
+  {
+   "ay": 7,
+   "n7": 6937,
+   "t7": 6040896.079999998,
+   "n8": 2268,
+   "t8": 109989165.56000002,
+   "pay7": 5.206319805933348
+  },
+  {
+   "ay": 8,
+   "n7": 3328,
+   "t7": 2393258.9299999997,
+   "n8": 1249,
+   "t8": 85500573.62,
+   "pay7": 2.7228974554483694
+  }
+ ],
+ "cx-10": [
+  {
+   "ay": 1,
+   "n": 5794,
+   "tutar": 5219018.2500000065
+  },
+  {
+   "ay": 2,
+   "n": 7888,
+   "tutar": 4629187.059999983
+  },
+  {
+   "ay": 3,
+   "n": 5697,
+   "tutar": 3578752.559999968
+  },
+  {
+   "ay": 4,
+   "n": 6634,
+   "tutar": 4325953.649999969
+  },
+  {
+   "ay": 5,
+   "n": 5433,
+   "tutar": 3955104.2900000247
+  },
+  {
+   "ay": 6,
+   "n": 7052,
+   "tutar": 13117946.920000099
+  },
+  {
+   "ay": 7,
+   "n": 6803,
+   "tutar": 6429393.19000002
+  },
+  {
+   "ay": 8,
+   "n": 3386,
+   "tutar": 3270337.320000005
+  }
+ ]
+}
