@@ -18,6 +18,8 @@ evidence, and the Evidence Engine still decides.
 from __future__ import annotations
 
 import logging
+import os
+import time
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -63,6 +65,10 @@ class ProbeReport:
             "freshness": self.freshness,
             "errors": self.errors[:5],
         }
+
+
+#: how many sentinel-bearing columns of one table are checked for freshness in a single scan
+MAX_FRESHNESS_COLUMNS = 40
 
 
 class ValueProbe:
@@ -115,17 +121,28 @@ def probe_catalog(
     context: Optional[dict[str, str]] = None,
     dialect: str = "",
     max_metrics: int = 25,
+    budget_seconds: Optional[float] = None,
 ) -> ProbeReport:
-    """Confront every value candidate with the data, and every certified metric with an execution."""
+    """Confront every value candidate with the data, and every certified metric with an execution.
+
+    Each distribution is a GROUP BY over a whole table, so the pass gets a wall clock: past it, the
+    remaining candidates keep the status they had and the report says how many were left unprobed. A
+    probe that never finishes would hold back a catalog that is otherwise ready to serve."""
     report = ProbeReport()
     if connector is None:
         return report
+    started = time.time()
+    budget = budget_seconds if budget_seconds is not None else float(os.environ.get("SEMANTIC_PROBE_BUDGET_SEC", "900"))
+    skipped = 0
     probe = ValueProbe(connector, profiles, context, dialect=dialect)
     by_entity = {p.entity: p for p in profiles}
 
     # --- value candidates: does this code actually occur, and does it carry data?
     for concept in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.DIMENSION_VALUE, limit=100000):
         if concept.status == ConceptStatus.REJECTED:
+            continue
+        if budget and time.time() - started > budget:
+            skipped += 1
             continue
         for mapping in store.list_mappings(concept.id):
             if not mapping.column or not mapping.values:
@@ -154,6 +171,9 @@ def probe_catalog(
     compiler = DeterministicCompiler(profiles, context or {}, dialect or getattr(connector, "dialect", "") or "generic", default_filters=default_filters_provider(store, tenant_id, datasource_id))
     metrics = [c for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, status=ConceptStatus.CERTIFIED, limit=100000)][:max_metrics]
     for concept in metrics:
+        if budget and time.time() - started > budget:
+            skipped += 1
+            continue
         mapping = next(iter(store.list_mappings(concept.id)), None)
         if mapping is None or not mapping.formula or mapping.entity not in by_entity:
             continue
@@ -182,6 +202,12 @@ def probe_catalog(
         store.clear_counter_evidence(concept.id, "EXECUTION_EMPTY")
         store.add_evidence(Evidence(concept.id, EvidenceType.EXECUTION, "probe:execute", support_count=1, weight=1.0, payload={"value": float(value), "rows": len(rows)}))
         report.metrics_executed += 1
+    if skipped:
+        # never a silent cap: an unprobed concept keeps the status it had, and the report says so
+        note = f"probe budget ({budget:.0f}s) spent — {skipped} concepts left unprobed"
+        log.warning(note)
+        report.errors.append(note)
+    log.info("probe: %d distributions, %d metrics executed, %d failed, %.0fs", report.distributions, report.metrics_executed, report.metrics_failed, time.time() - started)
     return report
 
 
@@ -265,28 +291,38 @@ def freshness(profiles: list[SchemaProfile], connector: Any, conventions: Any, *
     if connector is None:
         return out
     d = Dialect(dialect or getattr(connector, "dialect", "") or "generic")
+    started = time.time()
+    budget = float(os.environ.get("SEMANTIC_FRESHNESS_BUDGET_SEC", "300"))
     for prof in profiles:
         time_col = conventions.time_column(prof.entity) if conventions else None
         if not time_col:
             continue
-        for col in prof.columns:
-            if not col.sentinel_values or col.sensitive or col.ref_entity or col.is_primary_key:
-                continue
-            table = d.table(prof.schema_name, physical_name(prof.table_pattern, {**prof.context, **(context or {})}))
-            marker = col.sentinel_values[0]
-            sql = (f"SELECT MAX({d.q(time_col)}) AS filled_until FROM {table} WHERE {d.q(col.name)} <> {marker}")
-            total_sql = f"SELECT MAX({d.q(time_col)}) AS last_row FROM {table}"
-            try:
-                _, filled, _ = connector.execute(sql, 1)
-                _, latest, _ = connector.execute(total_sql, 1)
-            except Exception as e:  # noqa: BLE001
-                log.debug("freshness probe failed %s.%s: %s", prof.entity, col.name, e)
-                continue
-            f_val = next((v for r in filled for v in r.values()), None)
-            l_val = next((v for r in latest for v in r.values()), None)
+        if budget and time.time() - started > budget:
+            log.warning("freshness budget (%.0fs) spent; stopped before %s", budget, prof.entity)
+            break
+        candidates = [c for c in prof.columns
+                      if c.sentinel_values and not c.sensitive and not c.ref_entity and not c.is_primary_key][:MAX_FRESHNESS_COLUMNS]
+        if not candidates:
+            continue
+        # One scan per table, not two per column: a wide table with a hundred sentinel columns used to
+        # cost two hundred full scans, which is how a probe pass stops looking like it is progressing.
+        table = d.table(prof.schema_name, physical_name(prof.table_pattern, {**prof.context, **(context or {})}))
+        parts = [f"MAX({d.q(time_col)}) AS last_row"]
+        for i, col in enumerate(candidates):
+            parts.append(f"MAX(CASE WHEN {d.q(col.name)} <> {col.sentinel_values[0]} THEN {d.q(time_col)} END) AS c{i}")
+        try:
+            _, rows, _ = connector.execute(f"SELECT {', '.join(parts)} FROM {table}", 1)
+        except Exception as e:  # noqa: BLE001
+            log.debug("freshness probe failed on %s: %s", prof.entity, e)
+            continue
+        row = dict(rows[0]) if rows else {}
+        lowered = {str(k).lower(): v for k, v in row.items()}
+        l_val = lowered.get("last_row")
+        for i, col in enumerate(candidates):
+            f_val = lowered.get(f"c{i}")
             if f_val and l_val and str(f_val) != str(l_val):
-                entry = {"entity": prof.entity, "column": col.name, "filled_until": str(f_val), "last_row": str(l_val)}
-                out.append(entry)
+                marker = col.sentinel_values[0]
+                out.append({"entity": prof.entity, "column": col.name, "filled_until": str(f_val), "last_row": str(l_val)})
                 col.description = ((col.description or "") + f" [tazelik] {f_val} tarihine kadar dolu; sonrası {marker} (değer yok)").strip()
     return out
 
