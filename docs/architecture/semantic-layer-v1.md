@@ -98,7 +98,7 @@ profilde yoksa) → `DEPRECATED` (drift).
 | 9 Portal | `/bi/semantic-layer`: tespit edilen tablo/kolonlar, katalog durumu, kullanıcı açıklama girişi | `nanobase_api/semantic_layer_api.py`, `src/pages/BiSemanticLayerPage.tsx` |
 | 10 Bench | cold-start 6 dilim (Schema/Value/Metric/Temporal/SQL/Result) | `tests/text2sql/semantic-coldstart-eval.py` |
 | 11 Ops | worker (gece 02:00: profile → mine → candidates → certify → version), deploy script | `infra/systemd/nanobase-semantic-worker.*`, `scripts/server/deploy-semantic-bridge.sh` |
-| 12 SuperSonic A/B | sonra: `SuperSonicCompilerAdapter` aynı arayüzle; ölçülebilir kazanırsa girer | — |
+| 12 SuperSonic A/B | `SuperSonicCompilerAdapter` aynı arayüzle + gölge/pinned mod + A/B ölçüm hattı | `semantic_layer/runtime/supersonic.py`, `tests/text2sql/compiler-ab-eval.py` |
 
 ## 6. Başarı kriteri
 
@@ -173,3 +173,45 @@ Ayrıca aynı kolonda çelişen filtreler artık deterministik derlemeyi durduru
 Gate politikası (uygulanan): `SEMANTIC_GATE_MODE=multi_source` — `validated ≥ 3` **veya**
 `validated ≥ 1 ∧ (DOC|HUMAN) ∧ profile_fit`; `strict` = yalnız `validated ≥ 3`. LLM adayı hiçbir
 modda tek başına geçemez.
+
+
+## 9. Faz 8 — SuperSonic A/B (uygulandı)
+
+SuperSonic **bağımlılık değil, ölçülen bir aday derleyicidir**. Doğruluk kaynağı yine bizim kataloğumuz:
+resolver'ın ürettiği `SemanticQuery` (sertifikalı metrik + boyut filtreleri + dönem + kırılım) SuperSonic'in
+*struct query* sözleşmesine çevrilir ve SQL istenir; SuperSonic'in kendi NL anlama katmanı devrede değildir.
+
+```
+SemanticQuery ─► SuperSonicCompilerAdapter.build_struct()
+                 {dataSetId, metrics, dimensions, dimensionFilters, dateInfo, limit, sqlOnly}
+              ─► POST {SUPERSONIC_STRUCT_PATH} ─► querySQL ─► CompiledQuery(compiler="supersonic")
+```
+
+| Ayar | Anlamı |
+|---|---|
+| `SUPERSONIC_BASE` | servis adresi; boşsa adaptör hiç kurulmaz (üretim yolu değişmez) |
+| `SUPERSONIC_DATASETS=INVOICE=7,STLINE=8` | varlık → dataSet eşlemesi; eksikse adaptör `None` döner ve yönlendirici bir sonraki derleyiciye geçer (asla tahmin etmez) |
+| `SUPERSONIC_DATE_FIELDS=INVOICE=invoice_date` | dönem alanı adı (opsiyonel) |
+| `SUPERSONIC_MODE=shadow\|off` | gölge mod: cevabı değiştirmeden yanında derler ve ölçer (varsayılan shadow) |
+| `SEMANTIC_COMPILER=supersonic` | kontrollü deney: birincil derleyiciyi sabitler |
+| `SUPERSONIC_STRUCT_PATH` / `_SQL_PATH` / `_LOGIN_PATH` / `_MODEL_PATH` | sürümler arası uç nokta farkları koddan değil ayardan |
+
+Adil karşılaştırma için katalog SuperSonic modeline dışa aktarılabilir
+(`supersonic.export_semantic_model` → dataSet/metric/dimension/defaultFilter), böylece iki derleyici
+**aynı bilgi tabanı** üzerinde yarışır.
+
+Ölçüm: `tests/text2sql/compiler-ab-eval.py` her soruyu tek bir resolver koşusundan geçirip her derleyiciye
+aynı `SemanticQuery`'yi verir; ürettiği SQL guardrail'den geçirilir, `--bridge` ile çalıştırılır ve
+`--truth` ile karşılaştırılır. Rapor matristir: `compiled / behaviour (beklenen reddi de doğru sayar) /
+executable / result_correct / certified / latency`. **Terfi kapısı:** aday ancak doğrulukta en az eşit ve
+(daha doğru **veya** medyan gecikmede ≥%20 daha hızlı — mevcut zaten <50 ms ise hız tek başına yetmez) ise
+önerilir; karar `verdict` alanında gerekçesiyle yazılır.
+
+Yerel referans koşusu (LLM ve SuperSonic olmadan, yalnız deterministik):
+`compiled 16/20 · behaviour 18/20 · executable 1.0 · certified 0.8 · medyan gecikme 0 ms`
+(`artifacts/timas/compiler-ab-offline.json`). SuperSonic ayağa kalktığında aynı komut
+`--compilers deterministic,existing_llm,supersonic --bridge … --truth …` ile çalışır.
+
+Not: SuperSonic uç nokta yolları ve payload alanları sürüme göre değişebilir; adaptör bunları ayar olarak
+alır ve sözleşmeyi taklit eden sahte bir servise karşı test edilir (`tests/test_supersonic_ab.py`).
+Canlı bir SuperSonic kurulumunda ilk iş `GET /health` + tek bir struct sorgusuyla yolları doğrulamaktır.

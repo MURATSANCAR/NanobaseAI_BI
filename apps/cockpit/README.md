@@ -72,3 +72,17 @@ PYTHONPATH=backend python3 tests/text2sql/semantic-coldstart-eval.py --store "$N
 
 Portalde `/bi/semantic-layer`: tespit edilen tablo/kolonlar, sertifikalı anlamlar, tanımsız kolonlara kullanıcı
 açıklaması (HUMAN_ANNOTATION kanıtı → aday → doğrulanmış sorguyla CERTIFIED).
+
+### Derleyici A/B (Faz 8)
+
+```bash
+# gölge mod: SuperSonic cevabı değiştirmeden yanında ölçülür
+SUPERSONIC_BASE=http://127.0.0.1:9080 SUPERSONIC_DATASETS=INVOICE=7,STLINE=8 SUPERSONIC_MODE=shadow \
+  systemctl restart nanobase-semantic-bridge
+curl -s http://127.0.0.1:8795/api/v1/semantic/ab | head -c 400      # örnek sayısı, uyuşma oranı, gecikme
+
+# ölçüm koşusu (aynı SemanticQuery, üç derleyici, gerçek sonuç karşılaştırması)
+PYTHONPATH=backend python3 tests/text2sql/compiler-ab-eval.py --store "$NANOBASE_META_DSN" \
+  --compilers deterministic,existing_llm,supersonic --bridge http://127.0.0.1:8795 \
+  --truth artifacts/timas/complex-truth.json --out artifacts/timas/compiler-ab.json
+```
