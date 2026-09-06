@@ -36,6 +36,12 @@ profiles="$(printf '%s' "$health" | python3 -c 'import json,sys; print(json.load
 ask="$(curl -fsS -m 60 -H 'Content-Type: application/json' \
   -d "{\"question\":\"${SEMANTIC_WATCHDOG_QUESTION:-2026 toplam net ciro nedir?}\",\"sampleSize\":1}" \
   "http://127.0.0.1:${PORT}/api/v1/ask" 2>/dev/null || true)"
+# An unreachable data source is an outage, but not this service's: restarting the bridge would not
+# bring the database back, and reporting it as a bridge fault sends whoever reads this to the wrong
+# machine. Say which one is down.
+if printf '%s' "$ask" | grep -q '"type": *"DATA_SOURCE_UNAVAILABLE"'; then
+  fail "the data source is unreachable — the bridge is healthy, the database it reads is not"
+fi
 printf '%s' "$ask" | grep -q '"type": *"TEXT_TO_SQL"' || fail "the bridge could not answer a catalog question: $(printf '%s' "$ask" | head -c 200)"
 
 log "healthy: ${profiles} profiles, ${certified} certified concepts"
