@@ -202,6 +202,8 @@ class DeterministicCompiler:
             return None, "period outside the data window: " + ", ".join(q.out_of_scope)
         if q.unhandled:
             return None, "qualifiers with no certified meaning: " + ", ".join(q.unhandled)
+        if q.shape:
+            return None, f"question asks for a {q.shape.lower()} this compiler cannot express"
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
         if not metrics:
             return None, "no certified metric"
@@ -361,7 +363,8 @@ Kurallar:
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
-- Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
+- Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- İSTENEN BİÇİM oran ise tek bir toplam döndürme: payı, paydayı ve oranı birlikte ver.
+- Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
 _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
 _VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sales_cube|line_cube|orders_cube|küp|cube|görünüm)")
@@ -530,6 +533,10 @@ class ExistingCompiler:
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
+            "## İSTENEN BİÇİM\n" + (
+                "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster; paydayı sorudan çıkar "
+                "(kırılım varsa genel toplam, yoksa aynı ölçünün filtresiz hali)." if q.shape == "RATIO" else "(serbest)"
+            ),
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
             "## Şema bağlamı\n" + self.schema_context(q, recalled, entities),
         ]

@@ -323,6 +323,10 @@ class SemanticQuery:
     # "satmayan ürünler"). Dropping it would answer a wider question than the one that was asked,
     # so it blocks the deterministic path and is handed to the model spelled out.
     unhandled: list[str] = field(default_factory=list)
+    # A shape the question asks for that the deterministic compiler cannot express but the model can
+    # ("payı yüzde kaç" needs a denominator). Unlike `unhandled`, this is a request to write different
+    # SQL, not a meaning nobody has defined — so it routes to the model instead of refusing.
+    shape: Optional[str] = None
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -351,6 +355,7 @@ class SemanticQuery:
             "ignored": list(self.ignored),
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
+            "shape": self.shape,
             "fullyResolved": self.fully_resolved,
             "explanation": list(self.explanation),
         }

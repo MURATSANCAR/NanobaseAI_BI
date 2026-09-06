@@ -205,11 +205,18 @@ def test_filter_contradicting_the_measure_scope_is_refused(catalog, profiles):
     assert any("boş" in e for e in sq.explanation)
 
 
-def test_share_question_needs_a_certified_denominator(catalog, profiles):
-    """"payı yüzde kaç" asks for a ratio; answering with the plain total replaces the question."""
+def test_share_question_asks_for_a_ratio_instead_of_a_total(catalog, profiles):
+    """"payı yüzde kaç" asks for a ratio. The deterministic compiler cannot express one, but that is a
+    shape it lacks, not a meaning nobody defined — so it goes to the model told what to write, rather
+    than being answered with a plain total or refused outright."""
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("Toptan satışın payı yüzde kaç?", today=date(2026, 7, 20))
-    assert sq.unhandled and not sq.fully_resolved
+    assert sq.shape == "RATIO" and not sq.unhandled
+    c = DeterministicCompiler(profiles, {}, "tsql")
+    assert c.compile(sq, catalog) is None and "ratio" in c.plan(sq)[1]
+    from semantic_layer.runtime.compiler import ExistingCompiler
+    prompt = ExistingCompiler(FakeLlm([""]), profiles, {}).build_messages(sq, [])[0]["content"]
+    assert "İSTENEN BİÇİM" in prompt and "payda" in prompt
 
 
 def test_count_question_uses_the_profiled_key(catalog, profiles, logo_db):

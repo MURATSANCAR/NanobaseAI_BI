@@ -1,5 +1,5 @@
 {
- "ran_at": "2026-09-06T23:24:15",
+ "ran_at": "2026-09-06T23:37:19",
  "mode": "offline",
  "catalog_version": 1,
  "verdicts": {
@@ -64,13 +64,6 @@
    ]
   },
   {
-   "term": "payi",
-   "count": 1,
-   "questions": [
-    "u20"
-   ]
-  },
-  {
    "term": "satmayan",
    "count": 1,
    "questions": [
@@ -82,13 +75,6 @@
    "count": 1,
    "questions": [
     "u34"
-   ]
-  },
-  {
-   "term": "paylarini",
-   "count": 1,
-   "questions": [
-    "u36"
    ]
   },
   {
@@ -686,14 +672,12 @@
     }
    ],
    "unresolved": [],
-   "unhandled": [
-    "payi"
-   ],
+   "unhandled": [],
    "ignored": [],
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "qualifiers with no certified meaning: payi",
+   "why": "question asks for a ratio this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "EKSİK",
    "wall_s": 0.0
@@ -1127,9 +1111,7 @@
     }
    ],
    "unresolved": [],
-   "unhandled": [
-    "paylarini"
-   ],
+   "unhandled": [],
    "ignored": [
     "iyi",
     "cikar"
@@ -1137,7 +1119,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "qualifiers with no certified meaning: paylarini",
+   "why": "question asks for a ratio this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "EKSİK",
    "wall_s": 0.0

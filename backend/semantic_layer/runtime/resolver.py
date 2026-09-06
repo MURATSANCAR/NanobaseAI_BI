@@ -365,9 +365,11 @@ class SemanticResolver:
             s_.semantic_type == SemanticType.METRIC and s_.mapping and "/" in (s_.mapping.formula or "") for s_ in hits
         ):
             cue = next((t for t in qf.tokens if _SHARE_CUE.fullmatch(stem(t)) or _SHARE_CUE.fullmatch(fold(t))), "pay")
-            if cue not in sq.unhandled:
-                sq.unhandled.append(cue)
-                sq.explanation.append(f"'{cue}' bir oran istiyor; katalogda paydayı veren sertifikalı bir oran ölçüsü yok")
+            sq.shape = "RATIO"
+            sq.explanation.append(
+                f"'{cue}' bir oran istiyor; katalogda paydayı veren sertifikalı bir ölçü yok, "
+                "bu yüzden payda soruya göre seçilmeli — düz toplam farklı bir soruyu cevaplar"
+            )
 
         sq.limit = qf.limit
         sq.order_desc = qf.order_desc
