@@ -8,8 +8,9 @@ Kural: **her adım geri alınabilir**, kesme (nginx anahtarı) en sona ve ayrı 
 | Şey | Kontrol | Not |
 |---|---|---|
 | SSH | `ssh nanobase-direct 'hostname'` → `NanobaseAI` | `nanobase` alias'ı ProxyJump (`a40legal`) üzerinden **kopuk**; `nanobase-direct` veya `nanobase-cm` kullanın |
-| Repo | `/data/nanobaseai/bi/frontend` (bu depo) güncel mi | deploy script `ROOT` olarak kendi konumunu kullanır |
-| Venv | `/data/nanobaseai/bi/frontend/backend/.venv` | nanobase_api ile **paylaşımlı** — bağımlılık çakışması riski (aşağıya bak) |
+| Kod | `/data/nanobaseai/bi/frontend` güncel mi (sunucuda **git yok**, rsync ile gelir) | `rsync -a --delete --exclude node_modules --exclude .git ./ nanobase-direct:/data/nanobaseai/bi/frontend/` |
+| Venv | `/data/nanobaseai/bi/semantic-venv` (script kurar) | üretim API'sinin venv'ine **dokunulmaz**; pyodbc yalnız köprü venv'inde |
+| Alembic | mevcut head `013_forecast_runs` | 014 temiz uygulanır |
 | Bağlantı dosyası | `/data/nanobaseai/bi/secrets/logo-mssql-connection.json` (mod 600) | MSSQL/FreeTDS salt-okunur kullanıcı |
 | Meta DB | `bi_meta` PostgreSQL 127.0.0.1:5434 erişilebilir | alembic 014 buraya yazar |
 | Kapsam | `SEMANTIC_TABLE_LIKE` bilinçli verilmiş | boş bırakılırsa tüm şema taranır (aşağıya bak) |
@@ -30,14 +31,22 @@ Not: kod tarafında Logo'ya özgü hiçbir sabit yok; kapsam **operatör ayarıd
 ## 2. Kurulum (idempotent, servisi ayağa kaldırır ama trafiği çevirmez)
 
 ```bash
+# 0) kodu gönder (iş istasyonundan)
+rsync -a --delete --exclude node_modules --exclude .git --exclude dist ./ nanobase-direct:/data/nanobaseai/bi/frontend/
+
+# 1) kur (sunucuda) — kapsam verilmezse betik durur
 ssh nanobase-direct
 cd /data/nanobaseai/bi/frontend
 SEMANTIC_TABLE_LIKE='LG_411_%' SEMANTIC_SCHEMA=dbo ./scripts/server/deploy-semantic-bridge.sh
+
+# 2) portal sayfası yeni router'ı görsün (ÜRETİM API yeniden başlar — bilinçli adım)
+sudo systemctl restart nanobase-bi-api
 ```
 
-Sırasıyla: bağımlılıklar → `alembic upgrade head` (014_semantic_layer) → offline pipeline (profil → madencilik →
-doküman → sertifikasyon → katalog v1) → `nanobase-semantic-bridge.service` (:8795) → gece worker timer'ı →
-health + tek soruluk smoke.
+Sırasıyla: kapsam koruması → bağlantı dosyası (yoksa `mssql-ro.datasources.json`'dan türetilir, mod 600) →
+ayrı venv + bağımlılıklar → `alembic upgrade head` (014) → env dosyası → offline pipeline (profil →
+madencilik → doküman → sertifikasyon → katalog v1) → `nanobase-semantic-bridge.service` (:8795) → gece
+worker + timer → health/engine/ask smoke (SQL üretmezse betik durur). **Trafik çevrilmez.**
 
 ## 3. Doğrulama kapıları (hepsi geçmeden kesme yok)
 
@@ -79,7 +88,7 @@ Kesme anında kokpitteki açık `threadId`'ler yeni süreçte boştur (konuşma 
 
 | Belirti | Aksiyon |
 |---|---|
-| Yanlış/boş cevaplar | `switch-timas-api.sh bridge` (saniyeler), sonra `sl_query_log`'dan hatalı soruları incele |
+| Yanlış/boş cevaplar | `SEMANTIC_STRICT_MISS=1` ile köprüyü yeniden başlat (çözümlenemeyen terimde SQL üretmez) ve `sl_query_log`'dan hatalı soruları incele |
 | Katalog bozulması (gece worker sonrası) | `sl_catalog_version` son iyi sürüme bak; `semantic_layer.cli certify` yeniden koş; gerekiyorsa `SEMANTIC_MIN_SUPPORT` yükselt |
 | ERP yükü | `nanobase-semantic-worker.timer` durdur (`systemctl disable --now`), kapsamı daralt, tekrar profil al |
 | Migrasyon geri alma | `alembic downgrade 013_forecast_runs` (sl_* tabloları düşer; portal sayfası boş görünür, üretim API'si etkilenmez) |

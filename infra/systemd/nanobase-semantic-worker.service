@@ -7,15 +7,17 @@ Wants=network-online.target
 Type=oneshot
 User=administrator
 WorkingDirectory=/data/nanobaseai/bi/frontend/backend
+# Same env file the bridge uses: one scope, one catalog, one connection.
 EnvironmentFile=/data/nanobaseai/bi/frontend/backend/nanobase_semantic_bridge.env
 Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
-TimeoutStartSec=3600
-# --llm: Qwen proposes CANDIDATEs for unresolved runtime terms (never certifies)
-ExecStart=/data/nanobaseai/bi/frontend/backend/.venv/bin/python -m semantic_layer.cli pipeline --llm --note "nightly"
-ExecStartPost=/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:8795/api/v1/semantic/reload
+TimeoutStartSec=7200
+# --llm: the model proposes CANDIDATEs for terms the runtime could not resolve (it never certifies).
+ExecStart=/data/nanobaseai/bi/semantic-venv/bin/python -m semantic_layer.cli pipeline --llm --note nightly
+# Reload is best-effort: a failed reload must not mark the nightly run as failed.
+ExecStartPost=-/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:8795/api/v1/semantic/reload
 
 [Install]
 WantedBy=multi-user.target
