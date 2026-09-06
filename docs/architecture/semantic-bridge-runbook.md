@@ -48,6 +48,24 @@ ayrı venv + bağımlılıklar → `alembic upgrade head` (014) → env dosyası
 madencilik → doküman → sertifikasyon → katalog v1) → `nanobase-semantic-bridge.service` (:8795) → gece
 worker + timer → health/engine/ask smoke (SQL üretmezse betik durur). **Trafik çevrilmez.**
 
+## 2b. Bütçeler (canlı bir kaynağa karşı çalışırken)
+
+Boru hattı canlı ERP'ye sorgu atar; her adımın duvar saati vardır ve bütçesi dolduğunda **durur, susmaz**:
+ne yapılamadığı loga yazılır, kısmi tarama tam tarama gibi görünmez.
+
+| Değişken | Varsayılan | Ne yapar |
+|---|---|---|
+| `SEMANTIC_DEEP_TABLES` | 40 | kaç tabloya değer envanteri + örnek satır + zaman penceresi çıkarılır |
+| `SEMANTIC_DEEP_BUDGET_SEC` | 1800 | derin profil aşamasının duvar saati; aşılırsa kalan tablolar kataloglanır ama sondalanmaz |
+| `SEMANTIC_PROBE_BUDGET_SEC` | 900 | değer dağılımı + ölçü çalıştırma aşaması; sondalanmayan kavram eski durumunu korur |
+| `SEMANTIC_FRESHNESS_BUDGET_SEC` | 300 | tazelik taraması (tablo başına tek tarama) |
+| `SEMANTIC_QUERY_TIMEOUT_SEC` | 120 | tek bir sorgunun üst sınırı; yavaş kaynakta 45 iyi bir başlangıç |
+| `SEMANTIC_PROMPT_TABLES` / `SEMANTIC_PROMPT_COLUMNS` | 12 / 60 | modelin bağlamına sığdırılacak tablo/kolon sayısı (300 tablolu şema prompta sığmaz) |
+| `SEMANTIC_GATE_STRICT` | 1 | yeni katalog eskisinden geri çıkarsa dağıtımı durdurur; `0` yalnız uyarır |
+
+İlerleme loga tablo tablo yazılır (`profiled <tablo> (n/m, k kolon, s sn)`), yani takıldı mı çalışıyor mu
+bakmak için `tail -f` yeterlidir.
+
 ## 3. Doğrulama kapıları (hepsi geçmeden kesme yok)
 
 ```bash
@@ -100,6 +118,20 @@ Kesme anında kokpitteki açık `threadId`'ler yeni süreçte boştur (konuşma 
 | ERP yükü | `nanobase-semantic-worker.timer` durdur (`systemctl disable --now`), kapsamı daralt, tekrar profil al |
 | Migrasyon geri alma | `alembic downgrade 013_forecast_runs` (sl_* tabloları düşer; portal sayfası boş görünür, üretim API'si etkilenmez) |
 | Servis çökmesi | `journalctl -u nanobase-semantic-bridge -n 200`; unit `Restart=always` |
+
+## 5b. Katalog neyi bilmiyor (portalin iş kuyruğu)
+
+Köprü, cevapladığı her soruda yerleştiremediği terimleri kaydeder. Bunları okumak için:
+
+```bash
+curl -s 127.0.0.1:8795/api/v1/semantic/gaps?days=30 | python3 -m json.tool | head -40
+```
+
+`undefined` = kimsenin tanımlamadığı bir sözcük, `qualifier` = konuyu daraltan ama karşılığı olmayan bir
+niteleyici ("bekleyen siparişler"). Aynı liste portalde `/bi/semantic-layer` sayfasının başında görünür;
+oradan ilgili tabloya/kolona açıklama girmek terimi kanıt katmanına ekler ve bir sonraki sertifikasyonda
+kavram olur. `unmeasuredWindows` alanı, zaman penceresi ölçülemeyen varlıkları söyler — o varlıklarda
+dönem kapsamı kontrolü kapalıdır.
 
 ## 6. Kurulum sonrası
 
