@@ -21,7 +21,9 @@ SECRETS="${SECRETS_ROOT:-/data/nanobaseai/bi/secrets}"
 CONN_FILE="${SEMANTIC_CONNECTION_FILE:-${SECRETS}/logo-mssql-connection.json}"
 DATASOURCE_KEY="${SEMANTIC_DATASOURCE_KEY:-logo}"
 API_ENV="${NANOBASE_API_ENV:-${ROOT}/backend/nanobase_api.env}"
-ENV_FILE="${SEMANTIC_BRIDGE_ENV:-${ROOT}/backend/nanobase_semantic_bridge.env}"
+# Outside the rsynced code tree on purpose: `rsync --delete` of the repo must not delete the file both
+# units load, and it holds a database password that must never be near the repository.
+ENV_FILE="${SEMANTIC_BRIDGE_ENV:-/etc/nanobase/semantic-bridge.env}"
 UNIT=/etc/systemd/system/nanobase-semantic-bridge.service
 PORT="${SEMANTIC_BRIDGE_PORT:-8795}"
 WORKERS="${SEMANTIC_BRIDGE_WORKERS:-2}"
@@ -100,11 +102,18 @@ log "alembic upgrade head (014_semantic_layer)"
 # --- 4. env file (never printed) ------------------------------------------------------------------
 if [[ -z "${NANOBASE_META_DSN:-}" ]]; then
   META_PW="$(tr -d '\n\r' < "${SECRETS}/bi-meta-db.password")"
-  META_PW_ENC="$("$PYTHON_BIN" -c "import urllib.parse,sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$META_PW")"
+  META_PW_ENC="$(META_PW="$META_PW" "$PYTHON_BIN" -c "import os,urllib.parse; print(urllib.parse.quote_plus(os.environ['META_PW']))")"
   NANOBASE_META_DSN="postgresql+psycopg2://bi_meta:${META_PW_ENC}@127.0.0.1:5434/bi_meta"
 fi
 LLM_BASE="$(grep -E '^OPENAI_API_BASE=' "$API_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
 LLM_MODEL="$(grep -E '^LLM_MODEL_NAME=' "$API_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
+LLM_KEY="$(grep -E '^OPENAI_API_KEY=' "$API_ENV" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)"
+sudo mkdir -p "$(dirname "$ENV_FILE")"
+sudo chown "${SERVICE_USER:-administrator}" "$(dirname "$ENV_FILE")" 2>/dev/null || true
+if [[ -f "$ENV_FILE" ]]; then
+  cp "$ENV_FILE" "${ENV_FILE}.bak-$(date +%Y%m%d%H%M%S)"
+  log "existing env kept at ${ENV_FILE}.bak-* (operator tuning is not silently overwritten)"
+fi
 umask 077
 cat > "$ENV_FILE" <<ENV
 SEMANTIC_STORE_DSN=${NANOBASE_META_DSN}
@@ -129,8 +138,12 @@ SEMANTIC_SUMMARY_MODE=${SEMANTIC_SUMMARY_MODE:-fast}
 SEMANTIC_MAX_ROWS=${SEMANTIC_MAX_ROWS:-500}
 SEMANTIC_INTUGLE=${SEMANTIC_INTUGLE:-0}
 OPENAI_API_BASE=${LLM_BASE:-http://172.17.0.1:8020/v1}
-OPENAI_API_KEY=
+OPENAI_API_KEY=${LLM_KEY}
 LLM_MODEL_NAME=${LLM_MODEL:-nanobaseai-bi-llm}
+SEMANTIC_LLM_SLOTS=${SEMANTIC_LLM_SLOTS:-1}
+SEMANTIC_QUERY_TIMEOUT_SEC=${SEMANTIC_QUERY_TIMEOUT_SEC:-120}
+SEMANTIC_DEEP_TABLES=${SEMANTIC_DEEP_TABLES:-60}
+SEMANTIC_PROBE_LINKS=${SEMANTIC_PROBE_LINKS:-0}
 LLM_TIMEOUT_SEC=${LLM_TIMEOUT_SEC:-240}
 ENV
 chmod 600 "$ENV_FILE"
@@ -184,9 +197,9 @@ ExecStart=${VENV}/bin/python -m semantic_layer.cli pipeline --llm --note nightly
 ExecStartPost=-/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:${PORT}/api/v1/semantic/reload
 WORKEREOF
 sudo cp "${ROOT}/infra/systemd/nanobase-semantic-worker.timer" /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now nanobase-semantic-bridge.service nanobase-semantic-worker.timer
-sudo systemctl restart nanobase-semantic-bridge.service
+sudo -E systemctl daemon-reload
+sudo -E systemctl enable --now nanobase-semantic-bridge.service nanobase-semantic-worker.timer
+sudo -E systemctl restart nanobase-semantic-bridge.service
 sleep 3
 
 # --- 7. smoke: the service must answer, and answer from the catalog --------------------------------

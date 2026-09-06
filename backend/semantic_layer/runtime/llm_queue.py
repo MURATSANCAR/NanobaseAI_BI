@@ -74,6 +74,7 @@ class LlmQueue:
         self.lease_seconds = lease_seconds
         self.max_wait_seconds = max_wait_seconds
         self.poll_seconds = poll_seconds
+        self._base_poll = poll_seconds
         self.worker = worker or f"{socket.gethostname()}:{os.getpid()}"
         self._local = threading.Semaphore(self.slots)
 
@@ -99,6 +100,7 @@ class LlmQueue:
                 self._local.release()
             return
         ticket_id = self._enqueue(purpose, tenant_id, datasource_id, user_id, question)
+        self.poll_seconds = self._base_poll
         started = time.perf_counter()
         try:
             ahead = self._wait_for_turn(ticket_id, on_wait)
@@ -198,6 +200,9 @@ class LlmQueue:
                     on_wait(ahead)
                 except Exception:  # noqa: BLE001
                     pass
+            # Back off: a request that has been waiting for minutes does not need four checks a second
+            # on the production database. Starts responsive, settles to a light poll.
+            self.poll_seconds = min(self.poll_seconds * 1.5, 5.0)
             if time.monotonic() > deadline:
                 # Never fail the user's question on queueing alone: take the slot and let the model decide.
                 log.warning("llm queue wait exceeded %ss for %s — proceeding", self.max_wait_seconds, ticket_id)

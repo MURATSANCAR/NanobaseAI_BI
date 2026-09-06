@@ -83,7 +83,8 @@ def test_links_inferred_from_value_overlap(retail_profiles, retail_connector):
     added = infer_links(retail_profiles, retail_connector)
     orders = next(p for p in retail_profiles if p.entity == "ORDERS")
     assert before == 0 and added >= 1
-    assert {"column": "customer", "ref_entity": "CUSTOMERS", "ref_column": "id"} in orders.relationships
+    link = next(r for r in orders.relationships if r["column"] == "customer")
+    assert (link["ref_entity"], link["ref_column"], link["source"]) == ("CUSTOMERS", "id", "value-overlap")
 
 
 def test_end_to_end_on_an_unrelated_schema(retail_catalog, retail_db):

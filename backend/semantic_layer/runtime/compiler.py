@@ -443,8 +443,11 @@ class ExistingCompiler:
                 lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
         return "\n".join(lines) or "(yok)"
 
-    def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]]) -> list[dict[str, str]]:
-        recalled = self.recall(q.question) if self.recall else []
+    def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]], *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> list[dict[str, str]]:
+        """`recall` overrides the shared one for this call only — the compiler object is shared by every
+        concurrent request and must never be mutated per request."""
+        recall_fn = recall or self.recall
+        recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
         ctx = [
             "## Tablolar\n" + self.model_index(),
@@ -460,9 +463,9 @@ class ExistingCompiler:
         msgs.append({"role": "user", "content": q.question})
         return msgs
 
-    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None) -> Optional[CompiledQuery]:
+    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[CompiledQuery]:
         t0 = time.perf_counter()
-        messages = self.build_messages(q, thread or [])
+        messages = self.build_messages(q, thread or [], recall=recall)
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         sql = extract_sql(text)
@@ -472,8 +475,8 @@ class ExistingCompiler:
         certified = not q.unresolved and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots)
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
 
-    def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None) -> Optional[str]:
-        messages = self.build_messages(q, thread or [])
+    def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[str]:
+        messages = self.build_messages(q, thread or [], recall=recall)
         messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})
         return extract_sql(self.llm.chat(messages))
@@ -506,11 +509,11 @@ class CompilerRouter:
             self.shadow_results.append({"compiler": out.compiler, "sql": out.sql, "ms": out.llm_ms, "same_as_primary": out.sql.strip() == chosen.sql.strip(), "explain": out.explain})
             del self.shadow_results[:-50]
 
-    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None) -> CompiledQuery:
+    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:
         if self.primary:
             comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
             if comp is not None:
-                out = comp.compile(q, catalog, thread) if getattr(comp, "name", "") == "existing_llm" else comp.compile(q, catalog)
+                out = comp.compile(q, catalog, thread, recall=recall) if getattr(comp, "name", "") == "existing_llm" else comp.compile(q, catalog)
                 if out is not None:
                     self._run_shadow(q, catalog, out)
                     return out
@@ -527,7 +530,7 @@ class CompilerRouter:
                 if out is not None:
                     return out
             return CompiledQuery(sql="", compiler="none", catalog_version=q.catalog_version, explain=["no LLM compiler configured"], certified=False)
-        out = self.existing.compile(q, catalog, thread)
+        out = self.existing.compile(q, catalog, thread, recall=recall)
         self._run_shadow(q, catalog, out)
         return out
 

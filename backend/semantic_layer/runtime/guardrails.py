@@ -9,22 +9,72 @@ import sqlglot
 from sqlglot import exp
 
 from semantic_layer.models import SchemaProfile
-from semantic_layer.naming import logical_table, physical_name
+from semantic_layer.naming import logical_table, physical_name, strip_quotes
 
 _DENY = re.compile(r"(?i)\b(insert|update|delete|drop|alter|truncate|merge|exec|execute|grant|revoke|create|into|openrowset|openquery|opendatasource|xp_\w+|sp_\w+|bulk|shutdown|dbcc|waitfor|kill|backup|restore)\b")
 _COMMENT = re.compile(r"--|/\*|\*/")
 
 
+def strip_comments(sql: str) -> str:
+    """Remove SQL comments outside string literals. They are stripped rather than rejected: a model
+    routinely annotates its SQL, and a comment is also the classic place to hide a second statement."""
+    out, i, n = [], 0, len(sql or "")
+    in_str = False
+    while i < n:
+        ch = sql[i]
+        if in_str:
+            out.append(ch)
+            if ch == "'":
+                if i + 1 < n and sql[i + 1] == "'":
+                    out.append(sql[i + 1]); i += 2; continue
+                in_str = False
+            i += 1
+            continue
+        if ch == "'":
+            in_str = True; out.append(ch); i += 1; continue
+        if sql.startswith("--", i):
+            j = sql.find("\n", i)
+            i = n if j == -1 else j
+            continue
+        if sql.startswith("/*", i):
+            j = sql.find("*/", i + 2)
+            i = n if j == -1 else j + 2
+            out.append(" ")
+            continue
+        out.append(ch); i += 1
+    return "".join(out)
+
+
+def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: Optional[str] = "tsql") -> tuple[bool, str]:
+    """Every table the statement reads must be one the catalog profiled. Without this the endpoint is a
+    read-anything console over whatever the database login can reach."""
+    known: set[str] = set()
+    schemas: set[str] = set()
+    for p in profiles:
+        phys = physical_name(p.table_pattern, {**p.context, **(context or {})}).upper()
+        known.update({p.entity.upper(), phys, p.table_name.upper()})
+        if p.schema_name:
+            schemas.add(p.schema_name.upper())
+    for name in referenced_tables(sql, dialect):
+        raw = strip_quotes(name).upper()
+        bare = raw.split(".")[-1]
+        candidates = {raw, bare, logical_table(raw).entity.upper()}
+        for schema in schemas | {"DBO", "PUBLIC", "MAIN"}:          # model spelling: <schema>_<table>
+            if bare.startswith(schema + "_"):
+                candidates.add(bare[len(schema) + 1:])
+        if not (candidates & known):
+            return False, f"table not in the catalog: {name}"
+    return True, "ok"
+
+
 def validate_sql(sql: str) -> tuple[bool, str]:
-    s = (sql or "").strip().rstrip(";").strip()
+    s = strip_comments(sql or "").strip().rstrip(";").strip()
     if not s:
         return False, "empty"
     if not re.match(r"(?is)^\s*(with|select)\b", s):
         return False, "only SELECT/WITH allowed"
     if ";" in s:
         return False, "multiple statements"
-    if _COMMENT.search(s):
-        return False, "comments not allowed"
     if _DENY.search(s):
         return False, f"denied keyword: {_DENY.search(s).group(0)}"
     return True, "ok"

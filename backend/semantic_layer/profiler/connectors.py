@@ -10,11 +10,16 @@ ModelFileConnector — offline: a model export (models/*/metadata.yml + relation
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
+import logging
 from typing import Any, Iterable, Optional, Protocol
 
 import yaml
+
+
+log = logging.getLogger(__name__)
 
 
 class Connector(Protocol):
@@ -64,21 +69,55 @@ class _DbApiBase:
 
     def _rows(self, sql: str, params: tuple = ()) -> tuple[list[str], list[tuple]]:
         cur = self.conn().cursor()
-        cur.execute(sql, params)
-        cols = [d[0] for d in cur.description] if cur.description else []
-        rows = cur.fetchall()
-        cur.close()
-        return cols, rows
+        try:
+            cur.execute(sql, params)
+            cols = [d[0] for d in cur.description] if cur.description else []
+            rows = cur.fetchall()
+            return cols, rows
+        except Exception:
+            self._drop_if_broken()
+            raise
+        finally:
+            try:
+                cur.close()
+            except Exception:  # noqa: BLE001
+                pass
 
     def execute(self, sql: str, limit: int) -> tuple[list[dict[str, str]], list[dict[str, Any]], bool]:
         cur = self.conn().cursor()
-        cur.execute(sql)
-        cols = [{"name": d[0], "type": str(d[1].__name__ if hasattr(d[1], "__name__") else d[1])} for d in (cur.description or [])]
-        raw = cur.fetchmany(limit + 1)
-        cur.close()
+        try:
+            cur.execute(sql)
+            cols = [{"name": d[0], "type": str(d[1].__name__ if hasattr(d[1], "__name__") else d[1])} for d in (cur.description or [])]
+            raw = cur.fetchmany(limit + 1)
+        except Exception:
+            self._drop_if_broken()
+            raise
+        finally:
+            try:
+                cur.close()
+            except Exception:  # noqa: BLE001
+                pass
         truncated = len(raw) > limit
         rows = [{c["name"]: _norm(v) for c, v in zip(cols, r)} for r in raw[:limit]]
         return cols, rows, truncated
+
+    def _drop_if_broken(self) -> None:
+        """Forget a connection the driver can no longer use, so the next call reconnects instead of
+        failing forever after a network blip or a database restart."""
+        conn = self._conn
+        if conn is None:
+            return
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT 1")
+            cur.close()
+        except Exception:  # noqa: BLE001
+            log.warning("database connection is broken — dropping it so the next call reconnects")
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+            self._conn = None
 
     def sample_rows(self, schema: str, table: str, limit: int = 20) -> list[dict[str, Any]]:
         """A handful of real rows — the cheapest way to see what a column actually holds.
@@ -115,7 +154,8 @@ class MSSQLConnector(_DbApiBase):
                 c.get("driver", "FreeTDS"), c["host"], c.get("port", 1433), c["database"], c["user"], c["password"], c.get("tds_version", "7.4"))
             for k, v in (c.get("kwargs") or {}).items():
                 cs += f";{k}={v}"
-            self._conn = pyodbc.connect(cs, timeout=30, readonly=True)
+            self._conn = pyodbc.connect(cs, timeout=30, readonly=True, autocommit=True)
+            self._conn.timeout = self.query_timeout        # per-query timeout, not just login
             try:
                 self._conn.setdecoding(pyodbc.SQL_CHAR, encoding="utf-8")
                 self._conn.setdecoding(pyodbc.SQL_WCHAR, encoding="utf-8")
@@ -204,6 +244,8 @@ class PostgresConnector(_DbApiBase):
                 pw = Path(c["password_file"]).read_text(encoding="utf-8").strip()
             self._conn = psycopg2.connect(host=c["host"], port=int(c.get("port") or 5432), dbname=c.get("database") or c.get("dbname"), user=c["user"], password=pw, sslmode=c.get("sslmode") or "prefer", connect_timeout=10)
             self._conn.set_session(readonly=True, autocommit=True)
+            with self._conn.cursor() as cur:
+                cur.execute(f"SET statement_timeout = {int(self.query_timeout) * 1000}")
         return self._conn
 
     def _rows(self, sql: str, params: tuple = ()) -> tuple[list[str], list[tuple]]:

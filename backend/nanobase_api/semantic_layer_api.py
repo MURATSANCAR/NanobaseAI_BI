@@ -7,15 +7,27 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
+from collections import OrderedDict
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 
 from nanobase_api.auth.principal import ROLE_ADMIN, ROLE_DATA_ENGINEER, RequestPrincipal, get_current_principal, has_role
 from nanobase_api.config import get_settings
+from nanobase_api.errors import ApiError
 
 router = APIRouter(prefix="/api/v1/bi/semantic-layer", tags=["semantic-layer"])
 
-_runtimes: dict[str, Any] = {}
+# One catalog engine for this process, and a small bounded set of runtimes. The datasource id arrives
+# from the client, so it is validated against what the catalog actually holds before anything is
+# created — an unbounded cache keyed by a request parameter would exhaust the API's database pool.
+_STORE: Any = None
+_runtimes: "OrderedDict[str, Any]" = OrderedDict()
+_MAX_RUNTIMES = 8
+
+
+class SemanticSettingsDefault:
+    datasource_id = os.environ.get("SEMANTIC_DATASOURCE_ID", "default")
 
 
 def _settings_for(datasource_id: Optional[str], tenant_id: str):
@@ -29,21 +41,54 @@ def _settings_for(datasource_id: Optional[str], tenant_id: str):
     return s
 
 
+def _store():
+    global _STORE
+    if _STORE is None:
+        from semantic_layer.store.catalog_store import open_store
+
+        _STORE = open_store(os.environ.get("SEMANTIC_STORE_DSN") or get_settings().meta_dsn)
+    return _STORE
+
+
+def _known_datasources() -> set[str]:
+    import sqlalchemy as sa
+
+    from semantic_layer.store import schema as S
+
+    with _store().engine.connect() as conn:
+        return {r[0] for r in conn.execute(sa.select(S.sl_schema_profile.c.datasource_id).distinct())}
+
+
 def _runtime(datasource_id: Optional[str], tenant_id: str):
-    """One offline Runtime (no LLM, no DB) per datasource for inventory/annotation/certify."""
+    """One offline Runtime (no LLM, no ERP connection) per datasource, for inventory/annotation/certify."""
     from semantic_bridge.app import Runtime
 
     s = _settings_for(datasource_id, tenant_id)
+    if datasource_id and datasource_id != s.datasource_id:
+        s.datasource_id = datasource_id
+    if datasource_id and datasource_id not in _known_datasources() | {SemanticSettingsDefault.datasource_id}:
+        raise ApiError("NOT_FOUND", f"Bilinmeyen veri kaynağı: {datasource_id}", status_code=404)
     key = f"{s.tenant_id}:{s.datasource_id}"
     rt = _runtimes.get(key)
     if rt is None:
-        rt = Runtime(s, connector=None, llm=None)
+        rt = Runtime(s, store=_store(), connector=None, llm=None)
         _runtimes[key] = rt
+        while len(_runtimes) > _MAX_RUNTIMES:
+            _runtimes.popitem(last=False)
+    else:
+        _runtimes.move_to_end(key)
     return rt
 
 
 def _ds(request: Request, body: Optional[dict[str, Any]] = None) -> Optional[str]:
     return (body or {}).get("datasource_id") or request.query_params.get("datasource_id") or None
+
+
+def _may_govern(principal: RequestPrincipal) -> bool:
+    """Catalog-changing actions need a governing role. In dev auth mode the principal carries every role,
+    so this is only meaningful with real tokens — the deployment must not run AUTH_MODE=dev in production
+    (the deploy script warns), and the check stays here so it bites the moment tokens are on."""
+    return has_role(principal, ROLE_ADMIN) or has_role(principal, ROLE_DATA_ENGINEER)
 
 
 def _err(e: Exception, status: int = 500) -> JSONResponse:
@@ -158,8 +203,11 @@ async def sl_reject_concept(concept_id: str, request: Request, body: dict[str, A
 
 @router.post("/certify-run")
 async def sl_certify_run(request: Request, body: dict[str, Any] | None = None, principal: RequestPrincipal = Depends(get_current_principal)) -> JSONResponse:
+    if not _may_govern(principal):
+        return JSONResponse({"ok": False, "code": "FORBIDDEN", "error": "Sertifikasyon için admin / data engineer rolü gerekir."}, status_code=403)
     try:
         rt = _runtime(_ds(request, body), principal.tenant_id)
+        rt.rebuild()          # certify against what the catalog holds now, not a snapshot from first use
         return JSONResponse({"ok": True, "report": rt.certify(note=f"portal:{principal.user_id}")})
     except Exception as e:  # noqa: BLE001
         return _err(e)

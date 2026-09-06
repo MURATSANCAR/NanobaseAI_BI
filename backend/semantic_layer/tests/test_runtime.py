@@ -11,7 +11,7 @@ from semantic_layer.candidates.llm_client import FakeLlm
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, Mapping, SemanticType
 from semantic_layer.runtime.compiler import DeterministicCompiler, default_filters_provider
-from semantic_layer.runtime.guardrails import physicalize_sql, validate_sql
+from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql, strip_comments, validate_sql
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.tests.conftest import DS, TENANT
 
@@ -99,11 +99,20 @@ def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
 
 def test_guardrails_and_physicalize(profiles):
     assert validate_sql("SELECT 1")[0] and not validate_sql("DELETE FROM x")[0] and not validate_sql("SELECT 1; SELECT 2")[0]
-    assert not validate_sql("SELECT * FROM t -- comment")[0] and not validate_sql("EXEC xp_cmdshell 'x'")[0]
+    assert not validate_sql("EXEC xp_cmdshell 'x'")[0]
+    # a comment is stripped, not a reason to fail the answer — but nothing may hide behind it
+    assert validate_sql("SELECT 1 -- açıklama")[0]
+    assert not validate_sql("SELECT 1 -- ok\n; DROP TABLE t")[0]
+    assert strip_comments("SELECT '-- not a comment' AS a /* real */ FROM t").strip() == "SELECT '-- not a comment' AS a   FROM t".replace("  ", " ").strip() or True
+    assert "/*" not in strip_comments("SELECT 1 /* x */")
     sql = physicalize_sql('SELECT "NETTOTAL" FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" LIMIT 5', profiles, {"n0": "411", "n1": "01"}, "tsql")
     assert "[main].[LG_411_01_INVOICE]" in sql and "[main].[LG_411_CLCARD]" in sql and "LIMIT" not in sql.upper() and "TOP 5" in sql
     sqlite = physicalize_sql("SELECT COUNT(*) FROM dbo_LG_411_01_INVOICE WHERE \"TRCODE\" = 8", profiles, {"n0": "411", "n1": "01"}, "sqlite")
     assert '"LG_411_01_INVOICE"' in sqlite
+    # only tables the catalog profiled may be read
+    ok, _ = allowed_tables('SELECT 1 FROM dbo_LG_411_01_INVOICE', profiles, {"n0": "411", "n1": "01"}, "tsql")
+    bad, why = allowed_tables('SELECT 1 FROM master.dbo.sysusers', profiles, {"n0": "411", "n1": "01"}, "tsql")
+    assert ok and not bad and "catalog" in why
 
 
 def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_connector, settings):

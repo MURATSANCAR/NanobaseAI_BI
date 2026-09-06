@@ -602,6 +602,19 @@ class CatalogStore:
             description=d.get("description"),
         )
 
+    def prune_profiles(self, datasource_id: str, keep_patterns: list[str]) -> int:
+        """Drop profile rows for tables the current scope no longer covers, so the runtime never compiles
+        against a table that is out of scope or gone."""
+        if not keep_patterns:
+            return 0
+        with self.engine.begin() as conn:
+            res = conn.execute(
+                S.sl_schema_profile.delete()
+                .where(S.sl_schema_profile.c.datasource_id == datasource_id)
+                .where(S.sl_schema_profile.c.table_pattern.notin_(keep_patterns))
+            )
+        return int(res.rowcount or 0)
+
     def list_profiles(self, datasource_id: str) -> list[SchemaProfile]:
         rows = self._rows(sa.select(S.sl_schema_profile).where(S.sl_schema_profile.c.datasource_id == datasource_id).order_by(S.sl_schema_profile.c.table_name))
         out = []

@@ -4,6 +4,7 @@ certify → version. Used by the CLI, the nightly worker and the portal "refresh
 from __future__ import annotations
 
 import logging
+import os
 import time
 from pathlib import Path
 from typing import Any, Optional
@@ -32,11 +33,16 @@ def build_connector(settings: SemanticSettings, *, project_dir: Optional[Path] =
     raise RuntimeError("no connection file and no knowledge pack with models/ — nothing to profile")
 
 
-def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None, probe_links: bool = True) -> list[SchemaProfile]:
+def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None, probe_links: Optional[bool] = None) -> list[SchemaProfile]:
     """Discover tables/columns/enums/keys. Schema and dialect default to the connector's own."""
     schema = schema or settings.schema_name or getattr(connector, "default_schema", "")
     prof = Profiler(connector, enum_max_distinct=settings.enum_max_distinct)
-    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None)
+    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None, deep_limit=int(os.environ.get("SEMANTIC_DEEP_TABLES", "60")))
+    # Value-overlap link inference asks the customer's database a question per candidate column. On a
+    # real warehouse that is a deliberate, opt-in cost (SEMANTIC_PROBE_LINKS=1); on a local/file source
+    # it is free, so it stays on there.
+    if probe_links is None:
+        probe_links = os.environ.get("SEMANTIC_PROBE_LINKS", "").lower() in ("1", "true", "yes") or getattr(connector, "dialect", "") == "sqlite"
     if probe_links and hasattr(connector, "execute"):
         try:
             added = infer_links(profiles, connector)
@@ -48,6 +54,9 @@ def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Conn
         settings.dialect = getattr(connector, "dialect", "") or "generic"
     for p in profiles:
         store.upsert_profile(p)
+    removed = store.prune_profiles(settings.datasource_id, [p.table_pattern for p in profiles])
+    if removed:
+        log.info("pruned %d profile rows no longer in scope", removed)
     return profiles
 
 
@@ -99,8 +108,13 @@ def run_pipeline(
     report["docs"] = gen.ingest_project_docs(project_dir)
     report["profile_evidence"] = gen.attach_profile_evidence()
     if llm is not None:
-        unresolved = store.list_unresolved_terms(settings.tenant_id, settings.datasource_id)
-        report["llm"] = gen.llm_candidates(llm, list(unresolved)[:20])
+        # A model timeout must not cost the whole nightly run: candidates are a bonus, not a precondition.
+        try:
+            unresolved = store.list_unresolved_terms(settings.tenant_id, settings.datasource_id)
+            report["llm"] = gen.llm_candidates(llm, list(unresolved)[:20])
+        except Exception as e:  # noqa: BLE001
+            log.warning("llm candidate stage skipped: %s", e)
+            report["llm"] = {"error": str(e)[:200]}
     if use_intugle and report.get("intugle", {}).get("ran"):
         from semantic_layer.profiler import intugle_adapter
 

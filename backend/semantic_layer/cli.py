@@ -8,6 +8,7 @@
   explain "terim"                  why this mapping (certified senses + candidates)
   status                           counts, latest catalog version
   export-knowledge --out DIR       write a self-contained knowledge pack (validated pairs + docs) from the catalog
+  restore-version --version N      set concept statuses back to what catalog version N certified
   concepts [--status S] [--type T] list concepts
 """
 
@@ -44,6 +45,37 @@ def _dump(obj) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=1, default=str))
 
 
+def _restore_version(store, s, version: int) -> dict:
+    """Put the catalog back to what a previous version certified: everything in that snapshot becomes
+    CERTIFIED again, everything else that is currently certified steps back to CANDIDATE. Evidence is
+    untouched, so the next certification run can re-derive the same result."""
+    import sqlalchemy as sa
+
+    from semantic_layer.models import ConceptStatus
+    from semantic_layer.store import schema as S
+
+    with store.engine.connect() as conn:
+        row = conn.execute(
+            sa.select(S.sl_catalog_version.c.snapshot_json)
+            .where(S.sl_catalog_version.c.tenant_id == s.tenant_id, S.sl_catalog_version.c.datasource_id == s.datasource_id, S.sl_catalog_version.c.version == version)
+        ).first()
+    if row is None:
+        raise SystemExit(f"catalog version {version} not found")
+    snapshot = row[0] if isinstance(row[0], dict) else json.loads(row[0])
+    wanted = set(snapshot.get("certified") or [])
+    restored = demoted = 0
+    for c in store.find_concepts(s.tenant_id, s.datasource_id, limit=100000):
+        key = f"{c.semantic_type}:{c.normalized_term}#{c.sense_id}"
+        if key in wanted and c.status != ConceptStatus.CERTIFIED:
+            store.update_concept(c.id, status=ConceptStatus.CERTIFIED, bump_version=True, explain={"restored_from_version": version})
+            restored += 1
+        elif key not in wanted and c.status == ConceptStatus.CERTIFIED:
+            store.update_concept(c.id, status=ConceptStatus.CANDIDATE, bump_version=True, explain={"restored_from_version": version})
+            demoted += 1
+    new_version = store.create_version(s.tenant_id, s.datasource_id, {"certified_count": len(wanted), "certified": sorted(wanted), "restored_from": version}, note=f"restore of v{version}")
+    return {"restored": restored, "demoted": demoted, "catalog_version": new_version}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="semantic_layer")
     ap.add_argument("--store", help="SQLAlchemy DSN (default env SEMANTIC_STORE_DSN / NANOBASE_META_DSN / sqlite)")
@@ -63,6 +95,7 @@ def main(argv=None) -> int:
     sub.add_parser("certify")
     sub.add_parser("status")
     p = sub.add_parser("export-knowledge"); p.add_argument("--out", required=True)
+    p = sub.add_parser("restore-version"); p.add_argument("--version", type=int, required=True)
     p = sub.add_parser("resolve"); p.add_argument("question")
     p = sub.add_parser("compile"); p.add_argument("question")
     p = sub.add_parser("explain"); p.add_argument("term")
@@ -76,6 +109,9 @@ def main(argv=None) -> int:
         store.create_all()
         print("ok:", s.store_dsn.split("@")[-1])
         return 0
+    if args.cmd == "restore-version":
+        _dump(_restore_version(store, s, args.version))
+        return 0
     if args.cmd == "export-knowledge":
         from semantic_layer.history.sources import export_pack
 
@@ -87,8 +123,12 @@ def main(argv=None) -> int:
         llm = None
         if args.llm:
             from semantic_layer.candidates.llm_client import LlmClient
+            from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 
-            llm = LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout)
+            # Background work waits behind people: same queue, same arrival order.
+            llm = QueuedLlm(LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout),
+                            LlmQueue.from_env(store.engine), purpose="nightly",
+                            tenant_id=s.tenant_id, datasource_id=s.datasource_id)
         import os as _os
 
         use_intugle = args.intugle or _os.environ.get("SEMANTIC_INTUGLE", "").lower() in ("1", "true", "yes")

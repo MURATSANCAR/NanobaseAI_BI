@@ -142,7 +142,7 @@ class EvidenceEngine:
         return min(fits), min(phys), reasons
 
     # ------------------------------------------------------------------ evaluation
-    def evaluate(self, concept: Concept, profiles: dict[str, SchemaProfile]) -> Evaluation:
+    def evaluate(self, concept: Concept, profiles: dict[str, SchemaProfile], *, scoped: bool = False) -> Evaluation:
         mappings = self.store.list_mappings(concept.id)
         evidence = self.store.list_evidence(concept.id)
         counters = self.store.list_counter_evidence(concept.id)
@@ -177,6 +177,10 @@ class EvidenceEngine:
             gate_reasons.append("blocking counter-evidence: " + ", ".join(c.conflict_type for c in blocking))
         if concept.explain.get("schema_drift"):
             gate_reasons.append("unresolved schema drift")
+        if scoped and any(m.entity not in profiles for m in mappings):
+            # Not covered by this run's scope: keep whatever the catalog already decided.
+            gate_reasons = [r for r in gate_reasons if "physical mapping invalid" not in r]
+            gate_reasons.append("out of profiling scope — status preserved")
         gate_passed = not gate_reasons
 
         breakdown = {
@@ -258,12 +262,17 @@ class EvidenceEngine:
         return report
 
     # ------------------------------------------------------------------ drift
-    def detect_drift(self, tenant_id: str, datasource_id: str, profiles: dict[str, SchemaProfile]) -> list[dict[str, Any]]:
+    def detect_drift(self, tenant_id: str, datasource_id: str, profiles: dict[str, SchemaProfile], *, scoped: bool = False) -> list[dict[str, Any]]:
+        """Drift is a table or value that *disappeared*. A table that was never in this run's scope is
+        unknown, not gone: `scoped=True` says the profile covers only part of the schema, and concepts
+        outside it keep their status instead of being decertified by a narrower scan."""
         out = []
         for c in self.store.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000):
             for m in self.store.list_mappings(c.id):
                 prof = profiles.get(m.entity)
                 if prof is None:
+                    if scoped:
+                        continue      # out of scope this run — say nothing rather than decertify
                     self.store.add_counter_evidence(CounterEvidence(c.id, "drift:table", "DRIFT", payload={"missing_table": m.table_pattern, "support": 3}, severity="BLOCKING"))
                     self.store.update_concept(c.id, status=ConceptStatus.DEPRECATED, explain={"schema_drift": f"table {m.table_pattern} missing"})
                     out.append({"concept": c.term, "drift": "table_missing", "table": m.table_pattern})
@@ -345,9 +354,14 @@ class EvidenceEngine:
         return out
 
     # ------------------------------------------------------------------ full run
-    def run(self, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, note: str = "") -> dict[str, Any]:
+    def run(self, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, note: str = "", scoped: Optional[bool] = None) -> dict[str, Any]:
         pmap = {p.entity: p for p in profiles}
+        if scoped is None:
+            import os
+
+            scoped = bool(os.environ.get("SEMANTIC_TABLE_LIKE") or os.environ.get("SEMANTIC_DEEP_TABLES"))
         sense_report = self.resolve_senses(tenant_id, datasource_id, pmap)
+        drift = self.detect_drift(tenant_id, datasource_id, pmap, scoped=scoped)
         changed: dict[str, list[str]] = {s: [] for s in ConceptStatus.ALL}
         evaluations: list[Evaluation] = []
         for c in self.store.find_concepts(tenant_id, datasource_id, limit=100000):
@@ -355,15 +369,16 @@ class EvidenceEngine:
                 continue
             if c.status == ConceptStatus.SENSE_CONFLICT and not self.store.list_counter_evidence(c.id):
                 pass
-            ev = self.evaluate(c, pmap)
+            ev = self.evaluate(c, pmap, scoped=scoped)
             evaluations.append(ev)
             new_status = ev.status
+            if scoped and "out of profiling scope" in " ".join(ev.gate_reasons):
+                continue      # leave it exactly as it was
             if c.status == ConceptStatus.SENSE_CONFLICT and any(x.conflict_type == "SENSE_CONFLICT" for x in self.store.list_counter_evidence(c.id)):
                 new_status = ConceptStatus.SENSE_CONFLICT
             if new_status != c.status:
                 changed[new_status].append(c.term)
             self.store.update_concept(c.id, status=new_status, confidence=ev.score, explain=ev.explain)
-        drift = self.detect_drift(tenant_id, datasource_id, pmap)
         synonyms = self.link_synonyms(tenant_id, datasource_id)
         certified = self.store.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
         snapshot = {

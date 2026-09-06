@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -38,7 +38,7 @@ from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
-from semantic_layer.runtime.guardrails import physicalize_sql, referenced_tables, strip_trailing_semicolon, validate_sql
+from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
@@ -62,6 +62,8 @@ class Runtime:
         self.profiles = self.store.list_profiles(settings.datasource_id)
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
+        self._catalog_version = None
+        self._checked_at = 0.0
         self._cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
         self._cache_ttl = int(os.environ.get("SEMANTIC_CACHE_TTL_SEC", "300"))
         self.rebuild()
@@ -75,9 +77,30 @@ class Runtime:
         parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md")) if f.parent.name != "sql"]
         return "\n\n".join(parts)
 
+    def ensure_fresh(self, *, every: float = 30.0) -> None:
+        """Pick up a catalog published by another process (the nightly worker, the portal, a sibling
+        uvicorn worker). A reload request only ever reaches one worker, so each worker checks for itself:
+        one cheap version read at most every `every` seconds, and a rebuild only when it actually moved."""
+        now = time.time()
+        if now - self._checked_at < every:
+            return
+        self._checked_at = now
+        try:
+            latest = self.store.latest_version(self.settings.tenant_id, self.settings.datasource_id)
+        except Exception as e:  # noqa: BLE001
+            log.debug("catalog version check failed: %s", e)
+            return
+        version = (latest or {}).get("version")
+        if version != self._catalog_version:
+            log.info("catalog changed (v%s → v%s) — reloading profiles", self._catalog_version, version)
+            self.rebuild()
+
     def rebuild(self) -> None:
         s = self.settings
         self.profiles = self.store.list_profiles(s.datasource_id)
+        latest = self.store.latest_version(s.tenant_id, s.datasource_id)
+        self._catalog_version = (latest or {}).get("version")
+        self._checked_at = time.time()
         self.conventions = Conventions.from_profiles(self.profiles)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
@@ -145,7 +168,12 @@ class Runtime:
             self.connector.dry_run(sql)
 
     def run_sql(self, sql: str, limit: int) -> dict[str, Any]:
+        sql = strip_comments(sql or "")
         ok, why = validate_sql(sql)
+        if not ok:
+            raise ValueError(f"SQL rejected: {why}")
+        # The endpoint reads the catalog's tables — not everything the database login can reach.
+        ok, why = allowed_tables(sql, self.profiles, self.settings.context, self.settings.dialect or None)
         if not ok:
             raise ValueError(f"SQL rejected: {why}")
         limit = max(1, min(int(limit or self.settings.max_rows), self.settings.max_rows))
@@ -163,9 +191,10 @@ class Runtime:
         with self._engine_lock:
             cols, rows, truncated = self.connector.execute(phys, limit)
         out = {"id": uuid.uuid4().hex, "columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "cached": False, "physicalSql": phys}
-        if self._cache_ttl > 0:
+        if self._cache_ttl > 0 and len(out.get("records") or []) <= 200:
             self._cache[key] = (time.time(), out)
-            while len(self._cache) > 256:
+            budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
+            while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
                 self._cache.popitem(last=False)
         return out
 
@@ -185,17 +214,18 @@ class Runtime:
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True) -> dict[str, Any]:
         t0 = time.perf_counter()
         timings: dict[str, int] = {}
-        thread = self.threads.setdefault(thread_id or uuid.uuid4().hex, [])
         thread_id = thread_id or uuid.uuid4().hex
+        thread = self.threads.setdefault(thread_id, [])
+        # a long-lived process must not accumulate every conversation it ever served
+        if len(self.threads) > 200:
+            for stale in list(self.threads)[:-100]:
+                self.threads.pop(stale, None)
+        self.ensure_fresh()
         t = time.perf_counter()
         sq = self.resolver.resolve(question)
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
         t = time.perf_counter()
-        if self.existing is not None and exclude_nl and self.settings.recall_enabled:
-            self.existing.recall = lambda q, _ex=exclude_nl: self.recall(q, _ex)
-        compiled = self.router.compile(sq, self.store, thread)
-        if self.existing is not None:
-            self.existing.recall = self.recall if self.settings.recall_enabled else None
+        compiled = self.router.compile(sq, self.store, thread, recall=(lambda q: self.recall(q, exclude_nl)) if (exclude_nl and self.settings.recall_enabled) else None)
         timings["compile_ms"] = int((time.perf_counter() - t) * 1000)
         if compiled.llm_ms:
             timings["llm_ms"] = compiled.llm_ms
@@ -371,6 +401,23 @@ def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optiona
     return Runtime(settings, store=store, connector=connector, llm=llm)
 
 
+def _require_admin(request: Any) -> None:
+    """Reading and asking sit behind the site's own authentication; changing the catalog needs a token.
+    Without this, anything that can reach the cockpit's API path could recertify the semantics."""
+    token = os.environ.get("SEMANTIC_ADMIN_TOKEN", "")
+    if not token:
+        return                      # not configured: the loopback binding is the only control
+    supplied = request.headers.get("x-semantic-admin", "") or request.query_params.get("admin_token", "")
+    if not secrets_compare(supplied, token):
+        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
+
+
+def secrets_compare(a: str, b: str) -> bool:
+    import hmac
+
+    return hmac.compare_digest(str(a or ""), str(b or ""))
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
 
@@ -447,7 +494,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/generate_summary")
     def generate_summary(body: dict[str, Any]) -> dict[str, Any]:
         r = rt()
-        result = r.run_sql(str(body.get("sql") or ""), int(body.get("sampleSize") or 50))
+        try:
+            result = r.run_sql(str(body.get("sql") or ""), int(body.get("sampleSize") or 50))
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(status_code=400, detail={"code": type(e).__name__, "message": str(e)[:400]}) from e
         return {"summary": r.summarize(str(body.get("question") or ""), str(body.get("sql") or ""), result)}
 
     @app.post("/api/v1/feedback")
@@ -476,7 +526,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True, "engine": "semantic-layer", "version": SEMANTIC_LAYER_VERSION, "status": r.store.status_counts(s.tenant_id, s.datasource_id), "certifiedByType": r.store.type_counts(s.tenant_id, s.datasource_id), "catalogVersion": r.store.latest_version(s.tenant_id, s.datasource_id), "profiles": len(r.profiles), "queries": r.store.query_stats(s.tenant_id, s.datasource_id), "unresolved": dict(list(r.store.list_unresolved_terms(s.tenant_id, s.datasource_id).items())[:30]), "recall": s.recall_enabled, "strictMiss": s.strict_miss}
 
     @app.post("/api/v1/semantic/certify")
-    def certify(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    def certify(request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        _require_admin(request)
         return rt().certify(note=str((body or {}).get("note") or "api certify"))
 
     @app.get("/api/v1/llm/queue")
@@ -502,7 +553,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         }
 
     @app.post("/api/v1/semantic/reload")
-    def reload() -> dict[str, Any]:
+    def reload(request: Request) -> dict[str, Any]:
+        _require_admin(request)
         r = rt()
         r.pairs = load_project_pairs(r.settings.project_dir) if r.settings.project_dir else []
         r.rules_text = r._load_rules()
@@ -529,7 +581,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return rt().inventory()
 
     @app.post("/api/v1/schema/annotations")
-    def add_annotation(body: AnnotationIn) -> dict[str, Any]:
+    def add_annotation(request: Request, body: AnnotationIn) -> dict[str, Any]:
+        _require_admin(request)
         if not body.text.strip():
             raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT"})
         return rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
@@ -540,7 +593,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"items": [{"id": a.id, "tablePattern": a.table_pattern, "column": a.column, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in r.store.list_annotations(r.settings.datasource_id, tablePattern)]}
 
     @app.delete("/api/v1/schema/annotations/{annotation_id}")
-    def retire_annotation(annotation_id: str) -> dict[str, Any]:
+    def retire_annotation(request: Request, annotation_id: str) -> dict[str, Any]:
+        _require_admin(request)
         return {"ok": rt().store.retire_annotation(annotation_id)}
 
     return app

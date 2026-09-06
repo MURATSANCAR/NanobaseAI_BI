@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Any, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
@@ -177,6 +178,18 @@ def _mark_sentinels(col: ColumnProfile, sample: list[str] | None = None) -> None
             break
 
 
+def _key_shaped(col: ColumnProfile, row_count: Optional[int]) -> bool:
+    """Could this column hold references? A key takes many different values relative to the table's size;
+    a status or type code takes a handful whatever the size. Decided from the measured spread, so it holds
+    on a 30-row fixture and on a 2-million-row fact table alike."""
+    distinct = col.distinct_count if col.distinct_count is not None else (len(col.top_values) or None)
+    if distinct is not None and distinct <= 2:
+        return False
+    if distinct is not None and row_count:
+        return (distinct / max(1, row_count)) >= 0.05
+    return True                      # unknown spread: let the value-overlap test decide
+
+
 def _is_numeric_type(data_type: str) -> bool:
     return any(t in (data_type or "").lower() for t in ("int", "float", "decimal", "numeric", "money", "real", "double"))
 
@@ -201,32 +214,72 @@ def rank_tables(rows: dict[str, Optional[int]], references: dict[str, int]) -> l
     return scored
 
 
-def infer_links(profiles: list[SchemaProfile], connector: Connector, *, sample: int = 40, min_overlap: float = 0.9) -> int:
-    """Relationships where the database declares no foreign keys: sample an integer column's values
-    and keep the link when they are contained in another table's single-column key. Pure data
-    evidence — no naming conventions."""
-    keys = [(p, p.primary_key[0]) for p in profiles if len(p.primary_key) == 1]
+def infer_links(
+    profiles: list[SchemaProfile],
+    connector: Connector,
+    *,
+    sample: int = 40,
+    min_overlap: float = 0.95,
+    min_values: int = 5,
+    max_columns_per_table: int = 20,
+    max_targets: int = 30,
+    max_probes: int = 2000,
+    max_target_rows: Optional[int] = 5_000_000,
+    deadline_seconds: float = 300.0,
+) -> int:
+    """Relationships where the database declares no foreign keys: sample a column's values and keep the
+    link when they are contained in another table's single-column key. Pure data evidence — no naming
+    conventions.
+
+    Every dimension of this search is bounded, because it runs against a customer's live database: the
+    candidate columns per table, the target tables (smallest first, huge ones skipped), the total number
+    of probes and the wall-clock budget. Values already collected during profiling are reused instead of
+    re-aggregating the same column. Whatever the budget does not cover is simply not inferred — the
+    catalog stays smaller rather than the database being hammered.
+    """
+    started = time.monotonic()
+    probes = 0
     added = 0
+    keys: list[tuple[SchemaProfile, str]] = [(p, p.primary_key[0]) for p in profiles if len(p.primary_key) == 1]
+    keys = [(p, k) for p, k in keys if max_target_rows is None or (p.row_count or 0) <= max_target_rows]
+    keys.sort(key=lambda pk: pk[0].row_count if pk[0].row_count is not None else 0)
+    keys = keys[:max_targets]
+    if not keys:
+        return 0
     for p in profiles:
         known = {r["column"].upper() for r in p.relationships}
-        for col in p.columns:
-            name = col.name.upper()
-            if col.is_primary_key or name in known or not any(t in col.data_type.lower() for t in ("int", "bigint", "smallint")):
-                continue
-            try:
-                values = [v for v, _ in connector.top_values(p.schema_name, p.table_name, col.name, sample) if str(v).lstrip("-").isdigit()]
-            except Exception as e:  # noqa: BLE001
-                log.debug("link probe failed %s.%s: %s", p.table_name, col.name, e)
-                continue
-            values = [v for v in values if v not in set(col.sentinel_values) | {"0", "-1"}]
-            if len(values) < 5:
-                continue
-            best: tuple[float, SchemaProfile, str] | None = None
-            for target, key in keys:
-                if target.entity == p.entity:
-                    continue
+        candidates = [
+            c for c in p.columns
+            if not c.is_primary_key
+            and c.name.upper() not in known
+            and not c.ref_entity
+            and not c.sensitive
+            and any(t in c.data_type.lower() for t in ("int", "bigint", "smallint"))
+            and _key_shaped(c, p.row_count)   # a type code repeats; a key spreads
+        ][:max_columns_per_table]
+        for col in candidates:
+            if probes >= max_probes or time.monotonic() - started > deadline_seconds:
+                log.warning("link inference stopped at its budget (%d probes, %.0fs) — %d links found", probes, time.monotonic() - started, added)
+                return added
+            values = [v for v, _ in (col.top_values or [])]
+            if not values:
                 try:
-                    hits = connector.execute(
+                    values = [v for v, _ in connector.top_values(p.schema_name, p.table_name, col.name, sample)]
+                    probes += 1
+                except Exception as e:  # noqa: BLE001
+                    log.debug("link probe failed %s.%s: %s", p.table_name, col.name, e)
+                    continue
+            values = [str(v) for v in values if str(v).lstrip("-").isdigit()]
+            values = [v for v in values if v not in set(col.sentinel_values) | {"0", "-1"}][:sample]
+            if len(values) < min_values:
+                continue
+            best: Optional[tuple[float, SchemaProfile, str]] = None
+            for target, key in keys:
+                if target.entity == p.entity or probes >= max_probes:
+                    continue
+                probes += 1
+                try:
+                    rows = connector.execute(
                         f'SELECT COUNT(*) AS n FROM {connector.q(target.schema_name)}.{connector.q(target.table_name)} WHERE {connector.q(key)} IN ({", ".join(values)})'
                         if getattr(connector, "quote_l", '"') == "["
                         else f'SELECT COUNT(*) AS n FROM {connector.q(target.table_name)} WHERE {connector.q(key)} IN ({", ".join(values)})',
@@ -234,15 +287,18 @@ def infer_links(profiles: list[SchemaProfile], connector: Connector, *, sample: 
                     )[1]
                 except Exception:  # noqa: BLE001
                     continue
-                n = int(list(hits[0].values())[0]) if hits else 0
+                n = int(list(rows[0].values())[0]) if rows else 0
                 ratio = n / len(values)
                 if ratio >= min_overlap and (best is None or ratio > best[0]):
                     best = (ratio, target, key)
+                    if ratio >= 0.999:
+                        break            # a perfect containment needs no further comparison
             if best is not None:
                 col.ref_entity, col.ref_column = best[1].entity, best[2]
-                p.relationships.append({"column": col.name, "ref_entity": best[1].entity, "ref_column": best[2]})
+                p.relationships.append({"column": col.name, "ref_entity": best[1].entity, "ref_column": best[2], "source": "value-overlap", "confidence": round(best[0], 3)})
                 added += 1
     return added
+
 
 
 def profile_summary(profiles: list[SchemaProfile]) -> dict[str, Any]:
