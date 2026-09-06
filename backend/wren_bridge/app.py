@@ -450,8 +450,23 @@ def _llm(messages: list[dict[str, str]], *, max_tokens: int = 1024, temperature:
     if LLM_KEY:
         headers["Authorization"] = f"Bearer {LLM_KEY}"
     payload = {"model": LLM_MODEL, "messages": messages, "max_tokens": max_tokens, "temperature": temperature, "stream": False}
-    with httpx.Client(timeout=LLM_TIMEOUT) as c:
-        r = c.post(f"{LLM_BASE}/chat/completions", json=payload, headers=headers)
+    # llama-server ara sıra yanıt vermeden bağlantıyı kesiyor (httpx.RemoteProtocolError, ~1 s içinde).
+    # Taşıma hatalarında kısa beklemeyle 2 tekrar; zaman aşımı (240 s) ve HTTP hataları tekrarlanmaz.
+    last: Exception | None = None
+    for attempt, wait_s in enumerate((0.0, 1.0, 3.0)):
+        if wait_s:
+            time.sleep(wait_s)
+        try:
+            with httpx.Client(timeout=LLM_TIMEOUT) as c:
+                r = c.post(f"{LLM_BASE}/chat/completions", json=payload, headers=headers)
+            break
+        except httpx.TimeoutException:
+            raise
+        except httpx.TransportError as e:
+            last = e
+            log.warning("LLM transport error (deneme %d/3): %s", attempt + 1, e)
+    else:
+        raise RuntimeError(f"LLM ulaşılamadı (3 deneme): {last}") from last
     if r.status_code >= 400:
         raise RuntimeError(f"LLM HTTP {r.status_code}: {r.text[:300]}")
     return str(r.json()["choices"][0]["message"]["content"] or "")
