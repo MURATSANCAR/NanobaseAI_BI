@@ -416,3 +416,22 @@ def test_a_question_that_names_nothing_is_asked_back_not_guessed(catalog, profil
     assert "belirsiz" in prompt and "NO_SQL" in prompt
     # a question that does name something is never called underspecified
     assert r.resolve("Bu ay toptan satış tutarı", today=date(2026, 7, 20)).shape is None
+
+
+def test_time_words_survive_turkish_case_endings(catalog, profiles):
+    """"Geçen aya göre" carries a period; if the dative hides it, the question loses the very thing it
+    is comparing against and reads as if it named nothing at all."""
+    from semantic_layer.runtime.temporal import parse_temporal
+
+    for text, primitive in [("Geçen aya göre daha mı iyiyiz?", "LAST_MONTH"),
+                            ("geçen ayın cirosu", "LAST_MONTH"),
+                            ("bu çeyreği göster", "THIS_QUARTER"),
+                            ("dünkü satış", "YESTERDAY"),
+                            ("bu yıla göre", "THIS_YEAR")]:
+        slots, _ = parse_temporal(text, date(2026, 9, 6))
+        assert slots and slots[0].primitive == primitive, (text, [s.primitive for s in slots])
+    # a word that merely starts the same way is not a period
+    assert parse_temporal("bu ayakkabı modeli", date(2026, 9, 6))[0] == []
+    # and a question with a period is never called underspecified
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    assert r.resolve("Geçen aya göre daha mı iyiyiz?", today=date(2026, 7, 20)).shape is None

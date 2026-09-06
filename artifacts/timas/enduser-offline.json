@@ -1,5 +1,5 @@
 {
- "ran_at": "2026-09-06T23:52:08",
+ "ran_at": "2026-09-07T00:21:10",
  "mode": "offline",
  "catalog_version": 1,
  "verdicts": {
@@ -161,10 +161,8 @@
   ]
  ],
  "unmeasured_windows": [
-  "CLFLINE",
   "INVOICE",
   "ORFICHE",
-  "ORFLINE",
   "STLINE",
   "CLCARD",
   "ITEMS"
@@ -229,7 +227,12 @@
     "iyiyiz"
    ],
    "conflicts": [],
-   "temporal": [],
+   "temporal": [
+    {
+     "primitive": "LAST_MONTH",
+     "ambiguous": false
+    }
+   ],
    "sql": null,
    "why": "no certified metric",
    "outcome": "reddetti",

@@ -79,6 +79,8 @@ def gate(summary: dict, baseline_path: str | None) -> list[str]:
         answered_before = was["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
         answered_now = r["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
         if answered_before and not answered_now:
+            if was["verdict"] == "RİSK":
+                continue      # it used to answer a question it should not have; refusing it is the fix
             out.append(f"{r['id']} artık cevaplanmıyor ({r.get('why') or r['outcome']}): {r['q'][:70]}")
         elif was["verdict"] == "OK" and r["verdict"] == "RİSK":
             out.append(f"{r['id']} cevaplanmaması gereken soruyu cevapladı: {r['q'][:70]}")
@@ -169,7 +171,7 @@ def main() -> int:
     # has no window and needs none, and listing 275 of them would bury the ones that matter
     used = {m.entity for senses in store.certified_index(s.tenant_id, s.datasource_id).values()
             for _, maps in senses for m in maps}
-    unmeasured = [p.entity for p in profiles if p.time_window is None and (p.entity in used or conventions.time_column(p.entity))]
+    unmeasured = [p.entity for p in profiles if p.time_window is None and p.entity in used]
     counts = Counter(r["verdict"] for r in results)
     by_outcome = Counter(r["outcome"] for r in results)
     risky = [r for r in results if r["verdict"] == "RİSK"]

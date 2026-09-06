@@ -18,6 +18,12 @@ MONTHS = {
     "temmuz": 7, "agustos": 8, "eylul": 9, "ekim": 10, "kasim": 11, "aralik": 12,
 }
 _MONTH_RE = "|".join(MONTHS)
+# Turkish attaches the whole case paradigm to a time word — "ay" becomes aya, ayda, aydan, ayın, ayki —
+# so the ending is written once as grammar instead of being spelled out on every phrase. Without it
+# "geçen aya göre" carries no period at all, and the question loses the thing it is comparing.
+_CASE = r"(?:ki|ku|nin|nun|nde|nda|ndan|nden|in|un|da|de|ta|te|dan|den|tan|ten|ya|ye|i|u|a|e)?"
+# ...and softens a final k before a vowel ("çeyrek" → "çeyreği"), which folds to g.
+_QUARTER = r"ceyre[kg]"
 _YEAR = r"(20\d{2})"
 
 PRIMITIVES = (
@@ -105,15 +111,15 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     for m in re.finditer(r"\bson\s+(gunler|gunlerde|donem|donemde|zamanlar|zamanlarda|haftalar)\b", text):
         add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
     simple = {
-        r"\bbugun(ku)?\b": ("TODAY", today, today + timedelta(days=1), "DAY"),
-        r"\bdun(ku)?\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
-        r"\bbu hafta(ki)?\b": ("THIS_WEEK", today - timedelta(days=today.weekday()), today - timedelta(days=today.weekday()) + timedelta(days=7), "WEEK"),
-        r"\bgecen hafta(ki)?\b": ("LAST_WEEK", today - timedelta(days=today.weekday() + 7), today - timedelta(days=today.weekday()), "WEEK"),
-        r"\bbu ay(ki|in)?\b": ("THIS_MONTH", _month_start(today.year, today.month), _next_month(today.year, today.month), "MONTH"),
-        r"\bgecen ay(ki|in)?\b": ("LAST_MONTH", _month_start(*((today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1))), _month_start(today.year, today.month), "MONTH"),
-        r"\bbu ceyrek(te|teki)?\b": ("THIS_QUARTER", _quarter_start(today), _next_month(_quarter_start(today).year, _quarter_start(today).month + 2), "QUARTER"),
-        r"\bbu yil(ki|in|da)?\b": ("THIS_YEAR", date(today.year, 1, 1), date(today.year + 1, 1, 1), "YEAR"),
-        r"\bgecen yil(ki|in|da)?\b": ("LAST_YEAR", date(today.year - 1, 1, 1), date(today.year, 1, 1), "YEAR"),
+        rf"\bbugun{_CASE}\b": ("TODAY", today, today + timedelta(days=1), "DAY"),
+        rf"\bdun{_CASE}\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
+        rf"\bbu hafta{_CASE}\b": ("THIS_WEEK", today - timedelta(days=today.weekday()), today - timedelta(days=today.weekday()) + timedelta(days=7), "WEEK"),
+        rf"\bgecen hafta{_CASE}\b": ("LAST_WEEK", today - timedelta(days=today.weekday() + 7), today - timedelta(days=today.weekday()), "WEEK"),
+        rf"\bbu ay{_CASE}\b": ("THIS_MONTH", _month_start(today.year, today.month), _next_month(today.year, today.month), "MONTH"),
+        rf"\bgecen ay{_CASE}\b": ("LAST_MONTH", _month_start(*((today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1))), _month_start(today.year, today.month), "MONTH"),
+        rf"\bbu {_QUARTER}{_CASE}\b": ("THIS_QUARTER", _quarter_start(today), _next_month(_quarter_start(today).year, _quarter_start(today).month + 2), "QUARTER"),
+        rf"\bbu yil{_CASE}\b": ("THIS_YEAR", date(today.year, 1, 1), date(today.year + 1, 1, 1), "YEAR"),
+        rf"\bgecen yil{_CASE}\b": ("LAST_YEAR", date(today.year - 1, 1, 1), date(today.year, 1, 1), "YEAR"),
         r"\b(ay basindan( beri| bu yana| itibaren)?|mtd)\b": ("MTD", _month_start(today.year, today.month), today + timedelta(days=1), "DAY"),
         r"\b(yil basindan( beri| bu yana| itibaren)?|ytd|yilbasindan)\b": ("YTD", date(today.year, 1, 1), today + timedelta(days=1), "DAY"),
         r"\b(ceyrek basindan( beri| bu yana)?|qtd)\b": ("QTD", _quarter_start(today), today + timedelta(days=1), "DAY"),
@@ -122,7 +128,7 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         for m in re.finditer(pat, text):
             add(m, TemporalSlot(m.group(0).strip(), prim, start, end, grain))
     # last quarter
-    for m in re.finditer(r"\bgecen ceyrek(te|teki)?\b", text):
+    for m in re.finditer(rf"\bgecen {_QUARTER}{_CASE}\b", text):
         qs = _quarter_start(today)
         prev_end = qs
         prev_start = _quarter_start(qs - timedelta(days=1))
