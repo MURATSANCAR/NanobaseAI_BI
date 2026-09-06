@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 import { ask, runSql, type SqlResult, WrenError } from '../lib/wren';
+import { Thinking } from './Thinking';
 
 type Msg =
   | { role: 'user'; text: string; at: string }
@@ -24,8 +25,9 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
   const [threadId, setThreadId] = useState<string | undefined>();
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Giriş kutusu panelin üstünde; yeni mesaj gelince listenin başına kaydır ki cevap hemen kutunun altında görünsün.
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
+    listRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   }, [msgs]);
 
   async function send(question: string) {
@@ -33,7 +35,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
     if (!q || busy) return;
     setInput('');
     setBusy(true);
-    setMsgs((m) => [...m, { role: 'user', text: q, at: now() }, { role: 'assistant', text: 'Logo modelleri üstünde SQL üretiliyor…', at: now(), pending: true }]);
+    setMsgs((m) => [...m, { role: 'user', text: q, at: now() }, { role: 'assistant', text: '', at: now(), pending: true }]);
     try {
       const a = await ask(q, threadId);
       if (a.threadId) setThreadId(a.threadId);
@@ -75,38 +77,8 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         </button>
       </div>
 
-      <div className="mx-4 mt-3 rounded-xl bg-page px-3 py-2 text-[11px] text-ink-muted">
-        <span className="font-semibold text-ink">Aktif bağlam:</span> Logo Tiger · fatura, malzeme hareketi, cari, sipariş modelleri (2026). Cevaplar deterministik SQL ile üretilir; SQL her yanıtta görünür.
-      </div>
-
-      <div ref={listRef} className="scroll-thin flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {msgs.length === 0 && (
-          <div className="pt-2 text-[12px] text-ink-muted">
-            Logo verisine Türkçe soru sorun. Örnek:
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => send(s)} className="chip hover:border-brand hover:text-brand">
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-        {msgs.map((m, i) => (m.role === 'user' ? <UserBubble key={i} m={m} /> : <AssistantCard key={i} m={m} wide={wide} />))}
-      </div>
-
-      {msgs.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto px-4 pb-2 scroll-thin">
-          {SUGGESTIONS.map((s) => (
-            <button key={s} onClick={() => send(s)} disabled={busy} className="chip shrink-0 hover:border-brand hover:text-brand disabled:opacity-50">
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
-
       <form
-        className="border-t border-line p-3"
+        className="border-b border-line px-4 pb-3 pt-3"
         onSubmit={(e) => {
           e.preventDefault();
           void send(input);
@@ -130,6 +102,29 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
           <span>Enter ile gönder</span>
         </div>
       </form>
+      <div className="mx-4 mt-3 rounded-xl bg-page px-3 py-2 text-[11px] text-ink-muted">
+        <span className="font-semibold text-ink">Aktif bağlam:</span> Logo Tiger · fatura, malzeme hareketi, cari, sipariş modelleri (2026). Cevaplar deterministik SQL ile üretilir; SQL her yanıtta görünür.
+      </div>
+
+      <div ref={listRef} className="scroll-thin flex-1 space-y-3 overflow-y-auto px-4 py-3">
+        {msgs.length === 0 && (
+          <div className="pt-2 text-[12px] text-ink-muted">
+            Logo verisine Türkçe soru sorun. Örnek:
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => send(s)} className="chip hover:border-brand hover:text-brand">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {[...msgs].reverse().map((m, i) =>
+          m.role === 'user' ? <UserBubble key={i} m={m} /> : m.pending ? <Thinking key={i} /> : <AssistantCard key={i} m={m} wide={wide} />,
+        )}
+      </div>
+
+
     </aside>
   );
 }
