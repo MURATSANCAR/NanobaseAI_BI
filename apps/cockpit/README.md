@@ -24,3 +24,17 @@ cd apps/cockpit && npm install && npm run dev      # http://localhost:5180
 ## Veri kuralları (Logo, firma 411 = 2026)
 
 `src/lib/metrics.ts` başındaki yorumda; TRCODE/LINETYPE/OUTCOST anlamları canlı veride doğrulanmıştır.
+
+## SQL lehçesi notu (MSSQL yolu)
+
+Motorun MSSQL yolunda `EXTRACT`, `DATE_PART`, `DATE_TRUNC`, `MONTH()` ve `TRIM` (→ `BTRIM`) çevrilemiyor.
+Ay kırılımı tarih aralığı kovalarıyla (`"DATE_" >= '2026-01-01' AND "DATE_" < '2026-02-01'`), gün kırılımı
+`CAST("DATE_" AS DATE)` ile yapılır; `GROUP BY` içinde takma ad kullanılmaz.
+
+## Sunucu notları (2026-09-06)
+
+- Embedder A40 GPU'da: `nanobaseai-bi-embed.service` (:8012). nanobase → A40 tüneli `a40-embed-tunnel.service`
+  (172.17.0.1:8021) + wren köprüsü `nanobase-bridge-wren-8021.service` (172.31.0.1:8021). Motor `config.yaml`
+  embedder `api_base` bu adrese bakar. İndexleme ~10 s.
+- `deploy/wren_knowledge.py` motorun *instructions* + *sql pairs* mekanizmasına Logo iş kurallarını yazar;
+  her model değişikliğinden sonra tekrar çalıştırılabilir (mevcut kayıtları atlar).

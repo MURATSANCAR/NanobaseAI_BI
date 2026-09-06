@@ -38,16 +38,24 @@ SELECT
   MAX("DATE_") AS last_date
 FROM ${INV}
 WHERE "CANCELLED" = 0`,
+  // Bu MSSQL yolunda EXTRACT/DATE_PART/DATE_TRUNC çevrilemiyor; aylar tarih aralığı kovalarıyla alınır
+  // ve istemci tarafında (parseMonthly) satıra çevrilir.
   monthly: `
 SELECT
-  EXTRACT(MONTH FROM "DATE_") AS month,
-  SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS sales,
-  SUM(CASE WHEN "TRCODE" IN (2,3)   THEN "NETTOTAL" ELSE 0 END) AS returns,
-  SUM(CASE WHEN "TRCODE" IN (1,4)   THEN "NETTOTAL" ELSE 0 END) AS purchases
+${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  .map((m) => {
+    const from = `2026-${String(m).padStart(2, '0')}-01`;
+    const to = m === 12 ? '2027-01-01' : `2026-${String(m + 1).padStart(2, '0')}-01`;
+    const inMonth = `"DATE_" >= '${from}' AND "DATE_" < '${to}'`;
+    return [
+      `  SUM(CASE WHEN ${inMonth} AND "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS s${m}`,
+      `  SUM(CASE WHEN ${inMonth} AND "TRCODE" IN (2,3)   THEN "NETTOTAL" ELSE 0 END) AS r${m}`,
+      `  SUM(CASE WHEN ${inMonth} AND "TRCODE" IN (1,4)   THEN "NETTOTAL" ELSE 0 END) AS p${m}`,
+    ].join(',\n');
+  })
+  .join(',\n')}
 FROM ${INV}
-WHERE "CANCELLED" = 0
-GROUP BY EXTRACT(MONTH FROM "DATE_")
-ORDER BY 1`,
+WHERE "CANCELLED" = 0`,
   lines: `
 SELECT
   SUM(CASE WHEN "LINETYPE" = 0 THEN "TOTAL" ELSE 0 END) AS gross,
@@ -59,18 +67,18 @@ FROM ${STL}
 WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8)`,
   channels: `
 SELECT
-  COALESCE(NULLIF(TRIM(c."SPECODE2"), ''), '(boş)') AS channel,
+  COALESCE(NULLIF(c."SPECODE2", ''), '(boş)') AS channel,
   SUM(CASE WHEN i."TRCODE" IN (7,8,9) THEN i."NETTOTAL" ELSE -i."NETTOTAL" END) AS net,
   COUNT(DISTINCT i."CLIENTREF") AS customers
 FROM ${INV} i
 JOIN ${CLC} c ON c."LOGICALREF" = i."CLIENTREF"
 WHERE i."CANCELLED" = 0 AND i."TRCODE" IN (2,3,7,8,9)
-GROUP BY COALESCE(NULLIF(TRIM(c."SPECODE2"), ''), '(boş)')
+GROUP BY COALESCE(NULLIF(c."SPECODE2", ''), '(boş)')
 ORDER BY net DESC
 LIMIT 8`,
   imprints: `
 SELECT
-  COALESCE(NULLIF(TRIM(it."SPECODE"), ''), '(boş)') AS imprint,
+  COALESCE(NULLIF(it."SPECODE", ''), '(boş)') AS imprint,
   COUNT(DISTINCT sl."STOCKREF") AS titles,
   SUM(CASE WHEN sl."TRCODE" IN (7,8) THEN sl."TOTAL" ELSE -sl."TOTAL" END) AS net,
   SUM(CASE WHEN sl."TRCODE" IN (2,3) THEN sl."AMOUNT" ELSE 0 END) AS ret_qty,
@@ -80,13 +88,26 @@ SELECT
 FROM ${STL} sl
 JOIN ${ITM} it ON it."LOGICALREF" = sl."STOCKREF"
 WHERE sl."CANCELLED" = 0 AND sl."LINETYPE" = 0 AND sl."TRCODE" IN (2,3,7,8)
-GROUP BY COALESCE(NULLIF(TRIM(it."SPECODE"), ''), '(boş)')
+GROUP BY COALESCE(NULLIF(it."SPECODE", ''), '(boş)')
 ORDER BY net DESC
 LIMIT 8`,
 };
 
 const n = (v: unknown): number => (v == null ? 0 : Number(v));
 const s = (v: unknown): string => (v == null ? '' : String(v));
+
+/** s1..s12 / r1..r12 / p1..p12 kovalarını aylık satırlara çevirir; veri olmayan aylar atılır. */
+function parseMonthly(row: Record<string, unknown>): Monthly[] {
+  const out: Monthly[] = [];
+  for (let m = 1; m <= 12; m++) {
+    const sales = n(row[`s${m}`]);
+    const returns = n(row[`r${m}`]);
+    const purchases = n(row[`p${m}`]);
+    if (sales === 0 && returns === 0 && purchases === 0) continue;
+    out.push({ month: m, sales, returns, purchases });
+  }
+  return out;
+}
 
 export async function loadLive(): Promise<CockpitData> {
   const [summary, monthly, lines, channels, imprints] = await Promise.all([
@@ -102,7 +123,7 @@ export async function loadLive(): Promise<CockpitData> {
     source: 'live',
     summary: { sales: n(sm.sales), returns: n(sm.returns), purchases: n(sm.purchases), invoices: n(sm.invoices), lastDate: s(sm.last_date) },
     lines: { gross: n(ln.gross), discount: n(ln.discount), costedRevenue: n(ln.costed_revenue), cost: n(ln.cost), costUntil: s(ln.cost_until) },
-    monthly: monthly.records.map((r) => ({ month: n(r.month), sales: n(r.sales), returns: n(r.returns), purchases: n(r.purchases) })),
+    monthly: parseMonthly(monthly.records[0] ?? {}),
     channels: channels.records.map((r) => ({ channel: s(r.channel), net: n(r.net), customers: n(r.customers) })),
     imprints: imprints.records.map((r) => {
       const sold = n(r.sold_qty);

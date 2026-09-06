@@ -1,0 +1,135 @@
+{
+  "passed": 4,
+  "total": 8,
+  "results": [
+    {
+      "id": "fc-001",
+      "question": "İstanbul satışları önümüzdeki 6 ay nasıl?",
+      "expect": "done",
+      "ok": false,
+      "elapsed_s": 0.9,
+      "phases": [
+        "preparing",
+        "forecast_intent"
+      ],
+      "detail": "engine=None phases=['forecast_intent']",
+      "error": {
+        "message": "All connection attempts failed",
+        "code": "CHAT_STREAM_FAILED"
+      }
+    },
+    {
+      "id": "fc-002",
+      "question": "Toplam ciro için gelecek 3 çeyrek tahmini",
+      "expect": "done",
+      "ok": false,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_intent"
+      ],
+      "detail": "engine=None phases=['forecast_intent']",
+      "error": {
+        "message": "All connection attempts failed",
+        "code": "CHAT_STREAM_FAILED"
+      }
+    },
+    {
+      "id": "fc-003",
+      "question": "Ankara cirosu önümüzdeki 12 ay ne olur?",
+      "expect": "done",
+      "ok": false,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_intent"
+      ],
+      "detail": "engine=None phases=['forecast_intent']",
+      "error": {
+        "message": "All connection attempts failed",
+        "code": "CHAT_STREAM_FAILED"
+      }
+    },
+    {
+      "id": "fc-004",
+      "question": "Satılan adet önümüzdeki 4 ay tahmini",
+      "expect": "done",
+      "ok": false,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_intent"
+      ],
+      "detail": "engine=None phases=['forecast_intent']",
+      "error": {
+        "message": "All connection attempts failed",
+        "code": "CHAT_STREAM_FAILED"
+      }
+    },
+    {
+      "id": "fc-005",
+      "question": "Segment bazında önümüzdeki 6 ay satış tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_declined"
+      ],
+      "detail": "code=UNSUPPORTED_SHAPE",
+      "error": null
+    },
+    {
+      "id": "fc-006",
+      "question": "Önümüzdeki 30 gün satış tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_declined"
+      ],
+      "detail": "code=UNSUPPORTED_GRAIN",
+      "error": null
+    },
+    {
+      "id": "fc-007",
+      "question": "Toplam ciro nedir?",
+      "expect": "llm",
+      "ok": true,
+      "elapsed_s": 33.6,
+      "phases": [
+        "preparing",
+        "semantic_metric_hit",
+        "validating",
+        "validated",
+        "executing",
+        "gateway_explain",
+        "generating_answer",
+        "finalizing"
+      ],
+      "detail": "forecast_phases=[]",
+      "error": null
+    },
+    {
+      "id": "fc-008",
+      "question": "Bu sorgunun tahmini maliyeti nedir?",
+      "expect": "llm",
+      "ok": true,
+      "elapsed_s": 17.8,
+      "phases": [
+        "preparing",
+        "schema_retrieval",
+        "schema_retrieval_done",
+        "generating_sql"
+      ],
+      "detail": "forecast_phases=[]",
+      "error": {
+        "type": "ERROR",
+        "code": "TEXT_TO_SQL_MODEL_UNAVAILABLE",
+        "message": "Text-to-SQL modeline erişilemiyor.",
+        "retryable": true
+      }
+    }
+  ]
+}

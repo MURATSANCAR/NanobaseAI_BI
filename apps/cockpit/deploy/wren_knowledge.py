@@ -44,14 +44,23 @@ INSTRUCTIONS = [
 ]
 
 SQL_PAIRS = [
+    # Bu MSSQL yolunda EXTRACT/DATE_PART çevrilemiyor: ay kırılımı tarih aralığı ile yapılır.
     ("2026 yılında aylık net satış tutarı nedir?",
-     'SELECT EXTRACT(MONTH FROM "DATE_") AS ay, '
-     'SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS satis, '
-     'SUM(CASE WHEN "TRCODE" IN (2,3) THEN "NETTOTAL" ELSE 0 END) AS iade, '
-     'SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) - SUM(CASE WHEN "TRCODE" IN (2,3) THEN "NETTOTAL" ELSE 0 END) AS net_ciro '
-     'FROM dbo_LG_411_01_INVOICE WHERE "CANCELLED" = 0 AND "TRCODE" IN (2,3,7,8,9) GROUP BY EXTRACT(MONTH FROM "DATE_") ORDER BY ay'),
+     'SELECT ' + ', '.join(
+         f'SUM(CASE WHEN "DATE_" >= \'2026-{m:02d}-01\' AND "DATE_" < \'{2027 if m == 12 else 2026}-{1 if m == 12 else m + 1:02d}-01\' '
+         f'AND "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) - '
+         f'SUM(CASE WHEN "DATE_" >= \'2026-{m:02d}-01\' AND "DATE_" < \'{2027 if m == 12 else 2026}-{1 if m == 12 else m + 1:02d}-01\' '
+         f'AND "TRCODE" IN (2,3) THEN "NETTOTAL" ELSE 0 END) AS ay_{m:02d}' for m in range(1, 13)) +
+     ' FROM dbo_LG_411_01_INVOICE WHERE "CANCELLED" = 0 AND "TRCODE" IN (2,3,7,8,9)'),
+    ("Ağustos 2026 net satış tutarı nedir?",
+     'SELECT SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE -"NETTOTAL" END) AS net_ciro '
+     'FROM dbo_LG_411_01_INVOICE WHERE "CANCELLED" = 0 AND "TRCODE" IN (2,3,7,8,9) '
+     'AND "DATE_" >= \'2026-08-01\' AND "DATE_" < \'2026-09-01\''),
+    ("Günlük satış tutarı (son günler) nedir?",
+     'SELECT CAST("DATE_" AS DATE) AS gun, SUM("NETTOTAL") AS satis FROM dbo_LG_411_01_INVOICE '
+     'WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8,9) AND "DATE_" >= \'2026-08-01\' GROUP BY CAST("DATE_" AS DATE) ORDER BY 1'),
     ("Kanal bazında net ciro nedir?",
-     'SELECT COALESCE(NULLIF(TRIM(c."SPECODE2"), \'\'), \'(boş)\') AS kanal, '
+     'SELECT COALESCE(NULLIF(c."SPECODE2", \'\'), \'(boş)\') AS kanal, '
      'SUM(CASE WHEN i."TRCODE" IN (7,8,9) THEN i."NETTOTAL" ELSE -i."NETTOTAL" END) AS net_ciro, COUNT(DISTINCT i."CLIENTREF") AS cari_sayisi '
      'FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" '
      'WHERE i."CANCELLED" = 0 AND i."TRCODE" IN (2,3,7,8,9) GROUP BY 1 ORDER BY net_ciro DESC'),
@@ -63,13 +72,12 @@ SQL_PAIRS = [
      'SELECT c."CODE" AS cari_kodu, c."DEFINITION_" AS unvan, SUM(i."NETTOTAL") AS iade_tutari, COUNT(*) AS iade_faturasi '
      'FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" '
      'WHERE i."CANCELLED" = 0 AND i."TRCODE" IN (2,3) GROUP BY c."CODE", c."DEFINITION_" ORDER BY iade_tutari DESC LIMIT 10'),
-    ("Aylık iskonto oranı nedir?",
-     'SELECT EXTRACT(MONTH FROM "DATE_") AS ay, '
-     'SUM(CASE WHEN "LINETYPE" = 0 THEN "TOTAL" ELSE 0 END) AS brut, SUM(CASE WHEN "LINETYPE" = 2 THEN "TOTAL" ELSE 0 END) AS iskonto, '
+    ("2026 iskonto oranı nedir?",
+     'SELECT SUM(CASE WHEN "LINETYPE" = 0 THEN "TOTAL" ELSE 0 END) AS brut, SUM(CASE WHEN "LINETYPE" = 2 THEN "TOTAL" ELSE 0 END) AS iskonto, '
      'SUM(CASE WHEN "LINETYPE" = 2 THEN "TOTAL" ELSE 0 END) / NULLIF(SUM(CASE WHEN "LINETYPE" = 0 THEN "TOTAL" ELSE 0 END), 0) AS iskonto_orani '
-     'FROM dbo_LG_411_01_STLINE WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8) GROUP BY EXTRACT(MONTH FROM "DATE_") ORDER BY ay'),
+     'FROM dbo_LG_411_01_STLINE WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8) AND "DATE_" >= \'2026-01-01\''),
     ("Yayınevi bazında net ciro ve brüt kâr marjı nedir?",
-     'SELECT COALESCE(NULLIF(TRIM(it."SPECODE"), \'\'), \'(boş)\') AS yayinevi, '
+     'SELECT COALESCE(NULLIF(it."SPECODE", \'\'), \'(boş)\') AS yayinevi, '
      'SUM(CASE WHEN sl."TRCODE" IN (7,8) THEN sl."TOTAL" ELSE -sl."TOTAL" END) AS net_ciro, '
      '1 - SUM(CASE WHEN sl."TRCODE" IN (7,8) AND sl."OUTCOST" <> 0 THEN sl."AMOUNT" * sl."OUTCOST" ELSE 0 END) '
      '/ NULLIF(SUM(CASE WHEN sl."TRCODE" IN (7,8) AND sl."OUTCOST" <> 0 THEN sl."TOTAL" ELSE 0 END), 0) AS brut_kar_marji '

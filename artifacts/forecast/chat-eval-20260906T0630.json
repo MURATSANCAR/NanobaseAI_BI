@@ -1,0 +1,131 @@
+{
+  "passed": 8,
+  "total": 8,
+  "results": [
+    {
+      "id": "fc-001",
+      "question": "İstanbul satışları önümüzdeki 6 ay nasıl?",
+      "expect": "done",
+      "ok": true,
+      "elapsed_s": 0.6,
+      "phases": [
+        "preparing",
+        "forecast_intent",
+        "forecast_series_hit",
+        "forecast_bundle_ready",
+        "forecast_done"
+      ],
+      "detail": "engine=timesfm-3.0 phases=['forecast_intent', 'forecast_series_hit', 'forecast_bundle_ready', 'forecast_done']",
+      "error": null
+    },
+    {
+      "id": "fc-002",
+      "question": "Toplam ciro için gelecek 3 çeyrek tahmini",
+      "expect": "done",
+      "ok": true,
+      "elapsed_s": 0.4,
+      "phases": [
+        "preparing",
+        "forecast_intent",
+        "forecast_series_hit",
+        "forecast_bundle_ready",
+        "forecast_done"
+      ],
+      "detail": "engine=timesfm-3.0 phases=['forecast_intent', 'forecast_series_hit', 'forecast_bundle_ready', 'forecast_done']",
+      "error": null
+    },
+    {
+      "id": "fc-003",
+      "question": "Ankara cirosu önümüzdeki 12 ay ne olur?",
+      "expect": "done",
+      "ok": true,
+      "elapsed_s": 0.4,
+      "phases": [
+        "preparing",
+        "forecast_intent",
+        "forecast_series_hit",
+        "forecast_bundle_ready",
+        "forecast_done"
+      ],
+      "detail": "engine=timesfm-3.0 phases=['forecast_intent', 'forecast_series_hit', 'forecast_bundle_ready', 'forecast_done']",
+      "error": null
+    },
+    {
+      "id": "fc-004",
+      "question": "Satılan adet önümüzdeki 4 ay tahmini",
+      "expect": "done",
+      "ok": true,
+      "elapsed_s": 0.5,
+      "phases": [
+        "preparing",
+        "forecast_intent",
+        "forecast_series_hit",
+        "forecast_bundle_ready",
+        "forecast_done"
+      ],
+      "detail": "engine=timesfm-3.0 phases=['forecast_intent', 'forecast_series_hit', 'forecast_bundle_ready', 'forecast_done']",
+      "error": null
+    },
+    {
+      "id": "fc-005",
+      "question": "Segment bazında önümüzdeki 6 ay satış tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_declined"
+      ],
+      "detail": "code=UNSUPPORTED_SHAPE",
+      "error": null
+    },
+    {
+      "id": "fc-006",
+      "question": "Önümüzdeki 30 gün satış tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_declined"
+      ],
+      "detail": "code=UNSUPPORTED_GRAIN",
+      "error": null
+    },
+    {
+      "id": "fc-007",
+      "question": "Toplam ciro nedir?",
+      "expect": "llm",
+      "ok": true,
+      "elapsed_s": 27.9,
+      "phases": [
+        "preparing",
+        "semantic_metric_hit",
+        "validating",
+        "validated",
+        "executing",
+        "gateway_explain",
+        "generating_answer",
+        "finalizing"
+      ],
+      "detail": "forecast_phases=[]",
+      "error": null
+    },
+    {
+      "id": "fc-008",
+      "question": "Bu sorgunun tahmini maliyeti nedir?",
+      "expect": "llm",
+      "ok": true,
+      "elapsed_s": 61.1,
+      "phases": [
+        "preparing",
+        "schema_retrieval",
+        "schema_retrieval_done",
+        "generating_sql",
+        "clarification_required"
+      ],
+      "detail": "forecast_phases=[]",
+      "error": null
+    }
+  ]
+}
