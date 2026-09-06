@@ -236,6 +236,8 @@ class AskIn(BaseModel):
     threadId: str | None = None
     language: str | None = "TR"
     sampleSize: int | None = 50
+    # yalnız /api/v1/ask_agent: True ise ajan wren_store_query ile knowledge/sql'e yazabilir (varsayılan kapalı)
+    store: bool | None = False
 
 
 # --- endpoints ----------------------------------------------------------------------
@@ -585,13 +587,14 @@ def generate_summary(body: dict) -> dict:
 # Tek atışlık istem yerine araç çağıran döngü: agent kendi recall/fetch_context/dry_plan/query
 # araçlarını sırayla kullanır. Köprünün varsayılan yolu değişmez; POST /api/v1/ask_agent ile denenir.
 
-_agent: Any = None
+_agents: dict[bool, Any] = {}
 
 
-def _pydantic_agent():
-    """WrenToolkit + A40 modeli (OpenAI uyumlu uç). İlk çağrıda kurulur."""
-    global _agent
-    if _agent is None:
+def _pydantic_agent(store: bool = False):
+    """WrenToolkit + A40 modeli (OpenAI uyumlu uç). `store` bayrağına göre iki ayrı ajan önbelleklenir:
+    store=False → wren_store_query aracı yok (varsayılan; deneysel uç knowledge/sql'e yazmasın),
+    store=True  → ajan doğruladığı çifti kendisi saklayabilir."""
+    if store not in _agents:
         from pydantic_ai import Agent
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
@@ -602,40 +605,122 @@ def _pydantic_agent():
             LLM_MODEL,
             provider=OpenAIProvider(base_url=LLM_BASE, api_key=LLM_KEY or "x"),
         )
-        _agent = Agent(
+        _agents[store] = Agent(
             model,
             instructions=toolkit.instructions() + "\n\nTürkçe cevap ver. Hedef veritabanı SQL Server (T-SQL): LIMIT yerine TOP kullan, "
             "GROUP BY içinde takma ad kullanma, ay kırılımı için DATEFROMPARTS(YEAR(x), MONTH(x), 1).",
-            toolsets=[toolkit.toolset()],
+            toolsets=[toolkit.toolset(include_memory_write=store)],
         )
-        log.info("pydantic-ai agent ready: project=%s model=%s", PROJECT, LLM_MODEL)
-    return _agent
+        log.info("pydantic-ai agent ready: project=%s model=%s store=%s", PROJECT, LLM_MODEL, store)
+    return _agents[store]
+
+
+def _agent_trace(res) -> tuple[list[str], str | None, dict]:
+    """Araç çağrılarını, ajanın çalıştırdığı son SQL'i (wren_query; yoksa wren_dry_plan) ve token kullanımını çıkarır."""
+    calls: list[str] = []
+    sql: str | None = None
+    try:
+        from pydantic_ai.messages import ToolCallPart
+
+        for m in res.all_messages():
+            for part in getattr(m, "parts", []):
+                if not isinstance(part, ToolCallPart):
+                    continue
+                calls.append(part.tool_name)
+                try:
+                    args = part.args_as_dict()
+                except Exception:  # noqa: BLE001
+                    args = part.args if isinstance(part.args, dict) else {}
+                if part.tool_name == "wren_query" and args.get("sql"):
+                    sql = str(args["sql"])
+                elif sql is None and part.tool_name == "wren_dry_plan" and args.get("sql"):
+                    sql = str(args["sql"])
+    except Exception:  # noqa: BLE001
+        log.debug("agent trace parse failed", exc_info=True)
+    usage: dict = {}
+    try:
+        u = res.usage()
+        usage = {
+            "inputTokens": getattr(u, "input_tokens", None) or getattr(u, "request_tokens", None),
+            "outputTokens": getattr(u, "output_tokens", None) or getattr(u, "response_tokens", None),
+            "requests": getattr(u, "requests", None),
+        }
+    except Exception:  # noqa: BLE001
+        pass
+    return calls, sql, usage
+
+
+class _TraceView:
+    """_agent_trace için minimal sonuç görünümü (all_messages/usage)."""
+
+    def __init__(self, msgs, usage):
+        self._msgs, self._usage = msgs, usage
+
+    def all_messages(self):
+        return self._msgs
+
+    def usage(self):
+        return self._usage
+
+
+def _agent_run_traced(agent, question: str, *, request_limit: int) -> tuple[str, str, list, Any]:
+    """Ajanı çalıştırır; (status, output, messages, usage) döner. status: OK | LIMIT."""
+    import asyncio
+
+    from pydantic_ai.exceptions import UsageLimitExceeded
+    from pydantic_ai.usage import UsageLimits
+
+    async def _go():
+        msgs: list = []
+        usage = None
+        async with agent.iter(question, usage_limits=UsageLimits(request_limit=request_limit)) as run:
+            try:
+                async for _node in run:
+                    pass
+            except UsageLimitExceeded as e:
+                log.warning("ask_agent: %s", e)
+                try:
+                    msgs = list(run.all_messages())
+                except Exception:  # noqa: BLE001
+                    msgs = list(getattr(getattr(run, "ctx", None), "state", None).message_history or [])  # type: ignore[union-attr]
+                try:
+                    usage = run.usage()
+                except Exception:  # noqa: BLE001
+                    usage = None
+                return "LIMIT", "", msgs, usage
+            result = run.result
+            msgs = list(result.all_messages()) if result is not None else list(run.all_messages())
+            usage = result.usage() if result is not None else run.usage()
+            return "OK", str(result.output) if result is not None else "", msgs, usage
+
+    return asyncio.run(_go())
 
 
 @app.post("/api/v1/ask_agent")
 def ask_agent(body: AskIn) -> dict:
-    """Deneysel: araç çağıran ajan döngüsü (wren-pydantic). Varsayılan /api/v1/ask etkilenmez."""
+    """Deneysel: araç çağıran ajan döngüsü (wren-pydantic). Varsayılan /api/v1/ask etkilenmez.
+    Yanıt, ajanın çalıştırdığı SQL'i de döndürür (A/B karşılaştırması ve cockpit tablo/grafik için)."""
     t0 = time.perf_counter()
     q = body.question.strip()
     if not q:
         raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
     try:
-        with _engine_lock:
-            res = _pydantic_agent().run_sync(q)
-        tools = []
-        try:
-            for m in res.all_messages():
-                for part in getattr(m, "parts", []):
-                    name = getattr(part, "tool_name", None)
-                    if name:
-                        tools.append(name)
-        except Exception:  # noqa: BLE001
-            pass
+        # Kilit YOK: toolkit from_project ile kendi motorunu kurar; köprü motoru serbest kalır. Aksi halde
+        # 40–120 s süren ajan döngüsü boyunca watchdog'un run_sql sağlık sorgusu kilitte bekler, 30 s'de
+        # düşer ve nanobase-wren-watchdog birimi yeniden başlatır.
+        # agent.iter: istek limiti aşılsa bile o ana kadarki mesajlar (araç izi, son SQL) elde kalır;
+        # 502 yerine status=LIMIT ile döneriz — A/B ve hata ayıklama için iz kaybolmaz.
+        status, output, msgs, usage_obj = _agent_run_traced(_pydantic_agent(bool(body.store)), q, request_limit=10)
+        tools, sql, usage = _agent_trace(_TraceView(msgs, usage_obj))
         return {
             "id": uuid.uuid4().hex,
             "type": "AGENT",
-            "summary": str(res.output),
+            "status": status,
+            "summary": output,
+            "sql": sql,
             "toolCalls": tools,
+            "usage": usage,
+            "store": bool(body.store),
             "threadId": body.threadId or uuid.uuid4().hex,
             "latency_ms": int((time.perf_counter() - t0) * 1000),
         }
