@@ -1,10 +1,14 @@
 import { num, pct, tl } from '../lib/format';
+import { InfoTip } from './InfoTip';
 import type { Channel } from '../lib/metrics';
 
 export function ChannelMix({ channels, total }: { channels: Channel[]; total: number }) {
   return (
     <section className="card p-5">
-      <h2 className="font-display text-[20px] font-semibold leading-tight">Kanal Payı</h2>
+      <div className="flex items-center gap-2">
+        <h2 className="font-display text-[20px] font-semibold leading-tight">Kanal Payı</h2>
+        <InfoTip k="channels" align="right" />
+      </div>
       <p className="mt-1 text-[12px] text-ink-muted">Net ciro · cari kartındaki kanal kodu (SPECODE2)</p>
       <ul className="mt-4 space-y-3">
         {channels.map((c) => {

@@ -3,6 +3,7 @@ import { SlidersHorizontal, X } from 'lucide-react';
 import clsx from 'clsx';
 import { num, pct, tl } from '../lib/format';
 import type { Imprint } from '../lib/metrics';
+import { InfoTip } from './InfoTip';
 
 type Tone = 'good' | 'ok' | 'bad' | 'na';
 /** Eşikler kural tabanlıdır (LLM yok): marj ≥ %70 yüksek, %55–70 optimal, < %55 kritik; iade ≥ %15 yüksek. */
@@ -84,16 +85,16 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto scroll-thin">
+      <div className="mt-4 overflow-x-auto overflow-y-visible scroll-thin">
         <table className="w-full min-w-[640px] text-[13px]">
           <thead>
             <tr className="eyebrow border-b border-line text-left">
               <th className="py-2 pr-3 font-semibold">Yayınevi / Dizi</th>
-              <th className="py-2 pr-3 font-semibold">Başlık</th>
-              <th className="py-2 pr-3 font-semibold">Net Ciro</th>
-              <th className="py-2 pr-3 font-semibold">Brüt Kâr Marjı</th>
-              <th className="py-2 pr-3 font-semibold">İade Oranı</th>
-              <th className="py-2 font-semibold">Kural Tabanlı Uyarı</th>
+              <th className="py-2 pr-3 font-semibold"><span className="inline-flex items-center gap-1">Başlık <InfoTip k="imprintTitles" /></span></th>
+              <th className="py-2 pr-3 font-semibold"><span className="inline-flex items-center gap-1">Net Ciro <InfoTip k="imprintNet" /></span></th>
+              <th className="py-2 pr-3 font-semibold"><span className="inline-flex items-center gap-1">Brüt Kâr Marjı <InfoTip k="imprintMargin" /></span></th>
+              <th className="py-2 pr-3 font-semibold"><span className="inline-flex items-center gap-1">İade Oranı <InfoTip k="imprintReturn" /></span></th>
+              <th className="py-2 font-semibold"><span className="inline-flex items-center gap-1">Kural Tabanlı Uyarı <InfoTip k="imprintAdvice" align="right" /></span></th>
             </tr>
           </thead>
           <tbody>

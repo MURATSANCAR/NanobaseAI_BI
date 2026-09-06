@@ -1,5 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { InfoTip } from './InfoTip';
+import type { InfoKey } from '../lib/definitions';
 
 export function KpiCard({
   label,
@@ -8,6 +10,7 @@ export function KpiCard({
   icon: Icon,
   tone = 'neutral',
   progress,
+  info,
 }: {
   label: string;
   value: string;
@@ -16,11 +19,16 @@ export function KpiCard({
   tone?: 'neutral' | 'good' | 'bad' | 'brand';
   /** 0..1 — kartın altındaki ince çubuk */
   progress?: number | null;
+  /** Nasıl hesaplandığı — (i) düğmesi */
+  info?: InfoKey;
 }) {
   return (
-    <div className="card relative overflow-hidden p-4">
+    <div className="card relative p-4">
       <div className="flex items-start justify-between">
-        <div className="eyebrow max-w-[70%] leading-[1.35]">{label}</div>
+        <div className="flex max-w-[78%] items-start gap-1.5">
+          <div className="eyebrow leading-[1.35]">{label}</div>
+          {info && <InfoTip k={info} className="mt-px" />}
+        </div>
         <Icon size={16} className="text-ink-faint" />
       </div>
       <div

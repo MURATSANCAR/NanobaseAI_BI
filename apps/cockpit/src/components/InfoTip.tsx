@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Info, X } from 'lucide-react';
 import clsx from 'clsx';
-import { INFO, type InfoKey } from '../lib/definitions';
+import { INFO, type InfoKey, type MetricInfo } from '../lib/definitions';
 
 /** "i" düğmesi: tıklanınca göstergenin tanımı, formülü, kaynağı, SQL'i ve uyarıları açılır. */
 export function InfoTip({ k, className, align = 'left' }: { k: InfoKey; className?: string; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const info = INFO[k];
+  const info: MetricInfo = INFO[k];
 
   useEffect(() => {
     if (!open) return;

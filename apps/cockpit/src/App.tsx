@@ -8,6 +8,7 @@ import { ImprintTable } from './components/ImprintTable';
 import { ChannelMix } from './components/ChannelMix';
 import { CopilotPanel } from './components/CopilotPanel';
 import { useCockpit, useEngine } from './hooks/useCockpit';
+import { InfoTip } from './components/InfoTip';
 import { derive } from './lib/metrics';
 import { dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
 
@@ -86,6 +87,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           icon={TrendingUp}
           tone="brand"
           progress={k.lastMonth ? k.lastMonth / 12 : 0}
+          info="netRevenue"
         />
         <KpiCard
           label="Brüt Kâr Marjı"
@@ -94,6 +96,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           icon={Percent}
           tone={k.grossMargin != null && k.grossMargin < 0.55 ? 'bad' : 'good'}
           progress={k.grossMargin}
+          info="grossMargin"
         />
         <KpiCard
           label="İade Oranı (tutar)"
@@ -102,6 +105,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           icon={Undo2}
           tone={k.returnRate != null && k.returnRate > 0.1 ? 'bad' : 'neutral'}
           progress={k.returnRate != null ? Math.min(k.returnRate / 0.2, 1) : 0}
+          info="returnRate"
         />
         <KpiCard
           label="İskonto Yükü"
@@ -110,6 +114,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           icon={BadgePercent}
           tone="neutral"
           progress={k.discountRate}
+          info="discountRate"
         />
       </section>
 
@@ -120,7 +125,10 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         <div className="space-y-5">
           <ChannelMix channels={d.channels} total={k.channelTotal} />
           <section className="card p-5">
-            <h2 className="font-display text-[20px] font-semibold leading-tight">Satınalma &amp; Hizmet</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-[20px] font-semibold leading-tight">Satınalma &amp; Hizmet</h2>
+              <InfoTip k="purchases" align="right" />
+            </div>
             <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), {year} YTD</p>
             <div className="mt-3 flex items-end gap-2">
               <ShoppingCart size={18} className="mb-1 text-brand" />

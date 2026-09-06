@@ -1,5 +1,6 @@
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Info } from 'lucide-react';
+import { InfoTip } from './InfoTip';
 import { MONTHS_TR, tl } from '../lib/format';
 import type { Monthly } from '../lib/metrics';
 
@@ -18,9 +19,12 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
     <section className="card p-5">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-[22px] font-semibold leading-tight">
-            Aylık Net Ciro, Satınalma &amp; Nakit Farkı
-          </h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-display text-[22px] font-semibold leading-tight">
+              Aylık Net Ciro, Satınalma &amp; Nakit Farkı
+            </h2>
+            <InfoTip k="monthly" />
+          </div>
           <p className="mt-1 text-[12px] text-ink-muted">
             Çubuk: net ciro (satış − iade). Çizgi: mal &amp; hizmet alımı. Kesik: satış iadeleri. Alan: ciro − alım farkı.
           </p>
