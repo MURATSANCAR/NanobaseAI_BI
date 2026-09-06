@@ -242,3 +242,19 @@ def test_header_measure_is_not_multiplied_by_a_line_level_breakdown(catalog, pro
     c = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite")
     plan, reason = c.plan(sq)
     assert plan is None and "multiplied" in reason, reason
+
+
+def test_model_sql_that_contradicts_a_certified_fact_is_caught(catalog, profiles):
+    """The prompt asks the model to honour the catalog; the audit checks whether it did. "toptan" is
+    certified as TRCODE 8, so SQL restricting the same column to 7 answers a different question."""
+    from semantic_layer.runtime.audit import audit_sql
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
+    good = "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE WHERE INVOICE.TRCODE IN (8)"
+    bad = "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE WHERE INVOICE.TRCODE IN (7)"
+    assert audit_sql(sq, good) == []
+    problems = audit_sql(sq, bad)
+    assert problems and "toptan" in problems[0].lower()
+    # a restriction expressed some other way is style, not disagreement: silence, not a false alarm
+    assert audit_sql(sq, "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE") == []

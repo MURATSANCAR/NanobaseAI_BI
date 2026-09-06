@@ -38,6 +38,7 @@ from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
+from semantic_layer.runtime.audit import audit_sql
 from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
@@ -246,6 +247,16 @@ class Runtime:
         ok, why = validate_sql(sql)
         if not ok:
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Guardrail: {why}", "threadId": thread_id, "timings": timings, "semantic": semantic}
+        # The prompt asks the model to honour the certified catalog; this is where we check that it did.
+        # A query that contradicts a certified fact answers a different question than the one asked.
+        if not compiled.certified:
+            contradictions = audit_sql(sq, sql, conventions=self.conventions)
+            if contradictions:
+                semantic["catalogAudit"] = contradictions
+                reason = "Üretilen SQL sertifikalı katalogla çelişiyor: " + "; ".join(contradictions)
+                log.warning("catalog audit refused q=%r %s", question[:80], contradictions)
+                qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+                return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         repairs = 0
         error: Optional[str] = None
         if self.connector is not None:
