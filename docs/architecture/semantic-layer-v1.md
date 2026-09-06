@@ -177,6 +177,11 @@ modda tek başına geçemez.
 
 ## 9. Faz 8 — SuperSonic A/B (uygulandı)
 
+**Arayüz bizde kalır:** SuperSonic'in kendi web arayüzü / chat / agent yüzeyleri kullanılmaz, kuruluma
+frontend gerekmez; ürünün yüzü portal (`/bi/semantic-layer`) ve kokpittir. Bu modül SuperSonic'in yalnız
+sorgu API'siyle konuşur ve yalnız "çözümlenmiş SemanticQuery → SQL" için. Kataloğu onların model deposuna
+yazmak bile varsayılan kapalıdır (`SUPERSONIC_ALLOW_MODEL_WRITE=1` ile açılır).
+
 SuperSonic **bağımlılık değil, ölçülen bir aday derleyicidir**. Doğruluk kaynağı yine bizim kataloğumuz:
 resolver'ın ürettiği `SemanticQuery` (sertifikalı metrik + boyut filtreleri + dönem + kırılım) SuperSonic'in
 *struct query* sözleşmesine çevrilir ve SQL istenir; SuperSonic'in kendi NL anlama katmanı devrede değildir.
@@ -193,6 +198,8 @@ SemanticQuery ─► SuperSonicCompilerAdapter.build_struct()
 | `SUPERSONIC_DATASETS=INVOICE=7,STLINE=8` | varlık → dataSet eşlemesi; eksikse adaptör `None` döner ve yönlendirici bir sonraki derleyiciye geçer (asla tahmin etmez) |
 | `SUPERSONIC_DATE_FIELDS=INVOICE=invoice_date` | dönem alanı adı (opsiyonel) |
 | `SUPERSONIC_MODE=shadow\|off` | gölge mod: cevabı değiştirmeden yanında derler ve ölçer (varsayılan shadow) |
+| `SUPERSONIC_HEADLESS=1` (varsayılan) | yalnız API; SuperSonic arayüzü hiçbir yerde kullanılmaz/gömülmez |
+| `SUPERSONIC_ALLOW_MODEL_WRITE=0` (varsayılan) | katalog ihracı dosya olarak üretilir; onların deposuna yazmak açık onay ister |
 | `SEMANTIC_COMPILER=supersonic` | kontrollü deney: birincil derleyiciyi sabitler |
 | `SUPERSONIC_STRUCT_PATH` / `_SQL_PATH` / `_LOGIN_PATH` / `_MODEL_PATH` | sürümler arası uç nokta farkları koddan değil ayardan |
 

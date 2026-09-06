@@ -1,5 +1,10 @@
 """SuperSonic behind the same compiler interface — for a measured A/B, not as a dependency.
 
+HEADLESS ONLY. SuperSonic's own web UI, chat and agent surfaces are never used: the product interface
+stays our portal (/bi/semantic-layer) and the cockpit. This module speaks to exactly one thing — the
+query API — and only to turn an already-resolved SemanticQuery into SQL. Nothing here renders, links
+to, embeds or redirects to a SuperSonic page, and the deployment needs no SuperSonic frontend.
+
 The engine keeps its own truth: the SemanticQuery produced by our resolver (certified metric,
 dimension filters, time range, group-by) is translated into SuperSonic's *struct query* and SuperSonic
 is asked for SQL. Nothing about SuperSonic reaches the production answer path unless the operator
@@ -40,6 +45,8 @@ class SuperSonicSettings:
     model_path: str = "/api/semantic/dataSet"
     datasets: dict[str, int] = field(default_factory=dict)   # entity → dataSetId
     date_field: dict[str, str] = field(default_factory=dict)  # entity → time dimension bizName
+    headless: bool = True          # never use SuperSonic's own UI/chat; our portal is the interface
+    allow_model_write: bool = False  # pushing our catalog into their model store is an explicit opt-in
 
     @classmethod
     def from_env(cls) -> "SuperSonicSettings":
@@ -69,6 +76,8 @@ class SuperSonicSettings:
             model_path=os.environ.get("SUPERSONIC_MODEL_PATH", "/api/semantic/dataSet"),
             datasets=datasets,
             date_field=dates,
+            headless=os.environ.get("SUPERSONIC_HEADLESS", "1").lower() not in ("0", "false", "no"),
+            allow_model_write=os.environ.get("SUPERSONIC_ALLOW_MODEL_WRITE", "").lower() in ("1", "true", "yes"),
         )
 
     @property
@@ -132,6 +141,10 @@ class SuperSonicClient:
         return r.json()
 
     def upsert_dataset(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Push our catalog into SuperSonic's model store. Off by default: the A/B can run with an
+        operator-loaded model, and writing into another system is never a side effect of a query."""
+        if not self.s.allow_model_write:
+            raise PermissionError("SuperSonic model write disabled (set SUPERSONIC_ALLOW_MODEL_WRITE=1)")
         self.login()
         with self._client() as c:
             r = c.post(self.s.model_path, json=payload, headers=self._headers())

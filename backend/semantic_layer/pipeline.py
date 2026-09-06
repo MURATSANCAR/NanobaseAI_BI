@@ -14,7 +14,7 @@ from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.miner import HistoryMiner
 from semantic_layer.history.sources import dedupe, load_project_pairs, load_query_log
 from semantic_layer.models import SchemaProfile
-from semantic_layer.profiler.connectors import Connector, MDLConnector, connector_from_file
+from semantic_layer.profiler.connectors import Connector, ModelFileConnector, connector_from_file
 from semantic_layer.conventions import Conventions
 from semantic_layer.profiler.profiler import Profiler, column_index, infer_links, profile_summary
 from semantic_layer.store.catalog_store import CatalogStore
@@ -28,8 +28,8 @@ def build_connector(settings: SemanticSettings, *, project_dir: Optional[Path] =
         return connector_from_file(conn_file)
     proj = project_dir or settings.project_dir
     if proj and (Path(proj) / "models").exists():
-        return MDLConnector(Path(proj), enum_probe)
-    raise RuntimeError("no connection file and no project dir with models/ — nothing to profile")
+        return ModelFileConnector(Path(proj), enum_probe)
+    raise RuntimeError("no connection file and no knowledge pack with models/ — nothing to profile")
 
 
 def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None, probe_links: bool = True) -> list[SchemaProfile]:

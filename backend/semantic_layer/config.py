@@ -24,7 +24,7 @@ class SemanticSettings:
     store_dsn: str = ""
     tenant_id: str = "default"
     datasource_id: str = "default"
-    project_dir: Optional[Path] = None            # legacy wren project (models/*.yml, knowledge/) — import only
+    project_dir: Optional[Path] = None            # knowledge pack: knowledge/**.md docs + validated pairs (+ optional models/*.yml for offline profiling)
     connection_file: str = ""                     # JSON: {datasource, host, port, database, user, password, driver…}
     llm_base: str = "http://172.17.0.1:8020/v1"
     llm_key: str = ""
@@ -46,7 +46,9 @@ class SemanticSettings:
 
     @classmethod
     def from_env(cls) -> "SemanticSettings":
-        project = _env("SEMANTIC_PROJECT_DIR") or _env("WREN_PROJECT")
+        # SEMANTIC_KNOWLEDGE_DIR is the name going forward; the older variables stay readable so an
+        # existing deployment keeps working until its directory is renamed.
+        project = _env("SEMANTIC_KNOWLEDGE_DIR") or _env("SEMANTIC_PROJECT_DIR") or _env("WREN_PROJECT")
         dsn = _env("SEMANTIC_STORE_DSN") or _env("NANOBASE_META_DSN")
         if not dsn:
             dsn = "sqlite:///" + str(Path(_env("SEMANTIC_STORE_PATH", ".semantic_layer.db")).resolve())

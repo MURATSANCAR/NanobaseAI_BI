@@ -1,4 +1,7 @@
-"""Validated Q→SQL sources: legacy wren project exports, knowledge/sql/*.md, and the runtime query log."""
+"""Validated Q→SQL sources: the knowledge pack (pairs-export.yml, knowledge/sql/*.md) and the runtime query log.
+
+These are plain files owned by the product — a pack can be exported from the catalog itself
+(`semantic_layer.cli export-knowledge`), so no third-party project layout is required."""
 
 from __future__ import annotations
 
@@ -75,3 +78,31 @@ def load_project_pairs(project_dir: Optional[Path]) -> list[ValidatedPair]:
     pairs = load_pairs_export(project_dir / "knowledge" / "pairs-export.yml")
     pairs += load_knowledge_sql_dir(project_dir / "knowledge" / "sql")
     return dedupe(pairs)
+
+
+def export_pack(store, settings, out_dir: Path) -> dict[str, Any]:
+    """Write a knowledge pack the product owns: every validated question→SQL pair the catalog knows
+    (runtime-validated + previously imported) plus the operator documentation, in the plain layout the
+    miner reads. After this the deployment no longer needs the directory it was bootstrapped from."""
+    out_dir = Path(out_dir)
+    (out_dir / "knowledge" / "sql").mkdir(parents=True, exist_ok=True)
+    pairs = load_project_pairs(settings.project_dir)
+    pairs += load_query_log(store.list_validated_queries(settings.tenant_id, settings.datasource_id))
+    pairs = [p for p in dedupe(pairs) if p.source != "seed"]
+    payload = {
+        "version": 1,
+        "datasource": settings.datasource_id,
+        "pairs": [{"nl": p.nl, "sql": p.sql, "source": p.source, "created_at": p.created_at} for p in pairs],
+    }
+    (out_dir / "knowledge" / "pairs-export.yml").write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    copied = 0
+    src = settings.project_dir / "knowledge" if settings.project_dir else None
+    if src and src.exists():
+        for f in sorted(src.rglob("*.md")):
+            if f.parent.name == "sql":
+                continue
+            target = out_dir / "knowledge" / f.parent.name / f.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(f.read_text(encoding="utf-8"), encoding="utf-8")
+            copied += 1
+    return {"out": str(out_dir), "pairs": len(pairs), "docs": copied}

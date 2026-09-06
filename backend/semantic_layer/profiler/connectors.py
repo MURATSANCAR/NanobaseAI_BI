@@ -3,7 +3,8 @@
 MSSQLConnector   — pyodbc/FreeTDS (production Logo DB)
 PostgresConnector— psycopg2 (nanobase datasources)
 SQLiteConnector  — tests / local fixtures
-MDLConnector     — offline: legacy wren project models/*.yml (+ optional enum probe JSON); no DB needed
+ModelFileConnector — offline: a model export (models/*/metadata.yml + relationships.yml, optionally an enum
+                   probe JSON); lets the whole pipeline run before a database connection exists
 """
 
 from __future__ import annotations
@@ -302,12 +303,12 @@ class SQLiteConnector(_DbApiBase):
             cur.close()
 
 
-class MDLConnector:
-    default_schema = ""
+class ModelFileConnector:
+    """Offline connector over an exported model directory: models/*/metadata.yml give tables/columns/
+    descriptions, relationships.yml gives joins, and an optional enum probe JSON gives distinct/top values.
+    Lets the whole pipeline run without a database (bootstrap, tests, air-gapped review)."""
 
-    """Offline connector over an exported model project: models/*/metadata.yml give tables/columns/descriptions,
-    relationships.yml gives joins, and an optional enum probe JSON (artifacts/timas/apply-all.json) gives
-    distinct/top values. Lets the whole pipeline run without a database."""
+    default_schema = ""
 
     dialect = "tsql"
 
@@ -413,3 +414,7 @@ def connector_from_file(path: str) -> Connector:
     if ds == "sqlite":
         return SQLiteConnector(cfg.get("path", ":memory:"))
     raise ValueError(f"unsupported datasource: {ds}")
+
+
+# Backwards-compatible alias for the previous name of ModelFileConnector.
+MDLConnector = ModelFileConnector

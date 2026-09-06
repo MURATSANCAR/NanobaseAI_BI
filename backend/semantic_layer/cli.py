@@ -7,6 +7,7 @@
   compile "soru"                   resolve + deterministic compile (no LLM)
   explain "terim"                  why this mapping (certified senses + candidates)
   status                           counts, latest catalog version
+  export-knowledge --out DIR       write a self-contained knowledge pack (validated pairs + docs) from the catalog
   concepts [--status S] [--type T] list concepts
 """
 
@@ -48,7 +49,7 @@ def main(argv=None) -> int:
     ap.add_argument("--store", help="SQLAlchemy DSN (default env SEMANTIC_STORE_DSN / NANOBASE_META_DSN / sqlite)")
     ap.add_argument("--datasource")
     ap.add_argument("--tenant")
-    ap.add_argument("--project", help="legacy wren project dir (models/, knowledge/)")
+    ap.add_argument("--project", "--knowledge", dest="project", help="knowledge pack dir (knowledge/, optional models/)")
     ap.add_argument("--connection", help="connection JSON (mssql/postgres)")
     ap.add_argument("--enum-probe", help="offline enum probe JSON (artifacts/timas/apply-all.json)")
     ap.add_argument("--min-support", type=int)
@@ -61,6 +62,7 @@ def main(argv=None) -> int:
     sub.add_parser("docs")
     sub.add_parser("certify")
     sub.add_parser("status")
+    p = sub.add_parser("export-knowledge"); p.add_argument("--out", required=True)
     p = sub.add_parser("resolve"); p.add_argument("question")
     p = sub.add_parser("compile"); p.add_argument("question")
     p = sub.add_parser("explain"); p.add_argument("term")
@@ -73,6 +75,11 @@ def main(argv=None) -> int:
     if args.cmd == "init-db":
         store.create_all()
         print("ok:", s.store_dsn.split("@")[-1])
+        return 0
+    if args.cmd == "export-knowledge":
+        from semantic_layer.history.sources import export_pack
+
+        _dump(export_pack(store, s, Path(args.out)))
         return 0
     from semantic_layer import pipeline as pl
 
