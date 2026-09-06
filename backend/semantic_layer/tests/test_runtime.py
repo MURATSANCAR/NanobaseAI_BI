@@ -275,3 +275,16 @@ def test_gaps_endpoint_reports_what_users_asked_for(catalog, profiles, logo_conn
     assert terms["sepet"]["count"] == 2 and terms["sepet"]["kind"] == "undefined"
     assert terms["sepet"]["questions"], "the question that asked for it is kept with the term"
     assert terms["bekleyen"]["kind"] == "qualifier"
+
+
+def test_documented_basis_travels_with_the_mapping(catalog, profiles):
+    """A figure's basis (VAT included or not, unit or total) decides whether two numbers may be added.
+    Whoever documented the column wrote it down; it has to reach the model with the mapping."""
+    from semantic_layer.runtime.compiler import ExistingCompiler
+
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    inv.column("NETTOTAL").unit = "KDV hariç"
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
+    block = ExistingCompiler(FakeLlm([""]), profiles, {}).catalog_block(sq)
+    assert "KDV hariç" in block and "INVOICE.NETTOTAL" in block

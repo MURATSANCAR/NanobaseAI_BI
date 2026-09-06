@@ -360,7 +360,7 @@ Kurallar:
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
-- Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
+- Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
 _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
 _VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sales_cube|line_cube|orders_cube|küp|cube|görünüm)")
@@ -457,15 +457,32 @@ class ExistingCompiler:
                 continue
             if m.formula:
                 cond = "; ".join((m.extra or {}).get("conditions") or [])
-                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else ""))
+                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else "") + self._basis(m.formula))
             elif m.values:
                 lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
             elif m.column:
-                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu")
+                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu" + self._basis(f"{m.entity}.{m.column}"))
         for t in q.temporal:
             if t.start and t.end:
                 lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
         return "\n".join(lines) or "(yok)"
+
+    def _basis(self, expression: str) -> str:
+        """Documented basis of every column the expression touches ("KDV hariç", "birim maliyet").
+
+        A figure's basis decides whether two numbers may be added at all. It is written down by whoever
+        documented the column, so it belongs beside the mapping instead of being rediscovered each time.
+        """
+        found: list[str] = []
+        for prof in self.profiles:
+            for col in prof.columns:
+                if not col.unit:
+                    continue
+                if re.search(rf"\b{re.escape(prof.entity)}\.{re.escape(col.name)}\b", expression or ""):
+                    note = f"{prof.entity}.{col.name}: {col.unit}"
+                    if note not in found:
+                        found.append(note)
+        return f" [baz — {'; '.join(found)}]" if found else ""
 
     def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]], *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> list[dict[str, str]]:
         """`recall` overrides the shared one for this call only — the compiler object is shared by every
