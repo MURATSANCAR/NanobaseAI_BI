@@ -1,5 +1,5 @@
 {
- "ran_at": "2026-09-06T23:12:12",
+ "ran_at": "2026-09-06T23:24:15",
  "mode": "offline",
  "catalog_version": 1,
  "verdicts": {
@@ -78,13 +78,6 @@
    ]
   },
   {
-   "term": "cikan",
-   "count": 1,
-   "questions": [
-    "u24"
-   ]
-  },
-  {
    "term": "bekleyen",
    "count": 1,
    "questions": [
@@ -104,18 +97,15 @@
    "questions": [
     "u40"
    ]
-  },
-  {
-   "term": "derken",
-   "count": 1,
-   "questions": [
-    "u41"
-   ]
   }
  ],
  "out_of_domain_terms": [
   [
    "sektor",
+   1
+  ],
+  [
+   "cikan",
    1
   ],
   [
@@ -801,10 +791,10 @@
      "status": "INFERRED"
     }
    ],
-   "unresolved": [],
-   "unhandled": [
+   "unresolved": [
     "cikan"
    ],
+   "unhandled": [],
    "ignored": [
     "yeni",
     "tuttu"
@@ -812,7 +802,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "qualifiers with no certified meaning: cikan",
+   "why": "unresolved terms: cikan",
    "outcome": "reddetti",
    "verdict": "OK",
    "wall_s": 0.0
@@ -1282,10 +1272,9 @@
     "kdv",
     "dahil"
    ],
-   "unhandled": [
-    "derken"
-   ],
+   "unhandled": [],
    "ignored": [
+    "derken",
     "konusuyoruz"
    ],
    "conflicts": [],

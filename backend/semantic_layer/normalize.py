@@ -216,6 +216,10 @@ _VERB_TAILS = (
     "arak", "erek", "yarak", "yerek", "irken", "ırken", "arken", "erken", "urken", "ürken", "yken", "ken",
     "yan", "yen", "an", "en", "yip", "yıp", "yup", "yüp", "ip", "ıp", "up", "üp",
 )
+# Bare -an/-en is not a reliable participle marker: plenty of ordinary nouns end that way ("toptan",
+# "zaman", "düzen"). It stays available to verb_root, where a bridge only survives if a certified term
+# backs it, but it never decides on its own that a word is grammar rather than business vocabulary.
+_AMBIGUOUS_TAILS = frozenset(("an", "en"))
 _QUESTION_TAILS = ("mi", "mı", "mu", "mü", "misin", "misiniz", "midir", "mıdır")
 # The dental past tense is a verb marker even on a four-letter word ("oldu", "aldı", "tuttu").
 _PAST_TAILS = frozenset(("di", "dı", "du", "dü", "ti", "tı", "tu", "tü"))
@@ -254,6 +258,8 @@ def is_verb_form(token: str) -> bool:
         # a noun that merely ends the same way ("kadar", "zaman") keeps a plausible noun root, so
         # require the root to be short enough to be a verb stem; two-letter tails need a longer word
         # still, otherwise every noun ending in -an or -ip would read as a participle.
+        if tail in _AMBIGUOUS_TAILS:
+            continue
         strict = len(tail) <= 2 and tail not in _PAST_TAILS
         if strict and (len(t) < 5 or not 3 <= len(root) <= 6 or stem(t) != t):
             continue
@@ -359,7 +365,7 @@ _LIGHT_ROOTS = frozenset("et ed edil edil ol olun olus yap yapil kil bulun gerce
 def is_participle(token: str) -> bool:
     t = fold(token)
     for tail in _PARTICIPLE_TAILS:
-        if t.endswith(tail):
+        if t.endswith(tail) and tail not in _AMBIGUOUS_TAILS:
             root = t[: -len(tail)]
             if len(tail) <= 2 and (len(t) < 5 or not 3 <= len(root) <= 6 or stem(t) != t):
                 continue

@@ -345,3 +345,29 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
     assert "INVOICE" in prompt and "NOISE7" not in prompt
     assert "listelenmedi" in prompt, "what was left out has to be said, not silently dropped"
     assert len(prompt) < 40_000, f"prompt is {len(prompt)} characters"
+
+
+def test_a_period_after_the_last_loaded_row_is_still_answered(catalog, profiles):
+    """A month with no rows yet is a loading state, not a gap in what this source covers. Refusing it
+    would make an ordinary "how are we doing this month" unanswerable; the cut-off is said instead."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    last = inv.time_window[1]
+    after = r.resolve("Bu ay toptan satış ne kadar?", today=date(2027, 6, 15))
+    assert after.out_of_scope == [] and after.fully_resolved
+    assert any(last in e and "yüklenmemiş" in e for e in after.explanation)
+    # before the data begins is a different thing: there is nothing to find, and zero would be a lie
+    before = r.resolve("2019'da toptan satış ne kadar?", today=date(2026, 7, 20))
+    assert before.out_of_scope and not before.fully_resolved
+
+
+def test_a_noun_that_merely_ends_like_a_participle_stays_business_vocabulary(catalog, profiles):
+    """Bare -an/-en marks a participle in Turkish and also ends plenty of ordinary nouns ("toptan",
+    "zaman", "düzen"). Grammar must not decide those away; only evidence may."""
+    from semantic_layer.normalize import is_participle, is_verb_form
+
+    for word in ("toptan", "zaman", "duzen", "insan"):
+        assert not is_participle(word) and not is_verb_form(word), word
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Meydan satış tutarı ne kadar?", today=date(2026, 7, 20))
+    assert "meydan" in sq.unresolved and "meydan" not in sq.unhandled

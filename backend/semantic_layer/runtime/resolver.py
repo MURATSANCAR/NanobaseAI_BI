@@ -272,6 +272,11 @@ class SemanticResolver:
                 continue
             if st in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
                 continue
+            if is_light_verb(tok):
+                # "iade edilen" — the compound's meaning is in the noun beside it, not in this word
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
+                continue
             if is_participle(tok) or is_negative(tok):
                 # A participle is grammar, but an attributive one narrows the subject ("bekleyen
                 # siparişler"): dropping it would answer a wider question than the one that was asked.
@@ -337,10 +342,21 @@ class SemanticResolver:
             except Exception:  # noqa: BLE001
                 first = last = None
             for t in sq.temporal:
-                if first and last and t.start and t.end and (t.end <= first or t.start > last):
+                if not (first and last and t.start and t.end):
+                    continue
+                if t.end <= first:
+                    # entirely before the data begins: there is nothing to find, and an empty result
+                    # would read as a real zero
                     sq.out_of_scope.append(t.text)
                     sq.explanation.append(
                         f"'{t.text}' bu veri kaynağının kapsamı dışında: {entity} verisi {window[0]} – {window[1]} arasını içeriyor"
+                    )
+                elif t.start > last:
+                    # after the last row loaded. That is a loading state, not a gap in coverage — the
+                    # current month legitimately has no rows yet — so the question is still answered,
+                    # with the cut-off said out loud.
+                    sq.explanation.append(
+                        f"'{t.text}' için veri henüz yüklenmemiş olabilir: {entity} son kaydı {window[1]}"
                     )
 
         # 9) a share question needs a denominator. When no certified ratio supplies one, answering with
