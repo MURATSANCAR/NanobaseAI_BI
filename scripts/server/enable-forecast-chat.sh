@@ -2,6 +2,8 @@
 # Wire the Forecast API (:8793) into nanobase_api: env keys, alembic 013 (fc_forecast_run/point),
 # restart API + ARQ worker, verify /health of both services. Idempotent.
 set -euo pipefail
+# Shared host: systemd's manager can take >25 s to answer; keep systemctl from timing out.
+export SYSTEMD_BUS_TIMEOUT="${SYSTEMD_BUS_TIMEOUT:-300}"
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 ENV_FILE="${NANOBASE_API_ENV:-/data/nanobaseai/bi/frontend/backend/nanobase_api.env}"
 FORECAST_BASE="${FORECAST_API_BASE:-http://127.0.0.1:8793}"
@@ -32,8 +34,8 @@ log "Alembic migrations (013 forecast tables)"
 "${ROOT}/scripts/server/migrate-nanobase-api.sh"
 
 log "Restarting nanobase-bi-api + nanobase-arq"
-sudo systemctl restart nanobase-bi-api
-sudo systemctl restart nanobase-arq
+sudo -E systemctl restart nanobase-bi-api
+sudo -E systemctl restart nanobase-arq
 for i in $(seq 1 30); do
   if curl -fsS http://127.0.0.1:8790/health >/dev/null 2>&1; then break; fi
   sleep 2

@@ -8,6 +8,8 @@
 # The script installs the service requirements into that venv, writes the env
 # file + unit, restarts the service and waits for /health to report ready.
 set -euo pipefail
+# Shared host: systemd's manager can take >25 s to answer; keep systemctl from timing out.
+export SYSTEMD_BUS_TIMEOUT="${SYSTEMD_BUS_TIMEOUT:-300}"
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VENV="${FORECAST_VENV:-/data/nanobaseai/bi/timesfm-venv}"
@@ -82,9 +84,9 @@ CPUQuota=${CPU_QUOTA}
 WantedBy=multi-user.target
 UNIT
 
-sudo systemctl daemon-reload
-sudo systemctl enable nanobase-forecast >/dev/null
-sudo systemctl restart nanobase-forecast
+sudo -E systemctl daemon-reload
+sudo -E systemctl enable nanobase-forecast >/dev/null
+sudo -E systemctl restart nanobase-forecast
 
 log "Waiting for /health ready (timeout ${READY_TIMEOUT}s — first start hashes + loads the checkpoint)"
 deadline=$(( $(date +%s) + READY_TIMEOUT ))
@@ -95,7 +97,7 @@ while :; do
   fi
   if (( $(date +%s) > deadline )); then
     curl -sS "http://127.0.0.1:${PORT}/health" || true
-    sudo journalctl -u nanobase-forecast -n 40 --no-pager
+    sudo -E journalctl -u nanobase-forecast -n 40 --no-pager
     die "forecast service not ready after ${READY_TIMEOUT}s"
   fi
   sleep 5
