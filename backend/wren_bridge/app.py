@@ -101,7 +101,14 @@ def engine():
         ds, conn = _load_connection()
         _data_source = ds
         manifest_str = base64.b64encode(json.dumps(_manifest).encode("utf-8")).decode("ascii")
-        _engine = WrenEngine(manifest_str, DataSource(ds.lower()), conn)
+        # strict_mode + denied_functions come from ~/.wren/config.json (WREN_HOME), the same file the CLI reads:
+        # only MDL-declared tables may be referenced and dangerous functions are rejected before execution.
+        from wren.config import load_config
+
+        wren_home = Path(os.environ.get("WREN_HOME", str(Path.home() / ".wren")))
+        cfg = load_config(wren_home)
+        _engine = WrenEngine(manifest_str, DataSource(ds.lower()), conn, config=cfg)
+        log.info("engine config: strict_mode=%s denied_functions=%d", cfg.strict_mode, len(cfg.denied_functions))
         log.info("wren engine ready: project=%s datasource=%s models=%d", PROJECT, ds, len(_manifest.get("models", [])))
     return _engine
 
@@ -183,7 +190,16 @@ def engine_status() -> dict:
     except Exception as e:  # noqa: BLE001
         log.warning("engine probe failed: %s", e)
         deployed = False
-    return {"dataSource": _data_source, "models": len(m.get("models", [])), "deployed": deployed, "project": PROJECT.name, "engine": "wrenai-core"}
+    return {
+        "dataSource": _data_source,
+        "models": len(m.get("models", [])),
+        "views": len(m.get("views", []) or []),
+        "cubes": len(m.get("cubes", []) or []),
+        "relationships": len(m.get("relationships", []) or []),
+        "deployed": deployed,
+        "project": PROJECT.name,
+        "engine": "wrenai-core",
+    }
 
 
 @app.post("/api/v1/run_sql")
