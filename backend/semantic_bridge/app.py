@@ -28,11 +28,13 @@ from pydantic import BaseModel, Field
 
 from semantic_layer import SEMANTIC_LAYER_VERSION
 from semantic_layer.candidates.generator import CandidateGenerator
+from semantic_layer.conventions import Conventions
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
 from semantic_layer.models import Annotation, ConceptStatus, TemporalSlot
+from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
@@ -62,18 +64,20 @@ class Runtime:
         self.rebuild()
 
     def _load_rules(self) -> str:
+        """Operator documentation shipped with the deployment — every *.md under knowledge/ except
+        the validated Q→SQL pairs (those are the miner's input, and reach the LLM through recall)."""
         pd = self.settings.project_dir
-        if not pd:
+        if not pd or not (pd / "knowledge").exists():
             return ""
-        parts = []
-        for sub in ("rules", "glossary", "metrics", "caveats"):
-            for f in sorted((pd / "knowledge" / sub).glob("*.md")):
-                parts.append(f.read_text(encoding="utf-8"))
+        parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md")) if f.parent.name != "sql"]
         return "\n\n".join(parts)
 
     def rebuild(self) -> None:
         s = self.settings
         self.profiles = self.store.list_profiles(s.datasource_id)
+        self.conventions = Conventions.from_profiles(self.profiles)
+        if not s.dialect:
+            s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = None
         dp = os.environ.get("SEMANTIC_DEFAULT_PERIOD", "")  # e.g. YEAR:2026
         if dp.startswith("YEAR:"):
@@ -81,11 +85,11 @@ class Runtime:
 
             y = int(dp.split(":")[1])
             default_temporal = TemporalSlot(text="varsayılan", primitive="YEAR", start=date(y, 1, 1), end=date(y + 1, 1, 1), grain="YEAR", params={"year": y, "default": True})
-        self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal)
-        det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id))
+        self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions)
+        det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id), conventions=self.conventions)
         existing = None
         if self.llm is not None:
-            existing = ExistingCompiler(self.llm, self.profiles, s.context, rules_text=self.rules_text, recall=self.recall if s.recall_enabled else None)
+            existing = ExistingCompiler(self.llm, self.profiles, s.context, rules_text=self.rules_text, recall=self.recall if s.recall_enabled else None, dialect=s.dialect, conventions=self.conventions)
         self.existing = existing
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss)
 
@@ -279,6 +283,7 @@ class Runtime:
                 })
             tables.append({
                 "entity": p.entity, "tableName": p.table_name, "tablePattern": p.table_pattern, "schema": p.schema_name,
+                "context": label_context(p.context, s.pattern_labels),
                 "description": p.description, "rowCount": p.row_count, "primaryKey": p.primary_key, "relationships": p.relationships,
                 "annotations": [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, None), [])],
                 "columns": cols, "undefinedColumns": sum(1 for c in cols if c["status"] == "UNDEFINED"), "scannedAt": p.scanned_at.isoformat(),
@@ -288,13 +293,13 @@ class Runtime:
     def add_annotation(self, table_pattern: str, column: Optional[str], text: str, author: str) -> dict[str, Any]:
         s = self.settings
         ann = self.store.add_annotation(Annotation(datasource_id=s.datasource_id, table_pattern=table_pattern, column=(column or None), text=text.strip(), author=author))
-        gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles)
+        gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         ingested = gen.ingest_annotation(table_pattern, column, text, f"annotation:{ann.id}")
         return {"annotation": {"id": ann.id, "tablePattern": table_pattern, "column": column, "text": ann.text, "author": author}, "candidates": ingested}
 
     def certify(self, note: str = "") -> dict[str, Any]:
         s = self.settings
-        gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles)
+        gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         gen.attach_profile_evidence()
         rep = EvidenceEngine(self.store, min_support=s.min_support, threshold=s.certify_threshold).run(s.tenant_id, s.datasource_id, self.profiles, note=note)
         self.rebuild()
@@ -371,7 +376,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             try:
                 p = r.profiles[0]
                 pk = p.primary_key[0] if p.primary_key else p.columns[0].name
-                r.run_sql(f'SELECT TOP 1 "{pk}" FROM {p.schema_name}_{p.table_name}' if r.settings.dialect == "tsql" else f'SELECT "{pk}" FROM {p.table_name} LIMIT 1', 1)
+                label = f"{p.schema_name}_{p.table_name}" if p.schema_name else p.table_name
+                r.run_sql(f'SELECT TOP 1 "{pk}" FROM {label}' if r.settings.dialect == "tsql" else f'SELECT "{pk}" FROM {label} LIMIT 1', 1)
                 deployed = True
             except Exception as e:  # noqa: BLE001
                 log.warning("engine probe failed: %s", e)

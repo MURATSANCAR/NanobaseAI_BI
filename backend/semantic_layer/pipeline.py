@@ -15,7 +15,8 @@ from semantic_layer.history.miner import HistoryMiner
 from semantic_layer.history.sources import dedupe, load_project_pairs, load_query_log
 from semantic_layer.models import SchemaProfile
 from semantic_layer.profiler.connectors import Connector, MDLConnector, connector_from_file
-from semantic_layer.profiler.profiler import Profiler, column_index, profile_summary
+from semantic_layer.conventions import Conventions
+from semantic_layer.profiler.profiler import Profiler, column_index, infer_links, profile_summary
 from semantic_layer.store.catalog_store import CatalogStore
 
 log = logging.getLogger(__name__)
@@ -31,23 +32,35 @@ def build_connector(settings: SemanticSettings, *, project_dir: Optional[Path] =
     raise RuntimeError("no connection file and no project dir with models/ — nothing to profile")
 
 
-def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None) -> list[SchemaProfile]:
+def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None, probe_links: bool = True) -> list[SchemaProfile]:
+    """Discover tables/columns/enums/keys. Schema and dialect default to the connector's own."""
+    schema = schema or settings.schema_name or getattr(connector, "default_schema", "")
     prof = Profiler(connector, enum_max_distinct=settings.enum_max_distinct)
-    profiles = prof.profile(settings.datasource_id, schema or settings.schema_name, like if like is not None else settings.table_like)
+    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None)
+    if probe_links and hasattr(connector, "execute"):
+        try:
+            added = infer_links(profiles, connector)
+            if added:
+                log.info("link inference added %d relationships from value overlap", added)
+        except Exception as e:  # noqa: BLE001
+            log.warning("link inference skipped: %s", e)
+    if not settings.dialect:
+        settings.dialect = getattr(connector, "dialect", "") or "generic"
     for p in profiles:
         store.upsert_profile(p)
     return profiles
 
 
-def run_mine(store: CatalogStore, settings: SemanticSettings, profiles: list[SchemaProfile], project_dir: Optional[Path]) -> dict[str, Any]:
+def run_mine(store: CatalogStore, settings: SemanticSettings, profiles: list[SchemaProfile], project_dir: Optional[Path], conventions: Optional[Conventions] = None) -> dict[str, Any]:
     pairs = load_project_pairs(project_dir or settings.project_dir)
     pairs += load_query_log(store.list_validated_queries(settings.tenant_id, settings.datasource_id))
     pairs = dedupe(pairs)
-    flags = {(p.entity, c.name.upper()): ((c.distinct_count or 0) <= 2 and bool(c.top_values)) for p in profiles for c in p.columns}
-    miner = HistoryMiner(column_index(profiles), column_flags=flags)
+    conv = conventions or Conventions.from_profiles(profiles)
+    miner = HistoryMiner(column_index(profiles), conventions=conv)
     res = miner.mine(pairs)
+    conv.learn_time_hint(res.temporal_bindings)
     persisted = miner.persist(res, store, settings.tenant_id, settings.datasource_id)
-    return {"summary": res.summary(), "persisted": persisted, "context": res.context}
+    return {"summary": res.summary(), "persisted": persisted, "context": res.context, "time_columns": dict(conv.time_hint)}
 
 
 def run_pipeline(
@@ -72,9 +85,10 @@ def run_pipeline(
             profiles = run_profile(store, settings, connector)
         finally:
             connector.close()
+    conventions = Conventions.from_profiles(profiles)
     report["profile"] = profile_summary(profiles)
-    report["mine"] = run_mine(store, settings, profiles, project_dir)
-    gen = CandidateGenerator(store, settings.tenant_id, settings.datasource_id, profiles)
+    report["mine"] = run_mine(store, settings, profiles, project_dir, conventions)
+    gen = CandidateGenerator(store, settings.tenant_id, settings.datasource_id, profiles, conventions)
     report["docs"] = gen.ingest_project_docs(project_dir)
     report["profile_evidence"] = gen.attach_profile_evidence()
     if llm is not None:

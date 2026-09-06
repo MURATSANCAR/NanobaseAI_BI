@@ -184,8 +184,8 @@ async def sl_pipeline(request: Request, body: dict[str, Any] | None = None, prin
             cfg = resolve_pg_connect_cfg(s.datasource_id)
             if cfg:
                 connector = PostgresConnector(cfg)
-                s.schema_name = str((body or {}).get("schema") or "public")
-                s.table_like = str((body or {}).get("tableLike") or "%")
+                s.schema_name = str((body or {}).get("schema") or s.schema_name or connector.default_schema)
+                s.table_like = str((body or {}).get("tableLike") or s.table_like or "")
         except Exception:  # noqa: BLE001
             connector = None
         if connector is not None:

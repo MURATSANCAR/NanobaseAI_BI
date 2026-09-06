@@ -1,5 +1,5 @@
 """Question → facts: candidate terms (1..3-grams within a clause), explicit code hints
-("toptan (TRCODE 8)"), metric words, limit/order hints and temporal slots."""
+("toptan (KOD 8)"), metric words, limit/order hints and temporal slots."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ class QuestionFacts:
     terms: list[tuple[int, int, str]]                 # (start, end, stemmed n-gram)
     surface: dict[str, str]                           # stemmed n-gram → surface text (first seen)
     explicit_codes: list[tuple[str, tuple[str, ...]]]  # (COLUMN, values) stated in the question
-    explicit_bindings: list[tuple[str, str, tuple[str, ...]]]  # (term, COLUMN, values) "toptan (TRCODE 8)"
+    explicit_bindings: list[tuple[str, str, tuple[str, ...]]]  # (term, COLUMN, values) "toptan (KOD 8)"
     metric_words: list[str]
     temporal: list = field(default_factory=list)
     grain: Optional[str] = None

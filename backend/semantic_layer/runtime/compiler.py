@@ -32,17 +32,28 @@ class SemanticQueryCompiler(Protocol):
 # ---------------------------------------------------------------------- dialect helpers
 
 class Dialect:
+    """Per-engine SQL shapes. Unknown engines fall back to the standard-SQL family (date_trunc/LIMIT),
+    which is what every non-SQL-Server target this product connects to speaks."""
+
     def __init__(self, name: str):
-        self.name = name
+        self.name = (name or "").lower() or "generic"
+
+    @property
+    def family(self) -> str:
+        if self.name in ("tsql", "mssql", "sqlserver"):
+            return "tsql"
+        if self.name in ("sqlite",):
+            return "sqlite"
+        return "standard"
 
     def q(self, ident: str) -> str:
-        return f"[{ident}]" if self.name == "tsql" else f'"{ident}"'
+        return f"[{ident}]" if self.family == "tsql" else f'"{ident}"'
 
     def table(self, schema: str, name: str) -> str:
-        return f"{self.q(schema)}.{self.q(name)}" if self.name == "tsql" else self.q(name)
+        return f"{self.q(schema)}.{self.q(name)}" if schema and self.family != "sqlite" else self.q(name)
 
     def bucket(self, col: str, grain: str) -> str:
-        if self.name == "tsql":
+        if self.family == "tsql":
             return {
                 "DAY": f"CAST({col} AS DATE)",
                 "WEEK": f"DATEADD(DAY, 1 - DATEPART(WEEKDAY, {col}), CAST({col} AS DATE))",
@@ -50,16 +61,24 @@ class Dialect:
                 "QUARTER": f"DATEFROMPARTS(YEAR({col}), ((MONTH({col}) - 1) / 3) * 3 + 1, 1)",
                 "YEAR": f"YEAR({col})",
             }[grain]
+        if self.family == "sqlite":
+            return {
+                "DAY": f"date({col})",
+                "WEEK": f"strftime('%Y-%W', {col})",
+                "MONTH": f"strftime('%Y-%m-01', {col})",
+                "QUARTER": f"(strftime('%Y', {col}) || '-Q' || ((cast(strftime('%m', {col}) as integer) + 2) / 3))",
+                "YEAR": f"cast(strftime('%Y', {col}) as integer)",
+            }[grain]
         return {
-            "DAY": f"date({col})",
-            "WEEK": f"strftime('%Y-%W', {col})",
-            "MONTH": f"strftime('%Y-%m-01', {col})",
-            "QUARTER": f"(strftime('%Y', {col}) || '-Q' || ((cast(strftime('%m', {col}) as integer) + 2) / 3))",
-            "YEAR": f"cast(strftime('%Y', {col}) as integer)",
+            "DAY": f"date_trunc('day', {col})",
+            "WEEK": f"date_trunc('week', {col})",
+            "MONTH": f"date_trunc('month', {col})",
+            "QUARTER": f"date_trunc('quarter', {col})",
+            "YEAR": f"date_trunc('year', {col})",
         }[grain]
 
     def limit(self, sql_select: str, n: int) -> str:
-        if self.name == "tsql":
+        if self.family == "tsql":
             return sql_select.replace("SELECT ", f"SELECT TOP {int(n)} ", 1)
         return sql_select + f"\nLIMIT {int(n)}"
 
@@ -82,7 +101,7 @@ def _lit(v: str) -> str:
         float(v)
         return v
     except ValueError:
-        return "N'" + v.replace("'", "''") + "'" if False else "'" + v.replace("'", "''") + "'"
+        return "'" + v.replace("'", "''") + "'"
 
 
 def _pred_sql(alias: str, m: Mapping, d: Dialect) -> str:
@@ -149,12 +168,15 @@ class _Plan:
 class DeterministicCompiler:
     name = "deterministic"
 
-    def __init__(self, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql", *, default_filters: Optional[Callable[[str], list[Mapping]]] = None):
+    def __init__(self, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql", *, default_filters: Optional[Callable[[str], list[Mapping]]] = None, conventions: Any = None):
+        from semantic_layer.conventions import Conventions
+
         self.profiles = profiles
         self.by_entity = {p.entity: p for p in profiles}
         self.context = context
         self.d = Dialect(dialect)
         self._default_filters = default_filters or (lambda entity: [])
+        self.conventions = conventions or Conventions.from_profiles(profiles)
 
     # -- capability check
     def plan(self, q: SemanticQuery) -> tuple[Optional[_Plan], str]:
@@ -195,7 +217,7 @@ class DeterministicCompiler:
         extra_cols = [s for s in q.slots if s.semantic_type == SemanticType.COLUMN and s not in group_cols]
         if extra_cols:
             return None, "column projections without group-by are not supported deterministically"
-        date_col = self._date_column(prof)
+        date_col = self.conventions.time_column(entity)
         if (q.temporal or q.grain) and not date_col:
             return None, f"no date column on {entity}"
         return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
@@ -275,8 +297,9 @@ class DeterministicCompiler:
         sql = "SELECT " + ", ".join(select)
         sql += f"\nFROM {d.table(prof.schema_name, physical_name(prof.table_pattern, {**prof.context, **self.context}))} AS {alias}"
         for ent, col, ref_ent, ref_col in plan.joins:
-            rp = self.by_entity[ref_ent]
-            sql += f"\nJOIN {d.table(rp.schema_name, physical_name(rp.table_pattern, {**rp.context, **self.context}))} AS {ref_ent} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            joined = ref_ent if ref_ent != plan.entity else ent
+            rp = self.by_entity[joined]
+            sql += f"\nJOIN {d.table(rp.schema_name, physical_name(rp.table_pattern, {**rp.context, **self.context}))} AS {joined} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -287,26 +310,12 @@ class DeterministicCompiler:
             sql += "\nORDER BY " + ", ".join(order)
         if q.limit:
             sql = d.limit(sql, q.limit)
-        tables = [prof.table_name] + [self.by_entity[j[2]].table_name for j in plan.joins]
+        tables = [prof.table_name] + [self.by_entity[j[2] if j[2] != plan.entity else j[0]].table_name for j in plan.joins]
         return CompiledQuery(sql=sql, compiler=self.name, tables=tables, catalog_version=q.catalog_version, explain=explain, certified=True)
 
     # -- helpers
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
-        prof = self.by_entity.get(entity)
-        if prof:
-            for r in prof.relationships:
-                if r["ref_entity"] == other:
-                    return (entity, r["column"], other, r["ref_column"])
-        return None
-
-    @staticmethod
-    def _date_column(prof: SchemaProfile) -> Optional[str]:
-        if prof.column("DATE_"):
-            return "DATE_"
-        for c in prof.columns:
-            if any(x in c.data_type.lower() for x in ("date", "timestamp")):
-                return c.name
-        return None
+        return self.conventions.join_path(entity, other)
 
     def _formula_sql(self, formula: str, entity: str) -> str:
         d = self.d
@@ -314,8 +323,6 @@ class DeterministicCompiler:
             ent, col = m.group(1), m.group(2)
             return f"{ent}.{d.q(col)}"
         out = re.sub(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", repl, formula)
-        if d.name == "sqlite":
-            out = out.replace("NULLIF(", "NULLIF(")
         return out
 
 
@@ -323,11 +330,10 @@ class DeterministicCompiler:
 
 SYSTEM_PROMPT = """Sen NanobaseAI BI'ın SQL üreticisisin. Görevin: kullanıcının Türkçe iş sorusunu, aşağıdaki fiziksel tablolar üzerinde çalışan TEK bir SELECT sorgusuna çevirmek.
 Kurallar:
-- Yalnız verilen tablo adlarını kullan; tablo adlarını verildiği gibi yaz (ör. dbo_LG_411_01_INVOICE), kolon adlarını çift tırnak içinde yaz.
-- Hedef veritabanı SQL Server (T-SQL). LIMIT yerine TOP kullan; GROUP BY içinde takma ad veya sıra numarası kullanma, ifadeyi tekrar yaz.
-- Tarih kırılımı: ay için DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1); gün için CAST("DATE_" AS DATE).
+- Yalnız "## Tablolar" bölümündeki adları, verildikleri yazımla kullan; kolon adlarını çift tırnak içinde yaz.
+- SQL lehçesi ve tarih kırılımı örnekleri "## Lehçe" bölümündedir; oradaki kalıpları kullan.
 - SERTİFİKALI KATALOG bloğundaki eşlemeler kesindir: bir terim için verilen kolon/değer kümesini AYNEN kullan, başka değer uydurma.
-- İş kurallarına (TRCODE, LINETYPE, CANCELLED = 0 vb.) mutlaka uy.
+- "## İş kuralları" bölümündeki varsayılan filtrelere ve tanımlara mutlaka uy.
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
@@ -347,20 +353,33 @@ def extract_sql(text: str) -> Optional[str]:
 
 
 def clean_rules(text: str) -> str:
-    """Drop legacy WrenAI view/cube guidance from the business rules."""
+    """Drop guidance about objects this engine does not serve (materialised views / cubes of the
+    previous stack); the remaining business rules are passed through untouched."""
     return "\n".join(line for line in (text or "").splitlines() if not _VIEW_LINES.search(line))
+
+
+_DIALECT_NOTES = {
+    "tsql": ('Hedef veritabanı SQL Server (T-SQL). LIMIT yerine TOP kullan; GROUP BY içinde takma ad veya sıra numarası kullanma, ifadeyi tekrar yaz. '
+             'Ay kırılımı DATEFROMPARTS(YEAR(<tarih>), MONTH(<tarih>), 1); gün kırılımı CAST(<tarih> AS DATE).'),
+    "postgres": ('Hedef veritabanı PostgreSQL. Ay kırılımı date_trunc(\'month\', <tarih>); gün kırılımı <tarih>::date; satır sınırı LIMIT.'),
+    "sqlite": ("Hedef veritabanı SQLite. Ay kırılımı strftime('%Y-%m-01', <tarih>); satır sınırı LIMIT."),
+}
 
 
 class ExistingCompiler:
     name = "existing_llm"
 
-    def __init__(self, llm, profiles: list[SchemaProfile], context: dict[str, str], *, rules_text: str = "", recall: Optional[Callable[[str], list[dict[str, str]]]] = None, model_naming: str = "mdl"):
+    def __init__(self, llm, profiles: list[SchemaProfile], context: dict[str, str], *, rules_text: str = "", recall: Optional[Callable[[str], list[dict[str, str]]]] = None, model_naming: str = "mdl", dialect: str = "tsql", conventions: Any = None):
+        from semantic_layer.conventions import Conventions
+
         self.llm = llm
         self.profiles = profiles
         self.context = context
         self.rules_text = clean_rules(rules_text)
         self.recall = recall
         self.model_naming = model_naming
+        self.dialect = dialect
+        self.conventions = conventions or Conventions.from_profiles(profiles)
 
     def table_label(self, p: SchemaProfile) -> str:
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
@@ -370,7 +389,13 @@ class ExistingCompiler:
         lines = ["### Tablolar"]
         for p in self.profiles:
             pk = ", ".join(p.primary_key) or "-"
-            lines.append(f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon' + (f" — {p.description[:160]}" if p.description else ""))
+            rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}' for r in p.relationships[:6])
+            line = f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon'
+            if p.description:
+                line += f" — {p.description[:160]}"
+            if rels:
+                line += f" · ilişkiler: {rels}"
+            lines.append(line)
         return "\n".join(lines)
 
     def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> str:
@@ -419,6 +444,7 @@ class ExistingCompiler:
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
         ctx = [
             "## Tablolar\n" + self.model_index(),
+            "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),

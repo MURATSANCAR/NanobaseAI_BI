@@ -288,7 +288,7 @@ class EvidenceEngine:
     def link_synonyms(self, tenant_id: str, datasource_id: str) -> list[dict[str, Any]]:
         """Two evidence-backed synonym rules for CERTIFIED metrics:
         (a) a validated sub-term ('satis' ⊂ 'satis tutar') whose own formula uses the same columns and scope;
-        (b) terms declared together in documentation ("ciro / satış tutarı" = INVOICE.NETTOTAL)."""
+        (b) terms declared together in documentation ("ciro / satış tutarı" = the same measure column)."""
         out: list[dict[str, Any]] = []
         certified = self.store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, status=ConceptStatus.CERTIFIED, limit=100000)
         others = [c for c in self.store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, limit=100000) if c.status not in (ConceptStatus.CERTIFIED, ConceptStatus.REJECTED)]
@@ -425,8 +425,8 @@ def conditions_map(conditions: list[str]) -> dict[str, frozenset[str]]:
 
 def metric_signature(mapping: Mapping) -> tuple[str, dict[str, frozenset[str]]]:
     """Base aggregate + scope, folding a redundant conditional aggregate into the scope:
-    SUM(CASE WHEN TRCODE IN (7,8) THEN AMOUNT ELSE 0 END) ≡ SUM(AMOUNT) scoped to TRCODE IN (7,8).
-    An ELSE branch that is not 0 (net ciro's -NETTOTAL) is a different measure and is never folded."""
+    SUM(CASE WHEN <code> IN (…) THEN <measure> ELSE 0 END) ≡ SUM(<measure>) scoped to that condition.
+    An ELSE branch that is not 0 (a signed net measure) is a different measure and is never folded."""
     formula = (mapping.formula or "").strip()
     conds = conditions_map(list((mapping.extra or {}).get("conditions") or []))
     m = _CASE_SUM.match(formula)

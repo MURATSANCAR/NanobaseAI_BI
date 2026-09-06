@@ -33,8 +33,8 @@ def validate_sql(sql: str) -> tuple[bool, str]:
 def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql") -> str:
     """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
 
-    dbo_LG_411_01_INVOICE → [dbo].[LG_411_01_INVOICE]; INVOICE (entity) → its physical table;
-    LIMIT → TOP, EXTRACT → DATEPART (sqlglot)."""
+    A model spelling (schema_TABLE), a logical entity or a stale period name all resolve to the
+    physical table of the profiled pattern under the given context; LIMIT → TOP, EXTRACT → DATEPART."""
     by_entity = {p.entity: p for p in profiles}
     by_table = {p.table_name.upper(): p for p in profiles}
     for p in profiles:

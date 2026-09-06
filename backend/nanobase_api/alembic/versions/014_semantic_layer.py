@@ -121,7 +121,7 @@ def upgrade() -> None:
         CREATE TABLE IF NOT EXISTS sl_schema_profile (
             id VARCHAR(64) PRIMARY KEY,
             datasource_id VARCHAR(128) NOT NULL,
-            schema_name VARCHAR(128) NOT NULL DEFAULT 'dbo',
+            schema_name VARCHAR(128) NOT NULL DEFAULT '',
             table_name VARCHAR(256) NOT NULL,
             table_pattern VARCHAR(256) NOT NULL,
             entity VARCHAR(128) NOT NULL,

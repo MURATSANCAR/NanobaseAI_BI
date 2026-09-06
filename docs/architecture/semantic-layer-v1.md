@@ -106,6 +106,26 @@ profilde yoksa) → `DEPRECATED` (drift).
 kaynaklı olanları (toptan, perakende, iade oranı, son günler …) History Miner + Profiler + aday hattı ile
 (elle katalog yazmadan) CERTIFIED'a taşınır; bench dilim bazında raporlanır (tek sayı değil).
 
+## 7. Şemadan bağımsızlık (zorunlu tasarım kuralı)
+
+Motor kodunda **hiçbir müşteriye özgü tablo/kolon/kod adı yoktur**; hepsi profilden türetilir:
+
+| Soru | Eski (statik) | Yeni (dinamik) |
+|---|---|---|
+| Tablo ailesi / dönem deseni | `LG_(\d{3})_(\d{2})_X` regex'i | ad içindeki sayısal segmentler konumsal yer tutucuya döner: `LG_411_01_INVOICE → LG_{n0}_{n1}_INVOICE`, `sales_2024_orders → SALES_{n0}_ORDERS` (`naming.logical_table`) |
+| `*REF` hangi tabloya gider? | `CLIENTREF→CLCARD` sözlüğü | (1) gerçek FK metadata, (2) doğrulanmış SQL'lerden madenlenen JOIN'ler, (3) değer örtüşmesi ile bağlantı çıkarımı (`profiler.infer_links`) |
+| Hangi kolon metrik kapsamı? | `TRCODE/LINETYPE` listesi | profil: 3–64 farklı değerli enum = iş kodu (kapsam); ≤2 ve boolean-biçimli (0/1, Y/N) = bayrak (varsayılan filtre adayı) (`conventions.py`) |
+| Tarih kolonu | `DATE_` tercihi | profil tip taraması + doğrulanmış sorguların fiilen filtrelediği kolon (`Conventions.learn_time_hint`) |
+| Aynı kolon iki tabloda | `NETTOTAL→INVOICE` sezgisi | `preferred_entity`: satır sayısı (başlık tablosu küçüktür), referans yönü, sorgudaki diğer kolonlar |
+| Doküman madenciliği | sabit kolon/varlık listesi | profildeki varlık ve enum kolonları (`mine_text(..., conventions)`) |
+| LLM istemi | "TRCODE, LINETYPE, CANCELLED = 0'a uy" | yalnız profil tabloları + sertifikalı katalog + lehçe notu |
+| Lehçe | T-SQL varsayımı | `Dialect` aileleri (tsql / sqlite / standard), bağlantıdan gelir |
+| Ayarlar | `datasource=logo`, `LG_411_%`, `firm/period` | hepsi boş varsayılan; `SEMANTIC_CONTEXT=n0=412` ile aynı katalog başka firma/döneme derlenir |
+
+Bunu koruyan iki test: `tests/test_dynamic_schema.py` — (a) tamamen farklı bir şema (FK'siz, `*REF`siz,
+yıl ekli olgu tablosu) üzerinde profil→madencilik→sertifika→çözümleme→derleme→**çalıştırma** uçtan uca
+doğru sonucu üretir, (b) motor kaynaklarında müşteri tanımlayıcısı geçmediğini grep ile doğrular.
+
 ## 7. Uygulama durumu (2026-09-06)
 
 Kodlandı ve yerelde doğrulandı (23 birim/entegrasyon testi, SQLite üzerinde uçtan uca):
@@ -128,17 +148,27 @@ Cold-start (recall OFF, LLM YOK, yalnız katalog + deterministik derleyici, logo
 
 | Dilim | Sonuç |
 |---|---|
-| Schema | 18/20 |
-| Semantic Value | 12/13 |
-| Metric | 12/14 |
+| Schema | 20/20 |
+| Semantic Value | 13/13 |
+| Metric | 14/14 |
 | Temporal | 18/18 |
-| SQL (deterministik, LLM'siz) | 13/20 |
+| SQL (deterministik, LLM'siz) | 18/20 |
 | Result | sunucuda `--bridge` ile ölçülür |
 
-Kalan 7 SQL kaybı LLM'siz ölçümdür: bu sorular köprüde ExistingCompiler'a (Qwen + sertifikalı gerçekler) düşer.
-Kayıp nedenleri dürüst: `satılan adet` (2 formül varyantı, destek 1+1), `iade tutarı` (ölçü kelimesi
-"tutar" için sertifikalı formül yok), `KITAPCI/E-TICARET` kanal kodları (kanal *değer*leri henüz
-history'de yok — profil `SPECODE2` enum'unu görüyor, doğrulanmış sorgu gelince aday→sertifika).
+Kalan 2 SQL kaybı bilinçli reddir, LLM hattına düşer: (a) "toptan iade tutarı" — aynı kolonda çelişen iki
+değer kümesi (8 ile 2,3) istendi; doğrusu "toptan iade" (tek kod) ve o kavram dokümandan CANDIDATE olarak
+duruyor, bir doğrulanmış sorguyla sertifikalanır; (b) "maliyetli ciro" — `maliyetli` terimi 2 doğrulanmış
+sorguda görülüyor (eşik 3) ve dokümanda karşılığı yok.
+
+Bu turda eklenen üç kanıt mekanizması (hepsi şemadan bağımsız):
+1. **Eşdeğer formül eş anlamlısı** — `SUM(CASE WHEN k THEN x ELSE 0 END)` ≡ `SUM(x)` + kapsam k; aynı
+   varlıkta aynı ölçüyü adlandıran terimler tek sertifikalı kavramda birleşir ("satılan adet" ≡ "adet").
+   Aynı kolonda farklı değer kümesi varsa asla birleşmez.
+2. **Profil/doküman destekli değer literalleri** — sorudaki bir sözcük, *sertifikalı bir kolonun* gözlenen
+   ya da dokümante edilmiş değerlerinden biriyse (KITAPCI, E-TICARET) filtre olarak çözümlenir.
+3. **Bileşik metrik** — sertifikalı ölçü kolonu + ölçü kelimesi + sertifikalı filtre ("iade tutarı" =
+   SUM(<ölçü kolonu>) WHERE <iade filtresi>), tümü sertifikalı olduğunda.
+Ayrıca aynı kolonda çelişen filtreler artık deterministik derlemeyi durdurur (boş sonuç üretmek yerine).
 
 Gate politikası (uygulanan): `SEMANTIC_GATE_MODE=multi_source` — `validated ≥ 3` **veya**
 `validated ≥ 1 ∧ (DOC|HUMAN) ∧ profile_fit`; `strict` = yalnız `validated ≥ 3`. LLM adayı hiçbir

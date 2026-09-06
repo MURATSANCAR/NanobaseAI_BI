@@ -1,20 +1,26 @@
-"""Logical ↔ physical naming for Logo-style period tables.
+"""Logical ↔ physical table naming — derived from the observed names, never from a customer's schema.
 
-Physical  : dbo.LG_411_01_INVOICE, dbo_LG_411_01_INVOICE (MDL model name), [dbo].[LG_411_01_INVOICE]
-Logical   : entity=INVOICE, table_pattern=LG_{firm}_{period}_INVOICE, context={firm: 411, period: 01}
+Any name is split on `_`; all-numeric segments become positional placeholders and the trailing
+non-numeric segments become the entity:
 
-The catalog never stores LG_411_01_*; mappings are defined on entity.column and instantiated with a
-context at compile time, so LG_002_01 / LG_003_02 environments share the same semantics.
+    LG_411_01_INVOICE  → entity INVOICE, pattern LG_{n0}_{n1}_INVOICE, context {n0: 411, n1: 01}
+    LG_411_CARDS       → entity CARDS,   pattern LG_{n0}_CARDS,        context {n0: 411}
+    sales_2024_orders  → entity ORDERS,  pattern SALES_{n0}_ORDERS,    context {n0: 2024}
+    customers          → entity CUSTOMERS, pattern CUSTOMERS,          context {}
+
+so the catalog stores meaning against `entity.column` and a pattern, and the same catalog compiles
+against another firm / period / year by swapping the context. Placeholders can be given operator
+labels (SEMANTIC_PATTERN_LABELS=firm,period) purely for display.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from typing import Iterable, Optional
 
-_PERIOD = re.compile(r"^LG_(\d{3})_(\d{2})_([A-Z0-9_]+)$", re.I)
-_FIRM = re.compile(r"^LG_(\d{3})_([A-Z0-9_]+)$", re.I)
-_SCHEMA_PREFIX = re.compile(r"^(?:\[?dbo\]?[._])", re.I)
+_NUMERIC = re.compile(r"^\d+$")
+_SPLIT = re.compile(r"[_\s]+")
 
 
 @dataclass(frozen=True)
@@ -22,43 +28,54 @@ class LogicalTable:
     entity: str
     table_pattern: str
     context: dict[str, str]
-    schema_name: str = "dbo"
+    schema_name: str = ""
 
     def physical(self, context: dict[str, str] | None = None) -> str:
         ctx = dict(self.context)
         ctx.update(context or {})
-        out = self.table_pattern
-        for k, v in ctx.items():
-            out = out.replace("{" + k + "}", str(v))
-        return out
+        return physical_name(self.table_pattern, ctx)
 
 
 def strip_quotes(name: str) -> str:
     return (name or "").strip().strip('"').strip("[]").strip("`")
 
 
-def logical_table(name: str, schema_name: str = "dbo") -> LogicalTable:
-    """Any physical / MDL spelling → logical table. Unknown patterns map onto themselves."""
+def split_schema(name: str, schema_name: str = "") -> tuple[str, str]:
+    """'[dbo].[LG_411_01_INVOICE]' / 'dbo.T' / 'dbo_T' (MDL model spelling) → (schema, table)."""
     raw = strip_quotes(name)
     if "." in raw:
         parts = [strip_quotes(p) for p in raw.split(".")]
-        if len(parts) >= 2 and parts[-2]:
-            schema_name = parts[-2]
-        raw = parts[-1]
-    else:
-        m = _SCHEMA_PREFIX.match(raw)
-        if m:
-            raw = raw[m.end():]
+        return (parts[-2] or schema_name), parts[-1]
+    if schema_name:
+        prefix = f"{schema_name}_"
+        if raw.lower().startswith(prefix.lower()):
+            return schema_name, raw[len(prefix):]
+    return schema_name, raw
+
+
+def logical_table(name: str, schema_name: str = "", *, known_schemas: Iterable[str] = ()) -> LogicalTable:
+    """Split a physical/MDL name into entity + pattern + context. Unknown shapes map onto themselves."""
+    schema, raw = split_schema(name, schema_name)
+    if not schema:
+        for candidate in known_schemas:
+            if raw.lower().startswith(f"{candidate.lower()}_"):
+                schema, raw = candidate, raw[len(candidate) + 1:]
+                break
     up = raw.upper()
-    m = _PERIOD.match(up)
-    if m:
-        firm, period, entity = m.groups()
-        return LogicalTable(entity, f"LG_{{firm}}_{{period}}_{entity}", {"firm": firm, "period": period}, schema_name)
-    m = _FIRM.match(up)
-    if m:
-        firm, entity = m.groups()
-        return LogicalTable(entity, f"LG_{{firm}}_{entity}", {"firm": firm}, schema_name)
-    return LogicalTable(up, up, {}, schema_name)
+    segments = [s for s in _SPLIT.split(up) if s]
+    numeric = [i for i, s in enumerate(segments) if _NUMERIC.match(s)]
+    if not numeric or len(numeric) == len(segments):
+        return LogicalTable(up, up, {}, schema)
+    context: dict[str, str] = {}
+    pattern: list[str] = []
+    for k, i in enumerate(numeric):
+        context[f"n{k}"] = segments[i]
+    order = {i: f"n{k}" for k, i in enumerate(numeric)}
+    for i, seg in enumerate(segments):
+        pattern.append("{" + order[i] + "}" if i in order else seg)
+    tail = segments[numeric[-1] + 1:]
+    entity = "_".join(tail) if tail else "_".join(s for i, s in enumerate(segments) if i not in order)
+    return LogicalTable(entity or up, "_".join(pattern), context, schema)
 
 
 def physical_name(table_pattern: str, context: dict[str, str]) -> str:
@@ -68,36 +85,40 @@ def physical_name(table_pattern: str, context: dict[str, str]) -> str:
     return out
 
 
-def mdl_model_name(table_pattern: str, context: dict[str, str], schema_name: str = "dbo") -> str:
-    """Model spelling used by the legacy WrenAI pairs: dbo_LG_411_01_INVOICE."""
-    return f"{schema_name}_{physical_name(table_pattern, context)}"
+def mdl_model_name(table_pattern: str, context: dict[str, str], schema_name: str = "") -> str:
+    """Flat model spelling used by exported knowledge (dbo_LG_411_01_INVOICE)."""
+    phys = physical_name(table_pattern, context)
+    return f"{schema_name}_{phys}" if schema_name else phys
 
 
-def entity_of(name: str) -> str:
-    return logical_table(name).entity
+def entity_of(name: str, schema_name: str = "") -> str:
+    return logical_table(name, schema_name).entity
 
 
-# Logo ERP reference-column conventions (used when FK constraints are absent, which is the norm).
-LOGO_REF_TARGETS: dict[str, str] = {
-    "CLIENTREF": "CLCARD",
-    "STOCKREF": "ITEMS",
-    "INVOICEREF": "INVOICE",
-    "ORDFICHEREF": "ORFICHE",
-    "STFICHEREF": "STFICHE",
-    "SALESMANREF": "SLSMAN",
-    "PROJECTREF": "PROJECT",
-    "PAYMENTREF": "PAYPLANS",
-    "UOMREF": "UNITSETL",
-    "ACCOUNTREF": "EMUHACC",
-    "BANKACCREF": "BANKACC",
-}
+def label_context(context: dict[str, str], labels: Optional[list[str]] = None) -> dict[str, str]:
+    """Positional placeholders → operator labels for display ({n0: 411} → {firm: 411})."""
+    if not labels:
+        return dict(context)
+    out = {}
+    for key, value in (context or {}).items():
+        idx = int(key[1:]) if key.startswith("n") and key[1:].isdigit() else -1
+        out[labels[idx] if 0 <= idx < len(labels) else key] = value
+    return out
 
 
-def infer_ref_target(column: str) -> tuple[str, str] | None:
-    """*REF column → (entity, key column) via Logo naming; None when unknown."""
-    col = (column or "").upper()
-    if col in LOGO_REF_TARGETS:
-        return LOGO_REF_TARGETS[col], "LOGICALREF"
-    if col.endswith("REF") and len(col) > 3:
-        return col[:-3], "LOGICALREF"
-    return None
+def disambiguate(entities: list[tuple[str, str]]) -> dict[str, str]:
+    """(entity, pattern) pairs → unique entity names; collisions keep their leading segments
+    (A_{n0}_ORDERS / B_{n0}_ORDERS → A_ORDERS / B_ORDERS)."""
+    by_entity: dict[str, list[str]] = {}
+    for entity, pattern in entities:
+        by_entity.setdefault(entity, []).append(pattern)
+    out: dict[str, str] = {}
+    for entity, patterns in by_entity.items():
+        if len(set(patterns)) <= 1:
+            for p in patterns:
+                out[p] = entity
+            continue
+        for p in set(patterns):
+            prefix = [s for s in p.split("_") if s and not s.startswith("{")][:-len(entity.split("_"))]
+            out[p] = ("_".join(prefix + entity.split("_"))) if prefix else entity
+    return out

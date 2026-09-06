@@ -18,6 +18,7 @@ import yaml
 
 class Connector(Protocol):
     dialect: str
+    default_schema: str
 
     def list_tables(self, schema: str, like: Optional[str] = None) -> list[tuple[str, str]]: ...
     def columns(self, schema: str, table: str) -> list[dict[str, Any]]: ...
@@ -88,6 +89,7 @@ class _DbApiBase:
 
 class MSSQLConnector(_DbApiBase):
     dialect = "tsql"
+    default_schema = "dbo"
     quote_l, quote_r = "[", "]"
 
     def __init__(self, cfg: dict[str, Any]):
@@ -176,6 +178,7 @@ class MSSQLConnector(_DbApiBase):
 
 class PostgresConnector(_DbApiBase):
     dialect = "postgres"
+    default_schema = "public"
 
     def __init__(self, cfg: dict[str, Any]):
         super().__init__()
@@ -246,6 +249,7 @@ class PostgresConnector(_DbApiBase):
 
 class SQLiteConnector(_DbApiBase):
     dialect = "sqlite"
+    default_schema = "main"
 
     def __init__(self, path: str = ":memory:", conn=None):
         super().__init__()
@@ -299,7 +303,9 @@ class SQLiteConnector(_DbApiBase):
 
 
 class MDLConnector:
-    """Offline connector over a legacy wren project: models/*/metadata.yml give tables/columns/descriptions,
+    default_schema = ""
+
+    """Offline connector over an exported model project: models/*/metadata.yml give tables/columns/descriptions,
     relationships.yml gives joins, and an optional enum probe JSON (artifacts/timas/apply-all.json) gives
     distinct/top values. Lets the whole pipeline run without a database."""
 
@@ -372,7 +378,7 @@ class MDLConnector:
         e = self.enum.get((table.upper(), column.upper()))
         if e and e.get("distinct") is not None:
             return int(e["distinct"])
-        for c in self.columns("dbo", table):
+        for c in self.columns(self.default_schema, table):
             if c["name"].upper() == column.upper() and c.get("description"):
                 m = re.search(r"(\d+) farkl", c["description"])
                 if m:

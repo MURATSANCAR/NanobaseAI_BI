@@ -132,7 +132,7 @@ sl_schema_profile = sa.Table(
     metadata,
     sa.Column("id", sa.String(64), primary_key=True),
     sa.Column("datasource_id", sa.String(128), nullable=False),
-    sa.Column("schema_name", sa.String(128), nullable=False, server_default="dbo"),
+    sa.Column("schema_name", sa.String(128), nullable=False, server_default=""),
     sa.Column("table_name", sa.String(256), nullable=False),
     sa.Column("table_pattern", sa.String(256), nullable=False),
     sa.Column("entity", sa.String(128), nullable=False),

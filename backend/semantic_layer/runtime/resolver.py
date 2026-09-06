@@ -35,7 +35,9 @@ _COMPARE_CUE = re.compile(r"\b(karsilastir|karsilastirma|kiyasla|kiyaslama|vs|ay
 
 
 class SemanticResolver:
-    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: Optional[TemporalSlot] = None):
+    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: Optional[TemporalSlot] = None, conventions: Any = None):
+        from semantic_layer.conventions import Conventions
+
         self.store = store
         self.tenant_id = tenant_id
         self.datasource_id = datasource_id
@@ -43,6 +45,7 @@ class SemanticResolver:
         self.by_entity = {p.entity: p for p in profiles}
         self.column_names = {c.name.upper() for p in profiles for c in p.columns}
         self.default_temporal = default_temporal
+        self.conventions = conventions or Conventions.from_profiles(profiles)
         self._value_index: dict[str, list[tuple[str, str, str]]] = {}
         self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
 
@@ -264,7 +267,7 @@ class SemanticResolver:
                     observed = [str(v) for v, _ in col.top_values] if col.is_enum() else []
                     documented = [str(v) for v in (concept.explain.get("documented_values") or [])]
                     for raw in dict.fromkeys(observed + documented):
-                        token = fold(raw)
+                        token = " ".join(tokenize(raw))   # same shape the question tokens have ("E-TICARET" → "e ticaret")
                         if len(token) >= 3 and not token.isdigit() and token not in STOPWORDS_S and not token.isnumeric():
                             values.setdefault(token, []).append((m.entity, col.name, raw))
         self._value_index = values
@@ -302,12 +305,7 @@ class SemanticResolver:
         owners = [p.entity for p in self.profiles if p.column(col)]
         if len(owners) == 1:
             return owners[0]
-        primary = self._primary_entity(hits)
-        if primary in owners:
-            return primary
-        if "INVOICE" in owners:
-            return "INVOICE"
-        return owners[0] if owners else None
+        return self.conventions.preferred_entity(owners, hint=self._primary_entity(hits))
 
     @staticmethod
     def _primary_entity(hits: list[ResolvedSlot]) -> Optional[str]:

@@ -36,7 +36,7 @@ def catalog(store, profiles):
     _certify(store, "net ciro", SemanticType.METRIC, Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, formula="SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)", extra={"conditions": ["INVOICE.TRCODE IN (2,3,7,8,9)"]}))
     _certify(store, "satis tutari", SemanticType.METRIC, Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, formula="SUM(INVOICE.NETTOTAL)", extra={"conditions": ["INVOICE.TRCODE IN (7,8,9)"]}), synonyms=["satis", "ciro"])
     _certify(store, "satilan adet", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern=stl.table_pattern, formula="SUM(STLINE.AMOUNT)", extra={"conditions": ["STLINE.TRCODE IN (7,8)", "STLINE.LINETYPE IN (0)"]}), synonyms=["adet"])
-    _certify(store, "kanal", SemanticType.COLUMN, Mapping(concept_id="", entity="CLCARD", table_pattern="LG_{firm}_CLCARD", column="SPECODE2", operator="COLUMN"))
+    _certify(store, "kanal", SemanticType.COLUMN, Mapping(concept_id="", entity="CLCARD", table_pattern="LG_{n0}_CLCARD", column="SPECODE2", operator="COLUMN"))
     _certify(store, "invoice default cancelled", SemanticType.DEFAULT_FILTER, Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, column="CANCELLED", operator="=", values=["0"]))
     _certify(store, "stline default cancelled", SemanticType.DEFAULT_FILTER, Mapping(concept_id="", entity="STLINE", table_pattern=stl.table_pattern, column="CANCELLED", operator="=", values=["0"]))
     EvidenceEngine(store, min_support=3).run(TENANT, DS, profiles)
@@ -55,7 +55,7 @@ def _run(compiler, store, resolver, logo_db, q):
 def test_profiler_on_sqlite_fixture(profiles):
     ents = {p.entity: p for p in profiles}
     assert set(ents) == {"INVOICE", "STLINE", "CLCARD", "ITEMS"}
-    assert ents["INVOICE"].table_pattern == "LG_{firm}_{period}_INVOICE" and ents["INVOICE"].context == {"firm": "411", "period": "01"}
+    assert ents["INVOICE"].table_pattern == "LG_{n0}_{n1}_INVOICE" and ents["INVOICE"].context == {"n0": "411", "n1": "01"}
     trcode = ents["INVOICE"].column("TRCODE")
     assert trcode.is_enum() and {v for v, _ in trcode.top_values} >= {"7", "8", "2", "3", "1", "9"}
     assert {"column": "CLIENTREF", "ref_entity": "CLCARD", "ref_column": "LOGICALREF"} in ents["INVOICE"].relationships
@@ -71,13 +71,13 @@ def test_resolver_uses_only_certified_and_explains(catalog, profiles):
     miss = r.resolve("Bölgesel performans son günlerde")
     assert set(miss.unresolved) == {"bolgesel", "performans"} and not miss.fully_resolved
     # candidates never resolve
-    catalog.upsert_concept(TENANT, DS, "bolgesel", SemanticType.DIMENSION_VALUE, mapping=Mapping(concept_id="", entity="CLCARD", table_pattern="LG_{firm}_CLCARD", column="CITY", operator="IN", values=["İstanbul"]), status=ConceptStatus.CANDIDATE)
+    catalog.upsert_concept(TENANT, DS, "bolgesel", SemanticType.DIMENSION_VALUE, mapping=Mapping(concept_id="", entity="CLCARD", table_pattern="LG_{n0}_CLCARD", column="CITY", operator="IN", values=["İstanbul"]), status=ConceptStatus.CANDIDATE)
     assert "bolgesel" in r.resolve("bölgesel satış").unresolved
 
 
 def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
     r = SemanticResolver(catalog, TENANT, DS, profiles)
-    comp = DeterministicCompiler(profiles, {"firm": "411", "period": "01"}, "sqlite", default_filters=default_filters_provider(catalog, TENANT, DS))
+    comp = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite", default_filters=default_filters_provider(catalog, TENANT, DS))
     sq, out, cols, rows = _run(comp, catalog, r, logo_db, "2026 toptan satış tutarı")
     assert out.compiler == "deterministic" and out.certified
     assert rows[0][0] == 1500  # 1000 + 500 (cancelled/2025 rows excluded)
@@ -100,9 +100,9 @@ def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
 def test_guardrails_and_physicalize(profiles):
     assert validate_sql("SELECT 1")[0] and not validate_sql("DELETE FROM x")[0] and not validate_sql("SELECT 1; SELECT 2")[0]
     assert not validate_sql("SELECT * FROM t -- comment")[0] and not validate_sql("EXEC xp_cmdshell 'x'")[0]
-    sql = physicalize_sql('SELECT "NETTOTAL" FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" LIMIT 5', profiles, {"firm": "411", "period": "01"}, "tsql")
+    sql = physicalize_sql('SELECT "NETTOTAL" FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" LIMIT 5', profiles, {"n0": "411", "n1": "01"}, "tsql")
     assert "[main].[LG_411_01_INVOICE]" in sql and "[main].[LG_411_CLCARD]" in sql and "LIMIT" not in sql.upper() and "TOP 5" in sql
-    sqlite = physicalize_sql("SELECT COUNT(*) FROM dbo_LG_411_01_INVOICE WHERE \"TRCODE\" = 8", profiles, {"firm": "411", "period": "01"}, "sqlite")
+    sqlite = physicalize_sql("SELECT COUNT(*) FROM dbo_LG_411_01_INVOICE WHERE \"TRCODE\" = 8", profiles, {"n0": "411", "n1": "01"}, "sqlite")
     assert '"LG_411_01_INVOICE"' in sqlite
 
 
@@ -139,7 +139,7 @@ def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_conn
     assert inv["tableCount"] == 4 and inv["undefinedColumns"] > 0
     trcode = next(c for t in inv["tables"] if t["entity"] == "INVOICE" for c in t["columns"] if c["name"] == "TRCODE")
     assert trcode["status"] == "CERTIFIED" and any(x["term"] == "toptan" for x in trcode["concepts"])
-    ann = client.post("/api/v1/schema/annotations", json={"tablePattern": "LG_{firm}_CLCARD", "column": "CITY", "text": "Şehir; bölge analizinde kullanılır", "author": "ayse"}).json()
+    ann = client.post("/api/v1/schema/annotations", json={"tablePattern": "LG_{n0}_CLCARD", "column": "CITY", "text": "Şehir; bölge analizinde kullanılır", "author": "ayse"}).json()
     assert ann["annotation"]["id"]
     inv2 = client.get("/api/v1/schema/inventory").json()
     city = next(c for t in inv2["tables"] if t["entity"] == "CLCARD" for c in t["columns"] if c["name"] == "CITY")

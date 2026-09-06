@@ -29,12 +29,15 @@ log = logging.getLogger(__name__)
 
 
 class CandidateGenerator:
-    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile]):
+    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], conventions: Any = None):
+        from semantic_layer.conventions import Conventions
+
         self.store = store
         self.tenant_id = tenant_id
         self.datasource_id = datasource_id
         self.profiles = profiles
         self.by_entity = {p.entity: p for p in profiles}
+        self.conventions = conventions or Conventions.from_profiles(profiles)
 
     # ------------------------------------------------------------------ doc facts → concepts/evidence
     def _entity_for(self, fact: DocFact) -> Optional[str]:
@@ -44,10 +47,8 @@ class CandidateGenerator:
             owners = [p.entity for p in self.profiles if p.column(fact.column)]
             if len(owners) == 1:
                 return owners[0]
-            if "INVOICE" in owners:
-                return "INVOICE"
             if owners:
-                return owners[0]
+                return self.conventions.preferred_entity(owners)
         return None
 
     def ingest_doc_facts(self, facts: Iterable[DocFact], *, evidence_type: str = EvidenceType.DOC, weight: float = 1.0) -> dict[str, int]:
@@ -122,16 +123,16 @@ class CandidateGenerator:
         return {"created": created, "evidence": evidence}
 
     def ingest_project_docs(self, project_dir: Optional[Path]) -> dict[str, int]:
-        facts = list(mine_profiles(self.profiles))
+        facts = list(mine_profiles(self.profiles, self.conventions))
         if project_dir:
-            facts += mine_project_docs(project_dir)
+            facts += mine_project_docs(Path(project_dir), self.conventions)
         return self.ingest_doc_facts(facts)
 
     def ingest_annotation(self, table_pattern: str, column: Optional[str], text: str, source: str) -> dict[str, int]:
         prof = next((p for p in self.profiles if p.table_pattern == table_pattern), None)
         if prof is None:
             return {"created": 0, "evidence": 0}
-        facts = mine_annotation(text, prof.entity, column, source)
+        facts = mine_annotation(text, prof.entity, column, source, self.conventions)
         return self.ingest_doc_facts(facts, evidence_type=EvidenceType.HUMAN_ANNOTATION, weight=1.0)
 
     # ------------------------------------------------------------------ profile fit evidence

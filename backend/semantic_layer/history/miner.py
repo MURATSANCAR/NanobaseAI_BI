@@ -106,10 +106,22 @@ class MiningResult:
 
 
 class HistoryMiner:
-    def __init__(self, column_index: Optional[dict[str, set[str]]] = None, *, default_filter_ratio: float = 0.75, column_flags: Optional[dict[tuple[str, str], bool]] = None):
-        self.column_index = column_index
+    def __init__(self, column_index: Optional[dict[str, set[str]]] = None, *, default_filter_ratio: float = 0.75, conventions: Any = None):
+        self.conventions = conventions
+        self.column_index = column_index or (dict(conventions.columns) if conventions is not None else None)
         self.default_filter_ratio = default_filter_ratio
-        self.column_flags = column_flags  # (entity, column) → True when the column is a binary flag (default-filter eligible)
+
+    def _is_scope(self, entity: Optional[str], column: str) -> bool:
+        """A metric's scope is a business type code — an enum with more than two values in the
+        profile. Without a profile nothing is scope: unproven assumptions stay out of the catalog."""
+        if self.conventions is None:
+            return False
+        return self.conventions.is_scope_column(entity, column)
+
+    def _is_flag(self, entity: Optional[str], column: str) -> bool:
+        if self.conventions is None:
+            return True
+        return self.conventions.is_flag_column(entity, column)
 
     # ------------------------------------------------------------------ mining
     def mine(self, pairs: Iterable[ValidatedPair]) -> MiningResult:
@@ -130,7 +142,7 @@ class HistoryMiner:
         column_names = {c.upper() for cols in (self.column_index or {}).values() for c in cols}
 
         for pair in pairs:
-            sf = extract_sql_facts(pair.sql, self.column_index)
+            sf = extract_sql_facts(pair.sql, self.column_index, self.conventions)
             if sf.parse_error:
                 res.parse_errors.append((pair.id, sf.parse_error))
                 continue
@@ -169,7 +181,7 @@ class HistoryMiner:
 
             # explicit "(TRCODE 8)" bindings — the question states the physical value itself
             for term, col, vals in qf.explicit_bindings:
-                ent = _entity_for_column(col, sf.tables, self.column_index)
+                ent = self._entity_for_column(col, sf.tables)
                 if ent:
                     c = _get(co, term, ent, res.patterns.get(ent, ent), col, "IN" if len(vals) > 1 else "=", vals)
                     c.explicit_support += 1
@@ -211,7 +223,7 @@ class HistoryMiner:
                     continue
                 res.surface.setdefault(term, qf.surface.get(term, term.replace("_", " ")))
                 # scope: WHERE value predicates on the metric's entity (SUM(NETTOTAL) means nothing without TRCODE IN (7,8,9))
-                scope = sorted({p.key() for p in sf.predicates if p.source in ("where", "scope") and p.entity == (agg.entity or p.entity) and _is_scope_column(p.column) and p.operator in ("=", "IN", "<>", "NOT IN")})
+                scope = sorted({p.key() for p in sf.predicates if p.source in ("where", "scope") and p.entity == (agg.entity or p.entity) and self._is_scope(p.entity, p.column) and p.operator in ("=", "IN", "<>", "NOT IN")})
                 mkey = agg.formula + ("|" + ";".join(scope) if scope else "")
                 mc = metric_by_formula.setdefault(mkey, MetricCandidate(term, agg.entity, agg.formula, agg.func))
                 mc.support += 1
@@ -258,9 +270,9 @@ class HistoryMiner:
         # (business scope columns such as TRCODE/LINETYPE are metric scope, never defaults)
         for pk, n in pred_pairs.items():
             base = entity_pairs.get(pk[0], 0)
-            if _is_scope_column(pk[1]) or pk[2] not in ("=", "IN"):
+            if self._is_scope(pk[0], pk[1]) or pk[2] not in ("=", "IN"):
                 continue
-            if self.column_flags and not self.column_flags.get((pk[0], pk[1]), True):
+            if not self._is_flag(pk[0], pk[1]):
                 continue
             if base and n / base >= self.default_filter_ratio and n >= 3:
                 res.default_filters.append((Predicate(pk[0], pk[1], pk[2], pk[3], "where"), n))
@@ -283,6 +295,15 @@ class HistoryMiner:
         res.correlations.sort(key=lambda c: (-(c.explicit_support * 3 + c.alias_support * 2 + c.support), c.term))
         res.metrics = sorted(metric_by_formula.values(), key=lambda m: -m.support)
         return res
+
+    def _entity_for_column(self, col: str, entities: list[str]) -> Optional[str]:
+        col = col.upper()
+        owners = [e for e in entities if col in {c.upper() for c in (self.column_index or {}).get(e, set())}]
+        if len(owners) == 1:
+            return owners[0]
+        if owners and self.conventions is not None:
+            return self.conventions.preferred_entity(owners)
+        return owners[0] if owners else (entities[0] if entities else None)
 
     # ------------------------------------------------------------------ persistence
     def persist(self, res: MiningResult, store, tenant_id: str, datasource_id: str) -> dict[str, int]:
@@ -344,13 +365,6 @@ def _get(co: dict, term: str, entity: str, pattern: str, column: str, op: str, v
     return co[key]
 
 
-_SCOPE_COLUMNS = frozenset({"TRCODE", "LINETYPE", "IOCODE", "CARDTYPE", "GRPCODE", "CLOSED", "BILLED", "STATUS"})
-
-
-def _is_scope_column(col: str) -> bool:
-    return col.upper() in _SCOPE_COLUMNS
-
-
 def _usable_term(t: str) -> bool:
     words = t.split()
     if not words or len(t) < 3:
@@ -365,16 +379,7 @@ def _usable_term(t: str) -> bool:
     return True
 
 
-def _entity_for_column(col: str, entities: list[str], column_index: Optional[dict[str, set[str]]]) -> Optional[str]:
-    col = col.upper()
-    if column_index:
-        owners = [e for e in entities if col in {c.upper() for c in column_index.get(e, set())}]
-        if len(owners) == 1:
-            return owners[0]
-        if owners:
-            # header vs line: prefer the entity the question is about — header for TRCODE unless only STLINE
-            return "INVOICE" if "INVOICE" in owners else owners[0]
-    return entities[0] if len(entities) == 1 else (entities[0] if entities else None)
+
 
 
 def _metric_term(alias_toks: list[str], question_terms: set[str]) -> Optional[str]:

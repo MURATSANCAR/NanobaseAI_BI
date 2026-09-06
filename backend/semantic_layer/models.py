@@ -168,7 +168,7 @@ class SchemaProfile:
     table_name: str                   # LG_411_01_INVOICE
     table_pattern: str                # LG_{firm}_{period}_INVOICE
     entity: str                       # INVOICE
-    schema_name: str = "dbo"
+    schema_name: str = ""
     columns: list[ColumnProfile] = field(default_factory=list)
     primary_key: list[str] = field(default_factory=list)
     relationships: list[dict[str, str]] = field(default_factory=list)  # {column, ref_entity, ref_column}

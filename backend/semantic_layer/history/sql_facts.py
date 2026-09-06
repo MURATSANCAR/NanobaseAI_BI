@@ -1,13 +1,13 @@
 """SQL → facts (sqlglot). Predicates, conditional aggregates, joins, time ranges, grain, limit.
 
-Model spellings (dbo_LG_411_01_INVOICE) and physical spellings (dbo.LG_411_01_INVOICE) both map onto
-logical entities so the mined evidence is period/firm independent.
+Model spellings (schema_TABLE) and physical spellings (schema.TABLE) both map onto logical entities,
+so mined evidence stays independent of the numeric segments in a table name (period, firm, year).
 """
 
 from __future__ import annotations
 
 import re
-from typing import Optional
+from typing import Any, Optional
 
 import sqlglot
 from sqlglot import exp
@@ -45,12 +45,13 @@ def _literal(node: exp.Expression) -> Optional[str]:
 
 
 class _Scope:
-    def __init__(self, tree: exp.Expression, column_index: Optional[dict[str, set[str]]]):
+    def __init__(self, tree: exp.Expression, column_index: Optional[dict[str, set[str]]], conventions: Any = None):
         self.alias_to_entity: dict[str, str] = {}
         self.entities: list[str] = []
         self.patterns: dict[str, str] = {}
         self.context: dict[str, str] = {}
         self.column_index = {k.upper(): {c.upper() for c in v} for k, v in (column_index or {}).items()}
+        self.conventions = conventions
         for t in tree.find_all(exp.Table):
             name = t.name
             if not name:
@@ -76,11 +77,10 @@ class _Scope:
         owners = [e for e in self.entities if cname in self.column_index.get(e, set())]
         if len(owners) == 1:
             return owners[0]
-        # Logo heuristics: header amounts live on INVOICE, line amounts on STLINE
-        if cname in ("NETTOTAL", "GROSSTOTAL", "TOTALVAT") and "INVOICE" in self.entities:
-            return "INVOICE"
-        if cname in ("AMOUNT", "TOTAL", "OUTCOST", "PRICE", "LINETYPE", "STOCKREF") and "STLINE" in self.entities:
-            return "STLINE"
+        if owners and self.conventions is not None:
+            picked = self.conventions.preferred_entity(owners)
+            if picked:
+                return picked
         return owners[0] if owners else (self.entities[0] if self.entities else "UNKNOWN")
 
 
@@ -204,14 +204,14 @@ def _grain_of(expr: exp.Expression) -> Optional[str]:
     return None
 
 
-def extract_sql_facts(sql: str, column_index: Optional[dict[str, set[str]]] = None) -> SqlFacts:
+def extract_sql_facts(sql: str, column_index: Optional[dict[str, set[str]]] = None, conventions: Any = None) -> SqlFacts:
     facts = SqlFacts()
     try:
         tree = parse_sql(sql)
     except Exception as e:  # noqa: BLE001
         facts.parse_error = str(e)[:300]
         return facts
-    scope = _Scope(tree, column_index)
+    scope = _Scope(tree, column_index, conventions)
     facts.tables = list(scope.entities)
     facts.table_patterns = dict(scope.patterns)
     facts.context = dict(scope.context)
