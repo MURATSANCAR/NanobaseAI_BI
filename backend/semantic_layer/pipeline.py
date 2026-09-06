@@ -73,6 +73,7 @@ def run_pipeline(
     skip_profile: bool = False,
     llm=None,
     use_intugle: bool = False,
+    probe: bool = True,
     note: str = "",
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
@@ -82,10 +83,7 @@ def run_pipeline(
         profiles = store.list_profiles(settings.datasource_id)
     else:
         connector = build_connector(settings, project_dir=project_dir, connection_file=connection_file, enum_probe=enum_probe)
-        try:
-            profiles = run_profile(store, settings, connector)
-        finally:
-            connector.close()
+        profiles = run_profile(store, settings, connector)
     if use_intugle:
         from semantic_layer.profiler import intugle_adapter
 
@@ -108,6 +106,23 @@ def run_pipeline(
 
         report["intugle"]["evidence"] = intugle_adapter.attach_evidence(store, settings.tenant_id, settings.datasource_id, profiles, intugle_adapter.IntugleReport(available=True, ran=True)).evidence
     engine = EvidenceEngine(store, min_support=settings.min_support, threshold=settings.certify_threshold)
-    report["certify"] = engine.run(settings.tenant_id, settings.datasource_id, profiles, note=note)
+    report["certify"] = engine.run(settings.tenant_id, settings.datasource_id, profiles, note=note + " (pre-probe)")
+
+    # Confront the catalog with the data: do the codes occur, do the metrics run, do related tables agree,
+    # and how far is each measure actually populated. Then certify again with what the database answered.
+    if probe and connector is not None and hasattr(connector, "execute"):
+        from semantic_layer.evidence.probe import probe_all
+
+        try:
+            rep = probe_all(store, settings.tenant_id, settings.datasource_id, profiles, connector, conventions, context=settings.context, dialect=settings.dialect)
+            report["probe"] = rep.to_dict()
+            for p in profiles:
+                store.upsert_profile(p)          # freshness notes land on the columns
+            report["certify"] = engine.run(settings.tenant_id, settings.datasource_id, profiles, note=note)
+        except Exception as e:  # noqa: BLE001
+            log.warning("probing skipped: %s", e)
+            report["probe"] = {"error": str(e)[:200]}
+    if connector is not None:
+        connector.close()
     report["elapsed_ms"] = int((time.perf_counter() - t0) * 1000)
     return report

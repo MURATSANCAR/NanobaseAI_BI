@@ -40,6 +40,13 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _aware(value: Any) -> Optional[datetime]:
+    """SQLite hands back naive datetimes; treat stored timestamps as UTC so arithmetic is safe."""
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return None
+
+
 @dataclass
 class Ticket:
     id: str
@@ -124,12 +131,12 @@ class LlmQueue:
                     "purpose": r["purpose"],
                     "user": r["user_id"],
                     "status": r["status"],
-                    "enqueuedAt": r["enqueued_at"].isoformat() if r["enqueued_at"] else None,
-                    "waitingMs": int((_now() - r["enqueued_at"]).total_seconds() * 1000) if r["enqueued_at"] and r["status"] == "WAITING" else 0,
+                    "enqueuedAt": _aware(r["enqueued_at"]).isoformat() if r["enqueued_at"] else None,
+                    "waitingMs": int((_now() - _aware(r["enqueued_at"])).total_seconds() * 1000) if r["enqueued_at"] and r["status"] == "WAITING" else 0,
                 }
                 for i, r in enumerate(waiting)
             ] + [
-                {"position": 0, "purpose": r["purpose"], "user": r["user_id"], "status": "RUNNING", "startedAt": r["started_at"].isoformat() if r["started_at"] else None}
+                {"position": 0, "purpose": r["purpose"], "user": r["user_id"], "status": "RUNNING", "startedAt": _aware(r["started_at"]).isoformat() if r["started_at"] else None}
                 for r in running
             ],
         }
@@ -145,15 +152,19 @@ class LlmQueue:
             ))
         return ticket_id
 
-    def _reclaim(self, conn: sa.Connection) -> None:
-        """A ticket whose worker stopped reporting is abandoned, so one crash cannot stop the line."""
-        cutoff = _now() - timedelta(seconds=self.lease_seconds)
-        conn.execute(
-            S.sl_llm_queue.update()
-            .where(S.sl_llm_queue.c.status.in_(("RUNNING", "WAITING")))
-            .where(sa.or_(S.sl_llm_queue.c.heartbeat_at.is_(None), S.sl_llm_queue.c.heartbeat_at < cutoff))
-            .values(status="ABANDONED", finished_at=_now())
+    def _reclaim(self, conn: sa.Connection, *, exclude_id: Optional[str] = None) -> None:
+        """A ticket whose worker stopped reporting is abandoned, so one crash cannot stop the line.
+        The caller's own ticket is never reclaimed — it is being held by a thread that is right here."""
+        running_cutoff = _now() - timedelta(seconds=max(1, self.lease_seconds))
+        waiting_cutoff = _now() - timedelta(seconds=max(60, self.lease_seconds))
+        stale = sa.or_(
+            sa.and_(S.sl_llm_queue.c.status == "RUNNING", sa.or_(S.sl_llm_queue.c.heartbeat_at.is_(None), S.sl_llm_queue.c.heartbeat_at < running_cutoff)),
+            sa.and_(S.sl_llm_queue.c.status == "WAITING", sa.or_(S.sl_llm_queue.c.heartbeat_at.is_(None), S.sl_llm_queue.c.heartbeat_at < waiting_cutoff)),
         )
+        stmt = S.sl_llm_queue.update().where(stale).values(status="ABANDONED", finished_at=_now())
+        if exclude_id:
+            stmt = stmt.where(S.sl_llm_queue.c.id != exclude_id)
+        conn.execute(stmt)
 
     def _wait_for_turn(self, ticket_id: str, on_wait: Optional[Any]) -> int:
         deadline = time.monotonic() + self.max_wait_seconds
@@ -161,7 +172,7 @@ class LlmQueue:
         ahead_at_start = 0
         while True:
             with self.engine.begin() as conn:
-                self._reclaim(conn)
+                self._reclaim(conn, exclude_id=ticket_id)
                 running = conn.execute(
                     sa.select(sa.func.count()).select_from(S.sl_llm_queue).where(S.sl_llm_queue.c.status == "RUNNING")
                 ).scalar() or 0
@@ -171,14 +182,14 @@ class LlmQueue:
                     .order_by(S.sl_llm_queue.c.enqueued_at, S.sl_llm_queue.c.id)
                 )]
                 order = [r["id"] for r in waiting]
-                if ticket_id not in order:              # reclaimed while waiting: re-enter at the back
-                    conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(status="WAITING", heartbeat_at=_now(), enqueued_at=_now()))
-                    continue
+                if ticket_id not in order:              # someone marked it done: take the turn rather than stall
+                    conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(status="RUNNING", started_at=_now(), heartbeat_at=_now(), worker=self.worker))
+                    return ahead_at_start
                 ahead = order.index(ticket_id)
                 if not announced:
                     ahead_at_start = ahead
                     announced = True
-                if ahead < self.slots - running + (0 if running >= self.slots else 0) and running < self.slots:
+                if running < self.slots and ahead < (self.slots - running):
                     conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(status="RUNNING", started_at=_now(), heartbeat_at=_now(), worker=self.worker))
                     return ahead_at_start
                 conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(heartbeat_at=_now()))
