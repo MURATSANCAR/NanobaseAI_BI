@@ -124,7 +124,7 @@ def run_pipeline(
 
     # Confront the catalog with the data: do the codes occur, do the metrics run, do related tables agree,
     # and how far is each measure actually populated. Then certify again with what the database answered.
-    if probe and connector is not None and hasattr(connector, "execute"):
+    if probe and connector is not None and getattr(connector, "supports_execution", False):
         from semantic_layer.evidence.probe import probe_all
 
         try:

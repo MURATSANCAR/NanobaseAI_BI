@@ -75,13 +75,17 @@ class ValueProbe:
         self.d = Dialect(dialect or getattr(connector, "dialect", "") or "generic")
         self._cache: dict[tuple[str, str], dict[str, float]] = {}
 
-    def distribution(self, entity: str, column: str) -> dict[str, float]:
-        """value → share of rows. Empty when the column cannot be probed."""
+    #: how many distinct values a single distribution query asks for
+    LIMIT = 128
+
+    def distribution(self, entity: str, column: str) -> tuple[dict[str, float], bool]:
+        """(value → share of rows, complete). `complete` is False when the answer was truncated, in which
+        case a value's absence proves nothing — only a complete inventory can contradict a mapping."""
         key = (entity, column.upper())
         if key in self._cache:
             return self._cache[key]
         prof = self.by_entity.get(entity)
-        self._cache[key] = {}
+        self._cache[key] = ({}, False)
         if prof is None or prof.column(column) is None:
             return self._cache[key]
         col = prof.column(column)
@@ -89,14 +93,15 @@ class ValueProbe:
             return self._cache[key]
         table = physical_name(prof.table_pattern, {**prof.context, **self.context})
         try:
-            pairs = self.c.top_values(prof.schema_name, table, col.name, 128)
+            pairs = self.c.top_values(prof.schema_name, table, col.name, self.LIMIT)
         except Exception as e:  # noqa: BLE001
             log.debug("distribution probe failed %s.%s: %s", entity, column, e)
             return self._cache[key]
         total = sum(n for _, n in pairs) or 0
         if total <= 0:
             return self._cache[key]
-        self._cache[key] = {str(v): n / total for v, n in pairs}
+        complete = len(pairs) < self.LIMIT and all(n > 0 for _, n in pairs)
+        self._cache[key] = ({str(v): n / total for v, n in pairs}, complete)
         return self._cache[key]
 
 
@@ -125,13 +130,15 @@ def probe_catalog(
         for mapping in store.list_mappings(concept.id):
             if not mapping.column or not mapping.values:
                 continue
-            dist = probe.distribution(mapping.entity, mapping.column)
+            dist, complete = probe.distribution(mapping.entity, mapping.column)
             if not dist:
                 continue
             report.distributions += 1
             share = sum(dist.get(str(v), 0.0) for v in mapping.values)
             missing = [str(v) for v in mapping.values if str(v) not in dist]
-            payload = {"share": round(share, 6), "missing": missing, "column": f"{mapping.entity}.{mapping.column}"}
+            payload = {"share": round(share, 6), "missing": missing, "complete": complete, "column": f"{mapping.entity}.{mapping.column}"}
+            if missing and not complete:
+                continue      # the inventory was truncated: absence here is not evidence of absence
             if missing or share < MIN_SHARE:
                 store.add_counter_evidence(CounterEvidence(concept.id, f"probe:{mapping.entity}.{mapping.column}", "VALUE_MISMATCH", payload=payload | {"support": 2}, severity="BLOCKING" if missing else "MEDIUM"))
                 report.values_rejected += 1

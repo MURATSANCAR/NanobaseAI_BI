@@ -25,6 +25,7 @@ log = logging.getLogger(__name__)
 class Connector(Protocol):
     dialect: str
     default_schema: str
+    supports_execution: bool
 
     def list_tables(self, schema: str, like: Optional[str] = None) -> list[tuple[str, str]]: ...
     def columns(self, schema: str, table: str) -> list[dict[str, Any]]: ...
@@ -355,6 +356,7 @@ class SQLiteConnector(_DbApiBase):
 
 
 class ModelFileConnector:
+    supports_execution = False       # file-backed: it can describe the schema, it cannot query the data
     """Offline connector over an exported model directory: models/*/metadata.yml give tables/columns/
     descriptions, relationships.yml gives joins, and an optional enum probe JSON gives distinct/top values.
     Lets the whole pipeline run without a database (bootstrap, tests, air-gapped review)."""
