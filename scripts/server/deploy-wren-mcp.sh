@@ -6,11 +6,14 @@ export SYSTEMD_BUS_TIMEOUT="${SYSTEMD_BUS_TIMEOUT:-300}"
 VENV="${WREN_VENV:-/data/nanobaseai/bi/wren-venv}"
 PROJECT="${WREN_PROJECT:-/data/nanobaseai/bi/wren-project/logo_timas}"
 PROFILE="${WREN_PROFILE:-logo-tunnel}"
+# Ajanların doğrulanmış NL→SQL çiftini geri yazabilmesi için store_query aracı (öğrenme döngüsü).
+ALLOW_WRITE="${WREN_MCP_ALLOW_WRITE:-1}"
 PORT="${WREN_MCP_PORT:-8090}"
 UNIT=/etc/systemd/system/nanobase-wren-mcp.service
 log() { printf '[deploy-wren-mcp] %s\n' "$*"; }
 "${VENV}/bin/python" -c 'import mcp' 2>/dev/null || { log "installing wrenai[mcp]"; "${VENV}/bin/python" -m pip install -q 'wrenai[mcp]'; }
 [[ -f "${PROJECT}/target/mdl.json" ]] || { echo "missing ${PROJECT}/target/mdl.json (wren context build)" >&2; exit 1; }
+WRITE_FLAG=""; [[ "$ALLOW_WRITE" == "1" ]] && WRITE_FLAG="--allow-write"
 sudo -E tee "$UNIT" >/dev/null <<UNIT
 [Unit]
 Description=NanobaseAI BI — WrenAI MCP server (:${PORT}, loopback)
@@ -22,7 +25,7 @@ User=administrator
 WorkingDirectory=${PROJECT}
 Environment=PATH=${VENV}/bin:/usr/bin
 Environment=HOME=/home/administrator
-ExecStart=${VENV}/bin/wren serve mcp --transport http --host 127.0.0.1 --port ${PORT} --project ${PROJECT} --profile ${PROFILE} --quiet
+ExecStart=${VENV}/bin/wren serve mcp --transport http --host 127.0.0.1 --port ${PORT} --project ${PROJECT} --profile ${PROFILE} ${WRITE_FLAG} --quiet
 Restart=on-failure
 RestartSec=5
 
