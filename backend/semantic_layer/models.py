@@ -307,6 +307,7 @@ class SemanticQuery:
     order_desc: bool = True
     catalog_version: Optional[int] = None
     explanation: list[str] = field(default_factory=list)
+    conflicts: list[str] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -318,7 +319,7 @@ class SemanticQuery:
 
     @property
     def fully_resolved(self) -> bool:
-        return not self.unresolved and not any(t.ambiguous for t in self.temporal)
+        return not self.unresolved and not self.conflicts and not any(t.ambiguous for t in self.temporal)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -331,6 +332,7 @@ class SemanticQuery:
             "limit": self.limit,
             "orderDesc": self.order_desc,
             "catalogVersion": self.catalog_version,
+            "conflicts": list(self.conflicts),
             "fullyResolved": self.fully_resolved,
             "explanation": list(self.explanation),
         }

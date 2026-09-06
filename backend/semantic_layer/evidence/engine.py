@@ -20,6 +20,7 @@ Drift: certified enum values that disappeared from the profile → DEPRECATED.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -311,6 +312,22 @@ class EvidenceEngine:
                     if validated >= 1 and x.normalized_term not in syns:
                         syns.add(x.normalized_term)
                         out.append({"metric": y.term, "synonym": x.term, "rule": "validated_subterm"})
+            # (c) equivalent measure: same base formula on the same entity with compatible scope
+            #     ("satılan adet" ≡ "adet" = SUM(STLINE.AMOUNT)); conflicting value sets never link.
+            ybase, yconds = metric_signature(ym)
+            for x in others:
+                if x.normalized_term in syns or x.normalized_term == y.normalized_term:
+                    continue
+                xm = next(iter(self.store.list_mappings(x.id)), None)
+                if not xm or not xm.formula or xm.entity != ym.entity:
+                    continue
+                xbase, xconds = metric_signature(xm)
+                if xbase != ybase or not conditions_compatible(xconds, yconds):
+                    continue
+                validated, _, _, _, _ = self._support(self.store.list_evidence(x.id))
+                if validated >= 1:
+                    syns.add(x.normalized_term)
+                    out.append({"metric": y.term, "synonym": x.term, "rule": "equivalent_formula"})
             for c in columns:
                 declared = set(c.explain.get("declared_synonyms") or [])
                 if not declared:
@@ -380,15 +397,52 @@ class EvidenceEngine:
 
 
 def _column_refs(formula: str) -> list[str]:
-    import re
-
     return re.findall(r"\b([A-Z][A-Z0-9_]*\.[A-Z][A-Z0-9_]*)\b", formula or "")
+
+
+_COND_IN = re.compile(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\s+IN\s*\(([^)]*)\)", re.I)
+_COND_EQ = re.compile(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\s*=\s*(-?\d+)", re.I)
+_CASE_SUM = re.compile(r"^\s*(SUM|COUNT)\(\s*CASE\s+WHEN\s+(.+?)\s+THEN\s+(.+?)\s+ELSE\s+0\s+END\s*\)\s*$", re.I | re.S)
+
+
+def _values_of(raw: str) -> frozenset[str]:
+    return frozenset(v.strip().strip("'\"") for v in raw.split(",") if v.strip())
+
+
+def conditions_map(conditions: list[str]) -> dict[str, frozenset[str]]:
+    """['INVOICE.TRCODE IN (7,8,9)'] → {'INVOICE.TRCODE': {'7','8','9'}}."""
+    out: dict[str, frozenset[str]] = {}
+    for c in conditions or []:
+        m = _COND_IN.search(c) or None
+        if m:
+            out[f"{m.group(1).upper()}.{m.group(2).upper()}"] = _values_of(m.group(3))
+            continue
+        m = _COND_EQ.search(c)
+        if m:
+            out[f"{m.group(1).upper()}.{m.group(2).upper()}"] = frozenset({m.group(3)})
+    return out
+
+
+def metric_signature(mapping: Mapping) -> tuple[str, dict[str, frozenset[str]]]:
+    """Base aggregate + scope, folding a redundant conditional aggregate into the scope:
+    SUM(CASE WHEN TRCODE IN (7,8) THEN AMOUNT ELSE 0 END) ≡ SUM(AMOUNT) scoped to TRCODE IN (7,8).
+    An ELSE branch that is not 0 (net ciro's -NETTOTAL) is a different measure and is never folded."""
+    formula = (mapping.formula or "").strip()
+    conds = conditions_map(list((mapping.extra or {}).get("conditions") or []))
+    m = _CASE_SUM.match(formula)
+    if m and "CASE" not in m.group(3).upper():
+        conds.update(conditions_map([m.group(2)]))
+        formula = f"{m.group(1).upper()}({m.group(3).strip()})"
+    return " ".join(formula.split()), conds
+
+
+def conditions_compatible(a: dict[str, frozenset[str]], b: dict[str, frozenset[str]]) -> bool:
+    """Columns present in both must carry the same value set; a column present in only one is fine."""
+    return all(a[col] == b[col] for col in set(a) & set(b))
 
 
 def _scope_in_formula(formula: str, extra: dict | None) -> bool:
     """A sub-term metric whose WHERE scope (TRCODE IN (7,8,9)) equals the CASE scope embedded in the certified formula."""
-    import re
-
     conds = (extra or {}).get("conditions") or []
     if not conds:
         return False

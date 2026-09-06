@@ -162,6 +162,8 @@ class DeterministicCompiler:
             return None, "unresolved terms: " + ", ".join(q.unresolved)
         if any(t.ambiguous for t in q.temporal):
             return None, "ambiguous temporal term"
+        if q.conflicts:
+            return None, "conflicting filters on " + ", ".join(q.conflicts)
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
         if not metrics:
             return None, "no certified metric"

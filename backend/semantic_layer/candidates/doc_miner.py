@@ -30,6 +30,7 @@ class DocFact:
     column: Optional[str] = None
     values: tuple[str, ...] = ()
     snippet: str = ""
+    operator: str = "IN"
     extra: dict = field(default_factory=dict)
 
 
@@ -109,6 +110,62 @@ def _in_list_facts(text: str, source: str) -> list[DocFact]:
     return out
 
 
+_CODE = re.compile(r"^[A-ZÇĞİÖŞÜ0-9][A-ZÇĞİÖŞÜ0-9._\-]{1,24}$")
+_VALUES_LABEL = re.compile(r"\b([A-Z_][A-Z0-9_]{2,})\s*=\s*([A-ZÇĞİÖŞÜ][A-ZÇĞİÖŞÜ ]{2,40}?)\s*\(([^)]{5,200})\)")
+_VALUES_COLON = re.compile(r"\b([A-Z_][A-Z0-9_]{2,})\s*:\s*([A-ZÇĞİÖŞÜ0-9][^.\n]{5,200})")
+
+
+def _code_list(raw: str) -> tuple[str, ...]:
+    """'KITAPCI, E-TICARET, DAGITICI, ...' → codes; prose and ellipses are dropped."""
+    out = []
+    for part in re.split(r"[,;]", raw):
+        token = part.strip().strip('"\u201c\u201d').rstrip(".").strip()
+        if token and _CODE.match(token) and not token.isdigit():
+            out.append(token)
+    return tuple(dict.fromkeys(out))
+
+
+def _column_values_facts(text: str, source: str, entity_hint: Optional[str] = None) -> list[DocFact]:
+    """Documented value inventories for a text column:
+       'SPECODE2 = SATIŞ KANALI (KITAPCI, E-TICARET, DAGITICI...)' and 'SPECODE2: KITAPCI, E-TICARET, ...'
+    The codes become the column's documented value list (DOC evidence), so a question naming one of them
+    resolves without waiting for a live value probe."""
+    out: list[DocFact] = []
+    for m in _VALUES_LABEL.finditer(text):
+        column, label, raw = m.group(1).upper(), m.group(2).strip(), m.group(3)
+        codes = _code_list(raw)
+        if len(codes) < 2:
+            continue
+        entity = _entity_in(text[: m.start()]) or entity_hint
+        for term in _label_terms(label):
+            out.append(DocFact("column", term, source, entity, column, (), m.group(0)[:120], extra={"documented_values": list(codes)}))
+    for m in _VALUES_COLON.finditer(text):
+        column, raw = m.group(1).upper(), m.group(2)
+        codes = _code_list(raw)
+        if len(codes) < 2:
+            continue
+        entity = _entity_in(text[: m.start()]) or entity_hint
+        out.append(DocFact("column_values", column.lower(), source, entity, column, (), m.group(0)[:120], extra={"documented_values": list(codes)}))
+    return out
+
+
+_COMPARISON = re.compile(r"`(?:([A-Z_][A-Z0-9_]*)\.)?([A-Z_][A-Z0-9_]{2,})\s*(<>|!=|=)\s*(-?\d+)`\s*\(([^)]{3,60})\)")
+
+
+def _comparison_facts(text: str, source: str) -> list[DocFact]:
+    """'`OUTCOST <> 0` (maliyetlendirilmiş satır) varsayılan' → value fact with the stated operator."""
+    out: list[DocFact] = []
+    for m in _COMPARISON.finditer(text):
+        entity, column, op, value, label = m.groups()
+        terms = _label_terms(label)
+        if not terms:
+            continue
+        op = "<>" if op in ("<>", "!=") else "IN"
+        for term in terms:
+            out.append(DocFact("value", term, source, (entity or "").upper() or _entity_in(text[: m.start()]), column.upper(), (value,), m.group(0)[:100], operator=op))
+    return out
+
+
 def _column_alias_facts(text: str, source: str) -> list[DocFact]:
     """'"kanal / satış kanalı" = faturanın carisindeki `CLCARD.SPECODE2`' → COLUMN facts (terms declared together are synonyms)."""
     out: list[DocFact] = []
@@ -147,13 +204,15 @@ def mine_text(text: str, source: str, entity_hint: Optional[str] = None) -> list
         if col in text:
             facts.extend(_enum_facts(text, col, entity_hint, source))
     facts.extend(_in_list_facts(text, source))
+    facts.extend(_comparison_facts(text, source))
+    facts.extend(_column_values_facts(text, source, entity_hint))
     facts.extend(_column_alias_facts(text, source))
     facts.extend(_metric_facts(text, source))
     # de-dup
     seen = set()
     out = []
     for f in facts:
-        k = (f.kind, f.term, f.entity, f.column, f.values)
+        k = (f.kind, f.term, f.entity, f.column, f.values, f.operator, tuple(f.extra.get("documented_values") or ()))
         if k not in seen and f.term and not f.term.isdigit():
             seen.add(k)
             out.append(f)

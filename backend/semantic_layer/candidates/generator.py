@@ -60,8 +60,8 @@ class CandidateGenerator:
                 prof = self.by_entity[entity]
                 if not prof.column(f.column):
                     continue
-                op = "IN" if len(f.values) > 1 else "="
-                mapping = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, column=f.column.upper(), operator="IN" if op == "=" else op, values=[str(v) for v in f.values])
+                op = "IN" if f.operator == "IN" else f.operator
+                mapping = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, column=f.column.upper(), operator=op, values=[str(v) for v in f.values])
                 concept, was_new = self.store.upsert_concept(self.tenant_id, self.datasource_id, f.term, SemanticType.DIMENSION_VALUE, mapping=mapping, status=ConceptStatus.CANDIDATE)
                 created += int(was_new)
                 self.store.add_evidence(Evidence(concept.id, evidence_type, f.source, support_count=1, weight=weight, payload={"snippet": f.snippet}))
@@ -87,12 +87,27 @@ class CandidateGenerator:
                 evidence += 1
                 if f.extra.get("synonyms"):
                     self.store.update_concept(concept.id, explain={"declared_synonyms": sorted(set(f.extra["synonyms"]))})
+                if f.extra.get("documented_values"):
+                    known = set(concept.explain.get("documented_values") or [])
+                    self.store.update_concept(concept.id, explain={"documented_values": sorted(known | set(f.extra["documented_values"]))})
                 # a documented measure column also backs metric formulas over it ("satış tutarı" = INVOICE.NETTOTAL)
                 ref = f"{entity}.{f.column.upper()}"
                 for mc in self.store.find_concepts(self.tenant_id, self.datasource_id, normalized_term=normalize_term(f.term), semantic_type=SemanticType.METRIC):
                     if any(ref in (m.formula or "") for m in self.store.list_mappings(mc.id)):
                         self.store.add_evidence(Evidence(mc.id, evidence_type, f.source, support_count=1, weight=weight, payload={"snippet": f.snippet}))
                         evidence += 1
+            elif f.kind == "column_values":
+                # value inventory documented for a column that already has a certified/candidate name
+                if not entity or not f.column:
+                    continue
+                for c in self.store.mappings_for_column(self.tenant_id, self.datasource_id, entity, f.column.upper()):
+                    concept, mapping = c
+                    if concept.semantic_type != SemanticType.COLUMN:
+                        continue
+                    known = set(concept.explain.get("documented_values") or [])
+                    self.store.update_concept(concept.id, explain={"documented_values": sorted(known | set(f.extra["documented_values"]))})
+                    self.store.add_evidence(Evidence(concept.id, evidence_type, f.source, support_count=1, weight=weight, payload={"snippet": f.snippet, "values": f.extra["documented_values"]}))
+                    evidence += 1
             elif f.kind == "metric":
                 # attach DOC evidence to existing metric senses with the same term whose formula uses a column
                 # the doc mentions (never invent a formula from prose; never back the wrong sense)
