@@ -582,3 +582,22 @@ export type BiSlConcept = {
   };
   mappings: Array<{ entity: string; table_pattern: string; column?: string | null; operator?: string | null; values: string[]; formula?: string | null; extra?: Record<string, unknown> }>;
 };
+
+
+/** Terms real users asked for that the catalog could not place — the queue behind the annotation page.
+ *  `undefined` is a word nobody has defined; `qualifier` narrows a question in a way nothing covers. */
+export type BiSemanticLayerGap = {
+  kind: 'undefined' | 'qualifier';
+  term: string;
+  count: number;
+  questions: string[];
+  lastAsked?: string | null;
+};
+
+export type BiSemanticLayerGaps = {
+  ok: boolean;
+  days: number;
+  gaps: BiSemanticLayerGap[];
+  /** Entities whose data window was never measured: scope checks are off for them. */
+  unmeasuredWindows: string[];
+};

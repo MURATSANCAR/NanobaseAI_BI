@@ -1,4 +1,4 @@
-import type { BiSemanticLayerInventory, BiSemanticLayerStatus, BiSlConcept } from './bi-types';
+import type { BiSemanticLayerGaps, BiSemanticLayerInventory, BiSemanticLayerStatus, BiSlConcept } from './bi-types';
 import type {
   BiAlertRule,
   BiBrandingSettings,
@@ -70,6 +70,11 @@ export function createBiApi() {
         request<BiSemanticLayerInventory>(
           c,
           `/api/v1/bi/semantic-layer/inventory${datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+        ),
+      gaps: (c: ApiConfig, datasourceId?: string, days = 30) =>
+        request<BiSemanticLayerGaps>(
+          c,
+          `/api/v1/bi/semantic-layer/gaps?days=${days}${datasourceId ? `&datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
         ),
       addAnnotation: (
         c: ApiConfig,

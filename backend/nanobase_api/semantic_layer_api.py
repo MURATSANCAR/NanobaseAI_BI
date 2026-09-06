@@ -124,6 +124,23 @@ async def sl_inventory(request: Request, principal: RequestPrincipal = Depends(g
         return _err(e)
 
 
+@router.get("/gaps")
+async def sl_gaps(request: Request, days: int = 30, limit: int = 50, principal: RequestPrincipal = Depends(get_current_principal)) -> JSONResponse:
+    """Terms real users asked for that the catalog could not place — the queue behind this page.
+
+    A word here is not an error: it is a part of the business nobody has written down yet, which is
+    exactly what an annotation on this page supplies.
+    """
+    try:
+        rt = _runtime(_ds(request), principal.tenant_id)
+        s = rt.settings
+        gaps = rt.store.term_gaps(s.tenant_id, s.datasource_id, since_days=max(1, min(days, 365)), limit=max(1, min(limit, 200)))
+        return JSONResponse({"ok": True, "days": days, "gaps": gaps,
+                             "unmeasuredWindows": [p.entity for p in rt.profiles if p.time_window is None]})
+    except Exception as e:  # noqa: BLE001
+        return _err(e)
+
+
 @router.post("/annotations")
 async def sl_add_annotation(request: Request, body: dict[str, Any], principal: RequestPrincipal = Depends(get_current_principal)) -> JSONResponse:
     text = str(body.get("text") or "").strip()

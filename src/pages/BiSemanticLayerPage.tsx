@@ -6,7 +6,7 @@ import ApiErrorBanner from '@/components/ApiErrorBanner';
 import EmptyState from '@/components/EmptyState';
 import { PageShell } from '@/components/PageShell';
 import { api, isRunnerConfigured } from '@/api/client';
-import type { BiSlColumn, BiSlConcept, BiSlTable } from '@/api/bi-types';
+import type { BiSemanticLayerGaps, BiSlColumn, BiSlConcept, BiSlTable } from '@/api/bi-types';
 import { useApiConfig } from '@/context/ApiContext';
 import { t } from '@/i18n';
 
@@ -159,6 +159,50 @@ function ColumnRow({
 
 /** Sertifikalı ölçüler ve her zaman uygulanan varsayılan filtreler — sohbetin arkasındaki sözleşme.
  *  Ölçü = formül + kapsam; varsayılan filtre = o varlığa her sorguda eklenen koşul. */
+function GapsSection({ data }: { data?: BiSemanticLayerGaps }) {
+  const [open, setOpen] = useState(true);
+  const gaps = data?.gaps ?? [];
+  if (!data || (gaps.length === 0 && (data.unmeasuredWindows?.length ?? 0) === 0)) return null;
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4">
+      <button type="button" className="flex w-full items-center justify-between text-left" onClick={() => setOpen((v) => !v)}>
+        <h2 className="text-sm font-semibold text-slate-800">
+          {t('bi.sl.gapsTitle')} <span className="ml-2 font-normal text-slate-500">{t('bi.sl.gapsWindow', { d: String(data.days) })}</span>
+        </h2>
+        <span className="text-xs text-slate-500">{gaps.length}</span>
+      </button>
+      {open ? (
+        <>
+          <p className="mt-1 text-xs text-slate-500">{t('bi.sl.gapsNote')}</p>
+          {data.unmeasuredWindows?.length ? (
+            <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs text-amber-800">
+              {t('bi.sl.gapsUnmeasured', { e: data.unmeasuredWindows.join(', ') })}
+            </p>
+          ) : null}
+          <ul className="mt-3 space-y-2">
+            {gaps.map((g) => (
+              <li key={`${g.kind}:${g.term}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={`rounded px-1.5 py-0.5 text-[11px] ${g.kind === 'qualifier' ? 'bg-violet-100 text-violet-700' : 'bg-rose-100 text-rose-700'}`}>
+                    {g.kind === 'qualifier' ? t('bi.sl.gapQualifier') : t('bi.sl.gapUndefined')}
+                  </span>
+                  <span className="font-medium text-slate-800">{g.term}</span>
+                  <span className="text-xs text-slate-500">×{g.count}</span>
+                </div>
+                {g.questions?.length ? (
+                  <div className="mt-1 space-y-0.5 text-xs text-slate-500">
+                    {g.questions.map((q, i) => <div key={i}>“{q}”</div>)}
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
 function CatalogSection({ items }: { items: BiSlConcept[] }) {
   const [open, setOpen] = useState(true);
   const metrics = items.filter((x) => x.concept.semantic_type === 'METRIC');
@@ -247,6 +291,12 @@ export default function BiSemanticLayerPage() {
     queryFn: () => api.bi.semanticLayer.concepts(config, { datasource_id: datasourceId, status: 'CERTIFIED' }),
     enabled,
   });
+  const gapsQ = useQuery({
+    queryKey: ['bi-sl-gaps', datasourceId, config],
+    queryFn: () => api.bi.semanticLayer.gaps(config, datasourceId),
+    enabled,
+    staleTime: 60_000,
+  });
   const explainQ = useQuery({
     queryKey: ['bi-sl-explain', explainQuery, datasourceId, config],
     queryFn: () => api.bi.semanticLayer.explain(config, explainQuery, datasourceId),
@@ -256,6 +306,7 @@ export default function BiSemanticLayerPage() {
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['bi-sl-inventory'] });
     void qc.invalidateQueries({ queryKey: ['bi-sl-status'] });
+    void qc.invalidateQueries({ queryKey: ['bi-sl-gaps'] });
   };
 
   const annotateMut = useMutation({
@@ -380,6 +431,8 @@ export default function BiSemanticLayerPage() {
           </div>
         ) : null}
       </section>
+
+      <GapsSection data={gapsQ.data} />
 
       <CatalogSection items={conceptsQ.data?.items ?? []} />
 
