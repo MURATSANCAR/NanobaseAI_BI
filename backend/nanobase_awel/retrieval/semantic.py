@@ -203,8 +203,6 @@ def try_compile_resolved_metric(
     group_by: list[str] | None = None,
     limit: int | None = None,
     order_desc: bool = True,
-    time_grain: str | None = None,
-    dimension_filters: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     try:
         from nanobase_api.semantic_catalog.application.services import compile_metric_sql
@@ -216,11 +214,9 @@ def try_compile_resolved_metric(
             datasource_id=datasource_id,
             metric_code=metric_code,
             period=period,
-            dimension_filters=dimension_filters,
             group_by=group_by,
             limit=limit,
             order_desc=order_desc,
-            time_grain=time_grain,
         )
     except Exception:
         return None

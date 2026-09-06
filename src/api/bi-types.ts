@@ -79,25 +79,14 @@ export type BiAuditEntry = {
   source?: string;
 };
 
-export type BiForecastBlockData = {
-  metric: string;
-  unit?: string | null;
-  frequency: string;
-  engine?: string;
-  history: Array<{ period: string; value: number }>;
-  forecast: Array<{ period: string; p10: number; p50: number; p90: number }>;
-};
-
 export type BiAnswerBlock = {
-  type: 'text' | 'metric' | 'table' | 'list' | 'highlight' | 'decision' | 'forecast' | string;
+  type: 'text' | 'metric' | 'table' | 'list' | 'highlight' | 'decision' | string;
   title?: string;
   content?: string;
   metrics?: Array<{ label: string; value: string; tone?: 'positive' | 'negative' | 'neutral' }>;
   columns?: string[];
   rows?: unknown[][];
   items?: string[];
-  /** Forecast block: history + p10/p50/p90 series (rendered as a chart with a band). */
-  forecast?: BiForecastBlockData;
 };
 
 export type BiChatResponse = {

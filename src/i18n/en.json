@@ -2022,8 +2022,5 @@
   "ui.poweredBy": "Powered by {brand}",
   "ux.biFlow.title": "BI setup — click any step to jump",
   "ux.breadcrumbs.home": "Home",
-  "ux.breadcrumbs.label": "Breadcrumb navigation",
-  "bi.forecast.band": "Range (p10–p90)",
-  "bi.forecast.history": "Actual",
-  "bi.forecast.p50": "Forecast (p50)"
+  "ux.breadcrumbs.label": "Breadcrumb navigation"
 }

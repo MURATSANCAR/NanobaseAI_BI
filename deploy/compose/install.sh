@@ -104,8 +104,8 @@ compose() { docker compose "${PROFILES[@]}" "$@"; }
 
 log "imajlar derleniyor"
 compose build
-log "altyapı başlatılıyor (meta-db, redis, qdrant, embedding, gateway, forecast)"
-compose up -d meta-db redis qdrant embedding gateway forecast
+log "altyapı başlatılıyor (meta-db, redis, qdrant, embedding, gateway)"
+compose up -d meta-db redis qdrant embedding gateway
 [[ $WITH_DEMO == 1 ]] && compose up -d demo-db
 [[ $WITH_GPU_LLM == 1 ]] && { log "LLM başlatılıyor (ilk yükleme birkaç dakika sürer)"; compose up -d llm; }
 

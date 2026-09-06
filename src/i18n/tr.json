@@ -2022,8 +2022,5 @@
   "ui.poweredBy": "{brand} ile güçlendirildi",
   "ux.biFlow.title": "Raporlar kurulumu — gezinmek için adıma tıklayın",
   "ux.breadcrumbs.home": "Ana sayfa",
-  "ux.breadcrumbs.label": "Sayfa konumu",
-  "bi.forecast.band": "Aralık (p10–p90)",
-  "bi.forecast.history": "Gerçekleşen",
-  "bi.forecast.p50": "Tahmin (p50)"
+  "ux.breadcrumbs.label": "Sayfa konumu"
 }

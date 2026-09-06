@@ -358,35 +358,6 @@ async def compile_endpoint(
         return _domain_error(e)
 
 
-@router.post("/series")
-async def series_endpoint(
-    body: dict[str, Any],
-    response: Response,
-    principal: RequestPrincipal = Depends(get_current_principal),
-) -> Any:
-    """Governed metric time series (forecasting plan Faz 1.3).
-
-    {"metric": "total_revenue", "datasourceId": "bi_reporting", "grain": "month",
-     "historyMonths": 36, "dimensionFilters": {"branch_city": "İstanbul"}}
-    → rows [{"period": "2023-09-01", "value": 123.0}, ...] oldest→newest, SQL + logical plan.
-    """
-    _contract_headers(response)
-    from nanobase_api.application.series import SeriesError, load_metric_series
-
-    try:
-        out = await load_metric_series(
-            tenant_id=principal.tenant_id,
-            datasource_id=str(body.get("datasourceId") or "bi_reporting"),
-            metric_code=str(body.get("metric") or "total_revenue"),
-            grain=str(body.get("grain") or "month"),
-            history_periods=int(body.get("historyMonths") or body.get("historyPeriods") or 36),
-            dimension_filters=body.get("dimensionFilters") or {},
-        )
-        return {"ok": True, **out}
-    except SeriesError as e:
-        return JSONResponse({"ok": False, "code": e.code, "error": e.message}, status_code=400)
-
-
 @router.post("/schema-impact")
 async def schema_impact(
     body: dict[str, Any],

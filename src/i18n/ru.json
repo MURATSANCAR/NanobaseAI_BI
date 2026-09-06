@@ -1319,8 +1319,5 @@
   "ui.poweredBy": "При поддержке {brand}",
   "ux.biFlow.title": "Настройка BI — нажмите шаг для перехода",
   "ux.breadcrumbs.home": "Главная",
-  "ux.breadcrumbs.label": "Навигационная цепочка",
-  "bi.forecast.band": "Диапазон (p10–p90)",
-  "bi.forecast.history": "Факт",
-  "bi.forecast.p50": "Прогноз (p50)"
+  "ux.breadcrumbs.label": "Навигационная цепочка"
 }
