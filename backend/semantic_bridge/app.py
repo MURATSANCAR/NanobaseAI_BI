@@ -39,7 +39,7 @@ from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
 from semantic_layer.runtime.audit import audit_sql
-from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
+from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
@@ -273,6 +273,14 @@ class Runtime:
                     break
                 except Exception as e:  # noqa: BLE001
                     error = str(e)[:1500]
+                    if is_connection_error(e):
+                        # The database went away. No rewrite of this SQL can help, and telling the user
+                        # their question was invalid would send them looking in the wrong place.
+                        log.error("data source unreachable q=%r err=%s", question[:80], error[:300])
+                        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}")
+                        return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE", "sql": sql,
+                                "explanation": "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak.",
+                                "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
                     log.warning("dry_run failed (attempt %d) q=%r err=%s", attempt + 1, question[:80], error[:300])
                     if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
                         break
@@ -292,8 +300,15 @@ class Runtime:
             result = self.run_sql(sql, sample_size)
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=err)
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Sorgu çalıştırılamadı: {err}", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+            down = is_connection_error(e)
+            if down:
+                log.error("data source unreachable during execution q=%r err=%s", question[:80], err[:300])
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=(f"data source unreachable: {err}" if down else err))
+            return {"id": uuid.uuid4().hex,
+                    "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", "sql": sql,
+                    "explanation": ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                                    if down else f"Sorgu çalıştırılamadı: {err}"),
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
         t = time.perf_counter()
         summary = self.summarize(question, sql, result)

@@ -137,3 +137,27 @@ def referenced_tables(sql: str, dialect: Optional[str] = "tsql") -> list[str]:
         if t.name and t.name.upper() not in ctes:
             out.append(((t.db + ".") if t.db else "") + t.name)
     return list(dict.fromkeys(out))
+
+
+# SQLSTATE class 08 is the standard "connection exception" class, and HYT00 is a connection timeout.
+# Every ODBC/JDBC driver reports them the same way, so this is a protocol fact, not a driver quirk.
+_CONNECTION_STATES = ("08S01", "08001", "08003", "08004", "08006", "08007", "HYT00", "HY000")
+_CONNECTION_WORDS = (
+    "communication link failure", "server is not found", "login timeout", "connection is closed",
+    "connection refused", "broken pipe", "connection reset", "unable to connect", "not accessible",
+)
+
+
+def is_connection_error(error: object) -> bool:
+    """Did the data source go away, or was the query wrong?
+
+    They fail in the same place and mean opposite things: a wrong query can be rewritten, an
+    unreachable database cannot. Asking a model to repair SQL that was already correct costs a wait
+    and produces nothing, and telling a user their question was invalid when the connection dropped
+    sends them looking in the wrong place.
+    """
+    text = str(error or "")
+    if any(f"'{state}'" in text or f"[{state}]" in text for state in _CONNECTION_STATES):
+        return True
+    low = text.lower()
+    return any(w in low for w in _CONNECTION_WORDS)

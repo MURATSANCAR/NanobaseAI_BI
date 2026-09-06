@@ -458,3 +458,34 @@ def test_the_same_period_said_three_ways(catalog, profiles):
     # a period says when, never what: it does not rescue a question that names no subject
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     assert r.resolve("Son çeyrekte ne oldu?", today=date(2026, 7, 20)).shape == "UNDERSPECIFIED"
+
+
+def test_an_unreachable_database_is_not_a_bad_question(catalog, profiles, settings, monkeypatch):
+    """A dropped connection and a wrong query fail in the same place and mean opposite things. Asking
+    the model to rewrite correct SQL costs a wait and produces nothing, and telling users their
+    question was invalid sends them looking in the wrong place."""
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.runtime.guardrails import is_connection_error
+
+    assert is_connection_error("('08S01', '[08S01] [FreeTDS][SQL Server]Communication link failure')")
+    assert not is_connection_error("Invalid column name 'NOPE'.")
+
+    class _Dead:
+        dialect = "sqlite"
+        supports_execution = True
+
+        def dry_run(self, sql):
+            raise RuntimeError("('08S01', '[08S01] [FreeTDS][SQL Server]Communication link failure (0)')")
+
+        def execute(self, sql, limit):
+            raise RuntimeError("('08S01', '[08S01] [FreeTDS][SQL Server]Communication link failure (0)')")
+
+        def close(self):
+            pass
+
+    llm = FakeLlm(["should not be asked to repair a connection"])
+    client = TestClient(create_app(Runtime(settings, store=catalog, connector=_Dead(), llm=llm)))
+    body = client.post("/api/v1/ask", json={"question": "Bu ay toptan satış tutarı", "sampleSize": 5}).json()
+    assert body["type"] == "DATA_SOURCE_UNAVAILABLE"
+    assert "ulaşılamıyor" in body["explanation"] and body.get("repairs", 0) == 0
+    assert body["sql"], "the SQL it wrote is still shown — there was nothing wrong with it"

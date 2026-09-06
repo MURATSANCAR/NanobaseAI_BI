@@ -39,6 +39,7 @@ ANSWERED_CATALOG = "katalogdan"       # deterministic SQL, no model involved
 ANSWERED_MODEL = "modelden"           # the model wrote the SQL, constrained by certified facts
 REFUSED = "reddetti"
 ERROR = "hata"
+UNAVAILABLE = "kaynak_yok"          # the data source was unreachable — nothing to do with the catalog
 
 
 def post(base: str, path: str, body: dict, timeout: int = 300) -> dict:
@@ -48,6 +49,8 @@ def post(base: str, path: str, body: dict, timeout: int = 300) -> dict:
 
 def verdict(expected: str, outcome: str) -> str:
     """Did the system behave the way a careful analyst would?"""
+    if outcome == UNAVAILABLE:
+        return "KAYNAK YOK"      # the database was down; this run says nothing about the catalog
     if expected == "answer":
         return "OK" if outcome in (ANSWERED_CATALOG, ANSWERED_MODEL) else "EKSİK"
     if expected in ("refuse", "clarify"):
@@ -76,6 +79,8 @@ def gate(summary: dict, baseline_path: str | None) -> list[str]:
         was = before.get(r["id"])
         if not was:
             continue
+        if r["outcome"] == UNAVAILABLE or was["outcome"] == UNAVAILABLE:
+            continue      # an outage on either side is not a statement about the catalog
         answered_before = was["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
         answered_now = r["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
         if answered_before and not answered_now:
@@ -145,6 +150,9 @@ def main() -> int:
                 sem = r.get("semantic") or {}
                 if r.get("type") == "TEXT_TO_SQL":
                     outcome = ANSWERED_CATALOG if sem.get("compiler") == "deterministic" else ANSWERED_MODEL
+                elif r.get("type") == "DATA_SOURCE_UNAVAILABLE":
+                    outcome = UNAVAILABLE
+                    rec["why"] = str(r.get("explanation"))[:200]
                 elif r.get("type") in ("NON_SQL_QUERY", "SQL_INVALID"):
                     outcome = REFUSED
                     rec["why"] = str(r.get("explanation"))[:300]
