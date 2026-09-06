@@ -1,5 +1,5 @@
 {
- "ran_at": "2026-09-06T23:38:24",
+ "ran_at": "2026-09-06T23:52:08",
  "mode": "offline",
  "catalog_version": 1,
  "verdicts": {
@@ -185,7 +185,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "no certified metric",
+   "why": "question asks for a underspecified this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "OK",
    "wall_s": 0.01
@@ -304,7 +304,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "no certified metric",
+   "why": "question asks for a underspecified this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "OK",
    "wall_s": 0.0
@@ -1273,7 +1273,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "no certified metric",
+   "why": "question asks for a underspecified this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "OK",
    "wall_s": 0.0
@@ -1292,7 +1292,7 @@
    "conflicts": [],
    "temporal": [],
    "sql": null,
-   "why": "no certified metric",
+   "why": "question asks for a underspecified this compiler cannot express",
    "outcome": "reddetti",
    "verdict": "OK",
    "wall_s": 0.0

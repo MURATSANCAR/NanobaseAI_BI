@@ -165,7 +165,11 @@ def main() -> int:
 
     # Scope safety can only be judged where the window was actually measured; say so rather than
     # letting a deployment that never measured one look safe.
-    unmeasured = [p.entity for p in profiles if p.time_window is None]
+    # only entities anyone actually asks about: a table nothing references and nothing is certified on
+    # has no window and needs none, and listing 275 of them would bury the ones that matter
+    used = {m.entity for senses in store.certified_index(s.tenant_id, s.datasource_id).values()
+            for _, maps in senses for m in maps}
+    unmeasured = [p.entity for p in profiles if p.time_window is None and (p.entity in used or conventions.time_column(p.entity))]
     counts = Counter(r["verdict"] for r in results)
     by_outcome = Counter(r["outcome"] for r in results)
     risky = [r for r in results if r["verdict"] == "RİSK"]

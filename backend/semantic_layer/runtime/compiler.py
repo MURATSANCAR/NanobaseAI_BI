@@ -364,6 +364,7 @@ Kurallar:
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
 - Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- İSTENEN BİÇİM oran ise tek bir toplam döndürme: payı, paydayı ve oranı birlikte ver.
+- İSTENEN BİÇİM belirsiz ise SQL yazma ve tablo seçme; tek satır: NO_SQL: hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız?
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
 _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
@@ -537,7 +538,8 @@ class ExistingCompiler:
                 "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster; paydayı sorudan çıkar "
                 "(kırılım varsa genel toplam, yoksa aynı ölçünün filtresiz hali)." if q.shape == "RATIO" else
                 "yokluk — ölçünün hiç gerçekleşmediği kayıtlar isteniyor: NOT EXISTS ya da LEFT JOIN … IS NULL "
-                "kullan; ölçünün gerçekleştiği kayıtları döndürme." if q.shape == "ABSENCE" else "(serbest)"
+                "kullan; ölçünün gerçekleştiği kayıtları döndürme." if q.shape == "ABSENCE" else
+                "belirsiz — soru neyin ölçüleceğini söylemiyor." if q.shape == "UNDERSPECIFIED" else "(serbest)"
             ),
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
             "## Şema bağlamı\n" + self.schema_context(q, recalled, entities),

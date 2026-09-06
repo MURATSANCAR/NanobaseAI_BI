@@ -385,6 +385,14 @@ class SemanticResolver:
                 "bu yüzden payda soruya göre seçilmeli — düz toplam farklı bir soruyu cevaplar"
             )
 
+        # 10) a question that names nothing — no measure, no filter, no column, no period, not even a
+        #     word the catalog is missing — has not said what it is about. The model must ask, not pick
+        #     a table: "toplam sayıyı ver" answered with a row count is a guess wearing a number.
+        if not hits and not sq.unresolved and not sq.temporal and not sq.shape:
+            if not any(is_domain_candidate(t) for t in qf.tokens):
+                sq.shape = "UNDERSPECIFIED"
+                sq.explanation.append("soru neyin ölçüleceğini söylemiyor; hangi ölçü ve hangi kırılım istendiği sorulmalı")
+
         sq.limit = qf.limit
         sq.order_desc = qf.order_desc
         for s in hits:

@@ -401,3 +401,18 @@ def test_negation_asks_for_absence_instead_of_the_opposite_answer(catalog, profi
     from semantic_layer.runtime.compiler import ExistingCompiler
     prompt = ExistingCompiler(FakeLlm([""]), profiles, {}).build_messages(sq, [])[0]["content"]
     assert "NOT EXISTS" in prompt
+
+
+def test_a_question_that_names_nothing_is_asked_back_not_guessed(catalog, profiles):
+    """"Bana toplam sayıyı ver" names no measure, no filter, no period — and no word the catalog is
+    missing either. Answering it means picking a table, and a row count from a table nobody named is a
+    guess wearing a number."""
+    from semantic_layer.runtime.compiler import ExistingCompiler
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Bana toplam sayıyı ver", today=date(2026, 7, 20))
+    assert sq.shape == "UNDERSPECIFIED"
+    prompt = ExistingCompiler(FakeLlm([""]), profiles, {}).build_messages(sq, [])[0]["content"]
+    assert "belirsiz" in prompt and "NO_SQL" in prompt
+    # a question that does name something is never called underspecified
+    assert r.resolve("Bu ay toptan satış tutarı", today=date(2026, 7, 20)).shape is None
