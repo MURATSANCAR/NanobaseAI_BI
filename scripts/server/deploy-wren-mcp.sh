@@ -11,7 +11,9 @@ ALLOW_WRITE="${WREN_MCP_ALLOW_WRITE:-1}"
 PORT="${WREN_MCP_PORT:-8090}"
 UNIT=/etc/systemd/system/nanobase-wren-mcp.service
 log() { printf '[deploy-wren-mcp] %s\n' "$*"; }
-"${VENV}/bin/python" -c 'import mcp' 2>/dev/null || { log "installing wrenai[mcp]"; "${VENV}/bin/python" -m pip install -q 'wrenai[mcp]'; }
+# wrenai 0.13.4 FastMCP v1 API'sini bekler; mcp 2.x sunucuyu import aşamasında düşürür (bkz. docs/upstream Issue 2).
+"${VENV}/bin/python" -c "import mcp.server.fastmcp" 2>/dev/null || { log "installing wrenai[mcp] (mcp<2)"; "${VENV}/bin/python" -m pip install -q "wrenai[mcp]" "mcp<2"; }
+"${VENV}/bin/python" -c "import importlib.metadata as m; v=m.version('mcp'); assert int(v.split('.')[0]) < 2, v; print('  mcp', v)" || { log "pinning mcp<2"; "${VENV}/bin/python" -m pip install -q "mcp<2"; }
 [[ -f "${PROJECT}/target/mdl.json" ]] || { echo "missing ${PROJECT}/target/mdl.json (wren context build)" >&2; exit 1; }
 WRITE_FLAG=""; [[ "$ALLOW_WRITE" == "1" ]] && WRITE_FLAG="--allow-write"
 sudo -E tee "$UNIT" >/dev/null <<UNIT
