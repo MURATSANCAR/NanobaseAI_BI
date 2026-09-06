@@ -36,11 +36,11 @@ export default function App() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar lastDate={d?.summary.lastDate ?? ''} live={d?.source === 'live'} engineOk={engineOk} periodLabel={periodLabel} onSearch={focusCopilot} />
 
-        <div className="flex flex-1 flex-col gap-5 px-6 pb-8 pt-5 lg:flex-row">
-          <main className="min-w-0 flex-1 space-y-5">
-            {cockpit.isPending && <div className="card p-6 text-sm text-ink-muted">Logo verisi yükleniyor…</div>}
+        <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
+          <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
+            {cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Logo verisi yükleniyor…</div>}
             {cockpit.isError && (
-              <div className="card flex items-start gap-3 border-brand-accent/40 p-5 text-sm">
+              <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
                 <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
                 <div>
                   <div className="font-semibold">Veri alınamadı</div>
@@ -68,14 +68,14 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
     <>
       <section className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold tracking-wider text-white">MALİ ATLAS {year}</span>
             <span className="text-[11px] text-ink-muted">
               Kaynak: Logo Tiger (MSSQL) · veri kesiti {dateTr(d.summary.lastDate)} · {d.source === 'live' ? 'canlı sorgu' : 'önbellek'}
             </span>
           </div>
-          <h1 className="mt-3 font-display text-[34px] font-semibold leading-[1.05] tracking-tight">
-            Finansal Durum &amp;<br />Nakit Görünümü
+          <h1 className="mt-2.5 font-display text-[26px] font-semibold leading-[1.08] tracking-tight sm:mt-3 sm:text-[34px] sm:leading-[1.05]">
+            Finansal Durum &amp;<br className="hidden sm:inline" /> Nakit Görünümü
           </h1>
           <p className="mt-2 max-w-[520px] text-[13px] text-ink-muted">
             {year} Ocak–{untilMonth} gerçekleşmeleri: satış, iade, iskonto, satınalma ve yayınevi kârlılığı tek ekranda. Her rakam fatura ve hareket satırlarından doğrudan hesaplanır.
@@ -83,7 +83,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 2xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
         <KpiCard
           label="Net Ciro (YTD)"
           value={tl(k.netRevenue)}
@@ -124,19 +124,19 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
 
       <CashFlowChart monthly={d.monthly} live={d.source === 'live'} partialMonth={ym ? MONTHS_TR_LONG[ym.month - 1] : null} />
 
-      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid min-w-0 gap-4 sm:gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <ImprintTable rows={d.imprints} />
-        <div className="grid min-w-0 gap-5 sm:grid-cols-2 2xl:grid-cols-1">
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 2xl:grid-cols-1">
           <ChannelMix channels={d.channels} total={k.channelTotal} />
-          <section className="card min-w-0 p-5">
+          <section className="card min-w-0 p-4 sm:p-5">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-[20px] font-semibold leading-tight">Satınalma &amp; Hizmet</h2>
+              <h2 className="font-display text-[18px] font-semibold leading-tight sm:text-[20px]">Satınalma &amp; Hizmet</h2>
               <InfoTip k="purchases" align="right" />
             </div>
             <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), {year} YTD</p>
             <div className="mt-3 flex items-end gap-2">
               <ShoppingCart size={18} className="mb-1 text-brand" />
-              <span className="font-display text-[28px] font-semibold leading-none">{tl(d.summary.purchases)}</span>
+              <span className="font-display text-[24px] font-semibold leading-none sm:text-[28px]">{tl(d.summary.purchases)}</span>
             </div>
             <div className="mt-2 text-[11px] text-ink-muted">
               Net ciroya oranı <b className="text-ink">{pct(k.netRevenue > 0 ? d.summary.purchases / k.netRevenue : null)}</b>
