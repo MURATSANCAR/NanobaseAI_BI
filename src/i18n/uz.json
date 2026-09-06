@@ -1319,5 +1319,8 @@
   "ui.poweredBy": "{brand} tomonidan quvvatlanadi",
   "ux.biFlow.title": "BI sozlash — qadamga bosib o'ting",
   "ux.breadcrumbs.home": "Bosh sahifa",
-  "ux.breadcrumbs.label": "Sahifa joylashuvi"
+  "ux.breadcrumbs.label": "Sahifa joylashuvi",
+  "bi.forecast.band": "Oraliq (p10–p90)",
+  "bi.forecast.history": "Haqiqiy",
+  "bi.forecast.p50": "Prognoz (p50)"
 }

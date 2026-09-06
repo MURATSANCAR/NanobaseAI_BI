@@ -14,6 +14,11 @@ from nanobase_api.semantic_catalog.domain.metric import Metric
 
 _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
 
+TimeGrain = str  # "day" | "week" | "month" | "quarter" | "year"
+TIME_GRAINS: tuple[str, ...] = ("day", "week", "month", "quarter", "year")
+_ORACLE_TRUNC_FMT = {"day": "DD", "week": "IW", "month": "MM", "quarter": "Q", "year": "YYYY"}
+PERIOD_ALIAS = "period"
+
 
 def _quote_ident(parts: str, *, dialect: str = "postgres") -> str:
     """Quote schema.table or column — Postgres quoted; Oracle unquoted uppercase."""
@@ -22,6 +27,8 @@ def _quote_ident(parts: str, *, dialect: str = "postgres") -> str:
     bits = parts.replace('"', "").split(".")
     if dialect == "oracle":
         return ".".join(b.upper() for b in bits)
+    if dialect == "mssql":
+        return ".".join(bits)
     return ".".join(f'"{b}"' for b in bits)
 
 
@@ -53,6 +60,11 @@ class CompileRequest:
     # breakdown (still ordered by the aggregate, descending, for readability).
     limit: int | None = None
     order_desc: bool = True
+    # Time-series questions ("aylık ciro", forecasting history): bucket the
+    # metric's own time field with date_trunc and ORDER BY period ASC.
+    # Requires metric.time. Rows come back oldest→newest, one per bucket
+    # (buckets with no rows are absent — SeriesBundleBuilder fills them).
+    time_grain: TimeGrain | None = None
     dialect: str = "postgres"
 
 
@@ -77,6 +89,8 @@ class MetricCompiler:
         dialect = (req.dialect or "postgres").lower()
         if dialect in ("postgresql", "postgres"):
             dialect = "postgres"
+        elif dialect in ("mssql", "tsql", "sqlserver"):
+            dialect = "mssql"
         elif dialect != "oracle":
             raise ValidationError(f"Desteklenmeyen dialect: {req.dialect}")
 
@@ -93,6 +107,12 @@ class MetricCompiler:
                 expr = col_sql
             agg = metric.aggregation.upper()
             select_expr = f"{agg}({expr}) AS {metric.code.upper()}"
+            from_sql = f"FROM {_quote_ident(table, dialect=dialect)} {alias}"
+        elif dialect == "mssql":
+            col_sql = f"{alias}.{col}"
+            expr = f"ISNULL({col_sql}, 0)" if metric.null_policy == "ZERO" else col_sql
+            agg = metric.aggregation.upper()
+            select_expr = f"{agg}({expr}) AS {metric.code}"
             from_sql = f"FROM {_quote_ident(table, dialect=dialect)} {alias}"
         else:
             col_sql = f'{alias}."{col}"'
@@ -141,6 +161,12 @@ class MetricCompiler:
                     where_parts.append(f"{time_sql} >= :PERIOD_START")
                 if req.period.get("to"):
                     where_parts.append(f"{time_sql} < :PERIOD_END")
+            elif dialect == "mssql":
+                time_sql = f"{alias}.{col_name}"
+                if req.period.get("from"):
+                    where_parts.append(f"{time_sql} >= '{req.period['from']}'")
+                if req.period.get("to"):
+                    where_parts.append(f"{time_sql} < '{req.period['to']}'")
             else:
                 time_sql = f'{alias}."{col_name}"'
                 if req.period.get("from"):
@@ -156,6 +182,11 @@ class MetricCompiler:
                 cname = dim_code
             if dialect == "oracle":
                 where_parts.append(f"{alias}.{cname.upper()} = {_sql_literal(value)}")
+            elif dialect == "mssql":
+                lit = _sql_literal(value)
+                if isinstance(value, str):
+                    lit = "N" + lit  # nvarchar literal keeps Turkish characters intact
+                where_parts.append(f"{alias}.{cname} = {lit}")
             else:
                 where_parts.append(f'{alias}."{cname}" = {_sql_literal(value)}')
 
@@ -172,14 +203,47 @@ class MetricCompiler:
             # for the target dialect ("segment" / SEGMENT) — do not re-wrap it.
             group_cols_sql.append(f"{alias}.{_quote_ident(cname, dialect=dialect)}")
 
-        select_cols = list(group_cols_sql) + [select_expr]
+        # Time grain (series): bucket expression comes first in SELECT/GROUP BY
+        # and dictates ORDER BY period ASC — time order, never rank order.
+        period_expr: str | None = None
+        if req.time_grain is not None:
+            grain = str(req.time_grain).lower()
+            if grain not in TIME_GRAINS:
+                raise ValidationError(f"Geçersiz time_grain: {req.time_grain}")
+            if not metric.time or not metric.time.time_field:
+                raise ValidationError("time_grain için metric.time.time_field zorunludur.")
+            tcol = metric.time.time_field.split(".")[-1]
+            if dialect == "oracle":
+                period_expr = f"TRUNC({alias}.{tcol.upper()}, '{_ORACLE_TRUNC_FMT[grain]}')"
+                period_select = f"{period_expr} AS {PERIOD_ALIAS.upper()}"
+            elif dialect == "mssql":
+                d = f"{alias}.{tcol}"
+                period_expr = {
+                    "day": f"CAST({d} AS date)",
+                    "week": f"DATEADD(week, DATEDIFF(week, 0, {d}), 0)",
+                    "month": f"DATEFROMPARTS(YEAR({d}), MONTH({d}), 1)",
+                    "quarter": f"DATEFROMPARTS(YEAR({d}), ((MONTH({d}) - 1) / 3) * 3 + 1, 1)",
+                    "year": f"DATEFROMPARTS(YEAR({d}), 1, 1)",
+                }[grain]
+                period_select = f"{period_expr} AS {PERIOD_ALIAS}"
+            else:
+                period_expr = f"date_trunc('{grain}', {alias}.\"{tcol}\")"
+                period_select = f'{period_expr} AS "{PERIOD_ALIAS}"'
+            select_cols = [period_select] + list(group_cols_sql) + [select_expr]
+            group_sql_cols = [period_expr] + list(group_cols_sql)
+        else:
+            select_cols = list(group_cols_sql) + [select_expr]
+            group_sql_cols = list(group_cols_sql)
         sql_parts = [f"SELECT\n    " + ",\n    ".join(select_cols), from_sql]
         if join_sql_parts:
             sql_parts.extend(join_sql_parts)
         if where_parts:
             sql_parts.append("WHERE " + "\n  AND ".join(where_parts))
-        if group_cols_sql:
-            sql_parts.append("GROUP BY " + ", ".join(group_cols_sql))
+        if group_sql_cols:
+            sql_parts.append("GROUP BY " + ", ".join(group_sql_cols))
+        if period_expr is not None:
+            order_parts = [f"{period_expr} ASC"] + [f"{g} ASC" for g in group_cols_sql]
+            sql_parts.append("ORDER BY " + ", ".join(order_parts))
         # Rank/breakdown ordering: by the aggregate value, not a dimension —
         # "en yüksek"/"ilk N" questions mean "highest metric value first".
         # A tie-break on the first group-by column is required for genuine
@@ -187,7 +251,7 @@ class MetricCompiler:
         # an equal aggregate value without a secondary sort key, and "same
         # logical plan in, byte-identical rows out" is the entire point of
         # compiling this instead of asking the LLM.
-        if group_cols_sql or req.limit is not None:
+        elif group_cols_sql or req.limit is not None:
             order_dir = "DESC" if req.order_desc else "ASC"
             order_parts = [f"{agg}({expr}) {order_dir}"]
             if group_cols_sql:
@@ -197,11 +261,13 @@ class MetricCompiler:
             limit_n = int(req.limit)
             if dialect == "oracle":
                 sql_parts.append(f"FETCH FIRST {limit_n} ROWS ONLY")
+            elif dialect == "mssql":
+                sql_parts[0] = sql_parts[0].replace("SELECT\n", f"SELECT TOP {limit_n}\n", 1)
             else:
                 sql_parts.append(f"LIMIT {limit_n}")
 
         sql = "\n".join(sql_parts)
-        if dialect != "oracle":
+        if dialect not in ("oracle", "mssql"):
             sql += ";"
 
         logical = metric.to_logical_plan()
@@ -214,6 +280,9 @@ class MetricCompiler:
         if req.limit is not None:
             logical["limit"] = req.limit
             logical["orderDesc"] = req.order_desc
+        if req.time_grain is not None:
+            logical["timeGrain"] = str(req.time_grain).lower()
+            logical["periodAlias"] = PERIOD_ALIAS
         logical["dialect"] = dialect
 
         fingerprint = self.ast_fingerprint(sql, dialect=dialect)
@@ -227,6 +296,8 @@ class MetricCompiler:
             a = aliases.get(table) or aliases.get(bits[-2]) or _alias_for(table, dialect=dialect)
             if dialect == "oracle":
                 return f"{a}.{col.upper()}"
+            if dialect == "mssql":
+                return f"{a}.{col}"
             return f'{a}."{col}"'
         return _quote_ident(expr, dialect=dialect)
 
@@ -254,7 +325,7 @@ class MetricCompiler:
     def ast_fingerprint(sql: str, *, dialect: str = "postgres") -> str:
         """Normalize via sqlglot when available; else whitespace-normalized hash."""
         normalized = sql
-        read_dialect = "oracle" if dialect == "oracle" else "postgres"
+        read_dialect = {"oracle": "oracle", "mssql": "tsql"}.get(dialect, "postgres")
         try:
             import sqlglot
 

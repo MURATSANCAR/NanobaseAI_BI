@@ -207,6 +207,22 @@ PDF §11-12: ayrı anomali modeli yok; TimesFM aralığı sinyal, Qwen sebebi DB
 
 ---
 
+## 7b. Karar güncellemesi — 2026-09-06: prod motoru TimesFM 3.0
+
+Kullanıcı kararı: üretim motoru **TimesFM 3.0** (`FORECAST_ENGINE=timesfm3`), K4'teki "prod = 2.5" satırı bu kararla değişti.
+
+| Ne | Değer |
+|---|---|
+| Kaynak | https://github.com/google-research/timesfm, commit `0df95ae62085a6ac0d0afd1ad40dee2e6c1356ab` (pip: `backend/forecasting/requirements-timesfm.txt`) |
+| Paket / API | `timesfm3` (`ModelConfig(checkpoint_path, per_core_batch_size, device)` → `TimesFM3Evaluator.predict_batch(contexts, horizon, return_quantiles=True)` → `ForecastOutput.forecast`, `.quantiles[horizon, 9]`, seviyeler 0.1..0.9) |
+| Ağırlık | `google/timesfm-3.0-pytorch`; sunucuda `/data/nanobaseai/bi/models/timesfm-3.0-pytorch` (1.3 GB), `HF_HUB_OFFLINE=1` |
+| Sunucu | venv `/data/nanobaseai/bi/timesfm-venv` (torch CPU), unit `nanobase-forecast.service` :8793, `scripts/server/deploy-forecast.sh`; API bağlantısı `scripts/server/enable-forecast-chat.sh` |
+| Lisans | Upstream ağırlıklar ticari olmayan lisanslı; yükleme `FORECAST_ALLOW_NONCOMMERCIAL=1` ile açıkça izinli (operatör kararı) |
+| p10/p50/p90 | quantile başlığı indeks 0 / 4 / 8; negatif olmayan seriler 0'da kırpılır (`_clip_floor`) |
+| Ölçüm (sunucu, CPU, 60 aylık gerçek Logo serisi) | yükleme 6.5 s, çıkarım 2.4 s (`timesfm-smoke.json`) |
+
+`timesfm25` adaptörü repoda duruyor ama kurulu paketle doğrulanmadı; kullanılmıyor.
+
 ## 8. Kabul ölçütleri (ölçülebilir)
 
 - [ ] E2E soru: gateway'e giden SQL `semantic_metric_compiler` kaynaklı, LLM SQL çağrısı **0**, cevapta 6 aylık p10/p50/p90.

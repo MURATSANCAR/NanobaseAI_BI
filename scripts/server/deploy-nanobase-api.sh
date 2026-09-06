@@ -28,7 +28,7 @@ ENV_FILE=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
 # Keep operator overlays (Superset, embed key, etc.) across redeploys
 PRESERVE_ENV="$(mktemp)"
 if [[ -f "$ENV_FILE" ]]; then
-  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
+  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE|FORECAST_)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
 fi
 umask 077
 cat > "$ENV_FILE" <<EOF
@@ -61,6 +61,9 @@ MODEL_MAX_CONCURRENCY=2
 LLM_REPEAT_PENALTY=1.0
 TEXT2SQL_MAX_COMPLETION_TOKENS=2048
 TEXT2SQL_CONTEXT_CHARS=9000
+# Forecast API (:8793, TimesFM 3.0) — scripts/server/deploy-forecast.sh; chat branch before the LLM path
+FORECAST_API_BASE=http://127.0.0.1:8793
+FORECAST_CHAT_ENABLED=true
 EOF
 # Prefer shared contract embedding key when present (BGE-M3 :8083)
 if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
@@ -89,6 +92,8 @@ if [[ -s "$PRESERVE_ENV" ]]; then
   while IFS= read -r line; do
     k="${line%%=*}"
     [[ "$k" == "BI_EMBED_API_KEY" ]] && grep -q '^BI_EMBED_API_KEY=' "$ENV_FILE" && continue
+    # operator value wins over the heredoc default (FORECAST_*, LLM_MODEL_NAME, ...)
+    grep -q "^${k}=" "$ENV_FILE" && sed -i "/^${k}=/d" "$ENV_FILE"
     printf '%s\n' "$line" >> "$ENV_FILE"
   done <"$PRESERVE_ENV"
   log "Restored preserved env overlays from prior nanobase_api.env"

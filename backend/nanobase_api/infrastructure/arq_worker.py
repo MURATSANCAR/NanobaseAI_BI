@@ -238,8 +238,20 @@ async def run_scenario_embedding_publish(ctx, tenant_id: str, datasource_id: str
     return int(result.get("upserted") or 0)
 
 
+async def run_forecast_reconcile(ctx, limit: int = 200) -> str:
+    """Forecasting V1 Faz 6.1 — compare closed periods with stored forecasts."""
+    import json as _json
+
+    from nanobase_api.app import _meta_engine
+    from nanobase_api.application.forecast_chat import reconcile_forecasts
+
+    stats = await reconcile_forecasts(_meta_engine(), limit=limit)
+    return _json.dumps(stats)
+
+
 class WorkerSettings:
     functions = [
+        run_forecast_reconcile,
         run_schema_scan,
         run_scenario_build,
         scenario_discovery,

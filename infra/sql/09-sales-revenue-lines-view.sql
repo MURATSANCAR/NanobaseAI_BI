@@ -24,11 +24,15 @@ SELECT
     c.segment,
     c.country AS customer_country,
     p.category AS product_category,
-    p.product_name
+    p.product_name,
+    -- Forecasting V1 (plan Faz 0.4): city dimension for "İstanbul satışları" series.
+    -- Appended last so CREATE OR REPLACE VIEW stays valid on live databases.
+    b.city AS branch_city
 FROM analytics.sales_order_items soi
 JOIN analytics.sales_orders so ON so.order_id = soi.order_id
 JOIN analytics.customers c ON c.customer_id = so.customer_id
-JOIN analytics.products p ON p.product_id = soi.product_id;
+JOIN analytics.products p ON p.product_id = soi.product_id
+LEFT JOIN analytics.branches b ON b.branch_id = so.branch_id;
 
 CREATE OR REPLACE VIEW public.v_sales_revenue_lines AS
 SELECT * FROM analytics.v_sales_revenue_lines;
