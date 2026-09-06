@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-page text-ink font-sans antialiased;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+.card {
+  @apply bg-card border border-line rounded-2xl shadow-card;
+}
+
+.eyebrow {
+  @apply text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-muted;
+}
+
+.chip {
+  @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs text-ink-muted;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #e3cfc3;
+  border-radius: 999px;
+}

@@ -1,0 +1,182 @@
+{
+ "summary": {
+  "sales": 922418666.060004,
+  "returns": 74308487.23999998,
+  "purchases": 492447013.72,
+  "invoices": 70664,
+  "lastDate": "2026-08-17"
+ },
+ "monthly": [
+  {
+   "month": 1,
+   "sales": 107907015.30999996,
+   "returns": 9123067.700000001,
+   "purchases": 76686904.07
+  },
+  {
+   "month": 2,
+   "sales": 139906198.88,
+   "returns": 8647079.200000001,
+   "purchases": 74633405.47999999
+  },
+  {
+   "month": 3,
+   "sales": 124234690.35999992,
+   "returns": 5053225.69,
+   "purchases": 56230683.599999994
+  },
+  {
+   "month": 4,
+   "sales": 127831037.7100001,
+   "returns": 9789248.75,
+   "purchases": 73028732.07999998
+  },
+  {
+   "month": 5,
+   "sales": 88626539.64999998,
+   "returns": 13564848.82,
+   "purchases": 67004312.1
+  },
+  {
+   "month": 6,
+   "sales": 128324056.75999984,
+   "returns": 19439090.81,
+   "purchases": 57778869.54
+  },
+  {
+   "month": 7,
+   "sales": 117695294.83999982,
+   "returns": 7482724.3500000015,
+   "purchases": 70331595.00999999
+  },
+  {
+   "month": 8,
+   "sales": 87893832.55000006,
+   "returns": 1209201.9199999997,
+   "purchases": 16752511.839999998
+  }
+ ],
+ "lines": {
+  "gross": 1707809654.439996,
+  "discount": 785178332.5000005,
+  "costedRevenue": 1304122726.4299898,
+  "cost": 176863597.29463395,
+  "costUntil": "2026-06-30"
+ },
+ "channels": [
+  {
+   "channel": "KITAPCI",
+   "net": 359387308.9099999,
+   "customers": 960,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "E-TICARET",
+   "net": 192872534.56999996,
+   "customers": 12,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "DAGITICI",
+   "net": 125698455.15,
+   "customers": 36,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "ZINCIR",
+   "net": 92808104.52000001,
+   "customers": 46,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "(boş)",
+   "net": 32865585.140000094,
+   "customers": 690,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "KURUM",
+   "net": 17213504.45,
+   "customers": 33,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "MAGAZA",
+   "net": 9196553.379999997,
+   "customers": 2,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  },
+  {
+   "channel": "FUAR",
+   "net": 4886841.35,
+   "customers": 6,
+   "soldQty": 0.0,
+   "returnQty": 0.0
+  }
+ ],
+ "imprints": [
+  {
+   "imprint": "Timaş Çocu",
+   "titles": 902,
+   "net": 429305276.4500003,
+   "returnRate": 0.08594898865547193,
+   "margin": 0.8945282310347552
+  },
+  {
+   "imprint": "İlk Genç T",
+   "titles": 143,
+   "net": 230147044.70000002,
+   "returnRate": 0.06623763408192275,
+   "margin": 0.8961805442874708
+  },
+  {
+   "imprint": "Genç Timaş",
+   "titles": 294,
+   "net": 229903019.94000003,
+   "returnRate": 0.08544898324007272,
+   "margin": 0.9088003292835314
+  },
+  {
+   "imprint": "Timaş Yayı",
+   "titles": 520,
+   "net": 146780103.5099999,
+   "returnRate": 0.13240389243219639,
+   "margin": 0.8851070495307392
+  },
+  {
+   "imprint": "Ç",
+   "titles": 639,
+   "net": 76797811.55222997,
+   "returnRate": 0.06897485056952746,
+   "margin": 0.9232902407647023
+  },
+  {
+   "imprint": "Mavi Kirpi",
+   "titles": 337,
+   "net": 49822997.36999998,
+   "returnRate": 0.19599989389638983,
+   "margin": 0.760964724625913
+  },
+  {
+   "imprint": "Bi Kutu Oy",
+   "titles": 53,
+   "net": 48127914.43999998,
+   "returnRate": 0.009664714851180277,
+   "margin": 0.5358258737057888
+  },
+  {
+   "imprint": "Gülce Çocu",
+   "titles": 147,
+   "net": 46302896.11000002,
+   "returnRate": 0.0865845362411675,
+   "margin": 0.8386685627454917
+  }
+ ]
+}
