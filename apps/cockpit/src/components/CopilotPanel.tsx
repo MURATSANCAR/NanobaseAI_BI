@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
+import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
-import { ask, runSql, type SqlResult, EngineError } from '../lib/engine';
+import { ask, runSql, sendFeedback, type SemanticTrace, type SqlResult, EngineError } from '../lib/engine';
 import { ResultChart } from './ResultChart';
 import { Thinking } from './Thinking';
 
@@ -45,7 +45,10 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
       const text =
         a.summary?.trim() ||
         (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
-      setMsgs((m) => [...m.slice(0, -1), { role: 'assistant', text, sql: a.sql, result, at: now() }]);
+      setMsgs((m) => [
+        ...m.slice(0, -1),
+        { role: 'assistant', text, sql: a.sql, result, at: now(), semantic: a.semantic, queryId: a.queryId },
+      ]);
     } catch (e) {
       const msg = e instanceof EngineError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
       setMsgs((m) => [...m.slice(0, -1), { role: 'assistant', text: 'Soru yanıtlanamadı.', error: msg, at: now() }]);
@@ -139,6 +142,86 @@ function UserBubble({ m }: { m: Extract<Msg, { role: 'user' }> }) {
   );
 }
 
+/** Anlam izi: hangi terim hangi fiziksel karşılığa çözümlendi, hangi derleyici üretti, kaç kanıt var.
+ *  Katalogda karşılığı olmayan terimler ayrıca gösterilir — cevabın neden öyle olduğu görünür olsun. */
+function SemanticTraceCard({ trace }: { trace: SemanticTrace }) {
+  const [open, setOpen] = useState(false);
+  const slots = trace.query?.slots ?? [];
+  const unresolved = trace.query?.unresolved ?? [];
+  const certified = trace.certified === true;
+  const compilerLabel =
+    trace.compiler === 'deterministic' ? 'katalogdan doğrudan' : trace.compiler === 'existing_llm' ? 'model destekli' : trace.compiler ?? '—';
+  if (slots.length === 0 && unresolved.length === 0) return null;
+  return (
+    <div className="mt-2">
+      <button onClick={() => setOpen((v) => !v)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
+        {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        <ShieldCheck size={12} className={certified ? 'text-ok' : 'text-ink-faint'} />
+        Anlam ({compilerLabel}
+        {trace.catalogVersion ? ` · katalog v${trace.catalogVersion}` : ''})
+      </button>
+      {open && (
+        <div className="mt-1 space-y-1 rounded-lg bg-page p-2 text-[11px] text-ink-muted">
+          {slots.map((s, i) => {
+            const map = (s.mapping ?? {}) as { entity?: string; column?: string; values?: string[]; formula?: string };
+            const target = map.formula
+              ? String(map.formula)
+              : `${map.entity ?? ''}.${map.column ?? ''}${map.values?.length ? ` ∈ (${map.values.join(', ')})` : ''}`;
+            return (
+              <div key={i} className="flex flex-wrap items-baseline gap-1">
+                <span className="font-semibold text-ink">“{s.term}”</span>
+                <span>→</span>
+                <span className="font-mono text-[10px] text-ink">{target}</span>
+                <span className={clsx('rounded px-1 text-[9px] font-bold', s.status === 'CERTIFIED' ? 'bg-ok/15 text-ok' : 'bg-ink-faint/15')}>
+                  {s.status}
+                </span>
+              </div>
+            );
+          })}
+          {unresolved.length > 0 && (
+            <div className="text-brand-accent">Katalogda karşılığı yok: {unresolved.join(', ')}</div>
+          )}
+          {(trace.query?.explanation ?? []).slice(-2).map((line, i) => (
+            <div key={`x${i}`} className="text-[10px]">{line}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "Doğru/yanlış" işareti köprüye gider (sl_query_log.validated); gece madenciliği bunu kanıt sayar. */
+function FeedbackRow({ queryId }: { queryId: string }) {
+  const [sent, setSent] = useState<null | boolean>(null);
+  const [failed, setFailed] = useState(false);
+  const mark = async (ok: boolean) => {
+    setSent(ok);
+    try {
+      await sendFeedback(queryId, ok);
+    } catch {
+      setFailed(true);
+    }
+  };
+  if (sent !== null) {
+    return (
+      <div className="mt-2 text-[10px] text-ink-muted">
+        {failed ? 'Geri bildirim gönderilemedi.' : sent ? 'Teşekkürler — bu cevap doğrulanmış örnek olarak kaydedildi.' : 'Kaydedildi; bu eşleme gözden geçirilecek.'}
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-center gap-2 text-[10px] text-ink-muted">
+      <span>Bu cevap doğru mu?</span>
+      <button onClick={() => mark(true)} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 hover:border-ok hover:text-ok">
+        <ThumbsUp size={11} /> Doğru
+      </button>
+      <button onClick={() => mark(false)} className="inline-flex items-center gap-1 rounded-md border border-line px-1.5 py-0.5 hover:border-brand-accent hover:text-brand-accent">
+        <ThumbsDown size={11} /> Yanlış
+      </button>
+    </div>
+  );
+}
+
 function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wide?: boolean }) {
   const [showSql, setShowSql] = useState(false);
   const [showTable, setShowTable] = useState(false);
@@ -176,6 +259,8 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
           {showSql && <pre className="mt-1 max-h-48 overflow-auto scroll-thin whitespace-pre-wrap break-words rounded-lg bg-ink p-2 text-[10px] text-white/90">{m.sql}</pre>}
         </div>
       )}
+      {m.semantic && <SemanticTraceCard trace={m.semantic} />}
+      {m.queryId && !m.error && <FeedbackRow queryId={m.queryId} />}
     </div>
   );
 }
