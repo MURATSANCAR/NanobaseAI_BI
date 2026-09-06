@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Area, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Info } from 'lucide-react';
 import { InfoTip } from './InfoTip';
@@ -5,6 +6,8 @@ import { MONTHS_TR, tl } from '../lib/format';
 import type { Monthly } from '../lib/metrics';
 
 export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthly[]; live: boolean; partialMonth?: string | null }) {
+  // Telefonda 12 ay etiketi çakışıyor: eksen daraltılır, etiketler ayda bir gösterilir.
+  const narrow = useNarrow();
   const data = monthly.map((m) => ({
     ay: MONTHS_TR[m.month - 1],
     net: m.sales - m.returns,
@@ -16,11 +19,11 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
   const worst = data.reduce((a, b) => (b.fark < a.fark ? b : a), data[0]);
 
   return (
-    <section className="card min-w-0 p-5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
+    <section className="card min-w-0 p-4 sm:p-5">
+      <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h2 className="font-display text-[22px] font-semibold leading-tight">Aylık Net Ciro, Satınalma &amp; Nakit Farkı</h2>
+            <h2 className="font-display text-[18px] font-semibold leading-tight sm:text-[22px]">Aylık Net Ciro, Satınalma &amp; Nakit Farkı</h2>
             <InfoTip k="monthly" />
           </div>
           <p className="mt-1 text-[12px] text-ink-muted">
@@ -35,7 +38,7 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
         </div>
       </div>
 
-      <div className="mt-5 h-[300px]">
+      <div className="mt-4 h-[230px] sm:mt-5 sm:h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
             <defs>
@@ -45,8 +48,8 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="#F0E3DA" />
-            <XAxis dataKey="ay" tick={{ fontSize: 11, fill: '#7C6259' }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={(v: number) => tl(v)} tick={{ fontSize: 11, fill: '#B39A90' }} axisLine={false} tickLine={false} width={64} />
+            <XAxis dataKey="ay" tick={{ fontSize: narrow ? 10 : 11, fill: '#7C6259' }} axisLine={false} tickLine={false} interval={narrow ? 1 : 0} />
+            <YAxis tickFormatter={(v: number) => tl(v)} tick={{ fontSize: narrow ? 10 : 11, fill: '#B39A90' }} axisLine={false} tickLine={false} width={narrow ? 52 : 64} />
             <Tooltip
               formatter={(v: number, name: string) => [tl(v, { compact: false }), name]}
               contentStyle={{ borderRadius: 12, border: '1px solid #EAD9CE', fontSize: 12 }}
@@ -70,6 +73,19 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
       )}
     </section>
   );
+}
+
+/** Recharts eksen ayarları CSS ile yapılamıyor; kırılım noktası JS'ten okunur (Tailwind `sm` = 640px). */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 640);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const on = () => setNarrow(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return narrow;
 }
 
 function Legend({ swatch, label, line, dashed }: { swatch: string; label: string; line?: boolean; dashed?: boolean }) {

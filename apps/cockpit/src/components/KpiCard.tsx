@@ -33,7 +33,7 @@ export function KpiCard({
       </div>
       <div
         className={clsx(
-          'mt-3 font-display text-[30px] font-semibold leading-none tracking-tight',
+          'mt-3 font-display text-[26px] font-semibold leading-none tracking-tight sm:text-[30px]',
           tone === 'bad' && 'text-brand-accent',
           tone === 'good' && 'text-ok',
           tone === 'brand' && 'text-brand-deep',

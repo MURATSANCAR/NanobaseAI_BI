@@ -55,7 +55,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
   }
 
   return (
-    <aside className={clsx('card flex h-full min-h-[560px] w-full flex-col overflow-hidden lg:shrink-0', wide ? 'lg:w-[560px]' : 'lg:w-[330px]')}>
+    <aside className={clsx('card flex h-full min-h-[420px] w-full flex-col overflow-hidden sm:min-h-[560px] lg:shrink-0', wide ? 'lg:w-[560px]' : 'lg:w-[330px]')}>
       <div className="flex items-center gap-3 border-b border-line px-4 py-3">
         <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">
           <Bot size={18} />
@@ -73,7 +73,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         <button type="button" className="text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
           <RotateCcw size={15} />
         </button>
-        <button type="button" className="text-ink-faint hover:text-ink" title={wide ? 'Daralt' : 'Genişlet'} aria-pressed={wide} onClick={() => setWide((v) => !v)}>
+        <button type="button" className="hidden text-ink-faint hover:text-ink lg:block" title={wide ? 'Daralt' : 'Genişlet'} aria-pressed={wide} onClick={() => setWide((v) => !v)}>
           {wide ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
       </div>
@@ -100,7 +100,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         </div>
         <div className="mt-2 flex items-center justify-between text-[10px] text-ink-muted">
           <span className="inline-flex items-center gap-1"><Database size={11} /> Salt-okunur · LOGO_DB</span>
-          <span>Enter ile gönder</span>
+          <span className="hidden sm:inline">Enter ile gönder</span>
         </div>
       </form>
       <div className="mx-4 mt-3 rounded-xl bg-page px-3 py-2 text-[11px] text-ink-muted">
