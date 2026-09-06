@@ -83,7 +83,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 2xl:grid-cols-4">
         <KpiCard
           label="Net Ciro (YTD)"
           value={tl(k.netRevenue)}
@@ -124,11 +124,11 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
 
       <CashFlowChart monthly={d.monthly} live={d.source === 'live'} partialMonth={ym ? MONTHS_TR_LONG[ym.month - 1] : null} />
 
-      <div className="grid gap-5 xl:grid-cols-[1fr_320px]">
+      <div className="grid min-w-0 gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
         <ImprintTable rows={d.imprints} />
-        <div className="space-y-5">
+        <div className="grid min-w-0 gap-5 sm:grid-cols-2 2xl:grid-cols-1">
           <ChannelMix channels={d.channels} total={k.channelTotal} />
-          <section className="card p-5">
+          <section className="card min-w-0 p-5">
             <div className="flex items-center gap-2">
               <h2 className="font-display text-[20px] font-semibold leading-tight">Satınalma &amp; Hizmet</h2>
               <InfoTip k="purchases" align="right" />

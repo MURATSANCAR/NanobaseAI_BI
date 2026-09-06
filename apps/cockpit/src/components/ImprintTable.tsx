@@ -36,7 +36,7 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
   const active = sortKey !== 'net' || dir !== 'desc' || tone !== 'all' || highReturnOnly;
 
   return (
-    <section className="card p-5">
+    <section className="card min-w-0 p-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-[22px] font-semibold leading-tight">Yayınevi &amp; Dizi Ciro-Marj Raporu</h2>

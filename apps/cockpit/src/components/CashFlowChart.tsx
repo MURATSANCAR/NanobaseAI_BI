@@ -16,13 +16,11 @@ export function CashFlowChart({ monthly, live, partialMonth }: { monthly: Monthl
   const worst = data.reduce((a, b) => (b.fark < a.fark ? b : a), data[0]);
 
   return (
-    <section className="card p-5">
+    <section className="card min-w-0 p-5">
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-[22px] font-semibold leading-tight">
-              Aylık Net Ciro, Satınalma &amp; Nakit Farkı
-            </h2>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <h2 className="font-display text-[22px] font-semibold leading-tight">Aylık Net Ciro, Satınalma &amp; Nakit Farkı</h2>
             <InfoTip k="monthly" />
           </div>
           <p className="mt-1 text-[12px] text-ink-muted">

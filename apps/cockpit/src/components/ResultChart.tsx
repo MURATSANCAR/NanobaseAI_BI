@@ -28,6 +28,8 @@ const SERIES = ['#B34630', '#2A1912', '#C98A1E', '#3C7D4E', '#8F3521', '#7C6259'
 const TICK = { fontSize: 10, fill: '#7C6259' };
 const GRID = '#F0E3DA';
 const TOOLTIP = { borderRadius: 12, border: '1px solid #EAD9CE', fontSize: 11 } as const;
+// Sohbet cevabı anında okunmalı; giriş animasyonu hem gecikme katıyor hem yeniden-render'da baştan
+// tetiklenip grafiği boş gösteriyor — tüm serilerde isAnimationActive={false}.
 
 /** Para gibi okunan ölçüler ₺ ile gösterilir. Oran/adet alanları hariç tutulur;
  *  yanlış tahminin bedeli yalnızca ₺ işaretidir, veri değişmez. */
@@ -123,9 +125,11 @@ export function ResultChart({
   if (!xk || !yk) return null;
 
   const limit = widget.type === 'pie' ? 8 : wide ? 16 : 10;
+  // Alan adları `x`/`y` OLAMAZ: Recharts nokta koordinatlarını aynı adlarla yazıyor ve
+  // seri tek bir x'e çöküyor (line path'i M46,…C46,… çıkar). `cat`/`val` ile çakışma yok.
   const data = records
-    .map((r) => ({ x: r[xk], y: toNum(r[yk]) }))
-    .filter((d): d is { x: unknown; y: number } => d.y != null)
+    .map((r) => ({ cat: r[xk], val: toNum(r[yk]) }))
+    .filter((d): d is { cat: unknown; val: number } => d.val != null)
     .slice(0, limit);
   if (data.length < 2) return null;
 
@@ -138,10 +142,10 @@ export function ResultChart({
         <ResponsiveContainer width="100%" height={h}>
           <LineChart data={data} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke={GRID} />
-            <XAxis dataKey="x" tick={TICK} axisLine={false} tickLine={false} tickFormatter={(v) => truncate(v, 8)} />
+            <XAxis dataKey="cat" tick={TICK} axisLine={false} tickLine={false} tickFormatter={(v) => truncate(v, 8)} />
             <YAxis tick={TICK} axisLine={false} tickLine={false} width={46} tickFormatter={(v) => fmt(yk, v, true)} />
             <Tooltip formatter={tip} contentStyle={TOOLTIP} labelStyle={{ fontWeight: 700 }} />
-            <Line type="monotone" dataKey="y" name={yk} stroke={SERIES[0]} strokeWidth={2} dot={{ r: 2.5, fill: '#fff', strokeWidth: 2 }} />
+            <Line type="monotone" dataKey="val" name={yk} stroke={SERIES[0]} strokeWidth={2} dot={{ r: 2.5, fill: '#fff', strokeWidth: 2 }} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </Frame>
@@ -155,13 +159,14 @@ export function ResultChart({
           <PieChart margin={{ top: 4, right: 4, left: 4, bottom: 4 }}>
             <Pie
               data={data}
-              dataKey="y"
-              nameKey="x"
+              dataKey="val"
+              nameKey="cat"
               innerRadius="45%"
               outerRadius="78%"
               paddingAngle={2}
               stroke="#fff"
               strokeWidth={2}
+              isAnimationActive={false}
             >
               {data.map((_, i) => <Cell key={i} fill={SERIES[i % SERIES.length]} />)}
             </Pie>
@@ -172,7 +177,7 @@ export function ResultChart({
           {data.map((d, i) => (
             <li key={i} className="inline-flex items-center gap-1">
               <span className="h-2 w-2 rounded-sm" style={{ background: SERIES[i % SERIES.length] }} />
-              {truncate(d.x, 18)}
+              {truncate(d.cat, 18)}
             </li>
           ))}
         </ul>
@@ -189,7 +194,7 @@ export function ResultChart({
           <XAxis type="number" tick={TICK} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(yk, v, true)} />
           <YAxis
             type="category"
-            dataKey="x"
+            dataKey="cat"
             tick={TICK}
             axisLine={false}
             tickLine={false}
@@ -197,7 +202,7 @@ export function ResultChart({
             tickFormatter={(v) => truncate(v, wide ? 18 : 12)}
           />
           <Tooltip formatter={tip} contentStyle={TOOLTIP} labelStyle={{ fontWeight: 700 }} cursor={{ fill: '#F4DCD3', opacity: 0.4 }} />
-          <Bar dataKey="y" name={yk} fill={SERIES[0]} radius={[0, 5, 5, 0]} maxBarSize={16} />
+          <Bar dataKey="val" name={yk} fill={SERIES[0]} radius={[0, 5, 5, 0]} maxBarSize={16} isAnimationActive={false} />
         </BarChart>
       </ResponsiveContainer>
     </Frame>

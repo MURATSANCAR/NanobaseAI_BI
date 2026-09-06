@@ -25,11 +25,11 @@ export function KpiCard({
   return (
     <div className="card relative p-4">
       <div className="flex items-start justify-between">
-        <div className="flex max-w-[78%] items-start gap-1.5">
-          <div className="eyebrow leading-[1.35]">{label}</div>
+        <div className="flex min-w-0 flex-1 items-start gap-1.5">
+          <div className="eyebrow leading-[1.3] tracking-[0.1em]">{label}</div>
           {info && <InfoTip k={info} className="mt-px" />}
         </div>
-        <Icon size={16} className="text-ink-faint" />
+        <Icon size={16} className="ml-2 shrink-0 text-ink-faint" />
       </div>
       <div
         className={clsx(
@@ -41,7 +41,7 @@ export function KpiCard({
       >
         {value}
       </div>
-      <div className="mt-2 text-[11px] leading-snug text-ink-muted">{sub}</div>
+      <div className="mt-2 break-words text-[11px] leading-snug text-ink-muted">{sub}</div>
       <div className="mt-3 h-1 w-full rounded-full bg-page">
         <div
           className={clsx('h-1 rounded-full', tone === 'bad' ? 'bg-brand-accent' : tone === 'good' ? 'bg-ok' : 'bg-brand')}
