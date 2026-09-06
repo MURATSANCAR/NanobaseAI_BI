@@ -30,6 +30,12 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
+try:  # ajan yolu (isteğe bağlı): `from __future__ import annotations` altında final_sql imzasındaki
+    # RunContext string-annotation'ı pydantic-ai tarafından MODÜL globallerinde çözülür; burada olmalı.
+    from pydantic_ai import RunContext  # noqa: F401
+except Exception:  # noqa: BLE001
+    RunContext = Any  # type: ignore[misc,assignment]
+
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
