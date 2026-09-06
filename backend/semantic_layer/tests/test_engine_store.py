@@ -111,3 +111,24 @@ def test_human_annotation_becomes_candidate_with_human_evidence(store, synthetic
     # a human annotation alone does not certify — it needs at least one validated query too
     EvidenceEngine(store, min_support=3).run(TENANT, DS, synthetic_profiles)
     assert store.get_concept(c.id).status == ConceptStatus.CANDIDATE
+
+
+def test_catalog_cache_follows_a_change_that_never_bumped_the_version(store, profiles):
+    """A human certification from the portal, or a rebuild that stopped halfway, changes what the
+    resolver should see without changing the version number. The cache has to notice."""
+    from semantic_layer.models import Evidence, EvidenceType, Mapping, SemanticType
+    from semantic_layer.store.catalog_store import ConceptStatus
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    before = store.certified_index(TENANT, DS)
+    c, _ = store.upsert_concept(TENANT, DS, "kargo", SemanticType.DIMENSION_VALUE,
+                                mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, column="TRCODE", operator="IN", values=["4"]),
+                                status=ConceptStatus.CANDIDATE)
+    store.add_evidence(Evidence(c.id, EvidenceType.HUMAN_ANNOTATION, "portal", support_count=1))
+    store.update_concept(c.id, status=ConceptStatus.CERTIFIED, confidence=1.0)
+    after = store.certified_index(TENANT, DS)
+    assert "kargo" in after and "kargo" not in before
+    fp = store.catalog_fingerprint(TENANT, DS)
+    assert store.catalog_fingerprint(TENANT, DS) == fp        # stable while nothing changes

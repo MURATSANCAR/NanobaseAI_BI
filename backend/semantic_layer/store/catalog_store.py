@@ -693,18 +693,40 @@ class CatalogStore:
     def _invalidate(self, tenant_id: str, datasource_id: str) -> None:
         self._index_cache.pop((tenant_id, datasource_id), None)
 
+    def catalog_fingerprint(self, tenant_id: str, datasource_id: str) -> tuple[Any, int, int]:
+        """(version, certified count, last concept write). Cheap, and it moves for changes a version
+        number does not see: a human certification from the portal, or a rebuild that stopped halfway.
+        Readers key their caches on this so a partly-applied catalog is never served as a settled one."""
+        latest = self.latest_version(tenant_id, datasource_id)
+        stmt = sa.select(sa.func.count(), sa.func.max(S.sl_concept.c.updated_at)).where(
+            S.sl_concept.c.tenant_id == tenant_id,
+            S.sl_concept.c.datasource_id == datasource_id,
+            S.sl_concept.c.status == ConceptStatus.CERTIFIED,
+        )
+        with self.engine.connect() as conn:
+            n, last = conn.execute(stmt).first() or (0, None)
+        return ((latest or {}).get("version", 0), int(n or 0), int(_dt(last).timestamp()) if last else 0)
+
     def certified_index(self, tenant_id: str, datasource_id: str) -> dict[str, list[tuple[Concept, list[Mapping]]]]:
         """normalized term (and synonyms) → [(concept, mappings)] for CERTIFIED concepts only.
         Cached per catalog version; the resolver never sees CANDIDATE rows."""
         key = (tenant_id, datasource_id)
-        latest = self.latest_version(tenant_id, datasource_id)
-        ver = latest["version"] if latest else 0
+        ver = self.catalog_fingerprint(tenant_id, datasource_id)
         cached = self._index_cache.get(key)
         if cached and cached[0] == ver:
             return cached[1]
         index: dict[str, list[tuple[Concept, list[Mapping]]]] = {}
-        for c in self.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000):
-            maps = self.list_mappings(c.id)
+        concepts = self.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
+        # one query for every mapping in the catalog, not one per concept: this runs on the first
+        # request after each nightly rebuild, in every worker.
+        by_concept: dict[str, list[Mapping]] = {}
+        if concepts:
+            ids = [c.id for c in concepts]
+            for chunk in (ids[i : i + 500] for i in range(0, len(ids), 500)):
+                for r in self._rows(sa.select(S.sl_mapping).where(S.sl_mapping.c.concept_id.in_(chunk))):
+                    by_concept.setdefault(str(r["concept_id"]), []).append(self._row_to_mapping(r))
+        for c in concepts:
+            maps = by_concept.get(c.id, [])
             for k in [c.normalized_term, *c.synonyms]:
                 if k:
                     index.setdefault(k, []).append((c, maps))

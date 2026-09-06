@@ -87,20 +87,18 @@ class Runtime:
             return
         self._checked_at = now
         try:
-            latest = self.store.latest_version(self.settings.tenant_id, self.settings.datasource_id)
+            version = self.store.catalog_fingerprint(self.settings.tenant_id, self.settings.datasource_id)
         except Exception as e:  # noqa: BLE001
             log.debug("catalog version check failed: %s", e)
             return
-        version = (latest or {}).get("version")
         if version != self._catalog_version:
-            log.info("catalog changed (v%s → v%s) — reloading profiles", self._catalog_version, version)
+            log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
             self.rebuild()
 
     def rebuild(self) -> None:
         s = self.settings
         self.profiles = self.store.list_profiles(s.datasource_id)
-        latest = self.store.latest_version(s.tenant_id, s.datasource_id)
-        self._catalog_version = (latest or {}).get("version")
+        self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
         self.conventions = Conventions.from_profiles(self.profiles)
         if not s.dialect:
