@@ -155,6 +155,29 @@ cd "${ROOT}/backend"
 PYTHONPATH="${ROOT}/backend" "${VENV}/bin/python" -m semantic_layer.cli pipeline --note "deploy $(date -Is)" | tail -40
 PYTHONPATH="${ROOT}/backend" "${VENV}/bin/python" -m semantic_layer.cli status
 
+# --- 5b. regression gate: this catalog must not answer worse than the one it replaces --------------
+# A nightly catalog changes on its own: a new sense splits an old mapping, a certification is
+# withdrawn, a synonym starts winning. The end-user corpus is replayed against the fresh catalog and
+# compared with the last accepted run — a question that used to be answered and now is not, or one
+# that used to be refused and is now answered, stops the deploy before the service picks it up.
+GATE_DIR="${SEMANTIC_REPORT_DIR:-/data/nanobaseai/bi/logs}"
+GATE_CORPUS="${ROOT}/tests/text2sql/enduser-50.yaml"
+if [[ -f "$GATE_CORPUS" ]]; then
+  sudo mkdir -p "$GATE_DIR" && sudo chown "$(id -u):$(id -g)" "$GATE_DIR" 2>/dev/null || true
+  GATE_NOW="${GATE_DIR}/enduser-$(date +%Y%m%d-%H%M%S).json"
+  GATE_BASE="${GATE_DIR}/enduser-baseline.json"
+  if PYTHONPATH="${ROOT}/backend" "${VENV}/bin/python" "${ROOT}/tests/text2sql/enduser-eval.py"         --corpus "$GATE_CORPUS" --store "$SEMANTIC_STORE_DSN"         --datasource "${SEMANTIC_DATASOURCE_ID:-}" --tenant "${SEMANTIC_TENANT_ID:-}"         --baseline "$GATE_BASE" --gate --out "$GATE_NOW" | tail -12; then
+    cp "$GATE_NOW" "$GATE_BASE"
+    log "regression gate passed — baseline updated ($GATE_BASE)"
+  elif [[ "${SEMANTIC_GATE_STRICT:-1}" == "1" ]]; then
+    die "regression gate failed: this catalog answers worse than the one in use — report: $GATE_NOW (override with SEMANTIC_GATE_STRICT=0)"
+  else
+    log "WARNING regression gate failed but SEMANTIC_GATE_STRICT=0 — continuing; report: $GATE_NOW"
+  fi
+else
+  log "regression gate skipped: corpus not deployed ($GATE_CORPUS)"
+fi
+
 # --- 6. bridge service ----------------------------------------------------------------------------
 log "writing ${UNIT}"
 sudo tee "$UNIT" >/dev/null <<UNITEOF

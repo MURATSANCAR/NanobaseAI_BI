@@ -55,6 +55,36 @@ def verdict(expected: str, outcome: str) -> str:
     return "?"
 
 
+def gate(summary: dict, baseline_path: str | None) -> list[str]:
+    """What got worse since the last run against this corpus.
+
+    A catalog changes every night, and a change that fixes one term can quietly break another: a new
+    sense splits an old mapping, a certification is withdrawn, a synonym starts winning. Only two
+    things count as a regression, and both are things a user would notice: a question that used to be
+    answered and now is not, and a question that used to be refused and is now answered — the second
+    matters more, because an answer nobody can tell is wrong is worse than a refusal.
+    """
+    if not baseline_path or not Path(baseline_path).exists():
+        return []
+    try:
+        old = json.loads(Path(baseline_path).read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        return [f"önceki rapor okunamadı ({e}); karşılaştırma yapılamadı"]
+    before = {r["id"]: r for r in old.get("results", [])}
+    out: list[str] = []
+    for r in summary["results"]:
+        was = before.get(r["id"])
+        if not was:
+            continue
+        answered_before = was["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
+        answered_now = r["outcome"] in (ANSWERED_CATALOG, ANSWERED_MODEL)
+        if answered_before and not answered_now:
+            out.append(f"{r['id']} artık cevaplanmıyor ({r.get('why') or r['outcome']}): {r['q'][:70]}")
+        elif was["verdict"] == "OK" and r["verdict"] == "RİSK":
+            out.append(f"{r['id']} cevaplanmaması gereken soruyu cevapladı: {r['q'][:70]}")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--corpus", default=str(ROOT / "tests/text2sql/enduser-50.yaml"))
@@ -64,6 +94,8 @@ def main() -> int:
     ap.add_argument("--bridge")
     ap.add_argument("--today", default=str(date.today()))
     ap.add_argument("--out", required=True)
+    ap.add_argument("--baseline", help="previous run's JSON; the gate compares against it")
+    ap.add_argument("--gate", action="store_true", help="exit non-zero when the catalog regressed")
     a = ap.parse_args()
 
     s = SemanticSettings.from_env()
@@ -152,6 +184,7 @@ def main() -> int:
         "results": results,
     }
     Path(a.out).write_text(json.dumps(summary, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    regressions = gate(summary, a.baseline)
     print("\nVERDICTS:", dict(counts), "| OUTCOMES:", dict(by_outcome))
     print("PORTALDE TANIMLANMASI GEREKENLER:", ", ".join(f"{t}({','.join(asked_by[t])})" for t, _ in actionable.most_common(15)) or "(yok)")
     print("KARŞILANAMAYAN NİTELEYİCİLER:", ", ".join(f"{t}×{n}" for t, n in qualifiers.most_common(10)) or "(yok)")
@@ -159,6 +192,14 @@ def main() -> int:
     if unmeasured:
         print("UYARI: zaman penceresi ölçülmemiş varlıklar (kapsam kontrolü devre dışı):", ", ".join(unmeasured))
     print("→", a.out)
+    if regressions:
+        print("\nGERİLEME (katalog bu soruları eskiden daha iyi cevaplıyordu):")
+        for line in regressions:
+            print("  -", line)
+        if a.gate:
+            return 1
+    elif a.baseline:
+        print("gerileme yok — bu katalog sürümü öncekinden geri değil")
     return 0
 
 
