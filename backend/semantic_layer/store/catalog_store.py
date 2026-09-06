@@ -10,7 +10,7 @@ import hashlib
 import json
 import threading
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 
 import sqlalchemy as sa
@@ -476,6 +476,43 @@ class CatalogStore:
             return version
 
     # ------------------------------------------------------------------ query log
+    def term_gaps(self, tenant_id: str, datasource_id: str, *, since_days: int = 30, limit: int = 50) -> list[dict[str, Any]]:
+        """Terms real users said that the catalog could not place, ranked by how often they said them.
+
+        This is the work queue behind the portal's annotation page: a word here is not a bug, it is a
+        piece of the business nobody has written down yet. Questions are kept alongside each term so
+        whoever defines it can see what was actually being asked.
+        """
+        cutoff = utcnow() - timedelta(days=max(1, since_days))
+        stmt = (
+            sa.select(S.sl_query_log.c.question, S.sl_query_log.c.resolved_json, S.sl_query_log.c.created_at)
+            .where(
+                S.sl_query_log.c.tenant_id == tenant_id,
+                S.sl_query_log.c.datasource_id == datasource_id,
+                S.sl_query_log.c.created_at >= cutoff,
+            )
+            .order_by(S.sl_query_log.c.created_at.desc())
+            .limit(5000)
+        )
+        counts: dict[tuple[str, str], int] = {}
+        examples: dict[tuple[str, str], list[str]] = {}
+        last_seen: dict[tuple[str, str], Any] = {}
+        for r in self._rows(stmt):
+            resolved = _json(r["resolved_json"]) or {}
+            for kind, key in (("undefined", "unresolved"), ("qualifier", "unhandled")):
+                for term in resolved.get(key) or []:
+                    k = (kind, str(term))
+                    counts[k] = counts.get(k, 0) + 1
+                    if len(examples.setdefault(k, [])) < 3:
+                        examples[k].append(str(r["question"])[:200])
+                    last_seen.setdefault(k, _dt(r["created_at"]))
+        ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0][1]))[:limit]
+        return [
+            {"kind": kind, "term": term, "count": n, "questions": examples.get((kind, term), []),
+             "lastAsked": last_seen.get((kind, term))}
+            for (kind, term), n in ranked
+        ]
+
     def log_query(
         self,
         tenant_id: str,

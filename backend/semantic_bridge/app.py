@@ -530,6 +530,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def explain(term: str) -> dict[str, Any]:
         return rt().resolver.explain_term(term)
 
+    @app.get("/api/v1/semantic/gaps")
+    def semantic_gaps(days: int = 30, limit: int = 50) -> dict[str, Any]:
+        """What real users asked for that the catalog cannot place yet.
+
+        The portal's annotation page reads this: each term here is a piece of the business nobody has
+        written down, ranked by how often people ask for it, with the questions that were being asked.
+        """
+        r = rt()
+        s = r.settings
+        gaps = r.store.term_gaps(s.tenant_id, s.datasource_id, since_days=max(1, min(days, 365)), limit=max(1, min(limit, 200)))
+        unmeasured = [p.entity for p in r.profiles if p.time_window is None]
+        return {"ok": True, "days": days, "gaps": gaps, "unmeasuredWindows": unmeasured}
+
     @app.get("/api/v1/semantic/status")
     def semantic_status() -> dict[str, Any]:
         r = rt()

@@ -258,3 +258,20 @@ def test_model_sql_that_contradicts_a_certified_fact_is_caught(catalog, profiles
     assert problems and "toptan" in problems[0].lower()
     # a restriction expressed some other way is style, not disagreement: silence, not a false alarm
     assert audit_sql(sq, "SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE") == []
+
+
+def test_gaps_endpoint_reports_what_users_asked_for(catalog, profiles, logo_connector, settings):
+    """Every question the bridge serves records what it could not place. Those terms are the portal's
+    work queue — a word here is not a bug, it is a part of the business nobody has written down."""
+    from semantic_bridge.app import Runtime, create_app
+
+    llm = FakeLlm(["NO_SQL: bilmiyorum", "NO_SQL: bilmiyorum", "NO_SQL: bilmiyorum"])
+    client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=llm)))
+    for _ in range(2):
+        client.post("/api/v1/ask", json={"question": "Sepet tutarımız nedir?", "sampleSize": 5})
+    client.post("/api/v1/ask", json={"question": "Bekleyen toptan satış tutarı", "sampleSize": 5})
+    body = client.get("/api/v1/semantic/gaps").json()
+    terms = {g["term"]: g for g in body["gaps"]}
+    assert terms["sepet"]["count"] == 2 and terms["sepet"]["kind"] == "undefined"
+    assert terms["sepet"]["questions"], "the question that asked for it is kept with the term"
+    assert terms["bekleyen"]["kind"] == "qualifier"
