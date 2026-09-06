@@ -16,6 +16,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -24,6 +25,7 @@ columns:
   - name: "CLOSED"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "CLOSED"
   - name: "DATE_"
     type: "TIMESTAMP"
@@ -37,6 +39,7 @@ columns:
   - name: "LINETYPE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0, 2, 4, 1 · 4 farklı değer"
       "displayName": "LINETYPE"
   - name: "LOGICALREF"
     type: "INTEGER"
@@ -71,6 +74,7 @@ columns:
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 1 · 1 farklı değer"
       "displayName": "TRCODE"
   - name: "ACCOUNTREF"
     type: "INTEGER"
@@ -647,6 +651,7 @@ columns:
   - name: "STATUS"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 4, 2 · 2 farklı değer"
       "displayName": "STATUS"
   - name: "TEXTINC"
     type: "SMALLINT"

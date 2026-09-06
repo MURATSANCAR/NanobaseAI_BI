@@ -3,7 +3,7 @@
 Serves the cockpit's semantic-engine contract on top of the WrenAI main-line engine
 (`wrenai` package, in-process DataFusion/MDL engine — no wren-ui, no wren-ai-service):
 
-    POST /api/v1/run_sql   {sql, limit}            → {id, columns[{name,type}], records[], totalRows}
+    POST /api/v1/run_sql   {sql, limit, question?} → {id, columns[{name,type}], records[], totalRows, widget?}
     POST /api/v1/ask       {question, threadId?}   → {id, sql, summary, threadId, explanation?}
     GET  /api/v1/engine                            → {dataSource, models, deployed, project}
     GET  /health
@@ -157,6 +157,7 @@ def run_sql(sql: str, limit: int) -> dict:
 class RunSqlIn(BaseModel):
     sql: str
     limit: int | None = Field(default=None, ge=0)
+    question: str | None = None
 
 
 class AskIn(BaseModel):
@@ -205,9 +206,43 @@ def engine_status() -> dict:
 @app.post("/api/v1/run_sql")
 def run_sql_ep(body: RunSqlIn) -> dict:
     try:
-        return run_sql(body.sql, body.limit or MAX_ROWS)
+        result = run_sql(body.sql, body.limit or MAX_ROWS)
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=400, detail={"code": _err_code(e), "message": str(e)[:1200]}) from e
+    widget = _widget_spec(result, body.question)
+    if widget:
+        result["widget"] = widget
+    return result
+
+
+def _widget_spec(result: dict, question: str | None) -> dict | None:
+    """Görselleştirme tipini sonuc setinden cikar (kpi/multi_card/line/bar/pie/table).
+
+    Karar mantigi ana uygulamayla ortak: `nanobase_api.chat_widgets` (deterministik, LLM yok).
+    Ureteci `data` blogunu da dolduruyor; `records` istemcide zaten oldugu icin onu atiyoruz —
+    tek istisna `multi_card`, cunku onun satirlari (label/value ciftleri) sonuc setinde yok.
+    """
+    try:
+        from nanobase_api.chat_widgets import widgets_from_query_result
+    except Exception as e:  # noqa: BLE001
+        log.debug("widget cikarimi devre disi (%s)", e)
+        return None
+    try:
+        widgets = widgets_from_query_result(
+            columns=result.get("columns"),
+            rows=result.get("records"),
+            title=(question or "").strip() or None,
+        )
+    except Exception:  # noqa: BLE001
+        log.warning("widget cikarimi basarisiz", exc_info=True)
+        return None
+    if not widgets:
+        return None
+    widget = dict(widgets[0])
+    widget.pop("sql", None)
+    if widget.get("type") != "multi_card":
+        widget.pop("data", None)
+    return widget
 
 
 def _err_code(e: Exception) -> str:
@@ -446,3 +481,65 @@ def generate_summary(body: dict) -> dict:
     q = str(body.get("question") or "")
     result = run_sql(sql, int(body.get("sampleSize") or 50))
     return {"summary": _summarize(q, sql, result)}
+
+# --- Ajan modu: WrenAI'nin resmi Pydantic AI toolkit'i (wren-pydantic) ----------------
+# Tek atışlık istem yerine araç çağıran döngü: agent kendi recall/fetch_context/dry_plan/query
+# araçlarını sırayla kullanır. Köprünün varsayılan yolu değişmez; POST /api/v1/ask_agent ile denenir.
+
+_agent: Any = None
+
+
+def _pydantic_agent():
+    """WrenToolkit + A40 modeli (OpenAI uyumlu uç). İlk çağrıda kurulur."""
+    global _agent
+    if _agent is None:
+        from pydantic_ai import Agent
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+        from wren_pydantic import WrenToolkit
+
+        toolkit = WrenToolkit.from_project(str(PROJECT))
+        model = OpenAIChatModel(
+            LLM_MODEL,
+            provider=OpenAIProvider(base_url=LLM_BASE, api_key=LLM_KEY or "x"),
+        )
+        _agent = Agent(
+            model,
+            instructions=toolkit.instructions() + "\n\nTürkçe cevap ver. Hedef veritabanı SQL Server (T-SQL): LIMIT yerine TOP kullan, "
+            "GROUP BY içinde takma ad kullanma, ay kırılımı için DATEFROMPARTS(YEAR(x), MONTH(x), 1).",
+            toolsets=[toolkit.toolset()],
+        )
+        log.info("pydantic-ai agent ready: project=%s model=%s", PROJECT, LLM_MODEL)
+    return _agent
+
+
+@app.post("/api/v1/ask_agent")
+def ask_agent(body: AskIn) -> dict:
+    """Deneysel: araç çağıran ajan döngüsü (wren-pydantic). Varsayılan /api/v1/ask etkilenmez."""
+    t0 = time.perf_counter()
+    q = body.question.strip()
+    if not q:
+        raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
+    try:
+        with _engine_lock:
+            res = _pydantic_agent().run_sync(q)
+        tools = []
+        try:
+            for m in res.all_messages():
+                for part in getattr(m, "parts", []):
+                    name = getattr(part, "tool_name", None)
+                    if name:
+                        tools.append(name)
+        except Exception:  # noqa: BLE001
+            pass
+        return {
+            "id": uuid.uuid4().hex,
+            "type": "AGENT",
+            "summary": str(res.output),
+            "toolCalls": tools,
+            "threadId": body.threadId or uuid.uuid4().hex,
+            "latency_ms": int((time.perf_counter() - t0) * 1000),
+        }
+    except Exception as e:  # noqa: BLE001
+        log.exception("ask_agent failed")
+        raise HTTPException(status_code=502, detail={"code": _err_code(e), "message": str(e)[:800]}) from e

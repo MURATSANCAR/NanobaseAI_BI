@@ -1,0 +1,823 @@
+{
+ "parse_types": {
+  "_changed": 0
+ },
+ "enum_probe": [
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "TRCODE",
+   "distinct": 8,
+   "top": [
+    [
+     "7",
+     49551
+    ],
+    [
+     "8",
+     21046
+    ],
+    [
+     "4",
+     6655
+    ],
+    [
+     "3",
+     2353
+    ],
+    [
+     "1",
+     1394
+    ],
+    [
+     "2",
+     643
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "CANCELLED",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     81760
+    ],
+    [
+     "1",
+     41
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "TRCURR",
+   "distinct": 4,
+   "top": [
+    [
+     "0",
+     81471
+    ],
+    [
+     "1",
+     197
+    ],
+    [
+     "20",
+     123
+    ],
+    [
+     "17",
+     10
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "GRPCODE",
+   "distinct": 2,
+   "top": [
+    [
+     "2",
+     73701
+    ],
+    [
+     "1",
+     8100
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "SPECODE",
+   "distinct": 9,
+   "top": [
+    [
+     "B2C",
+     48932
+    ],
+    [
+     "",
+     31695
+    ],
+    [
+     "-120",
+     811
+    ],
+    [
+     "TARÇN KAFE",
+     258
+    ],
+    [
+     "HS",
+     66
+    ],
+    [
+     "00",
+     19
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "STATUS",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     81801
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "DEPARTMENT",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     81801
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "BRANCH",
+   "distinct": 1,
+   "top": [
+    [
+     "1",
+     81801
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "EINVOICE",
+   "distinct": 3,
+   "top": [
+    [
+     "2",
+     49253
+    ],
+    [
+     "1",
+     27176
+    ],
+    [
+     "0",
+     5372
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_INVOICE",
+   "column": "PROFILEID",
+   "distinct": 3,
+   "top": [
+    [
+     "1",
+     65889
+    ],
+    [
+     "2",
+     14667
+    ],
+    [
+     "0",
+     1245
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "LINETYPE",
+   "distinct": 7,
+   "top": [
+    [
+     "0",
+     1031739
+    ],
+    [
+     "2",
+     666941
+    ],
+    [
+     "4",
+     19905
+    ],
+    [
+     "3",
+     1299
+    ],
+    [
+     "1",
+     196
+    ],
+    [
+     "8",
+     60
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "TRCODE",
+   "distinct": 16,
+   "top": [
+    [
+     "8",
+     1113236
+    ],
+    [
+     "7",
+     277349
+    ],
+    [
+     "3",
+     154407
+    ],
+    [
+     "25",
+     90984
+    ],
+    [
+     "14",
+     28088
+    ],
+    [
+     "4",
+     19838
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "CANCELLED",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     1720136
+    ],
+    [
+     "1",
+     6
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "IOCODE",
+   "distinct": 5,
+   "top": [
+    [
+     "4",
+     1400990
+    ],
+    [
+     "1",
+     206661
+    ],
+    [
+     "3",
+     45492
+    ],
+    [
+     "2",
+     45492
+    ],
+    [
+     "0",
+     21507
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "UOMREF",
+   "distinct": 9,
+   "top": [
+    [
+     "24",
+     987395
+    ],
+    [
+     "0",
+     668239
+    ],
+    [
+     "25",
+     45492
+    ],
+    [
+     "23",
+     9521
+    ],
+    [
+     "27",
+     8893
+    ],
+    [
+     "32",
+     319
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "BILLED",
+   "distinct": 2,
+   "top": [
+    [
+     "1",
+     1499428
+    ],
+    [
+     "0",
+     220714
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "PRCURR",
+   "distinct": 4,
+   "top": [
+    [
+     "0",
+     1640179
+    ],
+    [
+     "160",
+     79951
+    ],
+    [
+     "1",
+     8
+    ],
+    [
+     "20",
+     4
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_STLINE",
+   "column": "VAT",
+   "distinct": 5,
+   "top": [
+    [
+     "0.0",
+     1671328
+    ],
+    [
+     "10.0",
+     25756
+    ],
+    [
+     "20.0",
+     20234
+    ],
+    [
+     "1.0",
+     2820
+    ],
+    [
+     "1.18",
+     4
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_CLCARD",
+   "column": "CARDTYPE",
+   "distinct": 4,
+   "top": [
+    [
+     "3",
+     256975
+    ],
+    [
+     "1",
+     100
+    ],
+    [
+     "4",
+     4
+    ],
+    [
+     "22",
+     1
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_CLCARD",
+   "column": "ISPERSCOMP",
+   "distinct": 2,
+   "top": [
+    [
+     "1",
+     242777
+    ],
+    [
+     "0",
+     14303
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_CLCARD",
+   "column": "BLOCKED",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     257080
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_CLCARD",
+   "column": "PAYMENTPROC",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     256884
+    ],
+    [
+     "1",
+     196
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_ITEMS",
+   "column": "CARDTYPE",
+   "distinct": 8,
+   "top": [
+    [
+     "12",
+     15342
+    ],
+    [
+     "1",
+     13527
+    ],
+    [
+     "11",
+     3030
+    ],
+    [
+     "10",
+     403
+    ],
+    [
+     "4",
+     16
+    ],
+    [
+     "20",
+     2
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_ITEMS",
+   "column": "ACTIVE",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     31899
+    ],
+    [
+     "1",
+     423
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_ITEMS",
+   "column": "CLASSTYPE",
+   "distinct": 3,
+   "top": [
+    [
+     "0",
+     32319
+    ],
+    [
+     "20",
+     2
+    ],
+    [
+     "22",
+     1
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_ITEMS",
+   "column": "UNITSETREF",
+   "distinct": 10,
+   "top": [
+    [
+     "6",
+     29094
+    ],
+    [
+     "5",
+     1740
+    ],
+    [
+     "7",
+     906
+    ],
+    [
+     "9",
+     403
+    ],
+    [
+     "14",
+     112
+    ],
+    [
+     "12",
+     45
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_ITEMS",
+   "column": "STGRPCODE",
+   "distinct": 16,
+   "top": [
+    [
+     "",
+     17390
+    ],
+    [
+     "AKTİF",
+     6601
+    ],
+    [
+     "YS04",
+     3169
+    ],
+    [
+     "YSTY",
+     2580
+    ],
+    [
+     "YS07",
+     1416
+    ],
+    [
+     "YS10P",
+     731
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFICHE",
+   "column": "TRCODE",
+   "distinct": 1,
+   "top": [
+    [
+     "1",
+     48687
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFICHE",
+   "column": "CANCELLED",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     48687
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFICHE",
+   "column": "STATUS",
+   "distinct": 2,
+   "top": [
+    [
+     "4",
+     48553
+    ],
+    [
+     "2",
+     134
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFICHE",
+   "column": "DEPARTMENT",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     48687
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFICHE",
+   "column": "BRANCH",
+   "distinct": 1,
+   "top": [
+    [
+     "1",
+     48687
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFLINE",
+   "column": "LINETYPE",
+   "distinct": 4,
+   "top": [
+    [
+     "0",
+     167542
+    ],
+    [
+     "2",
+     9259
+    ],
+    [
+     "4",
+     4056
+    ],
+    [
+     "1",
+     196
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFLINE",
+   "column": "TRCODE",
+   "distinct": 1,
+   "top": [
+    [
+     "1",
+     181053
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFLINE",
+   "column": "CANCELLED",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     181053
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFLINE",
+   "column": "CLOSED",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     181053
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_ORFLINE",
+   "column": "STATUS",
+   "distinct": 2,
+   "top": [
+    [
+     "4",
+     180802
+    ],
+    [
+     "2",
+     251
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_CLFLINE",
+   "column": "TRCODE",
+   "distinct": 27,
+   "top": [
+    [
+     "37",
+     49551
+    ],
+    [
+     "38",
+     21046
+    ],
+    [
+     "34",
+     6486
+    ],
+    [
+     "70",
+     3841
+    ],
+    [
+     "21",
+     3305
+    ],
+    [
+     "14",
+     2611
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_CLFLINE",
+   "column": "SIGN",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     76539
+    ],
+    [
+     "1",
+     20225
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_CLFLINE",
+   "column": "CANCELLED",
+   "distinct": 2,
+   "top": [
+    [
+     "0",
+     96723
+    ],
+    [
+     "1",
+     41
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_CLFLINE",
+   "column": "MODULENR",
+   "distinct": 6,
+   "top": [
+    [
+     "4",
+     81631
+    ],
+    [
+     "5",
+     8794
+    ],
+    [
+     "7",
+     4871
+    ],
+    [
+     "10",
+     872
+    ],
+    [
+     "6",
+     549
+    ],
+    [
+     "61",
+     47
+    ]
+   ]
+  },
+  {
+   "model": "dbo_LG_411_01_CLFLINE",
+   "column": "PAIDINCASH",
+   "distinct": 1,
+   "top": [
+    [
+     "0",
+     96764
+    ]
+   ]
+  }
+ ],
+ "dump": {
+  "cmd": "Dumped 47 pair(s) to /data/nanobaseai/bi/wren-project/logo_timas/knowledge/pairs-export.yml",
+  "bytes": 25143,
+  "pairs": 47
+ },
+ "notes": []
+}

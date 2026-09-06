@@ -11,7 +11,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima 0"
+      "description": "İptal bayrağı; daima 0 [enum] 0 · 1 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -46,11 +46,12 @@ columns:
   - name: "STATUS"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 4, 2 · 2 farklı değer"
       "displayName": "STATUS"
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
-      "description": "Sipariş türü (1 satınalma siparişi, 2 satış siparişi)"
+      "description": "Sipariş türü (1 satınalma siparişi, 2 satış siparişi) [enum] 1 · 1 farklı değer"
       "displayName": "TRCODE"
   - name: "ACCEPTEINVPUBLIC"
     type: "SMALLINT"
@@ -115,6 +116,7 @@ columns:
   - name: "BRANCH"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 1 · 1 farklı değer"
       "displayName": "BRANCH"
   - name: "CAMPAIGNCODE"
     type: "VARCHAR"
@@ -279,6 +281,7 @@ columns:
   - name: "DEPARTMENT"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "DEPARTMENT"
   - name: "DEVIR"
     type: "SMALLINT"

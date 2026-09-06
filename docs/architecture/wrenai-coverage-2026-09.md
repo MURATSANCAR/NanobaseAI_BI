@@ -91,3 +91,21 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 | strict_mode kapalı | Açıldı, köprüde de etkin, canlı test edildi |
 | Onaylı cevaplar saklanmıyor | Kampanyanın 8 doğrulanmış çifti `wren memory store` ile yazıldı → **18 çift** |
 | Ajan SDK yok | `wren-pydantic` kuruldu |
+
+
+## 7. Kalan yedi mekanizma — uygulandı (2026-09-06 gece, ikinci tur)
+
+| # | Mekanizma | Ne yapıldı | Kanıt |
+|---|---|---|---|
+| 1 | `generate-mdl` (yeni DB onboarding) | Skill'in Faz 1-5'i otomatikleştirildi: `tools/wren/generate_mdl_from_db.py` canlı DB'yi INFORMATION_SCHEMA ile tarar, tipleri `wren.type_mapping.parse_types` ile normalleştirir, proje + modeller + FK'lerden ilişkiler + knowledge iskeletini yazar, validate/build çalıştırır | Logo DB'de koşuldu: 181 kolon otomatik, validate + build başarılı (`artifacts/timas/generate-mdl.log`). **Bulgu:** Logo şemasında tanımlı FK yok → ilişkiler elle/çıkarımla verilmeli |
+| 2 | `enrich-context` (canlı DB probe) | Step 4.5 sondası 7 modelde uygulandı; ≤30 farklı değerli kolonlar bulundu, `[enum]` etiketleri kolon açıklamalarına yazıldı (TRCODE, LINETYPE, SIGN, CANCELLED, TRCURR için Türkçe anlamlarla) | **42 kolon** etiketlendi (INVOICE 10, STLINE 8, ORFICHE/ORFLINE/CLFLINE 5'er, ITEMS 5, CLCARD 4) |
+| 3 | `wren memory watch` | `nanobase-wren-memory-watch.service` kuruldu | active; `target/mdl.json` + `knowledge/sql/` 5 sn'de bir izleniyor |
+| 4 | `wren memory dump` / `load` | Doğrulanmış çiftler taşınabilir YAML'a aktarıldı: `knowledge/pairs-export.yml` (**47 çift**, 25 KB). Yeni müşteride `wren memory load` ile yüklenir | Repoda `deploy/wren-project/logo_timas/knowledge/pairs-export.yml` |
+| 5 | `wren utils parse-types` | Tüm MDL kolon tipleri `parse_types(dialect="mssql")` ile denetlendi | **0 sapma** — legacy MDL tipleri zaten kanonik |
+| 6 | `wren-pydantic` ajan modu | Köprüye `POST /api/v1/ask_agent` eklendi: `WrenToolkit.from_project` + A40 modeli, araç çağıran döngü | Canlı test: "2026 toplam net ciro" → **848.110.178,82 TL** (DB ile birebir), araç zinciri `recall_queries → fetch_context → query → store_query`, 54 sn. Varsayılan `/api/v1/ask` değişmedi |
+| 7 | `dlt-connector` | Uygulanmadı: bağlanacak SaaS kaynağı (HubSpot/Stripe/Salesforce) yok. Gerektiğinde `wren skills get dlt-connector` | — |
+
+### Not: iki iş akışı yan yana
+- `/api/v1/ask` (varsayılan): tek atış istem + `dry_run` doğrulama + tek onarım turu → ~25-40 sn, kampanyada 10/10.
+- `/api/v1/ask_agent` (yeni): WrenAI'nin resmi araç döngüsü, kendi kendine çift saklıyor → ~55 sn, daha fazla LLM turu.
+Cockpit hâlâ varsayılanı kullanıyor; ajan modu A/B için hazır.

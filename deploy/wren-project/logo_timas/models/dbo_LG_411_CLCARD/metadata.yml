@@ -15,6 +15,7 @@ columns:
   - name: "CARDTYPE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 3, 1, 4, 22 · 4 farklı değer"
       "displayName": "CARDTYPE"
   - name: "CITY"
     type: "VARCHAR"
@@ -327,6 +328,7 @@ columns:
   - name: "BLOCKED"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "BLOCKED"
   - name: "BROKERCOMP"
     type: "SMALLINT"
@@ -1059,6 +1061,7 @@ columns:
   - name: "ISPERSCOMP"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 1, 0 · 2 farklı değer"
       "displayName": "ISPERSCOMP"
   - name: "KVKKANONYDATE"
     type: "TIMESTAMP"
@@ -1271,6 +1274,7 @@ columns:
   - name: "PAYMENTPROC"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0, 1 · 2 farklı değer"
       "displayName": "PAYMENTPROC"
   - name: "PAYMENTPROCBRANCH"
     type: "SMALLINT"

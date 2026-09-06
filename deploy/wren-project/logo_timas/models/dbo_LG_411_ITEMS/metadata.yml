@@ -11,10 +11,12 @@ columns:
   - name: "ACTIVE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0, 1 · 2 farklı değer"
       "displayName": "ACTIVE"
   - name: "CARDTYPE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 12, 1, 11, 10, 4, 20, 22, 13 · 8 farklı değer"
       "displayName": "CARDTYPE"
   - name: "CODE"
     type: "VARCHAR"
@@ -46,10 +48,12 @@ columns:
   - name: "STGRPCODE"
     type: "VARCHAR"
     properties:
+      "description": "[enum] (boş), AKTİF, YS04, YSTY, YS07, YS10P, YS00, YS05, YS10A, YS08, YS06, YS11, YS01, YS09 · 16 farklı değer"
       "displayName": "STGRPCODE"
   - name: "UNITSETREF"
     type: "INTEGER"
     properties:
+      "description": "[enum] 6, 5, 7, 9, 14, 12, 10, 13, 11, 0 · 10 farklı değer"
       "displayName": "UNITSETREF"
   - name: "ADDTAXPURCHBRWS"
     type: "SMALLINT"
@@ -162,6 +166,7 @@ columns:
   - name: "CLASSTYPE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0, 20, 22 · 3 farklı değer"
       "displayName": "CLASSTYPE"
   - name: "COMBLOTUNITS"
     type: "SMALLINT"

@@ -16,7 +16,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı"
+      "description": "İptal bayrağı [enum] 0, 1 · 2 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -41,16 +41,17 @@ columns:
   - name: "MODULENR"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 4, 5, 7, 10, 6, 61 · 6 farklı değer"
       "displayName": "MODULENR"
   - name: "SIGN"
     type: "SMALLINT"
     properties:
-      "description": "0 borç, 1 alacak"
+      "description": "0 borç, 1 alacak [enum] 0=borç, 1=alacak · 2 farklı değer"
       "displayName": "SIGN"
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
-      "description": "Hareket türü"
+      "description": "Hareket türü [enum] 37, 38, 34, 70, 21, 14, 33, 5, 20, 31, 1, 32, 61, 6 · 27 farklı değer"
       "displayName": "TRCODE"
   - name: "ACCFICHEREF"
     type: "INTEGER"
@@ -379,6 +380,7 @@ columns:
   - name: "PAIDINCASH"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "PAIDINCASH"
   - name: "PAYDEFREF"
     type: "INTEGER"

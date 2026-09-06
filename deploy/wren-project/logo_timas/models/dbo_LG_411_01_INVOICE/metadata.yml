@@ -11,11 +11,12 @@ columns:
   - name: "BRANCH"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 1 · 1 farklı değer"
       "displayName": "BRANCH"
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima CANCELLED = 0"
+      "description": "İptal bayrağı; daima CANCELLED = 0 [enum] 0=geçerli belge, 1=iptal · 2 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -34,6 +35,7 @@ columns:
   - name: "EINVOICE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 2, 1, 0 · 3 farklı değer"
       "displayName": "EINVOICE"
   - name: "FICHENO"
     type: "VARCHAR"
@@ -78,12 +80,12 @@ columns:
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
-      "description": "Fatura türü: 1 mal alım, 2 perakende satış iadesi, 3 toptan satış iadesi, 4 alınan hizmet, 6 alım iadesi, 7 perakende satış, 8 toptan satış, 9 verilen hizmet"
+      "description": "Fatura türü: 1 mal alım, 2 perakende satış iadesi, 3 toptan satış iadesi, 4 alınan hizmet, 6 alım iadesi, 7 perakende satış, 8 toptan satış, 9 verilen hizmet [enum] 7=perakende satış, 8=toptan satış, 4=alınan hizmet, 3=toptan satış iadesi, 1=mal alım, 2=perakende satış iadesi, 9=verilen hizmet, 6=alım iadesi · 8 farklı değer"
       "displayName": "TRCODE"
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
-      "description": "Döviz türü (0 = TL)"
+      "description": "Döviz türü (0 = TL) [enum] 0=TL (yerel para), 1, 20, 17 · 4 farklı değer"
       "displayName": "TRCURR"
   - name: "TRNET"
     type: "FLOAT8"
@@ -289,6 +291,7 @@ columns:
   - name: "DEPARTMENT"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "DEPARTMENT"
   - name: "DEVIR"
     type: "SMALLINT"
@@ -473,6 +476,7 @@ columns:
   - name: "GRPCODE"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 2, 1 · 2 farklı değer"
       "displayName": "GRPCODE"
   - name: "GRPFIRMTRANS"
     type: "SMALLINT"
@@ -577,6 +581,7 @@ columns:
   - name: "PROFILEID"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 1, 2, 0 · 3 farklı değer"
       "displayName": "PROFILEID"
   - name: "PROJECTREF"
     type: "INTEGER"
@@ -657,10 +662,12 @@ columns:
   - name: "SPECODE"
     type: "VARCHAR"
     properties:
+      "description": "[enum] B2C, (boş), -120, TARÇN KAFE, HS, 00, TARÇIN ETK, SİL, -100 · 9 farklı değer"
       "displayName": "SPECODE"
   - name: "STATUS"
     type: "SMALLINT"
     properties:
+      "description": "[enum] 0 · 1 farklı değer"
       "displayName": "STATUS"
   - name: "TAXFREECHX"
     type: "SMALLINT"
