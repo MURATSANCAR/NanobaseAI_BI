@@ -86,6 +86,17 @@ class Dialect:
         return f"{a} / NULLIF({b}, 0)"
 
 
+_ADDITIVE = re.compile(r"\b(SUM|AVG)\s*\(", re.I)
+
+
+def _is_additive(formula: Optional[str]) -> bool:
+    """Does this measure add up rows? COUNT(DISTINCT key) survives a fan-out; SUM(amount) does not."""
+    f = formula or ""
+    if not _ADDITIVE.search(f):
+        return False
+    return True
+
+
 def _snake(term: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "_", fold(term)).strip("_")
     return s or "deger"
@@ -217,6 +228,13 @@ class DeterministicCompiler:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
                 if j not in joins:
                     joins.append(j)
+        # A measure kept on the "one" side of a join is repeated once per row on the "many" side, so a
+        # header total broken down by a line-level column silently multiplies. Refuse and say so; the
+        # honest answer needs a pre-aggregate, not a bigger number.
+        fanning = [j for j in joins if j[2] == entity]
+        if fanning and any(_is_additive(s.mapping.formula) for s in metrics):
+            others = ", ".join(sorted({j[0] for j in fanning}))
+            return None, f"additive measure on {entity} would be multiplied by the join to {others}"
         # unresolved metric-like or column slots that are not group-by → we cannot express projections yet
         extra_cols = [s for s in q.slots if s.semantic_type == SemanticType.COLUMN and s not in group_cols]
         if extra_cols:

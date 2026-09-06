@@ -228,3 +228,17 @@ def test_written_number_after_a_ranking_cue_is_a_top_n(catalog, profiles):
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     assert r.resolve("En yüksek beş kanalı ver", today=date(2026, 7, 20)).limit == 5
     assert r.resolve("Zararına sattığımız bir şey var mı?", today=date(2026, 7, 20)).limit is None
+
+
+def test_header_measure_is_not_multiplied_by_a_line_level_breakdown(catalog, profiles):
+    """A header total joined to its line table repeats once per line. The number that comes back looks
+    plausible and is wrong, so the deterministic path refuses instead of inflating it."""
+    _certify(catalog, "satir tipi", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE", column="LINETYPE", operator="COLUMN"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Satır tipi bazında satış tutarı", today=date(2026, 7, 20))
+    assert sq.fully_resolved, sq.to_dict()
+    c = DeterministicCompiler(profiles, {"n0": "411", "n1": "01"}, "sqlite")
+    plan, reason = c.plan(sq)
+    assert plan is None and "multiplied" in reason, reason
