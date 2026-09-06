@@ -413,10 +413,14 @@ class ExistingCompiler:
             cols = []
             for c in p.columns:
                 desc = ""
-                if c.is_enum() and c.top_values:
-                    desc = " {" + ", ".join(v for v, _ in c.top_values[:10]) + "}"
+                if c.sensitive:
+                    desc = " [kişisel veri — seçme/gruplama, değerleri istemde yok]"
+                elif c.is_enum() and c.meaningful_values():
+                    desc = " {" + ", ".join(v for v, _ in c.meaningful_values()[:10]) + "}"
                 elif c.ref_entity:
                     desc = f" → {c.ref_entity}.{c.ref_column}"
+                if c.sentinel_values and not c.sensitive:
+                    desc += f" [{', '.join(c.sentinel_values)} = değer yok]"
                 cols.append(f'"{c.name}" {c.data_type}{desc}')
             lines.append(f"{self.table_label(p)}: " + ", ".join(cols))
         return "\n".join(lines)

@@ -2070,5 +2070,10 @@
   "bi.sl.rows": "rows",
   "bi.sl.pipelineDone": "Profile and mining done: {c} certified concepts, catalog v{v}.",
   "bi.sl.certifyDone": "Certification done: {c} certified, catalog v{v}.",
-  "bi.sl.layerNote": "Your descriptions are stored as HUMAN_ANNOTATION evidence; alone they never certify, combined with validated queries they move a concept to CERTIFIED."
+  "bi.sl.layerNote": "Your descriptions are stored as HUMAN_ANNOTATION evidence; alone they never certify, combined with validated queries they move a concept to CERTIFIED.",
+  "bi.sl.catalogTitle": "Certified catalog",
+  "bi.sl.metrics": "Metrics",
+  "bi.sl.values": "Value mappings",
+  "bi.sl.defaultFilters": "Default filters",
+  "bi.sl.scope": "Scope"
 }

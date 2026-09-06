@@ -9,7 +9,8 @@ from typing import Any, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
 from semantic_layer.naming import disambiguate, logical_table
-from semantic_layer.profiler.connectors import Connector, MDLConnector
+from semantic_layer.profiler import sensitivity
+from semantic_layer.profiler.connectors import Connector, ModelFileConnector
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +57,9 @@ class Profiler:
             rels: list[dict[str, str]] = []
             for col in self.c.columns(sch, table):
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")), description=col.get("description"))
+                reason = sensitivity.name_is_sensitive(cp.name)
+                if reason:
+                    cp.sensitive, cp.sensitivity_reason = True, reason
                 fk = next((f for f in fk_by_table.get(table.upper(), []) if f["column"].upper() == col["name"].upper()), None)
                 if fk:
                     ref_lt = logical_table(fk["ref_table"], sch)
@@ -63,10 +67,15 @@ class Profiler:
                     cp.ref_column = fk["ref_column"]
                 if cp.ref_entity:
                     rels.append({"column": cp.name, "ref_entity": cp.ref_entity, "ref_column": cp.ref_column or ""})
-                if _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity)):
+                if not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity)):
                     try:
                         hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
                         top = self.c.top_values(sch, table, col["name"], self.enum_max_distinct + 1)
+                        # A column named innocuously can still hold personal data — check the sample too,
+                        # and drop it before anything is stored.
+                        reason = sensitivity.values_are_sensitive([v for v, _ in top])
+                        if reason:
+                            cp.sensitive, cp.sensitivity_reason, top = True, reason, []
                         if top and len(top) <= self.enum_max_distinct:
                             cp.top_values = top[: self.enum_max_distinct]
                             cp.distinct_count = hint if hint is not None else len(top)
@@ -75,6 +84,7 @@ class Profiler:
                             cp.distinct_count = hint if hint is not None else len(top)
                     except Exception as e:  # noqa: BLE001
                         log.debug("top_values failed %s.%s: %s", table, col["name"], e)
+                _mark_sentinels(cp)
                 cols.append(cp)
             desc = self.c.table_description(table) if hasattr(self.c, "table_description") else None
             out.append(
@@ -102,6 +112,24 @@ class Profiler:
         return out
 
 
+# Values that mean "no value" rather than a real one. A reference column stores 0/-1 for "unset", and a
+# measure that is only filled once a background process has run reads 0 until then — counting either as
+# data silently corrupts averages, ratios and joins.
+_ABSENT_MARKERS = ("0", "-1", "")
+
+
+def _mark_sentinels(col: ColumnProfile) -> None:
+    if col.ref_entity:
+        col.sentinel_values = [v for v in _ABSENT_MARKERS if v != ""]
+        return
+    if col.top_values and not col.is_primary_key:
+        total = sum(n for _, n in col.top_values) or 1
+        for value, n in col.top_values:
+            # a dominant zero in a numeric column is a filled-in-later marker, not a measurement
+            if value in ("0", "") and n / total >= 0.25 and any(t in col.data_type.lower() for t in ("int", "float", "decimal", "numeric", "money", "real")):
+                col.sentinel_values.append(value)
+
+
 def column_index(profiles: list[SchemaProfile]) -> dict[str, set[str]]:
     return {p.entity: {c.name.upper() for c in p.columns} for p in profiles}
 
@@ -123,7 +151,7 @@ def infer_links(profiles: list[SchemaProfile], connector: Connector, *, sample: 
             except Exception as e:  # noqa: BLE001
                 log.debug("link probe failed %s.%s: %s", p.table_name, col.name, e)
                 continue
-            values = [v for v in values if v not in ("0", "-1")]
+            values = [v for v in values if v not in set(col.sentinel_values) | {"0", "-1"}]
             if len(values) < 5:
                 continue
             best: tuple[float, SchemaProfile, str] | None = None

@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
-import { BookOpen, KeyRound, Link2, RefreshCw, Search, ShieldCheck, Table2 } from 'lucide-react';
+import { BookOpen, Calculator, KeyRound, Link2, RefreshCw, Search, ShieldCheck, Table2 } from 'lucide-react';
 import ApiErrorBanner from '@/components/ApiErrorBanner';
 import EmptyState from '@/components/EmptyState';
 import { PageShell } from '@/components/PageShell';
 import { api, isRunnerConfigured } from '@/api/client';
-import type { BiSlColumn, BiSlTable } from '@/api/bi-types';
+import type { BiSlColumn, BiSlConcept, BiSlTable } from '@/api/bi-types';
 import { useApiConfig } from '@/context/ApiContext';
 import { t } from '@/i18n';
 
@@ -157,6 +157,75 @@ function ColumnRow({
   );
 }
 
+/** Sertifikalı ölçüler ve her zaman uygulanan varsayılan filtreler — sohbetin arkasındaki sözleşme.
+ *  Ölçü = formül + kapsam; varsayılan filtre = o varlığa her sorguda eklenen koşul. */
+function CatalogSection({ items }: { items: BiSlConcept[] }) {
+  const [open, setOpen] = useState(true);
+  const metrics = items.filter((x) => x.concept.semantic_type === 'METRIC');
+  const filters = items.filter((x) => x.concept.semantic_type === 'DEFAULT_FILTER');
+  const values = items.filter((x) => x.concept.semantic_type === 'DIMENSION_VALUE');
+  if (items.length === 0) return null;
+  const target = (m: BiSlConcept['mappings'][number]) =>
+    m.formula ?? `${m.entity}.${m.column ?? ''}${m.values?.length ? ` ${m.operator ?? 'IN'} (${m.values.join(', ')})` : ''}`;
+  return (
+    <section className="rounded-2xl border border-white/70 bg-white/70 p-3">
+      <button type="button" className="flex w-full items-center gap-2 text-left" onClick={() => setOpen((v) => !v)}>
+        <Calculator className="h-4 w-4 text-violet-600" />
+        <h2 className="text-sm font-semibold text-slate-800">{t('bi.sl.catalogTitle')}</h2>
+        <span className="text-xs text-slate-500">
+          {metrics.length} ölçü · {values.length} değer · {filters.length} varsayılan filtre
+        </span>
+      </button>
+      {open ? (
+        <div className="mt-2 grid gap-3 md:grid-cols-2">
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('bi.sl.metrics')}</h3>
+            <ul className="mt-1 space-y-1">
+              {metrics.map((x) => (
+                <li key={x.concept.id} className="rounded-lg border border-emerald-200 bg-emerald-50/60 px-2 py-1 text-xs">
+                  <span className="font-semibold text-slate-800">{x.concept.term}</span>
+                  {x.concept.synonyms.length > 0 ? (
+                    <span className="ml-1 text-slate-500">({x.concept.synonyms.join(', ')})</span>
+                  ) : null}
+                  <div className="mt-0.5 break-all font-mono text-[11px] text-slate-700">{x.mappings.map(target).join(' | ')}</div>
+                  {x.mappings.some((m) => (m.extra as { conditions?: string[] } | undefined)?.conditions?.length) ? (
+                    <div className="text-[11px] text-slate-500">
+                      {t('bi.sl.scope')}: {x.mappings.flatMap((m) => ((m.extra as { conditions?: string[] } | undefined)?.conditions ?? [])).join('; ')}
+                    </div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('bi.sl.defaultFilters')}</h3>
+              <ul className="mt-1 space-y-1">
+                {filters.map((x) => (
+                  <li key={x.concept.id} className="rounded-lg border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] text-slate-700">
+                    {x.mappings.map(target).join(' | ')}
+                  </li>
+                ))}
+                {filters.length === 0 ? <li className="text-xs text-slate-500">—</li> : null}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('bi.sl.values')}</h3>
+              <ul className="mt-1 flex flex-wrap gap-1">
+                {values.map((x) => (
+                  <li key={x.concept.id} className="rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] text-violet-800" title={x.mappings.map(target).join(' | ')}>
+                    {x.concept.term} → {x.mappings[0]?.values?.join(', ')}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 export default function BiSemanticLayerPage() {
   const { config } = useApiConfig();
   const qc = useQueryClient();
@@ -173,6 +242,11 @@ export default function BiSemanticLayerPage() {
 
   const statusQ = useQuery({ queryKey: ['bi-sl-status', datasourceId, config], queryFn: () => api.bi.semanticLayer.status(config, datasourceId), enabled });
   const invQ = useQuery({ queryKey: ['bi-sl-inventory', datasourceId, config], queryFn: () => api.bi.semanticLayer.inventory(config, datasourceId), enabled });
+  const conceptsQ = useQuery({
+    queryKey: ['bi-sl-concepts', datasourceId, config],
+    queryFn: () => api.bi.semanticLayer.concepts(config, { datasource_id: datasourceId, status: 'CERTIFIED' }),
+    enabled,
+  });
   const explainQ = useQuery({
     queryKey: ['bi-sl-explain', explainQuery, datasourceId, config],
     queryFn: () => api.bi.semanticLayer.explain(config, explainQuery, datasourceId),
@@ -306,6 +380,8 @@ export default function BiSemanticLayerPage() {
           </div>
         ) : null}
       </section>
+
+      <CatalogSection items={conceptsQ.data?.items ?? []} />
 
       <section className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">

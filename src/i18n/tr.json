@@ -2070,5 +2070,10 @@
   "bi.sl.rows": "satır",
   "bi.sl.pipelineDone": "Profil ve madencilik tamamlandı: {c} sertifikalı kavram, katalog v{v}.",
   "bi.sl.certifyDone": "Sertifikasyon tamamlandı: {c} sertifikalı, katalog v{v}.",
-  "bi.sl.layerNote": "Açıklamalarınız HUMAN_ANNOTATION kanıtı olarak saklanır; tek başına sertifika vermez, doğrulanmış sorgularla birleşince kavramı CERTIFIED'a taşır."
+  "bi.sl.layerNote": "Açıklamalarınız HUMAN_ANNOTATION kanıtı olarak saklanır; tek başına sertifika vermez, doğrulanmış sorgularla birleşince kavramı CERTIFIED'a taşır.",
+  "bi.sl.catalogTitle": "Sertifikalı katalog",
+  "bi.sl.metrics": "Ölçüler",
+  "bi.sl.values": "Değer eşlemeleri",
+  "bi.sl.defaultFilters": "Varsayılan filtreler",
+  "bi.sl.scope": "Kapsam"
 }

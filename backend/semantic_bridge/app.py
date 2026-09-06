@@ -292,7 +292,9 @@ class Runtime:
                 cols.append({
                     "name": c.name, "type": c.data_type, "nullable": c.nullable, "isPrimaryKey": c.is_primary_key,
                     "ref": f"{c.ref_entity}.{c.ref_column}" if c.ref_entity else None,
-                    "distinct": c.distinct_count, "topValues": [[v, n] for v, n in c.top_values[:12]],
+                    "sensitive": c.sensitive, "sensitivityReason": c.sensitivity_reason,
+                    "sentinelValues": list(c.sentinel_values),
+                    "distinct": c.distinct_count, "topValues": [] if c.sensitive else [[v, n] for v, n in c.top_values[:12]],
                     "description": c.description, "annotations": col_anns, "concepts": cons,
                     "status": "CERTIFIED" if any(x["status"] == ConceptStatus.CERTIFIED for x in cons) else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")),
                 })

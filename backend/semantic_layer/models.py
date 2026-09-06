@@ -154,12 +154,19 @@ class ColumnProfile:
     top_values: list[tuple[str, int]] = field(default_factory=list)   # (value, count)
     null_ratio: Optional[float] = None
     is_primary_key: bool = False
-    ref_entity: Optional[str] = None      # CLIENTREF → CLCARD
-    ref_column: Optional[str] = None      # LOGICALREF
-    description: Optional[str] = None    # from MDL / docs (not user annotation)
+    ref_entity: Optional[str] = None      # a reference column and the entity it points at
+    ref_column: Optional[str] = None
+    description: Optional[str] = None     # from the source / model export (not a user annotation)
+    sensitive: bool = False               # personal data: never sampled, never shown, never sent to a model
+    sensitivity_reason: Optional[str] = None
+    sentinel_values: list[str] = field(default_factory=list)  # values that mean "absent" (0 on a reference, …)
 
     def is_enum(self) -> bool:
         return bool(self.top_values) and (self.distinct_count or 0) <= 64
+
+    def meaningful_values(self) -> list[tuple[str, int]]:
+        """Observed values with the sentinels removed — what a business term may actually mean."""
+        return [(v, n) for v, n in self.top_values if v not in self.sentinel_values]
 
 
 @dataclass

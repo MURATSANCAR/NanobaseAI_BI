@@ -264,7 +264,9 @@ class SemanticResolver:
                     if any(t in col.data_type.lower() for t in _NUMERIC_TYPES) and not col.is_primary_key and not col.ref_entity:
                         head = concept.normalized_term.split()[-1]
                         measures.setdefault((m.entity, head), (col.name, concept.term))
-                    observed = [str(v) for v, _ in col.top_values] if col.is_enum() else []
+                    if col.sensitive:
+                        continue        # personal data never becomes a searchable value literal
+                    observed = [str(v) for v, _ in col.meaningful_values()] if col.is_enum() else []
                     documented = [str(v) for v in (concept.explain.get("documented_values") or [])]
                     for raw in dict.fromkeys(observed + documented):
                         token = " ".join(tokenize(raw))   # same shape the question tokens have ("E-TICARET" → "e ticaret")

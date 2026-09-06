@@ -29,6 +29,8 @@ class Conventions:
     flag_columns: dict[str, set[str]] = field(default_factory=dict)     # ≤ 2 distinct  → default filter
     time_columns: dict[str, list[str]] = field(default_factory=dict)
     numeric_columns: dict[str, set[str]] = field(default_factory=dict)
+    sensitive_columns: dict[str, set[str]] = field(default_factory=dict)
+    sentinels: dict[tuple[str, str], set[str]] = field(default_factory=dict)
     key_columns: dict[str, list[str]] = field(default_factory=dict)
     ref_columns: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
     row_counts: dict[str, int] = field(default_factory=dict)
@@ -47,21 +49,26 @@ class Conventions:
             c.key_columns[p.entity] = list(p.primary_key)
             if p.row_count is not None:
                 c.row_counts[p.entity] = int(p.row_count)
-            enums, flags, times, numerics = set(), set(), [], set()
+            enums, flags, times, numerics, sensitive = set(), set(), [], set(), set()
             for col in p.columns:
                 name = col.name.upper()
+                if col.sensitive:
+                    sensitive.add(name)
+                if col.sentinel_values:
+                    c.sentinels[(p.entity, name)] = set(col.sentinel_values)
                 if is_time(col):
                     times.append(name)
                 if is_numeric(col) and not col.is_primary_key and not col.ref_entity:
                     numerics.add(name)
                 distinct = col.distinct_count or (len(col.top_values) if col.top_values else None)
-                if distinct is not None and col.top_values and not col.is_primary_key and not col.ref_entity:
+                if distinct is not None and col.top_values and not col.is_primary_key and not col.ref_entity and not col.sensitive:
                     values = {str(v).strip().upper() for v, _ in col.top_values}
                     if distinct <= FLAG_MAX_DISTINCT and values <= FLAG_VALUES:
                         flags.add(name)
                     elif distinct <= SCOPE_MAX_DISTINCT:
                         enums.add(name)
             c.enum_columns[p.entity] = enums
+            c.sensitive_columns[p.entity] = sensitive
             c.flag_columns[p.entity] = flags
             c.time_columns[p.entity] = times
             c.numeric_columns[p.entity] = numerics
@@ -75,6 +82,14 @@ class Conventions:
     def owners(self, column: str) -> list[str]:
         col = column.upper()
         return [e for e in self.entities if col in self.columns.get(e, set())]
+
+    def is_sensitive(self, entity: Optional[str], column: str) -> bool:
+        col = column.upper()
+        entities = [entity] if entity else self.entities
+        return any(col in self.sensitive_columns.get(e, set()) for e in entities if e)
+
+    def sentinel_values(self, entity: str, column: str) -> set[str]:
+        return self.sentinels.get((entity, column.upper()), set())
 
     def is_scope_column(self, entity: Optional[str], column: str) -> bool:
         """Business type code (enum with ≥3 values): belongs to a metric's scope, not to defaults."""
