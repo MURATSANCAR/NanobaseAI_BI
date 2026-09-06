@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
-import { ask, runSql, type SqlResult, WrenError } from '../lib/wren';
+import { ask, runSql, type SqlResult, EngineError } from '../lib/engine';
 import { ResultChart } from './ResultChart';
 import { Thinking } from './Thinking';
 
@@ -47,7 +47,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
       setMsgs((m) => [...m.slice(0, -1), { role: 'assistant', text, sql: a.sql, result, at: now() }]);
     } catch (e) {
-      const msg = e instanceof WrenError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
+      const msg = e instanceof EngineError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
       setMsgs((m) => [...m.slice(0, -1), { role: 'assistant', text: 'Soru yanıtlanamadı.', error: msg, at: now() }]);
     } finally {
       setBusy(false);

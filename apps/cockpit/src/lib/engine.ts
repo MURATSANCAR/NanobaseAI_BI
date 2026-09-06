@@ -1,11 +1,11 @@
 /**
- * Semantik motor istemcisi (wren-ui REST + GraphQL).
+ * Semantik motor istemcisi — NanobaseAI Semantic Bridge (backend/semantic_bridge, :8795).
  * Tüm çağrılar aynı origin'deki /api altına gider; geliştirmede vite proxy, üretimde reverse proxy
- * bunları wren-ui:3000'e iletir. Motor yetenekleri (modelleme, deploy, thread'ler) olduğu gibi korunur;
- * bu dosya yalnız istemci sarmalayıcıdır.
+ * bunları köprüye iletir. Sözleşme: /api/v1/ask, /api/v1/run_sql, /api/v1/generate_summary,
+ * /api/v1/engine, /api/v1/feedback. Bu dosya yalnız istemci sarmalayıcıdır.
  */
 
-const BASE = (import.meta.env.VITE_WREN_BASE as string | undefined) ?? '';
+const BASE = ((import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '');
 
 export type SqlColumn = { name: string; type: string };
 
@@ -33,7 +33,7 @@ export type SqlResult = {
   widget?: WidgetSpec;
 };
 
-export class WrenError extends Error {
+export class EngineError extends Error {
   constructor(message: string, public code?: string, public status?: number) {
     super(message);
   }
@@ -51,7 +51,7 @@ async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promis
     });
     const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok || data.code === 'INVALID_SQL_ERROR' || (typeof data.error === 'string' && data.error)) {
-      throw new WrenError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+      throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
     }
     return data as T;
   } finally {
@@ -65,14 +65,36 @@ export function runSql(sql: string, limit = 500, question?: string): Promise<Sql
   return post<SqlResult>('/api/v1/run_sql', { sql, limit, ...(question ? { question } : {}) });
 }
 
+/** Köprünün her cevaba iliştirdiği anlam izi: hangi terim neye çözümlendi, hangi derleyici üretti. */
+export type SemanticTrace = {
+  compiler?: 'deterministic' | 'existing_llm' | 'supersonic' | (string & {});
+  certified?: boolean;
+  catalogVersion?: number;
+  explain?: string[];
+  query?: {
+    slots?: Array<{ term: string; semanticType: string; status: string; mapping?: Record<string, unknown> | null; confidence?: number }>;
+    unresolved?: string[];
+    conflicts?: string[];
+    temporal?: Array<{ text: string; primitive: string; start?: string | null; end?: string | null; ambiguous?: boolean }>;
+    explanation?: string[];
+  };
+};
+
 export type AskResult = {
   id: string;
   sql?: string;
   summary?: string;
   threadId?: string;
   explanation?: string;
+  queryId?: string;
+  semantic?: SemanticTrace;
   [k: string]: unknown;
 };
+
+/** Kullanıcının "doğru/yanlış" işareti: doğrulanmış çift havuzuna yazılır, gece madenciliğine girer. */
+export function sendFeedback(queryId: string, validated: boolean): Promise<{ ok: boolean }> {
+  return post<{ ok: boolean }>('/api/v1/feedback', { queryId, validated }, 30_000);
+}
 
 /** Doğal dil soru → SQL (+ özet). threadId verilirse takip sorusu olarak işlenir. */
 export function ask(question: string, threadId?: string): Promise<AskResult> {
@@ -84,22 +106,11 @@ export function generateSummary(question: string, sql: string, sampleSize = 50):
   return post<{ summary?: string }>('/api/v1/generate_summary', { question, sql, language: 'TR', sampleSize }, 180_000);
 }
 
-export async function graphql<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`${BASE}/api/graphql`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  });
-  const data = (await res.json()) as { data?: T; errors?: { message: string }[] };
-  if (data.errors?.length) throw new WrenError(data.errors.map((e) => e.message).join('; '));
-  return data.data as T;
-}
 
-/** Motor durumu: bağlı veri kaynağı ve deploy edilmiş modeller.
- *  Yeni hat (WrenAI core engine + köprü): GET /api/v1/engine. Eski wren-ui GraphQL'e düşüş yok. */
+/** Motor durumu: bağlı veri kaynağı, profillenmiş model sayısı ve katalog sürümü (GET /api/v1/engine). */
 export async function engineStatus(): Promise<{ dataSource: string; models: number; deployed: boolean }> {
   const res = await fetch(`${BASE}/api/v1/engine`);
   const d = (await res.json().catch(() => ({}))) as { dataSource?: string; models?: number; deployed?: boolean; error?: string };
-  if (!res.ok) throw new WrenError(String(d.error ?? `HTTP ${res.status}`), undefined, res.status);
+  if (!res.ok) throw new EngineError(String(d.error ?? `HTTP ${res.status}`), undefined, res.status);
   return { dataSource: d.dataSource ?? 'mssql', models: Number(d.models ?? 0), deployed: Boolean(d.deployed) };
 }

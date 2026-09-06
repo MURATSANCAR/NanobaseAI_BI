@@ -20,7 +20,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import type { WidgetSpec } from '../lib/wren';
+import type { WidgetSpec } from '../lib/engine';
 import { num, tl } from '../lib/format';
 
 // tailwind.config.js ile aynı: brand, ink, warn, ok — ek seri rengi icat edilmedi.
