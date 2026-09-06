@@ -432,6 +432,29 @@ def test_time_words_survive_turkish_case_endings(catalog, profiles):
         assert slots and slots[0].primitive == primitive, (text, [s.primitive for s in slots])
     # a word that merely starts the same way is not a period
     assert parse_temporal("bu ayakkabı modeli", date(2026, 9, 6))[0] == []
-    # and a question with a period is never called underspecified
+    # The period is read, and the question is still asked back: "better" never says better at what, and
+    # with several certified measures to choose from, picking one would be a guess.
     r = SemanticResolver(catalog, TENANT, DS, profiles)
-    assert r.resolve("Geçen aya göre daha mı iyiyiz?", today=date(2026, 7, 20)).shape is None
+    sq = r.resolve("Geçen aya göre daha mı iyiyiz?", today=date(2026, 7, 20))
+    assert sq.temporal and sq.temporal[0].primitive == "LAST_MONTH"
+    assert sq.shape == "UNDERSPECIFIED"
+    # naming what to measure settles it
+    assert r.resolve("Geçen aya göre toptan satış tutarı", today=date(2026, 7, 20)).shape is None
+
+
+def test_the_same_period_said_three_ways(catalog, profiles):
+    """"geçen ay", "son ay" and "önceki ay" are one period. Reading only the first left the other two
+    carrying no period at all — and a question with no period and no subject looks like a question that
+    named nothing, which is a different failure than the one it actually had."""
+    from semantic_layer.runtime.temporal import parse_temporal
+
+    for text in ("geçen ayda", "son ayda", "önceki ayda"):
+        slots, _ = parse_temporal(text, date(2026, 9, 6))
+        assert slots and slots[0].primitive == "LAST_MONTH", text
+    assert parse_temporal("son çeyrekte", date(2026, 9, 6))[0][0].primitive == "LAST_QUARTER"
+    # a counted period keeps its own reading, and "son" before a noun is not a period at all
+    assert parse_temporal("son 3 ayda", date(2026, 9, 6))[0][0].primitive == "LAST_N_MONTHS"
+    assert parse_temporal("son fatura numarası", date(2026, 9, 6))[0] == []
+    # a period says when, never what: it does not rescue a question that names no subject
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    assert r.resolve("Son çeyrekte ne oldu?", today=date(2026, 7, 20)).shape == "UNDERSPECIFIED"

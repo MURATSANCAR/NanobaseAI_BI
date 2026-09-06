@@ -388,8 +388,11 @@ class SemanticResolver:
         # 10) a question that names nothing — no measure, no filter, no column, no period, not even a
         #     word the catalog is missing — has not said what it is about. The model must ask, not pick
         #     a table: "toplam sayıyı ver" answered with a row count is a guess wearing a number.
-        if not hits and not sq.unresolved and not sq.temporal and not sq.shape:
-            if not any(is_domain_candidate(t) for t in qf.tokens):
+        # A period is not a subject: "son çeyrekte ne oldu?" says when, never what.
+        if not hits and not sq.unresolved and not sq.shape:
+            said_when = {t for slot in sq.temporal for t in tokenize(slot.text)}
+            if not any(is_domain_candidate(t) and t not in said_when and stem(t) not in _TIME_WORDS
+                       and short_root(t) not in _TIME_WORDS for t in qf.tokens):
                 sq.shape = "UNDERSPECIFIED"
                 sq.explanation.append("soru neyin ölçüleceğini söylemiyor; hangi ölçü ve hangi kırılım istendiği sorulmalı")
 

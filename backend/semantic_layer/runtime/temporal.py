@@ -24,6 +24,9 @@ _MONTH_RE = "|".join(MONTHS)
 _CASE = r"(?:ki|ku|nin|nun|nde|nda|ndan|nden|in|un|da|de|ta|te|dan|den|tan|ten|ya|ye|i|u|a|e)?"
 # ...and softens a final k before a vowel ("çeyrek" → "çeyreği"), which folds to g.
 _QUARTER = r"ceyre[kg]"
+# "geçen ay", "son ay" and "önceki ay" are the same period said three ways. Listing the words that mean
+# "the one before this one" is grammar; which period they attach to is what carries the meaning.
+_PREV = r"(?:gecen|son|onceki|gecmis)"
 _YEAR = r"(20\d{2})"
 
 PRIMITIVES = (
@@ -114,12 +117,12 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         rf"\bbugun{_CASE}\b": ("TODAY", today, today + timedelta(days=1), "DAY"),
         rf"\bdun{_CASE}\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
         rf"\bbu hafta{_CASE}\b": ("THIS_WEEK", today - timedelta(days=today.weekday()), today - timedelta(days=today.weekday()) + timedelta(days=7), "WEEK"),
-        rf"\bgecen hafta{_CASE}\b": ("LAST_WEEK", today - timedelta(days=today.weekday() + 7), today - timedelta(days=today.weekday()), "WEEK"),
+        rf"\b{_PREV} hafta{_CASE}\b": ("LAST_WEEK", today - timedelta(days=today.weekday() + 7), today - timedelta(days=today.weekday()), "WEEK"),
         rf"\bbu ay{_CASE}\b": ("THIS_MONTH", _month_start(today.year, today.month), _next_month(today.year, today.month), "MONTH"),
-        rf"\bgecen ay{_CASE}\b": ("LAST_MONTH", _month_start(*((today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1))), _month_start(today.year, today.month), "MONTH"),
+        rf"\b{_PREV} ay{_CASE}\b": ("LAST_MONTH", _month_start(*((today.year - 1, 12) if today.month == 1 else (today.year, today.month - 1))), _month_start(today.year, today.month), "MONTH"),
         rf"\bbu {_QUARTER}{_CASE}\b": ("THIS_QUARTER", _quarter_start(today), _next_month(_quarter_start(today).year, _quarter_start(today).month + 2), "QUARTER"),
         rf"\bbu yil{_CASE}\b": ("THIS_YEAR", date(today.year, 1, 1), date(today.year + 1, 1, 1), "YEAR"),
-        rf"\bgecen yil{_CASE}\b": ("LAST_YEAR", date(today.year - 1, 1, 1), date(today.year, 1, 1), "YEAR"),
+        rf"\b{_PREV} yil{_CASE}\b": ("LAST_YEAR", date(today.year - 1, 1, 1), date(today.year, 1, 1), "YEAR"),
         r"\b(ay basindan( beri| bu yana| itibaren)?|mtd)\b": ("MTD", _month_start(today.year, today.month), today + timedelta(days=1), "DAY"),
         r"\b(yil basindan( beri| bu yana| itibaren)?|ytd|yilbasindan)\b": ("YTD", date(today.year, 1, 1), today + timedelta(days=1), "DAY"),
         r"\b(ceyrek basindan( beri| bu yana)?|qtd)\b": ("QTD", _quarter_start(today), today + timedelta(days=1), "DAY"),
@@ -128,7 +131,7 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         for m in re.finditer(pat, text):
             add(m, TemporalSlot(m.group(0).strip(), prim, start, end, grain))
     # last quarter
-    for m in re.finditer(rf"\bgecen {_QUARTER}{_CASE}\b", text):
+    for m in re.finditer(rf"\b{_PREV} {_QUARTER}{_CASE}\b", text):
         qs = _quarter_start(today)
         prev_end = qs
         prev_start = _quarter_start(qs - timedelta(days=1))
