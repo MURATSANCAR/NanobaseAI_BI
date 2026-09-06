@@ -1,9 +1,11 @@
 """Profiler — "what exists in this data world": tables, columns, types, enum values with frequencies,
-keys, relationships and Logo table patterns. Output: SchemaProfile rows (sl_schema_profile)."""
+keys, relationships and the table-name pattern each table follows.
+Output: SchemaProfile rows (sl_schema_profile)."""
 
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from typing import Any, Optional
@@ -42,12 +44,16 @@ def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool, sample: 
 
 
 class Profiler:
-    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: int = 300, sample_rows: int = 20):
+    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: int = 300, sample_rows: int = 20,
+                 deep_budget_seconds: Optional[float] = None, max_probes_per_table: int = 40):
         self.c = connector
         self.enum_max_distinct = enum_max_distinct
         self.top_n = top_n
         self.max_tables = max_tables
         self.sample_rows = sample_rows
+        self.deep_budget_seconds = deep_budget_seconds if deep_budget_seconds is not None else float(os.environ.get("SEMANTIC_DEEP_BUDGET_SEC", "1800"))
+        self.max_probes_per_table = max_probes_per_table
+        self.deep_skipped: list[str] = []
         self.truncated: list[str] = []
 
     def _sample(self, schema: str, table: str) -> dict[str, list[Any]]:
@@ -110,13 +116,24 @@ class Profiler:
             deep = {name for name, _ in ranked[:deep_limit]}
             log.info("profiling %d/%d tables deeply (volume + centrality)", len(deep), len(tables))
         out: list[SchemaProfile] = []
-        for (sch, table), lt in zip(tables, names):
+        started = time.time()
+        deep_done = 0
+        budget_spent: list[str] = []
+        for index, ((sch, table), lt) in enumerate(zip(tables, names), start=1):
             entity = entity_by_pattern.get(lt.table_pattern, lt.entity)
             pk = self.c.primary_keys(sch, table)
             is_deep = deep is None or table in deep
+            # A value inventory over a large table is a full scan per column. Give the whole deep phase a
+            # wall clock, so a slow source degrades to a catalogued-but-unprobed schema instead of a
+            # deployment that never finishes — and say out loud which tables that cost.
+            if is_deep and self.deep_budget_seconds and time.time() - started > self.deep_budget_seconds:
+                is_deep = False
+                budget_spent.append(table)
+            t_table = time.time()
             sample = self._sample(sch, table) if is_deep else {}
             cols: list[ColumnProfile] = []
             rels: list[dict[str, str]] = []
+            probes_left = self.max_probes_per_table
             for col in self.c.columns(sch, table):
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")), description=col.get("description"))
                 observed = [v for v in sample.get(cp.name.upper(), []) if v is not None and str(v) != ""]
@@ -133,7 +150,8 @@ class Profiler:
                     cp.ref_column = fk["ref_column"]
                 if cp.ref_entity:
                     rels.append({"column": cp.name, "ref_entity": cp.ref_entity, "ref_column": cp.ref_column or ""})
-                if is_deep and not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity), sample=sample.get(cp.name.upper())):
+                if is_deep and probes_left > 0 and not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity), sample=sample.get(cp.name.upper())):
+                    probes_left -= 1
                     try:
                         hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
                         top = self.c.top_values(sch, table, col["name"], self.enum_max_distinct + 1)
@@ -154,6 +172,11 @@ class Profiler:
                 cols.append(cp)
             desc = self.c.table_description(table) if hasattr(self.c, "table_description") else None
             window = self._time_window(sch, table, cols) if is_deep else None
+            if is_deep:
+                deep_done += 1
+                log.info("profiled %s (%d/%d, %d columns, %.1fs, toplam %.0fs)", table, index, len(tables), len(cols), time.time() - t_table, time.time() - started)
+            elif index % 25 == 0:
+                log.info("catalogued %d/%d tables (%.0fs)", index, len(tables), time.time() - started)
             out.append(
                 SchemaProfile(
                     datasource_id=datasource_id,
@@ -170,6 +193,10 @@ class Profiler:
                     context=dict(lt.context),
                 )
             )
+        if budget_spent:
+            self.deep_skipped = budget_spent
+            log.warning("deep profiling budget (%.0fs) spent after %d tables; %d left catalogued but unprobed: %s",
+                        self.deep_budget_seconds, deep_done, len(budget_spent), ", ".join(budget_spent[:10]))
         # drop relationships whose target entity is not profiled (keeps the graph honest)
         entities = {p.entity for p in out}
         for p in out:

@@ -1,6 +1,6 @@
 """Database connectors for profiling and execution. All read-only.
 
-MSSQLConnector   — pyodbc/FreeTDS (production Logo DB)
+MSSQLConnector   — pyodbc/FreeTDS (SQL Server sources)
 PostgresConnector— psycopg2 (nanobase datasources)
 SQLiteConnector  — tests / local fixtures
 ModelFileConnector — offline: a model export (models/*/metadata.yml + relationships.yml, optionally an enum
