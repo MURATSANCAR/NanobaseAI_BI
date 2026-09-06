@@ -57,7 +57,12 @@ def _norm(v: Any) -> Any:
 
 class _DbApiBase:
     dialect = "generic"
+    default_schema = ""
+    supports_execution = True
     quote_l, quote_r = '"', '"'
+    # A query that never returns must not hold the deploy or the service hostage: a customer database can
+    # always be slow, blocked, or restarted under us.
+    query_timeout = int(os.environ.get("SEMANTIC_QUERY_TIMEOUT_SEC", "120"))
 
     def __init__(self) -> None:
         self._conn = None
