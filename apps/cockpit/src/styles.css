@@ -17,16 +17,20 @@ body {
   font-feature-settings: 'ss01', 'cv11';
 }
 
-.card {
-  @apply bg-card border border-line rounded-2xl shadow-card;
-}
+/* @layer components şart: katmansız tanımlar `@tailwind utilities`ten sonra geldiği için
+   `hidden`, `text-brand`, `border-brand` gibi utility'leri sessizce eziyordu. */
+@layer components {
+  .card {
+    @apply bg-card border border-line rounded-2xl shadow-card;
+  }
 
-.eyebrow {
-  @apply text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-muted;
-}
+  .eyebrow {
+    @apply text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-muted;
+  }
 
-.chip {
-  @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs text-ink-muted;
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs text-ink-muted;
+  }
 }
 
 .scroll-thin::-webkit-scrollbar {

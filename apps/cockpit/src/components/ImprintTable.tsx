@@ -36,10 +36,10 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
   const active = sortKey !== 'net' || dir !== 'desc' || tone !== 'all' || highReturnOnly;
 
   return (
-    <section className="card min-w-0 p-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <h2 className="font-display text-[22px] font-semibold leading-tight">Yayınevi &amp; Dizi Ciro-Marj Raporu</h2>
+    <section className="card min-w-0 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+          <h2 className="font-display text-[18px] font-semibold leading-tight sm:text-[22px]">Yayınevi &amp; Dizi Ciro-Marj Raporu</h2>
           <p className="mt-1 text-[12px] text-ink-muted">YTD · en yüksek cirolu 8 yayınevi (ITEMS özel kodu) · marj = 1 − maliyet / maliyetli ciro</p>
         </div>
         <button
@@ -85,7 +85,46 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto scroll-thin">
+      {/* Telefon: 6 kolonluk tablo yatay kaydırmaya ve isim kırpılmasına yol açıyordu — kart listesi. */}
+      <ul className="mt-4 space-y-3 md:hidden">
+        {view.length === 0 && <li className="py-6 text-center text-[13px] text-ink-muted">Bu filtreyle eşleşen yayınevi yok.</li>}
+        {view.map(({ r, v }) => (
+          <li key={r.imprint} className="rounded-xl border border-line p-3">
+            <div className="flex items-start gap-2">
+              <span className={clsx('mt-1 h-3.5 w-1 shrink-0 rounded-full', v.tone === 'bad' ? 'bg-brand-accent' : v.tone === 'good' ? 'bg-ok' : 'bg-ink-faint')} />
+              <div className="min-w-0 flex-1">
+                <div className="font-semibold leading-tight">{r.imprint}</div>
+                <div className="text-[11px] text-ink-muted">{num(r.titles)} aktif başlık</div>
+              </div>
+              <span
+                className={clsx(
+                  'shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold',
+                  v.tone === 'bad' ? 'bg-brand-accent/10 text-brand-accent' : v.tone === 'good' ? 'bg-ok/10 text-ok' : 'bg-page text-ink-muted',
+                )}
+              >
+                {v.badge}
+              </span>
+            </div>
+            <dl className="mt-2.5 grid grid-cols-3 gap-2 text-[12px]">
+              <div>
+                <dt className="eyebrow leading-[1.3]">Net Ciro</dt>
+                <dd className="mt-0.5 font-semibold">{tl(r.net)}</dd>
+              </div>
+              <div>
+                <dt className="eyebrow leading-[1.3]">Brüt Marj</dt>
+                <dd className={clsx('mt-0.5 font-semibold', v.tone === 'bad' && 'text-brand-accent', v.tone === 'good' && 'text-ok')}>{pct(r.margin)}</dd>
+              </div>
+              <div>
+                <dt className="eyebrow leading-[1.3]">İade</dt>
+                <dd className={clsx('mt-0.5 font-semibold', (r.returnRate ?? 0) >= 0.15 && 'text-brand-accent')}>{pct(r.returnRate)}</dd>
+              </div>
+            </dl>
+            <p className="mt-2.5 rounded-xl bg-brand-soft/60 px-3 py-2 text-[11px] leading-snug text-brand-deep">{v.advice}</p>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 hidden overflow-x-auto scroll-thin md:block">
         <table className="w-full min-w-[640px] text-[13px]">
           <thead>
             <tr className="eyebrow border-b border-line text-left">

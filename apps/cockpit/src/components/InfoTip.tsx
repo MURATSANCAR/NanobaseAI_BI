@@ -21,7 +21,9 @@ export function InfoTip({ k, className }: { k: InfoKey; className?: string; alig
     if (!open || !btnRef.current) return;
     const place = () => {
       const b = btnRef.current!.getBoundingClientRect();
-      const left = Math.min(Math.max(M, b.left), window.innerWidth - W - M);
+      // Telefonda W (360) ekrandan geniş kalıyor: hizalama gerçek genişlikle yapılmazsa panel sağa kayıyor.
+      const w = Math.min(W, window.innerWidth - 2 * M);
+      const left = Math.min(Math.max(M, b.left), Math.max(M, window.innerWidth - w - M));
       const h = popRef.current?.offsetHeight ?? 320;
       const below = b.bottom + 8;
       const top = below + h > window.innerHeight - M ? Math.max(M, b.top - h - 8) : below;
@@ -77,8 +79,8 @@ export function InfoTip({ k, className }: { k: InfoKey; className?: string; alig
             ref={popRef}
             role="dialog"
             aria-label={info.title}
-            style={{ position: 'fixed', top: pos?.top ?? -9999, left: pos?.left ?? -9999, width: W, maxWidth: 'calc(100vw - 24px)' }}
-            className="z-[120] rounded-2xl border border-line bg-white p-4 text-left shadow-[0_18px_48px_-18px_rgba(42,25,18,0.45)]"
+            style={{ position: 'fixed', top: pos?.top ?? -9999, left: pos?.left ?? -9999, width: W, maxWidth: 'calc(100vw - 24px)', maxHeight: 'calc(100vh - 24px)' }}
+            className="scroll-thin z-[120] overflow-y-auto rounded-2xl border border-line bg-white p-4 text-left shadow-[0_18px_48px_-18px_rgba(42,25,18,0.45)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-2">

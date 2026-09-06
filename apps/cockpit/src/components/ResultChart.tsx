@@ -124,7 +124,7 @@ export function ResultChart({
   const yk = widget.y_key;
   if (!xk || !yk) return null;
 
-  const limit = widget.type === 'pie' ? 8 : wide ? 16 : 10;
+  const limit = widget.type === 'pie' ? 8 : wide ? 16 : 8;
   // Alan adları `x`/`y` OLAMAZ: Recharts nokta koordinatlarını aynı adlarla yazıyor ve
   // seri tek bir x'e çöküyor (line path'i M46,…C46,… çıkar). `cat`/`val` ile çakışma yok.
   const data = records
@@ -188,7 +188,8 @@ export function ResultChart({
   // bar — Logo kırılımları uzun adlar üretir (müşteri, kitap, yayınevi); yatay çubuk okunur kalır.
   return (
     <Frame note={cut}>
-      <ResponsiveContainer width="100%" height={Math.max(h, data.length * (wide ? 22 : 18) + 20)}>
+      {/* Kategori adları iki satıra sarabiliyor: satır yüksekliği buna göre; aksi halde etiketler çakışıyor. */}
+      <ResponsiveContainer width="100%" height={Math.max(h, data.length * (wide ? 26 : 30) + 24)}>
         <BarChart data={data} layout="vertical" margin={{ top: 2, right: 10, left: 0, bottom: 0 }}>
           <CartesianGrid horizontal={false} stroke={GRID} />
           <XAxis type="number" tick={TICK} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(yk, v, true)} />
@@ -198,9 +199,9 @@ export function ResultChart({
             tick={TICK}
             axisLine={false}
             tickLine={false}
-            width={wide ? 120 : 84}
+            width={wide ? 120 : 96}
             interval={0}
-            tickFormatter={(v) => truncate(v, wide ? 18 : 12)}
+            tickFormatter={(v) => truncate(v, wide ? 18 : 16)}
           />
           <Tooltip formatter={tip} contentStyle={TOOLTIP} labelStyle={{ fontWeight: 700 }} cursor={{ fill: '#F4DCD3', opacity: 0.4 }} />
           <Bar dataKey="val" name={yk} fill={SERIES[0]} radius={[0, 5, 5, 0]} maxBarSize={16} isAnimationActive={false} />
