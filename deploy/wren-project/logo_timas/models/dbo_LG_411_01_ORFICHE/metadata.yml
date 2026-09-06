@@ -11,7 +11,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima 0 [enum] 0 · 1 farklı değer"
+      "description": "İptal bayrağı; daima 0 [enum] 0 · 1 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -21,7 +21,7 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
-      "description": "Sipariş tarihi"
+      "description": "Sipariş tarihi sipariş (fiş) tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
       "displayName": "DATE_"
   - name: "FICHENO"
     type: "VARCHAR"
@@ -37,11 +37,12 @@ columns:
   - name: "NETTOTAL"
     type: "FLOAT8"
     properties:
-      "description": "Sipariş fişi net tutarı"
+      "description": "Sipariş fişi net tutarı [unit] TL, KDV dahil (fatura NETTOTAL ile aynı sözleşme)"
       "displayName": "NETTOTAL"
   - name: "SALESMANREF"
     type: "INTEGER"
     properties:
+      "description": "Satış temsilcisi referansı [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "SALESMANREF"
   - name: "STATUS"
     type: "SMALLINT"
@@ -129,6 +130,7 @@ columns:
   - name: "CAPIBLOCK_CREADEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kayıt oluşturma zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_CREADEDDATE"
   - name: "CAPIBLOCK_CREATEDBY"
     type: "SMALLINT"
@@ -153,6 +155,7 @@ columns:
   - name: "CAPIBLOCK_MODIFIEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Son değişiklik zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_MODIFIEDDATE"
   - name: "CAPIBLOCK_MODIFIEDHOUR"
     type: "SMALLINT"
@@ -354,6 +357,7 @@ columns:
   - name: "GROSSTOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Fiş brüt toplamı [unit] TL, iskonto öncesi"
       "displayName": "GROSSTOTAL"
   - name: "GUID"
     type: "VARCHAR"
@@ -446,6 +450,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PUBLICBNACCREF"
     type: "INTEGER"
@@ -466,10 +471,12 @@ columns:
   - name: "REPORTNET"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi cinsinden net tutar [unit] raporlama dövizi — analizde kullanma, TL için NETTOTAL"
       "displayName": "REPORTNET"
   - name: "REPORTRATE"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi kuru (Logo raporlama para birimi) [unit] raporlama dövizi / TL — analizde kullanma"
       "displayName": "REPORTRATE"
   - name: "REVISNR"
     type: "VARCHAR"
@@ -542,6 +549,7 @@ columns:
   - name: "TOTALDISCOUNTS"
     type: "FLOAT8"
     properties:
+      "description": "Fiş toplam iskontosu [unit] TL"
       "displayName": "TOTALDISCOUNTS"
   - name: "TOTALEXADDTAX"
     type: "FLOAT8"
@@ -562,6 +570,7 @@ columns:
   - name: "TOTALVAT"
     type: "FLOAT8"
     properties:
+      "description": "Fiş toplam KDV [unit] TL"
       "displayName": "TOTALVAT"
   - name: "TRADINGGRP"
     type: "VARCHAR"
@@ -574,14 +583,17 @@ columns:
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
+      "description": "Belge para birimi kodu [enum] 0=TL (yerel para), diğerleri döviz; TL karşılığı için NETTOTAL/AMOUNT kullan, TRNET'i toplama"
       "displayName": "TRCURR"
   - name: "TRNET"
     type: "FLOAT8"
     properties:
+      "description": "Belge para birimi (TRCURR) cinsinden net tutar; TL belgelerde anlamsız [unit] döviz tutarı, toplama katma (TL için NETTOTAL)"
       "displayName": "TRNET"
   - name: "TRRATE"
     type: "FLOAT8"
     properties:
+      "description": "Belge döviz kuru [unit] TL karşılığı / 1 birim döviz; TRCURR = 0 (TL) belgelerde kullanılmaz"
       "displayName": "TRRATE"
   - name: "TYP"
     type: "SMALLINT"

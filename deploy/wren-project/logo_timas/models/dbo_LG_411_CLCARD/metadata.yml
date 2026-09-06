@@ -25,7 +25,7 @@ columns:
   - name: "CODE"
     type: "VARCHAR"
     properties:
-      "description": "Cari kodu"
+      "description": "Cari kodu [magic] firmalar (yıl tabloları) arası sabit anahtar; LOGICALREF firmaya özeldir"
       "displayName": "CODE"
   - name: "COUNTRY"
     type: "VARCHAR"
@@ -55,7 +55,7 @@ columns:
   - name: "SPECODE2"
     type: "VARCHAR"
     properties:
-      "description": "Satış kanalı kodu (KITAPCI, E-TICARET, DAGITICI, ZINCIR, KURUM, MAGAZA, FUAR)"
+      "description": "Satış kanalı kodu (KITAPCI, E-TICARET, DAGITICI, ZINCIR, KURUM, MAGAZA, FUAR) [enum] KITAPCI=kitapçı, E-TICARET=e-ticaret/pazaryeri (sipariş modülü bu kanaldan), DAGITICI=dağıtıcı, ZINCIR=zincir mağaza, KURUM=kurumsal satış, MAGAZA=mağaza, FUAR=fuar, YURTDIŞI=yurt dışı [magic] '' (boş) = kanal atanmamış → raporda '(boş)' (cironun ≈%4'ü)"
       "displayName": "SPECODE2"
   - name: "TOWN"
     type: "VARCHAR"
@@ -76,10 +76,12 @@ columns:
   - name: "ADDR1"
     type: "VARCHAR"
     properties:
+      "description": "[pii] adres — kişisel veri, asla seçme/maskele"
       "displayName": "ADDR1"
   - name: "ADDR2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] adres — kişisel veri, asla seçme/maskele"
       "displayName": "ADDR2"
   - name: "ADDTOREFLIST"
     type: "SMALLINT"
@@ -244,30 +246,37 @@ columns:
   - name: "BANKIBANS1"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS1"
   - name: "BANKIBANS2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS2"
   - name: "BANKIBANS3"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS3"
   - name: "BANKIBANS4"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS4"
   - name: "BANKIBANS5"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS5"
   - name: "BANKIBANS6"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS6"
   - name: "BANKIBANS7"
     type: "VARCHAR"
     properties:
+      "description": "[pii] IBAN — kişisel veri, asla seçme/maskele"
       "displayName": "BANKIBANS7"
   - name: "BANKNAMES1"
     type: "VARCHAR"
@@ -337,6 +346,7 @@ columns:
   - name: "CAPIBLOCK_CREADEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kayıt oluşturma zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_CREADEDDATE"
   - name: "CAPIBLOCK_CREATEDBY"
     type: "SMALLINT"
@@ -361,6 +371,7 @@ columns:
   - name: "CAPIBLOCK_MODIFIEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Son değişiklik zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_MODIFIEDDATE"
   - name: "CAPIBLOCK_MODIFIEDHOUR"
     type: "SMALLINT"
@@ -385,6 +396,7 @@ columns:
   - name: "CELLPHONE"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CELLPHONE"
   - name: "CITYCODE"
     type: "VARCHAR"
@@ -649,10 +661,12 @@ columns:
   - name: "DSPSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "DSPSENDEMAILADDR"
   - name: "DSPSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "DSPSENDFAXNR"
   - name: "DSPSENDFORMAT"
     type: "SMALLINT"
@@ -737,14 +751,17 @@ columns:
   - name: "EARCEMAILADDR1"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EARCEMAILADDR1"
   - name: "EARCEMAILADDR2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EARCEMAILADDR2"
   - name: "EARCEMAILADDR3"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EARCEMAILADDR3"
   - name: "EBANKNO"
     type: "SMALLINT"
@@ -777,14 +794,17 @@ columns:
   - name: "EMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EMAILADDR"
   - name: "EMAILADDR2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EMAILADDR2"
   - name: "EMAILADDR3"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EMAILADDR3"
   - name: "EXCNTRYREF"
     type: "INTEGER"
@@ -825,10 +845,12 @@ columns:
   - name: "EXIMSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EXIMSENDEMAILADDR"
   - name: "EXIMSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "EXIMSENDFAXNR"
   - name: "EXIMSENDFORMAT"
     type: "SMALLINT"
@@ -865,10 +887,12 @@ columns:
   - name: "EXTSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "EXTSENDEMAILADDR"
   - name: "EXTSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "EXTSENDFAXNR"
   - name: "EXTSENDFORMAT"
     type: "SMALLINT"
@@ -901,14 +925,17 @@ columns:
   - name: "FAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "FAXNR"
   - name: "FBASENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "FBASENDEMAILADDR"
   - name: "FBASENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "FBASENDFAXNR"
   - name: "FBASENDFORMAT"
     type: "SMALLINT"
@@ -921,10 +948,12 @@ columns:
   - name: "FBSSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "FBSSENDEMAILADDR"
   - name: "FBSSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "FBSSENDFAXNR"
   - name: "FBSSENDFORMAT"
     type: "SMALLINT"
@@ -1005,14 +1034,17 @@ columns:
   - name: "INCHTELNRS1"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "INCHTELNRS1"
   - name: "INCHTELNRS2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "INCHTELNRS2"
   - name: "INCHTELNRS3"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "INCHTELNRS3"
   - name: "ININVENNR"
     type: "SMALLINT"
@@ -1037,10 +1069,12 @@ columns:
   - name: "INVSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "INVSENDEMAILADDR"
   - name: "INVSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "INVSENDFAXNR"
   - name: "INVSENDFORMAT"
     type: "SMALLINT"
@@ -1170,10 +1204,12 @@ columns:
   - name: "LTRSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "LTRSENDEMAILADDR"
   - name: "LTRSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "LTRSENDFAXNR"
   - name: "LTRSENDFORMAT"
     type: "SMALLINT"
@@ -1194,6 +1230,7 @@ columns:
   - name: "NAME"
     type: "VARCHAR"
     properties:
+      "description": "Cari kısa adı; unvan/müşteri adı için DEFINITION_ kullan"
       "displayName": "NAME"
   - name: "NOTIFYCRDREF"
     type: "INTEGER"
@@ -1202,10 +1239,12 @@ columns:
   - name: "OFFSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "OFFSENDEMAILADDR"
   - name: "OFFSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "OFFSENDFAXNR"
   - name: "OFFSENDFORMAT"
     type: "SMALLINT"
@@ -1230,10 +1269,12 @@ columns:
   - name: "ORDSENDEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "ORDSENDEMAILADDR"
   - name: "ORDSENDFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "ORDSENDFAXNR"
   - name: "ORDSENDFORMAT"
     type: "SMALLINT"
@@ -1323,6 +1364,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PUBLICBNACCREF"
     type: "INTEGER"
@@ -1496,6 +1538,7 @@ columns:
   - name: "TCKNO"
     type: "VARCHAR"
     properties:
+      "description": "[pii] TC kimlik numarası — kişisel veri, asla seçme/maskele"
       "displayName": "TCKNO"
   - name: "TELCODES1"
     type: "VARCHAR"
@@ -1516,10 +1559,12 @@ columns:
   - name: "TELNRS1"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "TELNRS1"
   - name: "TELNRS2"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "TELNRS2"
   - name: "TEXTINC"
     type: "SMALLINT"
@@ -1560,10 +1605,12 @@ columns:
   - name: "WARNEMAILADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] e-posta — kişisel veri, asla seçme/maskele"
       "displayName": "WARNEMAILADDR"
   - name: "WARNFAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "WARNFAXNR"
   - name: "WARNMETHOD"
     type: "SMALLINT"
@@ -1572,6 +1619,7 @@ columns:
   - name: "WEBADDR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] adres — kişisel veri, asla seçme/maskele"
       "displayName": "WEBADDR"
   - name: "WFLOWCRDREF"
     type: "INTEGER"

@@ -11,12 +11,12 @@ columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
-      "description": "Hareket tutarı"
+      "description": "Hareket tutarı [unit] TL; yön SIGN ile (0 borç, 1 alacak)"
       "displayName": "AMOUNT"
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı [enum] 0, 1 · 2 farklı değer"
+      "description": "İptal bayrağı [enum] 0, 1 · 2 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -26,7 +26,7 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
-      "description": "Hareket tarihi"
+      "description": "Hareket tarihi cari hareket tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
       "displayName": "DATE_"
   - name: "LINEEXP"
     type: "VARCHAR"
@@ -140,6 +140,7 @@ columns:
   - name: "CAPIBLOCK_CREADEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kayıt oluşturma zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_CREADEDDATE"
   - name: "CAPIBLOCK_CREATEDBY"
     type: "SMALLINT"
@@ -164,6 +165,7 @@ columns:
   - name: "CAPIBLOCK_MODIFIEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Son değişiklik zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_MODIFIEDDATE"
   - name: "CAPIBLOCK_MODIFIEDHOUR"
     type: "SMALLINT"
@@ -224,6 +226,7 @@ columns:
   - name: "DEPARTMENT"
     type: "SMALLINT"
     properties:
+      "description": "Departman; bu kurulumda kullanılmıyor [magic] 0 = tanımsız"
       "displayName": "DEPARTMENT"
   - name: "DEVIR"
     type: "SMALLINT"
@@ -256,6 +259,7 @@ columns:
   - name: "DOCDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kaynak evrak tarihi; raporlama DATE_ ile [time] gün hassasiyeti, TZ yok"
       "displayName": "DOCDATE"
   - name: "DOCODE"
     type: "VARCHAR"
@@ -429,10 +433,12 @@ columns:
   - name: "REPORTNET"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi cinsinden net tutar [unit] raporlama dövizi — analizde kullanma, TL için NETTOTAL"
       "displayName": "REPORTNET"
   - name: "REPORTRATE"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi kuru (Logo raporlama para birimi) [unit] raporlama dövizi / TL — analizde kullanma"
       "displayName": "REPORTRATE"
   - name: "RETCCFCREF"
     type: "INTEGER"
@@ -441,6 +447,7 @@ columns:
   - name: "SALESMANREF"
     type: "INTEGER"
     properties:
+      "description": "Satış temsilcisi referansı [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "SALESMANREF"
   - name: "SERVREASONDEF"
     type: "VARCHAR"
@@ -477,6 +484,7 @@ columns:
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
+      "description": "Belge para birimi kodu [enum] 0=TL (yerel para), diğerleri döviz; TL karşılığı için NETTOTAL/AMOUNT kullan, TRNET'i toplama"
       "displayName": "TRCURR"
   - name: "TRGFLAG"
     type: "SMALLINT"
@@ -485,10 +493,12 @@ columns:
   - name: "TRNET"
     type: "FLOAT8"
     properties:
+      "description": "Belge para birimi (TRCURR) cinsinden net tutar; TL belgelerde anlamsız [unit] döviz tutarı, toplama katma (TL için NETTOTAL)"
       "displayName": "TRNET"
   - name: "TRRATE"
     type: "FLOAT8"
     properties:
+      "description": "Belge döviz kuru [unit] TL karşılığı / 1 birim döviz; TRCURR = 0 (TL) belgelerde kullanılmaz"
       "displayName": "TRRATE"
   - name: "UNDERDEDUCTLIMIT"
     type: "SMALLINT"

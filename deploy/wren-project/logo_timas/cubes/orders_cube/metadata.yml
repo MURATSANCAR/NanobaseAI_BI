@@ -1,0 +1,21 @@
+name: orders_cube
+base_object: dbo_LG_411_01_ORFICHE
+properties:
+  description: "Sipariş fişi başlığından sipariş sayısı ve tutarı (CANCELLED = 0 ölçülere gömülü). Sipariş modülü tüm satışları kapsamaz; ciro için sales_cube kullan."
+measures:
+  - name: siparis_sayisi
+    expression: COUNT(DISTINCT CASE WHEN "CANCELLED" = 0 THEN "LOGICALREF" END)
+    type: BIGINT
+  - name: siparis_tutari
+    expression: SUM(CASE WHEN "CANCELLED" = 0 THEN "NETTOTAL" ELSE 0 END)
+    type: DOUBLE
+dimensions:
+  - name: trcode
+    expression: "TRCODE"
+    type: INTEGER
+time_dimensions:
+  - name: siparis_tarihi
+    expression: "DATE_"
+    type: DATE
+hierarchies:
+  zaman: [siparis_tarihi]

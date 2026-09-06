@@ -11,12 +11,12 @@ columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
-      "description": "Sipariş adedi"
+      "description": "Sipariş adedi [unit] adet"
       "displayName": "AMOUNT"
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "[enum] 0 · 1 farklı değer"
+      "description": "[enum] 0 · 1 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -30,11 +30,12 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
-      "description": "Sipariş satır tarihi"
+      "description": "Sipariş satır tarihi sipariş satır tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
       "displayName": "DATE_"
   - name: "DUEDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Planlanan teslim tarihi [time] gün hassasiyeti, TZ yok [magic] 1899-12-30 = boş tarih"
       "displayName": "DUEDATE"
   - name: "LINETYPE"
     type: "SMALLINT"
@@ -55,11 +56,12 @@ columns:
   - name: "PRICE"
     type: "FLOAT8"
     properties:
+      "description": "Birim fiyat [unit] TL / adet"
       "displayName": "PRICE"
   - name: "SHIPPEDAMOUNT"
     type: "FLOAT8"
     properties:
-      "description": "Sevk edilen adet"
+      "description": "Sevk edilen adet [unit] adet; açık sipariş = AMOUNT > SHIPPEDAMOUNT"
       "displayName": "SHIPPEDAMOUNT"
   - name: "STOCKREF"
     type: "INTEGER"
@@ -69,7 +71,7 @@ columns:
   - name: "TOTAL"
     type: "FLOAT8"
     properties:
-      "description": "Satır brüt tutarı"
+      "description": "Satır brüt tutarı [unit] TL, satır brüt (iskonto öncesi); sipariş tutarı için ORFICHE.NETTOTAL"
       "displayName": "TOTAL"
   - name: "TRCODE"
     type: "SMALLINT"
@@ -283,6 +285,7 @@ columns:
   - name: "DEPARTMENT"
     type: "SMALLINT"
     properties:
+      "description": "Departman; bu kurulumda kullanılmıyor [magic] 0 = tanımsız"
       "displayName": "DEPARTMENT"
   - name: "DETLINE"
     type: "SMALLINT"
@@ -547,6 +550,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PROMCLASITEMREF"
     type: "INTEGER"
@@ -623,6 +627,7 @@ columns:
   - name: "SALESMANREF"
     type: "INTEGER"
     properties:
+      "description": "Satış temsilcisi referansı [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "SALESMANREF"
   - name: "SHIPPEDAMNTSUGG"
     type: "FLOAT8"
@@ -664,6 +669,7 @@ columns:
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
+      "description": "Belge para birimi kodu [enum] 0=TL (yerel para), diğerleri döviz; TL karşılığı için NETTOTAL/AMOUNT kullan, TRNET'i toplama"
       "displayName": "TRCURR"
   - name: "TRGFLAG"
     type: "SMALLINT"

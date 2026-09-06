@@ -18,6 +18,7 @@ The LLM never sees credentials; SQL is validated and executed by the engine with
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import logging
 import os
@@ -25,6 +26,7 @@ import re
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -140,15 +142,50 @@ def _normalize(v: Any) -> Any:
     return v
 
 
+_CACHE_TTL = int(os.environ.get("WREN_CACHE_TTL_SEC", "300"))
+_CACHE_MAX = int(os.environ.get("WREN_CACHE_MAX", "256"))
+_sql_cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
+_cache_lock = threading.Lock()
+
+
+def _cache_get(key: str) -> dict | None:
+    with _cache_lock:
+        hit = _sql_cache.get(key)
+        if not hit:
+            return None
+        ts, val = hit
+        if time.time() - ts > _CACHE_TTL:
+            _sql_cache.pop(key, None)
+            return None
+        _sql_cache.move_to_end(key)
+        return val
+
+
+def _cache_put(key: str, val: dict) -> None:
+    with _cache_lock:
+        _sql_cache[key] = (time.time(), val)
+        while len(_sql_cache) > _CACHE_MAX:
+            _sql_cache.popitem(last=False)
+
+
 def run_sql(sql: str, limit: int) -> dict:
     limit = max(1, min(int(limit or MAX_ROWS), MAX_ROWS))
+    key = hashlib.sha256(f"{limit}\n{sql}".encode("utf-8")).hexdigest()
+    if _CACHE_TTL > 0 and (cached := _cache_get(key)):
+        out = dict(cached)
+        out["id"] = uuid.uuid4().hex
+        out["cached"] = True
+        return out
     with _engine_lock:
         table = engine().query(sql, limit + 1)
     rows = [{k: _normalize(x) for k, x in r.items()} for r in table.to_pylist()]
     truncated = len(rows) > limit
     rows = rows[:limit]
     cols = [{"name": f.name, "type": str(f.type)} for f in table.schema]
-    return {"id": uuid.uuid4().hex, "columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated}
+    out = {"id": uuid.uuid4().hex, "columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "cached": False}
+    if _CACHE_TTL > 0:
+        _cache_put(key, out)
+    return out
 
 
 # --- models -------------------------------------------------------------------------
@@ -174,7 +211,7 @@ class AskIn(BaseModel):
 def health() -> JSONResponse:
     try:
         m = manifest()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-wren-bridge", "project": str(PROJECT), "dataSource": _data_source, "models": len(m.get("models", []))})
+        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-wren-bridge", "project": str(PROJECT), "dataSource": _data_source, "models": len(m.get("models", [])), "cache": {"ttl_s": _CACHE_TTL, "entries": len(_sql_cache)}, "pid": os.getpid()})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"status": "error", "error": f"{type(e).__name__}: {e}"}, status_code=503)
 

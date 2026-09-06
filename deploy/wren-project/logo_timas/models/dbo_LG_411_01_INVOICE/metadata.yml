@@ -16,7 +16,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima CANCELLED = 0 [enum] 0=geçerli belge, 1=iptal · 2 farklı değer"
+      "description": "İptal bayrağı; daima CANCELLED = 0 [enum] 0=geçerli belge, 1=iptal · 2 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -26,11 +26,12 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
-      "description": "Fatura tarihi (2026)"
+      "description": "Fatura tarihi (2026) belge (fatura) tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
       "displayName": "DATE_"
   - name: "DOCDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kaynak evrak tarihi; raporlama DATE_ ile [time] gün hassasiyeti, TZ yok"
       "displayName": "DOCDATE"
   - name: "EINVOICE"
     type: "SMALLINT"
@@ -45,7 +46,7 @@ columns:
   - name: "GROSSTOTAL"
     type: "FLOAT8"
     properties:
-      "description": "Fatura brüt toplamı (iskonto öncesi)"
+      "description": "Fatura brüt toplamı (iskonto öncesi) [unit] TL, iskonto öncesi brüt"
       "displayName": "GROSSTOTAL"
   - name: "LOGICALREF"
     type: "INTEGER"
@@ -57,7 +58,7 @@ columns:
   - name: "NETTOTAL"
     type: "FLOAT8"
     properties:
-      "description": "Fatura net toplamı (KDV dahil); ciro/satış/iade/alım tutarı bu kolondan"
+      "description": "Fatura net toplamı (KDV dahil); ciro/satış/iade/alım tutarı bu kolondan [unit] TL (yerel para), KDV dahil; döviz belgelerinde TL karşılığı"
       "displayName": "NETTOTAL"
   - name: "PAYDEFREF"
     type: "INTEGER"
@@ -66,16 +67,17 @@ columns:
   - name: "SALESMANREF"
     type: "INTEGER"
     properties:
+      "description": "Satış temsilcisi referansı; ≈%83–88 dolu [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "SALESMANREF"
   - name: "TOTALDISCOUNTS"
     type: "FLOAT8"
     properties:
-      "description": "Fatura toplam iskontosu"
+      "description": "Fatura toplam iskontosu [unit] TL"
       "displayName": "TOTALDISCOUNTS"
   - name: "TOTALVAT"
     type: "FLOAT8"
     properties:
-      "description": "Fatura toplam KDV"
+      "description": "Fatura toplam KDV [unit] TL; KDV hariç net = NETTOTAL − TOTALVAT"
       "displayName": "TOTALVAT"
   - name: "TRCODE"
     type: "SMALLINT"
@@ -90,7 +92,7 @@ columns:
   - name: "TRNET"
     type: "FLOAT8"
     properties:
-      "description": "Döviz cinsinden net tutar"
+      "description": "Döviz cinsinden net tutar Belge para birimi (TRCURR) cinsinden net tutar; TL belgelerde anlamsız [unit] döviz tutarı, toplama katma (TL için NETTOTAL)"
       "displayName": "TRNET"
   - name: "ACCEPTEINVPUBLIC"
     type: "SMALLINT"
@@ -171,6 +173,7 @@ columns:
   - name: "CANCELDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "İptal tarihi [magic] 1899-12-30 = boş tarih (Logo boş tarih sentineli)"
       "displayName": "CANCELDATE"
   - name: "CANCELDESPSINV"
     type: "SMALLINT"
@@ -183,10 +186,12 @@ columns:
   - name: "CANCELLEDACC"
     type: "SMALLINT"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDACC"
   - name: "CANCELLEDREFLACC"
     type: "SMALLINT"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDREFLACC"
   - name: "CANTCREDEDUCT"
     type: "SMALLINT"
@@ -195,6 +200,7 @@ columns:
   - name: "CAPIBLOCK_CREADEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kayıt oluşturma zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_CREADEDDATE"
   - name: "CAPIBLOCK_CREATEDBY"
     type: "SMALLINT"
@@ -219,6 +225,7 @@ columns:
   - name: "CAPIBLOCK_MODIFIEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Son değişiklik zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_MODIFIEDDATE"
   - name: "CAPIBLOCK_MODIFIEDHOUR"
     type: "SMALLINT"
@@ -561,6 +568,7 @@ columns:
   - name: "PASSPORTNO"
     type: "VARCHAR"
     properties:
+      "description": "[pii] pasaport no — kişisel veri, asla seçme/maskele"
       "displayName": "PASSPORTNO"
   - name: "PAYMENTTYPE"
     type: "SMALLINT"
@@ -586,6 +594,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PUBLICBNACCREF"
     type: "INTEGER"
@@ -618,10 +627,12 @@ columns:
   - name: "REPORTNET"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi cinsinden net tutar [unit] raporlama dövizi — analizde kullanma, TL için NETTOTAL"
       "displayName": "REPORTNET"
   - name: "REPORTRATE"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi kuru (Logo raporlama para birimi) [unit] raporlama dövizi / TL — analizde kullanma"
       "displayName": "REPORTRATE"
   - name: "RIGHTOFRETURNTYP"
     type: "VARCHAR"
@@ -720,6 +731,7 @@ columns:
   - name: "TRRATE"
     type: "FLOAT8"
     properties:
+      "description": "Belge döviz kuru [unit] TL karşılığı / 1 birim döviz; TRCURR = 0 (TL) belgelerde kullanılmaz"
       "displayName": "TRRATE"
   - name: "TYPECODE"
     type: "VARCHAR"

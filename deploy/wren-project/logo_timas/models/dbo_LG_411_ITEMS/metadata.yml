@@ -21,7 +21,7 @@ columns:
   - name: "CODE"
     type: "VARCHAR"
     properties:
-      "description": "Stok (kitap) kodu"
+      "description": "Stok (kitap) kodu [magic] firmalar (yıl tabloları) arası sabit anahtar; LOGICALREF firmaya özeldir"
       "displayName": "CODE"
   - name: "LOGICALREF"
     type: "INTEGER"
@@ -43,7 +43,7 @@ columns:
   - name: "SPECODE"
     type: "VARCHAR"
     properties:
-      "description": "Yayınevi (imprint) özel kodu"
+      "description": "Yayınevi (imprint) özel kodu [magic] '' (boş) = yayınevi atanmamış → '(boş)'; değerler 10 karakterde kesiktir ('Timaş Çocu' = Timaş Çocuk, 'İlk Genç T' = İlk Genç Timaş)"
       "displayName": "SPECODE"
   - name: "STGRPCODE"
     type: "VARCHAR"
@@ -114,6 +114,7 @@ columns:
   - name: "CAPIBLOCK_CREADEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Kayıt oluşturma zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_CREADEDDATE"
   - name: "CAPIBLOCK_CREATEDBY"
     type: "SMALLINT"
@@ -138,6 +139,7 @@ columns:
   - name: "CAPIBLOCK_MODIFIEDDATE"
     type: "TIMESTAMP"
     properties:
+      "description": "Son değişiklik zamanı (sistem) [time] sistem zaman damgası (kayıt/değişiklik anı), yerel saat, TZ yok — iş tarihi değil; raporlamada kullanma"
       "displayName": "CAPIBLOCK_MODIFIEDDATE"
   - name: "CAPIBLOCK_MODIFIEDHOUR"
     type: "SMALLINT"
@@ -707,6 +709,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PUBLICCOUNTRYREF"
     type: "INTEGER"
@@ -935,6 +938,7 @@ columns:
   - name: "VAT"
     type: "FLOAT8"
     properties:
+      "description": "Malzeme KDV oranı [unit] yüzde"
       "displayName": "VAT"
   - name: "WFLOWCRDREF"
     type: "INTEGER"

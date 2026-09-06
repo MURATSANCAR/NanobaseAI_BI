@@ -15,6 +15,7 @@ API_ENV="${NANOBASE_API_ENV:-/data/nanobaseai/bi/frontend/backend/nanobase_api.e
 ENV_FILE="${WREN_BRIDGE_ENV:-/data/nanobaseai/bi/frontend/backend/nanobase_wren_bridge.env}"
 UNIT=/etc/systemd/system/nanobase-wren-bridge.service
 PORT="${WREN_BRIDGE_PORT:-8794}"
+WORKERS="${WREN_BRIDGE_WORKERS:-3}"   # işçi başına ayrı engine → paralel sorgu; RAM ~1.5 GB/işçi
 WREN="${VENV}/bin/wren"
 
 log() { printf '[deploy-wren-bridge] %s\n' "$*"; }
@@ -92,6 +93,8 @@ LLM_TIMEOUT_SEC=240
 WREN_MAX_ROWS=500
 WREN_CONTEXT_ITEMS=40
 WREN_RECALL_LIMIT=4
+WREN_CACHE_TTL_SEC=300
+WREN_CACHE_MAX=256
 HF_HUB_OFFLINE=0
 ENV
 chmod 600 "$ENV_FILE"
@@ -107,7 +110,7 @@ WorkingDirectory=${ROOT}/backend
 EnvironmentFile=${ENV_FILE}
 Environment=PATH=${VENV}/bin:/usr/bin
 Environment=PYTHONPATH=${ROOT}/backend
-ExecStart=${VENV}/bin/uvicorn wren_bridge.app:app --host 127.0.0.1 --port ${PORT} --workers 1 --timeout-keep-alive 30
+ExecStart=${VENV}/bin/uvicorn wren_bridge.app:app --host 127.0.0.1 --port ${PORT} --workers ${WORKERS} --timeout-keep-alive 30
 Restart=on-failure
 RestartSec=5
 

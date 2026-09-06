@@ -11,7 +11,7 @@ columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
-      "description": "Adet (miktar)"
+      "description": "Adet (miktar) [unit] adet (kitapta adet; birim UOMREF)"
       "displayName": "AMOUNT"
   - name: "BILLED"
     type: "SMALLINT"
@@ -21,7 +21,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima 0 [enum] 0=geçerli satır, 1=iptal · 2 farklı değer"
+      "description": "İptal bayrağı; daima 0 [enum] 0=geçerli satır, 1=iptal · 2 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -31,7 +31,7 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
-      "description": "Hareket tarihi; STLINE daima DATE_ ile filtrelenir"
+      "description": "Hareket tarihi; STLINE daima DATE_ ile filtrelenir hareket (belge) tarihi [time] gün hassasiyeti (saat 00:00), yerel saat, TZ yok; ay/yıl kırılımı bu kolondan; mali yıl = takvim yılı (firma 411 = 2026)"
       "displayName": "DATE_"
   - name: "DISCPER"
     type: "FLOAT8"
@@ -62,16 +62,17 @@ columns:
   - name: "OUTCOST"
     type: "FLOAT8"
     properties:
-      "description": "Birim maliyet (maliyetlendirme çalışmadıysa 0); satır maliyeti = AMOUNT * OUTCOST"
+      "description": "Birim maliyet (maliyetlendirme çalışmadıysa 0); satır maliyeti = AMOUNT * OUTCOST [unit] TL / adet — BİRİM maliyet, satır maliyeti = AMOUNT × OUTCOST [magic] 0 = maliyetlendirilmemiş satır (marj hesabına girmez; 2026'da 30.06 sonrası)"
       "displayName": "OUTCOST"
   - name: "PRICE"
     type: "FLOAT8"
     properties:
-      "description": "Birim fiyat"
+      "description": "Birim fiyat [unit] TL / adet, iskonto öncesi birim fiyat"
       "displayName": "PRICE"
   - name: "SALESMANREF"
     type: "INTEGER"
     properties:
+      "description": "Satış temsilcisi referansı [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "SALESMANREF"
   - name: "SOURCEINDEX"
     type: "SMALLINT"
@@ -89,7 +90,7 @@ columns:
   - name: "TOTAL"
     type: "FLOAT8"
     properties:
-      "description": "Satır tutarı; LINETYPE 0 için brüt (iskonto öncesi), LINETYPE 2 için iskonto tutarı"
+      "description": "Satır tutarı; LINETYPE 0 için brüt (iskonto öncesi), LINETYPE 2 için iskonto tutarı [unit] TL, KDV hariç satır tutarı (satır KDV'si VATAMNT); LINETYPE 0'da iskonto öncesi brüt"
       "displayName": "TOTAL"
   - name: "TRCODE"
     type: "SMALLINT"
@@ -99,7 +100,7 @@ columns:
   - name: "VATAMNT"
     type: "FLOAT8"
     properties:
-      "description": "Satır KDV tutarı"
+      "description": "Satır KDV tutarı Satır KDV tutarı [unit] TL"
       "displayName": "VATAMNT"
   - name: "ABVATAMOUNT"
     type: "FLOAT8"
@@ -280,18 +281,22 @@ columns:
   - name: "CANCELLEDINVREF1"
     type: "INTEGER"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDINVREF1"
   - name: "CANCELLEDINVREF2"
     type: "INTEGER"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDINVREF2"
   - name: "CANCELLEDINVREF3"
     type: "INTEGER"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDINVREF3"
   - name: "CANCELLEDINVREF4"
     type: "INTEGER"
     properties:
+      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDINVREF4"
   - name: "CANDEDUCT"
     type: "SMALLINT"
@@ -1017,6 +1022,7 @@ columns:
   - name: "PROJECTREF"
     type: "INTEGER"
     properties:
+      "description": "Proje referansı; bu kurulumda kullanılmıyor [magic] 0 = atanmamış (Logo *REF kolonlarında boş değer 0'dır, NULL değil)"
       "displayName": "PROJECTREF"
   - name: "PROMCLASITEMREF"
     type: "INTEGER"
@@ -1149,6 +1155,7 @@ columns:
   - name: "REPORTRATE"
     type: "FLOAT8"
     properties:
+      "description": "Raporlama dövizi kuru (Logo raporlama para birimi) [unit] raporlama dövizi / TL — analizde kullanma"
       "displayName": "REPORTRATE"
   - name: "RETAMOUNT"
     type: "FLOAT8"
@@ -1241,6 +1248,7 @@ columns:
   - name: "TCKTAXNR"
     type: "VARCHAR"
     properties:
+      "description": "[pii] TC kimlik / vergi no — kişisel veri, asla seçme/maskele"
       "displayName": "TCKTAXNR"
   - name: "TEXTINC"
     type: "SMALLINT"
@@ -1257,10 +1265,12 @@ columns:
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
+      "description": "Belge para birimi kodu [enum] 0=TL (yerel para), diğerleri döviz; TL karşılığı için NETTOTAL/AMOUNT kullan, TRNET'i toplama"
       "displayName": "TRCURR"
   - name: "TRRATE"
     type: "FLOAT8"
     properties:
+      "description": "Belge döviz kuru [unit] TL karşılığı / 1 birim döviz; TRCURR = 0 (TL) belgelerde kullanılmaz"
       "displayName": "TRRATE"
   - name: "UINFO1"
     type: "FLOAT8"
@@ -1318,7 +1328,7 @@ columns:
   - name: "VAT"
     type: "FLOAT8"
     properties:
-      "description": "[enum] 0.0, 10.0, 20.0, 1.0, 1.18 · 5 farklı değer"
+      "description": "[enum] 0.0, 10.0, 20.0, 1.0, 1.18 · 5 farklı değer [unit] yüzde (20 = %20)"
       "displayName": "VAT"
   - name: "VATACCREF"
     type: "INTEGER"
