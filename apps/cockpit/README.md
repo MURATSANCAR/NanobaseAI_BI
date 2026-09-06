@@ -53,3 +53,22 @@ Ay kırılımı tarih aralığı kovalarıyla (`"DATE_" >= '2026-01-01' AND "DAT
   embedder `api_base` bu adrese bakar. İndexleme ~10 s.
 - `deploy/wren_knowledge.py` motorun *instructions* + *sql pairs* mekanizmasına Logo iş kurallarını yazar;
   her model değişikliğinden sonra tekrar çalıştırılabilir (mevcut kayıtları atlar).
+
+## Semantic Layer hattı (WrenAI'siz, 2026-09)
+
+Üretim yolu artık `backend/semantic_bridge` (:8795) olabilir: aynı kokpit sözleşmesi, WrenAI yok.
+Doğruluk kaynağı `backend/semantic_layer` kataloğu (bi_meta `sl_*` tabloları): History Miner doğrulanmış
+soru→SQL çiftlerinden (`knowledge/`, `/api/v1/feedback`) term↔predicate kanıtı çıkarır, Profiler SQL Server'ı
+tarar, Evidence Engine sert kapı + skor + karşı-kanıt ile CERTIFIED verir; runtime Resolver yalnız CERTIFIED
+girdileri kullanır ve basit sorularda LLM'siz deterministik SQL üretir. Qwen yalnız katalog MISS/karmaşık
+sorularda çalışır ve istemde sertifikalı gerçekleri sert kısıt olarak alır.
+
+```bash
+./scripts/server/deploy-semantic-bridge.sh          # migrate 014 + pipeline + systemd nanobase-semantic-bridge + gece worker
+./scripts/server/switch-timas-api.sh semantic       # nginx /timas/api/ → :8795   (geri: bridge)
+PYTHONPATH=backend python3 -m semantic_layer.cli status | resolve "…" | compile "…" | explain toptan
+PYTHONPATH=backend python3 tests/text2sql/semantic-coldstart-eval.py --store "$NANOBASE_META_DSN" --bridge http://127.0.0.1:8795 --truth artifacts/timas/complex-truth.json --out /tmp/coldstart.json
+```
+
+Portalde `/bi/semantic-layer`: tespit edilen tablo/kolonlar, sertifikalı anlamlar, tanımsız kolonlara kullanıcı
+açıklaması (HUMAN_ANNOTATION kanıtı → aday → doğrulanmış sorguyla CERTIFIED).

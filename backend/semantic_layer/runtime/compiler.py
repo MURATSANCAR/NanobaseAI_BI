@@ -1,0 +1,506 @@
+"""Compilers: SemanticQuery → SQL.
+
+DeterministicCompiler — no LLM; only when every slot is CERTIFIED and the query shape is
+                        metric [+ dimension filters] [+ temporal] [+ group by column/grain] [+ limit/order].
+ExistingCompiler      — the production LLM prompt (rules + recalled pairs + schema context) **plus**
+                        certified catalog facts as hard constraints. Keeps 20/20 on complex questions.
+CompilerRouter        — deterministic first, else LLM. SEMANTIC_STRICT_MISS refuses unresolved value terms.
+"""
+
+from __future__ import annotations
+
+import logging
+import re
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable, Optional, Protocol
+
+from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
+from semantic_layer.naming import physical_name
+from semantic_layer.normalize import fold
+from semantic_layer.store.catalog_store import CatalogStore
+
+log = logging.getLogger(__name__)
+
+
+class SemanticQueryCompiler(Protocol):
+    name: str
+
+    def compile(self, query: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]: ...
+
+
+# ---------------------------------------------------------------------- dialect helpers
+
+class Dialect:
+    def __init__(self, name: str):
+        self.name = name
+
+    def q(self, ident: str) -> str:
+        return f"[{ident}]" if self.name == "tsql" else f'"{ident}"'
+
+    def table(self, schema: str, name: str) -> str:
+        return f"{self.q(schema)}.{self.q(name)}" if self.name == "tsql" else self.q(name)
+
+    def bucket(self, col: str, grain: str) -> str:
+        if self.name == "tsql":
+            return {
+                "DAY": f"CAST({col} AS DATE)",
+                "WEEK": f"DATEADD(DAY, 1 - DATEPART(WEEKDAY, {col}), CAST({col} AS DATE))",
+                "MONTH": f"DATEFROMPARTS(YEAR({col}), MONTH({col}), 1)",
+                "QUARTER": f"DATEFROMPARTS(YEAR({col}), ((MONTH({col}) - 1) / 3) * 3 + 1, 1)",
+                "YEAR": f"YEAR({col})",
+            }[grain]
+        return {
+            "DAY": f"date({col})",
+            "WEEK": f"strftime('%Y-%W', {col})",
+            "MONTH": f"strftime('%Y-%m-01', {col})",
+            "QUARTER": f"(strftime('%Y', {col}) || '-Q' || ((cast(strftime('%m', {col}) as integer) + 2) / 3))",
+            "YEAR": f"cast(strftime('%Y', {col}) as integer)",
+        }[grain]
+
+    def limit(self, sql_select: str, n: int) -> str:
+        if self.name == "tsql":
+            return sql_select.replace("SELECT ", f"SELECT TOP {int(n)} ", 1)
+        return sql_select + f"\nLIMIT {int(n)}"
+
+    def null_div(self, a: str, b: str) -> str:
+        return f"{a} / NULLIF({b}, 0)"
+
+
+def _snake(term: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "_", fold(term)).strip("_")
+    return s or "deger"
+
+
+def _alias_of(slot: ResolvedSlot) -> str:
+    """Stable alias from the catalog key (perakende_satis), not from the surface form (satislari)."""
+    return _snake(str(slot.explain.get("normalized") or slot.term))
+
+
+def _lit(v: str) -> str:
+    try:
+        float(v)
+        return v
+    except ValueError:
+        return "N'" + v.replace("'", "''") + "'" if False else "'" + v.replace("'", "''") + "'"
+
+
+def _pred_sql(alias: str, m: Mapping, d: Dialect) -> str:
+    col = f"{alias}.{d.q(m.column)}"
+    op = (m.operator or "IN").upper()
+    if op in ("IN", "NOT IN"):
+        return f"{col} {op} ({', '.join(_lit(v) for v in m.values)})"
+    if op == "BETWEEN" and len(m.values) == 2:
+        return f"{col} BETWEEN {_lit(m.values[0])} AND {_lit(m.values[1])}"
+    if op == "=" and len(m.values) > 1:
+        return f"{col} IN ({', '.join(_lit(v) for v in m.values)})"
+    return f"{col} {op} {_lit(m.values[0])}"
+
+
+def _pred_key_sql(entity: str, key: str, d: Dialect) -> Optional[str]:
+    """'INVOICE.TRCODE IN (7,8,9)' (Predicate.key) → SQL over alias."""
+    m = re.match(r"^(\w+)\.(\w+)\s+(IN|NOT IN|=|<>|>=|<=|>|<|BETWEEN)\s+\((.*)\)$", key)
+    if not m:
+        return None
+    ent, col, op, vals = m.groups()
+    if ent != entity:
+        return None
+    values = [v.strip() for v in vals.split(",") if v.strip()]
+    return _pred_sql(entity, Mapping(concept_id="", entity=ent, table_pattern="", column=col, operator=op, values=values), d)
+
+
+def _wrap_condition(formula_sql: str, pred: str) -> str:
+    """SUM(x) → SUM(CASE WHEN pred THEN x ELSE 0 END) for every aggregate in the formula (sqlglot)."""
+    import sqlglot
+    from sqlglot import exp
+
+    try:
+        tree = sqlglot.parse_one(formula_sql, read="tsql")
+        cond = sqlglot.parse_one(pred, read="tsql")
+    except Exception:  # noqa: BLE001
+        return formula_sql
+
+    def tx(node: exp.Expression) -> exp.Expression:
+        if isinstance(node, (exp.Sum, exp.Avg, exp.Min, exp.Max)):
+            inner = node.this
+            return type(node)(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=inner)], default=exp.Literal.number(0)))
+        if isinstance(node, exp.Count):
+            inner = node.this
+            if isinstance(inner, exp.Star):
+                return exp.Sum(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=exp.Literal.number(1))], default=exp.Literal.number(0)))
+            return exp.Count(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=inner)]))
+        return node
+
+    return tree.transform(tx).sql(dialect="tsql").replace("[", "[").replace("]", "]")
+
+
+# ---------------------------------------------------------------------- deterministic
+
+@dataclass
+class _Plan:
+    entity: str
+    metrics: list[ResolvedSlot]
+    filters: list[ResolvedSlot]
+    group_cols: list[ResolvedSlot]
+    joins: list[tuple[str, str, str, str]] = field(default_factory=list)   # (entity, column, ref_entity, ref_column)
+    date_column: Optional[str] = None
+
+
+class DeterministicCompiler:
+    name = "deterministic"
+
+    def __init__(self, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql", *, default_filters: Optional[Callable[[str], list[Mapping]]] = None):
+        self.profiles = profiles
+        self.by_entity = {p.entity: p for p in profiles}
+        self.context = context
+        self.d = Dialect(dialect)
+        self._default_filters = default_filters or (lambda entity: [])
+
+    # -- capability check
+    def plan(self, q: SemanticQuery) -> tuple[Optional[_Plan], str]:
+        if q.unresolved:
+            return None, "unresolved terms: " + ", ".join(q.unresolved)
+        if any(t.ambiguous for t in q.temporal):
+            return None, "ambiguous temporal term"
+        metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
+        if not metrics:
+            return None, "no certified metric"
+        entities = {s.mapping.entity for s in metrics}
+        if len(entities) != 1:
+            return None, "metrics span multiple entities"
+        entity = next(iter(entities))
+        prof = self.by_entity.get(entity)
+        if prof is None:
+            return None, f"entity {entity} not profiled"
+        filters = [s for s in q.filters if s.mapping]
+        joins: list[tuple[str, str, str, str]] = []
+        for s in filters:
+            if s.mapping.entity != entity:
+                j = self._join(entity, s.mapping.entity)
+                if j is None:
+                    return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
+                if j not in joins:
+                    joins.append(j)
+        group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
+        for s in group_cols:
+            if s.mapping.entity != entity:
+                j = self._join(entity, s.mapping.entity)
+                if j is None:
+                    return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
+                if j not in joins:
+                    joins.append(j)
+        # unresolved metric-like or column slots that are not group-by → we cannot express projections yet
+        extra_cols = [s for s in q.slots if s.semantic_type == SemanticType.COLUMN and s not in group_cols]
+        if extra_cols:
+            return None, "column projections without group-by are not supported deterministically"
+        date_col = self._date_column(prof)
+        if (q.temporal or q.grain) and not date_col:
+            return None, f"no date column on {entity}"
+        return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
+
+    def compile(self, q: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]:
+        plan, reason = self.plan(q)
+        if plan is None:
+            log.debug("deterministic compile refused: %s", reason)
+            return None
+        d = self.d
+        prof = self.by_entity[plan.entity]
+        alias = plan.entity
+        select: list[str] = []
+        group: list[str] = []
+        order: list[str] = []
+        explain: list[str] = []
+        # bucket
+        if q.grain and plan.date_column:
+            b = d.bucket(f"{alias}.{d.q(plan.date_column)}", q.grain)
+            select.append(f"{b} AS {_snake(q.grain.lower() if q.grain != 'MONTH' else 'ay')}")
+            group.append(b)
+            order.append(b)
+            explain.append(f"kırılım: {q.grain} ({plan.date_column})")
+        for s in plan.group_cols:
+            col = f"{s.mapping.entity}.{d.q(s.mapping.column)}"
+            select.append(f"{col} AS {_alias_of(s)}")
+            group.append(col)
+            explain.append(f"grup: '{s.term}' → {s.mapping.entity}.{s.mapping.column}")
+        metric_aliases = []
+        # pivot: several values on the same column ("perakende ile toptan … karşılaştır") → one conditional aggregate each
+        by_col: dict[tuple[str, str], list[ResolvedSlot]] = {}
+        for s in plan.filters:
+            by_col.setdefault((s.mapping.entity, (s.mapping.column or "").upper()), []).append(s)
+        pivots = [grp for grp in by_col.values() if len(grp) > 1]
+        pivot_slots = {id(s) for grp in pivots for s in grp}
+        for s in plan.metrics:
+            formula = self._formula_sql(s.mapping.formula, plan.entity)
+            malias = _alias_of(s)
+            if pivots:
+                for grp in pivots:
+                    for f in grp:
+                        pred = _pred_sql(f.mapping.entity, f.mapping, d)
+                        palias = f"{_alias_of(f)}_{malias}"
+                        select.append(f"{_wrap_condition(formula, pred)} AS {palias}")
+                        metric_aliases.append(palias)
+                        explain.append(f"pivot: '{f.term}' → {pred} için '{s.term}'")
+            else:
+                metric_aliases.append(malias)
+                select.append(f"{formula} AS {malias}")
+            explain.append(f"ölçü: '{s.term}' → {s.mapping.formula}")
+        where: list[str] = []
+        for m in self._default_filters(plan.entity):
+            where.append(_pred_sql(alias, m, d))
+            explain.append(f"varsayılan filtre: {m.entity}.{m.column} {m.operator} {m.values}")
+        for s in plan.metrics:
+            for key in (s.mapping.extra or {}).get("conditions") or []:
+                p = _pred_key_sql(plan.entity, key, d)
+                if p and p not in where:
+                    where.append(p)
+                    explain.append(f"ölçü kapsamı: {key}")
+        for s in plan.filters:
+            if id(s) in pivot_slots:
+                continue
+            p = _pred_sql(s.mapping.entity, s.mapping, d)
+            if p not in where:
+                where.append(p)
+                explain.append(f"filtre: '{s.term}' → {p}")
+        for grp in pivots:
+            ent, col = grp[0].mapping.entity, grp[0].mapping.column
+            vals = sorted({v for f in grp for v in f.mapping.values}, key=lambda v: (0, float(v)) if v.replace('.', '').lstrip('-').isdigit() else (1, v))
+            where.append(_pred_sql(ent, Mapping(concept_id="", entity=ent, table_pattern="", column=col, operator="IN", values=vals), d))
+        for t in q.temporal:
+            if t.start and t.end and plan.date_column:
+                col = f"{alias}.{d.q(plan.date_column)}"
+                where.append(f"{col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}'")
+                explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
+        sql = "SELECT " + ", ".join(select)
+        sql += f"\nFROM {d.table(prof.schema_name, physical_name(prof.table_pattern, {**prof.context, **self.context}))} AS {alias}"
+        for ent, col, ref_ent, ref_col in plan.joins:
+            rp = self.by_entity[ref_ent]
+            sql += f"\nJOIN {d.table(rp.schema_name, physical_name(rp.table_pattern, {**rp.context, **self.context}))} AS {ref_ent} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+        if where:
+            sql += "\nWHERE " + "\n  AND ".join(where)
+        if group:
+            sql += "\nGROUP BY " + ", ".join(group)
+        if plan.group_cols and not q.grain:
+            order = [f"{metric_aliases[0]} {'DESC' if q.order_desc else 'ASC'}"]
+        if order:
+            sql += "\nORDER BY " + ", ".join(order)
+        if q.limit:
+            sql = d.limit(sql, q.limit)
+        tables = [prof.table_name] + [self.by_entity[j[2]].table_name for j in plan.joins]
+        return CompiledQuery(sql=sql, compiler=self.name, tables=tables, catalog_version=q.catalog_version, explain=explain, certified=True)
+
+    # -- helpers
+    def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
+        prof = self.by_entity.get(entity)
+        if prof:
+            for r in prof.relationships:
+                if r["ref_entity"] == other:
+                    return (entity, r["column"], other, r["ref_column"])
+        return None
+
+    @staticmethod
+    def _date_column(prof: SchemaProfile) -> Optional[str]:
+        if prof.column("DATE_"):
+            return "DATE_"
+        for c in prof.columns:
+            if any(x in c.data_type.lower() for x in ("date", "timestamp")):
+                return c.name
+        return None
+
+    def _formula_sql(self, formula: str, entity: str) -> str:
+        d = self.d
+        def repl(m: re.Match) -> str:
+            ent, col = m.group(1), m.group(2)
+            return f"{ent}.{d.q(col)}"
+        out = re.sub(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", repl, formula)
+        if d.name == "sqlite":
+            out = out.replace("NULLIF(", "NULLIF(")
+        return out
+
+
+# ---------------------------------------------------------------------- existing (LLM) compiler
+
+SYSTEM_PROMPT = """Sen NanobaseAI BI'ın SQL üreticisisin. Görevin: kullanıcının Türkçe iş sorusunu, aşağıdaki fiziksel tablolar üzerinde çalışan TEK bir SELECT sorgusuna çevirmek.
+Kurallar:
+- Yalnız verilen tablo adlarını kullan; tablo adlarını verildiği gibi yaz (ör. dbo_LG_411_01_INVOICE), kolon adlarını çift tırnak içinde yaz.
+- Hedef veritabanı SQL Server (T-SQL). LIMIT yerine TOP kullan; GROUP BY içinde takma ad veya sıra numarası kullanma, ifadeyi tekrar yaz.
+- Tarih kırılımı: ay için DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1); gün için CAST("DATE_" AS DATE).
+- SERTİFİKALI KATALOG bloğundaki eşlemeler kesindir: bir terim için verilen kolon/değer kümesini AYNEN kullan, başka değer uydurma.
+- İş kurallarına (TRCODE, LINETYPE, CANCELLED = 0 vb.) mutlaka uy.
+- Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
+- ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
+- Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
+
+_SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
+_VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sales_cube|line_cube|orders_cube|küp|cube|görünüm)")
+
+
+def extract_sql(text: str) -> Optional[str]:
+    m = _SQL_BLOCK.search(text or "")
+    sql = (m.group(1) if m else (text or "")).strip().rstrip(";").strip()
+    if not sql or sql.upper().startswith("NO_SQL"):
+        return None
+    if not re.match(r"(?is)^\s*(with|select)\b", sql):
+        return None
+    return sql
+
+
+def clean_rules(text: str) -> str:
+    """Drop legacy WrenAI view/cube guidance from the business rules."""
+    return "\n".join(line for line in (text or "").splitlines() if not _VIEW_LINES.search(line))
+
+
+class ExistingCompiler:
+    name = "existing_llm"
+
+    def __init__(self, llm, profiles: list[SchemaProfile], context: dict[str, str], *, rules_text: str = "", recall: Optional[Callable[[str], list[dict[str, str]]]] = None, model_naming: str = "mdl"):
+        self.llm = llm
+        self.profiles = profiles
+        self.context = context
+        self.rules_text = clean_rules(rules_text)
+        self.recall = recall
+        self.model_naming = model_naming
+
+    def table_label(self, p: SchemaProfile) -> str:
+        phys = physical_name(p.table_pattern, {**p.context, **self.context})
+        return f"{p.schema_name}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
+
+    def model_index(self) -> str:
+        lines = ["### Tablolar"]
+        for p in self.profiles:
+            pk = ", ".join(p.primary_key) or "-"
+            lines.append(f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon' + (f" — {p.description[:160]}" if p.description else ""))
+        return "\n".join(lines)
+
+    def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> str:
+        wanted = {s.mapping.entity for s in q.slots if s.mapping}
+        for r in recalled:
+            for p in self.profiles:
+                if self.table_label(p) in (r.get("sql") or ""):
+                    wanted.add(p.entity)
+        if not wanted:
+            wanted = {p.entity for p in self.profiles}
+        lines = []
+        for p in self.profiles:
+            if p.entity not in wanted:
+                continue
+            cols = []
+            for c in p.columns:
+                desc = ""
+                if c.is_enum() and c.top_values:
+                    desc = " {" + ", ".join(v for v, _ in c.top_values[:10]) + "}"
+                elif c.ref_entity:
+                    desc = f" → {c.ref_entity}.{c.ref_column}"
+                cols.append(f'"{c.name}" {c.data_type}{desc}')
+            lines.append(f"{self.table_label(p)}: " + ", ".join(cols))
+        return "\n".join(lines)
+
+    def catalog_block(self, q: SemanticQuery) -> str:
+        lines = []
+        for s in q.slots:
+            m = s.mapping
+            if not m:
+                continue
+            if m.formula:
+                cond = "; ".join((m.extra or {}).get("conditions") or [])
+                lines.append(f"- ölçü '{s.term}' = {m.formula}" + (f" (kapsam: {cond})" if cond else ""))
+            elif m.values:
+                lines.append(f"- '{s.term}' = {m.entity}.{m.column} {m.operator} ({', '.join(m.values)}) [{s.status}]")
+            elif m.column:
+                lines.append(f"- '{s.term}' = {m.entity}.{m.column} kolonu")
+        for t in q.temporal:
+            if t.start and t.end:
+                lines.append(f"- dönem '{t.text}' = DATE_ >= '{t.start.isoformat()}' AND DATE_ < '{t.end.isoformat()}'")
+        return "\n".join(lines) or "(yok)"
+
+    def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]]) -> list[dict[str, str]]:
+        recalled = self.recall(q.question) if self.recall else []
+        examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
+        ctx = [
+            "## Tablolar\n" + self.model_index(),
+            "## İş kuralları\n" + (self.rules_text or "(yok)"),
+            "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
+            "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
+            "## Şema bağlamı\n" + self.schema_context(q, recalled),
+        ]
+        msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n\n".join(ctx)}]
+        msgs.extend(thread[-6:])
+        msgs.append({"role": "user", "content": q.question})
+        return msgs
+
+    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None) -> Optional[CompiledQuery]:
+        t0 = time.perf_counter()
+        messages = self.build_messages(q, thread or [])
+        text = self.llm.chat(messages)
+        ms = int((time.perf_counter() - t0) * 1000)
+        sql = extract_sql(text)
+        if not sql:
+            reason = (text or "").strip().replace("NO_SQL:", "").strip()[:300]
+            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version, explain=[f"NO_SQL: {reason}"], llm_ms=ms, certified=False)
+        certified = not q.unresolved and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots)
+        return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
+
+    def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None) -> Optional[str]:
+        messages = self.build_messages(q, thread or [])
+        messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
+        messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})
+        return extract_sql(self.llm.chat(messages))
+
+
+# ---------------------------------------------------------------------- router
+
+class CompilerRouter:
+    def __init__(self, deterministic: Optional[DeterministicCompiler], existing: Optional[ExistingCompiler], *, strict_miss: bool = False):
+        self.deterministic = deterministic
+        self.existing = existing
+        self.strict_miss = strict_miss
+
+    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None) -> CompiledQuery:
+        if self.deterministic is not None:
+            out = self.deterministic.compile(q, catalog)
+            if out is not None:
+                return out
+        if self.strict_miss and q.unresolved:
+            return CompiledQuery(sql="", compiler="refused", catalog_version=q.catalog_version, explain=["strict mode: " + ", ".join(q.unresolved) + " katalogda tanımlı değil"], certified=False)
+        if self.existing is None:
+            return CompiledQuery(sql="", compiler="none", catalog_version=q.catalog_version, explain=["no LLM compiler configured"], certified=False)
+        return self.existing.compile(q, catalog, thread)
+
+
+def default_filters_provider(store: CatalogStore, tenant_id: str, datasource_id: str) -> Callable[[str], list[Mapping]]:
+    def _get(entity: str) -> list[Mapping]:
+        out = []
+        for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.DEFAULT_FILTER, status=ConceptStatus.CERTIFIED, limit=1000):
+            for m in store.list_mappings(c.id):
+                if m.entity == entity:
+                    out.append(m)
+        return out
+    return _get
+
+
+# ---------------------------------------------------------------------- summaries
+
+def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], total: int) -> str:
+    """Deterministic Turkish summary — no LLM round-trip (saves ~10 s per question)."""
+    def fmt(v: Any) -> str:
+        if isinstance(v, bool):
+            return "evet" if v else "hayır"
+        if isinstance(v, int):
+            return f"{v:,}".replace(",", ".")
+        if isinstance(v, float):
+            return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return str(v)
+    if total == 0:
+        return "Sorgu sonuç döndürmedi."
+    if total == 1 and len(columns) == 1:
+        return f"{columns[0]}: {fmt(rows[0][columns[0]])}"
+    if total == 1:
+        return "; ".join(f"{c}: {fmt(rows[0].get(c))}" for c in columns[:6])
+    head = rows[:3]
+    parts = []
+    for r in head:
+        parts.append(", ".join(f"{c}={fmt(r.get(c))}" for c in columns[:4]))
+    return f"{total} satır döndü. İlk satırlar: " + " | ".join(parts)
+
+
+__all__ = ["SemanticQueryCompiler", "DeterministicCompiler", "ExistingCompiler", "CompilerRouter", "default_filters_provider", "fast_summary", "extract_sql", "SYSTEM_PROMPT", "TemporalSlot"]

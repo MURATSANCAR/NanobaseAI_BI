@@ -1,0 +1,21 @@
+[Unit]
+Description=Nanobase Semantic Layer nightly worker (profile → mine → candidates → certify → version)
+After=network-online.target nanobase-semantic-bridge.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=administrator
+WorkingDirectory=/data/nanobaseai/bi/frontend/backend
+EnvironmentFile=/data/nanobaseai/bi/frontend/backend/nanobase_semantic_bridge.env
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=3600
+# --llm: Qwen proposes CANDIDATEs for unresolved runtime terms (never certifies)
+ExecStart=/data/nanobaseai/bi/frontend/backend/.venv/bin/python -m semantic_layer.cli pipeline --llm --note "nightly"
+ExecStartPost=/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:8795/api/v1/semantic/reload
+
+[Install]
+WantedBy=multi-user.target

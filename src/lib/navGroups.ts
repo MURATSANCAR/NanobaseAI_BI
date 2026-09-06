@@ -122,6 +122,13 @@ export const BI_NAV_GROUPS: NavGroupDef[] = [
         emojiKey: 'nav.biSchema.emoji',
         hintKey: 'nav.hint.biSchema',
       },
+      {
+        to: '/bi/semantic-layer',
+        icon: BookOpen,
+        labelKey: 'nav.biSemanticLayer',
+        emojiKey: 'nav.biSemanticLayer.emoji',
+        hintKey: 'nav.hint.biSemanticLayer',
+      },
     ],
   },
   {

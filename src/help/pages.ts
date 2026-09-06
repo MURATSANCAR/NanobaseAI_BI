@@ -29,6 +29,7 @@ export function helpPageFromPath(pathname: string): HelpPageId {
   if (pathname.startsWith('/bi/queries')) return 'biQueries';
   if (pathname.startsWith('/bi/templates')) return 'biTemplates';
   if (pathname.startsWith('/bi/schedules')) return 'biSchedules';
+  if (pathname.startsWith('/bi/semantic-layer')) return 'biSchema';
   if (pathname.startsWith('/bi/schema')) return 'biSchema';
   if (pathname.startsWith('/bi/settings')) return 'biSettings';
   if (pathname.startsWith('/bi/sources') || pathname.startsWith('/bi/connection')) return 'biConnection';

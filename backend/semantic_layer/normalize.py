@@ -24,6 +24,8 @@ STOPWORDS: frozenset[str] = frozenset(
     yalniz yalnizca sadece kimler kim nerede nasil neden var yok mi midir dir dur tur tir
     lutfen ise ama fakat ancak ya eger ozellikle daha gibi kadar bunlar sunlar onlar
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
+    milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
+    alan eden olan yapan veren gelen giden sahip ait
     """.split()
 )
 
@@ -40,10 +42,11 @@ MODIFIERS: frozenset[str] = frozenset(
 # metric mining can still see them).
 METRIC_VOCAB: frozenset[str] = frozenset(
     """
-    ciro tutar tutari adet miktar sayi sayisi oran orani marj marji kar maliyet iskonto
+    ciro tutar tutari adet aded adedi miktar sayi sayisi oran orani marj marji kar maliyet iskonto
     ortalama toplam pay payi net brut satis satislar hasilat gelir gider fiyat
     """.split()
 )
+
 
 _SUFFIXES = (
     "larini", "lerini", "larina", "lerine", "lardan", "lerden", "larda", "lerde",
@@ -76,12 +79,12 @@ def tokenize(text: str) -> list[str]:
 
 @lru_cache(maxsize=65536)
 def stem(token: str) -> str:
-    """Very light suffix stripping (max two passes, never below 4 chars). Deterministic and
+    """Very light suffix stripping (max three passes, never below 4 chars). Deterministic and
     symmetric: both catalog terms and question tokens go through it."""
     t = token
     if t in _PROTECTED or len(t) <= 4 or t.isdigit():
         return t
-    for _ in range(2):
+    for _ in range(3):
         for suf in _SUFFIXES:
             if t.endswith(suf) and len(t) - len(suf) >= 4:
                 t = t[: -len(suf)]
@@ -115,3 +118,20 @@ def alias_tokens(alias: str) -> list[str]:
     """SQL alias → tokens (net_ciro → [net, ciro]; perakendeToplam → [perakende, toplam])."""
     s = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", alias or "")
     return [stem(t) for t in tokenize(s.replace("_", " ")) if t not in STOPWORDS]
+
+
+def stemmed(words) -> frozenset[str]:
+    """Stem a vocabulary so it can be compared with stemmed question tokens."""
+    return frozenset(stem(w) for w in words) | frozenset(words)
+
+
+STOPWORDS_S = stemmed(STOPWORDS)
+MODIFIERS_S = stemmed(MODIFIERS)
+METRIC_VOCAB_S = stemmed(METRIC_VOCAB)
+
+CLAUSE_SPLIT = re.compile(r"[,;:()?!/|\n]|\s-\s|\s–\s|\s—\s")
+
+
+def clauses(text: str) -> list[str]:
+    """Split a question into clauses at punctuation so n-grams never cross a comma."""
+    return [c for c in (x.strip() for x in CLAUSE_SPLIT.split(text or "")) if c]

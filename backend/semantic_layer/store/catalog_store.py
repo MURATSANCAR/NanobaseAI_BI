@@ -56,6 +56,10 @@ def open_store(dsn: str, *, create: bool = True) -> "CatalogStore":
     kwargs: dict[str, Any] = {"pool_pre_ping": True}
     if dsn.startswith("sqlite"):
         kwargs = {"connect_args": {"check_same_thread": False}}
+        if dsn in ("sqlite://", "sqlite:///:memory:"):
+            from sqlalchemy.pool import StaticPool
+
+            kwargs["poolclass"] = StaticPool
     engine = sa.create_engine(dsn, **kwargs)
     if dsn.startswith("sqlite"):
         @sa.event.listens_for(engine, "connect")
@@ -295,21 +299,9 @@ class CatalogStore:
             self._invalidate(c.tenant_id, c.datasource_id)
 
     def mappings_for_column(self, tenant_id: str, datasource_id: str, entity: str, column: str) -> list[tuple[Concept, Mapping]]:
-        stmt = (
-            sa.select(S.sl_concept, S.sl_mapping)
-            .join(S.sl_mapping, S.sl_mapping.c.concept_id == S.sl_concept.c.id)
-            .where(S.sl_concept.c.tenant_id == tenant_id, S.sl_concept.c.datasource_id == datasource_id)
-            .where(S.sl_mapping.c.entity == entity, S.sl_mapping.c.column_name == column)
-        )
-        out = []
-        with self.engine.connect() as conn:
-            for r in conn.execute(stmt):
-                d = dict(r._mapping)
-                cd = {k.key if hasattr(k, "key") else k: v for k, v in d.items()}
-                out.append(cd)
-        # SQLAlchemy Core join returns overlapping column names as prefixed keys; rebuild by selecting twice.
         result: list[tuple[Concept, Mapping]] = []
-        for m in self._rows(sa.select(S.sl_mapping).where(S.sl_mapping.c.entity == entity, S.sl_mapping.c.column_name == column)):
+        stmt = sa.select(S.sl_mapping).where(S.sl_mapping.c.entity == entity, S.sl_mapping.c.column_name == column)
+        for m in self._rows(stmt):
             c = self.get_concept(m["concept_id"])
             if c and c.tenant_id == tenant_id and c.datasource_id == datasource_id:
                 result.append((c, self._row_to_mapping(m)))

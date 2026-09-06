@@ -157,6 +157,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             const flags = getFeatureFlags();
             const links = group.links.filter((l) => {
               if (l.to === '/bi/semantic-catalog' && !flags.enableSemanticCatalog) return false;
+              if (l.to === '/bi/semantic-layer') return canBi('schema.read');
               if (l.to.includes('semantic') && !canBi('semantic.review') && !canBi('semantic.publish')) {
                 return false;
               }

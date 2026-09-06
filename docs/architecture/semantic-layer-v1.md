@@ -105,3 +105,41 @@ profilde yoksa) → `DEPRECATED` (drift).
 İlk milestone **Semantic Value Cold Start**: recall OFF iken kaybedilen 6 sorunun değer-çözümleme
 kaynaklı olanları (toptan, perakende, iade oranı, son günler …) History Miner + Profiler + aday hattı ile
 (elle katalog yazmadan) CERTIFIED'a taşınır; bench dilim bazında raporlanır (tek sayı değil).
+
+## 7. Uygulama durumu (2026-09-06)
+
+Kodlandı ve yerelde doğrulandı (23 birim/entegrasyon testi, SQLite üzerinde uçtan uca):
+
+| Bileşen | Dosya | Durum |
+|---|---|---|
+| Catalog store + DDL | `backend/semantic_layer/store/`, `nanobase_api/alembic/versions/014_semantic_layer.py` | ✅ PG (JSONB) + SQLite |
+| History Miner | `backend/semantic_layer/history/` | ✅ 52 çift (23 gerçek) → toptan→TRCODE 8, perakende→7, iade→(2,3), net ciro formülü (4 destek), kanal→CLCARD.SPECODE2, maliyetli→OUTCOST<>0 |
+| Profiler | `backend/semantic_layer/profiler/` | ✅ MSSQL (pyodbc) / Postgres / SQLite / MDL-offline; Intugle opsiyonel adaptör |
+| Doc miner + Candidate Generator | `backend/semantic_layer/candidates/` | ✅ enum glossları, "term" = `ENTITY.COLUMN` alias'ları, portal açıklamaları (HUMAN_ANNOTATION), Qwen offline adayları |
+| Evidence Engine | `backend/semantic_layer/evidence/engine.py` | ✅ hard gate, skor, karşı-kanıt, sense conflict, doc-dominance, drift→DEPRECATED, sürüm snapshot, kanıta dayalı eş anlamlı |
+| Resolver / Temporal | `backend/semantic_layer/runtime/` | ✅ yalnız CERTIFIED; "son günler" AMBIGUOUS |
+| Compiler | `runtime/compiler.py` | ✅ Deterministic (pivot dahil) + Existing (Qwen + sertifikalı gerçekler) + router + `SEMANTIC_STRICT_MISS` |
+| Bridge | `backend/semantic_bridge/app.py` (:8795) | ✅ kokpit sözleşmesi, feedback→validated, inventory/annotations |
+| Portal | `nanobase_api/semantic_layer_api.py`, `src/pages/BiSemanticLayerPage.tsx` (`/bi/semantic-layer`) | ✅ tespit edilen tablo/kolon, durum rozetleri, kullanıcı açıklaması, "neden bu eşleme" |
+| Bench | `tests/text2sql/semantic-coldstart-eval.py` + corpus | ✅ 6 dilim |
+| Ops | `scripts/server/deploy-semantic-bridge.sh`, `infra/systemd/nanobase-semantic-worker.*` | ✅ gece 02:00 |
+
+Cold-start (recall OFF, LLM YOK, yalnız katalog + deterministik derleyici, logo_timas knowledge'ından üretilen katalog v1, 37 sertifikalı kavram):
+
+| Dilim | Sonuç |
+|---|---|
+| Schema | 18/20 |
+| Semantic Value | 12/13 |
+| Metric | 12/14 |
+| Temporal | 18/18 |
+| SQL (deterministik, LLM'siz) | 13/20 |
+| Result | sunucuda `--bridge` ile ölçülür |
+
+Kalan 7 SQL kaybı LLM'siz ölçümdür: bu sorular köprüde ExistingCompiler'a (Qwen + sertifikalı gerçekler) düşer.
+Kayıp nedenleri dürüst: `satılan adet` (2 formül varyantı, destek 1+1), `iade tutarı` (ölçü kelimesi
+"tutar" için sertifikalı formül yok), `KITAPCI/E-TICARET` kanal kodları (kanal *değer*leri henüz
+history'de yok — profil `SPECODE2` enum'unu görüyor, doğrulanmış sorgu gelince aday→sertifika).
+
+Gate politikası (uygulanan): `SEMANTIC_GATE_MODE=multi_source` — `validated ≥ 3` **veya**
+`validated ≥ 1 ∧ (DOC|HUMAN) ∧ profile_fit`; `strict` = yalnız `validated ≥ 3`. LLM adayı hiçbir
+modda tek başına geçemez.

@@ -230,6 +230,7 @@ class SqlFacts:
     time_ranges: list[TimeRange] = field(default_factory=list)
     grain: Optional[str] = None
     group_by: list[str] = field(default_factory=list)
+    projections: list[tuple[Optional[str], str, str]] = field(default_factory=list)   # (alias, entity, column)
     limit: Optional[int] = None
     parse_error: Optional[str] = None
 

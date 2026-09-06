@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Point https://portal.nanobase.ai/timas/api/ at the WrenAI main-line bridge (:8794) or back at the legacy wren-ui (:3000).
-# Usage: switch-timas-api.sh bridge|legacy
+# Usage: switch-timas-api.sh semantic|bridge|legacy   (semantic = WrenAI-free Semantic Layer bridge :8795)
 set -euo pipefail
 TARGET="${1:-bridge}"
 SITE="${PORTAL_SITE:-/etc/nginx/sites-enabled/portal.nanobase.ai}"
 case "$TARGET" in
   bridge) UP="127.0.0.1:${WREN_BRIDGE_PORT:-8794}" ;;
+  semantic) UP="127.0.0.1:${SEMANTIC_BRIDGE_PORT:-8795}" ;;
   legacy) UP="127.0.0.1:3000" ;;
   *) echo "usage: $0 bridge|legacy" >&2; exit 2 ;;
 esac

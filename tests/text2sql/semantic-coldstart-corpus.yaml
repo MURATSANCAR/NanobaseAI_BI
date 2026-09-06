@@ -1,0 +1,126 @@
+# Cold-start benchmark (recall OFF): each question is scored on 6 slices
+#   schema   → expected entities ⊆ entities referenced by the compiled SQL (or resolved slots)
+#   value    → every expected (term → column/values) mapping is resolved from the CERTIFIED catalog
+#   metric   → expected metric term resolves to a certified formula
+#   temporal → expected temporal primitive(s) parsed (+ grain)
+#   sql      → SQL produced (deterministic or LLM) and passes guardrails / dry-run
+#   result   → rows match artifacts/timas/complex-truth.json (needs --bridge)
+version: 1
+questions:
+  - id: cs-01
+    q: "Son 30 günde toptan satış ne kadar?"
+    schema: [INVOICE]
+    values: [{term: toptan, column: TRCODE, values: ["8"]}]
+    metric: satis
+    temporal: [LAST_N_DAYS]
+  - id: cs-02
+    q: "2026 toplam net ciro nedir?"
+    schema: [INVOICE]
+    metric: net ciro
+    temporal: [YEAR]
+    truth: net_ciro_2026
+  - id: cs-03
+    q: "2026 yılında aylık net ciro"
+    schema: [INVOICE]
+    metric: net ciro
+    temporal: [YEAR]
+    grain: MONTH
+  - id: cs-04
+    q: "Perakende ile toptan satışları 2026 ay bazında karşılaştır"
+    schema: [INVOICE]
+    values: [{term: perakende, column: TRCODE, values: ["7"]}, {term: toptan, column: TRCODE, values: ["8"]}]
+    metric: satis
+    temporal: [YEAR]
+    grain: MONTH
+    truth: cx-09
+  - id: cs-05
+    q: "Temmuz 2026 iade oranı nedir?"
+    schema: [STLINE]
+    metric: iade orani
+    temporal: [MONTH]
+  - id: cs-06
+    q: "Kanal bazında net ciro"
+    schema: [INVOICE, CLCARD]
+    metric: net ciro
+    group_by: kanal
+  - id: cs-07
+    q: "2026 iade tutarı kanal bazında"
+    schema: [INVOICE, CLCARD]
+    values: [{term: iade, column: TRCODE, values: ["2", "3"]}]
+    temporal: [YEAR]
+    group_by: kanal
+  - id: cs-08
+    q: "Yayınevi bazında 2026 satılan adet"
+    schema: [STLINE, ITEMS]
+    metric: satilan adet
+    temporal: [YEAR]
+    group_by: yayinevi
+  - id: cs-09
+    q: "Geçen ay perakende satış tutarı"
+    schema: [INVOICE]
+    values: [{term: perakende, column: TRCODE, values: ["7"]}]
+    metric: satis tutari
+    temporal: [LAST_MONTH]
+  - id: cs-10
+    q: "Günlük satış tutarı (son günler) nedir?"
+    schema: [INVOICE]
+    temporal: [AMBIGUOUS_RECENT]
+    expect_ambiguous: true
+  - id: cs-11
+    q: "2026 Ocak–Ağustos brüt kâr marjı"
+    schema: [STLINE]
+    metric: brut kar marji
+    temporal: [MONTH_RANGE]
+  - id: cs-12
+    q: "Mal alım faturaları 2026 toplam tutar"
+    schema: [INVOICE]
+    values: [{term: mal alim, column: TRCODE, values: ["1"]}]
+    temporal: [YEAR]
+  - id: cs-13
+    q: "Bu yıl toptan iade tutarı"
+    schema: [INVOICE]
+    values: [{term: toptan, column: TRCODE, values: ["8"]}, {term: iade, column: TRCODE, values: ["2", "3"]}]
+    temporal: [THIS_YEAR]
+  - id: cs-14
+    q: "2026 ay bazında sipariş sayısı"
+    schema: [ORFICHE]
+    metric: siparis sayisi
+    temporal: [YEAR]
+    grain: MONTH
+  - id: cs-15
+    q: "Bölgesel performans son 90 gün"
+    schema: []
+    temporal: [LAST_N_DAYS]
+    expect_unresolved: [bolgesel, performans]
+  - id: cs-16
+    q: "2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro"
+    schema: [INVOICE, CLCARD]
+    metric: net ciro
+    temporal: [YEAR]
+    grain: MONTH
+    group_by: kanal
+    truth: cx-01
+  - id: cs-17
+    q: "Toptan satış faturaları (TRCODE 8) Temmuz 2026 satılan adet"
+    schema: [STLINE]
+    values: [{term: toptan, column: TRCODE, values: ["8"]}]
+    metric: satilan adet
+    temporal: [MONTH]
+  - id: cs-18
+    q: "Yıl başından beri net ciro"
+    schema: [INVOICE]
+    metric: net ciro
+    temporal: [YTD]
+  - id: cs-19
+    q: "Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır: her ay için fatura sayısı, NETTOTAL toplamı ve ortalama fatura tutarı; ayrıca perakendenin o ayın toplam satışındaki payı."
+    schema: [INVOICE]
+    values: [{term: perakende, column: TRCODE, values: ["7"]}, {term: toptan, column: TRCODE, values: ["8"]}]
+    temporal: [YEAR]
+    grain: MONTH
+    truth: cx-09
+  - id: cs-20
+    q: "Kanal bazında brüt kâr marjı: satış hareket satırlarında maliyetli ciro, maliyet ve marj yüzdesi"
+    schema: [STLINE, CLCARD]
+    metric: brut kar marji
+    group_by: kanal
+    truth: cx-08

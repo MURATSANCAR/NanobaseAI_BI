@@ -507,3 +507,78 @@ export type BiConnectionUpsert = {
   supabase_api_key?: string;
   connection_url?: string;
 };
+
+
+// ---------------------------------------------------------------- Semantic Layer V1 (portal layer)
+export type BiSlConceptRef = {
+  id: string;
+  term: string;
+  type: string;
+  status: string;
+  operator?: string;
+  values?: string[];
+  formula?: string;
+  confidence?: number;
+};
+export type BiSlAnnotation = { id: string; text: string; author: string; createdAt: string };
+export type BiSlColumn = {
+  name: string;
+  type: string;
+  nullable?: boolean;
+  isPrimaryKey?: boolean;
+  ref?: string | null;
+  distinct?: number | null;
+  topValues?: Array<[string, number]>;
+  description?: string | null;
+  annotations: BiSlAnnotation[];
+  concepts: BiSlConceptRef[];
+  status: 'CERTIFIED' | 'CANDIDATE' | 'DESCRIBED' | 'UNDEFINED' | (string & {});
+};
+export type BiSlTable = {
+  entity: string;
+  tableName: string;
+  tablePattern: string;
+  schema: string;
+  description?: string | null;
+  rowCount?: number | null;
+  primaryKey: string[];
+  relationships: Array<{ column: string; ref_entity: string; ref_column: string }>;
+  annotations: BiSlAnnotation[];
+  columns: BiSlColumn[];
+  undefinedColumns: number;
+  scannedAt: string;
+};
+export type BiSemanticLayerInventory = {
+  datasourceId: string;
+  tables: BiSlTable[];
+  tableCount: number;
+  columnCount: number;
+  undefinedColumns: number;
+  catalog: Record<string, number>;
+  version?: { version: number; certified_count: number; created_at: string; note?: string } | null;
+};
+export type BiSemanticLayerStatus = {
+  ok: boolean;
+  datasourceId: string;
+  status: Record<string, number>;
+  certifiedByType: Record<string, number>;
+  version?: { version: number; certified_count: number; created_at: string } | null;
+  profiles: number;
+  queries: { total: number; validated: number; deterministic: number };
+  unresolved: Record<string, number>;
+};
+export type BiSlConcept = {
+  concept: {
+    id: string;
+    term: string;
+    normalized_term: string;
+    semantic_type: string;
+    status: string;
+    confidence: number;
+    version: number;
+    sense_id: number;
+    synonyms: string[];
+    explain: Record<string, unknown>;
+  };
+  mappings: Array<{ entity: string; table_pattern: string; column?: string | null; operator?: string | null; values: string[]; formula?: string | null; extra?: Record<string, unknown> }>;
+};
