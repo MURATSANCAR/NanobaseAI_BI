@@ -91,7 +91,22 @@ class Runtime:
         if self.llm is not None:
             existing = ExistingCompiler(self.llm, self.profiles, s.context, rules_text=self.rules_text, recall=self.recall if s.recall_enabled else None, dialect=s.dialect, conventions=self.conventions)
         self.existing = existing
-        self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss)
+        # SuperSonic joins only when configured: "shadow" measures it next to the answer, "primary"
+        # is an explicit experiment. Neither is on by default (SEMANTIC_COMPILER / SUPERSONIC_MODE).
+        alternates: dict[str, Any] = {}
+        shadow: list[Any] = []
+        try:
+            from semantic_layer.runtime.supersonic import build_adapter
+
+            adapter = build_adapter()
+            if adapter is not None:
+                alternates["supersonic"] = adapter
+                if os.environ.get("SUPERSONIC_MODE", "shadow").lower() == "shadow":
+                    shadow.append(adapter)
+                log.info("supersonic adapter enabled (mode=%s)", os.environ.get("SUPERSONIC_MODE", "shadow"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("supersonic adapter unavailable: %s", e)
+        self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
 
     # ------------------------------------------------------------------ recall (Memory ON)
     def recall(self, question: str, exclude_nl: Optional[str] = None) -> list[dict[str, str]]:
@@ -452,6 +467,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/semantic/certify")
     def certify(body: dict[str, Any] | None = None) -> dict[str, Any]:
         return rt().certify(note=str((body or {}).get("note") or "api certify"))
+
+    @app.get("/api/v1/semantic/ab")
+    def ab_status() -> dict[str, Any]:
+        """What the shadow compilers produced next to the answers this process served."""
+        r = rt()
+        rows = list(r.router.shadow_results)
+        agree = sum(1 for x in rows if x.get("same_as_primary"))
+        return {
+            "primary": r.router.primary or "auto (deterministic → llm)",
+            "shadow": [getattr(c, "name", str(c)) for c in r.router.shadow],
+            "alternates": sorted(r.router.alternates),
+            "samples": len(rows),
+            "agreement": round(agree / len(rows), 3) if rows else None,
+            "meanShadowMs": int(sum(x.get("ms", 0) for x in rows) / len(rows)) if rows else 0,
+            "recent": rows[-10:],
+        }
 
     @app.post("/api/v1/semantic/reload")
     def reload() -> dict[str, Any]:

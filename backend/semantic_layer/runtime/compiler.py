@@ -478,21 +478,54 @@ class ExistingCompiler:
 # ---------------------------------------------------------------------- router
 
 class CompilerRouter:
-    def __init__(self, deterministic: Optional[DeterministicCompiler], existing: Optional[ExistingCompiler], *, strict_miss: bool = False):
+    """Deterministic first, then the LLM. `primary` pins one compiler for a controlled experiment;
+    `shadow` compilers run for measurement only and never change the answer."""
+
+    def __init__(self, deterministic: Optional[DeterministicCompiler], existing: Optional[ExistingCompiler], *, strict_miss: bool = False, primary: str = "", shadow: Optional[list[Any]] = None, alternates: Optional[dict[str, Any]] = None):
         self.deterministic = deterministic
         self.existing = existing
         self.strict_miss = strict_miss
+        self.primary = (primary or "").strip().lower()
+        self.shadow = list(shadow or [])
+        self.alternates = dict(alternates or {})
+        self.shadow_results: list[dict[str, Any]] = []
+
+    def _run_shadow(self, q: SemanticQuery, catalog: CatalogStore, chosen: CompiledQuery) -> None:
+        for comp in self.shadow:
+            try:
+                out = comp.compile(q, catalog)
+            except Exception as e:  # noqa: BLE001
+                log.warning("shadow compiler %s failed: %s", getattr(comp, "name", comp), e)
+                continue
+            if out is None:
+                continue
+            self.shadow_results.append({"compiler": out.compiler, "sql": out.sql, "ms": out.llm_ms, "same_as_primary": out.sql.strip() == chosen.sql.strip(), "explain": out.explain})
+            del self.shadow_results[:-50]
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None) -> CompiledQuery:
+        if self.primary:
+            comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
+            if comp is not None:
+                out = comp.compile(q, catalog, thread) if getattr(comp, "name", "") == "existing_llm" else comp.compile(q, catalog)
+                if out is not None:
+                    self._run_shadow(q, catalog, out)
+                    return out
         if self.deterministic is not None:
             out = self.deterministic.compile(q, catalog)
             if out is not None:
+                self._run_shadow(q, catalog, out)
                 return out
         if self.strict_miss and q.unresolved:
             return CompiledQuery(sql="", compiler="refused", catalog_version=q.catalog_version, explain=["strict mode: " + ", ".join(q.unresolved) + " katalogda tanımlı değil"], certified=False)
         if self.existing is None:
+            for comp in self.alternates.values():
+                out = comp.compile(q, catalog)
+                if out is not None:
+                    return out
             return CompiledQuery(sql="", compiler="none", catalog_version=q.catalog_version, explain=["no LLM compiler configured"], certified=False)
-        return self.existing.compile(q, catalog, thread)
+        out = self.existing.compile(q, catalog, thread)
+        self._run_shadow(q, catalog, out)
+        return out
 
 
 def default_filters_provider(store: CatalogStore, tenant_id: str, datasource_id: str) -> Callable[[str], list[Mapping]]:
@@ -531,4 +564,4 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
     return f"{total} satır döndü. İlk satırlar: " + " | ".join(parts)
 
 
-__all__ = ["SemanticQueryCompiler", "DeterministicCompiler", "ExistingCompiler", "CompilerRouter", "default_filters_provider", "fast_summary", "extract_sql", "SYSTEM_PROMPT", "TemporalSlot"]
+__all__ = ["SemanticQueryCompiler", "DeterministicCompiler", "ExistingCompiler", "CompilerRouter", "Dialect", "default_filters_provider", "fast_summary", "extract_sql", "SYSTEM_PROMPT", "TemporalSlot"]
