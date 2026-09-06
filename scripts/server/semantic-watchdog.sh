@@ -5,11 +5,23 @@
 set -uo pipefail
 PORT="${SEMANTIC_BRIDGE_PORT:-8795}"
 UNIT="${SEMANTIC_UNIT:-nanobase-semantic-bridge.service}"
-STATE="${SEMANTIC_WATCHDOG_STATE:-/run/semantic-watchdog.state}"
+STATE="${SEMANTIC_WATCHDOG_STATE:-/run/nanobase-semantic/watchdog.state}"
 LOG_TAG="semantic-watchdog"
 
 log() { logger -t "$LOG_TAG" -- "$*"; printf '[%s] %s\n' "$LOG_TAG" "$*"; }
-fail() { log "UNHEALTHY: $*"; exit 1; }
+fail() {
+  # How long has it been since this bridge last answered? A single failed check is noise; hours of
+  # them is an outage nobody noticed, and that difference belongs in the alert line.
+  local since=""
+  if [[ -r "$STATE" ]]; then
+    local last now
+    last="$(cat "$STATE" 2>/dev/null || echo 0)"
+    now="$(date +%s)"
+    [[ "${last:-0}" -gt 0 ]] && since=" (son sağlıklı yanıt $(( (now - last) / 60 )) dk önce)"
+  fi
+  log "UNHEALTHY: $*${since}"
+  exit 1
+}
 
 health="$(curl -fsS -m 10 "http://127.0.0.1:${PORT}/health" 2>/dev/null || true)"
 [[ -n "$health" ]] || { log "no answer on :${PORT} — restarting ${UNIT}"; sudo systemctl restart "$UNIT"; sleep 5; health="$(curl -fsS -m 15 "http://127.0.0.1:${PORT}/health" || true)"; }
@@ -27,4 +39,7 @@ ask="$(curl -fsS -m 60 -H 'Content-Type: application/json' \
 printf '%s' "$ask" | grep -q '"type": *"TEXT_TO_SQL"' || fail "the bridge could not answer a catalog question: $(printf '%s' "$ask" | head -c 200)"
 
 log "healthy: ${profiles} profiles, ${certified} certified concepts"
-date +%s > "$STATE" 2>/dev/null || true
+mkdir -p "$(dirname "$STATE")" 2>/dev/null || true
+if ! date +%s > "$STATE" 2>/dev/null; then
+  log "warning: cannot record health state at $STATE — an outage's duration will not be reported"
+fi
