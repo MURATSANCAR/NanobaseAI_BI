@@ -10,6 +10,7 @@ CompilerRouter        — deterministic first, else LLM. SEMANTIC_STRICT_MISS re
 from __future__ import annotations
 
 import logging
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -404,14 +405,46 @@ class ExistingCompiler:
         self.model_naming = model_naming
         self.dialect = dialect
         self.conventions = conventions or Conventions.from_profiles(profiles)
+        self.by_entity = {p.entity: p for p in profiles}
+        # A local model has a fixed context; a schema does not. These bound what the prompt may carry.
+        self.max_prompt_tables = int(os.environ.get("SEMANTIC_PROMPT_TABLES", "12"))
+        self.max_prompt_columns = int(os.environ.get("SEMANTIC_PROMPT_COLUMNS", "60"))
+        self.catalog_entities: set[str] = set()
 
     def table_label(self, p: SchemaProfile) -> str:
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
         return f"{p.schema_name}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
 
-    def model_index(self) -> str:
+    def relevant_entities(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> set[str]:
+        """Which tables this question can possibly need.
+
+        A schema of three hundred tables does not fit in a prompt, and sending it would drown the few
+        that matter. The set is built from evidence, never from a list of names: the entities the
+        resolver placed, the entities any certified concept maps to (the vocabulary someone has already
+        written down), the tables a recalled example query used, and one join hop out from those.
+        """
+        wanted = {s.mapping.entity for s in q.slots if s.mapping}
+        wanted |= set(self.catalog_entities)
+        for r in recalled:
+            for p in self.profiles:
+                if self.table_label(p) in (r.get("sql") or ""):
+                    wanted.add(p.entity)
+        for entity in list(wanted):
+            for other in self.by_entity:
+                if other not in wanted and self.conventions.join_path(entity, other):
+                    wanted.add(other)
+        if not wanted:
+            # nothing certified yet and nothing resolved: fall back to the biggest tables, which is what
+            # a person opening this schema for the first time would look at
+            ranked = sorted(self.profiles, key=lambda p: -(p.row_count or 0))
+            wanted = {p.entity for p in ranked[: self.max_prompt_tables]}
+        return wanted
+
+    def model_index(self, entities: Optional[set[str]] = None) -> str:
+        shown = [p for p in self.profiles if entities is None or p.entity in entities]
         lines = ["### Tablolar"]
-        for p in self.profiles:
+        left_out = len(self.profiles) - len(shown)
+        for p in shown:
             pk = ", ".join(p.primary_key) or "-"
             rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}' for r in p.relationships[:6])
             line = f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon'
@@ -420,16 +453,13 @@ class ExistingCompiler:
             if rels:
                 line += f" · ilişkiler: {rels}"
             lines.append(line)
+        if left_out > 0:
+            # never a silent cap: the model must know the schema it was shown is not the whole schema
+            lines.append(f"- (bu soruyla ilgisi kurulamayan {left_out} tablo listelenmedi; burada olmayan bir tabloyu varsayma)")
         return "\n".join(lines)
 
-    def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> str:
-        wanted = {s.mapping.entity for s in q.slots if s.mapping}
-        for r in recalled:
-            for p in self.profiles:
-                if self.table_label(p) in (r.get("sql") or ""):
-                    wanted.add(p.entity)
-        if not wanted:
-            wanted = {p.entity for p in self.profiles}
+    def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]], entities: Optional[set[str]] = None) -> str:
+        wanted = entities if entities is not None else self.relevant_entities(q, recalled)
         lines = []
         for p in self.profiles:
             if p.entity not in wanted:
@@ -446,7 +476,8 @@ class ExistingCompiler:
                 if c.sentinel_values and not c.sensitive:
                     desc += f" [{', '.join(c.sentinel_values)} = değer yok]"
                 cols.append(f'"{c.name}" {c.data_type}{desc}')
-            lines.append(f"{self.table_label(p)}: " + ", ".join(cols))
+            lines.append(f"{self.table_label(p)}: " + ", ".join(cols[: self.max_prompt_columns]) +
+                         (f" … (+{len(cols) - self.max_prompt_columns} kolon)" if len(cols) > self.max_prompt_columns else ""))
         return "\n".join(lines)
 
     def catalog_block(self, q: SemanticQuery) -> str:
@@ -490,8 +521,9 @@ class ExistingCompiler:
         recall_fn = recall or self.recall
         recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
+        entities = self.relevant_entities(q, recalled)
         ctx = [
-            "## Tablolar\n" + self.model_index(),
+            "## Tablolar\n" + self.model_index(entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
@@ -499,7 +531,7 @@ class ExistingCompiler:
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
-            "## Şema bağlamı\n" + self.schema_context(q, recalled),
+            "## Şema bağlamı\n" + self.schema_context(q, recalled, entities),
         ]
         msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n\n".join(ctx)}]
         msgs.extend(thread[-6:])

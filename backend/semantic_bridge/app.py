@@ -131,6 +131,14 @@ class Runtime:
                 log.info("supersonic adapter enabled (mode=%s)", os.environ.get("SUPERSONIC_MODE", "shadow"))
         except Exception as e:  # noqa: BLE001
             log.warning("supersonic adapter unavailable: %s", e)
+        # The vocabulary someone has already written down tells the prompt which tables matter; a
+        # three-hundred-table schema would not fit in a local model's context, and sending it whole
+        # would bury the handful that answer the question.
+        try:
+            index = self.store.certified_index(s.tenant_id, s.datasource_id)
+            existing.catalog_entities = {m.entity for senses in index.values() for _, maps in senses for m in maps}
+        except Exception as e:  # noqa: BLE001
+            log.debug("catalog entity set unavailable: %s", e)
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
 
     # ------------------------------------------------------------------ recall (Memory ON)
