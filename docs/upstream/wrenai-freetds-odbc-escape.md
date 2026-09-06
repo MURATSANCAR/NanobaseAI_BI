@@ -52,3 +52,37 @@ or starts with `{`), which is the ODBC rule and keeps both drivers working. Two 
 (`…/v2/migration/#fastmcp-renamed-to-mcpserve … or pin 'mcp<2' to keep running v1 code`). `pip install 'mcp<2'`
 (1.29.1) fixes it: server starts, 17 tools listed, `run_sql` works over Streamable HTTP. Suggest `mcp[cli]>=1.19,<2`
 until the server is ported to the v2 API.
+
+---
+
+## Issue 3 — `wren cube query` emits unsupported SQL for SQL Server (mssql)
+
+**Title:** `cube query: DATE_TRUNC and outer-reference GROUP BY break cubes on mssql`
+
+wrenai 0.13.4, `mssql` connector (FreeTDS/pyodbc), SQL Server 2019. Measure-only cube queries work:
+
+```bash
+$ wren cube query --cube sales_cube --measures net_ciro,satis,iade
+    net_ciro        satis        iade
+8.481102e+08 9.224187e+08 74308487.24     # matches raw SQL exactly
+```
+
+Adding a dimension or a time granularity fails at execution:
+
+```bash
+$ wren cube query --cube sales_cube --measures net_ciro --time-dimension fatura_tarihi:month
+Error: [GENERIC_USER_ERROR] ('42000', "[42000] [FreeTDS][SQL Server]'DATE_TRUNC' is not a recognized
+built-in function name. (195) (SQLExecDirectW)") phase=SQL_EXECUTION
+
+$ wren cube query --cube sales_cube --measures net_ciro --dimensions trcode
+Error: [GENERIC_USER_ERROR] ('42000', '[42000] [FreeTDS][SQL Server]Each GROUP BY expression must
+contain at least one column that is not an outer reference. (164) (SQLExecDirectW)')
+```
+
+Expected: the cube query builder should translate the time granularity to a T-SQL expression
+(`DATEFROMPARTS(YEAR(c), MONTH(c), 1)` for month, `CAST(c AS date)` for day, …) and emit dimension
+expressions in `GROUP BY` directly rather than as outer references. Both are dialect-translation gaps,
+not user errors: hand-written T-SQL with the same semantics runs fine through `wren query`.
+
+Impact: cubes are unusable for any breakdown on SQL Server, which is the main reason to define one.
+Workaround: MDL views with the grouping baked in (`v_monthly_sales`, `v_channel_net`).

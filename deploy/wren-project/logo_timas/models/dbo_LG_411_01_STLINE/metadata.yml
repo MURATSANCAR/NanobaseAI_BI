@@ -5,11 +5,13 @@ table_reference:
   table: "LG_411_01_STLINE"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Malzeme hareket satırı (fatura/irsaliye satırları). LINETYPE: 0 malzeme satırı, 2 iskonto satırı (TOTAL iskonto tutarı), 4 hizmet. TRCODE satış 7/8, satış iadesi 2/3. AMOUNT adet, TOTAL satır brüt tutarı (iskonto öncesi), OUTCOST birim maliyet (satır maliyeti = AMOUNT*OUTCOST), STOCKREF → dbo_LG_411_ITEMS, INVOICEREF → dbo_LG_411_01_INVOICE. Daima CANCELLED = 0 ve DATE_ ile filtrele."
   "displayName": "dbo.LG_411_01_STLINE"
 columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
+      "description": "Adet (miktar)"
       "displayName": "AMOUNT"
   - name: "BILLED"
     type: "SMALLINT"
@@ -18,14 +20,17 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
+      "description": "İptal bayrağı; daima 0"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
     properties:
+      "description": "Cari referansı → dbo_LG_411_CLCARD.LOGICALREF"
       "displayName": "CLIENTREF"
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
+      "description": "Hareket tarihi; STLINE daima DATE_ ile filtrelenir"
       "displayName": "DATE_"
   - name: "DISCPER"
     type: "FLOAT8"
@@ -34,6 +39,7 @@ columns:
   - name: "INVOICEREF"
     type: "INTEGER"
     properties:
+      "description": "Fatura başlığı referansı → dbo_LG_411_01_INVOICE.LOGICALREF"
       "displayName": "INVOICEREF"
   - name: "IOCODE"
     type: "SMALLINT"
@@ -42,20 +48,24 @@ columns:
   - name: "LINETYPE"
     type: "SMALLINT"
     properties:
+      "description": "Satır türü: 0 malzeme, 2 iskonto satırı, 4 hizmet"
       "displayName": "LINETYPE"
   - name: "LOGICALREF"
     type: "INTEGER"
     not_null: true
     is_primary_key: true
     properties:
+      "description": "Birincil anahtar"
       "displayName": "LOGICALREF"
   - name: "OUTCOST"
     type: "FLOAT8"
     properties:
+      "description": "Birim maliyet (maliyetlendirme çalışmadıysa 0); satır maliyeti = AMOUNT * OUTCOST"
       "displayName": "OUTCOST"
   - name: "PRICE"
     type: "FLOAT8"
     properties:
+      "description": "Birim fiyat"
       "displayName": "PRICE"
   - name: "SALESMANREF"
     type: "INTEGER"
@@ -72,18 +82,22 @@ columns:
   - name: "STOCKREF"
     type: "INTEGER"
     properties:
+      "description": "Malzeme referansı → dbo_LG_411_ITEMS.LOGICALREF"
       "displayName": "STOCKREF"
   - name: "TOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Satır tutarı; LINETYPE 0 için brüt (iskonto öncesi), LINETYPE 2 için iskonto tutarı"
       "displayName": "TOTAL"
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
+      "description": "Hareket türü: 7 perakende satış, 8 toptan satış, 2/3 satış iadesi, 1 alım"
       "displayName": "TRCODE"
   - name: "VATAMNT"
     type: "FLOAT8"
     properties:
+      "description": "Satır KDV tutarı"
       "displayName": "VATAMNT"
   - name: "ABVATAMOUNT"
     type: "FLOAT8"
@@ -1362,3 +1376,27 @@ columns:
   - name: "dbo_LG_411_CLCARD"
     type: "dbo_LG_411_CLCARD"
     relationship: "Dbo.lg_411_01_stlineClientrefDbo.lg_411_clcardLogicalref"
+  - name: "line_cost"
+    type: "DOUBLE"
+    is_calculated: true
+    expression: "\"AMOUNT\" * \"OUTCOST\""
+    properties:
+      "description": "Satır maliyeti (birim maliyet × adet); OUTCOST = 0 ise maliyetlendirilmemiş"
+  - name: "is_item_line"
+    type: "BOOLEAN"
+    is_calculated: true
+    expression: "CASE WHEN \"LINETYPE\" = 0 THEN 1 ELSE 0 END"
+    properties:
+      "description": "Malzeme satırı mı"
+  - name: "is_discount_line"
+    type: "BOOLEAN"
+    is_calculated: true
+    expression: "CASE WHEN \"LINETYPE\" = 2 THEN 1 ELSE 0 END"
+    properties:
+      "description": "İskonto satırı mı"
+  - name: "line_month"
+    type: "DATE"
+    is_calculated: true
+    expression: "DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)"
+    properties:
+      "description": "Hareket ayı"

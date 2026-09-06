@@ -5,23 +5,28 @@ table_reference:
   table: "LG_411_01_CLFLINE"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Cari hesap hareketi (borç/alacak). CLIENTREF → cari; tutar AMOUNT, işaret SIGN (0 borç, 1 alacak), tarih DATE_; TRCODE hareket türü."
   "displayName": "dbo.LG_411_01_CLFLINE"
 columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
+      "description": "Hareket tutarı"
       "displayName": "AMOUNT"
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
+      "description": "İptal bayrağı"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
     properties:
+      "description": "Cari referansı"
       "displayName": "CLIENTREF"
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
+      "description": "Hareket tarihi"
       "displayName": "DATE_"
   - name: "LINEEXP"
     type: "VARCHAR"
@@ -40,10 +45,12 @@ columns:
   - name: "SIGN"
     type: "SMALLINT"
     properties:
+      "description": "0 borç, 1 alacak"
       "displayName": "SIGN"
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
+      "description": "Hareket türü"
       "displayName": "TRCODE"
   - name: "ACCFICHEREF"
     type: "INTEGER"

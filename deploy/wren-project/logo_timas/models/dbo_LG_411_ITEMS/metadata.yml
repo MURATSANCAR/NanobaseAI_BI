@@ -5,6 +5,7 @@ table_reference:
   table: "LG_411_ITEMS"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Malzeme kartı (kitap/ürün). CODE stok kodu, NAME kitap adı, SPECODE YAYINEVİ (imprint) özel kodu."
   "displayName": "dbo.LG_411_ITEMS"
 columns:
   - name: "ACTIVE"
@@ -18,24 +19,29 @@ columns:
   - name: "CODE"
     type: "VARCHAR"
     properties:
+      "description": "Stok (kitap) kodu"
       "displayName": "CODE"
   - name: "LOGICALREF"
     type: "INTEGER"
     not_null: true
     is_primary_key: true
     properties:
+      "description": "Birincil anahtar"
       "displayName": "LOGICALREF"
   - name: "NAME"
     type: "VARCHAR"
     properties:
+      "description": "Kitap / ürün adı"
       "displayName": "NAME"
   - name: "PRODUCERCODE"
     type: "VARCHAR"
     properties:
+      "description": "Üretici kodu"
       "displayName": "PRODUCERCODE"
   - name: "SPECODE"
     type: "VARCHAR"
     properties:
+      "description": "Yayınevi (imprint) özel kodu"
       "displayName": "SPECODE"
   - name: "STGRPCODE"
     type: "VARCHAR"

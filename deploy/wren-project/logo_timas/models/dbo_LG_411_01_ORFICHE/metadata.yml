@@ -5,19 +5,23 @@ table_reference:
   table: "LG_411_01_ORFICHE"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Sipariş fişi başlığı. Sipariş sayısı = COUNT(DISTINCT LOGICALREF); tutar NETTOTAL; tarih DATE_; CLIENTREF → cari. Satırlara JOIN edince satır sayısı kadar çoğalır."
   "displayName": "dbo.LG_411_01_ORFICHE"
 columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
+      "description": "İptal bayrağı; daima 0"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
     properties:
+      "description": "Cari referansı"
       "displayName": "CLIENTREF"
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
+      "description": "Sipariş tarihi"
       "displayName": "DATE_"
   - name: "FICHENO"
     type: "VARCHAR"
@@ -28,10 +32,12 @@ columns:
     not_null: true
     is_primary_key: true
     properties:
+      "description": "Birincil anahtar; sipariş sayısı = COUNT(DISTINCT LOGICALREF)"
       "displayName": "LOGICALREF"
   - name: "NETTOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Sipariş fişi net tutarı"
       "displayName": "NETTOTAL"
   - name: "SALESMANREF"
     type: "INTEGER"
@@ -44,6 +50,7 @@ columns:
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
+      "description": "Sipariş türü (1 satınalma siparişi, 2 satış siparişi)"
       "displayName": "TRCODE"
   - name: "ACCEPTEINVPUBLIC"
     type: "SMALLINT"

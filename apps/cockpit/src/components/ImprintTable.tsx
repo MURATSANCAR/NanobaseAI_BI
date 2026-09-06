@@ -85,7 +85,7 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto overflow-y-visible scroll-thin">
+      <div className="mt-4 overflow-x-auto scroll-thin">
         <table className="w-full min-w-[640px] text-[13px]">
           <thead>
             <tr className="eyebrow border-b border-line text-left">

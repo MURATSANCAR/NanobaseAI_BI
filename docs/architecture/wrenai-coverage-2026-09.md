@@ -22,7 +22,7 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 | `wren memory store` | Onaylı çifti `knowledge/sql/` altına yaz | **Kullanılıyor** (kampanyanın 8 doğrulanmış çifti yazıldı) |
 | `wren memory list/forget/dump/load/export/reset` | Çift yönetimi | Kullanılabilir; `list`/`check` kullanıldı, diğerleri gerektiğinde |
 | `wren memory watch` | Kaynak değişince otomatik yeniden indeksle | Kullanılmıyor (deploy betiği elle indeksliyor) |
-| `wren cube list/describe/query` | Ön-toplulaştırılmış küpler | **Kullanılıyor** (`sales_cube`, `line_cube` eklendi) |
+| `wren cube list/describe/query` | Ön-toplulaştırılmış küpler | **Kullanılıyor** (`sales_cube`, `line_cube`) — ölçüler doğru; kırılımlı sorgu SQL Server'da upstream hatası (bkz. docs/upstream Issue 3), kırılım için view'ler kullanılıyor |
 | `wren serve mcp` | 17 araçlı MCP sunucusu | **Kullanılıyor** (`nanobase-wren-mcp` :8090) |
 | `wren skills list/get` | Ajan iş akışı rehberleri (6 skill) | Rehber olarak okundu; köprü istemi bu akışı uyguluyor |
 | `wren ask --guided/--direct` | İstem şekillendirme şablonu | Kullanılmıyor — köprü kendi Türkçe sistem istemini kuruyor |
@@ -45,7 +45,7 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 | LanceDB memory index | **1635 şema öğesi + çiftler** |
 | `dry_run` doğrulama + tek onarım turu | **Köprüde zorunlu** |
 | `policy.py` salt-SELECT | **Her zaman açık** (motor içi) |
-| `strict_mode` + `denied_functions` | **Açıldı** (`~/.wren/config.json`; openrowset/xp_cmdshell… yasak) |
+| `strict_mode` + `denied_functions` | **Açıldı ve canlı doğrulandı**: ham `dbo.LG_411_01_INVOICE` reddedildi (MODEL_NOT_FOUND), MDL modeli çalıştı. Köprü de `load_config` ile aynı ayarı okuyor |
 
 ## 3. SDK ve entegrasyon
 
@@ -53,7 +53,7 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 |---|---|
 | `wren` Python API (`WrenEngine`) | **Kullanılıyor** (köprü doğrudan bu API üzerinde) |
 | MCP sunucusu | **Kullanılıyor** (:8090, 17 araç) |
-| `wren-pydantic` (Pydantic AI toolkit) | **Kuruldu** (0.3.0); ajan modu için hazır |
+| `wren-pydantic` (Pydantic AI toolkit) | **Kuruldu** (0.3.0 + pydantic-ai 1.107.5); 6 araçlı ajan modu için hazır |
 | `wren-langchain` (LangChain/LangGraph) | Kurulmadı — Pydantic AI ile aynı işi yapar, ikisi gereksiz |
 | `wren-core-wasm` | Kullanılmıyor (tarayıcı içi planlama; bizde sunucu tarafı) |
 | dbt / OSI içe aktarma | Kullanılmıyor (kaynak yok) |
@@ -77,3 +77,17 @@ Amaç: "eksiksiz kullan" talimatına karşı, upstream'deki **her** mekanizmayı
 | `WREN_MEMORY_BACKEND` | Varsayılan `lancedb` (extra kurulu) |
 | `WREN_EMBEDDING_MODEL` | Varsayılan `paraphrase-multilingual-MiniLM-L12-v2` (Türkçe için uygun) |
 | `WREN_DB_STATEMENT_TIMEOUT` | **Ayarlanmalı** (bağlantı profiline `statement_timeout`) — uzun süren sorgular için |
+
+
+## 6. Bu turda kapatılanlar (2026-09-06 gece)
+
+| Eksik | Durum |
+|---|---|
+| Model/kolon açıklamaları yok → zayıf retrieval | 7 model + ~60 kritik kolon Türkçe açıklandı; indeks 1635 → **1663 şema öğesi** |
+| Hesaplanmış kolon yok | `net_signed_total`, `line_cost`, `is_sale/is_sales_return/is_purchase`, `is_item_line/is_discount_line`, `invoice_month/line_month` |
+| View yok | `v_monthly_sales`, `v_channel_net`, `v_imprint_perf` (build: 7 model + **3 view**) |
+| Cube yok | `sales_cube` (satis, iade, net_ciro, alim, satis_fatura_sayisi), `line_cube` (brut_satir, iskonto, maliyetli_ciro, maliyet, satilan_adet) |
+| glossary / metrics / caveats yok | Üçü de yazıldı (Türkçe, doğrulanmış tanımlar ve veri uyarıları) |
+| strict_mode kapalı | Açıldı, köprüde de etkin, canlı test edildi |
+| Onaylı cevaplar saklanmıyor | Kampanyanın 8 doğrulanmış çifti `wren memory store` ile yazıldı → **18 çift** |
+| Ajan SDK yok | `wren-pydantic` kuruldu |

@@ -5,11 +5,13 @@ table_reference:
   table: "LG_411_01_ORFLINE"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Sipariş fişi satırı. ORDFICHEREF → dbo_LG_411_01_ORFICHE, STOCKREF → dbo_LG_411_ITEMS; AMOUNT adet, TOTAL satır brüt tutarı."
   "displayName": "dbo.LG_411_01_ORFLINE"
 columns:
   - name: "AMOUNT"
     type: "FLOAT8"
     properties:
+      "description": "Sipariş adedi"
       "displayName": "AMOUNT"
   - name: "CANCELLED"
     type: "SMALLINT"
@@ -26,6 +28,7 @@ columns:
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
+      "description": "Sipariş satır tarihi"
       "displayName": "DATE_"
   - name: "DUEDATE"
     type: "TIMESTAMP"
@@ -44,6 +47,7 @@ columns:
   - name: "ORDFICHEREF"
     type: "INTEGER"
     properties:
+      "description": "Sipariş fişi referansı → dbo_LG_411_01_ORFICHE"
       "displayName": "ORDFICHEREF"
   - name: "PRICE"
     type: "FLOAT8"
@@ -52,14 +56,17 @@ columns:
   - name: "SHIPPEDAMOUNT"
     type: "FLOAT8"
     properties:
+      "description": "Sevk edilen adet"
       "displayName": "SHIPPEDAMOUNT"
   - name: "STOCKREF"
     type: "INTEGER"
     properties:
+      "description": "Malzeme referansı"
       "displayName": "STOCKREF"
   - name: "TOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Satır brüt tutarı"
       "displayName": "TOTAL"
   - name: "TRCODE"
     type: "SMALLINT"

@@ -5,6 +5,7 @@ table_reference:
   table: "LG_411_CLCARD"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Cari kart (müşteri/tedarikçi). CODE cari kodu, DEFINITION_ unvan, SPECODE2 SATIŞ KANALI (KITAPCI, E-TICARET, DAGITICI, ZINCIR, KURUM, MAGAZA, FUAR...)."
   "displayName": "dbo.LG_411_CLCARD"
 columns:
   - name: "ACTIVE"
@@ -18,10 +19,12 @@ columns:
   - name: "CITY"
     type: "VARCHAR"
     properties:
+      "description": "Şehir"
       "displayName": "CITY"
   - name: "CODE"
     type: "VARCHAR"
     properties:
+      "description": "Cari kodu"
       "displayName": "CODE"
   - name: "COUNTRY"
     type: "VARCHAR"
@@ -30,12 +33,14 @@ columns:
   - name: "DEFINITION_"
     type: "VARCHAR"
     properties:
+      "description": "Cari unvanı (müşteri/tedarikçi adı)"
       "displayName": "DEFINITION_"
   - name: "LOGICALREF"
     type: "INTEGER"
     not_null: true
     is_primary_key: true
     properties:
+      "description": "Birincil anahtar"
       "displayName": "LOGICALREF"
   - name: "PAYMENTREF"
     type: "INTEGER"
@@ -44,10 +49,12 @@ columns:
   - name: "SPECODE"
     type: "VARCHAR"
     properties:
+      "description": "Cari özel kodu"
       "displayName": "SPECODE"
   - name: "SPECODE2"
     type: "VARCHAR"
     properties:
+      "description": "Satış kanalı kodu (KITAPCI, E-TICARET, DAGITICI, ZINCIR, KURUM, MAGAZA, FUAR)"
       "displayName": "SPECODE2"
   - name: "TOWN"
     type: "VARCHAR"
@@ -1472,6 +1479,7 @@ columns:
   - name: "TAXNR"
     type: "VARCHAR"
     properties:
+      "description": "Vergi numarası"
       "displayName": "TAXNR"
   - name: "TAXOFFCODE"
     type: "VARCHAR"

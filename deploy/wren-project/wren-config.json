@@ -1,0 +1,10 @@
+{
+ "strict_mode": true,
+ "denied_functions": [
+  "openrowset",
+  "opendatasource",
+  "openquery",
+  "xp_cmdshell",
+  "sp_executesql"
+ ]
+}

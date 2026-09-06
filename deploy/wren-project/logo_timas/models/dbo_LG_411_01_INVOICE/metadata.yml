@@ -5,6 +5,7 @@ table_reference:
   table: "LG_411_01_INVOICE"
 primary_key: "LOGICALREF"
 properties:
+  "description": "Fatura başlığı (2026, firma 411). TRCODE: 1 mal alım, 2 perakende satış iadesi, 3 toptan satış iadesi, 4 alınan hizmet, 6 alım iadesi, 7 perakende satış, 8 toptan satış, 9 verilen hizmet. Tutar NETTOTAL (KDV dahil net), tarih DATE_, cari CLIENTREF → dbo_LG_411_CLCARD. Daima CANCELLED = 0."
   "displayName": "dbo.LG_411_01_INVOICE"
 columns:
   - name: "BRANCH"
@@ -14,14 +15,17 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
+      "description": "İptal bayrağı; daima CANCELLED = 0"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
     properties:
+      "description": "Cari kart referansı → dbo_LG_411_CLCARD.LOGICALREF"
       "displayName": "CLIENTREF"
   - name: "DATE_"
     type: "TIMESTAMP"
     properties:
+      "description": "Fatura tarihi (2026)"
       "displayName": "DATE_"
   - name: "DOCDATE"
     type: "TIMESTAMP"
@@ -34,20 +38,24 @@ columns:
   - name: "FICHENO"
     type: "VARCHAR"
     properties:
+      "description": "Fatura numarası"
       "displayName": "FICHENO"
   - name: "GROSSTOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Fatura brüt toplamı (iskonto öncesi)"
       "displayName": "GROSSTOTAL"
   - name: "LOGICALREF"
     type: "INTEGER"
     not_null: true
     is_primary_key: true
     properties:
+      "description": "Birincil anahtar"
       "displayName": "LOGICALREF"
   - name: "NETTOTAL"
     type: "FLOAT8"
     properties:
+      "description": "Fatura net toplamı (KDV dahil); ciro/satış/iade/alım tutarı bu kolondan"
       "displayName": "NETTOTAL"
   - name: "PAYDEFREF"
     type: "INTEGER"
@@ -60,22 +68,27 @@ columns:
   - name: "TOTALDISCOUNTS"
     type: "FLOAT8"
     properties:
+      "description": "Fatura toplam iskontosu"
       "displayName": "TOTALDISCOUNTS"
   - name: "TOTALVAT"
     type: "FLOAT8"
     properties:
+      "description": "Fatura toplam KDV"
       "displayName": "TOTALVAT"
   - name: "TRCODE"
     type: "SMALLINT"
     properties:
+      "description": "Fatura türü: 1 mal alım, 2 perakende satış iadesi, 3 toptan satış iadesi, 4 alınan hizmet, 6 alım iadesi, 7 perakende satış, 8 toptan satış, 9 verilen hizmet"
       "displayName": "TRCODE"
   - name: "TRCURR"
     type: "SMALLINT"
     properties:
+      "description": "Döviz türü (0 = TL)"
       "displayName": "TRCURR"
   - name: "TRNET"
     type: "FLOAT8"
     properties:
+      "description": "Döviz cinsinden net tutar"
       "displayName": "TRNET"
   - name: "ACCEPTEINVPUBLIC"
     type: "SMALLINT"
@@ -739,3 +752,33 @@ columns:
   - name: "dbo_LG_411_01_STLINE"
     type: "dbo_LG_411_01_STLINE"
     relationship: "Dbo.lg_411_01_stlineInvoicerefDbo.lg_411_01_invoiceLogicalref"
+  - name: "is_sale"
+    type: "BOOLEAN"
+    is_calculated: true
+    expression: "CASE WHEN \"TRCODE\" IN (7,8,9) THEN 1 ELSE 0 END"
+    properties:
+      "description": "Satış faturası mı (TRCODE 7,8,9)"
+  - name: "is_sales_return"
+    type: "BOOLEAN"
+    is_calculated: true
+    expression: "CASE WHEN \"TRCODE\" IN (2,3) THEN 1 ELSE 0 END"
+    properties:
+      "description": "Satış iadesi mi (TRCODE 2,3)"
+  - name: "is_purchase"
+    type: "BOOLEAN"
+    is_calculated: true
+    expression: "CASE WHEN \"TRCODE\" IN (1,4) THEN 1 ELSE 0 END"
+    properties:
+      "description": "Mal alım / alınan hizmet mi (TRCODE 1,4)"
+  - name: "net_signed_total"
+    type: "DOUBLE"
+    is_calculated: true
+    expression: "CASE WHEN \"TRCODE\" IN (7,8,9) THEN \"NETTOTAL\" WHEN \"TRCODE\" IN (2,3) THEN -\"NETTOTAL\" ELSE 0 END"
+    properties:
+      "description": "Net ciroya katkı: satış +NETTOTAL, satış iadesi −NETTOTAL, diğer 0"
+  - name: "invoice_month"
+    type: "DATE"
+    is_calculated: true
+    expression: "DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)"
+    properties:
+      "description": "Fatura ayı (ayın ilk günü)"
