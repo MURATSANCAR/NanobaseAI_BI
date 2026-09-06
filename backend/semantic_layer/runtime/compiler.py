@@ -535,7 +535,9 @@ class ExistingCompiler:
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             "## İSTENEN BİÇİM\n" + (
                 "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster; paydayı sorudan çıkar "
-                "(kırılım varsa genel toplam, yoksa aynı ölçünün filtresiz hali)." if q.shape == "RATIO" else "(serbest)"
+                "(kırılım varsa genel toplam, yoksa aynı ölçünün filtresiz hali)." if q.shape == "RATIO" else
+                "yokluk — ölçünün hiç gerçekleşmediği kayıtlar isteniyor: NOT EXISTS ya da LEFT JOIN … IS NULL "
+                "kullan; ölçünün gerçekleştiği kayıtları döndürme." if q.shape == "ABSENCE" else "(serbest)"
             ),
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
             "## Şema bağlamı\n" + self.schema_context(q, recalled, entities),

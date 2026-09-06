@@ -277,6 +277,20 @@ class SemanticResolver:
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 continue
+            if is_negative(tok):
+                root = verb_root(tok)
+                named = self._metric_keys_for_root(root, index) if root else []
+                if named:
+                    # "hiç satmayan ürünler": the measure is known, what is being asked for is records
+                    # with none of it. That is an anti-join, a shape this compiler cannot write but the
+                    # model can — and it is not the positive question, which is what must never happen.
+                    sq.shape = "ABSENCE"
+                    sq.explanation.append(
+                        f"'{tok}' olumsuz: '{named[0][0]}' ölçüsünün hiç gerçekleşmediği kayıtlar isteniyor"
+                    )
+                    if tok not in sq.ignored:
+                        sq.ignored.append(tok)
+                    continue
             if is_participle(tok) or is_negative(tok):
                 # A participle is grammar, but an attributive one narrows the subject ("bekleyen
                 # siparişler"): dropping it would answer a wider question than the one that was asked.
@@ -468,10 +482,7 @@ class SemanticResolver:
             root = verb_root(tok)
             if not root or is_negative(tok):
                 continue        # "satmayan" is the opposite of "satış": bridging it would invert the answer
-            matches = [
-                (key, senses) for key, senses in index.items()
-                if key.split()[0].startswith(root) and any(c.semantic_type == SemanticType.METRIC for c, _ in senses)
-            ]
+            matches = self._metric_keys_for_root(root, index)
             if not matches:
                 continue
             # Turkish forms a noun from a verb with -ış/-im/-ma ("sat" → "satış"): that nominalisation is
@@ -620,6 +631,14 @@ class SemanticResolver:
                                     explain={"why": f"'{tok} {nxt}' kırılım istiyor → sertifikalı '{key}' kolonu ({m.entity}.{m.column})", "role": "group_by"},
                                     span=(nxt_i, nxt_i + 1))
         return None
+
+    @staticmethod
+    def _metric_keys_for_root(root: str, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> list[tuple[str, list[tuple[Concept, list[Mapping]]]]]:
+        """Certified measures whose term begins with this verb root — how a verb reaches a noun catalog."""
+        return [
+            (key, senses) for key, senses in index.items()
+            if key.split()[0].startswith(root) and any(c.semantic_type == SemanticType.METRIC for c, _ in senses)
+        ]
 
     def _compose_metric(self, qf: Any, hits: list[ResolvedSlot], primary: Optional[str], consumed: set[int]) -> Optional[ResolvedSlot]:
         entity = primary or next((s_.mapping.entity for s_ in hits if s_.mapping), None)

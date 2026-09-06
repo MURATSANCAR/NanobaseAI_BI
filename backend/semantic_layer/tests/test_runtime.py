@@ -178,11 +178,19 @@ def test_ordinary_speech_never_becomes_a_catalog_gap(catalog, profiles):
 
 
 def test_negation_never_bridges_to_the_measure_it_negates(catalog, profiles):
-    """"satmayan" is the opposite of "satış": reading it as the sales measure would invert the answer."""
+    """"satmayan" is the opposite of "satış": reading it as the sales measure would invert the answer.
+
+    Whether the catalog knows the root or not, the one thing that must never happen is the positive
+    reading — and the deterministic path must not answer either way.
+    """
     r = SemanticResolver(catalog, TENANT, DS, profiles)
-    sq = r.resolve("Hiç satmayan ürünlerimiz var mı?", today=date(2026, 7, 20))
-    assert not any(s.semantic_type == SemanticType.METRIC for s in sq.slots)
-    assert "satmayan" in sq.unhandled and not sq.fully_resolved
+    c = DeterministicCompiler(profiles, {}, "tsql")
+    known = r.resolve("Hiç satmayan ürünlerimiz var mı?", today=date(2026, 7, 20))
+    assert not any(s.semantic_type == SemanticType.METRIC for s in known.slots)
+    assert c.compile(known, catalog) is None
+    # a negated verb the catalog has never seen stays a qualifier nothing covers
+    unknown = r.resolve("Hiç kiralamayan müşterilerimiz var mı?", today=date(2026, 7, 20))
+    assert "kiralamayan" in unknown.unhandled and not unknown.fully_resolved
 
 
 def test_qualifier_without_meaning_blocks_instead_of_widening(catalog, profiles):
@@ -378,3 +386,18 @@ def test_a_noun_that_merely_ends_like_a_participle_stays_business_vocabulary(cat
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("Meydan satış tutarı ne kadar?", today=date(2026, 7, 20))
     assert "meydan" in sq.unresolved and "meydan" not in sq.unhandled
+
+
+def test_negation_asks_for_absence_instead_of_the_opposite_answer(catalog, profiles):
+    """"hiç satmayan ürünler" names a measure the catalog knows and asks for records with none of it.
+    Bridging it to the measure would answer the opposite question; refusing outright throws away a
+    question the model can write. It becomes a shape: an anti-join, stated as such."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Hiç satmayan ürünlerimiz var mı?", today=date(2026, 7, 20))
+    assert sq.shape == "ABSENCE"
+    assert not any(s.semantic_type == SemanticType.METRIC for s in sq.slots), "never the positive reading"
+    c = DeterministicCompiler(profiles, {}, "tsql")
+    assert c.compile(sq, catalog) is None
+    from semantic_layer.runtime.compiler import ExistingCompiler
+    prompt = ExistingCompiler(FakeLlm([""]), profiles, {}).build_messages(sq, [])[0]["content"]
+    assert "NOT EXISTS" in prompt
