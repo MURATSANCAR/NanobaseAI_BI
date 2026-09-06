@@ -8,7 +8,30 @@
 const BASE = (import.meta.env.VITE_WREN_BASE as string | undefined) ?? '';
 
 export type SqlColumn = { name: string; type: string };
-export type SqlResult = { id: string; columns: SqlColumn[]; records: Record<string, unknown>[]; totalRows: number; threadId?: string };
+
+/** Köprünün sonuç setinden çıkardığı görselleştirme spec'i (BiWidget sözleşmesi).
+ *  Karar deterministik ve backend'de: backend/nanobase_api/chat_widgets.py — ana uygulamayla ortak.
+ *  `data` yalnız multi_card'da dolu gelir; diğer tiplerde satırlar `records`tedir. */
+export type WidgetSpec = {
+  id: string;
+  type: 'kpi' | 'multi_card' | 'line' | 'bar' | 'pie' | 'table' | (string & {});
+  title: string;
+  x_key?: string;
+  y_key?: string;
+  label_key?: string;
+  value_key?: string;
+  format?: 'number' | 'percent' | 'currency';
+  data?: { columns: string[]; rows: Record<string, unknown>[]; row_count?: number };
+};
+
+export type SqlResult = {
+  id: string;
+  columns: SqlColumn[];
+  records: Record<string, unknown>[];
+  totalRows: number;
+  threadId?: string;
+  widget?: WidgetSpec;
+};
 
 export class WrenError extends Error {
   constructor(message: string, public code?: string, public status?: number) {
@@ -36,9 +59,10 @@ async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promis
   }
 }
 
-/** Deterministik SQL çalıştırır (model adlarıyla: dbo_LG_411_01_INVOICE ...). */
-export function runSql(sql: string, limit = 500): Promise<SqlResult> {
-  return post<SqlResult>('/api/v1/run_sql', { sql, limit });
+/** Deterministik SQL çalıştırır (model adlarıyla: dbo_LG_411_01_INVOICE ...).
+ *  `question` verilirse köprü sonuç setine göre bir `widget` spec'i de döndürür (grafik başlığı = soru). */
+export function runSql(sql: string, limit = 500, question?: string): Promise<SqlResult> {
+  return post<SqlResult>('/api/v1/run_sql', { sql, limit, ...(question ? { question } : {}) });
 }
 
 export type AskResult = {

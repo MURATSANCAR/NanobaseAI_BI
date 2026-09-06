@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import clsx from 'clsx';
 import { ask, runSql, type SqlResult, WrenError } from '../lib/wren';
+import { ResultChart } from './ResultChart';
 import { Thinking } from './Thinking';
 
 type Msg =
@@ -40,7 +41,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
       const a = await ask(q, threadId);
       if (a.threadId) setThreadId(a.threadId);
       let result: SqlResult | undefined;
-      if (a.sql) result = await runSql(a.sql, 50);
+      if (a.sql) result = await runSql(a.sql, 50, q);
       const text =
         a.summary?.trim() ||
         (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
@@ -140,8 +141,15 @@ function UserBubble({ m }: { m: Extract<Msg, { role: 'user' }> }) {
 
 function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wide?: boolean }) {
   const [showSql, setShowSql] = useState(false);
+  const [showTable, setShowTable] = useState(false);
   const cols = m.result?.columns.slice(0, wide ? 8 : 5) ?? [];
   const rows = m.result?.records.slice(0, wide ? 20 : 8) ?? [];
+  const widget = m.result?.widget;
+  // Grafik çizilebiliyorsa tablo katlanır; çizilemiyorsa (table tipi ya da uygunsuz veri) eskisi gibi açık gelir.
+  const chart =
+    widget && widget.type !== 'table' && m.result ? (
+      <ResultChart widget={widget} records={m.result.records} wide={wide} />
+    ) : null;
   return (
     <div className="rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">
@@ -150,23 +158,14 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
       </div>
       <p className={clsx('mt-1.5 text-[13px] leading-snug', m.error && 'text-brand-accent')}>{m.text}</p>
       {m.error && <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-page p-2 text-[10px] text-ink-muted">{m.error}</pre>}
-      {rows.length > 0 && (
-        <div className="mt-2 overflow-x-auto scroll-thin rounded-lg border border-line">
-          <table className="w-full text-[11px]">
-            <thead className="bg-page">
-              <tr>{cols.map((c) => <th key={c.name} className="px-2 py-1 text-left font-semibold">{c.name}</th>)}</tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className="border-t border-line/60">
-                  {cols.map((c) => <td key={c.name} className="whitespace-nowrap px-2 py-1">{fmtCell(r[c.name])}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {m.result && m.result.totalRows > rows.length && (
-            <div className="bg-page px-2 py-1 text-[10px] text-ink-muted">İlk {rows.length} / {m.result.totalRows} satır</div>
-          )}
+      {chart}
+      {rows.length > 0 && !chart && <ResultTable cols={cols} rows={rows} totalRows={m.result?.totalRows ?? rows.length} />}
+      {rows.length > 0 && chart && (
+        <div className="mt-2">
+          <button onClick={() => setShowTable((v) => !v)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
+            {showTable ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Tablo ({m.result?.totalRows ?? rows.length} satır)
+          </button>
+          {showTable && <ResultTable cols={cols} rows={rows} totalRows={m.result?.totalRows ?? rows.length} />}
         </div>
       )}
       {m.sql && (
@@ -176,6 +175,36 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
           </button>
           {showSql && <pre className="mt-1 max-h-48 overflow-auto scroll-thin whitespace-pre-wrap break-words rounded-lg bg-ink p-2 text-[10px] text-white/90">{m.sql}</pre>}
         </div>
+      )}
+    </div>
+  );
+}
+
+function ResultTable({
+  cols,
+  rows,
+  totalRows,
+}: {
+  cols: { name: string; type: string }[];
+  rows: Record<string, unknown>[];
+  totalRows: number;
+}) {
+  return (
+    <div className="mt-2 overflow-x-auto scroll-thin rounded-lg border border-line">
+      <table className="w-full text-[11px]">
+        <thead className="bg-page">
+          <tr>{cols.map((c) => <th key={c.name} className="px-2 py-1 text-left font-semibold">{c.name}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t border-line/60">
+              {cols.map((c) => <td key={c.name} className="whitespace-nowrap px-2 py-1">{fmtCell(r[c.name])}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {totalRows > rows.length && (
+        <div className="bg-page px-2 py-1 text-[10px] text-ink-muted">İlk {rows.length} / {totalRows} satır</div>
       )}
     </div>
   );
