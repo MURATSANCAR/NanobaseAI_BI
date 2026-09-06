@@ -1,0 +1,12 @@
+[
+ {"id":"cx-01","q":"2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro (satış eksi iade) ve her kanalın o ay içindeki payını yüzde olarak ver; ay ve kanal sırasıyla listele."},
+ {"id":"cx-02","q":"Yayınevi bazında 2026 YTD net ciro (satış satırları eksi iade satırları), satılan adet, iade adedi, adet bazlı iade oranı ve maliyetli satırlardan brüt kâr marjı; yalnız net cirosu 20 milyon TL üzerindeki yayınevleri, marja göre azalan sırada."},
+ {"id":"cx-03","q":"En çok iade alan 10 müşteri: iade tutarı, aynı müşterinin 2026 satış tutarı, iade/satış oranı ve cari kartındaki kanal kodu; yalnız satışı 1 milyon TL üzerinde olanlar, iade tutarına göre azalan."},
+ {"id":"cx-04","q":"2026 Ocak–Ağustos için ay bazında iskonto oranı (iskonto satırları toplamı / brüt malzeme satırları toplamı) ve satış faturası başına ortalama fatura tutarı (NETTOTAL ortalaması, TRCODE 7,8,9)."},
+ {"id":"cx-05","q":"Temmuz 2026'da en çok satan 15 kitap: stok kodu, kitap adı, yayınevi, satılan adet ve brüt satır tutarı; yalnız toptan satış faturaları (TRCODE 8), adede göre azalan."},
+ {"id":"cx-06","q":"2026'da mal alım (TRCODE 1) ve alınan hizmet (TRCODE 4) faturalarında tedarikçi (cari) bazında toplam tutar, fatura sayısı, ilk ve son fatura tarihi; toplam tutara göre ilk 10 tedarikçi, cari unvanıyla."},
+ {"id":"cx-07","q":"Müşteri yoğunlaşması: 2026 net ciroya (satış eksi iade) göre ilk 10 müşterinin toplam net ciro içindeki payı yüzde olarak; her müşteri için net ciro, kümülatif pay ve kanal kodu."},
+ {"id":"cx-08","q":"Kanal bazında brüt kâr marjı: satış hareket satırlarında (TRCODE 7,8, LINETYPE 0, maliyeti işlenmiş satırlar) faturanın cari kartındaki kanal koduna göre maliyetli ciro, maliyet ve marj yüzdesi; maliyetli cirosu 10 milyon TL üzerindeki kanallar, marja göre azalan."},
+ {"id":"cx-09","q":"Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır: her ay için fatura sayısı, NETTOTAL toplamı ve ortalama fatura tutarı; ayrıca perakendenin o ayın toplam satışındaki payı."},
+ {"id":"cx-10","q":"Sipariş fişlerinde (ORFICHE) 2026 ay bazında açılan sipariş sayısı ve toplam tutar; hangi kolonların tutar ve tarih olduğunu modelden bul, emin değilsen NO_SQL yaz."}
+]

@@ -361,13 +361,20 @@ def ask(body: AskIn) -> dict:
         raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
     thread_id = body.threadId or uuid.uuid4().hex
     thread = _threads.setdefault(thread_id, [])
+    timings: dict[str, int] = {}
+    repairs = 0
     try:
+        t = time.perf_counter()
         messages = _build_messages(q, thread)
+        timings["context_ms"] = int((time.perf_counter() - t) * 1000)
+        t = time.perf_counter()
         text = _llm(messages)
+        timings["llm_ms"] = int((time.perf_counter() - t) * 1000)
         sql = _extract_sql(text)
         if not sql:
             reason = text.strip().replace("NO_SQL:", "").strip()[:500]
-            return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id}
+            log.info("ask NON_SQL q=%r reason=%r", q[:80], reason[:200])
+            return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings}
         # validate; one repair round with the engine's structured error
         error: str | None = None
         for attempt in range(2):
@@ -378,17 +385,25 @@ def ask(body: AskIn) -> dict:
                 break
             except Exception as e:  # noqa: BLE001
                 error = str(e)[:1500]
+                log.warning("ask dry_run failed (attempt %d) q=%r err=%s", attempt + 1, q[:80], error[:300])
                 if attempt == 1:
                     break
+                repairs += 1
                 fix = _llm(messages + [{"role": "assistant", "content": f"```sql\n{sql}\n```"}, {"role": "user", "content": f"Bu sorgu motor doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."}])
                 sql2 = _extract_sql(fix)
                 if not sql2:
                     break
                 sql = sql2
         if error:
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Üretilen SQL doğrulanamadı: {error}", "threadId": thread_id}
+            log.warning("ask SQL_INVALID q=%r repairs=%d err=%s", q[:80], repairs, error[:300])
+            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Üretilen SQL doğrulanamadı: {error}", "threadId": thread_id, "repairs": repairs, "timings": timings}
+        t = time.perf_counter()
         result = run_sql(sql, int(body.sampleSize or 50))
+        timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
+        t = time.perf_counter()
         summary = _summarize(q, sql, result)
+        timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
+        log.info("ask ok q=%r rows=%d repairs=%d timings=%s", q[:80], result["totalRows"], repairs, timings)
         thread.append({"role": "user", "content": q})
         thread.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         return {
@@ -399,6 +414,8 @@ def ask(body: AskIn) -> dict:
             "threadId": thread_id,
             "rowCount": result["totalRows"],
             "latency_ms": int((time.perf_counter() - t0) * 1000),
+            "repairs": repairs,
+            "timings": timings,
         }
     except HTTPException:
         raise
