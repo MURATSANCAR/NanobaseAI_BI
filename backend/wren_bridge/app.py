@@ -148,7 +148,34 @@ _sql_cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
 _cache_lock = threading.Lock()
 
 
+_redis: Any = None
+_REDIS_URL = os.environ.get("REDIS_URL", "")
+
+
+def _redis_client():
+    """Paylaşımlı önbellek: birden çok uvicorn işçisi aynı sonucu görsün. Redis yoksa süreç-içi önbelleğe düşer."""
+    global _redis
+    if _redis is None and _REDIS_URL:
+        try:
+            import redis  # noqa: PLC0415
+
+            _redis = redis.Redis.from_url(_REDIS_URL, socket_timeout=0.5, socket_connect_timeout=0.5)
+            _redis.ping()
+            log.info("cache backend: redis %s", _REDIS_URL.split("@")[-1])
+        except Exception as e:  # noqa: BLE001
+            log.warning("redis unavailable (%s) — in-process cache", e)
+            _redis = False
+    return _redis or None
+
+
 def _cache_get(key: str) -> dict | None:
+    r = _redis_client()
+    if r is not None:
+        try:
+            raw = r.get("wren:sql:" + key)
+            return json.loads(raw) if raw else None
+        except Exception:  # noqa: BLE001
+            pass
     with _cache_lock:
         hit = _sql_cache.get(key)
         if not hit:
@@ -162,6 +189,13 @@ def _cache_get(key: str) -> dict | None:
 
 
 def _cache_put(key: str, val: dict) -> None:
+    r = _redis_client()
+    if r is not None:
+        try:
+            r.setex("wren:sql:" + key, _CACHE_TTL, json.dumps(val, default=str))
+            return
+        except Exception:  # noqa: BLE001
+            pass
     with _cache_lock:
         _sql_cache[key] = (time.time(), val)
         while len(_sql_cache) > _CACHE_MAX:
@@ -211,7 +245,7 @@ class AskIn(BaseModel):
 def health() -> JSONResponse:
     try:
         m = manifest()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-wren-bridge", "project": str(PROJECT), "dataSource": _data_source, "models": len(m.get("models", [])), "cache": {"ttl_s": _CACHE_TTL, "entries": len(_sql_cache)}, "pid": os.getpid()})
+        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-wren-bridge", "project": str(PROJECT), "dataSource": _data_source, "models": len(m.get("models", [])), "cache": {"ttl_s": _CACHE_TTL, "backend": "redis" if _redis_client() else "process", "entries": len(_sql_cache)}, "pid": os.getpid()})
     except Exception as e:  # noqa: BLE001
         return JSONResponse({"status": "error", "error": f"{type(e).__name__}: {e}"}, status_code=503)
 
