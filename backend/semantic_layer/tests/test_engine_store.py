@@ -132,3 +132,29 @@ def test_catalog_cache_follows_a_change_that_never_bumped_the_version(store, pro
     assert "kargo" in after and "kargo" not in before
     fp = store.catalog_fingerprint(TENANT, DS)
     assert store.catalog_fingerprint(TENANT, DS) == fp        # stable while nothing changes
+
+
+def test_documented_value_lands_on_the_table_that_holds_it(store, profiles):
+    """A column name does not name a table: in a real schema many tables share one code column.
+    Attaching a documented meaning to whichever one came first splits the evidence for a term across
+    unrelated tables, so none of them reaches the gate. The data decides which tables it can be about."""
+    from semantic_layer.candidates.doc_miner import DocFact
+    from semantic_layer.candidates.generator import CandidateGenerator
+    from semantic_layer.conventions import Conventions
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+
+    # an unrelated table that also has a TRCODE, profiled shallowly so its inventory is unknown
+    decoy = SchemaProfile(datasource_id=DS, table_name="LG_411_01_APPROVAL", table_pattern="LG_{n0}_{n1}_APPROVAL",
+                          entity="APPROVAL", schema_name="main",
+                          columns=[ColumnProfile(name="LOGICALREF", data_type="int", is_primary_key=True),
+                                   ColumnProfile(name="TRCODE", data_type="smallint")],
+                          primary_key=["LOGICALREF"], context={"n0": "411", "n1": "01"})
+    all_profiles = list(profiles) + [decoy]
+    for p in all_profiles:
+        store.upsert_profile(p)
+    gen = CandidateGenerator(store, TENANT, DS, all_profiles, Conventions.from_profiles(all_profiles))
+    fact = DocFact("value", "toptan", "doc:rules.md", None, "TRCODE", ("8",), "8 = toptan")
+    chosen = gen._entity_for(fact)
+    assert chosen != "APPROVAL", "a table whose inventory cannot hold the value is not what the doc means"
+    assert chosen in {"INVOICE", "STLINE"} and "8" in {v for v, _ in store.list_profiles(DS) and next(
+        p for p in all_profiles if p.entity == chosen).column("TRCODE").top_values}

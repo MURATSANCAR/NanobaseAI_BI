@@ -41,12 +41,31 @@ class CandidateGenerator:
 
     # ------------------------------------------------------------------ doc facts → concepts/evidence
     def _entity_for(self, fact: DocFact) -> Optional[str]:
+        """Which table a documented fact is about.
+
+        A column name alone does not name a table: in a real schema dozens of tables share one code
+        column, and
+        attaching a documented meaning to whichever one came first silently splits the evidence for a
+        term across unrelated tables, so none of them reaches the gate. When the fact carries values,
+        the tables whose profiled inventory actually contains those values are preferred — the data
+        decides. Where nothing can be confirmed (a table profiled shallowly has no inventory), the
+        existing convention applies.
+        """
         if fact.entity and fact.entity in self.by_entity:
             return fact.entity
         if fact.column:
             owners = [p.entity for p in self.profiles if p.column(fact.column)]
             if len(owners) == 1:
                 return owners[0]
+            if fact.values:
+                wanted = {str(v) for v in fact.values}
+                observed = [e for e in owners
+                            if (col := self.by_entity[e].column(fact.column)) is not None
+                            and col.top_values and wanted <= {str(v) for v, _ in col.top_values}]
+                if observed:
+                    owners = observed
+                    if len(owners) == 1:
+                        return owners[0]
             if owners:
                 return self.conventions.preferred_entity(owners)
         return None
