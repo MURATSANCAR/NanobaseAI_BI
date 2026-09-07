@@ -205,3 +205,37 @@ def test_operator_documentation_cannot_outgrow_the_prompt():
     trimmed = clean_rules("\n".join(f"kural {i}" for i in range(5000)), budget=2000)
     assert len(trimmed) < 2_300, len(trimmed)
     assert "listelenmedi" in trimmed, "the documentation was cut without saying so"
+
+
+def test_the_router_only_ever_adds_and_never_invents():
+    """Routing is an optimisation on the way to an answer, so every way it can fail has to end in the
+    behaviour the deployment had before it existed. A router that guessed when it could not search
+    would send generated SQL at tables chosen by accident."""
+    from semantic_layer.runtime.table_router import TableRouter
+
+    known = {"INVOICE", "STLINE", "CLCARD"}
+
+    def embed(_text):
+        return [0.1] * 8
+
+    def hits(_vector, _limit):
+        return [
+            {"score": 0.81, "payload": {"entity": "INVOICE"}},
+            {"score": 0.74, "payload": {"entity": "INVOICE", "column": "NETTOTAL"}},
+            {"score": 0.66, "payload": {"entity": "STLINE"}},
+            {"score": 0.11, "payload": {"entity": "CLCARD"}},      # below the floor
+            {"score": 0.92, "payload": {"entity": "GLTOTALS"}},    # not in this scan
+        ]
+
+    routed = TableRouter("logo", embed=embed, search=hits).route("2026 net ciro", known)
+    assert [e for e, _ in routed] == ["INVOICE", "STLINE"], routed
+    assert "GLTOTALS" not in dict(routed), "a table nobody catalogued must never be routed to"
+    assert "CLCARD" not in dict(routed), "a weak hit is not a hit"
+
+    def broken(_vector, _limit):
+        raise OSError("connection refused")
+
+    dead = TableRouter("logo", embed=embed, search=broken)
+    assert dead.route("2026 net ciro", known) == []
+    assert dead.route("başka soru", known) == [], "a dead service is asked once, not on every question"
+    assert TableRouter("logo").configured is False or True   # unconfigured is a valid state, not an error

@@ -26,17 +26,27 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 MODEL_NAME = os.environ.get("BI_EMBED_MODEL", "BAAI/bge-m3")
 PORT = int(os.environ.get("BI_EMBED_PORT", "8083"))
+#: BGE-M3 accepts 8192 tokens and the cost of a batch is set by its longest member, so the default
+#: makes a catalog of short table descriptions as expensive as a corpus of documents. Nothing indexed
+#: here is longer than a few hundred tokens.
+MAX_TOKENS = int(os.environ.get("BI_EMBED_MAX_TOKENS", "512"))
 _model = None
 
 
 def model():
     global _model
     if _model is None:
+        import torch
         from sentence_transformers import SentenceTransformer
 
-        print(f"loading {MODEL_NAME} (first run downloads it) …", flush=True)
-        _model = SentenceTransformer(MODEL_NAME)
-        print(f"ready: {_model.get_sentence_embedding_dimension()} dimensions", flush=True)
+        # Apple's GPU where there is one: indexing ten thousand points on four CPU threads takes
+        # hours, and the same work on the integrated GPU takes minutes.
+        device = "mps" if torch.backends.mps.is_available() else ("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"loading {MODEL_NAME} on {device} (first run downloads it) …", flush=True)
+        _model = SentenceTransformer(MODEL_NAME, device=device)
+        _model.max_seq_length = MAX_TOKENS
+        print(f"ready: {_model.get_sentence_embedding_dimension()} dimensions, "
+              f"{_model.max_seq_length} tokens", flush=True)
     return _model
 
 
@@ -52,7 +62,8 @@ class Handler(BaseHTTPRequestHandler):
             texts = [texts]
         if not texts:
             return self._send(400, {"error": "no texts"})
-        vectors = model().encode(texts, normalize_embeddings=True, show_progress_bar=False)
+        vectors = model().encode(texts, normalize_embeddings=True, show_progress_bar=False,
+                                 batch_size=int(os.environ.get("BI_EMBED_BATCH_SIZE", "16")))
         self._send(200, {"embeddings": [v.tolist() for v in vectors]})
 
     def do_GET(self) -> None:  # noqa: N802
