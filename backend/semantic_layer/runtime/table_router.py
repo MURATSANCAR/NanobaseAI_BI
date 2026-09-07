@@ -48,6 +48,34 @@ def _http_json(method: str, url: str, body: Optional[dict] = None,
         return json.loads(raw) if raw else {}
 
 
+def embed_request(url: str, texts: list[str], api_key: str = "", timeout: float = 120.0) -> list[list[float]]:
+    """Embed a batch, whichever embedding service this deployment runs.
+
+    Two are in use and they do not agree. The GPU host serves llama.cpp's OpenAI-compatible endpoint,
+    which requires `input` and answers anything else with `"input" or "content" must be provided`. The
+    application host runs a wrapper of its own that takes `texts`. Both were probed, neither is going
+    away, and a caller that picks one silently produces an empty index on the other — which is what an
+    existing collection with zero points in it turned out to be.
+
+    So: the standard field first, the wrapper's field when the service rejects it.
+    """
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    last: Exception
+    for field in ("input", "texts"):
+        try:
+            res = _http_json("POST", url, {field: texts}, headers=headers, timeout=timeout)
+        except (urllib.error.HTTPError, RuntimeError) as e:
+            last = e
+            continue
+        vectors = res.get("embeddings") or res.get("data") or []
+        if vectors and isinstance(vectors[0], dict):
+            vectors = [v["embedding"] for v in sorted(vectors, key=lambda x: x.get("index", 0))]
+        if len(vectors) == len(texts):
+            return [list(v) for v in vectors]
+        last = RuntimeError(f"embedding service returned {len(vectors)} vectors for {len(texts)} texts")
+    raise RuntimeError(f"embedding service {url} accepted neither 'input' nor 'texts': {last}")
+
+
 class TableRouter:
     """Question → the entities most likely to answer it, by vector search over the catalog.
 
@@ -80,15 +108,7 @@ class TableRouter:
     def embed(self, text: str) -> list[float]:
         if self._embed:
             return self._embed(text)
-        res = _http_json("POST", self.embed_url, {"texts": [text]},
-                         headers={"Authorization": f"Bearer {self.api_key}"} if self.api_key else None,
-                         timeout=self.timeout)
-        vectors = res.get("embeddings") or res.get("data") or []
-        if vectors and isinstance(vectors[0], dict):
-            vectors = [v["embedding"] for v in vectors]
-        if not vectors:
-            raise RuntimeError(f"embedding service returned nothing: {list(res)}")
-        return list(vectors[0])
+        return embed_request(self.embed_url, [text], self.api_key, self.timeout)[0]
 
     def search(self, vector: list[float], limit: int) -> list[dict]:
         if self._search:

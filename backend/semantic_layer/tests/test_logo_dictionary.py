@@ -239,3 +239,29 @@ def test_the_router_only_ever_adds_and_never_invents():
     assert dead.route("2026 net ciro", known) == []
     assert dead.route("başka soru", known) == [], "a dead service is asked once, not on every question"
     assert TableRouter("logo").configured is False or True   # unconfigured is a valid state, not an error
+
+
+def test_either_embedding_service_is_spoken_to_in_its_own_dialect(monkeypatch):
+    """Two embedding services are deployed and they disagree about the request field: llama.cpp's
+    OpenAI endpoint requires `input`, the application host's own wrapper takes `texts`. A caller that
+    knows only one produces an empty index against the other — silently, because an index nobody
+    reads back looks exactly like an index that worked."""
+    from semantic_layer.runtime import table_router
+
+    seen: list[str] = []
+
+    def fake_http(method, url, body=None, headers=None, timeout=0):
+        field = next(iter(body))
+        seen.append(field)
+        if field == "input" and "wrapper" in url:
+            raise RuntimeError('400: "input" or "content" must be provided')
+        return {"data": [{"index": 0, "embedding": [0.5, 0.5]}]}
+
+    monkeypatch.setattr(table_router, "_http_json", fake_http)
+
+    assert table_router.embed_request("http://llama/v1/embeddings", ["soru"]) == [[0.5, 0.5]]
+    assert seen == ["input"], "the standard field is tried first"
+
+    seen.clear()
+    assert table_router.embed_request("http://wrapper/v1/embeddings", ["soru"]) == [[0.5, 0.5]]
+    assert seen == ["input", "texts"], "a rejection has to be retried in the other dialect"

@@ -62,17 +62,11 @@ def _http_json(method: str, url: str, body: Optional[dict] = None,
 
 
 def embed(texts: list[str], api_key: str) -> list[list[float]]:
+    from semantic_layer.runtime.table_router import embed_request
+
     out: list[list[float]] = []
     for i in range(0, len(texts), BATCH):
-        chunk = texts[i:i + BATCH]
-        res = _http_json("POST", EMBED_URL, {"texts": chunk},
-                         headers={"Authorization": f"Bearer {api_key}"} if api_key else None)
-        vectors = res.get("embeddings") or res.get("data") or []
-        if vectors and isinstance(vectors[0], dict):
-            vectors = [v["embedding"] for v in sorted(vectors, key=lambda x: x.get("index", 0))]
-        if len(vectors) != len(chunk):
-            raise RuntimeError(f"embedding service returned {len(vectors)} of {len(chunk)}")
-        out.extend(vectors)
+        out.extend(embed_request(EMBED_URL, texts[i:i + BATCH], api_key))
         print(f"  gömüldü {min(i + BATCH, len(texts))}/{len(texts)}", end="\r", flush=True)
     print()
     return out
