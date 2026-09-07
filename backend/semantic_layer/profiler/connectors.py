@@ -329,6 +329,41 @@ class MSSQLConnector(_DbApiBase):
         _, rows = self._rows(sql)
         return [(str(_norm(r[0])), int(r[1])) for r in rows]
 
+
+    #: Types a batched inventory reads exactly as the one-column inventory does. Both paths end in
+    #: str(_norm(value)); for these the server-side CAST to nvarchar and Python's str() agree. They
+    #: do not for bit ("1" vs "True"), decimal ("1.50" vs "1.5") or dates, so those stay per-column.
+    BATCHABLE_TYPES = ("int", "bigint", "smallint", "tinyint", "char", "nchar", "varchar", "nvarchar")
+
+    def batchable(self, data_type: str) -> bool:
+        dt = (data_type or "").lower()
+        return any(dt == t or dt.startswith(t + "(") for t in self.BATCHABLE_TYPES)
+
+    def top_values_batch(self, schema: str, table: str, columns: list[str], limit: int) -> dict[str, list[tuple[str, int]]]:
+        """The value inventory of several columns from one read of the table.
+
+        One GROUP BY per column is one full scan per column: a 336-column fact table of twelve
+        million rows was read three hundred and thirty-six times to learn the same thing GROUPING
+        SETS learns in one pass. The per-column TOP is pushed into the query with ROW_NUMBER so what
+        comes back is the inventory, not the whole table's worth of groups. Same values, same
+        counts, same order as `top_values` — only the number of times the table is read changes.
+        """
+        if not columns:
+            return {}
+        lit = lambda name: "'" + name.replace("'", "''") + "'"  # noqa: E731
+        sets = ", ".join(f"({self.q(c)})" for c in columns)
+        which = " ".join(f"WHEN GROUPING({self.q(c)}) = 0 THEN {lit(c)}" for c in columns)
+        value = " ".join(f"WHEN GROUPING({self.q(c)}) = 0 THEN CAST({self.q(c)} AS nvarchar(400))" for c in columns)
+        sql = (f"WITH g AS (SELECT CASE {which} END AS c, CASE {value} END AS v, COUNT_BIG(*) AS n "
+               f"FROM {self.q(schema)}.{self.q(table)} GROUP BY GROUPING SETS ({sets})), "
+               f"r AS (SELECT c, v, n, ROW_NUMBER() OVER (PARTITION BY c ORDER BY n DESC) AS rn FROM g) "
+               f"SELECT c, v, n FROM r WHERE rn <= {int(limit)} ORDER BY c, n DESC{self.probe_hint}")
+        _, rows = self._rows(sql)
+        out: dict[str, list[tuple[str, int]]] = {c: [] for c in columns}
+        for c, v, n in rows:
+            out.setdefault(str(c), []).append((str(_norm(v)), int(n)))
+        return out
+
     def row_count(self, schema: str, table: str) -> Optional[int]:
         try:
             _, rows = self._rows(

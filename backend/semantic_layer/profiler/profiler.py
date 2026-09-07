@@ -59,6 +59,12 @@ class Profiler:
         if max_probes_per_table is None:
             max_probes_per_table = int(os.environ.get("SEMANTIC_MAX_PROBES", "40"))
         self.max_probes_per_table = max_probes_per_table
+        # How many columns one read of a table inventories at once, where the connector can. Off
+        # until it is measured to read less: the first batched form (GROUPING SETS) ran faster on
+        # the wall clock and read *more* pages — the server spools the table and walks the spool
+        # once per set — so the clock was the scan's own noise, not a gain. Turn on only with a
+        # connector whose batch is measured, in isolation, to read fewer pages than N single reads.
+        self.probe_batch = int(os.environ.get("SEMANTIC_PROBE_BATCH", "0") or 0)
         self.deep_skipped: list[str] = []
         self.truncated: list[str] = []
 
@@ -75,6 +81,47 @@ class Profiler:
         for row in rows:
             for k, v in row.items():
                 out.setdefault(str(k).upper(), []).append(v)
+        return out
+
+    def _inventories(self, schema: str, table: str, columns: list[ColumnProfile]) -> dict[str, list[tuple[str, int]]]:
+        """Value inventories for these columns, keyed by column name; absent where the read failed.
+
+        A connector that can read several columns in one pass is asked for them in batches of
+        SEMANTIC_PROBE_BATCH (0 turns batching off). Columns whose type the batch would not read
+        identically go one at a time, and a batch that fails falls back to one at a time for its
+        own columns — so a failure costs time, never coverage.
+        """
+        limit = self.enum_max_distinct + 1
+        out: dict[str, list[tuple[str, int]]] = {}
+
+        def one(cp: ColumnProfile) -> None:
+            try:
+                out[cp.name] = self.c.top_values(schema, table, cp.name, limit)
+            except Exception as e:  # noqa: BLE001
+                log.debug("top_values failed %s.%s: %s", table, cp.name, e)
+
+        can_batch = self.probe_batch > 0 and hasattr(self.c, "top_values_batch") and hasattr(self.c, "batchable")
+        batched: list[ColumnProfile] = []
+        for cp in columns:
+            if can_batch and self.c.batchable(cp.data_type):
+                batched.append(cp)
+            else:
+                one(cp)
+        for start in range(0, len(batched), self.probe_batch or 1):
+            chunk = batched[start:start + self.probe_batch]
+            try:
+                got = self.c.top_values_batch(schema, table, [cp.name for cp in chunk], limit)
+            except Exception as e:  # noqa: BLE001
+                log.info("batched inventory failed for %s (%d columns), reading them one at a time: %s",
+                         table, len(chunk), str(e)[:200])
+                for cp in chunk:
+                    one(cp)
+                continue
+            for cp in chunk:
+                if cp.name in got:
+                    out[cp.name] = got[cp.name]
+                else:
+                    one(cp)
         return out
 
     def _time_window(self, schema: str, table: str, columns: list[ColumnProfile]) -> Optional[tuple[str, str]]:
@@ -261,6 +308,7 @@ class Profiler:
             rels: list[dict[str, str]] = []
             # 0 means every column of the table is probed, not the first forty.
             probes_left = self.max_probes_per_table if self.max_probes_per_table else 1 << 30
+            pending: list[tuple[ColumnProfile, dict]] = []
             for col in self.c.columns(sch, table):
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")),
                                    description=col.get("description") or described.get((table, col["name"])))
@@ -280,24 +328,30 @@ class Profiler:
                     rels.append({"column": cp.name, "ref_entity": cp.ref_entity, "ref_column": cp.ref_column or ""})
                 if is_deep and probes_left > 0 and not cp.sensitive and _enum_candidate(col, is_key=cp.is_primary_key, is_ref=bool(cp.ref_entity), sample=sample.get(cp.name.upper())):
                     probes_left -= 1
-                    try:
-                        hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
-                        top = self.c.top_values(sch, table, col["name"], self.enum_max_distinct + 1)
-                        # A column named innocuously can still hold personal data — check the sample too,
-                        # and drop it before anything is stored.
-                        reason = sensitivity.values_are_sensitive([v for v, _ in top])
-                        if reason:
-                            cp.sensitive, cp.sensitivity_reason, top = True, reason, []
-                        if top and len(top) <= self.enum_max_distinct:
-                            cp.top_values = top[: self.enum_max_distinct]
-                            cp.distinct_count = hint if hint is not None else len(top)
-                        elif top:
-                            cp.top_values = top[: self.top_n]
-                            cp.distinct_count = hint if hint is not None else len(top)
-                    except Exception as e:  # noqa: BLE001
-                        log.debug("top_values failed %s.%s: %s", table, col["name"], e)
-                _mark_sentinels(cp, [str(v) for v in sample.get(cp.name.upper(), []) if v is not None])
+                    pending.append((cp, col))
                 cols.append(cp)
+            # The inventories are read together, as few times over the table as the connector
+            # allows, and filed afterwards. Reading them inside the loop above, one query per column,
+            # is how a wide fact table came to be scanned once per column.
+            inventories = self._inventories(sch, table, [cp for cp, _ in pending]) if pending else {}
+            for cp, col in pending:
+                top = inventories.get(cp.name)
+                if top is None:
+                    continue
+                hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
+                # A column named innocuously can still hold personal data — check the sample too,
+                # and drop it before anything is stored.
+                reason = sensitivity.values_are_sensitive([v for v, _ in top])
+                if reason:
+                    cp.sensitive, cp.sensitivity_reason, top = True, reason, []
+                if top and len(top) <= self.enum_max_distinct:
+                    cp.top_values = top[: self.enum_max_distinct]
+                    cp.distinct_count = hint if hint is not None else len(top)
+                elif top:
+                    cp.top_values = top[: self.top_n]
+                    cp.distinct_count = hint if hint is not None else len(top)
+            for cp in cols:
+                _mark_sentinels(cp, [str(v) for v in sample.get(cp.name.upper(), []) if v is not None])
             desc = (self.c.table_description(table) if hasattr(self.c, "table_description") else None) or described.get((table, None))
             window = self._time_window(sch, table, cols) if is_deep else None
             if is_deep:
