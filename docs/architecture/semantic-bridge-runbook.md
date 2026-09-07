@@ -1,6 +1,6 @@
 # Semantic Bridge — kurulum, doğrulama, geri dönüş runbook'u
 
-Hedef: Timaş kokpitinin NL→SQL hattını WrenAI köprüsünden (:8794) Semantic Layer köprüsüne (:8795) taşımak.
+Hedef: Timaş kokpitinin NL→SQL hattını Semantic Layer köprüsü (:8795) üzerinden işletmek.
 Kural: **her adım geri alınabilir**, kesme (nginx anahtarı) en sona ve ayrı komuta bırakılır.
 
 ## 0. Erişim ve ön koşullar

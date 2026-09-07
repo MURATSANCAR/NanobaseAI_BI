@@ -47,7 +47,7 @@ if "location /timas/api/v1/ask" not in s:
                "        limit_req zone=timas_ask burst=3 nodelay;\n"
                "        limit_req_status 429;\n"
                "        rewrite ^/timas/(.*)$ /$1 break;\n"
-               "        proxy_pass http://127.0.0.1:8794;\n"
+               "        proxy_pass http://127.0.0.1:8795;\n"
                "        proxy_http_version 1.1;\n"
                "        proxy_set_header Host $host;\n"
                "        proxy_set_header X-Real-IP $remote_addr;\n"

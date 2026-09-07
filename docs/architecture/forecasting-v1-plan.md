@@ -1,6 +1,6 @@
 # Forecasting V1 Planı — "İstanbul satışları önümüzdeki 6 ay nasıl?" (2026-09-05)
 
-Kaynak: `WrenAI Ne İş Yapar.pdf` (Qwen + WrenAI + PostgreSQL + TimesFM tasarım notu).
+Kaynak: Qwen + PostgreSQL + TimesFM tasarım notu.
 Bu belge o tasarımı **bu repoya** oturtur. PDF'teki *kalıp* korunur (LLM SQL yazmaz,
 deterministik SeriesBundle katmanı, adapter'lı Forecast API, baseline'a karşı
 benchmark, ayrı anomali modeli yok); *teknoloji seçimleri* mevcut kilitli mimariyle
@@ -13,7 +13,6 @@ benchmark, ayrı anomali modeli yok); *teknoloji seçimleri* mevcut kilitli mima
 | # | PDF diyor | Repo gerçeği | Karar |
 |---|---|---|---|
 | K1 | Main backend **Java 21 / Spring Boot** | `locked-architecture.md`: "Backend Python FastAPI (Spring/Java yok)"; orkestrasyon sahibi `nanobase_api` | **Java yok.** Orchestrator = `nanobase_api` (zaten Qwen'i sürüyor). Forecast API = ayrı FastAPI servisi (PDF de böyle diyor). |
-| K2 | Semantic layer = **WrenAI** | Repo'da zaten aynı rolü yapan katman var: `semantic_catalog` (`sc_metric_definition` + `FilterRule` + `TimeSemantics` + `MetricCompiler`), 2.168 senaryolu `scenario_engine`, Query Gateway allowlist. Ağustos denetimi "aynı datasource'ta iki paralel şema katmanı = sessiz yanlış cevap" dedi. WrenAI ayrıca kendi LLM'i, kendi Qdrant'ı ve kendi RAG'iyle gelir — PDF'in "Vector DB YOK / RAG YOK" satırıyla çelişir. | **WrenAI V1 kritik yolunda değil.** PDF'teki `query_semantic()` = `MetricCompiler` + yeni `time_grain`. WrenAI (yalnız Wren Engine/MDL) istenirse ayrı 1-2 günlük spike (Bölüm 9). |
 | K3 | Qwen'e `query_semantic()` / `forecast()` **tool**'ları verilir | Chat hattı tool-calling değil: intent → deterministik resolver → compile → gateway; LLM yalnız plan/explain. Fable aksiyomu: tahmin yok, ya bilir ya görünür şekilde reddeder. | **Aynı sonuç, farklı mekanizma.** Forecast niyeti deterministik resolver ile çözülür (`resolve_revenue_intent` kalıbı). Qwen SQL'i de, seriyi de görmez; yalnız hazır forecast gerçeklerini Türkçeye çevirir. |
 | K4 | TimesFM **3.0** hedef, 2.5 fallback | 3.0 checkpoint non-commercial/non-production; 2.5 Apache-2.0. Sunucuda GPU olup olmadığı repoda kayıtlı değil; host paylaşımlı ve yük ortalaması 95-105 görüldü. | **Prod = TimesFM 2.5 (CPU'da çalışır, 200M param).** 3.0 yalnız offline benchmark'ta. Faz 0'da `nvidia-smi` ile doğrulanır. |
 
@@ -144,7 +143,6 @@ PDF §11-12: ayrı anomali modeli yok; TimesFM aralığı sinyal, Qwen sebebi DB
 
 - **Multivariate** (Orders/Customers/Returns past-only covariate): TimesFM 2.5'te native yok → V1'de tek değişkenli. 3.0 lisansı çözülürse ya da benchmark'ta 3.0 anlamlı fark gösterirse tekrar ele alınır.
 - **Future covariates**: yalnız *bilinen* gelecek — TR resmi tatil takvimi (statik tablo), `budget_lines`'taki planlı indirim/kampanya (repo'da zaten var). Reklam harcaması gibi bilinmeyenler asla LLM'den doldurulmaz.
-- **WrenAI spike** (§9).
 - **Serbest Qwen investigation** (tool-calling döngüsü).
 
 ---
@@ -235,17 +233,7 @@ Kullanıcı kararı: üretim motoru **TimesFM 3.0** (`FORECAST_ENGINE=timesfm3`)
 
 ---
 
-## 9. WrenAI: isteğe bağlı spike (V1 dışı, 1-2 gün)
-
-Yalnız **Wren Engine** (MDL → SQL) değerlendirilir; Wren AI service (kendi LLM+Qdrant+RAG) kapsam dışı.
-Soru: MDL modelleme, `sc_metric_definition` + `FilterRule` + `TimeSemantics`'in ifade edemediği ne sağlıyor?
-Çıktı: aynı 3 metrik (Revenue/Orders/Customers) iki katmanda tanımlanır, üretilen SQL'ler ve
-bakım maliyeti karşılaştırılır. Karar kriteri: **tek doğruluk kaynağı** ilkesi — iki katman
-aynı anda prod'da olmaz; ya MetricCompiler'ı MDL üstünde yeniden yazarız ya da WrenAI'yı bırakırız.
-
----
-
-## 10. Sıra ve tahmin
+## 9. Sıra ve tahmin
 
 | Faz | Süre | Bağımlılık |
 |---|---|---|

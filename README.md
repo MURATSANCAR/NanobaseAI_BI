@@ -26,7 +26,7 @@ npm run dev            # http://127.0.0.1:5174/bi/
 | Web (Vite dev) | 5174 |
 | API (`nanobase_api`) | 8790 |
 | Query Gateway | 8792 |
-| Semantic Bridge (Timaş, WrenAI'siz) | 8795 |
+| Semantic Bridge (Timaş) | 8795 |
 | LLM (OpenAI uyumlu) | 8010 yerel / harici GPU sunucusu |
 | Gömme servisi | 8083 |
 | Meta DB (Postgres) | 5434 |
@@ -41,8 +41,8 @@ LLM model takma adı: `nanobaseai-bi-llm` (bkz. `deploy/llm-server/`).
 | `backend/nanobase_api` | API, chat gateway, semantic katalog, senaryo motoru |
 | `backend/nanobase_awel` | LLM operatörleri, planlama/onarım/açıklama iş akışları |
 | `backend/query_gateway` | Müşteri SQL'inin tek çalışma noktası (salt-okunur, izin listeli) |
-| `backend/semantic_layer` | Semantic Catalog + Evidence Engine + History Miner + Profiler + Resolver/Compiler (WrenAI'siz NL→SQL çekirdeği; `docs/architecture/semantic-layer-v1.md`) |
-| `backend/semantic_bridge` | Timaş kokpiti için WrenAI'siz köprü (:8795) — `/api/v1/ask`, `/run_sql`, `/api/v1/semantic/*`, `/api/v1/schema/*` |
+| `backend/semantic_layer` | Semantic Catalog + Evidence Engine + History Miner + Profiler + Resolver/Compiler (NL→SQL çekirdeği; `docs/architecture/semantic-layer-v1.md`) |
+| `backend/semantic_bridge` | Timaş kokpiti köprüsü (:8795) — `/api/v1/ask`, `/run_sql`, `/api/v1/semantic/*`, `/api/v1/schema/*` |
 | `tools/schema-indexer` | Şema tarama ve gömme |
 | `deploy/compose` | Müşteri kurulum paketi (Docker) |
 | `deploy/llm-server` | GPU sunucusu için LLM servis tanımı |
