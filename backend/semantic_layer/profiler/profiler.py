@@ -118,6 +118,18 @@ class Profiler:
                     seen_names.add(tbl)
                     discovered.append((sch, tbl))
         tables = discovered
+        # A table that holds nothing answers nothing. A schema this size carries thousands of them —
+        # features never switched on, a module the customer does not use — and cataloguing them puts
+        # empty tables in the way of routing a question to the one with the data. Off by default,
+        # because "empty today" is not "empty forever"; a deployment that turns it on says so, and is
+        # told how many were left out rather than discovering the gap later.
+        if os.environ.get("SEMANTIC_SKIP_EMPTY", "").strip() in ("1", "true", "yes", "on"):
+            counts = self._bulk_row_counts(schema, [t for _, t in discovered])
+            if counts:
+                kept = [(sch, t) for sch, t in discovered if (counts.get(t) or 0) > 0]
+                log.info("scope matched %d tables; %d hold rows and %d are empty — cataloguing the %d",
+                         len(discovered), len(kept), len(discovered) - len(kept), len(kept))
+                tables = discovered = kept
         # Logical identity up front: both the scope cut and the deep set are decisions about *what kind
         # of table* this is, and they cannot be made from a physical name alone.
         logical = {tbl: logical_table(tbl, sch) for sch, tbl in discovered}

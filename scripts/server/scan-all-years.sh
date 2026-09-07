@@ -25,9 +25,9 @@ ENVF=/etc/nanobase/semantic-bridge.env
 DRY=0
 [[ "${1:-}" == "--dry-run" ]] && DRY=1
 
-# Every Logo firm code this database declares. Read from L_CAPIFIRM on 2026-09-07; if a new fiscal
-# year is opened, its code is added here and the scan re-run.
-FIRMS="015 016 105 115 171 181 191 201 211 411"
+# The fiscal years this database holds, read from L_CAPIFIRM on 2026-09-07. Kept for the record: the
+# scope below is the whole schema, so a new year needs no edit here.
+#   015/105 2015 · 016/115 2016 · 171 2017 · 181 2018 · 191 2019 · 201 2020 · 211 2021-25 · 411 2026
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 
@@ -35,15 +35,18 @@ cd "$ROOT/backend"
 set -a; sudo cat "$ENVF" > /tmp/semantic.env; . /tmp/semantic.env; set +a
 export PYTHONPATH=.
 
-LIKE=""
-for f in $FIRMS; do LIKE="${LIKE:+$LIKE,}LG_${f}_%"; done
-LIKE="$LIKE,L_%"            # the database-wide tables (currencies, cities, firm definitions)
-export SEMANTIC_TABLE_LIKE="$LIKE"
+# Everything, not just what the vendor named. Measured on this database: 7.725 tables, of which
+# 3.034 are not Logo's — and 407 of those hold rows, including a 6.9M-row sales-by-year table and
+# per-year sales tables going back to 2006. A scope that reads only LG_% leaves the customer's own
+# reporting tables out of every answer.
+unset SEMANTIC_TABLE_LIKE || true
+# A table holding nothing answers nothing, and this schema carries five and a half thousand of them.
+export SEMANTIC_SKIP_EMPTY=1
 # No ceiling on how many tables are catalogued: which years exist is the database's answer, not a
 # number chosen here. The deep-probe phase is bounded by wall clock instead (SEMANTIC_DEEP_BUDGET_SEC).
 unset SEMANTIC_MAX_TABLES || true
 
-echo "kapsam: $SEMANTIC_TABLE_LIKE"
+echo "kapsam: bütün şema (boş tablolar hariç)"
 if [[ $DRY -eq 1 ]]; then
   echo "(kuru çalışma — profil çıkarılmadı)"
   exit 0
