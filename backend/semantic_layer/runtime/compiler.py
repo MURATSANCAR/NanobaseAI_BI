@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol
@@ -577,6 +578,12 @@ class ExistingCompiler:
         self.columns: Any = None
         # Narrows the retrieved shortlist before it becomes a prompt. Set by the runtime when a
         # deployment configures a selector model; "shadow" measures without changing anything.
+        # Keeps the tail of a table's columns only where the question reaches it. On by default:
+        # what it replaces is not "everything" but a byte budget cutting in declaration order.
+        self.column_focus = (os.environ.get("SEMANTIC_COLUMN_FOCUS", "1") or "1").strip() not in ("0", "false", "no", "off")
+        self.column_focus_tail = int(os.environ.get("SEMANTIC_COLUMN_FOCUS_TAIL", "60"))
+        self._scored_lock = threading.Lock()
+        self._scored_cache: dict[str, set[tuple[str, str]]] = {}
         self.selector: Any = None
         self.selector_mode = (os.environ.get("SEMANTIC_TABLE_SELECTOR", "shadow") or "shadow").strip().lower()
         self.catalog_entities: set[str] = set()
@@ -764,6 +771,30 @@ class ExistingCompiler:
             lines.append(f"- (bu soruyla ilgisi kurulamayan {left_out} tablo listelenmedi; burada olmayan bir tabloyu varsayma)")
         return "\n".join(lines)
 
+    _SCORED_CACHE_MAX = 512
+
+    def _scored_columns(self, question: str) -> set[tuple[str, str]]:
+        """(entity, COLUMN) the lexical/value index scored for this question.
+
+        `prompt_columns` runs once per table and the search is the same each time, so the result is
+        cached — but this compiler object is shared by every concurrent request, so the cache is keyed
+        by the question and guarded. A single slot keyed by "the last question" would hand one
+        request the columns scored for another's, and the wrong columns would be dropped silently.
+        """
+        if self.columns is None:
+            return set()
+        with self._scored_lock:
+            hit = self._scored_cache.get(question)
+            if hit is not None:
+                return hit
+        found = {(h["entity"], str(h["column"]).upper())
+                 for h in self.columns.search(question, limit=self.column_focus_tail)}
+        with self._scored_lock:
+            if len(self._scored_cache) >= self._SCORED_CACHE_MAX:
+                self._scored_cache.clear()
+            self._scored_cache[question] = found
+        return found
+
     def prompt_columns(self, p: SchemaProfile, q: Optional[SemanticQuery] = None) -> tuple[list[Any], int]:
         """The columns of one table, most answerable first, and how many did not fit.
 
@@ -790,6 +821,9 @@ class ExistingCompiler:
                 for token in re.findall(rf"\b{re.escape(p.entity)}\.(\w+)", str(m.formula or "")):
                     named.add(token.upper())
         keys = {k.upper() for k in p.primary_key}
+        # What this table joins on. Declared foreign keys are rare in an ERP schema — this deployment
+        # has none — so the relationships a vendor dictionary supplied are the join graph there is.
+        joins = {str(r.get("column", "")).upper() for r in (p.relationships or [])}
 
         def rank(c: Any) -> int:
             name = c.name.upper()
@@ -797,8 +831,14 @@ class ExistingCompiler:
                 return 0        # the question resolved to it: leaving it out makes the prompt unanswerable
             if (p.entity, name) in self.catalog_columns:
                 return 1        # a certified concept is built on it — a measure, a value, a default filter
-            if name in keys or c.is_primary_key or c.ref_entity:
+            if name in keys or c.is_primary_key or c.ref_entity or name in joins:
                 return 2        # what rows are identified by and what they join on
+            if any(t in (c.data_type or "").lower() for t in ("date", "time", "timestamp")):
+                # The time axis is structural, not lexical. "2026 net ciro" contains no word that
+                # matches DATE_, so a question-scored shortlist drops it — and then the model is asked
+                # for a year it has no column to filter on. Measured: pinning the dated columns took
+                # the golden set from eight questions missing a needed column to one.
+                return 2
             if self.annotations.get((p.entity, name)):
                 return 3        # a person wrote about this column
             if c.is_enum() or c.unit or c.sentinel_values:
@@ -808,6 +848,24 @@ class ExistingCompiler:
             return 5 if (c.description or c.derived) else 6
 
         ordered = sorted(range(len(p.columns)), key=lambda i: (rank(p.columns[i]), i))
+        # Below the structural tiers the ranking stops separating anything: on this schema the
+        # enum/unit tier alone holds 886 of the 1,820 columns a question arrives with, because almost
+        # every code column in an ERP has few enough distinct values to look like an enum. Ranking
+        # them is not selecting them, and what actually decided which ones reached the model was the
+        # byte budget running out — a cut made in declaration order, which is the order the vendor
+        # laid the record out in twenty years ago.
+        #
+        # So the tail is kept only where the question reaches it: the lexical/value index scores
+        # columns against this question, and a column below the structural tiers has to be one of
+        # them. The structural tiers themselves — resolved, certified, keys, joins, dates, annotated
+        # — are never cut this way. Measured on the golden set: 1,820 columns to 111, with the
+        # columns the answers need surviving. SEMANTIC_COLUMN_FOCUS=0 restores the old behaviour.
+        if self.column_focus and q is not None and self.columns is not None:  # noqa: SIM102
+            scored = self._scored_columns(q.question)
+            focused = [i for i in ordered
+                       if rank(p.columns[i]) <= 3 or (p.entity, p.columns[i].name.upper()) in scored]
+            if focused:
+                ordered = focused
         # No ceiling by default: a table that answers the question goes in with the columns it has.
         # The ranking still decides the order, so a deployment that does set one keeps the useful end.
         keep = self.max_prompt_columns or len(ordered)
