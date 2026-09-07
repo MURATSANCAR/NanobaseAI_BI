@@ -323,9 +323,8 @@ def freshness(profiles: list[SchemaProfile], connector: Any, conventions: Any, *
             if f_val and l_val and str(f_val) != str(l_val):
                 marker = col.sentinel_values[0]
                 out.append({"entity": prof.entity, "column": col.name, "filled_until": str(f_val), "last_row": str(l_val)})
-                note = f"{f_val} tarihine kadar dolu; sonrası {marker} (değer yok)"
-                if note not in col.derived:
-                    col.derived.append(note)      # our reading, beside whatever the source says, never over it
+                # a measurement of the data, not a competing definition: it holds whoever described this
+                col.add_derived("freshness", f"{f_val} tarihine kadar dolu; sonrası {marker} (değer yok)")
     return out
 
 

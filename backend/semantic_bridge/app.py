@@ -139,6 +139,20 @@ class Runtime:
             existing.catalog_entities = {m.entity for senses in index.values() for _, maps in senses for m in maps}
         except Exception as e:  # noqa: BLE001
             log.debug("catalog entity set unavailable: %s", e)
+        # What people wrote in the portal is the last word on what a column means; until now the model
+        # never saw it. The newest annotation for a table or column wins over an older one.
+        try:
+            by_pattern = {p.table_pattern: p.entity for p in self.profiles}
+            said: dict[tuple[str, Optional[str]], str] = {}
+            for a in sorted(self.store.list_annotations(s.datasource_id), key=lambda a: a.created_at):
+                entity = by_pattern.get(a.table_pattern)
+                if entity and a.text:
+                    said[(entity, (a.column or "").upper() or None)] = a.text
+            existing.annotations = said
+            if said:
+                log.info("%d portal annotations carried into the model prompt", len(said))
+        except Exception as e:  # noqa: BLE001
+            log.debug("annotations unavailable: %s", e)
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
 
     # ------------------------------------------------------------------ recall (Memory ON)

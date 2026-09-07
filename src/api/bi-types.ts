@@ -531,8 +531,9 @@ export type BiSlColumn = {
   topValues?: Array<[string, number]>;
   /** What the source itself says — a database comment or model export. The customer's own words. */
   description?: string | null;
-  /** What this system concluded from the data. Kept beside the source's words, never merged into them. */
-  derived?: string[];
+  /** What this system concluded, tagged by where it came from. Kept beside the source's words,
+   *  never merged into them. `freshness` entries measure the data rather than define the column. */
+  derived?: Array<{ source: string; text: string }>;
   unit?: string | null;
   annotations: BiSlAnnotation[];
   concepts: BiSlConceptRef[];

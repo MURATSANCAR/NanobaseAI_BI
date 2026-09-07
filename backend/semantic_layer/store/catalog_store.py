@@ -658,7 +658,7 @@ class CatalogStore:
         kwargs["sensitive"] = bool(d.get("sensitive"))
         kwargs["top_values"] = [(str(v), int(n)) for v, n in (d.get("top_values") or [])]
         kwargs["sentinel_values"] = [str(v) for v in (d.get("sentinel_values") or [])]
-        kwargs["derived"] = [str(v) for v in (d.get("derived") or [])]
+        kwargs["derived"] = [dict(v) for v in (d.get("derived") or []) if isinstance(v, dict)]
         return ColumnProfile(**kwargs)
 
     def prune_profiles(self, datasource_id: str, keep_patterns: list[str]) -> int:

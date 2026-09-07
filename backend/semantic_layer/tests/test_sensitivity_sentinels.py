@@ -98,14 +98,14 @@ def test_everything_the_profile_knows_survives_the_store(store, profiles):
     col.sensitivity_reason = "test"
     col.sentinel_values = ["0"]
     col.unit = "KDV hariç"
-    col.derived = ["2026-08-17 tarihine kadar dolu"]
+    col.add_derived("freshness", "2026-08-17 tarihine kadar dolu")
     store.upsert_profile(p)
 
     back = next(x for x in store.list_profiles(p.datasource_id) if x.entity == p.entity)
     c = back.column(col.name)
     assert c.sensitive and c.sensitivity_reason == "test"
     assert c.sentinel_values == ["0"] and c.unit == "KDV hariç"
-    assert c.derived == ["2026-08-17 tarihine kadar dolu"]
+    assert c.data_facts() == ["2026-08-17 tarihine kadar dolu"]
     # and nothing the dataclass carries is quietly left behind
     for f in dataclasses.fields(ColumnProfile):
         assert hasattr(c, f.name), f.name

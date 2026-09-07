@@ -414,6 +414,10 @@ class ExistingCompiler:
         self.max_prompt_tables = int(os.environ.get("SEMANTIC_PROMPT_TABLES", "12"))
         self.max_prompt_columns = int(os.environ.get("SEMANTIC_PROMPT_COLUMNS", "60"))
         self.catalog_entities: set[str] = set()
+        # What people wrote in the portal, keyed by (entity, column) with column None for the table.
+        # Loaded by the runtime on every catalog change; a person's own words are the last word on
+        # what a column means, so the model has to see them.
+        self.annotations: dict[tuple[str, Optional[str]], str] = {}
 
     def table_label(self, p: SchemaProfile) -> str:
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
@@ -479,11 +483,20 @@ class ExistingCompiler:
                     desc = f" → {c.ref_entity}.{c.ref_column}"
                 if c.sentinel_values and not c.sensitive:
                     desc += f" [{', '.join(c.sentinel_values)} = değer yok]"
-                if c.description and not c.sensitive:
-                    desc += f" — {c.description[:120]}"          # what the source itself says
-                for note in (c.derived or [])[:2]:
-                    desc += f" [çıkarım: {note[:80]}]"           # and what we worked out, marked as ours
+                if not c.sensitive:
+                    # one meaning, and it is the most authoritative account there is: what a person
+                    # wrote in the portal, else what the database says, else what we worked out
+                    said = self.annotations.get((p.entity, c.name.upper()))
+                    meaning = c.meaning(said)
+                    if meaning:
+                        who = "kullanıcı" if said else ("kaynak" if c.description else "çıkarım")
+                        desc += f" — {meaning[:140]} ({who})"
+                    for fact in c.data_facts()[:1]:
+                        desc += f" [{fact[:80]}]"    # measured, true whoever described the column
                 cols.append(f'"{c.name}" {c.data_type}{desc}')
+            table_said = self.annotations.get((p.entity, None)) or p.description
+            if table_said:
+                lines.append(f"{self.table_label(p)} — {table_said[:200]}")
             lines.append(f"{self.table_label(p)}: " + ", ".join(cols[: self.max_prompt_columns]) +
                          (f" … (+{len(cols) - self.max_prompt_columns} kolon)" if len(cols) > self.max_prompt_columns else ""))
         return "\n".join(lines)

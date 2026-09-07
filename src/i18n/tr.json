@@ -2083,5 +2083,7 @@
   "bi.sl.defaultFilters": "Varsayılan filtreler",
   "bi.sl.scope": "Kapsam",
   "bi.sl.fromSource": "kaynaktan",
-  "bi.sl.fromData": "veriden çıkarım"
+  "bi.sl.fromData": "veriden çıkarım",
+  "bi.sl.measured": "ölçüm",
+  "bi.sl.userWins": "Sistem, girilen açıklamayı esas alıyor; diğerleri bilgi olarak duruyor."
 }

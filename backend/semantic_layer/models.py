@@ -160,7 +160,11 @@ class ColumnProfile:
     # overwrite another: the source's own comment is what the customer wrote, `derived` is what this
     # system concluded from the data, and a portal annotation lives in its own table with its author.
     description: Optional[str] = None     # the source's own words — a database comment or model export
-    derived: list[str] = field(default_factory=list)   # what we concluded from the data, kept beside it
+    # What this system concluded, each entry tagged with where it came from. Two different kinds live
+    # here: a reading of what the column *means* (a third-party glossary), which a person's own words
+    # override, and a fact about the data (how far it is populated), which is true regardless of who
+    # described the column and is therefore always reported.
+    derived: list[dict[str, str]] = field(default_factory=list)
     sensitive: bool = False               # personal data: never sampled, never shown, never sent to a model
     sensitivity_reason: Optional[str] = None
     sentinel_values: list[str] = field(default_factory=list)  # values that mean "absent" (0 on a reference, …)
@@ -169,13 +173,29 @@ class ColumnProfile:
     def is_enum(self) -> bool:
         return bool(self.top_values) and (self.distinct_count or 0) <= 64
 
-    def notes(self) -> list[str]:
-        """Everything known about this column, each with whose reading it is."""
-        out = []
+    #: derived entries that describe the data rather than define the column
+    FACTS = ("freshness",)
+
+    def add_derived(self, source: str, text: str) -> None:
+        if text and not any(d.get("text") == text for d in self.derived):
+            self.derived.append({"source": source, "text": text})
+
+    def meaning(self, annotation: Optional[str] = None) -> Optional[str]:
+        """What this column means, and whose account of it that is.
+
+        A person who wrote it down in the portal is the last word; failing that, whatever the database
+        itself says; failing that, what this system worked out. They are never merged — one of them is
+        the answer and the others stay visible elsewhere.
+        """
+        if annotation:
+            return annotation
         if self.description:
-            out.append(f"kaynak: {self.description}")
-        out.extend(f"çıkarım: {d}" for d in self.derived)
-        return out
+            return self.description
+        return next((d["text"] for d in self.derived if d.get("source") not in self.FACTS), None)
+
+    def data_facts(self) -> list[str]:
+        """Things measured about the data, true no matter who described the column."""
+        return [d["text"] for d in self.derived if d.get("source") in self.FACTS]
 
     def meaningful_values(self) -> list[tuple[str, int]]:
         """Observed values with the sentinels removed — what a business term may actually mean."""
@@ -194,7 +214,7 @@ class SchemaProfile:
     relationships: list[dict[str, str]] = field(default_factory=list)  # {column, ref_entity, ref_column}
     row_count: Optional[int] = None
     description: Optional[str] = None      # the source's own words about the table
-    derived: list[str] = field(default_factory=list)   # what we concluded about it from the data
+    derived: list[dict[str, str]] = field(default_factory=list)   # what we concluded, tagged by source
     time_window: Optional[tuple[str, str]] = None   # measured (first, last) value of the time column
     context: dict[str, str] = field(default_factory=dict)              # placeholder values for the pattern
     scanned_at: datetime = field(default_factory=utcnow)

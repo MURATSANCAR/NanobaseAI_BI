@@ -61,7 +61,9 @@ def test_links_and_glossary_are_merged_into_the_profile(monkeypatch, retail_prof
     # description rather than replacing whatever the database itself says
     col = orders.column("net_amount")
     assert col.description is None
-    assert any(d.startswith("Sipariş net tutarı") for d in col.derived), col.derived
+    assert col.meaning().startswith("Sipariş net tutarı"), col.derived
+    # and a person's own words take it back: what the portal says is the last word
+    assert col.meaning("Ciro, iade düşülmemiş hâli") == "Ciro, iade düşülmemiş hâli"
     assert report.glossary_added == 2
 
 

@@ -508,3 +508,46 @@ def test_an_empty_answer_says_whether_the_data_is_missing_or_the_business_is(cat
     # either it refuses as out of scope, or it answers and says the data stops earlier — never a bare zero
     text = str(body.get("summary") or "") + str(body.get("explanation") or "")
     assert inv.time_window[1] in text or "kapsamı dışında" in text, body
+
+
+def test_what_a_person_wrote_in_the_portal_is_the_last_word(catalog, profiles, logo_connector, settings):
+    """Three accounts of one column can exist at once: a person's, the database's, and this system's.
+    The person's wins — that is what the portal is for — and until now the model never saw it at all.
+    A measurement of the data is not one of the three: it holds whoever described the column."""
+    from semantic_bridge.app import Runtime
+    from semantic_layer.models import Annotation
+
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    col = inv.column("NETTOTAL")
+    col.description = "Net total of the invoice"          # what the database says
+    col.add_derived("intugle", "Sipariş net tutarı")      # what a third party inferred
+    col.add_derived("freshness", "2026-08-17 tarihine kadar dolu")
+    catalog.upsert_profile(inv)
+
+    assert col.meaning() == "Net total of the invoice", "the source outranks an inference"
+    catalog.add_annotation(Annotation(datasource_id=DS, table_pattern=inv.table_pattern, column="NETTOTAL",
+                                      text="Ciro: KDV hariç net tutar", author="portal"))
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    r = SemanticResolver(catalog, TENANT, DS, rt.profiles)
+    sq = r.resolve("Toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
+    prompt = rt.existing.build_messages(sq, [])[0]["content"]
+    assert "Ciro: KDV hariç net tutar (kullanıcı)" in prompt
+    assert "Net total of the invoice" not in prompt, "one meaning reaches the model, not three"
+    assert "2026-08-17 tarihine kadar dolu" in prompt, "a measurement holds regardless of who described it"
+
+
+def test_with_nothing_written_down_our_own_reading_is_used(catalog, profiles, logo_connector, settings):
+    """"If the customer wrote something, use it; if it is empty, use whatever we found." The second
+    half matters as much as the first: a column nobody has described is not a column nobody knows."""
+    from semantic_bridge.app import Runtime
+
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    col = inv.column("NETTOTAL")
+    col.description = None
+    col.derived = []
+    col.add_derived("intugle", "Fatura net tutarı")
+    catalog.upsert_profile(inv)
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    r = SemanticResolver(catalog, TENANT, DS, rt.profiles)
+    prompt = rt.existing.build_messages(r.resolve("Toptan satış tutarı", today=date(2026, 7, 20)), [])[0]["content"]
+    assert "Fatura net tutarı (çıkarım)" in prompt
