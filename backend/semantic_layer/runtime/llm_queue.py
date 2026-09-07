@@ -36,6 +36,10 @@ from semantic_layer.store import schema as S
 log = logging.getLogger(__name__)
 
 
+#: background tickets sort after interactive ones, whatever time they arrived
+BACKGROUND_LAST = sa.case((S.sl_llm_queue.c.purpose.like("bg:%"), 1), else_=0)
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -145,6 +149,7 @@ class LlmQueue:
 
     # ------------------------------------------------------------------ internals
     def _enqueue(self, purpose: str, tenant_id: str, datasource_id: str, user_id: Optional[str], question: Optional[str]) -> str:
+        """Purposes beginning with "bg:" are background work and yield to anyone who is waiting."""
         ticket_id = new_id("llmq")
         with self.engine.begin() as conn:
             conn.execute(S.sl_llm_queue.insert().values(
@@ -181,7 +186,10 @@ class LlmQueue:
                 waiting = [dict(r._mapping) for r in conn.execute(
                     sa.select(S.sl_llm_queue.c.id, S.sl_llm_queue.c.enqueued_at)
                     .where(S.sl_llm_queue.c.status == "WAITING")
-                    .order_by(S.sl_llm_queue.c.enqueued_at, S.sl_llm_queue.c.id)
+                    # A person waiting for an answer goes before work nobody is watching. Background
+                    # reading of the schema can take all night; a question cannot take a minute longer
+                    # because a batch of it happened to arrive first.
+                    .order_by(BACKGROUND_LAST, S.sl_llm_queue.c.enqueued_at, S.sl_llm_queue.c.id)
                 )]
                 order = [r["id"] for r in waiting]
                 if ticket_id not in order:              # someone marked it done: take the turn rather than stall

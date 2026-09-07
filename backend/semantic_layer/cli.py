@@ -125,9 +125,10 @@ def main(argv=None) -> int:
             from semantic_layer.candidates.llm_client import LlmClient
             from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 
-            # Background work waits behind people: same queue, same arrival order.
+            # Background reading yields to anyone who is waiting: the "bg:" prefix sorts it after
+            # every interactive ticket, whatever time it arrived.
             llm = QueuedLlm(LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout),
-                            LlmQueue.from_env(store.engine), purpose="nightly",
+                            LlmQueue.from_env(store.engine), purpose="bg:nightly",
                             tenant_id=s.tenant_id, datasource_id=s.datasource_id)
         import os as _os
 

@@ -293,9 +293,9 @@ def test_the_reader_asks_in_batches_and_one_bad_answer_costs_only_its_batch(stor
 
     import os
 
-    os.environ["SEMANTIC_PROPOSE_BATCH"] = "1"
+    os.environ["SEMANTIC_PROPOSE_BATCH"] = "1"      # tabanı 5: partiler 5'erli gelir
     try:
-        rep = gen.propose_column_meanings(_Counting(), max_columns=3)
+        rep = gen.propose_column_meanings(_Counting(), max_columns=12)
     finally:
         os.environ.pop("SEMANTIC_PROPOSE_BATCH", None)
 

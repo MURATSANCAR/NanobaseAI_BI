@@ -110,3 +110,39 @@ def test_catalog_answers_never_take_a_ticket(queue_store, profiles):
     assert comp is not None and before["waiting"] == 0
     with queue_store.engine.connect() as conn:
         assert conn.execute(sa.select(sa.func.count()).select_from(S.sl_llm_queue)).scalar() == 0
+
+
+def test_background_work_yields_to_anyone_waiting(store):
+    """The schema reader can take all night; a person's question cannot take a minute longer because a
+    batch of it happened to arrive first. Background tickets sort after interactive ones, whatever
+    time they arrived."""
+    import threading
+
+    from semantic_layer.runtime.llm_queue import LlmQueue
+
+    q = LlmQueue(store.engine, slots=1, poll_seconds=0.05, lease_seconds=30)
+    order: list[str] = []
+    gate = threading.Event()
+
+    def run(purpose: str, name: str, hold: float = 0.0):
+        with q.lease(purpose=purpose):
+            order.append(name)
+            if hold:
+                gate.wait(timeout=5)
+
+    first = threading.Thread(target=run, args=("bg:nightly", "bg-1", 0.3))
+    first.start()
+    import time as _t
+
+    _t.sleep(0.15)                      # bg-1 is running and holding the only slot
+    rest = [threading.Thread(target=run, args=("bg:nightly", "bg-2")),
+            threading.Thread(target=run, args=("nl2sql", "insan"))]
+    for t in rest:
+        t.start()
+        _t.sleep(0.1)                   # bg-2 arrives BEFORE the person does
+    gate.set()
+    first.join(timeout=10)
+    for t in rest:
+        t.join(timeout=10)
+    assert order[0] == "bg-1"
+    assert order.index("insan") < order.index("bg-2"), order
