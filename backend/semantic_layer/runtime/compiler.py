@@ -442,6 +442,7 @@ Kurallar:
 - SERTİFİKALI KATALOG bloğundaki eşlemeler kesindir: bir terim için verilen kolon/değer kümesini AYNEN kullan, başka değer uydurma.
 - "## İş kuralları" bölümündeki varsayılan filtrelere ve tanımlara mutlaka uy.
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
+- Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - DÖNEM NOTU bloğu doluysa dönem kapsam içindedir, yalnız son kayıt daha eskidir: SQL'i normal yaz, reddetme.
@@ -488,6 +489,18 @@ def refusal_for(q: SemanticQuery) -> str:
     return _REFUSALS["off_topic"]
 
 
+#: `AS 2025_ciro` — a column label that starts with a digit. Legal as a quoted identifier, a syntax
+#: error unquoted, and the natural thing to write when the question is about a year. Asked for the
+#: revenue of two years side by side, the model named its columns after them and the whole answer was
+#: thrown away as invalid SQL. The label is what the person reads, so it is kept and quoted rather
+#: than renamed. Only bare identifiers match: anything already bracketed or quoted is left alone.
+_NUMERIC_ALIAS = re.compile(r"(?i)\bAS\s+(?![\[\"'`])(\d[A-Za-z0-9_]*)")
+
+
+def quote_numeric_aliases(sql: str) -> str:
+    return _NUMERIC_ALIAS.sub(lambda m: f"AS [{m.group(1)}]", sql or "")
+
+
 def extract_sql(text: str) -> Optional[str]:
     m = _SQL_BLOCK.search(text or "")
     sql = (m.group(1) if m else (text or "")).strip().rstrip(";").strip()
@@ -495,7 +508,7 @@ def extract_sql(text: str) -> Optional[str]:
         return None
     if not re.match(r"(?is)^\s*(with|select)\b", sql):
         return None
-    return sql
+    return quote_numeric_aliases(sql)
 
 
 #: How much of the operator documentation one prompt may carry. A local model has a fixed context and
