@@ -546,7 +546,11 @@ def test_what_a_person_wrote_in_the_portal_is_the_last_word(catalog, profiles, l
     prompt = rt.existing.build_messages(sq, [])[0]["content"]
     assert "Ciro: KDV hariç net tutar (kullanıcı)" in prompt
     assert "Net total of the invoice" not in prompt, "one meaning reaches the model, not three"
-    assert "2026-08-17 tarihine kadar dolu" in prompt, "a measurement holds regardless of who described it"
+    # The measurement is kept and labelled where a person reads it, and deliberately left out of the
+    # dense schema line: "filled until 2025-12-31" there read as the table's date coverage, and the
+    # model refused a question about the current month on the strength of it.
+    assert "2026-08-17 tarihine kadar dolu" not in prompt
+    assert col.data_facts() == ["2026-08-17 tarihine kadar dolu"]
 
 
 def test_with_nothing_written_down_our_own_reading_is_used(catalog, profiles, logo_connector, settings):

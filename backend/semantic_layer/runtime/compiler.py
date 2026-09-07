@@ -587,8 +587,10 @@ class ExistingCompiler:
                     if meaning:
                         who = "kullanıcı" if said else ("kaynak" if c.description else "çıkarım")
                         desc += f" — {meaning[:140]} ({who})"
-                    for fact in c.data_facts()[:1]:
-                        desc += f" [{fact[:80]}]"    # measured, true whoever described the column
+                    # A column's own fill measurement is deliberately not put here. "Filled until
+                    # 2025-12-31" reads, in a dense schema line, as the table's date coverage — and the
+                    # model refused a question about the current month on the strength of it. The
+                    # measurement is kept on the profile and shown in the portal, where it is labelled.
                 cols.append(f'"{c.name}" {c.data_type}{desc}')
             table_said = self.annotations.get((p.entity, None)) or p.description
             if table_said:
@@ -648,8 +650,10 @@ class ExistingCompiler:
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             "## İSTENEN BİÇİM\n" + (
-                "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster; paydayı sorudan çıkar "
-                "(kırılım varsa genel toplam, yoksa aynı ölçünün filtresiz hali)." if q.shape == "RATIO" else
+                "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster. Paydayı sen belirle: "
+                "kırılım varsa aynı dönemin genel toplamı, yoksa aynı ölçünün filtresiz hâli. Payda birden çok "
+                "okunabiliyorsa en doğal olanı seç ve sütun adında belirt — belirsizlik gerekçesiyle SQL yazmaktan "
+                "kaçınma." if q.shape == "RATIO" else
                 "yokluk — ölçünün hiç gerçekleşmediği kayıtlar isteniyor: NOT EXISTS ya da LEFT JOIN … IS NULL "
                 "kullan; ölçünün gerçekleştiği kayıtları döndürme." if q.shape == "ABSENCE" else
                 "belirsiz — soru neyin ölçüleceğini söylemiyor." if q.shape == "UNDERSPECIFIED" else "(serbest)"
