@@ -101,6 +101,50 @@ def parse_expression(expr: str) -> tuple[str, dict[str, str]]:
     return head.strip(), values
 
 
+def index_segments(rows: list[dict]) -> dict[int, list[dict]]:
+    """The workbook's index sheet, one row per segment, folded into one entry per index.
+
+    Two things here change a generated query. The unique single-column index on LOGICALREF is the
+    primary key a Logo database never declares, so without it every join the planner writes is
+    against a column it believes could repeat. And the leading column of each index is the filter
+    the vendor built the table to be searched by — the difference between a scan of a period's
+    STLINE and a seek.
+
+    Segments arrive in their own rows, ordered by `Segment No` under a repeated index name.
+    """
+    by_resource: dict[int, dict[str, dict]] = defaultdict(dict)
+    for r in rows:
+        name = str(r.get("Index Name") or "").strip()
+        column = str(r.get("Segment Field") or "").strip().upper()
+        if not name or not column:
+            continue
+        attrs = str(r.get("Attributes") or "").strip()
+        entry = by_resource[_int(r["Resource ID"])].setdefault(
+            name,
+            {
+                "name": name,
+                "unique": attrs.lower().startswith("unique"),
+                "nullable": "allow null" in attrs.lower(),
+                "segments": [],
+            },
+        )
+        entry["segments"].append((_int(r.get("Segment No")), column, str(r.get("Sense") or "").strip()))
+
+    out: dict[int, list[dict]] = {}
+    for rid, named in by_resource.items():
+        built = []
+        for entry in named.values():
+            segments = sorted(entry.pop("segments"))
+            entry["columns"] = [c for _, c, _ in segments]
+            # Descending appears once in the whole dictionary. Recording it only where it occurs
+            # keeps the common entry small without losing the one index that is not ascending.
+            if descending := [c for _, c, sense in segments if sense.lower().startswith("desc")]:
+                entry["descending"] = descending
+            built.append(entry)
+        out[rid] = built
+    return out
+
+
 def build(xls_path: Path) -> dict:
     import xlrd
 
