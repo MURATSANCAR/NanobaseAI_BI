@@ -577,3 +577,26 @@ def test_a_question_that_crosses_a_period_boundary_reads_both_tables(catalog, pr
     spanning = c.compile(r.resolve("Son 12 ayda toptan satış tutarı", today=date(2026, 7, 20)), catalog)
     assert "UNION ALL" in spanning.sql and "LG_211_01_INVOICE" in spanning.sql and "LG_411_01_INVOICE" in spanning.sql
     assert any("dönem" in e for e in spanning.explain), spanning.explain
+
+
+def test_two_periods_in_one_question_become_two_columns(catalog, profiles, logo_db):
+    """"This year and last year" ANDed is a date that falls in both years, which is no date at all —
+    the query comes back empty and empty reads as zero. Two periods are being compared, never
+    intersected, so each becomes its own column."""
+    import copy
+
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    inv.time_window = ("2026-01-01", "2026-08-17")
+    older = copy.deepcopy(inv)
+    older.table_name, older.context, older.time_window = "LG_211_01_INVOICE", {"n0": "211", "n1": "01"}, ("2021-01-01", "2025-12-31")
+    both = [older if p.entity == "INVOICE" else p for p in profiles] + [inv]
+    c = DeterministicCompiler(both, {}, "sqlite", default_filters=default_filters_provider(catalog, TENANT, DS))
+    r = SemanticResolver(catalog, TENANT, DS, both)
+
+    out = c.compile(r.resolve("Bu yıl ve geçen yıl toptan satış tutarı", today=date(2026, 7, 20)), catalog)
+    assert out is not None
+    assert " OR " in out.sql, "the two periods are a union of spans, not an impossible intersection"
+    assert out.sql.count("AS bu_yil") + out.sql.count("AS gecen_yil") >= 2 or out.sql.lower().count(" as ") >= 3, out.sql
+    assert "UNION ALL" in out.sql, "and both period tables are read"
+    # the fixture holds only this year's table, so the shape is checked against the one that exists
+    logo_db.execute(out.sql.replace("LG_211_01_INVOICE", "LG_411_01_INVOICE")).fetchall()

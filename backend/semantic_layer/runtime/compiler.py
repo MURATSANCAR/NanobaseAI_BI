@@ -370,8 +370,27 @@ class DeterministicCompiler:
             ent, col = grp[0].mapping.entity, grp[0].mapping.column
             vals = sorted({v for f in grp for v in f.mapping.values}, key=lambda v: (0, float(v)) if v.replace('.', '').lstrip('-').isdigit() else (1, v))
             where.append(_pred_sql(ent, Mapping(concept_id="", entity=ent, table_pattern="", column=col, operator="IN", values=vals), d))
-        for t in q.temporal:
-            if t.start and t.end and plan.date_column:
+        ranges = [t for t in q.temporal if t.start and t.end and plan.date_column]
+        if len(ranges) > 1:
+            # Two periods in one question are being compared, never intersected: "this year and last
+            # year" ANDed is a date that is in both years, which is no date at all. The result comes
+            # back empty and empty reads as zero.
+            col = f"{alias}.{d.q(plan.date_column)}"
+            spans_sql = [f"({col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}')" for t in ranges]
+            where.append("(" + " OR ".join(spans_sql) + ")")
+            base_aliases = list(metric_aliases)
+            metric_aliases = []
+            rebuilt = []
+            for s_ in plan.metrics:
+                formula = self._formula_sql(s_.mapping.formula, plan.entity)
+                for t, span in zip(ranges, spans_sql):
+                    palias = f"{_snake(t.text)}_{_alias_of(s_)}"
+                    rebuilt.append(f"{_wrap_condition(formula, span)} AS {palias}")
+                    metric_aliases.append(palias)
+                    explain.append(f"dönem sütunu: '{t.text}' [{t.start}, {t.end})")
+            select = [x for x in select if x.split(" AS ")[-1] not in base_aliases] + rebuilt
+        else:
+            for t in ranges:
                 col = f"{alias}.{d.q(plan.date_column)}"
                 where.append(f"{col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}'")
                 explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
