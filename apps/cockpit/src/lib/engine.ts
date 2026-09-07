@@ -114,3 +114,91 @@ export async function engineStatus(): Promise<{ dataSource: string; models: numb
   if (!res.ok) throw new EngineError(String(d.error ?? `HTTP ${res.status}`), undefined, res.status);
   return { dataSource: d.dataSource ?? 'mssql', models: Number(d.models ?? 0), deployed: Boolean(d.deployed) };
 }
+
+// ---------------------------------------------------------------- veri sözlüğü
+
+/** Bir kolon hakkında bilinenler. Üç ayrı okuma yan yana durur ve hiçbiri diğerini ezmez:
+ *  kaynağın kendi yorumu, bu sistemin veriden çıkardığı, ve bir kişinin buraya yazdığı. */
+export type CatalogColumn = {
+  name: string;
+  type: string;
+  nullable?: boolean;
+  isPrimaryKey?: boolean;
+  ref?: string | null;
+  sensitive?: boolean;
+  sensitivityReason?: string | null;
+  sentinelValues?: string[];
+  distinct?: number | null;
+  topValues?: Array<[string, number]>;
+  description?: string | null;
+  derived?: Array<{ source: string; text: string }>;
+  unit?: string | null;
+  annotations: Array<{ id: string; text: string; author: string; createdAt: string }>;
+  concepts: Array<{ id: string; term: string; type: string; status: string; values?: string[]; formula?: string }>;
+  status: 'CERTIFIED' | 'CANDIDATE' | 'DESCRIBED' | 'UNDEFINED' | (string & {});
+};
+
+export type CatalogTable = {
+  entity: string;
+  tableName: string;
+  tablePattern: string;
+  schema: string;
+  description?: string | null;
+  rowCount?: number | null;
+  primaryKey: string[];
+  relationships: Array<{ column: string; ref_entity: string; ref_column: string }>;
+  annotations: Array<{ id: string; text: string; author: string; createdAt: string }>;
+  columns: CatalogColumn[];
+  columnCount: number;
+  certifiedColumns?: number;
+  undefinedColumns: number;
+};
+
+export type CatalogPage = {
+  tables: CatalogTable[];
+  tableCount: number;
+  total: number;
+  /** Katalog okunamadığında dolu gelir — boş liste "veri yok" demek değildir. */
+  warning?: string;
+};
+
+async function get<T>(path: string, timeoutMs = 60_000): Promise<T> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${BASE}${path}`, { signal: ctl.signal });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+    return data as T;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Tablo listesi. Kolon ayrıntısı istenmez — tüm envanter sekiz megabayt, liste birkaç kilobayt. */
+export function catalogTables(search: string, limit = 60, offset = 0): Promise<CatalogPage> {
+  const qs = new URLSearchParams({ columns: 'false', limit: String(limit), offset: String(offset) });
+  if (search.trim()) qs.set('q', search.trim());
+  return get<CatalogPage>(`/api/v1/schema/inventory?${qs.toString()}`);
+}
+
+/** Tek bir tablonun kolonları — açıldığında istenir. */
+export function catalogTable(entity: string): Promise<CatalogPage> {
+  return get<CatalogPage>(`/api/v1/schema/inventory?entity=${encodeURIComponent(entity)}`);
+}
+
+export function writeLabel(tablePattern: string, column: string | null, text: string, author = 'kokpit'): Promise<{ annotation: { id: string } }> {
+  return post('/api/v1/schema/annotations', { tablePattern, column, text, author });
+}
+
+/** Düzeltme yeni bir cümledir: eskisi geri çekilir, kayıtta kalır, modele yalnız yenisi gider. */
+export async function rewriteLabel(id: string, tablePattern: string, column: string | null, text: string, author = 'kokpit'): Promise<{ annotation: { id: string } }> {
+  const res = await fetch(`${BASE}/api/v1/schema/annotations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tablePattern, column, text, author }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+  return data as { annotation: { id: string } };
+}
