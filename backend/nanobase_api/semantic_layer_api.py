@@ -81,7 +81,24 @@ def _runtime(datasource_id: Optional[str], tenant_id: str):
 
 
 def _ds(request: Request, body: Optional[dict[str, Any]] = None) -> Optional[str]:
-    return (body or {}).get("datasource_id") or request.query_params.get("datasource_id") or None
+    """Which catalog this page is about.
+
+    The portal's data-source picker and the semantic catalog are different namespaces: a catalog exists
+    only for a source that has been profiled. Asking for one the catalog never heard of used to return
+    an empty page, which reads as "nothing was ever discovered" rather than "you are looking at the
+    wrong source" — so fall back to a catalog that does exist and let the response name it.
+    """
+    asked = (body or {}).get("datasource_id") or request.query_params.get("datasource_id") or None
+    try:
+        known = _known_datasources()
+    except Exception:  # noqa: BLE001
+        return asked
+    if asked and asked in known:
+        return asked
+    configured = os.environ.get("SEMANTIC_DATASOURCE_ID") or ""
+    if configured in known:
+        return configured
+    return next(iter(sorted(known)), asked)
 
 
 def _may_govern(principal: RequestPrincipal) -> bool:
