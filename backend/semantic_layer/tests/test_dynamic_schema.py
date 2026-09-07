@@ -214,3 +214,35 @@ def test_an_entity_split_across_periods_is_read_by_measured_window():
     # an unmeasured table cannot be ruled out
     unknown = prof("T_999_SALES", {"n0": "999"}, None)
     assert [p.table_name for p in tables_for(both + [unknown], date(2015, 1, 1), date(2016, 1, 1))] == [unknown.table_name]
+
+
+def test_the_same_year_kept_twice_is_read_once():
+    """This customer's database holds 2015 under two company codes and 2016 under two more — the same
+    invoices, 47.458 of them matching on number, date and amount. A partitioned source is expected to
+    overlap at the edges, so overlap alone cannot be the test; two tables measured to hold the *same*
+    window are copies, and reading both returns twice the revenue with nothing looking wrong."""
+    from datetime import date
+
+    from semantic_layer.models import SchemaProfile
+    from semantic_layer.runtime.periods import tables_for
+
+    def year(table, y, rows):
+        return SchemaProfile(datasource_id="logo", table_name=table, table_pattern=table,
+                             entity="INVOICE", time_window=(f"{y}-01-01", f"{y}-12-31"), row_count=rows)
+
+    old_copy = year("LG_015_01_INVOICE", 2015, 40_981)
+    new_copy = year("LG_105_01_INVOICE", 2015, 41_015)
+    later = year("LG_171_01_INVOICE", 2017, 40_327)
+
+    asked = tables_for([old_copy, new_copy, later], date(2015, 1, 1), date(2016, 1, 1))
+    assert [p.table_name for p in asked] == ["LG_105_01_INVOICE"], "2015 was counted twice"
+
+    spanning = tables_for([old_copy, new_copy, later], date(2015, 1, 1), date(2018, 1, 1))
+    assert [p.table_name for p in spanning] == ["LG_105_01_INVOICE", "LG_171_01_INVOICE"], spanning
+
+    # a genuinely partitioned source still reads both sides of a boundary
+    y21 = SchemaProfile(datasource_id="logo", table_name="LG_211_01_INVOICE", table_pattern="x",
+                        entity="INVOICE", time_window=("2021-01-01", "2025-12-31"), row_count=502_826)
+    y26 = year("LG_411_01_INVOICE", 2026, 81_801)
+    both = tables_for([y21, y26], date(2025, 1, 1), date(2027, 1, 1))
+    assert {p.table_name for p in both} == {"LG_211_01_INVOICE", "LG_411_01_INVOICE"}

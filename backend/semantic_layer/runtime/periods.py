@@ -52,7 +52,34 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
     hit = [p for p, w in dated if w and w[0] < end and start <= w[1]]
     # a table whose window was never measured cannot be ruled out, so it travels with the rest
     hit += [p for p, w in dated if not w]
-    return hit or []
+    return _one_per_window(hit, dict(dated))
+
+
+def _one_per_window(chosen: list[SchemaProfile], windows: dict) -> list[SchemaProfile]:
+    """Two tables covering the same period are copies of it, not two halves of it.
+
+    A partitioned source is expected to overlap at the edges — a range that crosses a boundary reads
+    both sides, and that is the whole point. Two tables measured to hold the *same* window are a
+    different thing: a migration that was run twice, an old company code kept beside its replacement.
+    Reading both adds the period to itself, and the answer comes back at twice the real figure with
+    nothing about it looking wrong.
+
+    So where windows coincide, one is read. The one with more rows is kept, because the copy that was
+    still being written to is the one that has the later corrections in it.
+    """
+    groups: dict[tuple, list[SchemaProfile]] = {}
+    for p in chosen:
+        w = windows.get(p)
+        # to the month: a re-import rarely lands on the same day, and never on a different quarter
+        key = (w[0].year, w[0].month, w[1].year, w[1].month) if w else ("undated", p.table_name)
+        groups.setdefault(key, []).append(p)
+    out = []
+    for key, members in groups.items():
+        if len(members) == 1 or key[0] == "undated":
+            out.extend(members)
+            continue
+        out.append(max(members, key=lambda p: (p.row_count or 0, p.table_name)))
+    return [p for p in chosen if p in out]
 
 
 def describe(chosen: list[SchemaProfile], available: list[SchemaProfile]) -> str:
