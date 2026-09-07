@@ -453,6 +453,34 @@ _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
 _VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sales_cube|line_cube|orders_cube|küp|cube|görünüm)")
 
 
+#: what a person is told when no SQL could be written. One of these, never the model's own sentence.
+_REFUSALS = {
+    "scope": "{detail}",
+    "unknown": "Bu soruda geçen '{terms}' bu veri kaynağında tanımlı değil. Portalden açıklamasını girerseniz bir dahakine cevaplanabilir.",
+    "qualifier": "'{terms}' koşulunu veride karşılayan bir tanım yok; onu yok sayıp daha geniş bir soruyu cevaplamak doğru olmaz.",
+    "vague": "Hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız? (ör. ciro, iade oranı, sipariş sayısı)",
+    "off_topic": "Yalnızca bu veri kaynağındaki verilerle ilgili soruları cevaplayabiliyorum.",
+}
+
+
+def refusal_for(q: SemanticQuery) -> str:
+    """Why no answer — said by this system, in one of its own sentences.
+
+    The model is never quoted. A refusal it wrote could be about anything at all, and a data tool that
+    can be talked into discussing itself is no longer a data tool.
+    """
+    detail = next((e for e in q.explanation if "kapsamı dışında" in e), "")
+    if q.out_of_scope and detail:
+        return _REFUSALS["scope"].format(detail=detail)
+    if q.unresolved:
+        return _REFUSALS["unknown"].format(terms=", ".join(q.unresolved[:4]))
+    if q.unhandled:
+        return _REFUSALS["qualifier"].format(terms=", ".join(q.unhandled[:3]))
+    if q.shape == "UNDERSPECIFIED" or not q.slots:
+        return _REFUSALS["vague"] if q.temporal or q.shape else _REFUSALS["off_topic"]
+    return _REFUSALS["off_topic"]
+
+
 def extract_sql(text: str) -> Optional[str]:
     m = _SQL_BLOCK.search(text or "")
     sql = (m.group(1) if m else (text or "")).strip().rstrip(";").strip()
@@ -682,8 +710,15 @@ class ExistingCompiler:
         ms = int((time.perf_counter() - t0) * 1000)
         sql = extract_sql(text)
         if not sql:
-            reason = (text or "").strip().replace("NO_SQL:", "").strip()[:300]
-            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version, explain=[f"NO_SQL: {reason}"], llm_ms=ms, certified=False)
+            # The model's own words never reach the person asking. Its job here is to write SQL; when it
+            # cannot, what the user is told is decided by what the resolver established, not by whatever
+            # sentence the model chose to produce. That is what keeps this a data tool: there is no
+            # channel through which it can answer about itself, about the world, or about anything but
+            # this database. Its text is kept for diagnosis only.
+            log.info("model produced no sql q=%r said=%r", q.question[:80], (text or "").strip()[:200])
+            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
+                                 explain=[refusal_for(q)], llm_ms=ms, certified=False,
+                                 model_text=(text or "").strip()[:500])
         certified = not q.unresolved and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots)
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
 
