@@ -72,6 +72,43 @@ def embed(texts: list[str], api_key: str) -> list[list[float]]:
     return out
 
 
+def points_from_dictionary(entities: set[str]) -> list[Point]:
+    """The vendor dictionary as the routing corpus, when the catalog has not been re-profiled yet.
+
+    A catalog profiled before the dictionary was imported carries bare identifiers: its tables have a
+    name and its columns have nothing. Embedding that gives a router that can match "kampanya" to
+    CAMPAIGN and little else, because there is no other text to match against.
+
+    The dictionary is where the meanings live — a Turkish sentence for a hundred and twenty-nine
+    tables, for two thousand eight hundred columns, and the Turkish labels behind a hundred and sixty
+    code sets. Indexing it directly is read-only and immediate, and the same points are what a
+    re-profiled catalog would produce.
+    """
+    path = Path(os.environ.get("LOGO_LDDS_PATH") or
+                Path(__file__).resolve().parents[2] / "configs" / "schemas" / "logo-ldds.json")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    points: list[Point] = []
+    for entity, table in sorted(data.get("tables", {}).items()):
+        # A table nobody catalogued must never be routed to: the point would name a FROM clause that
+        # cannot be written.
+        if entities and entity not in entities:
+            continue
+        columns = table.get("columns") or {}
+        said = " — ".join(x for x in (table.get("description_tr"), table.get("description")) if x)
+        points.append(Point(len(points) + 1, entity, table.get("physical", entity), None,
+                            f"{entity} {said}\nkolonlar: {', '.join(list(columns)[:80])}"))
+        for column, meta in columns.items():
+            text = " — ".join(x for x in (meta.get("description_tr"), meta.get("description")) if x)
+            if not text:
+                continue
+            codes = meta.get("values_tr") or meta.get("values") or {}
+            if codes:
+                text += " · " + ", ".join(f"{k}={v}" for k, v in list(codes.items())[:12])
+            points.append(Point(len(points) + 1, entity, table.get("physical", entity), column,
+                                f"{entity}.{column} — {text}"))
+    return points
+
+
 def points_for(profiles) -> list[Point]:
     """One point for the table, one for every column anybody described.
 
@@ -109,9 +146,19 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    points = points_for(profiles)
+    entities = {p.entity for p in profiles}
+    if "--dictionary" in sys.argv:
+        points = points_from_dictionary(entities)
+        source = "sözlük"
+    else:
+        points = points_for(profiles)
+        source = "katalog"
+        described = sum(1 for p in points if p.column)
+        if described == 0:
+            print("uyarı: katalogdaki hiçbir kolonun açıklaması yok — yönlendirme yalnız tablo "
+                  "adlarıyla eşleşir. Sözlükten indekslemek için: --dictionary", file=sys.stderr)
     collection = os.environ.get("SEMANTIC_ROUTER_COLLECTION", f"semantic_catalog_{s.datasource_id}")
-    print(f"katalog: {len(profiles)} tablo → {len(points)} nokta ({collection})")
+    print(f"{source}: {len(entities)} tablo → {len(points)} nokta ({collection})")
 
     api_key = os.environ.get("BI_EMBED_API_KEY") or os.environ.get("CONTRACT_API_KEY", "")
     vectors = embed([p.text for p in points], api_key)
