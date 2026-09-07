@@ -343,6 +343,7 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
     catalog knows plus one join hop, says how many it left out, and never claims to be complete."""
     from semantic_bridge.app import Runtime
     from semantic_layer.models import ColumnProfile, SchemaProfile
+    from semantic_layer.runtime.compiler import ExistingCompiler
 
     noise = [
         SchemaProfile(datasource_id=DS, table_name=f"LG_411_01_NOISE{i}", table_pattern="LG_{n0}_{n1}_NOISE" + str(i),
