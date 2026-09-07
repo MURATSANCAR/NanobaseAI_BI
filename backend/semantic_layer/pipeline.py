@@ -37,13 +37,19 @@ def build_connector(settings: SemanticSettings, *, project_dir: Optional[Path] =
 def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Connector, *, schema: Optional[str] = None, like: Optional[str] = None, probe_links: Optional[bool] = None) -> list[SchemaProfile]:
     """Discover tables/columns/enums/keys. Schema and dialect default to the connector's own."""
     schema = schema or settings.schema_name or getattr(connector, "default_schema", "")
-    # An ERP that keeps one table set per firm and one per firm-period (Logo: 311 shapes → well over
-    # a thousand physical tables) blows straight through a 300-table cap, and everything past it is
-    # not merely unprofiled but absent from the catalog. Cataloguing is cheap — names, columns, keys —
-    # so the cap sits where a pathological schema would still be caught. Deep probing is the expensive
-    # half (value inventories are full scans); it stays bounded by its own limit and wall clock.
-    prof = Profiler(connector, enum_max_distinct=settings.enum_max_distinct, max_tables=int(os.environ.get("SEMANTIC_MAX_TABLES", "5000")))
-    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None, deep_limit=int(os.environ.get("SEMANTIC_DEEP_TABLES", "200")))
+    # No count limits. An ERP that keeps one table set per firm and one per firm-period (Logo: 310
+    # shapes → well over a thousand physical tables) blew straight through the old 300-table cap, and
+    # everything past it was not merely unprofiled but absent from the catalog — so the catalog said
+    # one thing and the database another, and no plan or report built on it could be reconciled.
+    # Cataloguing is cheap (names, columns, keys). Deep probing is the expensive half — value
+    # inventories are full scans — and it is bounded by its wall clock, not by a table count; both
+    # environment variables remain for a deployment that deliberately wants a bounded run.
+    def _cap(name: str) -> Optional[int]:
+        raw = (os.environ.get(name) or "").strip()
+        return int(raw) if raw.isdigit() and int(raw) > 0 else None
+
+    prof = Profiler(connector, enum_max_distinct=settings.enum_max_distinct, max_tables=_cap("SEMANTIC_MAX_TABLES"))
+    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None, deep_limit=_cap("SEMANTIC_DEEP_TABLES"))
     # Value-overlap link inference asks the customer's database a question per candidate column. On a
     # real warehouse that is a deliberate, opt-in cost (SEMANTIC_PROBE_LINKS=1); on a local/file source
     # it is free, so it stays on there.

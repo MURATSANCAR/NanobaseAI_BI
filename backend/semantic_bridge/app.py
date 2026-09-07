@@ -66,8 +66,28 @@ class Runtime:
         self._catalog_version = None
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self._checked_at = 0.0
+        # ---- sonuç önbelleği + arka plan tazeleyici -------------------------------------------
+        # Kokpit açılışta beş ağır toplama sorgusu ister; tek bağlantı üstünde bunlar sıraya girer ve
+        # kullanıcı toplam süreyi ekranda bekler. Önbellek bu beklemeyi devralır: istek anında elde
+        # olanı alır, sorguyu kullanıcı adına arka plandaki tazeleyici çalıştırır.
         self._cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
         self._cache_ttl = int(os.environ.get("SEMANTIC_CACHE_TTL_SEC", "300"))
+        # Son `hot_window` saniye içinde sorulan sorgular sıcaktır; tazeleyici yalnız onlara bakar,
+        # bir kez sorulup bırakılan sorgu kendiliğinden listeden düşer.
+        self._refresh_sec = float(os.environ.get("SEMANTIC_REFRESH_SEC", "15"))
+        self._hot_window = float(os.environ.get("SEMANTIC_HOT_WINDOW_SEC", "900"))
+        # Bir sorgu ne kadar uzun sürüyorsa o kadar seyrek tazelenir: on saniye süren bir toplamayı
+        # her on beş saniyede bir koşturmak kaynağı bize ayırmak demektir. Aralık = süre × duty.
+        self._refresh_duty = float(os.environ.get("SEMANTIC_REFRESH_DUTY", "5"))
+        # Tazeleyici cevap alamıyorsa bayat kopya sonsuza kadar servis edilmez: bu yaştan sonra
+        # istek yeniden kaynağa iner ve kullanıcı beklemeyi görür — çünkü artık gerçek odur.
+        self._stale_max = float(os.environ.get("SEMANTIC_STALE_MAX_SEC", "900"))
+        self._hot: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+        self._hot_lock = threading.Lock()
+        self._waiting = 0                      # bağlantıyı bekleyen kullanıcı isteği sayısı
+        self._wait_lock = threading.Lock()
+        self._stop = threading.Event()
+        self._refresher: Optional[threading.Thread] = None
         self.rebuild()
 
     def _load_rules(self) -> str:
@@ -203,23 +223,139 @@ class Runtime:
         phys = self._physical(sql)
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if self._cache_ttl > 0:
+            self._touch_hot(key, phys, limit)
             hit = self._cache.get(key)
-            if hit and time.time() - hit[0] < self._cache_ttl:
-                out = dict(hit[1])
-                out["id"] = uuid.uuid4().hex
-                out["cached"] = True
-                return out
+            if hit:
+                age = time.time() - hit[0]
+                # Taze kopya doğrudan gider. Süresi geçmiş kopya da gider — ama yalnız tazeleyici
+                # ayaktaysa: o zaman bekleme kimseye bir şey kazandırmaz, yenisi zaten yolda.
+                if age < self._cache_ttl or (self._refresher_alive() and age < self._stale_max):
+                    out = self._served(hit[1], hit[0])
+                    out["cached"] = True
+                    return out
+        out, duration = self._execute(phys, limit, interactive=True)
+        self._remember(key, out, duration)
+        served = self._served(out, time.time())
+        served["cached"] = False
+        return served
+
+    # ------------------------------------------------------------------ önbellek iç işleyişi
+
+    def _execute(self, phys: str, limit: int, *, interactive: bool) -> tuple[dict[str, Any], float]:
+        """Tek bağlantı, tek sıra. `interactive` olan istek beklerken tazeleyici sıraya girmez."""
         if self.connector is None:
             raise RuntimeError("no database connector")
-        with self._engine_lock:
-            cols, rows, truncated = self.connector.execute(phys, limit)
-        out = {"id": uuid.uuid4().hex, "columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "cached": False, "physicalSql": phys}
-        if self._cache_ttl > 0 and len(out.get("records") or []) <= 200:
-            self._cache[key] = (time.time(), out)
-            budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
-            while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
-                self._cache.popitem(last=False)
-        return out
+        if interactive:
+            with self._wait_lock:
+                self._waiting += 1
+        try:
+            with self._engine_lock:
+                t0 = time.monotonic()
+                cols, rows, truncated = self.connector.execute(phys, limit)
+                duration = time.monotonic() - t0
+        finally:
+            if interactive:
+                with self._wait_lock:
+                    self._waiting -= 1
+        return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
+
+    def _served(self, out: dict[str, Any], computed_at: float) -> dict[str, Any]:
+        """Sonucun bu isteğe ait kopyası. Yaş cevabın içinde gider: arayüz rakamın ne zaman
+        hesaplandığını söyleyebilsin, "canlı" etiketi bir dakikalık kopyanın üstünde durmasın."""
+        copy = dict(out)
+        copy["id"] = uuid.uuid4().hex
+        copy["computedAt"] = round(computed_at, 3)
+        copy["ageSec"] = round(max(0.0, time.time() - computed_at), 1)
+        return copy
+
+    def _remember(self, key: str, out: dict[str, Any], duration: float) -> None:
+        if self._cache_ttl <= 0 or len(out.get("records") or []) > 200:
+            return
+        self._cache[key] = (time.time(), out)
+        self._cache.move_to_end(key)
+        budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
+        while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
+            dropped, _ = self._cache.popitem(last=False)
+            with self._hot_lock:
+                self._hot.pop(dropped, None)
+        with self._hot_lock:
+            hot = self._hot.get(key)
+            if hot is not None:
+                hot["duration"] = duration
+                hot["fails"] = 0
+
+    def _touch_hot(self, key: str, phys: str, limit: int) -> None:
+        """Sorulan her sorgu sıcak listeye yazılır; tazeleyicinin işi bu listeyi güncel tutmaktır."""
+        with self._hot_lock:
+            hot = self._hot.get(key)
+            if hot is None:
+                hot = self._hot[key] = {"sql": phys, "limit": limit, "duration": 0.0, "fails": 0}
+            hot["asked"] = time.time()
+            self._hot.move_to_end(key)
+            while len(self._hot) > 64:
+                self._hot.popitem(last=False)
+
+    def _refresher_alive(self) -> bool:
+        t = self._refresher
+        return t is not None and t.is_alive()
+
+    def start_refresher(self) -> None:
+        """Sıcak sorguları kullanıcıdan önce tazeleyen tek iş parçacığı. Uygulama ayağa kalkarken
+        çağrılır; SEMANTIC_REFRESH_SEC=0 ile kapatılır ve o zaman her istek kaynağa iner."""
+        if self._refresh_sec <= 0 or self._cache_ttl <= 0 or self.connector is None:
+            return
+        if self._refresher_alive():
+            return
+        self._stop = threading.Event()
+        self._refresher = threading.Thread(target=self._refresh_loop, name="sql-refresh", daemon=True)
+        self._refresher.start()
+        log.info("background refresh on: every %.0fs, hot window %.0fs", self._refresh_sec, self._hot_window)
+
+    def stop_refresher(self) -> None:
+        self._stop.set()
+
+    def _refresh_loop(self) -> None:
+        while not self._stop.wait(self._refresh_sec):
+            try:
+                self._refresh_tick()
+            except Exception as e:  # noqa: BLE001
+                log.warning("refresh tick failed: %s", e)
+
+    def _refresh_tick(self) -> None:
+        now = time.time()
+        with self._hot_lock:
+            for k, hot in list(self._hot.items()):
+                if now - hot.get("asked", 0.0) > self._hot_window:
+                    self._hot.pop(k, None)        # kimse bakmıyor: kaynağı da meşgul etmeyelim
+            due = []
+            for k, hot in self._hot.items():
+                cached_at = self._cache[k][0] if k in self._cache else 0.0
+                every = max(self._refresh_sec, hot.get("duration", 0.0) * self._refresh_duty)
+                if now - cached_at >= every:
+                    due.append((k, dict(hot)))
+        for key, hot in due:
+            if self._waiting or self._stop.is_set():
+                return                            # bekleyen bir kullanıcı varsa sıra onun
+            self._refresh_one(key, hot)
+
+    def _refresh_one(self, key: str, hot: dict[str, Any]) -> None:
+        try:
+            out, duration = self._execute(hot["sql"], hot["limit"], interactive=False)
+        except Exception as e:  # noqa: BLE001
+            with self._hot_lock:
+                cur = self._hot.get(key)
+                if cur is not None:
+                    cur["fails"] = cur.get("fails", 0) + 1
+                    if cur["fails"] >= 5:         # kaynak cevap vermiyor: denemeyi bırak, istek gelince yeniden dene
+                        self._hot.pop(key, None)
+            log.warning("background refresh failed (%s…): %s", key[:8], e)
+            return
+        self._remember(key, out, duration)
+
+    def cache_stats(self) -> dict[str, Any]:
+        with self._hot_lock:
+            hot = len(self._hot)
+        return {"entries": len(self._cache), "hot": hot, "ttlSec": self._cache_ttl, "refreshSec": self._refresh_sec, "refreshing": self._refresher_alive()}
 
     def summarize(self, question: str, sql: str, result: dict[str, Any], sq: Optional[SemanticQuery] = None) -> str:
         cols = [c["name"] for c in result.get("columns") or []]
@@ -530,7 +666,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             state["rt"] = build_runtime()
         rt = state["rt"]
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
-        yield
+        rt.start_refresher()
+        try:
+            yield
+        finally:
+            rt.stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
 
@@ -542,7 +682,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/health")
     def health() -> JSONResponse:
         r = rt()
-        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid()})
+        return JSONResponse({"status": "ok", "service": "nanobaseai-bi-semantic-bridge", "version": SEMANTIC_LAYER_VERSION, "profiles": len(r.profiles), "catalog": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id), "llm": bool(r.llm), "db": bool(r.connector), "pid": os.getpid(), "cache": r.cache_stats()})
 
     @app.get("/api/v1/engine")
     def engine_status() -> dict[str, Any]:

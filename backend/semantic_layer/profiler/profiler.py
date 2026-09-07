@@ -44,7 +44,7 @@ def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool, sample: 
 
 
 class Profiler:
-    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: int = 300, sample_rows: int = 20,
+    def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: Optional[int] = None, sample_rows: int = 20,
                  deep_budget_seconds: Optional[float] = None, max_probes_per_table: int = 40):
         self.c = connector
         self.enum_max_distinct = enum_max_distinct
@@ -101,8 +101,12 @@ class Profiler:
         return {n: (bulk.get(n) if n in bulk else self.c.row_count(schema, n)) for n in names}
 
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
-        """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
-        catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
+        """Catalogue every table the scope matches. Neither this nor `deep_limit` is bounded by a count
+        by default: a catalogue that holds fewer tables than the database is one nobody can plan or
+        report against. `deep_limit`, when a deployment does set one, caps how many tables get value
+        inventories and row samples — the rest are still catalogued (names, columns, keys). Left unset,
+        every table is probed and the deep phase is bounded only by its wall clock, biggest-first, so
+        what the clock does reach is what carries the most."""
         # A scope may name several patterns ("LG_411_%,LG_211_%"): a source that keeps each year under
         # its own prefix is one world, and reading only one prefix is how a year goes missing.
         patterns = [x.strip() for x in (like or "").split(",") if x.strip()] or [like]
@@ -117,7 +121,7 @@ class Profiler:
         # Logical identity up front: both the scope cut and the deep set are decisions about *what kind
         # of table* this is, and they cannot be made from a physical name alone.
         logical = {tbl: logical_table(tbl, sch) for sch, tbl in discovered}
-        if len(discovered) > self.max_tables:
+        if self.max_tables and len(discovered) > self.max_tables:
             # Which tables to drop is a decision about value, not about the alphabet. Cutting the list
             # where it happens to end left behind the table that defines what this database's own codes
             # mean, purely because of its initial. The same volume-and-centrality score that picks the
@@ -153,20 +157,29 @@ class Profiler:
         # Which tables earn the expensive treatment (value inventories, row samples): the ones that carry
         # data and that other tables point at. The rest are still catalogued, just not probed.
         deep: Optional[set[str]] = None
-        if deep_limit is not None and len(tables) > deep_limit:
+        order = list(range(len(tables)))
+        if len(tables) > 1:
             counts = self._bulk_row_counts(schema, [t for _, t in tables])
             refs: dict[str, int] = {}
             for fk in fks:
                 refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1
             score = dict(rank_tables(counts, refs))
-            deep = {t for _, t in _one_per_pattern(tables, score, logical, deep_limit)}
-            log.info("profiling %d/%d tables deeply — %d distinct shapes (volume + centrality, one shape at a time)",
-                     len(deep), len(tables), len({logical[t].table_pattern for t in deep}))
-        out: list[SchemaProfile] = []
+            if deep_limit is not None and len(tables) > deep_limit:
+                deep = {t for _, t in _one_per_pattern(tables, score, logical, deep_limit)}
+                log.info("profiling %d/%d tables deeply — %d distinct shapes (volume + centrality, one shape at a time)",
+                         len(deep), len(tables), len({logical[t].table_pattern for t in deep}))
+            else:
+                # Every table gets probed and the wall clock is the only bound, so the order it is
+                # spent in decides what gets understood. Alphabetical order would hand the whole
+                # budget to whatever sorts first; go biggest-and-most-referenced first instead. The
+                # catalogue is still emitted in discovery order — only the traversal is reordered.
+                order.sort(key=lambda i: (-score.get(tables[i][1], 0.0), tables[i][1]))
+        profiled: list[Optional[SchemaProfile]] = [None] * len(tables)
         started = time.time()
         deep_done = 0
         budget_spent: list[str] = []
-        for index, ((sch, table), lt) in enumerate(zip(tables, names), start=1):
+        for index, position in enumerate(order, start=1):
+            (sch, table), lt = tables[position], names[position]
             entity = entity_by_pattern.get(lt.table_pattern, lt.entity)
             pk = self.c.primary_keys(sch, table)
             is_deep = deep is None or table in deep
@@ -225,7 +238,7 @@ class Profiler:
                 log.info("profiled %s (%d/%d, %d columns, %.1fs, toplam %.0fs)", table, index, len(tables), len(cols), time.time() - t_table, time.time() - started)
             elif index % 25 == 0:
                 log.info("catalogued %d/%d tables (%.0fs)", index, len(tables), time.time() - started)
-            out.append(
+            profiled[position] = (
                 SchemaProfile(
                     datasource_id=datasource_id,
                     table_name=table,
@@ -241,6 +254,7 @@ class Profiler:
                     context=dict(lt.context),
                 )
             )
+        out = [p for p in profiled if p is not None]
         if budget_spent:
             self.deep_skipped = budget_spent
             log.warning("deep profiling budget (%.0fs) spent after %d tables; %d left catalogued but unprobed: %s",

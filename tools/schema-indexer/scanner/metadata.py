@@ -105,8 +105,8 @@ def scan_metadata(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relationshi
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         schemas = list(cfg.schemas)
-        # Cap in Python, not in SQL: `LIMIT n` over an alphabetical listing drops tables without
-        # anyone being able to tell that it did. Reading the whole catalogue costs one scan.
+        # No LIMIT: the scan reports on the whole schema. A count limit over an alphabetical listing
+        # dropped tables without anyone being able to tell that it had.
         cur.execute(
             """
             SELECT t.table_schema, t.table_name, t.table_type,
@@ -124,7 +124,7 @@ def scan_metadata(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relationshi
         discovered = list(cur.fetchall())
         cfg.discovered_tables = len(discovered)
         raw_tables = discovered
-        if len(discovered) > cfg.max_tables:
+        if cfg.max_tables and len(discovered) > cfg.max_tables:
             # A cap that has to bite should keep what carries data, not what sorts first.
             discovered.sort(key=lambda t: (-int(t["approx_rows"] or 0), t["table_schema"], t["table_name"]))
             raw_tables = discovered[: cfg.max_tables]

@@ -2,18 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any, Optional
 
 import psycopg2
 import psycopg2.extras
-
-
-# How many relations one schema response carries. ERP schemas run to thousands of tables; the cap
-# exists to keep a single HTTP response finite, and the response says when it bit. There is no cap
-# on columns: a Logo table has 100–222 of them, and cutting at 80 hid two thirds of STLINE.
-_MAX_TABLES = int(os.environ.get("BI_SCHEMA_API_MAX_TABLES", "2000") or "2000")
 
 
 def _pg_connect(cfg: dict[str, Any]):
@@ -148,15 +141,12 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                 WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
                   AND table_type IN ('BASE TABLE', 'VIEW')
                 ORDER BY table_schema, table_name
-                LIMIT %s
-                """,
-                (_MAX_TABLES + 1,),
+                """
             )
+            # Every table, and every column of every table. Both used to be capped (300 and 80), and
+            # a capped answer is indistinguishable from a smaller database: an ERP table runs to
+            # 100-222 columns, so the column cap alone hid two thirds of the largest table there is.
             rels = list(cur.fetchall())
-            # Ask for one more than we will return, so the caller can be told the list is cut
-            # instead of reading a truncated catalogue as the whole database.
-            truncated = len(rels) > _MAX_TABLES
-            rels = rels[:_MAX_TABLES]
             tables: list[dict[str, Any]] = []
             nodes: list[dict[str, Any]] = []
             for rel in rels:
@@ -196,7 +186,6 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
             "dialect": "postgresql",
             "source_id": datasource_id,
             "table_count": len(tables),
-            "table_list_truncated": truncated,
             "graph": {"nodes": nodes, "edges": []},
             "engine": "nanobase_api",
         }

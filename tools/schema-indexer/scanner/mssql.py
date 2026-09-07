@@ -296,7 +296,7 @@ def select_tables(cfg: IndexerConfig, discovered: list[dict], row_counts) -> lis
     """
     cfg.discovered_tables = len(discovered)
     cfg.truncated_tables = []
-    if len(discovered) <= int(cfg.max_tables):
+    if not int(cfg.max_tables) or len(discovered) <= int(cfg.max_tables):
         return discovered
     # If a cap has to bite, it must drop the least-carrying tables, not the ones whose name happens
     # to sort last. Row counts come from the partition stats DMV; an account without VIEW DATABASE
@@ -334,10 +334,10 @@ def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relat
         if patterns:
             where.append("(" + " OR ".join("TABLE_NAME LIKE %s" for _ in patterns) + ")")
             params.extend(patterns)
-        # Read the whole matching list — INFORMATION_SCHEMA.TABLES is a catalogue scan, cheap even
-        # at ten thousand rows — and cap it here rather than in SQL. `TOP n ... ORDER BY TABLE_NAME`
-        # cut a Logo database off mid-alphabet: the scan stopped somewhere inside LG_<firm>_<period>_C%
-        # and ITEMS, STLINE and STFICHE were never seen, with nothing in the report to say so.
+        # Every table the scope matches, with no TOP. `TOP n ... ORDER BY TABLE_NAME` cut a Logo
+        # database off mid-alphabet — the scan stopped inside LG_<firm>_<period>_C% and ITEMS, STLINE
+        # and STFICHE were never seen — and the report said nothing, so the catalogue silently
+        # disagreed with the database.
         cur.execute(
             f"SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE "
             f"FROM INFORMATION_SCHEMA.TABLES WHERE {' AND '.join(where)} ORDER BY TABLE_SCHEMA, TABLE_NAME",
