@@ -269,3 +269,36 @@ def test_the_system_reads_the_schema_itself_but_a_person_still_decides(store, pr
     gen.ingest_annotation(sug["tablePattern"], sug["column"], sug["text"], "annotation:accepted")
     EvidenceEngine(store, min_support=3).run(TENANT, DS, profiles)
     assert not store.list_suggestions(DS), "a decided suggestion stops being offered"
+
+
+def test_the_reader_asks_in_batches_and_one_bad_answer_costs_only_its_batch(store, profiles):
+    """A hundred columns with their values is more than a local model can read at once — the earlier
+    single request came to a hundred thousand tokens against sixteen and answered nothing at all. And
+    a batch that comes back unusable must cost only itself."""
+    from semantic_layer.candidates.generator import CandidateGenerator
+    from semantic_layer.conventions import Conventions
+
+    for p in profiles:
+        store.upsert_profile(p)
+    gen = CandidateGenerator(store, TENANT, DS, profiles, Conventions.from_profiles(profiles))
+
+    asked: list[str] = []
+
+    class _Counting:
+        def chat(self, messages, **kw):
+            asked.append(messages[0]["content"])
+            if len(asked) == 1:
+                return "bu bir JSON değil"          # the first batch is wasted, the rest are not
+            return '[{"entity":"INVOICE","column":"TRCODE","meaning":"Fatura türü","confidence":0.7}]'
+
+    import os
+
+    os.environ["SEMANTIC_PROPOSE_BATCH"] = "1"
+    try:
+        rep = gen.propose_column_meanings(_Counting(), max_columns=3)
+    finally:
+        os.environ.pop("SEMANTIC_PROPOSE_BATCH", None)
+
+    assert len(asked) >= 2, "asked more than once"
+    assert all(len(p) < 20_000 for p in asked), "no single request carries the whole schema"
+    assert rep["proposed"] >= 1 and rep["asked"] >= 2, rep

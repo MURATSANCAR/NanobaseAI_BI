@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, Iterable, Optional
@@ -192,9 +193,24 @@ class CandidateGenerator:
         if not todo:
             return {"asked": 0, "proposed": 0}
 
+        # asked in batches: a hundred columns with their values is more than a local model can read at
+        # once, and one oversized request answers nothing at all
+        batch = max(5, int(os.environ.get("SEMANTIC_PROPOSE_BATCH", "20")))
+        proposed = 0
+        asked = 0
+        for start in range(0, len(todo), batch):
+            chunk = todo[start : start + batch]
+            asked += len(chunk)
+            try:
+                proposed += self._propose_batch(llm, chunk, model_version)
+            except Exception as e:  # noqa: BLE001
+                log.warning("column proposal batch failed: %s", str(e)[:200])
+        return {"asked": asked, "proposed": proposed}
+
+    def _propose_batch(self, llm, todo: list[tuple[Any, Any]], model_version: Optional[str]) -> int:
         lines = []
         for prof, col in todo:
-            vals = ", ".join(f"{v} ({n})" for v, n in col.meaningful_values()[:10])
+            vals = ", ".join(f"{v} ({n})" for v, n in col.meaningful_values()[:8])
             lines.append(f"- {prof.entity}.{col.name} [{col.data_type}] değerler: {vals}")
         prompt = (
             "Bir veritabanı şemasını okuyorsun. Her satır bir kolonu, içindeki değerleri ve kaç kez geçtiğini veriyor. "
@@ -204,14 +220,14 @@ class CandidateGenerator:
             "\"values\": {\"kod\": \"anlamı\"}, \"confidence\": 0-1}]. "
             "Emin olmadığın kolonu listeye hiç koyma; uydurma anlam yazma.\n\n## Kolonlar\n" + "\n".join(lines)
         )
-        text = llm.chat([{"role": "user", "content": prompt}], max_tokens=2500)
+        text = llm.chat([{"role": "user", "content": prompt}], max_tokens=1800)
         m = re.search(r"\[.*\]", text, re.S)
         if not m:
-            return {"asked": len(todo), "proposed": 0, "raw": text[:200]}
+            return 0
         try:
             items = json.loads(m.group(0))
         except Exception:  # noqa: BLE001
-            return {"asked": len(todo), "proposed": 0, "raw": text[:200]}
+            return 0
 
         by_key = {(p.entity, c.name.upper()): (p, c) for p, c in todo}
         n = 0
@@ -230,7 +246,7 @@ class CandidateGenerator:
             facts = mine_annotation(text_out, prof.entity, col.name, f"llm:{prof.entity}.{col.name}", self.conventions)
             self.ingest_doc_facts(facts, evidence_type=EvidenceType.LLM_CANDIDATE, weight=0.1)
             n += 1
-        return {"asked": len(todo), "proposed": n}
+        return n
 
     # ------------------------------------------------------------------ profile fit evidence
     def attach_profile_evidence(self) -> int:
@@ -257,10 +273,16 @@ class CandidateGenerator:
         terms = [t for t in dict.fromkeys(terms) if t][:max_terms]
         if not terms:
             return {"asked": 0, "candidates": 0}
+        # The whole schema does not fit in a model's context — 837 tables came to a hundred thousand
+        # tokens against sixteen, so this stage had been failing on every run and saying so only in a
+        # field nobody reads. The tables anyone has already named come first, then the fullest.
+        named = {m.entity for c in self.store.find_concepts(self.tenant_id, self.datasource_id, limit=100000)
+                 for m in self.store.list_mappings(c.id)}
+        ordered = sorted(self.profiles, key=lambda p: (p.entity not in named, -(p.row_count or 0)))
         ctx_lines = []
-        for p in self.profiles:
-            enum_cols = [f"{c.name} {{{', '.join(v for v, _ in c.top_values[:12])}}}" for c in p.columns if c.is_enum()]
-            ctx_lines.append(f"- {p.entity} ({p.table_pattern}): {', '.join(c.name for c in p.columns[:40])}" + (f" | enum: {'; '.join(enum_cols[:8])}" if enum_cols else ""))
+        for p in ordered[:12]:
+            enum_cols = [f"{c.name} {{{', '.join(v for v, _ in c.top_values[:8])}}}" for c in p.columns if c.is_enum()]
+            ctx_lines.append(f"- {p.entity} ({p.table_pattern}): {', '.join(c.name for c in p.columns[:30])}" + (f" | enum: {'; '.join(enum_cols[:6])}" if enum_cols else ""))
         prompt = (
             "Sen bir ERP semantik analistisin. Aşağıdaki şema profiline bakarak verilen Türkçe iş terimlerinin olası fiziksel karşılıklarını öner. "
             "Yalnız JSON listesi döndür: [{\"term\":..., \"semantic_type\": \"DIMENSION_VALUE|COLUMN|METRIC\", \"entity\":..., \"column\":..., \"operator\": \"IN\", \"values\": [..], \"formula\": null, \"confidence\": 0-1, \"rationale\": ...}]. "

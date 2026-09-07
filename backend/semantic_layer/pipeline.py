@@ -123,15 +123,21 @@ def run_pipeline(
     report["profile_evidence"] = gen.attach_profile_evidence()
     if llm is not None:
         # A model timeout must not cost the whole nightly run: candidates are a bonus, not a precondition.
+        # Two separate readings, and one failing must not take the other with it: they were in one
+        # try block, so a context overflow in the first meant the second never ran at all.
         try:
             unresolved = store.list_unresolved_terms(settings.tenant_id, settings.datasource_id)
             report["llm"] = gen.llm_candidates(llm, list(unresolved)[:20])
-            # and read the schema itself: a column no question has ever mentioned would otherwise stay
-            # nameless for ever, and there are tens of thousands of them
-            report["proposals"] = gen.propose_column_meanings(llm, max_columns=int(os.environ.get("SEMANTIC_PROPOSE_COLUMNS", "200")))
         except Exception as e:  # noqa: BLE001
             log.warning("llm candidate stage skipped: %s", e)
             report["llm"] = {"error": str(e)[:200]}
+        try:
+            # read the schema itself: a column no question has ever mentioned would otherwise stay
+            # nameless for ever, and there are tens of thousands of them
+            report["proposals"] = gen.propose_column_meanings(llm, max_columns=int(os.environ.get("SEMANTIC_PROPOSE_COLUMNS", "200")))
+        except Exception as e:  # noqa: BLE001
+            log.warning("column proposal stage skipped: %s", e)
+            report["proposals"] = {"error": str(e)[:200]}
     if use_intugle and report.get("intugle", {}).get("ran"):
         from semantic_layer.profiler import intugle_adapter
 
