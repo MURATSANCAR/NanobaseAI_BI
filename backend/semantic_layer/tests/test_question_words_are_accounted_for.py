@@ -34,3 +34,20 @@ def test_a_column_named_in_lower_case_is_still_a_column():
 def test_several_codes_after_a_column_are_all_kept():
     codes = extract_question_facts("trcode 7,8 ve 9 satışları").explicit_codes
     assert codes and codes[0][0] == "TRCODE" and set(codes[0][1]) == {"7", "8", "9"}
+
+
+def test_a_stated_filter_that_cannot_reach_the_subject_is_reported_not_applied(monkeypatch):
+    """A column existing in exactly one table is not thereby the column that was meant."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+    from semantic_layer.runtime.resolver import SemanticResolver
+
+    invoice = SchemaProfile(datasource_id="d", table_name="INVOICE", table_pattern="INVOICE", entity="INVOICE",
+                            columns=[ColumnProfile(name="NETTOTAL", data_type="float")])
+    elsewhere = SchemaProfile(datasource_id="d", table_name="TEMPLATES", table_pattern="TEMPLATES", entity="TEMPLATES",
+                              columns=[ColumnProfile(name="SPECCODE", data_type="int")])
+    r = SemanticResolver.__new__(SemanticResolver)
+    r.profiles = [invoice, elsewhere]
+    r._edges, r._related_cache = {}, {}
+    r.conventions = None
+    monkeypatch.setattr(SemanticResolver, "_primary_entity", lambda self, hits: "INVOICE")
+    assert r._entity_for_column("SPECCODE", []) is None

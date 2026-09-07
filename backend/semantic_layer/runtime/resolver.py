@@ -107,6 +107,8 @@ class SemanticResolver:
         self.default_temporal = default_temporal
         self.conventions = conventions or Conventions.from_profiles(profiles)
         self._value_index: dict[str, list[tuple[str, str, str]]] = {}
+        self._edges: dict[str, set[str]] = {}
+        self._related_cache: dict[str, set[str]] = {}
         self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
 
     # ------------------------------------------------------------------ public
@@ -152,13 +154,13 @@ class SemanticResolver:
                 # The column exists but nothing in the question says which table it belongs to — it
                 # occurs in several. Answering without the filter answers a wider question than the
                 # one that was asked, so this is stated rather than passed over.
-                where = sorted({p.entity for p in self.profiles if any(c.name.upper() == col for c in p.columns)})[:5]
+                where = sorted({p.entity for p in self.profiles if any(c.name.upper() == col for c in p.columns)})
                 term = f"{col} {','.join(values)}"
                 if term not in sq.unhandled:
                     sq.unhandled.append(term)
                     sq.explanation.append(
-                        f"'{col}' bu veritabanında {len(where)} tabloda var ({', '.join(where)}); "
-                        f"hangisi kastedildiği anlaşılmadığı için {col} = {', '.join(values)} filtresi UYGULANMADI"
+                        f"'{col}' kolonu bu veritabanında var ({', '.join(where[:5])}) ama sorunun konusuyla "
+                        f"ilişkili değil; {col} = {', '.join(values)} filtresi UYGULANMADI"
                     )
                 for k, tok in enumerate(qf.tokens):
                     if tok.upper() == col or tok in values:
@@ -726,11 +728,49 @@ class SemanticResolver:
             )
         return None
 
+    def _related_entities(self, root: str, hops: int = 2) -> set[str]:
+        """Entities a question about `root` can also be about: those joined to it, either direction.
+
+        Built from the relationships the source itself declares, so it says nothing about any
+        particular schema — only that a filter has to land somewhere the answer can reach.
+        """
+        cached = self._related_cache.get(root)
+        if cached is not None:
+            return cached
+        if not self._edges:
+            for p in self.profiles:
+                for rel in p.relationships:
+                    other = rel.get("ref_entity")
+                    if not other:
+                        continue
+                    self._edges.setdefault(p.entity, set()).add(other)
+                    self._edges.setdefault(other, set()).add(p.entity)
+        seen, frontier = {root}, {root}
+        for _ in range(hops):
+            nxt: set[str] = set()
+            for e in frontier:
+                nxt |= self._edges.get(e, set())
+            frontier = nxt - seen
+            seen |= frontier
+        self._related_cache[root] = seen
+        return seen
+
     def _entity_for_column(self, col: str, hits: list[ResolvedSlot]) -> Optional[str]:
         owners = [p.entity for p in self.profiles if p.column(col)]
+        if not owners:
+            return None
+        primary = self._primary_entity(hits)
+        if primary:
+            # A stated filter belongs to what the question is about, or to something joined to it. A
+            # column that merely happens to exist in one unrelated table is not what was meant, and
+            # binding it there attaches a condition to an answer nobody can see the workings of.
+            near = self._related_entities(primary)
+            owners = [e for e in owners if e in near]
+            if not owners:
+                return None
         if len(owners) == 1:
             return owners[0]
-        return self.conventions.preferred_entity(owners, hint=self._primary_entity(hits))
+        return self.conventions.preferred_entity(owners, hint=primary)
 
     @staticmethod
     def _primary_entity(hits: list[ResolvedSlot]) -> Optional[str]:
