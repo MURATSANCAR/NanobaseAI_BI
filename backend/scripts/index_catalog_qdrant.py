@@ -119,14 +119,19 @@ def points_for(profiles) -> list[Point]:
     for p in profiles:
         names = [c.name for c in p.columns]
         head = f"{p.entity} ({p.table_name})"
-        if p.description:
-            head += f" — {p.description}"
+        # What the source said, else what was worked out about it. Most of this catalog's meaning
+        # arrived as the second kind — the vendor documented a fraction of these tables — and indexing
+        # only `description` would leave the router matching against bare identifiers again.
+        said = (p.description or "").strip() or next(
+            (d["text"] for d in (p.derived or []) if d.get("text")), "")
+        if said:
+            head += f" — {said}"
         # Column names are worth carrying, but a four-hundred-column list drowns the description that
         # actually says what the table is for.
         points.append(Point(len(points) + 1, p.entity, p.table_name, None,
                             f"{head}\nkolonlar: {', '.join(names[:80])}"))
         for c in p.columns:
-            meaning = (c.description or "").strip()
+            meaning = (c.meaning() or "").strip()
             if not meaning:
                 continue
             values = ""
