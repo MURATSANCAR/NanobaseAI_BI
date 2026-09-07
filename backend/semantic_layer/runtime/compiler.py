@@ -758,18 +758,40 @@ class ExistingCompiler:
             table_said = self.annotations.get((p.entity, None)) or p.description
             if table_said:
                 lines.append(f"{self.table_label(p)} — {table_said[:200]}")
-            block = [f"{self.table_label(p)}: " + ", ".join(cols) +
-                     (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else "")]
-            if table_said:
-                block.insert(0, lines.pop())
-            size = sum(len(x) + 1 for x in block)
-            # A table the question itself resolved to is never dropped: without it the prompt cannot
-            # be answered at all, and a short prompt that cannot be answered is not an improvement.
-            if spent + size > budget and spent > 0 and p.entity not in self._resolved_entities(q):
+            head = lines.pop() if table_said else ""
+            prefix = f"{self.table_label(p)}: "
+            remaining = budget - spent - len(head) - len(prefix) - 2
+
+            # A table the question itself resolved to is never dropped — without it the prompt cannot
+            # be answered at all, and a short prompt that cannot be answered is no improvement. Every
+            # other table gives way when the budget is gone.
+            required = p.entity in self._resolved_entities(q) or not lines
+            if remaining < 200 and not required:
                 skipped.append(p.entity)
+                if head:
+                    pass          # its own description goes with it
                 continue
+
+            # The context is a hard physical limit, not a preference: what a table cannot spend it
+            # does not get. Columns are already ranked by what the question can be answered with, so
+            # what goes is the tail — and what went is said, never dropped in silence.
+            if sum(len(c) + 2 for c in cols) > remaining:
+                fitted: list[str] = []
+                used = 0
+                for text in cols:
+                    if used + len(text) + 2 > remaining:
+                        break
+                    fitted.append(text)
+                    used += len(text) + 2
+                left_out += len(cols) - len(fitted)
+                cols = fitted or cols[:1]      # one column is still more use than a bare table name
+
+            block = ([head] if head else []) + [
+                prefix + ", ".join(cols) +
+                (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else "")
+            ]
             lines.extend(block)
-            spent += size
+            spent += sum(len(x) + 1 for x in block)
         if skipped:
             # Never a silent cap. The model has to know the schema it was shown is not all of it.
             lines.append(f"(bağlam bütçesine sığmayan {len(skipped)} tablo listelenmedi: "
