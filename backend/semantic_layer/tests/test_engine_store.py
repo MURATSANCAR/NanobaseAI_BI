@@ -192,3 +192,35 @@ def test_the_gap_list_is_plain_json(store, profiles):
     gaps = store.term_gaps(TENANT, DS)
     assert gaps and gaps[0]["term"] == "sepet"
     json.dumps({"gaps": gaps})       # would raise on a datetime
+
+
+def test_a_person_writing_a_definition_is_enough_when_the_data_agrees(store, profiles):
+    """A deployment where nobody presses the approve button could define columns and never what its
+    codes or its measures mean — the part of the business that actually needs saying. Someone writing
+    it down against a table and column is a definition, not a guess. The data still has to agree."""
+    from semantic_layer.evidence.engine import EvidenceEngine
+    from semantic_layer.models import Evidence, EvidenceType, Mapping, SemanticType
+    from semantic_layer.store.catalog_store import ConceptStatus
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    pmap = {p.entity: p for p in profiles}
+
+    # a value the profile actually observed on that column
+    good, _ = store.upsert_concept(TENANT, DS, "toptan", SemanticType.DIMENSION_VALUE,
+                                   mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern,
+                                                   column="TRCODE", operator="IN", values=["8"]),
+                                   status=ConceptStatus.CANDIDATE)
+    store.add_evidence(Evidence(good.id, EvidenceType.HUMAN_ANNOTATION, "annotation:1", support_count=1))
+
+    # and a value it never saw there
+    bad, _ = store.upsert_concept(TENANT, DS, "hayali", SemanticType.DIMENSION_VALUE,
+                                  mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern,
+                                                  column="TRCODE", operator="IN", values=["9999"]),
+                                  status=ConceptStatus.CANDIDATE)
+    store.add_evidence(Evidence(bad.id, EvidenceType.HUMAN_ANNOTATION, "annotation:2", support_count=1))
+
+    engine = EvidenceEngine(store, min_support=3)
+    assert engine.evaluate(store.get_concept(good.id), pmap).status == ConceptStatus.CERTIFIED
+    assert engine.evaluate(store.get_concept(bad.id), pmap).status != ConceptStatus.CERTIFIED

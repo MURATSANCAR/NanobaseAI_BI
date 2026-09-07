@@ -7,6 +7,7 @@
 Gate (multi_source, default):
     validated_support ≥ min_support
     OR (validated_support ≥ 1 AND documented (DOC/HUMAN) AND profile_fit = 1)
+    OR (a person wrote it in the portal AND the data agrees: HUMAN ≥ 1 AND profile_fit = 1)
     OR human_certified
     AND physical mapping exists AND table pattern is profiled AND no BLOCKING counter-evidence
 Gate (strict): only validated_support ≥ min_support OR human_certified.
@@ -166,7 +167,18 @@ class EvidenceEngine:
         elif self.gate_mode == "strict":
             support_ok = validated >= self.min_support
         else:
-            support_ok = validated >= self.min_support or (validated >= 1 and documented and profile_fit >= 0.9) or (concept.semantic_type == SemanticType.COLUMN and documented and physical_fit >= 0.99)
+            support_ok = (
+                validated >= self.min_support
+                or (validated >= 1 and documented and profile_fit >= 0.9)
+                or (concept.semantic_type == SemanticType.COLUMN and documented and physical_fit >= 0.99)
+                # Someone deliberately wrote this down against this table and column, and the data
+                # agrees with what they wrote. That is a definition, not a guess, and waiting for a
+                # validated query on top of it means a deployment where nobody presses the approve
+                # button can define columns but never what its codes or its measures mean — which is
+                # the part of the business that actually needs saying. The data still has to confirm
+                # it: an annotation the profile contradicts does not pass.
+                or (human >= 1 and profile_fit >= 0.9 and physical_fit >= 0.99)
+            )
         if human_certified:
             support_ok = True
         if not support_ok:
