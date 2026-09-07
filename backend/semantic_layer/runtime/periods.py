@@ -82,14 +82,43 @@ def _one_per_window(chosen: list[SchemaProfile], windows: dict) -> list[SchemaPr
     return [p for p in chosen if p in out]
 
 
+def duplicates_of(chosen: list[SchemaProfile], available: list[SchemaProfile]) -> list[tuple[SchemaProfile, SchemaProfile]]:
+    """(read, skipped) for every period this source keeps more than one copy of.
+
+    A copy that is not read has to be named. It is the one thing here a person could disagree with —
+    which of two company codes holds the real 2015 — and an answer that silently picked one is an
+    answer nobody can check.
+    """
+    taken = {p.table_name for p in chosen}
+    out = []
+    for kept in chosen:
+        w = _window(kept)
+        if not w:
+            continue
+        for other in available:
+            if other.table_name in taken:
+                continue
+            o = _window(other)
+            if o and (o[0].year, o[0].month, o[1].year, o[1].month) == (w[0].year, w[0].month, w[1].year, w[1].month):
+                out.append((kept, other))
+    return out
+
+
 def describe(chosen: list[SchemaProfile], available: list[SchemaProfile]) -> str:
     """What an answer should say about which tables it read, when there was a choice."""
     if len(available) <= 1 or not chosen:
         return ""
+    parts = []
     if len(chosen) == len(available):
-        return f"{chosen[0].entity}: {len(chosen)} dönem tablosu birlikte okundu"
-    names = ", ".join(sorted(p.table_name for p in chosen))
-    return f"{chosen[0].entity}: dönemle kesişen tablolar okundu ({names})"
+        parts.append(f"{chosen[0].entity}: {len(chosen)} dönem tablosu birlikte okundu")
+    else:
+        names = ", ".join(sorted(p.table_name for p in chosen))
+        parts.append(f"{chosen[0].entity}: dönemle kesişen tablolar okundu ({names})")
+    # Never a silent choice between two copies of the same year.
+    for kept, skipped in duplicates_of(chosen, available):
+        parts.append(f"aynı dönemin ikinci kopyası okunmadı: {skipped.table_name} "
+                     f"(okunan: {kept.table_name}) — iki kez sayılmasın diye")
+    return "; ".join(parts)
 
 
-__all__ = ["tables_for", "spans", "describe"]
+__all__ = ["tables_for", "spans", "describe", "duplicates_of"]

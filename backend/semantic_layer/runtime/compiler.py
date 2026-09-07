@@ -834,12 +834,22 @@ class ExistingCompiler:
             available = self.tables_of.get(entity) or []
             if len(available) < 2:
                 continue
-            chosen = {p.table_name for p in periods.tables_for(available, first, last)}
+            picked = periods.tables_for(available, first, last)
+            chosen = {p.table_name for p in picked}
+            # A period this source keeps twice: one copy is read and the other must be named, or the
+            # model sees a table it was not allowed to use and no reason for it.
+            copies = {skipped.table_name: kept.table_name
+                      for kept, skipped in periods.duplicates_of(picked, available)}
             rows = []
             for prof in sorted(available, key=lambda p: p.table_name):
                 window = prof.time_window
                 covers = f"{str(window[0])[:10]} – {str(window[1])[:10]}" if window else "dönemi ölçülmemiş"
-                mark = " ← bu soru için" if prof.table_name in chosen else ""
+                if prof.table_name in chosen:
+                    mark = " ← bu soru için"
+                elif prof.table_name in copies:
+                    mark = f" ← KULLANMA: {copies[prof.table_name]} ile aynı dönemin kopyası, iki kez sayılır"
+                else:
+                    mark = ""
                 rows.append(f"  - {self.table_label(prof)}: {covers}{mark}")
             lines.append(f"{entity} yıllara bölünmüş:")
             lines.extend(rows)
