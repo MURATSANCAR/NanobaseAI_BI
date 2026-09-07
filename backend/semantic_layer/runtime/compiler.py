@@ -581,6 +581,9 @@ class ExistingCompiler:
         # Keeps the tail of a table's columns only where the question reaches it. On by default:
         # what it replaces is not "everything" but a byte budget cutting in declaration order.
         self.column_focus = (os.environ.get("SEMANTIC_COLUMN_FOCUS", "1") or "1").strip() not in ("0", "false", "no", "off")
+        # Who resolves an entity split one-table-per-year: the compiler (default) or the model.
+        # SEMANTIC_PERIOD_IN_SQL=0 puts the year-to-table map back in the prompt.
+        self.period_in_sql = (os.environ.get("SEMANTIC_PERIOD_IN_SQL", "1") or "1").strip() not in ("0", "false", "no", "off")
         self.column_focus_tail = int(os.environ.get("SEMANTIC_COLUMN_FOCUS_TAIL", "60"))
         self._scored_lock = threading.Lock()
         self._scored_cache: dict[str, set[tuple[str, str]]] = {}
@@ -971,6 +974,19 @@ class ExistingCompiler:
         """
         first = min((t.start for t in q.temporal if t.start), default=None)
         last = max((t.end for t in q.temporal if t.end), default=None)
+        if self.period_in_sql:
+            # The compiler resolves this now (see physicalize_sql). Handing the model the
+            # year-to-table map and asking it to write the UNION was a step where it could pick the
+            # wrong year or union a duplicate copy — and a duplicate unioned in returns exactly twice
+            # the real figure, which is the kind of wrong answer nobody catches. Naming one table is
+            # all that is asked; the years the question needs are added around it afterwards.
+            split = [e for e in entities if len(self.tables_of.get(e) or []) > 1]
+            if not split:
+                return "(bu sorudaki tablolar yıllara bölünmemiş)"
+            return ("Şu tablolar yıllara bölünmüştür: " + ", ".join(sorted(split)) + ".\n"
+                    "Listedeki tabloyu olduğu gibi kullan. Sorunun kapsadığı yılların tabloları "
+                    "derleyici tarafından birleştirilir — kendin UNION ALL yazma, başka bir yılın "
+                    "tablosunu adlandırma.")
         lines: list[str] = []
         for entity in entities:
             available = self.tables_of.get(entity) or []

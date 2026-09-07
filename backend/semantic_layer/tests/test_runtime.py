@@ -838,14 +838,30 @@ def test_a_question_about_an_earlier_year_is_shown_that_year_s_table(catalog, pr
     assert shown(ask(date(2024, 1, 1), date(2025, 1, 1))) == {"LG_211_01_INVOICE"}, "2024 was shown the 2026 table"
     assert shown(ask(date(2026, 1, 1), date(2027, 1, 1))) == {"LG_411_01_INVOICE"}, "the bigger table won on size"
 
+    # Reading across the boundary is now the compiler's job rather than the model's: it is told the
+    # entity is split and to name one table, and physicalize_sql adds the years around it. So the
+    # guarantee is asserted where it now lives — in the SQL, not in the prompt.
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
     spanning = ask(date(2024, 1, 1), date(2027, 1, 1))
     text = c.period_block(spanning, ["INVOICE"])
-    assert "LG_211_01_INVOICE" in text and "LG_411_01_INVOICE" in text, text
-    assert text.count("← bu soru için") == 2, "both years are needed and both have to be marked"
-    assert "UNION ALL" in text, "the model is not told how to read across the boundary"
+    assert "UNION ALL" in text, "the model must be told not to write the union itself"
+    assert "INVOICE" in text
 
-    one_year = c.period_block(ask(date(2026, 1, 1), date(2027, 1, 1)), ["INVOICE"])
-    assert one_year.count("← bu soru için") == 1, one_year
+    sql = physicalize_sql("SELECT SUM(NETTOTAL) FROM INVOICE", [old, new], {},
+                          period=(date(2024, 1, 1), date(2027, 1, 1)))
+    assert "LG_211_01_INVOICE" in sql and "LG_411_01_INVOICE" in sql, sql
+    assert "UNION ALL" in sql.upper(), "a question spanning both years has to read both"
+
+    one_year = physicalize_sql("SELECT SUM(NETTOTAL) FROM INVOICE", [old, new], {},
+                               period=(date(2026, 1, 1), date(2027, 1, 1)))
+    assert "LG_411_01_INVOICE" in one_year and "LG_211_01_INVOICE" not in one_year, one_year
+
+    # The old contract is still available to a deployment that wants the model to do it.
+    c.period_in_sql = False
+    legacy = c.period_block(spanning, ["INVOICE"])
+    assert "LG_211_01_INVOICE" in legacy and "LG_411_01_INVOICE" in legacy
+    assert legacy.count("← bu soru için") == 2, "both years are needed and both have to be marked"
 
 
 def test_a_year_the_deployment_never_loaded_is_refused_not_handed_to_a_model(catalog, profiles, settings):
