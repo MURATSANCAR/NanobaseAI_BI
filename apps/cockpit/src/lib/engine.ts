@@ -29,6 +29,12 @@ export type SqlResult = {
   columns: SqlColumn[];
   records: Record<string, unknown>[];
   totalRows: number;
+  /** Köprünün önbelleğinden mi geldi ve sonuç kaç saniye önce hesaplandı. Köprü aynı sorguyu arka
+   *  planda sıcak tutar (SEMANTIC_REFRESH_SEC); rakamın yaşı bu yüzden cevapla birlikte gelir ve
+   *  arayüz "canlı" derken kaç saniyelik bir canlılıktan söz ettiğini söyleyebilir. */
+  cached?: boolean;
+  ageSec?: number;
+  computedAt?: number;
   threadId?: string;
   widget?: WidgetSpec;
 };
