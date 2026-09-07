@@ -101,6 +101,157 @@ def parse_expression(expr: str) -> tuple[str, dict[str, str]]:
     return head.strip(), values
 
 
+# --- the vendor's Turkish table-structure document -------------------------------------------
+
+#: `LG_XXX_ITEMS`, `LG_XXX_XX_STLINE`, `L_CAPIDEF` — a heading on a line of its own. `XXX` is the
+#: firm and the inner `XX` the period, the same two placeholders the workbook writes as prefixes.
+_DOC_HEADING = re.compile(r"^(?:LG_XXX_\s*(?P<period>XX_)?|(?P<db>L_))(?P<base>[A-Z][A-Z0-9_]*)\s*$")
+
+#: The document was written in Word with a Wingdings arrow, which survives conversion as a private-use
+#: codepoint. "Muhasebe hesabı referansı EMUHACC" is the vendor naming a foreign key.
+_DOC_ARROW = "\uf0e0"
+
+#: Lines that are table furniture, not a Turkish name for the table above them.
+_DOC_FURNITURE = {"Adı", "İndeksler", "İndeks sayısı", "Alan", "Tipi", "Açıklama", "No", "Uzunluk", "Özellik"}
+
+
+def doc_text(path: Path) -> str:
+    """The .DOC as text. Word 97 binary, so it goes through the converter macOS ships."""
+    if path.suffix.lower() in (".txt", ".md"):
+        return path.read_text(encoding="utf-8", errors="replace")
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "doc.txt"
+        try:
+            subprocess.run(
+                ["textutil", "-convert", "txt", "-encoding", "UTF-8", "-output", str(out), str(path)],
+                check=True, capture_output=True,
+            )
+        except (OSError, subprocess.CalledProcessError) as e:
+            raise SystemExit(
+                f"cannot read {path}: needs `textutil` (macOS) or a .txt export of the document.\n{e}"
+            ) from e
+        return out.read_text(encoding="utf-8", errors="replace")
+
+
+def parse_structure_doc(text: str) -> dict[str, dict]:
+    """Turkish names for the tables and their columns, plus the foreign keys the arrows name.
+
+    The document is one long Word table flattened to a line per cell, in two passes over the same
+    headings: a list that gives each table its Turkish name, then a section per table that gives its
+    indexes and its columns as `field / type / Turkish sentence` triples.
+    """
+    lines = [l.rstrip() for l in text.split("\n")]
+    # The table of contents repeats every heading as a HYPERLINK field. Reading it as content would
+    # give each table a "description" that is the page number of the section it points at.
+    toc = [i for i, l in enumerate(lines) if "HYPERLINK" in l]
+    body = lines[max(toc) + 1:] if toc else lines
+
+    out: dict[str, dict] = {}
+    current = None
+    i = 0
+    while i < len(body):
+        line = body[i].strip()
+        if m := _DOC_HEADING.match(line):
+            current = m.group("base")
+            entry = out.setdefault(current, {"columns": {}, "relations": []})
+            entry.setdefault("scope", "database" if m.group("db") else "period" if m.group("period") else "firm")
+            entry.setdefault("physical", line)
+            nxt = body[i + 1].strip() if i + 1 < len(body) else ""
+            # In the naming list the heading is followed by its Turkish name; in the detail section
+            # by the index count. A digit is the detail section, not a name.
+            if nxt and "description" not in entry and not _DOC_HEADING.match(nxt) and nxt not in _DOC_FURNITURE:
+                if not nxt[0].isdigit() and len(nxt) <= 90:
+                    entry["description"] = nxt
+            i += 1
+            continue
+
+        if line == "Alan" and body[i + 1 : i + 3] and [b.strip() for b in body[i + 1 : i + 3]] == ["Tipi", "Açıklama"]:
+            i = _read_column_block(body, i + 3, out.get(current))
+            continue
+        i += 1
+    return out
+
+
+def _read_column_block(body: list[str], start: int, entry: dict | None) -> int:
+    """The `field / type / Turkish sentence` triples under one Alan/Tipi/Açıklama header."""
+    i = start
+    while i + 2 < len(body):
+        name, ftype, desc = (body[i].strip(), body[i + 1].strip(), body[i + 2].strip())
+        if not name or _DOC_HEADING.match(name) or name in _DOC_FURNITURE:
+            break
+        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", name) or not ftype:
+            break
+        if entry is not None:
+            target = ""
+            if _DOC_ARROW in desc:
+                desc, _, tail = desc.partition(_DOC_ARROW)
+                target = re.sub(r"^[^A-Z]*", "", tail.strip()).split()[0] if tail.strip() else ""
+                target = re.sub(r"[^A-Z0-9_].*$", "", target)
+            desc = desc.strip()
+            if desc:
+                entry["columns"][name] = desc
+            if target:
+                entry["relations"].append({"column": name, "to": target})
+        i += 3
+    return i
+
+
+def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
+    """Turkish alongside English, and the tables only the document knows.
+
+    Nothing is overwritten: the workbook stays the structural truth — types, sizes, offsets, code
+    sets — and the document adds the sentence a Turkish question can actually match against. A table
+    the workbook never mentions is carried in with what the document has and marked as such, so a
+    consumer can tell a documented column from an undocumented one.
+    """
+    tables = data["tables"]
+    added, tr_tables, tr_columns, unmatched, hinted = [], 0, 0, 0, 0
+    for base, entry in sorted(doc.items()):
+        target = tables.get(base)
+        if target is None:
+            tables[base] = target = {
+                "physical": entry.get("physical", base),
+                "level": {"database": "system", "period": "period"}.get(entry.get("scope", "firm"), "firm"),
+                "scope": entry.get("scope", "firm"),
+                "description": "",
+                "columns": {},
+                "relations": [],
+                "indexes": [],
+                "source": "structure-doc",
+            }
+            added.append(base)
+        if desc := entry.get("description"):
+            target["description_tr"] = desc
+            tr_tables += 1
+        for column, text in entry["columns"].items():
+            col = target["columns"].get(column)
+            if col is None:
+                # The document names a column the workbook does not. It is a real column of an older
+                # release; recorded without a type, because the document does not give one we trust.
+                col = target["columns"][column] = {"type": "", "source": "structure-doc"}
+                unmatched += 1
+            col["description_tr"] = text
+            tr_columns += 1
+        known = {(r["column"], r["to"]) for r in target["relations"]}
+        for hint in entry["relations"]:
+            if hint["to"] in tables and (hint["column"], hint["to"]) not in known:
+                target["relations"].append(
+                    {"column": hint["column"], "to": hint["to"], "to_column": "LOGICALREF",
+                     "type": "one-to-many", "source": "structure-doc"}
+                )
+                hinted += 1
+
+    data["table_count"] = len(tables)
+    data["column_count"] = sum(len(t["columns"]) for t in tables.values())
+    data["relation_count"] = sum(len(t["relations"]) for t in tables.values())
+    data["doc_tables_added"] = added
+    data["tr_table_count"] = tr_tables
+    data["tr_column_count"] = tr_columns
+    data["doc_only_column_count"] = unmatched
+    data["doc_relation_count"] = hinted
+    return data
+
+
 def index_segments(rows: list[dict]) -> dict[int, list[dict]]:
     """The workbook's index sheet, one row per segment, folded into one entry per index.
 
@@ -224,6 +375,7 @@ def build(xls_path: Path) -> dict:
         "table_count": len(tables),
         "column_count": sum(len(t["columns"]) for t in tables.values()),
         "relation_count": sum(len(t["relations"]) for t in tables.values()),
+        "index_count": sum(len(t["indexes"]) for t in tables.values()),
         "coded_column_count": sum(1 for t in tables.values() for c in t["columns"].values() if "values" in c),
         "key_collisions": collisions,
         "tables": tables,
@@ -322,31 +474,77 @@ def glossary_markdown(data: dict) -> str:
             pairs = ", ".join(f"{k}={v}" for k, v in sorted(values.items(), key=lambda kv: _int(kv[0])))
             lines.append(f"- `{name}.{col}` — {desc}: {pairs}")
     lines.append("")
+
+    # The Turkish sentences, when the structure document was supplied. The Doc Miner matches a
+    # question against this text, and a question about "cari hesap" matches "Cari hesap kartları",
+    # never "Current Account Cards".
+    tr = {n: t for n, t in sorted(data["tables"].items())
+          if t.get("description_tr") or any("description_tr" in c for c in t["columns"].values())}
+    if tr:
+        lines += [
+            f"## Tablo ve kolon açıklamaları (Türkçe — `{data.get('structure_doc', 'yapı dökümanı')}`)",
+            "",
+            "Logo'nun Türkçe tablo yapısı dökümanından; İngilizce açıklamaların Türkçe karşılığı.",
+            "",
+        ]
+        for name, table in tr.items():
+            head = table.get("description_tr") or table.get("description") or name
+            lines.append(f"### {name} — {head}")
+            lines.append("")
+            for col, meta in table["columns"].items():
+                if text := meta.get("description_tr"):
+                    lines.append(f"- `{col}` — {text}")
+            lines.append("")
     return "\n".join(lines)
 
 
-def main() -> int:
-    if len(sys.argv) < 2:
+def main(argv: list[str]) -> int:
+    args = [a for a in argv if a != "--doc"]
+    doc_path = None
+    if "--doc" in argv:
+        idx = argv.index("--doc")
+        if idx + 1 >= len(argv):
+            print("--doc needs a path", file=sys.stderr)
+            return 2
+        doc_path = Path(argv[idx + 1]).expanduser()
+        args = [a for a in args if a != argv[idx + 1]]
+    if not args:
         print(__doc__)
         return 2
-    xls = Path(sys.argv[1]).expanduser()
+    xls = Path(args[0]).expanduser()
     if not xls.is_file():
         print(f"not found: {xls}", file=sys.stderr)
         return 1
     data = build(xls)
+    if doc_path is not None:
+        if not doc_path.is_file():
+            print(f"not found: {doc_path}", file=sys.stderr)
+            return 1
+        data["structure_doc"] = doc_path.name
+        merge_doc(data, parse_structure_doc(doc_text(doc_path)))
+
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(data, ensure_ascii=False, indent=1, sort_keys=False), encoding="utf-8")
     OUT_GLOSSARY.parent.mkdir(parents=True, exist_ok=True)
     OUT_GLOSSARY.write_text(glossary_markdown(data), encoding="utf-8")
     print(
         f"{OUT_JSON.relative_to(REPO)}: {data['table_count']} tablo, {data['column_count']} kolon, "
-        f"{data['relation_count']} ilişki, {data['coded_column_count']} kodlu kolon"
+        f"{data['relation_count']} ilişki, {data['index_count']} indeks, "
+        f"{data['coded_column_count']} kodlu kolon"
     )
     if data["key_collisions"]:
         print(f"  ad çakışması ({len(data['key_collisions'])}): {', '.join(data['key_collisions'][:5])}")
+    if doc_path is not None:
+        print(
+            f"  {doc_path.name}: {data['tr_table_count']} tablo açıklaması, "
+            f"{data['tr_column_count']} kolon açıklaması (Türkçe), "
+            f"{len(data['doc_tables_added'])} yeni tablo, {data['doc_relation_count']} yeni ilişki"
+        )
+        if data["doc_tables_added"]:
+            print(f"  yalnız dökümanda olan tablolar: {', '.join(data['doc_tables_added'])}")
     print(f"{OUT_GLOSSARY.relative_to(REPO)}: {len(data['document_codes'])} fiş türü, {len(data['currencies'])} döviz")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))
