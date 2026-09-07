@@ -3,6 +3,10 @@ import { AlertTriangle, BookOpen, Calendar, Database, RefreshCw, Search } from '
 import clsx from 'clsx';
 import { agoTr, dateTr } from '../lib/format';
 
+/** Bu yaşı geçen bir tablo artık "az önce" değildir: yenileme döngüsü on beş saniye, bu onun birkaç
+ *  katı — buraya gelmişse yenileme fiilen durmuştur ve rozet bunu söylemek zorundadır. */
+const STALE_AFTER_SEC = 90;
+
 /** Yaş her saniye büyür; onu gösteren satır da her saniye yeniden çizilmeli. */
 function useSecondTick(): void {
   const [, tick] = useState(0);
@@ -40,6 +44,10 @@ export function TopBar({
 }) {
   useSecondTick();
   const age = updatedAt ? ageSec + (Date.now() - updatedAt) / 1000 : null;
+  // Yenilemenin durduğunu her zaman bir hata anlatmaz: tarayıcı ağı kapalı sayabilir, sekme askıya
+  // alınmış olabilir, istek sessizce beklemeye düşebilir. Yaşın kendisi bunların hepsini söyler.
+  const stale = age != null && age > STALE_AFTER_SEC;
+  const warn = failed || stale;
   return (
     <header className="px-4 pt-4 sm:px-6 sm:pt-5">
       {/* Mobil marka satırı: Sidebar lg altında gizli olduğu için kurum kimliği ve kullanıcı burada durur. */}
@@ -100,16 +108,16 @@ export function TopBar({
 
         {/* Rakamın yaşı: ekran kendi kendine yenilendiği için "canlı" tek başına bir şey söylemez. */}
         <div
-          className={clsx('chip h-9 gap-2', failed && 'border-warn/50 text-warn')}
-          title={failed ? 'Son yenileme başarısız — ekrandaki rakamlar olduğu yerde duruyor' : 'Veriler kendiliğinden yenilenir'}
+          className={clsx('chip h-9 gap-2', warn && 'border-warn/50')}
+          title={warn ? 'Rakamlar yenilenmiyor — ekranda gördüğünüz tablo olduğu yerde duruyor' : 'Veriler kendiliğinden yenilenir'}
         >
-          {failed ? (
-            <AlertTriangle size={14} className="shrink-0" />
+          {warn ? (
+            <AlertTriangle size={14} className="shrink-0 text-warn" />
           ) : (
             <RefreshCw size={14} className={clsx('shrink-0 text-ink-muted', refreshing && 'animate-spin')} />
           )}
-          <span className={clsx('font-semibold', failed ? 'text-warn' : 'text-ink')}>{age == null ? 'yükleniyor' : agoTr(age)}</span>
-          {failed && <span className="hidden text-[11px] sm:inline">yenilenemedi</span>}
+          <span className={clsx('font-semibold', warn ? 'text-warn' : 'text-ink')}>{age == null ? 'yükleniyor' : agoTr(age)}</span>
+          {warn && <span className="hidden text-[11px] text-warn sm:inline">yenilenmiyor</span>}
         </div>
 
         <div className="ml-auto hidden items-center gap-3 lg:flex">
