@@ -209,3 +209,49 @@ def test_a_question_the_catalog_can_place_is_not_refused_by_a_selector_saying_no
 
     r = client.post("/api/v1/ask", json={"question": "2026 toptan satış tutarı"}).json()
     assert r["type"] == "TEXT_TO_SQL" and r["rowCount"] == 1, r
+
+
+def _with(profile_cols, **kw):
+    return SchemaProfile(datasource_id="d", table_name="LG_411_01_INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+                         entity="INVOICE", schema_name="dbo", primary_key=["LOGICALREF"],
+                         columns=[ColumnProfile(**c) for c in profile_cols], **kw)
+
+
+def test_two_amounts_on_different_bases_are_not_added_together():
+    """Arithmetically fine, meaningless as a figure, and nothing about the result gives it away."""
+    p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True),
+               dict(name="NETTOTAL", data_type="decimal", unit="KDV dahil"),
+               dict(name="TOTAL", data_type="decimal", unit="KDV hariç")])
+    f = review('SELECT SUM(i."NETTOTAL" + i."TOTAL") FROM dbo.LG_411_01_INVOICE i', [p])
+    assert f and f[0].kind == "MIXED_BASIS" and f[0].severity == "block"
+    assert "KDV dahil" in f[0].message and "KDV hariç" in f[0].message
+
+
+def test_one_basis_used_consistently_is_fine():
+    p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True),
+               dict(name="NETTOTAL", data_type="decimal", unit="KDV dahil")])
+    assert review('SELECT SUM(i."NETTOTAL") FROM dbo.LG_411_01_INVOICE i', [p]) == []
+
+
+def test_filtering_on_a_value_that_was_never_seen_is_flagged():
+    """An empty result reads as "none this month", not as a filter that could never have matched."""
+    p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True),
+               dict(name="TRCODE", data_type="smallint", distinct_count=3,
+                    top_values=[("7", 100), ("8", 50), ("9", 5)])])
+    f = review('SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i WHERE i."TRCODE" = 99', [p])
+    assert any(x.kind == "UNKNOWN_VALUE" and x.severity == "warn" for x in f)
+    assert not [x for x in review('SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i WHERE i."TRCODE" = 7', [p])
+                if x.kind == "UNKNOWN_VALUE"]
+
+
+def test_a_column_whose_values_were_never_inventoried_says_nothing():
+    """Only a complete value set can rule a value out; a partial one would refuse real data."""
+    p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True),
+               dict(name="CODE", data_type="varchar(25)")])
+    assert review('SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i WHERE i."CODE" = \'X\'', [p]) == []
+
+
+def test_a_table_with_no_rows_at_all_is_said_out_loud():
+    p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True)], row_count=0)
+    f = review("SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i", [p])
+    assert any(x.kind == "EMPTY_TABLE" and x.severity == "warn" for x in f)

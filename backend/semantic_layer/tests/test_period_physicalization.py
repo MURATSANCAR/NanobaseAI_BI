@@ -112,3 +112,18 @@ def test_a_model_that_named_one_year_of_a_wider_question_is_given_the_rest():
                           period=(date(2025, 1, 1), date(2026, 12, 31)))
     names = re.findall(r"\[dbo\]\.\[([A-Za-z0-9_]+)\]", out)
     assert sorted(names) == ["LG_211_01_STLINE", "LG_411_01_STLINE"], names
+
+
+def test_the_model_is_told_how_far_the_data_reaches_even_though_it_picks_no_year():
+    """Taking the year-to-table map out of the prompt took the coverage with it, and the model drew
+    the obvious conclusion from a prompt naming only LG_411: asked how this year compares with last,
+    it replied that there is no last year — with five years of it in tables the compiler supplies."""
+    from semantic_layer.models import SemanticQuery
+    from semantic_layer.runtime.compiler import ExistingCompiler
+
+    c = ExistingCompiler(None, [Y2021, Y2026], {}, dialect="tsql")
+    q = SemanticQuery(question="geçen yıla göre bu yıl", tenant_id="t", datasource_id="d")
+    block = c.period_block(q, ["STLINE"])
+    assert "2021-01-01" in block and "2026" in block, block
+    assert "LG_211_01_STLINE" not in block, "the table map stays out; only the span goes in"
+    assert "UNION ALL" in block, "and it is still told not to write the union itself"

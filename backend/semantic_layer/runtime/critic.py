@@ -160,6 +160,49 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                             f"{agg.sql(dialect=dialect)}: {prof.entity}.{c.name} sayısal değil "
                             f"({prof.column(c.name).data_type}); bu kolon toplanamaz."))
 
+        # Two figures kept on different bases, added together. The catalog records the basis a
+        # column is on ("KDV dahil", "satır brüt") because mixing them produces a total that is
+        # arithmetically fine and means nothing — and no error, no empty result and no odd-looking
+        # number gives it away.
+        for agg in select.find_all((exp.Sum, exp.Avg)):
+            bases: dict[str, list[str]] = {}
+            for col in agg.find_all(exp.Column):
+                prof = tables.get((col.table or "").upper()) if col.table else (next(iter(tables.values())) if len(tables) == 1 else None)
+                c = prof.column(col.name) if prof else None
+                if c is not None and c.unit:
+                    bases.setdefault(c.unit, []).append(f"{prof.entity}.{c.name}")
+            if len(bases) > 1:
+                pairs = "; ".join(f"{', '.join(v)} = {k}" for k, v in sorted(bases.items()))
+                findings.append(Finding("MIXED_BASIS", "block",
+                    f"{agg.sql(dialect=dialect)}: farklı bazdaki tutarlar toplanıyor ({pairs}). "
+                    f"Aynı toplamda birleştirilemezler."))
+
+        # A value compared against a column whose complete value set the catalog holds. Filtering on
+        # something that is not in it returns nothing, and an empty result reads as "none this month"
+        # rather than as a filter that could never have matched.
+        for eq in select.find_all(exp.EQ):
+            for col, lit in ((eq.left, eq.right), (eq.right, eq.left)):
+                if not (isinstance(col, exp.Column) and isinstance(lit, exp.Literal)):
+                    continue
+                prof = tables.get((col.table or "").upper()) if col.table else (next(iter(tables.values())) if len(tables) == 1 else None)
+                c = prof.column(col.name) if prof else None
+                if c is None or c.sensitive or not c.is_enum():
+                    continue
+                known = {str(v) for v, _ in c.top_values}
+                asked = str(lit.this)
+                if known and asked not in known:
+                    findings.append(Finding("UNKNOWN_VALUE", "warn",
+                        f"{prof.entity}.{c.name} = {asked}: bu kolonda böyle bir değer ölçülmedi "
+                        f"(görülenler: {', '.join(sorted(known)[:8])}). Sonuç boş dönebilir."))
+
+        # A table this deployment holds and has never loaded a row into. The query is valid and its
+        # result will be empty; that is worth saying, because an empty result otherwise reads as a
+        # fact about the business rather than about the deployment.
+        for alias, prof in tables.items():
+            if prof.row_count == 0:
+                findings.append(Finding("EMPTY_TABLE", "warn",
+                    f"{prof.entity} tablosu bu kurulumda boş — hiç kayıt yok; sonuç boş dönecek."))
+
         # A column the catalog says the table does not have.
         for c in select.find_all(exp.Column):
             if not c.table:

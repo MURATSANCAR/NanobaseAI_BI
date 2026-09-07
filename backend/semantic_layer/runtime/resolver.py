@@ -88,6 +88,16 @@ def _parse_condition(key: str) -> Optional[tuple[tuple[str, str], set[str]]]:
     return (ent, col.upper()), {v.strip().strip("'") for v in vals.split(",") if v.strip()}
 
 
+#: "iyi mi", "nasıl gidiyor", "ne durumda" — asking after a state of affairs rather than a figure.
+#: On its own this means nothing: "yurtdışı satışlarımız geçen yıla göre nasıl?" asks the same way and
+#: names its measure. It only decides anything where no measure was placed at all.
+_HOW_ARE_THINGS = ("iyi", "kotu", "nasil", "durum", "gidiyor", "gidiyoruz", "ne alemde")
+
+
+def _asks_how_things_are(tokens) -> bool:
+    return any(stem(t) in _HOW_ARE_THINGS or t in _HOW_ARE_THINGS for t in tokens)
+
+
 class SemanticResolver:
     def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None):
         from semantic_layer.conventions import Conventions
@@ -439,10 +449,15 @@ class SemanticResolver:
         #     word the catalog is missing — has not said what it is about. The model must ask, not pick
         #     a table: "toplam sayıyı ver" answered with a row count is a guess wearing a number.
         # A period is not a subject: "son çeyrekte ne oldu?" says when, never what.
-        if not hits and not sq.unresolved and not sq.shape:
+        if not hits and not sq.shape and (not sq.unresolved or _asks_how_things_are(qf.tokens)):
             said_when = {t for slot in sq.temporal for t in tokenize(slot.text)}
-            if not any(is_domain_candidate(t) and t not in said_when and stem(t) not in _TIME_WORDS
-                       and short_root(t) not in _TIME_WORDS for t in qf.tokens):
+            named = [t for t in qf.tokens if is_domain_candidate(t) and t not in said_when
+                     and stem(t) not in _TIME_WORDS and short_root(t) not in _TIME_WORDS]
+            # "Bu yıl performansımız iyi mi?" names a word — but the word is the question, not a
+            # measure, and nothing in the catalog answers it. Asked how things are going with no
+            # measure placed, the honest reply is to ask which one; picking a table and returning a
+            # number is a guess the person has no way to check.
+            if not named or (not sq.slots and _asks_how_things_are(qf.tokens)):
                 sq.shape = "UNDERSPECIFIED"
                 sq.explanation.append("soru neyin ölçüleceğini söylemiyor; hangi ölçü ve hangi kırılım istendiği sorulmalı")
 

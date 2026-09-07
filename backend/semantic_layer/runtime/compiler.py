@@ -445,6 +445,9 @@ Kurallar:
 - Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
+- Bu blok "(yok)" ise dönem kapsam içindedir. Hangi dönemin veride bulunduğuna bu sistem karar verir
+  ve DÖNEM TABLOLARI bloğundaki aralık ölçülmüştür: o aralıktaki bir yıl için "veri yok" deme, tablo
+  adına ya da kendi tahminine dayanarak dönemi reddetme. Sorguyu yaz; sonucun boş çıkması hata değil.
 - DÖNEM NOTU bloğu doluysa dönem kapsam içindedir, yalnız son kayıt daha eskidir: SQL'i normal yaz, reddetme.
 - KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
 - Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- İSTENEN BİÇİM oran ise tek bir toplam döndürme: payı, paydayı ve oranı birlikte ver.
@@ -612,6 +615,18 @@ class ExistingCompiler:
         self.annotations: dict[tuple[str, Optional[str]], str] = {}
 
     def table_label(self, p: SchemaProfile) -> str:
+        """What the model is told a table is called.
+
+        Where the compiler resolves periods, that is the entity: a physical name carries a firm code
+        and a year, and the model reads them. Told the schema holds dbo_LG_411_01_INVOICE, it refused
+        to compare this year with last — "2025 ve öncesi veriler bu projede (firma 411) bulunmuyor" —
+        with five years of it in tables the compiler would have supplied, and it kept refusing after
+        being told in the same prompt how far the data reaches. A name it cannot draw a wrong
+        conclusion from is better than a note asking it not to. Validation and physicalisation both
+        already accept the entity name, so nothing downstream changes.
+        """
+        if self.period_in_sql and len(self.tables_of.get(p.entity) or []) > 1:
+            return p.entity
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
         return f"{p.schema_name}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
 
@@ -719,6 +734,29 @@ class ExistingCompiler:
         if isinstance(entities, list):
             return [out[e] for e in entities if e in out]
         return list(out.values())
+
+    def empty_table_note(self, q: SemanticQuery) -> Optional[str]:
+        """"There is no such thing here" and "there is such a thing and it is empty" are different
+        answers, and the second one is useful.
+
+        This deployment holds two EMPLOYEE tables and not one row between them, so "kaç çalışanımız
+        var?" gets told the term is undefined — which sends somebody to the portal to define a word
+        that is already modelled. What they need to know is that the module was never loaded.
+
+        Consulted wherever a refusal is produced, not only where the selector found nothing: the two
+        arrive at the same place by different routes, and the person asking cannot tell them apart.
+        """
+        if self.columns is None:
+            return None
+        for hit in self.columns.search(q.question, limit=8):
+            tables = self.tables_of.get(hit["entity"]) or []
+            if not tables or any((t.row_count or 0) > 0 or t.row_count is None for t in tables):
+                continue
+            said = self.annotations.get((hit["entity"], None)) or (tables[0].description or "")
+            what = f"{said.strip()[:80]} ({hit['entity']})" if said.strip() else hit["entity"]
+            return (f"Bu soruyu cevaplayamıyorum: {what} tablosu bu kurulumda var ama içi boş — "
+                    f"hiç kayıt yüklenmemiş. Veri yüklendiğinde aynı soru çalışacak.")
+        return None
 
     def entity_note(self, entity: str) -> str:
         """One line about a table, for a model that is choosing between them and nothing more."""
@@ -1005,10 +1043,22 @@ class ExistingCompiler:
             split = [e for e in entities if len(self.tables_of.get(e) or []) > 1]
             if not split:
                 return "(bu sorudaki tablolar yıllara bölünmemiş)"
-            return ("Şu tablolar yıllara bölünmüştür: " + ", ".join(sorted(split)) + ".\n"
-                    "Listedeki tabloyu olduğu gibi kullan. Sorunun kapsadığı yılların tabloları "
-                    "derleyici tarafından birleştirilir — kendin UNION ALL yazma, başka bir yılın "
-                    "tablosunu adlandırma.")
+            # How far each entity's data reaches, without the table-by-table map. Taking the map out
+            # took the coverage with it, and the model drew the obvious conclusion from a prompt
+            # naming one table: asked how this year compares with last, it answered that there is no
+            # last year — while five years of it sat in tables the compiler would have supplied. The
+            # span is what it needs; which table holds which year is not its problem.
+            lines = []
+            for entity in sorted(split):
+                span = periods.spans(self.tables_of.get(entity) or [])
+                lines.append(f"- {entity}: {span[0].isoformat()} – {span[1].isoformat()}" if span
+                             else f"- {entity}: dönemi ölçülmemiş")
+            return ("Şu tablolar yıllara bölünmüştür; her birinin kapsadığı dönem:\n"
+                    + "\n".join(lines) + "\n"
+                    "Bu aralıktaki her yıl okunabilir. Listedeki tabloyu olduğu gibi kullan — "
+                    "sorunun kapsadığı yılların tabloları derleyici tarafından birleştirilir. "
+                    "Kendin UNION ALL yazma, başka bir yılın tablosunu adlandırma, tablo adındaki "
+                    "yıl yüzünden veri yok sanma.")
         lines: list[str] = []
         for entity in entities:
             available = self.tables_of.get(entity) or []
@@ -1129,8 +1179,8 @@ class ExistingCompiler:
             ms = int((time.perf_counter() - t0) * 1000)
             log.info("no table fits and nothing resolved — refusing q=%r", q.question[:80])
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
-                                 explain=[refusal_for(q)], llm_ms=ms, certified=False,
-                                 refusal="NO_FITTING_TABLE")
+                                 explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
+                                 certified=False, refusal="NO_FITTING_TABLE")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         sql = extract_sql(text)
@@ -1142,8 +1192,8 @@ class ExistingCompiler:
             # this database. Its text is kept for diagnosis only.
             log.info("model produced no sql q=%r said=%r", q.question[:80], (text or "").strip()[:200])
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
-                                 explain=[refusal_for(q)], llm_ms=ms, certified=False,
-                                 model_text=(text or "").strip()[:500])
+                                 explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
+                                 certified=False, model_text=(text or "").strip()[:500])
         certified = not q.unresolved and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots)
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
 
