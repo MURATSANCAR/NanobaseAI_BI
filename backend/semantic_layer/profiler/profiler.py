@@ -45,13 +45,19 @@ def _enum_candidate(col: dict[str, Any], *, is_key: bool, is_ref: bool, sample: 
 
 class Profiler:
     def __init__(self, connector: Connector, *, enum_max_distinct: int = 64, top_n: int = 12, max_tables: Optional[int] = None, sample_rows: int = 20,
-                 deep_budget_seconds: Optional[float] = None, max_probes_per_table: int = 40):
+                 deep_budget_seconds: Optional[float] = None, max_probes_per_table: Optional[int] = None):
         self.c = connector
         self.enum_max_distinct = enum_max_distinct
         self.top_n = top_n
         self.max_tables = max_tables
         self.sample_rows = sample_rows
+        # Both of these bound how much of a source is actually looked at, and a deployment that wants
+        # the whole thing says so with a 0: no wall clock on the deep phase, no ceiling on how many
+        # columns of a table are probed. The defaults stay conservative for a first run against an
+        # unknown database; a catalogue that is meant to be complete sets them to 0 and waits.
         self.deep_budget_seconds = deep_budget_seconds if deep_budget_seconds is not None else float(os.environ.get("SEMANTIC_DEEP_BUDGET_SEC", "1800"))
+        if max_probes_per_table is None:
+            max_probes_per_table = int(os.environ.get("SEMANTIC_MAX_PROBES", "40"))
         self.max_probes_per_table = max_probes_per_table
         self.deep_skipped: list[str] = []
         self.truncated: list[str] = []
@@ -223,7 +229,8 @@ class Profiler:
             sample = self._sample(sch, table) if is_deep else {}
             cols: list[ColumnProfile] = []
             rels: list[dict[str, str]] = []
-            probes_left = self.max_probes_per_table
+            # 0 means every column of the table is probed, not the first forty.
+            probes_left = self.max_probes_per_table if self.max_probes_per_table else 1 << 30
             for col in self.c.columns(sch, table):
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")),
                                    description=col.get("description") or described.get((table, col["name"])))

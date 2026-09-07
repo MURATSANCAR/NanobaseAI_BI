@@ -145,7 +145,7 @@ def run_pipeline(
         try:
             # read the schema itself: a column no question has ever mentioned would otherwise stay
             # nameless for ever, and there are tens of thousands of them
-            report["proposals"] = gen.propose_column_meanings(llm, max_columns=int(os.environ.get("SEMANTIC_PROPOSE_COLUMNS", "200")))
+            report["proposals"] = gen.propose_column_meanings(llm, max_columns=int(os.environ.get("SEMANTIC_PROPOSE_COLUMNS", "200")) or 10**9)
         except Exception as e:  # noqa: BLE001
             log.warning("column proposal stage skipped: %s", e)
             report["proposals"] = {"error": str(e)[:200]}

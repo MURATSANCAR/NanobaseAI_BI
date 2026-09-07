@@ -42,6 +42,14 @@ export PYTHONPATH=.
 unset SEMANTIC_TABLE_LIKE || true
 # A table holding nothing answers nothing, and this schema carries five and a half thousand of them.
 export SEMANTIC_SKIP_EMPTY=1
+# No ceilings on what gets looked at. The deep phase runs until it is done rather than until a clock
+# runs out, and every column of a table is probed rather than the first forty. This is the run that
+# is meant to be complete; it takes as long as it takes.
+export SEMANTIC_DEEP_BUDGET_SEC=0     # derin faz: saat sınırı yok
+export SEMANTIC_MAX_PROBES=0          # tablo başına kolon tavanı yok
+export SEMANTIC_PROBE_BUDGET_SEC=0    # kanıt sondajı: saat sınırı yok
+export SEMANTIC_FRESHNESS_BUDGET_SEC=0
+export SEMANTIC_PROPOSE_COLUMNS=0     # kolon önerisi: sayı tavanı yok
 # No ceiling on how many tables are catalogued: which years exist is the database's answer, not a
 # number chosen here. The deep-probe phase is bounded by wall clock instead (SEMANTIC_DEEP_BUDGET_SEC).
 unset SEMANTIC_MAX_TABLES || true

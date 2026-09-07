@@ -132,6 +132,8 @@ def probe_catalog(
     if connector is None:
         return report
     started = time.time()
+    # 0 means no clock: a catalogue meant to be complete confronts every candidate with the data
+    # rather than however many fit in a quarter of an hour.
     budget = budget_seconds if budget_seconds is not None else float(os.environ.get("SEMANTIC_PROBE_BUDGET_SEC", "900"))
     skipped = 0
     probe = ValueProbe(connector, profiles, context, dialect=dialect)
@@ -316,7 +318,7 @@ def freshness(profiles: list[SchemaProfile], connector: Any, conventions: Any, *
         return out
     d = Dialect(dialect or getattr(connector, "dialect", "") or "generic")
     started = time.time()
-    budget = float(os.environ.get("SEMANTIC_FRESHNESS_BUDGET_SEC", "300"))
+    budget = float(os.environ.get("SEMANTIC_FRESHNESS_BUDGET_SEC", "300"))   # 0 = sınırsız
     for prof in profiles:
         time_col = conventions.time_column(prof.entity) if conventions else None
         if not time_col:
