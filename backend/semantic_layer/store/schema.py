@@ -131,6 +131,23 @@ sl_query_log = sa.Table(
     sa.Index("ix_sl_query_log_validated", "tenant_id", "datasource_id", "validated"),
 )
 
+# What the system read out of the schema on its own: a proposed meaning for a column nobody has named.
+# It is a suggestion, never a definition — a person accepts it, and accepting is what makes it one.
+sl_suggestion = sa.Table(
+    "sl_suggestion",
+    metadata,
+    sa.Column("id", sa.String(64), primary_key=True),
+    sa.Column("datasource_id", sa.String(128), nullable=False),
+    sa.Column("table_pattern", sa.String(256), nullable=False),
+    sa.Column("column_name", sa.String(128)),
+    sa.Column("text", sa.Text(), nullable=False),
+    sa.Column("confidence", sa.Float(), nullable=False, server_default=sa.text("0")),
+    sa.Column("model", sa.String(64)),
+    sa.Column("status", sa.String(16), nullable=False, server_default=sa.text("'OPEN'")),   # OPEN | ACCEPTED | DISMISSED
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.UniqueConstraint("datasource_id", "table_pattern", "column_name", name="uq_sl_suggestion_target"),
+)
+
 sl_schema_profile = sa.Table(
     "sl_schema_profile",
     metadata,

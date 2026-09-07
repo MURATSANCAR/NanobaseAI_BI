@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, KeyRound, Link2, Lock, Pencil, Search, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, KeyRound, Link2, Lock, Pencil, Search, Sparkles, X } from 'lucide-react';
 import clsx from 'clsx';
-import { catalogTable, catalogTables, rewriteLabel, writeLabel, type CatalogColumn, type CatalogTable } from '../lib/engine';
+import { acceptSuggestion, catalogTable, catalogTables, dismissSuggestion, rewriteLabel, writeLabel, type CatalogColumn, type CatalogTable } from '../lib/engine';
 
 /** Veri sözlüğü: taramada bulunan tablolar, kolonları ve aralarındaki ilişkiler.
  *
@@ -223,7 +223,47 @@ function ColumnRow({ c, tablePattern, entity }: { c: CatalogColumn; tablePattern
       {derived.map((d, i) => <Note key={i} tone="çıkarım" text={d.text} />)}
       {measured.map((d, i) => <Note key={`m${i}`} tone="ölçüm" text={d.text} />)}
 
+      {c.suggestion && !c.annotations?.length ? <SuggestionRow s={c.suggestion} /> : null}
       <LabelBox tablePattern={tablePattern} column={c.name} current={c.annotations?.[0]} source={c.description} what={`${entity}.${c.name}`} compact />
+    </div>
+  );
+}
+
+/** Sistemin kendi okuması. Kabul edilene kadar tanım değildir; kabul etmek kişinin işidir. */
+function SuggestionRow({ s }: { s: NonNullable<CatalogColumn['suggestion']> }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState<'accept' | 'dismiss' | null>(null);
+  const after = async () => {
+    await Promise.all([
+      qc.refetchQueries({ queryKey: ['catalog-table'], type: 'active' }),
+      qc.invalidateQueries({ queryKey: ['catalog-tables'] }),
+    ]);
+    setBusy(null);
+  };
+  return (
+    <div className="mt-1.5 flex flex-wrap items-start gap-1.5 rounded-lg border border-dashed border-brand/30 bg-brand-soft/40 px-2 py-1.5 text-[11px]">
+      <span className="mt-px inline-flex shrink-0 items-center gap-1 rounded bg-white px-1 text-[10px] text-brand-deep">
+        <Sparkles size={9} /> öneri
+      </span>
+      <span className="min-w-0 flex-1 text-ink">{s.text}</span>
+      <span className="flex shrink-0 items-center gap-1">
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => { setBusy('accept'); void acceptSuggestion(s.id).then(after).catch(() => setBusy(null)); }}
+          className="inline-flex items-center gap-1 rounded-md bg-brand px-1.5 py-0.5 text-[10px] font-medium text-white disabled:opacity-50"
+        >
+          <Check size={10} /> {busy === 'accept' ? '…' : 'kabul et'}
+        </button>
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => { setBusy('dismiss'); void dismissSuggestion(s.id).then(after).catch(() => setBusy(null)); }}
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-1.5 py-0.5 text-[10px] text-ink-muted disabled:opacity-50"
+        >
+          <X size={10} /> yanlış
+        </button>
+      </span>
     </div>
   );
 }

@@ -133,6 +133,8 @@ export type CatalogColumn = {
   description?: string | null;
   derived?: Array<{ source: string; text: string }>;
   unit?: string | null;
+  /** Sistemin şemayı kendi okumasıyla önerdiği anlam. Tanım değildir: kabul eden kişi tanım yapar. */
+  suggestion?: { id: string; text: string; confidence: number; model?: string } | null;
   annotations: Array<{ id: string; text: string; author: string; createdAt: string }>;
   concepts: Array<{ id: string; term: string; type: string; status: string; values?: string[]; formula?: string }>;
   status: 'CERTIFIED' | 'CANDIDATE' | 'DESCRIBED' | 'UNDEFINED' | (string & {});
@@ -201,4 +203,13 @@ export async function rewriteLabel(id: string, tablePattern: string, column: str
   const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
   return data as { annotation: { id: string } };
+}
+
+/** Öneriyi kabul etmek bir kişinin işidir ve onun adına kaydedilir. */
+export function acceptSuggestion(id: string): Promise<{ ok?: boolean }> {
+  return post(`/api/v1/schema/suggestions/${encodeURIComponent(id)}/accept`, {});
+}
+
+export function dismissSuggestion(id: string): Promise<{ ok: boolean }> {
+  return post(`/api/v1/schema/suggestions/${encodeURIComponent(id)}/dismiss`, {});
 }

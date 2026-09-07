@@ -378,6 +378,7 @@ class Runtime:
         if hit is not None:
             return hit
         anns = self.store.list_annotations(s.datasource_id)
+        suggested = {(x["tablePattern"], (x["column"] or "").upper() or None): x for x in self.store.list_suggestions(s.datasource_id)}
         by_key: dict[tuple[str, Optional[str]], list[Annotation]] = {}
         for a in anns:
             by_key.setdefault((a.table_pattern, (a.column or "").upper() or None), []).append(a)
@@ -423,6 +424,8 @@ class Runtime:
                     # three readings of one column, kept apart: what the source says, what we concluded
                     # from the data, and what a person typed in the portal
                     "description": c.description, "derived": list(c.derived), "unit": c.unit,
+                    # what the system read on its own, kept apart from what anyone has confirmed
+                    "suggestion": suggested.get((p.table_pattern, c.name.upper())),
                     "annotations": col_anns, "concepts": cons,
                     "status": "CERTIFIED" if any(x["status"] == ConceptStatus.CERTIFIED for x in cons) else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")),
                 })
@@ -744,6 +747,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         out = r.add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
         out["replaced"] = annotation_id
         return out
+
+    @app.post("/api/v1/schema/suggestions/{suggestion_id}/accept")
+    def accept_suggestion(request: Request, suggestion_id: str, author: str = "kokpit") -> dict[str, Any]:
+        """Accepting is what turns a reading into a definition — and it is a person's act, recorded as
+        theirs. The suggestion itself never had the standing to certify anything."""
+        _require_admin(request)
+        r = rt()
+        sug = r.store.close_suggestion(suggestion_id, "ACCEPTED")
+        if sug is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        out = r.add_annotation(sug["tablePattern"], sug["column"], sug["text"], author)
+        out["accepted"] = suggestion_id
+        return out
+
+    @app.post("/api/v1/schema/suggestions/{suggestion_id}/dismiss")
+    def dismiss_suggestion(request: Request, suggestion_id: str) -> dict[str, Any]:
+        _require_admin(request)
+        r = rt()
+        if r.store.close_suggestion(suggestion_id, "DISMISSED") is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        r._inventory_cache.clear()
+        return {"ok": True, "dismissed": suggestion_id}
 
     @app.get("/api/v1/schema/annotations")
     def list_annotations(tablePattern: str | None = None) -> dict[str, Any]:

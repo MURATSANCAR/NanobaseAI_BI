@@ -126,6 +126,9 @@ def run_pipeline(
         try:
             unresolved = store.list_unresolved_terms(settings.tenant_id, settings.datasource_id)
             report["llm"] = gen.llm_candidates(llm, list(unresolved)[:20])
+            # and read the schema itself: a column no question has ever mentioned would otherwise stay
+            # nameless for ever, and there are tens of thousands of them
+            report["proposals"] = gen.propose_column_meanings(llm, max_columns=int(os.environ.get("SEMANTIC_PROPOSE_COLUMNS", "200")))
         except Exception as e:  # noqa: BLE001
             log.warning("llm candidate stage skipped: %s", e)
             report["llm"] = {"error": str(e)[:200]}

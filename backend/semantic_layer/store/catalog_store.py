@@ -745,6 +745,43 @@ class CatalogStore:
             for r in self._rows(stmt)
         ]
 
+    # ------------------------------------------------------------------ suggestions
+    def add_suggestion(self, datasource_id: str, table_pattern: str, column: Optional[str], text: str, *, confidence: float = 0.5, model: str = "") -> None:
+        """File what the system read out of the schema. One open suggestion per target: a newer reading
+        replaces an older one rather than piling up, and a person's decision is never overwritten."""
+        with self.engine.begin() as conn:
+            row = conn.execute(
+                sa.select(S.sl_suggestion.c.id, S.sl_suggestion.c.status).where(
+                    S.sl_suggestion.c.datasource_id == datasource_id,
+                    S.sl_suggestion.c.table_pattern == table_pattern,
+                    S.sl_suggestion.c.column_name == (column or None),
+                )
+            ).first()
+            if row and str(row[1]) != "OPEN":
+                return                                   # already decided by a person; leave it alone
+            values = {"datasource_id": datasource_id, "table_pattern": table_pattern, "column_name": (column or None),
+                      "text": text[:2000], "confidence": float(confidence), "model": model[:64], "status": "OPEN",
+                      "created_at": utcnow()}
+            if row:
+                conn.execute(S.sl_suggestion.update().where(S.sl_suggestion.c.id == row[0]).values(**values))
+            else:
+                conn.execute(S.sl_suggestion.insert().values(id=new_id("sug"), **values))
+
+    def list_suggestions(self, datasource_id: str, table_pattern: Optional[str] = None, *, status: str = "OPEN") -> list[dict[str, Any]]:
+        stmt = sa.select(S.sl_suggestion).where(S.sl_suggestion.c.datasource_id == datasource_id, S.sl_suggestion.c.status == status)
+        if table_pattern:
+            stmt = stmt.where(S.sl_suggestion.c.table_pattern == table_pattern)
+        return [{"id": r["id"], "tablePattern": r["table_pattern"], "column": r["column_name"], "text": r["text"],
+                 "confidence": float(r["confidence"] or 0), "model": r["model"]} for r in self._rows(stmt)]
+
+    def close_suggestion(self, suggestion_id: str, status: str) -> Optional[dict[str, Any]]:
+        with self.engine.begin() as conn:
+            row = conn.execute(sa.select(S.sl_suggestion).where(S.sl_suggestion.c.id == suggestion_id)).mappings().first()
+            if row is None:
+                return None
+            conn.execute(S.sl_suggestion.update().where(S.sl_suggestion.c.id == suggestion_id).values(status=status))
+        return {"id": row["id"], "tablePattern": row["table_pattern"], "column": row["column_name"], "text": row["text"]}
+
     def retire_annotation(self, annotation_id: str) -> bool:
         """Withdraw what someone wrote, and everything the catalog concluded from it.
 

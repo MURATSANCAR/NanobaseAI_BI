@@ -233,3 +233,39 @@ def test_a_person_writing_a_definition_is_enough_when_the_data_agrees(store, pro
     engine = EvidenceEngine(store, min_support=3)
     assert engine.evaluate(store.get_concept(good.id), pmap).status == ConceptStatus.CERTIFIED
     assert engine.evaluate(store.get_concept(bad.id), pmap).status != ConceptStatus.CERTIFIED
+
+
+def test_the_system_reads_the_schema_itself_but_a_person_still_decides(store, profiles):
+    """Tens of thousands of columns nobody has named will not be described by waiting. The table name,
+    the column name and the values in it say enough for a reader to propose a meaning — and a proposal
+    is filed apart from definitions, because a machine reading a schema is not a business deciding
+    what its own words mean."""
+    from semantic_layer.candidates.generator import CandidateGenerator
+    from semantic_layer.candidates.llm_client import FakeLlm
+    from semantic_layer.conventions import Conventions
+    from semantic_layer.evidence.engine import EvidenceEngine
+    from semantic_layer.store.catalog_store import ConceptStatus
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    gen = CandidateGenerator(store, TENANT, DS, profiles, Conventions.from_profiles(profiles))
+
+    llm = FakeLlm(['[{"entity":"INVOICE","column":"TRCODE","meaning":"Fatura türü",'
+                   '"values":{"8":"toptan satış","7":"perakende satış"},"confidence":0.8}]'])
+    rep = gen.propose_column_meanings(llm, max_columns=50)
+    assert rep["proposed"] == 1, rep
+
+    open_ones = store.list_suggestions(DS)
+    assert open_ones and open_ones[0]["column"] == "TRCODE" and "toptan" in open_ones[0]["text"]
+
+    # what it read cannot certify itself, however confident it sounded
+    EvidenceEngine(store, min_support=3).run(TENANT, DS, profiles)
+    read = [c for c in store.find_concepts(TENANT, DS, normalized_term="toptan satis")]
+    assert all(c.status != ConceptStatus.CERTIFIED for c in read), [c.status for c in read]
+
+    # a person accepting it is what makes it a definition
+    sug = store.close_suggestion(open_ones[0]["id"], "ACCEPTED")
+    gen.ingest_annotation(sug["tablePattern"], sug["column"], sug["text"], "annotation:accepted")
+    EvidenceEngine(store, min_support=3).run(TENANT, DS, profiles)
+    assert not store.list_suggestions(DS), "a decided suggestion stops being offered"
