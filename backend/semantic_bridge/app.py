@@ -33,11 +33,11 @@ from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
-from semantic_layer.models import Annotation, ConceptStatus, TemporalSlot
+from semantic_layer.models import Annotation, ConceptStatus, SemanticQuery, TemporalSlot
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
-from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary
+from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
 from semantic_layer.runtime.audit import audit_sql
 from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
@@ -205,17 +205,25 @@ class Runtime:
                 self._cache.popitem(last=False)
         return out
 
-    def summarize(self, question: str, sql: str, result: dict[str, Any]) -> str:
+    def summarize(self, question: str, sql: str, result: dict[str, Any], sq: Optional[SemanticQuery] = None) -> str:
         cols = [c["name"] for c in result.get("columns") or []]
+        # An empty answer is where "nothing happened" and "nothing is loaded yet" look identical. The
+        # resolver measured the data window and already knows which one this is; saying it here is the
+        # difference between a real zero and a figure the deployment cannot yet have.
+        note = ""
+        if sq is not None and is_empty_result(cols, result.get("records") or [], int(result.get("totalRows") or 0)):
+            note = " ".join(e for e in sq.explanation if "yüklenmemiş" in e or "kapsamı dışında" in e)
+            if note:
+                note = " " + note.strip().capitalize() + "."
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
                       f"Soru: {question}\nSatır sayısı: {result['totalRows']}\nİlk satırlar (JSON): {json.dumps(sample, ensure_ascii=False)[:4000]}")
             try:
-                return self.llm.chat([{"role": "user", "content": prompt}], max_tokens=300).strip()
+                return self.llm.chat([{"role": "user", "content": prompt}], max_tokens=300).strip() + note
             except Exception as e:  # noqa: BLE001
                 log.warning("llm summary failed: %s", e)
-        return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0))
+        return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True) -> dict[str, Any]:
@@ -311,7 +319,7 @@ class Runtime:
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
         t = time.perf_counter()
-        summary = self.summarize(question, sql, result)
+        summary = self.summarize(question, sql, result, sq)
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
         fp = result_fingerprint([c["name"] for c in result["columns"]], result["records"])
         qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)

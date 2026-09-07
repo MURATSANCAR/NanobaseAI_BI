@@ -489,3 +489,22 @@ def test_an_unreachable_database_is_not_a_bad_question(catalog, profiles, settin
     assert body["type"] == "DATA_SOURCE_UNAVAILABLE"
     assert "ulaşılamıyor" in body["explanation"] and body.get("repairs", 0) == 0
     assert body["sql"], "the SQL it wrote is still shown — there was nothing wrong with it"
+
+
+def test_an_empty_answer_says_whether_the_data_is_missing_or_the_business_is(catalog, profiles, logo_connector, settings):
+    """A sum over no rows comes back NULL, and "satış: None" reads as a figure. It is not one — and
+    "we sold nothing" and "this month is not loaded yet" are different answers to the same question.
+    The window was measured, so the difference is known and has to be said."""
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.runtime.compiler import fast_summary, is_empty_result
+
+    assert is_empty_result(["satis"], [{"satis": None}], 1) and not is_empty_result(["satis"], [{"satis": 0}], 1)
+    assert fast_summary("x", ["satis"], [{"satis": None}], 1) == "Sorgu sonuç döndürmedi."
+
+    client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm(["NO_SQL"]))))
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    after = date.fromisoformat(inv.time_window[1])
+    body = client.post("/api/v1/ask", json={"question": f"{after.year + 1} yılında toptan satış ne kadar?", "sampleSize": 5}).json()
+    # either it refuses as out of scope, or it answers and says the data stops earlier — never a bare zero
+    text = str(body.get("summary") or "") + str(body.get("explanation") or "")
+    assert inv.time_window[1] in text or "kapsamı dışında" in text, body

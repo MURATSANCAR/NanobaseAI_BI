@@ -634,6 +634,20 @@ def default_filters_provider(store: CatalogStore, tenant_id: str, datasource_id:
 
 # ---------------------------------------------------------------------- summaries
 
+def is_empty_result(columns: list[str], rows: list[dict[str, Any]], total: int) -> bool:
+    """No rows, or one row whose every measure is NULL — what an aggregate returns over no data.
+
+    A sum over nothing comes back as NULL, and NULL formatted for a person reads as a real figure of
+    nothing. It is not: it means the question found no rows, which may be a fact about the business or
+    a fact about what has been loaded, and those are different answers.
+    """
+    if total == 0 or not rows:
+        return True
+    if total > 1:
+        return False
+    return all(rows[0].get(c) is None for c in (columns or rows[0].keys()))
+
+
 def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], total: int) -> str:
     """Deterministic Turkish summary — no LLM round-trip (saves ~10 s per question)."""
     def fmt(v: Any) -> str:
@@ -644,7 +658,8 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
         if isinstance(v, float):
             return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         return str(v)
-    if total == 0:
+    if is_empty_result(columns, rows, total):
+        # "satis: None" reads as a number; it is the absence of one
         return "Sorgu sonuç döndürmedi."
     if total == 1 and len(columns) == 1:
         return f"{columns[0]}: {fmt(rows[0][columns[0]])}"
