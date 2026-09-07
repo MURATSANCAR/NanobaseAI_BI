@@ -185,7 +185,7 @@ export function ResultChart({
     );
   }
 
-  // bar — Logo kırılımları uzun adlar üretir (müşteri, kitap, yayınevi); yatay çubuk okunur kalır.
+  // bar — kırılımlar uzun adlar üretir (müşteri, kitap, yayınevi); yatay çubuk okunur kalır.
   return (
     <Frame note={cut}>
       {/* Kategori adları iki satıra sarabiliyor: satır yüksekliği buna göre; aksi halde etiketler çakışıyor. */}

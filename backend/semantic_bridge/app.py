@@ -687,7 +687,35 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # --- portal layer: schema inventory + annotations
     @app.get("/api/v1/schema/inventory")
     def inventory(q: str = "", entity: str = "", limit: int = 0, offset: int = 0, columns: bool = True) -> dict[str, Any]:
-        return rt().inventory(search=q, entity=entity, limit=max(0, min(limit, 500)), offset=max(0, offset), with_columns=columns)
+        """The catalogue, with a second attempt and an honest banner when it cannot be produced.
+
+        A page that comes back empty and says nothing reads as "this database has nothing in it",
+        which is a different and much worse statement than "I could not read the catalogue just now".
+        A failure is retried once against a freshly loaded catalog, and if it still cannot be built the
+        answer carries a warning for the screen to show rather than an empty list that looks like fact.
+        """
+        r = rt()
+        last = ""
+        for attempt in (1, 2):
+            try:
+                out = r.inventory(search=q, entity=entity, limit=max(0, min(limit, 500)), offset=max(0, offset), with_columns=columns)
+                if out["tables"] or out.get("total"):
+                    return out
+                last = "katalog boş döndü"
+            except Exception as e:  # noqa: BLE001
+                last = str(e)[:200]
+                log.warning("inventory attempt %d failed: %s", attempt, last)
+            if attempt == 1:
+                r.rebuild()          # the catalog may have moved under a stale set of profiles
+        empty = {"datasourceId": r.settings.datasource_id, "tables": [], "tableCount": 0, "total": 0,
+                 "columnCount": 0, "undefinedColumns": 0, "catalog": {}, "version": None}
+        if q or entity:
+            empty["warning"] = "Bu aramaya uyan tablo bulunamadı."
+        else:
+            empty["warning"] = (f"Katalog şu an okunamıyor ({last}). Gece taraması henüz çalışmamış olabilir; "
+                                "birkaç dakika sonra tekrar deneyin, sürerse yöneticinize bildirin.")
+        log.error("inventory could not be produced: %s", last)
+        return empty
 
     @app.post("/api/v1/schema/annotations")
     def add_annotation(request: Request, body: AnnotationIn) -> dict[str, Any]:

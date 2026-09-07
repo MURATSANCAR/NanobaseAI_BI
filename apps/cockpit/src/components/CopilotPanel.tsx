@@ -80,7 +80,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-ink-muted">
             <span className={clsx('h-1.5 w-1.5 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-warn' : 'bg-ink-faint')} />
-            {engineOk ? 'Logo ERP modelleri canlı' : engineOk === false ? 'Model deploy bekliyor' : 'Bağlantı kontrol ediliyor'}
+            {engineOk ? 'Veri modelleri canlı' : engineOk === false ? 'Model deploy bekliyor' : 'Bağlantı kontrol ediliyor'}
           </div>
         </div>
         <button type="button" className="text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
@@ -112,18 +112,18 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
           </button>
         </div>
         <div className="mt-2 flex items-center justify-between text-[10px] text-ink-muted">
-          <span className="inline-flex items-center gap-1"><Database size={11} /> Salt-okunur · LOGO_DB</span>
+          <span className="inline-flex items-center gap-1"><Database size={11} /> Salt-okunur</span>
           <span className="hidden sm:inline">Enter ile gönder</span>
         </div>
       </form>
       <div className="mx-4 mt-3 rounded-xl bg-page px-3 py-2 text-[11px] text-ink-muted">
-        <span className="font-semibold text-ink">Aktif bağlam:</span> Logo Tiger · fatura, malzeme hareketi, cari, sipariş modelleri (2026). Cevaplar deterministik SQL ile üretilir; SQL her yanıtta görünür.
+        <span className="font-semibold text-ink">Aktif bağlam:</span> fatura, malzeme hareketi, cari ve sipariş modelleri. Cevaplar deterministik SQL ile üretilir; SQL her yanıtta görünür.
       </div>
 
       <div ref={listRef} className="scroll-thin flex-1 space-y-3 overflow-y-auto px-4 py-3">
         {msgs.length === 0 && (
           <div className="pt-2 text-[12px] text-ink-muted">
-            Logo verisine Türkçe soru sorun. Örnek:
+            Verilerinize Türkçe soru sorun. Örnek:
             <div className="mt-2 flex flex-wrap gap-1.5">
               {SUGGESTIONS.map((s) => (
                 <button key={s} onClick={() => send(s)} className="chip hover:border-brand hover:text-brand">

@@ -57,7 +57,7 @@ export function TopBar({
           <span className={clsx('h-2 w-2 shrink-0 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-warn' : 'bg-ink-faint')} />
           <span className="eyebrow hidden text-[11px] normal-case tracking-normal sm:inline">ERP Canlı</span>
           <span className="font-semibold text-ink">
-            Logo Tiger<span className="hidden sm:inline"> · MSSQL</span>
+            Salt-okunur<span className="hidden sm:inline"> · canlı veri</span>
           </span>
         </div>
 

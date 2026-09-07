@@ -38,7 +38,7 @@ export default function App() {
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
-            {cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Logo verisi yükleniyor…</div>}
+            {cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Veriler yükleniyor…</div>}
             {cockpit.isError && (
               <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
                 <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
@@ -71,7 +71,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold tracking-wider text-white">MALİ ATLAS {year}</span>
             <span className="text-[11px] text-ink-muted">
-              Kaynak: Logo Tiger (MSSQL) · veri kesiti {dateTr(d.summary.lastDate)} · {d.source === 'live' ? 'canlı sorgu' : 'önbellek'}
+              Veri kesiti {dateTr(d.summary.lastDate)} · {d.source === 'live' ? 'canlı sorgu' : 'önbellek'}
             </span>
           </div>
           <h1 className="mt-2.5 font-display text-[26px] font-semibold leading-[1.08] tracking-tight sm:mt-3 sm:text-[34px] sm:leading-[1.05]">

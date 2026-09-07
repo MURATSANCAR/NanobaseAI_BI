@@ -51,7 +51,7 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
             Semantik Motor {engineOk ? 'Aktif' : engineOk === false ? 'Model deploy bekliyor' : 'Kontrol ediliyor'}
           </div>
           <div className="mt-1 text-[11px] text-ink-muted">
-            {modelCount != null ? `${modelCount} Logo modeli` : 'Logo ERP modelleri'} · salt-okunur
+            {modelCount != null ? `${modelCount} veri modeli` : 'Veri modelleri'} · salt-okunur
           </div>
         </div>
       </div>

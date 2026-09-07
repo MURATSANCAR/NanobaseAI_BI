@@ -1,5 +1,5 @@
 /**
- * CEO/CFO kokpit metrikleri — Logo ERP (firma 411 = 2026) üstünde doğrulanmış iş kuralları:
+ * CEO/CFO kokpit metrikleri — bağlı ERP üstünde doğrulanmış iş kuralları:
  *  - INVOICE.TRCODE: 7/8 satış, 9 verilen hizmet, 2/3 satış iadesi, 1 mal alım, 4 alınan hizmet
  *  - STLINE.LINETYPE: 0 malzeme satırı, 2 iskonto satırı (ciro kadar büyük; net = 0 − 2)
  *  - STLINE.OUTCOST = BİRİM maliyet → satır maliyeti AMOUNT*OUTCOST; maliyetlendirme aylık gecikmeli

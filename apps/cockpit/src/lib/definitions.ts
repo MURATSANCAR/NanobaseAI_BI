@@ -1,6 +1,6 @@
 /**
  * Ekrandaki her göstergenin "nasıl hesaplandığı" — bilgi (i) alanları bunu gösterir.
- * Kaynak: Logo Tiger LOGO_DB, firma 411 = 2026 (LG_411_01_INVOICE, LG_411_01_STLINE, LG_411_CLCARD, LG_411_ITEMS).
+ * Kaynak: bağlı ERP'nin fatura, hareket, cari ve malzeme tabloları.
  * Rakamlar motordan bağımsız ham T-SQL ile doğrulandı; karşılıkları semantik katalogda sertifikalıdır.
  */
 export type MetricInfo = {
@@ -31,7 +31,7 @@ FROM dbo_LG_411_01_INVOICE WHERE "CANCELLED" = 0`,
   },
   grossMargin: {
     title: 'Brüt Kâr Marjı',
-    definition: 'Maliyetlendirilmiş satış satırlarında satır tutarına göre kâr oranı. Logo maliyetlendirme aylık gecikmeli çalışır; yalnız OUTCOST ≠ 0 satırlar hesaba girer.',
+    definition: 'Maliyetlendirilmiş satış satırlarında satır tutarına göre kâr oranı. Maliyetlendirme aylık gecikmeli çalışır; yalnız OUTCOST ≠ 0 satırlar hesaba girer.',
     formula: 'Marj = 1 − Σ(AMOUNT × OUTCOST) / Σ TOTAL   (LINETYPE 0 malzeme satırı, TRCODE 7,8, OUTCOST ≠ 0)',
     sources: [STL],
     sql: `SELECT SUM(CASE WHEN "LINETYPE" = 0 AND "OUTCOST" <> 0 THEN "TOTAL" ELSE 0 END) AS costed_revenue,

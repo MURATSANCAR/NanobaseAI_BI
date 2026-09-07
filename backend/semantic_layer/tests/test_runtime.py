@@ -730,3 +730,31 @@ def test_withdrawing_a_label_withdraws_what_it_taught(catalog, profiles, logo_co
         still = catalog.get_concept(cid)
         assert still is None or (still.status != "CERTIFIED"
                                  and not any(e.source_id == source for e in catalog.list_evidence(cid))), cid
+
+
+def test_a_catalogue_that_cannot_be_read_says_so(catalog, profiles, logo_connector, settings, monkeypatch):
+    """An empty page that says nothing reads as "this database has nothing in it" — a different and
+    much worse claim than "I could not read the catalogue just now". One retry against a freshly
+    loaded catalog, then a warning the screen can show."""
+    from semantic_bridge.app import Runtime, create_app
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    client = TestClient(create_app(rt))
+
+    tries = {"n": 0}
+    real = rt.inventory
+
+    def flaky(*a, **k):
+        tries["n"] += 1
+        if tries["n"] == 1:
+            raise RuntimeError("depo cevap vermedi")
+        return real(*a, **k)
+
+    monkeypatch.setattr(rt, "inventory", flaky)
+    body = client.get("/api/v1/schema/inventory?columns=false&limit=2").json()
+    assert tries["n"] == 2 and body["tables"], "a failure is tried again before it is reported"
+    assert "warning" not in body
+
+    monkeypatch.setattr(rt, "inventory", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("depo yok")))
+    broken = client.get("/api/v1/schema/inventory?columns=false").json()
+    assert broken["tables"] == [] and "okunamıyor" in broken["warning"], broken
