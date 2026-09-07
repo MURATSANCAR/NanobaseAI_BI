@@ -497,10 +497,35 @@ def extract_sql(text: str) -> Optional[str]:
     return sql
 
 
-def clean_rules(text: str) -> str:
+#: How much of the operator documentation one prompt may carry. A local model has a fixed context and
+#: a knowledge pack has no size at all: a generated vendor dictionary or a long runbook dropped into
+#: the pack silently pushes the schema, the catalog and the examples out of the window, and the only
+#: symptom is worse SQL. The budget is generous — the hand-written documentation for a live
+#: deployment is a tenth of it — and what it drops is said out loud rather than vanishing.
+RULES_BUDGET = int(os.environ.get("SEMANTIC_PROMPT_RULES_CHARS", "20000"))
+
+
+def clean_rules(text: str, budget: int = 0) -> str:
     """Drop guidance about objects this engine does not serve (materialised views / cubes of the
-    previous stack); the remaining business rules are passed through untouched."""
-    return "\n".join(line for line in (text or "").splitlines() if not _VIEW_LINES.search(line))
+    previous stack); the remaining business rules are passed through untouched, up to the budget."""
+    kept = [line for line in (text or "").splitlines() if not _VIEW_LINES.search(line)]
+    out = "\n".join(kept)
+    limit = budget or RULES_BUDGET
+    if len(out) <= limit:
+        return out
+    # Cut at a line, never mid-sentence, and say how much did not fit — a rule the model was not
+    # shown is a rule it will break, and it must not look as though it had the whole document.
+    head: list[str] = []
+    size = 0
+    for line in kept:
+        if size + len(line) + 1 > limit:
+            break
+        head.append(line)
+        size += len(line) + 1
+    dropped = len(out) - size
+    head.append(f"\n(iş kuralları istem bütçesine sığmadı: {dropped} karakter listelenmedi — "
+                f"burada olmayan bir kuralı varsayma)")
+    return "\n".join(head)
 
 
 _DIALECT_NOTES = {
@@ -530,6 +555,9 @@ class ExistingCompiler:
         self.max_prompt_tables = int(os.environ.get("SEMANTIC_PROMPT_TABLES", "12"))
         self.max_prompt_columns = int(os.environ.get("SEMANTIC_PROMPT_COLUMNS", "60"))
         self.catalog_entities: set[str] = set()
+        # (entity, COLUMN) for every column a certified concept names — the measures, the
+        # dimension values, and the default filters. These are the columns an answer is made of.
+        self.catalog_columns: set[tuple[str, str]] = set()
         # What people wrote in the portal, keyed by (entity, column) with column None for the table.
         # Loaded by the runtime on every catalog change; a person's own words are the last word on
         # what a column means, so the model has to see them.
@@ -599,12 +627,62 @@ class ExistingCompiler:
             lines.append(f"- (bu soruyla ilgisi kurulamayan {left_out} tablo listelenmedi; burada olmayan bir tabloyu varsayma)")
         return "\n".join(lines)
 
+    def prompt_columns(self, p: SchemaProfile, q: Optional[SemanticQuery] = None) -> tuple[list[Any], int]:
+        """The columns of one table, most answerable first, and how many did not fit.
+
+        A Logo table has two to four hundred columns and a prompt cannot carry them all. Which ones
+        it carries was, until this was written, whichever ones the scan happened to return first —
+        `INFORMATION_SCHEMA` order, i.e. the order Logo laid the record out in 1998. On the customer's
+        own database that puts `STLINE.CANCELLED` at position 85, `OUTCOST` at 80 and
+        `CLCARD.SPECODE2` — the sales channel every one of their metrics breaks down by — at 146, all
+        of them outside a sixty-column window. The model would then be asked for margin by channel
+        while shown neither the cost nor the channel.
+
+        So the window is filled by what a question can actually be answered with: the columns this
+        question already resolved to, then the keys and the joins, then everything somebody has said
+        something about, then the rest in the order the source gave them.
+        """
+        named: set[str] = set()
+        if q is not None:
+            for slot in q.slots:
+                m = slot.mapping
+                if not m or (m.entity and m.entity != p.entity):
+                    continue
+                if m.column:
+                    named.add(m.column.upper())
+                for token in re.findall(rf"\b{re.escape(p.entity)}\.(\w+)", str(m.formula or "")):
+                    named.add(token.upper())
+        keys = {k.upper() for k in p.primary_key}
+
+        def rank(c: Any) -> int:
+            name = c.name.upper()
+            if name in named:
+                return 0        # the question resolved to it: leaving it out makes the prompt unanswerable
+            if (p.entity, name) in self.catalog_columns:
+                return 1        # a certified concept is built on it — a measure, a value, a default filter
+            if name in keys or c.is_primary_key or c.ref_entity:
+                return 2        # what rows are identified by and what they join on
+            if self.annotations.get((p.entity, name)):
+                return 3        # a person wrote about this column
+            if c.is_enum() or c.unit or c.sentinel_values:
+                return 4        # what you filter on and what you may add up
+            # Having a description is not evidence of importance here: the vendor dictionary describes
+            # nearly every column there is, so this signal stopped separating anything once it landed.
+            return 5 if (c.description or c.derived) else 6
+
+        ordered = sorted(range(len(p.columns)), key=lambda i: (rank(p.columns[i]), i))
+        shown = [p.columns[i] for i in ordered[: self.max_prompt_columns]]
+        # Back into the source's own order, so the model reads a table rather than a ranking.
+        shown.sort(key=lambda c: p.columns.index(c))
+        return shown, max(0, len(p.columns) - len(shown))
+
     def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]], entities: Optional[set[str]] = None) -> str:
         wanted = entities if entities is not None else self.relevant_entities(q, recalled)
         lines = []
         for p in self._one_per_entity(wanted):
             cols = []
-            for c in p.columns:
+            selected, left_out = self.prompt_columns(p, q)
+            for c in selected:
                 desc = ""
                 if c.sensitive:
                     desc = " [kişisel veri — seçme/gruplama, değerleri istemde yok]"
@@ -630,8 +708,8 @@ class ExistingCompiler:
             table_said = self.annotations.get((p.entity, None)) or p.description
             if table_said:
                 lines.append(f"{self.table_label(p)} — {table_said[:200]}")
-            lines.append(f"{self.table_label(p)}: " + ", ".join(cols[: self.max_prompt_columns]) +
-                         (f" … (+{len(cols) - self.max_prompt_columns} kolon)" if len(cols) > self.max_prompt_columns else ""))
+            lines.append(f"{self.table_label(p)}: " + ", ".join(cols) +
+                         (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else ""))
         return "\n".join(lines)
 
     def catalog_block(self, q: SemanticQuery) -> str:

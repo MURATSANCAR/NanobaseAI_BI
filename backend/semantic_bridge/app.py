@@ -91,13 +91,21 @@ class Runtime:
         self._refresher: Optional[threading.Thread] = None
         self.rebuild()
 
+    #: Documents the miner reads but the prompt does not carry. `sql/` holds the validated Q→SQL pairs,
+    #: which reach the model through recall instead. `reference/` holds generated vendor material —
+    #: 168 KB of Logo's data dictionary — whose codes reach a question through the catalog, for the
+    #: columns that question actually touches. Pasting either into every prompt spends the context on
+    #: the schema the question did not ask about.
+    _NOT_IN_PROMPT = {"sql", "reference"}
+
     def _load_rules(self) -> str:
         """Operator documentation shipped with the deployment — every *.md under knowledge/ except
-        the validated Q→SQL pairs (those are the miner's input, and reach the LLM through recall)."""
+        the ones that reach the model by another route."""
         pd = self.settings.project_dir
         if not pd or not (pd / "knowledge").exists():
             return ""
-        parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md")) if f.parent.name != "sql"]
+        parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md"))
+                 if f.parent.name not in self._NOT_IN_PROMPT]
         return "\n\n".join(parts)
 
     def ensure_fresh(self, *, every: float = 30.0) -> None:
@@ -153,7 +161,17 @@ class Runtime:
         # would bury the handful that answer the question.
         try:
             index = self.store.certified_index(s.tenant_id, s.datasource_id)
-            existing.catalog_entities = {m.entity for senses in index.values() for _, maps in senses for m in maps}
+            maps_all = [m for senses in index.values() for _, maps in senses for m in maps]
+            existing.catalog_entities = {m.entity for m in maps_all}
+            # Which columns, not just which tables. A table has three hundred of them and the
+            # prompt carries sixty; the ones a certified concept is built on go in first.
+            cols: set[tuple[str, str]] = set()
+            for m in maps_all:
+                if m.entity and m.column:
+                    cols.add((m.entity, m.column.upper()))
+                for ent, col in re.findall(r"\b(\w+)\.\"?(\w+)\"?", str(m.formula or "")):
+                    cols.add((ent, col.upper()))
+            existing.catalog_columns = cols
         except Exception as e:  # noqa: BLE001
             log.debug("catalog entity set unavailable: %s", e)
         # What people wrote in the portal is the last word on what a column means; until now the model

@@ -1,6 +1,6 @@
 {
  "source": "LDDS.xls",
- "generated_at": "2026-09-07T12:07:07+00:00",
+ "generated_at": "2026-09-07T12:27:28+00:00",
  "generator": "backend/scripts/import_logo_ldds.py",
  "table_count": 330,
  "column_count": 9303,

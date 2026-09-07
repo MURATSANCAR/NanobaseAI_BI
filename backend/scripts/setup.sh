@@ -1,11 +1,30 @@
 #!/usr/bin/env bash
-# Create venv and install DB-GPT backend deps.
+# Create venv and install the backend deps.
 # Target: Python 3.11 (see .python-version). dbgpt 0.8.1 pins aiohttp==3.8.4 —
 # that wheel/build often fails on 3.12+ macOS.
+#
+#   ./scripts/setup.sh                  DB-GPT + the semantic layer
+#   ./scripts/setup.sh --semantic-only  the semantic layer alone — profiling, the pipeline, the tests
+#
+# The semantic layer imports none of DB-GPT. Anyone working on the catalog wants the second form: it
+# installs seven packages in seconds instead of building aiohttp.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+SEMANTIC_ONLY=0
+for arg in "$@"; do
+  case "$arg" in
+    --semantic-only) SEMANTIC_ONLY=1 ;;
+    *) echo "unknown option: $arg" >&2; exit 2 ;;
+  esac
+done
+
+REQS=(requirements.txt requirements-semantic.txt)
+if [[ $SEMANTIC_ONLY -eq 1 ]]; then
+  REQS=(requirements-semantic.txt)
+fi
 
 # Prefer uv if available (faster, better conflict resolution)
 if command -v uv >/dev/null 2>&1; then
@@ -39,7 +58,7 @@ if [[ ${#UV[@]} -gt 0 ]]; then
   "${UV[@]}" venv .venv
   # shellcheck disable=SC1091
   source .venv/bin/activate
-  "${UV[@]}" pip install -r requirements.txt
+  for req in "${REQS[@]}"; do "${UV[@]}" pip install -r "$req"; done
 else
   echo "warn: uv not found — falling back to pip (install uv for reliability)" >&2
   if [[ ! -d .venv ]]; then
@@ -48,10 +67,16 @@ else
   # shellcheck disable=SC1091
   source .venv/bin/activate
   python -m pip install --upgrade pip setuptools wheel
-  python -m pip install -r requirements.txt
+  for req in "${REQS[@]}"; do python -m pip install -r "$req"; done
 fi
 
 echo
-echo "OK — DB-GPT CLI: $(dbgpt --version 2>/dev/null || echo 'installed')"
-echo "Next: cp .env.example .env  # then edit paths/keys"
-echo "Start: ./scripts/start.sh"
+if [[ $SEMANTIC_ONLY -eq 1 ]]; then
+  echo "OK — semantic layer only."
+  echo "Test:  python -m pytest semantic_layer/tests/ -q"
+  echo "Build: python -m semantic_layer.cli pipeline   # see README, 'Semantic catalog'"
+else
+  echo "OK — DB-GPT CLI: $(dbgpt --version 2>/dev/null || echo 'installed')"
+  echo "Next: cp .env.example .env  # then edit paths/keys"
+  echo "Start: ./scripts/start.sh"
+fi

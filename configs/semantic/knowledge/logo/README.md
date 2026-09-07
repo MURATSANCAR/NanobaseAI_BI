@@ -7,7 +7,8 @@ Semantic Layer'ın offline girdisi. Ürüne aittir; hiçbir üçüncü taraf pro
 | `knowledge/rules,glossary,metrics,caveats/*.md` | operatör iş kuralları → **doküman kanıtı** (aday üretir, tek başına sertifika vermez) |
 | `knowledge/sql/*.md`, `knowledge/pairs-export.yml` | doğrulanmış soru→SQL çiftleri → **History Miner** girdisi |
 | `models/*/metadata.yml`, `relationships.yml` | veritabanı bağlantısı yokken offline profil (bootstrap/test); canlı profil varsa gerekmez |
-| `knowledge/glossary/logo-ldds-codes.md` | **üretilmiştir** — Logo'nun veri sözlüğündeki kod kümeleri (fiş türleri, dövizler, kolon kodları) ve Türkçe tablo/kolon açıklamaları. Elle düzenlemeyin; `backend/scripts/import_logo_ldds.py` ile yeniden üretin. |
+| `knowledge/reference/logo-ldds.md` | **üretilmiştir** — Logo'nun veri sözlüğü: kod kümeleri (fiş türleri, dövizler, kolon kodları) ve Türkçe tablo/kolon açıklamaları. Elle düzenlemeyin; `backend/scripts/import_logo_ldds.py` ile yeniden üretin. |
+| `knowledge/reference/` | Doc Miner okur, **isteme girmez**. 168 KB'lık bir referans her isteme eklenirse şema, katalog ve örnekler bağlamdan taşar; kodlar zaten sorunun dokunduğu kolonlar üzerinden katalogdan gelir. Aynı kural `knowledge/sql/` için de geçerli (onlar recall ile ulaşır). |
 
 Logo veritabanı ne yabancı anahtar tanımlar ne birincil anahtar ne de kolon açıklaması yazar;
 tabloların anlamı, kod kümeleri, indeksler ve join grafiği `configs/schemas/logo-ldds.json`

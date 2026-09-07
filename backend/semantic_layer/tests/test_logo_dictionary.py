@@ -174,3 +174,34 @@ def test_what_a_person_wrote_survives_and_a_machine_count_gets_its_labels():
 
     human = written["OUTCOST"]["description"]
     assert human.startswith("Birim maliyet"), "a hand-written line was displaced by a vendor sentence"
+
+
+def test_the_generated_reference_does_not_ride_along_in_every_prompt():
+    """The vendor dictionary is 168 KB. `_load_rules` concatenates the knowledge pack into the system
+    prompt, so leaving it under a directory the prompt reads spends the whole context on the codes of
+    tables the question never mentions — and the schema, the catalog and the examples fall out."""
+    from pathlib import Path
+
+    pack = Path(__file__).resolve().parents[3] / "configs" / "semantic" / "knowledge" / "logo" / "knowledge"
+    generated = pack / "reference" / "logo-ldds.md"
+    assert generated.exists(), "the generated reference moved — see backend/scripts/import_logo_ldds.py"
+    assert generated.stat().st_size > 100_000, "this is the file the exclusion exists for"
+
+    from semantic_bridge.app import Runtime
+
+    assert "reference" in Runtime._NOT_IN_PROMPT
+    carried = sum(f.stat().st_size for f in pack.rglob("*.md") if f.parent.name not in Runtime._NOT_IN_PROMPT)
+    assert carried < 20_000, f"the prompt would carry {carried} characters of documentation"
+
+
+def test_operator_documentation_cannot_outgrow_the_prompt():
+    """A knowledge pack has no size limit and a local model's context does. Whatever ends up in the
+    pack, what is dropped is said — a rule the model was not shown is a rule it will break."""
+    from semantic_layer.runtime.compiler import clean_rules
+
+    small = "kural bir\nkural iki"
+    assert clean_rules(small, budget=1000) == small
+
+    trimmed = clean_rules("\n".join(f"kural {i}" for i in range(5000)), budget=2000)
+    assert len(trimmed) < 2_300, len(trimmed)
+    assert "listelenmedi" in trimmed, "the documentation was cut without saying so"

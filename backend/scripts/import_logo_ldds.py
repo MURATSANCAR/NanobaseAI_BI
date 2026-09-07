@@ -16,7 +16,7 @@ DAILYEXCHANGES. Pass it with --doc and its Turkish sentences are carried alongsi
 
     python backend/scripts/import_logo_ldds.py /path/to/LDDS.xls --doc /path/to/LOGO_TABLE_YAPISI.DOC
 
-Writes configs/schemas/logo-ldds.json and refreshes the Turkish code glossary in the `logo`
+Writes configs/schemas/logo-ldds.json and refreshes the Turkish reference document in the `logo`
 knowledge pack. Both outputs are generated: edit this script, not them.
 """
 
@@ -34,7 +34,11 @@ from typing import Optional
 
 REPO = Path(__file__).resolve().parents[2]
 OUT_JSON = REPO / "configs" / "schemas" / "logo-ldds.json"
-OUT_GLOSSARY = REPO / "configs" / "semantic" / "knowledge" / "logo" / "knowledge" / "glossary" / "logo-ldds-codes.md"
+# `knowledge/reference/`, not `knowledge/glossary/`: the Doc Miner reads every document under
+# knowledge/, but the compiler pastes the operator documentation into every prompt, and this file
+# is 168 KB of it. Reference material reaches a question through the catalog — the codes for the
+# columns that question touches — not by spending the whole context on the codes for all of them.
+OUT_GLOSSARY = REPO / "configs" / "semantic" / "knowledge" / "logo" / "knowledge" / "reference" / "logo-ldds.md"
 
 # Level, as the workbook uses it: which of the three table sets a name belongs to. It decides the
 # physical name a scan will see — L_X once per database, LG_<firm>_X once per firm, and
