@@ -33,12 +33,13 @@ from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
-from semantic_layer.models import Annotation, ConceptStatus, SemanticQuery, TemporalSlot
+from semantic_layer.models import Annotation, ConceptStatus, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
 from semantic_layer.runtime.audit import audit_sql
+from semantic_layer.runtime import critic
 from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
@@ -46,6 +47,35 @@ from semantic_layer.store.catalog_store import CatalogStore, open_store, result_
 
 log = logging.getLogger("semantic_bridge")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+
+def one_entity_per_pattern(profiles: list[SchemaProfile]) -> list[SchemaProfile]:
+    """Two profiles of the same physical pattern are the same entity, whatever they are labelled.
+
+    An entity's name is worked out per scan from the patterns that scan saw: a run scoped to one
+    firm calls LG_{n0}_ITEMS "ITEMS", and a run over the whole schema — where LV_, VW_ and DV_ copies
+    of the same table also appear — calls it "LG_ITEMS" to keep them apart. Both are reasonable and
+    they disagree, so while a scan is rewriting the catalog table by table the two live side by side,
+    and one entity splits in half: the 2021-2025 items under one name, the 2026 items under another.
+    Nothing can then read across the years of it, and a question is answered from whichever half it
+    happened to reach.
+
+    The pattern is the stable thing — it is derived from the table name alone — so it decides. The
+    most recently scanned label wins, because that one came from the run with the fuller picture.
+    """
+    latest: dict[str, tuple] = {}
+    for p in profiles:
+        seen = latest.get(p.table_pattern)
+        if seen is None or p.scanned_at > seen[0]:
+            latest[p.table_pattern] = (p.scanned_at, p.entity)
+    renamed = 0
+    for p in profiles:
+        want = latest[p.table_pattern][1]
+        if p.entity != want:
+            p.entity, renamed = want, renamed + 1
+    if renamed:
+        log.info("catalog: %d profiles relabelled so one pattern is one entity (a scan is mid-flight)", renamed)
+    return profiles
 
 
 class Runtime:
@@ -60,7 +90,7 @@ class Runtime:
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         self._engine_lock = threading.Lock()
         self.threads: dict[str, list[dict[str, str]]] = {}
-        self.profiles = self.store.list_profiles(settings.datasource_id)
+        self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id))
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
         self._catalog_version = None
@@ -127,7 +157,7 @@ class Runtime:
 
     def rebuild(self) -> None:
         s = self.settings
-        self.profiles = self.store.list_profiles(s.datasource_id)
+        self.profiles = one_entity_per_pattern(self.store.list_profiles(s.datasource_id))
         self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
@@ -509,12 +539,36 @@ class Runtime:
                 return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         repairs = 0
         error: Optional[str] = None
+        critic_notes: list[dict] = []
         if self.connector is not None:
             for attempt in range(2):
                 try:
                     self.dry_run(self._physical(sql, self._asked_period(sq)))
                     error = None
-                    break
+                    # The database has now agreed the query is valid. Whether it returns the number
+                    # that was asked for is a different question and the one that costs the most: a
+                    # join that repeats rows under a SUM returns a total larger than the truth by a
+                    # factor nobody sees, and the database is perfectly happy with it. Reviewed after
+                    # dry_run so the reviewer works on a query already known to parse and resolve.
+                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql")
+                    critic_notes = [f.to_dict() for f in found]
+                    blocking = [f for f in found if f.severity == "block"]
+                    if not blocking:
+                        break
+                    log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
+                    if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
+                        # Out of attempts, or the SQL came from the deterministic compiler — which
+                        # builds from the catalog rather than guessing, so a finding against it is
+                        # this system's own bug and rewriting it with a model would hide that.
+                        error = "; ".join(f.message for f in blocking)
+                        break
+                    repairs += 1
+                    fixed = self.existing.repair(sq, sql, "; ".join(f.message for f in blocking), thread)
+                    if not fixed:
+                        error = "; ".join(f.message for f in blocking)
+                        break
+                    sql = strip_trailing_semicolon(fixed)
+                    continue
                 except Exception as e:  # noqa: BLE001
                     error = str(e)[:1500]
                     if is_connection_error(e):
@@ -533,9 +587,16 @@ class Runtime:
                     if not fixed:
                         break
                     sql = strip_trailing_semicolon(fixed)
+        if critic_notes:
+            semantic["critic"] = critic_notes
         if error:
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error)
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Üretilen SQL doğrulanamadı: {error}", "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
+            # A query the reviewer stopped is a different thing from one the database rejected, and
+            # the person is owed the difference: the first has an explanation they can act on, the
+            # second is a fault. Both refuse — neither returns a number nobody can trust.
+            blocked = any(n.get("severity") == "block" for n in critic_notes)
+            explanation = error if blocked else f"Üretilen SQL doğrulanamadı: {error}"
+            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
             return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq)), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}

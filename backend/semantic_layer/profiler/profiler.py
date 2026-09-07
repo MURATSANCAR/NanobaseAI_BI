@@ -59,12 +59,6 @@ class Profiler:
         if max_probes_per_table is None:
             max_probes_per_table = int(os.environ.get("SEMANTIC_MAX_PROBES", "40"))
         self.max_probes_per_table = max_probes_per_table
-        # How many columns one read of a table inventories at once, where the connector can. Off
-        # until it is measured to read less: the first batched form (GROUPING SETS) ran faster on
-        # the wall clock and read *more* pages — the server spools the table and walks the spool
-        # once per set — so the clock was the scan's own noise, not a gain. Turn on only with a
-        # connector whose batch is measured, in isolation, to read fewer pages than N single reads.
-        self.probe_batch = int(os.environ.get("SEMANTIC_PROBE_BATCH", "0") or 0)
         self.deep_skipped: list[str] = []
         self.truncated: list[str] = []
 
@@ -84,44 +78,18 @@ class Profiler:
         return out
 
     def _inventories(self, schema: str, table: str, columns: list[ColumnProfile]) -> dict[str, list[tuple[str, int]]]:
-        """Value inventories for these columns, keyed by column name; absent where the read failed.
+        """Value inventories for these columns, keyed by name; absent where the read failed.
 
-        A connector that can read several columns in one pass is asked for them in batches of
-        SEMANTIC_PROBE_BATCH (0 turns batching off). Columns whose type the batch would not read
-        identically go one at a time, and a batch that fails falls back to one at a time for its
-        own columns — so a failure costs time, never coverage.
+        One read per column. Reading several at once was measured and is slower here — see the note
+        in the MSSQL connector. A column that fails is logged and skipped: the rest of the table is
+        still catalogued.
         """
-        limit = self.enum_max_distinct + 1
         out: dict[str, list[tuple[str, int]]] = {}
-
-        def one(cp: ColumnProfile) -> None:
+        for cp in columns:
             try:
-                out[cp.name] = self.c.top_values(schema, table, cp.name, limit)
+                out[cp.name] = self.c.top_values(schema, table, cp.name, self.enum_max_distinct + 1)
             except Exception as e:  # noqa: BLE001
                 log.debug("top_values failed %s.%s: %s", table, cp.name, e)
-
-        can_batch = self.probe_batch > 0 and hasattr(self.c, "top_values_batch") and hasattr(self.c, "batchable")
-        batched: list[ColumnProfile] = []
-        for cp in columns:
-            if can_batch and self.c.batchable(cp.data_type):
-                batched.append(cp)
-            else:
-                one(cp)
-        for start in range(0, len(batched), self.probe_batch or 1):
-            chunk = batched[start:start + self.probe_batch]
-            try:
-                got = self.c.top_values_batch(schema, table, [cp.name for cp in chunk], limit)
-            except Exception as e:  # noqa: BLE001
-                log.info("batched inventory failed for %s (%d columns), reading them one at a time: %s",
-                         table, len(chunk), str(e)[:200])
-                for cp in chunk:
-                    one(cp)
-                continue
-            for cp in chunk:
-                if cp.name in got:
-                    out[cp.name] = got[cp.name]
-                else:
-                    one(cp)
         return out
 
     def _time_window(self, schema: str, table: str, columns: list[ColumnProfile]) -> Optional[tuple[str, str]]:

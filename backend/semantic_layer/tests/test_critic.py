@@ -1,8 +1,11 @@
 """The critic reads a query for the ways it can return the wrong number."""
 from __future__ import annotations
 
+import pytest
+
 from semantic_layer.models import ColumnProfile, SchemaProfile
 from semantic_layer.runtime.critic import review
+from semantic_layer.tests.test_runtime import catalog  # noqa: F401  — the certified fixture lives there
 
 
 def _t(entity, name, cols, pk="LOGICALREF", rels=()):
@@ -63,3 +66,67 @@ def test_unreadable_sql_gets_no_findings_not_a_refusal():
 
 def test_a_clean_single_table_aggregate_has_nothing_to_say():
     assert review("SELECT SUM(TOTAL) AS ciro FROM dbo.LG_411_01_STLINE WHERE STOCKREF > 0", P) == []
+
+
+def _client(catalog, logo_connector, settings, replies):
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.candidates.llm_client import FakeLlm
+
+    llm = FakeLlm(list(replies))
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=llm)
+    return TestClient(create_app(rt)), llm
+
+
+#: "How many customers bought something" written as a count over the invoice join. Every customer is
+#: counted once per invoice they have, so the answer is the number of invoices wearing the name of
+#: the number of customers. The database returns it without complaint.
+_INFLATED = ('```sql\nSELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+             'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF"\n```')
+_CORRECT = ('```sql\nSELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+            'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF"\n```')
+
+
+def test_an_inflated_count_is_sent_back_to_the_model_and_the_corrected_query_is_what_runs(
+        catalog, profiles, logo_connector, settings):
+    client, llm = _client(catalog, logo_connector, settings, [_INFLATED, _CORRECT])
+    r = client.post("/api/v1/ask", json={"question": "Bölgesel satış dağılımı 2026"}).json()
+
+    assert r["type"] == "TEXT_TO_SQL", r.get("explanation")
+    assert r["repairs"] == 1, "the finding went back to the model as an instruction"
+    assert "DISTINCT" in r["sql"], "what ran is the corrected query"
+    told = llm.calls[-1][-1]["content"]
+    assert "şişirilmiş" in told and "CLCARD" in told, told[:200]
+
+
+def test_a_repair_that_does_not_fix_it_refuses_rather_than_returning_the_number(
+        catalog, profiles, logo_connector, settings):
+    client, _ = _client(catalog, logo_connector, settings, [_INFLATED, _INFLATED])
+    r = client.post("/api/v1/ask", json={"question": "Bölgesel satış dağılımı 2026"}).json()
+
+    assert r["type"] == "SQL_INVALID"
+    assert "şişirilmiş" in r["explanation"], "the person is told what is wrong, not that the SQL is invalid"
+    assert "doğrulanamadı" not in r["explanation"], "a reviewed refusal is not reported as a database fault"
+    assert any(n["kind"] == "FANOUT" for n in r["semantic"]["critic"])
+
+
+def test_one_physical_pattern_is_one_entity_even_mid_scan():
+    """While a scan rewrites the catalog table by table, rows from two runs sit side by side and can
+    disagree about what an entity is called — splitting one entity's years in half. The pattern is
+    derived from the table name alone, so it decides."""
+    from datetime import timedelta
+
+    from semantic_bridge.app import one_entity_per_pattern
+    from semantic_layer.models import utcnow
+
+    old_ = SchemaProfile(datasource_id="d", table_name="LG_211_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                         entity="ITEMS", schema_name="dbo", scanned_at=utcnow() - timedelta(hours=12))
+    new_ = SchemaProfile(datasource_id="d", table_name="LG_411_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                         entity="LG_ITEMS", schema_name="dbo", scanned_at=utcnow())
+    other = SchemaProfile(datasource_id="d", table_name="LV_411_ITEMS", table_pattern="LV_{n0}_ITEMS",
+                          entity="LV_ITEMS", schema_name="dbo", scanned_at=utcnow())
+    out = one_entity_per_pattern([old_, new_, other])
+    assert {p.table_name: p.entity for p in out} == {
+        "LG_211_ITEMS": "LG_ITEMS", "LG_411_ITEMS": "LG_ITEMS", "LV_411_ITEMS": "LV_ITEMS",
+    }, "both years of one pattern share the newest label; a different pattern keeps its own"
