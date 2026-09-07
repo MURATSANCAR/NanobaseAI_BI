@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
-from semantic_layer.naming import physical_name
+from semantic_layer.naming import is_shadow_copy, physical_name
 from semantic_layer.runtime import periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
@@ -575,6 +575,10 @@ class ExistingCompiler:
         # embeddings could not — a question naming a value ("trendyol") reaches the column that holds
         # it — and costs milliseconds with nothing deployed. Off unless a deployment asks for it.
         self.columns: Any = None
+        # Narrows the retrieved shortlist before it becomes a prompt. Set by the runtime when a
+        # deployment configures a selector model; "shadow" measures without changing anything.
+        self.selector: Any = None
+        self.selector_mode = (os.environ.get("SEMANTIC_TABLE_SELECTOR", "shadow") or "shadow").strip().lower()
         self.catalog_entities: set[str] = set()
         # (entity, COLUMN) for every column a certified concept names — the measures, the
         # dimension values, and the default filters. These are the columns an answer is made of.
@@ -616,27 +620,56 @@ class ExistingCompiler:
                 add(slot.mapping.entity)
         resolved = list(ordered)
 
-        # The vocabulary somebody has already written down comes before anything inferred: the budget
-        # is spent down this order, and a certified mapping must not be pushed out of the prompt by a
-        # lexical hit on a table nobody has certified anything about.
-        for entity in sorted(self.catalog_entities):
-            add(entity)
+        # What the question itself points at, gathered before anything is placed: lexical and value
+        # search over the columns, then the vector router, then the tables a recalled example used.
+        evidence: list[str] = []
+        def sight(entity: Optional[str]) -> None:
+            if entity and entity in self.by_entity and entity not in evidence:
+                evidence.append(entity)
+
         if self.columns is not None:
             for entity, _score in self.columns.entities(q.question):
-                add(entity)
+                sight(entity)
         if self.router is not None:
             for entity, _score in self.router.route(q.question, set(self.by_entity)):
-                add(entity)
+                sight(entity)
         for r in recalled:
             for p in self.profiles:
                 if self.table_label(p) in (r.get("sql") or ""):
-                    add(p.entity)
+                    sight(p.entity)
+
+        # The vocabulary somebody has already written down comes before anything inferred — but only
+        # where the question reaches it. Placing the whole certified catalog ahead of the question's
+        # own evidence put certified tables the question never used in front of the ones it did, in
+        # alphabetical order; on this deployment that is five tables, small enough to have hidden the
+        # ordering error and large enough to have caused it. So certified-and-seen leads, then the
+        # rest of what the question points at, and the remaining certified vocabulary follows behind
+        # rather than ahead — still present, still preferred over a table reached only by a join hop.
+        #
+        # This orders; it does not cut. What reaches the prompt is still everything the lexical index
+        # scored above its floor — ten tables for a question that needs one. Cutting is the selector's
+        # job, and it can only cut safely from the tail of an order that is right.
+        for entity in evidence:
+            if entity in self.catalog_entities:
+                add(entity)
+        for entity in evidence:
+            add(entity)
+        for entity in sorted(self.catalog_entities):
+            add(entity)
 
         core = list(ordered)
         for entity in core:
             for other in sorted(self.by_entity):
                 if other not in ordered and self.conventions.join_path(entity, other):
                     add(other)
+
+        # A table whose name says it is a backup, a test or a staging leftover answers no question a
+        # person asks, but it carries the same columns as the table it was copied from and so scores
+        # like it. Keep it — a deployment where the copy is all there is must still work — but behind
+        # everything else, so it is the first thing a context budget drops.
+        shadow = [e for e in ordered if is_shadow_copy(e)]
+        if shadow and len(shadow) < len(ordered):
+            ordered = [e for e in ordered if e not in shadow] + shadow
 
         if not ordered:
             # Nothing certified, nothing resolved and no router: the honest fallback is the tables
@@ -670,6 +703,43 @@ class ExistingCompiler:
         if isinstance(entities, list):
             return [out[e] for e in entities if e in out]
         return list(out.values())
+
+    def entity_note(self, entity: str) -> str:
+        """One line about a table, for a model that is choosing between them and nothing more."""
+        p = self.by_entity.get(entity)
+        if p is None:
+            return ""
+        note = (p.description or "").strip()
+        if not note:
+            for d in p.derived:
+                if d.get("text"):
+                    note = str(d["text"]).strip()
+                    break
+        cols = ", ".join(c.name for c in p.columns[:12])
+        return f"{note[:160]} [kolonlar: {cols}]" if note else f"[kolonlar: {cols}]"
+
+    def narrow(self, q: SemanticQuery, entities: list[str]) -> list[str]:
+        """Ask the selector which of the retrieved tables the question is actually about.
+
+        Off unless a deployment asks for it, and in shadow by default: the decision is measured
+        against the golden set before it is allowed to change a prompt. What the resolver placed is
+        pinned — it is not offered for selection and cannot be dropped.
+
+        A NONE is recorded but never applied here. "No table fits" is a refusal, and a refusal has to
+        come from the resolver, where it can be explained to the person asking; letting a selector
+        empty the table list would produce the same silence with no account of why.
+        """
+        if self.selector is None or len(entities) <= 1:
+            return entities
+        pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
+        sel = self.selector.select(q.question, entities, self.entity_note, pinned=pinned)
+        log.info("table selector [%s] %s: %d/%d kept%s%s q=%r",
+                 self.selector_mode, sel.decision, len(sel.tables), len(entities),
+                 f" dropped={sel.dropped}" if sel.dropped else "",
+                 f" ({sel.ms} ms)" if sel.ms else "", q.question[:60])
+        if self.selector_mode == "on" and sel.decision == "SELECT" and sel.tables:
+            return sel.tables
+        return entities
 
     def model_index(self, entities: Optional[set[str]] = None) -> str:
         shown = self._one_per_entity(entities)
@@ -911,7 +981,7 @@ class ExistingCompiler:
         recall_fn = recall or self.recall
         recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
-        entities = self.relevant_entities(q, recalled)
+        entities = self.narrow(q, self.relevant_entities(q, recalled))
         ctx = [
             "## Tablolar\n" + self.model_index(entities),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),

@@ -13,6 +13,7 @@ from datetime import date
 from typing import Optional
 
 from semantic_layer.models import SchemaProfile
+from semantic_layer.naming import source_rank
 
 
 def _window(p: SchemaProfile) -> Optional[tuple[date, date]]:
@@ -64,8 +65,11 @@ def _one_per_window(chosen: list[SchemaProfile]) -> list[SchemaProfile]:
     Reading both adds the period to itself, and the answer comes back at twice the real figure with
     nothing about it looking wrong.
 
-    So where windows coincide, one is read. The one with more rows is kept, because the copy that was
-    still being written to is the one that has the later corrections in it.
+    So where windows coincide, one is read. A table whose name says it is a backup or a test is never
+    the one kept while a plain table is on offer, and a view is not kept over the table beneath it —
+    otherwise the choice falls to whichever name sorts first, and LV_ sorts after LG_. Among equals,
+    the one with more rows is kept, because the copy that was still being written to is the one that
+    has the later corrections in it.
     """
     # Keyed by table name throughout: SchemaProfile is a plain dataclass, so it compares by value and
     # cannot be hashed or used as a dict key.
@@ -80,8 +84,15 @@ def _one_per_window(chosen: list[SchemaProfile]) -> list[SchemaProfile]:
         if len(members) == 1 or key[0] == "undated":
             keep.update(m.table_name for m in members)
             continue
-        keep.add(max(members, key=lambda p: (p.row_count or 0, p.table_name)).table_name)
+        keep.add(max(members, key=_preference).table_name)
     return [p for p in chosen if p.table_name in keep]
+
+
+def _preference(p: SchemaProfile) -> tuple:
+    """Best-first ordering for two tables that hold the same period. Higher is better."""
+    # an unmeasured row count is what a view looks like here: the count comes from the base tables
+    rank = source_rank(p.table_name, is_view=p.row_count is None)
+    return (-rank, p.row_count or 0, p.table_name)
 
 
 def duplicates_of(chosen: list[SchemaProfile], available: list[SchemaProfile]) -> list[tuple[SchemaProfile, SchemaProfile]]:

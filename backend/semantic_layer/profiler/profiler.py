@@ -214,11 +214,24 @@ class Profiler:
                 # Volume and centrality still order them among themselves — but a much-referenced
                 # empty table must not take a turn ahead of a small table with rows in it, because
                 # the rows are what an answer is made of.
+                #
+                # And within that, the *second copy of a shape comes after the first copy of every
+                # other shape*. A source that keeps one set of tables per fiscal year holds the same
+                # 336-column STLINE a dozen times, each one a multi-million-row scan that re-learns
+                # columns already understood. Reading them biggest-first spends a day on one entity
+                # while hundreds of other shapes stay unread. Nothing is skipped — every copy is
+                # still profiled, and row counts and date windows still come from each of them — but
+                # the schema is understood breadth-first, so the catalog is useful from the first
+                # pass instead of only at the end.
+                depth = _shape_depth([t for t in tables], score, logical)
                 order.sort(key=lambda i: (0 if (counts.get(tables[i][1]) or 0) > 0 else 1,
+                                          depth.get(tables[i][1], 0),
                                           -score.get(tables[i][1], 0.0), tables[i][1]))
                 with_rows = sum(1 for _, t in tables if (counts.get(t) or 0) > 0)
-                log.info("traversal: %d tables with rows first, then %d without",
-                         with_rows, len(tables) - with_rows)
+                shapes = len({lt.table_pattern for lt in logical.values()})
+                log.info("traversal: %d tables with rows first, then %d without; "
+                         "%d distinct shapes, one copy of each before any second copy",
+                         with_rows, len(tables) - with_rows, shapes)
         profiled: list[Optional[SchemaProfile]] = [None] * len(tables)
         started = time.time()
         deep_done = 0
@@ -478,6 +491,23 @@ def profile_summary(profiles: list[SchemaProfile]) -> dict[str, Any]:
         "relationships": sum(len(p.relationships) for p in profiles),
         "entities": sorted(p.entity for p in profiles),
     }
+
+
+def _shape_depth(tables: list[tuple[str, str]], score: dict[str, float], logical: dict) -> dict[str, int]:
+    """Which copy of its shape each table is — 0 for the best one, 1 for the next, and so on.
+
+    Used to order a full traversal breadth-first by shape without dropping anything: sorting on this
+    before volume means every distinct shape is read once before any shape is read twice.
+    """
+    by_pattern: dict[str, list[str]] = {}
+    for _, table in tables:
+        by_pattern.setdefault(logical[table].table_pattern, []).append(table)
+    out: dict[str, int] = {}
+    for group in by_pattern.values():
+        group.sort(key=lambda t: (-score.get(t, 0.0), t))
+        for depth, table in enumerate(group):
+            out[table] = depth
+    return out
 
 
 def _one_per_pattern(tables: list[tuple[str, str]], score: dict[str, float], logical: dict, limit: int) -> list[tuple[str, str]]:

@@ -122,3 +122,47 @@ def disambiguate(entities: list[tuple[str, str]]) -> dict[str, str]:
             prefix = [s for s in p.split("_") if s and not s.startswith("{")][:-len(entity.split("_"))]
             out[p] = ("_".join(prefix + entity.split("_"))) if prefix else entity
     return out
+
+
+# A name that announces itself as a copy: a backup taken by hand, a table left over from a test, a
+# staging table that was never cleaned up. These hold real rows and a real schema, so nothing here
+# excludes them — but where a question could be answered from either them or the table they were
+# copied from, the copy is not the one to read, and it is not the one to offer a model as a
+# candidate. The markers are the ones people actually type, in both languages this catalog sees.
+_SHADOW_MARKERS = (
+    "yedek", "yedekk", "backup", "bckp", "bak", "copy", "kopya",
+    "old", "eski", "test", "temp", "tmp", "deneme", "sil", "arsiv", "arşiv",
+)
+
+
+def is_shadow_copy(name: str, markers: Iterable[str] = ()) -> bool:
+    """True when a table name carries a backup/test/temp marker as a whole segment or a prefix.
+
+    Segment-wise, so ORDERS_TEST and BCKP_030826LG_411_01_STLINE match while TEMPLATES, LATEST and
+    BAKERY_SALES do not — a substring test would quietly demote real tables.
+    """
+    words = tuple(m.lower() for m in (markers or _SHADOW_MARKERS))
+    for seg in (s for s in _SPLIT.split(strip_quotes(name).lower()) if s):
+        # trailing digits are part of the marker: YEDEK1, TEMP2, BAK_2024
+        core = seg.rstrip("0123456789") or seg
+        if core in words:
+            return True
+        # a dated prefix glued to the real name: BCKP_030826LG_411_01_STLINE
+        if any(core.startswith(w) and core[len(w):].isdigit() for w in words):
+            return True
+    return False
+
+
+def source_rank(name: str, *, is_view: bool = False, markers: Iterable[str] = ()) -> int:
+    """How much a physical table deserves to be the one read. Lower is better.
+
+    0 — a base table that does not announce itself as a copy.
+    1 — a view: the same rows seen through someone else's shaping, fine to read but not the source.
+    2 — a table whose name says it is a backup, a test or a staging leftover.
+
+    This orders a choice that would otherwise fall to whichever name sorts first, which is how a
+    view came to be preferred over the table under it.
+    """
+    if is_shadow_copy(name, markers):
+        return 2
+    return 1 if is_view else 0
