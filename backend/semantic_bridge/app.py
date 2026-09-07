@@ -178,9 +178,10 @@ class Runtime:
         # is strictly additional: the certified vocabulary above is consulted first and always, and a
         # deployment with no index — or one whose index is unreachable — routes exactly as before.
         # Column-level lexical and value search. Nothing to deploy and nothing to keep in step: it is
-        # built from the catalog already in memory. Off by default because it changes which tables a
-        # question is answered from, which is a decision a deployment makes deliberately.
-        if os.environ.get("SEMANTIC_COLUMN_ROUTER", "").strip() in ("1", "true", "yes", "on"):
+        # built from the catalog already in memory, costs milliseconds, and says which word or which
+        # value matched. It runs after the certified vocabulary, so it can only add tables a question
+        # would otherwise have had no way to reach. Set SEMANTIC_COLUMN_ROUTER=0 to turn it off.
+        if os.environ.get("SEMANTIC_COLUMN_ROUTER", "1").strip() not in ("0", "false", "no", "off"):
             try:
                 from semantic_layer.runtime.column_index import ColumnIndex
 

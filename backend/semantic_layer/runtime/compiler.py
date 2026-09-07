@@ -616,15 +616,17 @@ class ExistingCompiler:
                 add(slot.mapping.entity)
         resolved = list(ordered)
 
+        # The vocabulary somebody has already written down comes before anything inferred: the budget
+        # is spent down this order, and a certified mapping must not be pushed out of the prompt by a
+        # lexical hit on a table nobody has certified anything about.
+        for entity in sorted(self.catalog_entities):
+            add(entity)
         if self.columns is not None:
             for entity, _score in self.columns.entities(q.question):
                 add(entity)
         if self.router is not None:
             for entity, _score in self.router.route(q.question, set(self.by_entity)):
                 add(entity)
-
-        for entity in sorted(self.catalog_entities):
-            add(entity)
         for r in recalled:
             for p in self.profiles:
                 if self.table_label(p) in (r.get("sql") or ""):
