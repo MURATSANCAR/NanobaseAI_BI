@@ -24,9 +24,12 @@ deployment without a profiled catalog gets nothing rather than a guess.
 
 from __future__ import annotations
 
+import json
 import math
+import os
 import re
 from collections import Counter, defaultdict
+from pathlib import Path
 from typing import Any, Iterable, Optional
 
 from semantic_layer.normalize import STOPWORDS, content_tokens, fold, stem, tokenize
@@ -83,6 +86,17 @@ class ColumnIndex:
     #: Below this a hit says more about the corpus than about the question.
     MIN_SCORE = 1.0
 
+    #: Values collected for search only — everything a column holds, including what a prompt must
+    #: never be shown. Written by backend/scripts/probe_column_values.py, read here and nowhere else.
+    VALUES_PATH = os.environ.get("SEMANTIC_COLUMN_VALUES", "/data/nanobaseai/bi/var/column-values.json")
+
+    @classmethod
+    def _search_values(cls) -> dict[str, list[str]]:
+        try:
+            return json.loads(Path(cls.VALUES_PATH).read_text(encoding="utf-8")).get("values", {})
+        except (OSError, json.JSONDecodeError, ValueError):
+            return {}
+
     def __init__(self, profiles: Iterable[Any], annotations: Optional[dict] = None):
         self.docs: list[tuple[str, str]] = []          # (entity, column)
         self.terms: list[Counter] = []
@@ -92,6 +106,7 @@ class ColumnIndex:
         self.values: dict[str, set[int]] = defaultdict(set)
         annotations = annotations or {}
         seen: set[tuple[str, str]] = set()
+        extra = self._search_values()
 
         for prof in profiles:
             for col in getattr(prof, "columns", []) or []:
@@ -106,7 +121,12 @@ class ColumnIndex:
                 for entry in (getattr(col, "derived", None) or []):
                     bag.update(tokens(entry.get("text", "")))
                 i = len(self.docs)
-                for value, _count in (col.meaningful_values() or []):
+                # What a prompt may see, and what only search may see. The second list is where a
+                # customer's own name lives: enough to find the column a question is about, and not
+                # a single character of it goes into a prompt.
+                held = [v for v, _ in (col.meaningful_values() or [])]
+                held += extra.get(f"{prof.entity}.{col.name.upper()}", [])
+                for value in held:
                     for t in tokens(value):
                         self.values[t].add(i)
                         bag[t] += 1
