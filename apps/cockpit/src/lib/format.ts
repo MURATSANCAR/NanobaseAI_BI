@@ -34,6 +34,17 @@ export function ymOf(iso: string | null | undefined): { year: number; month: num
   return Number.isFinite(y) && m >= 1 && m <= 12 ? { year: y, month: m } : null;
 }
 
+/** Rakamın yaşı: "şimdi", "12 sn önce", "4 dk önce". Kokpit kendi kendine yenilendiği için ekranda
+ *  "canlı" yazması yetmez — okuyan, baktığı sayının ne zaman hesaplandığını görebilmeli. */
+export function agoTr(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return '—';
+  if (sec < 5) return 'şimdi';
+  if (sec < 60) return `${Math.round(sec)} sn önce`;
+  if (sec < 3600) return `${Math.round(sec / 60)} dk önce`;
+  if (sec < 86_400) return `${Math.round(sec / 3600)} sa önce`;
+  return `${Math.round(sec / 86_400)} gün önce`;
+}
+
 export function dateTr(iso: string | null | undefined): string {
   if (!iso) return '—';
   const [y, m, d] = iso.slice(0, 10).split('-');

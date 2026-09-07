@@ -12,7 +12,7 @@ import { useCockpit, useEngine } from './hooks/useCockpit';
 import { InfoTip } from './components/InfoTip';
 import { Splash } from './components/Splash';
 import { derive } from './lib/metrics';
-import { dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
+import { agoTr, dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
 
 export default function App() {
   const cockpit = useCockpit();
@@ -23,6 +23,9 @@ export default function App() {
   const [splash, setSplash] = useState(true);
   const [view, setView] = useState<View>('desk');
   const closeSplash = useCallback(() => setSplash(false), []);
+  // Elde bir tablo varsa (canlı cevap ya da bu tarayıcıdaki son kopya) ekran onu gösterir; yenileme
+  // arkada döner. Boş ekran yalnız hiç tablo görmemiş bir tarayıcıda kalır.
+  const failed = cockpit.isError;
   const ym = ymOf(d?.summary.lastDate);
   const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]}` : 'Veri kesiti bekleniyor';
   const focusCopilot = () => {
@@ -36,13 +39,23 @@ export default function App() {
       <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} view={view} onView={setView} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar lastDate={d?.summary.lastDate ?? ''} live={d?.source === 'live'} engineOk={engineOk} periodLabel={periodLabel} onSearch={focusCopilot} />
+        <TopBar
+          lastDate={d?.summary.lastDate ?? ''}
+          live={d?.source === 'live'}
+          engineOk={engineOk}
+          periodLabel={periodLabel}
+          onSearch={focusCopilot}
+          updatedAt={d ? cockpit.dataUpdatedAt : 0}
+          ageSec={d?.ageSec ?? 0}
+          refreshing={cockpit.isFetching}
+          failed={failed}
+        />
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
             {view === 'catalog' && <CatalogExplorer />}
-            {view === 'desk' && cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Veriler yükleniyor…</div>}
-            {view === 'desk' && cockpit.isError && (
+            {view === 'desk' && !d && !failed && <DeskSkeleton />}
+            {view === 'desk' && failed && !d && (
               <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
                 <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
                 <div>
@@ -51,10 +64,53 @@ export default function App() {
                 </div>
               </div>
             )}
+            {/* Tablo duruyor ama yenilenemedi: rakamları saklamak yerine yaşlarını söylemek doğrusu. */}
+            {view === 'desk' && failed && d && (
+              <div className="card flex items-start gap-2.5 border-warn/40 p-3 text-[12px] sm:px-4">
+                <AlertTriangle className="mt-0.5 shrink-0 text-warn" size={15} />
+                <div>
+                  <span className="font-semibold">Yenileme başarısız</span> — aşağıdaki rakamlar {agoTr(d.ageSec + (Date.now() - cockpit.dataUpdatedAt) / 1000)} hesaplandı.
+                  <span className="text-ink-muted"> {(cockpit.error as Error).message}</span>
+                </div>
+              </div>
+            )}
             {view === 'desk' && d && <Dashboard d={d} engineOk={engineOk} />}
           </main>
 
           <CopilotPanel engineOk={engineOk} inputRef={copilotInput} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** İlk kez giren bir tarayıcıda tablo henüz yok. Tek satırlık "yükleniyor" yazısı yerine ekranın
+ *  kendi düzeni çizilir: gelecek olanın nerede duracağı baştan bellidir, sayfa yerinden oynamaz. */
+function DeskSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4 sm:space-y-5" aria-busy="true" aria-label="Veriler yükleniyor">
+      <div className="space-y-2">
+        <div className="h-4 w-56 rounded bg-line" />
+        <div className="h-8 w-[min(420px,80%)] rounded bg-line" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="card space-y-3 p-4 sm:p-5">
+            <div className="h-3 w-24 rounded bg-line" />
+            <div className="h-7 w-32 rounded bg-line" />
+            <div className="h-2.5 w-full rounded bg-line" />
+          </div>
+        ))}
+      </div>
+      <div className="card h-64 p-4 sm:p-5">
+        <div className="h-3 w-40 rounded bg-line" />
+      </div>
+      <div className="grid min-w-0 gap-4 sm:gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="card h-72 p-4 sm:p-5">
+          <div className="h-3 w-32 rounded bg-line" />
+        </div>
+        <div className="card h-72 p-4 sm:p-5">
+          <div className="h-3 w-28 rounded bg-line" />
         </div>
       </div>
     </div>

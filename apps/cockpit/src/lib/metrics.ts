@@ -16,6 +16,9 @@ export type Imprint = { imprint: string; titles: number; net: number; returnRate
 
 export type CockpitData = {
   source: 'live' | 'fixture';
+  /** Rakamların köprüde hesaplanmasının üstünden geçen süre. Kokpit her yenilemede köprünün sıcak
+   *  önbelleğinden okur; "canlı" etiketinin arkasında kaç saniyelik bir canlılık olduğunu bu söyler. */
+  ageSec: number;
   summary: { sales: number; returns: number; purchases: number; invoices: number; lastDate: string };
   lines: { gross: number; discount: number; costedRevenue: number; cost: number; costUntil: string };
   monthly: Monthly[];
@@ -119,8 +122,12 @@ export async function loadLive(): Promise<CockpitData> {
   ]);
   const sm = summary.records[0] ?? {};
   const ln = lines.records[0] ?? {};
+  // Beş sorgunun en eskisi tablonun yaşıdır: bir kartı taze gösterip yanındakini eski göstermek
+  // okuyanı yanıltır, ekran tek bir ana aittir.
+  const ageSec = Math.max(...[summary, monthly, lines, channels, imprints].map((r) => r.ageSec ?? 0));
   return {
     source: 'live',
+    ageSec,
     summary: { sales: n(sm.sales), returns: n(sm.returns), purchases: n(sm.purchases), invoices: n(sm.invoices), lastDate: s(sm.last_date) },
     lines: { gross: n(ln.gross), discount: n(ln.discount), costedRevenue: n(ln.costed_revenue), cost: n(ln.cost), costUntil: s(ln.cost_until) },
     monthly: parseMonthly(monthly.records[0] ?? {}),
@@ -140,8 +147,8 @@ export async function loadLive(): Promise<CockpitData> {
 }
 
 export function loadFixture(): CockpitData {
-  const f = fixture as Omit<CockpitData, 'source'> & { channels: (Channel & { soldQty?: number; returnQty?: number })[] };
-  return { source: 'fixture', ...f, channels: f.channels.map(({ channel, net, customers }) => ({ channel, net, customers })) };
+  const f = fixture as Omit<CockpitData, 'source' | 'ageSec'> & { channels: (Channel & { soldQty?: number; returnQty?: number })[] };
+  return { source: 'fixture', ...f, ageSec: 0, channels: f.channels.map(({ channel, net, customers }) => ({ channel, net, customers })) };
 }
 
 export type DataMode = 'live' | 'fixture' | 'auto';

@@ -1,6 +1,16 @@
-import { BookOpen, Calendar, Database, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, BookOpen, Calendar, Database, RefreshCw, Search } from 'lucide-react';
 import clsx from 'clsx';
-import { dateTr } from '../lib/format';
+import { agoTr, dateTr } from '../lib/format';
+
+/** Yaş her saniye büyür; onu gösteren satır da her saniye yeniden çizilmeli. */
+function useSecondTick(): void {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => tick((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+}
 
 export function TopBar({
   lastDate,
@@ -8,6 +18,10 @@ export function TopBar({
   engineOk,
   periodLabel,
   onSearch,
+  updatedAt,
+  ageSec,
+  refreshing,
+  failed,
 }: {
   lastDate: string;
   live: boolean;
@@ -16,7 +30,16 @@ export function TopBar({
   periodLabel: string;
   /** Arama = Timaş Finans'a soru: girişe odaklanır */
   onSearch: () => void;
+  /** Bu tablonun tarayıcıya ulaştığı an (ms) — 0 ise elde henüz bir tablo yok */
+  updatedAt: number;
+  /** Ulaştığı anda köprüde kaç saniyeliktı; toplam yaş = bu + o andan beri geçen süre */
+  ageSec: number;
+  refreshing: boolean;
+  /** Son yenileme başarısız: ekrandaki rakamlar duruyor ama artık ilerlemiyor */
+  failed: boolean;
 }) {
+  useSecondTick();
+  const age = updatedAt ? ageSec + (Date.now() - updatedAt) / 1000 : null;
   return (
     <header className="px-4 pt-4 sm:px-6 sm:pt-5">
       {/* Mobil marka satırı: Sidebar lg altında gizli olduğu için kurum kimliği ve kullanıcı burada durur. */}
@@ -73,6 +96,20 @@ export function TopBar({
         <div className="chip h-9 gap-2 border-ink/30">
           <Calendar size={14} className="shrink-0" />
           <span className="font-semibold text-ink">{periodLabel}</span>
+        </div>
+
+        {/* Rakamın yaşı: ekran kendi kendine yenilendiği için "canlı" tek başına bir şey söylemez. */}
+        <div
+          className={clsx('chip h-9 gap-2', failed && 'border-warn/50 text-warn')}
+          title={failed ? 'Son yenileme başarısız — ekrandaki rakamlar olduğu yerde duruyor' : 'Veriler kendiliğinden yenilenir'}
+        >
+          {failed ? (
+            <AlertTriangle size={14} className="shrink-0" />
+          ) : (
+            <RefreshCw size={14} className={clsx('shrink-0 text-ink-muted', refreshing && 'animate-spin')} />
+          )}
+          <span className={clsx('font-semibold', failed ? 'text-warn' : 'text-ink')}>{age == null ? 'yükleniyor' : agoTr(age)}</span>
+          {failed && <span className="hidden text-[11px] sm:inline">yenilenemedi</span>}
         </div>
 
         <div className="ml-auto hidden items-center gap-3 lg:flex">
