@@ -109,7 +109,7 @@ def test_a_concept_knocked_out_by_a_bad_minute_can_come_back(store, profiles):
     inv = next(p for p in profiles if p.entity == "INVOICE")
     c, _ = store.upsert_concept(TENANT, DS, "ciro", SemanticType.METRIC,
                                 mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, formula="SUM(INVOICE.NETTOTAL)"),
-                                status=ConceptStatus.REJECTED)
+                                status=ConceptStatus.CANDIDATE)
     store.add_evidence(Evidence(c.id, EvidenceType.VALIDATED_SQL, "hm", support_count=3, payload={"pairs": ["a", "b", "c"]}))
     store.add_counter_evidence(CounterEvidence(c.id, "probe:execute", "EXECUTION_FAILED",
                                                payload={"error": "Timeout expired", "support": 2}, severity="MEDIUM"))
