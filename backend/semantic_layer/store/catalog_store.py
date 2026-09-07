@@ -624,7 +624,8 @@ class CatalogStore:
         with self._lock, self.engine.begin() as conn:
             row = conn.execute(
                 sa.select(S.sl_schema_profile.c.id).where(
-                    S.sl_schema_profile.c.datasource_id == p.datasource_id, S.sl_schema_profile.c.table_pattern == p.table_pattern
+                    S.sl_schema_profile.c.datasource_id == p.datasource_id,
+                    S.sl_schema_profile.c.table_name == p.table_name,
                 )
             ).first()
             if row:

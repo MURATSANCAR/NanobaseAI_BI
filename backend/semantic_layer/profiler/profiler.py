@@ -103,7 +103,16 @@ class Profiler:
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
         """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
         catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
-        discovered = self.c.list_tables(schema, like)
+        # A scope may name several patterns ("LG_411_%,LG_211_%"): a source that keeps each year under
+        # its own prefix is one world, and reading only one prefix is how a year goes missing.
+        patterns = [x.strip() for x in (like or "").split(",") if x.strip()] or [like]
+        discovered = []
+        seen_names: set[str] = set()
+        for pat in patterns:
+            for sch, tbl in self.c.list_tables(schema, pat or None):
+                if tbl not in seen_names:
+                    seen_names.add(tbl)
+                    discovered.append((sch, tbl))
         tables = discovered
         if len(discovered) > self.max_tables:
             # Which tables to drop is a decision about value, not about the alphabet. Cutting the list

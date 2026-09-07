@@ -38,6 +38,8 @@ class SemanticSettings:
     max_rows: int = 500
     dialect: str = ""                             # empty → taken from the connector
     schema_name: str = ""                         # empty → the connector's default schema
+    # One or more LIKE patterns, comma separated. A source that keeps each fiscal year under its own
+    # prefix is one deployment with several patterns, not several deployments.
     table_like: str = ""                          # empty → every table in the schema
     context: dict[str, str] = field(default_factory=dict)      # pattern placeholder overrides ({n0: "412"})
     pattern_labels: list[str] = field(default_factory=list)    # display names for placeholders

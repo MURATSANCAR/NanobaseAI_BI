@@ -183,3 +183,34 @@ def test_the_database_own_descriptions_become_catalog_evidence(store):
 def test_an_engine_without_comments_contributes_nothing_rather_than_failing(logo_connector):
     """SQLite keeps no comments. The profile must come out the same as before, not fall over."""
     assert logo_connector.descriptions("main") == {}
+
+
+def test_an_entity_split_across_periods_is_read_by_measured_window():
+    """One entity often lives in several tables that differ only in context — a fiscal period each.
+    Which of them a question needs is decided by the window each was measured to hold, so a source that
+    partitions by year, by branch or not at all goes through the same rule."""
+    from datetime import date
+
+    from semantic_layer.models import SchemaProfile
+    from semantic_layer.runtime.periods import spans, tables_for
+
+    def prof(name, ctx, win):
+        return SchemaProfile(datasource_id="ds", table_name=name, table_pattern="T_{n0}_SALES",
+                             entity="SALES", schema_name="main", context=ctx, time_window=win)
+
+    old = prof("T_211_SALES", {"n0": "211"}, ("2021-01-01", "2025-12-31"))
+    new = prof("T_411_SALES", {"n0": "411"}, ("2026-01-01", "2026-08-17"))
+    both = [old, new]
+
+    assert spans(both) == (date(2021, 1, 1), date(2026, 8, 17))
+    # no period asked → the current one, not ten years of scan
+    assert tables_for(both) == [new]
+    # last year → only the table that holds it
+    assert tables_for(both, date(2025, 1, 1), date(2026, 1, 1)) == [old]
+    # a range crossing the boundary reads both sides
+    assert {p.table_name for p in tables_for(both, date(2025, 6, 1), date(2026, 6, 1))} == {old.table_name, new.table_name}
+    # before everything measured → nothing to read, and the caller can say so
+    assert tables_for(both, date(2015, 1, 1), date(2016, 1, 1)) == []
+    # an unmeasured table cannot be ruled out
+    unknown = prof("T_999_SALES", {"n0": "999"}, None)
+    assert [p.table_name for p in tables_for(both + [unknown], date(2015, 1, 1), date(2016, 1, 1))] == [unknown.table_name]

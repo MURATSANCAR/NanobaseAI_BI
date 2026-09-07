@@ -75,7 +75,13 @@ class SemanticResolver:
         self.tenant_id = tenant_id
         self.datasource_id = datasource_id
         self.profiles = profiles
-        self.by_entity = {p.entity: p for p in profiles}
+        # An entity can span several physical tables — one fiscal period each. Keep them all, so a
+        # question about a past year is judged against everything this deployment holds rather than
+        # against whichever table happened to be profiled last.
+        self.tables_of: dict[str, list[SchemaProfile]] = {}
+        for prof in profiles:
+            self.tables_of.setdefault(prof.entity, []).append(prof)
+        self.by_entity = {e: ps[0] for e, ps in self.tables_of.items()}
         self.column_names = {c.name.upper() for p in profiles for c in p.columns}
         self.default_temporal = default_temporal
         self.conventions = conventions or Conventions.from_profiles(profiles)
@@ -346,15 +352,12 @@ class SemanticResolver:
         # 8) does this deployment even hold the period being asked about? The window is measured, so the
         #    answer is "there is no data for 2019 here", not an empty result set that looks like zero sales.
         entity = self._primary_entity(hits) or next((s_.mapping.entity for s_ in hits if s_.mapping), None)
-        prof = self.by_entity.get(entity or "")
-        window = prof.time_window if prof else None
-        if window and sq.temporal:
-            from datetime import date as _date
+        from semantic_layer.runtime import periods
 
-            try:
-                first, last = _date.fromisoformat(window[0]), _date.fromisoformat(window[1])
-            except Exception:  # noqa: BLE001
-                first = last = None
+        covered = periods.spans(self.tables_of.get(entity or "", []))
+        window = (covered[0].isoformat(), covered[1].isoformat()) if covered else None
+        if window and sq.temporal:
+            first, last = covered
             for t in sq.temporal:
                 if not (first and last and t.start and t.end):
                     continue
@@ -363,7 +366,10 @@ class SemanticResolver:
                     # would read as a real zero
                     sq.out_of_scope.append(t.text)
                     sq.explanation.append(
-                        f"'{t.text}' bu veri kaynağının kapsamı dışında: {entity} verisi {window[0]} – {window[1]} arasını içeriyor"
+                        # what this deployment was given, not what the business has: the difference
+                        # matters, because a period missing here may be sitting in a table nobody scoped
+                        f"'{t.text}' bu kurulumun kapsamı dışında: {entity} için tanımlı veri "
+                        f"{window[0]} – {window[1]} arasını içeriyor"
                     )
                 elif t.start > last:
                     # after the last row loaded. That is a loading state, not a gap in coverage — the

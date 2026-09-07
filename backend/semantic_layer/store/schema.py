@@ -148,7 +148,10 @@ sl_schema_profile = sa.Table(
     sa.Column("description", sa.Text()),
     sa.Column("time_window_json", sa.JSON()),
     sa.Column("scanned_at", sa.DateTime(timezone=True), nullable=False),
-    sa.UniqueConstraint("datasource_id", "table_pattern", name="uq_sl_schema_profile"),
+    # One row per physical table, not per pattern. A logical entity often lives in several tables that
+    # share a pattern and differ only in context — one fiscal period each, say — and keying on the
+    # pattern made them overwrite one another, leaving only whichever was profiled last.
+    sa.UniqueConstraint("datasource_id", "table_name", name="uq_sl_schema_profile_table"),
 )
 
 sl_schema_annotation = sa.Table(

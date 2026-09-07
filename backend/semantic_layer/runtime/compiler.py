@@ -18,6 +18,7 @@ from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
 from semantic_layer.naming import physical_name
+from semantic_layer.runtime import periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -96,6 +97,11 @@ def _is_additive(formula: Optional[str]) -> bool:
     if not _ADDITIVE.search(f):
         return False
     return True
+
+
+def _parse_cond_column(key: str) -> Optional[tuple[str, str]]:
+    m = re.match(r"^(\w+)\.(\w+)\s", key.strip())
+    return (m.group(1), m.group(2).upper()) if m else None
 
 
 def _snake(term: str) -> str:
@@ -184,7 +190,12 @@ class DeterministicCompiler:
         from semantic_layer.conventions import Conventions
 
         self.profiles = profiles
-        self.by_entity = {p.entity: p for p in profiles}
+        # One entity can live in several physical tables that differ only in context — a fiscal period
+        # each. Keep them all; `by_entity` holds the representative whose structure they share.
+        self.tables_of: dict[str, list[SchemaProfile]] = {}
+        for prof in profiles:
+            self.tables_of.setdefault(prof.entity, []).append(prof)
+        self.by_entity = {e: ps[0] for e, ps in self.tables_of.items()}
         self.context = context
         self.d = Dialect(dialect)
         self._default_filters = default_filters or (lambda entity: [])
@@ -246,6 +257,51 @@ class DeterministicCompiler:
         if (q.temporal or q.grain) and not date_col:
             return None, f"no date column on {entity}"
         return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
+
+    def _source(self, entity: str, q: SemanticQuery, needed: set[str], alias: str) -> tuple[str, list[str], str]:
+        """The FROM target for one entity: a table, or the periods a question spans, unioned.
+
+        Which tables that is comes from the window each was measured to hold, so a source that splits an
+        entity by year and one that does not are compiled by the same rule.
+        """
+        d = self.d
+        available = self.tables_of.get(entity) or []
+        first = min((t.start for t in q.temporal if t.start), default=None)
+        last = max((t.end for t in q.temporal if t.end), default=None)
+        chosen = periods.tables_for(available, first, last) or available[:1]
+        names = [d.table(p.schema_name, physical_name(p.table_pattern, {**p.context, **self.context})) for p in chosen]
+        tables = [p.table_name for p in chosen]
+        if len(names) == 1:
+            return names[0], tables, periods.describe(chosen, available)
+        cols = ", ".join(d.q(c) for c in sorted(needed)) or "*"
+        union = " UNION ALL ".join(f"SELECT {cols} FROM {n}" for n in names)
+        return f"({union})", tables, periods.describe(chosen, available)
+
+    def _needed_columns(self, entity: str, plan: "_Plan", q: SemanticQuery) -> set[str]:
+        prof = self.by_entity[entity]
+        names = {c.name.upper() for c in prof.columns}
+        used: set[str] = set()
+        if plan.date_column:
+            used.add(plan.date_column)
+        for s_ in plan.metrics + plan.filters + plan.group_cols:
+            if s_.mapping and s_.mapping.entity == entity and s_.mapping.column:
+                used.add(s_.mapping.column)
+            for ref in re.findall(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", (s_.mapping.formula if s_.mapping else "") or ""):
+                if ref[0] == entity:
+                    used.add(ref[1])
+            for key in ((s_.mapping.extra or {}).get("conditions") or []) if s_.mapping else []:
+                cond = _parse_cond_column(key)
+                if cond and cond[0] == entity:
+                    used.add(cond[1])
+        for m in self._default_filters(entity):
+            if m.column:
+                used.add(m.column)
+        for j in plan.joins:
+            if j[0] == entity:
+                used.add(j[1])
+            if j[2] == entity:
+                used.add(j[3])
+        return {c for c in used if c.upper() in names}
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]:
         plan, reason = self.plan(q)
@@ -320,11 +376,17 @@ class DeterministicCompiler:
                 where.append(f"{col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}'")
                 explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
         sql = "SELECT " + ", ".join(select)
-        sql += f"\nFROM {d.table(prof.schema_name, physical_name(prof.table_pattern, {**prof.context, **self.context}))} AS {alias}"
+        source, read_tables, span_note = self._source(plan.entity, q, self._needed_columns(plan.entity, plan, q), alias)
+        if span_note:
+            explain.append(span_note)
+        sql += f"\nFROM {source} AS {alias}"
         for ent, col, ref_ent, ref_col in plan.joins:
             joined = ref_ent if ref_ent != plan.entity else ent
-            rp = self.by_entity[joined]
-            sql += f"\nJOIN {d.table(rp.schema_name, physical_name(rp.table_pattern, {**rp.context, **self.context}))} AS {joined} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | {col, ref_col}, joined)
+            read_tables += j_tables
+            if j_note:
+                explain.append(j_note)
+            sql += f"\nJOIN {j_source} AS {joined} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -335,7 +397,7 @@ class DeterministicCompiler:
             sql += "\nORDER BY " + ", ".join(order)
         if q.limit:
             sql = d.limit(sql, q.limit)
-        tables = [prof.table_name] + [self.by_entity[j[2] if j[2] != plan.entity else j[0]].table_name for j in plan.joins]
+        tables = read_tables
         return CompiledQuery(sql=sql, compiler=self.name, tables=tables, catalog_version=q.catalog_version, explain=explain, certified=True)
 
     # -- helpers

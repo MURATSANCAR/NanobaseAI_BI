@@ -551,3 +551,29 @@ def test_with_nothing_written_down_our_own_reading_is_used(catalog, profiles, lo
     r = SemanticResolver(catalog, TENANT, DS, rt.profiles)
     prompt = rt.existing.build_messages(r.resolve("Toptan satış tutarı", today=date(2026, 7, 20)), [])[0]["content"]
     assert "Fatura net tutarı (çıkarım)" in prompt
+
+
+def test_a_question_that_crosses_a_period_boundary_reads_both_tables(catalog, profiles, logo_db):
+    """The year before this one lived in a different physical table, and the compiler only ever wrote
+    one table name — so a comparison with last year could not be expressed at all, however much of the
+    history the source actually held."""
+    import copy
+
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    inv.time_window = ("2026-01-01", "2026-08-17")
+    older = copy.deepcopy(inv)
+    older.table_name, older.context, older.time_window = "LG_211_01_INVOICE", {"n0": "211", "n1": "01"}, ("2021-01-01", "2025-12-31")
+    both = [older if p.entity == "INVOICE" else p for p in profiles] + [inv]
+    c = DeterministicCompiler(both, {}, "sqlite", default_filters=default_filters_provider(catalog, TENANT, DS))
+    r = SemanticResolver(catalog, TENANT, DS, both)
+
+    this_year = c.compile(r.resolve("Bu yıl toptan satış tutarı", today=date(2026, 7, 20)), catalog)
+    assert "LG_411_01_INVOICE" in this_year.sql and "LG_211_01_INVOICE" not in this_year.sql
+
+    last_year = c.compile(r.resolve("Geçen yıl toptan satış tutarı", today=date(2026, 7, 20)), catalog)
+    assert "LG_211_01_INVOICE" in last_year.sql, last_year.sql
+    assert set(last_year.tables) == {"LG_211_01_INVOICE"}
+
+    spanning = c.compile(r.resolve("Son 12 ayda toptan satış tutarı", today=date(2026, 7, 20)), catalog)
+    assert "UNION ALL" in spanning.sql and "LG_211_01_INVOICE" in spanning.sql and "LG_411_01_INVOICE" in spanning.sql
+    assert any("dönem" in e for e in spanning.explain), spanning.explain
