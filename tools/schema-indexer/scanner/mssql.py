@@ -269,13 +269,17 @@ def _dictionary_links(table_name: str, columns: list[str], present: set[str]) ->
         column, target = rel.get("column", ""), rel.get("to", "")
         if column not in have or column in seen or not target:
             continue
-        level = (tables.get(target) or {}).get("level", "firm")
-        candidates = []
-        if level == "period" and period:
-            candidates.append(f"LG_{firm}_{period}_{target}")
-        if level in ("period", "firm"):
-            candidates.append(f"LG_{firm}_{target}")
-        candidates.append(f"L_{target}")
+        # Try the shape the dictionary says this table takes first, then the others: the workbook's
+        # own scope is right almost always, and where it is not (a table listed as global that
+        # actually ships per firm) the scan set settles it.
+        scope = (tables.get(target) or {}).get("scope", "firm")
+        forms = {
+            "period": f"LG_{firm}_{period}_{target}" if period else "",
+            "firm": f"LG_{firm}_{target}",
+            "database": f"L_{target}",
+        }
+        order = [scope] + [k for k in ("period", "firm", "database") if k != scope]
+        candidates = [forms[k] for k in order if forms[k]]
         for cand in candidates:
             if cand in present:
                 seen.add(column)

@@ -224,8 +224,41 @@ class MSSQLConnector(_DbApiBase):
                 (schema,),
             )
         except Exception:  # noqa: BLE001
+            rows = []
+        declared = [{"table": r[0], "column": r[1], "ref_table": r[2], "ref_column": r[3]} for r in rows]
+        # Logo declares no foreign keys at all, so the honest answer above is an empty graph and every
+        # join has to be guessed from column names. The vendor's dictionary states the graph outright.
+        # What the database itself declares always wins; the dictionary only fills what is missing.
+        extra = self._dictionary_foreign_keys(schema)
+        if not extra:
+            return declared
+        have = {(fk["table"].upper(), fk["column"].upper()) for fk in declared}
+        return declared + [fk for fk in extra if (fk["table"].upper(), fk["column"].upper()) not in have]
+
+    def _table_names(self, schema: str) -> list[str]:
+        """The scanned table names, read once per schema — both dictionary lookups need them."""
+        key = schema or self.default_schema
+        cached = getattr(self, "_names_cache", None)
+        if cached is None:
+            cached = self._names_cache = {}
+        if key not in cached:
+            try:
+                cached[key] = [t for _, t in self.list_tables(key)]
+            except Exception as e:  # noqa: BLE001
+                log.debug("table listing for the data dictionary failed: %s", e)
+                cached[key] = []
+        return cached[key]
+
+    def _dictionary_foreign_keys(self, schema: str) -> list[dict[str, str]]:
+        from semantic_layer.profiler import logo_dictionary
+
+        names = self._table_names(schema)
+        if not logo_dictionary.is_logo_schema(names):
             return []
-        return [{"table": r[0], "column": r[1], "ref_table": r[2], "ref_column": r[3]} for r in rows]
+        links = logo_dictionary.foreign_keys(names)
+        if links:
+            log.info("Logo data dictionary supplied %d joins the database does not declare", len(links))
+        return links
 
     def row_counts(self, schema: str) -> dict[str, int]:
         try:
@@ -255,8 +288,22 @@ class MSSQLConnector(_DbApiBase):
             )
         except Exception as e:  # noqa: BLE001
             log.debug("extended properties unavailable: %s", e)
-            return {}
-        return {(str(r[0]), str(r[1]) if r[1] is not None else None): str(r[2]) for r in rows if r[2]}
+            rows = []
+        written = {(str(r[0]), str(r[1]) if r[1] is not None else None): str(r[2]) for r in rows if r[2]}
+        # Logo writes no extended properties, so the query above returns nothing on the source that
+        # needs descriptions most: 8.900 columns named CLIENTREF, TRCODE, SIGN and no statement
+        # anywhere in the database about what they hold. The dictionary answers for them — and
+        # anything a person actually wrote into this database still takes precedence.
+        from semantic_layer.profiler import logo_dictionary
+
+        names = self._table_names(schema)
+        if not logo_dictionary.is_logo_schema(names):
+            return written
+        merged = logo_dictionary.descriptions(names)
+        merged.update(written)
+        log.info("Logo data dictionary described %d tables/columns the database leaves unannotated",
+                 len(merged) - len(written))
+        return merged
 
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]:
         sql = f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n FROM {self.q(schema)}.{self.q(table)} GROUP BY {self.q(column)} ORDER BY n DESC"

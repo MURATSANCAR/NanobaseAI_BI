@@ -57,6 +57,18 @@ def base_name(raw: str) -> str:
     return re.sub(r"^(?:LG|L)_", "", n)
 
 
+def scope_of(physical: str, level: int) -> str:
+    """How many copies of this table a database holds — which is also how its physical name is built.
+
+    The workbook's Level column does not answer this on its own: SLSMAN is Level 0 yet ships as
+    `LG_SLSMAN`, one per firm. The vendor prefix is the reliable signal — `L_` means one copy for the
+    whole database — and Level only distinguishes firm from firm-period among the rest.
+    """
+    if str(physical).upper().startswith("L_"):
+        return "database"
+    return "period" if level == 2 else "firm"
+
+
 def parse_expression(expr: str) -> tuple[str, dict[str, str]]:
     """`"Item Card Type ;1- Commercial Good;2- Mixed case"` → the sentence, and the code set.
 
@@ -69,9 +81,15 @@ def parse_expression(expr: str) -> tuple[str, dict[str, str]]:
     head, _, rest = text.partition(";")
     values: dict[str, str] = {}
     for part in rest.split(";"):
-        m = re.match(r"\s*(-?\d+)\s*[-:.)]?\s*(.+)", part.strip())
-        if m and m.group(2).strip():
-            values[m.group(1)] = m.group(2).strip()
+        # A clause names one code or a run of them: "1- Commercial Good", "0 Percentage", and
+        # "15, 16, 17, 18, 19 User Defined Input Slip" — where every code in the run carries the same
+        # meaning. Reading the run as a single code labelled ", 16, 17, …" loses four of the five.
+        m = re.match(r"\s*((?:-?\d+\s*,\s*)*-?\d+)\s*[-:.)]?\s*(.+)", part.strip())
+        if not m or not m.group(2).strip():
+            continue
+        label = m.group(2).strip()
+        for code in re.findall(r"-?\d+", m.group(1)):
+            values.setdefault(code, label)
     return head.strip(), values
 
 
@@ -133,6 +151,7 @@ def build(xls_path: Path) -> dict:
         tables[key] = {
             "physical": physical,
             "level": LEVELS.get(_int(t["Level"]), "system"),
+            "scope": scope_of(physical, _int(t["Level"])),
             "description": str(t["Resource Description"]).strip(),
             "columns": columns,
             "relations": relations,

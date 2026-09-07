@@ -1,6 +1,6 @@
 # Logo kod sözlüğü (LDDS'den üretildi)
 
-Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T11:25:54+00:00
+Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T11:33:31+00:00
 
 > Bu dosya üretilmiştir; elle düzenlemeyin. Değişiklik için üreticiyi çalıştırın.
 
@@ -305,7 +305,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `DIIB.FICHETYPE` — Fiche Type: 0== DIIB, 1== Temporary Acceptance01
 - `DIIBLINE.LINETYPE` — Line Type: 1=Permitted Importation Material, 2=Subscribed Export Material
 - `DIIBLINE.TRNET` — Transaction Currency Amount: 1=CIF Reminder, 2=FOB Amount
-- `DISCPAYTRANS.TRCODE` — Transaction Type: 11=,12: AR/AP, 21=22: Bank, 31=39: Invoice, 61=64: Check/P.Notes, 71=74: Safe Deposit
+- `DISCPAYTRANS.TRCODE` — Transaction Type: 11=AR/AP, 12=AR/AP, 21=22: Bank, 31=39: Invoice, 61=64: Check/P.Notes, 71=74: Safe Deposit
 - `DISCPAYTRANS.MODULENR` — Card Module Number: 10=Safe Deposit
 - `DISTORD.STATUS` — Status: 0=Proposal, 1=Sevk Edilebilir, 2=Sevk Edildi
 - `DISTORD.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect7
@@ -340,13 +340,13 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `IMPSRVREL.DISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount03
 - `INVEXIMINFO.COUNTRYTYPE` — Destination - Origin Country Type: 1=Member States of European Union (EU), 2=Member States of European Coal and Steel Community (ECSC), 3=Member States of European Free Trade Association (EFTA), 4=Pan-European System of Cumulation of Origin, 5=The States
 - `INVOICE.GRPCODE` — Group Code: 1=Purchase Invoice, 2=Sales Invoice
-- `INVOICE.ENTEGSET` — Discounts / Surcharges / Promotions have been distributed: 0=Promotions  Will Be Distributed to Item Cost, 1=Purchases  Will Be Distrib
+- `INVOICE.ENTEGSET` — Discounts / Surcharges / Promotions have been distributed: 0=Discounts Will Be Distributed to GL, 1=Discounts Will Be Distributed to Item Cost
 - `INVOICE.AFFECTCOLLATRL` — (Affect) Collateral: 0=Don't Affect, 1=Affect0
 - `ITEMS.CARDTYPE` — Item Card Type: 1=(TM) Commercial Good, 2=(KK) Mixed case, 3=(DM) Deposited Item, 4=(SK) Fixed Asset, 10=(HM) Raw Material, 11=(YM) Semi Finished Good, 12=(MM) Finished Good, 13=(TK) Consumer Goods, 20=(MS) Material Class (General), 21=(MT) Material Clas
 - `KSDISTDETLINES.CSDISTTEMPLINE` — Safe Deposit Account?: 0=Offset Account, 1=Safe Deposit
-- `KSDISTDETLINES.TRCODE` — Transaction Type: 11=,12 :AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
+- `KSDISTDETLINES.TRCODE` — Transaction Type: 11=AR/AP,, 12=AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
 - `KSDISTDETLINES.DISTTEMPLNTYP` — Safe Deposit G/L Distribution Line Type: 1=Safe Deposit, 2=Transaction, 3=VAT
-- `KSLINES.TRCODE` — Transaction Type: 11=,12 :AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
+- `KSLINES.TRCODE` — Transaction Type: 11=AR/AP,, 12=AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
 - `KSLINES.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect3
 - `LDXRECDELREQ.DOCTYPE` — Document Type: 1=Dispatch, 3=Order, 4=Invoice, 6=Check/P.Note (Bank), 7=Bank Slip, 9=G/L Slip, 101=Material, 105=AR/AP, 210=Import/Export Oper, 211=Export Registered Invoice, 1001=Material Slip, 1051=AR/AP Slip, 1061=Check/P.Note (B2B)
 - `LOGREP.LINETYPE` — Log Line Type: 0=Description, 1=Correct Transaction, 2=Transaction with error
@@ -418,7 +418,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `STFICHE.GRPCODE` — Group Code: 1=Purchasing, 2=Sales, 3=Material Management
 - `STFICHE.IOCODE` — Input / Output Code: 1=Input, 2=Warehouse, 3=Output
 - `STLINE.LINETYPE` — Line Type: 0=Material, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed Case, 7=Mixed Case Line, 8=Fixed Asset, 9=Optional Material, 10=Material Class, 11=Subcontracting1
-- `STLINE.TRCODE` — Voucher Type That Connected: 15=, 16, 17, 18, 19 User Defined Input Slip, 20=, 21, 22, 23, 24 User Defined Output Slip, 30=, 31, 32, 33, 34 User defined purchase receipts, 35=, 36, 37, 38, 39 User defined sales dispatches3
+- `STLINE.TRCODE` — Voucher Type That Connected: 15=User Defined Input Slip, 16=User Defined Input Slip, 17=User Defined Input Slip, 18=User Defined Input Slip, 19=User Defined Input Slip, 20=User Defined Output Slip, 21=User Defined Output Slip, 22=User Defined Output Slip, 23=User Defined Output Slip, 24=User Defined Output Slip, 30=User defined purchase receipts, 31=User defined purchase receipts, 32=User defined purchase receipts, 33=User defined purchase receipts, 34=User defined purchase receipts, 35=User defined sales dispatches3, 36=User defined sales dispatches3, 37=User defined sales dispatches3, 38=User defined sales dispatches3, 39=User defined sales dispatches3
 - `STLINE.CALCTYPE` — (For Discount, Surcharge, Promotion Lines) Calculation Type: 0=Percentage, 1=Quantity, 2=Formula5
 - `STLINE.IOCODE` — Input / Output Code: 1=Input, 2=Input From Warehouse, 3=Output From Warehouse, 4=Output8
 - `STLINE.RETCOSTTYPE` — Return Transaction Cost Type: 0=Output, 1=At The Moment, 2=Amount
