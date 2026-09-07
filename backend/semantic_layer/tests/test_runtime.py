@@ -829,7 +829,7 @@ def test_a_question_about_an_earlier_year_is_shown_that_year_s_table(catalog, pr
 
     def ask(start, end):
         q = SemanticQuery(question="ciro", tenant_id=TENANT, datasource_id=DS)
-        q.temporal.append(TemporalSlot(text="dönem", start=start, end=end))
+        q.temporal.append(TemporalSlot(text="dönem", primitive="YEAR", start=start, end=end))
         return q
 
     def shown(q):
