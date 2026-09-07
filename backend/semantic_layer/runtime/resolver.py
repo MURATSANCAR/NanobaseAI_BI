@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import date
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from semantic_layer.history.question_facts import GENERIC_S, extract_question_facts
 from semantic_layer.models import (
@@ -89,7 +89,7 @@ def _parse_condition(key: str) -> Optional[tuple[tuple[str, str], set[str]]]:
 
 
 class SemanticResolver:
-    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: Optional[TemporalSlot] = None, conventions: Any = None):
+    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None):
         from semantic_layer.conventions import Conventions
 
         self.store = store
@@ -104,6 +104,9 @@ class SemanticResolver:
             self.tables_of.setdefault(prof.entity, []).append(prof)
         self.by_entity = {e: ps[0] for e, ps in self.tables_of.items()}
         self.column_names = {c.name.upper() for p in profiles for c in p.columns}
+        # Either a fixed period or something that decides one per question. A service started in
+        # December must not still be answering "last month" against last year in January, and a fixed
+        # value frozen at startup does exactly that — silently, which is the worst way to be wrong.
         self.default_temporal = default_temporal
         self.conventions = conventions or Conventions.from_profiles(profiles)
         self._value_index: dict[str, list[tuple[str, str, str]]] = {}
@@ -290,8 +293,10 @@ class SemanticResolver:
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
         if not sq.temporal and self.default_temporal is not None:
-            sq.temporal = [self.default_temporal]
-            sq.explanation.append(f"dönem belirtilmedi → varsayılan {self.default_temporal.primitive} uygulandı")
+            fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
+            if fallback is not None:
+                sq.temporal = [fallback]
+                sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
         for t in sq.temporal:
             sq.explanation.append(describe(t))
         if not sq.grain and _asks_for_a_trend(question):

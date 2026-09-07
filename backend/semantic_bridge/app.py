@@ -126,13 +126,7 @@ class Runtime:
         self.conventions = Conventions.from_profiles(self.profiles)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
-        default_temporal = None
-        dp = os.environ.get("SEMANTIC_DEFAULT_PERIOD", "")  # e.g. YEAR:2026
-        if dp.startswith("YEAR:"):
-            from datetime import date
-
-            y = int(dp.split(":")[1])
-            default_temporal = TemporalSlot(text="varsayılan", primitive="YEAR", start=date(y, 1, 1), end=date(y + 1, 1, 1), grain="YEAR", params={"year": y, "default": True})
+        default_temporal = _default_period()
         self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions)
         det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id), conventions=self.conventions)
         existing = None
@@ -617,6 +611,34 @@ class Runtime:
 
 
 # ---------------------------------------------------------------------- FastAPI
+
+def _year_slot(year: int) -> TemporalSlot:
+    from datetime import date
+
+    return TemporalSlot(text="varsayılan", primitive="YEAR", start=date(year, 1, 1), end=date(year + 1, 1, 1),
+                        grain="YEAR", params={"year": year, "default": True})
+
+
+def _default_period():
+    """Which period a question that names none is about.
+
+    Nobody writing "geçen ay ciro" means a year they did not mention: they mean now. So the default is
+    the year it currently is, read when the question is asked rather than when the service started —
+    a process that has been up since December would otherwise answer January's questions against last
+    year, and say nothing about having done so.
+
+    SEMANTIC_DEFAULT_PERIOD=YEAR:<n> still pins a specific year for a deployment that wants one, and
+    SEMANTIC_DEFAULT_PERIOD=NONE turns the fallback off so an undated question stays undated.
+    """
+    dp = os.environ.get("SEMANTIC_DEFAULT_PERIOD", "").strip()
+    if dp.upper() in ("NONE", "OFF"):
+        return None
+    if dp.upper().startswith("YEAR:") and dp.split(":", 1)[1].strip().isdigit():
+        return _year_slot(int(dp.split(":", 1)[1]))
+    from datetime import date
+
+    return lambda: _year_slot(date.today().year)
+
 
 def _table_scope(table_name: str) -> tuple[str, str]:
     """The sub-database a physical table belongs to, and its subdivision within it.
