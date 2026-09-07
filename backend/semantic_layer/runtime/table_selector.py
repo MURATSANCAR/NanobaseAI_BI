@@ -35,11 +35,14 @@ _JSON = re.compile(r"\{.*\}", re.S)
 
 SYSTEM = (
     "Sen bir veritabanı şema seçicisin. Sana bir soru ve aday tablo listesi verilir. "
-    "Soruyu yanıtlamak için GEREKEN tabloları seç — gerekmeyeni alma.\n"
+    "Soruyu yanıtlamak için gereken tabloların TAMAMINI seç.\n"
     "Kurallar:\n"
-    "- Yalnız listedeki adları kullan. Liste dışı ad uydurma.\n"
-    "- Bir tabloyu yalnız soruya doğrudan katkısı varsa seç: ölçü, kırılım, filtre ya da zorunlu bağlantı.\n"
-    "- Hiçbir aday soruyu karşılamıyorsa decision NONE ver ve tables boş kalsın.\n"
+    "- Yalnız listedeki adları kullan; liste dışı ad uydurma.\n"
+    "- (kesin gerekli) işaretli tabloları HER ZAMAN listene dahil et.\n"
+    "- Bir tabloyu yalnız soruya doğrudan katkısı varsa ekle: ölçü, kırılım, filtre ya da zorunlu bağlantı.\n"
+    "- Emin değilsen tabloyu dahil et. Eksik tablo, fazla tablodan daha kötüdür.\n"
+    "- decision NONE yalnız hiçbir aday soruyla ilgili değilse; o zaman tables boş kalır.\n"
+    "- reason en fazla 8 kelime.\n"
     "- Yalnız JSON döndür, başka metin yazma:\n"
     '{"decision":"SELECT","tables":[{"name":"X","reason":"..."}]}'
 )
@@ -79,11 +82,14 @@ class TableSelector:
         self.llm = llm
         self.max_reason_chars = max_reason_chars
 
-    def _shortlist(self, candidates: Sequence[str], describe: Callable[[str], str]) -> str:
+    def _shortlist(self, candidates: Sequence[str], describe: Callable[[str], str],
+                   pinned: Sequence[str] = ()) -> str:
+        must = set(pinned)
         lines = []
         for name in candidates:
             note = (describe(name) or "").strip().replace("\n", " ")
-            lines.append(f"- {name}: {note[:200]}" if note else f"- {name}")
+            mark = " (kesin gerekli)" if name in must else ""
+            lines.append(f"- {name}{mark}: {note[:200]}" if note else f"- {name}{mark}")
         return "\n".join(lines)
 
     def select(self, question: str, candidates: Sequence[str], describe: Callable[[str], str],
@@ -94,12 +100,13 @@ class TableSelector:
         if len(cands) <= 1 or len(keep) == len(cands):
             return Selection(list(cands), "KEPT", note="narrowing not needed")
 
-        offered = [c for c in cands if c not in keep]
-        prompt = [f"Soru: {question}", ""]
-        if keep:
-            prompt.append("Zaten seçilmiş (bunları tekrar yazma, kesin kullanılacak):\n" +
-                          "\n".join(f"- {k}" for k in keep) + "")
-        prompt.append("Aday tablolar:\n" + self._shortlist(offered, describe))
+        # Every candidate is offered, established ones included and marked. Hiding them and asking for
+        # "anything more" made NONE mean two different things — "these are enough" when something was
+        # established, "nothing here fits" when nothing was — and a model that leans to NONE then
+        # returns an empty table list for exactly the questions the resolver could not place, which
+        # are the ones that needed the selector most.
+        prompt = [f"Soru: {question}", "",
+                  "Aday tablolar:\n" + self._shortlist(cands, describe, pinned=keep)]
 
         t0 = time.perf_counter()
         try:

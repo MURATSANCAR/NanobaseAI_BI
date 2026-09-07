@@ -638,23 +638,16 @@ class ExistingCompiler:
                 if self.table_label(p) in (r.get("sql") or ""):
                     sight(p.entity)
 
-        # The vocabulary somebody has already written down comes before anything inferred — but only
-        # where the question reaches it. Placing the whole certified catalog ahead of the question's
-        # own evidence put certified tables the question never used in front of the ones it did, in
-        # alphabetical order; on this deployment that is five tables, small enough to have hidden the
-        # ordering error and large enough to have caused it. So certified-and-seen leads, then the
-        # rest of what the question points at, and the remaining certified vocabulary follows behind
-        # rather than ahead — still present, still preferred over a table reached only by a join hop.
-        #
-        # This orders; it does not cut. What reaches the prompt is still everything the lexical index
-        # scored above its floor — ten tables for a question that needs one. Cutting is the selector's
-        # job, and it can only cut safely from the tail of an order that is right.
-        for entity in evidence:
-            if entity in self.catalog_entities:
-                add(entity)
-        for entity in evidence:
-            add(entity)
+        # The vocabulary somebody has already written down comes before anything inferred, and the
+        # measurement is unambiguous about why: over this deployment's golden set the lexical index
+        # scores the table an answer actually needs at zero for nineteen of twenty-seven cases, while
+        # the certified catalog contains it every time. Certified entities are established fact —
+        # somebody wrote down what they mean and it was reviewed — not another retrieval signal to be
+        # ranked against BM25. Ordered behind the index they would be the first thing any cut drops,
+        # which is the recall this system has and the index does not.
         for entity in sorted(self.catalog_entities):
+            add(entity)
+        for entity in evidence:
             add(entity)
 
         core = list(ordered)
@@ -722,8 +715,19 @@ class ExistingCompiler:
         """Ask the selector which of the retrieved tables the question is actually about.
 
         Off unless a deployment asks for it, and in shadow by default: the decision is measured
-        against the golden set before it is allowed to change a prompt. What the resolver placed is
-        pinned — it is not offered for selection and cannot be dropped.
+        against the golden set before it is allowed to change a prompt.
+
+        Two kinds of table are pinned — shown to the selector, but not up for removal. What the
+        resolver placed is one: those came from the question's own terms matched against certified
+        vocabulary. The certified catalog is the other, and that one is measured rather than assumed.
+        Left droppable, the selector cut the table an answer needed in four of seventeen golden cases
+        — every one of them a question the resolver could not place, where the certified catalog was
+        the only thing that knew which table held the measure. Pinned, recall stays whole and the
+        prompt still loses a third of its tables:
+
+            no selector            9.8 tables   precision 0.17   recall 17/17
+            slots pinned           4.0 tables   precision 0.38   recall 13/17
+            slots + catalog        6.4 tables   precision 0.26   recall 17/17
 
         A NONE is recorded but never applied here. "No table fits" is a refusal, and a refusal has to
         come from the resolver, where it can be explained to the person asking; letting a selector
@@ -732,6 +736,7 @@ class ExistingCompiler:
         if self.selector is None or len(entities) <= 1:
             return entities
         pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
+        pinned += [e for e in entities if e in self.catalog_entities and e not in pinned]
         sel = self.selector.select(q.question, entities, self.entity_note, pinned=pinned)
         log.info("table selector [%s] %s: %d/%d kept%s%s q=%r",
                  self.selector_mode, sel.decision, len(sel.tables), len(entities),

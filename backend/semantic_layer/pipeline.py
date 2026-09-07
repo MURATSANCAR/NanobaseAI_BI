@@ -49,7 +49,17 @@ def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Conn
         return int(raw) if raw.isdigit() and int(raw) > 0 else None
 
     prof = Profiler(connector, enum_max_distinct=settings.enum_max_distinct, max_tables=_cap("SEMANTIC_MAX_TABLES"))
-    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None, deep_limit=_cap("SEMANTIC_DEEP_TABLES"))
+    # Stored as each table finishes rather than at the end: a scan over this many tables runs for
+    # hours, and a run that persists nothing until its final statement has no partial success — an
+    # interruption in hour three leaves the catalog exactly as empty as if nothing had run.
+    stored: list[int] = [0]
+
+    def _store(p: SchemaProfile) -> None:
+        store.upsert_profile(p)
+        stored[0] += 1
+
+    profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None,
+                            deep_limit=_cap("SEMANTIC_DEEP_TABLES"), on_profile=_store)
     # Value-overlap link inference asks the customer's database a question per candidate column. On a
     # real warehouse that is a deliberate, opt-in cost (SEMANTIC_PROBE_LINKS=1); on a local/file source
     # it is free, so it stays on there.
@@ -65,8 +75,12 @@ def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Conn
     globals()["_last_profiler"] = prof
     if not settings.dialect:
         settings.dialect = getattr(connector, "dialect", "") or "generic"
+    # Written once more at the end: the loop above stored each table as it was profiled, and this
+    # pass carries the corrections made since — relationships pointing at entities that turned out
+    # not to be in scope are dropped after the whole schema is known.
     for p in profiles:
         store.upsert_profile(p)
+    log.info("catalog: %d profiles stored during the scan, %d rewritten after it", stored[0], len(profiles))
     removed = store.prune_profiles(settings.datasource_id, [p.table_pattern for p in profiles])
     if removed:
         log.info("pruned %d profile rows no longer in scope", removed)

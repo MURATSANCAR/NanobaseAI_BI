@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
 from semantic_layer.naming import disambiguate, logical_table
@@ -115,7 +115,9 @@ class Profiler:
             return {n: bulk.get(n) for n in names}
         return {n: (bulk.get(n) if n in bulk else self.c.row_count(schema, n)) for n in names}
 
-    def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
+    def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *,
+                deep_limit: Optional[int] = None,
+                on_profile: Optional[Callable[[SchemaProfile], None]] = None) -> list[SchemaProfile]:
         """Catalogue every table the scope matches. Neither this nor `deep_limit` is bounded by a count
         by default: a catalogue that holds fewer tables than the database is one nobody can plan or
         report against. `deep_limit`, when a deployment does set one, caps how many tables get value
@@ -319,6 +321,17 @@ class Profiler:
                     context=dict(lt.context),
                 )
             )
+            # Handed over the moment it is finished, not at the end of the run. A full scan of this
+            # schema is measured in days, and holding every profile in memory until the last table
+            # means a disconnect, a restart or a kill in hour forty throws away forty hours of work
+            # that was already correct. Persisting per table also makes the catalog usable while the
+            # scan is still going. A failure to store one table must not end the scan, so it is
+            # logged and the traversal continues.
+            if on_profile is not None:
+                try:
+                    on_profile(profiled[position])
+                except Exception as exc:                                        # noqa: BLE001
+                    log.warning("could not store profile for %s, continuing: %s", table, exc)
         out = [p for p in profiled if p is not None]
         if budget_spent:
             self.deep_skipped = budget_spent
