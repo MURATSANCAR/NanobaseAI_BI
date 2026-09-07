@@ -746,8 +746,27 @@ class CatalogStore:
         ]
 
     def retire_annotation(self, annotation_id: str) -> bool:
+        """Withdraw what someone wrote, and everything the catalog concluded from it.
+
+        Retiring only the text left the meanings it produced standing, so a corrected label kept
+        answering with the old one — which is worse than never having written it, because the record
+        says it was fixed. The evidence goes with the statement; concepts left with nothing behind
+        them fall back out of the catalog on the next evaluation.
+        """
         with self.engine.begin() as conn:
             res = conn.execute(S.sl_schema_annotation.update().where(S.sl_schema_annotation.c.id == annotation_id).values(status="RETIRED"))
+            touched = [r[0] for r in conn.execute(sa.select(S.sl_evidence.c.concept_id).where(S.sl_evidence.c.source_id == f"annotation:{annotation_id}"))]
+            if touched:
+                conn.execute(S.sl_evidence.delete().where(S.sl_evidence.c.source_id == f"annotation:{annotation_id}"))
+                # a concept that now has no evidence at all was created by this statement alone
+                for cid in set(touched):
+                    left = conn.execute(sa.select(sa.func.count()).select_from(S.sl_evidence).where(S.sl_evidence.c.concept_id == cid)).scalar() or 0
+                    if left == 0:
+                        conn.execute(S.sl_mapping.delete().where(S.sl_mapping.c.concept_id == cid))
+                        conn.execute(S.sl_concept.delete().where(S.sl_concept.c.id == cid))
+                    else:
+                        conn.execute(S.sl_concept.update().where(S.sl_concept.c.id == cid).values(status=ConceptStatus.CANDIDATE, updated_at=utcnow()))
+        self._index_cache.clear()
         return bool(res.rowcount)
 
     # ------------------------------------------------------------------ certified index (runtime)

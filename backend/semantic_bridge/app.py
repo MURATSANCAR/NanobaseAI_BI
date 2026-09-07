@@ -64,6 +64,7 @@ class Runtime:
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
         self._catalog_version = None
+        self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self._checked_at = 0.0
         self._cache: "OrderedDict[str, tuple[float, dict]]" = OrderedDict()
         self._cache_ttl = int(os.environ.get("SEMANTIC_CACHE_TTL_SEC", "300"))
@@ -100,6 +101,7 @@ class Runtime:
         self.profiles = self.store.list_profiles(s.datasource_id)
         self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
+        self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self.conventions = Conventions.from_profiles(self.profiles)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
@@ -358,8 +360,23 @@ class Runtime:
         }
 
     # ------------------------------------------------------------------ portal layer
-    def inventory(self) -> dict[str, Any]:
+    def inventory(self, *, search: str = "", entity: str = "", limit: int = 0, offset: int = 0, with_columns: bool = True) -> dict[str, Any]:
+        """The catalogue of what was discovered.
+
+        The whole thing is eight megabytes across 837 tables and 27,000 columns, which is not something
+        to hand a browser on every visit. A caller that wants the list asks without columns and gets a
+        few kilobytes; a caller that opens one table asks for that table.
+
+        The answer is remembered until the catalog itself changes. It is built from profiles that only
+        move when the pipeline runs — nightly, or when someone runs it — so a timer would either
+        refresh work that nothing changed or serve a stale page after a rebuild. Keying on the catalog
+        fingerprint does neither: the first request after a rebuild pays, every one after it is free.
+        """
         s = self.settings
+        key = (self._catalog_version, search.lower(), entity.upper(), limit, offset, with_columns)
+        hit = self._inventory_cache.get(key)
+        if hit is not None:
+            return hit
         anns = self.store.list_annotations(s.datasource_id)
         by_key: dict[tuple[str, Optional[str]], list[Annotation]] = {}
         for a in anns:
@@ -374,9 +391,16 @@ class Runtime:
                 elif m.formula:
                     for ref in re.findall(r"\b([A-Z][A-Z0-9_]*)\.([A-Z][A-Z0-9_]*)\b", m.formula):
                         concepts_by_col.setdefault((ref[0], ref[1]), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "formula": m.formula, "confidence": round(c.confidence, 2)})
+        wanted = [p for p in self.profiles
+                  if (not entity or p.entity.upper() == entity.upper())
+                  and (not search or search.lower() in p.entity.lower() or search.lower() in p.table_name.lower()
+                       or any(search.lower() in c.name.lower() for c in p.columns))]
+        total = len(wanted)
+        if limit:
+            wanted = wanted[offset : offset + limit]
         tables = []
         undefined_cols = 0
-        for p in self.profiles:
+        for p in wanted:
             cols = []
             for c in p.columns:
                 cons = concepts_by_col.get((p.entity, c.name.upper()), [])
@@ -403,15 +427,26 @@ class Runtime:
                 "context": label_context(p.context, s.pattern_labels),
                 "description": p.description, "rowCount": p.row_count, "primaryKey": p.primary_key, "relationships": p.relationships,
                 "annotations": [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, None), [])],
-                "columns": cols, "undefinedColumns": sum(1 for c in cols if c["status"] == "UNDEFINED"), "scannedAt": p.scanned_at.isoformat(),
+                "columns": cols if with_columns else [],
+                "columnCount": len(cols),
+                "certifiedColumns": sum(1 for c in cols if c["status"] == "CERTIFIED"),
+                "undefinedColumns": sum(1 for c in cols if c["status"] == "UNDEFINED"),
+                "scannedAt": p.scanned_at.isoformat(),
             })
-        return {"datasourceId": s.datasource_id, "tables": tables, "tableCount": len(tables), "columnCount": sum(len(t["columns"]) for t in tables), "undefinedColumns": undefined_cols, "catalog": self.store.status_counts(s.tenant_id, s.datasource_id), "version": self.store.latest_version(s.tenant_id, s.datasource_id)}
+        out = {"datasourceId": s.datasource_id, "tables": tables, "tableCount": len(tables), "total": total,
+               "columnCount": sum(t["columnCount"] for t in tables), "undefinedColumns": undefined_cols,
+               "catalog": self.store.status_counts(s.tenant_id, s.datasource_id), "version": self.store.latest_version(s.tenant_id, s.datasource_id)}
+        if len(self._inventory_cache) > 24:      # a handful of views, not an unbounded memory of them
+            self._inventory_cache.clear()
+        self._inventory_cache[key] = out
+        return out
 
     def add_annotation(self, table_pattern: str, column: Optional[str], text: str, author: str) -> dict[str, Any]:
         s = self.settings
         ann = self.store.add_annotation(Annotation(datasource_id=s.datasource_id, table_pattern=table_pattern, column=(column or None), text=text.strip(), author=author))
         gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         ingested = gen.ingest_annotation(table_pattern, column, text, f"annotation:{ann.id}")
+        self._inventory_cache.clear()      # what someone just wrote has to show on the very next read
         return {"annotation": {"id": ann.id, "tablePattern": table_pattern, "column": column, "text": ann.text, "author": author}, "candidates": ingested}
 
     def certify(self, note: str = "") -> dict[str, Any]:
@@ -651,8 +686,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     # --- portal layer: schema inventory + annotations
     @app.get("/api/v1/schema/inventory")
-    def inventory() -> dict[str, Any]:
-        return rt().inventory()
+    def inventory(q: str = "", entity: str = "", limit: int = 0, offset: int = 0, columns: bool = True) -> dict[str, Any]:
+        return rt().inventory(search=q, entity=entity, limit=max(0, min(limit, 500)), offset=max(0, offset), with_columns=columns)
 
     @app.post("/api/v1/schema/annotations")
     def add_annotation(request: Request, body: AnnotationIn) -> dict[str, Any]:
@@ -660,6 +695,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not body.text.strip():
             raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT"})
         return rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+
+    @app.put("/api/v1/schema/annotations/{annotation_id}")
+    def update_annotation(request: Request, annotation_id: str, body: AnnotationIn) -> dict[str, Any]:
+        """Correct what someone wrote earlier.
+
+        A correction is a new statement, not an edit of the old one: the previous text is retired and
+        kept, so the record still shows what was believed before and who changed it. Only the newest
+        reaches the model, which is what makes fixing a wrong label actually fix the answers.
+        """
+        _require_admin(request)
+        if not body.text.strip():
+            raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT"})
+        r = rt()
+        r.store.retire_annotation(annotation_id)
+        out = r.add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+        out["replaced"] = annotation_id
+        return out
 
     @app.get("/api/v1/schema/annotations")
     def list_annotations(tablePattern: str | None = None) -> dict[str, Any]:

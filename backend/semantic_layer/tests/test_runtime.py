@@ -639,3 +639,94 @@ def test_the_model_never_speaks_for_itself(catalog, profiles, logo_connector, se
         for said in ("yapay zeka modeliyim", "GPT mimarisiyle", "sohbet edelim", "her konuda yardımcı"):
             assert said not in text, text
         assert "tanımlı" in text.lower() or "veri" in text.lower(), text   # a data tool's answer, or none
+
+
+def test_the_catalogue_can_be_asked_for_a_page_instead_of_all_of_it(catalog, profiles, logo_connector, settings):
+    """The full inventory is eight megabytes across hundreds of tables and tens of thousands of columns
+    — not something to hand a browser on every visit. A list view asks without columns and gets a few
+    kilobytes; opening one table asks for that table."""
+    from semantic_bridge.app import Runtime
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    full = rt.inventory()
+    assert full["tableCount"] == len(rt.profiles) and full["tables"][0]["columns"]
+
+    listing = rt.inventory(with_columns=False, limit=2)
+    assert len(listing["tables"]) == 2 and listing["total"] == len(rt.profiles)
+    assert listing["tables"][0]["columns"] == []
+    assert listing["tables"][0]["columnCount"] > 0, "the count still travels, only the detail is dropped"
+
+    one = rt.inventory(entity="INVOICE")
+    assert [t["entity"] for t in one["tables"]] == ["INVOICE"] and one["tables"][0]["columns"]
+
+    found = rt.inventory(search="TRCODE", with_columns=False)
+    assert found["tables"] and all("TRCODE" in t["entity"] or t["columnCount"] for t in found["tables"])
+
+
+def test_the_catalogue_is_remembered_until_the_catalog_changes(catalog, profiles, logo_connector, settings):
+    """It is built from profiles that only move when the pipeline runs. A timer would either rebuild
+    work nothing changed or serve a stale page after a rebuild; the catalog's own fingerprint does
+    neither."""
+    from semantic_bridge.app import Runtime
+    from semantic_layer.models import Annotation
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    first = rt.inventory(with_columns=False, limit=3)
+    assert rt.inventory(with_columns=False, limit=3) is first, "the same view is not rebuilt"
+    assert rt.inventory(with_columns=False, limit=4) is not first, "a different view is its own answer"
+
+    # something a person did in the portal changes the catalog, so the remembered answer is dropped
+    catalog.add_annotation(Annotation(datasource_id=DS, table_pattern=profiles[0].table_pattern, column=None, text="fatura başlıkları", author="portal"))
+    rt.rebuild()
+    assert rt.inventory(with_columns=False, limit=3) is not first
+
+
+def test_a_label_can_be_corrected_and_the_correction_is_what_the_model_sees(catalog, profiles, logo_connector, settings):
+    """A wrong label is worse than a missing one, so fixing it has to actually change the answers. The
+    old text is retired rather than erased — the record still shows what was believed and who changed
+    it — and only the newest reaches the model."""
+    from semantic_bridge.app import Runtime, create_app
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    client = TestClient(create_app(rt))
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+
+    first = client.post("/api/v1/schema/annotations", json={
+        "tablePattern": inv.table_pattern, "column": "NETTOTAL", "text": "Ciro: KDV dahil tutar", "author": "ali"}).json()
+    rt.rebuild()
+    assert rt.existing.annotations[("INVOICE", "NETTOTAL")] == "Ciro: KDV dahil tutar"
+
+    fixed = client.put(f"/api/v1/schema/annotations/{first['annotation']['id']}", json={
+        "tablePattern": inv.table_pattern, "column": "NETTOTAL", "text": "Ciro: KDV hariç net tutar", "author": "veli"}).json()
+    assert fixed["replaced"] == first["annotation"]["id"]
+
+    rt.rebuild()
+    assert rt.existing.annotations[("INVOICE", "NETTOTAL")] == "Ciro: KDV hariç net tutar"
+    r = SemanticResolver(catalog, TENANT, DS, rt.profiles)
+    prompt = rt.existing.build_messages(r.resolve("Toptan satış tutarı", today=date(2026, 7, 20)), [])[0]["content"]
+    line = next(l for l in prompt.splitlines() if l.strip().startswith(("main_", "dbo_")) and "NETTOTAL" in l)
+    assert "KDV hariç net tutar (kullanıcı)" in line and "KDV dahil" not in line, line
+
+
+def test_withdrawing_a_label_withdraws_what_it_taught(catalog, profiles, logo_connector, settings):
+    """Retiring only the text left the meanings it produced standing, so a corrected label kept
+    answering with the old one — worse than never having written it, because the record says it was
+    fixed."""
+    from semantic_bridge.app import Runtime, create_app
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    client = TestClient(create_app(rt))
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+
+    written = client.post("/api/v1/schema/annotations", json={
+        "tablePattern": inv.table_pattern, "column": "TRCODE", "text": "4 = konsinye", "author": "ali"}).json()
+    source = f"annotation:{written['annotation']['id']}"
+    born = [c.id for c in catalog.find_concepts(TENANT, DS, limit=10000)
+            if any(e.source_id == source for e in catalog.list_evidence(c.id))]
+    assert born, "the sentence produced a meaning"
+
+    client.delete(f"/api/v1/schema/annotations/{written['annotation']['id']}")
+    for cid in born:
+        still = catalog.get_concept(cid)
+        assert still is None or (still.status != "CERTIFIED"
+                                 and not any(e.source_id == source for e in catalog.list_evidence(cid))), cid
