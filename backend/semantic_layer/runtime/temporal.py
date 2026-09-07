@@ -32,7 +32,7 @@ _YEAR = r"(20\d{2})"
 PRIMITIVES = (
     "TODAY", "YESTERDAY", "LAST_N_DAYS", "THIS_WEEK", "LAST_WEEK", "THIS_MONTH", "LAST_MONTH", "LAST_N_YEARS",
     "THIS_QUARTER", "LAST_QUARTER", "THIS_YEAR", "LAST_YEAR", "MTD", "QTD", "YTD",
-    "YEAR", "MONTH", "MONTH_RANGE", "AMBIGUOUS_RECENT",
+    "YEAR", "MONTH", "MONTH_RANGE", "RANGE", "AMBIGUOUS_RECENT",
 )
 
 
@@ -63,12 +63,50 @@ def _grain_hint(text: str) -> Optional[str]:
     return None
 
 
+#: What sits between two periods that are the ends of one span: "ile", "ila", a dash, and the day
+#: numbers of a full date ("1 ocak 2025 ile 31 aralik 2026" — the day is not part of either period).
+#: "ve" is deliberately absent: "2025 ve 2026" can mean one span or two figures side by side, and
+#: guessing which would silently change the question. It stays two periods.
+_RANGE_GAP = re.compile(r"^[\s\-]*(?:ile|ila|arasi\w*)?[\s\-]*\d{0,2}\.?[\s\-]*(?:ile|ila|arasi\w*)?[\s\-]*$")
+_RANGE_WORD = re.compile(r"(?:^|\s)(?:ile|ila|aras\w*)")
+_RANGE_AFTER = re.compile(r"^\s*(?:\w{1,4}\s+)?aras\w*")
+
+
+def _join_ranges(found: list, text: str) -> list:
+    """Two periods that are the two ends of one span become one period.
+
+    "1 ocak 2025 ile 31 aralik 2026 arasindaki ciro" parses as two months, and the two reach the
+    model as two separate periods: it writes a column for January 2025 and a column for December
+    2026 and answers a question nobody asked. Only the span was ever asked for, and the months at
+    its ends are its bounds, not its subject.
+
+    The join is made only where the question says so — "ile"/"ila"/a dash between them and an
+    "aras…" after, or the range word between them. Anything else and they stay separate.
+    """
+    if len(found) < 2:
+        return found
+    out = list(found)
+    i = 0
+    while i < len(out) - 1:
+        (a_start, a_end, a), (b_start, b_end, b) = out[i], out[i + 1]
+        gap = text[a_end:b_start]
+        after = text[b_end:b_end + 24]
+        joined = _RANGE_GAP.match(gap) and (_RANGE_WORD.search(gap) or _RANGE_AFTER.match(after))
+        if joined and a.start and b.end and a.start < b.end:
+            span = TemporalSlot(text[a_start:b_end].strip(), "RANGE", a.start, b.end, None,
+                                params={"from": a.text, "to": b.text})
+            out[i:i + 2] = [(a_start, b_end, span)]
+            continue
+        i += 1
+    return out
+
+
 def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[TemporalSlot], Optional[str]]:
     """Return (slots, grain). Slots are ordered by position in the question."""
     today = today or date.today()
     text = " " + fold(question) + " "
     text = re.sub(r"[–—-]", "-", text)
-    found: list[tuple[int, TemporalSlot]] = []
+    found: list[tuple[int, int, TemporalSlot]] = []
     taken: list[tuple[int, int]] = []
 
     def free(a: int, b: int) -> bool:
@@ -77,7 +115,7 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     def add(m: re.Match, slot: TemporalSlot) -> None:
         if free(m.start(), m.end()):
             taken.append((m.start(), m.end()))
-            found.append((m.start(), slot))
+            found.append((m.start(), m.end(), slot))
 
     # --- explicit month ranges: "2026 ocak-agustos", "ocak-agustos 2026"
     for m in re.finditer(rf"{_YEAR}\s+({_MONTH_RE})\s*-\s*({_MONTH_RE})", text):
@@ -145,7 +183,8 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         prim = "YTD" if "ytd" in m.group(0) else "YEAR"
         add(m, TemporalSlot(m.group(0).strip(), prim, date(y, 1, 1), date(y + 1, 1, 1), "YEAR", params={"year": y}))
     found.sort(key=lambda x: x[0])
-    slots = [s for _, s in found]
+    found = _join_ranges(found, text)
+    slots = [s for _, _, s in found]
     grain = _grain_hint(text)
     if grain is None:
         for s in slots:
