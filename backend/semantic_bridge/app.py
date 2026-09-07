@@ -560,13 +560,31 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         v = r.store.latest_version(r.settings.tenant_id, r.settings.datasource_id)
         return {"dataSource": r.connector.dialect if r.connector else "offline", "models": len(r.profiles), "views": 0, "cubes": 0, "relationships": sum(len(p.relationships) for p in r.profiles), "deployed": deployed, "project": r.settings.datasource_id, "engine": "semantic-layer", "catalogVersion": v["version"] if v else 0, "certified": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id).get("CERTIFIED", 0)}
 
+    def _sql_failure(e: Exception) -> HTTPException:
+        """Turn a failed statement into the right answer for the caller.
+
+        Unreachable or overloaded source → 503 and a sentence the reader can act on: wait and retry.
+        Anything else is a statement the source rejected, which is a 400 and worth showing verbatim.
+        """
+        if is_connection_error(e):
+            return HTTPException(status_code=503, detail={
+                "code": "DATA_SOURCE_UNAVAILABLE",
+                "message": "Veri kaynağı şu anda yanıt vermiyor. Sorgu doğru; birazdan tekrar deneyin.",
+                "detail": str(e)[:400],
+                "retryable": True,
+            })
+        return HTTPException(status_code=400, detail={"code": type(e).__name__, "message": str(e)[:1200]})
+
     @app.post("/api/v1/run_sql")
     def run_sql_ep(body: RunSqlIn) -> dict[str, Any]:
         r = rt()
         try:
             result = r.run_sql(body.sql, body.limit or r.settings.max_rows)
         except Exception as e:  # noqa: BLE001
-            raise HTTPException(status_code=400, detail={"code": type(e).__name__, "message": str(e)[:1200]}) from e
+            # A query that timed out or lost its connection is not a bad request. Reported as 400 it
+            # reads to the user as "your question was wrong" and to the client as "do not retry" —
+            # both false, and both send people looking for a fault that is not there.
+            raise _sql_failure(e) from e
         try:
             from nanobase_api.chat_widgets import widgets_from_query_result  # optional, same as legacy bridge
 
@@ -600,7 +618,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             result = r.run_sql(str(body.get("sql") or ""), int(body.get("sampleSize") or 50))
         except Exception as e:  # noqa: BLE001
-            raise HTTPException(status_code=400, detail={"code": type(e).__name__, "message": str(e)[:400]}) from e
+            raise _sql_failure(e) from e
         return {"summary": r.summarize(str(body.get("question") or ""), str(body.get("sql") or ""), result)}
 
     @app.post("/api/v1/feedback")

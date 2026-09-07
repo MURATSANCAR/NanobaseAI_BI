@@ -30,6 +30,7 @@ from semantic_layer.normalize import (
     is_domain_candidate,
     is_light_verb,
     is_negative,
+    is_inflection_of,
     is_participle,
     short_root,
     stem,
@@ -50,7 +51,27 @@ _COMPARE_CUE = re.compile(r"\b(karsilastir|karsilastirma|kiyasla|kiyaslama|vs|ay
 # "kaç fatura", "fatura sayısı", "kaç tane" — the question asks how many rows, not how much value.
 _COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariyla|sayi)\b")
 # A movement word turns one number into a series: the answer has to be broken down over time.
-_TREND_CUE = re.compile(r"\b(?:artis|artiyor|artan|azalis|azaliyor|dusus|dusuyor|duserken|buyume|buyuyor|kuculuyor|gerileme|trend|gidisat|seyir|ay ay|gun gun|yil yil|hafta hafta|zaman icinde|zamanla)\w{0,6}\b")
+# Cue words are recognised through the morphology, not by allowing any letters to follow. A tail of
+# "up to six more letters" after "trend" also spells trendyol, a marketplace: the question then picked
+# up a monthly breakdown nobody asked for, and the brand disappeared from it without a word — read as
+# grammar, so never reported as a term the catalog could not place. Inflection is what stem() is for.
+_TREND_WORDS = frozenset(
+    "artis artiyor artan azalis azaliyor dusus dusuyor duserken buyume buyuyor kuculuyor "
+    "gerileme trend gidisat seyir".split()
+)
+_TREND_PHRASES = re.compile(r"\b(?:ay ay|gun gun|yil yil|hafta hafta|zaman icinde|zamanla)\b")
+
+
+def _is_trend_cue(token: str) -> bool:
+    f = fold(token)
+    if f in _TREND_WORDS or short_root(f) in _TREND_WORDS:
+        return True
+    return any(is_inflection_of(f, w) for w in _TREND_WORDS)
+
+
+def _asks_for_a_trend(question: str) -> bool:
+    folded = fold(question)
+    return bool(_TREND_PHRASES.search(folded)) or any(_is_trend_cue(t) for t in tokenize(question))
 # Ranking cues that make a following number a top-N rather than a value.
 _RANK_CUE = frozenset("en ilk top bastaki basta".split())
 _WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
@@ -117,15 +138,31 @@ class SemanticResolver:
 
         # 2) explicit physical codes in the question: "(TRCODE 8)" / "TRCODE 7,8,9"
         for col, values in qf.explicit_codes:
-            if col in self.column_names:
-                entity = self._entity_for_column(col, hits)
-                if entity:
-                    prof = self.by_entity[entity]
-                    m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, column=col, operator="IN", values=list(values))
-                    hits.append(ResolvedSlot(term=f"{col} {','.join(values)}", semantic_type=SemanticType.DIMENSION_VALUE, status="EXPLICIT", mapping=m, confidence=1.0, explain={"why": "kullanıcı fiziksel kodu sorunun içinde verdi"}))
-                    for k, tok in enumerate(qf.tokens):
-                        if tok.upper() == col or tok in values:
-                            consumed.add(k)
+            if col not in self.column_names:
+                continue
+            entity = self._entity_for_column(col, hits)
+            if entity:
+                prof = self.by_entity[entity]
+                m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, column=col, operator="IN", values=list(values))
+                hits.append(ResolvedSlot(term=f"{col} {','.join(values)}", semantic_type=SemanticType.DIMENSION_VALUE, status="EXPLICIT", mapping=m, confidence=1.0, explain={"why": "kullanıcı fiziksel kodu sorunun içinde verdi"}))
+                for k, tok in enumerate(qf.tokens):
+                    if tok.upper() == col or tok in values:
+                        consumed.add(k)
+            else:
+                # The column exists but nothing in the question says which table it belongs to — it
+                # occurs in several. Answering without the filter answers a wider question than the
+                # one that was asked, so this is stated rather than passed over.
+                where = sorted({p.entity for p in self.profiles if any(c.name.upper() == col for c in p.columns)})[:5]
+                term = f"{col} {','.join(values)}"
+                if term not in sq.unhandled:
+                    sq.unhandled.append(term)
+                    sq.explanation.append(
+                        f"'{col}' bu veritabanında {len(where)} tabloda var ({', '.join(where)}); "
+                        f"hangisi kastedildiği anlaşılmadığı için {col} = {', '.join(values)} filtresi UYGULANMADI"
+                    )
+                for k, tok in enumerate(qf.tokens):
+                    if tok.upper() == col or tok in values:
+                        consumed.add(k)
 
         # 2b) profile-backed literal values: a token that *is* a value of a certified column
         #     ("KITAPCI" ∈ CLCARD.SPECODE2 profile) — the column meaning is certified, the value is observed.
@@ -255,11 +292,11 @@ class SemanticResolver:
             sq.explanation.append(f"dönem belirtilmedi → varsayılan {self.default_temporal.primitive} uygulandı")
         for t in sq.temporal:
             sq.explanation.append(describe(t))
-        if not sq.grain and _TREND_CUE.search(fold(question)):
+        if not sq.grain and _asks_for_a_trend(question):
             sq.grain = "MONTH"
             sq.explanation.append("soru bir gidişat soruyor → sonuç ay ay kırılacak")
         for k, tok in enumerate(qf.tokens):
-            if k in consumed or not (_TREND_CUE.fullmatch(fold(tok)) or _COUNT_CUE.fullmatch(fold(tok))):
+            if k in consumed or not (_is_trend_cue(tok) or _COUNT_CUE.fullmatch(fold(tok))):
                 continue
             if is_participle(tok) and self._modifies_a_noun(qf.tokens, k, consumed):
                 continue            # "artan ürünler" narrows the subject; it is not just a trend cue

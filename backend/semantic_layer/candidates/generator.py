@@ -207,6 +207,72 @@ class CandidateGenerator:
                 log.warning("column proposal batch failed: %s", str(e)[:200])
         return {"asked": asked, "proposed": proposed}
 
+    # ------------------------------------------------------------------ vetting a reading
+    #: glosses that say nothing. A reader who writes these has run out of evidence and kept writing.
+    _FILLER = {"diğer", "digger", "diger", "diğerleri", "bilinmiyor", "bilinmeyen", "tanımsız",
+               "tanimsiz", "belirsiz", "yok", "other", "unknown", "misc", "n/a", "na", "none"}
+    #: a reading hedged in words is a guess wearing a sentence
+    _HEDGES = ("muhtemelen", "olabilir", "edebilir", "belki", "sanır", "tahmin", "görünüyor",
+               "gibi duruyor", "olasılıkla", "sanılır")
+
+    @staticmethod
+    def _vet_reading(col, meaning: str, glosses: dict[str, str], confidence: float) -> tuple[str, dict[str, str], float, list[str]]:
+        """Check a proposed reading against what was actually measured, and cut back what it cannot support.
+
+        Everything here is a property of the numbers, not of any particular database: a gloss that only
+        repeats the code says nothing whatever the code is; a code list written for a column with
+        thousands of distinct values is a category error in any schema; two codes appearing an equal
+        number of times are one thing seen twice, not two unrelated things. The model is left free to
+        read — this only stops a reading being filed as if it were measured.
+        """
+        notes: list[str] = []
+        counts = {str(v): n for v, n in col.top_values}
+        whole = sum(counts.values()) or 1
+
+        # A column with more distinct values than we could enumerate is a free field. Whatever list
+        # came back for it is a handful of examples mistaken for a code list.
+        if glosses and not col.is_enum():
+            glosses = {}
+            notes.append("kod listesi değil, serbest alan")
+
+        # Strip each gloss of its own code. If two of them then read the same, the list carries no
+        # information — "47 = Kullanıcı 47, 3 = Kullanıcı 3" is the column name repeated, not a reading.
+        if len(glosses) >= 2:
+            stripped = {k: " ".join(w for w in str(v).lower().split() if w.strip(".,:;") != k.lower())
+                        for k, v in glosses.items()}
+            if len(set(stripped.values())) < len(stripped):
+                glosses = {}
+                notes.append("kod açıklamaları kodun kendisini tekrar ediyordu")
+
+        # Placeholder glosses, dropped one by one; a partial list is worth more than a padded one.
+        glosses = {k: v for k, v in glosses.items()
+                   if {w.strip(".,:;()").lower() for w in str(v).split()} - CandidateGenerator._FILLER}
+
+        # Codes seen an all but equal number of times are almost always two sides of one movement.
+        # Read as independent categories they invert whatever they are used to decide.
+        eq = [(a, b) for i, a in enumerate(glosses) for b in list(glosses)[i + 1:]
+              if counts.get(a) and counts.get(b)
+              and counts[a] >= 0.01 * whole
+              and abs(counts[a] - counts[b]) <= 0.02 * max(counts[a], counts[b])]
+        for a, b in eq[:2]:
+            notes.append(f"{a} ve {b} eşit sayıda geçiyor, aynı işlemin iki ayağı olabilir")
+            confidence = min(confidence, 0.4)
+
+        # A reading that explains the rare codes and passes over the one holding most of the column is
+        # not wrong so much as beside the point. Say what the rest of the rows hold — except on a flag,
+        # where naming one side already says what the other side is and spelling it out is noise.
+        if glosses and (col.distinct_count or 0) > 2:
+            for v, n in col.top_values:
+                if str(v) not in glosses and n >= 0.2 * whole:
+                    notes.append(f"satırların %{100 * n / whole:.3g}'inde değer {v}, bu okumada yok")
+                    confidence = min(confidence, 0.5)
+                    break
+
+        if any(h in meaning.lower() for h in CandidateGenerator._HEDGES):
+            confidence = min(confidence, 0.35)
+
+        return meaning, glosses, confidence, notes
+
     def _propose_batch(self, llm, todo: list[tuple[Any, Any]], model_version: Optional[str]) -> int:
         """One batch of columns, asked the way a person reads an unfamiliar schema.
 
@@ -219,16 +285,34 @@ class CandidateGenerator:
         blocks = []
         for prof, col in todo:
             siblings = [c.name for c in prof.columns if c.name != col.name][:12]
+            # Percentages must be shares of the whole column, not of what survived filtering. Taken
+            # over the filtered list, a code holding 0.6% of the rows shows up as "52%" and reads like
+            # the main case — which is how a rarity came to be described as the column's meaning.
+            whole = sum(n for _, n in col.top_values) or prof.row_count or 1
             vals = col.meaningful_values()[:8]
-            total = sum(n for _, n in vals) or 1
-            shown = ", ".join(f"{v} (%{round(100 * n / total)})" for v, n in vals)
-            blocks.append(
-                f"### {prof.entity}.{col.name}\n"
-                f"- tablo: {prof.entity} ({prof.table_name}), {prof.row_count or 0} satır\n"
-                f"- aynı tablodaki diğer kolonlar: {', '.join(siblings) or '—'}\n"
-                f"- tip: {col.data_type}, farklı değer sayısı: {col.distinct_count if col.distinct_count is not None else 'bilinmiyor'}\n"
-                f"- en sık değerler: {shown or '—'}"
-            )
+            shown = ", ".join(f"{v} (%{100 * n / whole:.3g})" for v, n in vals)
+            lines = [
+                f"### {prof.entity}.{col.name}",
+                f"- tablo: {prof.entity} ({prof.table_name}), {prof.row_count or 0} satır",
+                f"- aynı tablodaki diğer kolonlar: {', '.join(siblings) or '—'}",
+                f"- tip: {col.data_type}, farklı değer sayısı: "
+                f"{col.distinct_count if col.distinct_count is not None else 'bilinmiyor'}",
+                f"- en sık değerler: {shown or '—'}",
+            ]
+            # A value we suppressed as a placeholder is still most of the column. Saying so is the
+            # difference between "1 means average cost" and "almost every row leaves this unset".
+            hidden = [(v, n) for v, n in col.top_values
+                      if v in col.sentinel_values and n >= 0.2 * whole]
+            for v, n in hidden:
+                lines.append(f"- satırların %{100 * n / whole:.3g}'inde bu alan {v} (boş/atanmamış sayılıyor)")
+            # Whether the shown list is the whole list. Without this a truncated top-N reads as a
+            # complete code list, and free-text columns get written up as enumerations.
+            if col.is_enum():
+                lines.append("- bu bir kod listesi: yukarıdaki değerler alanın tamamıdır")
+            else:
+                lines.append("- bu bir kod listesi DEĞİL (çok sayıda farklı değer var, liste kesilmiştir): "
+                             "kod anlamı yazma, yalnız ne tuttuğunu yaz")
+            blocks.append("\n".join(lines))
 
         prompt = (
             "Tanımadığın bir veritabanını okuyor ve kolonların ne işe yaradığını yazıyorsun.\n\n"
@@ -244,12 +328,14 @@ class CandidateGenerator:
             "- Anlamı tek cümlede, işi bilen birine anlatır gibi yaz. Kolon adını tekrar etme "
             "(\"CANCELLED: iptal edilmiş\" değil, \"Fişin iptal edilip edilmediği\").\n"
             "- Şirkete, sektöre ya da bu veritabanına dair bilmediğin şeyi varsayma.\n\n"
-            "Örnek — iyi:\n"
-            '{"entity":"INVOICE","column":"TRCODE","meaning":"Faturanın işlem türü",'
-            '"values":{"7":"perakende satış","8":"toptan satış","2":"satış iadesi"},"confidence":0.8}\n'
-            "Örnek — kötü (kolon adını tekrar ediyor, gösterilmeyen kod uyduruyor):\n"
-            '{"entity":"INVOICE","column":"TRCODE","meaning":"TRCODE alanı",'
-            '"values":{"99":"özel durum"},"confidence":0.9}\n\n'
+            # The examples are deliberately about a table that is not in the batch. An illustration
+            # drawn from the very column being asked about is an answer key, and a model will copy it.
+            "Örnek — iyi (bu tablo aşağıdaki listede yok, yalnız biçimi göstermek için):\n"
+            '{"entity":"KARGO","column":"TESLIM_DURUMU","meaning":"Gönderinin teslim aşaması",'
+            '"values":{"H":"hazırlanıyor","Y":"yolda","T":"teslim edildi"},"confidence":0.8}\n'
+            "Örnek — kötü (kolon adını tekrar ediyor, gösterilmeyen bir kod uyduruyor):\n"
+            '{"entity":"KARGO","column":"TESLIM_DURUMU","meaning":"TESLIM_DURUMU alanı",'
+            '"values":{"Z":"özel durum"},"confidence":0.9}\n\n'
             "Çıktı: yalnız JSON listesi, başka hiçbir şey yazma.\n"
             '[{"entity":..., "column":..., "meaning":"tek cümle", "values":{"kod":"anlamı"} ya da {}, "confidence":0-1}]\n\n'
             "## Kolonlar\n" + "\n\n".join(blocks)
@@ -274,9 +360,13 @@ class CandidateGenerator:
             prof, col = found
             observed = {str(v) for v, _ in col.meaningful_values()}
             glosses = {str(k): str(v) for k, v in (it.get("values") or {}).items() if str(k) in observed}
+            conf = float(it.get("confidence") or 0.5)
+            meaning, glosses, conf, notes = self._vet_reading(col, meaning, glosses, conf)
             text_out = meaning if not glosses else meaning + " — " + ", ".join(f"{k} = {v}" for k, v in glosses.items())
+            if notes:
+                text_out += " (" + "; ".join(notes) + ")"
             self.store.add_suggestion(self.datasource_id, prof.table_pattern, col.name, text_out,
-                                      confidence=float(it.get("confidence") or 0.5), model=model_version or "llm")
+                                      confidence=conf, model=model_version or "llm")
             facts = mine_annotation(text_out, prof.entity, col.name, f"llm:{prof.entity}.{col.name}", self.conventions)
             self.ingest_doc_facts(facts, evidence_type=EvidenceType.LLM_CANDIDATE, weight=0.1)
             n += 1

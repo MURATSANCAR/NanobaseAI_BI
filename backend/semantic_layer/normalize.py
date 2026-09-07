@@ -96,6 +96,36 @@ def tokenize(text: str) -> list[str]:
 
 
 @lru_cache(maxsize=65536)
+def is_inflection_of(token: str, root: str) -> bool:
+    """Is `token` this root wearing Turkish suffixes, or a different word that merely starts the same?
+
+    Stemming answers neither question reliably at this length: it cuts "büyümesi" back past "büyüme",
+    and leaves "trendyol" whole. The reliable test is the other direction — take the root off the
+    front and ask whether what remains is a suffix chain this language can produce. "büyüme|si" can
+    be; "trend|yol" cannot, and a marketplace stops being read as the word "trend".
+    """
+    t, r = fold(token), fold(root)
+    if t == r:
+        return True
+    for base in {r} | {r[:-1] + hard for last, hard in _HARDEN.items() if r.endswith(last)}:
+        if not t.startswith(base):
+            continue
+        tail = t[len(base):]
+        # buffer consonants Turkish inserts between a vowel-final stem and a vowel-initial suffix
+        if tail[:1] in ("y", "n", "s") and tail[1:2] in "aeiouüöı":
+            tail = tail[1:]
+        while tail:
+            for suf in _SUFFIXES:                       # longest first: _SUFFIXES is ordered that way
+                if tail.startswith(suf):
+                    tail = tail[len(suf):]
+                    break
+            else:
+                break
+        if not tail:
+            return True
+    return False
+
+
 def stem(token: str) -> str:
     """Very light suffix stripping (max three passes, never below 4 chars). Deterministic and
     symmetric: both catalog terms and question tokens go through it."""

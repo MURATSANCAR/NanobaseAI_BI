@@ -39,7 +39,9 @@ export class EngineError extends Error {
   }
 }
 
-async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promise<T> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function once<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
@@ -49,13 +51,32 @@ async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promis
       body: JSON.stringify(body),
       signal: ctl.signal,
     });
-    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    // FastAPI wraps a raised error under `detail`; read through it, otherwise every failure reaches
+    // the user as a bare "HTTP 400" and the sentence explaining what happened is thrown away.
+    const data = (raw.detail && typeof raw.detail === 'object' ? (raw.detail as Record<string, unknown>) : raw);
     if (!res.ok || data.code === 'INVALID_SQL_ERROR' || (typeof data.error === 'string' && data.error)) {
       throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
     }
-    return data as T;
+    return raw as T;
   } finally {
     clearTimeout(t);
+  }
+}
+
+/** Retryable means the source was busy, not that the request was wrong — waiting is the whole fix. */
+function retryable(e: unknown): boolean {
+  return e instanceof EngineError && (e.status === 503 || e.code === 'DATA_SOURCE_UNAVAILABLE');
+}
+
+async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await once<T>(path, body, timeoutMs);
+    } catch (e) {
+      if (attempt >= 2 || !retryable(e)) throw e;
+      await sleep(1500 * (attempt + 1));
+    }
   }
 }
 

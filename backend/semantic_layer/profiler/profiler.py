@@ -114,6 +114,9 @@ class Profiler:
                     seen_names.add(tbl)
                     discovered.append((sch, tbl))
         tables = discovered
+        # Logical identity up front: both the scope cut and the deep set are decisions about *what kind
+        # of table* this is, and they cannot be made from a physical name alone.
+        logical = {tbl: logical_table(tbl, sch) for sch, tbl in discovered}
         if len(discovered) > self.max_tables:
             # Which tables to drop is a decision about value, not about the alphabet. Cutting the list
             # where it happens to end left behind the table that defines what this database's own codes
@@ -124,14 +127,14 @@ class Profiler:
             for fk in self.c.foreign_keys(schema):
                 refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1
             score = dict(rank_tables({t: counts.get(t) for _, t in discovered}, refs))
-            ordered = sorted(discovered, key=lambda st: -score.get(st[1], 0.0))
-            tables, dropped = ordered[: self.max_tables], ordered[self.max_tables:]
-            self.truncated = [t for _, t in dropped]
+            tables = _one_per_pattern(discovered, score, logical, self.max_tables)
+            kept = {t for _, t in tables}
+            self.truncated = [t for _, t in discovered if t not in kept]
             biggest = sorted(((counts.get(t) or 0, t) for t in self.truncated), reverse=True)[:5]
             log.warning("scope matched %d tables; cataloguing the %d that carry the most (volume + centrality) — %d left out%s",
                         len(discovered), len(tables), len(self.truncated),
                         (", largest dropped: " + ", ".join(f"{t} ({n})" for n, t in biggest if n)) if biggest else "")
-        names = [logical_table(t, sch) for sch, t in tables]
+        names = [logical[t] for _, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
         fks = self.c.foreign_keys(schema)
         # What the people who built this database wrote about it. Read once for the whole schema, so a
@@ -155,9 +158,10 @@ class Profiler:
             refs: dict[str, int] = {}
             for fk in fks:
                 refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1
-            ranked = rank_tables(counts, refs)
-            deep = {name for name, _ in ranked[:deep_limit]}
-            log.info("profiling %d/%d tables deeply (volume + centrality)", len(deep), len(tables))
+            score = dict(rank_tables(counts, refs))
+            deep = {t for _, t in _one_per_pattern(tables, score, logical, deep_limit)}
+            log.info("profiling %d/%d tables deeply — %d distinct shapes (volume + centrality, one shape at a time)",
+                     len(deep), len(tables), len({logical[t].table_pattern for t in deep}))
         out: list[SchemaProfile] = []
         started = time.time()
         deep_done = 0
@@ -408,3 +412,28 @@ def profile_summary(profiles: list[SchemaProfile]) -> dict[str, Any]:
         "relationships": sum(len(p.relationships) for p in profiles),
         "entities": sorted(p.entity for p in profiles),
     }
+
+
+def _one_per_pattern(tables: list[tuple[str, str]], score: dict[str, float], logical: dict, limit: int) -> list[tuple[str, str]]:
+    """Take `limit` tables best-first, but never a second copy of a shape before every shape has one.
+
+    A source that keeps one set of tables per company or per fiscal year holds the same INVOICE a
+    dozen times over. Ranked by size alone the few largest shapes take every slot: the catalog ends up
+    read deeply on a handful of tables and blind to hundreds of others, which is exactly how a
+    database holding ten companies came to be understood through two of them. What is learned is
+    learned per shape, so the second copy of a shape is worth less than the first copy of any other —
+    and that holds wherever the repetition comes from: a company prefix, a fiscal year, a tenant.
+    """
+    by_pattern: dict[str, list[tuple[str, str]]] = {}
+    for st in tables:
+        by_pattern.setdefault(logical[st[1]].table_pattern, []).append(st)
+    for group in by_pattern.values():
+        group.sort(key=lambda st: -score.get(st[1], 0.0))
+    picked: list[tuple[str, str]] = []
+    depth = 0
+    while len(picked) < limit and any(len(g) > depth for g in by_pattern.values()):
+        tier = [g[depth] for g in by_pattern.values() if len(g) > depth]
+        tier.sort(key=lambda st: -score.get(st[1], 0.0))
+        picked.extend(tier)
+        depth += 1
+    return picked[:limit]

@@ -19,7 +19,11 @@ from semantic_layer.normalize import (
 )
 from semantic_layer.runtime.temporal import parse_temporal
 
-_CODE_HINT = re.compile(r"\b([A-Z][A-Z0-9_]{2,})\s*(?:=|:)?\s*((?:\d+\s*(?:,|/|ve|veya)\s*)*\d+)\b")
+# "SPECODE 5" and "speccode 5" are the same request. Column names are upper case in the database and
+# lower case in the way people type, and requiring capitals meant a stated filter was read as ordinary
+# words and quietly dropped. Any word may be proposed here; whether it names a real column is settled
+# against the profile by whoever consumes this, which is the only place that can know.
+_CODE_HINT = re.compile(r"\b([A-Za-z][A-Za-z0-9_]{2,})\s*(?:=|:)?\s*((?:\d+\s*(?:,|/|ve|veya)\s*)*\d+)\b")
 _EXPLICIT = re.compile(r"((?:[a-z]+\s+){0,3}[a-z]+)\s*\(\s*([a-z][a-z0-9_]{2,})\s*((?:\d+\s*(?:,|/|ve|veya)\s*)*\d+)\s*\)")
 # A ranking cue followed by a number is a top-N. The noun after the number is deliberately not
 # enumerated: which nouns a customer ranks by is their data's business, not this parser's.
