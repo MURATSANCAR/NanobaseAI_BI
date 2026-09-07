@@ -40,7 +40,7 @@ export function ImprintTable({ rows }: { rows: Imprint[] }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
           <h2 className="font-display text-[18px] font-semibold leading-tight sm:text-[22px]">Yayınevi &amp; Dizi Ciro-Marj Raporu</h2>
-          <p className="mt-1 text-[12px] text-ink-muted">YTD · en yüksek cirolu 8 yayınevi (ITEMS özel kodu) · marj = 1 − maliyet / maliyetli ciro</p>
+          <p className="mt-1 text-[12px] text-ink-muted">Yılbaşından bugüne · en yüksek cirolu 8 yayınevi (ITEMS özel kodu) · marj = 1 − maliyet / maliyetli ciro</p>
         </div>
         <button
           type="button"

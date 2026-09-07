@@ -285,11 +285,17 @@ def test_the_reader_asks_in_batches_and_one_bad_answer_costs_only_its_batch(stor
     asked: list[str] = []
 
     class _Counting:
+        """Answers for a column that is actually in the batch it was asked about."""
+
         def chat(self, messages, **kw):
-            asked.append(messages[0]["content"])
+            prompt = messages[0]["content"]
+            asked.append(prompt)
             if len(asked) == 1:
                 return "bu bir JSON değil"          # the first batch is wasted, the rest are not
-            return '[{"entity":"INVOICE","column":"TRCODE","meaning":"Fatura türü","confidence":0.7}]'
+            import re as _re
+
+            m = _re.search(r"### (\w+)\.(\w+)", prompt)
+            return ('[{"entity":"%s","column":"%s","meaning":"Bir alan","confidence":0.7}]' % (m.group(1), m.group(2))) if m else "[]"
 
     import os
 

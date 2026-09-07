@@ -12,7 +12,7 @@ export function TopBar({
   lastDate: string;
   live: boolean;
   engineOk: boolean | null;
-  /** "2026 · Ocak–Ağustos (YTD)" — veri kesitinden türetilir */
+  /** "2026 · Ocak–Ağustos" — veri kesitinden türetilir */
   periodLabel: string;
   /** Arama = Timaş Finans'a soru: girişe odaklanır */
   onSearch: () => void;

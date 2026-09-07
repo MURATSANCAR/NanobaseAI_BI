@@ -20,7 +20,7 @@ const ONLY_VALID = 'Yalnız CANCELLED = 0 (iptal edilmemiş) belgeler.';
 
 export const INFO = {
   netRevenue: {
-    title: 'Net Ciro (YTD)',
+    title: 'Net Ciro',
     definition: '2026 başından veri kesitine kadar satış faturalarının net toplamından satış iadelerinin düşülmesi.',
     formula: 'Net ciro = Σ NETTOTAL (TRCODE 7 perakende satış, 8 toptan satış, 9 verilen hizmet) − Σ NETTOTAL (TRCODE 2 perakende iade, 3 toptan iade)',
     sources: [INV],

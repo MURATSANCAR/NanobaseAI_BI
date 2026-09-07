@@ -24,7 +24,7 @@ export default function App() {
   const [view, setView] = useState<View>('desk');
   const closeSplash = useCallback(() => setSplash(false), []);
   const ym = ymOf(d?.summary.lastDate);
-  const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]} (YTD)` : 'Veri kesiti bekleniyor';
+  const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]}` : 'Veri kesiti bekleniyor';
   const focusCopilot = () => {
     copilotInput.current?.focus();
     copilotInput.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -88,7 +88,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
 
       <section className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 2xl:grid-cols-4">
         <KpiCard
-          label="Net Ciro (YTD)"
+          label="Net Ciro"
           value={tl(k.netRevenue)}
           sub={`Satış ${tl(d.summary.sales)} − iade ${tl(d.summary.returns)} · ${num(d.summary.invoices)} fatura`}
           icon={TrendingUp}
@@ -136,7 +136,7 @@ function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpi
               <h2 className="font-display text-[18px] font-semibold leading-tight sm:text-[20px]">Satınalma &amp; Hizmet</h2>
               <InfoTip k="purchases" align="right" />
             </div>
-            <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), {year} YTD</p>
+            <p className="mt-1 text-[12px] text-ink-muted">Mal alım (TRCODE 1) + alınan hizmet (4), {year} yılbaşından bugüne</p>
             <div className="mt-3 flex items-end gap-2">
               <ShoppingCart size={18} className="mb-1 text-brand" />
               <span className="font-display text-[24px] font-semibold leading-none sm:text-[28px]">{tl(d.summary.purchases)}</span>

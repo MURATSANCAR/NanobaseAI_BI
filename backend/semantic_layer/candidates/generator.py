@@ -208,17 +208,51 @@ class CandidateGenerator:
         return {"asked": asked, "proposed": proposed}
 
     def _propose_batch(self, llm, todo: list[tuple[Any, Any]], model_version: Optional[str]) -> int:
-        lines = []
+        """One batch of columns, asked the way a person reads an unfamiliar schema.
+
+        A reader does not look at a column alone. They see what kind of record the table holds, what
+        the column is called, what is actually in it, and whether the values confirm the name or
+        contradict it. They tell a code list from a free field by how many distinct values there are.
+        And they say nothing when the name is opaque and the values do not help — which is the part a
+        model has to be told, because its instinct is to produce something for every line.
+        """
+        blocks = []
         for prof, col in todo:
-            vals = ", ".join(f"{v} ({n})" for v, n in col.meaningful_values()[:8])
-            lines.append(f"- {prof.entity}.{col.name} [{col.data_type}] değerler: {vals}")
+            siblings = [c.name for c in prof.columns if c.name != col.name][:12]
+            vals = col.meaningful_values()[:8]
+            total = sum(n for _, n in vals) or 1
+            shown = ", ".join(f"{v} (%{round(100 * n / total)})" for v, n in vals)
+            blocks.append(
+                f"### {prof.entity}.{col.name}\n"
+                f"- tablo: {prof.entity} ({prof.table_name}), {prof.row_count or 0} satır\n"
+                f"- aynı tablodaki diğer kolonlar: {', '.join(siblings) or '—'}\n"
+                f"- tip: {col.data_type}, farklı değer sayısı: {col.distinct_count if col.distinct_count is not None else 'bilinmiyor'}\n"
+                f"- en sık değerler: {shown or '—'}"
+            )
+
         prompt = (
-            "Bir veritabanı şemasını okuyorsun. Her satır bir kolonu, içindeki değerleri ve kaç kez geçtiğini veriyor. "
-            "Tablo adı, kolon adı ve değerlere bakarak kolonun ne işe yaradığını tek cümleyle yaz; değerler kod gibi "
-            "görünüyorsa hangi kodun ne demek olduğunu da yaz.\n"
-            "Yalnız JSON listesi döndür: [{\"entity\":..., \"column\":..., \"meaning\": \"tek cümle\", "
-            "\"values\": {\"kod\": \"anlamı\"}, \"confidence\": 0-1}]. "
-            "Emin olmadığın kolonu listeye hiç koyma; uydurma anlam yazma.\n\n## Kolonlar\n" + "\n".join(lines)
+            "Tanımadığın bir veritabanını okuyor ve kolonların ne işe yaradığını yazıyorsun.\n\n"
+            "Nasıl okuyacaksın:\n"
+            "1. Önce tablonun ne tuttuğuna bak (adı ve diğer kolonları söyler).\n"
+            "2. Kolon adının ne ima ettiğine bak.\n"
+            "3. İçindeki değerlerin bunu doğrulayıp doğrulamadığına bak. Değerler adı yalanlıyorsa değerlere güven.\n"
+            "4. Az sayıda tekrar eden değer varsa bu bir kod listesidir: hangi kodun ne demek olduğunu yaz. "
+            "Çok sayıda farklı değer varsa serbest alandır: yalnız ne tuttuğunu yaz, kod listesi yazma.\n\n"
+            "Kurallar:\n"
+            "- Emin değilsen o kolonu listeye HİÇ koyma. Eksik bırakmak, uydurmaktan iyidir.\n"
+            "- Yalnız sana gösterilen değerler için anlam yaz; gösterilmeyen bir kod uydurma.\n"
+            "- Anlamı tek cümlede, işi bilen birine anlatır gibi yaz. Kolon adını tekrar etme "
+            "(\"CANCELLED: iptal edilmiş\" değil, \"Fişin iptal edilip edilmediği\").\n"
+            "- Şirkete, sektöre ya da bu veritabanına dair bilmediğin şeyi varsayma.\n\n"
+            "Örnek — iyi:\n"
+            '{"entity":"INVOICE","column":"TRCODE","meaning":"Faturanın işlem türü",'
+            '"values":{"7":"perakende satış","8":"toptan satış","2":"satış iadesi"},"confidence":0.8}\n'
+            "Örnek — kötü (kolon adını tekrar ediyor, gösterilmeyen kod uyduruyor):\n"
+            '{"entity":"INVOICE","column":"TRCODE","meaning":"TRCODE alanı",'
+            '"values":{"99":"özel durum"},"confidence":0.9}\n\n'
+            "Çıktı: yalnız JSON listesi, başka hiçbir şey yazma.\n"
+            '[{"entity":..., "column":..., "meaning":"tek cümle", "values":{"kod":"anlamı"} ya da {}, "confidence":0-1}]\n\n'
+            "## Kolonlar\n" + "\n\n".join(blocks)
         )
         text = llm.chat([{"role": "user", "content": prompt}], max_tokens=1800)
         m = re.search(r"\[.*\]", text, re.S)
