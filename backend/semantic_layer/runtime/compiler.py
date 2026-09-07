@@ -551,9 +551,20 @@ class ExistingCompiler:
         self.dialect = dialect
         self.conventions = conventions or Conventions.from_profiles(profiles)
         self.by_entity = {p.entity: p for p in profiles}
-        # A local model has a fixed context; a schema does not. These bound what the prompt may carry.
-        self.max_prompt_tables = int(os.environ.get("SEMANTIC_PROMPT_TABLES", "12"))
-        self.max_prompt_columns = int(os.environ.get("SEMANTIC_PROMPT_COLUMNS", "60"))
+        # A local model has a fixed context; a schema does not. What the prompt may carry is therefore
+        # bounded — but by the context that actually exists, not by a table count somebody picked. The
+        # model is served `LLM_CTX` tokens; at roughly three characters a token, and leaving a third
+        # of the window for the answer and the reasoning, this is what the whole prompt may weigh.
+        # Raising the model's context raises this with it, which is the only knob that should matter.
+        ctx_tokens = int(os.environ.get("LLM_CTX") or os.environ.get("CTX_SIZE") or "24576")
+        self.prompt_budget = int(os.environ.get("SEMANTIC_PROMPT_BUDGET_CHARS") or ctx_tokens * 3 * 0.66)
+        # Both default to no ceiling: a table that answers the question goes in with the columns it
+        # has. They remain as an override for a deployment that wants to spend its context otherwise.
+        self.max_prompt_tables = int(os.environ.get("SEMANTIC_PROMPT_TABLES", "0"))
+        self.max_prompt_columns = int(os.environ.get("SEMANTIC_PROMPT_COLUMNS", "0"))
+        # Set by the runtime when the deployment runs a vector index. Absent, routing is the certified
+        # catalog and the join graph alone — exactly what it was.
+        self.router: Any = None
         self.catalog_entities: set[str] = set()
         # (entity, COLUMN) for every column a certified concept names — the measures, the
         # dimension values, and the default filters. These are the columns an answer is made of.
@@ -567,39 +578,67 @@ class ExistingCompiler:
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
         return f"{p.schema_name}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
 
-    def relevant_entities(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> set[str]:
-        """Which tables this question can possibly need.
+    def relevant_entities(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> list[str]:
+        """Which tables this question can possibly need, most likely first.
 
-        A schema of three hundred tables does not fit in a prompt, and sending it would drown the few
-        that matter. The set is built from evidence, never from a list of names: the entities the
-        resolver placed, the entities any certified concept maps to (the vocabulary someone has already
-        written down), the tables a recalled example query used, and one join hop out from those.
+        A schema of three hundred tables does not fit in a prompt — nine thousand columns is six times
+        a local model's context — and sending what does fit at random drowns the few that matter. The
+        order is built from evidence, never from a list of names, and each source is weaker than the
+        one before it:
+
+          1. what the resolver placed — the question's own terms, mapped to columns
+          2. what the router found — vector search over the catalog, for questions using words nobody
+             has written down yet; absent a deployed index this contributes nothing
+          3. the certified vocabulary, and the tables a recalled example query used
+          4. one join hop out from all of those
+
+        Returning an order rather than a set is what lets the caller spend a context budget on the
+        tables that earned it, instead of cutting at a table count somebody picked in advance.
         """
-        wanted = {s.mapping.entity for s in q.slots if s.mapping}
-        wanted |= set(self.catalog_entities)
+        ordered: list[str] = []
+
+        def add(entity: Optional[str]) -> None:
+            if entity and entity in self.by_entity and entity not in ordered:
+                ordered.append(entity)
+
+        for slot in q.slots:
+            if slot.mapping:
+                add(slot.mapping.entity)
+        resolved = list(ordered)
+
+        if self.router is not None:
+            for entity, _score in self.router.route(q.question, set(self.by_entity)):
+                add(entity)
+
+        for entity in sorted(self.catalog_entities):
+            add(entity)
         for r in recalled:
             for p in self.profiles:
                 if self.table_label(p) in (r.get("sql") or ""):
-                    wanted.add(p.entity)
-        core = set(wanted)
-        for entity in list(core):
-            for other in self.by_entity:
-                if other not in wanted and self.conventions.join_path(entity, other):
-                    wanted.add(other)
-        if len(wanted) > self.max_prompt_tables:
-            # the ones the question actually named come first, then their neighbours by size
-            rest = sorted(wanted - core, key=lambda e: -((self.by_entity.get(e).row_count or 0) if self.by_entity.get(e) else 0))
-            wanted = set(list(core)[: self.max_prompt_tables]) | set(rest[: max(0, self.max_prompt_tables - len(core))])
-        if not wanted:
-            # nothing certified yet and nothing resolved: fall back to the biggest tables, which is what
-            # a person opening this schema for the first time would look at
-            ranked = sorted(self.profiles, key=lambda p: -(p.row_count or 0))
-            wanted = {p.entity for p in ranked[: self.max_prompt_tables]}
-        return wanted
+                    add(p.entity)
 
-    def _one_per_entity(self, entities: Optional[set[str]]) -> list[SchemaProfile]:
+        core = list(ordered)
+        for entity in core:
+            for other in sorted(self.by_entity):
+                if other not in ordered and self.conventions.join_path(entity, other):
+                    add(other)
+
+        if not ordered:
+            # Nothing certified, nothing resolved and no router: the honest fallback is the tables
+            # that carry the data, which is what a person opening this schema would look at first.
+            for p in sorted(self.profiles, key=lambda p: -(p.row_count or 0)):
+                add(p.entity)
+        if self.max_prompt_tables:
+            keep = max(self.max_prompt_tables, len(resolved))    # never drop a table the question named
+            ordered = ordered[:keep]
+        return ordered
+
+    def _one_per_entity(self, entities: Optional[Any]) -> list[SchemaProfile]:
         """One profile per entity. The model reasons about the entity; which physical tables a period
-        needs is the compiler's job, and listing each period separately only spends context twice."""
+        needs is the compiler's job, and listing each period separately only spends context twice.
+
+        A list of entities keeps its order — it is a ranking, and the caller spends its budget down
+        that ranking. A set has none, and the profiles' own order stands in."""
         out: dict[str, SchemaProfile] = {}
         for prof in self.profiles:
             if entities is not None and prof.entity not in entities:
@@ -607,6 +646,8 @@ class ExistingCompiler:
             best = out.get(prof.entity)
             if best is None or (prof.row_count or 0) > (best.row_count or 0):
                 out[prof.entity] = prof
+        if isinstance(entities, list):
+            return [out[e] for e in entities if e in out]
         return list(out.values())
 
     def model_index(self, entities: Optional[set[str]] = None) -> str:
@@ -630,13 +671,13 @@ class ExistingCompiler:
     def prompt_columns(self, p: SchemaProfile, q: Optional[SemanticQuery] = None) -> tuple[list[Any], int]:
         """The columns of one table, most answerable first, and how many did not fit.
 
-        A Logo table has two to four hundred columns and a prompt cannot carry them all. Which ones
-        it carries was, until this was written, whichever ones the scan happened to return first —
-        `INFORMATION_SCHEMA` order, i.e. the order Logo laid the record out in 1998. On the customer's
-        own database that puts `STLINE.CANCELLED` at position 85, `OUTCOST` at 80 and
-        `CLCARD.SPECODE2` — the sales channel every one of their metrics breaks down by — at 146, all
-        of them outside a sixty-column window. The model would then be asked for margin by channel
-        while shown neither the cost nor the channel.
+        An ERP table has two to four hundred columns and a prompt cannot carry them all. Which ones it
+        carried was, until this was written, whichever ones the scan returned first — declaration
+        order, which is the order the vendor laid the record out in twenty years ago and has nothing
+        to do with what anyone asks about. Measured against a real schema, that order puts the void
+        flag at position 85, the unit cost at 80, and the channel code every one of that deployment's
+        metrics breaks down by at 146: all three outside a sixty-column window. The model would be
+        asked for margin by channel while shown neither the cost nor the channel.
 
         So the window is filled by what a question can actually be answered with: the columns this
         question already resolved to, then the keys and the joins, then everything somebody has said
@@ -671,14 +712,23 @@ class ExistingCompiler:
             return 5 if (c.description or c.derived) else 6
 
         ordered = sorted(range(len(p.columns)), key=lambda i: (rank(p.columns[i]), i))
-        shown = [p.columns[i] for i in ordered[: self.max_prompt_columns]]
+        # No ceiling by default: a table that answers the question goes in with the columns it has.
+        # The ranking still decides the order, so a deployment that does set one keeps the useful end.
+        keep = self.max_prompt_columns or len(ordered)
+        shown = [p.columns[i] for i in ordered[:keep]]
         # Back into the source's own order, so the model reads a table rather than a ranking.
         shown.sort(key=lambda c: p.columns.index(c))
         return shown, max(0, len(p.columns) - len(shown))
 
     def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]], entities: Optional[set[str]] = None) -> str:
         wanted = entities if entities is not None else self.relevant_entities(q, recalled)
-        lines = []
+        lines: list[str] = []
+        # What the rest of the prompt already costs — the rules, the catalog, the examples — is not
+        # known here, so the schema is given the share of the budget that is left after a fixed
+        # allowance for them. Tables are written best-first and stop when the budget is gone.
+        budget = max(2000, self.prompt_budget - self.RESERVED_FOR_INSTRUCTIONS - len(self.rules_text))
+        spent = 0
+        skipped: list[str] = []
         for p in self._one_per_entity(wanted):
             cols = []
             selected, left_out = self.prompt_columns(p, q)
@@ -708,9 +758,31 @@ class ExistingCompiler:
             table_said = self.annotations.get((p.entity, None)) or p.description
             if table_said:
                 lines.append(f"{self.table_label(p)} — {table_said[:200]}")
-            lines.append(f"{self.table_label(p)}: " + ", ".join(cols) +
-                         (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else ""))
+            block = [f"{self.table_label(p)}: " + ", ".join(cols) +
+                     (f" … (+{left_out} kolon listelenmedi; burada olmayan bir kolonu varsayma)" if left_out else "")]
+            if table_said:
+                block.insert(0, lines.pop())
+            size = sum(len(x) + 1 for x in block)
+            # A table the question itself resolved to is never dropped: without it the prompt cannot
+            # be answered at all, and a short prompt that cannot be answered is not an improvement.
+            if spent + size > budget and spent > 0 and p.entity not in self._resolved_entities(q):
+                skipped.append(p.entity)
+                continue
+            lines.extend(block)
+            spent += size
+        if skipped:
+            # Never a silent cap. The model has to know the schema it was shown is not all of it.
+            lines.append(f"(bağlam bütçesine sığmayan {len(skipped)} tablo listelenmedi: "
+                         f"{', '.join(sorted(skipped))} — burada olmayan bir tabloyu varsayma)")
         return "\n".join(lines)
+
+    #: What the system prompt, the dialect notes, the catalog block and the examples cost before the
+    #: schema gets its share. Measured, not guessed: the fixed blocks come to about six thousand
+    #: characters and the recalled examples to a few thousand more.
+    RESERVED_FOR_INSTRUCTIONS = 12000
+
+    def _resolved_entities(self, q: Optional[SemanticQuery]) -> set[str]:
+        return {s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity} if q else set()
 
     def catalog_block(self, q: SemanticQuery) -> str:
         lines = []

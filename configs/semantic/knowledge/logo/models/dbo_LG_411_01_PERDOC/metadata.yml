@@ -1,0 +1,24 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_01_PERDOC"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_01_PERDOC"
+properties:
+  "displayName": "dbo.LG_411_01_PERDOC"
+columns:
+  - name: "LREF"
+    type: "INTEGER"
+  - name: "INFOTYP"
+    type: "SMALLINT"
+  - name: "INFOREF"
+    type: "INTEGER"
+  - name: "DOCTYP"
+    type: "INTEGER"
+  - name: "DOCNR"
+    type: "INTEGER"
+  - name: "LDATA"
+    type: "BYTEA"

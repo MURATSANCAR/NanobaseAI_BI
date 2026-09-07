@@ -1,0 +1,40 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_EXPCREDITLN"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_EXPCREDITLN"
+properties:
+  "displayName": "dbo.LG_411_EXPCREDITLN"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "EXCREDITREF"
+    type: "INTEGER"
+  - name: "GTIPCODE"
+    type: "VARCHAR(25)"
+  - name: "UNITSETREF"
+    type: "INTEGER"
+  - name: "UOMREF"
+    type: "INTEGER"
+  - name: "AMOUNT"
+    type: "FLOAT8"
+  - name: "TRCURR"
+    type: "SMALLINT"
+  - name: "TRTOTAL"
+    type: "FLOAT8"
+  - name: "TRRATE"
+    type: "FLOAT8"
+  - name: "REPORTRATE"
+    type: "FLOAT8"
+  - name: "LINENO_"
+    type: "SMALLINT"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

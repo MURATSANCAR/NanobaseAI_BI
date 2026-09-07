@@ -1,0 +1,24 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_CDBTMP"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_CDBTMP"
+properties:
+  "displayName": "dbo.L_CDBTMP"
+columns:
+  - name: "LREF"
+    type: "INTEGER"
+  - name: "MODULE_"
+    type: "INTEGER"
+  - name: "INFOTYPE"
+    type: "SMALLINT"
+  - name: "OBJID"
+    type: "INTEGER"
+  - name: "INSTID"
+    type: "INTEGER"
+  - name: "LDATA"
+    type: "BYTEA"

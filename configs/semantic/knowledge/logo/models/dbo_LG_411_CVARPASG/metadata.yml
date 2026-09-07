@@ -1,0 +1,28 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_CVARPASG"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_CVARPASG"
+properties:
+  "displayName": "dbo.LG_411_CVARPASG"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "CSTVNDREF"
+    type: "INTEGER"
+  - name: "ARPREF"
+    type: "INTEGER"
+  - name: "FIRMNO"
+    type: "SMALLINT"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"
+  - name: "DEFAULTFLG"
+    type: "SMALLINT"

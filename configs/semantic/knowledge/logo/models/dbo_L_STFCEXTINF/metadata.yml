@@ -1,0 +1,22 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_STFCEXTINF"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_STFCEXTINF"
+properties:
+  "displayName": "dbo.L_STFCEXTINF"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "STFCREF"
+    type: "INTEGER"
+  - name: "ARTDESGES"
+    type: "VARCHAR(17)"
+  - name: "VERKEHRSZ"
+    type: "VARCHAR(17)"
+  - name: "VERFAHREN"
+    type: "VARCHAR(17)"

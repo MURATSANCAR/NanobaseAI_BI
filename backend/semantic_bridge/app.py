@@ -163,8 +163,8 @@ class Runtime:
             index = self.store.certified_index(s.tenant_id, s.datasource_id)
             maps_all = [m for senses in index.values() for _, maps in senses for m in maps]
             existing.catalog_entities = {m.entity for m in maps_all}
-            # Which columns, not just which tables. A table has three hundred of them and the
-            # prompt carries sixty; the ones a certified concept is built on go in first.
+            # Which columns, not just which tables. When a context budget forces a choice, the
+            # columns a certified concept is built on are the ones that must survive it.
             cols: set[tuple[str, str]] = set()
             for m in maps_all:
                 if m.entity and m.column:
@@ -174,6 +174,18 @@ class Runtime:
             existing.catalog_columns = cols
         except Exception as e:  # noqa: BLE001
             log.debug("catalog entity set unavailable: %s", e)
+        # Vector routing over the catalog, for questions whose words nobody has written down yet. It
+        # is strictly additional: the certified vocabulary above is consulted first and always, and a
+        # deployment with no index — or one whose index is unreachable — routes exactly as before.
+        try:
+            from semantic_layer.runtime.table_router import TableRouter
+
+            router = TableRouter(s.datasource_id)
+            if router.configured:
+                existing.router = router
+                log.info("table router enabled (%s, collection %s)", router.qdrant_url, router.collection)
+        except Exception as e:  # noqa: BLE001
+            log.debug("table router unavailable, routing from the catalog alone: %s", e)
         # What people wrote in the portal is the last word on what a column means; until now the model
         # never saw it. The newest annotation for a table or column wins over an older one.
         try:

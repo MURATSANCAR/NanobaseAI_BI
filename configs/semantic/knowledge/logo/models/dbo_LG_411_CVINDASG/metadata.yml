@@ -1,0 +1,34 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_CVINDASG"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_CVINDASG"
+properties:
+  "displayName": "dbo.LG_411_CVINDASG"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "CSTVNDREF"
+    type: "INTEGER"
+  - name: "INDREF"
+    type: "INTEGER"
+  - name: "PRIMARYFLG"
+    type: "SMALLINT"
+  - name: "ANNVOLUME"
+    type: "FLOAT8"
+  - name: "VOLCURR"
+    type: "SMALLINT"
+  - name: "ANNVOLUMERC"
+    type: "FLOAT8"
+  - name: "EMPLOYEECNT"
+    type: "FLOAT8"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

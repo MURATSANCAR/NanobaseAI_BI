@@ -1,0 +1,36 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_TSKSHELN"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_TSKSHELN"
+properties:
+  "displayName": "dbo.L_TSKSHELN"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "TSLEVEL"
+    type: "SMALLINT"
+  - name: "TSPROCESSNAME"
+    type: "VARCHAR(101)"
+  - name: "TSPROCESSID"
+    type: "SMALLINT"
+  - name: "TSPARAMS"
+    type: "VARCHAR(251)"
+  - name: "TSWAITTIME"
+    type: "SMALLINT"
+  - name: "TSBEGINALERT"
+    type: "SMALLINT"
+  - name: "TSENDALERT"
+    type: "SMALLINT"
+  - name: "LINENR"
+    type: "SMALLINT"
+  - name: "TASKREF"
+    type: "INTEGER"
+  - name: "OLDTASK"
+    type: "VARCHAR(25)"
+  - name: "APPROXTIME"
+    type: "VARCHAR(25)"

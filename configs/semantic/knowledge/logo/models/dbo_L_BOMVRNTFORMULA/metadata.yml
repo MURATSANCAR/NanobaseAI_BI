@@ -1,0 +1,42 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_BOMVRNTFORMULA"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_BOMVRNTFORMULA"
+properties:
+  "displayName": "dbo.L_BOMVRNTFORMULA"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "BOMLREF"
+    type: "INTEGER"
+  - name: "TYP"
+    type: "SMALLINT"
+  - name: "LINENR"
+    type: "SMALLINT"
+  - name: "MAINITEMREF"
+    type: "INTEGER"
+  - name: "MAINCHARREF"
+    type: "INTEGER"
+  - name: "OPERATOR"
+    type: "SMALLINT"
+  - name: "ASGTYP"
+    type: "SMALLINT"
+  - name: "CARDREF"
+    type: "INTEGER"
+  - name: "LOGICOP"
+    type: "SMALLINT"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"
+  - name: "ISITEMREFCBOML"
+    type: "SMALLINT"
+  - name: "MAINVALREF"
+    type: "INTEGER"

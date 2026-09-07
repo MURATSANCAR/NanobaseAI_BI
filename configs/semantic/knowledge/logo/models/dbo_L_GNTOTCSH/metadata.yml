@@ -1,0 +1,22 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_GNTOTCSH"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_GNTOTCSH"
+properties:
+  "displayName": "dbo.L_GNTOTCSH"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "CARDREF"
+    type: "INTEGER"
+  - name: "TOTTYPE"
+    type: "SMALLINT"
+  - name: "DEBIT"
+    type: "FLOAT8"
+  - name: "CREDIT"
+    type: "FLOAT8"

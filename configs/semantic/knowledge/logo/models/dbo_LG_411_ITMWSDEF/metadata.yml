@@ -1,0 +1,30 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_ITMWSDEF"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_ITMWSDEF"
+properties:
+  "displayName": "dbo.LG_411_ITMWSDEF"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "ITEMREF"
+    type: "INTEGER"
+  - name: "WSREF"
+    type: "INTEGER"
+  - name: "MINLEVEL"
+    type: "FLOAT8"
+  - name: "MAXLEVEL"
+    type: "FLOAT8"
+  - name: "SAFELEVEL"
+    type: "FLOAT8"
+  - name: "MINLEVELCTRL"
+    type: "SMALLINT"
+  - name: "MAXLEVELCTRL"
+    type: "SMALLINT"
+  - name: "SAFELEVELCTRL"
+    type: "SMALLINT"

@@ -1,0 +1,42 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_OVHDTRANS"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_OVHDTRANS"
+properties:
+  "displayName": "dbo.LG_411_OVHDTRANS"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "PRODORDREF"
+    type: "INTEGER"
+  - name: "WORKORDREF"
+    type: "INTEGER"
+  - name: "OVHDCLNREF"
+    type: "INTEGER"
+  - name: "OPACTIVITYREF"
+    type: "INTEGER"
+  - name: "ACCOUNTED"
+    type: "SMALLINT"
+  - name: "ACTIVITY"
+    type: "SMALLINT"
+  - name: "TRANTYPE"
+    type: "SMALLINT"
+  - name: "TRANBEGDATE"
+    type: "INTEGER"
+  - name: "TRANENDDATE"
+    type: "INTEGER"
+  - name: "AMOUNT"
+    type: "FLOAT8"
+  - name: "UNITCOST"
+    type: "FLOAT8"
+  - name: "TOTAL"
+    type: "FLOAT8"
+  - name: "RDTOTAL"
+    type: "FLOAT8"
+  - name: "CREATEDBYACT"
+    type: "SMALLINT"

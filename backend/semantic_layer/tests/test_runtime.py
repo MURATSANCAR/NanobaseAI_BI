@@ -758,3 +758,47 @@ def test_a_catalogue_that_cannot_be_read_says_so(catalog, profiles, logo_connect
     monkeypatch.setattr(rt, "inventory", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("depo yok")))
     broken = client.get("/api/v1/schema/inventory?columns=false").json()
     assert broken["tables"] == [] and "okunamıyor" in broken["warning"], broken
+
+
+def test_the_columns_a_prompt_carries_are_the_ones_an_answer_needs(catalog, profiles, settings):
+    """A wide table does not fit in a prompt, and which sixty columns go in decides whether the
+    question can be answered at all. Declaration order — what the scan returns — puts a void flag, a
+    unit cost and a channel code past position 70 on a real ERP schema, so a question about margin by
+    channel would be asked with none of the three on screen."""
+    from semantic_bridge.app import Runtime
+    from semantic_layer.models import ColumnProfile, SchemaProfile, SemanticQuery
+
+    wide = SchemaProfile(
+        datasource_id=DS, table_name="LG_411_01_WIDE", table_pattern="LG_{n0}_{n1}_WIDE",
+        entity="WIDE", schema_name="main", primary_key=["LOGICALREF"],
+        columns=(
+            [ColumnProfile(name="LOGICALREF", data_type="int", is_primary_key=True)]
+            + [ColumnProfile(name=f"FILLER{i}", data_type="varchar(50)", description="vendor line") for i in range(200)]
+            + [ColumnProfile(name="VOIDFLAG", data_type="int", top_values=[("0", 9), ("1", 1)], distinct_count=2),
+               ColumnProfile(name="UNITCOST", data_type="float", unit="TL / adet"),
+               ColumnProfile(name="OWNERREF", data_type="int", ref_entity="CLCARD", ref_column="LOGICALREF")]
+        ),
+        context={"n0": "411", "n1": "01"})
+    catalog.upsert_profile(wide)
+    rt = Runtime(settings, store=catalog, connector=None, llm=FakeLlm([""]))
+    c = rt.existing
+    c.catalog_columns = {("WIDE", "VOIDFLAG")}
+
+    # With no ceiling the whole table goes in — that is the point: nothing is cut for its own sake.
+    assert c.prompt_columns(wide)[1] == 0, "a table that answers the question goes in whole"
+
+    # A deployment that does set one keeps the useful end of the ranking rather than the first rows
+    # the scan happened to return.
+    c.max_prompt_columns = 20
+    shown, left_out = c.prompt_columns(wide)
+    names = {col.name for col in shown}
+    assert left_out == len(wide.columns) - 20
+    assert "VOIDFLAG" in names, "the default filter is column 202 — declaration order buries it"
+    assert "UNITCOST" in names, "a measure with a documented basis has to be visible to be summed"
+    assert "OWNERREF" in names, "a join column the model cannot see is a join it cannot write"
+    assert "LOGICALREF" in names
+    assert [col.name for col in shown] == [c.name for c in wide.columns if c.name in names], \
+        "the model should read a table in the source's order, not in our ranking"
+
+    text = c.schema_context(SemanticQuery(question="x", tenant_id=TENANT, datasource_id=DS), [], {"WIDE"})
+    assert "listelenmedi" in text, "columns dropped from the prompt have to be declared"

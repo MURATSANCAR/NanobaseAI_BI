@@ -1,0 +1,42 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_STDUNITCOST"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_STDUNITCOST"
+properties:
+  "displayName": "dbo.LG_411_STDUNITCOST"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "CARDTYPE"
+    type: "SMALLINT"
+  - name: "CARDREF"
+    type: "INTEGER"
+  - name: "PERIODREF"
+    type: "INTEGER"
+  - name: "FACTORYNR"
+    type: "SMALLINT"
+  - name: "UNITCOST"
+    type: "FLOAT8"
+  - name: "REPUNITCOST"
+    type: "FLOAT8"
+  - name: "TRUNITCOST"
+    type: "FLOAT8"
+  - name: "TRCURR"
+    type: "SMALLINT"
+  - name: "TRRATE"
+    type: "FLOAT8"
+  - name: "REPORTRATE"
+    type: "FLOAT8"
+  - name: "LINENO_"
+    type: "INTEGER"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

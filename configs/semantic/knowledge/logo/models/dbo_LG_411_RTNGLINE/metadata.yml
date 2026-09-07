@@ -1,0 +1,38 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_RTNGLINE"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_RTNGLINE"
+properties:
+  "displayName": "dbo.LG_411_RTNGLINE"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "ROUTINGREF"
+    type: "INTEGER"
+  - name: "LINENO_"
+    type: "SMALLINT"
+  - name: "OPERATIONREF"
+    type: "INTEGER"
+  - name: "SPECODE"
+    type: "VARCHAR(11)"
+  - name: "COSTRELATED"
+    type: "SMALLINT"
+  - name: "PLANRELATED"
+    type: "SMALLINT"
+  - name: "OUTITEMREF"
+    type: "INTEGER"
+  - name: "LINEEXP"
+    type: "VARCHAR(51)"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"
+  - name: "WFSTATUS"
+    type: "INTEGER"

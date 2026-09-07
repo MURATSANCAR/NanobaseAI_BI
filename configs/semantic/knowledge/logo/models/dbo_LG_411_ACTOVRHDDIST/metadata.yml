@@ -1,0 +1,38 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_ACTOVRHDDIST"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_ACTOVRHDDIST"
+properties:
+  "displayName": "dbo.LG_411_ACTOVRHDDIST"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "EXPCENTERREF"
+    type: "INTEGER"
+  - name: "ACCOUNTREF"
+    type: "INTEGER"
+  - name: "OVHDCLNREF"
+    type: "INTEGER"
+  - name: "LINETYPE"
+    type: "SMALLINT"
+  - name: "PARENTREF"
+    type: "INTEGER"
+  - name: "TOTAL"
+    type: "FLOAT8"
+  - name: "RDTOTAL"
+    type: "FLOAT8"
+  - name: "REALCAPACITY"
+    type: "FLOAT8"
+  - name: "ACTUNITCOST"
+    type: "FLOAT8"
+  - name: "POSTEDPRDREF"
+    type: "INTEGER"
+  - name: "LOADRATE"
+    type: "FLOAT8"
+  - name: "ACCOUNTED"
+    type: "SMALLINT"
