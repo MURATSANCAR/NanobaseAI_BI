@@ -571,6 +571,10 @@ class ExistingCompiler:
         # Set by the runtime when the deployment runs a vector index. Absent, routing is the certified
         # catalog and the join graph alone — exactly what it was.
         self.router: Any = None
+        # Lexical/value search over the catalog's columns. Measured against this schema it finds what
+        # embeddings could not — a question naming a value ("trendyol") reaches the column that holds
+        # it — and costs milliseconds with nothing deployed. Off unless a deployment asks for it.
+        self.columns: Any = None
         self.catalog_entities: set[str] = set()
         # (entity, COLUMN) for every column a certified concept names — the measures, the
         # dimension values, and the default filters. These are the columns an answer is made of.
@@ -612,6 +616,9 @@ class ExistingCompiler:
                 add(slot.mapping.entity)
         resolved = list(ordered)
 
+        if self.columns is not None:
+            for entity, _score in self.columns.entities(q.question):
+                add(entity)
         if self.router is not None:
             for entity, _score in self.router.route(q.question, set(self.by_entity)):
                 add(entity)

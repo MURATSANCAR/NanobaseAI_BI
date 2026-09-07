@@ -177,6 +177,19 @@ class Runtime:
         # Vector routing over the catalog, for questions whose words nobody has written down yet. It
         # is strictly additional: the certified vocabulary above is consulted first and always, and a
         # deployment with no index — or one whose index is unreachable — routes exactly as before.
+        # Column-level lexical and value search. Nothing to deploy and nothing to keep in step: it is
+        # built from the catalog already in memory. Off by default because it changes which tables a
+        # question is answered from, which is a decision a deployment makes deliberately.
+        if os.environ.get("SEMANTIC_COLUMN_ROUTER", "").strip() in ("1", "true", "yes", "on"):
+            try:
+                from semantic_layer.runtime.column_index import ColumnIndex
+
+                existing.columns = ColumnIndex(self.profiles, existing.annotations)
+                log.info("column index enabled: %d columns, %d distinct values",
+                         len(existing.columns.docs), len(existing.columns.values))
+            except Exception as e:  # noqa: BLE001
+                log.warning("column index unavailable, routing from the catalog alone: %s", e)
+
         try:
             from semantic_layer.runtime.table_router import TableRouter
 

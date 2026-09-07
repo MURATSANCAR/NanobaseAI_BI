@@ -265,3 +265,37 @@ def test_either_embedding_service_is_spoken_to_in_its_own_dialect(monkeypatch):
     seen.clear()
     assert table_router.embed_request("http://wrapper/v1/embeddings", ["soru"]) == [[0.5, 0.5]]
     assert seen == ["input", "texts"], "a rejection has to be retried in the other dialect"
+
+
+def test_a_question_naming_a_value_finds_the_column_that_holds_it():
+    """No table description in this database contains the word Trendyol. The column does, in its
+    data, and that is the only thing in the catalog that can route the question. Embeddings over
+    table text were measured on this schema and could not do it — every score landed in a band 0.2
+    wide, which is another way of saying nothing matched."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+    from semantic_layer.runtime.column_index import ColumnIndex
+
+    def col(name, desc="", values=()):
+        return ColumnProfile(name=name, data_type="varchar(20)", description=desc,
+                             top_values=[(v, 10) for v in values],
+                             distinct_count=len(values) or None)
+
+    clfline = SchemaProfile(
+        datasource_id="logo", table_name="LG_411_01_CLFLINE", table_pattern="x", entity="CLFLINE",
+        columns=[col("TRADINGGRP", "Ticari işlem grubu", ("TRENDYOL", "HEPSIBURADA", "TIMASCOMTR")),
+                 col("LOGICALREF", "Fiziksel adres")])
+    clcard = SchemaProfile(
+        datasource_id="logo", table_name="LG_411_CLCARD", table_pattern="x", entity="CLCARD",
+        columns=[col("CITY", "Şehir"), col("DEFINITION_", "Cari hesap ünvanı")])
+    idx = ColumnIndex([clfline, clcard])
+
+    top = idx.search("trendyol satışları ne kadar?", limit=3)
+    assert top and (top[0]["entity"], top[0]["column"]) == ("CLFLINE", "TRADINGGRP"), top
+    assert "trendyol" in top[0]["values"], "the hit has to say it was the value that matched"
+
+    # Turkish is agglutinative: the question says şehirlerde, the column says Şehir.
+    cities = idx.search("hangi şehirlerde müşterimiz var?", limit=3)
+    assert ("CLCARD", "CITY") in [(h["entity"], h["column"]) for h in cities], cities
+
+    # A column nobody described and nothing matches is not returned as a weak best guess.
+    assert idx.entities("kaç adet uçak bileti kesilmiş") == []
