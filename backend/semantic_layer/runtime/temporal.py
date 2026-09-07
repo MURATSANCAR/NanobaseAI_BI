@@ -30,7 +30,7 @@ _PREV = r"(?:gecen|son|onceki|gecmis)"
 _YEAR = r"(20\d{2})"
 
 PRIMITIVES = (
-    "TODAY", "YESTERDAY", "LAST_N_DAYS", "THIS_WEEK", "LAST_WEEK", "THIS_MONTH", "LAST_MONTH",
+    "TODAY", "YESTERDAY", "LAST_N_DAYS", "THIS_WEEK", "LAST_WEEK", "THIS_MONTH", "LAST_MONTH", "LAST_N_YEARS",
     "THIS_QUARTER", "LAST_QUARTER", "THIS_YEAR", "LAST_YEAR", "MTD", "QTD", "YTD",
     "YEAR", "MONTH", "MONTH_RANGE", "AMBIGUOUS_RECENT",
 )
@@ -103,6 +103,9 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     for m in re.finditer(r"\bson\s+(\d{1,3})\s+gun\w*", text):
         n = int(m.group(1))
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_DAYS", today - timedelta(days=n), today + timedelta(days=1), "DAY", params={"n": n}))
+    for m in re.finditer(r"\bson\s+(\d{1,2})\s+yil\w*", text):
+        n = max(1, min(20, int(m.group(1))))
+        add(m, TemporalSlot(m.group(0).strip(), "LAST_N_YEARS", date(today.year - n + 1, 1, 1), date(today.year + 1, 1, 1), "YEAR", params={"n": n}))
     for m in re.finditer(r"\bson\s+(\d{1,2})\s+ay\w*", text):
         n = int(m.group(1))
         y, mo = today.year, today.month

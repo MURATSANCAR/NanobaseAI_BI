@@ -361,6 +361,18 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
     assert "listelenmedi" in prompt, "what was left out has to be said, not silently dropped"
     assert len(prompt) < 40_000, f"prompt is {len(prompt)} characters"
 
+    # a source that splits one entity across periods must not spend the context twice on it
+    import copy
+
+    inv = next(p for p in rt.profiles if p.entity == "INVOICE")
+    older = copy.deepcopy(inv)
+    older.table_name, older.context = "LG_211_01_INVOICE", {"n0": "211", "n1": "01"}
+    doubled = rt.profiles + [older]
+    twice = ExistingCompiler(FakeLlm([""]), doubled, {}, conventions=rt.conventions)
+    twice.catalog_entities = rt.existing.catalog_entities
+    text = twice.build_messages(sq, [])[0]["content"]
+    assert text.count("(INVOICE)") <= 1, "one entry per entity, not one per period"
+
 
 def test_a_period_after_the_last_loaded_row_is_still_answered(catalog, profiles):
     """A month with no rows yet is a loading state, not a gap in what this source covers. Refusing it

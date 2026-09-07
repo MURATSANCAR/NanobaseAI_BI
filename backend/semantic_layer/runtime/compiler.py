@@ -518,10 +518,15 @@ class ExistingCompiler:
             for p in self.profiles:
                 if self.table_label(p) in (r.get("sql") or ""):
                     wanted.add(p.entity)
-        for entity in list(wanted):
+        core = set(wanted)
+        for entity in list(core):
             for other in self.by_entity:
                 if other not in wanted and self.conventions.join_path(entity, other):
                     wanted.add(other)
+        if len(wanted) > self.max_prompt_tables:
+            # the ones the question actually named come first, then their neighbours by size
+            rest = sorted(wanted - core, key=lambda e: -((self.by_entity.get(e).row_count or 0) if self.by_entity.get(e) else 0))
+            wanted = set(list(core)[: self.max_prompt_tables]) | set(rest[: max(0, self.max_prompt_tables - len(core))])
         if not wanted:
             # nothing certified yet and nothing resolved: fall back to the biggest tables, which is what
             # a person opening this schema for the first time would look at
@@ -529,10 +534,22 @@ class ExistingCompiler:
             wanted = {p.entity for p in ranked[: self.max_prompt_tables]}
         return wanted
 
+    def _one_per_entity(self, entities: Optional[set[str]]) -> list[SchemaProfile]:
+        """One profile per entity. The model reasons about the entity; which physical tables a period
+        needs is the compiler's job, and listing each period separately only spends context twice."""
+        out: dict[str, SchemaProfile] = {}
+        for prof in self.profiles:
+            if entities is not None and prof.entity not in entities:
+                continue
+            best = out.get(prof.entity)
+            if best is None or (prof.row_count or 0) > (best.row_count or 0):
+                out[prof.entity] = prof
+        return list(out.values())
+
     def model_index(self, entities: Optional[set[str]] = None) -> str:
-        shown = [p for p in self.profiles if entities is None or p.entity in entities]
+        shown = self._one_per_entity(entities)
         lines = ["### Tablolar"]
-        left_out = len(self.profiles) - len(shown)
+        left_out = len({p.entity for p in self.profiles}) - len(shown)
         for p in shown:
             pk = ", ".join(p.primary_key) or "-"
             rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}' for r in p.relationships[:6])
@@ -550,9 +567,7 @@ class ExistingCompiler:
     def schema_context(self, q: SemanticQuery, recalled: list[dict[str, str]], entities: Optional[set[str]] = None) -> str:
         wanted = entities if entities is not None else self.relevant_entities(q, recalled)
         lines = []
-        for p in self.profiles:
-            if p.entity not in wanted:
-                continue
+        for p in self._one_per_entity(wanted):
             cols = []
             for c in p.columns:
                 desc = ""
