@@ -5,9 +5,15 @@
  *  - STLINE.OUTCOST = BİRİM maliyet → satır maliyeti AMOUNT*OUTCOST; maliyetlendirme aylık gecikmeli
  *  - CLCARD.SPECODE2 = satış kanalı, ITEMS.SPECODE = yayınevi (imprint)
  *  - Her sorgu CANCELLED = 0 filtreler.
- * SQL, semantik motorun model adlarıyla yazılır (dbo_LG_411_01_INVOICE ...).
+ * SQL, semantik motorun model adlarıyla yazılır (dbo_LG_<firma>_<dönem>_INVOICE ...).
+ *
+ * Tablo adları seçilen yıla göre kurulur: Logo her yılı ayrı bir firma numarasında tutar, dolayısıyla
+ * yıl değiştirmek sorgunun gittiği tabloyu değiştirir. Bir dönem birden çok yıl taşıyabildiği için
+ * (211 = 2021–2025) her sorgu ayrıca yılın tarih aralığıyla sınırlanır — yoksa 2023 sorulduğunda beş
+ * yılın toplamı döner.
  */
 import { runSql } from './engine';
+import { model, type Period } from './periods';
 import fixture from '../fixtures/cockpit.json';
 
 export type Monthly = { month: number; sales: number; returns: number; purchases: number };
@@ -26,12 +32,18 @@ export type CockpitData = {
   imprints: Imprint[];
 };
 
-const INV = 'dbo_LG_411_01_INVOICE';
-const STL = 'dbo_LG_411_01_STLINE';
-const CLC = 'dbo_LG_411_CLCARD';
-const ITM = 'dbo_LG_411_ITEMS';
-
-export const SQL = {
+/** Seçilen yılın tabloları ve o yıla ait tarih aralığı. */
+export function sqlFor(p: Period, year: number) {
+  const INV = model(p, 'INVOICE');
+  const STL = model(p, 'STLINE');
+  const CLC = model(p, 'CLCARD', false);
+  const ITM = model(p, 'ITEMS', false);
+  const y0 = `${year}-01-01`;
+  const y1 = `${year + 1}-01-01`;
+  /** Dönem tek bir yılsa aralık zaten tablonun tamamıdır; yine de yazılır — tablo adı yanlış bir
+   *  firmaya düşerse sonuç sessizce başka bir yılın rakamı olmasın. */
+  const inYear = (col = '"DATE_"') => `${col} >= '${y0}' AND ${col} < '${y1}'`;
+  return {
   summary: `
 SELECT
   SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS sales,
@@ -40,15 +52,15 @@ SELECT
   SUM(CASE WHEN "TRCODE" IN (7,8,9) THEN 1 ELSE 0 END)          AS invoices,
   MAX("DATE_") AS last_date
 FROM ${INV}
-WHERE "CANCELLED" = 0`,
+WHERE "CANCELLED" = 0 AND ${inYear()}`,
   // Bu MSSQL yolunda EXTRACT/DATE_PART/DATE_TRUNC çevrilemiyor; aylar tarih aralığı kovalarıyla alınır
   // ve istemci tarafında (parseMonthly) satıra çevrilir.
   monthly: `
 SELECT
 ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
   .map((m) => {
-    const from = `2026-${String(m).padStart(2, '0')}-01`;
-    const to = m === 12 ? '2027-01-01' : `2026-${String(m + 1).padStart(2, '0')}-01`;
+    const from = `${year}-${String(m).padStart(2, '0')}-01`;
+    const to = m === 12 ? `${year + 1}-01-01` : `${year}-${String(m + 1).padStart(2, '0')}-01`;
     const inMonth = `"DATE_" >= '${from}' AND "DATE_" < '${to}'`;
     return [
       `  SUM(CASE WHEN ${inMonth} AND "TRCODE" IN (7,8,9) THEN "NETTOTAL" ELSE 0 END) AS s${m}`,
@@ -67,7 +79,7 @@ SELECT
   SUM(CASE WHEN "LINETYPE" = 0 AND "OUTCOST" <> 0 THEN "AMOUNT" * "OUTCOST" ELSE 0 END) AS cost,
   MAX(CASE WHEN "LINETYPE" = 0 AND "OUTCOST" <> 0 THEN "DATE_" END)                     AS cost_until
 FROM ${STL}
-WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8)`,
+WHERE "CANCELLED" = 0 AND "TRCODE" IN (7,8) AND ${inYear()}`,
   channels: `
 SELECT
   COALESCE(NULLIF(c."SPECODE2", ''), '(boş)') AS channel,
@@ -75,7 +87,7 @@ SELECT
   COUNT(DISTINCT i."CLIENTREF") AS customers
 FROM ${INV} i
 JOIN ${CLC} c ON c."LOGICALREF" = i."CLIENTREF"
-WHERE i."CANCELLED" = 0 AND i."TRCODE" IN (2,3,7,8,9)
+WHERE i."CANCELLED" = 0 AND i."TRCODE" IN (2,3,7,8,9) AND ${inYear('i."DATE_"')}
 GROUP BY COALESCE(NULLIF(c."SPECODE2", ''), '(boş)')
 ORDER BY net DESC
 LIMIT 8`,
@@ -90,11 +102,12 @@ SELECT
   SUM(CASE WHEN sl."TRCODE" IN (7,8) AND sl."OUTCOST" <> 0 THEN sl."TOTAL" ELSE 0 END) AS costed_revenue
 FROM ${STL} sl
 JOIN ${ITM} it ON it."LOGICALREF" = sl."STOCKREF"
-WHERE sl."CANCELLED" = 0 AND sl."LINETYPE" = 0 AND sl."TRCODE" IN (2,3,7,8)
+WHERE sl."CANCELLED" = 0 AND sl."LINETYPE" = 0 AND sl."TRCODE" IN (2,3,7,8) AND ${inYear('sl."DATE_"')}
 GROUP BY COALESCE(NULLIF(it."SPECODE", ''), '(boş)')
 ORDER BY net DESC
 LIMIT 8`,
-};
+  };
+}
 
 const n = (v: unknown): number => (v == null ? 0 : Number(v));
 const s = (v: unknown): string => (v == null ? '' : String(v));
@@ -112,7 +125,8 @@ function parseMonthly(row: Record<string, unknown>): Monthly[] {
   return out;
 }
 
-export async function loadLive(): Promise<CockpitData> {
+export async function loadLive(p: Period, year: number): Promise<CockpitData> {
+  const SQL = sqlFor(p, year);
   const [summary, monthly, lines, channels, imprints] = await Promise.all([
     runSql(SQL.summary),
     runSql(SQL.monthly),
@@ -154,11 +168,11 @@ export function loadFixture(): CockpitData {
 export type DataMode = 'live' | 'fixture' | 'auto';
 
 /** auto: motor cevap veriyorsa canlı, veremiyorsa fixture (arayüzde "önbellek" etiketiyle). */
-export async function loadCockpit(mode: DataMode): Promise<CockpitData> {
+export async function loadCockpit(mode: DataMode, p: Period, year: number): Promise<CockpitData> {
   if (mode === 'fixture') return loadFixture();
-  if (mode === 'live') return loadLive();
+  if (mode === 'live') return loadLive(p, year);
   try {
-    return await loadLive();
+    return await loadLive(p, year);
   } catch {
     return loadFixture();
   }

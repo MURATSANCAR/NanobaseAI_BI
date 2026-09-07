@@ -21,6 +21,10 @@ export function TopBar({
   live,
   engineOk,
   periodLabel,
+  years,
+  year,
+  onYear,
+  yearsPending,
   onSearch,
   updatedAt,
   ageSec,
@@ -32,6 +36,14 @@ export function TopBar({
   engineOk: boolean | null;
   /** "2026 · Ocak–Ağustos" — veri kesitinden türetilir */
   periodLabel: string;
+  /** Seçilebilecek yıllar, yeniden eskiye. Logo her yılı ayrı bir firmada tuttuğu için bu liste
+   *  veritabanının kendi dönem tablosundan gelir, sabit bir aralıktan değil. */
+  years: number[];
+  /** Şu an bakılan yıl; liste gelene kadar null */
+  year: number | null;
+  /** Kullanıcı yıl seçti */
+  onYear: (year: number) => void;
+  yearsPending: boolean;
   /** Arama = Timaş Finans'a soru: girişe odaklanır */
   onSearch: () => void;
   /** Bu tablonun tarayıcıya ulaştığı an (ms) — 0 ise elde henüz bir tablo yok */
@@ -101,10 +113,26 @@ export function TopBar({
           </span>
         </div>
 
-        <div className="chip h-9 gap-2 border-ink/30">
+        {/* Yıl seçimi. Ekranın gösterdiği her rakam bu seçime aittir, o yüzden en üstte ve seçilebilir
+            durur — okuyan hangi yıla baktığını aramak zorunda kalmaz. */}
+        <label className="chip h-9 gap-2 border-ink/30 pr-1.5" title="Bakılan yıl">
           <Calendar size={14} className="shrink-0" />
-          <span className="font-semibold text-ink">{periodLabel}</span>
-        </div>
+          <span className="sr-only">Yıl</span>
+          {years.length ? (
+            <select
+              value={year ?? ''}
+              onChange={(e) => onYear(Number(e.target.value))}
+              className="cursor-pointer rounded-md bg-transparent py-0.5 pr-1 font-semibold text-ink outline-none focus:ring-1 focus:ring-brand"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="font-semibold text-ink-muted">{yearsPending ? 'yıllar geliyor…' : '—'}</span>
+          )}
+          <span className="hidden border-l border-line pl-2 text-[11px] text-ink-muted sm:inline">{periodLabel}</span>
+        </label>
 
         {/* Rakamın yaşı: ekran kendi kendine yenilendiği için "canlı" tek başına bir şey söylemez. */}
         <div

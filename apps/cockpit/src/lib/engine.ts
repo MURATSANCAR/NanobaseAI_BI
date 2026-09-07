@@ -172,6 +172,10 @@ export type CatalogTable = {
   tableName: string;
   tablePattern: string;
   schema: string;
+  /** Tablonun ait olduğu firma numarası (Logo'da: yıl). Böyle bir öneki olmayan tabloda null. */
+  scope?: string | null;
+  /** Firma içindeki dönem numarası. */
+  scopeSub?: string | null;
   description?: string | null;
   rowCount?: number | null;
   primaryKey: string[];
@@ -187,6 +191,9 @@ export type CatalogPage = {
   tables: CatalogTable[];
   tableCount: number;
   total: number;
+  /** Katalogda hangi firmalar var ve her birinde kaç tablo — sayfalamadan önce, tamamı üzerinden
+   *  sayılır. Ekrandaki filtre seçeneklerini bu besler. */
+  scopes?: Array<{ code: string; tables: number }>;
   /** Katalog okunamadığında dolu gelir — boş liste "veri yok" demek değildir. */
   warning?: string;
 };
@@ -205,9 +212,10 @@ async function get<T>(path: string, timeoutMs = 60_000): Promise<T> {
 }
 
 /** Tablo listesi. Kolon ayrıntısı istenmez — tüm envanter sekiz megabayt, liste birkaç kilobayt. */
-export function catalogTables(search: string, limit = 60, offset = 0): Promise<CatalogPage> {
+export function catalogTables(search: string, limit = 60, offset = 0, scope = ''): Promise<CatalogPage> {
   const qs = new URLSearchParams({ columns: 'false', limit: String(limit), offset: String(offset) });
   if (search.trim()) qs.set('q', search.trim());
+  if (scope) qs.set('scope', scope);
   return get<CatalogPage>(`/api/v1/schema/inventory?${qs.toString()}`);
 }
 

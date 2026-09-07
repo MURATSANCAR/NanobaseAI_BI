@@ -543,6 +543,7 @@ class ModelFileConnector:
                 table = model.split("_", 1)[1] if model.startswith("dbo_") else model
                 self.enum[(table.upper(), str(e.get("column")).upper())] = e
         self._closed = False
+        self._is_logo: Optional[bool] = None
 
     def list_tables(self, schema: str, like: Optional[str] = None) -> list[tuple[str, str]]:
         pat = None
@@ -555,16 +556,77 @@ class ModelFileConnector:
         out = []
         for c in m.get("columns") or []:
             props = c.get("properties") or {}
-            out.append({"name": c["name"], "data_type": str(c.get("type") or ""), "nullable": not bool(c.get("not_null")), "pk": bool(c.get("is_primary_key")), "description": props.get("description")})
+            out.append({"name": c["name"], "data_type": str(c.get("type") or ""), "nullable": not bool(c.get("not_null")), "pk": bool(c.get("is_primary_key")), "description": self._describe(table, c["name"], props.get("description"))})
         return out
+
+    #: A profiler annotation, not a sentence anybody wrote: "[enum] 3, 1, 4, 22 · 4 farklı değer".
+    _ANNOTATION = re.compile(r"\[(?:enum|unit|time|pii)\]")
+
+    @classmethod
+    def _is_written(cls, text: Optional[str]) -> bool:
+        """Whether a description carries prose, or is only the annotations a previous run derived."""
+        return bool(cls._ANNOTATION.split(str(text or ""), 1)[0].strip())
+
+    @property
+    def _logo(self) -> bool:
+        from semantic_layer.profiler import logo_dictionary
+
+        if self._is_logo is None:
+            self._is_logo = logo_dictionary.is_logo_schema(self._table_names())
+        return self._is_logo
+
+    def _describe(self, table: str, column: str, exported: Optional[str]) -> Optional[str]:
+        """The export's own words, with the vendor dictionary supplying what it never had.
+
+        A sentence someone typed is the last word: it carries the filters an answer needs — which
+        rows count as cancelled, which document code is a sale — and no vendor line displaces it.
+        A bare "[enum] 3, 1, 4, 22 · 4 farklı değer" is this pipeline's own earlier output, which
+        says which codes occur and nothing about what any of them means; there the vendor's labels
+        go in front, so the annotation keeps its place and the codes finally get their names.
+        """
+        if self._is_written(exported) or not self._logo:
+            return exported
+        from semantic_layer.profiler import logo_dictionary
+
+        sentence = logo_dictionary.column_description(table, column)
+        if not sentence:
+            return exported
+        return f"{sentence} {exported}".strip() if exported else sentence
 
     def table_description(self, table: str) -> Optional[str]:
         return ((self.models.get(table) or {}).get("properties") or {}).get("description")
 
+    def _table_names(self) -> list[str]:
+        return sorted(self.models)
+
+    def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
+        """Every table and column this export can speak for, in the shape a connector returns.
+
+        The column text is already composed by `columns()` — the export's own words, with the vendor
+        dictionary filling in what it never had. What is left for here is the table's own line.
+        """
+        out: dict[tuple[str, Optional[str]], str] = {}
+        for table in self.models:
+            for c in self.columns(schema, table):
+                if text := c.get("description"):
+                    out[(table, c["name"])] = str(text)
+            if desc := self.table_description(table):
+                out[(table, None)] = str(desc)
+            elif self._logo:
+                from semantic_layer.profiler import logo_dictionary
+
+                if sentence := logo_dictionary.table_description(table):
+                    out[(table, None)] = sentence
+        return out
+
     def primary_keys(self, schema: str, table: str) -> list[str]:
         m = self.models.get(table) or {}
         pk = m.get("primary_key")
-        return [pk] if pk else [c["name"] for c in self.columns(schema, table) if c.get("pk")]
+        if keys := ([pk] if pk else [c["name"] for c in self.columns(schema, table) if c.get("pk")]):
+            return keys
+        from semantic_layer.profiler import logo_dictionary
+
+        return logo_dictionary.primary_key(table, [c["name"] for c in self.columns(schema, table)])
 
     def foreign_keys(self, schema: str) -> list[dict[str, str]]:
         out = []
@@ -574,7 +636,18 @@ class ModelFileConnector:
             if m:
                 a, ca, b, cb = m.groups()
                 out.append({"table": a.split("_", 1)[1] if a.startswith("dbo_") else a, "column": ca, "ref_table": b.split("_", 1)[1] if b.startswith("dbo_") else b, "ref_column": cb})
-        return out
+        # relationships.yml holds the joins someone exported — a dozen of them. The dictionary holds
+        # the ones Logo never declared anywhere, and a join already exported is not added twice.
+        from semantic_layer.profiler import logo_dictionary
+
+        names = self._table_names()
+        if not logo_dictionary.is_logo_schema(names):
+            return out
+        known = {(f["table"], f["column"]) for f in out}
+        added = [f for f in logo_dictionary.foreign_keys(names) if (f["table"], f["column"]) not in known]
+        if added:
+            log.info("Logo data dictionary supplied %d joins the export does not declare", len(added))
+        return out + added
 
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]:
         e = self.enum.get((table.upper(), column.upper()))

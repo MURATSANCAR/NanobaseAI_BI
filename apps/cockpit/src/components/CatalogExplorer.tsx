@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, KeyRound, Link2, Lock, Pencil, Search, Sparkles, X } from 'lucide-react';
+import { AlertTriangle, CalendarRange, Check, ChevronDown, ChevronLeft, ChevronRight, KeyRound, Link2, Lock, Pencil, Search, Sparkles, X } from 'lucide-react';
 import clsx from 'clsx';
 import { acceptSuggestion, catalogTable, catalogTables, dismissSuggestion, rewriteLabel, writeLabel, type CatalogColumn, type CatalogTable } from '../lib/engine';
+import { usePeriods } from '../hooks/useCockpit';
+import { yearIndex } from '../lib/periods';
 
 /** Veri sözlüğü: taramada bulunan tablolar, kolonları ve aralarındaki ilişkiler.
  *
@@ -25,13 +27,33 @@ const PAGE = 40;
 
 export function CatalogExplorer() {
   const [search, setSearch] = useState('');
+  const [scope, setScope] = useState('');        // '' = tüm yıllar
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
+  const periods = usePeriods();
   const list = useQuery({
-    queryKey: ['catalog-tables', search, page],
-    queryFn: () => catalogTables(search, PAGE, page * PAGE),
+    queryKey: ['catalog-tables', search, scope, page],
+    queryFn: () => catalogTables(search, PAGE, page * PAGE, scope),
     staleTime: 5 * 60_000,
   });
+
+  // Katalogda hangi firmalar var, ve her firma hangi yılları taşıyor. İkisini birleştirmek gerekir:
+  // katalog firma numarasını bilir ama yılını bilmez, dönem tablosu yılı bilir ama katalogda o
+  // firmanın tablosu olup olmadığını bilmez. Yıl bilinmiyorsa numara yazılır — uydurulmaz.
+  const choices = useMemo(() => {
+    const byFirm = new Map<string, number[]>();
+    for (const [year, p] of yearIndex(periods.data ?? [])) {
+      byFirm.set(p.firm, [...(byFirm.get(p.firm) ?? []), year]);
+    }
+    return (list.data?.scopes ?? []).map(({ code, tables }) => {
+      const years = (byFirm.get(code) ?? []).sort((a, b) => a - b);
+      const label = years.length === 0 ? code
+        : years.length === 1 ? String(years[0])
+        : `${years[0]}–${years[years.length - 1]}`;
+      return { code, label, tables, sort: years[years.length - 1] ?? -1 };
+    }).sort((a, b) => b.sort - a.sort || a.code.localeCompare(b.code));
+  }, [list.data?.scopes, periods.data]);
+  const pick = (code: string) => { setScope(code); setPage(0); setOpen(null); };
   const total = list.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE));
   const from = total ? page * PAGE + 1 : 0;
@@ -64,10 +86,25 @@ export function CatalogExplorer() {
           />
         </div>
 
+        {/* Yıl süzgeci. Logo aynı tablo takımını her yıl için yeniden kurar; süzgeç olmadan sözlük
+            aynı INVOICE'ı on kez gösterir ve okuyan hangisine baktığını ayırt edemez. Bölünmemiş bir
+            kaynakta hiç çıkmaz. */}
+        {choices.length > 1 ? (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 inline-flex items-center gap-1 text-[11px] text-ink-muted">
+              <CalendarRange size={13} /> Yıl
+            </span>
+            <FilterChip active={scope === ''} onClick={() => pick('')} label="tümü" count={choices.reduce((a, c) => a + c.tables, 0)} />
+            {choices.map((c) => (
+              <FilterChip key={c.code} active={scope === c.code} onClick={() => pick(c.code)} label={c.label} count={c.tables} title={`firma ${c.code}`} />
+            ))}
+          </div>
+        ) : null}
+
         {list.data ? (
           <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-line pt-3">
             <span className="text-[13px] text-ink">
-              <span className="font-semibold">{nf(total)}</span> tablo{search.trim() ? ' eşleşti' : ''}
+              <span className="font-semibold">{nf(total)}</span> tablo{search.trim() || scope ? ' eşleşti' : ''}
             </span>
             <span className="text-[11px] text-ink-faint">en dolu tablodan en boşa doğru</span>
             <span className="ml-auto flex items-center gap-1.5">
@@ -102,6 +139,23 @@ export function CatalogExplorer() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+function FilterChip({ active, onClick, label, count, title }: { active: boolean; onClick: () => void; label: string; count: number; title?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={clsx(
+        'inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[11px] transition',
+        active ? 'border-brand bg-brand text-white' : 'border-line bg-white text-ink-muted hover:border-brand hover:text-brand',
+      )}
+    >
+      {label}
+      <span className={clsx('text-[10px]', active ? 'text-white/70' : 'text-ink-faint')}>{nf(count)}</span>
+    </button>
   );
 }
 

@@ -1,6 +1,6 @@
 {
  "source": "LDDS.xls",
- "generated_at": "2026-09-07T12:03:23+00:00",
+ "generated_at": "2026-09-07T12:07:07+00:00",
  "generator": "backend/scripts/import_logo_ldds.py",
  "table_count": 330,
  "column_count": 9303,
@@ -1485,8 +1485,9 @@
      "description": "Year"
     },
     "TOTALS_CAHAMNT": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Aylık toplam satış tutarları                     (tüm aylar için)"
     }
    },
@@ -2555,53 +2556,63 @@
      "description": "Affects Risk"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -7077,58 +7088,69 @@
      "description": "Total Exception Additional Tax Amount"
     },
     "GENEXP5": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
+     "size": 51,
      "description_tr": "Fiş genel açıklaması"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -9300,58 +9322,69 @@
      "description": "Is cancelled invoice's VAT amount transferred?"
     },
     "GENEXP5": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
+     "size": 51,
      "description_tr": "Fiş genel açıklaması"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -11212,53 +11245,63 @@
      "description": "Data Processing Site"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -15451,53 +15494,63 @@
      "description": "Automatic Posting Sign"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saniye"
     }
    },
@@ -17157,53 +17210,63 @@
      "description": "Is cancelled invoice's VAT amount transferred?"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -17861,53 +17924,63 @@
      "description": "AR/AP balance will be affected 1: Yes 0: No"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -18389,53 +18462,63 @@
      "description": "From Bank"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -23490,53 +23573,63 @@
      "description": "POS Terminal Number"
     },
     "CAPIBLOK_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "CAPIBLOK_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "CAPIBLOK_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "CAPIBLOK_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "CAPIBLOK_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "CAPIBLOK_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "CAPIBLOK_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği  Tarih"
     },
     "CAPIBLOK_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saat"
     },
     "CAPIBLOK_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Dakika"
     },
     "CAPIBLOK_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği  Saniye"
     }
    },
@@ -23867,13 +23960,15 @@
      "description": "Variant Port Logical Reference"
     },
     "SITEID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Bölge no"
     },
     "ORGLOGICREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Orjinal kayıt referansı"
     }
    },
@@ -39068,8 +39163,9 @@
      "description": "Delivery Time"
     },
     "ACTTOATLCOST": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Gerçekleşen total maliyet"
     }
    },
@@ -42607,8 +42703,9 @@
      "description": "Not In Use"
     },
     "RESERVED": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Fiili stok"
     }
    },
@@ -43914,18 +44011,20 @@
      "description": "Fee Difference Overhead Pool"
     },
     "PLANTNR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Fabrika No"
     },
     "LOCKSTR": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     },
     "COUNTER": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     }
    },
@@ -70360,27 +70459,31 @@
    "description": "",
    "columns": {
     "LREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "TYP": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "OWNER": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "ID": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -70397,32 +70500,37 @@
    "description": "",
    "columns": {
     "LREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "MODULE_": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "INFOTYPE": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "OBJID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "INSTID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -70439,17 +70547,19 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "COUNTRY": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Ülke"
     },
     "NAME": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Şehir adı"
     }
@@ -70466,27 +70576,29 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "CODE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Ülke kodu"
     },
     "NAME": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Ülke adı"
     },
     "COUNTRYNR": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Ülke numarası"
     },
     "STATESTR": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Eyalet için ayrılan alan"
     }
@@ -70503,38 +70615,45 @@
    "description": "",
    "columns": {
     "LREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "DATE_": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Tarih"
     },
     "CRTYPE": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Döviz türü"
     },
     "RATES1": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Oran1"
     },
     "RATES2": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Oran2"
     },
     "RATES3": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Oran3"
     },
     "RATES4": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Oran4"
     }
    },
@@ -70550,32 +70669,37 @@
    "description": "",
    "columns": {
     "LREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "INFOTYP": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "INFOREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "DOCTYP": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "DOCNR": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -70592,48 +70716,57 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "USRNR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kullanıcı No"
     },
     "TERMNR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Terminal No"
     },
     "LLOGINDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Programa giriş tarihi"
     },
     "LLOGINTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Programa giriş saati"
     },
     "LLOGOUTDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Programdan çıkış tarihi"
     },
     "LLOGOUTTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Programdan çıkış saati"
     },
     "ABNTERMS": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "TDEFERRORS": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     }
    },
@@ -70649,803 +70782,928 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "DOCIDEN": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Döküman no"
     },
     "APPMODULE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Modül no"
     },
     "FIRMID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Firma no"
     },
     "DIVISID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Bölüm no"
     },
     "WHID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Ambar no"
     },
     "FACTID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fabrika no"
     },
     "GROUPID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Şablonu kullanabilecek gruplar"
     },
     "ROLEID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Şablonu kullanabilecek roller"
     },
     "USERID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Şablonu kullanabilecek kullanıcılar"
     },
     "FIRSTNUM": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Başlangıç numarası"
     },
     "LASTNUM": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Bitiş numarası"
     },
     "EFFSDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Atama başlangıç tarihi"
     },
     "EFFEDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Atama bitiş tarihi"
     },
     "NUMFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Numara formatı sayı/metin"
     },
     "LASTASGND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Son atama tarihi"
     },
     "SEGMENTS1_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS1_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS1_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS1_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS1_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Sıralama"
     },
     "SEGMENTS1_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS1_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS1_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS1_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS2_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS2_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS2_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS2_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS2_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Sıralama"
     },
     "SEGMENTS2_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS2_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS2_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS2_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS3_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS3_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS3_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS3_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS3_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS3_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS3_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS3_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS3_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS4_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS4_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS4_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS4_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS4_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS4_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS4_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS4_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS4_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS5_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS5_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS5_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS5_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS5_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS5_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS5_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS5_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS5_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS6_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS6_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS6_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS6_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS6_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS6_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS6_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS6_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS6_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS7_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS7_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS7_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS7_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS7_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS7_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS7_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS7_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS7_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS8_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS8_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS8_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS8_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS8_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS8_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS8_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS8_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS8_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS9_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS9_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS9_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS9_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS9_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS9_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS9_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS9_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS9_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS10_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS10_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS10_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS10_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS10_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS10_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS10_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS10_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS10_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS11_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS11_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS11_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS11_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS11_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS11_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS11_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS11_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS11_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS12_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS12_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS12_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS12_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS12_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS12_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS12_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS12_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS12_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS13_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS13_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS13_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS13_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS13_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS13_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS13_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS13_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS13_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS14_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS14_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS14_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS14_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS14_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS14_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS14_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS14_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS14_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS15_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS15_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS15_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS15_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS15_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS15_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS15_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS15_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS15_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     },
     "SEGMENTS16_SEGSTART": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık başlangıcı"
     },
     "SEGMENTS16_SEGEND": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Aralık bitişi"
     },
     "SEGMENTS16_SEGLEN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Karakter sayısı"
     },
     "SEGMENTS16_FILLCH": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Boşluk karakteri"
     },
     "SEGMENTS16_SEGFORM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Format"
     },
     "SEGMENTS16_INCREM": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Artırımlı"
     },
     "SEGMENTS16_TXTLANG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Dili"
     },
     "SEGMENTS16_RESVD1": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 1"
     },
     "SEGMENTS16_RESVD2": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Rezerve alan 2"
     }
    },
@@ -71461,13 +71719,15 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "DOCID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kayıt Tipi",
      "values_tr": {
       "1": "Malzeme",
@@ -71477,13 +71737,15 @@
      }
     },
     "DOCREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kayıt referansı"
     },
     "FIELDID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Alan tipi",
      "values_tr": {
       "1": "Malzeme Açıklaması",
@@ -71493,8 +71755,9 @@
      }
     },
     "LANGID": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Seçilen dil"
     }
    },
@@ -71510,18 +71773,20 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "LOCKSTR": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Lock açıklaması"
     },
     "COUNTER": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Sayaç"
     }
    },
@@ -71537,23 +71802,27 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "PRODORDREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Üretim emirleri kartı"
     },
     "POLINEREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İş emri ref"
     },
     "OCCTYPE": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaynak tipi",
      "values_tr": {
       "1": "Çalışan",
@@ -71561,83 +71830,98 @@
      }
     },
     "OCCEXP": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Kaynak açıklaması"
     },
     "LABORREQREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Çalışan ihtiyaçları kartı"
     },
     "EMPREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Çalışan kartı referansı"
     },
     "TOOLREQREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Araç ihtiyaçları referansı"
     },
     "TOOLREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Araç kartı referansı"
     },
     "BEGDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Başlangıç tarihi"
     },
     "BEGTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Başlangıç saati"
     },
     "ENDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Bitiş tarihi"
     },
     "ENDTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Bitiş saati"
     },
     "DURATION": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "süre"
     },
     "ACTBEGDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Gerçekleşen başlangıç tarihi"
     },
     "ACTBEGTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Gerçekleşen başlangıç zamanı"
     },
     "ACTENDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Gerçekleşen bitiş tarihi"
     },
     "ACTENDTIME": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Gerçekleşen bitiş zamanı"
     },
     "ACTDURATION": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Gerçekleşen süre"
     },
     "AMOUNT": {
-     "type": "",
+     "type": "Double",
      "source": "structure-doc",
+     "size": 8,
      "description_tr": "Miktar"
     }
    },
@@ -71682,32 +71966,37 @@
    "description": "",
    "columns": {
     "LREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel Adres"
     },
     "INFOTYP": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "İç kullanım"
     },
     "INFOREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "DOCTYP": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "DOCNR": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "İç kullanım"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -71724,22 +72013,25 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "COUNTRY": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Ülke"
     },
     "CITY": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Şehir"
     },
     "POSTCODE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Posta Kodu"
     }
@@ -71756,28 +72048,33 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "DATATYPE": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Tasarım tipi"
     },
     "OWNERID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Tasarım no"
     },
     "INSTANCE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Örnek no"
     },
     "DEFAULTFLG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Default bayrağı",
      "values_tr": {
       "1": "Default",
@@ -71785,72 +72082,83 @@
      }
     },
     "TEMPNAME": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Tasarım adı"
     },
     "EXPLANATION": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Tasarım açıklaması"
     },
     "DATASIZE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Veri uzunluğu"
     },
     "UPDATEINFO_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "UPDATEINFO_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "UPDATEINFO_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "UPDATEINFO_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "UPDATEINFO_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "UPDATEINFO_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "UPDATEINFO_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği Tarih"
     },
     "UPDATEINFO_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saat"
     },
     "UPDATEINFO_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Dakika"
     },
     "UPDATEINFO_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saniye"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -71877,28 +72185,33 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "DATATYPE": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Tasarım tipi"
     },
     "OWNERID": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Tasarım no"
     },
     "INSTANCE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Örnek no"
     },
     "DEFAULTFLG": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Default bayrağı",
      "values_tr": {
       "1": "Default",
@@ -71906,72 +72219,83 @@
      }
     },
     "TEMPNAME": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Tasarım adı"
     },
     "EXPLANATION": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Tasarım açıklaması"
     },
     "DATASIZE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Veri uzunluğu"
     },
     "UPDATEINFO_CREATEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Oluşturan Kullanıcının Kodu"
     },
     "UPDATEINFO_CREATEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Oluşturulduğu Tarih"
     },
     "UPDATEINFO_CREATEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saat"
     },
     "UPDATEINFO_CREATEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Dakika"
     },
     "UPDATEINFO_CREATEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Oluşturulduğu Saniye"
     },
     "UPDATEINFO_MODIFIEDBY": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydı Değiştiren Kullanıcının Kodu"
     },
     "UPDATEINFO_MODIFIEDDATE": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Kaydın Değiştirildiği Tarih"
     },
     "UPDATEINFO_MODIFIEDHOUR": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saat"
     },
     "UPDATEINFO_MODIFIEDMIN": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Dakika"
     },
     "UPDATEINFO_MODIFIEDSEC": {
-     "type": "",
+     "type": "Integer",
      "source": "structure-doc",
+     "size": 2,
      "description_tr": "Kaydın Değiştirildiği Saniye"
     },
     "LDATA": {
-     "type": "",
+     "type": "Record",
      "source": "structure-doc",
      "description_tr": "İç kullanım"
     }
@@ -71998,32 +72322,33 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "CODE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Sevkiyat firması kodu"
     },
     "TITLE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Sevkiyat firması ünvanı"
     },
     "EMAIL": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "E_mail adresi"
     },
     "WEBADDR": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Internet adresi"
     },
     "TRACKINGFORM": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Izleme formu"
     }
@@ -72040,17 +72365,18 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "SCODE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Sevkiyat türü kodu"
     },
     "SDEF": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Sevkiyat türü açıklaması"
     }
@@ -72067,17 +72393,18 @@
    "description": "",
    "columns": {
     "LOGICALREF": {
-     "type": "",
+     "type": "Longint",
      "source": "structure-doc",
+     "size": 4,
      "description_tr": "Fiziksel adres"
     },
     "GCODE": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Ticari işlem grubu kodu"
     },
     "GDEF": {
-     "type": "",
+     "type": "ZString",
      "source": "structure-doc",
      "description_tr": "Ticari işlem grubu açıklaması"
     }
@@ -73268,5 +73595,6 @@
  "tr_column_count": 2830,
  "tr_coded_column_count": 163,
  "doc_only_column_count": 389,
+ "untyped_column_count": 0,
  "doc_relation_count": 30
 }

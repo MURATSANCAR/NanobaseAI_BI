@@ -81,7 +81,7 @@ def _bilingual(entry: dict[str, Any]) -> str:
 
     Questions arrive in Turkish, so "Cari hesap kartları" is the text a question about cari hesap can
     match; the English is the text the column names themselves were built from, and the only thing
-    that reads like `CLCARD`. Where the vendor gives both, both are kept.
+    that reads like an abbreviation. Where the vendor gives both, both are kept.
     """
     tr = str(entry.get("description_tr") or "").strip()
     en = str(entry.get("description") or "").strip()
@@ -118,21 +118,23 @@ def table_description(table_name: str) -> str:
 def primary_key(table_name: str, columns: list[str] | None = None) -> list[str]:
     """The primary key a Logo database does not declare.
 
-    Logo enforces uniqueness in the application, not in SQL Server: the constraint query returns
-    nothing for every table it owns, so profiling reports a schema in which no row is identifiable.
-    The dictionary's index listing says which columns are unique, and the one that matters is the
-    same everywhere — `LOGICALREF`, what every `*REF` column in the database points at.
+    Uniqueness here is enforced by the application, not by SQL Server: the constraint query returns
+    nothing for every table the vendor owns, so profiling reports a schema in which no row is
+    identifiable. The dictionary's index listing says which columns are unique.
     """
     indexes = _entry(table_name).get("indexes") or []
     present = {c.upper() for c in columns} if columns is not None else None
-    unique = [ix for ix in indexes
+    unique = [(pos, ix) for pos, ix in enumerate(indexes)
               if ix.get("unique") and ix.get("columns")
               and (present is None or present.issuperset(ix["columns"]))]
     if not unique:
         return []
-    # Shortest first, so a single-column key wins over a composite that also happens to be unique.
-    unique.sort(key=lambda ix: (ix["columns"] != ["LOGICALREF"], len(ix["columns"])))
-    return list(unique[0]["columns"])
+    # A table can have several unique indexes — a surrogate reference and a business code both are.
+    # The dictionary lists them in the vendor's own order and the row identifier is the one it lists
+    # first; shortest breaks a tie. Naming the identifying column here would tie the engine to one
+    # customer's schema, which is the thing this layer exists to avoid.
+    unique.sort(key=lambda pair: (pair[0], len(pair[1]["columns"])))
+    return list(unique[0][1]["columns"])
 
 
 def descriptions(table_names: list[str]) -> dict[tuple[str, Optional[str]], str]:

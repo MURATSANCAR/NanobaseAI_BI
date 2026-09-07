@@ -499,7 +499,7 @@ class Runtime:
         }
 
     # ------------------------------------------------------------------ portal layer
-    def inventory(self, *, search: str = "", entity: str = "", limit: int = 0, offset: int = 0, with_columns: bool = True) -> dict[str, Any]:
+    def inventory(self, *, search: str = "", entity: str = "", scope: str = "", limit: int = 0, offset: int = 0, with_columns: bool = True) -> dict[str, Any]:
         """The catalogue of what was discovered.
 
         The whole thing is eight megabytes across 837 tables and 27,000 columns, which is not something
@@ -512,7 +512,7 @@ class Runtime:
         fingerprint does neither: the first request after a rebuild pays, every one after it is free.
         """
         s = self.settings
-        key = (self._catalog_version, search.lower(), entity.upper(), limit, offset, with_columns)
+        key = (self._catalog_version, search.lower(), entity.upper(), scope.upper(), limit, offset, with_columns)
         hit = self._inventory_cache.get(key)
         if hit is not None:
             return hit
@@ -533,8 +533,17 @@ class Runtime:
                         concepts_by_col.setdefault((ref[0], ref[1]), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "formula": m.formula, "confidence": round(c.confidence, 2)})
         wanted = [p for p in self.profiles
                   if (not entity or p.entity.upper() == entity.upper())
+                  and (not scope or _table_scope(p.table_name)[0] == scope.upper())
                   and (not search or search.lower() in p.entity.lower() or search.lower() in p.table_name.lower()
                        or any(search.lower() in c.name.lower() for c in p.columns))]
+        # Which scopes exist at all, counted before the page is cut — the screen needs the full list of
+        # choices, not the ones that happen to fall on this page. A source with no scoping says nothing
+        # here and the screen shows no filter.
+        scopes: dict[str, int] = {}
+        for prof in self.profiles:
+            code = _table_scope(prof.table_name)[0]
+            if code:
+                scopes[code] = scopes.get(code, 0) + 1
         # Fullest first. A data dictionary is read to find where the business lives, and a schema of
         # hundreds of tables is mostly empty scaffolding; ordering by name buries the handful that
         # matter somewhere in the middle of the alphabet.
@@ -568,8 +577,10 @@ class Runtime:
                     "annotations": col_anns, "concepts": cons,
                     "status": "CERTIFIED" if any(x["status"] == ConceptStatus.CERTIFIED for x in cons) else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")),
                 })
+            scope_code, scope_sub = _table_scope(p.table_name)
             tables.append({
                 "entity": p.entity, "tableName": p.table_name, "tablePattern": p.table_pattern, "schema": p.schema_name,
+                "scope": scope_code or None, "scopeSub": scope_sub or None,
                 "context": label_context(p.context, s.pattern_labels),
                 "description": p.description, "rowCount": p.row_count, "primaryKey": p.primary_key, "relationships": p.relationships,
                 "annotations": [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, None), [])],
@@ -580,6 +591,7 @@ class Runtime:
                 "scannedAt": p.scanned_at.isoformat(),
             })
         out = {"datasourceId": s.datasource_id, "tables": tables, "tableCount": len(tables), "total": total,
+               "scopes": [{"code": c, "tables": n} for c, n in sorted(scopes.items(), key=lambda kv: kv[0])],
                "columnCount": sum(t["columnCount"] for t in tables), "undefinedColumns": undefined_cols,
                "catalog": self.store.status_counts(s.tenant_id, s.datasource_id), "version": self.store.latest_version(s.tenant_id, s.datasource_id)}
         if len(self._inventory_cache) > 24:      # a handful of views, not an unbounded memory of them
@@ -605,6 +617,20 @@ class Runtime:
 
 
 # ---------------------------------------------------------------------- FastAPI
+
+def _table_scope(table_name: str) -> tuple[str, str]:
+    """The sub-database a physical table belongs to, and its subdivision within it.
+
+    Sources that hold one set of tables per company, per fiscal year or per tenant encode that in the
+    name — `LG_411_01_INVOICE` is company 411, period 01 — and a catalogue of such a source is mostly
+    the same few hundred tables repeated. Without something to filter on, the screen shows one table
+    twenty times over and the reader cannot tell which copy is the one they want.
+
+    Nothing is guessed: a name that carries no such prefix returns nothing and is never filtered.
+    """
+    m = re.match(r"^[A-Z]+_(\d+)_(?:(\d+)_)?[A-Z][A-Z0-9_]*$", (table_name or "").upper())
+    return (m.group(1), m.group(2) or "") if m else ("", "")
+
 
 class RunSqlIn(BaseModel):
     sql: str
@@ -854,7 +880,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     # --- portal layer: schema inventory + annotations
     @app.get("/api/v1/schema/inventory")
-    def inventory(q: str = "", entity: str = "", limit: int = 0, offset: int = 0, columns: bool = True) -> dict[str, Any]:
+    def inventory(q: str = "", entity: str = "", scope: str = "", limit: int = 0, offset: int = 0, columns: bool = True) -> dict[str, Any]:
         """The catalogue, with a second attempt and an honest banner when it cannot be produced.
 
         A page that comes back empty and says nothing reads as "this database has nothing in it",
@@ -866,7 +892,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         last = ""
         for attempt in (1, 2):
             try:
-                out = r.inventory(search=q, entity=entity, limit=max(0, min(limit, 500)), offset=max(0, offset), with_columns=columns)
+                out = r.inventory(search=q, entity=entity, scope=scope, limit=max(0, limit), offset=max(0, offset), with_columns=columns)
                 if out["tables"] or out.get("total"):
                     return out
                 last = "katalog boş döndü"
@@ -876,8 +902,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             if attempt == 1:
                 r.rebuild()          # the catalog may have moved under a stale set of profiles
         empty = {"datasourceId": r.settings.datasource_id, "tables": [], "tableCount": 0, "total": 0,
-                 "columnCount": 0, "undefinedColumns": 0, "catalog": {}, "version": None}
-        if q or entity:
+                 "scopes": [], "columnCount": 0, "undefinedColumns": 0, "catalog": {}, "version": None}
+        if q or entity or scope:
             empty["warning"] = "Bu aramaya uyan tablo bulunamadı."
         else:
             empty["warning"] = (f"Katalog şu an okunamıyor ({last}). Gece taraması henüz çalışmamış olabilir; "

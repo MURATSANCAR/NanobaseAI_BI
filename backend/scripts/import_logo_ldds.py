@@ -192,7 +192,7 @@ def parse_structure_doc(text: str) -> dict[str, dict]:
         line = body[i].strip()
         if m := _heading(line):
             current = m.group("base")
-            entry = out.setdefault(current, {"columns": {}, "relations": []})
+            entry = out.setdefault(current, {"columns": {}, "relations": [], "types": {}})
             entry.setdefault("scope", "database" if m.group("db") else "period" if m.group("period") else "firm")
             entry.setdefault("physical", line)
             nxt = body[i + 1].strip() if i + 1 < len(body) else ""
@@ -214,6 +214,7 @@ def parse_structure_doc(text: str) -> dict[str, dict]:
 def _read_column(body: list[str], i: int, entry: dict) -> int:
     """One documented column: its name, its type, and the lines explaining it."""
     name = body[i].strip()
+    entry.setdefault("types", {})[name] = body[i + 1].strip()
     j = i + 2
     parts: list[str] = []
     while j < len(body):
@@ -261,6 +262,43 @@ def parse_tr_values(text: str) -> tuple[str, dict[str, str]]:
     return head, values
 
 
+#: The document's type names, mapped to the workbook's. Not guesswork: the two sources describe
+#: 2.480 columns in common, and every rule below is what that overlap actually says. The distinction
+#: the document draws in capitalisation is real — spelled-out "Integer" is the two-byte one in 94% of
+#: the overlap, while "int" is the four-byte Longint in 92%. Logo keeps a DateTime as a four-byte
+#: number, which is why a date column maps to Longint rather than to a date type.
+_DOC_TYPES: list[tuple[re.Pattern, str, Optional[int]]] = [
+    (re.compile(r"^z\s?string\s*(\d+)", re.I), "ZString", None),   # size read from the name itself
+    (re.compile(r"^(?:z\s?string|var\s?char|char|text)", re.I), "ZString", None),
+    (re.compile(r"^small\s?int", re.I), "Integer", 2),
+    (re.compile(r"^long\s?int", re.I), "Longint", 4),
+    (re.compile(r"^date\s?time", re.I), "Longint", 4),
+    (re.compile(r"^Integer"), "Integer", 2),                        # spelled out: the two-byte one
+    (re.compile(r"^int", re.I), "Longint", 4),                      # "int" / "İnt" / "Int": four bytes
+    (re.compile(r"^(?:float|double|money)", re.I), "Double", 8),
+    (re.compile(r"^(?:byte|bit|logical)", re.I), "Byte", 1),
+    (re.compile(r"^i?mage", re.I), "Record", None),
+]
+
+
+def normalize_doc_type(raw: str) -> tuple[str, Optional[int]]:
+    """`"SmallInt"` → `("Integer", 2)`, `"ZString51"` → `("ZString", 51)`.
+
+    The document is the only source for 389 columns the workbook never lists. Left untyped they are
+    names with a sentence attached, which is not enough to put one in a SELECT list or a filter.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return "", None
+    for pattern, name, size in _DOC_TYPES:
+        if m := pattern.match(text):
+            if m.groups() and m.group(1):
+                return name, int(m.group(1))
+            return name, size
+    # An unrecognised spelling is carried through as written rather than dropped or invented.
+    return text, None
+
+
 def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
     """Turkish alongside English, and the tables only the document knows.
 
@@ -270,7 +308,7 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
     consumer can tell a documented column from an undocumented one.
     """
     tables = data["tables"]
-    added, tr_tables, tr_columns, tr_values, unmatched, hinted = [], 0, 0, 0, 0, 0
+    added, tr_tables, tr_columns, tr_values, unmatched, untyped, hinted = [], 0, 0, 0, 0, 0, 0
     for base, entry in sorted(doc.items()):
         target = tables.get(base)
         if target is None:
@@ -291,9 +329,15 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
         for column, text in entry["columns"].items():
             col = target["columns"].get(column)
             if col is None:
-                # The document names a column the workbook does not. It is a real column of an older
-                # release; recorded without a type, because the document does not give one we trust.
-                col = target["columns"][column] = {"type": "", "source": "structure-doc"}
+                # The document names a column the workbook does not — a real column of a release the
+                # workbook was not written for. It is typed from what the document says, translated
+                # into the workbook's vocabulary so one type name means one thing across the file.
+                ctype, csize = normalize_doc_type(entry.get("types", {}).get(column, ""))
+                col = target["columns"][column] = {"type": ctype, "source": "structure-doc"}
+                if csize:
+                    col["size"] = csize
+                if not ctype:
+                    untyped += 1
                 unmatched += 1
             head, values = parse_tr_values(text)
             # The head can be empty — the document sometimes gives nothing but the codes — in which
@@ -320,6 +364,7 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
     data["tr_column_count"] = tr_columns
     data["tr_coded_column_count"] = tr_values
     data["doc_only_column_count"] = unmatched
+    data["untyped_column_count"] = untyped
     data["doc_relation_count"] = hinted
     return data
 

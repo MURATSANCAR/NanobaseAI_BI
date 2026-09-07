@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, Percent, ShoppingCart, TrendingUp, Undo2 } from 'lucide-react';
 import { Sidebar, type View } from './components/Sidebar';
 import { CatalogExplorer } from './components/CatalogExplorer';
@@ -8,14 +8,24 @@ import { CashFlowChart } from './components/CashFlowChart';
 import { ImprintTable } from './components/ImprintTable';
 import { ChannelMix } from './components/ChannelMix';
 import { CopilotPanel } from './components/CopilotPanel';
-import { useCockpit, useEngine } from './hooks/useCockpit';
+import { useCockpit, useEngine, usePeriods } from './hooks/useCockpit';
+import { latestYear, yearIndex, yearsOf } from './lib/periods';
 import { InfoTip } from './components/InfoTip';
 import { Splash } from './components/Splash';
 import { derive } from './lib/metrics';
 import { agoTr, dateTr, MONTHS_TR, MONTHS_TR_LONG, num, pct, tl, ymOf } from './lib/format';
 
 export default function App() {
-  const cockpit = useCockpit();
+  const periods = usePeriods();
+  // Yıl seçimi kullanıcı bir şey seçene kadar yazılmaz: veri olan en yeni yıl neyse ekran onu açar,
+  // ve yeni bir yıl açıldığında kimse ayara dokunmadan oraya geçer.
+  const [picked, setPicked] = useState<number | null>(null);
+  const all = periods.data ?? [];
+  const years = useMemo(() => yearsOf(all), [all]);
+  const index = useMemo(() => yearIndex(all), [all]);
+  const year = picked ?? latestYear(all);
+  const period = year != null ? index.get(year) ?? null : null;
+  const cockpit = useCockpit(period, year);
   const engine = useEngine();
   const engineOk = engine.isPending ? null : Boolean(engine.data?.deployed);
   const d = cockpit.data;
@@ -44,17 +54,32 @@ export default function App() {
           live={d?.source === 'live'}
           engineOk={engineOk}
           periodLabel={periodLabel}
+          years={years}
+          year={year}
+          onYear={setPicked}
+          yearsPending={periods.isPending}
           onSearch={focusCopilot}
           updatedAt={d ? cockpit.dataUpdatedAt : 0}
           ageSec={d?.ageSec ?? 0}
-          refreshing={cockpit.isFetching}
-          failed={failed}
+          refreshing={cockpit.isFetching || periods.isFetching}
+          failed={failed || periods.isError}
         />
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
             {view === 'catalog' && <CatalogExplorer />}
-            {view === 'desk' && !d && !failed && <DeskSkeleton />}
+            {view === 'desk' && !d && !failed && !periods.isError && <DeskSkeleton />}
+            {/* Yıl listesi okunamazsa hangi yıla bakıldığı da belli değildir; rakam göstermek yerine
+                bunu söylemek gerekir. */}
+            {view === 'desk' && periods.isError && (
+              <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
+                <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
+                <div>
+                  <div className="font-semibold">Yıl listesi alınamadı</div>
+                  <div className="text-ink-muted">{(periods.error as Error).message}</div>
+                </div>
+              </div>
+            )}
             {view === 'desk' && failed && !d && (
               <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
                 <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
@@ -74,7 +99,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {view === 'desk' && d && <Dashboard d={d} engineOk={engineOk} />}
+            {view === 'desk' && d && <Dashboard d={d} engineOk={engineOk} year={year} />}
           </main>
 
           <CopilotPanel engineOk={engineOk} inputRef={copilotInput} />
@@ -117,11 +142,13 @@ function DeskSkeleton() {
   );
 }
 
-function Dashboard({ d, engineOk }: { d: NonNullable<ReturnType<typeof useCockpit>['data']>; engineOk: boolean | null }) {
+function Dashboard({ d, engineOk, year: picked }: { d: NonNullable<ReturnType<typeof useCockpit>['data']>; engineOk: boolean | null; year: number | null }) {
   const k = derive(d);
   const lastMonthName = k.lastMonth ? MONTHS_TR[k.lastMonth - 1] : '—';
   const ym = ymOf(d.summary.lastDate);
-  const year = ym?.year ?? new Date().getFullYear();
+  // Başlıktaki yıl seçilen yıldır. Veri kesitinden türetmek, kapanmış bir yıla bakarken başlığı o
+  // yılın son gününe göre yazıyordu; seçim ile başlık ayrı şeyler söylerse hangisi doğru belli olmaz.
+  const year = picked ?? ym?.year ?? new Date().getFullYear();
   const untilMonth = ym ? MONTHS_TR_LONG[ym.month - 1] : '—';
   return (
     <>

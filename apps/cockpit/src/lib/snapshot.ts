@@ -11,14 +11,16 @@ const KEY = 'nanobase.cockpit.snapshot.v1';
 /** Bundan eskisi gösterilmez: dünkü tabloyu bir an için doğru sanmak, boş ekrandan kötüdür. */
 const MAX_AGE_MS = 12 * 60 * 60_000;
 
-type Stored = { mode: DataMode; at: number; data: CockpitData };
+/** Kopya yılıyla birlikte saklanır: 2023'e geçen bir ekranda bir an için 2026'nın rakamlarını
+ *  göstermek, boş ekrandan çok daha kötüdür — okuyan onları 2023 sanır. */
+type Stored = { mode: DataMode; year: number; at: number; data: CockpitData };
 
-export function readSnapshot(mode: DataMode): { at: number; data: CockpitData } | null {
+export function readSnapshot(mode: DataMode, year: number): { at: number; data: CockpitData } | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as Stored;
-    if (!s || s.mode !== mode || !s.data?.summary) return null;
+    if (!s || s.mode !== mode || s.year !== year || !s.data?.summary) return null;
     if (!(Date.now() - s.at < MAX_AGE_MS)) return null;
     return { at: s.at, data: s.data };
   } catch {
@@ -26,9 +28,9 @@ export function readSnapshot(mode: DataMode): { at: number; data: CockpitData } 
   }
 }
 
-export function saveSnapshot(mode: DataMode, data: CockpitData): void {
+export function saveSnapshot(mode: DataMode, year: number, data: CockpitData): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ mode, at: Date.now(), data } satisfies Stored));
+    localStorage.setItem(KEY, JSON.stringify({ mode, year, at: Date.now(), data } satisfies Stored));
   } catch {
     /* kota dolu ya da gizli sekme: kopya tutulamaması bir hata değil, yalnız bir hızlanmanın yokluğu */
   }

@@ -135,3 +135,42 @@ def test_a_table_only_the_structure_document_knows_is_described():
     """The workbook omits twenty tables the Turkish structure document covers."""
     assert ld.table_description("LG_411_CITY")
     assert ld.table_description("L_DAILYEXCHANGES")
+
+
+def _offline():
+    """The knowledge pack as the offline pipeline reads it — no database anywhere."""
+    from pathlib import Path
+
+    from semantic_layer.profiler.connectors import ModelFileConnector
+
+    pack = Path(__file__).resolve().parents[3] / "configs" / "semantic" / "knowledge" / "logo"
+    return ModelFileConnector(pack)
+
+
+def test_the_offline_pipeline_gets_the_dictionary_too():
+    """A run against the exported pack is the run we do on our own machines. If the dictionary only
+    reached the live connector, everything imported from the vendor would be invisible here."""
+    c = _offline()
+    described = c.descriptions("")
+    assert described[("LG_411_CLCARD", "TOWN")], "a column the export never annotated stayed blank"
+    assert c.primary_keys("", "LG_411_01_STLINE") == ["LOGICALREF"], "the export declares no key"
+    joins = {(f["table"], f["column"], f["ref_table"]) for f in c.foreign_keys("")}
+    assert ("LG_411_01_STLINE", "CLIENTREF", "LG_411_CLCARD") in joins, "an exported join was lost"
+    assert len(joins) > len(c.relationships), "the dictionary added no join the export lacks"
+
+
+def test_what_a_person_wrote_survives_and_a_machine_count_gets_its_labels():
+    """Two different things live in an export. A sentence someone typed carries the filters an answer
+    needs and must come through untouched. A bare "[enum] 3, 1, 4, 22" is this pipeline's own earlier
+    output — it says which codes occur and nothing about what they mean — so the vendor's labels go
+    in front of it, and the counts stay."""
+    cols = {c["name"]: c for c in _offline().columns("", "LG_411_CLCARD")}
+    written = {c["name"]: c for c in _offline().columns("", "LG_411_01_STLINE")}
+
+    machine = cols["CARDTYPE"]["description"]
+    assert machine.startswith("Kart tipi"), machine
+    assert "1=Alıcı" in machine, "the codes are still unnamed"
+    assert "[enum]" in machine, "the counts this run derived were thrown away"
+
+    human = written["OUTCOST"]["description"]
+    assert human.startswith("Birim maliyet"), "a hand-written line was displaced by a vendor sentence"

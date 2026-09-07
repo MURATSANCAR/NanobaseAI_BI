@@ -1,6 +1,6 @@
 # Logo kod sözlüğü (LDDS'den üretildi)
 
-Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T12:03:23+00:00
+Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T12:07:07+00:00
 
 > Bu dosya üretilmiştir; elle düzenlemeyin. Değişiklik için üreticiyi çalıştırın.
 

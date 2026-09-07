@@ -280,8 +280,9 @@ def _dictionary_key(table_name: str, columns: list[str]) -> list[str]:
               if ix.get("unique") and ix.get("columns") and present.issuperset(ix["columns"])]
     if not unique:
         return []
-    # Shortest first, so a single-column key wins over a composite one that also happens to be unique.
-    unique.sort(key=lambda ix: (ix["columns"] != ["LOGICALREF"], len(ix["columns"])))
+    # Shortest first — a single-column key over a composite that also happens to be unique — and the
+    # vendor's own order among equals, which puts the row reference first.
+    unique.sort(key=lambda ix: len(ix["columns"]))
     return list(unique[0]["columns"])
 
 
