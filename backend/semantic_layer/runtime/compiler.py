@@ -443,6 +443,7 @@ Kurallar:
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
+- DÖNEM NOTU bloğu doluysa dönem kapsam içindedir, yalnız son kayıt daha eskidir: SQL'i normal yaz, reddetme.
 - KARŞILANAMAYAN NİTELEYİCİLER bloğundaki sözcük konuyu daraltır ("bekleyen siparişler", "satmayan ürünler"). Şemadan karşılığını kesin olarak çıkaramıyorsan onu yok sayıp daha geniş bir soruyu cevaplama; tek satır: NO_SQL: '<niteleyici>' koşulu veride tanımlı değil.
 - Bir eşlemenin yanında [baz — ...] yazıyorsa o rakamın hangi temelde tutulduğudur (KDV dahil/hariç, birim/toplam). Farklı bazdaki kolonları tek bir toplamda birleştirme; soru o bazı açıkça istemiyorsa bazı değiştirme.\n- İSTENEN BİÇİM oran ise tek bir toplam döndürme: payı, paydayı ve oranı birlikte ver.
 - İSTENEN BİÇİM belirsiz ise SQL yazma ve tablo seçme; tek satır: NO_SQL: hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız?
@@ -649,6 +650,14 @@ class ExistingCompiler:
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
+            # The period was checked and found to be inside what this deployment covers, but past the
+            # last row loaded. Without being told, the model has no idea where the data ends and guesses
+            # — it refused an ordinary question about the current month. With the fact and the
+            # instruction, it writes the query and an empty result stays a fact rather than a verdict.
+            "## DÖNEM NOTU\n" + (
+                "; ".join(e for e in q.explanation if "yüklenmemiş" in e) + " Sorguyu yine de yaz; sonucun boş çıkması hata değildir."
+                if any("yüklenmemiş" in e for e in q.explanation) else "(yok)"
+            ),
             "## İSTENEN BİÇİM\n" + (
                 "oran/pay — payı ve paydayı ayrı ayrı seç, oranı yüzde olarak göster. Paydayı sen belirle: "
                 "kırılım varsa aynı dönemin genel toplamı, yoksa aynı ölçünün filtresiz hâli. Payda birden çok "
