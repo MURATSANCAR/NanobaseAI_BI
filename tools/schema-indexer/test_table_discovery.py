@@ -54,19 +54,22 @@ def counts_where_the_transactions_are(rows):
     }
 
 
-def test_the_default_cap_does_not_bite_a_real_erp_schema():
-    """Three firms with five periods each stay well under the cap — nobody should have to know an
-    environment variable exists in order to see their own database."""
-    rows = logo_tables(firms=(411, 412, 413), periods=(1, 2, 3, 4, 5))
+def test_there_is_no_cap_by_default():
+    """A scan reports on the whole database it was pointed at. A catalogue holding fewer tables than
+    the database is one that plans and reports cannot be reconciled against, and nobody should have
+    to know an environment variable exists in order to see their own schema."""
+    rows = logo_tables(firms=tuple(range(400, 420)), periods=tuple(range(1, 13)))
+    assert len(rows) > 1500
     cfg = IndexerConfig()
+    assert cfg.max_tables == 0, "a count cap is configuration, never a default"
     picked = select_tables(cfg, rows, lambda: {})
     assert cfg.truncated_tables == []
     assert len(picked) == len(rows)
 
 
-def test_the_transaction_tables_survive_a_cut():
-    """The old cut kept the alphabet's first n, and ITEMS/STLINE/STFICHE sort late — they were the
-    tables people actually asked about."""
+def test_the_transaction_tables_survive_a_deliberate_cut():
+    """An operator who does set a bound gets the tables that carry the most. The old cut kept the
+    alphabet's first n, and ITEMS/STLINE/STFICHE sort late — they were the tables people asked about."""
     rows = logo_tables()
     cfg = IndexerConfig()
     cfg.max_tables = 12

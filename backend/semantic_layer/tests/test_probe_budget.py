@@ -117,3 +117,12 @@ def test_a_scope_too_large_drops_the_least_useful_tables_not_the_last_alphabetic
     kept = {x.table_name for x in p.profile("ds", "main")}
     assert {"Z_ORDERS", "Z_CODES"} <= kept, kept
     assert p.truncated, "and what was dropped is reported, never silently"
+
+    # ...but only because a bound was asked for. Left alone, the catalog holds the whole schema and
+    # matches it table for table — a catalog smaller than the database cannot be planned or
+    # reported against, and the difference is invisible from the outside.
+    whole = Profiler(_Wide())
+    profiles = whole.profile("ds", "main")
+    assert len(profiles) == 8 and not whole.truncated
+    assert [x.table_name for x in profiles] == [f"A_EMPTY_{i:02d}" for i in range(6)] + ["Z_CODES", "Z_ORDERS"], \
+        "the catalog is emitted in discovery order even though the probe order is value-first"
