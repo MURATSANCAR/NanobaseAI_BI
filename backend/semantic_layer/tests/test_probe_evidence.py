@@ -95,3 +95,31 @@ def test_a_measure_that_times_out_is_not_a_measure_that_failed(store, profiles):
     report = probe_catalog(store, TENANT, DS, profiles, _Slow(), context={"n0": "411", "n1": "01"}, dialect="sqlite")
     assert not store.list_counter_evidence(c.id), "a check that could not run is not a failed check"
     assert any("doğrulanamadı" in e for e in report.errors), report.errors
+
+
+def test_a_concept_knocked_out_by_a_bad_minute_can_come_back(store, profiles):
+    """A measure rejected because the database timed out once was never probed again — so the evidence
+    that would clear it could never be gathered, and a bad minute became a permanent verdict."""
+    from semantic_layer.evidence.probe import probe_catalog
+    from semantic_layer.models import CounterEvidence, Evidence, EvidenceType, Mapping, SemanticType
+    from semantic_layer.store.catalog_store import ConceptStatus
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    c, _ = store.upsert_concept(TENANT, DS, "ciro", SemanticType.METRIC,
+                                mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, formula="SUM(INVOICE.NETTOTAL)"),
+                                status=ConceptStatus.REJECTED)
+    store.add_evidence(Evidence(c.id, EvidenceType.VALIDATED_SQL, "hm", support_count=3, payload={"pairs": ["a", "b", "c"]}))
+    store.add_counter_evidence(CounterEvidence(c.id, "probe:execute", "EXECUTION_FAILED",
+                                               payload={"error": "Timeout expired", "support": 2}, severity="MEDIUM"))
+
+    class _Works:
+        dialect = "sqlite"
+        supports_execution = True
+
+        def execute(self, sql, limit):
+            return ([{"name": "ciro", "type": "float"}], [{"ciro": 1234.5}], False)
+
+    probe_catalog(store, TENANT, DS, profiles, _Works(), context={"n0": "411", "n1": "01"}, dialect="sqlite")
+    assert not store.list_counter_evidence(c.id), "the block clears once the measure actually runs"

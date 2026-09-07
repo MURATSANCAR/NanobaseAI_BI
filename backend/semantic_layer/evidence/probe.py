@@ -169,7 +169,15 @@ def probe_catalog(
     from semantic_layer.models import ResolvedSlot, SemanticQuery
 
     compiler = DeterministicCompiler(profiles, context or {}, dialect or getattr(connector, "dialect", "") or "generic", default_filters=default_filters_provider(store, tenant_id, datasource_id))
-    metrics = [c for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, status=ConceptStatus.CERTIFIED, limit=100000)][:max_metrics]
+    # Certified measures, and the ones a run of the probe itself knocked out: a concept rejected because
+    # the database timed out once must have a way back, or a bad minute becomes a permanent verdict —
+    # it is never probed again, so the evidence that would clear it can never be gathered.
+    metrics = list(store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, status=ConceptStatus.CERTIFIED, limit=100000))
+    for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.METRIC, status=ConceptStatus.REJECTED, limit=100000):
+        blockers = store.list_counter_evidence(c.id)
+        if blockers and all(str(b.conflict_type).startswith("EXECUTION_") for b in blockers):
+            metrics.append(c)
+    metrics = metrics[:max_metrics]
     for concept in metrics:
         if budget and time.time() - started > budget:
             skipped += 1
