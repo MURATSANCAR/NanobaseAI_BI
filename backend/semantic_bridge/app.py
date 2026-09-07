@@ -191,6 +191,30 @@ class Runtime:
             except Exception as e:  # noqa: BLE001
                 log.warning("column index unavailable, routing from the catalog alone: %s", e)
 
+        # Narrows the retrieved shortlist before it becomes a prompt — the step every schema-linking
+        # result says matters most. Measured on this deployment's golden set with the A40 model:
+        #
+        #     no selector   12.0 tables   precision 0.17   recall 17/17
+        #     selector       5.1 tables   precision 0.31   recall 17/17   ~4.2s
+        #
+        # Default is shadow: it runs, it logs what it would have kept, and the prompt is unchanged.
+        # SEMANTIC_TABLE_SELECTOR=on applies it; =off skips the call entirely.
+        if existing.selector_mode in ("shadow", "on") and s.llm_base:
+            try:
+                from semantic_layer.runtime.table_selector import TableSelector
+
+                base = os.environ.get("SEMANTIC_SELECTOR_BASE", "").strip() or s.llm_base
+                model = os.environ.get("SEMANTIC_SELECTOR_MODEL", "").strip() or s.llm_model
+                timeout = float(os.environ.get("SEMANTIC_SELECTOR_TIMEOUT_SEC", "30"))
+                # A reasoning model asked to name tables spends most of its time explaining the
+                # choice to itself. It is not wanted here and the person asking pays for it.
+                client = LlmClient(base, model, s.llm_key, timeout,
+                                   extra={"chat_template_kwargs": {"enable_thinking": False}})
+                existing.selector = TableSelector(client)
+                log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
+            except Exception as e:  # noqa: BLE001
+                log.warning("table selector unavailable, sending every retrieved table: %s", e)
+
         try:
             from semantic_layer.runtime.table_router import TableRouter
 

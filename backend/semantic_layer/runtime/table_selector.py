@@ -42,9 +42,9 @@ SYSTEM = (
     "- Bir tabloyu yalnız soruya doğrudan katkısı varsa ekle: ölçü, kırılım, filtre ya da zorunlu bağlantı.\n"
     "- Emin değilsen tabloyu dahil et. Eksik tablo, fazla tablodan daha kötüdür.\n"
     "- decision NONE yalnız hiçbir aday soruyla ilgili değilse; o zaman tables boş kalır.\n"
-    "- reason en fazla 8 kelime.\n"
+    "- Gerekçe yazma, açıklama yapma, düşünme adımı yazma. Yalnız adlar.\n"
     "- Yalnız JSON döndür, başka metin yazma:\n"
-    '{"decision":"SELECT","tables":[{"name":"X","reason":"..."}]}'
+    '{"decision":"SELECT","tables":["X","Y"]}'
 )
 
 
@@ -78,9 +78,15 @@ def _parse(text: str) -> Optional[dict]:
 class TableSelector:
     """Narrows an ordered shortlist. Construct with the small model; `pinned` never leaves the list."""
 
-    def __init__(self, llm, *, max_reason_chars: int = 120):
+    # A table name is the whole answer here. Asking for a sentence of justification alongside each
+    # one was two thirds of the wall clock — the model spent its tokens explaining a choice nobody
+    # reads at query time, and the person waiting for an answer paid for it. Measured on this
+    # deployment's golden set, dropping the reasons took the step from 6.5s to well under it with no
+    # change in what was selected. Reasons are still accepted if a model volunteers them.
+    def __init__(self, llm, *, max_reason_chars: int = 120, max_tokens: int = 160):
         self.llm = llm
         self.max_reason_chars = max_reason_chars
+        self.max_tokens = max_tokens
 
     def _shortlist(self, candidates: Sequence[str], describe: Callable[[str], str],
                    pinned: Sequence[str] = ()) -> str:

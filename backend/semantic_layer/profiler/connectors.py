@@ -166,10 +166,15 @@ class MSSQLConnector(_DbApiBase):
     dialect = "tsql"
     default_schema = "dbo"
     quote_l, quote_r = "[", "]"
+    # Appended to the profiler's scanning queries so they do not take the whole server. Set
+    # SEMANTIC_PROBE_MAXDOP=0 to let the optimiser decide, as it did before this was measured.
+    probe_hint = ""
 
     def __init__(self, cfg: dict[str, Any]):
         super().__init__()
         self.cfg = cfg
+        dop = (os.environ.get("SEMANTIC_PROBE_MAXDOP") or "1").strip()
+        self.probe_hint = f" OPTION (MAXDOP {int(dop)})" if dop.isdigit() and int(dop) > 0 else ""
 
     def conn(self):
         if self._conn is None:
@@ -312,7 +317,15 @@ class MSSQLConnector(_DbApiBase):
         return merged
 
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]:
-        sql = f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n FROM {self.q(schema)}.{self.q(table)} GROUP BY {self.q(column)} ORDER BY n DESC"
+        # One of these per column, and on a fact table each is a full scan of millions of rows. Left
+        # to the optimiser they get a parallel plan and take every core the server has, which is how
+        # a scan running in the background made the customer's own questions time out at forty-five
+        # seconds: their query and ours sat in CXPACKET waiting for each other. Capped to one core
+        # the scan takes longer and the database stays usable while it runs — the scan is ours to
+        # wait for, the database is not. Nothing about what gets read changes.
+        sql = (f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n "
+               f"FROM {self.q(schema)}.{self.q(table)} GROUP BY {self.q(column)} ORDER BY n DESC"
+               f"{self.probe_hint}")
         _, rows = self._rows(sql)
         return [(str(_norm(r[0])), int(r[1])) for r in rows]
 
@@ -343,6 +356,8 @@ class PostgresConnector(_DbApiBase):
     def __init__(self, cfg: dict[str, Any]):
         super().__init__()
         self.cfg = cfg
+        dop = (os.environ.get("SEMANTIC_PROBE_MAXDOP") or "1").strip()
+        self.probe_hint = f" OPTION (MAXDOP {int(dop)})" if dop.isdigit() and int(dop) > 0 else ""
 
     def conn(self):
         if self._conn is None:
