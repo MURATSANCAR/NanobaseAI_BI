@@ -802,3 +802,47 @@ def test_the_columns_a_prompt_carries_are_the_ones_an_answer_needs(catalog, prof
 
     text = c.schema_context(SemanticQuery(question="x", tenant_id=TENANT, datasource_id=DS), [], {"WIDE"})
     assert "listelenmedi" in text, "columns dropped from the prompt have to be declared"
+
+
+def test_a_question_about_an_earlier_year_is_shown_that_year_s_table(catalog, profiles, settings):
+    """A source that keeps a year per table answers 2024 from a different table than 2026, and a
+    question spanning both has to read both. The deterministic compiler already unions them; the
+    prompt used to name whichever table was biggest — which, for an entity split by year, is the one
+    with the most history behind it. A question about this year was being shown last year's table."""
+    import copy
+    from datetime import date
+
+    from semantic_bridge.app import Runtime
+    from semantic_layer.models import SemanticQuery, TemporalSlot
+
+    new = next(p for p in profiles if p.entity == "INVOICE")
+    new.time_window = ("2026-01-01", "2026-08-31")
+    old = copy.deepcopy(new)
+    old.table_name, old.context = "LG_211_01_INVOICE", {"n0": "211", "n1": "01"}
+    old.time_window = ("2021-01-01", "2025-12-31")
+    old.row_count = (new.row_count or 0) + 10_000_000        # five years of history: the bigger table
+    catalog.upsert_profile(old)
+    catalog.upsert_profile(new)
+
+    rt = Runtime(settings, store=catalog, connector=None, llm=FakeLlm([""]))
+    c = rt.existing
+
+    def ask(start, end):
+        q = SemanticQuery(question="ciro", tenant_id=TENANT, datasource_id=DS)
+        q.temporal.append(TemporalSlot(text="dönem", start=start, end=end))
+        return q
+
+    def shown(q):
+        return {p.table_name for p in c._one_per_entity(["INVOICE"], q)}
+
+    assert shown(ask(date(2024, 1, 1), date(2025, 1, 1))) == {"LG_211_01_INVOICE"}, "2024 was shown the 2026 table"
+    assert shown(ask(date(2026, 1, 1), date(2027, 1, 1))) == {"LG_411_01_INVOICE"}, "the bigger table won on size"
+
+    spanning = ask(date(2024, 1, 1), date(2027, 1, 1))
+    text = c.period_block(spanning, ["INVOICE"])
+    assert "LG_211_01_INVOICE" in text and "LG_411_01_INVOICE" in text, text
+    assert text.count("← bu soru için") == 2, "both years are needed and both have to be marked"
+    assert "UNION ALL" in text, "the model is not told how to read across the boundary"
+
+    one_year = c.period_block(ask(date(2026, 1, 1), date(2027, 1, 1)), ["INVOICE"])
+    assert one_year.count("← bu soru için") == 1, one_year

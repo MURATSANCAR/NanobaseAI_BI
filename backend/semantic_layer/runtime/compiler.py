@@ -551,6 +551,12 @@ class ExistingCompiler:
         self.dialect = dialect
         self.conventions = conventions or Conventions.from_profiles(profiles)
         self.by_entity = {p.entity: p for p in profiles}
+        # Every period of an entity, not just one. A source that splits a year per table answers a
+        # question about 2024 from a different table than one about 2026, and a question that spans
+        # both has to read both — which cannot be decided from a single profile.
+        self.tables_of: dict[str, list[SchemaProfile]] = {}
+        for prof in profiles:
+            self.tables_of.setdefault(prof.entity, []).append(prof)
         # A local model has a fixed context; a schema does not. What the prompt may carry is therefore
         # bounded — but by the context that actually exists, not by a table count somebody picked. The
         # model is served `LLM_CTX` tokens; at roughly three characters a token, and leaving a third
@@ -633,19 +639,25 @@ class ExistingCompiler:
             ordered = ordered[:keep]
         return ordered
 
-    def _one_per_entity(self, entities: Optional[Any]) -> list[SchemaProfile]:
-        """One profile per entity. The model reasons about the entity; which physical tables a period
-        needs is the compiler's job, and listing each period separately only spends context twice.
+    def _one_per_entity(self, entities: Optional[Any], q: Optional[SemanticQuery] = None) -> list[SchemaProfile]:
+        """One profile per entity. The model reasons about the entity; the columns are the same in
+        every period of it, and listing each period separately only spends context twice.
+
+        Which period that one profile is matters, though. Picking the biggest table names the table
+        with the most history — for an entity split by year that is the *oldest* one — so a question
+        about this year would be shown last year's table. When the question has a period, the profile
+        that covers it is the one shown; the periods themselves are laid out in `period_block`.
 
         A list of entities keeps its order — it is a ranking, and the caller spends its budget down
         that ranking. A set has none, and the profiles' own order stands in."""
+        first = min((t.start for t in q.temporal if t.start), default=None) if q else None
+        last = max((t.end for t in q.temporal if t.end), default=None) if q else None
         out: dict[str, SchemaProfile] = {}
-        for prof in self.profiles:
-            if entities is not None and prof.entity not in entities:
+        for entity, available in self.tables_of.items():
+            if entities is not None and entity not in entities:
                 continue
-            best = out.get(prof.entity)
-            if best is None or (prof.row_count or 0) > (best.row_count or 0):
-                out[prof.entity] = prof
+            wanted = periods.tables_for(available, first, last) or available
+            out[entity] = max(wanted, key=lambda p: (p.row_count or 0))
         if isinstance(entities, list):
             return [out[e] for e in entities if e in out]
         return list(out.values())
@@ -729,7 +741,7 @@ class ExistingCompiler:
         budget = max(2000, self.prompt_budget - self.RESERVED_FOR_INSTRUCTIONS - len(self.rules_text))
         spent = 0
         skipped: list[str] = []
-        for p in self._one_per_entity(wanted):
+        for p in self._one_per_entity(wanted, q):
             cols = []
             selected, left_out = self.prompt_columns(p, q)
             for c in selected:
@@ -806,6 +818,39 @@ class ExistingCompiler:
     def _resolved_entities(self, q: Optional[SemanticQuery]) -> set[str]:
         return {s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity} if q else set()
 
+    def period_block(self, q: SemanticQuery, entities: Any) -> str:
+        """Which physical table holds which years, for the entities this question touches.
+
+        The deterministic compiler picks the tables a period needs and unions them. A prompt cannot do
+        that on the compiler's behalf — the model writes the FROM clause — so the model is told the
+        same facts instead: what each table was measured to hold, and which of them this question
+        falls in. Without it a question about 2024 is written against whichever table the prompt
+        happened to name, and comes back empty from a database that holds the answer.
+        """
+        first = min((t.start for t in q.temporal if t.start), default=None)
+        last = max((t.end for t in q.temporal if t.end), default=None)
+        lines: list[str] = []
+        for entity in entities:
+            available = self.tables_of.get(entity) or []
+            if len(available) < 2:
+                continue
+            chosen = {p.table_name for p in periods.tables_for(available, first, last)}
+            rows = []
+            for prof in sorted(available, key=lambda p: p.table_name):
+                window = prof.time_window
+                covers = f"{str(window[0])[:10]} – {str(window[1])[:10]}" if window else "dönemi ölçülmemiş"
+                mark = " ← bu soru için" if prof.table_name in chosen else ""
+                rows.append(f"  - {self.table_label(prof)}: {covers}{mark}")
+            lines.append(f"{entity} yıllara bölünmüş:")
+            lines.extend(rows)
+        if not lines:
+            return "(bu sorudaki tablolar yıllara bölünmemiş)"
+        lines.append("")
+        lines.append("Soru birden çok dönemi kapsıyorsa tabloları UNION ALL ile birleştir; "
+                     "tek dönemdeyse yalnız işaretli tabloyu kullan. İşaretli olmayan bir tabloyu "
+                     "kendiliğinden ekleme.")
+        return "\n".join(lines)
+
     def catalog_block(self, q: SemanticQuery) -> str:
         lines = []
         for s in q.slots:
@@ -850,6 +895,7 @@ class ExistingCompiler:
         entities = self.relevant_entities(q, recalled)
         ctx = [
             "## Tablolar\n" + self.model_index(entities),
+            "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
