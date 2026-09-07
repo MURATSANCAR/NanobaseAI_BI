@@ -1000,6 +1000,14 @@ class CompilerRouter:
             del self.shadow_results[:-50]
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:
+        # "I cannot write this" and "this must not be written" are different answers, and until now
+        # they left the deterministic compiler as the same bare None — so a question about a year this
+        # deployment never loaded fell through to the model, which duly wrote SQL that returns zero
+        # rows. A zero meaning "not loaded" and a zero meaning "sold nothing" look identical on screen.
+        # The refusal is the answer here; no compiler improves on it.
+        if reason := q.refusal_reason:
+            return CompiledQuery(sql="", compiler="refused", catalog_version=q.catalog_version,
+                                 explain=[refusal_for(q)], certified=False, refusal=reason)
         if self.primary:
             comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
             if comp is not None:

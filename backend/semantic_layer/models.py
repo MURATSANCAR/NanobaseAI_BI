@@ -373,6 +373,39 @@ class SemanticQuery:
     def fully_resolved(self) -> bool:
         return not self.unresolved and not self.unhandled and not self.conflicts and not self.out_of_scope and not any(t.ambiguous for t in self.temporal)
 
+    @property
+    def state(self) -> str:
+        """RESOLVED · PARTIAL · UNRESOLVED — how much of this question the catalog could place.
+
+        The three are routed differently: what is resolved is compiled deterministically and never
+        reaches a model, what is partial goes to the fallback with the resolved part pinned, and what
+        is unresolved has to be found before it can be answered at all.
+        """
+        if self.fully_resolved and self.slots:
+            return "RESOLVED"
+        return "PARTIAL" if any(s.mapping for s in self.slots) else "UNRESOLVED"
+
+    @property
+    def refusal_reason(self) -> Optional[str]:
+        """Why this question must not be answered — as opposed to merely not being answerable *here*.
+
+        The distinction decides routing, and getting it wrong is how a system produces a confident
+        wrong answer. A period the deployment holds no data for is not a harder question for a
+        language model: any SQL it writes returns zero rows, and a zero that means "we did not load
+        that year" is indistinguishable from a zero that means "you sold nothing". Contradictory
+        filters are the same shape — the result is empty by construction, whoever writes it.
+
+        Everything else is only a limit of the deterministic compiler: a join it cannot make, a metric
+        nobody certified, a shape it cannot express. Those are handed on, not refused.
+        """
+        if self.out_of_scope:
+            return "OUT_OF_SCOPE"
+        if self.conflicts:
+            return "AMBIGUOUS"
+        if any(t.ambiguous for t in self.temporal):
+            return "AMBIGUOUS"
+        return None
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "question": self.question,
@@ -390,6 +423,8 @@ class SemanticQuery:
             "unhandled": list(self.unhandled),
             "shape": self.shape,
             "fullyResolved": self.fully_resolved,
+            "state": self.state,
+            "refusalReason": self.refusal_reason,
             "explanation": list(self.explanation),
         }
 
@@ -407,3 +442,7 @@ class CompiledQuery:
     # could be about anything at all, and a data tool that can be talked into discussing itself is no
     # longer a data tool.
     model_text: Optional[str] = None
+    # Set when the answer is a refusal rather than a query: OUT_OF_SCOPE, AMBIGUOUS. A refusal is a
+    # first-class result — for a question whose data this deployment does not hold, it is the *correct*
+    # result, and measuring it as a failure is how a system gets pushed into answering anyway.
+    refusal: Optional[str] = None

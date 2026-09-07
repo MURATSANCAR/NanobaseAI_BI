@@ -846,3 +846,40 @@ def test_a_question_about_an_earlier_year_is_shown_that_year_s_table(catalog, pr
 
     one_year = c.period_block(ask(date(2026, 1, 1), date(2027, 1, 1)), ["INVOICE"])
     assert one_year.count("← bu soru için") == 1, one_year
+
+
+def test_a_year_the_deployment_never_loaded_is_refused_not_handed_to_a_model(catalog, profiles, settings):
+    """"I cannot write this" and "this must not be written" are different answers. They left the
+    deterministic compiler as the same bare None, so a question about 2019 — a year this deployment
+    holds no rows for — fell through to the model, which wrote SQL returning zero rows. A zero meaning
+    "not loaded" is indistinguishable on screen from a zero meaning "sold nothing"."""
+    from semantic_layer.models import SemanticQuery, TemporalSlot
+    from semantic_layer.runtime.compiler import CompilerRouter
+
+    class Never:
+        name = "existing_llm"
+        called = False
+
+        def compile(self, q, catalog, thread=None, *, recall=None):
+            Never.called = True
+            raise AssertionError("a refused question must never reach a compiler")
+
+    router = CompilerRouter(None, Never())
+
+    out_of_scope = SemanticQuery(question="2019 cirosu", tenant_id=TENANT, datasource_id=DS)
+    out_of_scope.out_of_scope.append("2019")
+    out_of_scope.explanation.append("'2019' bu kurulumun kapsamı dışında: INVOICE için tanımlı veri 2021-01-01 – 2026-08-17 arasını içeriyor")
+    answer = router.compile(out_of_scope, catalog)
+    assert answer.refusal == "OUT_OF_SCOPE" and answer.sql == "", answer
+    assert "kapsamı dışında" in " ".join(answer.explain)
+    assert not Never.called
+
+    contradictory = SemanticQuery(question="hem toptan hem perakende", tenant_id=TENANT, datasource_id=DS)
+    contradictory.conflicts.append("INVOICE.TRCODE")
+    assert router.compile(contradictory, catalog).refusal == "AMBIGUOUS"
+
+    # A limit of the deterministic compiler is not a refusal: it is handed on.
+    passes_through = SemanticQuery(question="bir sey", tenant_id=TENANT, datasource_id=DS)
+    passes_through.unresolved.append("problemli")
+    assert passes_through.refusal_reason is None
+    assert passes_through.state == "UNRESOLVED"
