@@ -60,6 +60,85 @@ _SUFFIX = [
 ]
 
 
+#: Logo's core vocabulary, in Turkish, matched on the whole name.
+#:
+#: These are documented — `LOGICALREF` is explained in three hundred tables — but each table words it
+#: differently ("Item Card Logical Reference", "Cari hesap kartı fiziksel adresi"), so no single
+#: wording is dominant enough to carry to a table that lacks one, and carrying one table's wording to
+#: another would say the wrong thing. The meaning is not in doubt; only the phrasing is. So the
+#: phrasing is written once, here, in the language the questions arrive in.
+_CANONICAL: dict[str, str] = {
+    # kimlik ve durum
+    "LOGICALREF": "Kaydın fiziksel referansı — birincil anahtar; diğer tablolar *REF kolonlarıyla buna bağlanır",
+    "CODE": "Kart/kayıt kodu", "NAME": "Ad", "NAME2": "İkinci ad", "SURNAME": "Soyad",
+    "DEFINITION_": "Açıklama / unvan", "ACTIVE": "Kullanım durumu (0 kullanımda, 1 kullanım dışı)",
+    "CANCELLED": "İptal bayrağı (0 geçerli, 1 iptal)", "STATUS": "Durum", "ESTATUS": "e-Belge durumu",
+    "STATUSDESC": "Durum açıklaması", "PRIORITY": "Öncelik", "TYP": "Tür", "TYPECODE": "Tür kodu",
+    "GLOBALID": "Kurum genelinde tekil kayıt kimliği", "GLOBALCODE": "Kurum genelinde tekil kod",
+    "RECHASH": "Kayıt özet değeri — kaydın değişip değişmediğinin denetimi",
+    # sınıflama
+    "TRCODE": "İşlem/belge türü kodu", "MODULENR": "Modül numarası", "LINENO_": "Satır numarası",
+    "SPECODE": "Özel kod", "CYPHCODE": "Yetki kodu", "TRADINGGRP": "Ticari işlem grubu",
+    "CARDTYPE": "Kart türü", "DOCTYPE": "Belge türü", "DOCODE": "Belge kodu", "FICHETYPE": "Fiş türü",
+    "TRANSTYPE": "Hareket türü", "PAYTYPE": "Ödeme türü", "USERTYPE": "Kullanıcı türü",
+    # tarih ve zaman
+    "DATE_": "Belge/hareket tarihi", "SDATE": "Tarih", "BEGDATE": "Başlangıç tarihi",
+    "ENDDATE": "Bitiş tarihi", "DUEDATE": "Vade tarihi", "CURRENTDATE": "Güncel tarih",
+    "CURRENTTIME": "Güncel saat", "PRINTDATE": "Basım tarihi", "PRINTCNT": "Basım sayısı",
+    # tutar ve miktar
+    "AMOUNT": "Miktar", "TOTAL": "Toplam tutar", "PRICE": "Birim fiyat", "ORGPRICE": "Orijinal birim fiyat",
+    "ITMDISC": "Malzeme iskontosu", "INFLATIONDIFF": "Enflasyon düzeltme farkı",
+    "TRRATE": "İşlem dövizi kuru", "REPORTRATE": "Raporlama dövizi kuru",
+    "CLTRCURR": "Cari işlem dövizi türü", "CLTRRATE": "Cari işlem dövizi kuru",
+    "CLTRNET": "Cari işlem dövizi net tutarı", "EXIMVAT": "İthalat/ihracat KDV tutarı",
+    "VATFLAG": "KDV uygulanıyor mu", "VATEXCEPTCODE": "KDV istisna kodu",
+    "VATEXCEPTREASON": "KDV istisna gerekçesi",
+    # referanslar
+    "CLIENTREF": "Cari hesap referansı", "CLCARDREF": "Cari hesap kartı referansı",
+    "ITEMREF": "Malzeme referansı", "ACCOUNTREF": "Muhasebe hesabı referansı",
+    "CENTERREF": "Masraf merkezi referansı", "UOMREF": "Birim referansı",
+    "INVOICEREF": "Fatura referansı", "FICHEREF": "Fiş referansı", "FICHENO": "Fiş numarası",
+    "STFREF": "Stok fişi referansı", "TRANSREF": "Hareket referansı", "PARENTREF": "Üst kayıt referansı",
+    "DOCREF": "Belge referansı", "OFFERREF": "Teklif referansı", "FAREF": "Sabit kıymet referansı",
+    "FAREGREF": "Sabit kıymet kaydı referansı", "PERREF": "Personel referansı", "USREF": "Kullanıcı referansı",
+    "WSREF": "İş istasyonu referansı", "BNACCREF": "Banka hesabı referansı",
+    "EMFLINEREF": "Muhasebe hareketi referansı", "SOURCEFREF": "Kaynak fiş referansı",
+    "SOURCEINDEX": "Kaynak ambar/işyeri indeksi", "APPROVALREF": "Onay kaydı referansı",
+    "CRELETTERREF": "Akreditif referansı", "LEASINGREF": "Leasing sözleşmesi referansı",
+    # yer ve kuruluş
+    "BRANCH": "İşyeri (şube) numarası", "FACTORYNR": "Fabrika numarası", "WAREHOUSE": "Ambar numarası",
+    "CITY": "Şehir", "COUNTRY": "Ülke", "POSTCODE": "Posta kodu",
+    # kimlik bilgileri
+    "TAXNR": "Vergi numarası", "TCKNO": "TC kimlik numarası", "IBAN": "IBAN",
+    "ISPERSCOMP": "Şahıs şirketi mi", "ISCOMP": "Tüzel kişi (şirket) mi",
+    "PAYERID": "Ödeyen kimlik numarası", "PAYERTYPE": "Ödeyen türü",
+    # serbest metin
+    "EXPLAIN": "Açıklama", "EXPLANATION": "Açıklama", "EXP": "Açıklama", "LINEEXP": "Satır açıklaması",
+    "DELIVERYCODE": "Teslimat kodu", "CAMPAIGNCODE": "Kampanya kodu",
+    "USEDINPERIODS": "Kaydın kullanıldığı dönemler",
+}
+
+#: Numbered free-text slots the vendor leaves for the customer: GENEXP1..6, UINFO1..8.
+_NUMBERED = {
+    "GENEXP": "Genel açıklama alanı",
+    "UINFO": "Kullanıcı tanımlı bilgi alanı",
+    "ROLLUPOVERHRPCOSTG": "Toplanmış (roll-up) genel üretim gideri — raporlama dövizi, grup",
+    "ROLLUPOVERHCOSTG": "Toplanmış (roll-up) genel üretim gideri — grup",
+}
+
+#: Rolled-up production cost components: the cost of a product with everything beneath it added in.
+_ROLLUP = {
+    "ROLLUPMATERIALCOST": "Toplanmış malzeme maliyeti", "ROLLUPWSCOST": "Toplanmış iş istasyonu maliyeti",
+    "ROLLUPLABORCOST": "Toplanmış işçilik maliyeti", "ROLLUPOVERHCOST": "Toplanmış genel üretim gideri",
+    "ROLLUPTOTALCOST": "Toplanmış toplam maliyet",
+    "ROLLUPMATERIALRPCOST": "Toplanmış malzeme maliyeti — raporlama dövizi",
+    "ROLLUPWSRPCOST": "Toplanmış iş istasyonu maliyeti — raporlama dövizi",
+    "ROLLUPLABORRPCOST": "Toplanmış işçilik maliyeti — raporlama dövizi",
+    "ROLLUPOVERHRPCOST": "Toplanmış genel üretim gideri — raporlama dövizi",
+    "ROLLUPTOTALRPCOST": "Toplanmış toplam maliyet — raporlama dövizi",
+}
+
+
 #: An array the vendor flattened into columns: `PROMLINES16_PRICE`, `ACCARR10_ACCTYPE`. The group is
 #: repeated N times and the field after the underscore is the documented one.
 _ARRAY = re.compile(r"^([A-Z]+?)(\d+)_(.+)$")
@@ -142,6 +221,13 @@ def vocabulary() -> dict[str, str]:
 def derive(name: str, vocab: dict[str, str]) -> tuple[str, str]:
     """(text, why) for a column the documents never named — or ("", "") when they say nothing."""
     n = name.upper()
+    # The core vocabulary is written here rather than voted on, because the vendor's wording for it
+    # varies table by table while the meaning does not.
+    if text := _CANONICAL.get(n) or _ROLLUP.get(n):
+        return text, "çekirdek Logo sözlüğü"
+    if m := re.match(r"^([A-Z_]+?)(\d+)$", n):
+        if base := _NUMBERED.get(m.group(1)):
+            return f"{base} {m.group(2)}", "numaralı alan"
     if text := vocab.get(n):
         return text, "aynı ad sözlükte belgeli"
     for prefix in ("CAPIBLOCK_", "CAPIBLOK_"):
