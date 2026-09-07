@@ -21,10 +21,17 @@ export function Splash({ onDone }: { onDone: () => void }) {
       role="dialog"
       aria-label="Timaş Finans açılış"
       onClick={() => setLeaving(true)}
-      className={`fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center bg-[#F4EEE9] transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
+      className={`fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden bg-[#F4EEE9] p-4 transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
     >
-      <img src={MASCOT} alt="Zeki AI — Timaş Yayın Grubu" className="w-[min(92vw,960px)] max-h-[70vh] object-contain" draggable={false} />
-      <div className="mt-2 flex flex-col items-center gap-2">
+      <div className="flex min-h-0 w-full flex-1 items-center justify-center">
+        <img
+          src={MASCOT}
+          alt="Zeki AI — Timaş Yayın Grubu"
+          className="h-auto max-h-full w-auto max-w-[min(92vw,960px)] object-contain"
+          draggable={false}
+        />
+      </div>
+      <div className="flex shrink-0 flex-col items-center gap-2">
         <div className="font-display text-[22px] font-semibold tracking-tight text-ink">Timaş Finans</div>
         <div className="text-[12px] text-ink-muted">Finans &amp; Bütçe Masası açılıyor…</div>
         <div className="mt-1 h-1 w-56 overflow-hidden rounded-full bg-line">
