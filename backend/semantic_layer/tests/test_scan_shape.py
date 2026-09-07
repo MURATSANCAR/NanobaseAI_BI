@@ -113,3 +113,50 @@ def test_a_scan_stores_each_table_as_it_finishes_not_at_the_end():
     assert seen == sorted(seen) or set(seen) == {"A", "B", "C"}, "every table is handed over"
     assert set(seen) == {"A", "B", "C"}, "a table is stored as it finishes, not at the end"
     assert {p.table_name for p in out} == {"A", "B", "C"}, "a failed store must not end the scan"
+
+
+def test_backups_and_test_tables_are_left_out_of_the_scan_and_named():
+    """Real tables with real rows that answer no question. Left in, each is a shape of its own, so
+    the shape-first traversal treats a backup of a fact table as a first copy and gives it priority
+    over tables nobody has read yet."""
+    import logging
+    import os
+
+    from semantic_layer.profiler.profiler import Profiler
+
+    class _Conn:
+        dialect, default_schema = "tsql", "dbo"
+        quote_l = quote_r = '"'
+
+        def __init__(self):
+            self.read: list[str] = []
+
+        def list_tables(self, schema, like=None):
+            return [("dbo", n) for n in ("LG_411_01_STLINE", "LG_411_01_STLINE_yedek1",
+                                         "BCKP_030826LG_411_01_STLINE", "AA_TEST", "LG_411_ITEMS")]
+
+        def columns(self, schema, table):
+            self.read.append(table)
+            return [{"name": "ID", "data_type": "int"}]
+
+        def primary_keys(self, schema, table): return ["ID"]
+        def foreign_keys(self, schema): return []
+        def row_count(self, schema, table): return 5
+        def row_counts(self, schema): return {}
+        def table_comments(self, schema): return {}
+        def column_comments(self, schema): return {}
+        def sample_rows(self, schema, table, limit=20): return []
+        def indexes(self, schema): return {}
+        def top_values(self, *a, **k): return []
+
+    conn = _Conn()
+    out = Profiler(conn).profile("d", "dbo")
+    assert {p.table_name for p in out} == {"LG_411_01_STLINE", "LG_411_ITEMS"}
+    assert not any("yedek" in t.lower() or "BCKP" in t or t == "AA_TEST" for t in conn.read), conn.read
+
+    os.environ["SEMANTIC_SKIP_SHADOW"] = "0"
+    try:
+        back = Profiler(_Conn()).profile("d", "dbo")
+        assert len(back) == 5, "a deployment that wants them back says so"
+    finally:
+        os.environ.pop("SEMANTIC_SKIP_SHADOW", None)

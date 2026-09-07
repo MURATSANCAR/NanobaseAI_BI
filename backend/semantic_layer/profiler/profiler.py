@@ -11,7 +11,7 @@ import time
 from typing import Any, Callable, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
-from semantic_layer.naming import disambiguate, logical_table
+from semantic_layer.naming import disambiguate, is_shadow_copy, logical_table
 from semantic_layer.profiler import sensitivity
 from semantic_layer.profiler.connectors import Connector, ModelFileConnector
 
@@ -171,6 +171,19 @@ class Profiler:
                          "cataloguing the %d", len(discovered), len(kept),
                          len(discovered) - len(kept), len(kept))
                 tables = discovered = kept
+        # Somebody's backup, somebody's test, a staging table left behind: real tables with real rows
+        # that answer no question anybody asks. Left in, each one is a shape of its own — a copy of a
+        # 336-column fact table is not another year of it — so the shape-first traversal gives it the
+        # priority of a first copy, and a question about sales arrives with a candidate list holding
+        # both the table and its backup. Excluded on the operator's word, and named in the log rather
+        # than dropped quietly. SEMANTIC_SKIP_SHADOW=0 puts them back.
+        if os.environ.get("SEMANTIC_SKIP_SHADOW", "1").strip() in ("1", "true", "yes", "on"):
+            shadows = [(sch, t) for sch, t in discovered if is_shadow_copy(t)]
+            if shadows:
+                tables = discovered = [(sch, t) for sch, t in discovered if not is_shadow_copy(t)]
+                log.info("scope: %d yedek/test/geçici tablo kapsam dışı bırakıldı: %s%s",
+                         len(shadows), ", ".join(t for _, t in shadows[:12]),
+                         " …" if len(shadows) > 12 else "")
         # Logical identity up front: both the scope cut and the deep set are decisions about *what kind
         # of table* this is, and they cannot be made from a physical name alone.
         logical = {tbl: logical_table(tbl, sch) for sch, tbl in discovered}
