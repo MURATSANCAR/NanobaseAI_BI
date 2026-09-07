@@ -194,6 +194,7 @@ class Profiler:
         # data and that other tables point at. The rest are still catalogued, just not probed.
         deep: Optional[set[str]] = None
         order = list(range(len(tables)))
+        counts: dict[str, Optional[int]] = {}
         if len(tables) > 1:
             counts = self._bulk_row_counts(schema, [t for _, t in tables])
             refs: dict[str, int] = {}
@@ -209,13 +210,27 @@ class Profiler:
                 # spent in decides what gets understood. Alphabetical order would hand the whole
                 # budget to whatever sorts first; go biggest-and-most-referenced first instead. The
                 # catalogue is still emitted in discovery order — only the traversal is reordered.
-                order.sort(key=lambda i: (-score.get(tables[i][1], 0.0), tables[i][1]))
+                # Tables that hold data come first, all of them, before anything that holds none.
+                # Volume and centrality still order them among themselves — but a much-referenced
+                # empty table must not take a turn ahead of a small table with rows in it, because
+                # the rows are what an answer is made of.
+                order.sort(key=lambda i: (0 if (counts.get(tables[i][1]) or 0) > 0 else 1,
+                                          -score.get(tables[i][1], 0.0), tables[i][1]))
+                with_rows = sum(1 for _, t in tables if (counts.get(t) or 0) > 0)
+                log.info("traversal: %d tables with rows first, then %d without",
+                         with_rows, len(tables) - with_rows)
         profiled: list[Optional[SchemaProfile]] = [None] * len(tables)
         started = time.time()
         deep_done = 0
         budget_spent: list[str] = []
+        crossed = False
         for index, position in enumerate(order, start=1):
             (sch, table), lt = tables[position], names[position]
+            # The one boundary worth announcing: everything that holds data has been catalogued.
+            if counts and not crossed and (counts.get(table) or 0) == 0 and index > 1:
+                crossed = True
+                log.info("=== DOLU TABLOLAR BITTI: %d tablo profillendi, simdi bos/gorunum tablolari ===",
+                         index - 1)
             entity = entity_by_pattern.get(lt.table_pattern, lt.entity)
             pk = self.c.primary_keys(sch, table)
             is_deep = deep is None or table in deep
