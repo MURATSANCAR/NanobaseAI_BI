@@ -100,7 +100,10 @@ def test_doc_miner_extracts_enum_glosses_and_column_aliases(synthetic_profiles):
     assert ("kanal", "CLCARD", "SPECODE2") in col and ("satis kanal", "CLCARD", "SPECODE2") in col
 
 
-def test_human_annotation_becomes_candidate_with_human_evidence(store, synthetic_profiles):
+def test_a_written_definition_the_data_confirms_is_enough(store, synthetic_profiles):
+    """What someone writes in the portal is a definition, and the data either bears it out or it does
+    not. Requiring a validated query on top meant a deployment where nobody presses approve could name
+    its columns and never say what its codes mean — the part of the business that most needs saying."""
     gen = CandidateGenerator(store, TENANT, DS, synthetic_profiles)
     store.add_annotation(Annotation(datasource_id=DS, table_pattern="LG_{n0}_{n1}_INVOICE", column="TRCODE", text="8 = toptan satış, 7 = perakende satış", author="ayse"))
     rep = gen.ingest_annotation("LG_{n0}_{n1}_INVOICE", "TRCODE", "8 = toptan satış, 7 = perakende satış", "annotation:1")
@@ -108,9 +111,15 @@ def test_human_annotation_becomes_candidate_with_human_evidence(store, synthetic
     c = store.find_concepts(TENANT, DS, normalized_term="toptan", semantic_type=SemanticType.DIMENSION_VALUE)[0]
     assert c.status == ConceptStatus.CANDIDATE
     assert any(e.evidence_type == EvidenceType.HUMAN_ANNOTATION for e in store.list_evidence(c.id))
-    # a human annotation alone does not certify — it needs at least one validated query too
+
     EvidenceEngine(store, min_support=3).run(TENANT, DS, synthetic_profiles)
-    assert store.get_concept(c.id).status == ConceptStatus.CANDIDATE
+    assert store.get_concept(c.id).status == ConceptStatus.CERTIFIED
+
+    # and the data still has the last word: a code it never saw on that column stays out
+    gen.ingest_annotation("LG_{n0}_{n1}_INVOICE", "TRCODE", "9999 = hayali kanal", "annotation:2")
+    EvidenceEngine(store, min_support=3).run(TENANT, DS, synthetic_profiles)
+    made_up = store.find_concepts(TENANT, DS, normalized_term="hayali kanal", semantic_type=SemanticType.DIMENSION_VALUE)
+    assert all(x.status != ConceptStatus.CERTIFIED for x in made_up), [x.status for x in made_up]
 
 
 def test_catalog_cache_follows_a_change_that_never_bumped_the_version(store, profiles):

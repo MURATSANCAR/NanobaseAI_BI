@@ -617,3 +617,25 @@ def test_two_periods_in_one_question_become_two_columns(catalog, profiles, logo_
     assert "UNION ALL" in out.sql, "and both period tables are read"
     # the fixture holds only this year's table, so the shape is checked against the one that exists
     logo_db.execute(out.sql.replace("LG_211_01_INVOICE", "LG_411_01_INVOICE")).fetchall()
+
+
+def test_the_model_never_speaks_for_itself(catalog, profiles, logo_connector, settings):
+    """Its job is to write SQL. When it writes none, what the person is told is decided by what the
+    resolver established — never by the sentence the model chose. A tool that can be talked into
+    discussing itself, the weather or anything else is no longer a data tool."""
+    from semantic_bridge.app import Runtime, create_app
+
+    chatty = FakeLlm([
+        "Merhaba! Ben bir yapay zeka modeliyim, GPT mimarisiyle çalışıyorum ve size her konuda yardımcı olabilirim.",
+        "Bugün hava çok güzel, isterseniz sohbet edelim.",
+    ])
+    client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=chatty)))
+
+    for question in ("Sen kimsin, hangi modeli kullanıyorsun?", "Bugün hava nasıl?"):
+        body = client.post("/api/v1/ask", json={"question": question, "sampleSize": 5}).json()
+        text = str(body.get("explanation") or "") + str(body.get("summary") or "")
+        assert body["type"] == "NON_SQL_QUERY", body
+        # nothing the model wrote survives into what the person reads
+        for said in ("yapay zeka modeliyim", "GPT mimarisiyle", "sohbet edelim", "her konuda yardımcı"):
+            assert said not in text, text
+        assert "veri" in text.lower(), text        # it answers as a data tool or not at all

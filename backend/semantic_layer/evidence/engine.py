@@ -203,7 +203,18 @@ class EvidenceEngine:
             "semantic_similarity": 1.0 if documented else (0.3 if llm else 0.0),
             "execution_consistency": 1.0 if validated > 0 else 0.0,
         }
-        raw = sum(WEIGHTS[k] * v for k, v in breakdown.items())
+        # Three of these terms measure use, not truth: whether queries ran, whether they correlated,
+        # whether one executed. For a definition a person wrote and the data confirms, they are not
+        # zero — they are unmeasured, and scoring an unmeasured axis as a failure is how a correct
+        # definition gets held below the bar for the sole reason that nobody has asked yet. When there
+        # is no query history at all, the score is taken over the axes that do apply, capped short of
+        # certainty because it is still unproven in use.
+        usage = ("validated_sql", "question_correlation", "execution_consistency")
+        if validated == 0 and human > 0:
+            applies = {k: v for k, v in breakdown.items() if k not in usage}
+            raw = min(0.85, sum(WEIGHTS[k] * v for k, v in applies.items()) / sum(WEIGHTS[k] for k in applies))
+        else:
+            raw = sum(WEIGHTS[k] * v for k, v in breakdown.items())
         score = raw * (1.0 - min(1.0, 2.0 * r_contra))
 
         if human_certified:

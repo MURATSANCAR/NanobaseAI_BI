@@ -403,3 +403,7 @@ class CompiledQuery:
     explain: list[str] = field(default_factory=list)
     llm_ms: int = 0
     certified: bool = False            # every semantic slot came from CERTIFIED catalog entries
+    # What the model said when it wrote no SQL. Kept for diagnosis and never shown: a refusal it wrote
+    # could be about anything at all, and a data tool that can be talked into discussing itself is no
+    # longer a data tool.
+    model_text: Optional[str] = None
