@@ -189,6 +189,17 @@ def probe_catalog(
         try:
             _, rows, _ = connector.execute(_physicalize(compiled.sql, profiles, context or {}, dialect or getattr(connector, "dialect", "")), 5)
         except Exception as e:  # noqa: BLE001
+            from semantic_layer.runtime.guardrails import is_connection_error
+
+            timed_out = "timeout" in str(e).lower() or "HYT00" in str(e)
+            if timed_out or is_connection_error(e):
+                # The measure could not be checked, which is not the same as failing the check. A
+                # timeout is a statement about how much data there is, and a dropped connection about
+                # the network; holding either against the definition would decertify correct knowledge
+                # because a table grew.
+                report.errors.append(f"{concept.term}: doğrulanamadı ({str(e)[:80]})")
+                log.warning("metric probe could not run for %s: %s", concept.term, str(e)[:200])
+                continue
             store.add_counter_evidence(CounterEvidence(concept.id, "probe:execute", "EXECUTION_FAILED", payload={"error": str(e)[:300], "support": 2}, severity="MEDIUM"))
             report.metrics_failed += 1
             report.errors.append(f"{concept.term}: {str(e)[:120]}")

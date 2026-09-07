@@ -67,3 +67,31 @@ def test_an_offline_connector_is_never_probed(store, synthetic_profiles):
 
     assert 'getattr(connector, "supports_execution", False)' in inspect.getsource(run_pipeline)
     assert not store.list_counter_evidence(c.id)
+
+
+def test_a_measure_that_times_out_is_not_a_measure_that_failed(store, profiles):
+    """A timeout says how much data there is; a dropped connection says something about the network.
+    Neither says the definition is wrong, and counting them against it decertifies correct knowledge
+    the moment a table grows."""
+    from semantic_layer.evidence.probe import probe_catalog
+    from semantic_layer.models import Evidence, EvidenceType, Mapping, SemanticType
+    from semantic_layer.store.catalog_store import ConceptStatus
+
+    for p in profiles:
+        store.upsert_profile(p)
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    c, _ = store.upsert_concept(TENANT, DS, "ciro", SemanticType.METRIC,
+                                mapping=Mapping(concept_id="", entity="INVOICE", table_pattern=inv.table_pattern, formula="SUM(INVOICE.NETTOTAL)"),
+                                status=ConceptStatus.CERTIFIED)
+    store.add_evidence(Evidence(c.id, EvidenceType.VALIDATED_SQL, "hm", support_count=3, payload={"pairs": ["a", "b", "c"]}))
+
+    class _Slow:
+        dialect = "sqlite"
+        supports_execution = True
+
+        def execute(self, sql, limit):
+            raise RuntimeError("('HYT00', '[HYT00] [FreeTDS][SQL Server]Timeout expired (0)')")
+
+    report = probe_catalog(store, TENANT, DS, profiles, _Slow(), context={"n0": "411", "n1": "01"}, dialect="sqlite")
+    assert not store.list_counter_evidence(c.id), "a check that could not run is not a failed check"
+    assert any("doğrulanamadı" in e for e in report.errors), report.errors

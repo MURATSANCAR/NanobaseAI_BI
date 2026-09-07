@@ -45,8 +45,10 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
         known = [(p, w) for p, w in dated if w]
         if not known:
             return list(profiles)
-        latest = max(w[1] for _, w in known)
-        return [p for p, w in known if w[1] == latest]
+        # by where each period *begins*, not where it ends: a single forward-dated row can push an old
+        # table's window years into the future and make it look like the current one
+        latest = max(w[0] for _, w in known)
+        return [p for p, w in known if w[0] == latest]
     hit = [p for p, w in dated if w and w[0] < end and start <= w[1]]
     # a table whose window was never measured cannot be ruled out, so it travels with the rest
     hit += [p for p, w in dated if not w]
