@@ -136,6 +136,15 @@ SEMANTIC_RECALL=${SEMANTIC_RECALL:-1}
 SEMANTIC_STRICT_MISS=${SEMANTIC_STRICT_MISS:-0}
 SEMANTIC_SUMMARY_MODE=${SEMANTIC_SUMMARY_MODE:-fast}
 SEMANTIC_MAX_ROWS=${SEMANTIC_MAX_ROWS:-500}
+# Kokpit açılışı: aynı beş toplama sorgusu her yenilemede sorulur. Sonuçlar önbellekte tutulur ve
+# arka planda tazelenir; kullanıcının isteği kaynağa inmez, hazır sonucu alır. Tazeleme turu, sıcak
+# sorguların toplam süresi × DUTY kadar uzayabilir — kaynak tazelemeye ayrılıp kullanıcıyı bekletmesin
+# diye. REFRESH_SEC=0 tazelemeyi kapatır (her istek yeniden kaynağa iner).
+SEMANTIC_CACHE_TTL_SEC=${SEMANTIC_CACHE_TTL_SEC:-300}
+SEMANTIC_REFRESH_SEC=${SEMANTIC_REFRESH_SEC:-15}
+SEMANTIC_REFRESH_DUTY=${SEMANTIC_REFRESH_DUTY:-5}
+SEMANTIC_HOT_WINDOW_SEC=${SEMANTIC_HOT_WINDOW_SEC:-900}
+SEMANTIC_STALE_MAX_SEC=${SEMANTIC_STALE_MAX_SEC:-900}
 SEMANTIC_INTUGLE=${SEMANTIC_INTUGLE:-0}
 OPENAI_API_BASE=${LLM_BASE:-http://172.17.0.1:8020/v1}
 OPENAI_API_KEY=${LLM_KEY}

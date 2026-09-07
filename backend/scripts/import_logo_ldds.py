@@ -4,11 +4,17 @@ Logo declares no foreign keys in SQL Server and writes no extended properties, s
 database yields bare identifiers: 8.900 columns named CLIENTREF, TRCODE, SIGN with nothing saying
 what any of them mean. Everything that meaning was hand-typed into two dicts covering 26 tables.
 
-The vendor ships the whole dictionary — every table, every column, the code sets, and the join graph —
-as an Excel workbook. This turns that workbook into a JSON file the scanners load, so a Logo source
-arrives documented instead of being documented a table at a time by whoever answers the support call.
+The vendor ships the whole dictionary — every table, every column, the code sets, the indexes and
+the join graph — as an Excel workbook. This turns that workbook into a JSON file the scanners load,
+so a Logo source arrives documented instead of being documented a table at a time by whoever answers
+the support call.
 
-    python backend/scripts/import_logo_ldds.py /path/to/LDDS.xls
+The workbook documents in English. The vendor's Turkish table-structure document (LOGO_TABLE_YAPISI /
+"Unity Veri tabanı", the same file under two names) documents 131 of the same tables in the language
+people ask questions in, and covers twenty the workbook omits entirely — CITY, COUNTRY, GOUSERS,
+DAILYEXCHANGES. Pass it with --doc and its Turkish sentences are carried alongside the English ones.
+
+    python backend/scripts/import_logo_ldds.py /path/to/LDDS.xls --doc /path/to/LOGO_TABLE_YAPISI.DOC
 
 Writes configs/schemas/logo-ldds.json and refreshes the Turkish code glossary in the `logo`
 knowledge pack. Both outputs are generated: edit this script, not them.
