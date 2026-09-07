@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, Percent, ShoppingCart, TrendingUp, Undo2 } from 'lucide-react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, type View } from './components/Sidebar';
+import { CatalogExplorer } from './components/CatalogExplorer';
 import { TopBar } from './components/TopBar';
 import { KpiCard } from './components/KpiCard';
 import { CashFlowChart } from './components/CashFlowChart';
@@ -20,6 +21,7 @@ export default function App() {
   const d = cockpit.data;
   const copilotInput = useRef<HTMLInputElement>(null);
   const [splash, setSplash] = useState(true);
+  const [view, setView] = useState<View>('desk');
   const closeSplash = useCallback(() => setSplash(false), []);
   const ym = ymOf(d?.summary.lastDate);
   const periodLabel = ym ? `${ym.year} · Ocak–${MONTHS_TR_LONG[ym.month - 1]} (YTD)` : 'Veri kesiti bekleniyor';
@@ -31,15 +33,16 @@ export default function App() {
   return (
     <div className="flex min-h-screen">
       {splash && <Splash onDone={closeSplash} />}
-      <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} />
+      <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} view={view} onView={setView} />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar lastDate={d?.summary.lastDate ?? ''} live={d?.source === 'live'} engineOk={engineOk} periodLabel={periodLabel} onSearch={focusCopilot} />
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
-            {cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Veriler yükleniyor…</div>}
-            {cockpit.isError && (
+            {view === 'catalog' && <CatalogExplorer />}
+            {view === 'desk' && cockpit.isPending && <div className="card p-4 text-sm text-ink-muted sm:p-6">Veriler yükleniyor…</div>}
+            {view === 'desk' && cockpit.isError && (
               <div className="card flex items-start gap-3 border-brand-accent/40 p-4 text-sm sm:p-5">
                 <AlertTriangle className="mt-0.5 shrink-0 text-brand-accent" size={18} />
                 <div>
@@ -48,7 +51,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {d && <Dashboard d={d} engineOk={engineOk} />}
+            {view === 'desk' && d && <Dashboard d={d} engineOk={engineOk} />}
           </main>
 
           <CopilotPanel engineOk={engineOk} inputRef={copilotInput} />

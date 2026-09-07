@@ -395,6 +395,10 @@ class Runtime:
                   if (not entity or p.entity.upper() == entity.upper())
                   and (not search or search.lower() in p.entity.lower() or search.lower() in p.table_name.lower()
                        or any(search.lower() in c.name.lower() for c in p.columns))]
+        # Fullest first. A data dictionary is read to find where the business lives, and a schema of
+        # hundreds of tables is mostly empty scaffolding; ordering by name buries the handful that
+        # matter somewhere in the middle of the alphabet.
+        wanted.sort(key=lambda p: (-(p.row_count or 0), p.entity))
         total = len(wanted)
         if limit:
             wanted = wanted[offset : offset + limit]

@@ -1,9 +1,11 @@
-import { BookOpen, Landmark } from 'lucide-react';
+import { BookOpen, Landmark, Table2 } from 'lucide-react';
 import clsx from 'clsx';
 
 /** Tek masa: Finans & Bütçe. Diğer masalar (satış/kanal, yayınevi, cari, stok, satınalma) veri modeli
  *  ve doğrulanmış sorguları hazır olduğunda eklenir — çalışmayan bağlantı gösterilmez. */
-export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; modelCount: number | null }) {
+export type View = 'desk' | 'catalog';
+
+export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void }) {
   return (
     <aside className="hidden lg:flex w-[236px] shrink-0 flex-col bg-rail border-r border-line px-4 py-5">
       <div className="flex items-center gap-3 px-1">
@@ -21,10 +23,8 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
 
       <div className="eyebrow mt-8 px-2">Masa & Çalışma Alanları</div>
       <nav className="mt-3 flex flex-col gap-1" aria-label="Masalar">
-        <span className="flex items-center gap-3 rounded-xl bg-brand px-3 py-2.5 text-[13px] font-medium text-white shadow-card" aria-current="page">
-          <Landmark size={16} strokeWidth={2} className="text-white" />
-          <span className="truncate">Finans &amp; Bütçe Masası</span>
-        </span>
+        <NavItem icon={Landmark} label="Finans & Bütçe Masası" active={view === 'desk'} onClick={() => onView('desk')} />
+        <NavItem icon={Table2} label="Veri Sözlüğü" active={view === 'catalog'} onClick={() => onView('catalog')} />
       </nav>
 
       {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
@@ -56,5 +56,22 @@ export function Sidebar({ engineOk, modelCount }: { engineOk: boolean | null; mo
         </div>
       </div>
     </aside>
+  );
+}
+
+function NavItem({ icon: Icon, label, active, onClick }: { icon: typeof Landmark; label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={clsx(
+        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition',
+        active ? 'bg-brand text-white shadow-card' : 'text-ink-muted hover:bg-brand-soft hover:text-brand-deep',
+      )}
+    >
+      <Icon size={16} strokeWidth={2} className={active ? 'text-white' : 'text-ink-faint'} />
+      <span className="truncate">{label}</span>
+    </button>
   );
 }
