@@ -323,7 +323,9 @@ def freshness(profiles: list[SchemaProfile], connector: Any, conventions: Any, *
             if f_val and l_val and str(f_val) != str(l_val):
                 marker = col.sentinel_values[0]
                 out.append({"entity": prof.entity, "column": col.name, "filled_until": str(f_val), "last_row": str(l_val)})
-                col.description = ((col.description or "") + f" [tazelik] {f_val} tarihine kadar dolu; sonrası {marker} (değer yok)").strip()
+                note = f"{f_val} tarihine kadar dolu; sonrası {marker} (değer yok)"
+                if note not in col.derived:
+                    col.derived.append(note)      # our reading, beside whatever the source says, never over it
     return out
 
 

@@ -368,6 +368,8 @@ class Runtime:
                 cons = concepts_by_col.get((p.entity, c.name.upper()), [])
                 col_anns = [{"id": a.id, "text": a.text, "author": a.author, "createdAt": a.created_at.isoformat()} for a in by_key.get((p.table_pattern, c.name.upper()), [])]
                 defined = bool(c.description) or bool(col_anns) or any(x["status"] == ConceptStatus.CERTIFIED for x in cons)
+                # what we worked out ourselves is knowledge, but it is not a definition: a column only
+                # this system has an opinion about is still one nobody has explained
                 if not defined:
                     undefined_cols += 1
                 cols.append({
@@ -376,7 +378,10 @@ class Runtime:
                     "sensitive": c.sensitive, "sensitivityReason": c.sensitivity_reason,
                     "sentinelValues": list(c.sentinel_values),
                     "distinct": c.distinct_count, "topValues": [] if c.sensitive else [[v, n] for v, n in c.top_values[:12]],
-                    "description": c.description, "annotations": col_anns, "concepts": cons,
+                    # three readings of one column, kept apart: what the source says, what we concluded
+                    # from the data, and what a person typed in the portal
+                    "description": c.description, "derived": list(c.derived), "unit": c.unit,
+                    "annotations": col_anns, "concepts": cons,
                     "status": "CERTIFIED" if any(x["status"] == ConceptStatus.CERTIFIED for x in cons) else ("CANDIDATE" if cons else ("DESCRIBED" if defined else "UNDEFINED")),
                 })
             tables.append({

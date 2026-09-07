@@ -101,6 +101,16 @@ class Profiler:
         names = [logical_table(t, sch) for sch, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
         fks = self.c.foreign_keys(schema)
+        # What the people who built this database wrote about it. Read once for the whole schema, so a
+        # documented source costs one query rather than one per table, and an engine that keeps no
+        # comments simply contributes nothing.
+        try:
+            described = self.c.descriptions(schema) if hasattr(self.c, "descriptions") else {}
+        except Exception as e:  # noqa: BLE001
+            log.debug("schema descriptions unavailable: %s", e)
+            described = {}
+        if described:
+            log.info("source documents itself: %d table/column descriptions found", len(described))
         fk_by_table: dict[str, list[dict[str, str]]] = {}
         for fk in fks:
             fk_by_table.setdefault(fk["table"].upper(), []).append(fk)
@@ -135,7 +145,8 @@ class Profiler:
             rels: list[dict[str, str]] = []
             probes_left = self.max_probes_per_table
             for col in self.c.columns(sch, table):
-                cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")), description=col.get("description"))
+                cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")),
+                                   description=col.get("description") or described.get((table, col["name"])))
                 observed = [v for v in sample.get(cp.name.upper(), []) if v is not None and str(v) != ""]
                 reason = sensitivity.name_is_sensitive(cp.name) or sensitivity.values_are_sensitive([str(v) for v in observed])
                 if reason:
@@ -170,7 +181,7 @@ class Profiler:
                         log.debug("top_values failed %s.%s: %s", table, col["name"], e)
                 _mark_sentinels(cp, [str(v) for v in sample.get(cp.name.upper(), []) if v is not None])
                 cols.append(cp)
-            desc = self.c.table_description(table) if hasattr(self.c, "table_description") else None
+            desc = (self.c.table_description(table) if hasattr(self.c, "table_description") else None) or described.get((table, None))
             window = self._time_window(sch, table, cols) if is_deep else None
             if is_deep:
                 deep_done += 1

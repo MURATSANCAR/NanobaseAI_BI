@@ -57,7 +57,11 @@ def test_links_and_glossary_are_merged_into_the_profile(monkeypatch, retail_prof
     assert report.ran and report.links_seen == 2 and report.links_added == 1
     link = next(r for r in orders.relationships if r["column"] == "customer")
     assert (link["ref_entity"], link["ref_column"], link["source"], link["confidence"]) == ("CUSTOMERS", "id", "intugle", 0.97)
-    assert orders.column("net_amount").description.startswith("Sipariş net tutarı")
+    # a third party's glossary is a reading, not the source's own words: it sits beside the column's
+    # description rather than replacing whatever the database itself says
+    col = orders.column("net_amount")
+    assert col.description is None
+    assert any(d.startswith("Sipariş net tutarı") for d in col.derived), col.derived
     assert report.glossary_added == 2
 
 

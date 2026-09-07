@@ -82,3 +82,30 @@ def test_prompt_hides_values_and_states_the_rules(pii_profiles):
     for leaked in ("10000000001", "user1@example.com", "+90 532 111 22 01"):
         assert leaked not in prompt
     assert "= değer yok" in prompt                                            # sentinel meaning is stated
+
+
+def test_everything_the_profile_knows_survives_the_store(store, profiles):
+    """A column detected as personal data came back from the store unmarked, because the reader named
+    its fields one by one and the ones added later were dropped in silence. The protection that keeps
+    personal data out of value lookups and out of prompts was then only ever true in memory."""
+    import dataclasses
+
+    from semantic_layer.models import ColumnProfile
+
+    p = profiles[0]
+    col = p.columns[0]
+    col.sensitive = True
+    col.sensitivity_reason = "test"
+    col.sentinel_values = ["0"]
+    col.unit = "KDV hariç"
+    col.derived = ["2026-08-17 tarihine kadar dolu"]
+    store.upsert_profile(p)
+
+    back = next(x for x in store.list_profiles(p.datasource_id) if x.entity == p.entity)
+    c = back.column(col.name)
+    assert c.sensitive and c.sensitivity_reason == "test"
+    assert c.sentinel_values == ["0"] and c.unit == "KDV hariç"
+    assert c.derived == ["2026-08-17 tarihine kadar dolu"]
+    # and nothing the dataclass carries is quietly left behind
+    for f in dataclasses.fields(ColumnProfile):
+        assert hasattr(c, f.name), f.name

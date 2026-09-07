@@ -218,11 +218,20 @@ def _unit_facts(text: str, source: str, entities: Iterable[str] = ()) -> list[Do
     return out
 
 
-def mine_text(text: str, source: str, entity_hint: Optional[str] = None, conventions: Any = None) -> list[DocFact]:
+def mine_text(text: str, source: str, entity_hint: Optional[str] = None, conventions: Any = None,
+              column_hint: Optional[str] = None) -> list[DocFact]:
     """Documentation → facts. Which columns carry value glosses and which words name an entity is
-    read from the profile (`conventions`), never from a built-in list of customer column names."""
+    read from the profile (`conventions`), never from a built-in list of customer column names.
+
+    `column_hint` says the text is written *about* one column — a comment on that column, or an
+    annotation someone typed against it. Then it is scanned whether or not the profile independently
+    called it an enum: a shallowly profiled or very large table has no value list of its own, and that
+    is exactly where a written explanation carries the most.
+    """
     entities = list(getattr(conventions, "entities", ()) or ())
     enum_columns = {c for cols in (getattr(conventions, "enum_columns", {}) or {}).values() for c in cols}
+    if column_hint:
+        enum_columns = enum_columns | {column_hint.upper()}
     facts: list[DocFact] = []
     for col in sorted(enum_columns):
         if col in text:
@@ -257,6 +266,10 @@ def mine_project_docs(project_dir: Path, conventions: Any = None) -> list[DocFac
     return facts
 
 
+#: a description that maps codes to meanings ("1 = toptan", "0: iptal") rather than prose about the column
+_GLOSSES = re.compile(r"\d\s*[=:]\s*\w|\b(kod|code|deger|value)\b\s*[=:]", re.I)
+
+
 def mine_profiles(profiles: Iterable, conventions: Any = None) -> list[DocFact]:
     """Column/table descriptions carried by the source itself → facts scoped to the entity."""
     facts: list[DocFact] = []
@@ -265,15 +278,21 @@ def mine_profiles(profiles: Iterable, conventions: Any = None) -> list[DocFact]:
         if p.description:
             facts.extend(mine_text(p.description, f"model:{p.entity}", p.entity, conventions))
         for c in p.columns:
-            if c.description and (not enum_columns or c.name.upper() in enum_columns):
-                facts.extend(mine_text(f"{c.name}: {c.description}", f"model:{p.entity}.{c.name}", p.entity, conventions))
+            if not c.description:
+                continue
+            # A documented code list is evidence whether or not the profiler independently decided the
+            # column is an enum — a table profiled shallowly, or one too large to inventory, has no
+            # value list of its own and is exactly where someone's written explanation is worth most.
+            if enum_columns and c.name.upper() not in enum_columns and not _GLOSSES.search(c.description):
+                continue
+            facts.extend(mine_text(f"{c.name}: {c.description}", f"model:{p.entity}.{c.name}", p.entity, conventions, column_hint=c.name))
     return facts
 
 
 def mine_annotation(text: str, entity: str, column: Optional[str], source: str, conventions: Any = None) -> list[DocFact]:
     """Portal annotation text ("8 = wholesale, 7 = retail" or free prose)."""
     prefixed = f"{column}: {text}" if column else text
-    facts = mine_text(prefixed, source, entity, conventions)
+    facts = mine_text(prefixed, source, entity, conventions, column_hint=column)
     for f in facts:
         f.entity = f.entity or entity
         if column and f.kind == "value" and not f.column:

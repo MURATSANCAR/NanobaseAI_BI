@@ -174,7 +174,9 @@ def run(profiles: list[SchemaProfile], *, datasets: Optional[dict[str, Any]] = N
         for p in candidates:
             col = p.column(column)
             if col is not None and not col.description:
-                col.description = text.strip()[:500]
+                note = text.strip()[:500]
+                if note and note not in col.derived:
+                    col.derived.append(note)      # a third party's reading is not the source's own words
                 report.glossary_added += 1
                 break
     return report

@@ -124,7 +124,18 @@ function ColumnRow({
           </span>
         ))}
       </div>
-      {col.description ? <p className="mt-1 text-xs text-slate-600">{col.description}</p> : null}
+      {col.description ? (
+        <p className="mt-1 flex items-start gap-2 text-xs text-slate-600">
+          <span className="mt-px rounded bg-slate-100 px-1 text-[10px] text-slate-500">{t('bi.sl.fromSource')}</span>
+          <span className="flex-1">{col.description}</span>
+        </p>
+      ) : null}
+      {(col.derived ?? []).map((d, i) => (
+        <p key={`d${i}`} className="mt-1 flex items-start gap-2 text-xs text-slate-500">
+          <span className="mt-px rounded bg-indigo-50 px-1 text-[10px] text-indigo-600">{t('bi.sl.fromData')}</span>
+          <span className="flex-1">{d}</span>
+        </p>
+      ))}
       {col.annotations.map((a) => (
         <p key={a.id} className="mt-1 flex items-start gap-2 text-xs text-slate-700">
           <BookOpen className="mt-0.5 h-3 w-3 shrink-0 text-sky-600" />

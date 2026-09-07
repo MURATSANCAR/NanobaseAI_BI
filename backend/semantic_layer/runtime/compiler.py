@@ -479,6 +479,10 @@ class ExistingCompiler:
                     desc = f" → {c.ref_entity}.{c.ref_column}"
                 if c.sentinel_values and not c.sensitive:
                     desc += f" [{', '.join(c.sentinel_values)} = değer yok]"
+                if c.description and not c.sensitive:
+                    desc += f" — {c.description[:120]}"          # what the source itself says
+                for note in (c.derived or [])[:2]:
+                    desc += f" [çıkarım: {note[:80]}]"           # and what we worked out, marked as ours
                 cols.append(f'"{c.name}" {c.data_type}{desc}')
             lines.append(f"{self.table_label(p)}: " + ", ".join(cols[: self.max_prompt_columns]) +
                          (f" … (+{len(cols) - self.max_prompt_columns} kolon)" if len(cols) > self.max_prompt_columns else ""))

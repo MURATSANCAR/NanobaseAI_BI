@@ -129,3 +129,57 @@ def test_no_customer_specific_identifiers_in_engine_sources():
             if banned.search(code):
                 offenders.append(f"{path.relative_to(root)}:{i}: {line.strip()[:90]}")
     assert not offenders, "customer-specific identifiers in engine code:\n" + "\n".join(offenders)
+
+
+def test_the_database_own_descriptions_become_catalog_evidence(store):
+    """Whatever the people who built a database wrote about it — a table comment, a column comment — is
+    the best evidence the catalog can get, and every engine keeps it somewhere different. Reading it is
+    part of profiling, not something a customer has to re-type into the portal."""
+    from semantic_layer.candidates.doc_miner import mine_profiles
+    from semantic_layer.conventions import Conventions
+    from semantic_layer.profiler.profiler import Profiler
+
+    class _Documented:
+        """A source that documents itself, in the shape every connector returns."""
+
+        dialect = "generic"
+        supports_execution = False
+
+        def list_tables(self, schema, like=None):
+            return [("main", "ORDERS_2024")]
+
+        def columns(self, schema, table):
+            return [{"name": "ID", "data_type": "int"}, {"name": "KIND", "data_type": "smallint"}]
+
+        def primary_keys(self, schema, table):
+            return ["ID"]
+
+        def foreign_keys(self, schema):
+            return []
+
+        def row_count(self, schema, table):
+            return 10
+
+        def descriptions(self, schema):
+            return {("ORDERS_2024", None): "Sipariş başlıkları",
+                    ("ORDERS_2024", "KIND"): "1 = toptan, 2 = perakende"}
+
+        def sample_rows(self, schema, table, limit=20):
+            return []
+
+        def top_values(self, schema, table, column, limit):
+            return []
+
+    profiles = Profiler(_Documented()).profile("ds", "main")
+    p = profiles[0]
+    assert p.description == "Sipariş başlıkları"
+    assert p.column("KIND").description == "1 = toptan, 2 = perakende"
+    # and that description is mined into facts the evidence engine can weigh
+    facts = mine_profiles(profiles, Conventions.from_profiles(profiles))
+    values = {f.term: f.values for f in facts if f.kind == "value"}
+    assert "toptan" in values and "1" in values["toptan"], [(f.kind, f.term, f.values) for f in facts]
+
+
+def test_an_engine_without_comments_contributes_nothing_rather_than_failing(logo_connector):
+    """SQLite keeps no comments. The profile must come out the same as before, not fall over."""
+    assert logo_connector.descriptions("main") == {}

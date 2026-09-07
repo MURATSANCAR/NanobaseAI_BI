@@ -156,7 +156,11 @@ class ColumnProfile:
     is_primary_key: bool = False
     ref_entity: Optional[str] = None      # a reference column and the entity it points at
     ref_column: Optional[str] = None
-    description: Optional[str] = None     # from the source / model export (not a user annotation)
+    # Three different people can have something to say about one column, and none of them may
+    # overwrite another: the source's own comment is what the customer wrote, `derived` is what this
+    # system concluded from the data, and a portal annotation lives in its own table with its author.
+    description: Optional[str] = None     # the source's own words — a database comment or model export
+    derived: list[str] = field(default_factory=list)   # what we concluded from the data, kept beside it
     sensitive: bool = False               # personal data: never sampled, never shown, never sent to a model
     sensitivity_reason: Optional[str] = None
     sentinel_values: list[str] = field(default_factory=list)  # values that mean "absent" (0 on a reference, …)
@@ -164,6 +168,14 @@ class ColumnProfile:
 
     def is_enum(self) -> bool:
         return bool(self.top_values) and (self.distinct_count or 0) <= 64
+
+    def notes(self) -> list[str]:
+        """Everything known about this column, each with whose reading it is."""
+        out = []
+        if self.description:
+            out.append(f"kaynak: {self.description}")
+        out.extend(f"çıkarım: {d}" for d in self.derived)
+        return out
 
     def meaningful_values(self) -> list[tuple[str, int]]:
         """Observed values with the sentinels removed — what a business term may actually mean."""
@@ -181,7 +193,8 @@ class SchemaProfile:
     primary_key: list[str] = field(default_factory=list)
     relationships: list[dict[str, str]] = field(default_factory=list)  # {column, ref_entity, ref_column}
     row_count: Optional[int] = None
-    description: Optional[str] = None
+    description: Optional[str] = None      # the source's own words about the table
+    derived: list[str] = field(default_factory=list)   # what we concluded about it from the data
     time_window: Optional[tuple[str, str]] = None   # measured (first, last) value of the time column
     context: dict[str, str] = field(default_factory=dict)              # placeholder values for the pattern
     scanned_at: datetime = field(default_factory=utcnow)

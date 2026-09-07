@@ -640,18 +640,26 @@ class CatalogStore:
 
     @staticmethod
     def _col_from_json(d: dict[str, Any]) -> ColumnProfile:
-        return ColumnProfile(
-            name=d["name"],
-            data_type=d.get("data_type") or "",
-            nullable=bool(d.get("nullable", True)),
-            distinct_count=d.get("distinct_count"),
-            top_values=[(str(v), int(n)) for v, n in (d.get("top_values") or [])],
-            null_ratio=d.get("null_ratio"),
-            is_primary_key=bool(d.get("is_primary_key")),
-            ref_entity=d.get("ref_entity"),
-            ref_column=d.get("ref_column"),
-            description=d.get("description"),
-        )
+        """Read back every field the profile carries.
+
+        This used to name the fields one by one, and the ones added later were dropped in silence:
+        a column detected as personal data came back from the store unmarked, so the protection that
+        keeps it out of value lookups and out of prompts was only ever true in memory. Reading the
+        dataclass itself means a field added tomorrow cannot go missing the same way.
+        """
+        import dataclasses
+
+        known = {f.name for f in dataclasses.fields(ColumnProfile)}
+        kwargs: dict[str, Any] = {k: v for k, v in d.items() if k in known}
+        kwargs["name"] = d["name"]
+        kwargs["data_type"] = d.get("data_type") or ""
+        kwargs["nullable"] = bool(d.get("nullable", True))
+        kwargs["is_primary_key"] = bool(d.get("is_primary_key"))
+        kwargs["sensitive"] = bool(d.get("sensitive"))
+        kwargs["top_values"] = [(str(v), int(n)) for v, n in (d.get("top_values") or [])]
+        kwargs["sentinel_values"] = [str(v) for v in (d.get("sentinel_values") or [])]
+        kwargs["derived"] = [str(v) for v in (d.get("derived") or [])]
+        return ColumnProfile(**kwargs)
 
     def prune_profiles(self, datasource_id: str, keep_patterns: list[str]) -> int:
         """Drop profile rows for tables the current scope no longer covers, so the runtime never compiles

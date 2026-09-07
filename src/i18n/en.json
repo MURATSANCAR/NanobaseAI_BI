@@ -2081,5 +2081,7 @@
   "bi.sl.metrics": "Metrics",
   "bi.sl.values": "Value mappings",
   "bi.sl.defaultFilters": "Default filters",
-  "bi.sl.scope": "Scope"
+  "bi.sl.scope": "Scope",
+  "bi.sl.fromSource": "from source",
+  "bi.sl.fromData": "derived from data"
 }

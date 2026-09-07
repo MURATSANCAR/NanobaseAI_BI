@@ -34,6 +34,7 @@ class Connector(Protocol):
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]: ...
     def sample_rows(self, schema: str, table: str, limit: int) -> list[dict[str, Any]]: ...
     def row_count(self, schema: str, table: str) -> Optional[int]: ...
+    def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]: ...
     def execute(self, sql: str, limit: int) -> tuple[list[dict[str, str]], list[dict[str, Any]], bool]: ...
     def dry_run(self, sql: str) -> None: ...
     def close(self) -> None: ...
@@ -63,6 +64,16 @@ class _DbApiBase:
     # A query that never returns must not hold the deploy or the service hostage: a customer database can
     # always be slow, blocked, or restarted under us.
     query_timeout = int(os.environ.get("SEMANTIC_QUERY_TIMEOUT_SEC", "120"))
+
+    def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
+        """What the people who built this database wrote about it: table and column comments.
+
+        Every engine keeps them somewhere different and none of them is optional to support — a
+        deployment where someone documented the schema in the database is the deployment where the
+        catalog has the most to learn. The key is (table, column) with column None for the table itself;
+        an engine with no comment store returns nothing rather than pretending.
+        """
+        return {}
 
     def __init__(self) -> None:
         self._conn = None
@@ -207,6 +218,23 @@ class MSSQLConnector(_DbApiBase):
             return []
         return [{"table": r[0], "column": r[1], "ref_table": r[2], "ref_column": r[3]} for r in rows]
 
+    def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
+        """SQL Server keeps them as the MS_Description extended property. One query for the schema."""
+        try:
+            _, rows = self._rows(
+                """SELECT t.name AS tbl, c.name AS col, CAST(ep.value AS NVARCHAR(4000)) AS descr
+                   FROM sys.extended_properties ep
+                   JOIN sys.tables t ON t.object_id = ep.major_id
+                   JOIN sys.schemas s ON s.schema_id = t.schema_id
+                   LEFT JOIN sys.columns c ON c.object_id = ep.major_id AND c.column_id = ep.minor_id
+                   WHERE ep.class = 1 AND ep.name = ? AND s.name = ?""",
+                ("MS_Description", schema or self.default_schema),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug("extended properties unavailable: %s", e)
+            return {}
+        return {(str(r[0]), str(r[1]) if r[1] is not None else None): str(r[2]) for r in rows if r[2]}
+
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]:
         sql = f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n FROM {self.q(schema)}.{self.q(table)} GROUP BY {self.q(column)} ORDER BY n DESC"
         _, rows = self._rows(sql)
@@ -265,6 +293,43 @@ class PostgresConnector(_DbApiBase):
             params = (schema, like)
         _, rows = self._rows(sql + " ORDER BY table_name", params)
         return [(r[0], r[1]) for r in rows]
+
+    def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
+        """Postgres keeps them as object comments: obj_description for a table, col_description for a
+        column. One query for the schema, same shape as every other engine's answer."""
+        try:
+            _, rows = self._rows(
+                """SELECT c.relname AS tbl, a.attname AS col,
+                          COALESCE(col_description(c.oid, a.attnum), obj_description(c.oid, 'pg_class')) AS descr,
+                          (a.attnum IS NULL) AS is_table
+                   FROM pg_class c
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                   LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
+                   WHERE n.nspname = %s AND c.relkind IN ('r', 'p', 'v', 'm')""",
+                (schema or self.default_schema,),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug("pg comments unavailable: %s", e)
+            return {}
+        out: dict[tuple[str, Optional[str]], str] = {}
+        for r in rows:
+            table, column, descr = str(r[0]), (str(r[1]) if r[1] is not None else None), r[2]
+            if not descr:
+                continue
+            out[(table, column)] = str(descr)
+        try:
+            _, trows = self._rows(
+                """SELECT c.relname, obj_description(c.oid, 'pg_class')
+                   FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                   WHERE n.nspname = %s AND c.relkind IN ('r', 'p', 'v', 'm')""",
+                (schema or self.default_schema,),
+            )
+            for r in trows:
+                if r[1]:
+                    out[(str(r[0]), None)] = str(r[1])
+        except Exception:  # noqa: BLE001
+            pass
+        return out
 
     def columns(self, schema: str, table: str) -> list[dict[str, Any]]:
         _, rows = self._rows("SELECT column_name, data_type, character_maximum_length, is_nullable FROM information_schema.columns WHERE table_schema=? AND table_name=? ORDER BY ordinal_position", (schema, table))
