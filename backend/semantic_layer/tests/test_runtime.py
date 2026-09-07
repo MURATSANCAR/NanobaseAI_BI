@@ -638,4 +638,4 @@ def test_the_model_never_speaks_for_itself(catalog, profiles, logo_connector, se
         # nothing the model wrote survives into what the person reads
         for said in ("yapay zeka modeliyim", "GPT mimarisiyle", "sohbet edelim", "her konuda yardımcı"):
             assert said not in text, text
-        assert "veri" in text.lower(), text        # it answers as a data tool or not at all
+        assert "tanımlı" in text.lower() or "veri" in text.lower(), text   # a data tool's answer, or none

@@ -458,7 +458,11 @@ _VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sal
 #: what a person is told when no SQL could be written. One of these, never the model's own sentence.
 _REFUSALS = {
     "scope": "{detail}",
-    "unknown": "Bu soruda geçen '{terms}' bu veri kaynağında tanımlı değil. Portalden açıklamasını girerseniz bir dahakine cevaplanabilir.",
+    # One sentence that is true whether the word is a business term nobody has defined or something
+    # this system has no business with at all. Telling someone who asked about the weather to go and
+    # define "hava" in the portal would be absurd; deciding which of the two it is would need a
+    # dictionary of the customer's language, which is exactly what this system refuses to keep.
+    "unknown": "Bu soruyu cevaplayamıyorum: '{terms}' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz.",
     "qualifier": "'{terms}' koşulunu veride karşılayan bir tanım yok; onu yok sayıp daha geniş bir soruyu cevaplamak doğru olmaz.",
     "vague": "Hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız? (ör. ciro, iade oranı, sipariş sayısı)",
     "off_topic": "Yalnızca bu veri kaynağındaki verilerle ilgili soruları cevaplayabiliyorum.",
