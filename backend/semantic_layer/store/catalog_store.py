@@ -824,6 +824,27 @@ class CatalogStore:
             n, last = conn.execute(stmt).first() or (0, None)
         return ((latest or {}).get("version", 0), int(n or 0), int(_dt(last).timestamp()) if last else 0)
 
+    def concept_entities(self, tenant_id: str, datasource_id: str) -> dict[str, str]:
+        """table_pattern → the entity name the certified vocabulary calls it.
+
+        A mapping records both, and the pattern is the durable half: it comes from the table name and
+        nothing recomputes it. The entity name is worked out afresh by every scan from the tables that
+        scan can see, so a scan widened from one firm to the whole schema renames ITEMS to LG_ITEMS —
+        LV_, VW_ and DV_ copies of the table now being visible — and every concept written against
+        "ITEMS" is left describing an entity that no longer exists. Keyed by pattern, the vocabulary
+        keeps its names across any rescan, including one that has replaced every row it started from.
+        """
+        out: dict[str, str] = {}
+        try:
+            for _, pairs in self.certified_index(tenant_id, datasource_id).items():
+                for _, maps in pairs:
+                    for m in maps:
+                        if m.entity and m.table_pattern:
+                            out.setdefault(m.table_pattern, m.entity)
+        except Exception:  # noqa: BLE001 — a catalog that cannot be read must not stop the runtime
+            return {}
+        return out
+
     def certified_index(self, tenant_id: str, datasource_id: str) -> dict[str, list[tuple[Concept, list[Mapping]]]]:
         """normalized term (and synonyms) → [(concept, mappings)] for CERTIFIED concepts only.
         Cached per catalog version; the resolver never sees CANDIDATE rows."""

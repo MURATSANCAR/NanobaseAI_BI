@@ -734,7 +734,7 @@ class ExistingCompiler:
         cols = ", ".join(c.name for c in p.columns[:12])
         return f"{note[:160]} [kolonlar: {cols}]" if note else f"[kolonlar: {cols}]"
 
-    def narrow(self, q: SemanticQuery, entities: list[str]) -> list[str]:
+    def narrow(self, q: SemanticQuery, entities: list[str], *, report: Optional[dict] = None) -> list[str]:
         """Ask the selector which of the retrieved tables the question is actually about.
 
         Off unless a deployment asks for it, and in shadow by default: the decision is measured
@@ -752,15 +752,24 @@ class ExistingCompiler:
             slots pinned           4.0 tables   precision 0.38   recall 13/17
             slots + catalog        6.4 tables   precision 0.26   recall 17/17
 
-        A NONE is recorded but never applied here. "No table fits" is a refusal, and a refusal has to
-        come from the resolver, where it can be explained to the person asking; letting a selector
-        empty the table list would produce the same silence with no account of why.
+        A NONE never empties the table list here — that would produce silence with no account of why.
+        It is reported to the caller instead, which decides whether the question is one this
+        deployment cannot answer. On its own it is not enough: the selector is a model looking at a
+        shortlist, and it says NONE about questions the certified vocabulary can place perfectly well.
+        Measured on this deployment, a NONE *and* a resolver that placed nothing is the combination
+        that separates "there is nothing here about this" from "I have not been told the word yet":
+        it fired on "churn oranımız" and "yarın hava nasıl" and on none of seven answerable questions,
+        including one the resolver could not place either.
         """
+        if report is not None:
+            report["decision"] = "KEPT"
         if self.selector is None or len(entities) <= 1:
             return entities
         pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
         pinned += [e for e in entities if e in self.catalog_entities and e not in pinned]
         sel = self.selector.select(q.question, entities, self.entity_note, pinned=pinned)
+        if report is not None:
+            report["decision"] = sel.decision
         log.info("table selector [%s] %s: %d/%d kept%s%s q=%r",
                  self.selector_mode, sel.decision, len(sel.tables), len(entities),
                  f" dropped={sel.dropped}" if sel.dropped else "",
@@ -1067,13 +1076,13 @@ class ExistingCompiler:
                         found.append(note)
         return f" [baz — {'; '.join(found)}]" if found else ""
 
-    def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]], *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> list[dict[str, str]]:
+    def build_messages(self, q: SemanticQuery, thread: list[dict[str, str]], *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None, report: Optional[dict] = None) -> list[dict[str, str]]:
         """`recall` overrides the shared one for this call only — the compiler object is shared by every
         concurrent request and must never be mutated per request."""
         recall_fn = recall or self.recall
         recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
-        entities = self.narrow(q, self.relevant_entities(q, recalled))
+        entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
         ctx = [
             "## Tablolar\n" + self.model_index(entities),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
@@ -1110,7 +1119,18 @@ class ExistingCompiler:
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[CompiledQuery]:
         t0 = time.perf_counter()
-        messages = self.build_messages(q, thread or [], recall=recall)
+        report: dict = {}
+        messages = self.build_messages(q, thread or [], recall=recall, report=report)
+        if report.get("decision") == "NONE" and q.state == "UNRESOLVED":
+            # The resolver placed nothing and a model reading the shortlist says none of it is about
+            # this question. Two independent readings agreeing is what makes this a refusal rather
+            # than a guess, and it is answered in this system's own sentence — the model that said
+            # NONE is never quoted, and it is not asked to write SQL it has already said it cannot.
+            ms = int((time.perf_counter() - t0) * 1000)
+            log.info("no table fits and nothing resolved — refusing q=%r", q.question[:80])
+            return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
+                                 explain=[refusal_for(q)], llm_ms=ms, certified=False,
+                                 refusal="NO_FITTING_TABLE")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
         sql = extract_sql(text)

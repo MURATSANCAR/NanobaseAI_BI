@@ -111,22 +111,101 @@ def test_a_repair_that_does_not_fix_it_refuses_rather_than_returning_the_number(
     assert any(n["kind"] == "FANOUT" for n in r["semantic"]["critic"])
 
 
-def test_one_physical_pattern_is_one_entity_even_mid_scan():
+def test_one_physical_pattern_is_one_entity_and_keeps_the_name_the_catalog_is_bound_to():
     """While a scan rewrites the catalog table by table, rows from two runs sit side by side and can
     disagree about what an entity is called — splitting one entity's years in half. The pattern is
-    derived from the table name alone, so it decides."""
+    derived from the table name alone, so it decides which rows are one entity; the certified
+    vocabulary decides what that entity is called, because nothing rewrites the vocabulary."""
     from datetime import timedelta
 
     from semantic_bridge.app import one_entity_per_pattern
     from semantic_layer.models import utcnow
 
-    old_ = SchemaProfile(datasource_id="d", table_name="LG_211_ITEMS", table_pattern="LG_{n0}_ITEMS",
-                         entity="ITEMS", schema_name="dbo", scanned_at=utcnow() - timedelta(hours=12))
-    new_ = SchemaProfile(datasource_id="d", table_name="LG_411_ITEMS", table_pattern="LG_{n0}_ITEMS",
-                         entity="LG_ITEMS", schema_name="dbo", scanned_at=utcnow())
-    other = SchemaProfile(datasource_id="d", table_name="LV_411_ITEMS", table_pattern="LV_{n0}_ITEMS",
-                          entity="LV_ITEMS", schema_name="dbo", scanned_at=utcnow())
-    out = one_entity_per_pattern([old_, new_, other])
+    def _p(name, pattern, entity, ago_hours):
+        return SchemaProfile(datasource_id="d", table_name=name, table_pattern=pattern, entity=entity,
+                             schema_name="dbo", scanned_at=utcnow() - timedelta(hours=ago_hours))
+
+    old_ = _p("LG_211_ITEMS", "LG_{n0}_ITEMS", "ITEMS", 12)       # the name concepts are written against
+    new_ = _p("LG_411_ITEMS", "LG_{n0}_ITEMS", "LG_ITEMS", 0)     # what the mid-flight scan called it
+    view = _p("LV_411_ITEMS", "LV_{n0}_ITEMS", "LV_ITEMS", 0)
+
+    out = one_entity_per_pattern([old_, new_, view], anchors={"LG_{n0}_ITEMS": "ITEMS"})
     assert {p.table_name: p.entity for p in out} == {
-        "LG_211_ITEMS": "LG_ITEMS", "LG_411_ITEMS": "LG_ITEMS", "LV_411_ITEMS": "LV_ITEMS",
-    }, "both years of one pattern share the newest label; a different pattern keeps its own"
+        "LG_211_ITEMS": "ITEMS", "LG_411_ITEMS": "ITEMS", "LV_411_ITEMS": "LV_ITEMS",
+    }, "the certified name survives the scan; a pattern nothing is bound to keeps its own"
+
+
+def test_the_certified_name_survives_even_when_every_old_row_is_gone():
+    """After a rescan replaces every row, no profile carries the old name any more. Anchoring on the
+    pattern still holds; anchoring on the name would have quietly let go."""
+    from semantic_bridge.app import one_entity_per_pattern
+    from semantic_layer.models import utcnow
+
+    only_new = [SchemaProfile(datasource_id="d", table_name=n, table_pattern="LG_{n0}_ITEMS",
+                              entity="LG_ITEMS", schema_name="dbo", scanned_at=utcnow())
+                for n in ("LG_211_ITEMS", "LG_411_ITEMS")]
+    out = one_entity_per_pattern(only_new, anchors={"LG_{n0}_ITEMS": "ITEMS"})
+    assert {p.entity for p in out} == {"ITEMS"}
+
+
+def test_with_nothing_certified_the_newest_label_decides():
+    """A deployment with no vocabulary yet still needs one name per pattern."""
+    from datetime import timedelta
+
+    from semantic_bridge.app import one_entity_per_pattern
+    from semantic_layer.models import utcnow
+
+    a = SchemaProfile(datasource_id="d", table_name="LG_211_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                      entity="ITEMS", schema_name="dbo", scanned_at=utcnow() - timedelta(hours=12))
+    b = SchemaProfile(datasource_id="d", table_name="LG_411_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                      entity="LG_ITEMS", schema_name="dbo", scanned_at=utcnow())
+    assert {p.entity for p in one_entity_per_pattern([a, b], anchors={})} == {"LG_ITEMS"}
+
+
+def test_a_question_this_deployment_has_nothing_about_is_refused_not_guessed(
+        catalog, profiles, logo_connector, settings):
+    """Two independent readings have to agree: the resolver placed nothing, and a model reading the
+    shortlist says none of it is about the question. Either alone is not enough — the selector says
+    NONE about questions the certified vocabulary places perfectly well, and plenty of answerable
+    questions use words the resolver has never been told."""
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.candidates.llm_client import FakeLlm
+    from semantic_layer.runtime.table_selector import TableSelector
+
+    class _SaysNone:
+        def chat(self, messages):
+            return '{"decision":"NONE","tables":[]}'
+
+    sql_llm = FakeLlm(['```sql\nSELECT 1\n```'])
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=sql_llm)
+    rt.existing.selector = TableSelector(_SaysNone())
+    rt.existing.selector_mode = "on"
+    client = TestClient(create_app(rt))
+
+    r = client.post("/api/v1/ask", json={"question": "Yarın hava nasıl olacak?"}).json()
+    assert r["type"] in ("NON_SQL_QUERY", "SQL_INVALID") or not r.get("sql"), r
+    assert not sql_llm.calls, "a model that already said nothing fits is not then asked for SQL"
+
+
+def test_a_question_the_catalog_can_place_is_not_refused_by_a_selector_saying_none(
+        catalog, profiles, logo_connector, settings):
+    """The resolver placed it, so NONE is overruled: the certified vocabulary knows this question."""
+    from fastapi.testclient import TestClient
+
+    from semantic_bridge.app import Runtime, create_app
+    from semantic_layer.candidates.llm_client import FakeLlm
+    from semantic_layer.runtime.table_selector import TableSelector
+
+    class _SaysNone:
+        def chat(self, messages):
+            return '{"decision":"NONE","tables":[]}'
+
+    rt = Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm([""]))
+    rt.existing.selector = TableSelector(_SaysNone())
+    rt.existing.selector_mode = "on"
+    client = TestClient(create_app(rt))
+
+    r = client.post("/api/v1/ask", json={"question": "2026 toptan satış tutarı"}).json()
+    assert r["type"] == "TEXT_TO_SQL" and r["rowCount"] == 1, r

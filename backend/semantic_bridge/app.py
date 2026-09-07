@@ -49,32 +49,38 @@ log = logging.getLogger("semantic_bridge")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
-def one_entity_per_pattern(profiles: list[SchemaProfile]) -> list[SchemaProfile]:
+def one_entity_per_pattern(profiles: list[SchemaProfile], anchors: Optional[dict[str, str]] = None) -> list[SchemaProfile]:
     """Two profiles of the same physical pattern are the same entity, whatever they are labelled.
 
-    An entity's name is worked out per scan from the patterns that scan saw: a run scoped to one
-    firm calls LG_{n0}_ITEMS "ITEMS", and a run over the whole schema — where LV_, VW_ and DV_ copies
-    of the same table also appear — calls it "LG_ITEMS" to keep them apart. Both are reasonable and
-    they disagree, so while a scan is rewriting the catalog table by table the two live side by side,
-    and one entity splits in half: the 2021-2025 items under one name, the 2026 items under another.
-    Nothing can then read across the years of it, and a question is answered from whichever half it
-    happened to reach.
+    An entity's name is worked out per scan from the patterns that scan saw: a run scoped to one firm
+    calls LG_{n0}_ITEMS "ITEMS", and a run over the whole schema — where LV_, VW_ and DV_ copies of the
+    same table also appear — calls it "LG_ITEMS" to keep them apart. Both are reasonable and they
+    disagree, so while a scan rewrites the catalog table by table the two live side by side and one
+    entity splits in half: the 2021-2025 items under one name, the 2026 items under another. Nothing
+    can then read across the years of it.
 
-    The pattern is the stable thing — it is derived from the table name alone — so it decides. The
-    most recently scanned label wins, because that one came from the run with the fuller picture.
+    The pattern is the stable thing — derived from the table name and recomputed by nothing — so it
+    decides both which profiles are one entity and what that entity is called. `anchors` maps a
+    pattern to the name the certified vocabulary uses for it; every concept, mapping and annotation in
+    the deployment refers to that name and nothing rewrites them, so it outranks whatever a scan has
+    since worked out. Keyed by pattern rather than by name, this holds even after a rescan has
+    replaced every row it started from — matching on names alone let go the moment the old rows were
+    pruned, and preferring the newest label renamed CLCARD, ITEMS and STLINE out from under the
+    certified catalog while the scan was still running.
     """
-    latest: dict[str, tuple] = {}
+    anchors = anchors or {}
+    newest: dict[str, tuple] = {}
     for p in profiles:
-        seen = latest.get(p.table_pattern)
+        seen = newest.get(p.table_pattern)
         if seen is None or p.scanned_at > seen[0]:
-            latest[p.table_pattern] = (p.scanned_at, p.entity)
-    renamed = 0
+            newest[p.table_pattern] = (p.scanned_at, p.entity)
+    chosen = {pattern: anchors.get(pattern) or label for pattern, (_, label) in newest.items()}
+    renamed = sum(1 for p in profiles if p.entity != chosen[p.table_pattern])
     for p in profiles:
-        want = latest[p.table_pattern][1]
-        if p.entity != want:
-            p.entity, renamed = want, renamed + 1
+        p.entity = chosen[p.table_pattern]
     if renamed:
-        log.info("catalog: %d profiles relabelled so one pattern is one entity (a scan is mid-flight)", renamed)
+        log.info("catalog: %d profiles relabelled so one pattern is one entity under the name the "
+                 "certified catalog uses", renamed)
     return profiles
 
 
@@ -90,7 +96,8 @@ class Runtime:
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         self._engine_lock = threading.Lock()
         self.threads: dict[str, list[dict[str, str]]] = {}
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id))
+        self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id),
+                                              self.store.concept_entities(settings.tenant_id, settings.datasource_id))
         self.rules_text = self._load_rules()
         self.pairs = load_project_pairs(settings.project_dir) if settings.project_dir else []
         self._catalog_version = None
@@ -157,7 +164,8 @@ class Runtime:
 
     def rebuild(self) -> None:
         s = self.settings
-        self.profiles = one_entity_per_pattern(self.store.list_profiles(s.datasource_id))
+        self.profiles = one_entity_per_pattern(self.store.list_profiles(s.datasource_id),
+                                              self.store.concept_entities(s.tenant_id, s.datasource_id))
         self._catalog_version = self.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
         self._checked_at = time.time()
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
