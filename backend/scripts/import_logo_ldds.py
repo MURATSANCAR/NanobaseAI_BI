@@ -185,8 +185,8 @@ def _read_column_block(body: list[str], start: int, entry: dict | None) -> int:
             target = ""
             if _DOC_ARROW in desc:
                 desc, _, tail = desc.partition(_DOC_ARROW)
-                target = re.sub(r"^[^A-Z]*", "", tail.strip()).split()[0] if tail.strip() else ""
-                target = re.sub(r"[^A-Z0-9_].*$", "", target)
+                m = re.search(r"[A-Z][A-Z0-9_]*", tail)
+                target = m.group() if m else ""
             desc = desc.strip()
             if desc:
                 entry["columns"][name] = desc
