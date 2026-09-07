@@ -178,3 +178,17 @@ def test_two_processes_cannot_create_the_same_sense_twice(store, profiles):
     assert again.id == first.id and not created_again
     rows = [c for c in store.find_concepts(TENANT, DS, normalized_term="kargo") if c.semantic_type == SemanticType.DIMENSION_VALUE]
     assert len(rows) == 1, [c.sense_id for c in rows]
+
+
+def test_the_gap_list_is_plain_json(store, profiles):
+    """The portal returns this through a plain JSON response, where a datetime is a 500 rather than a
+    missing field — the page came up empty because the one call that reports what users asked for died."""
+    import json
+
+    for p in profiles:
+        store.upsert_profile(p)
+    store.log_query(TENANT, DS, "Sepet tutarımız nedir?", sql=None, compiler="deterministic",
+                    catalog_version=1, resolved={"unresolved": ["sepet"], "unhandled": []}, executed=False)
+    gaps = store.term_gaps(TENANT, DS)
+    assert gaps and gaps[0]["term"] == "sepet"
+    json.dumps({"gaps": gaps})       # would raise on a datetime

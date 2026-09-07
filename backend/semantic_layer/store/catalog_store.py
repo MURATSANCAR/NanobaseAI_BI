@@ -521,8 +521,10 @@ class CatalogStore:
                     last_seen.setdefault(k, _dt(r["created_at"]))
         ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0][1]))[:limit]
         return [
+            # an ISO string, not a datetime: this crosses a plain JSON response on the portal side and
+            # a datetime there is a 500 rather than a missing field
             {"kind": kind, "term": term, "count": n, "questions": examples.get((kind, term), []),
-             "lastAsked": last_seen.get((kind, term))}
+             "lastAsked": (last_seen.get((kind, term)).isoformat() if last_seen.get((kind, term)) else None)}
             for (kind, term), n in ranked
         ]
 
