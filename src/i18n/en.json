@@ -2085,5 +2085,7 @@
   "bi.sl.fromSource": "from source",
   "bi.sl.fromData": "derived from data",
   "bi.sl.measured": "measured",
-  "bi.sl.userWins": "The system uses the description entered here; the others are kept for reference."
+  "bi.sl.userWins": "The system uses the description entered here; the others are kept for reference.",
+  "bi.sl.catalogOf": "source: {c}",
+  "bi.sl.otherCatalog": "No catalog for the selected source “{s}”; showing the “{c}” catalog"
 }

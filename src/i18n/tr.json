@@ -2085,5 +2085,7 @@
   "bi.sl.fromSource": "kaynaktan",
   "bi.sl.fromData": "veriden çıkarım",
   "bi.sl.measured": "ölçüm",
-  "bi.sl.userWins": "Sistem, girilen açıklamayı esas alıyor; diğerleri bilgi olarak duruyor."
+  "bi.sl.userWins": "Sistem, girilen açıklamayı esas alıyor; diğerleri bilgi olarak duruyor.",
+  "bi.sl.catalogOf": "kaynak: {c}",
+  "bi.sl.otherCatalog": "Seçili kaynak “{s}” için katalog yok; “{c}” kataloğu gösteriliyor"
 }

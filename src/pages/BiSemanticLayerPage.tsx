@@ -398,6 +398,17 @@ export default function BiSemanticLayerPage() {
           {t('bi.sl.version')}: {status?.version ? `v${status.version.version} · ${status.version.certified_count}` : t('bi.sl.noVersion')}
         </span>
         <span>·</span>
+        {/* A catalog exists only for a source that has been profiled. When the picker points at another
+            one, the page falls back to a catalog that exists — and has to say which, or the reader
+            takes these numbers for the source they selected. */}
+        {status?.datasourceId ? (
+          <span className={status.datasourceId !== datasourceId ? 'rounded bg-amber-50 px-1.5 py-0.5 text-amber-800' : ''}>
+            {status.datasourceId !== datasourceId
+              ? t('bi.sl.otherCatalog', { c: status.datasourceId, s: String(datasourceId ?? '') })
+              : t('bi.sl.catalogOf', { c: status.datasourceId })}
+          </span>
+        ) : null}
+        <span>·</span>
         <span>{t('bi.sl.queries', { t: String(status?.queries?.total ?? 0), v: String(status?.queries?.validated ?? 0), d: String(status?.queries?.deterministic ?? 0) })}</span>
         <span className="flex-1" />
         <button type="button" onClick={() => certifyMut.mutate()} disabled={busy || !enabled} className="rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 disabled:opacity-50">
