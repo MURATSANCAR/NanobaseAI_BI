@@ -124,11 +124,20 @@ class Profiler:
         # because "empty today" is not "empty forever"; a deployment that turns it on says so, and is
         # told how many were left out rather than discovering the gap later.
         if os.environ.get("SEMANTIC_SKIP_EMPTY", "").strip() in ("1", "true", "yes", "on"):
-            counts = self._bulk_row_counts(schema, [t for _, t in discovered])
-            if counts:
-                kept = [(sch, t) for sch, t in discovered if (counts.get(t) or 0) > 0]
-                log.info("scope matched %d tables; %d hold rows and %d are empty — cataloguing the %d",
-                         len(discovered), len(kept), len(discovered) - len(kept), len(kept))
+            # The engine's own statistics, in one query. Asking table by table instead is thousands of
+            # round trips against a remote source and takes longer than profiling the tables would.
+            bulk: dict[str, int] = {}
+            try:
+                bulk = (self.c.row_counts(schema) if hasattr(self.c, "row_counts") else {}) or {}
+            except Exception as e:  # noqa: BLE001
+                log.warning("row counts unavailable, cataloguing every table in scope: %s", e)
+            if bulk:
+                # A name the statistics do not mention is unknown, not empty — a view has no
+                # partitions and would otherwise be dropped for having none.
+                kept = [(sch, t) for sch, t in discovered if t not in bulk or (bulk.get(t) or 0) > 0]
+                log.info("scope matched %d tables; %d hold rows (or are views), %d are empty — "
+                         "cataloguing the %d", len(discovered), len(kept),
+                         len(discovered) - len(kept), len(kept))
                 tables = discovered = kept
         # Logical identity up front: both the scope cut and the deep set are decisions about *what kind
         # of table* this is, and they cannot be made from a physical name alone.
