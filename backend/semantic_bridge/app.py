@@ -76,8 +76,9 @@ class Runtime:
         # bir kez sorulup bırakılan sorgu kendiliğinden listeden düşer.
         self._refresh_sec = float(os.environ.get("SEMANTIC_REFRESH_SEC", "15"))
         self._hot_window = float(os.environ.get("SEMANTIC_HOT_WINDOW_SEC", "900"))
-        # Bir sorgu ne kadar uzun sürüyorsa o kadar seyrek tazelenir: on saniye süren bir toplamayı
-        # her on beş saniyede bir koşturmak kaynağı bize ayırmak demektir. Aralık = süre × duty.
+        # Tazeleme kaynağın tamamını bize ayıramaz: tek bağlantı var ve kullanıcının sorusu da aynı
+        # sıraya giriyor. Bir turun toplam sorgu süresi, turun 1/duty'sini geçemez — beş ağır toplama
+        # on beş saniyede bir koşacaksa ve toplamı on saniye tutuyorsa, tur kendiliğinden uzar.
         self._refresh_duty = float(os.environ.get("SEMANTIC_REFRESH_DUTY", "5"))
         # Tazeleyici cevap alamıyorsa bayat kopya sonsuza kadar servis edilmez: bu yaştan sonra
         # istek yeniden kaynağa iner ve kullanıcı beklemeyi görür — çünkü artık gerçek odur.
@@ -327,11 +328,13 @@ class Runtime:
             for k, hot in list(self._hot.items()):
                 if now - hot.get("asked", 0.0) > self._hot_window:
                     self._hot.pop(k, None)        # kimse bakmıyor: kaynağı da meşgul etmeyelim
+            # Tur uzunluğu sıcak kümenin tamamına bakılarak bulunur: tek tek bakılırsa beş sorgunun
+            # her biri sınırı aşmaz ama beşi birden bağlantıyı doldurur.
+            cycle = max(self._refresh_sec, sum(h.get("duration", 0.0) for h in self._hot.values()) * self._refresh_duty)
             due = []
             for k, hot in self._hot.items():
                 cached_at = self._cache[k][0] if k in self._cache else 0.0
-                every = max(self._refresh_sec, hot.get("duration", 0.0) * self._refresh_duty)
-                if now - cached_at >= every:
+                if now - cached_at >= cycle:
                     due.append((k, dict(hot)))
         for key, hot in due:
             if self._waiting or self._stop.is_set():

@@ -103,7 +103,8 @@ def test_refresher_leaves_cold_queries_alone(store, profiles, settings, logo_db)
 
 
 def test_slow_query_is_refreshed_less_often(store, profiles, settings, logo_db):
-    """Süre × duty: on kat pahalı bir sorgu on kat seyrek tazelenir, kaynak bize ayrılmaz."""
+    """Tur uzunluğu = sıcak kümenin toplam süresi × duty. Pahalı sorgu turu uzatır, kaynak bize
+    ayrılmaz; tek bağlantı üstünde kullanıcının sorusu sıraya girmeye devam edebilir."""
     conn = CountingConnector(logo_db, delay=0.1)
     rt = _runtime(store, profiles, settings, conn)
     rt._refresh_sec = 0.02
