@@ -98,6 +98,15 @@ class Profiler:
                 bulk = self.c.row_counts(schema) or {}
             except Exception as e:  # noqa: BLE001
                 log.debug("bulk row counts failed: %s", e)
+        if len(names) > 50:
+            # Asking table by table is one round trip each, and a schema with thousands of them spends
+            # longer counting than profiling. What the engine's statistics do not mention — a view has
+            # no partitions — stays unknown, which every caller here already handles.
+            missing = sum(1 for n in names if n not in bulk)
+            if missing:
+                log.info("row counts: %d of %d from engine statistics, %d unknown (views and the like)",
+                         len(names) - missing, len(names), missing)
+            return {n: bulk.get(n) for n in names}
         return {n: (bulk.get(n) if n in bulk else self.c.row_count(schema, n)) for n in names}
 
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
