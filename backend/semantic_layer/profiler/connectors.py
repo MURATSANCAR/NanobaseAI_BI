@@ -212,7 +212,13 @@ class MSSQLConnector(_DbApiBase):
                WHERE tc.CONSTRAINT_TYPE='PRIMARY KEY' AND tc.TABLE_SCHEMA=? AND tc.TABLE_NAME=? ORDER BY kcu.ORDINAL_POSITION""",
             (schema, table),
         )
-        return [r[0] for r in rows]
+        if keys := [r[0] for r in rows]:
+            return keys
+        # Logo enforces its keys in the application, so the query above returns nothing for every
+        # table it owns. The dictionary's unique indexes name the key the database keeps silent.
+        from semantic_layer.profiler import logo_dictionary
+
+        return logo_dictionary.primary_key(table, [c["name"] for c in self.columns(schema, table)])
 
     def foreign_keys(self, schema: str) -> list[dict[str, str]]:
         try:

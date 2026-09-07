@@ -157,6 +157,19 @@ def _ldds_table(table_name: str) -> dict[str, Any]:
     return (_ldds().get("tables") or {}).get(_logo_base(table_name)) or {}
 
 
+def _bilingual(tr: str, en: str) -> str:
+    """The vendor documents in both languages and neither one alone is enough.
+
+    Questions arrive in Turkish, so "Cari hesap kartları" is what a question about cari hesap can
+    match. The English is what the column names themselves were built from, and dropping it would
+    lose the only text that reads like `CLCARD`. Where both exist they are kept together.
+    """
+    tr, en = tr.strip(), en.strip()
+    if tr and en and tr.casefold() != en.casefold():
+        return f"{tr} ({en})"
+    return tr or en
+
+
 def _table_desc(table_name: str) -> str:
     """What this table is. The hand-written Turkish entries stay first — they carry the filters and
     transaction codes that answering a question actually needs — and the dictionary covers the
@@ -168,7 +181,8 @@ def _table_desc(table_name: str) -> str:
         written = _LOGO_TABLE_DESC.get(table_name.upper()[2:], "")
         if written:
             return written
-    return str(_ldds_table(table_name).get("description") or "")
+    entry = _ldds_table(table_name)
+    return _bilingual(str(entry.get("description_tr") or ""), str(entry.get("description") or ""))
 
 
 def _col_desc(column: str, table_name: str = "") -> str:
@@ -179,13 +193,19 @@ def _col_desc(column: str, table_name: str = "") -> str:
     """
     col = column.upper()
     entry = (_ldds_table(table_name).get("columns") or {}).get(col) if table_name else None
-    if entry and entry.get("values"):
-        head = entry.get("description") or _LOGO_COLUMN_DESC.get(col) or col
-        codes = ", ".join(f"{k}={v}" for k, v in sorted(entry["values"].items(), key=lambda kv: int(kv[0])))
+    # Turkish labels first where the vendor wrote them: a question asking for indirim satırları has
+    # to match "İndirim", not "Discount".
+    values = (entry.get("values_tr") or entry.get("values")) if entry else None
+    if values:
+        # With a code set the codes are the point, so the head stays short: one language, not two.
+        head = entry.get("description_tr") or entry.get("description") or _LOGO_COLUMN_DESC.get(col) or col
+        codes = ", ".join(f"{k}={v}" for k, v in sorted(values.items(), key=lambda kv: int(kv[0])))
         return f"{head} ({codes})"
     if col in _LOGO_COLUMN_DESC:
         return _LOGO_COLUMN_DESC[col]
-    return str((entry or {}).get("description") or "")
+    if not entry:
+        return ""
+    return _bilingual(str(entry.get("description_tr") or ""), str(entry.get("description") or ""))
 
 
 # --- connection -----------------------------------------------------------------
@@ -244,6 +264,25 @@ def _row_count_map(cur) -> dict[tuple[str, str], int]:
         return {(r["sch"], r["tbl"]): int(r["n"] or 0) for r in cur.fetchall()}
     except Exception:
         return {}
+
+
+def _dictionary_key(table_name: str, columns: list[str]) -> list[str]:
+    """The primary key a Logo database does not declare.
+
+    Logo enforces uniqueness in the application, not in SQL Server: `sys.key_constraints` is empty
+    for every table, so a scan reports a schema in which no row is identifiable. The dictionary's
+    index listing says which columns are unique, and the one that matters is the same everywhere —
+    `LOGICALREF`, the reference every `*REF` column in the database points at. Without it a join is
+    written between two columns the planner has no reason to believe are one-to-many.
+    """
+    present = {c.upper() for c in columns}
+    unique = [ix for ix in (_ldds_table(table_name).get("indexes") or [])
+              if ix.get("unique") and ix.get("columns") and present.issuperset(ix["columns"])]
+    if not unique:
+        return []
+    # Shortest first, so a single-column key wins over a composite one that also happens to be unique.
+    unique.sort(key=lambda ix: (ix["columns"] != ["LOGICALREF"], len(ix["columns"])))
+    return list(unique[0]["columns"])
 
 
 def _dictionary_links(table_name: str, columns: list[str], present: set[str]) -> list[dict[str, str]]:
@@ -416,6 +455,11 @@ def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relat
                         to_schema=fk.target_schema, to_table=fk.target_table, to_column=fk.target_column,
                     )
                 )
+            # Logo enforces its keys in the application, so the constraint query above returns
+            # nothing for every table it owns. The dictionary's unique indexes name the key instead.
+            if not pks:
+                pks = _dictionary_key(name, [c["COLUMN_NAME"] for c in cols_raw])
+
             # Logo declares no foreign keys, so an honest FK query returns nothing and the join graph
             # is empty. The vendor dictionary carries the whole graph — every *REF column and what it
             # points at — which is the difference between joining two tables and joining the schema.

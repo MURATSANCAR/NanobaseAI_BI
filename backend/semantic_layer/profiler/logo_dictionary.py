@@ -76,6 +76,20 @@ def is_logo_schema(table_names: list[str]) -> bool:
     return known >= max(3, len(table_names) // 4)
 
 
+def _bilingual(entry: dict[str, Any]) -> str:
+    """The vendor documents in both languages, and neither one alone is enough.
+
+    Questions arrive in Turkish, so "Cari hesap kartları" is the text a question about cari hesap can
+    match; the English is the text the column names themselves were built from, and the only thing
+    that reads like `CLCARD`. Where the vendor gives both, both are kept.
+    """
+    tr = str(entry.get("description_tr") or "").strip()
+    en = str(entry.get("description") or "").strip()
+    if tr and en and tr.casefold() != en.casefold():
+        return f"{tr} ({en})"
+    return tr or en
+
+
 def column_description(table_name: str, column: str) -> str:
     """What the column holds, with its code set when the vendor documented one.
 
@@ -86,16 +100,39 @@ def column_description(table_name: str, column: str) -> str:
     entry = (_entry(table_name).get("columns") or {}).get((column or "").upper())
     if not entry:
         return ""
-    head = str(entry.get("description") or "").strip()
-    values = entry.get("values") or {}
+    # Turkish labels first where the vendor wrote them: a question asking for indirim satırları has
+    # to match "İndirim", not "Discount".
+    values = entry.get("values_tr") or entry.get("values") or {}
     if not values:
-        return head
+        return _bilingual(entry)
+    # With a code set the codes are the point, so the head stays to one language rather than two.
+    head = str(entry.get("description_tr") or entry.get("description") or "").strip()
     codes = ", ".join(f"{k}={v}" for k, v in sorted(values.items(), key=lambda kv: int(kv[0])))
     return f"{head} ({codes})" if head else codes
 
 
 def table_description(table_name: str) -> str:
-    return str(_entry(table_name).get("description") or "").strip()
+    return _bilingual(_entry(table_name))
+
+
+def primary_key(table_name: str, columns: list[str] | None = None) -> list[str]:
+    """The primary key a Logo database does not declare.
+
+    Logo enforces uniqueness in the application, not in SQL Server: the constraint query returns
+    nothing for every table it owns, so profiling reports a schema in which no row is identifiable.
+    The dictionary's index listing says which columns are unique, and the one that matters is the
+    same everywhere — `LOGICALREF`, what every `*REF` column in the database points at.
+    """
+    indexes = _entry(table_name).get("indexes") or []
+    present = {c.upper() for c in columns} if columns is not None else None
+    unique = [ix for ix in indexes
+              if ix.get("unique") and ix.get("columns")
+              and (present is None or present.issuperset(ix["columns"]))]
+    if not unique:
+        return []
+    # Shortest first, so a single-column key wins over a composite that also happens to be unique.
+    unique.sort(key=lambda ix: (ix["columns"] != ["LOGICALREF"], len(ix["columns"])))
+    return list(unique[0]["columns"])
 
 
 def descriptions(table_names: list[str]) -> dict[tuple[str, Optional[str]], str]:

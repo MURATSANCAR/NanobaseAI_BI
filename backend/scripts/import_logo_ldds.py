@@ -30,6 +30,7 @@ import tempfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 REPO = Path(__file__).resolve().parents[2]
 OUT_JSON = REPO / "configs" / "schemas" / "logo-ldds.json"
@@ -105,14 +106,23 @@ def parse_expression(expr: str) -> tuple[str, dict[str, str]]:
 
 #: `LG_XXX_ITEMS`, `LG_XXX_XX_STLINE`, `L_CAPIDEF` — a heading on a line of its own. `XXX` is the
 #: firm and the inner `XX` the period, the same two placeholders the workbook writes as prefixes.
-_DOC_HEADING = re.compile(r"^(?:LG_XXX_\s*(?P<period>XX_)?|(?P<db>L_))(?P<base>[A-Z][A-Z0-9_]*)\s*$")
+#: The typist put a space after the prefix in some of them ("LG_XXX_XX_ ORFLINE"), so headings are
+#: matched with the whitespace removed — that one space cost ORFLINE its whole column listing.
+_DOC_HEADING = re.compile(r"^(?:LG_XXX_(?P<period>XX_)?|(?P<db>L_))(?P<base>[A-Z][A-Z0-9_]*)$")
+
 
 #: The document was written in Word with a Wingdings arrow, which survives conversion as a private-use
-#: codepoint. "Muhasebe hesabı referansı EMUHACC" is the vendor naming a foreign key.
+#: codepoint. "Muhasebe hesabı referansı <arrow> EMUHACC" is the vendor naming a foreign key in the
+#: middle of a sentence — the only place in either source where these joins are written in Turkish.
 _DOC_ARROW = "\uf0e0"
 
 #: Lines that are table furniture, not a Turkish name for the table above them.
 _DOC_FURNITURE = {"Adı", "İndeksler", "İndeks sayısı", "Alan", "Tipi", "Açıklama", "No", "Uzunluk", "Özellik"}
+
+
+def _heading(line: str) -> Optional[re.Match]:
+    flat = re.sub(r"\s+", "", line)
+    return _DOC_HEADING.match(flat) if flat else None
 
 
 def doc_text(path: Path) -> str:
@@ -133,14 +143,43 @@ def doc_text(path: Path) -> str:
         return out.read_text(encoding="utf-8", errors="replace")
 
 
+#: A type as the document writes it. It is what separates the two tables the document prints for
+#: every entity: the index listing gives a field a *size* ("4   bytes"), the column listing gives it
+#: a type. Requiring a type here is what keeps index segments from being read as documented columns.
+_DOC_TYPE = re.compile(
+    r"^(?:small\s?int|int|integer|long\s?int|float|double|date\s?time|byte|var\s?char|z\s?string\s*\d*"
+    r"|image|char|bit|long|money|text|logical|word)\b",
+    re.IGNORECASE,
+)
+_DOC_FIELD = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def _is_column_row(body: list[str], i: int) -> bool:
+    if i + 1 >= len(body):
+        return False
+    name, ftype = body[i].strip(), body[i + 1].strip()
+    if not _DOC_FIELD.match(name) or name in _DOC_FURNITURE or _heading(name):
+        return False
+    # "4   bytes" is a size, not a type — that row belongs to the index listing above.
+    return bool(ftype) and not ftype[0].isdigit() and bool(_DOC_TYPE.match(ftype))
+
+
 def parse_structure_doc(text: str) -> dict[str, dict]:
     """Turkish names for the tables and their columns, plus the foreign keys the arrows name.
 
     The document is one long Word table flattened to a line per cell, in two passes over the same
-    headings: a list that gives each table its Turkish name, then a section per table that gives its
-    indexes and its columns as `field / type / Turkish sentence` triples.
+    headings: a list that gives each table its Turkish name, then a section per table giving its
+    indexes and then its columns.
+
+    The column listing cannot be read as fixed-width records. Its header row is dropped on most
+    pages, and an explanation runs to as many lines as it needs — `ACTIVE` is four lines, its type
+    and then one line per code. So a column is found by its shape (a field name followed by a type)
+    and everything up to the next such pair is its explanation.
     """
-    lines = [l.rstrip() for l in text.split("\n")]
+    # Word's in-cell separator survives conversion as BEL on ~40 rows, running three cells
+    # together on one line ("DOMINANTREFS1\x07int\x07Genel bilgileri…"). Those rows are columns
+    # like any other once the separator is read as the line break it stands for.
+    lines = [l.rstrip() for l in text.replace("\x07", "\n").split("\n")]
     # The table of contents repeats every heading as a HYPERLINK field. Reading it as content would
     # give each table a "description" that is the page number of the section it points at.
     toc = [i for i, l in enumerate(lines) if "HYPERLINK" in l]
@@ -151,7 +190,7 @@ def parse_structure_doc(text: str) -> dict[str, dict]:
     i = 0
     while i < len(body):
         line = body[i].strip()
-        if m := _DOC_HEADING.match(line):
+        if m := _heading(line):
             current = m.group("base")
             entry = out.setdefault(current, {"columns": {}, "relations": []})
             entry.setdefault("scope", "database" if m.group("db") else "period" if m.group("period") else "firm")
@@ -159,41 +198,67 @@ def parse_structure_doc(text: str) -> dict[str, dict]:
             nxt = body[i + 1].strip() if i + 1 < len(body) else ""
             # In the naming list the heading is followed by its Turkish name; in the detail section
             # by the index count. A digit is the detail section, not a name.
-            if nxt and "description" not in entry and not _DOC_HEADING.match(nxt) and nxt not in _DOC_FURNITURE:
+            if nxt and "description" not in entry and not _heading(nxt) and nxt not in _DOC_FURNITURE:
                 if not nxt[0].isdigit() and len(nxt) <= 90:
                     entry["description"] = nxt
             i += 1
             continue
 
-        if line == "Alan" and body[i + 1 : i + 3] and [b.strip() for b in body[i + 1 : i + 3]] == ["Tipi", "Açıklama"]:
-            i = _read_column_block(body, i + 3, out.get(current))
+        if current and _is_column_row(body, i):
+            i = _read_column(body, i, out[current])
             continue
         i += 1
     return out
 
 
-def _read_column_block(body: list[str], start: int, entry: dict | None) -> int:
-    """The `field / type / Turkish sentence` triples under one Alan/Tipi/Açıklama header."""
-    i = start
-    while i + 2 < len(body):
-        name, ftype, desc = (body[i].strip(), body[i + 1].strip(), body[i + 2].strip())
-        if not name or _DOC_HEADING.match(name) or name in _DOC_FURNITURE:
+def _read_column(body: list[str], i: int, entry: dict) -> int:
+    """One documented column: its name, its type, and the lines explaining it."""
+    name = body[i].strip()
+    j = i + 2
+    parts: list[str] = []
+    while j < len(body):
+        line = body[j].strip()
+        if not line or _heading(line) or line in _DOC_FURNITURE or _is_column_row(body, j):
             break
-        if not re.fullmatch(r"[A-Z][A-Z0-9_]*", name) or not ftype:
+        parts.append(line)
+        j += 1
+        if len(parts) >= 8:  # a runaway read has left the listing; stop rather than absorb a page
             break
-        if entry is not None:
-            target = ""
-            if _DOC_ARROW in desc:
-                desc, _, tail = desc.partition(_DOC_ARROW)
-                m = re.search(r"[A-Z][A-Z0-9_]*", tail)
-                target = m.group() if m else ""
-            desc = desc.strip()
-            if desc:
-                entry["columns"][name] = desc
-            if target:
-                entry["relations"].append({"column": name, "to": target})
-        i += 3
-    return i
+
+    desc = "; ".join(parts).strip()
+    target = ""
+    if _DOC_ARROW in desc:
+        desc, _, tail = desc.partition(_DOC_ARROW)
+        m = re.search(r"[A-Z][A-Z0-9_]*", tail)
+        target = m.group() if m else ""
+    desc = desc.strip(" ;")
+    if desc:
+        entry["columns"][name] = desc
+    if target:
+        entry["relations"].append({"column": name, "to": target})
+    return max(j, i + 2)
+
+
+#: "Kart türü; 1 : Ticari mal; 2 : Karma koli" and "Stok yeri takibi (1:Evet, 0:Hayır)" — the
+#: document writes a column's code set inside its explanation, in either of those two layouts.
+_TR_CODE = re.compile(r"(-?\d+)\s*:\s*(.+?)(?=\s*[;,]?\s*-?\d+\s*:|\s*$)")
+
+
+def parse_tr_values(text: str) -> tuple[str, dict[str, str]]:
+    """`"Kart türü; 1 : Ticari mal; 2 : Karma koli"` → the sentence, and the code set in Turkish.
+
+    The workbook labels the same codes in English. A question asking for indirim satırları has to
+    match "İndirim", not "Discount", so where the document labels a code it is the label kept.
+    """
+    if not _TR_CODE.search(text):
+        return text, {}
+    head = _TR_CODE.split(text)[0].strip(" ;(,")
+    values = {}
+    for m in _TR_CODE.finditer(text):
+        label = m.group(2).strip().strip(" ,;.").rstrip(")")
+        if label:
+            values[m.group(1)] = label
+    return head, values
 
 
 def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
@@ -205,7 +270,7 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
     consumer can tell a documented column from an undocumented one.
     """
     tables = data["tables"]
-    added, tr_tables, tr_columns, unmatched, hinted = [], 0, 0, 0, 0
+    added, tr_tables, tr_columns, tr_values, unmatched, hinted = [], 0, 0, 0, 0, 0
     for base, entry in sorted(doc.items()):
         target = tables.get(base)
         if target is None:
@@ -230,7 +295,13 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
                 # release; recorded without a type, because the document does not give one we trust.
                 col = target["columns"][column] = {"type": "", "source": "structure-doc"}
                 unmatched += 1
-            col["description_tr"] = text
+            head, values = parse_tr_values(text)
+            # The head can be empty — the document sometimes gives nothing but the codes — in which
+            # case the codes are the description and the English head still stands beside them.
+            col["description_tr"] = head or text
+            if values:
+                col["values_tr"] = values
+                tr_values += 1
             tr_columns += 1
         known = {(r["column"], r["to"]) for r in target["relations"]}
         for hint in entry["relations"]:
@@ -247,6 +318,7 @@ def merge_doc(data: dict, doc: dict[str, dict]) -> dict:
     data["doc_tables_added"] = added
     data["tr_table_count"] = tr_tables
     data["tr_column_count"] = tr_columns
+    data["tr_coded_column_count"] = tr_values
     data["doc_only_column_count"] = unmatched
     data["doc_relation_count"] = hinted
     return data
@@ -466,11 +538,12 @@ def glossary_markdown(data: dict) -> str:
     seen: set[tuple[str, str]] = set()
     for name, table in sorted(data["tables"].items()):
         for col, meta in table["columns"].items():
-            values = meta.get("values")
+            # Turkish labels where the structure document gave them; the workbook's English otherwise.
+            values = meta.get("values_tr") or meta.get("values")
             if not values or (name, col) in seen:
                 continue
             seen.add((name, col))
-            desc = meta.get("description") or col
+            desc = meta.get("description_tr") or meta.get("description") or col
             pairs = ", ".join(f"{k}={v}" for k, v in sorted(values.items(), key=lambda kv: _int(kv[0])))
             lines.append(f"- `{name}.{col}` — {desc}: {pairs}")
     lines.append("")

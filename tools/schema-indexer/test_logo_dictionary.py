@@ -99,3 +99,29 @@ def test_a_join_to_a_table_that_was_not_scanned_is_not_invented():
 def test_a_non_logo_table_is_left_alone():
     assert m._dictionary_links("sales_orders", ["customer_id"], {"customers"}) == []
     assert m._table_desc("sales_orders") == ""
+
+
+def test_the_key_the_database_never_declares_is_supplied():
+    """Logo enforces uniqueness in the application, so `sys.key_constraints` is empty for every one
+    of its tables and a scan reports a schema in which no row is identifiable. The dictionary's
+    unique index on LOGICALREF is what every `*REF` column in the database points at."""
+    assert m._dictionary_key("LG_411_01_STLINE", ["LOGICALREF", "STOCKREF", "AMOUNT"]) == ["LOGICALREF"]
+    assert m._dictionary_key("LG_411_CLCARD", ["LOGICALREF", "CODE"]) == ["LOGICALREF"]
+    assert m._dictionary_key("LG_411_01_STLINE", ["STOCKREF", "AMOUNT"]) == [], "a key must be columns the scan found"
+    assert m._dictionary_key("sales_orders", ["id"]) == []
+
+
+def test_turkish_reaches_the_description():
+    """Questions arrive in Turkish. A table described only as "Item Transactions" is text no Turkish
+    question matches, and a code labelled "Discount" is not what someone asking for indirim typed."""
+    # STLINE has a hand-written entry, which still wins; these are two of the ~285 that never did.
+    assert "Banka fişleri" in m._table_desc("LG_411_01_BNFICHE")
+    assert "Bank Vouchers" in m._table_desc("LG_411_01_BNFICHE"), "the English is what reads like BNFICHE"
+    assert "İndirim" in m._col_desc("LINETYPE", "LG_411_01_STLINE")
+
+
+def test_a_table_only_the_structure_document_knows_is_described():
+    """The workbook omits twenty tables the document covers — the ones a question about a customer's
+    city or a day's exchange rate lands on."""
+    assert m._table_desc("LG_411_CITY")
+    assert m._table_desc("L_DAILYEXCHANGES")

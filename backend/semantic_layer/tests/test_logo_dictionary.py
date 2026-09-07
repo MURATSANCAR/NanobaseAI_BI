@@ -111,3 +111,27 @@ def test_what_the_database_itself_says_still_wins():
     described = _Annotated().descriptions("dbo")
     assert described[("LG_411_01_STLINE", "LINETYPE")] == "TİMAŞ: yalnız 0 ve 4 kullanılır"
     assert described[("LG_411_01_STLINE", "STOCKREF")], "the rest of the dictionary is still there"
+
+
+def test_the_key_the_database_never_declares_is_supplied():
+    """Logo enforces uniqueness in the application, so the constraint query returns nothing for
+    every table it owns and profiling reports a schema in which no row is identifiable."""
+    assert ld.primary_key("LG_411_01_STLINE") == ["LOGICALREF"]
+    assert ld.primary_key("LG_411_CLCARD", ["LOGICALREF", "CODE"]) == ["LOGICALREF"]
+    assert ld.primary_key("LG_411_01_STLINE", ["STOCKREF"]) == [], "a key must be columns the scan found"
+    assert ld.primary_key("sales_orders") == []
+
+
+def test_the_dictionary_speaks_the_language_the_questions_arrive_in():
+    """A table described only as "Item Transactions" is text no Turkish question matches, and a code
+    labelled "Discount" is not the word someone asking for indirim satırları typed."""
+    assert "Malzeme hareketleri" in ld.table_description("LG_411_01_STLINE")
+    assert "Item Transactions" in ld.table_description("LG_411_01_STLINE"), "the English still reads like STLINE"
+    assert "İndirim" in ld.column_description("LG_411_01_STLINE", "LINETYPE")
+    assert "Alıcı" in ld.column_description("LG_411_CLCARD", "CARDTYPE")
+
+
+def test_a_table_only_the_structure_document_knows_is_described():
+    """The workbook omits twenty tables the Turkish structure document covers."""
+    assert ld.table_description("LG_411_CITY")
+    assert ld.table_description("L_DAILYEXCHANGES")
