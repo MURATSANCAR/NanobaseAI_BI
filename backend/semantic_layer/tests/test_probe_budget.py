@@ -76,3 +76,44 @@ def test_recertifying_on_stored_profiles_still_probes(store, settings, monkeypat
     assert built, "the probe's connector is built even when the profile step is skipped"
     assert "no connector" in str(report.get("probe")), "and a probe that cannot run says so"
     assert report.get("certify"), "certification still completes"
+
+
+def test_a_scope_too_large_drops_the_least_useful_tables_not_the_last_alphabetically():
+    """When a scope matches more tables than the cap, which ones to drop is a decision about value.
+    Cutting the list where it happens to end threw away the table that defines what this database's own
+    codes mean — purely because of its initial."""
+    from semantic_layer.profiler.profiler import Profiler
+
+    class _Wide:
+        dialect = "generic"
+        supports_execution = False
+
+        def list_tables(self, schema, like=None):
+            # alphabetical, with the valuable ones deliberately late in the list
+            return [("main", f"A_EMPTY_{i:02d}") for i in range(6)] + [("main", "Z_CODES"), ("main", "Z_ORDERS")]
+
+        def columns(self, schema, table):
+            return [{"name": "ID", "data_type": "int"}]
+
+        def primary_keys(self, schema, table):
+            return ["ID"]
+
+        def foreign_keys(self, schema):
+            return []
+
+        def row_counts(self, schema):
+            return {f"A_EMPTY_{i:02d}": 0 for i in range(6)} | {"Z_CODES": 9_400, "Z_ORDERS": 300_000}
+
+        def row_count(self, schema, table):
+            return self.row_counts(schema).get(table, 0)
+
+        def sample_rows(self, schema, table, limit=20):
+            return []
+
+        def top_values(self, schema, table, column, limit):
+            return []
+
+    p = Profiler(_Wide(), max_tables=3)
+    kept = {x.table_name for x in p.profile("ds", "main")}
+    assert {"Z_ORDERS", "Z_CODES"} <= kept, kept
+    assert p.truncated, "and what was dropped is reported, never silently"

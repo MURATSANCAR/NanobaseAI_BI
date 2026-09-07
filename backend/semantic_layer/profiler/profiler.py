@@ -90,14 +90,38 @@ class Profiler:
         values = [str(v)[:10] for v in rows[0].values() if v is not None]
         return (values[0], values[1]) if len(values) == 2 else None
 
+    def _bulk_row_counts(self, schema: str, names: list[str]) -> dict[str, Optional[int]]:
+        """All the counts at once where the engine offers it, one at a time where it does not."""
+        bulk: dict[str, int] = {}
+        if hasattr(self.c, "row_counts"):
+            try:
+                bulk = self.c.row_counts(schema) or {}
+            except Exception as e:  # noqa: BLE001
+                log.debug("bulk row counts failed: %s", e)
+        return {n: (bulk.get(n) if n in bulk else self.c.row_count(schema, n)) for n in names}
+
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *, deep_limit: Optional[int] = None) -> list[SchemaProfile]:
         """`deep_limit` caps how many tables get value inventories and row samples; the rest are still
         catalogued (names, columns, keys) so nothing disappears, they simply are not probed."""
         discovered = self.c.list_tables(schema, like)
-        tables = discovered[: self.max_tables]
-        if len(discovered) > len(tables):
-            self.truncated = [t for _, t in discovered[self.max_tables:]]
-            log.warning("scope matched %d tables; profiling the first %d — %d left out (raise max_tables or narrow the scope)", len(discovered), len(tables), len(self.truncated))
+        tables = discovered
+        if len(discovered) > self.max_tables:
+            # Which tables to drop is a decision about value, not about the alphabet. Cutting the list
+            # where it happens to end left behind the table that defines what this database's own codes
+            # mean, purely because of its initial. The same volume-and-centrality score that picks the
+            # deep set picks what is worth cataloguing at all.
+            counts = self._bulk_row_counts(schema, [t for _, t in discovered])
+            refs: dict[str, int] = {}
+            for fk in self.c.foreign_keys(schema):
+                refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1
+            score = dict(rank_tables({t: counts.get(t) for _, t in discovered}, refs))
+            ordered = sorted(discovered, key=lambda st: -score.get(st[1], 0.0))
+            tables, dropped = ordered[: self.max_tables], ordered[self.max_tables:]
+            self.truncated = [t for _, t in dropped]
+            biggest = sorted(((counts.get(t) or 0, t) for t in self.truncated), reverse=True)[:5]
+            log.warning("scope matched %d tables; cataloguing the %d that carry the most (volume + centrality) — %d left out%s",
+                        len(discovered), len(tables), len(self.truncated),
+                        (", largest dropped: " + ", ".join(f"{t} ({n})" for n, t in biggest if n)) if biggest else "")
         names = [logical_table(t, sch) for sch, t in tables]
         entity_by_pattern = disambiguate([(lt.entity, lt.table_pattern) for lt in names])
         fks = self.c.foreign_keys(schema)
@@ -118,7 +142,7 @@ class Profiler:
         # data and that other tables point at. The rest are still catalogued, just not probed.
         deep: Optional[set[str]] = None
         if deep_limit is not None and len(tables) > deep_limit:
-            counts = {t: self.c.row_count(sch, t) for sch, t in tables}
+            counts = self._bulk_row_counts(schema, [t for _, t in tables])
             refs: dict[str, int] = {}
             for fk in fks:
                 refs[fk["ref_table"]] = refs.get(fk["ref_table"], 0) + 1

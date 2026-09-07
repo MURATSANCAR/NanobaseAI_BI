@@ -34,6 +34,7 @@ class Connector(Protocol):
     def top_values(self, schema: str, table: str, column: str, limit: int) -> list[tuple[str, int]]: ...
     def sample_rows(self, schema: str, table: str, limit: int) -> list[dict[str, Any]]: ...
     def row_count(self, schema: str, table: str) -> Optional[int]: ...
+    def row_counts(self, schema: str) -> dict[str, int]: ...
     def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]: ...
     def execute(self, sql: str, limit: int) -> tuple[list[dict[str, str]], list[dict[str, Any]], bool]: ...
     def dry_run(self, sql: str) -> None: ...
@@ -64,6 +65,14 @@ class _DbApiBase:
     # A query that never returns must not hold the deploy or the service hostage: a customer database can
     # always be slow, blocked, or restarted under us.
     query_timeout = int(os.environ.get("SEMANTIC_QUERY_TIMEOUT_SEC", "120"))
+
+    def row_counts(self, schema: str) -> dict[str, int]:
+        """Row count for every table in the schema, in one query where the engine can do it.
+
+        Deciding which tables matter needs all the counts before profiling any of them, and asking
+        table by table is a query storm against a live source.
+        """
+        return {}
 
     def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
         """What the people who built this database wrote about it: table and column comments.
@@ -218,6 +227,20 @@ class MSSQLConnector(_DbApiBase):
             return []
         return [{"table": r[0], "column": r[1], "ref_table": r[2], "ref_column": r[3]} for r in rows]
 
+    def row_counts(self, schema: str) -> dict[str, int]:
+        try:
+            _, rows = self._rows(
+                """SELECT t.name, SUM(p.rows) FROM sys.partitions p
+                   JOIN sys.tables t ON t.object_id = p.object_id
+                   JOIN sys.schemas s ON s.schema_id = t.schema_id
+                   WHERE s.name = ? AND p.index_id IN (0, 1) GROUP BY t.name""",
+                (schema or self.default_schema,),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug("bulk row counts unavailable: %s", e)
+            return {}
+        return {str(r[0]): int(r[1] or 0) for r in rows}
+
     def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
         """SQL Server keeps them as the MS_Description extended property. One query for the schema."""
         try:
@@ -293,6 +316,19 @@ class PostgresConnector(_DbApiBase):
             params = (schema, like)
         _, rows = self._rows(sql + " ORDER BY table_name", params)
         return [(r[0], r[1]) for r in rows]
+
+    def row_counts(self, schema: str) -> dict[str, int]:
+        try:
+            _, rows = self._rows(
+                """SELECT c.relname, GREATEST(c.reltuples, 0)::bigint FROM pg_class c
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                   WHERE n.nspname = %s AND c.relkind IN ('r', 'p')""",
+                (schema or self.default_schema,),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug("bulk row counts unavailable: %s", e)
+            return {}
+        return {str(r[0]): int(r[1] or 0) for r in rows}
 
     def descriptions(self, schema: str) -> dict[tuple[str, Optional[str]], str]:
         """Postgres keeps them as object comments: obj_description for a table, col_description for a
