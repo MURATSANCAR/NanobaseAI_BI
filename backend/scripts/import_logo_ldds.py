@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
+import tempfile
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -106,6 +108,7 @@ def build(xls_path: Path) -> dict:
     tables_raw = _sheet(book, "Tablolar")
     fields_raw = _sheet(book, "Alanlar")
     rels_raw = _sheet(book, "Relations")
+    index_raw = _sheet(book, "Indexler")
 
     fields_by_resource: dict[int, list[dict]] = defaultdict(list)
     for f in fields_raw:
@@ -113,6 +116,7 @@ def build(xls_path: Path) -> dict:
     rels_by_resource: dict[int, list[dict]] = defaultdict(list)
     for r in rels_raw:
         rels_by_resource[_int(r["Resource ID"])].append(r)
+    indexes_by_resource = index_segments(index_raw)
 
     tables: dict[str, dict] = {}
     collisions: list[str] = []
@@ -129,6 +133,11 @@ def build(xls_path: Path) -> dict:
 
         columns: dict[str, dict] = {}
         for f in sorted(fields_by_resource[rid], key=lambda x: _int(x.get("Field Offset"))):
+            name = str(f["Field Name"]).strip().upper()
+            # One row in the workbook (SATIFILTER, offset 181, "Internal Usage") names no field.
+            # Kept, it becomes a column called "" that every consumer has to special-case.
+            if not name:
+                continue
             desc, values = parse_expression(f.get("Expression"))
             col = {"type": str(f["Field Type"]).strip()}
             size = _int(f.get("Field Size"))
@@ -138,7 +147,7 @@ def build(xls_path: Path) -> dict:
                 col["description"] = desc
             if values:
                 col["values"] = values
-            columns[str(f["Field Name"]).strip().upper()] = col
+            columns[name] = col
 
         relations = []
         for r in rels_by_resource[rid]:
@@ -161,6 +170,7 @@ def build(xls_path: Path) -> dict:
             "description": str(t["Resource Description"]).strip(),
             "columns": columns,
             "relations": relations,
+            "indexes": indexes_by_resource.get(rid, []),
         }
 
     return {
