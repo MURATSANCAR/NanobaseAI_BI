@@ -105,18 +105,35 @@ def scan_metadata(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relationshi
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         schemas = list(cfg.schemas)
+        # Cap in Python, not in SQL: `LIMIT n` over an alphabetical listing drops tables without
+        # anyone being able to tell that it did. Reading the whole catalogue costs one scan.
         cur.execute(
             """
-            SELECT table_schema, table_name, table_type
-            FROM information_schema.tables
-            WHERE table_schema = ANY(%s)
-              AND table_type IN ('BASE TABLE', 'VIEW')
-            ORDER BY table_schema, table_name
-            LIMIT %s
+            SELECT t.table_schema, t.table_name, t.table_type,
+                   COALESCE(c.reltuples, -1)::bigint AS approx_rows
+            FROM information_schema.tables t
+            LEFT JOIN pg_class c
+              ON c.relname = t.table_name
+             AND c.relnamespace = to_regnamespace(t.table_schema)::oid
+            WHERE t.table_schema = ANY(%s)
+              AND t.table_type IN ('BASE TABLE', 'VIEW')
+            ORDER BY t.table_schema, t.table_name
             """,
-            (schemas, cfg.max_tables),
+            (schemas,),
         )
-        raw_tables = list(cur.fetchall())
+        discovered = list(cur.fetchall())
+        cfg.discovered_tables = len(discovered)
+        raw_tables = discovered
+        if len(discovered) > cfg.max_tables:
+            # A cap that has to bite should keep what carries data, not what sorts first.
+            discovered.sort(key=lambda t: (-int(t["approx_rows"] or 0), t["table_schema"], t["table_name"]))
+            raw_tables = discovered[: cfg.max_tables]
+            cfg.truncated_tables = [f'{t["table_schema"]}.{t["table_name"]}' for t in discovered[cfg.max_tables :]]
+            print(
+                f"[schema-indexer] WARNING: scope matched {len(discovered)} tables, cap is {cfg.max_tables} — "
+                f"cataloguing the {len(raw_tables)} largest, {len(cfg.truncated_tables)} left out "
+                f"(raise BI_SCHEMA_MAX_TABLES)"
+            )
 
         for t in raw_tables:
             schema, name, ttype = t["table_schema"], t["table_name"], t["table_type"]

@@ -93,6 +93,11 @@ class ScanReport:
     upserted: int
     soft_deleted: int
     elapsed_s: float
+    # What the scope actually matched, and what the cap left out. `tables_scanned` alone cannot
+    # distinguish "the database has 200 tables" from "we stopped after 200".
+    tables_discovered: int = 0
+    tables_truncated: int = 0
+    truncated_sample: list[str] = field(default_factory=list)
     points_count: int | None = None
     sample_docs: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)

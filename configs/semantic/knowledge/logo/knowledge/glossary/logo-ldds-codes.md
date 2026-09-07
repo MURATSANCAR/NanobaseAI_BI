@@ -1,0 +1,432 @@
+# Logo kod sözlüğü (LDDS'den üretildi)
+
+Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T11:25:54+00:00
+
+> Bu dosya üretilmiştir; elle düzenlemeyin. Değişiklik için üreticiyi çalıştırın.
+
+## Cari hesap fişi türleri (CLFLINE.MODULENR + CLFLINE.TRCODE)
+
+Fiş türü iki kolonun birlikte okunmasıyla belirlenir: aynı TRCODE farklı modülde başka bir belgedir.
+
+### Bordrolar — MODULENR = 3
+
+- Çek Girişi: `MODULENR = 3 AND TRCODE = 61`
+- Senet Girişi: `MODULENR = 3 AND TRCODE = 62`
+- Çek Çıkış (Cari Hesaba): `MODULENR = 3 AND TRCODE = 63`
+- Senet Çıkış (Cari Hesaba): `MODULENR = 3 AND TRCODE = 64`
+
+### Faturalar — MODULENR = 4
+
+- Mal Alım Faturası: `MODULENR = 4 AND TRCODE = 31`
+- Perakende Satış Iade Faturası: `MODULENR = 4 AND TRCODE = 32`
+- Toptan Satış Iade Faturası: `MODULENR = 4 AND TRCODE = 33`
+- Alınan Hizmet Faturası: `MODULENR = 4 AND TRCODE = 34`
+- Alım Iade Faturası: `MODULENR = 4 AND TRCODE = 36`
+- Perakende Satış Faturası: `MODULENR = 4 AND TRCODE = 37`
+- Toptan Satış Faturası: `MODULENR = 4 AND TRCODE = 38`
+- Verilen Hizmet Faturası: `MODULENR = 4 AND TRCODE = 39`
+- Satınalma Fiyat Farkı Faturası: `MODULENR = 4 AND TRCODE = 43`
+- Satış Fiyat Farkı Faturası: `MODULENR = 4 AND TRCODE = 44`
+- Müstahsil Makbuzu: `MODULENR = 4 AND TRCODE = 56`
+
+### Cari Hesap Fişleri — MODULENR = 5
+
+- Nakit Tahsilat: `MODULENR = 5 AND TRCODE = 1`
+- Nakit Ödeme: `MODULENR = 5 AND TRCODE = 2`
+- Borç Dekontu: `MODULENR = 5 AND TRCODE = 3`
+- Alacak Dekontu: `MODULENR = 5 AND TRCODE = 4`
+- Virman Fişi: `MODULENR = 5 AND TRCODE = 5`
+- Kur Farkı Işlemi: `MODULENR = 5 AND TRCODE = 6`
+- Özel Fiş: `MODULENR = 5 AND TRCODE = 12`
+- Açılış Fişi: `MODULENR = 5 AND TRCODE = 14`
+- Verilen Vade Farkı Faturası: `MODULENR = 5 AND TRCODE = 41`
+- Alınan Vade Farkı Faturası: `MODULENR = 5 AND TRCODE = 42`
+- Verilen Serbest Meslek Makbuzu: `MODULENR = 5 AND TRCODE = 45`
+- Alınan Serbest Meslek Makbuzu: `MODULENR = 5 AND TRCODE = 46`
+- Kredi Kartı Fişi: `MODULENR = 5 AND TRCODE = 70`
+- Kredi Kartı Iade Fişi: `MODULENR = 5 AND TRCODE = 71`
+- Firma Kredi Kartı Fişi: `MODULENR = 5 AND TRCODE = 72`
+- Firma Kredi Kartı Fişi İade: `MODULENR = 5 AND TRCODE = 73`
+
+### Banka Fişleri — MODULENR = 7
+
+- Gelen Havaleler: `MODULENR = 7 AND TRCODE = 20`
+- Gönderilen Havaleler: `MODULENR = 7 AND TRCODE = 21`
+- Döviz Alış Belgesi: `MODULENR = 7 AND TRCODE = 24`
+- Döviz Satış Belgesi: `MODULENR = 7 AND TRCODE = 25`
+- Alınan Hizmet Faturası: `MODULENR = 7 AND TRCODE = 26`
+- Verilen Hizmet Faturası: `MODULENR = 7 AND TRCODE = 29`
+- Müstahsil Makbuzu: `MODULENR = 7 AND TRCODE = 30`
+
+### Kasa Işlemleri — MODULENR = 10
+
+- Gider Pusulası: `MODULENR = 10 AND TRCODE = 75`
+
+## Döviz kodları (TRCURR / CURRSEL)
+
+Logo dövizi kendi küçük tamsayı koduyla saklar; ISO kodu bu tablodan gelir.
+
+- ABD Doları (USD): `TRCURR = 1`
+- Euro (EUR): `TRCURR = 20`
+- İngiliz Sterlini (GBP): `TRCURR = 17`
+- Alman Markı (DEM): `TRCURR = 2`
+- Avustralya Doları (AUD): `TRCURR = 3`
+- Avusturya Şilini (ATS): `TRCURR = 4`
+- Belçika Frangı (BEF): `TRCURR = 5`
+- Danimarka Kronu (DKK): `TRCURR = 6`
+- Fin Markkası (FIM): `TRCURR = 7`
+- Fransız Frangı (FRF): `TRCURR = 8`
+- Hollanda Florini (NLG): `TRCURR = 9`
+- İsveç Kronu (SEK): `TRCURR = 10`
+- İsviçre Frangı (CHF): `TRCURR = 11`
+- İtalyan Lireti (ITL): `TRCURR = 12`
+- Japon Yeni (JPY): `TRCURR = 13`
+- Kanada Doları (CAD): `TRCURR = 14`
+- Kuveyt Dinarı (KWD): `TRCURR = 15`
+- Norveç Kronu (NOK): `TRCURR = 16`
+- S. Arabistan Riyali (SAR): `TRCURR = 18`
+- Avrupa Para Birimi (XEU): `TRCURR = 19`
+- Azerbaycan Manatı (AZM): `TRCURR = 21`
+- Brezilya Cruzeirosu (BRL): `TRCURR = 22`
+- Bulgar Levası (BGN): `TRCURR = 23`
+- Çek Kuronu (CZK): `TRCURR = 24`
+- Çin Yüeni (CNY): `TRCURR = 25`
+- Estonya Kuronu (EEK): `TRCURR = 26`
+- Gürcistan Larisi (GEL): `TRCURR = 27`
+- Hindistan Rupisi (INR): `TRCURR = 28`
+- Hongkong Doları (HKD): `TRCURR = 29`
+- Irak Dinarı (IQD): `TRCURR = 30`
+- İran Riyali (IRR): `TRCURR = 31`
+- İrlanda Lirası (IEP): `TRCURR = 32`
+- İspanyol Pesetası (ESP): `TRCURR = 33`
+- İsrail Şekeli (ILS): `TRCURR = 34`
+- İzlanda Kuronu (ISK): `TRCURR = 35`
+- Kıbrıs Lirası (CYP): `TRCURR = 36`
+- Kırgızistan Somu (KGS): `TRCURR = 37`
+- Letonya Latsı (LVL): `TRCURR = 38`
+- Libya Dinarı (LYD): `TRCURR = 39`
+- Lübnan Lirası (LBP): `TRCURR = 40`
+- Litvanya Litası (LTL): `TRCURR = 41`
+- Lüksemburg Frangı (LUF): `TRCURR = 42`
+- Macaristan Forinti (HUF): `TRCURR = 43`
+- Malezya Ringgiti (MYR): `TRCURR = 44`
+- Meksika Pesosu (MXN): `TRCURR = 45`
+- Mısır Lirası (EGP): `TRCURR = 46`
+- Barbados Doları (BBD): `TRCURR = 47`
+- Polonya Zlotisi (PLN): `TRCURR = 48`
+- Portekiz Escudosu (PTE): `TRCURR = 49`
+- Romen Leyi (ROL): `TRCURR = 50`
+- Rus Rublesi (RUR): `TRCURR = 51`
+- Tayvan Doları (TWD): `TRCURR = 52`
+- Türk Lirası (TRY): `TRCURR = 53`
+- Ürdün Dinarı (JOD): `TRCURR = 54`
+- Yunan Drahmisi (GRD): `TRCURR = 55`
+- Arjantin Pesosu (ARS): `TRCURR = 56`
+- Laos Kipi (LAK): `TRCURR = 57`
+- Andorra Pesetası (ADP): `TRCURR = 58`
+- BAE Dirhemi (AED): `TRCURR = 59`
+- Afganistan Afganisi (AFN): `TRCURR = 60`
+- Arnavutluk Leki (ALL): `TRCURR = 61`
+- Hollanda Antilleri Florini (ANG): `TRCURR = 62`
+- Angola Kwanzası (AOA): `TRCURR = 63`
+- Bengaldeş Takası (BDT): `TRCURR = 64`
+- Bahreyn Dinarı (BHD): `TRCURR = 65`
+- Burundi Frangı (BIF): `TRCURR = 66`
+- Bermuda Doları (BMD): `TRCURR = 67`
+- Brunei Doları (BND): `TRCURR = 68`
+- Bolivya Bolivianosu (BOB): `TRCURR = 69`
+- Bahama Doları (BSD): `TRCURR = 70`
+- Butan Lirası (BTN): `TRCURR = 71`
+- Botswana Pulası (BWP): `TRCURR = 72`
+- Belize Doları (BZD): `TRCURR = 73`
+- Şili Pesosu (CLP): `TRCURR = 74`
+- Kolombiya Pesosu (COP): `TRCURR = 75`
+- Kosta Rika Kolonu (CRC): `TRCURR = 76`
+- Küba Pesosu (CUP): `TRCURR = 77`
+- Cape Verde Esküdosu (CVE): `TRCURR = 78`
+- Cibuti Frangı (DJF): `TRCURR = 79`
+- Dominik Pesosu (DOP): `TRCURR = 80`
+- Cezayir Dinarı (DZD): `TRCURR = 81`
+- Ekvator Sucresi (ECS): `TRCURR = 82`
+- Etyopya Birri (ETB): `TRCURR = 83`
+- Fiji Adaları Doları (FJD): `TRCURR = 84`
+- Falkland Adaları Sterlini (FKP): `TRCURR = 85`
+- Gana Cedisi (GHS): `TRCURR = 86`
+- Cebelitarık Sterlini (GIP): `TRCURR = 87`
+- Gambia Dalasisi (GMD): `TRCURR = 88`
+- Gine Frangı (GNF): `TRCURR = 89`
+- Guatemala Quetzali (GTQ): `TRCURR = 90`
+- Gine-Bisse Pesosu (GWP): `TRCURR = 91`
+- Guyana Doları (GYD): `TRCURR = 92`
+- Honduras Lempirası (HNL): `TRCURR = 93`
+- Haiti Gourdesi (HTG): `TRCURR = 94`
+- Endonezya Rupisi (IDR): `TRCURR = 95`
+- Jamaika Doları (JMD): `TRCURR = 96`
+- Kenya Şilingi (KES): `TRCURR = 97`
+- Kamboçya Rieli (KHR): `TRCURR = 98`
+- Komor Frangi (KMF): `TRCURR = 99`
+- Kuzey Kore Wonu (KPW): `TRCURR = 100`
+- Güney Kore Wonu (KRW): `TRCURR = 101`
+- Cayman Adaları Doları (KYD): `TRCURR = 102`
+- Sri Lanka Rupisi (LKR): `TRCURR = 103`
+- Liberya Doları (LRD): `TRCURR = 104`
+- Lesoto Lotisi (LSL): `TRCURR = 105`
+- Fas Dirhemi (MAD): `TRCURR = 106`
+- Moğol Tugriki (MNT): `TRCURR = 107`
+- Macau Patacası (MOP): `TRCURR = 108`
+- Moritanya Ogiyası (MRO): `TRCURR = 109`
+- Malta Lirası (MTL): `TRCURR = 110`
+- Mauritius Rupisi (MUR): `TRCURR = 111`
+- Maldiv Rufiyası (MVR): `TRCURR = 112`
+- Malavi Kwachası (MWK): `TRCURR = 113`
+- Mozambik Meticali (MZN): `TRCURR = 114`
+- Nijerya Nairası (NGN): `TRCURR = 115`
+- Nikaragua Cordoba Orosu (NIO): `TRCURR = 116`
+- Nepal Rupisi (NPR): `TRCURR = 117`
+- Yeni Zelanda Doları (NZD): `TRCURR = 118`
+- Umman Riyali (OMR): `TRCURR = 119`
+- Panama Balboası (PAB): `TRCURR = 120`
+- Peru Solu (PEN): `TRCURR = 121`
+- Papua Yeni Gine Kinası (PGK): `TRCURR = 122`
+- Filipin Pesosu (PHP): `TRCURR = 123`
+- Pakistan Rupisi (PKR): `TRCURR = 124`
+- Paraguay Guaranisi (PYG): `TRCURR = 125`
+- Katar Riyali (QAR): `TRCURR = 126`
+- Ruanda Frangı (RWF): `TRCURR = 127`
+- Solomon Adaları Doları (SBD): `TRCURR = 128`
+- Seyşel Adaları Rupisi (SCR): `TRCURR = 129`
+- Sudan Dinarı (SDG): `TRCURR = 130`
+- Singapur Doları (SGD): `TRCURR = 131`
+- St. Helen Lirası (SHP): `TRCURR = 132`
+- Sierra Leone Leonesi (SLL): `TRCURR = 133`
+- Somali Şilini (SOS): `TRCURR = 134`
+- Surinam Florini (SRD): `TRCURR = 135`
+- Sao Tome Dobrası (STD): `TRCURR = 136`
+- El Salvador Colonu (SVC): `TRCURR = 137`
+- Suriye Lirası (SYP): `TRCURR = 138`
+- Swaziland Lilangenisi (SZL): `TRCURR = 139`
+- Tayland Bahtı (THB): `TRCURR = 140`
+- Tunus Dinarı (TND): `TRCURR = 141`
+- Doğu Timor Esküdosu (TPE): `TRCURR = 142`
+- Trinidad ve Tobago Doları (TTD): `TRCURR = 143`
+- Tanzanya Şilini (TZS): `TRCURR = 144`
+- Uganda Şilini (UGX): `TRCURR = 145`
+- Uruguay Pesosu (UYU): `TRCURR = 146`
+- Venezuella Bolivarı (VEB): `TRCURR = 147`
+- Vietnam Dongu (VND): `TRCURR = 148`
+- Samoa Talası (WST): `TRCURR = 149`
+- Yemen Dinarı (YDD): `TRCURR = 150`
+- Yemen Riyali (YER): `TRCURR = 151`
+- Yugoslav Dinarı (YUD): `TRCURR = 152`
+- Güney Afrika Randı (ZAR): `TRCURR = 153`
+- Zambia Kwachası (ZMK): `TRCURR = 154`
+- Zimbabwe Doları (ZWL): `TRCURR = 155`
+- Kazak Tengesi (KZT): `TRCURR = 156`
+- Ukrayna Grevniyası (UAH): `TRCURR = 157`
+- Türkmenistan Manatı (TMT): `TRCURR = 158`
+- Özbekistan Somu (UZS): `TRCURR = 159`
+- Türk Lirası (TL): `TRCURR = 160`
+- Romen Yeni Leyi (RON): `TRCURR = 161`
+- Azerbaycan Yeni Manatı (AZN): `TRCURR = 162`
+- Ermeni Dramı (AMD): `TRCURR = 164`
+- Aruba Florini (AWG): `TRCURR = 165`
+- Konvertibıl Mark (BAM): `TRCURR = 166`
+- Beyaz Rusya Rublesi (BYR): `TRCURR = 167`
+- Kongo Frangı (CDF): `TRCURR = 168`
+- Eritre Nakfası (ERN): `TRCURR = 169`
+- Hırvatistsan Kunası (HRK): `TRCURR = 170`
+- Moldova Leyi (MDL): `TRCURR = 171`
+- Malgaş ariarysi (MGA): `TRCURR = 172`
+- Makedonya Dinarı (MKD): `TRCURR = 173`
+- Kyat (MMK): `TRCURR = 174`
+- Namibya Doları (NAD): `TRCURR = 175`
+- Sırp Dinarı (RSD): `TRCURR = 176`
+- Somoni (TJS): `TRCURR = 177`
+- Pa'anga (TOP): `TRCURR = 178`
+- Venezuela Bolivarı (VEF): `TRCURR = 179`
+- Vanuatu Vatusu (VUV): `TRCURR = 180`
+- Central African CFA Franc (XAF): `TRCURR = 181`
+- Doğu Karayip Doları (XCD): `TRCURR = 182`
+- CFA Frangı (XOF): `TRCURR = 183`
+- CFP Frangı (XPF): `TRCURR = 184`
+
+## Kolon kod kümeleri
+
+Kolonun taşıdığı sayının ne anlama geldiği:
+
+- `ACCFCASGN.TYP` — CGS Connection: 0=SMM Connection, 1=Tecil/Terkin Connection0
+- `ACTOVRHDDIST.LINETYPE` — Line Type: 0=Dolaysız, 1=Dolaylı
+- `ADDTAXLINE.TAXTYPE` — Tax Type: 0=Oran, 1=Tutar
+- `ANBDGTALLOCFC.TEXTINC` — Contains Detail Description: 0=No, 1=Yes
+- `ANBDGTREVFC.TEXTINC` — Contains Detail Description: 0=No, 1=Yes
+- `ANBUDGET.BDGTTYPE` — Budget Type: 0=Budget, 1=General Budget
+- `ANBUDGET.TEXTINC` — Contains Detail Description: 0=No, 1=Yes
+- `ASCOND.USETYPE` — Purchase / Sales: 1=For Purchase (Voucher Line), 2=For Purchase (Voucher General), 3=For Sales (Voucher Line), 4=For Sales  (Voucher Line)
+- `ASCOND.LINETYPE` — Line Type: 1=Discount, 2=Surcharge, 3=Promotion
+- `BNCREDITCARD.CRCARDTYPE` — Bank Credit Type: 1=Loan Against Check, 2=Loan Against P.Note, 3=Unsecured Credit
+- `BNCREDITCARD.CREDITTYPE` — Credit Type: 1=Operating Loan, 2=Investment Loan
+- `BNCREDITCARD.CRCALCTYPE` — Bank Credit Account Type: 1=Spot Loan, 2=Debtor Standing Credit (Revolving), 3=Discount - Credit of Redemption Bills
+- `BNCREPAYTR.TRANSTYPE` — Payment Transaction Type: 0=Main Records, 1=Back Payment of Main Records
+- `BNFICHE.MODULENR` — Module Number: 6=Checks/P.notes, 7=Bank, 10=Safe Deposit, 61=62 Checks/P.notes - AR/AP Transactions
+- `BNFICHE.CRCARDWZD` — Has it been generated by payment wizard?: 0=It has not been generated by payment wizard, 1=Payment Wizard+Credit Card, 2=Payment Wizard+Credit Card Return Slip
+- `BNFLINE.MODULENR` — Module Number: 6=Checks/P.notes, 7=Bank, 10=Safe Deposit
+- `BNFLINE.CRCARDWZD` — Has it been generated by payment wizard?: 0=It has not been generated by payment wizard., 1=Payment Wizard+Credit Card, 2=Payment Wizard+Credit Card Return Slip0
+- `BNFLINE.COMSTYPE` — Commission Type: 1=Point Commission, 2=Service Commission25
+- `BNFLINE.BNCRSOURCE` — Bank Transaction Slip: 0=Bank Credit Purchase Slip, 1=Bank Credit Payment Slip
+- `BOMLINE.BYDEFAULTEXISTS` — Default Production State for Co-Product or By-Product: 0=Always,, 1=When Required.
+- `CAMPAIGN.CARDTYPE` — Card Type: 1=Purchase,, 2=Sales.
+- `CHARASGN.MATRIXLOC` — Matrix Location Info: 0=Line, 1=Column
+- `CLCARD.BLOCKED` — Blocked: 0=Yes, 1=No
+- `CLFLINE.MODULENR` — Module Number: 10=Safe Deposit
+- `CLFLINE.TRGFLAG` — Trigger Flag: 0=Trigger Will Be Used, 1=Trigger Won't Be Used
+- `CLFLINE.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect0
+- `CMPGNLINE.LINETYPE` — Line Type: 1=İndirim, 2=Masraf, 3=Promosyon, 4=Puan
+- `CMPGNLINE.APPLYTYPE` — Application Type: 0=Satıra, 1=Genele
+- `COLLATRLCARD.COLLUSETYPE` — Letter Of Guarantee Type: 1=Temporary, 2=Advance, 3=Final2
+- `COLLATRLCARD.BANKPROCTYPE` — Cash Detail Transaction Type: 2=Money Orders, 3=EFT
+- `COLLATRLCARD.TEXTINC` — Contains Detail Description: 1=Yes, 2=No0
+- `COLLATRLCARD.COMPAYOWNER` — Customer Collateral: 0=Customer, 1=We
+- `COLLATRLROLL.TRCODE` — Transaction Type: 1=(01) Collateral Received, 2=(02) Collateral Issued, 3=(03) İşlem Bordrosu (Müşteri Teminatı), 4=(04) İşlem Bordrosu (Kendi Teminatımız)1
+- `COLLATRLTRAN.STATUS` — Status: 1=In Portfolio, 2=In Collateral, 3=Returned, 4=Çözdürüldü2
+- `COMPANSEACC.MIRRORACC` — Offset Account?: 0=No, 1=Yes
+- `COSTDISTLN.SRVDISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount
+- `CRDACREF.TRCODE` — Card Type: 1=Item Card, 3=Services Purchased, 4=Services Sales, 5=AR / AP, 8=Safe Deposit Transaction, 9=Purchase Promotion, 10=Sales Promotion, 11=Purchase Discount, 12=Sales Discount, 13=Purchase Surcharge, 14=Sales Surcharge
+- `CSROLL.CARDMD` — Card Module Number: 1=4 Account Receivable / Payable (5), 5=8 Bank Account (7)
+- `CSTRANS.CARDMD` — Card Module Number: 1=4 Account Receivable / Payable (5), 5=8 Bank Account (7)
+- `CSTRANS.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect1
+- `CSTVND.CARDTYPE` — Card Type: 1=Customer, 2=Vendor
+- `DATAEXCHHISTOR.DOCTYPE` — Document / Module Type: 1=Dispatche, 3=Order, 4=Invoice, 6=Check/P. Note Slip, 7=Money Order, 9=G/L, 101=Material, 105=AR/AP
+- `DECARDS.CARDTYPE` — Discount / Surcharge Card Type: 1=Discount For Purchase, 2=Discount For Sales, 3=Surcharge For Purchase, 4=Surcharge For Sales
+- `DEMANDLINE.MEETTYPE` — Delivery Type: 0==Purchase Order, 1==Production Order, 2==Warehouse Voucher
+- `DEMANDLINE.MRPHEADTYPE` — Demand/Quotation Plannig Type: 1==MPS   2=MRP
+- `DEMANDPEGGING.PARENTTYPE` — Demand/Resource Type: 0==Manual, 1==MPS, 2==MRP
+- `DEMANDPEGGING.CHILDTYPE` — Demand Delivery Type: 0==Purchase Order, 1==Production Order, 2==Warehouse Voucher, 3==Fulfilled From Stock
+- `DEMANDPEGGING.CHILDREF` — CHILDREF: 0==Manual, 1==MPS, 2==MRP
+- `DIIB.FICHETYPE` — Fiche Type: 0== DIIB, 1== Temporary Acceptance01
+- `DIIBLINE.LINETYPE` — Line Type: 1=Permitted Importation Material, 2=Subscribed Export Material
+- `DIIBLINE.TRNET` — Transaction Currency Amount: 1=CIF Reminder, 2=FOB Amount
+- `DISCPAYTRANS.TRCODE` — Transaction Type: 11=,12: AR/AP, 21=22: Bank, 31=39: Invoice, 61=64: Check/P.Notes, 71=74: Safe Deposit
+- `DISCPAYTRANS.MODULENR` — Card Module Number: 10=Safe Deposit
+- `DISTORD.STATUS` — Status: 0=Proposal, 1=Sevk Edilebilir, 2=Sevk Edildi
+- `DISTORD.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect7
+- `DISTORDLINE.LINETYPE` — Line Type: 1=Material, 2=Promotion, 7=Mixed case
+- `DISTORDLINE.RISKSTATUS` — Risk Status: 0=Not Risk, 1=Risk, 2=Inventory is insufficient
+- `DISTORDLINE.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect8
+- `EMDEMFICHE.TEXTINC` — Contains Detail Description: 0=No, 1=Yes
+- `EMDEMFICHE.CROSSFLAG` — Inverse Flag: 0=Original, 1=Inverse
+- `EMDEMFICHE.DOCTYPE` — Cost Of Sales Status Of Voucher: 0=Normal, 1=Cost Of Sales, 2=Differences Of Cost Of Sales
+- `EMDEMFLINE.NOTINFLATED` — Inflation Flag: 0==Join, 1==Not Join
+- `EMDEMFLINE.NOTCALCULATED` — Inflation Calculation Flag: 0==Join, 1==Not Join
+- `EMFICHE.CROSSFLAG` — Inverse Flag: 0=Original, 1=Inverse
+- `EMFICHE.DOCTYPE` — Cost Of Sales Status Of Voucher: 0=Normal, 1=Cost Of Sales, 2=Differences Of Cost Of Sales
+- `EMFICHE.BDGTFCTYPE` — Budget G/L Slip Type: 0=Journal Slip (G/L), 1=Journal Slip (General Budget approval), 2=Journal Slip (Revision)1
+- `EMFLINE.NOTINFLATED` — Inflation Flag: 0==Join, 1==Not Join
+- `EMFLINE.NOTCALCULATED` — Inflation Calculation Flag: 0==Join, 1==Not Join
+- `EMFLINE.BDGTLINETYPE` — Budget Line Type: 0=G/L Line, 1=Budget Line, 2=Budget Offsetting Line, 3=Allocation Line 4: Allocation Offsetting Line
+- `EMFLINE.BDGTFCTYPE` — Budget G/L Slip Type: 0=Journal Slip (G/L), 1=Journal Slip (General Budget approval), 2=Journal Slip (Revision)
+- `EMUHACC.PROJECTCTRL` — Project Control: 0==Proceed, 1==Warn user, 2==Block
+- `EMUHACC.NOTINFLATED` — Inflation Calculation Flag: 0==Join, 1==Not Join
+- `EXCEPT.SOURCETYPE` — Resource Type: 0=Employee, 1=Employee Group, 2=Workstation, 3=Workstation Group
+- `EXIMDISTLN.SRVDISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount01
+- `EXIMDISTLN.FICHETYPE` — Line Fiche Type: 0=Service Purchased Invoice, 1=Debit Note
+- `EXIMWHTRANS.LINETYPE` — Line Type: 0=Material, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed Case, 7=Mixed Case Line, 8=Fixed Asset, 9=Optional Material, 10=Material Class, 11=Subcontracting02
+- `EXPCREDITCRD.CREDITTYPE` — Credit Type: 1=Currency Credit, 2=Eximbank Credit1
+- `EXPCREDITCRD.STATUS` — Status: 1=Closed, 2=In Force
+- `FAANNCOST.TABLETY` — Table Type: 0=Normal, 1=Alternative
+- `FAREGIST.TRANSFER` — Carrying Over / New Record: 0=For Purchase, 1=For Transfer
+- `FINTABLEITEM.ITEMTYPE` — Item Type: 1=Group, 2=Account, 3=Account Range, 4=Subtotal, 6=Profit / Loss, 8=Page Setup, 9=Formula
+- `GAUGPARAM.ANTIALS` — Antialiasing: 0== None, 1== Level 1, 2== Level 2, 3== Level 31
+- `GERMANYDEF.DEFTYPE` — Business Type: 1=Business Type, 2=Verkehrszweign, 3=Verfahren (Export-Import)01
+- `IMPSRVREL.DISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount03
+- `INVEXIMINFO.COUNTRYTYPE` — Destination - Origin Country Type: 1=Member States of European Union (EU), 2=Member States of European Coal and Steel Community (ECSC), 3=Member States of European Free Trade Association (EFTA), 4=Pan-European System of Cumulation of Origin, 5=The States
+- `INVOICE.GRPCODE` — Group Code: 1=Purchase Invoice, 2=Sales Invoice
+- `INVOICE.ENTEGSET` — Discounts / Surcharges / Promotions have been distributed: 0=Promotions  Will Be Distributed to Item Cost, 1=Purchases  Will Be Distrib
+- `INVOICE.AFFECTCOLLATRL` — (Affect) Collateral: 0=Don't Affect, 1=Affect0
+- `ITEMS.CARDTYPE` — Item Card Type: 1=(TM) Commercial Good, 2=(KK) Mixed case, 3=(DM) Deposited Item, 4=(SK) Fixed Asset, 10=(HM) Raw Material, 11=(YM) Semi Finished Good, 12=(MM) Finished Good, 13=(TK) Consumer Goods, 20=(MS) Material Class (General), 21=(MT) Material Clas
+- `KSDISTDETLINES.CSDISTTEMPLINE` — Safe Deposit Account?: 0=Offset Account, 1=Safe Deposit
+- `KSDISTDETLINES.TRCODE` — Transaction Type: 11=,12 :AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
+- `KSDISTDETLINES.DISTTEMPLNTYP` — Safe Deposit G/L Distribution Line Type: 1=Safe Deposit, 2=Transaction, 3=VAT
+- `KSLINES.TRCODE` — Transaction Type: 11=,12 :AR/AP,, 21=22: Bank, 31=39: Invoice,, 61=64 : Check/P.Notes,, 71=74 Safe Deposit
+- `KSLINES.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect3
+- `LDXRECDELREQ.DOCTYPE` — Document Type: 1=Dispatch, 3=Order, 4=Invoice, 6=Check/P.Note (Bank), 7=Bank Slip, 9=G/L Slip, 101=Material, 105=AR/AP, 210=Import/Export Oper, 211=Export Registered Invoice, 1001=Material Slip, 1051=AR/AP Slip, 1061=Check/P.Note (B2B)
+- `LOGREP.LINETYPE` — Log Line Type: 0=Description, 1=Correct Transaction, 2=Transaction with error
+- `MRPHEAD.RUNTYPE` — Planning Type: 1=MPS, 2=MRP
+- `MRPHEAD.DEPMPS` — Dependent / Independent MRP: 0=Independent, 1=Dependent
+- `MRPHEAD.CHKRESOCC` — Resource Usage: 0=should not be checked, 1=should be checked
+- `MRPLINE.LINETYPE` — Line Type: 1=MPS, 2=MRP
+- `MRPPEGGING.PARENTTYPE` — Parent Type: 1=Sales Order, 2=User Demand, 3=MRP Line, 4=MRP Proposal, 5=Purchase Order, 6=Production Order, 7=Subcontracting Order
+- `MRPPEGGING.CHILDTYPE` — Child Type: 3=MRP Line, 4=MRP Proposal, 5=Purchase Order, 6=Production Order, 7=Subcontracting Order
+- `MRPPROPOSAL.PROPOSALTYPE` — Proposal Type: 0=Purchase Order, 1=Production Order, 2=Subcontracting Order
+- `MRPPROPOSAL.SOURCETYPE` — Source Type: 1=MPS, 2=MRP
+- `OCCUPATION.OCCSTATUS` — Resource Status: 1=Planned, 2=Actual
+- `OFFALTER.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect2
+- `OFFER.TYP` — Card Type: 1=For Sales, 2=For Purchase
+- `OFFER.TRCODE` — Card Type: 1=For Sales, 2=For Purchase
+- `OFFTRNS.LINETYPE` — Line Type: 0=Item Line, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed Case Line, 7=Mixed Case Details, 8=Fixed Asset Line
+- `OFFTRNS.TRCODE` — Card Type: 1=For Sales, 2=For Purchase
+- `OFFTRNS.GLOBTRANS` — Discount / Surcharge and Promotion Lines: 0=Line, 1=General
+- `OFFTRNS.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect4
+- `OFFTRNS.FCTYP` — Purchase Bidding Slips: 6=Order, 7=Bidding, 8=Agreement5
+- `ORDPEGGING.PARENTTYPE` — Demand/Resource Type: 0== Manual, 1== MPS, 2== MRP, 4== Sales Order
+- `ORFICHE.TRCODE` — Voucher Type: 1=for Sales Order, 2=for Purchase Order
+- `ORFICHE.TYP` — Value: 0=Order1
+- `ORFLINE.LINETYPE` — LineType: 0=Item Line, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed Case Line, 7=Mixed Case Details, 8=Fixed Asset Line
+- `ORFLINE.TRCODE` — Voucher Type: 1=Sales Orders, 2=Purchase Orders
+- `ORFLINE.GLOBTRANS` — Discount / Surcharge and Promotion Lines: 0=Line, 1=General
+- `ORFLINE.CALCTYPE` — Calculation Type: 0=Percentage %, 1=Function f(x), 2=Amount TL
+- `ORFLINE.TRGFLAG` — Trigger Flag: 0=Trigger Will Be Used, 1=Trigger Won't Be Used
+- `ORFLINE.FCTYP` — Purchase Bidding Slips: 6=Order, 7=Offer, 8=Agreement1
+- `OVRHDCENTERLN.LINETYPE` — Line Type: 0=Direct, 1=Indirect
+- `PACKAGEASGN.ASGNFICHETYPE` — Type of Related Voucher: 1=Order, 2=Dispatch
+- `PACKAGEASGN.ASGNFICHEREF` — ASSIGNFICHEREF: 1=Order, 2=Dispatch
+- `PACKAGEASGN.ASGNTRANSREF` — ASSGNTRANSREF: 1=Order, 2=Dispatch
+- `PAYTRANS.MODULENR` — Card Module Number: 10=Safe Deposit
+- `PAYTRANS.PAYMENTTYPE` — Payment Type: 0=No proceeding, 1=Cash, 2=Check, 3=P.Note, 4=Credit Card, 5=Store Card
+- `PAYTRANS.INSTALTYPE` — Installment Type: 1=Installment payment, 2=Collection01
+- `PEGGING.PEGTYPE` — Transaction Connection Type: 0=Input Connection, 1=Output Connection
+- `POLINE.MEETTYPE` — Batch Material Procurement Delivery Type: 0=Purchasing, 1=Production Order, 2=Warehouse Transfer
+- `POLINE.INVUSEPARAM` — Batch Material Procurement - Warehouse Usage Type: 0=Check All Warehouses, 1=Check Selected Warehouses
+- `PRCARDS.CARDTYPE` — Card Type: 1=Purchase Promotion, 2=Sales Promotion
+- `PRCARDS.ORDFCMODUL` — Usage Point at Order: 1=Sales Order, 2=Purchase Order
+- `PRCLIST.PTYPE` — Price Type: 1=Purchase Price, 2=Sales Price
+- `PRCLIST.PRCALTERTYP1` — Lower Level Authorized Person Type: 0=Percent, 1=Amount
+- `PRCLIST.PRCALTERTYP2` — Medium Level Authorized Person Type: 0=Percent, 1=Amount
+- `PRCLIST.PRCALTERTYP3` — Upper Level Authorized Person Type: 0=Percent, 1=Amount
+- `PURCHOFFER.TRCODE` — Voucher Type: 1=for Sales Order, 2=for Purchase Order
+- `PURCHOFFER.TYP` — Value: 0=Order
+- `PURCHOFFER.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect5
+- `PURCHOFFERLN.LINETYPE` — LineType: 0=Item Line, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed, 7=Mixed Case Details0
+- `PURCHOFFERLN.TRCODE` — Voucher Type: 1=Sales Orders, 2=Purchase Orders1
+- `PURCHOFFERLN.GLOBTRANS` — Discount / Surcharge and Promotion Lines: 0=Line, 1=General2
+- `PURCHOFFERLN.CALCTYPE` — Calculation Type: 0=Percentage %, 1=Function f(x), 2=Amount TL3
+- `PURCHOFFERLN.TRGFLAG` — Trigger Flag: 0=Trigger Will Be Used, 1=Trigger Won't Be Used
+- `PURCHOFFERLN.AFFECTCOLLATRL` — Affect Collateral: 0=Don't Affect, 1=Affect0
+- `PURCHOFFERLN.FCTYP` — Purchase Bidding Slip Type: 6=Order, 7=Offer, 8=Agreement1
+- `QASGN.ASGNTYPE` — Assignment Type: 0=Material, 2=Operation01
+- `QPRODUCT.PRODTYPE` — Product Type: 1=Product, 2=Parting
+- `REFLECTASGN.FICHETYPE` — Voucher Type: 1=Transfer1,, 2=Transfer2,, 3=Expense Closing Slip,, 4=Income closing Slip.
+- `REPAYPLAN.DEALINGTYPE` — Dealing Type: 0=Cash, 1=Installment, 2=All
+- `SERILOTN.SLTYPE` — Lot / Serial Type: 1=Serial, 2=Lot
+- `SHFTASGN.SOURCETYPE` — Resource Type: 0=Employee,, 1=Employee Group,, 2=Workstation,, 3=Workstation Group.
+- `SLQCASGN.ASGNTYPE` — Assignment Type: 0=Operation, 1=Material
+- `SLTRANS.IOCODE` — Input / Output Code: 1=Input, 2=Input From Warehouse, 3=Output From Warehouse, 4=Output
+- `SLTRANS.SLTYPE` — Lot / Serial Type: 1=Lot, 2=Serial
+- `SLTRANS.MADEOFSHRED` — Generated by Parting: 0=No, 1=Yes
+- `SLTRANS.STATUS` — Status: 0=Actual, 1=Proposal0
+- `SPECODES.SPECODETYPE` — Auxiliary Code Type: 1=Material, 2=Material Slip,, 3=Material Slip Line,, 4=Services Purchased,, 5=Services Sales,, 6=Purchase Discount,, 7=Purchase Surcharges, 8=Sales Discounts,, 9=Sales Surcharges,, 10=Purchase Promotions,, 11=Sales Promotions,, 14=Sales Orders,
+- `STDCOST.RESTYPE` — Resource Type: 1=Employee, 8=Workstation
+- `STFICHE.GRPCODE` — Group Code: 1=Purchasing, 2=Sales, 3=Material Management
+- `STFICHE.IOCODE` — Input / Output Code: 1=Input, 2=Warehouse, 3=Output
+- `STLINE.LINETYPE` — Line Type: 0=Material, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed Case, 7=Mixed Case Line, 8=Fixed Asset, 9=Optional Material, 10=Material Class, 11=Subcontracting1
+- `STLINE.TRCODE` — Voucher Type That Connected: 15=, 16, 17, 18, 19 User Defined Input Slip, 20=, 21, 22, 23, 24 User Defined Output Slip, 30=, 31, 32, 33, 34 User defined purchase receipts, 35=, 36, 37, 38, 39 User defined sales dispatches3
+- `STLINE.CALCTYPE` — (For Discount, Surcharge, Promotion Lines) Calculation Type: 0=Percentage, 1=Quantity, 2=Formula5
+- `STLINE.IOCODE` — Input / Output Code: 1=Input, 2=Input From Warehouse, 3=Output From Warehouse, 4=Output8
+- `STLINE.RETCOSTTYPE` — Return Transaction Cost Type: 0=Output, 1=At The Moment, 2=Amount
+- `STLINE.DECPRDIFF` — Price Difference: 0=Raiser, 1=Reducer
+- `STLINE.EISRVDSTTYP` — Service Distribution Type: 0=By Warehouse, 1=General
+- `STLINE.MADEOFSHRED` — Generated by Parting?: 0=No, 1=Yes
+- `TAXDECLLINE.LISTTYP` — List Type: -1=Social Security Organisations -2: Related Professional Association 0: Static Fields 1...n: Other Lists
+- `WFTASK.RECORDCUROP` — Formation of Task: 1== New, 2== Update, 4== Copy, 8== Delete, 16== By Next Workflow2
+- `WFTASK.SENDMAILREPORT` — Send Report Via E-Mail 0:Don't Send: 1=Send
+- `WHLIST.TYP` — Warehouse List Type: 1=Temin Ambarları, 2=MPS Ambarları
+- `WORKFLOWLINE.REMINDER` — Will Be Remind: 1=Active, 2=Passive0

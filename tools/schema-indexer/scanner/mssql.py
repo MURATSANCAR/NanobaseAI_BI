@@ -13,7 +13,11 @@ retrieval text carries business meaning instead of bare identifiers.
 
 from __future__ import annotations
 
+import json
+import os
 import re
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from config import IndexerConfig
@@ -94,24 +98,94 @@ _LOGO_COLUMN_DESC: dict[str, str] = {
 }
 
 _LOGO_NAME = re.compile(r"^(?:LG_\d+_(?:\d+_)?)?(?P<base>[A-Z][A-Z0-9]*)$")
+# The three shapes a Logo table name takes: L_X once per database, LG_<firm>_X once per firm, and
+# LG_<firm>_<period>_X once per firm-period. Splitting a physical name into (prefix, base) is what
+# lets a dictionary entry written once be applied to every copy of that table.
+_LOGO_PREFIX = re.compile(r"^(?P<prefix>L_|LG_(?P<firm>\d+)_(?:(?P<period>\d+)_)?)(?P<base>[A-Z][A-Z0-9_]*)$")
 
 
 def _logo_base(table_name: str) -> str:
     m = _LOGO_NAME.match(table_name.upper())
+    if m:
+        return m.group("base")
+    m = _LOGO_PREFIX.match(table_name.upper())
     return m.group("base") if m else table_name.upper()
 
 
+def _logo_parts(table_name: str) -> tuple[str, str | None, str | None]:
+    """(base, firm, period) for a physical Logo name; (name, None, None) for anything else."""
+    m = _LOGO_PREFIX.match(table_name.upper())
+    if not m:
+        return table_name.upper(), None, None
+    return m.group("base"), m.group("firm"), m.group("period")
+
+
+# --- vendor data dictionary (LDDS) ----------------------------------------------
+
+
+def _ldds_path() -> Path:
+    env = os.environ.get("LOGO_LDDS_PATH")
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parents[3] / "configs" / "schemas" / "logo-ldds.json"
+
+
+@lru_cache(maxsize=1)
+def _ldds() -> dict[str, Any]:
+    """Logo's own dictionary: 310 tables, 8.900 columns, the code sets and the join graph.
+
+    Logo declares no foreign keys and writes no extended properties, so without this a scan sees
+    nothing but identifiers. Absent file → empty dict: a source that is not Logo, or a deployment
+    that has not imported the workbook, keeps working exactly as before.
+    """
+    path = _ldds_path()
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[schema-indexer] Logo data dictionary not loaded ({path}): {e}")
+        return {}
+    tables = data.get("tables") or {}
+    print(
+        f"[schema-indexer] Logo data dictionary: {len(tables)} tables, "
+        f"{sum(len(t.get('columns') or {}) for t in tables.values())} columns, "
+        f"{sum(len(t.get('relations') or []) for t in tables.values())} relations"
+    )
+    return data
+
+
+def _ldds_table(table_name: str) -> dict[str, Any]:
+    return (_ldds().get("tables") or {}).get(_logo_base(table_name)) or {}
+
+
 def _table_desc(table_name: str) -> str:
+    """What this table is. The hand-written Turkish entries stay first — they carry the filters and
+    transaction codes that answering a question actually needs — and the dictionary covers the
+    several hundred tables nobody has written about."""
     base = _logo_base(table_name)
     if base in _LOGO_TABLE_DESC:
         return _LOGO_TABLE_DESC[base]
     if table_name.upper().startswith("L_CAPI"):
-        return _LOGO_TABLE_DESC.get(table_name.upper()[2:], "")
-    return ""
+        written = _LOGO_TABLE_DESC.get(table_name.upper()[2:], "")
+        if written:
+            return written
+    return str(_ldds_table(table_name).get("description") or "")
 
 
-def _col_desc(column: str) -> str:
-    return _LOGO_COLUMN_DESC.get(column.upper(), "")
+def _col_desc(column: str, table_name: str = "") -> str:
+    """What this column holds, and — when the vendor documented them — what its codes mean.
+
+    A coded column is the one case where the dictionary beats anything written by hand: `CARDTYPE`
+    described as "kart türü" cannot be filtered on, while `1=Ticari Mal, 12=Mamul` can.
+    """
+    col = column.upper()
+    entry = (_ldds_table(table_name).get("columns") or {}).get(col) if table_name else None
+    if entry and entry.get("values"):
+        head = entry.get("description") or _LOGO_COLUMN_DESC.get(col) or col
+        codes = ", ".join(f"{k}={v}" for k, v in sorted(entry["values"].items(), key=lambda kv: int(kv[0])))
+        return f"{head} ({codes})"
+    if col in _LOGO_COLUMN_DESC:
+        return _LOGO_COLUMN_DESC[col]
+    return str((entry or {}).get("description") or "")
 
 
 # --- connection -----------------------------------------------------------------
@@ -153,6 +227,96 @@ def _patterns(cfg: IndexerConfig) -> list[str]:
 # --- scan -------------------------------------------------------------------------
 
 
+def _row_count_map(cur) -> dict[tuple[str, str], int]:
+    """(schema, table) → row count, from the partition stats DMV. Empty when the read-only account
+    lacks VIEW DATABASE STATE — the caller then keeps whatever order it already had."""
+    try:
+        cur.execute(
+            """
+            SELECT s.name AS sch, o.name AS tbl, SUM(p.row_count) AS n
+            FROM sys.dm_db_partition_stats p
+            JOIN sys.objects o ON o.object_id = p.object_id
+            JOIN sys.schemas s ON s.schema_id = o.schema_id
+            WHERE p.index_id IN (0, 1) AND o.type = 'U'
+            GROUP BY s.name, o.name
+            """
+        )
+        return {(r["sch"], r["tbl"]): int(r["n"] or 0) for r in cur.fetchall()}
+    except Exception:
+        return {}
+
+
+def _dictionary_links(table_name: str, columns: list[str], present: set[str]) -> list[dict[str, str]]:
+    """The dictionary's joins for this table, resolved to table names this scan actually contains.
+
+    A relation is written once against `STLINE`; the database holds it as
+    `LG_411_01_STLINE → LG_411_ITEMS`, crossing from a period table to a firm one. The target's own
+    level decides which prefix it takes, and a target that is not in the scan is skipped rather than
+    invented — a join to a table nobody catalogued is worse than no join.
+    """
+    entry = _ldds_table(table_name)
+    relations = entry.get("relations") or []
+    if not relations:
+        return []
+    _, firm, period = _logo_parts(table_name)
+    if firm is None:
+        return []
+    tables = _ldds().get("tables") or {}
+    have = {c.upper() for c in columns}
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for rel in relations:
+        column, target = rel.get("column", ""), rel.get("to", "")
+        if column not in have or column in seen or not target:
+            continue
+        level = (tables.get(target) or {}).get("level", "firm")
+        candidates = []
+        if level == "period" and period:
+            candidates.append(f"LG_{firm}_{period}_{target}")
+        if level in ("period", "firm"):
+            candidates.append(f"LG_{firm}_{target}")
+        candidates.append(f"L_{target}")
+        for cand in candidates:
+            if cand in present:
+                seen.add(column)
+                out.append({"column": column, "table": cand, "to_column": rel.get("to_column") or "LOGICALREF"})
+                break
+    return out
+
+
+def select_tables(cfg: IndexerConfig, discovered: list[dict], row_counts) -> list[dict]:
+    """Which of the matched tables this run will catalogue, and a record of what it left out.
+
+    Kept separate from the scan so the decision can be reasoned about (and tested) without a database:
+    it is the decision that made a customer's schema look half-empty.
+    """
+    cfg.discovered_tables = len(discovered)
+    cfg.truncated_tables = []
+    if len(discovered) <= int(cfg.max_tables):
+        return discovered
+    # If a cap has to bite, it must drop the least-carrying tables, not the ones whose name happens
+    # to sort last. Row counts come from the partition stats DMV; an account without VIEW DATABASE
+    # STATE simply gets the alphabetical order it had before — but now the run says what it dropped.
+    try:
+        counts = row_counts() or {}
+    except Exception:
+        # No permission to read the stats DMV. Ranking degrades to the name order; losing the ranking
+        # must never cost the customer the scan itself.
+        counts = {}
+    ordered = sorted(
+        discovered,
+        key=lambda t: (-counts.get((t["TABLE_SCHEMA"], t["TABLE_NAME"]), 0), t["TABLE_SCHEMA"], t["TABLE_NAME"]),
+    )
+    cap = int(cfg.max_tables)
+    cfg.truncated_tables = [f'{t["TABLE_SCHEMA"]}.{t["TABLE_NAME"]}' for t in ordered[cap:]]
+    print(
+        f"[schema-indexer] WARNING: scope matched {len(discovered)} tables, cap is {cap} — "
+        f"cataloguing the {cap} largest, {len(cfg.truncated_tables)} left out "
+        f"(raise BI_SCHEMA_MAX_TABLES or narrow table_patterns)"
+    )
+    return ordered[:cap]
+
+
 def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[RelationshipMeta]]:
     conn = connect_mssql(cfg)
     tables: list[TableMeta] = []
@@ -166,12 +330,16 @@ def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relat
         if patterns:
             where.append("(" + " OR ".join("TABLE_NAME LIKE %s" for _ in patterns) + ")")
             params.extend(patterns)
+        # Read the whole matching list — INFORMATION_SCHEMA.TABLES is a catalogue scan, cheap even
+        # at ten thousand rows — and cap it here rather than in SQL. `TOP n ... ORDER BY TABLE_NAME`
+        # cut a Logo database off mid-alphabet: the scan stopped somewhere inside LG_<firm>_<period>_C%
+        # and ITEMS, STLINE and STFICHE were never seen, with nothing in the report to say so.
         cur.execute(
-            f"SELECT TOP {int(cfg.max_tables)} TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE "
+            f"SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE "
             f"FROM INFORMATION_SCHEMA.TABLES WHERE {' AND '.join(where)} ORDER BY TABLE_SCHEMA, TABLE_NAME",
             tuple(params),
         )
-        raw_tables = list(cur.fetchall())
+        raw_tables = select_tables(cfg, list(cur.fetchall()), lambda: _row_count_map(cur))
 
         # Extended properties (MS_Description) if the customer documented anything.
         descs: dict[tuple[str, str, str], str] = {}
@@ -244,25 +412,19 @@ def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relat
                         to_schema=fk.target_schema, to_table=fk.target_table, to_column=fk.target_column,
                     )
                 )
-            # ERP databases rarely declare FKs; derive the well-known *REF links from naming.
+            # Logo declares no foreign keys, so an honest FK query returns nothing and the join graph
+            # is empty. The vendor dictionary carries the whole graph — every *REF column and what it
+            # points at — which is the difference between joining two tables and joining the schema.
             if not fks:
-                base = _logo_base(name)
-                prefix = name[: len(name) - len(base)] if name.upper().endswith(base) else ""
-                firm_prefix = re.sub(r"(\d+_)$", "", prefix) if re.search(r"LG_\d+_\d+_$", prefix) else prefix
-                link_targets = {"CLIENTREF": "CLCARD", "STOCKREF": "ITEMS", "INVOICEREF": "INVOICE", "STFICHEREF": "STFICHE", "ORDFICHEREF": "ORFICHE", "SALESMANREF": "SLSMAN", "ACCOUNTREF": "EMUHACC"}
-                names_in_scan = {(r["TABLE_SCHEMA"], r["TABLE_NAME"]) for r in raw_tables}
-                for c in cols_raw:
-                    cname = c["COLUMN_NAME"].upper()
-                    if cname in link_targets:
-                        tgt_base = link_targets[cname]
-                        candidates = [f"{prefix}{tgt_base}", f"{firm_prefix}{tgt_base}"]
-                        for cand in candidates:
-                            if (schema, cand) in names_in_scan:
-                                relationships.append(
-                                    RelationshipMeta(from_schema=schema, from_table=name, from_column=c["COLUMN_NAME"], to_schema=schema, to_table=cand, to_column="LOGICALREF")
-                                )
-                                fks.append(ForeignKey(column=c["COLUMN_NAME"], target_schema=schema, target_table=cand, target_column="LOGICALREF"))
-                                break
+                present = {r["TABLE_NAME"].upper() for r in raw_tables if r["TABLE_SCHEMA"] == schema}
+                for link in _dictionary_links(name, [c["COLUMN_NAME"] for c in cols_raw], present):
+                    relationships.append(
+                        RelationshipMeta(
+                            from_schema=schema, from_table=name, from_column=link["column"],
+                            to_schema=schema, to_table=link["table"], to_column=link["to_column"],
+                        )
+                    )
+                    fks.append(ForeignKey(column=link["column"], target_schema=schema, target_table=link["table"], target_column=link["to_column"]))
 
             columns: list[ColumnMeta] = []
             for c in cols_raw:
@@ -276,7 +438,7 @@ def scan_metadata_mssql(cfg: IndexerConfig) -> tuple[list[TableMeta], list[Relat
                         nullable=str(c["IS_NULLABLE"]).upper() == "YES",
                         ordinal=int(c["ORDINAL_POSITION"]),
                         is_pk=cname in pks,
-                        description=descs.get((schema, name, cname)) or _col_desc(cname),
+                        description=descs.get((schema, name, cname)) or _col_desc(cname, name),
                         udt_name=str(c["DATA_TYPE"]),
                         max_length=c.get("CHARACTER_MAXIMUM_LENGTH"),
                         precision=c.get("NUMERIC_PRECISION"),

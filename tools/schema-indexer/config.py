@@ -53,7 +53,17 @@ class IndexerConfig:
     )
     vector_size: int = field(default_factory=lambda: int(_env("BI_EMBED_DIM", "1024") or "1024"))
     embed_batch: int = 8
-    max_tables: int = field(default_factory=lambda: int(_env("BI_SCHEMA_MAX_TABLES", "200") or "200"))
+    # A Logo/Unity ERP database carries one set of tables per firm and one per firm-period:
+    # 311 table types become well over a thousand physical tables. The old default of 200 cut
+    # that off mid-alphabet and said nothing, which is how a customer ends up looking at a
+    # catalogue that is missing most of their database. The cap is a safety valve against a
+    # pathological schema, not a scoping tool — scope belongs in `table_patterns`.
+    max_tables: int = field(default_factory=lambda: int(_env("BI_SCHEMA_MAX_TABLES", "5000") or "5000"))
+    # Filled in by the scanner so the run can say what it saw and what it left out. A cap that
+    # drops tables silently is indistinguishable, from the outside, from a database that does
+    # not have them.
+    discovered_tables: int = 0
+    truncated_tables: list[str] = field(default_factory=list)
     skip_samples: bool = False
     skip_profile: bool = False
     recreate_collection: bool = False
