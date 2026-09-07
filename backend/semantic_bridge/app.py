@@ -264,8 +264,23 @@ class Runtime:
         return [r for _, r in scored[: self.settings.recall_limit]]
 
     # ------------------------------------------------------------------ execution
-    def _physical(self, sql: str) -> str:
-        return physicalize_sql(strip_trailing_semicolon(sql), self.profiles, self.settings.context, self.settings.dialect)
+    def _physical(self, sql: str, period: Optional[tuple] = None) -> str:
+        """`period` lets an entity split one-table-per-year resolve to the tables that year needs.
+
+        Passed only where the question is known. The endpoints that take raw SQL have no question and
+        no period, and there the behaviour is what it always was: one entity, one table.
+        """
+        return physicalize_sql(strip_trailing_semicolon(sql), self.profiles, self.settings.context,
+                               self.settings.dialect, period=period)
+
+    @staticmethod
+    def _asked_period(q: Any) -> Optional[tuple]:
+        """The span a question asked for, or None when it named no period at all."""
+        if q is None:
+            return None
+        start = min((t.start for t in getattr(q, "temporal", []) if t.start), default=None)
+        end = max((t.end for t in getattr(q, "temporal", []) if t.end), default=None)
+        return (start, end) if start and end else None
 
     def dry_run(self, sql: str) -> None:
         if self.connector is None:
@@ -273,7 +288,7 @@ class Runtime:
         with self._engine_lock:
             self.connector.dry_run(sql)
 
-    def run_sql(self, sql: str, limit: int) -> dict[str, Any]:
+    def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None) -> dict[str, Any]:
         sql = strip_comments(sql or "")
         ok, why = validate_sql(sql)
         if not ok:
@@ -283,7 +298,11 @@ class Runtime:
         if not ok:
             raise ValueError(f"SQL rejected: {why}")
         limit = max(1, min(int(limit or self.settings.max_rows), self.settings.max_rows))
-        phys = self._physical(sql)
+        # The period travels with the SQL so the answer is executed against the same tables the
+        # response reports. Without it the two disagree the moment a question spans a year boundary,
+        # and the row the person is looking at came from a table the explanation does not name. It is
+        # also part of the cache key by construction: it changes `phys`, and `phys` is what is hashed.
+        phys = self._physical(sql, period)
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
@@ -493,7 +512,7 @@ class Runtime:
         if self.connector is not None:
             for attempt in range(2):
                 try:
-                    self.dry_run(self._physical(sql))
+                    self.dry_run(self._physical(sql, self._asked_period(sq)))
                     error = None
                     break
                 except Exception as e:  # noqa: BLE001
@@ -519,10 +538,10 @@ class Runtime:
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Üretilen SQL doğrulanamadı: {error}", "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
-            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
+            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq)), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
         t = time.perf_counter()
         try:
-            result = self.run_sql(sql, sample_size)
+            result = self.run_sql(sql, sample_size, self._asked_period(sq))
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)

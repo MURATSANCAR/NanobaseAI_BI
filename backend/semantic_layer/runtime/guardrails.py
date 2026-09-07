@@ -9,7 +9,8 @@ import sqlglot
 from sqlglot import exp
 
 from semantic_layer.models import SchemaProfile
-from semantic_layer.naming import logical_table, physical_name, strip_quotes
+from semantic_layer.naming import logical_table, physical_name, source_rank, strip_quotes
+from semantic_layer.runtime import periods
 
 _DENY = re.compile(r"(?i)\b(insert|update|delete|drop|alter|truncate|merge|exec|execute|grant|revoke|create|into|openrowset|openquery|opendatasource|xp_\w+|sp_\w+|bulk|shutdown|dbcc|waitfor|kill|backup|restore)\b")
 _COMMENT = re.compile(r"--|/\*|\*/")
@@ -80,21 +81,74 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     return True, "ok"
 
 
-def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql") -> str:
+def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
+                    *, period: Optional[tuple] = None) -> str:
     """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
 
     A model spelling (schema_TABLE), a logical entity or a stale period name all resolve to the
-    physical table of the profiled pattern under the given context; LIMIT → TOP, EXTRACT → DATEPART."""
-    by_entity = {p.entity: p for p in profiles}
+    physical table of the profiled pattern under the given context; LIMIT → TOP, EXTRACT → DATEPART.
+
+    With `period` given as (start, end), an entity whose rows are split across one table per year is
+    resolved here rather than in the prompt. Until now the model was handed the year-to-table map and
+    asked to write the UNION ALL itself — several hundred tokens of bookkeeping on every question,
+    and a step where a model can pick the wrong year, union a duplicate copy and return double the
+    real figure. The compiler already knows which tables a period needs and which copy to skip; doing
+    it here makes that knowledge structural instead of advisory.
+
+    Only tables of the representative's own pattern are unioned. The same entity can also exist as a
+    view or a hand-made copy under another prefix, and those are not other years of it.
+    """
     by_table = {p.table_name.upper(): p for p in profiles}
+    tables_of: dict[str, list[SchemaProfile]] = {}
+    for p in profiles:
+        tables_of.setdefault(p.entity, []).append(p)
+    # Which physical table stands for an entity when the model writes its logical name. Built from
+    # a dict comprehension this was whichever profile happened to be last, so an entity that also
+    # exists as a view or a hand-made copy could be represented by the copy — and every question
+    # asked in logical terms would then be answered from it. Rank decides: a base table before a
+    # view, a view before something whose name says it is a backup, and rows break the tie.
+    by_entity: dict[str, SchemaProfile] = {}
+    for entity, group in tables_of.items():
+        by_entity[entity] = min(group, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
+                                                      -(x.row_count or 0), x.table_name))
     for p in profiles:
         by_table[f"{p.schema_name}_{p.table_name}".upper()] = p
         by_table[f"{p.schema_name}.{p.table_name}".upper()] = p
+
+    def spread(prof: SchemaProfile) -> list[SchemaProfile]:
+        """The tables of `prof`'s entity this period needs — one, unless the years span more.
+
+        Never where the SQL already names more than one year of that pattern. A model told which
+        table holds which year writes the UNION itself, and expanding each of its branches to the
+        whole span again adds every year to itself: the answer comes back at twice the real figure
+        with nothing about it looking wrong. Naming one table is the case this is for — the model
+        picked a year and the question needs more than that one.
+        """
+        if period is None or already_spread.get(prof.table_pattern, 0) > 1:
+            return [prof]
+        same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
+        if len(same) < 2:
+            return [prof]
+        picked = periods.tables_for(same, period[0], period[1])
+        return picked or [prof]
     try:
         tree = sqlglot.parse_one(sql, read=dialect)
     except Exception:
         tree = sqlglot.parse_one(sql)
     cte_names = {c.alias.upper() for c in tree.find_all(exp.CTE) if c.alias}
+
+    # How many distinct physical tables of each pattern the SQL already names, counted before
+    # anything is rewritten: that is what says whether the model spread the years itself.
+    already_spread: dict[str, int] = {}
+    seen_tables: dict[str, set[str]] = {}
+    for node in tree.find_all(exp.Table):
+        if not node.name or node.name.upper() in cte_names:
+            continue
+        key = ((node.db + "_") if node.db else "") + node.name
+        found = by_table.get(key.upper()) or by_table.get(node.name.upper())
+        if found is not None:
+            seen_tables.setdefault(found.table_pattern, set()).add(found.table_name)
+    already_spread = {pattern: len(names) for pattern, names in seen_tables.items()}
 
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
@@ -108,8 +162,17 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
             if prof is None:
                 return node
-            phys = physical_name(prof.table_pattern, {**prof.context, **context})
-            new = exp.Table(this=exp.to_identifier(phys, quoted=True), db=exp.to_identifier(prof.schema_name, quoted=True))
+            wanted = spread(prof)
+            if len(wanted) > 1:
+                # One entity, several years: read them as one relation so everything the model wrote
+                # around it — the joins, the filters, the aggregate — is untouched.
+                parts = [exp.select(exp.Star()).from_(_physical_table(x, context)) for x in wanted]
+                union: exp.Expression = parts[0]
+                for nxt in parts[1:]:
+                    union = exp.union(union, nxt, distinct=False)
+                alias = node.alias or prof.entity
+                return exp.Subquery(this=union, alias=exp.TableAlias(this=exp.to_identifier(alias)))
+            new = _physical_table(wanted[0], context)
             if node.alias:
                 new.set("alias", exp.TableAlias(this=exp.to_identifier(node.alias)))
             return new
@@ -117,6 +180,11 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
 
     out = tree.transform(tx)
     return out.sql(dialect=dialect if dialect != "generic" else None)
+
+
+def _physical_table(prof: SchemaProfile, context: dict[str, str]) -> exp.Table:
+    phys = physical_name(prof.table_pattern, {**prof.context, **context})
+    return exp.Table(this=exp.to_identifier(phys, quoted=True), db=exp.to_identifier(prof.schema_name, quoted=True))
 
 
 def strip_trailing_semicolon(sql: str) -> str:
