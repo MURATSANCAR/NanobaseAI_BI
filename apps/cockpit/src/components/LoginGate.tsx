@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode, type FormEvent } from 'react';
 import { ArrowRight, BookOpen, Eye, EyeOff, LockKeyhole, UserRound, LogOut } from 'lucide-react';
 
+const moduleTitle = document.title;
 const auth = `${import.meta.env.BASE_URL}auth/`;
 // Capture once, before StrictMode mounts effects twice. Remove the invitation
 // from the address bar immediately; never persist it or the password.
@@ -17,6 +18,10 @@ export function LoginGate({ children }: { children: ReactNode }) {
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    document.title = user ? moduleTitle : 'Zeki AI | Timaş Yayın Grubu';
+  }, [user]);
 
   useEffect(() => {
     function acceptInvitation() {
@@ -74,18 +79,18 @@ export function LoginGate({ children }: { children: ReactNode }) {
   if (user) return <>{children}<button onClick={logout} disabled={busy} title={`${user} · Oturumu kapat`} className="fixed bottom-3 left-3 z-40 flex items-center gap-2 rounded-full border border-line bg-white px-3 py-2 text-xs text-ink-muted shadow-card"><LogOut size={14} />Çıkış</button></>;
 
   return <main className="login-page">
-    <header className="login-brand"><span className="login-mark"><BookOpen size={24} /></span><div><strong>TİMAŞ <span>BI</span></strong><small>KURUMSAL YAYIN ATLASI</small></div></header>
+    <header className="login-brand"><span className="login-mark"><BookOpen size={24} /></span><div><strong>TİMAŞ <span>AI</span></strong><small>KURUMSAL ÇALIŞMA PLATFORMU</small></div></header>
     <div className="login-layout">
       <section className="login-story">
         <span className="login-eyebrow">TİMAŞ YAYIN GRUBU · ZEKİ AI</span>
-        <h1>Verinizle konuşun.<br /><em>Birlikte anlamlandıralım.</em></h1>
-        <p>Finans, satış ve yayın dünyanız aynı masada.<br />Sorunuzu sorun, rakamların arkasını görün.</p>
-        <div className="login-illustration"><img src={`${import.meta.env.BASE_URL}zeki-ai.gif`} alt="Zeki AI, Timaş yapay zekâ asistanı" /><span>Bir soruyla başlayan yeni bir bakış.</span></div>
+        <h1>Tek bir giriş.<br /><em>Birlikte daha fazlası.</em></h1>
+        <p>Uygulamalarınız ve çalışma alanlarınız tek bir yerde.<br />Zeki AI ile işinize yeni bir bakış kazandırın.</p>
+        <div className="login-illustration"><img src={`${import.meta.env.BASE_URL}zeki-ai.gif`} alt="Zeki AI, Timaş yapay zekâ asistanı" /><span>İşinize eşlik eden akıllı yardımcınız.</span></div>
       </section>
       <section className="login-card" aria-labelledby="login-title">
         <span className="login-card-icon"><LockKeyhole size={22} /></span>
-        <h2 id="login-title">Masanız hazır.</h2>
-        <p className="login-intro">Finans & Bütçe Masası’na hoş geldiniz.</p>
+        <h2 id="login-title">Hoş geldiniz.</h2>
+        <p className="login-intro">Timaş kurumsal çalışma platformuna giriş yapın.</p>
         {test && <div className="login-test"><span />TEST ÇALIŞMA ALANI<p>Giriş bilgileriniz hazır. Başlamak için giriş yapın.</p></div>}
         <form onSubmit={login}>
           <label htmlFor="portal-username">Kullanıcı adı</label>
@@ -93,9 +98,9 @@ export function LoginGate({ children }: { children: ReactNode }) {
           <label htmlFor="portal-password">Şifre</label>
           <div className="login-field"><LockKeyhole size={18} /><input id="portal-password" type={show ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} disabled={!ready || busy} /><button type="button" aria-label={show ? 'Şifreyi gizle' : 'Şifreyi göster'} onClick={() => setShow(!show)}>{show ? <EyeOff size={18} /> : <Eye size={18} />}</button></div>
           {error && <p className="login-error" role="alert">{error}</p>}
-          <button className="login-submit" disabled={!ready || busy} type="submit">{!ready ? 'Hazırlanıyor…' : busy ? 'Giriş yapılıyor…' : 'Masama giriş yap'}<ArrowRight size={18} /></button>
+          <button className="login-submit" disabled={!ready || busy} type="submit">{!ready ? 'Hazırlanıyor…' : busy ? 'Giriş yapılıyor…' : 'Sisteme giriş yap'}<ArrowRight size={18} /></button>
         </form>
-        <div className="login-footnote"><LockKeyhole size={13} /> Güvenli oturum · Veritabanına salt-okunur erişim</div>
+        <div className="login-footnote"><LockKeyhole size={13} /> Güvenli oturum · Size özel çalışma alanı</div>
       </section>
     </div>
     <footer className="login-footer"><span>Timaş Yayın Grubu</span><span>Zeki AI ile desteklenir.</span></footer>

@@ -4,6 +4,12 @@
 #   hız: /timas/api/v1/ask 6 istek/dk (patlama 3), /timas/api/ 120 istek/dk (patlama 30), IP başına
 set -euo pipefail
 SITE="${PORTAL_SITE:-/etc/nginx/sites-enabled/portal.nanobase.ai}"
+# Session login owns these routes now. This legacy provisioning script replaces
+# htpasswd, so fail before any write instead of deleting active portal accounts.
+if sudo grep -q '# timas-session-login' "$SITE"; then
+  printf 'Session login is installed; use scripts/server/portal-login instead. No changes made.\n' >&2
+  exit 1
+fi
 SECRETS="${SECRETS_ROOT:-/data/nanobaseai/bi/secrets}"
 HTPASSWD=/etc/nginx/htpasswd-timas
 USER_NAME="${TIMAS_USER:-timas}"
