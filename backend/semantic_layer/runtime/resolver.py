@@ -418,6 +418,9 @@ class SemanticResolver:
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
 
         self._account_modifiers(sq, qf, consumed, index)
+        for slot in sq.filters:
+            if slot.mapping and slot.mapping.column:
+                slot.explain["equivalent_bindings"] = self.conventions.filter_bindings(slot.mapping)
         # A qualitative price judgment needs a business definition, not a
         # similarly named numeric column or a threshold invented by the model.
         for k, token in enumerate(qf.tokens):
@@ -501,11 +504,14 @@ class SemanticResolver:
 
         # 8) does this deployment even hold the period being asked about? The window is measured, so the
         #    answer is "there is no data for 2019 here", not an empty result set that looks like zero sales.
-        entity = self._primary_entity(hits) or next((s_.mapping.entity for s_ in hits if s_.mapping), None)
+        # A grouping/filter entity is not the owner of the requested measure.
+        # With no resolved measure, its creation date must not become an obligation.
+        metric_entities = {s.mapping.entity for s in sq.metrics if s.mapping and s.status in ("CERTIFIED", "INFERRED")}
+        entity = next(iter(metric_entities)) if len(metric_entities) == 1 else None
         from semantic_layer.runtime import periods
 
-        if sq.temporal and entity and (column := self.conventions.time_column(entity)):
-            sq.temporal_binding = {"entity": entity, "column": column}
+        if sq.temporal and entity:
+            sq.temporal_binding = self.conventions.temporal_binding(entity)
         if sq.comparison and sq.temporal_binding:
             sq.comparison.update(entity=entity, dateColumn=sq.temporal_binding["column"])
         covered = periods.spans(self.tables_of.get(entity or "", []))

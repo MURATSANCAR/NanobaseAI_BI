@@ -1,0 +1,26 @@
+# Explicit Logo business-date equivalence confirmed during the live regression review.
+# A generic FK is not date equivalence: do not broaden this to order/due/customer dates.
+equivalent_dates:
+  - left:
+      entity: INVOICE
+      column: DATE_
+    right:
+      entity: STLINE
+      column: DATE_
+    join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    reason: "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+
+# The existing Logo return report uses invoice TRCODE 2/3; the catalog's "iade"
+# binding currently lives on STLINE. Restrict equivalence to these exact codes.
+# Source: knowledge/sql/en-cok-iade-alan-10-musteri-kimler.md and the live review.
+equivalent_filters:
+  - left:
+      entity: STLINE
+      column: TRCODE
+    right:
+      entity: INVOICE
+      column: TRCODE
+    operator: IN
+    values: ["2", "3"]
+    join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    reason: "Satış iadesi kodları 2 ve 3, fatura başlığı ve bağlı satış satırında aynı işlemi seçer."

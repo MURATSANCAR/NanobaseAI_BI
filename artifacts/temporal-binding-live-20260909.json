@@ -1,0 +1,336 @@
+[
+  {
+    "q": "bu yıl en çok satan 10 kitap",
+    "before": "INCOMPLETE_ANSWER",
+    "after": "TEXT_TO_SQL",
+    "rows": 10,
+    "compiler": "existing_llm",
+    "explanation": null,
+    "sql": "SELECT TOP 10\n    it.\"CODE\" AS stok_kodu,\n    it.\"NAME\" AS kitap,\n    SUM(sl.\"AMOUNT\") AS adet,\n    SUM(sl.\"TOTAL\") AS tutar\nFROM dbo_LG_411_01_STLINE sl\nJOIN dbo_LG_411_ITEMS it ON it.\"LOGICALREF\" = sl.\"STOCKREF\"\nWHERE sl.\"CANCELLED\" = 0\n  AND sl.\"LINETYPE\" = 0\n  AND sl.\"TRCODE\" IN (7, 8)\n  AND sl.\"DATE_\" >= '2026-01-01'\n  AND sl.\"DATE_\" < '2027-01-01'\nGROUP BY it.\"CODE\", it.\"NAME\"\nORDER BY adet DESC",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 12.21
+  },
+  {
+    "q": "hangi müşteriden en çok iade geldi",
+    "before": "INCOMPLETE_ANSWER",
+    "after": "TEXT_TO_SQL",
+    "rows": 50,
+    "compiler": "existing_llm",
+    "explanation": null,
+    "sql": "SELECT TOP 50 c.\"CODE\" AS cari_kodu, c.\"DEFINITION_\" AS unvan, SUM(i.\"NETTOTAL\") AS iade_tutari FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (2,3) AND i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01' GROUP BY c.\"CODE\", c.\"DEFINITION_\" ORDER BY iade_tutari DESC",
+    "temporalBinding": null,
+    "seconds": 8.06
+  },
+  {
+    "q": "e-ticarette bu yıl ne kadar sattık",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 1,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[SPECODE2] IN ('E-TICARET')\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.65
+  },
+  {
+    "q": "en çok iskonto verdiğimiz müşteriler kimler",
+    "before": "CLARIFICATION",
+    "after": "CLARIFICATION",
+    "rows": null,
+    "compiler": "clarification",
+    "explanation": "‘verdigimiz’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?",
+    "sql": "",
+    "temporalBinding": {
+      "entity": "STLINE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "INVOICE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 0.03
+  },
+  {
+    "q": "bu yıl kaç fatura kestik",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 1,
+    "compiler": "existing_llm",
+    "explanation": null,
+    "sql": "SELECT COUNT(*) AS fatura_sayisi\nFROM INVOICE\nWHERE CANCELLED = 0\n  AND TRCODE IN (7, 8, 9)\n  AND DATE_ >= '2026-01-01'\n  AND DATE_ < '2027-01-01'",
+    "temporalBinding": null,
+    "seconds": 5.62
+  },
+  {
+    "q": "aylık satışlarımız nasıl gidiyor",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 8,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.57
+  },
+  {
+    "q": "en pahalı 10 ürünümüz",
+    "before": "CLARIFICATION",
+    "after": "CLARIFICATION",
+    "rows": null,
+    "compiler": "clarification",
+    "explanation": "‘pahali’ derken hangi fiyatı, para birimini ve hangi eşik veya karşılaştırma grubunu kastediyorsunuz?",
+    "sql": "",
+    "temporalBinding": null,
+    "seconds": 0.04
+  },
+  {
+    "q": "geçen yıla göre satışlarımız ne durumda",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 1,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT SUM(CASE WHEN (INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01') THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END END) AS bu_yil_satis, SUM(CASE WHEN (INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01') THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END END) AS gecen_yila_satis\nFROM (SELECT [CANCELLED], [DATE_], [NETTOTAL], [TRCODE] FROM [dbo].[LG_211_01_INVOICE] UNION ALL SELECT [CANCELLED], [DATE_], [NETTOTAL], [TRCODE] FROM [dbo].[LG_411_01_INVOICE]) AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND ((INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01') OR (INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01'))",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.44
+  },
+  {
+    "q": "hangi kanaldan en çok kazanıyoruz",
+    "before": "INCOMPLETE_ANSWER",
+    "after": "TEXT_TO_SQL",
+    "rows": 16,
+    "compiler": "existing_llm",
+    "explanation": null,
+    "sql": "SELECT ISNULL(c.\"SPECODE2\", '(boş)') AS kanal, SUM(i.\"NETTOTAL\") AS net_ciro FROM dbo_LG_411_01_INVOICE i LEFT JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01' GROUP BY ISNULL(c.\"SPECODE2\", '(boş)') ORDER BY net_ciro DESC",
+    "temporalBinding": null,
+    "seconds": 7.8
+  },
+  {
+    "q": "kitapçılara bu yıl ne kadar sattık",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 1,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[SPECODE2] IN ('KITAPCI')\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.61
+  },
+  {
+    "q": "2026 toplam net ciro nedir?",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 1,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.42
+  },
+  {
+    "q": "2026 kanal bazında net ciro",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 17,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 1.41
+  },
+  {
+    "q": "2026 ürün bazında net ciro, en yüksek 3",
+    "before": "TEXT_TO_SQL",
+    "after": "TEXT_TO_SQL",
+    "rows": 3,
+    "compiler": "deterministic",
+    "explanation": null,
+    "sql": "SELECT TOP 3 ITEMS.[NAME] AS urun, SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[LINENET] ELSE -STLINE.[LINENET] END) AS net_ciro\nFROM (SELECT '211' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[NAME]\nORDER BY net_ciro DESC",
+    "temporalBinding": {
+      "entity": "STLINE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "INVOICE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 2.29
+  },
+  {
+    "q": "geçen aya göre net ciro",
+    "before": "DATA_UNAVAILABLE",
+    "after": "DATA_UNAVAILABLE",
+    "rows": null,
+    "compiler": null,
+    "explanation": "'bu ay' gözlenen veri kapsamı dışında: INVOICE kayıtları 2015-01-01–2026-08-17. Bu dönem için veri yok; satışın sıfır olduğu sonucuna varılamaz.",
+    "sql": null,
+    "temporalBinding": {
+      "entity": "INVOICE",
+      "column": "DATE_",
+      "source": "resolved_metric",
+      "alternatives": [
+        {
+          "entity": "STLINE",
+          "column": "DATE_",
+          "join": [
+            "STLINE",
+            "INVOICEREF",
+            "INVOICE",
+            "LOGICALREF"
+          ],
+          "source": "declared_business_date",
+          "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+        }
+      ]
+    },
+    "seconds": 0.03
+  }
+]

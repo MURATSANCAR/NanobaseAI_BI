@@ -146,6 +146,8 @@ class Runtime:
         self._checked_at = time.time()
         self._inventory_cache: dict[tuple, dict[str, Any]] = {}
         self.conventions = Conventions.from_profiles(self.profiles)
+        if s.project_dir:
+            self.conventions.load_equivalences(s.project_dir / "equivalences.yml")
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()

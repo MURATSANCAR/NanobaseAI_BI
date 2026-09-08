@@ -95,6 +95,49 @@ class _AnswerScope(_Scope):
         return self.entities[0] if len(self.entities) == 1 else "UNKNOWN"
 
 
+def _measure_columns(node):
+    if isinstance(node, exp.Column):
+        return [node]
+    if isinstance(node, exp.Case):
+        children = [branch.args["true"] for branch in node.args.get("ifs") or []]
+        if node.args.get("default") is not None:
+            children.append(node.args["default"])
+    else:
+        children = list(node.iter_expressions())
+    return [column for child in children for column in _measure_columns(child)]
+
+
+def _accepts_bound_column(tree, scope, binding, alias, column, *, require_measure=True):
+    entity = scope.entity_for(exp.column(column, table=alias or None)).upper()
+    if entity == binding["entity"].upper() and column == binding["column"].upper():
+        return True
+    for candidate in binding.get("alternatives", []):
+        if entity != candidate["entity"].upper() or column != candidate["column"].upper():
+            continue
+        if binding["entity"] not in scope.entities:
+            if not require_measure:
+                return True
+            # A line-grain answer need not join its header just to repeat the date.
+            # The declared alternative must actually own the output measure.
+            if any(scope.entity_for(c).upper() == entity for projection in tree.expressions
+                   for agg in projection.find_all(exp.AggFunc) for c in _measure_columns(agg)):
+                return True
+            continue
+        expected = tuple(str(x).upper() for x in candidate["join"])
+        for join in tree.args.get("joins") or []:
+            on = join.args.get("on")
+            if on is None:
+                continue
+            for part in _split_and(on):
+                if not isinstance(part, exp.EQ) or not isinstance(part.left, exp.Column) or not isinstance(part.right, exp.Column):
+                    continue
+                left, right = part.left, part.right
+                edge = (scope.entity_for(left).upper(), left.name.upper(), scope.entity_for(right).upper(), right.name.upper())
+                if edge == expected or edge[2:] + edge[:2] == expected:
+                    return True
+    return False
+
+
 def _bounded_columns(condition, period):
     bounds = {}
     for part in _split_and(condition):
@@ -144,7 +187,7 @@ def _formula(node, scope):
     return _normalise_formula(node.copy().transform(canonical), scope)
 
 
-def _period_outputs(tree, period, scope):
+def _period_outputs(tree, period, scope, binding=None):
     """Output positions whose every aggregate is bounded by this exact period.
 
     A date in a comment, an unused CTE, WHERE, or an unrelated CASE is not
@@ -170,7 +213,11 @@ def _period_outputs(tree, period, scope):
                 break
             found = _bounded_columns(branch.this, period)
             columns = found if columns is None else columns & found
-        if columns and _admits_period(tree.args.get("where"), columns, period):
+        related_columns = {(alias, candidate["column"].upper())
+                           for alias in scope.alias_to_entity
+                           for candidate in ([binding] + binding.get("alternatives", []))
+                           if _accepts_bound_column(tree, scope, binding, alias, candidate["column"].upper())} if binding else set()
+        if columns and _admits_period(tree.args.get("where"), columns | related_columns, period):
             inner = projection.this if isinstance(projection, exp.Alias) else projection
             def unwrap(n):
                 if isinstance(n, exp.AggFunc) and isinstance(_aggregate_case(n), exp.Case):
@@ -197,10 +244,13 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
             out.append(str(comp.get("why") or "karşılaştırmanın iki dönemi belirlenemedi"))
         else:
             scope = _AnswerScope(tree)
-            left, right = _period_outputs(tree, current, scope), _period_outputs(tree, reference, scope)
+            left, right = _period_outputs(tree, current, scope, sq.temporal_binding), _period_outputs(tree, reference, scope, sq.temporal_binding)
             expected = {_formula(parse_sql(s.mapping.formula), _Scope(tree, None)) for s in sq.metrics
                         if s.mapping and s.mapping.formula}
             def correct_column(columns):
+                binding = sq.temporal_binding
+                if binding:
+                    return any(_accepts_bound_column(tree, scope, binding, alias, col) for alias, col in columns)
                 return any((not comp.get("dateColumn") or col == comp["dateColumn"].upper())
                            and (not comp.get("entity") or scope.entity_for(exp.column(col, table=alias or None)).upper() == comp["entity"].upper())
                            for alias, col in columns)
@@ -219,8 +269,7 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
         binding = sq.temporal_binding
         for period in sq.temporal:
             columns = _bounded_columns(where.this, period.to_dict()) if where else set()
-            if not any(col == binding["column"].upper() and scope.entity_for(exp.column(col, table=alias or None)).upper() == binding["entity"].upper()
-                       for alias, col in columns):
+            if not any(_accepts_bound_column(tree, scope, binding, alias, col) for alias, col in columns):
                 out.append(f"'{period.text}' dönemi doğru tarih sütununda doğrulanamadı")
 
     # Do not collect predicates from all scopes: an unused CTE or a SELECT CASE
@@ -235,6 +284,15 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
             for slot in sq.filters:
                 m = slot.mapping
                 if not m or not m.column or slot.status not in ("CERTIFIED", "INFERRED"):
+                    continue
+                equivalents = slot.explain.get("equivalent_bindings", [])
+                binding = {"entity": m.entity, "column": m.column, "alternatives": equivalents}
+                if any(p.entity.upper() == alt["entity"].upper() and p.column.upper() == alt["column"].upper()
+                       and p.operator.upper() in ({"=", "IN"} if alt["operator"].upper() in ("=", "IN") else {alt["operator"].upper()})
+                       and _values(p) == {str(v).upper() for v in alt["values"]}
+                       and any(_accepts_bound_column(tree, scope, binding, alias, p.column.upper(), require_measure=False)
+                               for alias, entity in scope.alias_to_entity.items() if entity.upper() == p.entity.upper())
+                       for alt in equivalents for p in predicates):
                     continue
                 expected = {str(v).strip().upper() for v in m.values}
                 op = (m.operator or "IN").upper()

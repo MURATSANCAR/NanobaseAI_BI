@@ -373,7 +373,7 @@ class SemanticQuery:
     # Karşılaştırma isteyen bir soru, karşılaştırma üretilmeden başarılı sayılamaz.
     comparison: Optional[dict[str, Any]] = None
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
-    temporal_binding: Optional[dict[str, str]] = None
+    temporal_binding: Optional[dict[str, Any]] = None
 
     @property
     def metrics(self) -> list[ResolvedSlot]:

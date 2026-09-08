@@ -12,6 +12,7 @@ from datetime import timedelta
 from typing import Any, Callable, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
+from semantic_layer.conventions import is_time, is_technical_time
 from semantic_layer.naming import disambiguate, is_shadow_copy, logical_table
 from semantic_layer.profiler import sensitivity
 from semantic_layer.profiler.connectors import Connector, ModelFileConnector
@@ -96,7 +97,7 @@ class Profiler:
     def _time_window(self, schema: str, table: str, columns: list[ColumnProfile]) -> Optional[tuple[str, str]]:
         """The period this table actually holds. One query, and it is what lets the system say "there is
         no 2019 data here" instead of returning an empty result as if it were an answer."""
-        time_cols = [c for c in columns if any(t in c.data_type.lower() for t in ("date", "time", "timestamp"))]
+        time_cols = [c for c in columns if is_time(c) and not is_technical_time(c.name)]
         if not time_cols or not getattr(self.c, "supports_execution", False):
             return None
         col = time_cols[0].name
