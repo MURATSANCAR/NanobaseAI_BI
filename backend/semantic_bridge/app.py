@@ -1053,15 +1053,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
         who = str((body or {}).get("by") or request.headers.get("X-User") or "portal")
         note = str((body or {}).get("note") or "")
+        eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
         if decision == "APPROVE":
+            # Two writes, and both matter. The evidence row is the audit trail — who said so, when,
+            # in what words. The human_certify call is what makes the decision hold: the engine reads
+            # `human_certified_by` when it re-scores, and a concept without that marker is re-judged
+            # on its evidence every night and quietly demoted no matter who approved it.
             r.store.add_evidence(Evidence(concept_id, EvidenceType.HUMAN_ANNOTATION, f"portal:{who}",
                                           support_count=1, weight=1.0,
                                           payload={"snippet": note or "portalden onaylandı", "by": who}))
-            r.store.update_concept(concept_id, status=ConceptStatus.CERTIFIED,
-                                   explain={"approved_by": who, "note": note})
+            eng.human_certify(concept_id, who, reason=note)
         else:
-            r.store.update_concept(concept_id, status=ConceptStatus.REJECTED,
-                                   explain={"rejected_by": who, "note": note})
+            eng.human_reject(concept_id, who, reason=note)
         # No rebuild here on purpose: certifying moves the catalog fingerprint, and the runtime's own
         # version check reloads on the next question. Rebuilding per click would cost seconds each
         # time, and a reviewer works through a queue of them.
@@ -1085,34 +1088,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """
         r = rt()
         s = r.settings
-        rows = r.store.find_concepts(s.tenant_id, s.datasource_id, status=ConceptStatus.CANDIDATE, limit=1000)
+        rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
+        used = [x for x in rows if any(k in _USED for k in x["evidence"])]
+        pool = rows if source == "all" else used
+        pool.sort(key=lambda x: (-(x["concept"].confidence or 0), -x["evidenceCount"]))
         said = getattr(r.existing, "annotations", None) or {}
         out = []
-        for c in rows:
-            b = r.store.concept_bundle(c.id) or {}
-            ev = b.get("evidence") or []
-            kinds: dict[str, int] = {}
-            for e in ev:
-                kinds[str(e.get("evidence_type"))] = kinds.get(str(e.get("evidence_type")), 0) + 1
-            maps = b.get("mappings") or []
-            prof = r.resolver.by_entity.get(maps[0].get("entity")) if maps else None
-            col = prof.column(maps[0].get("column")) if prof and maps and maps[0].get("column") else None
+        for x in pool[:limit]:
+            c, m = x["concept"], x["mapping"]
+            prof = r.resolver.by_entity.get(m.entity) if m else None
+            col = prof.column(m.column) if prof and m and m.column else None
             out.append({
-                "id": c.id, "term": c.term, "type": c.semantic_type,
-                "confidence": getattr(c, "confidence", None),
-                "mapping": maps[0] if maps else None,
-                "evidence": kinds,
-                "evidenceCount": len(ev),
+                "id": c.id, "term": c.term, "type": c.semantic_type, "confidence": c.confidence,
+                "mapping": m.to_dict() if m else None,
+                "evidence": x["evidence"], "evidenceCount": x["evidenceCount"],
                 # what the data itself shows about the column this term claims
                 "observed": [{"value": v, "rows": n} for v, n in (col.top_values or [])[:6]] if col else [],
-                "columnMeaning": (col.meaning(said.get((maps[0].get("entity"), (maps[0].get("column") or "").upper()))) if col and maps else None),
-                "counterEvidence": len(b.get("counterEvidence") or []),
+                "columnMeaning": col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None,
+                "counterEvidence": x["counterEvidence"],
             })
-        out.sort(key=lambda x: (-(x["confidence"] or 0), -x["evidenceCount"]))
-        used = [x for x in out if any(k in _USED for k in x["evidence"])]
-        shown = out if source == "all" else used
-        return {"waiting": len(shown), "used": len(used), "total": len(out),
-                "source": source, "items": shown[:limit]}
+        return {"waiting": len(pool), "used": len(used), "total": len(rows), "source": source, "items": out}
 
     @app.get("/api/v1/semantic/concepts/{concept_id}")
     def concept(concept_id: str) -> dict[str, Any]:

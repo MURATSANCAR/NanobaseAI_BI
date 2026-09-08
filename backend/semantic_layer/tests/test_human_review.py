@@ -9,7 +9,9 @@ a yes.
 
 from __future__ import annotations
 
-from semantic_layer.models import Concept, ConceptStatus, Evidence, EvidenceType, Mapping
+from semantic_layer.evidence.engine import EvidenceEngine
+from semantic_layer.models import (ColumnProfile, Concept, ConceptStatus, Evidence, EvidenceType,
+                                   Mapping, SchemaProfile)
 
 TENANT, DS = "t1", "logo"
 
@@ -59,4 +61,35 @@ def test_rejection_takes_the_term_out_of_the_queue(store):
     store.update_concept(c.id, status=ConceptStatus.REJECTED, explain={"rejected_by": "ayse"})
     waiting = [x.term for x in store.find_concepts(TENANT, DS, status=ConceptStatus.CANDIDATE)]
     assert "eksi" not in waiting
+    assert store.get_concept(c.id).status == ConceptStatus.REJECTED
+
+
+def _profile() -> SchemaProfile:
+    return SchemaProfile(datasource_id=DS, table_name="LG_411_01_INVOICE",
+                         table_pattern="LG_{n0}_{n1}_INVOICE", entity="INVOICE", schema_name="dbo",
+                         row_count=1000,
+                         columns=[ColumnProfile(name="TRCODE", data_type="int", distinct_count=8,
+                                                top_values=[("7", 500), ("8", 300)])])
+
+
+def test_an_approval_survives_the_nightly_re_scoring(store):
+    """The one that matters, and the one a status flag alone does not give you.
+
+    The engine re-scores every concept each night. A term approved in the portal has, by definition,
+    too little query history to clear the evidence bar on its own — that is why a person had to
+    decide. If the approval is only a status, the next run reads the same thin evidence and demotes
+    it, and the reviewer's work is undone before morning.
+    """
+    c = _candidate(store)
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    eng.human_certify(c.id, "ayse", reason="Logo sözlüğü: 8 = toptan satış faturası")
+    eng.run(TENANT, DS, [_profile()], scoped=False)
+    assert store.get_concept(c.id).status == ConceptStatus.CERTIFIED
+
+
+def test_a_rejection_survives_it_too(store):
+    c = _candidate(store, "eksi")
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    eng.human_reject(c.id, "ayse", reason="bu terim satış demek değil")
+    eng.run(TENANT, DS, [_profile()], scoped=False)
     assert store.get_concept(c.id).status == ConceptStatus.REJECTED

@@ -896,6 +896,37 @@ class CatalogStore:
         return out
 
     # ------------------------------------------------------------------ helpers
+    def review_rows(self, tenant_id: str, datasource_id: str, status: str, limit: int = 2000) -> list[dict[str, Any]]:
+        """Candidates with their evidence tally and first mapping, in three queries rather than four
+        per concept. The queue asks for a thousand of these at once; building a bundle each would be
+        four thousand round trips, and the page would sit on "reading" long enough that nobody waits.
+        """
+        rows = self.find_concepts(tenant_id, datasource_id, status=status, limit=limit)
+        ids = [c.id for c in rows]
+        if not ids:
+            return []
+        tally: dict[str, dict[str, int]] = {}
+        counter: dict[str, int] = {}
+        ev = sa.select(S.sl_evidence.c.concept_id, S.sl_evidence.c.evidence_type,
+                       sa.func.count().label("n")).where(
+            S.sl_evidence.c.concept_id.in_(ids)).group_by(S.sl_evidence.c.concept_id, S.sl_evidence.c.evidence_type)
+        for r in self._rows(ev):
+            tally.setdefault(r["concept_id"], {})[str(r["evidence_type"])] = int(r["n"])
+        cev = sa.select(S.sl_counter_evidence.c.concept_id, sa.func.count().label("n")).where(
+            S.sl_counter_evidence.c.concept_id.in_(ids)).group_by(S.sl_counter_evidence.c.concept_id)
+        for r in self._rows(cev):
+            counter[r["concept_id"]] = int(r["n"])
+        first: dict[str, Mapping] = {}
+        mp = sa.select(S.sl_mapping).where(S.sl_mapping.c.concept_id.in_(ids))
+        for r in self._rows(mp):
+            first.setdefault(r["concept_id"], self._row_to_mapping(r))
+        out = []
+        for c in rows:
+            kinds = tally.get(c.id, {})
+            out.append({"concept": c, "mapping": first.get(c.id), "evidence": kinds,
+                        "evidenceCount": sum(kinds.values()), "counterEvidence": counter.get(c.id, 0)})
+        return out
+
     def concept_bundle(self, concept_id: str) -> Optional[dict[str, Any]]:
         c = self.get_concept(concept_id)
         if c is None:

@@ -187,7 +187,7 @@ class EvidenceEngine:
             gate_reasons.append("physical mapping invalid: " + "; ".join(reasons))
         if blocking:
             gate_reasons.append("blocking counter-evidence: " + ", ".join(c.conflict_type for c in blocking))
-        if concept.explain.get("schema_drift"):
+        if concept.explain.get("schema_drift"):      # None once a later run saw the table again
             gate_reasons.append("unresolved schema drift")
         if scoped and any(m.entity not in profiles for m in mappings):
             # Not covered by this run's scope: keep whatever the catalog already decided.
@@ -285,11 +285,44 @@ class EvidenceEngine:
         return report
 
     # ------------------------------------------------------------------ drift
+    def _drift_free(self, m: Mapping, profiles: dict[str, SchemaProfile]) -> bool:
+        """Does this mapping still point at something that exists? Read-only: the same three questions
+        detect_drift asks, asked in order to withdraw a stale answer rather than to record a new one."""
+        prof = profiles.get(m.entity)
+        if prof is None:
+            return False
+        if m.column and prof.column(m.column) is None:
+            return False
+        col = prof.column(m.column) if m.column else None
+        if col and col.top_values and m.values and (col.distinct_count or 0) <= len(col.top_values):
+            known = {v for v, _ in col.top_values}
+            if [v for v in m.values if v not in known]:
+                return False
+        return True
+
     def detect_drift(self, tenant_id: str, datasource_id: str, profiles: dict[str, SchemaProfile], *, scoped: bool = False) -> list[dict[str, Any]]:
         """Drift is a table or value that *disappeared*. A table that was never in this run's scope is
         unknown, not gone: `scoped=True` says the profile covers only part of the schema, and concepts
         outside it keep their status instead of being decertified by a narrower scan."""
         out = []
+        # Drift is a claim about a moment: "this table was here and now it is not". A run that sees the
+        # table again refutes it, and a refuted claim has to be withdrawn — it is BLOCKING, so leaving
+        # it attached decertifies a healthy concept on some later run, long after the scan that wrote
+        # it. That is what took "ciro", "kanal" and the joins out of the vocabulary here: a narrow scan
+        # once failed to see LG_{n0}_{n1}_INVOICE, and every run since carried its verdict forward.
+        for c in self.store.find_concepts(tenant_id, datasource_id,
+                                          status=[ConceptStatus.CERTIFIED, ConceptStatus.REJECTED,
+                                                  ConceptStatus.CANDIDATE, ConceptStatus.DEPRECATED],
+                                          limit=100000):
+            maps = self.store.list_mappings(c.id)
+            if maps and all(self._drift_free(m, profiles) for m in maps) and \
+                    any(x.conflict_type == "DRIFT" for x in self.store.list_counter_evidence(c.id)):
+                self.store.clear_counter_evidence(c.id, "DRIFT")
+                # The note the detector left behind blocks the gate on its own — clearing only the
+                # counter-evidence would leave the concept failing for a reason nothing supports.
+                if c.explain.get("schema_drift"):
+                    self.store.update_concept(c.id, explain={"schema_drift": None})
+                out.append({"concept": c.term, "drift": "resolved"})
         for c in self.store.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000):
             for m in self.store.list_mappings(c.id):
                 prof = profiles.get(m.entity)
