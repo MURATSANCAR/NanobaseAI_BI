@@ -217,7 +217,10 @@ class Runtime:
         #
         # Default is shadow: it runs, it logs what it would have kept, and the prompt is unchanged.
         # SEMANTIC_TABLE_SELECTOR=on applies it; =off skips the call entirely.
-        if existing.selector_mode in ("shadow", "on") and s.llm_base:
+        # `existing` is the model-backed compiler; with SEMANTIC_LLM=0 there is none, and reading its
+        # selector mode raised AttributeError before the service could start at all. A deployment that
+        # has deliberately turned the model off must still come up on the deterministic path.
+        if existing is not None and existing.selector_mode in ("shadow", "on") and s.llm_base:
             try:
                 from semantic_layer.runtime.table_selector import TableSelector
 

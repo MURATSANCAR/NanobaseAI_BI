@@ -15,6 +15,79 @@ from query_gateway.domain.errors import GatewayError
 # Match :name but not Postgres casts (::type)
 _BIND_RE = re.compile(r"(?<!:):([A-Za-z_][A-Za-z0-9_]*)")
 
+
+def _segments(sql: str) -> list[tuple[str, bool]]:
+    """`sql` split into (text, is_code) runs — code being everything outside string literals,
+    quoted identifiers and comments.
+
+    A colon inside a literal is part of the text, not a placeholder. Substituted blindly,
+    `SELECT ':status' AS label` declares a bind named `status` that the caller never sent — so a
+    valid statement is refused for a missing parameter — and rewriting turns the literal itself into
+    something else. A time of day, a URL or a JSON fragment in a WHERE clause is enough to trigger it.
+    """
+    out: list[tuple[str, bool]] = []
+    buf: list[str] = []
+    i, n = 0, len(sql)
+
+    def flush() -> None:
+        if buf:
+            out.append(("".join(buf), True))
+            buf.clear()
+
+    while i < n:
+        ch = sql[i]
+        if ch == "'":
+            flush()
+            j = i + 1
+            while j < n:
+                if sql[j] == "'":
+                    if j + 1 < n and sql[j + 1] == "'":   # doubled quote escapes itself
+                        j += 2
+                        continue
+                    j += 1
+                    break
+                j += 1
+            out.append((sql[i:j], False))
+            i = j
+            continue
+        if ch in '"`':
+            flush()
+            j = sql.find(ch, i + 1)
+            j = n if j == -1 else j + 1
+            out.append((sql[i:j], False))
+            i = j
+            continue
+        if ch == "[":
+            flush()
+            j = sql.find("]", i + 1)
+            j = n if j == -1 else j + 1
+            out.append((sql[i:j], False))
+            i = j
+            continue
+        if sql.startswith("--", i):
+            flush()
+            j = sql.find("\n", i)
+            j = n if j == -1 else j
+            out.append((sql[i:j], False))
+            i = j
+            continue
+        if sql.startswith("/*", i):
+            flush()
+            j = sql.find("*/", i + 2)
+            j = n if j == -1 else j + 2
+            out.append((sql[i:j], False))
+            i = j
+            continue
+        buf.append(ch)
+        i += 1
+    flush()
+    return out
+
+
+def _sub_code(sql: str, repl) -> str:
+    """Apply `repl` to placeholders in code, leaving literals, identifiers and comments untouched."""
+    return "".join(_BIND_RE.sub(repl, text) if code else text for text, code in _segments(sql or ""))
+
 _ALLOWED = (str, int, float, bool, date, datetime, type(None))
 
 
@@ -36,7 +109,11 @@ def validate_parameters(parameters: dict[str, Any] | None) -> dict[str, Any]:
 
 
 def extract_bind_names(sql_template: str) -> list[str]:
-    return list(dict.fromkeys(_BIND_RE.findall(sql_template or "")))
+    names: list[str] = []
+    for text, code in _segments(sql_template or ""):
+        if code:
+            names.extend(_BIND_RE.findall(text))
+    return list(dict.fromkeys(names))
 
 
 def to_psycopg_sql(sql_template: str) -> str:
@@ -45,7 +122,7 @@ def to_psycopg_sql(sql_template: str) -> str:
     def repl(m: re.Match[str]) -> str:
         return f"%({m.group(1)})s"
 
-    return _BIND_RE.sub(repl, sql_template)
+    return _sub_code(sql_template, repl)
 
 
 def probe_sql_for_parse(sql_template: str, parameters: dict[str, Any] | None = None) -> str:
@@ -78,7 +155,7 @@ def probe_sql_for_parse(sql_template: str, parameters: dict[str, Any] | None = N
     def repl(m: re.Match[str]) -> str:
         return lit(m.group(1))
 
-    return _BIND_RE.sub(repl, sql_template)
+    return _sub_code(sql_template, repl)
 
 
 def assert_binds_present(sql_template: str, parameters: dict[str, Any]) -> None:

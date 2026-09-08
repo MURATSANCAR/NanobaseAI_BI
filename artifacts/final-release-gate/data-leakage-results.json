@@ -1,6 +1,6 @@
 {
-  "release": "1.0.0-rc.1",
-  "generatedAt": "2026-07-19T16:34:48Z",
+  "release": "test",
+  "generatedAt": "2026-09-08T19:24:13Z",
   "classes": [
     "PUBLIC",
     "INTERNAL",
@@ -18,8 +18,47 @@
     "log_dlp"
   ],
   "unmaskedRestricted": 0,
-  "llmForbiddenRaw": 0,
+  "llmForbiddenRaw": null,
+  "llmForbiddenRawMeasured": false,
   "logForbiddenRaw": 0,
   "gatewayMaskerImportable": true,
+  "gatewayMaskerUnmasked": 0,
+  "gatewayMaskerChecks": [
+    {
+      "field": "email",
+      "kind": "EMAIL",
+      "leaked": false
+    },
+    {
+      "field": "phone",
+      "kind": "PHONE",
+      "leaked": false
+    },
+    {
+      "field": "iban",
+      "kind": "IBAN",
+      "leaked": false
+    },
+    {
+      "field": "national_id",
+      "kind": "IDENTITY_NUMBER",
+      "leaked": false
+    },
+    {
+      "field": "card",
+      "kind": "LAST_FOUR",
+      "leaked": false
+    },
+    {
+      "field": "secret",
+      "kind": "FULL",
+      "leaked": false
+    },
+    {
+      "field": "dropped",
+      "kind": "NULLIFY",
+      "leaked": false
+    }
+  ],
   "pass": true
 }
