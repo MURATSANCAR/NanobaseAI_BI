@@ -9992,7 +9992,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `RECSTATUS` — Kayıt Durumu
 - `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
 
-### TAXDECLHDR — Metin beyanı başlık bilgileri
+### TAXDECLHDR — Text Declaration Header Info
 
 - `TYP` — Beyanname türü
 - `TAXDECLNO` — Beyanname numarası
@@ -10070,7 +10070,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `OTHSERVTOT` — Diğer malzeme ve hizmet maliyetleri toplamı
 - `WORKERCNT` — Çalışan sayısı
 
-### TAXDECLLINE — Metin beyanı satır bilgileri
+### TAXDECLLINE — Text Declaration Line Info
 
 - `LISTTYP` — Liste türü
 - `LINENR` — Satır numarası

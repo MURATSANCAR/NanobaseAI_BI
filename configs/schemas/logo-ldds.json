@@ -81837,13 +81837,7 @@
             "BEGDT"
           ]
         }
-      ],
-      "description_tr": "Metin beyanı başlık bilgileri",
-      "description_tr_provenance": {
-        "method": "reviewed-translation",
-        "source_description": "Text Declaration Header Info",
-        "source": "configs/schemas/logo-table-translations.json"
-      }
+      ]
     },
     "TAXDECLLINE": {
       "physical": "L_TAXDECLLINE",
@@ -82925,13 +82919,7 @@
             "LINENR"
           ]
         }
-      ],
-      "description_tr": "Metin beyanı satır bilgileri",
-      "description_tr_provenance": {
-        "method": "reviewed-translation",
-        "source_description": "Text Declaration Line Info",
-        "source": "configs/schemas/logo-table-translations.json"
-      }
+      ]
     },
     "COSTDISTFC": {
       "physical": "L_COSTDISTFC",

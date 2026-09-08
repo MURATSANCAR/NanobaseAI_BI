@@ -339,14 +339,6 @@
     "source_description": "Temporary Admission Connection",
     "description_tr": "Geçici kabul bağlantısı"
   },
-  "TAXDECLHDR": {
-    "source_description": "Text Declaration Header Info",
-    "description_tr": "Metin beyanı başlık bilgileri"
-  },
-  "TAXDECLLINE": {
-    "source_description": "Text Declaration Line Info",
-    "description_tr": "Metin beyanı satır bilgileri"
-  },
   "COSTDISTFC": {
     "source_description": "Cost Distribution Slips",
     "description_tr": "Maliyet dağıtım fişleri"
