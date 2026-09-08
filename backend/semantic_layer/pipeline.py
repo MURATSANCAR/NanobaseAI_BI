@@ -59,8 +59,13 @@ def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Conn
         store.upsert_profile(p)
         stored[0] += 1
 
+    # What a nightly run reads: only what changed. SEMANTIC_CHANGED_ONLY=1 turns it on; a first run
+    # has nothing stored and reads everything regardless.
+    known = None
+    if os.environ.get("SEMANTIC_CHANGED_ONLY", "").strip() in ("1", "true", "yes", "on"):
+        known = {p.table_name: p.scanned_at for p in store.list_profiles(settings.datasource_id)}
     profiles = prof.profile(settings.datasource_id, schema, (like if like is not None else settings.table_like) or None,
-                            deep_limit=_cap("SEMANTIC_DEEP_TABLES"), on_profile=_store)
+                            deep_limit=_cap("SEMANTIC_DEEP_TABLES"), on_profile=_store, known=known)
     # Value-overlap link inference asks the customer's database a question per candidate column. On a
     # real warehouse that is a deliberate, opt-in cost (SEMANTIC_PROBE_LINKS=1); on a local/file source
     # it is free, so it stays on there.
@@ -82,6 +87,12 @@ def run_profile(store: CatalogStore, settings: SemanticSettings, connector: Conn
     for p in profiles:
         store.upsert_profile(p)
     log.info("catalog: %d profiles stored during the scan, %d rewritten after it", stored[0], len(profiles))
+    if known is not None:
+        # This run only looked at what changed, so its list is not the schema. Pruning against it
+        # would delete every profile that was simply not touched tonight — which is nearly all of
+        # them, and the catalog would empty itself one quiet night at a time.
+        log.info("değişim taraması: kapsam dışı satırlar silinmedi (%d profil okundu)", len(profiles))
+        return profiles
     removed = store.prune_profiles(settings.datasource_id, [p.table_pattern for p in profiles])
     if removed:
         log.info("pruned %d profile rows no longer in scope", removed)

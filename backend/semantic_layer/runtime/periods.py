@@ -51,8 +51,13 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
         latest = max(w[0] for _, w in known)
         return [p for p, w in known if w[0] == latest]
     hit = [p for p, w in dated if w and w[0] < end and start <= w[1]]
-    # a table whose window was never measured cannot be ruled out, so it travels with the rest
-    hit += [p for p, w in dated if not w]
+    # A table whose period was never measured cannot be ruled out — but it can be set aside once a
+    # measured table covers what was asked. Carried along regardless, an unmeasured 2026 table joined
+    # every question about 2015, and the total came back as three years added together with nothing
+    # about it looking wrong. Unknown is a reason to keep a table when nothing else answers, not a
+    # reason to add it to something that does.
+    if not hit:
+        hit = [p for p, w in dated if not w]
     return _one_per_window(hit)
 
 

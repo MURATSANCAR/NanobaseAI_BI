@@ -132,7 +132,8 @@ class Profiler:
 
     def profile(self, datasource_id: str, schema: str = "", like: Optional[str] = None, *,
                 deep_limit: Optional[int] = None,
-                on_profile: Optional[Callable[[SchemaProfile], None]] = None) -> list[SchemaProfile]:
+                on_profile: Optional[Callable[[SchemaProfile], None]] = None,
+                known: Optional[dict[str, Any]] = None) -> list[SchemaProfile]:
         """Catalogue every table the scope matches. Neither this nor `deep_limit` is bounded by a count
         by default: a catalogue that holds fewer tables than the database is one nobody can plan or
         report against. `deep_limit`, when a deployment does set one, caps how many tables get value
@@ -170,6 +171,38 @@ class Profiler:
                 log.info("scope matched %d tables; %d hold rows (or are views), %d are empty — "
                          "cataloguing the %d", len(discovered), len(kept),
                          len(discovered) - len(kept), len(kept))
+                tables = discovered = kept
+        # What has not changed since it was last read does not need reading again. `known` maps a
+        # table to when its profile was taken; the engine says when the table itself last changed.
+        # A full pass over this schema runs for most of a day, which is why the nightly job never
+        # finished one — and a nightly job that never finishes is a catalog that never learns about
+        # the view somebody added on Monday. Everything still in scope keeps its stored profile;
+        # nothing is dropped, only skipped.
+        if known:
+            try:
+                changed = self.c.modified_at(schema) if hasattr(self.c, "modified_at") else {}
+            except Exception as e:  # noqa: BLE001
+                changed = {}
+                log.warning("change times unavailable, reading everything: %s", e)
+            if changed:
+                fresh = [(sch, t) for sch, t in discovered
+                         if t not in known or t not in changed or changed[t] > known[t]]
+                log.info("değişim taraması: %d nesnenin %d tanesi yeni ya da değişmiş",
+                         len(discovered), len(fresh))
+                tables = discovered = fresh
+        # Periods the business does not keep its books in. A source that numbers each fiscal year as
+        # its own firm can hold the same year twice — a migration that was run into a new code while
+        # the old one stayed — and only accounting knows which of the two is the record. Told which,
+        # the other is taken out of scope here rather than guessed at per query: the numbers differ
+        # by a few percent, and a system picking by row count picks whichever happens to be fuller.
+        # SEMANTIC_EXCLUDE_CONTEXT=015,016 drops every table whose name carries one of those numbers.
+        drop = {x.strip() for x in (os.environ.get("SEMANTIC_EXCLUDE_CONTEXT") or "").split(",") if x.strip()}
+        if drop:
+            kept = [(sch, t) for sch, t in discovered
+                    if not (drop & set(logical_table(t, sch).context.values()))]
+            if len(kept) != len(discovered):
+                log.info("kapsam: %d nesne kapsam dışı (dönem kodu %s)",
+                         len(discovered) - len(kept), ", ".join(sorted(drop)))
                 tables = discovered = kept
         # Somebody's backup, somebody's test, a staging table left behind: real tables with real rows
         # that answer no question anybody asks. Left in, each one is a shape of its own — a copy of a

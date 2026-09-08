@@ -160,3 +160,84 @@ def test_backups_and_test_tables_are_left_out_of_the_scan_and_named():
         assert len(back) == 5, "a deployment that wants them back says so"
     finally:
         os.environ.pop("SEMANTIC_SKIP_SHADOW", None)
+
+
+def test_a_changed_only_run_reads_what_changed_and_prunes_nothing():
+    """A nightly pass over a schema this size never finishes — the one here was killed by its own
+    timeout every night having read a quarter of it, so a view added on Monday was still unknown on
+    Friday. And a run that saw only what changed must never prune against what it saw: that list is
+    not the schema, and pruning against it empties the catalog one quiet night at a time."""
+    from datetime import datetime, timedelta
+
+    from semantic_layer.profiler.profiler import Profiler
+
+    dun = datetime(2026, 9, 7, 3, 0)
+    bugun = datetime(2026, 9, 8, 3, 0)
+
+    class _Conn:
+        dialect, default_schema = "tsql", "dbo"
+        quote_l = quote_r = '"'
+
+        def __init__(self):
+            self.read: list[str] = []
+
+        def list_tables(self, schema, like=None):
+            return [("dbo", n) for n in ("ESKI", "DEGISMIS", "YENI")]
+
+        def modified_at(self, schema):
+            return {"ESKI": dun - timedelta(days=30), "DEGISMIS": bugun}
+
+        def columns(self, schema, table):
+            self.read.append(table)
+            return [{"name": "ID", "data_type": "int"}]
+
+        def primary_keys(self, schema, table): return ["ID"]
+        def foreign_keys(self, schema): return []
+        def row_count(self, schema, table): return 1
+        def row_counts(self, schema): return {}
+        def table_comments(self, schema): return {}
+        def column_comments(self, schema): return {}
+        def sample_rows(self, schema, table, limit=20): return []
+        def indexes(self, schema): return {}
+        def top_values(self, *a, **k): return []
+
+    conn = _Conn()
+    out = Profiler(conn).profile("d", "dbo", known={"ESKI": dun, "DEGISMIS": dun})
+    assert set(conn.read) == {"DEGISMIS", "YENI"}, conn.read
+    assert {p.table_name for p in out} == {"DEGISMIS", "YENI"}, "untouched tables keep their stored profile"
+
+
+def test_a_period_accounting_does_not_keep_its_books_in_is_left_out_of_scope():
+    """The same fiscal year can exist twice under two firm codes, differing by a few percent. Which
+    one is the record is an accounting decision; told which, the other leaves the scope rather than
+    being picked per query by whichever happens to hold more rows."""
+    import os
+
+    from semantic_layer.profiler.profiler import Profiler
+
+    class _Conn:
+        dialect, default_schema = "tsql", "dbo"
+        quote_l = quote_r = '"'
+
+        def list_tables(self, schema, like=None):
+            return [("dbo", n) for n in ("LG_015_01_INVOICE", "LG_105_01_INVOICE",
+                                         "LG_411_01_INVOICE", "KAPAT_015_01")]
+
+        def columns(self, schema, table): return [{"name": "ID", "data_type": "int"}]
+        def primary_keys(self, schema, table): return ["ID"]
+        def foreign_keys(self, schema): return []
+        def row_count(self, schema, table): return 5
+        def row_counts(self, schema): return {}
+        def table_comments(self, schema): return {}
+        def column_comments(self, schema): return {}
+        def sample_rows(self, schema, table, limit=20): return []
+        def indexes(self, schema): return {}
+        def top_values(self, *a, **k): return []
+
+    os.environ["SEMANTIC_EXCLUDE_CONTEXT"] = "015"
+    try:
+        out = Profiler(_Conn()).profile("d", "dbo")
+    finally:
+        os.environ.pop("SEMANTIC_EXCLUDE_CONTEXT", None)
+    names = {p.table_name for p in out}
+    assert names == {"LG_105_01_INVOICE", "LG_411_01_INVOICE"}, names

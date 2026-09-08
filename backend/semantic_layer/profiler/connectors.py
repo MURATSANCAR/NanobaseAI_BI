@@ -339,6 +339,20 @@ class MSSQLConnector(_DbApiBase):
     # Wall-clock timings taken while the scan itself was running suggested the opposite and were the
     # scan's own noise. Measure page reads *and* CPU, in isolation, before trying this again.
 
+    def modified_at(self, schema: str) -> dict[str, Any]:
+        """When each table and view last changed, in one query.
+
+        A nightly job that reprofiles a whole schema never finishes on a database this size — the one
+        here was killed by its own two-hour timeout every night, having read a quarter of the tables,
+        so a view added on Monday was still unknown on Friday. What a nightly run has to do is find
+        what changed, and the engine already records it.
+        """
+        _, rows = self._rows(
+            "SELECT o.name, o.modify_date FROM sys.objects o "
+            "JOIN sys.schemas s ON s.schema_id = o.schema_id "
+            "WHERE o.type IN ('U','V') AND s.name = ?", (schema,))
+        return {str(r[0]): r[1] for r in rows}
+
     def search_values(self, schema: str, table: str, column: str, needle: str, limit: int) -> list[tuple[str, int]]:
         """Values of one column that contain `needle`, with how many rows carry each.
 

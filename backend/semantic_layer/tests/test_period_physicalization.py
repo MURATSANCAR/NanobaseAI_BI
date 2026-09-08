@@ -127,3 +127,26 @@ def test_the_model_is_told_how_far_the_data_reaches_even_though_it_picks_no_year
     assert "2021-01-01" in block and "2026" in block, block
     assert "LG_211_01_STLINE" not in block, "the table map stays out; only the span goes in"
     assert "UNION ALL" in block, "and it is still told not to write the union itself"
+
+
+def test_an_unmeasured_table_does_not_join_a_year_that_is_already_answered():
+    """A table whose period was never measured cannot be ruled out — but carried along regardless it
+    joined every question about every year, and a 2015 total came back as three years added
+    together. Unknown is a reason to keep a table when nothing else answers, not to add it to
+    something that does."""
+    from datetime import date
+
+    olculen = _p("LG_105_01_INVOICE", "LG_{n0}_{n1}_INVOICE", ("2015-01-01", "2015-12-31"),
+                 rows=48194, ctx={"n0": "105", "n1": "01"})
+    olculen.entity = "INVOICE"
+    olculmeyen = _p("LG_411_01_INVOICE", "LG_{n0}_{n1}_INVOICE", None, rows=81801,
+                    ctx={"n0": "411", "n1": "01"})
+    olculmeyen.entity = "INVOICE"
+    from semantic_layer.runtime.periods import tables_for
+
+    sec = tables_for([olculen, olculmeyen], date(2015, 1, 1), date(2016, 1, 1))
+    assert [p.table_name for p in sec] == ["LG_105_01_INVOICE"], [p.table_name for p in sec]
+
+    # and with nothing measured, the unmeasured table is still the best there is
+    yalniz = tables_for([olculmeyen], date(2015, 1, 1), date(2016, 1, 1))
+    assert [p.table_name for p in yalniz] == ["LG_411_01_INVOICE"]
