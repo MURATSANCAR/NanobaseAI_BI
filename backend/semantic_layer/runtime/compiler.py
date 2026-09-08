@@ -1185,6 +1185,11 @@ class ExistingCompiler:
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            # The person spelled out the report they want, column by column. Without this the model
+            # sees only the words and routinely turns a requested column into a filter — the channel
+            # asked for as the first column comes back as a WHERE and never appears in the result.
+            "## İSTENEN KOLONLAR (bu sırayla, SELECT'te hepsi bulunmalı)\n" + (
+                "\n".join(f"{i}. {c}" for i, c in enumerate(q.projection, 1)) if q.projection else "(belirtilmedi)"),
             # What those words look like in the data, where they turned out to be values. A term the
             # vocabulary never had is often a category that does exist, spelled its own way in a code
             # column; the model is told that spelling instead of guessing at capitalisation and

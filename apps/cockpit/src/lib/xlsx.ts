@@ -281,27 +281,44 @@ function crc32(buf: Uint8Array): number {
 
 type Bytes = Uint8Array<ArrayBuffer>;
 
-function zip(entries: { name: string; data: Bytes }[]): Blob {
+/** Ham deflate — tarayıcının kendi sıkıştırıcısıyla. Yoksa girdi olduğu gibi saklanır: 40 bin
+ *  satırlık bir rapor sıkıştırılmadan 20 MB, sıkıştırılınca 3 MB; ama sıkıştırma yoksa da dosya
+ *  geçerli olmalı. */
+async function deflateRaw(data: Bytes): Promise<Bytes | null> {
+  const CS = (globalThis as { CompressionStream?: new (f: string) => TransformStream }).CompressionStream;
+  if (!CS) return null;
+  try {
+    const stream = new Blob([data]).stream().pipeThrough(new CS('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer()) as Bytes;
+  } catch {
+    return null;
+  }
+}
+
+async function zip(entries: { name: string; data: Bytes }[]): Promise<Blob> {
   const enc = new TextEncoder();
   const parts: Bytes[] = [];
   const central: Bytes[] = [];
   let offset = 0;
   for (const e of entries) {
     const name = enc.encode(e.name);
-    const crc = crc32(e.data);
+    const crc = crc32(e.data);                       // CRC her zaman sıkıştırılmamış veri üzerinden
+    const packed = await deflateRaw(e.data);
+    const body = packed && packed.length < e.data.length ? packed : e.data;
+    const method = body === e.data ? 0 : 8;
     const local = new Uint8Array(30 + name.length);
     const lv = new DataView(local.buffer);
     lv.setUint32(0, 0x04034b50, true);
     lv.setUint16(4, 20, true);
     lv.setUint16(6, 0x0800, true); // ad UTF-8
-    lv.setUint16(8, 0, true); // stored
+    lv.setUint16(8, method, true);
     lv.setUint16(12, 0x0021, true); // 1980-01-01
     lv.setUint32(14, crc, true);
-    lv.setUint32(18, e.data.length, true);
+    lv.setUint32(18, body.length, true);
     lv.setUint32(22, e.data.length, true);
     lv.setUint16(26, name.length, true);
     local.set(name, 30);
-    parts.push(local, e.data);
+    parts.push(local, body);
 
     const cd = new Uint8Array(46 + name.length);
     const cv = new DataView(cd.buffer);
@@ -309,16 +326,16 @@ function zip(entries: { name: string; data: Bytes }[]): Blob {
     cv.setUint16(4, 20, true);
     cv.setUint16(6, 20, true);
     cv.setUint16(8, 0x0800, true);
-    cv.setUint16(10, 0, true);
+    cv.setUint16(10, method, true);
     cv.setUint16(14, 0x0021, true);
     cv.setUint32(16, crc, true);
-    cv.setUint32(20, e.data.length, true);
+    cv.setUint32(20, body.length, true);
     cv.setUint32(24, e.data.length, true);
     cv.setUint16(28, name.length, true);
     cv.setUint32(42, offset, true);
     cd.set(name, 46);
     central.push(cd);
-    offset += local.length + e.data.length;
+    offset += local.length + body.length;
   }
   const centralSize = central.reduce((s, c) => s + c.length, 0);
   const end = new Uint8Array(22);
@@ -360,7 +377,7 @@ export function questionToFileBase(question: string, when: Date = new Date()): s
 // ------------------------------------------------------------------ giriş noktası
 
 /** Belgeyi kurar ve tarayıcıya indirtir. Dönen değer: indirilen dosya adı. */
-export function downloadXlsx(doc: XlsxDoc): string {
+export async function downloadXlsx(doc: XlsxDoc): Promise<string> {
   const enc = new TextEncoder();
   const file = (name: string, xml: string) => ({ name, data: enc.encode(xml) });
   const entries = [
@@ -390,7 +407,7 @@ export function downloadXlsx(doc: XlsxDoc): string {
   ];
 
   const name = `${doc.fileBase}.xlsx`;
-  const url = URL.createObjectURL(zip(entries));
+  const url = URL.createObjectURL(await zip(entries));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;

@@ -899,3 +899,56 @@ def test_a_year_the_deployment_never_loaded_is_refused_not_handed_to_a_model(cat
     passes_through.unresolved.append("problemli")
     assert passes_through.refusal_reason is None
     assert passes_through.state == "UNRESOLVED"
+
+
+# --- rapor çerçevesi: sorunun biçim tarifi ile konusu ayrı şeylerdir -------------------------
+
+def test_a_spelled_out_report_request_is_not_a_pile_of_unknown_business_terms(catalog, profiles):
+    """"1. kolon kanal adı 2. kolon yıl 3. kolon toplam satış": 'kolon' bir iş terimi değil, çıktının
+    biçimi. Eskiden çözümleyici onu katalogda arayıp bulamıyor ve tüm soruyu reddediyordu."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("rapor istiyorum - 1. kolon kanal 2. kolon toptan satış 3. kolon net ciro")
+    assert "kolon" not in sq.unresolved
+    assert sq.projection == ["kanal", "toptan satis", "net ciro"]
+    assert any("istenen kolonlar" in e for e in sq.explanation)
+
+
+def test_the_role_word_is_recognised_by_where_it_stands_not_from_a_list(catalog, profiles):
+    """Liste tutulsaydı 'sütun' yarın yine reddedilirdi. Konum kuralı onu da tanır."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. sütun kanal 2. sütun toptan satış 3. sütun net ciro")
+    assert sq.unresolved == [] and sq.projection == ["kanal", "toptan satis", "net ciro"]
+
+
+def test_a_numbered_comparison_is_not_a_report_frame_and_its_words_are_still_missing(catalog, profiles):
+    """"1. bölge cirosu 2. bölge cirosu": burada sıra sayısı kolonu değil konuyu numaralandırıyor.
+    'bölge'yi çerçeve sanıp yutmak, sorulandan geniş bir soruyu cevaplamak olurdu."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. bölge cirosu 2. bölge cirosu 3. bölge cirosu")
+    assert "bolge" in sq.unresolved and sq.projection == []
+
+
+def test_a_word_the_catalog_knows_is_never_taken_for_a_frame_word(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. kanal net ciro 2. kanal net ciro 3. kanal net ciro")
+    assert sq.projection == [] and any(s.explain.get("normalized") == "kanal" for s in sq.slots)
+
+
+def test_items_that_drop_the_role_word_still_belong_to_the_same_list(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. kolon kanal 2. kolon toptan satış 3. kolon net ciro 4. ay bazında kırılım")
+    assert sq.projection[-1] == "ay bazinda kirilim"
+
+
+def test_a_year_is_not_an_item_number(catalog, profiles):
+    """Madde numarası 20'ye kadar; 2026 bir yıl, kolon sayısı değil."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. kolon kanal 2. kolon toptan satış 3. kolon net ciro 2026")
+    assert sq.projection[-1] == "net ciro 2026" or sq.projection[-1] == "net ciro"
+
+
+def test_a_generic_head_noun_beside_a_resolved_term_is_absorbed_not_reported_missing(catalog, profiles):
+    """"net ciro rakamı" — 'rakam' katalogda eksik bir kavram değil, yanındaki terimin baş ismi."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("2026 net ciro rakamı")
+    assert "rakami" not in sq.unresolved and sq.unresolved == []

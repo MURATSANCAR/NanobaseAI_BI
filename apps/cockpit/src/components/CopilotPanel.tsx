@@ -380,7 +380,7 @@ function ExportButton({ m, result }: { m: Extract<Msg, { role: 'assistant' }>; r
           full = result;
         }
       }
-      const file = downloadXlsx({
+      const file = await downloadXlsx({
         fileBase: questionToFileBase(m.question || 'sorgu sonucu'),
         columns: full.columns.map((c) => ({ key: c.name, label: columnLabel(c.name) })),
         rows: full.records,

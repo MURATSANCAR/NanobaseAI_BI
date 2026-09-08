@@ -882,10 +882,15 @@ class SemanticResolver:
         Döndürdüğü: tüketilecek belirteç indeksleri ve istenen kolonlar (sorulan sırayla).
         """
         toks = qf.tokens
+
+        def is_ordinal(t: str) -> bool:
+            # 20'den büyük sayı madde numarası değildir: "2026" bir yıl, "150" bir eşik.
+            return (t.isdigit() and 1 <= int(t) <= 20) or stem(t) in _ORDINAL_WORDS
+
         marks: list[tuple[int, int]] = []                 # (sıra belirteci, rol kelimesi)
         for k in range(len(toks) - 1):
             tok = toks[k]
-            if k in consumed or not (tok.isdigit() or stem(tok) in _ORDINAL_WORDS):
+            if k in consumed or not is_ordinal(tok):
                 continue
             r = k + 1
             if r in consumed or self._knows_word(toks[r], index):
@@ -903,11 +908,17 @@ class SemanticResolver:
             return set(), []
         # Her slotun içeriği: rol kelimesinden sonraki sözcükler, bir SONRAKİ sıra belirtecine kadar
         # — kullanıcı her maddede rol kelimesini tekrar etmeyebilir ("4. ürün kırılımı").
-        ordinals = sorted(k for k in range(len(toks)) if toks[k].isdigit() or stem(toks[k]) in _ORDINAL_WORDS)
+        first = hits[0][0]
+        ordinals = [k for k in range(first, len(toks)) if is_ordinal(toks[k])]
         order: list[str] = []
-        for _, r in hits:
-            nxt = next((o for o in ordinals if o > r), len(toks))
-            words = [toks[i] for i in range(r + 1, nxt)]
+        for pos, o in enumerate(ordinals):
+            start = o + 1
+            # Madde numarasından sonra rol kelimesi varsa atlanır; kullanıcı her maddede tekrar
+            # etmeyebilir ("3. kolon toplam satış" ile "4. ürün kırılımı" aynı listenin maddeleri).
+            if start < len(toks) and stem(toks[start]) == common:
+                start += 1
+            end = ordinals[pos + 1] if pos + 1 < len(ordinals) else len(toks)
+            words = [toks[i] for i in range(start, end)]
             if words:
                 order.append(" ".join(words))
         # Aynı içerik tekrar ediyorsa bu bir çıktı listesi değil, aynı şeyin farklı örnekleri:
