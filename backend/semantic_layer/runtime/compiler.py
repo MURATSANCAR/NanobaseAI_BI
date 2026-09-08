@@ -1342,8 +1342,19 @@ def is_empty_result(columns: list[str], rows: list[dict[str, Any]], total: int) 
     return all(rows[0].get(c) is None for c in (columns or rows[0].keys()))
 
 
+def column_label(col: str) -> str:
+    """`net_ciro` → `Net ciro`. Kolon adı cümlenin içinde okunacaksa makine adıyla durmasın."""
+    s = str(col).replace("_", " ").strip()
+    return (s[:1].upper() + s[1:]) if s else str(col)
+
+
 def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], total: int) -> str:
-    """Deterministic Turkish summary — no LLM round-trip (saves ~10 s per question)."""
+    """Deterministic Turkish summary — no LLM round-trip (saves ~10 s per question).
+
+    Çok satırlı sonuç tek satıra sıkıştırıldığında `a=1, b=2 | a=3, b=4` okunmaz hale geliyordu.
+    Satır başına bir satır yazılır; ölçü kolonları adıyla, ad/kod kolonları ise adı olmadan
+    (değerin kendisi zaten kendini anlatıyor) verilir.
+    """
     def fmt(v: Any) -> str:
         if isinstance(v, bool):
             return "evet" if v else "hayır"
@@ -1352,18 +1363,23 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
         if isinstance(v, float):
             return f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         return str(v)
+
+    def cell(col: str, v: Any) -> str:
+        # sayı tek başına ne olduğunu söylemez, metin söyler
+        return f"{column_label(col)} {fmt(v)}" if isinstance(v, (int, float)) and not isinstance(v, bool) else fmt(v)
+
     if is_empty_result(columns, rows, total):
         # "satis: None" reads as a number; it is the absence of one
         return "Sorgu sonuç döndürmedi."
     if total == 1 and len(columns) == 1:
-        return f"{columns[0]}: {fmt(rows[0][columns[0]])}"
+        return f"{column_label(columns[0])}: {fmt(rows[0][columns[0]])}"
     if total == 1:
-        return "; ".join(f"{c}: {fmt(rows[0].get(c))}" for c in columns[:6])
+        return " · ".join(f"{column_label(c)}: {fmt(rows[0].get(c))}" for c in columns[:6])
     head = rows[:3]
-    parts = []
-    for r in head:
-        parts.append(", ".join(f"{c}={fmt(r.get(c))}" for c in columns[:4]))
-    return f"{total} satır döndü. İlk satırlar: " + " | ".join(parts)
+    lines = [f"{total} satır döndü. İlk {len(head)}:"]
+    for i, r in enumerate(head, 1):
+        lines.append(f"{i}. " + " · ".join(cell(c, r.get(c)) for c in columns[:4]))
+    return "\n".join(lines)
 
 
 __all__ = ["SemanticQueryCompiler", "DeterministicCompiler", "ExistingCompiler", "CompilerRouter", "Dialect", "default_filters_provider", "fast_summary", "extract_sql", "SYSTEM_PROMPT", "TemporalSlot"]

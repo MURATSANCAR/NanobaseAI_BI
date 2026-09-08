@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { ArrowUp, Bot, ChevronDown, ChevronUp, Database, Loader2, Maximize2, Minimize2, RotateCcw, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { ArrowUp, Bot, Check, ChevronDown, ChevronUp, Database, FileSpreadsheet, LayoutDashboard, Loader2, Maximize2, Minimize2, RotateCcw, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
 import { ask, runSql, sendFeedback, type SemanticTrace, type SqlResult, EngineError } from '../lib/engine';
 import { ResultChart } from './ResultChart';
+import { pinId, type Tile } from '../lib/board';
+import { downloadXlsx, questionToFileBase } from '../lib/xlsx';
 import { Thinking } from './Thinking';
 
 type Msg =
@@ -17,6 +19,8 @@ type Msg =
       pending?: boolean;
       semantic?: SemanticTrace;
       queryId?: string;
+      /** Cevabın hangi soruya ait olduğu — masaya iliştirilirken kartın başlığı bu. */
+      question?: string;
     };
 
 const SUGGESTIONS = [
@@ -28,7 +32,28 @@ const SUGGESTIONS = [
 
 const now = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
-export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null; inputRef?: RefObject<HTMLInputElement> }) {
+/** `net_ciro` → `Net ciro`. Kolonun makine adı ne başlıkta ne de cümlede öyle durmalı. */
+export function columnLabel(name: string): string {
+  const s = String(name).replace(/_/g, ' ').trim();
+  return s ? s[0].toLocaleUpperCase('tr-TR') + s.slice(1) : String(name);
+}
+
+/** Satırlar zaten tablo olarak çiziliyorsa özetteki satır dökümü aynı veriyi ikinci kez yazar:
+ *  yalnız baş cümle kalsın. Köprünün eski tek satırlık "… İlk satırlar: a=1, b=2" biçimi de
+ *  kesilir — köprü güncellenmeden derlenmiş bir arayüz onu hâlâ görebilir. */
+function headline(text: string): string {
+  return text.split('\n')[0].replace(/\s*İlk\s+(satırlar|\d+)\s*:.*$/i, '').trim() || text;
+}
+
+export function CopilotPanel({
+  engineOk, inputRef, onPin, pinned,
+}: {
+  engineOk: boolean | null;
+  inputRef?: RefObject<HTMLInputElement>;
+  /** Cevabı masaya iliştir. Verilmezse düğme çıkmaz — panel başka bir yerde de kullanılabilir. */
+  onPin?: (tile: Tile) => void;
+  pinned?: string[];
+}) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [wide, setWide] = useState(false);
   const [input, setInput] = useState('');
@@ -57,7 +82,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
         (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
       setMsgs((m) => [
         ...m.slice(0, -1),
-        { role: 'assistant', text, sql: a.sql, result, at: now(), semantic: a.semantic, queryId: a.queryId },
+        { role: 'assistant', text, sql: a.sql, result, at: now(), semantic: a.semantic, queryId: a.queryId, question: q },
       ]);
     } catch (e) {
       const msg = e instanceof EngineError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
@@ -134,7 +159,7 @@ export function CopilotPanel({ engineOk, inputRef }: { engineOk: boolean | null;
           </div>
         )}
         {[...msgs].reverse().map((m, i) =>
-          m.role === 'user' ? <UserBubble key={i} m={m} /> : m.pending ? <Thinking key={i} /> : <AssistantCard key={i} m={m} wide={wide} />,
+          m.role === 'user' ? <UserBubble key={i} m={m} /> : m.pending ? <Thinking key={i} /> : <AssistantCard key={i} m={m} wide={wide} onPin={onPin} pinned={pinned} />,
         )}
       </div>
 
@@ -232,7 +257,14 @@ function FeedbackRow({ queryId }: { queryId: string }) {
   );
 }
 
-function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wide?: boolean }) {
+function AssistantCard({
+  m, wide, onPin, pinned,
+}: {
+  m: Extract<Msg, { role: 'assistant' }>;
+  wide?: boolean;
+  onPin?: (tile: Tile) => void;
+  pinned?: string[];
+}) {
   const [showSql, setShowSql] = useState(false);
   const [showTable, setShowTable] = useState(false);
   const cols = m.result?.columns.slice(0, wide ? 8 : 5) ?? [];
@@ -249,7 +281,9 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
         {m.pending ? <Loader2 size={12} className="animate-spin text-brand" /> : <Bot size={12} className="text-brand" />}
         Timaş Finans · {m.at}
       </div>
-      <p className={clsx('mt-1.5 text-[13px] leading-snug', m.error && 'text-brand-accent')}>{m.text}</p>
+      <p className={clsx('mt-1.5 whitespace-pre-line text-[13px] leading-snug', m.error && 'text-brand-accent')}>
+        {rows.length > 0 ? headline(m.text) : m.text}
+      </p>
       {m.error && <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-page p-2 text-[10px] text-ink-muted">{m.error}</pre>}
       {chart}
       {rows.length > 0 && !chart && <ResultTable cols={cols} rows={rows} totalRows={m.result?.totalRows ?? rows.length} />}
@@ -261,13 +295,21 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
           {showTable && <ResultTable cols={cols} rows={rows} totalRows={m.result?.totalRows ?? rows.length} />}
         </div>
       )}
-      {m.sql && (
+      {(m.sql || rows.length > 0) && (
         <div className="mt-2">
-          <button onClick={() => setShowSql((v) => !v)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
-            {showSql ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Üretilen SQL
-          </button>
-          {showSql && <pre className="mt-1 max-h-48 overflow-auto scroll-thin whitespace-pre-wrap break-words rounded-lg bg-ink p-2 text-[10px] text-white/90">{m.sql}</pre>}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {m.sql && (
+              <button onClick={() => setShowSql((v) => !v)} className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand">
+                {showSql ? <ChevronUp size={12} /> : <ChevronDown size={12} />} Üretilen SQL
+              </button>
+            )}
+            {rows.length > 0 && m.result && <ExportButton m={m} result={m.result} />}
+          </div>
+          {showSql && m.sql && <pre className="mt-1 max-h-48 overflow-auto scroll-thin whitespace-pre-wrap break-words rounded-lg bg-ink p-2 text-[10px] text-white/90">{m.sql}</pre>}
         </div>
+      )}
+      {onPin && widget && m.sql && m.result && m.result.records.length > 0 && (
+        <PinButton m={m} widget={widget} onPin={onPin} pinned={pinned} />
       )}
       {m.semantic && <SemanticTraceCard trace={m.semantic} />}
       {m.queryId && !m.error && <FeedbackRow queryId={m.queryId} />}
@@ -275,6 +317,115 @@ function AssistantCard({ m, wide }: { m: Extract<Msg, { role: 'assistant' }>; wi
   );
 }
 
+/** Bu cevabı masaya iliştir.
+ *
+ *  İliştirilen şey rakam değil sorgu: kart her açılışta yeniden hesaplar. Aynı soru iki kez
+ *  eklenmesin diye kimlik sorunun ve SQL'in kendisinden türetiliyor. */
+function PinButton({
+  m, widget, onPin, pinned,
+}: {
+  m: Extract<Msg, { role: 'assistant' }>;
+  widget: NonNullable<SqlResult['widget']>;
+  onPin: (tile: Tile) => void;
+  pinned?: string[];
+}) {
+  const id = pinId(m.question ?? widget.title, m.sql ?? '');
+  const already = pinned?.includes(id) ?? false;
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={already || done}
+      onClick={() => {
+        onPin({
+          id, kind: 'pinned', span: 2,
+          title: widget.title || m.question || 'Sorgu',
+          question: m.question ?? widget.title ?? '',
+          sql: m.sql ?? '',
+          chart: widget.type, xKey: widget.x_key, yKey: widget.y_key,
+          labelKey: widget.label_key, valueKey: widget.value_key, format: widget.format,
+          pinnedAt: Date.now(),
+        });
+        setDone(true);
+      }}
+      className={clsx('mt-2 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium transition',
+        already || done ? 'border-line bg-page text-ink-faint' : 'border-brand/30 bg-brand-soft text-brand-deep hover:border-brand/60')}
+    >
+      <LayoutDashboard size={12} /> {already || done ? 'masada' : 'masaya ekle'}
+    </button>
+  );
+}
+
+/** Sonucu Excel'e aktar.
+ *
+ *  Ekranda ilk 8-20 satır görünür; dosyaya sorgunun tamamı gitsin diye SQL, aktarma anında yüksek
+ *  bir sınırla yeniden koşturulur. Köprü kendi üst sınırında keserse (`truncated`) bu sessizce
+ *  geçilmez: hem düğmenin altında hem dosyanın künye sayfasında yazar. Dosya adı sorudan üretilir. */
+function ExportButton({ m, result }: { m: Extract<Msg, { role: 'assistant' }>; result: SqlResult }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ file: string; rows: number; partial: boolean } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  async function run() {
+    if (busy) return;
+    setBusy(true);
+    setFailed(null);
+    try {
+      let full = result;
+      if (m.sql) {
+        // Tam sonuç alınamazsa elde olanı aktarmak, hiç aktarmamaktan iyidir.
+        try {
+          full = await runSql(m.sql, 100_000);
+        } catch {
+          full = result;
+        }
+      }
+      const file = downloadXlsx({
+        fileBase: questionToFileBase(m.question || 'sorgu sonucu'),
+        columns: full.columns.map((c) => ({ key: c.name, label: columnLabel(c.name) })),
+        rows: full.records,
+        question: m.question,
+        sql: m.sql,
+        meta: full.truncated
+          ? [{ label: 'Uyarı', value: `Sonuç sunucu satır sınırında kesildi: ilk ${full.records.length} satır aktarıldı, sorgu bunun ötesinde devam ediyor.` }]
+          : [],
+      });
+      setNote({ file, rows: full.records.length, partial: Boolean(full.truncated) });
+    } catch (e) {
+      setFailed(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy}
+        className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand disabled:opacity-50"
+        title="Sonucu biçimlendirilmiş .xlsx olarak indir"
+      >
+        {busy ? <Loader2 size={12} className="animate-spin" /> : note ? <Check size={12} className="text-ok" /> : <FileSpreadsheet size={12} />}
+        {busy ? 'Hazırlanıyor…' : 'Excel’e aktar'}
+      </button>
+      {note && (
+        <div className="basis-full text-[10px] text-ink-muted">
+          <span className="font-mono">{note.file}</span> indirildi · {note.rows} satır
+          {note.partial && <span className="text-brand-accent"> · sunucu sınırında kesildi, tamamı değil</span>}
+        </div>
+      )}
+      {failed && <div className="basis-full text-[10px] text-brand-accent">Aktarma başarısız: {failed}</div>}
+    </>
+  );
+}
+
+/** Sonuç tablosu.
+ *
+ *  Okunurluk kararları: kolon adı makine adıyla değil ("Net ciro"), sayı kolonu sağa dayalı ve
+ *  sabit genişlikli rakamlarla (basamaklar alt alta gelsin diye), uzun metin kırpılır ama tam hali
+ *  hücrenin üstüne gelince görünür, satırlar zebra — dar panelde göz satırı kaybetmesin. */
 function ResultTable({
   cols,
   rows,
@@ -284,29 +435,68 @@ function ResultTable({
   rows: Record<string, unknown>[];
   totalRows: number;
 }) {
+  // Kolonun sayısal olup olmadığı tipe değil değere bakılarak belirlenir: sürücü tipi her zaman gelmiyor.
+  const numeric = cols.map((c) => {
+    const seen = rows.map((r) => r[c.name]).filter((v) => v != null && v !== '');
+    return seen.length > 0 && seen.every((v) => typeof v === 'number');
+  });
   return (
-    <div className="mt-2 overflow-x-auto scroll-thin rounded-lg border border-line">
-      <table className="w-full text-[11px]">
-        <thead className="bg-page">
-          <tr>{cols.map((c) => <th key={c.name} className="px-2 py-1 text-left font-semibold">{c.name}</th>)}</tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} className="border-t border-line/60">
-              {cols.map((c) => <td key={c.name} className="whitespace-nowrap px-2 py-1">{fmtCell(r[c.name])}</td>)}
+    <div className="mt-2 overflow-hidden rounded-xl border border-line">
+      <div className="overflow-x-auto scroll-thin">
+        <table className="w-full border-collapse text-[11px]">
+          <thead>
+            <tr className="bg-page">
+              {cols.map((c, i) => (
+                <th
+                  key={c.name}
+                  className={clsx(
+                    'whitespace-nowrap border-b border-line px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-muted',
+                    numeric[i] ? 'text-right' : 'text-left',
+                  )}
+                >
+                  {columnLabel(c.name)}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-      {totalRows > rows.length && (
-        <div className="bg-page px-2 py-1 text-[10px] text-ink-muted">İlk {rows.length} / {totalRows} satır</div>
-      )}
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={i} className={clsx('border-b border-line/50 last:border-0', i % 2 === 1 && 'bg-page/45')}>
+                {cols.map((c, ci) => {
+                  const v = r[c.name];
+                  const text = fmtCell(v);
+                  return (
+                    <td
+                      key={c.name}
+                      title={text}
+                      className={clsx(
+                        'px-2.5 py-1.5 align-top',
+                        numeric[ci]
+                          ? 'whitespace-nowrap text-right font-medium tabular-nums text-ink'
+                          : 'max-w-[190px] truncate text-ink-muted',
+                        v == null || v === '' ? 'text-ink-faint' : null,
+                      )}
+                    >
+                      {text || '—'}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-between gap-2 border-t border-line bg-page px-2.5 py-1 text-[10px] text-ink-muted">
+        <span>{totalRows > rows.length ? `İlk ${rows.length} / ${totalRows} satır` : `${totalRows} satır`}</span>
+        <span className="text-ink-faint">tamamı Excel aktarımında</span>
+      </div>
     </div>
   );
 }
 
 function fmtCell(v: unknown): string {
   if (v == null) return '';
+  if (typeof v === 'boolean') return v ? 'Evet' : 'Hayır';
   if (typeof v === 'number') return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 }).format(v);
   return String(v);
 }

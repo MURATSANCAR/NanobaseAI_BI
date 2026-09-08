@@ -5,7 +5,7 @@ import clsx from 'clsx';
  *  ve doğrulanmış sorguları hazır olduğunda eklenir — çalışmayan bağlantı gösterilmez. */
 export type View = 'desk' | 'catalog' | 'review';
 
-export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void }) {
+export function Sidebar({ engineOk, modelCount, view, onView, waiting = 0 }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void; waiting?: number }) {
   return (
     <aside className="hidden lg:flex w-[236px] shrink-0 flex-col bg-rail border-r border-line px-4 py-5">
       <div className="flex items-center gap-3 px-1">
@@ -25,7 +25,7 @@ export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: bool
       <nav className="mt-3 flex flex-col gap-1" aria-label="Masalar">
         <NavItem icon={Landmark} label="Finans & Bütçe Masası" active={view === 'desk'} onClick={() => onView('desk')} />
         <NavItem icon={Table2} label="Veri Sözlüğü" active={view === 'catalog'} onClick={() => onView('catalog')} />
-        <NavItem icon={Stamp} label="Onay Bekleyenler" active={view === 'review'} onClick={() => onView('review')} />
+        <NavItem icon={Stamp} label="Onay Bekleyenler" active={view === 'review'} onClick={() => onView('review')} badge={waiting} />
       </nav>
 
       {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
@@ -60,7 +60,7 @@ export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: bool
   );
 }
 
-function NavItem({ icon: Icon, label, active, onClick }: { icon: typeof Landmark; label: string; active: boolean; onClick: () => void }) {
+function NavItem({ icon: Icon, label, active, onClick, badge = 0 }: { icon: typeof Landmark; label: string; active: boolean; onClick: () => void; badge?: number }) {
   return (
     <button
       type="button"
@@ -72,7 +72,13 @@ function NavItem({ icon: Icon, label, active, onClick }: { icon: typeof Landmark
       )}
     >
       <Icon size={16} strokeWidth={2} className={active ? 'text-white' : 'text-ink-faint'} />
-      <span className="truncate">{label}</span>
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {badge > 0 && (
+        <span className={clsx('shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
+          active ? 'bg-white/25 text-white' : 'bg-brand text-white')}>
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </button>
   );
 }

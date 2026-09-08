@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { loadCockpit, type DataMode } from '../lib/metrics';
 import { readSnapshot, saveSnapshot } from '../lib/snapshot';
 import { loadPeriods, type Period } from '../lib/periods';
-import { engineStatus } from '../lib/engine';
+import { engineStatus, reviewCount } from '../lib/engine';
 
 // Üretim varsayılanı 'live': önbellek (fixture) rakamı hiçbir zaman sessizce gösterilmez; motor cevap
 // vermezse ekranda "Veri alınamadı" + hata görünür. Geliştirme için VITE_DATA_MODE=fixture|auto.
@@ -43,4 +43,21 @@ export function useCockpit(period: Period | null, year: number | null) {
 
 export function useEngine() {
   return useQuery({ queryKey: ['engine'], queryFn: engineStatus, retry: 0, staleTime: 60_000, refetchInterval: 60_000 });
+}
+
+
+/** Onay bekleyen terim sayısı.
+ *
+ *  Kuyruk dolduğunda kimse haberdar olmuyordu: sistem bir soruyu "bu kavram tanımlı değil" diye
+ *  geri çevirirken, o kavramın tanımı onay ekranında sırasını bekliyordu. Sayı masanın üstünde
+ *  duruyor ki iki ekran arasındaki bu boşluk kapansın. */
+export function useReviewCount() {
+  return useQuery({
+    queryKey: ['review-count'],
+    queryFn: reviewCount,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
+    retry: 0,
+  });
 }

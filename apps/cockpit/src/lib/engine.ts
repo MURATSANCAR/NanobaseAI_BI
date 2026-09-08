@@ -29,6 +29,9 @@ export type SqlResult = {
   columns: SqlColumn[];
   records: Record<string, unknown>[];
   totalRows: number;
+  /** Sonuç istenen satır sınırında kesildi mi — köprü sınırın bir fazlasını okuyup bakıyor.
+   *  Excel'e aktarırken kesilmiş bir sonucu sessizce tam sanmamak için gerekli. */
+  truncated?: boolean;
   /** Köprünün önbelleğinden mi geldi ve sonuç kaç saniye önce hesaplandı. Köprü aynı sorguyu arka
    *  planda sıcak tutar (SEMANTIC_REFRESH_SEC); rakamın yaşı bu yüzden cevapla birlikte gelir ve
    *  arayüz "canlı" derken kaç saniyelik bir canlılıktan söz ettiğini söyleyebilir. */
@@ -268,6 +271,12 @@ export type ReviewItem = {
   plain: string;
   counterEvidence: number;
 };
+
+/** Kaç terim bir kişinin kararını bekliyor. Kuyruğun kendisi değil, yalnız sayısı — masa bunu
+ *  dakikada bir sorar ve bir satır bile çekmemesi gerekir. */
+export function reviewCount(): Promise<{ waiting: number }> {
+  return get('/api/v1/semantic/review?limit=0');
+}
 
 export function reviewQueue(source: 'used' | 'all' = 'used', limit = 100): Promise<{ waiting: number; used: number; total: number; items: ReviewItem[] }> {
   return get(`/api/v1/semantic/review?source=${source}&limit=${limit}`);
