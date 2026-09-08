@@ -444,6 +444,7 @@ Kurallar:
 - Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
 - Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
+- SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - Bu blok "(yok)" ise dönem kapsam içindedir. Hangi dönemin veride bulunduğuna bu sistem karar verir
   ve DÖNEM TABLOLARI bloğundaki aralık ölçülmüştür: o aralıktaki bir yıl için "veri yok" deme, tablo
@@ -605,6 +606,9 @@ class ExistingCompiler:
         self.column_focus_tail = int(os.environ.get("SEMANTIC_COLUMN_FOCUS_TAIL", "60"))
         self._scored_lock = threading.Lock()
         self._scored_cache: dict[str, set[tuple[str, str]]] = {}
+        # Looks an unplaced word up in the data before the prompt is built. Set by the runtime where
+        # a live connector exists; absent, questions are answered from the catalog exactly as before.
+        self.probe: Any = None
         self.selector: Any = None
         self.selector_mode = (os.environ.get("SEMANTIC_TABLE_SELECTOR", "shadow") or "shadow").strip().lower()
         self.catalog_entities: set[str] = set()
@@ -777,6 +781,27 @@ class ExistingCompiler:
             return (f"Bu soruyu cevaplayamıyorum: {what} tablosu bu kurulumda var ama içi boş — "
                     f"hiç kayıt yüklenmemiş. Veri yüklendiğinde aynı soru çalışacak.")
         return None
+
+    def value_facts(self, q: SemanticQuery, entities: list[str]) -> str:
+        """Exact spellings for the question's unplaced words, looked up in the data.
+
+        Only for words the resolver could not place — a term the certified vocabulary already knows
+        needs no looking up, and probing for it would be a query per question for nothing.
+        """
+        if self.probe is None or not q.unresolved:
+            return "(yok)"
+        from semantic_layer.runtime.value_probe import facts_block
+
+        hits: list = []
+        for term in q.unresolved[:3]:
+            try:
+                hits += self.probe.find(term, entities, self.columns, q.question)
+            except Exception as e:  # noqa: BLE001
+                log.debug("value probe unavailable for %r: %s", term, e)
+        if hits:
+            log.info("value probe: %s -> %s", ", ".join(q.unresolved[:3]),
+                     "; ".join(h.as_fact() for h in hits[:4]))
+        return facts_block(hits)
 
     def entity_note(self, entity: str) -> str:
         """One line about a table, for a model that is choosing between them and nothing more."""
@@ -1160,6 +1185,11 @@ class ExistingCompiler:
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
             "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            # What those words look like in the data, where they turned out to be values. A term the
+            # vocabulary never had is often a category that does exist, spelled its own way in a code
+            # column; the model is told that spelling instead of guessing at capitalisation and
+            # suffixes, or refusing a question the data can answer.
+            "## SORUDAKİ DEĞERLER\n" + self.value_facts(q, entities),
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             # The period was checked and found to be inside what this deployment covers, but past the

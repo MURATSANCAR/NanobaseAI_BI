@@ -1,9 +1,9 @@
 """What a word in the question actually looks like in the data.
 
 The catalog is inventoried once, at scan time, and a question arrives months later using a word
-nobody wrote down. "Çocuk kitaplarının payı" names a category that exists — ITEMS.SPECODE2 holds
-"Çocuk Kitapları" — but the term is not in the certified vocabulary, so the question is refused
-while the answer sits in a column the scan already read.
+nobody wrote down. Asked about a product category by the word people say for it, a deployment can
+refuse — the term is not in the certified vocabulary — while the answer sits in a code column the
+scan already read, spelled slightly differently from the way the question spelled it.
 
 So before the prompt is built, an unplaced word is looked for in the data: a bounded search over the
 text columns most likely to hold it, returning the exact spelling and how many rows carry it. The
@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from semantic_layer.models import SchemaProfile
+from semantic_layer.normalize import fold
 
 log = logging.getLogger(__name__)
 
@@ -63,6 +64,17 @@ class ValueProbe:
         deliberately bounded against — the point is one quick look, not a search of the database.
         """
         wanted = set(entities)
+        # One profile per entity. An entity split one table per fiscal year has a dozen profiles and
+        # every one of them carries the same columns; walked as they come, twelve candidate slots go
+        # to twelve copies of one column and the search never reaches a second. The fullest table is
+        # the one to look in — the others hold the same shape with fewer rows.
+        best: dict[str, SchemaProfile] = {}
+        for prof in self.profiles:
+            if wanted and prof.entity not in wanted:
+                continue
+            seen = best.get(prof.entity)
+            if seen is None or (prof.row_count or 0) > (seen.row_count or 0):
+                best[prof.entity] = prof
         scored: list[tuple[float, SchemaProfile, Any]] = []
         reached: set[tuple[str, str]] = set()
         if columns is not None:
@@ -70,23 +82,25 @@ class ValueProbe:
                 reached = {(h["entity"], str(h["column"]).upper()) for h in columns.search(question, limit=40)}
             except Exception:  # noqa: BLE001
                 reached = set()
-        for p in self.profiles:
-            if wanted and p.entity not in wanted:
-                continue
+        for p in best.values():
             for col in p.columns:
                 if col.sensitive or not col.data_type:
                     continue
                 if not any(col.data_type.lower().startswith(t) for t in self.TEXT_TYPES):
                     continue
-                rank = 0.0
+                # Every text column is a candidate; the ranking decides which are looked at first
+                # within the budget. Scoring only the inventoried ones and dropping the rest was a
+                # shortcut that quietly excluded exactly the columns worth searching: a category code
+                # is inventoried and a customer name is not, so a question naming a company found
+                # nothing while a question naming a code worked.
+                rank = 1.0
                 if (p.entity, col.name.upper()) in reached:
                     rank += 2.0
                 if col.is_enum():
                     rank += 1.5          # a short value list is what a category looks like
                 elif col.top_values:
                     rank += 0.5
-                if rank:
-                    scored.append((rank, p, col))
+                scored.append((rank, p, col))
         scored.sort(key=lambda x: (-x[0], x[1].entity, x[2].name))
         return [(p, c) for _, p, c in scored[: self.max_columns]]
 
@@ -102,17 +116,23 @@ class ValueProbe:
             if time.perf_counter() - started > self.budget:
                 log.debug("value probe budget spent on %r after %d hits", term, len(hits))
                 break
-            # The inventory the scan already took answers this without touching the database.
+            # The inventory the scan already took answers this without touching the database. Both
+            # sides are folded: the question arrives with its Turkish characters already flattened by
+            # the resolver ("çocuk" → "cocuk") while the data keeps them, so comparing them as typed
+            # finds nothing and the question is refused over an accent.
+            needle = fold(term)
             for value, count in (col.top_values or []):
-                if term.lower() in str(value).lower():
+                if needle in fold(str(value)):
                     key = (prof.entity, col.name, str(value))
                     if key not in seen:
                         seen.add(key)
                         hits.append(ValueHit(prof.entity, col.name, str(value), int(count)))
             if len(hits) >= self.top:
                 break
-            # Only where the inventory is not the whole story does the database get asked.
-            if col.is_enum():
+            # A column whose complete value set was inventoried has already answered: the scan read
+            # every distinct value there is, so asking the database again can only return the same
+            # rows more slowly. Everything else is asked.
+            if col.is_enum() and col.top_values:
                 continue
             try:
                 for value, count in self._like(prof, col.name, term):

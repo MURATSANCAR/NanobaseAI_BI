@@ -253,6 +253,19 @@ class Runtime:
             except Exception as e:  # noqa: BLE001
                 log.warning("table selector unavailable, sending every retrieved table: %s", e)
 
+        # Looks a word the resolver could not place up in the data before the prompt is built —
+        # the one move a person makes that this system did not: open the database and run a SELECT
+        # before writing the query. Needs the live connector; without one, nothing changes.
+        if self.connector is not None and os.environ.get("SEMANTIC_VALUE_PROBE", "1").strip() not in ("0", "false", "no", "off"):
+            try:
+                from semantic_layer.runtime.value_probe import ValueProbe
+
+                existing.probe = ValueProbe(self.connector, self.profiles)
+                log.info("value probe enabled (%d columns, %.0fs budget)",
+                         existing.probe.max_columns, existing.probe.budget)
+            except Exception as e:  # noqa: BLE001
+                log.warning("value probe unavailable, questions answered from the catalog alone: %s", e)
+
         try:
             from semantic_layer.runtime.table_router import TableRouter
 

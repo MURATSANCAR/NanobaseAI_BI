@@ -347,8 +347,12 @@ class MSSQLConnector(_DbApiBase):
         and the wildcards it could otherwise smuggle in are escaped.
         """
         safe = needle.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]")
+        # Accent- and case-insensitive: the question reaches here with its Turkish characters already
+        # flattened, and matching it against the data as stored would miss every word carrying one.
+        # The collation does the folding in the engine, so the index is still usable.
         sql = (f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n "
-               f"FROM {self.q(schema)}.{self.q(table)} WHERE {self.q(column)} LIKE ? "
+               f"FROM {self.q(schema)}.{self.q(table)} "
+               f"WHERE {self.q(column)} COLLATE Latin1_General_CI_AI LIKE ? "
                f"GROUP BY {self.q(column)} ORDER BY n DESC{self.probe_hint}")
         _, rows = self._rows(sql, (f"%{safe}%",))
         return [(str(_norm(r[0])), int(r[1])) for r in rows]
