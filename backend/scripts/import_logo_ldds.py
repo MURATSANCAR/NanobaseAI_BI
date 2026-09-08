@@ -606,7 +606,9 @@ def glossary_markdown(data: dict) -> str:
         lines += [
             f"## Tablo ve kolon açıklamaları (Türkçe — `{data.get('structure_doc', 'yapı dökümanı')}`)",
             "",
-            "Logo'nun Türkçe tablo yapısı dökümanından; İngilizce açıklamaların Türkçe karşılığı.",
+            ("Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.json web_reference.policy alanındadır."
+             if data.get('web_reference') else
+             "Logo'nun Türkçe tablo yapısı dökümanından; İngilizce açıklamaların Türkçe karşılığı."),
             "",
         ]
         for name, table in tr.items():

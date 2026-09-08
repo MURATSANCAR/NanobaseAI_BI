@@ -28,3 +28,25 @@ python backend/scripts/import_logo_ldds.py LDDS.xls --doc LOGO_TABLE_YAPISI.DOC
 Kullanım: `SEMANTIC_KNOWLEDGE_DIR=configs/semantic/knowledge/logo`.
 Katalog büyüdükçe paket kendinden üretilebilir: `python -m semantic_layer.cli export-knowledge --out <dir>`
 (çalışma anında "doğru" denen sorgular dahil).
+
+### Web referansı ile eksiklerin tamamlanması
+
+`backend/scripts/import_logo_web.py`, [Tablo Açıklamaları Yeni](https://ugurozpinar.github.io/Logo/Tablo%20A%C3%A7%C4%B1klamalar%C4%B1%20Yeni/)
+sayfasının bütün bağlantılarını karşılaştırır. LDDS/DOC üretiminden **sonra** çalıştırın:
+
+```bash
+python backend/scripts/import_logo_web.py --cache /tmp/logo-web-cache --prefer-web
+# İndirilen sayfalarla çevrimdışı tekrar:
+python backend/scripts/import_logo_web.py --cache /tmp/logo-web-cache --offline --prefer-web
+```
+
+`--prefer-web` ile web kaynağının dolu açıklamaları, kod etiketleri, tipleri ve uzunlukları
+mevcut değerlerin yerine geçer. Aynı adlı indeksler web tanımına güncellenir; uç kolonları
+sözlükte bulunan koşulsuz ilişkiler eklenir. Kaynakta bulunmayan kolonlar, kodlar ve indeksler
+korunur. Bayrak verilmezse yalnız eksikler tamamlanır. Kaynak `web_source`, değişen eski/yeni
+değerler rapordaki `updates` alanıyla izlenir. Karşılaştırmanın ayrıntıları
+`docs/architecture/logo-web-audit.json`, kapsam ve sınırlamalar `docs/architecture/logo-web-audit.md`
+dosyalarındadır. Yeniden çalıştırıldığında JSON raporu o çalıştırmanın farklarını gösterir.
+Canlı kataloglar bu dosya değişince kendiliğinden yeniden profillenmez; müşteri şeması bir sonraki
+profil/indeksleme çalışmasında yeni açıklamaları alır. Web sözlüğünde bulunması, kolonun müşterinin
+Logo sürümünde de bulunduğunu kanıtlamaz; canlı şema esas alınır.
