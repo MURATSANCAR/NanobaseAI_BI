@@ -59,3 +59,19 @@ tamamlanmış koleksiyonun geri okuma doğrulamasından sonra kaydedildi.
 Aday SQLite ile yayın öncesi günlükteki 4.121 profil karşılaştırıldı: tablo/kolon adları,
 SQL tipleri, nullable durumu, örnek değerler, distinct/null oranları, anahtarlar, ilişkiler
 ve zaman aralıklarında **0 değişiklik** doğrulandı.
+
+## Kalite ölçütü uyumluluğu
+
+Güncel `golden-eval.py`, kesin retlere ek olarak `sq.clarification` durumunu da
+`CLARIFICATION` şeklinde sayar. Tarihsel referans yalnız 3 kesin ret kaydetmişti.
+İlk kapı bu yüzden 3 → 12 ret gösterdi ve yayın durdu. Canlı ve aday katalog
+48 soruda hem resolver hem compiler üzerinden karşılaştırıldı: açıklama/ret içerikleri
+birebir aynı; ikisinde de 3 kesin ret ve 9 netleştirme ihtiyacı mevcut.
+
+Tarihsel referans dosyası değiştirilmedi. Bu yayın için, tarihsel %100 tablo erişimi ve
+soru bazlı tablo kaybı sınırları korunarak, ret tanımı mevcut üretimde ölçülen etkili
+ret/netleştirme durumlarıyla eşleştirildi (`stage/release-baseline.json`). Adayın gerçek
+modelle ölçülmüş sonucunda yeni engellenen soru ve yeni kaçırılan tablo sıfır.
+48 soru, tablo beklenen 39 soruda tam tablo erişimi; tablo recall 1.0.
+Bu sonuç, mevcut 9 netleştirme ihtiyacının çözüldüğü veya bütün iş sorularının
+cevaplanabildiği anlamına gelmez.
