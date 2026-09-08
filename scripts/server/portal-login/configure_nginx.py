@@ -53,7 +53,7 @@ server {
     listen 127.0.0.1:8797;
     server_name localhost;
     access_log off;
-    location = / {
+    location = /verify {
         auth_basic "Portal verifier";
         auth_basic_user_file /etc/nginx/htpasswd-timas;
         alias /etc/nginx/timas-auth-ok.txt;

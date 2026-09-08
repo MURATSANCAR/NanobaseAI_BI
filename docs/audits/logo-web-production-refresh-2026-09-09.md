@@ -34,7 +34,16 @@ Hazırlık/yayın kayıtları ve geri dönüş kopyaları sunucuda
 Kalite ölçümleri diğer çalışan ölçümün dosya kilidine uyarak sıraya alınır.
 Aday kalite kapısı geçmeden canlı katalog yayımlanmaz.
 
-Yayın durumu: doğrulama devam ediyor; sonuçlar tamamlanınca bu bölüm güncellenir.
+Yayın durumu: **tamamlandı**. `stage/publication.json` durumu `complete`; canlı servis sağlıklı,
+4.121 profil yüklü, DB/LLM bağlantıları aktif. Etkin koleksiyon
+`semantic_catalog_logo_web_all_20260909` (47.960 kayıt). Üretim API envanterinde yeni Türkçe
+ITEMS.CARDTYPE açıklaması doğrulandı. Beş yayın dosyasının SHA-256 değeri yerel kaynakla aynı.
+
+Yayın sonrası 48 soruluk kalite koşusu, aşağıda açıklanan yayına özel uyumlu referansla geçti:
+tablo recall 1.0, tam tablo erişimi 39 soru, etkili ret/netleştirme 12 → 12.
+İzleme metrikleri: tablo isabeti 0,218, ortalama tablo 8,5, ortalama istem 9.312 token.
+İçe aktarma/sözlük testleri 16; aday katalog/indeks yardımcı testleri 5: toplam 21 test geçti.
+Eski katalog, dosyalar ve Qdrant koleksiyonu geri dönüş için saklandı.
 
 ## Açıklamasız kolon kapsamı
 
@@ -92,3 +101,13 @@ Aday ölçümünün izleme metrikleri (tarihsel referansa göre): tablo isabeti 
 ortalama gönderilen tablo 6,1 → 8,5; ortalama istem 8.619 → 9.312 token. Bunlar
 yayın kapısında engelleyici eşikler değildir; tablo kapsamının tamamlanması, arama
 hassasiyetinin veya iş sonucu doğruluğunun kusursuz olduğu anlamına gelmez.
+
+## Açıklama kapsamı — ayrı denetim
+
+İndekste kolon eksik olmaması, iş açıklamalarının eksiksiz olduğu anlamına gelmez.
+330 tabloluk sözlükte hiçbir dilde açıklaması olmayan 93 tablo / 13 kolon; başka açıklaması
+olup Türkçesi olmayan 108 tablo / 2.565 kolon vardır. Kalıcı canlı katalogda mevcut türetilmiş
+anlamlar ve portal notları dahil 3.222 fiziksel tablo / 84.792 kolon açıklamasızdır
+(31.805 farklı tablo kalıbı/kolon çifti). Çalışma anındaki ek zenginleştirme bu sayıya dahil değildir.
+Tam listeler `logo-missing-descriptions-dictionary-2026-09-09.json` ve
+`logo-missing-descriptions-live-2026-09-09.json` dosyalarındadır.

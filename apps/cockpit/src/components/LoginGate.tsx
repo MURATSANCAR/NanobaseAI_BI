@@ -4,10 +4,11 @@ import { ArrowRight, BookOpen, Eye, EyeOff, LockKeyhole, UserRound, LogOut } fro
 const auth = `${import.meta.env.BASE_URL}auth/`;
 // Capture once, before StrictMode mounts effects twice. Remove the invitation
 // from the address bar immediately; never persist it or the password.
-const invitation = new URLSearchParams(window.location.hash.slice(1)).get('test');
-if (invitation) window.history.replaceState(null, '', window.location.pathname + window.location.search);
+const initialInvitation = new URLSearchParams(window.location.hash.slice(1)).get('test');
+if (initialInvitation) window.history.replaceState(null, '', window.location.pathname + window.location.search);
 
 export function LoginGate({ children }: { children: ReactNode }) {
+  const [invitation, setInvitation] = useState(initialInvitation);
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<string | null>(null);
   const [username, setUsername] = useState('');
@@ -18,7 +19,19 @@ export function LoginGate({ children }: { children: ReactNode }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    function acceptInvitation() {
+      const token = new URLSearchParams(window.location.hash.slice(1)).get('test');
+      if (!token) return;
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      setInvitation(token);
+    }
+    window.addEventListener('hashchange', acceptInvitation);
+    return () => window.removeEventListener('hashchange', acceptInvitation);
+  }, []);
+
+  useEffect(() => {
     let active = true;
+    if (invitation) { setUser(null); setReady(false); }
     (async () => {
       try {
         const response = await fetch(auth + (invitation ? 'prefill' : 'session'), {
@@ -34,7 +47,7 @@ export function LoginGate({ children }: { children: ReactNode }) {
       finally { if (active) setReady(true); }
     })();
     return () => { active = false; };
-  }, []);
+  }, [invitation]);
 
   async function login(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError('');

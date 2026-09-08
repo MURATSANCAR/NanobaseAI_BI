@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 ORIGIN = os.environ.get('PORTAL_ORIGIN', 'https://portal.nanobase.ai')
 DB = os.environ.get('SESSION_DB', '/var/lib/timas-login/sessions.sqlite')
 INVITE = os.environ.get('INVITE_FILE', '/etc/nanobase/timas-test-invite.json')
-VERIFY = os.environ.get('PASSWORD_VERIFY_URL', 'http://127.0.0.1:8797/')
+VERIFY = os.environ.get('PASSWORD_VERIFY_URL', 'http://127.0.0.1:8797/verify')
 COOKIE = '__Secure-timas_session'
 TTL = 8 * 3600
 
