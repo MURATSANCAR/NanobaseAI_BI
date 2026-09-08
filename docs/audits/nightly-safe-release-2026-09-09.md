@@ -18,10 +18,16 @@
 - Üretim metadata yedeği ayrı `nightly_acceptance_20260909` PostgreSQL veritabanına geri yüklendi. Gerçek katalog kopyası özel SQLite adaya taşındı, formüller/profiller değiştirildi, yayınlandı ve yayın sonrası kasıtlı hata üretildi. Geri dönüşte değişebilir tabloların SHA-256 içerik özeti başlangıçla aynı; sorgu kayıtları ve açıklamalar aynı; reload çağrısı 2; günlük durumu `rolled_back`.
 - Kopyadaki kapsam: 1.017 kavram, 1.017 eşleme, 1.789 kanıt, 433 karşı kanıt, 4.352 aday, 4.121 profil, 54 öneri, 3 açıklama, 10 sürüm, 1.244 sorgu kaydı. Test veritabanı sonunda kaldırıldı. Üretim kataloğuna bu hata deneyi uygulanmadı.
 - Python derleme ve Bash sözdizimi kontrolleri geçti. Sunucudaki Python modülü, kalite kapısı ve betik SHA-256 değerleri yerelle eşleşti.
-- Sunucu kurulumu tamamlandı; köprü ve gece zamanlayıcısı active. Eski betik ve servis yedekleri `/data/nanobaseai/bi/backups/nightly-release-20260909` altında.
+- Sunucu kurulumu tamamlandı; köprü ve gece zamanlayıcısı active. Yeni iş 02:00:00’da zamanlayıcıyla başladı; 02:00:12 kontrolünde `activating` (oneshot işi çalışıyor), köprü `active`. Henüz tamamlanma sonucu yok. Eski betik ve servis yedekleri `/data/nanobaseai/bi/backups/nightly-release-20260909` altında.
 
 ## Sınırlar
 
 Bu çalışma tam gece taramasının tamamlandığı anlamına gelmez. Güç kesilmesi/SIGKILL durumunda kurtarma bir sonraki iş başlangıcındadır; kesinti anında çalışan bir geri dönüş garantisi yoktur. Profil → madencilik → sertifikalama akışının yeni düzenle ilk zamanlanmış çalışması ayrıca izlenmelidir. Kalite kapısı şema seçimini ölçer; iş rakamlarının doğruluğunu kanıtlamaz. Tarayıcıdan kullanıcı kabulü için mevcut giriş oturumu, bağımsız iş doğruluğu için geliştirmede kullanılmamış sorular ve onaylı referanslar hâlâ gereklidir.
 
-Canlı 48 soruluk kalite ölçümü sonucu ayrıca kaydedilecek.
+## Canlı kalite sonucu: KALDI
+
+48 soru gerçek katalog ve açık model tablo seçicisiyle ölçüldü. Taban değiştirilmedi. Tablo recall 1.0 → 1.0; tam recall 39 → 39; ret 3 → 4. Tablo precision 0.307 → 0.224; ortalama tablo 6.1 → 8.2; istem tokenı 8619 → 9309. Kapı exit 1 verdi.
+
+Yeni ret: `Yayınevi bazında 2026 YTD net ciro (satış satırları eksi iade satırları), satılan`. Önce PARTIAL/ret yok, şimdi PARTIAL/AMBIGUOUS. Resolver izi `eksi` kelimesini unresolved bırakıyor; iadeyi STLINE.TRCODE IN (2,3) filtresi, satılanı TRCODE IN (7,8) kapsamlı miktar ölçüsü yapıyor ve çelişki görüyor. Ayrıca yayınevi kırılımında ölçü granülaritesi için uyarı veriyor. Önceki ret yokluğu doğru sayısal yanıtın kanıtı değildir; bu test zaten yalnız şema erişimini ölçüyordu. İşlem/ölçü tanımını anlatan ifadelerle gerçek filtrelerin ayrılması hâlâ açık bir semantik iştir. Kapı bu yeni ret için gevşetilmedi ve taban yeniden kaydedilmedi.
+
+Ham sonuç: `artifacts/stress/nightly-live-quality.json`. Güvenli gece yayını mekanizması dağıtıldı; tüm canlı soruların kabulden geçtiği veya genel üretim kabulünün tamamlandığı iddia edilmiyor.

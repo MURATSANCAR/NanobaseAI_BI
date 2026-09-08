@@ -1,0 +1,1710 @@
+{
+ "summary": {
+  "cases": 48,
+  "table_recall": 1.0,
+  "table_precision": 0.224,
+  "fully_recalled": 39,
+  "mean_tables_sent": 8.2,
+  "mean_extra_tables": 6.2,
+  "mean_tokens": 9309,
+  "refused": 4,
+  "states": {
+   "RESOLVED": 22,
+   "PARTIAL": 21,
+   "UNRESOLVED": 5
+  }
+ },
+ "rows": [
+  {
+   "id": "2026-br-t-k-r-marj-nedir-maliyetlendiril",
+   "question": "2026 brüt kâr marjı nedir (maliyetlendirilmiş satış satırlarında)",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "COSTDISTPEG",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "COSTDISTPEG",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.1111111111111111,
+   "tables_sent": 9,
+   "prompt_chars": 28324,
+   "tokens": 9441,
+   "ms": 12744
+  },
+  {
+   "id": "2026-da-mal-al-m-trcode-1-ve-al-nan-hizm",
+   "question": "2026'da mal alım (TRCODE 1) ve alınan hizmet (TRCODE 4) faturalarında tedarikçi",
+   "state": "PARTIAL",
+   "refusal": "AMBIGUOUS",
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 7,
+   "prompt_chars": 29184,
+   "tokens": 9728,
+   "ms": 11380
+  },
+  {
+   "id": "2026-iskonto-oran-nedir",
+   "question": "2026 iskonto oranı nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE",
+    "TSOFT_SIPARISDETAY"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "TSOFT_SIPARISDETAY"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 30099,
+   "tokens": 10033,
+   "ms": 11599
+  },
+  {
+   "id": "2026-ocak-a-ustos-i-in-ay-baz-nda-iskont",
+   "question": "2026 Ocak–Ağustos için ay bazında iskonto oranı ve satış faturası başına ortalama",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "INVOICE",
+    "STLINE"
+   ],
+   "sent": [
+    "ABIRSALIYEFATURA",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "KPMG_SATISRAPORU",
+    "KPMG_V_SATISRAPORU",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "ABIRSALIYEFATURA",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "KPMG_SATISRAPORU",
+    "KPMG_V_SATISRAPORU",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2,
+   "tables_sent": 10,
+   "prompt_chars": 28431,
+   "tokens": 9477,
+   "ms": 12657
+  },
+  {
+   "id": "2026-toplam-net-ciro-nedir",
+   "question": "2026 toplam net ciro nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 27523,
+   "tokens": 9174,
+   "ms": 12308
+  },
+  {
+   "id": "2026-y-l-nda-kitapci-e-ticaret-ve-dagiti",
+   "question": "2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 28761,
+   "tokens": 9587,
+   "ms": 12357
+  },
+  {
+   "id": "2026-yilinda-aylik-net-satis-tutari-nedi",
+   "question": "2026 yılında aylık net satış tutarı nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "AHMET_YILLARA_GÖRE_SATIS",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "AHMET_YILLARA_GÖRE_SATIS",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 8,
+   "prompt_chars": 29962,
+   "tokens": 9987,
+   "ms": 11964
+  },
+  {
+   "id": "agustos-2026-net-satis-tutari-nedir",
+   "question": "Ağustos 2026 net satış tutarı nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.14285714285714285,
+   "tables_sent": 7,
+   "prompt_chars": 29962,
+   "tokens": 9987,
+   "ms": 12111
+  },
+  {
+   "id": "aylik-iskonto-orani-ve-ortalama-fatura-t",
+   "question": "2026 Ocak–Ağustos için ay bazında iskonto oranı ve satış faturası başına ortalama fatura tutarı",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "INVOICE",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 29021,
+   "tokens": 9674,
+   "ms": 11573
+  },
+  {
+   "id": "aylik-siparis-sayisi-ve-tutari",
+   "question": "2026 ay bazında açılan sipariş sayısı ve toplam sipariş tutarı (sipariş fişleri)",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ORFICHE"
+   ],
+   "sent": [
+    "ABSIPARIS",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "ABSIPARIS",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 30158,
+   "tokens": 10053,
+   "ms": 11344
+  },
+  {
+   "id": "en-cok-iade-alan-10-musteri-kimler",
+   "question": "En çok iade alan 10 müşteri kimler?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 28290,
+   "tokens": 9430,
+   "ms": 11253
+  },
+  {
+   "id": "en-ok-iade-alan-10-m-teri-iade-tutar-ayn",
+   "question": "'En çok iade alan 10 müşteri: iade tutarı, aynı müşterinin 2026 satış tutarı,",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 30315,
+   "tokens": 10105,
+   "ms": 12370
+  },
+  {
+   "id": "en-ok-satan-10-kitap-hangileri-adet",
+   "question": "En çok satan 10 kitap hangileri (adet)?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 27286,
+   "tokens": 9095,
+   "ms": 11608
+  },
+  {
+   "id": "gunluk-satis-tutari-son-gunler-nedir",
+   "question": "Günlük satış tutarı (son günler) nedir?",
+   "state": "PARTIAL",
+   "refusal": "AMBIGUOUS",
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.14285714285714285,
+   "tables_sent": 7,
+   "prompt_chars": 29626,
+   "tokens": 9875,
+   "ms": 11354
+  },
+  {
+   "id": "kanal-baz-nda-br-t-k-r-marj-sat-hareket-",
+   "question": "'Kanal bazında brüt kâr marjı: satış hareket satırlarında (TRCODE 7,8, LINETYPE",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.42857142857142855,
+   "tables_sent": 7,
+   "prompt_chars": 29295,
+   "tokens": 9765,
+   "ms": 12500
+  },
+  {
+   "id": "kanal-bazinda-net-ciro-nedir",
+   "question": "Kanal bazında net ciro nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 7,
+   "prompt_chars": 27492,
+   "tokens": 9164,
+   "ms": 12859
+  },
+  {
+   "id": "m-teri-yo-unla-mas-2026-net-ciroya-sat-e",
+   "question": "'Müşteri yoğunlaşması: 2026 net ciroya (satış eksi iade) göre ilk 10 müşterinin",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 33036,
+   "tokens": 11012,
+   "ms": 12172
+  },
+  {
+   "id": "perakende-trcode-7-ile-toptan-trcode-8-s",
+   "question": "'Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır:",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 31988,
+   "tokens": 10663,
+   "ms": 12347
+  },
+  {
+   "id": "temmuz-2026-da-en-ok-satan-15-kitap-stok",
+   "question": "'Temmuz 2026''da en çok satan 15 kitap: stok kodu, kitap adı, yayınevi, satılan",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE",
+    "STOK_HAREKETI"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE",
+    "STOK_HAREKETI"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 28831,
+   "tokens": 9610,
+   "ms": 12213
+  },
+  {
+   "id": "yay-nevi-baz-nda-2026-ytd-net-ciro-sat-s",
+   "question": "Yayınevi bazında 2026 YTD net ciro (satış satırları eksi iade satırları), satılan",
+   "state": "PARTIAL",
+   "refusal": "AMBIGUOUS",
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "NY_V_SATISRAPOR_YAZAR_SEHIR",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "NY_V_SATISRAPOR_YAZAR_SEHIR",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 30227,
+   "tokens": 10076,
+   "ms": 11857
+  },
+  {
+   "id": "yayinevi-bazinda-net-ciro-ve-brut-k-r-ma",
+   "question": "Yayınevi bazında net ciro ve brüt kâr marjı nedir?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EOS_URETIM",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EOS_URETIM",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 8,
+   "prompt_chars": 28440,
+   "tokens": 9480,
+   "ms": 11993
+  },
+  {
+   "id": "gecen-y-la-gore-bu-y-l-ciromuz-nas-l-g",
+   "question": "Geçen yıla göre bu yıl ciromuz nasıl gidiyor?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.14285714285714285,
+   "tables_sent": 7,
+   "prompt_chars": 26044,
+   "tokens": 8681,
+   "ms": 7124
+  },
+  {
+   "id": "2024-ile-2026-aras-ndaki-toplam-ciromu",
+   "question": "2024 ile 2026 arasındaki toplam ciromuz ne kadar?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.1111111111111111,
+   "tables_sent": 9,
+   "prompt_chars": 27719,
+   "tokens": 9240,
+   "ms": 12890
+  },
+  {
+   "id": "bu-y-l-n-ilk-alt-ay-gecen-y-l-n-ilk-al",
+   "question": "Bu yılın ilk altı ayı geçen yılın ilk altı ayına göre ne durumda?",
+   "state": "UNRESOLVED",
+   "refusal": null,
+   "expected": [
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.14285714285714285,
+   "tables_sent": 7,
+   "prompt_chars": 26309,
+   "tokens": 8770,
+   "ms": 11782
+  },
+  {
+   "id": "iyilik-timi-kitab-ndan-bu-y-l-kac-adet",
+   "question": "İyilik Timi kitabından bu yıl kaç adet sattık?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 25945,
+   "tokens": 8648,
+   "ms": 7354
+  },
+  {
+   "id": "e-ticaret-kanal-ndan-gelen-ciro-ne-kad",
+   "question": "E-TİCARET kanalından gelen ciro ne kadar?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "PORTAL_YAZAREKSTRE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "PORTAL_YAZAREKSTRE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 26734,
+   "tokens": 8911,
+   "ms": 10978
+  },
+  {
+   "id": "timas-cocuk-yay-nlar-n-n-bu-y-lki-sat-",
+   "question": "Timaş Çocuk yayınlarının bu yılki satışı ne kadar?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "AA_TUM_SATISLAR_SMM",
+    "AA_TUM_SATISLAR_SMM_E",
+    "AA_TUM_SATISLAR_V7-16",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "AA_TUM_SATISLAR_SMM",
+    "AA_TUM_SATISLAR_SMM_E",
+    "AA_TUM_SATISLAR_V7-16",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2,
+   "tables_sent": 10,
+   "prompt_chars": 26543,
+   "tokens": 8848,
+   "ms": 13226
+  },
+  {
+   "id": "e-ticaretin-toplam-ciro-icindeki-pay-y",
+   "question": "E-ticaretin toplam ciro içindeki payı yüzde kaç?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 28911,
+   "tokens": 9637,
+   "ms": 11391
+  },
+  {
+   "id": "bu-y-l-hic-sat-lmayan-kitaplar-m-z-han",
+   "question": "Bu yıl hiç satılmayan kitaplarımız hangileri?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 25940,
+   "tokens": 8647,
+   "ms": 6668
+  },
+  {
+   "id": "bu-y-l-kac-farkl-musteriye-sat-s-yapt-",
+   "question": "Bu yıl kaç farklı müşteriye satış yaptık?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 26333,
+   "tokens": 8778,
+   "ms": 11087
+  },
+  {
+   "id": "en-cok-iade-alan-5-yay-nevimiz-hangisi",
+   "question": "En çok iade alan 5 yayınevimiz hangisi?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "NY_V_SATISRAPOR_YAZAR_SEHIR",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "NY_V_SATISRAPOR_YAZAR_SEHIR",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 28006,
+   "tokens": 9335,
+   "ms": 11360
+  },
+  {
+   "id": "2010-y-l-nda-ciromuz-ne-kadard",
+   "question": "2010 yılında ciromuz ne kadardı?",
+   "state": "PARTIAL",
+   "refusal": "OUT_OF_SCOPE",
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 8,
+   "prompt_chars": 26413,
+   "tokens": 8804,
+   "ms": 8261
+  },
+  {
+   "id": "bu-y-l-performans-m-z-iyi-mi",
+   "question": "Bu yıl performansımız iyi mi?",
+   "state": "UNRESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "HEDEF_GERC_CARI",
+    "HEDEF_GERC_CARI_MRKT",
+    "HEDEF_GERC_CARI_V3",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "HEDEF_GERC_CARI",
+    "HEDEF_GERC_CARI_MRKT",
+    "HEDEF_GERC_CARI_V3",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 10,
+   "prompt_chars": 26090,
+   "tokens": 8697,
+   "ms": 7596
+  },
+  {
+   "id": "bu-y-lki-churn-oran-m-z-nedir",
+   "question": "Bu yılki churn oranımız nedir?",
+   "state": "UNRESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "NY_CARI_IADE_ORAN_S1Y",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "NY_CARI_IADE_ORAN_S1Y",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 8,
+   "prompt_chars": 26245,
+   "tokens": 8748,
+   "ms": 10530
+  },
+  {
+   "id": "kac-cal-san-m-z-var",
+   "question": "Kaç çalışanımız var?",
+   "state": "UNRESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EMPLOYEE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EMPLOYEE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 8,
+   "prompt_chars": 25805,
+   "tokens": 8602,
+   "ms": 6008
+  },
+  {
+   "id": "yar-n-hava-nas-l-olacak",
+   "question": "Yarın hava nasıl olacak?",
+   "state": "UNRESOLVED",
+   "refusal": null,
+   "expected": [],
+   "sent": [
+    "AA_MATBAA_EKSTRE",
+    "AA_URETIM_CARI_EKSTRE",
+    "AA_YAZARLAR_EKSTRE",
+    "APPROVAL",
+    "CARI_DETAYLI_EKSTRE",
+    "CLCARD",
+    "CLFLINE",
+    "COSTDISTLN",
+    "COSTDISTPEG",
+    "DISPLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "NY_YR_BANKA_DETAY",
+    "ORFICHE",
+    "PAYPLANS",
+    "PORTAL_YAZAREKSTRE",
+    "PRODORD",
+    "STLINE",
+    "WFTASK"
+   ],
+   "missing": [],
+   "extra": [
+    "AA_MATBAA_EKSTRE",
+    "AA_URETIM_CARI_EKSTRE",
+    "AA_YAZARLAR_EKSTRE",
+    "APPROVAL",
+    "CARI_DETAYLI_EKSTRE",
+    "CLCARD",
+    "CLFLINE",
+    "COSTDISTLN",
+    "COSTDISTPEG",
+    "DISPLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "NY_YR_BANKA_DETAY",
+    "ORFICHE",
+    "PAYPLANS",
+    "PORTAL_YAZAREKSTRE",
+    "PRODORD",
+    "STLINE",
+    "WFTASK"
+   ],
+   "recall": null,
+   "precision": 0.0,
+   "tables_sent": 21,
+   "prompt_chars": 28855,
+   "tokens": 9618,
+   "ms": 6123
+  },
+  {
+   "id": "trendyol-dan-bu-y-l-ne-kadar-sat-s-yap",
+   "question": "Trendyol'dan bu yıl ne kadar satış yaptık?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "A_MS_VIRMANAKTARIM",
+    "A_MS_VIRMANAKTARIM_TEST",
+    "CARI_DETAYLI_EKSTRE",
+    "CLCARD",
+    "CLFLINE",
+    "EKSTRE",
+    "INVOICE",
+    "ITEMS",
+    "LAV_CLFLINE",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "A_MS_VIRMANAKTARIM",
+    "A_MS_VIRMANAKTARIM_TEST",
+    "CARI_DETAYLI_EKSTRE",
+    "CLFLINE",
+    "EKSTRE",
+    "ITEMS",
+    "LAV_CLFLINE",
+    "LG_ORFLINE",
+    "LG_STFICHE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.14285714285714285,
+   "tables_sent": 14,
+   "prompt_chars": 29357,
+   "tokens": 9786,
+   "ms": 15205
+  },
+  {
+   "id": "amazon-ve-trendyol-dan-gelen-ciroyu-ka",
+   "question": "Amazon ve Trendyol'dan gelen ciroyu karşılaştır",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "A_MS_VIRMANAKTARIM",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LAV_CLCARD",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "A_MS_VIRMANAKTARIM",
+    "CLFLINE",
+    "ITEMS",
+    "LAV_CLCARD",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2222222222222222,
+   "tables_sent": 9,
+   "prompt_chars": 25979,
+   "tokens": 8660,
+   "ms": 7407
+  },
+  {
+   "id": "pazaryeri-sat-slar-n-n-toplam-ciro-ici",
+   "question": "Pazaryeri satışlarının toplam ciro içindeki payı nedir?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 28690,
+   "tokens": 9563,
+   "ms": 11113
+  },
+  {
+   "id": "kitapc-lar-m-e-ticaret-mi-daha-cok-sat",
+   "question": "Kitapçılar mı e-ticaret mi daha çok satıyor?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 25889,
+   "tokens": 8630,
+   "ms": 7009
+  },
+  {
+   "id": "bayi-kanal-ndan-bu-y-l-kac-adet-kitap-",
+   "question": "Bayi kanalından bu yıl kaç adet kitap gitti?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "STLINE"
+   ],
+   "sent": [
+    "AA_TAHS_SURESI_FAT",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "AA_TAHS_SURESI_FAT",
+    "APPROVAL",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 26937,
+   "tokens": 8979,
+   "ms": 11527
+  },
+  {
+   "id": "yurtd-s-sat-slar-m-z-gecen-y-la-gore-n",
+   "question": "Yurtdışı satışlarımız geçen yıla göre nasıl?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 26104,
+   "tokens": 8701,
+   "ms": 6716
+  },
+  {
+   "id": "her-kanalda-ortalama-siparis-tutar-m-z",
+   "question": "Her kanalda ortalama sipariş tutarımız ne kadar?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "ORFICHE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.2857142857142857,
+   "tables_sent": 7,
+   "prompt_chars": 26223,
+   "tokens": 8741,
+   "ms": 11403
+  },
+  {
+   "id": "cocuk-kitaplar-m-z-hangi-kanalda-daha-",
+   "question": "Çocuk kitaplarımız hangi kanalda daha çok satıyor?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "CLCARD",
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "AA_STOK_BILGILERI_ED",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "AA_STOK_BILGILERI_ED",
+    "APPROVAL",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.375,
+   "tables_sent": 8,
+   "prompt_chars": 26340,
+   "tokens": 8780,
+   "ms": 7656
+  },
+  {
+   "id": "hangi-kitab-m-zdan-en-cok-iade-geliyor",
+   "question": "Hangi kitabımızdan en çok iade geliyor?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "AA_STOK_BILGILERI_ED",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "AA_STOK_BILGILERI_ED",
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 27570,
+   "tokens": 9190,
+   "ms": 13157
+  },
+  {
+   "id": "bir-kitab-n-ortalama-sat-s-fiyat-ne-ka",
+   "question": "Bir kitabın ortalama satış fiyatı ne kadar?",
+   "state": "RESOLVED",
+   "refusal": null,
+   "expected": [
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "A_MS_ITEMS_CODE_BARCODE_PRICE_TARCIN",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "A_MS_ITEMS_CODE_BARCODE_PRICE_TARCIN",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.125,
+   "tables_sent": 8,
+   "prompt_chars": 26331,
+   "tokens": 8777,
+   "ms": 12051
+  },
+  {
+   "id": "en-cok-satan-10-kitab-m-z-n-kac-timas-",
+   "question": "En çok satan 10 kitabımızın kaçı Timaş Çocuk'tan?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EOS_STOK_DURUMU_V2",
+    "INVOICE",
+    "ITEMS",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "EOS_STOK_DURUMU_V2",
+    "INVOICE",
+    "ORFICHE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 26764,
+   "tokens": 8921,
+   "ms": 12017
+  },
+  {
+   "id": "hic-siparis-edilmemis-kitaplar-m-z-var",
+   "question": "Hiç sipariş edilmemiş kitaplarımız var mı?",
+   "state": "PARTIAL",
+   "refusal": null,
+   "expected": [
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "sent": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "ITEMS",
+    "LG_ORFLINE",
+    "ORFICHE",
+    "STLINE"
+   ],
+   "missing": [],
+   "extra": [
+    "APPROVAL",
+    "CLCARD",
+    "CLFLINE",
+    "INVOICE",
+    "LG_ORFLINE",
+    "STLINE"
+   ],
+   "recall": 1.0,
+   "precision": 0.25,
+   "tables_sent": 8,
+   "prompt_chars": 26178,
+   "tokens": 8726,
+   "ms": 6568
+  }
+ ]
+}
