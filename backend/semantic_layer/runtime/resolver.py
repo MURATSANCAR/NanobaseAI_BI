@@ -37,7 +37,7 @@ from semantic_layer.normalize import (
     tokenize,
     verb_root,
 )
-from semantic_layer.naming import source_rank
+from semantic_layer.naming import is_shadow_copy, source_rank
 from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -1023,7 +1023,10 @@ class SemanticResolver:
         for word in dict.fromkeys(looked):
             best: dict[tuple[str, str], dict] = {}
             for form in self._word_forms(word):
-                for hit in (self.columns.search(form, limit=6) or []):
+                # Wide on purpose: a column name like NETTOTAL is carried by dozens of tables, and a
+                # short list is whichever copies scored highest — the base table the business runs on
+                # need not be among them. The ranking below is what chooses; this only has to see it.
+                for hit in (self.columns.search(form, limit=40) or []):
                     # Only a hit on the column's own name counts as a reading of this word. A word
                     # that merely occurs among a column's values says what to filter for, not what
                     # the column is, and taking it for a column is how "fark" becomes a transaction
@@ -1059,13 +1062,17 @@ class SemanticResolver:
                 pr = self.by_entity.get(hit["entity"])
                 rows = (pr.row_count or 0) if pr else 0
                 is_view = pr.row_count is None if pr else True
-                return (source_rank(pr.table_name if pr else hit["entity"], is_view=is_view), -rows, -hit["score"])
+                name = pr.table_name if pr else hit["entity"]
+                # A dated copy of a table carries the same columns and scores like the original. Last,
+                # always: answering from someone's 2017 backup is answering a different question.
+                return (is_shadow_copy(name), source_rank(name, is_view=is_view), -rows, -hit["score"])
             owners = [h["entity"] for h in sorted(top_hits, key=_own_rank)]
-            # Near the question's subject, or — when the question established no subject at all — the
-            # best match itself. `near` is there to stop a reading from moving the question somewhere
-            # else; with nothing yet established there is nothing to move, and the word is all the
-            # question is about.
-            pick = next((e for e in owners if e in near), None) if near else owners[0]
+            # Only on or beside what the question is already about. Without a subject there is
+            # nothing to judge a table against, and the best-scoring copy of a column name is as
+            # likely to be a report view or someone's dated backup as the table the business runs
+            # on — this deployment offered a 2017 copy of the invoice table. A candidate that cannot
+            # be placed is reported, not assumed.
+            pick = next((e for e in owners if e in near), None)
             if pick is None:
                 continue
             prof = self.by_entity.get(pick)

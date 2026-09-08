@@ -1116,9 +1116,11 @@ def test_a_word_the_vocabulary_lacks_is_looked_for_in_the_schema(catalog, profil
     assert inferred[0].mapping.column == "DEFINITION_"
     assert any("sertifikalı değil" in e for e in sq.explanation)
 
-    # ...ve kolon adının kendisi söylendiğinde de: eskiden bu kelime hiçbir yere yazılmadan atlanıyordu
+    # Konusu olmayan bir soruda varsayım yapılmaz: kolon adı bulunur ama aday olarak kalır. Aksi
+    # halde aynı adı taşıyan bir rapor görünümü ya da yıllar önceki bir yedek kopya seçilebiliyor.
     sq2 = r.resolve("2026 outcost toplamı")
-    assert [s.mapping.column for s in sq2.slots if s.explain.get("source") == "column_index"] == ["OUTCOST"], sq2.to_dict()
+    assert [s for s in sq2.slots if s.explain.get("source") == "column_index"] == []
+    assert [c["column"] for c in sq2.candidates] == ["OUTCOST"], sq2.to_dict()
 
 
 def test_an_entity_word_is_never_read_as_a_column_by_the_schema_search(catalog, profiles):
