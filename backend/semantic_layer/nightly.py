@@ -4,7 +4,6 @@ Query logs, annotations and other tenants are never replaced by a rollback.
 A durable journal makes an interrupted publication recoverable on the next run.
 """
 from __future__ import annotations
-import contextlib
 import fcntl
 import hashlib
 import json
@@ -98,6 +97,18 @@ def save(path, data):
     fd=os.open(path.parent,os.O_RDONLY)
     try:os.fsync(fd)
     finally:os.close(fd)
+    if path.name == "journal.json":
+        save(path.with_name("journal-status.json"), {"state":data["state"],"id":data["id"]})
+
+
+def validate_candidate(before, candidate):
+    """A scheduled refresh cannot silently remove certified vocabulary."""
+    def certified(snapshot):
+        return {(r["semantic_type"], r["normalized_term"], r["sense_id"])
+                for r in snapshot[S.sl_concept.name] if r["status"] == "CERTIFIED"}
+    lost = certified(before) - certified(candidate)
+    if lost:
+        raise RuntimeError(f"candidate lost {len(lost)} certified concepts; review required")
 
 
 class Conflict(RuntimeError): pass
@@ -124,7 +135,9 @@ class Release:
         with self.store.engine.begin() as conn:
             lock(conn)
             current=capture(conn,self.tenant,self.datasource,tables=GUARD)
-            if digest(current)!=digest(data["before"]):raise Conflict("catalog changed while candidate was evaluated")
+            if digest(current)!=digest(data["before"]):
+                data["state"]="aborted";save(self.journal,data)
+                raise Conflict("catalog changed while candidate was evaluated")
             replace(conn,candidate,self.tenant,self.datasource)
             version(conn,self.tenant,self.datasource,"nightly:"+data["id"])
         data["state"]="published";save(self.journal,data)
@@ -192,11 +205,23 @@ def main():
         env=dict(os.environ,SEMANTIC_CHANGED_ONLY="1",SEMANTIC_SKIP_EMPTY="1",SEMANTIC_SKIP_SHADOW="1")
         if dsn:env["SEMANTIC_STORE_DSN"]=dsn
         subprocess.run([sys.executable,*args],cwd=root,env=env,check=True)
-    def gate(dsn):command(["tests/text2sql/quality-gate.py","--out",str(run/(("candidate" if dsn else "published")+"-quality.json"))],dsn)
+    def gate(dsn):
+        if dsn:
+            candidate_store = open_store(dsn, create=False)
+            try:
+                with candidate_store.engine.connect() as conn:
+                    candidate = capture(conn, settings.tenant_id, settings.datasource_id, MUTABLE)
+                validate_candidate(json.loads((run/"journal.json").read_text())["before"], candidate)
+            finally:
+                candidate_store.engine.dispose()
+        command(["tests/text2sql/quality-gate.py","--out",str(run/(("candidate" if dsn else "published")+"-quality.json"))],dsn)
     def build(dsn):
         for step in ("profile","mine","docs","certify"):command(["-m","semantic_layer.cli",step],dsn)
     # An unfinished commit is recovered before any fresh mutation is started.
     for old in sorted(state.glob(scope_id+"-*/journal.json")):
+        status=old.with_name("journal-status.json")
+        if status.exists() and json.loads(status.read_text())["state"] in ("complete","aborted","recovered"):
+            continue
         prior=Release(store,settings.tenant_id,settings.datasource_id,old)
         if prior.rollback() or json.loads(old.read_text())["state"]=="rolled_back":
             reload()

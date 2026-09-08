@@ -18,7 +18,9 @@ tables is a good trade — and is reported so a person can judge it.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
+import math
 import os
 import subprocess
 import sys
@@ -32,7 +34,7 @@ BASELINE = HERE / "quality-baseline-golden.json"
 CHECKS = [
     ("table_recall", "doğru tabloya ulaşma", 0.0, "yüksek"),
     ("fully_recalled", "hiç tablo kaçırmayan soru", 0, "yüksek"),
-    ("refused", "cevaplanamayacağını söyleyen", 0, "yüksek"),
+    ("refused", "cevaplanamayacağını söyleyen", 0, "düşük"),
 ]
 #: Reported, never fatal: these are trades, and which way to take them is a person's call.
 WATCH = [("table_precision", "tablo isabeti", "yüksek"),
@@ -45,18 +47,17 @@ def measure(out: Path) -> dict:
     # look slow; worse, a second run started while the first is going measures a machine under a load
     # the first one caused. A lock is cheaper than explaining the numbers afterwards.
     lock = Path("/tmp/quality-gate.lock")
+    handle = lock.open("a+")
     try:
-        fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-    except FileExistsError:
-        raise SystemExit(f"başka bir ölçüm çalışıyor ({lock.read_text()}); bitmesini bekleyin "
-                         f"ya da takıldıysa {lock} dosyasını silin")
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        handle.close()
+        raise SystemExit("başka bir kalite ölçümü çalışıyor")
     try:
         r = subprocess.run([sys.executable, str(HERE / "golden-eval.py"), "--kind", "all", "--out", str(out)],
                            cwd=HERE.parent.parent, capture_output=True, text=True)
     finally:
-        lock.unlink(missing_ok=True)
+        handle.close()
     if r.returncode != 0:
         print(r.stdout[-3000:], r.stderr[-3000:], sep="\n")
         raise SystemExit("ölçüm çalışmadı")
@@ -69,22 +70,38 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--out", default="/tmp/quality-now.json")
     args = ap.parse_args(argv)
 
+    if not args.record and not BASELINE.is_file():
+        raise SystemExit("kalite tabanı yok; gece işi otomatik taban oluşturamaz")
     now = measure(Path(args.out))
     s = now["summary"]
 
-    if args.record or not BASELINE.exists():
+    if args.record:
         BASELINE.write_text(json.dumps(now, ensure_ascii=False, indent=1), encoding="utf-8")
         print("taban kaydedildi:", BASELINE)
         for k, label, _, _ in CHECKS:
             print("   %-30s %s" % (label, s[k]))
         return 0
 
-    base = json.loads(BASELINE.read_text(encoding="utf-8"))["summary"]
+    baseline = json.loads(BASELINE.read_text(encoding="utf-8"))
+    base = baseline["summary"]
     print("%-30s %10s %10s %10s" % ("ölçüt", "taban", "şimdi", "fark"))
     failed: list[str] = []
+    old_rows, new_rows = baseline.get("rows", []), now.get("rows", [])
+    old_ids, new_ids = [r["id"] for r in old_rows], [r["id"] for r in new_rows]
+    if (not old_ids or set(old_ids) != set(new_ids) or len(set(new_ids)) != len(new_ids)
+            or len(set(old_ids)) != len(old_ids) or s.get("cases") != len(new_rows)):
+        failed.append("soru kümesi eksik veya değişmiş")
+    previous = {r["id"]: r for r in old_rows}
+    for row in new_rows:
+        was = previous.get(row["id"])
+        if was and ((not was.get("refusal") and row.get("refusal"))
+                    or set(row.get("missing", [])) - set(was.get("missing", []))):
+            failed.append("soru geriledi: " + str(row["id"]))
     for key, label, tolerance, better in CHECKS + [(k, l, None, b) for k, l, b in WATCH]:
         b, n = base.get(key), s.get(key)
-        if b is None or n is None:
+        if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in (b, n)):
+            if tolerance is not None:
+                failed.append(label + " ölçülmedi")
             continue
         d = n - b
         mark = ""
