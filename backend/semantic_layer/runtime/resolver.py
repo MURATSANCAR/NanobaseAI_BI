@@ -184,6 +184,12 @@ class SemanticResolver:
         for col, values in qf.explicit_codes:
             if col not in self.column_names:
                 continue
+            # "…net ciro 3. kolon…": the number is the third item of a list, and CIRO happens to be a
+            # column somewhere in the schema. Read as a code it silently adds CIRO = 3 to the query —
+            # a filter nobody asked for, on a question that otherwise looks answered.
+            at = [k for k, tok in enumerate(qf.tokens) if tok in values]
+            if at and all(k in frame_idx for k in at):
+                continue
             entity = self._entity_for_column(col, hits)
             if entity:
                 prof = self.by_entity[entity]

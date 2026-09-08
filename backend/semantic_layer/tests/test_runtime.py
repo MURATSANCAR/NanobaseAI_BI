@@ -991,3 +991,12 @@ def test_the_catalog_can_declare_a_grain_that_is_not_the_table_it_sits_on(catalo
                         mapping=Mapping(concept_id="", entity="STLINE", table_pattern="p",
                                         extra={"grain": "INVOICE"}))
     assert R._grain_of(slot) == "INVOICE"
+
+
+def test_an_item_number_is_not_read_as_a_code_for_a_column_that_happens_to_be_named_beside_it(catalog, profiles):
+    """"…net ciro 3. kolon…" — sayı listenin üçüncü maddesi. Yanındaki kelime şemada bir kolon adıysa
+    kod okuması sessizce bir filtre ekliyordu; sorulmamış bir daraltma cevabı sessizce değiştirir."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("1. kolon kanal 2. kolon net ciro 3. kolon toptan satış")
+    assert sq.projection == ["kanal", "net ciro", "toptan satis"]
+    assert not any((f.mapping.column or "") == "CIRO" for f in sq.filters if f.mapping)

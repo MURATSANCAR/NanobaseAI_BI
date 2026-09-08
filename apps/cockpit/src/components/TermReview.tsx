@@ -273,8 +273,12 @@ function facts(d: Record<string, unknown>): string[] {
   if (d.by) out.push(`yazan: ${String(d.by)}`);
   const counts = d.counts as Record<string, number> | undefined;
   if (counts && typeof counts === 'object') {
-    out.push(Object.entries(counts).map(([k, v]) => `${k} · ${nf(v)}`).join('   '));
+    out.push(Object.entries(counts).map(([k, v]) => `«${k}» değeri ${nf(v)} satırda geçiyor`).join(' · '));
   }
+  // Denemede bulunamayan değer, kanıtın en önemli parçasıdır: iddia edilen kod veride yoksa
+  // onaylanacak süzgeç hiçbir satır seçmez.
+  const gone = d.missing as unknown[] | undefined;
+  if (Array.isArray(gone) && gone.length) out.push(`veride bulunamayan değer: ${gone.join(', ')}`);
   return out;
 }
 
@@ -291,8 +295,11 @@ function Field({ k, v }: { k: string; v: ReactNode }) {
 
 /** Bir sorgu, kanıt olarak: sorulan soru ve onu cevaplayan SQL — iddiayı taşıyan satırlar işaretli.
  *  Uzun sorgu katlanır; okunması gereken satır zaten işaretli olandır. */
-function Pair({ ex }: { ex: Provenance['evidence'][number]['examples'][number] }) {
+function Pair({ ex, repeat }: { ex: Provenance['evidence'][number]['examples'][number]; repeat?: boolean }) {
   const [all, setAll] = useState(false);
+  // Aynı sorgu birden çok kanıt türünü besler (hem doğrulanmış sorgu, hem sorguda açık eşleme).
+  // İkinci kez baştan yazmak paneli iki katına çıkarır ve okuyanı aynı satırları tekrar okutur.
+  if (repeat) return <p className="mt-1 text-[11px] leading-snug text-ink-faint">“{ex.question}” — aynı sorgu, yukarıda.</p>;
   const near = new Set<number>();
   ex.hits.forEach((i) => [i - 1, i, i + 1].forEach((j) => j >= 0 && j < ex.lines.length && near.add(j)));
   const long = ex.lines.length > 9 && ex.hits.length > 0;
@@ -335,6 +342,13 @@ function Why({ id }: { id: string }) {
 
   const p = q.data;
   const t = p.target;
+  // Panelde bir sorgu bir kez tam hâliyle görünür; sonraki kanıtlar onu adıyla anar.
+  const shown = new Set<string>();
+  const firstTime = (question: string) => {
+    const first = !shown.has(question);
+    shown.add(question);
+    return first;
+  };
 
   return (
     <div className="mt-2.5 space-y-3 rounded-xl border border-line bg-page/60 p-3">
@@ -372,8 +386,14 @@ function Why({ id }: { id: string }) {
               <div className="flex flex-wrap items-baseline gap-1.5 text-[11px]">
                 <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand-deep">{SOURCE[e.kind] ?? e.kind.toLowerCase()}</span>
                 <span className="font-mono text-[10px] text-ink-faint">{e.source}</span>
+                {(e.support ?? 0) > 1 && <span className="text-[10px] text-ink-faint">· {nf(e.support!)} kez</span>}
                 {e.at && <span className="text-[10px] text-ink-faint">· {dateTr(e.at)}</span>}
               </div>
+              {/* Bazı kanıtın ayrıntısı yok: sayıldığı biliniyor, nereden sayıldığı yazılmamış.
+                  Bunu boş bırakmak «kanıt yok» gibi okunur; olduğu gibi söylemek daha doğru. */}
+              {facts(e.detail).length === 0 && e.examples.length === 0 && !e.detail.snippet && !e.detail.rationale && (
+                <p className="mt-0.5 text-[11px] text-ink-faint">ayrıntısı kaydedilmemiş — yalnız kaç kez görüldüğü biliniyor.</p>
+              )}
               {facts(e.detail).length > 0 && (
                 <p className="mt-0.5 text-[11px] leading-snug text-ink-muted">{facts(e.detail).join(' · ')}</p>
               )}
@@ -383,7 +403,7 @@ function Why({ id }: { id: string }) {
               {typeof e.detail.rationale === 'string' && (
                 <p className="mt-1 rounded-lg bg-white px-2 py-1.5 text-[11px] leading-snug text-ink-muted">model: “{e.detail.rationale}”</p>
               )}
-              {e.examples.map((ex, k) => <Pair key={k} ex={ex} />)}
+              {e.examples.map((ex, k) => <Pair key={k} ex={ex} repeat={!firstTime(ex.question)} />)}
               {/* Bulunamayan kanıt sessizce düşürülmez: karar verilirken sayılmış bir sorgu artık
                   gösterilemiyorsa, ekran daha az kanıt varmış gibi davranmamalı. */}
               {e.missing > 0 && (
