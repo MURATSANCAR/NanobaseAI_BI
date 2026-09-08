@@ -569,12 +569,15 @@ class Runtime:
                 self.thread_plans.pop(stale, None)
         self.ensure_fresh()
         t = time.perf_counter()
-        from semantic_layer.runtime.conversation import compose_followup
+        from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
         effective_question, context_error = compose_followup(question, self.thread_plans.get(thread_id))
         if context_error:
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
                     "threadId": thread_id, "timings": timings}
         sq = self.resolver.resolve(effective_question)
+        if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
+            bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
+                                self.existing.columns, self.conventions)
         if effective_question != question:
             sq.explanation.append(f"Konuşma bağlamıyla tamamlanan soru: {effective_question}")
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)

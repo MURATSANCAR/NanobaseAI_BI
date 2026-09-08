@@ -43,3 +43,14 @@ def test_no_business_declaration_no_absence_proof(profiles):
     q,c=plan(profiles);c.conventions.absence_rules=[]
     assert c.compile(q,None) is None
     assert unmet_obligations(q,"SELECT * FROM LG_411_ITEMS")
+
+
+def test_fact_candidates_from_another_firm_are_excluded(profiles):
+    from copy import deepcopy
+    q,c=plan(profiles)
+    foreign=deepcopy(c.tables_of["STLINE"][0]);foreign.context={**foreign.context,"n0":"211"}
+    foreign.table_name=foreign.table_name.replace("411","211")
+    choose=c._chosen
+    c._chosen=lambda entity,*a,**kw:choose(entity,*a,**kw)+([foreign] if entity=="STLINE" else [])
+    out=c.compile(q,None)
+    assert out and "211" not in out.sql

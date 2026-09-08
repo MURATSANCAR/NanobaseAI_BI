@@ -67,23 +67,38 @@ def test_requests_are_serialised_and_ordered(queue_store):
 
 
 def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
-    llm = SlowLlm(delay=0.3)
+    started, release = threading.Event(), threading.Event()
+
+    class HeldLlm(SlowLlm):
+        def chat(self, messages, **kwargs):
+            if messages[-1]["content"] == "uzun":
+                started.set()
+                assert release.wait(timeout=10), "test did not release the model"
+            return super().chat(messages, **kwargs)
+
+    llm = HeldLlm(delay=0.01)
     queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
     client = QueuedLlm(llm, queue)
     results: dict[int, str] = {}
     a = threading.Thread(target=_ask, args=(client, "uzun", results, 0))
-    a.start()
-    time.sleep(0.05)
-    status = queue.status()
-    assert status["running"] == 1
     b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1))
-    b.start()
-    time.sleep(0.05)
-    waiting = queue.status()
-    assert waiting["waiting"] == 1 and waiting["queue"][0]["position"] == 1   # told where they are in line
-    a.join(timeout=20)
-    b.join(timeout=20)
-    assert results[1] == "ok:beklesin"                                        # waited, did not fail
+    a.start()
+    try:
+        assert started.wait(timeout=5), "first request never reached the model"
+        assert queue.status()["running"] == 1
+        b.start()
+        deadline = time.monotonic() + 5
+        waiting = queue.status()
+        while waiting["waiting"] != 1 and time.monotonic() < deadline:
+            time.sleep(0.01)
+            waiting = queue.status()
+        assert waiting["waiting"] == 1 and waiting["queue"][0]["position"] == 1
+    finally:
+        release.set()
+        a.join(timeout=20)
+        if b.ident is not None:
+            b.join(timeout=20)
+    assert results[1] == "ok:beklesin"
     assert client.last_wait_ms > 0
 
 

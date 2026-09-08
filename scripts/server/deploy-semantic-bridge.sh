@@ -229,7 +229,7 @@ IOSchedulingClass=best-effort
 IOSchedulingPriority=7
 TimeoutStartSec=7200
 ExecStart=${VENV}/bin/python -m semantic_layer.cli pipeline --llm --note nightly
-ExecStartPost=-/usr/bin/curl -fsS -m 30 -X POST http://127.0.0.1:${PORT}/api/v1/semantic/reload
+ExecStartPost=-/usr/bin/curl -fsS -H "X-Semantic-Admin: \${SEMANTIC_ADMIN_TOKEN}" -m 30 -X POST http://127.0.0.1:${PORT}/api/v1/semantic/reload
 WORKEREOF
 sudo cp "${ROOT}/infra/systemd/nanobase-semantic-worker.timer" /etc/systemd/system/
 # Watchdog: a port check is not health — this one asks the bridge a real question every five minutes.
@@ -240,9 +240,9 @@ sudo -E systemctl restart nanobase-semantic-bridge.service
 sleep 3
 
 # --- 7. smoke: the service must answer, and answer from the catalog --------------------------------
-curl -fsS -m 20 "http://127.0.0.1:${PORT}/health" | head -c 400; echo
-curl -fsS -m 20 "http://127.0.0.1:${PORT}/api/v1/engine" | head -c 400; echo
-ASK="$(curl -fsS -m 240 -H 'Content-Type: application/json' -d '{"question":"2026 toplam net ciro nedir?","sampleSize":5}' "http://127.0.0.1:${PORT}/api/v1/ask")"
+curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 20 "http://127.0.0.1:${PORT}/health" | head -c 400; echo
+curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 20 "http://127.0.0.1:${PORT}/api/v1/engine" | head -c 400; echo
+ASK="$(curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 240 -H 'Content-Type: application/json' -d '{"question":"2026 toplam net ciro nedir?","sampleSize":5}' "http://127.0.0.1:${PORT}/api/v1/ask")"
 echo "$ASK" | head -c 700; echo
 echo "$ASK" | grep -q '"type": *"TEXT_TO_SQL"' || die "ask smoke did not produce SQL — inspect journalctl -u nanobase-semantic-bridge"
 

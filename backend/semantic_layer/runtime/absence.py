@@ -24,7 +24,8 @@ def compile_absence(compiler, q):
     sources, tables = {}, []
     for entity, columns in rule["columns"].items():
         selected = compiler._chosen(entity, q, spread=entity != target, anchor=anchor)
-        if any(compiler._firm_of(p) != compiler._firm_of(chosen[0]) for p in selected):
+        selected = [p for p in selected if compiler._firm_of(p) == compiler._firm_of(chosen[0])]
+        if not selected:
             return None
         src, names, _ = compiler._source(entity, q, set(columns), entity, chosen=selected)
         sources[entity] = src

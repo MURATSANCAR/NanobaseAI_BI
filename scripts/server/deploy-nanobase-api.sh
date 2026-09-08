@@ -147,5 +147,16 @@ sudo systemctl enable nanobase-bi-api
 sudo systemctl restart nanobase-bi-api
 sleep 2
 curl -fsS http://127.0.0.1:8790/health | python3 -m json.tool
-curl -fsS http://127.0.0.1:8790/api/v1/bi/sources | python3 -c 'import sys,json; d=json.load(sys.stdin); print("sources", len(d.get("sources") or []), "active", d.get("active_id"))'
+# Smoke the authenticated path without printing or persisting a bearer token.
+(set -a; source "$ENV_FILE"; set +a; "${VENV}/bin/python" - <<'PY_SMOKE'
+import os, time, json, urllib.request, jwt
+claims = {"sub": "deployment-check", "tenant_id": os.environ.get("DEV_TENANT_ID", "default"),
+          "roles": ["ADMIN"], "exp": int(time.time()) + 60}
+token = jwt.encode(claims, os.environ["JWT_SECRET"], algorithm="HS256")
+req = urllib.request.Request("http://127.0.0.1:8790/api/v1/bi/sources", headers={"Authorization": "Bearer " + token})
+with urllib.request.urlopen(req, timeout=15) as response:
+    data = json.load(response)
+print("sources", len(data.get("sources") or []))
+PY_SMOKE
+)
 log "nanobase-bi-api active on :8790 (bridge :8789 unchanged)"

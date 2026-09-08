@@ -29,3 +29,36 @@ def compose_followup(question, previous):
         base = re.sub(r"\b(?:gore|kiyasla|karsi|nazaran|oranla)\b", " ", base) if previous.comparison else base
         return " ".join((base + " " + text).split()), None
     return " ".join((base + " " + text).split()), None
+
+
+def bind_followup_value(question, sq, previous, probe, columns, conventions):
+    """An exact, unique value in the previous plan's entities may fill a filter.
+
+    A substring hit or competing column is not evidence of one specific filter.
+    This is an inferred query binding, never a catalog certification.
+    """
+    from semantic_layer.models import Mapping, ResolvedSlot
+    text = fold(question).strip(" ?.! ")
+    if not text.startswith("sadece ") or previous is None or probe is None:
+        return
+    term = text[len("sadece "):].strip()
+    if term not in [fold(w) for w in sq.unresolved]:
+        return
+    entities = sorted({s.mapping.entity for s in previous.slots if s.mapping})
+    try:
+        hits = probe.find(term, entities, columns, sq.question)
+    except Exception:
+        sq.clarification.append("Filtre değeri doğrulanamadı. Hangi alanı filtrelemek istediğinizi belirtir misiniz?")
+        return
+    exact = {(h.entity,h.column,h.value) for h in hits if fold(h.value) == term and h.entity in entities}
+    if len(exact) != 1:
+        sq.clarification.append(f"'{term}' hangi alanın değeri? Tek bir kesin eşleşme doğrulanamadı.")
+        return
+    entity,column,value = next(iter(exact))
+    sq.slots = [s for s in sq.slots if not (s.semantic_type == "DIMENSION_VALUE" and s.mapping and
+                s.mapping.entity == entity and s.mapping.column == column)]
+    sq.slots.append(ResolvedSlot(term,"DIMENSION_VALUE","INFERRED",mapping=Mapping("",entity,
+                    conventions.patterns[entity],column=column,operator="=",values=[value]),
+                    explain={"source":"exact_scoped_value_probe","value":value}))
+    sq.unresolved = [w for w in sq.unresolved if fold(w) != term]
+    sq.explanation.append(f"'{term}' önceki planın {entity}.{column} alanında tek tam değer eşleşmesiyle bağlandı.")

@@ -31,3 +31,30 @@ def test_city_followup_preserves_previous_period_and_metric():
 
 def test_unknown_followup_words_are_not_dropped():
     assert compose_followup("Peki geçen yıl gizli", previous())[0] == "Peki geçen yıl gizli"
+
+
+def test_unique_exact_value_becomes_audited_filter():
+    from types import SimpleNamespace
+    from semantic_layer.models import ResolvedSlot, Mapping
+    from semantic_layer.runtime.value_probe import ValueHit
+    from semantic_layer.runtime.conversation import bind_followup_value
+    old=previous();old.slots=[ResolvedSlot("kanal","COLUMN","CERTIFIED",mapping=Mapping("","CLCARD","LG_{n0}_CLCARD",column="SPECODE2"))]
+    current=previous();current.unresolved=["ankara"]
+    probe=SimpleNamespace(find=lambda *a:[ValueHit("CLCARD","CITY","ANKARA",2)])
+    bind_followup_value("Sadece Ankara",current,old,probe,None,SimpleNamespace(patterns={"CLCARD":"LG_{n0}_CLCARD"}))
+    assert not current.unresolved
+    assert current.filters[0].mapping.values==["ANKARA"]
+    assert current.filters[0].status=="INFERRED"
+
+
+def test_ambiguous_or_partial_value_does_not_become_filter():
+    from types import SimpleNamespace
+    from semantic_layer.models import ResolvedSlot, Mapping
+    from semantic_layer.runtime.value_probe import ValueHit
+    from semantic_layer.runtime.conversation import bind_followup_value
+    old=previous();old.slots=[ResolvedSlot("kanal","COLUMN","CERTIFIED",mapping=Mapping("","CLCARD","p",column="SPECODE2"))]
+    for hits in [[ValueHit("CLCARD","CITY","ANKARA MERKEZ",2)],
+                 [ValueHit("CLCARD","CITY","ANKARA",2),ValueHit("CLCARD","NAME","ANKARA",1)]]:
+        current=previous();current.unresolved=["ankara"]
+        bind_followup_value("Sadece Ankara",current,old,SimpleNamespace(find=lambda *a:hits),None,SimpleNamespace(patterns={"CLCARD":"p"}))
+        assert current.unresolved==["ankara"] and not current.filters
