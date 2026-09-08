@@ -82,11 +82,17 @@ def _one_per_window(chosen: list[SchemaProfile]) -> list[SchemaProfile]:
     for p in chosen:
         w = _window(p)
         # to the month: a re-import rarely lands on the same day, and never in a different quarter
-        key = (w[0].year, w[0].month, w[1].year, w[1].month) if w else ("undated", p.table_name)
+        # A table with no date column has no period, so two of them cannot be two halves of one:
+        # they are copies, and reading both adds the same rows to themselves. Keyed by pattern, not
+        # by name — LG_{n0}_ITEMS and LV_{n0}_ITEMS are different things, LG_211_ITEMS and
+        # LG_411_ITEMS are the same product catalogue in two firms. Unioning those doubled every
+        # product-level figure in the deployment, and joined a firm's sales lines to another firm's
+        # items, where LOGICALREF means something else entirely.
+        key = (w[0].year, w[0].month, w[1].year, w[1].month) if w else ("undated", p.table_pattern)
         groups.setdefault(key, []).append(p)
     keep: set[str] = set()
     for key, members in groups.items():
-        if len(members) == 1 or key[0] == "undated":
+        if len(members) == 1:
             keep.update(m.table_name for m in members)
             continue
         keep.add(max(members, key=_preference).table_name)

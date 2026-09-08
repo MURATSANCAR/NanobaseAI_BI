@@ -828,13 +828,18 @@ class SemanticResolver:
             )
         return None
 
-    def _points_at(self, root: str, hops: int = 3) -> set[str]:
+    def _points_at(self, root: str, hops: int = 1) -> set[str]:
         """Bir `root` satırından TEK bir satırına gidilebilen varlıklar — yabancı anahtarın yönü.
 
         `_related_entities` yönsüzdür ("bu ikisi bir arada sorulabilir" der). Taneciklik sorusu ise
         yönlüdür: faturanın müşterisi tektir, ama bir faturanın ürünü tek değildir. Kırılım yalnız
         okun gösterdiği yönde güvenlidir; ters yönde ölçü satırlara bölünmek zorundadır ve bölme
         işini yapan tablo elde yoksa çıkan rakam ya tekrarlanır ya da uydurulur.
+
+        Tek sıçrama, ve bu bilerek: 4121 profillik gerçek bir grafikte üç sıçramada her şey her şeye
+        ulaşıyor ve "güvenli" cevabı anlamını yitiriyor — fatura, müşterisi üzerinden ürüne de
+        "bağlı" çıkıyordu. Kırılımın ölçünün kendi satırının doğrudan niteliği olması aranır;
+        emin olunamayan durumda daha ince tanımı aramak, yanlış tanecikte cevap vermekten iyidir.
         """
         cached = self._fk_cache.get(root)
         if cached is not None:

@@ -402,7 +402,12 @@ class DeterministicCompiler:
         sql += f"\nFROM {source} AS {alias}"
         for ent, col, ref_ent, ref_col in plan.joins:
             joined = ref_ent if ref_ent != plan.entity else ent
-            j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | {col, ref_col}, joined)
+            # Only the join column that belongs to *this* side. Both were added here, so an entity
+            # whose years are read as a UNION got the other table's column in its projection and the
+            # database refused the query: "Invalid column name 'STOCKREF'". Invisible until an entity
+            # both spans periods and is joined — the shape a product breakdown produces.
+            own = ({col} if ent == joined else set()) | ({ref_col} if ref_ent == joined else set())
+            j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined)
             read_tables += j_tables
             if j_note:
                 explain.append(j_note)

@@ -1000,3 +1000,48 @@ def test_an_item_number_is_not_read_as_a_code_for_a_column_that_happens_to_be_na
     sq = r.resolve("1. kolon kanal 2. kolon net ciro 3. kolon toptan satış")
     assert sq.projection == ["kanal", "net ciro", "toptan satis"]
     assert not any((f.mapping.column or "") == "CIRO" for f in sq.filters if f.mapping)
+
+
+def test_a_joined_entity_that_spans_years_is_not_projected_with_the_other_side_s_column(catalog, profiles):
+    """Yılları UNION ile okunan bir tabloya karşı tarafın join kolonu yazılıyordu: veritabanı
+    "Invalid column name 'STOCKREF'" diyerek sorguyu reddediyor. Yalnız hem dönemlere yayılan hem de
+    join'lenen bir varlıkta görünüyor — ürün kırılımının ürettiği şekil."""
+    from copy import deepcopy
+    from semantic_layer.models import utcnow
+
+    _certify(catalog, "urun", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+
+    older = deepcopy(next(p for p in profiles if p.entity == "ITEMS"))   # aynı desenin ikinci yılı
+    older.table_name, older.context, older.scanned_at = "LG_211_ITEMS", {"n0": "211"}, utcnow()
+    spread = profiles + [older]
+
+    r = SemanticResolver(catalog, TENANT, DS, spread)
+    c = DeterministicCompiler(spread, {"n0": "411", "n1": "01"}, "tsql")
+    sq = r.resolve("2026 ürün bazında satış tutarı", today=date(2026, 7, 20))
+    out = c.compile(sq, catalog)
+    if out is None or "UNION ALL" not in out.sql:
+        return                                   # bu kurulumda yıl birleşimi oluşmuyorsa iddia yok
+    items_block = out.sql.split("AS ITEMS")[0].rsplit("JOIN", 1)[-1]
+    assert "STOCKREF" not in items_block, out.sql
+
+
+def test_two_copies_of_a_dated_table_are_not_read_as_two_periods_of_it():
+    """Tarihi olmayan bir tablonun dönemi de yoktur: aynı desenin iki kopyası iki yarım değil, iki
+    kopyadır. Birleştirilince her ürün satırı ikizleniyor ve ürün bazlı her rakam iki katına çıkıyordu
+    — üstelik bir firmanın satır tablosu başka bir firmanın ürünlerine bağlanıyordu."""
+    from semantic_layer.models import utcnow
+    from semantic_layer.runtime import periods as P
+
+    def _p(name, pattern, rows):
+        return SchemaProfile(datasource_id="d", table_name=name, table_pattern=pattern, entity="ITEMS",
+                             schema_name="dbo", row_count=rows, scanned_at=utcnow())
+
+    same = [_p("LG_211_ITEMS", "LG_{n0}_ITEMS", 29759), _p("LG_411_ITEMS", "LG_{n0}_ITEMS", 32322)]
+    kept = P.tables_for(same, date(2026, 1, 1), date(2027, 1, 1))
+    assert [k.table_name for k in kept] == ["LG_411_ITEMS"], "aynı desenin tarihsiz kopyalarından biri okunur"
+
+    # ...ama farklı desenler farklı şeylerdir ve ikisi de elde kalır
+    mixed = same + [_p("LV_411_ITEMS", "LV_{n0}_ITEMS", 32322)]
+    assert len(P.tables_for(mixed, date(2026, 1, 1), date(2027, 1, 1))) == 2
