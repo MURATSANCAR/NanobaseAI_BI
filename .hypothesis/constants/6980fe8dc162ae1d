@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/application/execute_query.py
+# hypothesis_version: 6.168.0
+
+[400, 404, 1000, 60000, 'MEDIUM', 'QUERY_EXECUTED', 'SUCCESS', 'allow_insecure_tls', 'column_policies', 'columns', 'datasourceId', 'driver', 'event', 'executionId', 'executionTimeMs', 'gatewayTimeMs', 'hana', 'large', 'medium', 'mssql', 'normalizedSql', 'odata', 'oracle', 'parameters', 'plan', 'policyVersion', 'postgres', 'postgresql', 'rowCount', 'rows', 'size_profile', 'sqlFingerprint', 'sqlserver', 'ssl_validate', 'status', 'tenantId', 'traceId', 'truncated', 'validate_certificate', 'validationTimeMs']

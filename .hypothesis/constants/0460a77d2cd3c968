@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/profiler/sensitivity.py
+# hypothesis_version: 6.168.0
+
+[0.6, ',', 'IBAN biçimi', '^\\+?\\d[\\d ()\\-]{8,}$', '^\\d{11}$', 'e-posta biçimi', 'telefon biçimi', '•••']

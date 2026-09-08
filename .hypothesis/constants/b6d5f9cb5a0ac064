@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/retrieval/forecast_intent.py
+# hypothesis_version: 6.168.0
+
+['36', 'Ankara', 'Berlin', 'HORIZON_UNRESOLVED', 'I', 'M', 'METRIC_UNRESOLVED', 'NFKD', 'Q', 'UNSUPPORTED_GRAIN', 'UNSUPPORTED_SHAPE', 'W', 'Y', 'alti', 'altı', 'ay', 'bes', 'beş', 'bir', 'branch_city', 'ceyrek', 'city', 'day', 'declined', 'dimensionFilters', 'dokuz', 'dort', 'dört', 'eight', 'five', 'four', 'frequency', 'grain', 'gun', 'gün', 'hafta', 'historyMonths', 'horizon', 'i', 'iki', 'metricCode', 'month', 'nine', 'on', 'on bir', 'on iki', 'one', 'quarter', 'reason', 'sekiz', 'seven', 'six', 'ten', 'three', 'total_quantity_sold', 'total_revenue', 'twelve', 'two', 'uc', 'week', 'year', 'yedi', 'yil', 'yıl', 'çeyrek', 'üç', 'İ', 'İstanbul', 'ı']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/critic.py
+# hypothesis_version: 6.168.0
+
+['*', ', ', '; ', 'EMPTY_TABLE', 'FANOUT', 'MIXED_BASIS', 'NON_NUMERIC', 'Scope', 'UNKNOWN_COLUMN', 'UNKNOWN_JOIN', 'UNKNOWN_VALUE', '_', 'alt sorgu', 'bigint', 'block', 'column', 'decimal', 'double', 'float', 'group', 'int', 'joins', 'kind', 'message', 'money', 'number', 'numeric', 'on', 'real', 'ref_column', 'ref_entity', 'severity', 'smallint', 'smallmoney', 'tinyint', 'tsql', 'warn']

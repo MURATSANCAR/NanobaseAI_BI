@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/workflows/sql_plan.py
+# hypothesis_version: 6.168.0
+
+[400, 800, 1200, 1500, 2000, 3000, 4000, 4096, '2048', '4500', '9000', 'TEXT2SQL_PREFER', 'arctic', 'chat', 'error', 'finish_reason', 'hana', 'hint_extra', 'hits', 'length', 'mssql', 'mssqlserver', 'odata', 'ok', 'oracle', 'parse_retry_forced', 'postgres', 'postgresql', 'query_guidance', 'retrieved_schema', 's4_odata', 'sap_hana', 'sap_odata', 'schema_hint', 'semantic_catalog', 'sql-plan-v1-hana', 'sql-plan-v1-mssql', 'sql-plan-v1-oracle', 'sql-plan-v1-s4-odata', 'sql_plan', 'sql_server', 'sqlserver', 'table_columns', 'tables', 'tail_overflow', 'text2sql', 'tsql']

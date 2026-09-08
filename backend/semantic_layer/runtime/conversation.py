@@ -24,7 +24,7 @@ def compose_followup(question, previous):
     base = fold(previous.question)
     if temporal_only:
         for period in previous.temporal:
-            base = base.replace(fold(period.text), " ")
+            base = re.sub(r"(?<!\w)" + re.escape(fold(period.text)) + r"(?!\w)", " ", base)
         # A single-period follow-up replaces a comparison, rather than leaving its cue behind.
         base = re.sub(r"\b(?:gore|kiyasla|karsi|nazaran|oranla)\b", " ", base) if previous.comparison else base
         return " ".join((base + " " + text).split()), None

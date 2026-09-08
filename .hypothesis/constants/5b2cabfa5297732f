@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/database/mssql_executor.py
+# hypothesis_version: 6.168.0
+
+[0.01, 50000.0, 400, 403, 408, 503, 1000, 1433, 15000, '([] ', ')', ', ', '127.0.0.1', '7.4', 'Argument', 'COLUMN_NOT_FOUND', 'EstimateRows', 'LogicalOp', 'OBJECT:', 'PERMISSION_DENIED', 'PhysicalOp', 'QUERY PLAN', 'SELECT 1', 'SET SHOWPLAN_ALL OFF', 'SET SHOWPLAN_ALL ON', 'SQL_EXECUTION_FAILED', 'Scan', 'StmtText', 'TotalSubtreeCost', 'UTF-8', 'WHERE:', '[', ']', 'adaptive server', 'closed', 'connection', 'database', 'denied', 'filterless', 'filterless_scan', 'host', 'id', 'invalid column name', 'invalid object name', 'large', 'login failed', 'master', 'medium', 'mssql', 'password', 'permission', 'plan_rows', 'port', 'replace', 'small', 'tds_version', 'timed out', 'timeout', 'total_cost', 'user', 'utf-8', 'very_large']

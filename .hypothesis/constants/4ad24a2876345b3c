@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/value_probe.py
+# hypothesis_version: 6.168.0
+
+[0.5, 1.0, 1.5, 2.0, '(yok)', '12', '4', '6', 'SEMANTIC_PROBE_TOP', 'char', 'column', 'entity', 'nchar', 'ntext', 'nvarchar', 'search_values', 'text', 'varchar']

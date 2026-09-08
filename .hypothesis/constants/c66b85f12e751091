@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/temporal.py
+# hypothesis_version: 6.168.0
+
+['(20\\d{2})', '-', 'AMBIGUOUS_RECENT', 'DAY', 'LAST_MONTH', 'LAST_N_DAYS', 'LAST_N_MONTHS', 'LAST_N_YEARS', 'LAST_QUARTER', 'LAST_WEEK', 'LAST_YEAR', 'MONTH', 'MONTHS', 'MONTH_RANGE', 'MTD', 'PRIMITIVES', 'QTD', 'QUARTER', 'RANGE', 'THIS_MONTH', 'THIS_QUARTER', 'THIS_WEEK', 'THIS_YEAR', 'TODAY', 'TemporalSlot', 'WEEK', 'YEAR', 'YESTERDAY', 'YTD', '[–—-]', 'agustos', 'aralik', 'calendar', 'ceyre[kg]', 'describe', 'ekim', 'eylul', 'from', 'haziran', 'kasim', 'mart', 'mayis', 'month', 'month_count', 'n', 'nisan', 'ocak', 'parse_temporal', 'subat', 'temmuz', 'to', 'year', 'year_assumed', 'ytd', '|']

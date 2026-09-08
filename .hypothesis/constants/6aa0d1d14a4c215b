@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/semantic_catalog/infrastructure/metric_compiler.py
+# hypothesis_version: 6.168.0
+
+['\n  AND ', '!=', '"', "'", "''", ',\n    ', ', ', '.', ';', '<', '<=', '<>', '=', '>', '>=', 'ASC', 'DD', 'DESC', 'FALSE', 'GROUP BY ', 'IN', 'IS_NOT_NULL', 'IS_NULL', 'IW', 'MM', 'N', 'NOT_IN', 'NULL', 'ORDER BY ', 'Q', 'SELECT\n', 'TRUE', 'WHERE ', 'YYYY', 'ZERO', '\\s+', 'astFingerprint', 'day', 'dialect', 'dimensionFilters', 'from', 'groupBy', 'limit', 'logicalPlan', 'month', 'mssql', 'oracle', 'orderDesc', 'period', 'periodAlias', 'postgres', 'postgresql', 'quarter', 'sql', 'sqlserver', 't', 'timeGrain', 'to', 'tsql', 'utf-8', 'week', 'year']

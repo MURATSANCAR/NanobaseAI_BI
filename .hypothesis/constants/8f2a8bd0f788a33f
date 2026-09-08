@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/forecasting/contracts/builder.py
+# hypothesis_version: 6.168.0
+
+[120, 10000, '+00:00', ',', ':', 'Boş tarih değeri.', 'D', 'DUPLICATE_TIMESTAMPS', 'Europe/Istanbul', 'FREQUENCY_MISMATCH', 'GAPS_EXCEED_POLICY', 'HORIZON_TOO_LONG', 'INSUFFICIENT_HISTORY', 'INVALID_POLICY', 'INVALID_TIMESTAMP', 'INVALID_VALUE', 'M', 'Q', 'W', 'Y', 'Z', 'frequency', 'history', 'horizon', 'interpolate', 'missing_policy', 'nan', 'period', 'reject', 'series_id', 'sha256:', 'zero']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/config.py
+# hypothesis_version: 6.168.0
+
+[0.6, 240.0, 500, ',', '.semantic_layer.db', '/', '0.6', '1', '240', '3', '4', '500', '64', '=', 'LLM_MODEL_NAME', 'LLM_TIMEOUT_SEC', 'NANOBASE_META_DSN', 'OPENAI_API_BASE', 'OPENAI_API_KEY', 'SEMANTIC_CONTEXT', 'SEMANTIC_DIALECT', 'SEMANTIC_MAX_ROWS', 'SEMANTIC_MIN_SUPPORT', 'SEMANTIC_PROJECT_DIR', 'SEMANTIC_RECALL', 'SEMANTIC_SCHEMA', 'SEMANTIC_STORE_DSN', 'SEMANTIC_STORE_PATH', 'SEMANTIC_STRICT_MISS', 'SEMANTIC_TABLE_LIKE', 'SEMANTIC_TENANT_ID', 'SemanticSettings', 'default', 'fast', 'logo', 'nanobaseai-bi-llm', 'on', 'sqlite:///', 'true', 'yes']

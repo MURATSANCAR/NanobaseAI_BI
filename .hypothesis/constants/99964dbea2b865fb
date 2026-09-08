@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/profiler/intugle_adapter.py
+# hypothesis_version: 6.168.0
+
+[0.8, 500, 100000, '.', 'available', 'build', 'business_description', 'business_glossary', 'column', 'column_glossary', 'column_name', 'confidence', 'dataset', 'description', 'entity', 'errors', 'evidence', 'field', 'from', 'generate_glossary', 'glossary', 'glossary_added', 'intugle', 'intugle:link', 'left', 'link_predictions', 'links', 'links_added', 'links_seen', 'predict_links', 'predicted_links', 'probability', 'profile', 'ran', 'ref', 'ref_column', 'ref_entity', 'relationships', 'right', 'schema', 'score', 'source', 'source_column', 'source_table', 'table', 'table_name', 'tables', 'target', 'target_table', 'text', 'to']

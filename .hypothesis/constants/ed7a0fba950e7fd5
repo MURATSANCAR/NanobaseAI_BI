@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/parser/bind_params.py
+# hypothesis_version: 6.168.0
+
+[400, '"`', "'", "''", "'x'", '*/', '--', '/*', '1', 'FALSE', 'INVALID_BIND_PARAM', 'MISSING_BIND_PARAM', 'NULL', 'TRUE', '[', ']', 'fetch_limit', 'limit', 'status']

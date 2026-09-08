@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/llm_queue.py
+# hypothesis_version: 6.168.0
+
+[0.25, 1.5, 5.0, 500, 900, 1000, 1800, '1', '1800', '900', 'ABANDONED', 'DONE', 'LlmQueue', 'RUNNING', 'SEMANTIC_LLM_SLOTS', 'WAITING', 'backend', 'bg:%', 'content', 'database', 'default', 'enqueuedAt', 'enqueued_at', 'id', 'llmq', 'local', 'model', 'nl2sql', 'position', 'process', 'purpose', 'queue', 'role', 'running', 'slots', 'startedAt', 'started_at', 'status', 'user', 'user_id', 'waiting', 'waitingMs']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/history/question_facts.py
+# hypothesis_version: 6.168.0
+
+['.', '^20\\d\\d$']

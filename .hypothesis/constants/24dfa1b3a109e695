@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/evidence/refute.py
+# hypothesis_version: 6.168.0
+
+[10000, 100000, ' || ', '.', 'ALIAS_BINDING', 'BLOCKING', 'EXPLICIT_BINDING', 'HUMAN_ANNOTATION', 'LLM_CANDIDATE', 'REFUTED', 'VALIDATED_SQL', 'column', 'concept', 'entity', 'evidence', 'evidenceCount', 'evidence_type', 'human_certified_by', 'human_rejected_by', 'id', 'label', 'mapping', 'message', 'never_asked', 'own_fit', 'ref_entity', 'rival_entity', 'rival_fit', 'source_label', 'support', 'unlinked_copy', 'values', 'why']

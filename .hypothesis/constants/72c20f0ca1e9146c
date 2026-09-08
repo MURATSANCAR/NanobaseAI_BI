@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/application/validate_query.py
+# hypothesis_version: 6.168.0
+
+[403, 404, 'APPROVED', 'ODATA_GET', 'QUERY_VALIDATED', 'SELECT', 'allow_insecure_tls', 'allowed_owners', 'allowed_schemas', 'allowed_tables', 'allowed_views', 'cds', 'cds_odata', 'columns', 'datasourceId', 'dialect', 'driver', 'entitySet', 'event', 'executionId', 'functions', 'hana', 'hdb', 'mssql', 'normalizedSql', 'odata', 'oracle', 'parameters', 'plan', 'policyVersion', 'postgres', 'postgresql', 'probeSql', 'result', 'sap_hana', 'schemas', 'select', 'sqlFingerprint', 'sqlTemplate', 'sqlserver', 'ssl_validate', 'statementType', 'status', 'tables', 'tenantId', 'traceId', 'tsql', 'userId', 'validate_certificate', 'warnings']

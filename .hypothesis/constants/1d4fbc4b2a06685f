@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/retrieval/semantic.py
+# hypothesis_version: 6.168.0
+
+[300, '(?i)\\bkategori', '(?i)\\bsegment', '(?i)\\bürün|\\burun', 'MANDATORY', 'businessTerms', 'category', 'city', 'code', 'customer', 'customer_country', 'customer_name', 'error', 'filterRules', 'groupBy', 'hint_extra', 'limit', 'mandatory', 'metricCode', 'metrics', 'ok', 'optional', 'orderDesc', 'product', 'product_category', 'product_name', 're.Pattern[str]', 'resolvedGroupBy', 'resolvedLimit', 'resolvedMetric', 'resolvedOrderDesc', 'retrievalHits', 'segment', 'semanticVersion', 'total_quantity_sold', 'total_revenue']

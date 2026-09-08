@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/evidence/probe.py
+# hypothesis_version: 6.168.0
+
+[0.0005, 0.01, 1.0, 128, 200, 300, 100000, ' AND ', ',', ', ', '300', '900', 'BLOCKING', 'CERTIFIED', 'EXECUTION_', 'EXECUTION_EMPTY', 'EXECUTION_FAILED', 'HYT00', 'LOW', 'MEASURE_DISAGREEMENT', 'MEDIUM', 'VALUE_MISMATCH', 'child', 'child_total', 'column', 'complete', 'conditions', 'dialect', 'difference', 'distributions', 'entity', 'error', 'errors', 'filled_until', 'freshness', 'generic', 'last_row', 'metrics_executed', 'metrics_failed', 'missing', 'normalized', 'parent', 'parent_total', 'probe:execute', 'reconciliation', 'reconciliations', 'ref_entity', 'rows', 'share', 'support', 'term', 'timeout', 'value', 'values_confirmed', 'values_rejected']

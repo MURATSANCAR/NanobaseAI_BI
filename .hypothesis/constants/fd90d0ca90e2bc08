@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/audit.py
+# hypothesis_version: 6.168.0
+
+[' / ', "'", ', ', '.', '0', '=', 'ABSENCE', 'CERTIFIED', 'IN', 'INFERRED', 'UNKNOWN', 'alternatives', 'audit_sql', 'case', 'column', 'current', 'dateColumn', 'default', 'end', 'entity', 'equivalent_bindings', 'ifs', 'join', 'joins', 'on', 'operator', 'reference', 'satisfied', 'sql', 'start', 'this', 'true', 'unmet_obligations', 'values', 'where', 'why']

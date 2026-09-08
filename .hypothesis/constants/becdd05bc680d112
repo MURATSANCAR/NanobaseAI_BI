@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/forecasting/app/service.py
+# hypothesis_version: 6.168.0
+
+[1000, '512', '@', 'FORECAST_CACHE_MAX', 'FORECAST_ENGINE', 'cache_entries', 'cache_hit', 'default_engine', 'engines_loaded', 'latency_ms', 'name', 'ready', 'seasonal_naive', 'version', 'warnings']
