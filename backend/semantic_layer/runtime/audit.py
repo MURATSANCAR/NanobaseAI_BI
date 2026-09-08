@@ -245,8 +245,23 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
         else:
             scope = _AnswerScope(tree)
             left, right = _period_outputs(tree, current, scope, sq.temporal_binding), _period_outputs(tree, reference, scope, sq.temporal_binding)
-            expected = {_formula(parse_sql(s.mapping.formula), _Scope(tree, None)) for s in sq.metrics
-                        if s.mapping and s.mapping.formula}
+            # Each metric can have a different row domain. Compare against its
+            # catalog-scoped formula, not against an unconditioned aggregate.
+            from semantic_layer.runtime.compiler import _pred_key_sql, _wrap_condition, _can_scope_formula, Dialect
+            measures = [s for s in sq.metrics if s.mapping and s.mapping.formula]
+            scopes = [tuple(sorted(set(_pred_key_sql(s.mapping.entity, key, Dialect("tsql")) or ""
+                                      for key in (s.mapping.extra or {}).get("conditions", []))))
+                      for s in measures]
+            expected = set()
+            for s, predicates in zip(measures, scopes):
+                formula = s.mapping.formula
+                if "" in predicates:
+                    out.append("ölçünün katalog kapsamı doğrulanamadı")
+                if len(set(scopes)) > 1 and predicates:
+                    if not _can_scope_formula(formula):
+                        out.append("ölçü kapsamının bu formüle uygulanması doğrulanamadı")
+                    formula = _wrap_condition(formula, " AND ".join(f"({p})" for p in predicates))
+                expected.add(_formula(parse_sql(formula), _Scope(tree, None)))
             def correct_column(columns):
                 binding = sq.temporal_binding
                 if binding:

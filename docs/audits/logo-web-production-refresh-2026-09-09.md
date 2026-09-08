@@ -44,9 +44,18 @@ bu kolonları gerçek kolon adı ve SQL tipi ile indeksler; açıklama veya iş 
 Yazmadan önce bütün profil entity/kolon çiftlerinin kapsandığı programatik olarak doğrulanır.
 Son aday koleksiyon: `semantic_catalog_logo_web_all_20260909`.
 
-Doğrulama: yerelde 16 sözlük/indeksleyici testi; üretim Python ortamında 3 katalog yenileme
+Doğrulama: yerelde 16 sözlük/indeksleyici testi; üretim Python ortamında 4 katalog yenileme
 ve bütün kolonların indeks kapsamına alınması testi geçti. Compose YAML ve Python derleme
 kontrolleri geçti.
 
 Kalıcı kaynak düzeltmesi: `index_catalog_qdrant.py` de açıklamasız kolonları SQL tipiyle
 indeksler; yalnızca bu yayına özel aday oluşturucuya bağlı değildir.
+
+Son adayın bütün payload kayıtları geri okunarak beklenen içerikle karşılaştırıldı:
+**47.960 kayıt, 1.529 entity, 39.957 farklı entity/kolon çifti; indeks dışı kolon: 0; durum green.**
+İndeks oluşturma sonrası raporlama değişkeninin kapsam hatası düzeltildi; nihai sayılar yalnız
+tamamlanmış koleksiyonun geri okuma doğrulamasından sonra kaydedildi.
+
+Aday SQLite ile yayın öncesi günlükteki 4.121 profil karşılaştırıldı: tablo/kolon adları,
+SQL tipleri, nullable durumu, örnek değerler, distinct/null oranları, anahtarlar, ilişkiler
+ve zaman aralıklarında **0 değişiklik** doğrulandı.

@@ -40,19 +40,44 @@ def catalog_points(profiles):
     return points,expected
 
 
+def verify_points(collection, points, expected):
+    actual=set();offset=None;count=0
+    while True:
+        body={'limit':512,'with_payload':True,'with_vector':False}
+        if offset is not None:body['offset']=offset
+        page=_http_json('POST',QDRANT_URL+'/collections/'+collection+'/points/scroll',body)['result']
+        for row in page['points']:
+            payload=row['payload']
+            actual.add((payload['entity'],payload.get('column'),payload['text']))
+            count+=1
+        offset=page.get('next_page_offset')
+        if offset is None:break
+    wanted={(p.entity,p.column,p.text) for p in points}
+    if actual!=wanted or count!=len(points):raise RuntimeError('Stored index payload coverage mismatch')
+    pairs={(entity,column) for entity,column,text in actual if column}
+    if expected-pairs:raise RuntimeError('Stored index omits columns')
+    info=_http_json('GET',QDRANT_URL+'/collections/'+collection)['result']
+    return {'collection':collection,'points':count,'entities':len({p.entity for p in points}),
+            'column_pairs':len(expected),'unindexed_columns':len(expected-pairs),'status':info['status']}
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--collection',required=True)
     p.add_argument('--previous',required=True)
     p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--verify-only',action='store_true')
     args=p.parse_args()
     existing=_http_json('GET',QDRANT_URL+'/collections')['result']['collections']
     present=args.collection in {c['name'] for c in existing}
-    if present and _http_json('GET',QDRANT_URL+'/collections/'+args.collection)['result']['points_count']:
+    if not args.verify_only and present and _http_json('GET',QDRANT_URL+'/collections/'+args.collection)['result']['points_count']:
         raise SystemExit('Candidate already has points; choose a fresh collection name')
     s=SemanticSettings.from_env();store=open_store(s.store_dsn,create=False)
     profiles=one_entity_per_pattern(store.list_profiles(s.datasource_id),store.concept_entities(s.tenant_id,s.datasource_id))
     points,expected=catalog_points(profiles)
+    if args.verify_only:
+        result=verify_points(args.collection,points,expected)
+        args.out.write_text(json.dumps(result,indent=2));print(json.dumps(result));return
     cached={};offset=None
     while True:
         body={'limit':256,'with_payload':True,'with_vector':True}
@@ -91,7 +116,7 @@ def main():
         _http_json('PUT',QDRANT_URL+'/collections/'+args.collection+'/points?wait=true',{'points':batch})
     info=_http_json('GET',QDRANT_URL+'/collections/'+args.collection)['result']
     if info['points_count']!=len(points):raise RuntimeError('Point count mismatch')
-    result={'collection':args.collection,'points':len(points),'entities':len({p.entity for p in points}),'column_pairs':len(expected),'unindexed_columns':len(expected-represented),'new_texts':len(missing),'status':info['status']}
+    result={'collection':args.collection,'points':len(points),'entities':len({p.entity for p in points}),'column_pairs':len(expected),'unindexed_columns':len(expected-{(p.entity,p.column) for p in points if p.column}),'new_texts':len(missing),'status':info['status']}
     args.out.write_text(json.dumps(result,indent=2));print(json.dumps(result))
 
 

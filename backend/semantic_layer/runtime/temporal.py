@@ -117,6 +117,23 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             taken.append((m.start(), m.end()))
             found.append((m.start(), m.end(), slot))
 
+    # A compound date phrase owns its entire span. Otherwise the year,
+    # year-to-date and "today" become three competing periods.
+    for m in re.finditer(rf"\b(?:{_YEAR}\s+)?yil\s*basindan\s+(?:bugune(?:\s+kadar)?|bu\s+yana|beri|itibaren)\b", text):
+        year = int(m.group(1)) if m.group(1) else today.year
+        start, end = date(year, 1, 1), today + timedelta(days=1)
+        add(m, TemporalSlot(m.group(0).strip(), "YTD", start if start < end else None,
+                            end if start < end else None, "DAY", ambiguous=start >= end,
+                            params={"year":year}))
+    for m in re.finditer(rf"\b{_YEAR}\s+ytd\b", text):
+        year = int(m.group(1))
+        # A historical/future YTD needs its cutoff specified; a bare year must
+        # not turn it silently into a complete year or the current year's YTD.
+        known = year == today.year
+        add(m, TemporalSlot(m.group(0).strip(), "YTD", date(year,1,1) if known else None,
+                            today + timedelta(days=1) if known else None, "DAY", ambiguous=not known,
+                            params={"year":year}))
+
     # --- explicit month ranges: "2026 ocak-agustos", "ocak-agustos 2026"
     for m in re.finditer(rf"{_YEAR}\s+({_MONTH_RE})\s*-\s*({_MONTH_RE})", text):
         y, m1, m2 = int(m.group(1)), MONTHS[m.group(2)], MONTHS[m.group(3)]

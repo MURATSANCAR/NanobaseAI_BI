@@ -22,3 +22,19 @@ def test_standard_indexer_also_keeps_undocumented_columns():
     profile=SchemaProfile(datasource_id='logo',table_name='LG_411_BANKACC',table_pattern='LG_{firm}_BANKACC',entity='BANKACC',columns=[ColumnProfile('IBAN',data_type='varchar')])
     points=points_for([profile])
     assert any(p.column=='IBAN' and p.text=='BANKACC.IBAN — SQL tipi: varchar' for p in points)
+
+
+def test_verification_rejects_missing_stored_column(monkeypatch):
+    import pytest
+    import build_catalog_index_candidate as module
+    profile=SchemaProfile(datasource_id='logo',table_name='LG_411_BANKACC',table_pattern='LG_{firm}_BANKACC',entity='BANKACC',columns=[ColumnProfile('IBAN',data_type='varchar')])
+    points,expected=catalog_points([profile])
+    stored=[{'payload':{'entity':p.entity,'column':p.column,'text':p.text}} for p in points]
+    def http(method,url,body=None):
+        if method=='GET':return {'result':{'status':'green'}}
+        return {'result':{'points':stored,'next_page_offset':None}}
+    monkeypatch.setattr(module,'_http_json',http)
+    assert module.verify_points('candidate',points,expected)['unindexed_columns']==0
+    stored.pop()
+    with pytest.raises(RuntimeError,match='coverage mismatch'):
+        module.verify_points('candidate',points,expected)

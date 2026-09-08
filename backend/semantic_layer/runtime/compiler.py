@@ -152,6 +152,21 @@ def _pred_key_sql(entity: str, key: str, d: Dialect) -> Optional[str]:
     return _pred_sql(entity, Mapping(concept_id="", entity=ent, table_pattern="", column=col, operator=op, values=values), d)
 
 
+def _can_scope_formula(formula):
+    from sqlglot import exp, parse_one
+    try:
+        tree = parse_one(formula, read="tsql")
+    except Exception:
+        return False
+    aggregates = list(tree.find_all(exp.AggFunc))
+    return (bool(aggregates) and not tree.find(exp.Window) and not tree.find(exp.Select)
+            and all(type(a) in (exp.Sum, exp.Avg, exp.Min, exp.Max, exp.Count)
+                    and not a.find_ancestor(exp.AggFunc)
+                    and not (isinstance(a.this, exp.Distinct) and len(a.this.expressions) != 1)
+                    for a in aggregates)
+            and all(c.find_ancestor(exp.AggFunc) for c in tree.find_all(exp.Column)))
+
+
 def _wrap_condition(formula_sql: str, pred: str) -> str:
     """Condition aggregates without inventing values; COUNT keeps its distinctness."""
     import sqlglot
@@ -386,8 +401,29 @@ class DeterministicCompiler:
             by_col.setdefault((s.mapping.entity, (s.mapping.column or "").upper()), []).append(s)
         pivots = [grp for grp in by_col.values() if len(grp) > 1]
         pivot_slots = {id(s) for grp in pivots for s in grp}
+        scopes = {}
+        for metric in plan.metrics:
+            predicates = []
+            for key in (metric.mapping.extra or {}).get("conditions") or []:
+                predicate = _pred_key_sql(plan.entity, key, d)
+                if not predicate:
+                    return None  # a catalog restriction must never disappear
+                predicates.append(predicate)
+            scopes[id(metric)] = tuple(sorted(set(predicates)))
+        separate_scopes = len(set(scopes.values())) > 1
+        if separate_scopes and any(scopes[id(m)] and not _can_scope_formula(m.mapping.formula)
+                                   for m in plan.metrics):
+            return None
+
+        def scoped_formula(metric):
+            formula = self._formula_sql(metric.mapping.formula, plan.entity)
+            predicates = scopes[id(metric)]
+            if separate_scopes and predicates:
+                formula = _wrap_condition(formula, " AND ".join(f"({p})" for p in predicates))
+            return formula
+
         for s in plan.metrics:
-            formula = self._formula_sql(s.mapping.formula, plan.entity)
+            formula = scoped_formula(s)
             malias = _alias_of(s)
             if pivots:
                 for grp in pivots:
@@ -405,12 +441,18 @@ class DeterministicCompiler:
         for m in self._default_filters(plan.entity):
             where.append(_pred_sql(alias, m, d))
             explain.append(f"varsayılan filtre: {m.entity}.{m.column} {m.operator} {m.values}")
-        for s in plan.metrics:
-            for key in (s.mapping.extra or {}).get("conditions") or []:
-                p = _pred_key_sql(plan.entity, key, d)
-                if p and p not in where:
-                    where.append(p)
-                    explain.append(f"ölçü kapsamı: {key}")
+        if separate_scopes:
+            # Read every row needed by any metric. An unrestricted metric needs
+            # all rows; it must not inherit another metric's restriction.
+            if all(scopes.values()):
+                where.append("(" + " OR ".join("(" + " AND ".join(f"({p})" for p in scope) + ")"
+                                               for scope in dict.fromkeys(scopes.values())) + ")")
+            explain.append("her ölçünün katalog kapsamı kendi toplamında uygulandı")
+        else:
+            for predicate in next(iter(scopes.values())):
+                if predicate not in where:
+                    where.append(predicate)
+                    explain.append(f"ölçü kapsamı: {predicate}")
         for s in plan.filters:
             if id(s) in pivot_slots:
                 continue
@@ -434,7 +476,7 @@ class DeterministicCompiler:
             metric_aliases = []
             rebuilt = []
             for s_ in plan.metrics:
-                formula = self._formula_sql(s_.mapping.formula, plan.entity)
+                formula = scoped_formula(s_)
                 for t, span in zip(ranges, spans_sql):
                     # "2019" → "d2019": a column alias may not begin with a digit, and a period the
                     # user names by year alone produced SQL the database refused to parse.
