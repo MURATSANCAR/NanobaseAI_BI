@@ -948,6 +948,13 @@ class ExistingCompiler:
             return entities
         pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
         pinned += [e for e in entities if e in self.catalog_entities and e not in pinned]
+        # A table that carries the only column matching a word the vocabulary does not define. The
+        # selector drops it — it is judging relevance from table names against a question whose word
+        # is not in any of them — and the model is then shown a schema with no column for that word
+        # and invents one that reads plausibly. It answered "barkodu olan kaç ürün" from a barcode
+        # column that does not exist, because the table that has one had just been removed.
+        pinned += [e for c in (q.candidates or []) for e in (c.get("entities") or [])[:2]
+                   if e in entities and e not in pinned]
         sel = self.selector.select(q.question, entities, self.entity_note, pinned=pinned)
         if report is not None:
             report["decision"] = sel.decision
