@@ -18,6 +18,21 @@ from semantic_layer.config import SemanticSettings
 from semantic_layer.store.catalog_store import open_store
 
 
+def compatible_cache(cache, key):
+    sample=list(cache)[:3]
+    if not sample:return True
+    checked=embed(sample,key)
+    if len(checked)!=len(sample):return False
+    for text,vector in zip(sample,checked):
+        old=cache[text]
+        if len(old)!=len(vector):return False
+        norm=math.sqrt(sum(x*x for x in old))*math.sqrt(sum(x*x for x in vector))
+        if not norm:return False
+        score=sum(a*b for a,b in zip(old,vector))/norm
+        if not math.isfinite(score) or score<0.999:return False
+    return True
+
+
 def catalog_points(profiles):
     unique={}
     generated=points_for(profiles)
@@ -89,21 +104,15 @@ def main():
         offset=result.get('next_page_offset')
         if offset is None:break
     # A matching text is reusable only when the current embedding model agrees with the old one.
-    sample=list(cached)[:3]
     key=os.environ.get('BI_EMBED_API_KEY') or os.environ.get('CONTRACT_API_KEY','')
-    if sample:
-        checked=embed(sample,key)
-        def cosine(a,b):
-            return sum(x*y for x,y in zip(a,b))/(math.sqrt(sum(x*x for x in a))*math.sqrt(sum(y*y for y in b)))
-        if len(checked)!=len(sample) or any(cosine(cached[t],v)<0.999 for t,v in zip(sample,checked)):
-            cached.clear()
+    if not compatible_cache(cached,key):cached.clear()
     missing=list(dict.fromkeys(p.text for p in points if p.text not in cached))
     missing_set=set(missing)
     print(json.dumps({'points':len(points),'reuse':len(points)-sum(p.text in missing_set for p in points),'new_texts':len(missing)}),flush=True)
     checkpoint=args.out.with_suffix('.vectors.json.gz')
     if checkpoint.exists():
         with gzip.open(checkpoint,'rt') as f: saved=json.load(f)
-        cached.update(saved)
+        if compatible_cache(saved,key):cached.update(saved)
         missing=list(dict.fromkeys(p.text for p in points if p.text not in cached))
     fresh=embed(missing,os.environ.get('BI_EMBED_API_KEY') or os.environ.get('CONTRACT_API_KEY',''))
     if len(fresh)!=len(missing) or any(len(v)!=VECTOR_SIZE for v in fresh):raise RuntimeError('Incomplete embedding response')

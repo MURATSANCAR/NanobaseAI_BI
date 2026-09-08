@@ -38,3 +38,14 @@ def test_verification_rejects_missing_stored_column(monkeypatch):
     stored.pop()
     with pytest.raises(RuntimeError,match='coverage mismatch'):
         module.verify_points('candidate',points,expected)
+
+
+def test_checkpoint_vectors_from_another_model_are_not_reused(monkeypatch):
+    import build_catalog_index_candidate as module
+    cached={'one':[1.0,0.0]}
+    monkeypatch.setattr(module,'embed',lambda texts,key:[[1.0,0.0]])
+    assert module.compatible_cache(cached,'')
+    monkeypatch.setattr(module,'embed',lambda texts,key:[[0.0,1.0]])
+    assert not module.compatible_cache(cached,'')
+    monkeypatch.setattr(module,'embed',lambda texts,key:[[0.0,0.0]])
+    assert not module.compatible_cache(cached,'')

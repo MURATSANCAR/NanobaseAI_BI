@@ -44,7 +44,7 @@ bu kolonları gerçek kolon adı ve SQL tipi ile indeksler; açıklama veya iş 
 Yazmadan önce bütün profil entity/kolon çiftlerinin kapsandığı programatik olarak doğrulanır.
 Son aday koleksiyon: `semantic_catalog_logo_web_all_20260909`.
 
-Doğrulama: yerelde 16 sözlük/indeksleyici testi; üretim Python ortamında 4 katalog yenileme
+Doğrulama: yerelde 16 sözlük/indeksleyici testi; üretim Python ortamında 5 katalog yenileme
 ve bütün kolonların indeks kapsamına alınması testi geçti. Compose YAML ve Python derleme
 kontrolleri geçti.
 
@@ -75,3 +75,20 @@ modelle ölçülmüş sonucunda yeni engellenen soru ve yeni kaçırılan tablo 
 48 soru, tablo beklenen 39 soruda tam tablo erişimi; tablo recall 1.0.
 Bu sonuç, mevcut 9 netleştirme ihtiyacının çözüldüğü veya bütün iş sorularının
 cevaplanabildiği anlamına gelmez.
+
+Mevcut 9 netleştirme isteğinin dağılımı:
+
+| Durum | Soru sayısı |
+|---|---:|
+| “açılan / alan / gelen” ifadelerinin koşul olarak sorgulanması | 6 |
+| “satış eksi iade” ölçü bileşiminin netleştirilmesi | 2 |
+| “hiç sipariş edilmemiş” olumsuz ilişkisinin netleştirilmesi | 1 |
+
+Bunlar canlı ve aday katalogda aynı metinlerle üretildi; sözlük/indeks yenilemesi
+çözümleyicinin bu davranışını değiştirmedi. İlgili kayıtlar sunucudaki
+`stage/compiler-refusal-comparison.json` dosyasındadır.
+
+Aday ölçümünün izleme metrikleri (tarihsel referansa göre): tablo isabeti 0,307 → 0,218;
+ortalama gönderilen tablo 6,1 → 8,5; ortalama istem 8.619 → 9.312 token. Bunlar
+yayın kapısında engelleyici eşikler değildir; tablo kapsamının tamamlanması, arama
+hassasiyetinin veya iş sonucu doğruluğunun kusursuz olduğu anlamına gelmez.
