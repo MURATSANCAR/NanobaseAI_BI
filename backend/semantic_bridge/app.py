@@ -32,14 +32,17 @@ from semantic_layer.conventions import Conventions
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
-from semantic_layer.history.sources import load_project_pairs
+from semantic_layer.history.sources import _pid as pair_id, load_project_pairs, load_query_log
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.models import Annotation, ConceptStatus, Evidence, EvidenceType, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.models import Mapping as SLMapping, SemanticType
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
-from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
+from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
+# The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
+# second, prettier version of it would let the screen and the engine disagree.
+from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
 from semantic_layer.runtime.audit import audit_sql
 from semantic_layer.runtime import critic
 from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
@@ -938,6 +941,56 @@ def _formula_reader(prof, said: dict) -> Any:
     return one
 
 
+# Where a line of SQL wants to break for a reader. A validated pair arrives as one long string; a
+# reviewer asked "is this what «hizmet» means?" should not have to scan four hundred characters to
+# find the one predicate that answers it.
+# A join keeps its own adjective: breaking between INNER and JOIN puts a word alone on a line and
+# makes the query look mangled, which costs the reader exactly the trust the panel is trying to earn.
+_SQL_BREAK = re.compile(
+    r"(?<!\bINNER)(?<!\bLEFT)(?<!\bRIGHT)(?<!\bFULL)(?<!\bCROSS)(?<!\bOUTER)"
+    r"\s+(?=(?:SELECT|FROM|WHERE|AND|OR|GROUP\s+BY|ORDER\s+BY|HAVING|"
+    r"(?:LEFT|RIGHT|INNER|FULL|CROSS)(?:\s+OUTER)?\s+JOIN|JOIN|UNION|WITH|ON)\b)", re.I)
+
+
+def _sql_lines(sql: str, limit: int = 40, width: int = 320) -> list[str]:
+    lines = [x.strip() for x in _SQL_BREAK.split(" ".join((sql or "").split())) if x.strip()]
+    return [(x[:width] + " …") if len(x) > width else x for x in lines[:limit]]
+
+
+def _pair_view(p: Any, needles: list[str]) -> dict[str, Any]:
+    """One validated question→SQL pair as evidence: the question somebody actually asked, the SQL that
+    answered it, and which of its lines carry the claim under review."""
+    lines = _sql_lines(p.sql)
+    low = [x.lower() for x in lines]
+    hits = [i for i, x in enumerate(low) if any(n and n.lower() in x for n in needles)]
+    return {"question": p.nl, "lines": lines, "hits": hits, "source": p.source, "at": p.created_at or None}
+
+
+def _needles(m: dict[str, Any] | None) -> list[str]:
+    """The words to look for in a query: the column this term claims, and the columns its formula reads."""
+    if not m:
+        return []
+    out = [m["column"]] if m.get("column") else []
+    out += re.findall(r"\b\w+\.\"?(\w+)\"?", m.get("formula") or "")
+    return list(dict.fromkeys(x for x in out if x))
+
+
+def _fragment(m: dict[str, Any], d: Dialect) -> str | None:
+    """The SQL this term puts into a query once it is approved — nothing more, nothing prettier."""
+    if m.get("formula"):
+        return m["formula"]
+    op = (m.get("operator") or "").upper()
+    if op == "JOIN":
+        return f"{m.get('entity')}.{m.get('column')} = {', '.join(m.get('values') or [])}"
+    if m.get("column") and m.get("values"):
+        return compiled_predicate(m["entity"], SLMapping("", m["entity"], m.get("table_pattern") or "",
+                                                         column=m["column"], operator=m.get("operator"),
+                                                         values=list(m.get("values") or [])), d)
+    if m.get("column"):
+        return f"{m['entity']}.{d.q(m['column'])}"
+    return None
+
+
 def _require_admin(request: Any) -> None:
     """Reading and asking sit behind the site's own authentication; changing the catalog needs a token.
     Without this, anything that can reach the cockpit's API path could recertify the semantics."""
@@ -1316,6 +1369,113 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not b:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
         return b
+
+    # Which part of the system proposed a term, said the way a reviewer would say it. The name of the
+    # module means nothing to them; how the sentence was arrived at means everything.
+    _PRODUCER = {
+        "history_miner": "çalışmış sorgular tarandı",
+        "doc_miner": "kaynağın kendi açıklaması okundu",
+        "profiler": "verinin kendisi ölçüldü",
+        "qwen": "model önerdi",
+        "human": "bir kişi yazdı",
+    }
+
+    @app.get("/api/v1/semantic/concepts/{concept_id}/provenance")
+    def provenance(concept_id: str, examples: int = 3) -> dict[str, Any]:
+        """Everything behind one pending term, in a form the person deciding can actually check.
+
+        The queue row says what the term would mean; it does not say why the system believes that, and
+        a reviewer cannot responsibly approve a claim whose grounds are a chip reading "doğrulanmış
+        sorgu ×2". This returns the grounds themselves: the questions the term was seen in with the SQL
+        that answered them, the sentence in the source documentation, the counts measured in the
+        column, the note somebody left — and, separately, the exact SQL fragment approving it will put
+        into future queries. Everything here already existed; none of it was reachable from the screen.
+        """
+        r = rt()
+        b = r.store.concept_bundle(concept_id)
+        if not b:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        c, maps = b["concept"], b.get("mappings") or []
+        m = maps[0] if maps else None
+        prof = r.resolver.by_entity.get(m["entity"]) if m else None
+        said = getattr(r.existing, "annotations", None) or {}
+        col = prof.column(m["column"]) if prof and m and m.get("column") else None
+        meaning = col.meaning(said.get((m["entity"], (m.get("column") or "").upper()))) if col and m else None
+        d = Dialect(r.settings.dialect or "")
+
+        target = None
+        if m:
+            target = {
+                "entity": m.get("entity"), "table": m.get("table_pattern"),
+                # the pattern is what the catalog holds; the reviewer recognises the real table name.
+                "tableExample": prof.table_name if prof else None,
+                "tableRows": prof.row_count if prof else None,
+                "column": m.get("column"), "operator": m.get("operator"), "values": m.get("values") or [],
+                "formula": m.get("formula"), "columnType": col.data_type if col else None,
+                "columnMeaning": meaning,
+                # what the source itself says about this column, kept apart from what we concluded.
+                "columnDoc": col.description if col else None,
+                "derived": [dict(x) for x in (col.derived or [])] if col else [],
+                "sql": _fragment(m, d),
+                "readable": _formula_reader(prof, said)(m["formula"]) if m.get("formula") else None,
+            }
+
+        # Pair ids in the evidence resolve against the same two sources the miner read: the knowledge
+        # pack and the validated query log. Ids are matched on content as well, because a pair that was
+        # re-exported keeps its text but not its row id — and an unresolvable id must be reported as a
+        # gap, not quietly dropped, or the screen would claim less evidence than the decision used.
+        index: dict[str, Any] = {}
+        for p in list(r.pairs) + load_query_log(r.store.list_validated_queries(
+                r.settings.tenant_id, r.settings.datasource_id, limit=500)):
+            index.setdefault(p.id, p)
+            index.setdefault(pair_id(p.nl, p.sql), p)
+        needles = _needles(m)
+
+        # A payload carries whatever the miner that wrote it had to say; these are the keys that mean
+        # something to a person, in the order a person reads them.
+        _KEEP = ("snippet", "rationale", "confidence", "precision", "raw_precision", "recall",
+                 "term_total", "aliases", "fit", "counts", "distinct", "value", "rows", "share",
+                 "ratio", "ref", "by", "missing", "expected", "found")
+        ev = []
+        for e in b.get("evidence") or []:
+            pl = e.get("payload") or {}
+            ids = [str(x) for x in (pl.get("pairs") or [])]
+            found = [index[i] for i in ids if i in index]
+            ev.append({
+                "kind": e["evidence_type"], "source": e["source_id"],
+                "support": e.get("support_count"), "weight": e.get("weight"), "at": e.get("created_at"),
+                "seenIn": len(ids), "missing": len(ids) - len(found),
+                "examples": [_pair_view(x, needles) for x in found[:max(0, examples)]],
+                "detail": {k: pl[k] for k in _KEEP if k in pl},
+            })
+        # Strongest first, and a query somebody ran outranks a sentence a model wrote about it.
+        rank = {"EXECUTION": 0, "VALIDATED_SQL": 1, "EXPLICIT_BINDING": 2, "ALIAS_BINDING": 3,
+                "HUMAN_ANNOTATION": 4, "DOC": 5, "PROFILE": 6, "LLM_CANDIDATE": 7}
+        ev.sort(key=lambda x: (rank.get(x["kind"], 9), -(x["support"] or 0)))
+
+        conflicts = [{"type": x.get("conflict_type"), "severity": x.get("severity"),
+                      "source": x.get("source_id"), "at": x.get("created_at"),
+                      "detail": {k: v for k, v in (x.get("payload") or {}).items() if k != "support"}}
+                     for x in (b.get("counterEvidence") or [])]
+        # The nightly run re-proposes what it proposed yesterday, so a term mined for two weeks carries
+        # fourteen identical candidate rows. A reviewer needs to know how it was found, once, and when
+        # it was last found — not the run history.
+        produced, seen_by = [], set()
+        for x in (b.get("candidates") or []):
+            k = (x.get("generated_by"), x.get("model_version"))
+            if k in seen_by:
+                continue
+            seen_by.add(k)
+            produced.append({"by": x.get("generated_by"), "how": _PRODUCER.get(str(x.get("generated_by")), ""),
+                             "model": x.get("model_version"), "at": x.get("created_at"),
+                             "detail": {kk: vv for kk, vv in (x.get("payload") or {}).items() if kk != "pairs"}})
+
+        return {"id": concept_id, "term": c.get("term"), "type": c.get("semantic_type"),
+                "status": c.get("status"), "confidence": c.get("confidence"),
+                "plain": _plain(c.get("term", ""), c.get("semantic_type", ""), m, meaning,
+                                said.get((m["entity"], None)) if m else None,
+                                readable=_formula_reader(prof, said)),
+                "target": target, "evidence": ev, "conflicts": conflicts, "producedBy": produced}
 
     # --- portal layer: schema inventory + annotations
     @app.get("/api/v1/schema/inventory")

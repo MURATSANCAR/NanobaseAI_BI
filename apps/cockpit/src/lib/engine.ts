@@ -272,6 +272,58 @@ export type ReviewItem = {
   counterEvidence: number;
 };
 
+/** Bir terimin arkasındaki her şey — kararı verecek kişinin bakacağı yer.
+ *
+ *  Kuyruk satırı terimin ne demek olduğunu söyler, neden öyle bilindiğini söylemez. Bu, onun
+ *  dayanağıdır: terimin geçtiği sorular ve o soruları cevaplayan SQL, kaynağın kendi cümlesi,
+ *  kolonda ölçülen sayılar — ve onaylandığında sorgulara girecek SQL parçasının kendisi. */
+export type Provenance = {
+  id: string;
+  term: string;
+  type: string;
+  status: string;
+  confidence: number | null;
+  plain: string;
+  target: {
+    entity: string;
+    /** kataloğun tuttuğu kalıp (LG_{n0}_{n1}_INVOICE) ve karşılığı olan gerçek tablo */
+    table: string | null;
+    tableExample: string | null;
+    tableRows: number | null;
+    column: string | null;
+    operator: string | null;
+    values: string[];
+    formula: string | null;
+    columnType: string | null;
+    columnMeaning: string | null;
+    /** kaynağın kendi açıklaması — bizim çıkardığımız `derived`den ayrı tutulur */
+    columnDoc: string | null;
+    derived: Array<{ source: string; text: string }>;
+    /** onaylandığında derleyicinin üreteceği parçanın aynısı */
+    sql: string | null;
+    readable: string | null;
+  } | null;
+  evidence: Array<{
+    kind: string;
+    source: string;
+    support: number | null;
+    weight: number | null;
+    at: string | null;
+    /** kanıtın dayandığı sorgu sayısı ve bunlardan kaçı artık bulunamıyor */
+    seenIn: number;
+    missing: number;
+    examples: Array<{ question: string; lines: string[]; hits: number[]; source: string; at: string | null }>;
+    detail: Record<string, unknown>;
+  }>;
+  conflicts: Array<{ type: string; severity: string; source: string; at: string | null; detail: Record<string, unknown> }>;
+  producedBy: Array<{ by: string; how: string; model: string | null; at: string | null; detail: Record<string, unknown> }>;
+};
+
+/** Kart açıldığında istenir: kuyruk yüz satır, kanıt tek terim için onlarca sorgu demek. */
+export function conceptProvenance(id: string): Promise<Provenance> {
+  return get<Provenance>(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/provenance`);
+}
+
 /** Kaç terim bir kişinin kararını bekliyor. Kuyruğun kendisi değil, yalnız sayısı — masa bunu
  *  dakikada bir sorar ve bir satır bile çekmemesi gerekir. */
 export function reviewCount(): Promise<{ waiting: number }> {

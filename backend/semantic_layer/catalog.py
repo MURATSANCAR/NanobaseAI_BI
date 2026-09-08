@@ -37,15 +37,37 @@ def one_entity_per_pattern(profiles: list[SchemaProfile], anchors: Optional[dict
     """
     anchors = anchors or {}
     newest: dict[str, tuple] = {}
+    # Which patterns a label has ever been used for, before anything is overwritten. A relationship
+    # records only the *name* of the table it points at, written by whichever scan wrote that row —
+    # so once the labels move, the graph still speaks the old generation's names.
+    patterns_of_label: dict[str, set[str]] = {}
     for p in profiles:
         seen = newest.get(p.table_pattern)
         if seen is None or p.scanned_at > seen[0]:
             newest[p.table_pattern] = (p.scanned_at, p.entity)
+        patterns_of_label.setdefault(p.entity, set()).add(p.table_pattern)
     chosen = {pattern: anchors.get(pattern) or label for pattern, (_, label) in newest.items()}
     renamed = sum(1 for p in profiles if p.entity != chosen[p.table_pattern])
     for p in profiles:
         p.entity = chosen[p.table_pattern]
-    if renamed:
+
+    # The join graph is relabelled by the same rule, or it points at entities that no longer exist
+    # under that name. Nothing errors when it does: joins simply stop being recognised, and every
+    # check that reads the graph — "is this a join the catalog knows?" among them — goes quiet on the
+    # tables the deployment uses most. A label that was used for more than one pattern is left alone;
+    # there is no way to tell which one was meant, and guessing would assert a join nobody recorded.
+    rewired = 0
+    for p in profiles:
+        for rel in p.relationships or []:
+            ref = rel.get("ref_entity")
+            pats = patterns_of_label.get(ref) if ref else None
+            if not pats or len(pats) != 1:
+                continue
+            target = chosen.get(next(iter(pats)))
+            if target and target != ref:
+                rel["ref_entity"] = target
+                rewired += 1
+    if renamed or rewired:
         log.info("catalog: %d profiles relabelled so one pattern is one entity under the name the "
-                 "certified catalog uses", renamed)
+                 "certified catalog uses (%d relationship targets relabelled with them)", renamed, rewired)
     return profiles

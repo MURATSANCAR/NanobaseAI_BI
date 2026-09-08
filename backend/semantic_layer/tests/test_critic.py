@@ -211,6 +211,59 @@ def test_one_physical_pattern_is_one_entity_and_keeps_the_name_the_catalog_is_bo
     }, "the certified name survives the scan; a pattern nothing is bound to keeps its own"
 
 
+def test_the_join_graph_is_relabelled_with_the_entities_it_points_at():
+    """İlişki kaydı yalnız hedefin ADINI tutuyor. Etiketler taşınınca grafik eski neslin adlarını
+    göstermeye devam ediyor ve hiçbir yerde hata çıkmıyor: join'ler sessizce tanınmaz oluyor —
+    üretimde STLINE→CLCARD ve STLINE→ITEMS için "katalogda böyle bir ilişki yok" uyarısı bu yüzden
+    çıkıyordu."""
+    from semantic_bridge.app import one_entity_per_pattern
+    from semantic_layer.models import utcnow
+
+    items = SchemaProfile(datasource_id="d", table_name="LG_411_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                          entity="LG_ITEMS", schema_name="dbo", scanned_at=utcnow())
+    stline = SchemaProfile(datasource_id="d", table_name="LG_411_01_STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+                           entity="LG_STLINE", schema_name="dbo", scanned_at=utcnow(),
+                           relationships=[{"column": "STOCKREF", "ref_entity": "LG_ITEMS", "ref_column": "LOGICALREF"},
+                                          {"column": "PRODORDERREF", "ref_entity": "PRODORD", "ref_column": "LOGICALREF"}])
+    out = one_entity_per_pattern([items, stline], anchors={"LG_{n0}_ITEMS": "ITEMS", "LG_{n0}_{n1}_STLINE": "STLINE"})
+    rels = {r["column"]: r["ref_entity"] for p in out for r in (p.relationships or [])}
+    assert rels["STOCKREF"] == "ITEMS", "hedef, işaret ettiği varlıkla aynı adı taşımalı"
+    assert rels["PRODORDERREF"] == "PRODORD", "taranmamış bir hedefin adı uydurulmaz"
+
+
+def test_an_ambiguous_old_label_is_left_alone_rather_than_guessed():
+    """Aynı etiket iki desende kullanılmışsa hangisinin kastedildiği bilinemez; kaydedilmemiş bir
+    ilişkiyi varsaymaktansa dokunmamak doğru."""
+    from semantic_bridge.app import one_entity_per_pattern
+    from semantic_layer.models import utcnow
+
+    a = SchemaProfile(datasource_id="d", table_name="LG_411_ITEMS", table_pattern="LG_{n0}_ITEMS",
+                      entity="SHARED", schema_name="dbo", scanned_at=utcnow())
+    b = SchemaProfile(datasource_id="d", table_name="LV_411_ITEMS", table_pattern="LV_{n0}_ITEMS",
+                      entity="SHARED", schema_name="dbo", scanned_at=utcnow())
+    c = SchemaProfile(datasource_id="d", table_name="LG_411_01_STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+                      entity="STLINE", schema_name="dbo", scanned_at=utcnow(),
+                      relationships=[{"column": "STOCKREF", "ref_entity": "SHARED", "ref_column": "LOGICALREF"}])
+    out = one_entity_per_pattern([a, b, c], anchors={"LG_{n0}_ITEMS": "ITEMS"})
+    assert [r["ref_entity"] for p in out for r in (p.relationships or [])] == ["SHARED"]
+
+
+def test_a_join_the_graph_records_is_not_reported_unknown_after_relabelling():
+    """Uçtan uca: etiketler taşındıktan sonra bilinen join sessiz, bilinmeyen join hâlâ uyarıyor."""
+    from semantic_bridge.app import one_entity_per_pattern
+
+    items = _t("LG_ITEMS", "LG_411_ITEMS", [("LOGICALREF", "int"), ("CODE", "nvarchar(25)")])
+    items.table_pattern = "LG_{n0}_ITEMS"
+    stl = _t("LG_STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("SPECODE", "nvarchar(17)"), ("TOTAL", "decimal(18,2)")],
+             rels=[{"column": "STOCKREF", "ref_entity": "LG_ITEMS", "ref_column": "LOGICALREF"}])
+    stl.table_pattern = "LG_{n0}_{n1}_STLINE"
+    profs = one_entity_per_pattern([items, stl], anchors={"LG_{n0}_ITEMS": "ITEMS", "LG_{n0}_{n1}_STLINE": "STLINE"})
+    known = "SELECT SUM(s.TOTAL) FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF"
+    assert not [f for f in review(known, profs) if f.kind == "UNKNOWN_JOIN"]
+    odd = "SELECT SUM(s.TOTAL) FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.SPECODE = i.CODE"
+    assert [f.kind for f in review(odd, profs) if f.kind == "UNKNOWN_JOIN"] == ["UNKNOWN_JOIN"]
+
+
 def test_the_certified_name_survives_even_when_every_old_row_is_gone():
     """After a rescan replaces every row, no profile carries the old name any more. Anchoring on the
     pattern still holds; anchoring on the name would have quietly let go."""

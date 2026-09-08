@@ -952,3 +952,42 @@ def test_a_generic_head_noun_beside_a_resolved_term_is_absorbed_not_reported_mis
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("2026 net ciro rakamı")
     assert "rakami" not in sq.unresolved and sq.unresolved == []
+
+
+# --- taneciklik: ölçünün bir satırı neyi temsil ediyor ---------------------------------------
+
+def test_a_header_measure_is_swapped_for_the_line_level_sense_when_the_breakdown_needs_it(catalog, profiles):
+    """Fatura seviyeli ciro ürüne bölünemez — bir faturada birkaç ürün vardır. Katalogda aynı terimin
+    satır seviyeli anlamı varsa doğru olan odur; soru reddedilmez, ölçü değişir."""
+    _certify(catalog, "urun", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    _certify(catalog, "net ciro", SemanticType.METRIC,
+             Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+                     formula="SUM(CASE WHEN STLINE.TRCODE IN (7,8) THEN STLINE.TOTAL ELSE -STLINE.TOTAL END)"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Ürün bazında net ciro", today=date(2026, 7, 20))
+    metric = next(s for s in sq.slots if s.semantic_type == SemanticType.METRIC)
+    assert metric.mapping.entity == "STLINE", sq.to_dict()
+    assert any("daha ince" in e for e in sq.explanation)
+
+
+def test_a_breakdown_the_measure_can_already_carry_is_left_alone(catalog, profiles):
+    """Faturanın müşterisi tektir: kanal kırılımı fatura seviyeli ölçüyü bölmez, anlam değişmemeli."""
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Kanal bazında satış tutarı", today=date(2026, 7, 20))
+    metric = next(s for s in sq.slots if s.semantic_type == SemanticType.METRIC)
+    assert metric.mapping.entity == "INVOICE"
+    assert not any("daha ince" in e for e in sq.explanation)
+
+
+def test_the_catalog_can_declare_a_grain_that_is_not_the_table_it_sits_on(catalog, profiles):
+    """`extra.grain` beyanı, ölçünün durduğu tablodan farklı bir tanecikliği söyleyebilir: satır
+    tablosunda duran ama fatura başına bir kez geçerli olan bir tutar gibi."""
+    from semantic_layer.runtime.resolver import SemanticResolver as R
+    from semantic_layer.models import ResolvedSlot
+
+    slot = ResolvedSlot(term="x", semantic_type=SemanticType.METRIC, status="CERTIFIED",
+                        mapping=Mapping(concept_id="", entity="STLINE", table_pattern="p",
+                                        extra={"grain": "INVOICE"}))
+    assert R._grain_of(slot) == "INVOICE"

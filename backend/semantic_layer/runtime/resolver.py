@@ -132,6 +132,8 @@ class SemanticResolver:
         self._value_index: dict[str, list[tuple[str, str, str]]] = {}
         self._edges: dict[str, set[str]] = {}
         self._related_cache: dict[str, set[str]] = {}
+        self._fk_edges: dict[str, set[str]] = {}      # yönlü: hangi varlıktan hangisine tek satır gidilir
+        self._fk_cache: dict[str, set[str]] = {}
         self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
 
     # ------------------------------------------------------------------ public
@@ -146,8 +148,22 @@ class SemanticResolver:
 
             qf.temporal, qf.grain = parse_temporal(question, today)
 
-        # 1) greedy longest-match over clause-local n-grams
+        # 0) report frame: "1. kolon kanal adı 2. kolon yıl" — the shape of the deliverable, not the
+        #     subject. First, and before anything looks a token up: a list marker is a fact about how
+        #     the sentence is written, and in this catalog "2" and "3" are also TRCODE values, so a
+        #     later pass reads the item numbers as a returns filter and the question quietly narrows.
         consumed: set[int] = set()
+        frame_idx, projection = self._report_frame(qf, consumed, index)
+        if frame_idx:
+            consumed.update(frame_idx)
+            for k in sorted(frame_idx):
+                if qf.tokens[k] not in sq.ignored and not qf.tokens[k].isdigit():
+                    sq.ignored.append(qf.tokens[k])   # izde görünsün: yutuldu ama saklanmadı
+            sq.projection = projection
+            if projection:
+                sq.explanation.append("istenen kolonlar (sorulan sıra): " + " | ".join(projection))
+
+        # 1) greedy longest-match over clause-local n-grams
         hits: list[ResolvedSlot] = []
         for i, j, key in sorted(qf.terms, key=lambda t: (-(t[1] - t[0]), t[0])):
             if any(k in consumed for k in range(i, j)):
@@ -312,6 +328,9 @@ class SemanticResolver:
                     sq.explanation.append(f"'{tok}' sıralama sayısı olarak okundu → ilk {n}")
                     break
 
+        # 4g) grain: can this measure be attributed to the breakdown that was asked for?
+        self._match_measure_to_grain(sq, hits, index)
+
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
@@ -331,19 +350,6 @@ class SemanticResolver:
             if is_participle(tok) and self._modifies_a_noun(qf.tokens, k, consumed):
                 continue            # "artan ürünler" narrows the subject; it is not just a trend cue
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
-
-        # 5c) report frame: "1. kolon kanal adı 2. kolon yıl" — the shape of the deliverable, not the
-        #     subject. Consumed here so the words that describe the output never reach step 6 and get
-        #     reported as business terms nobody defined; what they framed becomes the projection.
-        frame_idx, projection = self._report_frame(qf, consumed, index)
-        if frame_idx:
-            consumed.update(frame_idx)
-            for k in sorted(frame_idx):
-                if qf.tokens[k] not in sq.ignored and not qf.tokens[k].isdigit():
-                    sq.ignored.append(qf.tokens[k])   # izde görünsün: yutuldu ama saklanmadı
-            sq.projection = projection
-            if projection:
-                sq.explanation.append("istenen kolonlar (sorulan sıra): " + " | ".join(projection))
 
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
@@ -814,6 +820,91 @@ class SemanticResolver:
                 explain={"why": f"'{tok}' ölçü kelimesi + sertifikalı '{source_term}' kolonu → {agg}({entity}.{column})", "composed_from": source_term},
                 span=(k, k + 1),
             )
+        return None
+
+    def _points_at(self, root: str, hops: int = 3) -> set[str]:
+        """Bir `root` satırından TEK bir satırına gidilebilen varlıklar — yabancı anahtarın yönü.
+
+        `_related_entities` yönsüzdür ("bu ikisi bir arada sorulabilir" der). Taneciklik sorusu ise
+        yönlüdür: faturanın müşterisi tektir, ama bir faturanın ürünü tek değildir. Kırılım yalnız
+        okun gösterdiği yönde güvenlidir; ters yönde ölçü satırlara bölünmek zorundadır ve bölme
+        işini yapan tablo elde yoksa çıkan rakam ya tekrarlanır ya da uydurulur.
+        """
+        cached = self._fk_cache.get(root)
+        if cached is not None:
+            return cached
+        if not self._fk_edges:
+            for p in self.profiles:
+                for rel in p.relationships or []:
+                    other = rel.get("ref_entity")
+                    if other and other != p.entity:
+                        self._fk_edges.setdefault(p.entity, set()).add(other)
+        seen, frontier = set(), {root}
+        for _ in range(hops):
+            nxt: set[str] = set()
+            for e in frontier:
+                nxt |= self._fk_edges.get(e, set())
+            frontier = nxt - seen - {root}
+            seen |= frontier
+        self._fk_cache[root] = seen
+        return seen
+
+    @staticmethod
+    def _grain_of(slot: ResolvedSlot) -> str:
+        """Ölçünün bir satırının neyi temsil ettiği. Katalog `extra.grain` ile açıkça yazabilir;
+        yazmadıysa ölçünün durduğu tablo neyse taneciklik odur."""
+        m = slot.mapping
+        if m is None:
+            return ""
+        return str((m.extra or {}).get("grain") or m.entity or "")
+
+    def _match_measure_to_grain(self, sq: SemanticQuery, hits: list[ResolvedSlot], index: dict) -> None:
+        """İstenen kırılım ölçünün tanecikliğinden ince mi — ve inceyse, uyan başka bir anlam var mı?
+
+        "Ürün bazında net ciro" sorusunda fatura seviyeli ciro ürüne bölünemez: bir faturada birkaç
+        ürün vardır. Katalogda aynı terimin satır seviyeli anlamı varsa doğru olan odur ve buradan
+        seçilir. Yoksa soru sessizce yanlış tanecikte cevaplanmaz; niteliğiyle birlikte söylenir.
+        """
+        for metric in [s for s in hits if s.semantic_type == SemanticType.METRIC and s.mapping]:
+            grain = self._grain_of(metric)
+            if not grain:
+                continue
+            for dim in list(sq.group_by):
+                target = dim.mapping.entity if dim.mapping else ""
+                if not target or target == grain or target in self._points_at(grain):
+                    continue                      # aynı satır ya da okun gösterdiği yön: bölünme yok
+                alt = self._sense_at_grain(metric, target, index)
+                if alt is not None:
+                    old_grain, metric.mapping = grain, alt
+                    metric.explain["grain_switch"] = f"{old_grain} → {self._grain_of(metric)}"
+                    sq.explanation.append(
+                        f"'{metric.term}' {old_grain} seviyesinde tanımlı ama kırılım '{dim.term}' "
+                        f"({target}) daha ince; aynı terimin {self._grain_of(metric)} seviyesindeki "
+                        f"tanımı kullanıldı"
+                    )
+                    grain = self._grain_of(metric)
+                    continue
+                # Uyan bir anlam yok. Soruyu burada reddetmiyoruz: deterministik derleyici bu
+                # durumu zaten tanıyor ve planı kuramadığını söylüyor. Buraya düşen tek şey, neden
+                # öyle olduğunun ize yazılması — iki kapı aynı işi yaparsa hangisinin konuştuğu
+                # belirsizleşir.
+                note = (f"'{metric.term}' {grain} seviyesinde ölçülüyor; '{dim.term}' ({target}) kırılımı "
+                        f"daha ince ve bu ölçüyü satırlara bölecek bir tanım katalogda yok — bölünürse "
+                        f"çıkan rakam her satırda tekrar eder")
+                if note not in sq.explanation:
+                    sq.explanation.append(note)
+
+    def _sense_at_grain(self, metric: ResolvedSlot, target: str, index: dict) -> Optional[Mapping]:
+        """Aynı terimin, istenen kırılımı taşıyabilen başka bir anlamı."""
+        key = metric.explain.get("normalized") or metric.term
+        for sense in (index.get(key) or []):
+            concept, mappings = sense if isinstance(sense, tuple) else (sense, [])
+            for m in mappings or []:
+                grain = str((m.extra or {}).get("grain") or m.entity or "")
+                if not grain or grain == self._grain_of(metric):
+                    continue
+                if target == grain or target in self._points_at(grain):
+                    return m
         return None
 
     def _related_entities(self, root: str, hops: int = 2) -> set[str]:

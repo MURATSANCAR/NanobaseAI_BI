@@ -6,13 +6,17 @@
  * istemiyor. Burada düzen bir veri: taşınabilir, boyutlandırılabilir, ve sohbette çıkan bir cevap
  * doğrudan buraya iliştirilebilir.
  *
+ * Taşıma kartın kendisinden yapılır: karta basıp sürüklemek yeter, önce "düzeni değiştir"e girmek
+ * ya da köşedeki tutamağı nişan almak gerekmez. Düzenleme modu artık sırayı değil, sıradan olmayan
+ * işleri (boy verme, kaldırma, klavyeyle taşıma) açıyor.
+ *
  * Düzen tarayıcıda saklanıyor — sistemde kullanıcı kavramı yok (portalın kendi girişi kapalı), ve
  * "kişiye özel" demek olmayan bir şeyi öyleymiş gibi göstermek yanlış olurdu. Şema kişiye taşınmaya
  * hazır: değişecek tek şey `board.ts` içindeki load/save.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors,
-         type DragEndEvent } from '@dnd-kit/core';
+import { DndContext, KeyboardSensor, MouseSensor, TouchSensor, closestCenter, useSensor,
+         useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, rectSortingStrategy, sortableKeyboardCoordinates,
          useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -20,6 +24,22 @@ import { GripVertical, RotateCcw, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { DEFAULT_BOARD, SPANS, SPAN_LABEL, load, save, type Board as BoardModel, type Span,
          type Tile } from '../lib/board';
+
+/** Kartın içinde kendi işi olan öğeler: bunlara basmak sürükleme başlatmaz. */
+const INTERACTIVE = 'button, a, input, select, textarea, label, summary, [role="button"], [contenteditable="true"], [data-no-drag]';
+
+/** Sürüklemeyi kart gövdesinden başlatır, ama karttaki düğmeyi düğme olarak bırakır.
+ *  Tutamak da bir <button>; onu ayrı tutmasak kendi işlevini kaybederdi.
+ *  (dnd-kit dinleyicileri `Function` olarak tipli geliyor; imzayı burada geri veriyoruz.) */
+function fromBody<E extends React.SyntheticEvent>(listener: unknown) {
+  const handler = listener as ((e: E) => void) | undefined;
+  return (e: E) => {
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('[data-drag-handle]')) return handler?.(e);
+    if (el?.closest?.(INTERACTIVE)) return;
+    handler?.(e);
+  };
+}
 
 const COL: Record<Span, string> = {
   1: 'sm:col-span-2 2xl:col-span-1',
@@ -77,11 +97,20 @@ export function Board({
   render: (tile: Tile) => React.ReactNode;
 }) {
   const sensors = useSensors(
-    // 6 piksel eşik: karttaki düğmelere tıklamak sürükleme sayılmasın.
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    // 6 piksel eşik: karta tıklamak sürükleme sayılmasın.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Dokunmatikte eşik yerine basılı tutma: parmakla yapılan kaydırma sayfanın kalsın.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+  const [dragging, setDragging] = useState(false);
+  const onDragStart = () => {
+    setDragging(true);
+    // Kart gövdesinden sürüklerken eşik aşılana kadar metin seçilmiş olabilir; iz bırakmasın.
+    window.getSelection()?.removeAllRanges();
+  };
   const onDragEnd = (e: DragEndEvent) => {
+    setDragging(false);
     const over = e.over?.id;
     if (over && over !== e.active.id) onReorder(String(e.active.id), String(over));
   };
@@ -102,9 +131,10 @@ export function Board({
         </button>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter}
+        onDragStart={onDragStart} onDragCancel={() => setDragging(false)} onDragEnd={onDragEnd}>
         <SortableContext items={tiles.map((t) => t.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-4">
+          <div className={clsx('grid grid-cols-1 gap-3 sm:grid-cols-4 sm:gap-4', dragging && 'select-none')}>
             {tiles.map((t) => (
               <Cell key={t.id} tile={t} editing={editing} onResize={onResize} onRemove={onRemove}>
                 {render(t)}
@@ -124,20 +154,24 @@ function Cell({
   onRemove: (id: string) => void; children: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: tile.id, disabled: !editing });
+    useSortable({ id: tile.id });
   return (
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
-      className={clsx('relative min-w-0', COL[tile.span], isDragging && 'z-20 opacity-70')}
+      onMouseDown={fromBody<React.MouseEvent<HTMLDivElement>>(listeners?.onMouseDown)}
+      onTouchStart={fromBody<React.TouchEvent<HTMLDivElement>>(listeners?.onTouchStart)}
+      className={clsx('relative min-w-0 cursor-grab active:cursor-grabbing',
+        COL[tile.span], isDragging && 'z-20 cursor-grabbing opacity-70')}
     >
       {editing && (
         <div className="absolute -top-2 right-2 z-10 flex items-center gap-1 rounded-lg border border-line bg-white px-1 py-0.5 shadow-card">
           <button
             type="button"
+            data-drag-handle
             {...attributes}
             {...listeners}
-            aria-label="Kartı taşı"
+            aria-label="Kartı taşı (ok tuşlarıyla da taşınır)"
             className="cursor-grab rounded p-0.5 text-ink-faint hover:text-brand active:cursor-grabbing"
           >
             <GripVertical size={13} />
