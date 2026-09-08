@@ -26,7 +26,7 @@ API_ENV="${NANOBASE_API_ENV:-${ROOT}/backend/nanobase_api.env}"
 ENV_FILE="${SEMANTIC_BRIDGE_ENV:-/etc/nanobase/semantic-bridge.env}"
 UNIT=/etc/systemd/system/nanobase-semantic-bridge.service
 PORT="${SEMANTIC_BRIDGE_PORT:-8795}"
-WORKERS="${SEMANTIC_BRIDGE_WORKERS:-2}"
+WORKERS="${SEMANTIC_BRIDGE_WORKERS:-1}"
 # Interpreter: whatever this box actually has (3.10+). Prefer an explicit choice, then the newest
 # system Python, and finally the API venv's own base — never a hard-coded minor version.
 PYTHON_BIN="${SEMANTIC_PYTHON:-}"
@@ -40,6 +40,9 @@ fi
 
 log() { printf '[deploy-semantic-bridge] %s\n' "$*"; }
 die() { printf '[deploy-semantic-bridge] ERROR: %s\n' "$*" >&2; exit 1; }
+
+# Result snapshots and conversation state are process-local until a shared store is implemented.
+[[ "$WORKERS" == "1" ]] || die "SEMANTIC_BRIDGE_WORKERS must be 1: snapshots and threads are process-local"
 
 [[ -d "${ROOT}/backend/semantic_layer" ]] || die "backend/semantic_layer missing under ${ROOT} — rsync the repo first"
 command -v "$PYTHON_BIN" >/dev/null 2>&1 || [[ -x "$PYTHON_BIN" ]] || die "no usable python found (set SEMANTIC_PYTHON)"

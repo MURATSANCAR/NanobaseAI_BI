@@ -374,6 +374,7 @@ class SemanticQuery:
     comparison: Optional[dict[str, Any]] = None
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
     temporal_binding: Optional[dict[str, Any]] = None
+    absence_contract: Optional[dict[str, Any]] = None
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -444,6 +445,7 @@ class SemanticQuery:
             "comparison": dict(self.comparison) if self.comparison else None,
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,
+            "absenceContract": {k: v for k, v in self.absence_contract.items() if k != "sql"} if self.absence_contract else None,
             "fullyResolved": self.fully_resolved,
             "state": self.state,
             "refusalReason": self.refusal_reason,

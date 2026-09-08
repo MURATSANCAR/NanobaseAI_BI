@@ -626,7 +626,7 @@ class SemanticResolver:
                               resolved_as=",".join(sorted({f"{s.semantic_type}:{s.status}" for s in covering})))
             elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
                 sq.shape = "ABSENCE"
-                record.update(decision="ABSENCE", evidence_source="catalog")
+                record.update(decision="ABSENCE", evidence_source="catalog", verb_root=root)
                 sq.explanation.append(f"'{tok}' olumsuz: '{named[0][0]}' ölçüsünün hiç gerçekleşmediği kayıtlar isteniyor")
             elif not is_negative(tok) and (metric := self._metric_from_verb(tok, k, index)) is not None:
                 # The word is the verbal form of a measure this catalog defines: "en çok satan" ranks

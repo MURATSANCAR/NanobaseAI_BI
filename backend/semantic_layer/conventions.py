@@ -39,6 +39,7 @@ class Conventions:
     patterns: dict[str, str] = field(default_factory=dict)
     time_hint: dict[str, str] = field(default_factory=dict)             # evidence-preferred time column
 
+    absence_rules: list[dict] = field(default_factory=list)
     filter_equivalences: list[dict] = field(default_factory=list)
     time_equivalences: list[dict] = field(default_factory=list)  # knowledge-pack declarations, never inferred from a join
 
@@ -127,6 +128,11 @@ class Conventions:
         if not path.exists():
             return
         declarations = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        self.absence_rules = []
+        for rule in declarations.get("absence_queries", []):
+            if all(self.join_path(j[0], j[2]) == tuple(j) for j in rule["joins"]) and all(
+                    self.has(e, c) for e, cols in rule["columns"].items() for c in cols):
+                self.absence_rules.append(rule)
         for rule in declarations.get("equivalent_dates", []):
             left, right = rule["left"], rule["right"]
             join = tuple(rule["join"])

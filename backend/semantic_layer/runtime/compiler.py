@@ -353,6 +353,9 @@ class DeterministicCompiler:
         return {c for c in used if c.upper() in names}
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]:
+        if q.shape == "ABSENCE":
+            from semantic_layer.runtime.absence import compile_absence
+            return compile_absence(self, q)
         plan, reason = self.plan(q)
         if plan is None:
             log.debug("deterministic compile refused: %s", reason)
@@ -1428,6 +1431,12 @@ class CompilerRouter:
         if q.clarification:
             return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
                                  explain=q.clarification, certified=False)
+        if q.shape == "ABSENCE" and self.deterministic is not None:
+            out = self.deterministic.compile(q, catalog)
+            if out is not None:
+                return out
+            return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
+                                 explain=["Bu yokluk sorusunun ilişki, işlem türü veya dönem kapsamı tanımlı değil. Hangi işlem ve dönem için kayıt aramadığınızı belirtir misiniz?"], certified=False)
         if self.primary:
             comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
             if comp is not None:

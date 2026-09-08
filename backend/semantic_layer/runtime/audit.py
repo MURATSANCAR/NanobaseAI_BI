@@ -330,7 +330,9 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
     if sq.shape == "ABSENCE":
         # Presence of the word NOT is insufficient: until a correlated anti-join
         # is certified against the plan, do not serve a positive list as absence.
-        out.append("yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı")
+        expected = (sq.absence_contract or {}).get("sql")
+        if not expected or parse_sql(expected) != tree:
+            out.append("yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı")
     if sq.unhandled or sq.clarification:
         out.append("çözümlenmemiş soru koşulları var; netleştirme gerekiyor")
     return out

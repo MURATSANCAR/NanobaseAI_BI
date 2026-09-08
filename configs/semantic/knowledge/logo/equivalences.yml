@@ -24,3 +24,25 @@ equivalent_filters:
     values: ["2", "3"]
     join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
     reason: "Satış iadesi kodları 2 ve 3, fatura başlığı ve bağlı satış satırında aynı işlemi seçer."
+
+# A sale occurrence uses the certified invoice sales scope (7,8,9), not net
+# balance: a later return does not erase the fact that the product was sold.
+absence_queries:
+  - verb_root: sat
+    subject: ITEMS
+    event: STLINE
+    scope_entity: INVOICE
+    date_column: DATE_
+    joins:
+      - [STLINE, STOCKREF, ITEMS, LOGICALREF]
+      - [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    columns:
+      ITEMS: [LOGICALREF, CODE, NAME]
+      STLINE: [STOCKREF, INVOICEREF, CANCELLED, LINETYPE]
+      INVOICE: [LOGICALREF, DATE_, TRCODE, CANCELLED]
+    predicates:
+      - {entity: STLINE, column: CANCELLED, operator: '=', values: ['0']}
+      - {entity: STLINE, column: LINETYPE, operator: '=', values: ['0']}
+      - {entity: INVOICE, column: TRCODE, operator: IN, values: ['7', '8', '9']}
+      - {entity: INVOICE, column: CANCELLED, operator: '=', values: ['0']}
+    reason: "İptal edilmemiş satış faturalarına (sertifikalı satış kapsamı 7,8,9) bağlı ürün satırının yokluğu; iade satışın gerçekleşmiş olmasını silmez."

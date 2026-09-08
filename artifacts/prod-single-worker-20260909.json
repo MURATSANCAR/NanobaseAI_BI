@@ -1,0 +1,65 @@
+{
+  "type": "TEXT_TO_SQL",
+  "checks": [
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    },
+    {
+      "http": 200,
+      "samePrefix": true,
+      "rows": 17
+    }
+  ]
+}

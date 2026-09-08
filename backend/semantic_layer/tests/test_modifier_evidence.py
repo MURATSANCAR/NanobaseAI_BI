@@ -85,6 +85,7 @@ def test_bridge_returns_question_and_logs_modifier_without_calling_llm(resolver)
     runtime = Runtime.__new__(Runtime)
     runtime.settings = SimpleNamespace(tenant_id="t", datasource_id="d")
     runtime.threads = {}
+    runtime.thread_plans = {}
     runtime.ensure_fresh = lambda: None
     runtime.resolver = resolver
     runtime.store = resolver.store

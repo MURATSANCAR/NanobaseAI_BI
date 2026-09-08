@@ -72,6 +72,7 @@ class Runtime:
         self._results_max = int(os.environ.get("SEMANTIC_RESULT_KEEP", "64"))
         self._result_ttl = float(os.environ.get("SEMANTIC_RESULT_TTL_SEC", "1800"))
         self.threads: dict[str, list[dict[str, str]]] = {}
+        self.thread_plans: dict[str, Any] = {}
         self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id),
                                               self.store.concept_entities(settings.tenant_id, settings.datasource_id))
         self.rules_text = self._load_rules()
@@ -541,6 +542,8 @@ class Runtime:
         note = ""
         if sq is not None:
             note = " ".join(e for e in sq.explanation if "kısmen gözleniyor" in e or "gözlenen veri kapsamı dışında" in e or "Karşılaştırmada" in e)
+            if sq.absence_contract:
+                note += " " + sq.absence_contract.get("scope_note", "")
             if note:
                 note = " " + note
         if self.settings.summary_mode == "llm" and self.llm is not None:
@@ -563,9 +566,17 @@ class Runtime:
         if len(self.threads) > 200:
             for stale in list(self.threads)[:-100]:
                 self.threads.pop(stale, None)
+                self.thread_plans.pop(stale, None)
         self.ensure_fresh()
         t = time.perf_counter()
-        sq = self.resolver.resolve(question)
+        from semantic_layer.runtime.conversation import compose_followup
+        effective_question, context_error = compose_followup(question, self.thread_plans.get(thread_id))
+        if context_error:
+            return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
+                    "threadId": thread_id, "timings": timings}
+        sq = self.resolver.resolve(effective_question)
+        if effective_question != question:
+            sq.explanation.append(f"Konuşma bağlamıyla tamamlanan soru: {effective_question}")
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
         if any(c["status"] == "OUTSIDE_OBSERVED" for c in sq.data_coverage):
             reason = " ".join(e for e in sq.explanation if "gözlenen veri kapsamı dışında" in e)
@@ -734,6 +745,7 @@ class Runtime:
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
         fp = result_fingerprint([c["name"] for c in result["columns"]], result["records"])
         qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
+        self.thread_plans[thread_id] = sq
         thread.append({"role": "user", "content": question})
         thread.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         del thread[:-12]
