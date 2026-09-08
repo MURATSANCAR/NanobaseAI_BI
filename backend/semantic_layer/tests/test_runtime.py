@@ -1101,3 +1101,43 @@ def test_a_question_that_spans_copies_joins_inside_each_one_and_unions_the_resul
     assert out.sql.count("__nb_firm") >= 5, out.sql
     assert "STLINE.[__nb_firm] = ITEMS.[__nb_firm]" in out.sql or "ITEMS.[__nb_firm] = STLINE.[__nb_firm]" in out.sql, out.sql
     assert "LG_211_ITEMS" in out.sql and "LG_411_ITEMS" in out.sql, out.sql
+
+
+def test_a_word_the_vocabulary_lacks_is_looked_for_in_the_schema(catalog, profiles):
+    """Katalogda yoksa şemada ara: kolonun kendi adı kelimeyi taşıyorsa, o kelime tanımsız bir kavram
+    değil, adı konmamış bir kolondur. Okunur ama sertifikalı sayılmaz."""
+    from semantic_layer.runtime.column_index import ColumnIndex
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    r.columns = ColumnIndex(profiles)
+    sq = r.resolve("definition bazında 2026 net ciro")
+    inferred = [s for s in sq.slots if s.status == "INFERRED" and s.explain.get("source") == "column_index"]
+    assert inferred, sq.to_dict()
+    assert inferred[0].mapping.column == "DEFINITION_"
+    assert any("sertifikalı değil" in e for e in sq.explanation)
+
+    # ...ve kolon adının kendisi söylendiğinde de: eskiden bu kelime hiçbir yere yazılmadan atlanıyordu
+    sq2 = r.resolve("2026 outcost toplamı")
+    assert [s.mapping.column for s in sq2.slots if s.explain.get("source") == "column_index"] == ["OUTCOST"], sq2.to_dict()
+
+
+def test_an_entity_word_is_never_read_as_a_column_by_the_schema_search(catalog, profiles):
+    """"müşteri" bir tablonun adı; kolon diye okunursa sorulmayan bir kırılım eklenir."""
+    from semantic_layer.runtime.column_index import ColumnIndex
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    r.columns = ColumnIndex(profiles)
+    sq = r.resolve("müşteri bazında 2026 net ciro")
+    from_data = [s for s in sq.slots if s.explain.get("source") == "column_index"]
+    assert from_data == [], [s.term for s in from_data]
+
+
+def test_a_word_that_only_appears_among_a_column_s_values_is_not_read_as_that_column(catalog, profiles):
+    """Bir kelime bir kolonun İÇİNDE geçiyorsa, o kolonun ne olduğunu değil neyle süzüleceğini söyler."""
+    from semantic_layer.runtime.column_index import ColumnIndex
+
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    r.columns = ColumnIndex(profiles)
+    sq = r.resolve("kitapçı bazında 2026 net ciro")
+    bad = [s for s in sq.slots if s.explain.get("source") == "column_index" and s.mapping.column == "SPECODE2"]
+    assert bad == [], [s.term for s in bad]

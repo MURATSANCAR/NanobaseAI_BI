@@ -37,13 +37,22 @@ from semantic_layer.normalize import (
     tokenize,
     verb_root,
 )
-from semantic_layer.history.question_facts import GENERIC_S
+from semantic_layer.naming import source_rank
 from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
+# Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
+_DOMINANT = 1.5
+
+
+def _identifier_words(name: str) -> set[str]:
+    """`RAF_BILGISI` → {raf, bilgisi}. Kolon adının kendi kelimeleri."""
+    return {w for w in re.split(r"[^a-z0-9]+", fold(name or "")) if w}
+
+
 _ORDINAL_WORDS = frozenset(stem(w) for w in "birinci ikinci ucuncu dorduncu besinci altinci yedinci sekizinci dokuzuncu onuncu".split())
 _GROUP_MARKERS = re.compile(r"\b(bazinda|bazli|gore|kiriliminda|kirilimi|dagilimi|dagilim|itibariyla)\b")
 _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money", "smallmoney", "bigint", "smallint", "tinyint")
@@ -134,6 +143,9 @@ class SemanticResolver:
         self._related_cache: dict[str, set[str]] = {}
         self._fk_edges: dict[str, set[str]] = {}      # yönlü: hangi varlıktan hangisine tek satır gidilir
         self._fk_cache: dict[str, set[str]] = {}
+        # Kolon adları, açıklamaları ve içerdikleri değerler üzerinde sözlük araması. Dışarıdan
+        # verilir; verilmezse çözümleme bugünkü gibi yalnız sertifikalı sözlükten yürür.
+        self.columns: Any = None
         self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
 
     # ------------------------------------------------------------------ public
@@ -413,6 +425,11 @@ class SemanticResolver:
                 continue
             if tok not in sq.unresolved:
                 sq.unresolved.append(tok)
+
+        # 6b) a word the vocabulary has no entry for, looked for in the data itself. What the catalog
+        #     does not define, the schema may still contain: the question is then about a column
+        #     nobody wrote down, not about something this deployment has no answer for.
+        self._from_data(sq, index, qf, consumed)
 
         # 7) conflicting filters: two different value sets ANDed on one column (no comparison cue)
         by_col: dict[tuple[str, str], set[frozenset[str]]] = {}
@@ -961,6 +978,109 @@ class SemanticResolver:
         if len(owners) == 1:
             return owners[0]
         return self.conventions.preferred_entity(owners, hint=primary)
+
+    def _word_forms(self, word: str) -> list[str]:
+        """Bir kelimenin, kolon adlarıyla buluşabileceği biçimleri.
+
+        Kolon adları indekste çekimsiz duruyor ("BARKOD"), soru ise çekimli geliyor ("barkodu").
+        Kökü almadan ikisi hiç karşılaşmıyor — arama boş dönüyor ve kelime "veride yok" sayılıyor.
+        """
+        forms = [word, fold(word), stem(word), short_root(word)] + derived_forms(word)
+        return [f for f in dict.fromkeys(forms) if f and len(f) >= 3]
+
+    def _from_data(self, sq: SemanticQuery, index: dict, qf: Any = None, consumed: Optional[set] = None) -> None:
+        """Sözlükte olmayan kelimeyi şemanın kendisinde ara; yeterince baskınsa oku, değilse aday bırak.
+
+        İki ayrı sessiz hata için: bir kelime ya reddediliyor ("tanımlı bir kavram değil") ya da
+        gramer sayılıp atılıyor — ikisinde de veride duran karşılığına hiç bakılmıyor. Atılmış bir
+        kelimenin şemada güçlü bir karşılığı varsa o kelime gramer değil, içerikti; kararı morfoloji
+        değil kanıt versin.
+
+        Bulunan hiçbir şey sertifikalı sayılmaz: slot INFERRED olarak işaretlenir, cevap "doğrulanmış"
+        damgası almaz ve ne okunduğu ize yazılır.
+        """
+        if self.columns is None:
+            return
+        # A word the resolver could not place, or dropped as grammar. Never a word it *did* place by
+        # other means: an entity word names a table, and reading "müşteri" as a column would answer
+        # by a breakdown nobody asked for.
+        skip = STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S | _ENTITY_WORDS | _TIME_WORDS
+        def _worth(w: str) -> bool:
+            return len(w) >= 4 and not {stem(w), short_root(w), fold(w)} & skip
+        looked = [w for w in sq.unresolved if _worth(w)] + [w for w in sq.ignored if _worth(w)]
+        # A word that *is* a column name. Step 6 passes over it — it is plainly not a missing business
+        # term — but nothing then reads it either, so the question is answered as though it had not
+        # been said. Naming a column outright is the strongest evidence a question can carry.
+        for k, tok in enumerate(getattr(qf, "tokens", []) or []):
+            if (consumed and k in consumed) or tok.upper() not in self.column_names:
+                continue
+            if _worth(tok) and tok not in looked:
+                looked.append(tok)
+        if not looked:
+            return
+        primary = self._primary_entity(sq.slots)
+        near = self._related_entities(primary) | {primary} if primary else set()
+        for word in dict.fromkeys(looked):
+            best: dict[tuple[str, str], dict] = {}
+            for form in self._word_forms(word):
+                for hit in (self.columns.search(form, limit=6) or []):
+                    # Only a hit on the column's own name counts as a reading of this word. A word
+                    # that merely occurs among a column's values says what to filter for, not what
+                    # the column is, and taking it for a column is how "fark" becomes a transaction
+                    # type nobody asked about.
+                    if form not in _identifier_words(hit["column"]):
+                        continue
+                    key = (hit["entity"], hit["column"])
+                    if hit["score"] > best.get(key, {}).get("score", 0):
+                        best[key] = hit
+            if not best:
+                continue
+            by_column: dict[str, list[dict]] = {}
+            for hit in best.values():
+                by_column.setdefault(hit["column"], []).append(hit)
+            ranked = sorted(by_column.items(), key=lambda kv: -max(h["score"] for h in kv[1]))
+            top_col, top_hits = ranked[0]
+            top = max(h["score"] for h in top_hits)
+            runner = max((h["score"] for _, hs in ranked[1:] for h in hs), default=0.0)
+            sq.candidates.append({"term": word, "column": top_col,
+                                  "entities": [h["entity"] for h in sorted(top_hits, key=lambda h: -h["score"])][:4],
+                                  "score": round(top, 2), "runnerUp": round(runner, 2)})
+            # One name, clearly ahead of any other. Several tables carrying that same name is not
+            # ambiguity about *what* was meant — it is a choice of table, and the question's own
+            # subject settles it. A name that only exists far from the subject would answer a
+            # different question, so it is left as a candidate instead.
+            if runner and top < runner * _DOMINANT:
+                continue
+            # Among the tables carrying that name, a base table before a view and a full one before an
+            # empty one. Ranked by search score alone the answer lands in whichever hand-made copy
+            # scored highest, and the question is answered from a report view instead of the table
+            # the business runs on.
+            def _own_rank(hit: dict) -> tuple:
+                pr = self.by_entity.get(hit["entity"])
+                rows = (pr.row_count or 0) if pr else 0
+                is_view = pr.row_count is None if pr else True
+                return (source_rank(pr.table_name if pr else hit["entity"], is_view=is_view), -rows, -hit["score"])
+            owners = [h["entity"] for h in sorted(top_hits, key=_own_rank)]
+            # Near the question's subject, or — when the question established no subject at all — the
+            # best match itself. `near` is there to stop a reading from moving the question somewhere
+            # else; with nothing yet established there is nothing to move, and the word is all the
+            # question is about.
+            pick = next((e for e in owners if e in near), None) if near else owners[0]
+            if pick is None:
+                continue
+            prof = self.by_entity.get(pick)
+            if prof is None or prof.column(top_col) is None:
+                continue
+            m = Mapping(concept_id="", entity=pick, table_pattern=prof.table_pattern, column=top_col, operator="COLUMN")
+            sq.slots.append(ResolvedSlot(term=word, semantic_type=SemanticType.COLUMN, status="INFERRED",
+                                         mapping=m, confidence=0.5,
+                                         explain={"why": f"katalogda yok; şemada {pick}.{top_col} ile eşleşti",
+                                                  "source": "column_index", "normalized": stem(word)}))
+            if word in sq.unresolved:
+                sq.unresolved.remove(word)
+            if word in sq.ignored:
+                sq.ignored.remove(word)
+            sq.explanation.append(f"'{word}' → {pick}.{top_col} olarak okundu (veride eşleşti, sertifikalı değil)")
 
     def _knows_word(self, word: str, index: dict) -> bool:
         """Katalog bu kelimeyi tanıyor mu — terim, kolon adı ya da varlık adı olarak."""

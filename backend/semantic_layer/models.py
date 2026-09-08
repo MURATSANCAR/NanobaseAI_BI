@@ -363,6 +363,9 @@ class SemanticQuery:
     # Çıktının biçimi soruda tarif edildiyse istenen kolonlar, sorulduğu sırayla ("1. kolon kanal
     # adı 2. kolon yıl"). Anlamı değil sunumu belirler: neyin hangi sırayla görüneceğini söyler.
     projection: list[str] = field(default_factory=list)
+    # Katalogda karşılığı olmayan bir kelime için veride bulunan aday kolonlar. Karar değildir:
+    # biri yeterince baskınsa slota dönüşür, değilse modele "bu kelime şuna benziyor" diye gider.
+    candidates: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -426,6 +429,7 @@ class SemanticQuery:
             "unhandled": list(self.unhandled),
             "shape": self.shape,
             "projection": list(self.projection),
+            "candidates": [dict(c) for c in self.candidates],
             "fullyResolved": self.fully_resolved,
             "state": self.state,
             "refusalReason": self.refusal_reason,

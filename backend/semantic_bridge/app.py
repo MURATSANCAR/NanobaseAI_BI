@@ -194,6 +194,10 @@ class Runtime:
                 from semantic_layer.runtime.column_index import ColumnIndex
 
                 existing.columns = ColumnIndex(self.profiles, existing.annotations)
+                # The resolver reads it too: a word the certified vocabulary has no entry for may
+                # still be the name of a column this schema carries, and that is decided while the
+                # question is being resolved — not later, by a model guessing at a column name.
+                self.resolver.columns = existing.columns
                 log.info("column index enabled: %d columns, %d distinct values",
                          len(existing.columns.docs), len(existing.columns.values))
             except Exception as e:  # noqa: BLE001

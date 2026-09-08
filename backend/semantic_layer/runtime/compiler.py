@@ -549,6 +549,8 @@ _REFUSALS = {
     # define "hava" in the portal would be absurd; deciding which of the two it is would need a
     # dictionary of the customer's language, which is exactly what this system refuses to keep.
     "unknown": "Bu soruyu cevaplayamıyorum: '{terms}' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz.",
+    "found_but_undefined": ("'{term}' katalogda tanımlı değil, ama şemada karşılığı olabilecek bir kolon var: {where}. "
+                            "Doğrusu buysa portalden tanımlayın, bir daha sormayayım."),
     "qualifier": "'{terms}' koşulunu veride karşılayan bir tanım yok; onu yok sayıp daha geniş bir soruyu cevaplamak doğru olmaz.",
     "vague": "Hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız? (ör. ciro, iade oranı, sipariş sayısı)",
     "off_topic": "Yalnızca bu veri kaynağındaki verilerle ilgili soruları cevaplayabiliyorum.",
@@ -565,6 +567,14 @@ def refusal_for(q: SemanticQuery) -> str:
     if q.out_of_scope and detail:
         return _REFUSALS["scope"].format(detail=detail)
     if q.unresolved:
+        # A word nobody defined, that the schema nonetheless carries. Saying only "not a defined
+        # concept" hides what was found and sends someone to define a term the deployment can
+        # already point at; naming the column turns a dead end into one decision.
+        found = [c for c in (q.candidates or []) if c.get("term") in q.unresolved]
+        if found:
+            c = found[0]
+            where = ", ".join(f"{e}.{c['column']}" for e in (c.get("entities") or [])[:2])
+            return _REFUSALS["found_but_undefined"].format(term=c["term"], where=where)
         return _REFUSALS["unknown"].format(terms=", ".join(q.unresolved[:4]))
     if q.unhandled:
         return _REFUSALS["qualifier"].format(terms=", ".join(q.unhandled[:3]))
@@ -742,6 +752,14 @@ class ExistingCompiler:
         for slot in q.slots:
             if slot.mapping:
                 add(slot.mapping.entity)
+        # A table that carries the only column matching a word the vocabulary does not define. It is
+        # the answer to that word, so it is pinned beside what the question resolved: shortlisted by
+        # a general ranking it loses to tables the question never mentioned, and the model is then
+        # asked about a word whose column it was never shown.
+        for cand in getattr(q, "candidates", []) or []:
+            for ent in (cand.get("entities") or [])[:2]:
+                if ent in self.by_entity and ent not in ordered:
+                    ordered.append(ent)
         resolved = list(ordered)
 
         # What the question itself points at, gathered before anything is placed: lexical and value
@@ -1275,6 +1293,12 @@ class ExistingCompiler:
             # column; the model is told that spelling instead of guessing at capitalisation and
             # suffixes, or refusing a question the data can answer.
             "## SORUDAKİ DEĞERLER\n" + self.value_facts(q, entities),
+            # What the schema has that looks like a word the vocabulary does not define. Without it
+            # the model fills the gap by inventing a column name that reads plausibly and does not
+            # exist, and the person asking gets a database error instead of an answer.
+            "## KATALOGDA OLMAYAN KELİMELER İÇİN ŞEMADAKİ ADAYLAR\n" + (
+                "\n".join(f"'{c['term']}' → " + ", ".join(f"{e}.{c['column']}" for e in c["entities"][:3])
+                          for c in q.candidates) if q.candidates else "(yok)"),
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
             # The period was checked and found to be inside what this deployment covers, but past the
