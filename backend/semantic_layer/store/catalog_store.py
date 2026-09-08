@@ -896,7 +896,18 @@ class CatalogStore:
         return out
 
     # ------------------------------------------------------------------ helpers
-    def review_rows(self, tenant_id: str, datasource_id: str, status: str, limit: int = 2000) -> list[dict[str, Any]]:
+    def recent_questions(self, tenant_id: str, datasource_id: str, limit: int = 10000) -> list[str]:
+        """Everything anyone has typed at this deployment.
+
+        A business vocabulary is made of words people say. A term that appears in no question anybody
+        has ever asked is not evidence of a word — it is evidence of whatever produced it."""
+        stmt = (sa.select(S.sl_query_log.c.normalized_question)
+                .where(S.sl_query_log.c.tenant_id == tenant_id,
+                       S.sl_query_log.c.datasource_id == datasource_id)
+                .order_by(S.sl_query_log.c.created_at.desc()).limit(limit))
+        return [r["normalized_question"] or "" for r in self._rows(stmt)]
+
+    def review_rows(self, tenant_id: str, datasource_id: str, status: str | Iterable[str], limit: int = 2000) -> list[dict[str, Any]]:
         """Candidates with their evidence tally and first mapping, in three queries rather than four
         per concept. The queue asks for a thousand of these at once; building a bundle each would be
         four thousand round trips, and the page would sit on "reading" long enough that nobody waits.

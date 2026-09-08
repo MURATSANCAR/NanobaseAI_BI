@@ -741,6 +741,19 @@ class Runtime:
         s = self.settings
         gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         gen.attach_profile_evidence()
+        # Try to break the new candidates before weighing them. Everything upstream looks for reasons
+        # to believe a term; without this step the only thing standing between a plausible-looking
+        # mapping and the vocabulary is somebody noticing.
+        try:
+            from semantic_layer.evidence.refute import Refuter
+
+            said = getattr(self.existing, "annotations", None) or {}
+            broken = Refuter(self.store, s.tenant_id, s.datasource_id, self.profiles, said).run()
+            if broken:
+                log.info("çürütülen aday: %d (%s)", len(broken),
+                         ", ".join(sorted({b["why"] for b in broken})))
+        except Exception as e:  # noqa: BLE001
+            log.warning("çürütme adımı çalışmadı, aday havuzu süzülmeden geçti: %s", e)
         rep = EvidenceEngine(self.store, min_support=s.min_support, threshold=s.certify_threshold).run(s.tenant_id, s.datasource_id, self.profiles, note=note)
         self.rebuild()
         return rep
