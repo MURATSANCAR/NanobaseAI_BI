@@ -1,0 +1,375 @@
+{
+  "question": "2026 yılbaşından bugüne yayınevi bazında net ciro ve satılan adet",
+  "type": "TEXT_TO_SQL",
+  "correct": true,
+  "referenceRows": 48,
+  "answerRows": 48,
+  "columns": [
+    {
+      "name": "yayinev",
+      "type": "str"
+    },
+    {
+      "name": "net_ciro",
+      "type": "float"
+    },
+    {
+      "name": "satilan_adet",
+      "type": "float"
+    }
+  ],
+  "referenceSql": "SELECT P.SPECODE AS ref_publisher,\nSUM(CASE WHEN L.TRCODE IN (7,8) THEN L.LINENET ELSE -L.LINENET END) AS ref_net,\nSUM(CASE WHEN L.TRCODE IN (7,8) THEN L.AMOUNT END) AS ref_units\nFROM dbo.LG_411_01_STLINE L JOIN dbo.LG_411_ITEMS P ON L.STOCKREF=P.LOGICALREF\nWHERE L.CANCELLED=0 AND L.LINETYPE=0 AND L.TRCODE IN (2,3,7,8)\nAND L.DATE_ >= '2026-01-01' AND L.DATE_ < '2026-09-10' GROUP BY P.SPECODE",
+  "sql": "SELECT ITEMS.[SPECODE] AS yayinev, SUM(CASE WHEN (STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (2, 3, 7, 8)) THEN CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[LINENET] ELSE -STLINE.[LINENET] END END) AS net_ciro, SUM(CASE WHEN (STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (7, 8)) THEN STLINE.[AMOUNT] END) AS satilan_adet\nFROM (SELECT '211' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND (((STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (2, 3, 7, 8))) OR ((STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (7, 8))))\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2026-09-10'\nGROUP BY ITEMS.[SPECODE]\nORDER BY net_ciro DESC",
+  "explanation": null,
+  "semantic": {
+    "query": {
+      "question": "2026 yılbaşından bugüne yayınevi bazında net ciro ve satılan adet",
+      "slots": [
+        {
+          "term": "net ciro",
+          "semanticType": "METRIC",
+          "status": "CERTIFIED",
+          "conceptId": "sem_027f9813d2a7",
+          "mapping": {
+            "concept_id": "sem_8542c8254c47",
+            "entity": "STLINE",
+            "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+            "column": null,
+            "operator": null,
+            "values": [],
+            "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+            "time_primitive": null,
+            "extra": {
+              "func": "SUM",
+              "grain": "STLINE",
+              "aliases": [
+                "net_ciro"
+              ],
+              "conditions": [
+                "STLINE.LINETYPE = (0)",
+                "STLINE.TRCODE IN (2,3,7,8)"
+              ]
+            },
+            "id": "map_8801a3df4232"
+          },
+          "confidence": 0.85,
+          "explain": {
+            "normalized": "net ciro",
+            "sense": 1,
+            "version": 10,
+            "support": {
+              "doc": 1,
+              "llm": 0,
+              "human": 0,
+              "validated_queries": 5
+            },
+            "evidence_types": [
+              "DOC",
+              "EXECUTION",
+              "VALIDATED_SQL"
+            ],
+            "alternatives": [
+              {
+                "conceptId": "sem_8542c8254c47",
+                "entity": "STLINE",
+                "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+                "extra": {
+                  "func": "SUM",
+                  "grain": "STLINE",
+                  "aliases": [
+                    "net_ciro"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "confidence": 0.7
+              }
+            ],
+            "grain_switch": "INVOICE → STLINE"
+          }
+        },
+        {
+          "term": "satilan adet",
+          "semanticType": "METRIC",
+          "status": "CERTIFIED",
+          "conceptId": "sem_0777c0af5563",
+          "mapping": {
+            "concept_id": "sem_0777c0af5563",
+            "entity": "STLINE",
+            "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+            "column": null,
+            "operator": null,
+            "values": [],
+            "formula": "SUM(STLINE.AMOUNT)",
+            "time_primitive": null,
+            "extra": {
+              "func": "SUM",
+              "aliases": [
+                "adet"
+              ],
+              "conditions": [
+                "STLINE.LINETYPE = (0)",
+                "STLINE.TRCODE IN (7,8)"
+              ]
+            },
+            "id": "map_506aa75c8b0e"
+          },
+          "confidence": 0.65,
+          "explain": {
+            "normalized": "satilan adet",
+            "sense": 1,
+            "version": 10,
+            "support": {
+              "doc": 1,
+              "llm": 0,
+              "human": 0,
+              "validated_queries": 1
+            },
+            "evidence_types": [
+              "DOC",
+              "EXECUTION",
+              "VALIDATED_SQL"
+            ],
+            "alternatives": [
+              {
+                "conceptId": "sem_c7c4b595ee6a",
+                "entity": "STLINE",
+                "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END)",
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "satilan_adet"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "confidence": 0.65
+              }
+            ]
+          }
+        },
+        {
+          "term": "yayinevi",
+          "semanticType": "COLUMN",
+          "status": "CERTIFIED",
+          "conceptId": "sem_cb24a1bc505a",
+          "mapping": {
+            "concept_id": "sem_cb24a1bc505a",
+            "entity": "ITEMS",
+            "table_pattern": "DBO_LG_{n0}_ITEMS",
+            "column": "SPECODE",
+            "operator": "COLUMN",
+            "values": [],
+            "formula": null,
+            "time_primitive": null,
+            "extra": {},
+            "id": "map_99753839ad85"
+          },
+          "confidence": 0.85,
+          "explain": {
+            "normalized": "yayinev",
+            "sense": 1,
+            "version": 10,
+            "support": {
+              "doc": 1,
+              "llm": 0,
+              "human": 0,
+              "validated_queries": 3
+            },
+            "evidence_types": [
+              "ALIAS_BINDING",
+              "DOC",
+              "VALIDATED_SQL"
+            ],
+            "alternatives": [],
+            "role": "group_by"
+          }
+        }
+      ],
+      "unresolved": [],
+      "temporal": [
+        {
+          "text": "2026 yilbasindan bugune",
+          "primitive": "YTD",
+          "start": "2026-01-01",
+          "end": "2026-09-10",
+          "grain": "DAY",
+          "ambiguous": false,
+          "params": {
+            "year": 2026
+          }
+        }
+      ],
+      "grain": null,
+      "groupBy": [
+        {
+          "term": "yayinevi",
+          "semanticType": "COLUMN",
+          "status": "CERTIFIED",
+          "conceptId": "sem_cb24a1bc505a",
+          "mapping": {
+            "concept_id": "sem_cb24a1bc505a",
+            "entity": "ITEMS",
+            "table_pattern": "DBO_LG_{n0}_ITEMS",
+            "column": "SPECODE",
+            "operator": "COLUMN",
+            "values": [],
+            "formula": null,
+            "time_primitive": null,
+            "extra": {},
+            "id": "map_99753839ad85"
+          },
+          "confidence": 0.85,
+          "explain": {
+            "normalized": "yayinev",
+            "sense": 1,
+            "version": 10,
+            "support": {
+              "doc": 1,
+              "llm": 0,
+              "human": 0,
+              "validated_queries": 3
+            },
+            "evidence_types": [
+              "ALIAS_BINDING",
+              "DOC",
+              "VALIDATED_SQL"
+            ],
+            "alternatives": [],
+            "role": "group_by"
+          }
+        }
+      ],
+      "limit": null,
+      "orderDesc": true,
+      "catalogVersion": 10,
+      "conflicts": [],
+      "ignored": [],
+      "outOfScope": [],
+      "unhandled": [],
+      "modifiers": [
+        {
+          "token": "satilan",
+          "position": 8,
+          "decision": "SEMANTIC",
+          "evidence_source": "catalog",
+          "structural_candidate": false,
+          "light_verb_hint": false,
+          "recovered": true,
+          "concept_ids": [
+            "sem_0777c0af5563"
+          ],
+          "resolved_as": "METRIC:CERTIFIED"
+        }
+      ],
+      "clarification": [],
+      "modifierTelemetry": {
+        "modifier_seen": 1,
+        "modifier_grammatical": 0,
+        "modifier_semantic": 1,
+        "modifier_unknown": 0,
+        "modifier_absence": 0,
+        "modifier_historical_confirmed": 0,
+        "modifier_catalog_confirmed": 1,
+        "modifier_recovered": 1,
+        "modifier_silently_ignored": 0,
+        "silent_modifier_drop_rate": 0.0
+      },
+      "shape": null,
+      "projection": [],
+      "candidates": [],
+      "measureExpressions": [],
+      "comparison": null,
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026 yilbasindan bugune",
+            "primitive": "YTD",
+            "start": "2026-01-01",
+            "end": "2026-09-10",
+            "grain": "DAY",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "temporalBinding": {
+        "entity": "STLINE",
+        "column": "DATE_",
+        "source": "resolved_metric",
+        "alternatives": [
+          {
+            "entity": "INVOICE",
+            "column": "DATE_",
+            "join": [
+              "STLINE",
+              "INVOICEREF",
+              "INVOICE",
+              "LOGICALREF"
+            ],
+            "source": "declared_business_date",
+            "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+          }
+        ]
+      },
+      "absenceContract": null,
+      "fullyResolved": true,
+      "state": "RESOLVED",
+      "refusalReason": null,
+      "explanation": [
+        "'net ciro' INVOICE seviyesinde tanımlı ama kırılım 'yayinevi' (ITEMS) daha ince; aynı terimin STLINE seviyesindeki tanımı kullanıldı",
+        "'2026 yilbasindan bugune' → YTD [2026-01-01, 2026-09-10)",
+        "'satilan' niteleyici: SEMANTIC (kanıt: catalog)",
+        "'net ciro' → SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END) [CERTIFIED, 5 doğrulanmış sorgu, doküman 1, insan 0]",
+        "'satilan adet' → SUM(STLINE.AMOUNT) [CERTIFIED, 1 doğrulanmış sorgu, doküman 1, insan 0]",
+        "'yayinevi' → ITEMS.SPECODE [CERTIFIED, 3 doğrulanmış sorgu, doküman 1, insan 0]"
+      ]
+    },
+    "compiler": "deterministic",
+    "certified": true,
+    "explain": [
+      "grup: 'yayinevi' → ITEMS.SPECODE",
+      "ölçü: 'net ciro' → SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+      "ölçü: 'satilan adet' → SUM(STLINE.AMOUNT)",
+      "varsayılan filtre: STLINE.CANCELLED = ['0']",
+      "varsayılan filtre: STLINE.CANCELLED = ['0']",
+      "her ölçünün katalog kapsamı kendi toplamında uygulandı",
+      "dönem: YTD [2026-01-01, 2026-09-10)",
+      "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)",
+      "ITEMS: dönemle kesişen tablolar okundu (LG_211_ITEMS, LG_411_ITEMS)",
+      "join dönem içinde kapalı: STLINE ↔ ITEMS, her dönem kendi kaydıyla"
+    ],
+    "catalogVersion": 10
+  },
+  "snapshotMatches": true,
+  "followup": {
+    "question": "Mart 2026",
+    "type": "TEXT_TO_SQL",
+    "correct": true,
+    "referenceRows": 46,
+    "answerRows": 46,
+    "referenceSql": "SELECT P.SPECODE AS ref_publisher,\nSUM(CASE WHEN L.TRCODE IN (7,8) THEN L.LINENET ELSE -L.LINENET END) AS ref_net,\nSUM(CASE WHEN L.TRCODE IN (7,8) THEN L.AMOUNT END) AS ref_units\nFROM dbo.LG_411_01_STLINE L JOIN dbo.LG_411_ITEMS P ON L.STOCKREF=P.LOGICALREF\nWHERE L.CANCELLED=0 AND L.LINETYPE=0 AND L.TRCODE IN (2,3,7,8)\nAND L.DATE_ >= '2026-03-01' AND L.DATE_ < '2026-04-01' GROUP BY P.SPECODE",
+    "sql": "SELECT ITEMS.[SPECODE] AS yayinev, SUM(CASE WHEN (STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (2, 3, 7, 8)) THEN CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[LINENET] ELSE -STLINE.[LINENET] END END) AS net_ciro, SUM(CASE WHEN (STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (7, 8)) THEN STLINE.[AMOUNT] END) AS satilan_adet\nFROM (SELECT '211' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND (((STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (2, 3, 7, 8))) OR ((STLINE.[LINETYPE] = 0) AND (STLINE.[TRCODE] IN (7, 8))))\n  AND STLINE.[DATE_] >= '2026-03-01' AND STLINE.[DATE_] < '2026-04-01'\nGROUP BY ITEMS.[SPECODE]\nORDER BY net_ciro DESC",
+    "explanation": null
+  }
+}
