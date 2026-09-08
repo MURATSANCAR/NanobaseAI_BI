@@ -600,6 +600,8 @@ class ExistingCompiler:
         # Who resolves an entity split one-table-per-year: the compiler (default) or the model.
         # SEMANTIC_PERIOD_IN_SQL=0 puts the year-to-table map back in the prompt.
         self.period_in_sql = (os.environ.get("SEMANTIC_PERIOD_IN_SQL", "1") or "1").strip() not in ("0", "false", "no", "off")
+        # How many join-reachable tables a question may pick up beyond what it named. 0 = every one.
+        self.join_hops = int(os.environ.get("SEMANTIC_JOIN_HOPS", "8"))
         self.column_focus_tail = int(os.environ.get("SEMANTIC_COLUMN_FOCUS_TAIL", "60"))
         self._scored_lock = threading.Lock()
         self._scored_cache: dict[str, set[tuple[str, str]]] = {}
@@ -688,11 +690,29 @@ class ExistingCompiler:
         for entity in evidence:
             add(entity)
 
+        # One join hop out from what the question reached. Written when this deployment's join graph
+        # was empty, this added nothing and cost nothing; the scan filled the graph in — twenty-three
+        # relationships became five thousand — and the same line then went from contributing nothing
+        # to contributing three quarters of the candidate list, thirty tables a question. In an ERP
+        # every table hangs off LOGICALREF, so "one hop" is most of the schema, and a selector handed
+        # forty-one candidates stopped narrowing at all.
+        #
+        # The hop is still made — a table nobody named is often exactly what a join needs — but it is
+        # ordered by how many of the question's own tables reach it. A table two of them point at is
+        # more likely to be the one they join through than a table reached from exactly one, and the
+        # ones reached from one are the long tail this is bounded against. SEMANTIC_JOIN_HOPS=0 keeps
+        # every hop, as before.
         core = list(ordered)
+        reached: dict[str, int] = {}
         for entity in core:
             for other in sorted(self.by_entity):
                 if other not in ordered and self.conventions.join_path(entity, other):
-                    add(other)
+                    reached[other] = reached.get(other, 0) + 1
+        for other, _ in sorted(reached.items(), key=lambda kv: (-kv[1], kv[0]))[:self.join_hops or None]:
+            add(other)
+        if self.join_hops and len(reached) > self.join_hops:
+            log.debug("join hop: %d tables reachable, %d kept (most-referenced first)",
+                      len(reached), self.join_hops)
 
         # A table whose name says it is a backup, a test or a staging leftover answers no question a
         # person asks, but it carries the same columns as the table it was copied from and so scores
