@@ -10,9 +10,7 @@ with what the SQL actually says, both read through the same predicate extractor 
 
 from __future__ import annotations
 
-import re
-
-from typing import Any, Optional
+from typing import Any
 
 from semantic_layer.history.sql_facts import extract_sql_facts
 from semantic_layer.models import SemanticQuery, SemanticType
@@ -60,52 +58,224 @@ def audit_sql(sq: SemanticQuery, sql: str, *, conventions: Any = None) -> list[s
     return problems
 
 
-__all__ = ["audit_sql"]
+# Obligations are deliberately conservative. A syntactically valid but unsupported
+# expression is not proof that the requested restriction survived compilation.
+from sqlglot import exp
+from semantic_layer.history.sql_facts import parse_sql, _split_and, _literal, _Scope, _predicates_from, _normalise_formula
 
-def _period_in_sql(period: dict, sql: str) -> bool:
-    """Is this period actually restricted in the statement?
 
-    Read from the literals the query carries: the compiler and the model both write the boundary as
-    a date, and a year-grain period may be written as the year alone. Textual on purpose — the point
-    is to catch a period that is *absent*, and a period nobody wrote cannot be present under another
-    spelling.
-    """
-    start = str(period.get("start") or "")
-    if not start:
-        return False
-    text = " ".join((sql or "").split())
-    # As a lower bound, not merely present: "2026-01-01" is also the upper bound of 2025, so a query
-    # restricted to last year alone contains the string and would look like it carried both periods.
-    day = re.escape(start[:10])
-    if re.search(rf"(>=|>|BETWEEN)\s*'?{day}'?", text, re.I):
+class _AnswerScope(_Scope):
+    """Only sources reachable from the answer; unused CTE aliases prove nothing."""
+    def __init__(self, tree):
+        from sqlglot.optimizer.scope import build_scope, Scope
+        from semantic_layer.naming import logical_table
+        super().__init__(tree, None)
+        self.alias_to_entity = {}
+        self.entities = []
+        root = build_scope(tree)
+        def entities(source):
+            if isinstance(source, exp.Table):
+                return {logical_table((source.db + "." if source.db else "") + source.name).entity}
+            if isinstance(source, Scope):
+                if source.union_scopes:
+                    return set().union(*(entities(s) for s in source.union_scopes))
+                return set().union(*(entities(s) for _, s in source.selected_sources.values()))
+            return set()
+        if root:
+            for alias, (_, source) in root.selected_sources.items():
+                names = entities(source)
+                entity = next(iter(names)) if len(names) == 1 else "UNKNOWN"
+                self.alias_to_entity[alias.upper()] = entity
+                if entity not in self.entities:
+                    self.entities.append(entity)
+
+    def entity_for(self, col):
+        if col.table:
+            return self.alias_to_entity.get(col.table.upper(), "UNKNOWN")
+        return self.entities[0] if len(self.entities) == 1 else "UNKNOWN"
+
+
+def _bounded_columns(condition, period):
+    bounds = {}
+    for part in _split_and(condition):
+        if not isinstance(part, (exp.GTE, exp.GT, exp.LT, exp.LTE)):
+            continue
+        if not isinstance(part.left, exp.Column):
+            continue
+        key = (part.left.table.upper(), part.left.name.upper())
+        bounds.setdefault(key, {}).setdefault(type(part), set()).add(_literal(part.right))
+    return {key for key, b in bounds.items()
+            if b.get(exp.GTE) == {period.get("start")} and b.get(exp.LT) == {period.get("end")}
+            and not b.get(exp.GT) and not b.get(exp.LTE)}
+
+
+def _admits_period(node, columns, period):
+    """A global WHERE must not discard rows needed by either conditional measure."""
+    if node is None:
         return True
-    if period.get("grain") == "YEAR":
-        year = re.escape(start[:4])
-        return bool(re.search(rf"(YEAR\s*\([^)]*\)|DATEPART\s*\([^)]*\))\s*(=|IN\s*\()\s*'?{year}'?", text, re.I))
+    if isinstance(node, (exp.Where, exp.Paren)):
+        return _admits_period(node.this, columns, period)
+    if isinstance(node, exp.And):
+        return _admits_period(node.left, columns, period) and _admits_period(node.right, columns, period)
+    if isinstance(node, exp.Or):
+        return _admits_period(node.left, columns, period) or _admits_period(node.right, columns, period)
+    relevant = [c for c in node.find_all(exp.Column) if (c.table.upper(), c.name.upper()) in columns]
+    if not relevant:
+        return True
+    if isinstance(node, (exp.GTE, exp.LT)) and isinstance(node.left, exp.Column):
+        value = _literal(node.right)
+        if value and len(value) == 10:
+            return value <= period["start"] if isinstance(node, exp.GTE) else value >= period["end"]
     return False
 
 
-def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
-    """What the question asked for and the statement does not deliver.
+def _aggregate_case(aggregate):
+    inner = aggregate.this
+    if isinstance(inner, exp.Distinct) and len(inner.expressions) == 1:
+        inner = inner.expressions[0]
+    return inner
 
-    Separate from `audit_sql`, which reports disagreements: this reports *absences*, and only where
-    the question stated the requirement plainly enough that its absence cannot be a matter of style.
-    A comparison is the first of them — "geçen yıla göre" names two periods, and a statement carrying
-    one of them answers a different question while looking like a complete answer.
 
-    It checks that both periods reached the statement. Whether the two figures are then presented
-    side by side is the compiler's shape, not something readable from the SQL text; that part is
-    guaranteed structurally by the multi-period path rather than audited here.
+def _formula(node, scope):
+    def canonical(n):
+        if isinstance(n, exp.Count) and isinstance(n.this, exp.Literal):
+            n.set("this", exp.Star())
+        return n
+    return _normalise_formula(node.copy().transform(canonical), scope)
+
+
+def _period_outputs(tree, period, scope):
+    """Output positions whose every aggregate is bounded by this exact period.
+
+    A date in a comment, an unused CTE, WHERE, or an unrelated CASE is not
+    evidence for a separately presented measure. Unsupported SQL fails closed.
     """
+    if not isinstance(tree, exp.Select):
+        return {}
+    outputs = {}
+    for pos, projection in enumerate(tree.expressions):
+        aggregates = list(projection.find_all(exp.AggFunc))
+        if not aggregates:
+            continue
+        columns = None
+        for aggregate in aggregates:
+            case = _aggregate_case(aggregate)
+            if not isinstance(case, exp.Case) or len(case.args.get("ifs") or []) != 1:
+                columns = set()
+                break
+            branch = case.args["ifs"][0]
+            default = case.args.get("default")
+            if default is not None and not isinstance(default, exp.Null) and _literal(default) != "0":
+                columns = set()
+                break
+            found = _bounded_columns(branch.this, period)
+            columns = found if columns is None else columns & found
+        if columns and _admits_period(tree.args.get("where"), columns, period):
+            inner = projection.this if isinstance(projection, exp.Alias) else projection
+            def unwrap(n):
+                if isinstance(n, exp.AggFunc) and isinstance(_aggregate_case(n), exp.Case):
+                    value = _aggregate_case(n).args["ifs"][0].args["true"].copy()
+                    n.set("this", exp.Distinct(expressions=[value]) if isinstance(n.this, exp.Distinct) else value)
+                return n
+            formula = _formula(inner.copy().transform(unwrap), scope)
+            outputs[pos] = (columns, formula)
+    return outputs
+
+
+def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
+    """Fail closed when the final SQL does not demonstrate a resolved requirement."""
     out: list[str] = []
-    comp = getattr(sq, "comparison", None)
+    try:
+        tree = parse_sql(sql)
+    except Exception:
+        return ["sorgu ayrıştırılamadı; soru koşulları doğrulanamadı"]
+    comp = sq.comparison
     if comp:
         current, reference = comp.get("current"), comp.get("reference")
-        if not current:
-            out.append(str(comp.get("why") or "karşılaştırma için ikinci dönem belirlenemedi"))
+        comp["satisfied"] = False
+        if not current or not reference:
+            out.append(str(comp.get("why") or "karşılaştırmanın iki dönemi belirlenemedi"))
         else:
-            missing = [p for p in (current, reference) if p and not _period_in_sql(p, sql)]
-            if missing:
-                names = ", ".join(f"{p.get('start')}–{p.get('end')}" for p in missing)
-                out.append(f"karşılaştırma istendi ama sorguda şu dönem yok: {names}")
+            scope = _AnswerScope(tree)
+            left, right = _period_outputs(tree, current, scope), _period_outputs(tree, reference, scope)
+            expected = {_formula(parse_sql(s.mapping.formula), _Scope(tree, None)) for s in sq.metrics
+                        if s.mapping and s.mapping.formula}
+            def correct_column(columns):
+                return any((not comp.get("dateColumn") or col == comp["dateColumn"].upper())
+                           and (not comp.get("entity") or scope.entity_for(exp.column(col, table=alias or None)).upper() == comp["entity"].upper())
+                           for alias, col in columns)
+            proven = {af for a, (ac, af) in left.items() for b, (bc, bf) in right.items()
+                      if a != b and af == bf and correct_column(ac & bc)}
+            matched = (current.get("start"), current.get("end")) != (reference.get("start"), reference.get("end")) and bool(proven) and (not expected or expected <= proven)
+            if not matched:
+                out.append(f"karşılaştırma dönemleri ayrı ölçü sütunlarında doğrulanamadı: "
+                           f"{current.get('start')}–{current.get('end')}, "
+                           f"{reference.get('start')}–{reference.get('end')}")
+            comp["satisfied"] = matched
+
+    if not comp and sq.temporal and sq.temporal_binding:
+        scope = _AnswerScope(tree)
+        where = tree.args.get("where") if isinstance(tree, exp.Select) else None
+        binding = sq.temporal_binding
+        for period in sq.temporal:
+            columns = _bounded_columns(where.this, period.to_dict()) if where else set()
+            if not any(col == binding["column"].upper() and scope.entity_for(exp.column(col, table=alias or None)).upper() == binding["entity"].upper()
+                       for alias, col in columns):
+                out.append(f"'{period.text}' dönemi doğru tarih sütununda doğrulanamadı")
+
+    # Do not collect predicates from all scopes: an unused CTE or a SELECT CASE
+    # cannot establish a restriction on the rows of the actual answer.
+    if sq.filters:
+        if not isinstance(tree, exp.Select):
+            out.append("sonuç kapsamındaki filtreler doğrulanamadı")
+        else:
+            scope = _AnswerScope(tree)
+            where = tree.args.get("where")
+            predicates = _predicates_from(where.this, scope, "where", None) if where else []
+            for slot in sq.filters:
+                m = slot.mapping
+                if not m or not m.column or slot.status not in ("CERTIFIED", "INFERRED"):
+                    continue
+                expected = {str(v).strip().upper() for v in m.values}
+                op = (m.operator or "IN").upper()
+                compatible = {"=", "IN"} if op in ("=", "IN") else {op}
+                covered = any(p.entity.upper() == m.entity.upper() and p.column.upper() == m.column.upper()
+                              and p.operator.upper() in compatible and _values(p) == expected for p in predicates)
+                # A pivot legitimately puts alternative restrictions in distinct
+                # aggregate outputs. Each requested restriction must have its own.
+                if not covered:
+                    matches = []
+                    for projection in tree.expressions:
+                        aggregates = list(projection.find_all(exp.AggFunc))
+                        if not aggregates:
+                            continue
+                        conditions = []
+                        for agg in aggregates:
+                            case = _aggregate_case(agg)
+                            if not isinstance(case, exp.Case) or len(case.args.get("ifs") or []) != 1:
+                                break
+                            default = case.args.get("default")
+                            if default is not None and not isinstance(default, exp.Null) and _literal(default) != "0":
+                                break
+                            conditions.append(case.args["ifs"][0].this)
+                        else:
+                            matches.append(all(any(p.entity.upper() == m.entity.upper() and p.column.upper() == m.column.upper()
+                                                   and p.operator.upper() in compatible and _values(p) == expected
+                                                   for p in _predicates_from(c, scope, "case", None)) for c in conditions))
+                            continue
+                        matches.append(False)
+                    pivot_values = {tuple(sorted(str(v).upper() for v in s.mapping.values)) for s in sq.filters
+                                    if s.mapping and s.mapping.entity == m.entity and s.mapping.column == m.column}
+                    covered = bool(matches) and (any(matches) if len(pivot_values) > 1 else all(matches))
+                if not covered:
+                    out.append(f"'{slot.term}' koşulu sonuç kapsamında doğrulanamadı: {m.entity}.{m.column} {op} {sorted(expected)}")
+    if sq.shape == "ABSENCE":
+        # Presence of the word NOT is insufficient: until a correlated anti-join
+        # is certified against the plan, do not serve a positive list as absence.
+        out.append("yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı")
+    if sq.unhandled or sq.clarification:
+        out.append("çözümlenmemiş soru koşulları var; netleştirme gerekiyor")
     return out
+
+
+__all__ = ["audit_sql", "unmet_obligations"]

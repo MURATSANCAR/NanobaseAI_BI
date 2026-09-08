@@ -124,7 +124,7 @@ def test_guardrails_and_physicalize(profiles):
 def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_connector, settings):
     from semantic_bridge.app import Runtime, create_app
 
-    llm = FakeLlm(by_keyword={"ölgesel": "```sql\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) GROUP BY c.\"CITY\"\n```"})
+    llm = FakeLlm(by_keyword={"ölgesel": "```sql\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.DATE_ >= '2026-01-01' AND i.DATE_ < '2027-01-01' GROUP BY c.\"CITY\"\n```"})
     rt = Runtime(settings, store=catalog, connector=logo_connector, llm=llm)
     client = TestClient(create_app(rt))
     assert client.get("/health").json()["status"] == "ok"
@@ -375,15 +375,15 @@ def test_prompt_carries_the_tables_the_question_needs_not_the_whole_schema(catal
     assert text.count("(INVOICE)") <= 1, "one entry per entity, not one per period"
 
 
-def test_a_period_after_the_last_loaded_row_is_still_answered(catalog, profiles):
-    """A month with no rows yet is a loading state, not a gap in what this source covers. Refusing it
-    would make an ordinary "how are we doing this month" unanswerable; the cut-off is said instead."""
+def test_a_period_after_the_last_observed_row_cannot_claim_zero(catalog, profiles):
+    """An observed maximum is not a loading watermark or evidence of zero sales."""
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     inv = next(p for p in profiles if p.entity == "INVOICE")
     last = inv.time_window[1]
     after = r.resolve("Bu ay toptan satış ne kadar?", today=date(2027, 6, 15))
-    assert after.out_of_scope == [] and after.fully_resolved
-    assert any(last in e and "yüklenmemiş" in e for e in after.explanation)
+    assert after.out_of_scope and not after.fully_resolved
+    assert any(last in e and "sıfır" in e for e in after.explanation)
+    assert after.data_coverage[0]["completeness"] == "UNKNOWN"
     # before the data begins is a different thing: there is nothing to find, and zero would be a lie
     before = r.resolve("2019'da toptan satış ne kadar?", today=date(2026, 7, 20))
     assert before.out_of_scope and not before.fully_resolved
@@ -449,7 +449,8 @@ def test_time_words_survive_turkish_case_endings(catalog, profiles):
     # with several certified measures to choose from, picking one would be a guess.
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("Geçen aya göre daha mı iyiyiz?", today=date(2026, 7, 20))
-    assert sq.temporal and sq.temporal[0].primitive == "LAST_MONTH"
+    assert any(t.primitive == "LAST_MONTH" for t in sq.temporal)
+    assert sq.comparison and sq.temporal[0].primitive == "THIS_MONTH"
     assert sq.shape == "UNDERSPECIFIED"
     # naming what to measure settles it
     assert r.resolve("Geçen aya göre toptan satış tutarı", today=date(2026, 7, 20)).shape is None
@@ -498,7 +499,7 @@ def test_an_unreachable_database_is_not_a_bad_question(catalog, profiles, settin
 
     llm = FakeLlm(["should not be asked to repair a connection"])
     client = TestClient(create_app(Runtime(settings, store=catalog, connector=_Dead(), llm=llm)))
-    body = client.post("/api/v1/ask", json={"question": "Bu ay toptan satış tutarı", "sampleSize": 5}).json()
+    body = client.post("/api/v1/ask", json={"question": "2026 yılında toptan satış tutarı", "sampleSize": 5}).json()
     assert body["type"] == "DATA_SOURCE_UNAVAILABLE"
     assert "ulaşılamıyor" in body["explanation"] and body.get("repairs", 0) == 0
     assert body["sql"], "the SQL it wrote is still shown — there was nothing wrong with it"

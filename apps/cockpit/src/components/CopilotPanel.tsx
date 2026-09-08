@@ -48,6 +48,7 @@ function resultOf(a: AskResult): SqlResult | undefined {
     ageSec: a.ageSec as number | undefined,
     computedAt: a.computedAt as number | undefined,
     widget: a.widget as SqlResult['widget'],
+    dataCoverage: a.dataCoverage as SqlResult['dataCoverage'],
   };
 }
 
@@ -415,6 +416,10 @@ function ExportButton({ m, result }: { m: Extract<Msg, { role: 'assistant' }>; r
         question: m.question,
         sql: m.sql,
         meta: [
+          ...(full.dataCoverage || []).map((c) => ({
+            label: `Veri kapsamı (${c.period.text || c.period.start})`,
+            value: `${c.observedStart} – ${c.observedEnd}; yükleme bütünlüğü doğrulanmadı. Sonuç yalnız mevcut kayıtlara aittir.`,
+          })),
           ...(full.truncated
             ? [{ label: 'Uyarı', value: `Sonuç sunucu satır sınırında kesildi: ${full.records.length} satır aktarıldı, sorgu bunun ötesinde devam ediyor.` }]
             : []),

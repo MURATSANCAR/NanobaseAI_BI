@@ -47,13 +47,13 @@ def test_the_compiled_query_puts_the_two_periods_side_by_side(catalog, profiles,
 def test_a_statement_that_dropped_one_period_is_reported_not_answered(catalog, profiles):
     """Yükümlülük denetimi: iki dönemden biri sorguya taşınmamışsa cevap başarılı sayılamaz."""
     r = _resolver(catalog, profiles)
-    sq = r.resolve("geçen yıla göre net ciro", today=date(2026, 7, 20))
+    sq = r.resolve("geçen yıla göre satış tutarı", today=date(2026, 7, 20))
     only_reference = ("SELECT SUM(INVOICE.NETTOTAL) FROM LG_411_01_INVOICE AS INVOICE "
                       "WHERE INVOICE.DATE_ >= '2025-01-01' AND INVOICE.DATE_ < '2026-01-01'")
     problems = unmet_obligations(sq, only_reference)
     assert problems and "2026-01-01" in problems[0], problems
 
-    both = ("SELECT SUM(CASE WHEN INVOICE.DATE_ >= '2026-01-01' THEN INVOICE.NETTOTAL END) AS bu_yil, "
+    both = ("SELECT SUM(CASE WHEN INVOICE.DATE_ >= '2026-01-01' AND INVOICE.DATE_ < '2027-01-01' THEN INVOICE.NETTOTAL END) AS bu_yil, "
             "SUM(CASE WHEN INVOICE.DATE_ >= '2025-01-01' AND INVOICE.DATE_ < '2026-01-01' THEN INVOICE.NETTOTAL END) AS gecen_yil "
             "FROM LG_411_01_INVOICE AS INVOICE")
     assert unmet_obligations(sq, both) == []
@@ -61,7 +61,7 @@ def test_a_statement_that_dropped_one_period_is_reported_not_answered(catalog, p
 
 def test_a_reference_period_with_no_data_is_still_a_comparison(catalog, profiles, logo_db):
     """Önceki dönemde veri yoksa cevap yine iki sütun olmalı: boş bir dönem, karşılaştırmanın
-    yapılmadığı anlamına gelmez — sıfır da bir cevaptır ve tek sütuna düşmek onu gizler."""
+    yapılmadığı anlamına gelmez; boş dönem NULL kalmalı, sıfıra çevrilmemeli."""
     r = SemanticResolver(catalog, TENANT, DS, profiles,
                          default_temporal=TemporalSlot(text="bu yıl", primitive="YEAR",
                                                        start=date(2026, 1, 1), end=date(2027, 1, 1), grain="YEAR"))
@@ -79,4 +79,4 @@ def test_a_reference_period_with_no_data_is_still_a_comparison(catalog, profiles
     rows = cur.fetchall()
     assert len(cols) >= 2, cols
     # boş dönem sütunu vardır; değeri sıfır ya da NULL olabilir, ama sütun kaybolmaz
-    assert len(rows[0]) >= 2, rows
+    assert len(rows[0]) >= 2 and rows[0][1] is None, rows

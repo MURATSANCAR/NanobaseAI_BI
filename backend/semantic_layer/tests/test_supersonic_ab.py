@@ -118,7 +118,8 @@ def test_router_shadow_never_changes_the_answer(adapter, catalog, profiles):
     assert router.shadow_results and router.shadow_results[0]["compiler"] == "supersonic"
     assert router.shadow_results[0]["same_as_primary"] is False   # measured, not used
     pinned = CompilerRouter(det, None, primary="supersonic", alternates={"supersonic": comp})
-    assert pinned.compile(q, catalog).compiler == "supersonic"    # explicit experiment only
+    # An alternate physical dataset without proven source/period bindings cannot bypass the gate.
+    assert pinned.compile(q, catalog).compiler == "incomplete"
 
 
 def test_catalog_exports_as_supersonic_model(catalog, profiles):

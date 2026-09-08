@@ -24,7 +24,17 @@ export type WidgetSpec = {
   data?: { columns: string[]; rows: Record<string, unknown>[]; row_count?: number };
 };
 
+export type DataCoverage = {
+  entity: string;
+  period: { text: string; start: string; end: string };
+  status: string;
+  observedStart: string;
+  observedEnd: string;
+  completeness: string;
+};
+
 export type SqlResult = {
+  dataCoverage?: DataCoverage[];
   id: string;
   columns: SqlColumn[];
   records: Record<string, unknown>[];

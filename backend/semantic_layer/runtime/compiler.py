@@ -153,7 +153,7 @@ def _pred_key_sql(entity: str, key: str, d: Dialect) -> Optional[str]:
 
 
 def _wrap_condition(formula_sql: str, pred: str) -> str:
-    """SUM(x) → SUM(CASE WHEN pred THEN x ELSE 0 END) for every aggregate in the formula (sqlglot)."""
+    """Condition aggregates without inventing values; COUNT keeps its distinctness."""
     import sqlglot
     from sqlglot import exp
 
@@ -166,11 +166,14 @@ def _wrap_condition(formula_sql: str, pred: str) -> str:
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, (exp.Sum, exp.Avg, exp.Min, exp.Max)):
             inner = node.this
-            return type(node)(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=inner)], default=exp.Literal.number(0)))
+            return type(node)(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=inner)]))
         if isinstance(node, exp.Count):
             inner = node.this
             if isinstance(inner, exp.Star):
-                return exp.Sum(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=exp.Literal.number(1))], default=exp.Literal.number(0)))
+                return exp.Count(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=exp.Literal.number(1))]))
+            if isinstance(inner, exp.Distinct):
+                return exp.Count(this=exp.Distinct(expressions=[
+                    exp.Case(ifs=[exp.If(this=cond.copy(), true=item.copy())]) for item in inner.expressions]))
             return exp.Count(this=exp.Case(ifs=[exp.If(this=cond.copy(), true=inner)]))
         return node
 
@@ -1402,7 +1405,18 @@ class CompilerRouter:
             self.shadow_results.append({"compiler": out.compiler, "sql": out.sql, "ms": out.llm_ms, "same_as_primary": out.sql.strip() == chosen.sql.strip(), "explain": out.explain})
             del self.shadow_results[:-50]
 
-    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:
+    def compile(self, q: SemanticQuery, catalog: CatalogStore, thread=None, *, recall=None) -> CompiledQuery:
+        """All compiler routes share the same semantic obligation gate."""
+        from semantic_layer.runtime.audit import unmet_obligations, audit_sql
+        out = self._compile(q, catalog, thread, recall=recall)
+        if out.sql:
+            problems = unmet_obligations(q, out.sql) + audit_sql(q, out.sql)
+            if problems:
+                return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
+                                     explain=problems, certified=False)
+        return out
+
+    def _compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:
         # "I cannot write this" and "this must not be written" are different answers, and until now
         # they left the deterministic compiler as the same bare None — so a question about a year this
         # deployment never loaded fell through to the model, which duly wrote SQL that returns zero

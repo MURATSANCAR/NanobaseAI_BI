@@ -398,6 +398,8 @@ class Runtime:
                 "records": result.get("records") or [],
                 "totalRows": result.get("totalRows") or 0,
                 "truncated": bool(result.get("truncated")),
+                "dataCoverage": result.get("dataCoverage", []),
+                "comparison": result.get("comparison"),
             }
             while len(self._results) > self._results_max:
                 self._results.popitem(last=False)
@@ -532,14 +534,13 @@ class Runtime:
 
     def summarize(self, question: str, sql: str, result: dict[str, Any], sq: Optional[SemanticQuery] = None) -> str:
         cols = [c["name"] for c in result.get("columns") or []]
-        # An empty answer is where "nothing happened" and "nothing is loaded yet" look identical. The
-        # resolver measured the data window and already knows which one this is; saying it here is the
-        # difference between a real zero and a figure the deployment cannot yet have.
+        # Observed row dates are not loading-completeness evidence. Keep coverage
+        # notes even when a partial period has a nonempty aggregate.
         note = ""
-        if sq is not None and is_empty_result(cols, result.get("records") or [], int(result.get("totalRows") or 0)):
-            note = " ".join(e for e in sq.explanation if "yüklenmemiş" in e or "kapsamı dışında" in e)
+        if sq is not None:
+            note = " ".join(e for e in sq.explanation if "kısmen gözleniyor" in e or "gözlenen veri kapsamı dışında" in e or "Karşılaştırmada" in e)
             if note:
-                note = " " + note.strip().capitalize() + "."
+                note = " " + note
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
@@ -564,6 +565,12 @@ class Runtime:
         t = time.perf_counter()
         sq = self.resolver.resolve(question)
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
+        if any(c["status"] == "OUTSIDE_OBSERVED" for c in sq.data_coverage):
+            reason = " ".join(e for e in sq.explanation if "gözlenen veri kapsamı dışında" in e)
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler="coverage", catalog_version=sq.catalog_version,
+                                      resolved=sq.to_dict(), executed=False, error=reason)
+            return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
+                    "threadId": thread_id, "timings": timings, "semantic": {"query": sq.to_dict()}, "queryId": qid}
         t = time.perf_counter()
         compiled = self.router.compile(sq, self.store, thread, recall=(lambda q: self.recall(q, exclude_nl)) if (exclude_nl and self.settings.recall_enabled) else None)
         timings["compile_ms"] = int((time.perf_counter() - t) * 1000)
@@ -576,6 +583,13 @@ class Runtime:
         semantic = {"query": sq.to_dict(), "compiler": compiled.compiler, "certified": compiled.certified, "explain": compiled.explain, "catalogVersion": compiled.catalog_version}
         if queued:
             semantic["queue"] = queued
+        if compiled.compiler == "incomplete":
+            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(compiled.explain)
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
+                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                      resolved=sq.to_dict(), executed=False, error=reason)
+            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if compiled.compiler == "clarification":
             reason = " ".join(compiled.explain)
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
@@ -599,7 +613,7 @@ class Runtime:
         # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
         unmet = unmet_obligations(sq, sql)
         if unmet:
-            reason = "Soru bir karşılaştırma istiyor ama üretilen sorgu bunu vermiyor: " + "; ".join(unmet)
+            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
             log.warning("obligation unmet q=%r %s", question[:80], unmet)
             semantic["unmetObligations"] = unmet
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
@@ -676,6 +690,18 @@ class Runtime:
             blocked = any(n.get("severity") == "block" for n in critic_notes)
             explanation = error if blocked else f"Üretilen SQL doğrulanamadı: {error}"
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
+        # Repairs can remove filters or period predicates. Validate the exact final
+        # statement, including previews; never trust the pre-repair verdict.
+        final_problems = unmet_obligations(sq, sql) + audit_sql(sq, sql, conventions=self.conventions)
+        semantic["query"] = sq.to_dict()
+        if final_problems:
+            reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
+            semantic["unmetObligations"] = final_problems
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql,
+                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                      resolved=sq.to_dict(), executed=False, error=reason)
+            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
             return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq)), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
@@ -696,6 +722,8 @@ class Runtime:
                                     if down else f"Sorgu çalıştırılamadı: {err}"),
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
+        result["dataCoverage"] = list(sq.data_coverage)
+        result["comparison"] = sq.comparison
         self.attach_widget(result, question)
         self.remember_result(result, question=question, sql=sql)
         shown = list(result["records"])[: max(1, int(sample_size or 50))]
@@ -721,6 +749,7 @@ class Runtime:
             # ran it for answers that had already been refused. One execution, one set of rows,
             # everything downstream — table, chart, export — reads these.
             "resultId": result["id"],
+            "dataCoverage": result.get("dataCoverage", []),
             "columns": result["columns"],
             "records": shown,
             "shownRows": len(shown),
@@ -1222,7 +1251,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "message": "Bu sonucun saklama süresi doldu. Aynı soruyu tekrar sorun — eski SQL sessizce yeniden çalıştırılmaz."})
         return {"id": result_id, "columns": snap["columns"], "records": snap["records"],
                 "totalRows": snap["totalRows"], "truncated": snap["truncated"],
-                "question": snap["question"], "sql": snap["sql"], "computedAt": snap["at"]}
+                "question": snap["question"], "sql": snap["sql"], "computedAt": snap["at"],
+                "dataCoverage": snap.get("dataCoverage", []), "comparison": snap.get("comparison")}
 
     @app.post("/api/v1/ask")
     def ask(body: AskIn, request: Request) -> dict[str, Any]:

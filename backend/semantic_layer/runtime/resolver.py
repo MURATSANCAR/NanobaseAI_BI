@@ -89,7 +89,10 @@ def _identifier_words(name: str) -> set[str]:
 
 
 # "geçen yıla göre", "2025'e kıyasla" — ikinci dönem söylenmez, "göre" onu ima eder.
-_COMPARE_TO = re.compile(r"\b(gore|kiyasla|karsi|nazaran|oranla)\b")
+_COMPARE_TO = re.compile(
+    r"\b(?:(?:gecen|onceki|bu|[0-9]{4})\s+(?:yil|ay|hafta|ceyrek|donem|gun)\w*|"
+    r"[0-9]{4}(?:[’']?[eya]+)?)\s+(?:gore|kiyasla|karsi|nazaran|oranla)\b"
+)
 _ORDINAL_WORDS = frozenset(stem(w) for w in "birinci ikinci ucuncu dorduncu besinci altinci yedinci sekizinci dokuzuncu onuncu".split())
 _GROUP_MARKERS = re.compile(r"\b(bazinda|bazli|gore|kiriliminda|kirilimi|dagilimi|dagilim|itibariyla)\b")
 _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money", "smallmoney", "bigint", "smallint", "tinyint")
@@ -397,7 +400,11 @@ class SemanticResolver:
             if fallback is not None:
                 sq.temporal = [fallback]
                 sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
-        self._read_comparison(sq, qf, question)
+        self._read_comparison(sq, qf, question, today or date.today())
+        if sq.comparison:
+            metric_entity = next((s.mapping.entity for s in sq.metrics if s.mapping), None)
+            sq.comparison["entity"] = metric_entity
+            sq.comparison["dateColumn"] = self.conventions.time_column(metric_entity) if metric_entity else None
         for t in sq.temporal:
             sq.explanation.append(describe(t))
         if not sq.grain and _asks_for_a_trend(question):
@@ -411,6 +418,19 @@ class SemanticResolver:
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
 
         self._account_modifiers(sq, qf, consumed, index)
+        # A qualitative price judgment needs a business definition, not a
+        # similarly named numeric column or a threshold invented by the model.
+        for k, token in enumerate(qf.tokens):
+            if stem(token) not in {stem("pahali"), stem("ucuz")}:
+                continue
+            proven = any(s.status == "CERTIFIED" and s.mapping and s.span[0] <= k < s.span[1]
+                         for s in sq.slots)
+            if not proven:
+                sq.clarification.append(
+                    f"‘{token}’ derken hangi fiyatı, para birimini ve hangi eşik veya karşılaştırma grubunu kastediyorsunuz?"
+                )
+                if token not in sq.unhandled:
+                    sq.unhandled.append(token)
 
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
@@ -484,6 +504,10 @@ class SemanticResolver:
         entity = self._primary_entity(hits) or next((s_.mapping.entity for s_ in hits if s_.mapping), None)
         from semantic_layer.runtime import periods
 
+        if sq.temporal and entity and (column := self.conventions.time_column(entity)):
+            sq.temporal_binding = {"entity": entity, "column": column}
+        if sq.comparison and sq.temporal_binding:
+            sq.comparison.update(entity=entity, dateColumn=sq.temporal_binding["column"])
         covered = periods.spans(self.tables_of.get(entity or "", []))
         window = (covered[0].isoformat(), covered[1].isoformat()) if covered else None
         if window and sq.temporal:
@@ -491,23 +515,32 @@ class SemanticResolver:
             for t in sq.temporal:
                 if not (first and last and t.start and t.end):
                     continue
-                if t.end <= first:
-                    # entirely before the data begins: there is nothing to find, and an empty result
-                    # would read as a real zero
+                status = "OUTSIDE_OBSERVED" if t.end <= first or t.start > last else (
+                    "PARTIAL_OBSERVED" if t.start < first or t.end > last + timedelta(days=1) else "WITHIN_OBSERVED")
+                sq.data_coverage.append({"entity": entity, "period": t.to_dict(), "status": status,
+                                         "observedStart": window[0], "observedEnd": window[1],
+                                         "completeness": "UNKNOWN", "source": "profile_observed_range"})
+                if status == "OUTSIDE_OBSERVED":
                     sq.out_of_scope.append(t.text)
                     sq.explanation.append(
-                        # what this deployment was given, not what the business has: the difference
-                        # matters, because a period missing here may be sitting in a table nobody scoped
-                        f"'{t.text}' bu kurulumun kapsamı dışında: {entity} için tanımlı veri "
-                        f"{window[0]} – {window[1]} arasını içeriyor"
+                        f"'{t.text}' gözlenen veri kapsamı dışında: {entity} kayıtları {window[0]}–{window[1]}. "
+                        "Bu dönem için veri yok; satışın sıfır olduğu sonucuna varılamaz."
                     )
-                elif t.start > last:
-                    # after the last row loaded. That is a loading state, not a gap in coverage — the
-                    # current month legitimately has no rows yet — so the question is still answered,
-                    # with the cut-off said out loud.
+                elif status == "PARTIAL_OBSERVED":
                     sq.explanation.append(
-                        f"'{t.text}' için veri henüz yüklenmemiş olabilir: {entity} son kaydı {window[1]}"
+                        f"'{t.text}' dönemi kısmen gözleniyor: {entity} kayıtları {window[0]}–{window[1]}. "
+                        "Yükleme bütünlüğü doğrulanmadı; sonuç yalnız mevcut kayıtlara aittir."
                     )
+
+        if sq.comparison:
+            sq.comparison["alignment"] = "CALENDAR_PERIODS"
+            sq.comparison["coverageComparable"] = False
+            # Profile extrema cannot certify equally complete periods, even when
+            # both requested windows lie inside them.
+            sq.explanation.append(
+                "Karşılaştırmada takvim dönemleri kullanıldı; dönemlerin eşit veri kapsamına sahip olduğu "
+                "doğrulanmadı. Sonuç eş süreli performans değişimi olarak yorumlanmamalı."
+            )
 
         # 9) a share question needs a denominator. When no certified ratio supplies one, answering with
         #    the plain total would quietly replace "what percent" with "how much".
@@ -941,7 +974,7 @@ class SemanticResolver:
             )
         return None
 
-    def _read_comparison(self, sq: SemanticQuery, qf: Any, question: str) -> None:
+    def _read_comparison(self, sq: SemanticQuery, qf: Any, question: str, today: date) -> None:
         """"geçen yıla göre" — bir karşılaştırma isteği, tek bir dönem değil.
 
         Bu ifade tek bir dönem olarak ayrıştırılıyordu ve seçilen dönem *referans* olandı: soru "bu
@@ -951,19 +984,22 @@ class SemanticResolver:
         Buradaki iş yalnız ikinci dönemi eklemek değil: isteğin kendisi kaydediliyor, ki çalıştırma
         öncesinde "iki dönem gerçekten plana ve SQL'e taşındı mı" diye sorulabilsin.
         """
+        if len(sq.temporal) == 2:
+            current, reference = sorted(sq.temporal, key=lambda t: t.start or date.min, reverse=True)
+            sq.comparison = {"kind": "PERIOD", "current": current.to_dict(),
+                             "reference": reference.to_dict(), "satisfied": False}
+            return
         if len(sq.temporal) != 1 or not _COMPARE_TO.search(fold(question)):
             return
         reference = sq.temporal[0]
         if not (reference.start and reference.end):
             return
-        # The period compared against must be the same size as the one it is compared to: "geçen aya
-        # göre" is this month against last month, not this *year* against last month. Taken from the
-        # deployment's default window, the two sides were different lengths and the comparison meant
-        # nothing. The period immediately after the reference is that same size by construction.
-        current = TemporalSlot(
-            text="", primitive=reference.primitive, grain=reference.grain,
-            start=reference.end, end=_next_span(reference.start, reference.end),
-        ) if reference.end and reference.start else None
+        # Infer the current calendar unit from the request clock, not the default
+        # window or the end of a named historical reference (2019 does not imply 2020).
+        from semantic_layer.runtime.temporal import parse_temporal
+        unit = {"YEAR": "bu yıl", "MONTH": "bu ay", "WEEK": "bu hafta", "DAY": "bugün", "QUARTER": "bu çeyrek"}.get(reference.grain)
+        periods, _ = parse_temporal(unit, today) if unit else ([], None)
+        current = periods[0] if len(periods) == 1 else None
         if current is None or not (current.start and current.end):
             # Neye göre karşılaştırılacağı belli değil. Tek dönemlik cevabı karşılaştırma diye
             # sunmaktansa istek kayda geçer ve denetim bunu yakalar.
@@ -972,6 +1008,8 @@ class SemanticResolver:
             sq.explanation.append(f"'{reference.text}' bir karşılaştırma isteği ama güncel dönem belirlenemedi")
             return
         if (current.start, current.end) == (reference.start, reference.end):
+            sq.comparison = {"kind": "PERIOD", "reference": reference.to_dict(), "current": None, "satisfied": False}
+            sq.clarification.append(f"{reference.text} ile hangi dönemi karşılaştırmak istiyorsunuz?")
             return
         # The default period's own label is an internal word ("varsayılan") and it ends up as a column
         # name the reader sees. Name it by what it is.

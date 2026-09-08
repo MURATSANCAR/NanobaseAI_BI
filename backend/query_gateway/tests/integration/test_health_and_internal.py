@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 from fastapi.testclient import TestClient
 
-os.environ["QG_AUTH_REQUIRED"] = "false"
-os.environ["QG_REPLAY_REQUIRED"] = "false"
-
 from query_gateway.config.settings import reset_settings
 
-reset_settings()
 from query_gateway.main import create_app
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setenv("QG_AUTH_REQUIRED", "false")
+    monkeypatch.setenv("QG_REPLAY_REQUIRED", "false")
     reset_settings()
-    return TestClient(create_app())
+    try:
+        with TestClient(create_app()) as client:
+            yield client
+    finally:
+        reset_settings()
 
 
 def test_health_live(client: TestClient):

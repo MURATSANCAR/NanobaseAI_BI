@@ -1,19 +1,20 @@
 """Eski Gateway uçları da servis kimliğinden geçmeli."""
-import os
-
-os.environ["QG_AUTH_REQUIRED"] = "true"
-
 import pytest
 from fastapi.testclient import TestClient
 
-from query_gateway.config.settings import get_settings
+from query_gateway.config.settings import reset_settings
 from query_gateway.main import create_app
 
 
 @pytest.fixture
-def client():
-    get_settings.cache_clear()
-    return TestClient(create_app(), raise_server_exceptions=False)
+def client(monkeypatch):
+    monkeypatch.setenv("QG_AUTH_REQUIRED", "true")
+    reset_settings()
+    try:
+        with TestClient(create_app(), raise_server_exceptions=False) as client:
+            yield client
+    finally:
+        reset_settings()
 
 
 def test_legacy_execute_requires_service_authentication(client):

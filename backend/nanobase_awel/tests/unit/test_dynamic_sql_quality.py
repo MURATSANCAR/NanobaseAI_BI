@@ -99,7 +99,7 @@ def test_expand_tables_from_index_merges_match(monkeypatch):
         "hits": [],
         "hint_extra": "old",
     }
-    out = asyncio.get_event_loop().run_until_complete(
+    out = asyncio.run(
         auth.expand_tables_from_index(
             ["public.musteriler"],
             tenant_id="default",
