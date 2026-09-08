@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from semantic_layer.catalog import one_entity_per_pattern
 import argparse
 import json
 import logging
@@ -145,7 +146,10 @@ def main(argv=None) -> int:
 
         _dump(profile_summary(profiles))
         return 0
-    profiles = store.list_profiles(s.datasource_id)
+    # Read the way every other entry point reads it: an entity's name comes from the
+    # vocabulary written against it, not from whichever scan last touched the table.
+    profiles = one_entity_per_pattern(store.list_profiles(s.datasource_id),
+                                      store.concept_entities(s.tenant_id, s.datasource_id))
     if args.cmd == "mine":
         _dump(pl.run_mine(store, s, profiles, s.project_dir))
         return 0

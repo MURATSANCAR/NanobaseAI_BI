@@ -33,6 +33,7 @@ from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
+from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.models import Annotation, ConceptStatus, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
@@ -47,41 +48,6 @@ from semantic_layer.store.catalog_store import CatalogStore, open_store, result_
 
 log = logging.getLogger("semantic_bridge")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-
-
-def one_entity_per_pattern(profiles: list[SchemaProfile], anchors: Optional[dict[str, str]] = None) -> list[SchemaProfile]:
-    """Two profiles of the same physical pattern are the same entity, whatever they are labelled.
-
-    An entity's name is worked out per scan from the patterns that scan saw: a run scoped to one firm
-    calls LG_{n0}_ITEMS "ITEMS", and a run over the whole schema — where LV_, VW_ and DV_ copies of the
-    same table also appear — calls it "LG_ITEMS" to keep them apart. Both are reasonable and they
-    disagree, so while a scan rewrites the catalog table by table the two live side by side and one
-    entity splits in half: the 2021-2025 items under one name, the 2026 items under another. Nothing
-    can then read across the years of it.
-
-    The pattern is the stable thing — derived from the table name and recomputed by nothing — so it
-    decides both which profiles are one entity and what that entity is called. `anchors` maps a
-    pattern to the name the certified vocabulary uses for it; every concept, mapping and annotation in
-    the deployment refers to that name and nothing rewrites them, so it outranks whatever a scan has
-    since worked out. Keyed by pattern rather than by name, this holds even after a rescan has
-    replaced every row it started from — matching on names alone let go the moment the old rows were
-    pruned, and preferring the newest label renamed CLCARD, ITEMS and STLINE out from under the
-    certified catalog while the scan was still running.
-    """
-    anchors = anchors or {}
-    newest: dict[str, tuple] = {}
-    for p in profiles:
-        seen = newest.get(p.table_pattern)
-        if seen is None or p.scanned_at > seen[0]:
-            newest[p.table_pattern] = (p.scanned_at, p.entity)
-    chosen = {pattern: anchors.get(pattern) or label for pattern, (_, label) in newest.items()}
-    renamed = sum(1 for p in profiles if p.entity != chosen[p.table_pattern])
-    for p in profiles:
-        p.entity = chosen[p.table_pattern]
-    if renamed:
-        log.info("catalog: %d profiles relabelled so one pattern is one entity under the name the "
-                 "certified catalog uses", renamed)
-    return profiles
 
 
 class Runtime:

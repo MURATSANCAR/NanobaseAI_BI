@@ -3,6 +3,7 @@ certify → version. Used by the CLI, the nightly worker and the portal "refresh
 
 from __future__ import annotations
 
+from semantic_layer.catalog import one_entity_per_pattern
 import logging
 import os
 import time
@@ -117,7 +118,10 @@ def run_pipeline(
     project_dir = project_dir or settings.project_dir
     connector = None
     if skip_profile:
-        profiles = store.list_profiles(settings.datasource_id)
+        # Read the way every other entry point reads it: an entity's name comes from the
+        # vocabulary written against it, not from whichever scan last touched the table.
+        profiles = one_entity_per_pattern(store.list_profiles(settings.datasource_id),
+                                          store.concept_entities(settings.tenant_id, settings.datasource_id))
         if probe:
             # Re-certifying on stored profiles still has to confront the catalog with the data — that
             # is what the probe is for. Without a connector the whole run used to die at the last step.
