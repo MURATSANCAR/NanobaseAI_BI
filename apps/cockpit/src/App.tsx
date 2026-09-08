@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, Percent, ShoppingCart, TrendingUp, Undo2 } from 'lucide-react';
 import { Sidebar, type View } from './components/Sidebar';
 import { CatalogExplorer } from './components/CatalogExplorer';
+import { TermReview } from './components/TermReview';
 import { TopBar } from './components/TopBar';
 import { KpiCard } from './components/KpiCard';
 import { CashFlowChart } from './components/CashFlowChart';
@@ -68,6 +69,7 @@ export default function App() {
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
             {view === 'catalog' && <CatalogExplorer />}
+            {view === 'review' && <TermReview />}
             {view === 'desk' && !d && !failed && !periods.isError && <DeskSkeleton />}
             {/* Yıl listesi okunamazsa hangi yıla bakıldığı da belli değildir; rakam göstermek yerine
                 bunu söylemek gerekir. */}

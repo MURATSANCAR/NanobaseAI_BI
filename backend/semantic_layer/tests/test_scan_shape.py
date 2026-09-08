@@ -241,3 +241,49 @@ def test_a_period_accounting_does_not_keep_its_books_in_is_left_out_of_scope():
         os.environ.pop("SEMANTIC_EXCLUDE_CONTEXT", None)
     names = {p.table_name for p in out}
     assert names == {"LG_105_01_INVOICE", "LG_411_01_INVOICE"}, names
+
+
+def test_change_times_from_two_different_clocks_are_compared_safely():
+    """The engine records naive server time and the catalog records UTC with an offset. Compared
+    directly they raise; compared carelessly they disagree by hours, and an hour's disagreement in
+    the wrong direction skips a table that did change — a catalog that quietly goes stale."""
+    from datetime import datetime, timedelta, timezone
+
+    from semantic_layer.profiler.profiler import Profiler
+
+    naive = datetime(2026, 9, 8, 3, 0)
+    aware = datetime(2026, 9, 8, 3, 0, tzinfo=timezone.utc)
+
+    class _Conn:
+        dialect, default_schema = "tsql", "dbo"
+        quote_l = quote_r = '"'
+
+        def __init__(self):
+            self.read: list[str] = []
+
+        def list_tables(self, schema, like=None):
+            return [("dbo", n) for n in ("SINIRDA", "COKESKI")]
+
+        def modified_at(self, schema):
+            # naive, from the engine; one table changed an hour after its profile, one long before
+            return {"SINIRDA": naive + timedelta(hours=1), "COKESKI": naive - timedelta(days=90)}
+
+        def columns(self, schema, table):
+            self.read.append(table)
+            return [{"name": "ID", "data_type": "int"}]
+
+        def primary_keys(self, schema, table): return ["ID"]
+        def foreign_keys(self, schema): return []
+        def row_count(self, schema, table): return 1
+        def row_counts(self, schema): return {}
+        def table_comments(self, schema): return {}
+        def column_comments(self, schema): return {}
+        def sample_rows(self, schema, table, limit=20): return []
+        def indexes(self, schema): return {}
+        def top_values(self, *a, **k): return []
+
+    conn = _Conn()
+    # aware timestamps on the catalog side: the comparison must not raise, and must not skip SINIRDA
+    Profiler(conn).profile("d", "dbo", known={"SINIRDA": aware, "COKESKI": aware})
+    assert "SINIRDA" in conn.read, "a table that changed after its profile has to be read again"
+    assert "COKESKI" not in conn.read, "one untouched for months does not"

@@ -248,3 +248,30 @@ export function acceptSuggestion(id: string): Promise<{ ok?: boolean }> {
 export function dismissSuggestion(id: string): Promise<{ ok: boolean }> {
   return post(`/api/v1/schema/suggestions/${encodeURIComponent(id)}/dismiss`, {});
 }
+
+/** Onay bekleyen iş terimleri.
+ *
+ *  Motor bir terimi kendi başına önerebilir ama sertifikalayamaz: "iskonto" hangi kolon, "toptan"
+ *  hangi kod — bunu ancak işi bilen biri söyler. Kuyruk, gerçek kullanımdan çıkanları önce getirir;
+ *  Logo'nun kendi alan etiketlerinden türeyen yüzlerce parça `source: 'all'` ile görülür. */
+export type ReviewItem = {
+  id: string;
+  term: string;
+  type: string;
+  confidence: number | null;
+  mapping: { entity: string; column: string | null; operator: string | null; values: string[]; formula: string | null } | null;
+  evidence: Record<string, number>;
+  evidenceCount: number;
+  observed: Array<{ value: string; rows: number }>;
+  columnMeaning: string | null;
+  counterEvidence: number;
+};
+
+export function reviewQueue(source: 'used' | 'all' = 'used', limit = 100): Promise<{ waiting: number; used: number; total: number; items: ReviewItem[] }> {
+  return get(`/api/v1/semantic/review?source=${source}&limit=${limit}`);
+}
+
+/** Kararın kendisi kanıttır: onay insan kanıtı olarak yazılır, gece koşusu onu geri alamaz. */
+export function reviewConcept(id: string, decision: 'APPROVE' | 'REJECT', note = '', by = 'kokpit'): Promise<{ ok: boolean; certified: Record<string, number> }> {
+  return post(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/review`, { decision, note, by });
+}

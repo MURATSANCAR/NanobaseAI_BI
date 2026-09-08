@@ -34,7 +34,7 @@ from semantic_layer.config import SemanticSettings
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
 from semantic_layer.catalog import one_entity_per_pattern
-from semantic_layer.models import Annotation, ConceptStatus, SchemaProfile, SemanticQuery, TemporalSlot
+from semantic_layer.models import Annotation, ConceptStatus, Evidence, EvidenceType, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
@@ -1027,6 +1027,92 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         s = r.settings
         rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
         return {"items": [{"concept": c.to_dict(), "mappings": [m.to_dict() for m in r.store.list_mappings(c.id)]} for c in rows]}
+
+    @app.post("/api/v1/semantic/concepts/{concept_id}/review")
+    def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        """A person's yes or no on one proposed term.
+
+        The evidence engine can propose and can measure, but there are terms only the business can
+        settle: whether "iskonto" means this column and this code, whether a word is worth having at
+        all. Those proposals sit as candidates until somebody looks, and on this deployment a hundred
+        and ninety-five of them were sitting while questions were being refused for want of the very
+        words they define.
+
+        A yes is recorded as human evidence, not as a bare status change, so the next engine run can
+        see who decided and does not undo it. A no is a rejection with the same standing: the term
+        stops being proposed rather than coming back every night.
+        """
+        _require_admin(request)
+        r = rt()
+        decision = str((body or {}).get("decision") or "").strip().upper()
+        if decision not in ("APPROVE", "REJECT"):
+            raise HTTPException(status_code=400, detail={"code": "BAD_DECISION",
+                                                         "message": "decision APPROVE ya da REJECT olmalı"})
+        bundle = r.store.concept_bundle(concept_id)
+        if not bundle:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        who = str((body or {}).get("by") or request.headers.get("X-User") or "portal")
+        note = str((body or {}).get("note") or "")
+        if decision == "APPROVE":
+            r.store.add_evidence(Evidence(concept_id, EvidenceType.HUMAN_ANNOTATION, f"portal:{who}",
+                                          support_count=1, weight=1.0,
+                                          payload={"snippet": note or "portalden onaylandı", "by": who}))
+            r.store.update_concept(concept_id, status=ConceptStatus.CERTIFIED,
+                                   explain={"approved_by": who, "note": note})
+        else:
+            r.store.update_concept(concept_id, status=ConceptStatus.REJECTED,
+                                   explain={"rejected_by": who, "note": note})
+        # No rebuild here on purpose: certifying moves the catalog fingerprint, and the runtime's own
+        # version check reloads on the next question. Rebuilding per click would cost seconds each
+        # time, and a reviewer works through a queue of them.
+        return {"ok": True, "concept_id": concept_id, "status": decision,
+                "certified": r.store.status_counts(r.settings.tenant_id, r.settings.datasource_id)}
+
+    # A term nobody ever used and no query ever ran is not yet worth a person's minute. Logo's own
+    # field labels alone produce hundreds of fragments — "islem gerceklestik ay" — and a queue made
+    # mostly of those is a queue nobody works through. So the default queue is the terms that came
+    # out of real use: a query that ran, a person's note, a binding someone wrote. ?source=all shows
+    # the rest for anyone who wants to mine it.
+    _USED = ("EXECUTION", "VALIDATED_SQL", "HUMAN_ANNOTATION", "ALIAS_BINDING", "EXPLICIT_BINDING")
+
+    @app.get("/api/v1/semantic/review")
+    def review_queue(limit: int = 100, source: str = "used") -> dict[str, Any]:
+        """What is waiting for a person to decide, the most supported first.
+
+        Each row carries what the term would mean, where it points, and what stands behind it — the
+        queries it was seen in, the documents that describe it, what the data shows. Without those a
+        reviewer is being asked to approve a word, which nobody can do responsibly.
+        """
+        r = rt()
+        s = r.settings
+        rows = r.store.find_concepts(s.tenant_id, s.datasource_id, status=ConceptStatus.CANDIDATE, limit=1000)
+        said = getattr(r.existing, "annotations", None) or {}
+        out = []
+        for c in rows:
+            b = r.store.concept_bundle(c.id) or {}
+            ev = b.get("evidence") or []
+            kinds: dict[str, int] = {}
+            for e in ev:
+                kinds[str(e.get("evidence_type"))] = kinds.get(str(e.get("evidence_type")), 0) + 1
+            maps = b.get("mappings") or []
+            prof = r.resolver.by_entity.get(maps[0].get("entity")) if maps else None
+            col = prof.column(maps[0].get("column")) if prof and maps and maps[0].get("column") else None
+            out.append({
+                "id": c.id, "term": c.term, "type": c.semantic_type,
+                "confidence": getattr(c, "confidence", None),
+                "mapping": maps[0] if maps else None,
+                "evidence": kinds,
+                "evidenceCount": len(ev),
+                # what the data itself shows about the column this term claims
+                "observed": [{"value": v, "rows": n} for v, n in (col.top_values or [])[:6]] if col else [],
+                "columnMeaning": (col.meaning(said.get((maps[0].get("entity"), (maps[0].get("column") or "").upper()))) if col and maps else None),
+                "counterEvidence": len(b.get("counterEvidence") or []),
+            })
+        out.sort(key=lambda x: (-(x["confidence"] or 0), -x["evidenceCount"]))
+        used = [x for x in out if any(k in _USED for k in x["evidence"])]
+        shown = out if source == "all" else used
+        return {"waiting": len(shown), "used": len(used), "total": len(out),
+                "source": source, "items": shown[:limit]}
 
     @app.get("/api/v1/semantic/concepts/{concept_id}")
     def concept(concept_id: str) -> dict[str, Any]:

@@ -8,6 +8,7 @@ import logging
 import os
 import re
 import time
+from datetime import timedelta
 from typing import Any, Callable, Optional
 
 from semantic_layer.models import ColumnProfile, SchemaProfile
@@ -185,8 +186,26 @@ class Profiler:
                 changed = {}
                 log.warning("change times unavailable, reading everything: %s", e)
             if changed:
-                fresh = [(sch, t) for sch, t in discovered
-                         if t not in known or t not in changed or changed[t] > known[t]]
+                # The engine's clock and this catalog's are not the same clock: one records naive
+                # server time, the other UTC with an offset. Compared directly they raise; compared
+                # carelessly they disagree by hours, and an hour's disagreement in the wrong
+                # direction skips a table that did change — a catalog that quietly goes stale, which
+                # is worse than reading a few tables twice. So: compare without offsets, and give the
+                # stored time a margin so anything close to the line is read again.
+                margin = timedelta(hours=int(os.environ.get("SEMANTIC_CHANGE_MARGIN_HOURS", "12")))
+
+                def _naive(t: Any) -> Any:
+                    return t.replace(tzinfo=None) if getattr(t, "tzinfo", None) else t
+
+                def stale(t: str) -> bool:
+                    if t not in known or t not in changed:
+                        return True
+                    try:
+                        return _naive(changed[t]) > _naive(known[t]) - margin
+                    except TypeError:
+                        return True          # cannot tell — read it
+
+                fresh = [(sch, t) for sch, t in discovered if stale(t)]
                 log.info("değişim taraması: %d nesnenin %d tanesi yeni ya da değişmiş",
                          len(discovered), len(fresh))
                 tables = discovered = fresh

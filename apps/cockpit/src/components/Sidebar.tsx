@@ -1,9 +1,9 @@
-import { BookOpen, Landmark, Table2 } from 'lucide-react';
+import { BookOpen, Landmark, Stamp, Table2 } from 'lucide-react';
 import clsx from 'clsx';
 
 /** Tek masa: Finans & Bütçe. Diğer masalar (satış/kanal, yayınevi, cari, stok, satınalma) veri modeli
  *  ve doğrulanmış sorguları hazır olduğunda eklenir — çalışmayan bağlantı gösterilmez. */
-export type View = 'desk' | 'catalog';
+export type View = 'desk' | 'catalog' | 'review';
 
 export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void }) {
   return (
@@ -25,6 +25,7 @@ export function Sidebar({ engineOk, modelCount, view, onView }: { engineOk: bool
       <nav className="mt-3 flex flex-col gap-1" aria-label="Masalar">
         <NavItem icon={Landmark} label="Finans & Bütçe Masası" active={view === 'desk'} onClick={() => onView('desk')} />
         <NavItem icon={Table2} label="Veri Sözlüğü" active={view === 'catalog'} onClick={() => onView('catalog')} />
+        <NavItem icon={Stamp} label="Onay Bekleyenler" active={view === 'review'} onClick={() => onView('review')} />
       </nav>
 
       {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
