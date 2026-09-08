@@ -18,6 +18,7 @@ from typing import Optional
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.optimizer.scope import Scope, build_scope
 
 from semantic_layer.models import SchemaProfile
 from semantic_layer.naming import logical_table
@@ -57,6 +58,94 @@ def _resolve(node: exp.Table, by_table: dict, by_entity: dict) -> Optional[Schem
     return prof
 
 
+@dataclass(frozen=True)
+class _Rel:
+    """FROM'daki bir kaynak: temel tablo ya da CTE/alt sorgu.
+
+    Fan-out muhakemesi için gereken tek şey, bir satırı tekilleştiren kolon kümesi. Temel tabloda bu
+    birincil anahtar; bir CTE'de ise GROUP BY anahtarı — CTE de sonuçta bir tablodur ve kendi
+    tanecikliği vardır. Kritik bunu bilmezse modelin en sevdiği kalıbı (önce CTE'de topla, sonra
+    birleştir) hiç okuyamaz ve şişmiş toplam ağdan geçer."""
+
+    entity: str
+    keys: frozenset[str]                        # boş: tekilleştiren kolon bilinmiyor
+    profile: Optional[SchemaProfile] = None     # yalnız temel tabloda
+    aggregated: frozenset[str] = frozenset()    # CTE'de zaten toplanmış çıktı kolonları
+    grain: str = ""                             # insana okunur taneciklik ("fatura", "fatura×ürün")
+
+
+def _keys_of(prof: SchemaProfile) -> frozenset[str]:
+    ks = {k.upper() for k in prof.primary_key}
+    ks |= {c.name.upper() for c in prof.columns if c.is_primary_key}
+    return frozenset(ks)
+
+
+def _in_scope(node: exp.Expression, select: exp.Select) -> bool:
+    """Düğüm bu SELECT'e mi ait, yoksa içindeki bir alt sorguya mı. `find_all` alt sorgulara da
+    iniyor; kapsam ayrımı yapılmazsa bir CTE'nin join'i dış sorgunun join'i sanılır."""
+    p = node.parent
+    while p is not None:
+        if isinstance(p, exp.Select):
+            return p is select
+        p = p.parent
+    return False
+
+
+def _derived_rel(scope: "Scope", by_table: dict, by_entity: dict, cache: dict) -> Optional[_Rel]:
+    """Bir CTE/alt sorgunun tanecikliği: GROUP BY anahtarı ve zaten toplanmış kolonları."""
+    key = id(scope)
+    if key in cache:
+        return cache[key]
+    cache[key] = None                                    # özyineleme kırıcı
+    sel = scope.expression
+    if not isinstance(sel, exp.Select):
+        return None
+    by_sql: dict[str, str] = {}
+    aggregated: set[str] = set()
+    for e in sel.expressions:
+        name = (e.alias_or_name or "").upper()
+        if not name:
+            continue
+        inner = e.this if isinstance(e, exp.Alias) else e
+        by_sql[inner.sql()] = name
+        if list(inner.find_all(exp.AggFunc)):
+            aggregated.add(name)
+    keys: set[str] = set()
+    group = sel.args.get("group")
+    if group is not None:
+        for g in group.expressions:
+            nm = by_sql.get(g.sql()) or (g.name.upper() if isinstance(g, exp.Column) else "")
+            if nm:
+                keys.add(nm)
+        # Gruplama kolonlarından biri kaynak tablonun birincil anahtarıysa tek başına süperanahtardır:
+        # yanındaki YEAR(tarih) gibi ifadeler ona bağımlıdır, tanecikliği inceltmezler.
+        for g in group.expressions:
+            if not isinstance(g, exp.Column):
+                continue
+            src = _source_rel(scope, (g.table or ""), by_table, by_entity, cache)
+            if src is not None and src.keys and {g.name.upper()} >= src.keys:
+                nm = by_sql.get(g.sql()) or g.name.upper()
+                keys = {nm}
+                break
+    rel = _Rel(entity=(scope.expression.parent.alias_or_name if isinstance(scope.expression.parent, exp.CTE) else "alt sorgu") or "alt sorgu",
+               keys=frozenset(keys), aggregated=frozenset(aggregated),
+               grain=", ".join(sorted(keys)) if keys else "")
+    cache[key] = rel
+    return rel
+
+
+def _source_rel(scope: "Scope", alias: str, by_table: dict, by_entity: dict, cache: dict) -> Optional[_Rel]:
+    """Bu kapsamdaki takma adın arkasındaki ilişki — tablo ya da türetilmiş."""
+    sources = {str(k).upper(): v for k, v in scope.sources.items()}
+    src = sources.get(alias.upper()) if alias else (next(iter(scope.sources.values())) if len(scope.sources) == 1 else None)
+    if src is None:
+        return None
+    if isinstance(src, exp.Table):
+        prof = _resolve(src, by_table, by_entity)
+        return None if prof is None else _Rel(prof.entity, _keys_of(prof), prof, grain=prof.entity)
+    return _derived_rel(src, by_table, by_entity, cache)
+
+
 def _is_pk(prof: SchemaProfile, column: str) -> bool:
     c = column.upper()
     if c in {k.upper() for k in prof.primary_key}:
@@ -83,15 +172,26 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
             return []
     by_table, by_entity = _profiles_by_name(profiles)
     findings: list[Finding] = []
+    try:
+        root = build_scope(tree)
+    except Exception:  # noqa: BLE001
+        root = None
+    if root is None:
+        return []
+    cache: dict[int, Optional[_Rel]] = {}
 
-    for select in tree.find_all(exp.Select):
-        # Which alias names which table, within this SELECT.
-        tables: dict[str, SchemaProfile] = {}
-        for t in select.find_all(exp.Table):
-            prof = _resolve(t, by_table, by_entity)
-            if prof is not None:
-                tables[(t.alias or t.name).upper()] = prof
-        if not tables:
+    for scope in root.traverse():
+        select = scope.expression
+        if not isinstance(select, exp.Select):
+            continue
+        # Which alias names which relation, within this scope. A CTE is a relation too.
+        rels: dict[str, _Rel] = {}
+        for alias in scope.sources:
+            rel = _source_rel(scope, str(alias), by_table, by_entity, cache)
+            if rel is not None:
+                rels[str(alias).upper()] = rel
+        tables: dict[str, SchemaProfile] = {a: r.profile for a, r in rels.items() if r.profile is not None}
+        if not rels:
             continue
 
         # Each join: which side keeps its rows and which side gets repeated. The side whose join
@@ -99,27 +199,28 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
         # other side's rows are preserved and *this* side's rows are repeated once per match.
         repeated: set[str] = set()           # aliases whose rows are multiplied by a join
         uncertain: set[str] = set()          # neither side keyed: could go either way
-        for join in select.find_all(exp.Join):
+        for join in select.args.get("joins") or []:
             on = join.args.get("on")
-            if on is None:
+            if on is None or not _in_scope(join, select):
                 continue
+            # Columns each side is joined on, gathered across the whole ON clause: a composite key
+            # is only covered when every one of its columns is in the join, and a join that covers
+            # half of one does not keep that side's rows unique.
+            cols_by_alias: dict[str, set[str]] = {}
             for eq in on.find_all(exp.EQ):
                 l, r = eq.left, eq.right
                 if not (isinstance(l, exp.Column) and isinstance(r, exp.Column)):
                     continue
                 la, ra = (l.table or "").upper(), (r.table or "").upper()
-                lp, rp = tables.get(la), tables.get(ra)
-                if lp is None or rp is None or la == ra:
+                if la == ra or la not in rels or ra not in rels:
                     continue
-                lk, rk = _is_pk(lp, l.name), _is_pk(rp, r.name)
-                if lk and not rk:
-                    repeated.add(la)
-                elif rk and not lk:
-                    repeated.add(ra)
-                elif not lk and not rk:
-                    uncertain.update({la, ra})
+                cols_by_alias.setdefault(la, set()).add(l.name.upper())
+                cols_by_alias.setdefault(ra, set()).add(r.name.upper())
                 # A join the catalog has no relationship for — only said where the catalog has
                 # relationships for these tables at all, so a graph still being filled in stays quiet.
+                lp, rp = tables.get(la), tables.get(ra)
+                if lp is None or rp is None:
+                    continue
                 known = [(x["column"].upper(), x["ref_entity"], (x.get("ref_column") or "").upper())
                          for x in (lp.relationships or []) + (rp.relationships or [])]
                 if known:
@@ -128,6 +229,14 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                         findings.append(Finding("UNKNOWN_JOIN", "warn",
                             f"{lp.entity}.{l.name} = {rp.entity}.{r.name} bağlantısı katalogdaki ilişkilerde yok; "
                             f"bu iki tablo bu kolonlar üzerinden birleşmeyebilir."))
+            sides = set(cols_by_alias)
+            keyed = {a for a in sides if rels[a].keys and rels[a].keys <= cols_by_alias[a]}
+            if keyed and (sides - keyed):
+                # The keyed side matches at most one row per row of the other side, so *its* rows are
+                # the ones repeated — once per matching row on the other side.
+                repeated.update(keyed)
+            elif sides and not keyed:
+                uncertain.update(sides)
 
         for agg in select.find_all(exp.AggFunc):
             inner = agg.this
