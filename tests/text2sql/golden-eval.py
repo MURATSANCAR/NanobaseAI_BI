@@ -46,7 +46,10 @@ def main(argv: list[str]) -> int:
     for case in cases:
         t0 = time.perf_counter()
         sq = resolver.resolve(case["question"], today=date(2026, 8, 20))
-        sent = [p.entity for p in c._one_per_entity(c.relevant_entities(sq, []), sq)]
+        # What the prompt is actually built from, not what retrieval proposed: the selector
+        # narrows between the two, and scoring the wider list credits the system with tables
+        # it never sent and blames it for tables it dropped.
+        sent = [p.entity for p in c._one_per_entity(c.narrow(sq, c.relevant_entities(sq, [])), sq)]
         prompt = c.build_messages(sq, [])[0]["content"]
         ms = (time.perf_counter() - t0) * 1000
 
