@@ -98,6 +98,11 @@ def _asks_how_things_are(tokens) -> bool:
     return any(stem(t) in _HOW_ARE_THINGS or t in _HOW_ARE_THINGS for t in tokens)
 
 
+def _rooted(key: str) -> str:
+    """A term reduced to the roots of its words, so an inflected form finds the same entry."""
+    return " ".join(short_root(t) for t in key.split())
+
+
 class SemanticResolver:
     def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None):
         from semantic_layer.conventions import Conventions
@@ -109,6 +114,9 @@ class SemanticResolver:
         # An entity can span several physical tables — one fiscal period each. Keep them all, so a
         # question about a past year is judged against everything this deployment holds rather than
         # against whichever table happened to be profiled last.
+        # The certified vocabulary keyed by the roots of its own terms, rebuilt when the catalog is.
+        self._roots_for: Optional[int] = None
+        self._roots: dict = {}
         self.tables_of: dict[str, list[SchemaProfile]] = {}
         for prof in profiles:
             self.tables_of.setdefault(prof.entity, []).append(prof)
@@ -142,7 +150,10 @@ class SemanticResolver:
         for i, j, key in sorted(qf.terms, key=lambda t: (-(t[1] - t[0]), t[0])):
             if any(k in consumed for k in range(i, j)):
                 continue
-            senses = index.get(key)
+            # The key reaching this point has already been stemmed, and stemming an inflected word
+            # does not land where stemming its root does — "kanal" stems to "kanal" and "kanala" to
+            # "kana", so the two never meet. The root is taken from what the person actually wrote.
+            senses = index.get(key) or self._by_root(index).get(_rooted(qf.surface.get(key, key)))
             if not senses:
                 continue
             slot = self._slot_from_senses(key, qf.surface.get(key, key), senses, (i, j))
@@ -509,6 +520,41 @@ class SemanticResolver:
             explain={"normalized": key, "sense": c.sense_id, "version": c.version, "support": support, "evidence_types": sorted({e.evidence_type for e in ev}), "alternatives": alternatives},
             span=span,
         )
+
+    def _by_root(self, index: dict) -> dict:
+        """The certified vocabulary, keyed by the roots of its own terms.
+
+        Turkish inflects: a question asks about "kanala göre" or "2026 satışı" and the catalog holds
+        "kanal" and "satış". The lookup is exact, so the same question answered one way was refused
+        the other — the root was already being computed and simply never consulted here.
+
+        Nothing is added to the vocabulary and no suffix is written down anywhere: the keys are the
+        catalog's own terms, reduced by the same root function the rest of the resolver uses, so this
+        works for whatever language a deployment's catalog is written in.
+
+        A root two different terms share is left out rather than guessed at. "One of these two, and I
+        picked" is the kind of silent decision this system exists to avoid; those terms keep their
+        exact spelling and nothing else changes.
+        """
+        marker = id(index)
+        if self._roots_for != marker:
+            groups: dict[str, set[str]] = {}
+            for key in index:
+                groups.setdefault(_rooted(key), set()).add(key)
+            self._roots_for = marker
+            roots: dict = {}
+            for root, keys in groups.items():
+                # The canonical spelling wins where the catalog holds it: "kanal" and "kanallar" both
+                # reduce to "kanal", and the entry to use is the one written that way. Where no key is
+                # the root itself, a root two different terms share is left out rather than guessed at
+                # — "one of these two, and I picked" is the silent decision this system exists to
+                # avoid, and those terms keep their exact spelling.
+                if root in keys:
+                    roots[root] = index[root]
+                elif len(keys) == 1:
+                    roots[root] = index[next(iter(keys))]
+            self._roots = roots
+        return self._roots
 
     def _refresh_column_caches(self, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> None:
         """Value literals and measure columns come only from CERTIFIED COLUMN concepts: a value is
