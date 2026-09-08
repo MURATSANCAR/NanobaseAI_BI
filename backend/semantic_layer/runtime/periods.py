@@ -83,11 +83,11 @@ def _one_per_window(chosen: list[SchemaProfile]) -> list[SchemaProfile]:
         w = _window(p)
         # to the month: a re-import rarely lands on the same day, and never in a different quarter
         # A table with no date column has no period, so two of them cannot be two halves of one:
-        # they are copies, and reading both adds the same rows to themselves. Keyed by pattern, not
-        # by name — LG_{n0}_ITEMS and LV_{n0}_ITEMS are different things, LG_211_ITEMS and
-        # LG_411_ITEMS are the same product catalogue in two firms. Unioning those doubled every
-        # product-level figure in the deployment, and joined a firm's sales lines to another firm's
-        # items, where LOGICALREF means something else entirely.
+        # they are copies, and reading both adds the same rows to themselves. Keyed by pattern,
+        # not by name: two patterns are two different things, while two firms of one pattern are
+        # the same reference rows twice. Unioning those doubled every figure joined through them,
+        # and matched one firm's facts to another firm's rows, where an identifier of the same
+        # name means something else entirely.
         key = (w[0].year, w[0].month, w[1].year, w[1].month) if w else ("undated", p.table_pattern)
         groups.setdefault(key, []).append(p)
     keep: set[str] = set()

@@ -150,3 +150,17 @@ def test_an_unmeasured_table_does_not_join_a_year_that_is_already_answered():
     # and with nothing measured, the unmeasured table is still the best there is
     yalniz = tables_for([olculmeyen], date(2015, 1, 1), date(2016, 1, 1))
     assert [p.table_name for p in yalniz] == ["LG_411_01_INVOICE"]
+
+
+def test_only_the_relation_the_period_constrains_is_spread():
+    """Dönem, sorunun tarihlediği satırlara aittir. Yanındaki referans tablosu hangi yıl sorulursa
+    sorulsun aynı satırları tutar; o da yıllara yayılırsa her satır birden çok kez eşleşir ve rakam
+    çarpılarak döner — sorguya bakan hiçbir şeyin yanlış olduğunu göremez."""
+    items_old = _p("LG_211_ITEMS", "LG_{n0}_ITEMS", ("2010-01-01", "2026-01-19"), entity="ITEMS", ctx={"n0": "211"})
+    items_new = _p("LG_411_ITEMS", "LG_{n0}_ITEMS", ("2010-01-01", "2026-08-17"), entity="ITEMS", ctx={"n0": "411"})
+    sql = physicalize_sql(
+        'SELECT SUM(s."TOTAL") FROM STLINE s JOIN ITEMS i ON i."LOGICALREF" = s."STOCKREF" '
+        "WHERE s.\"DATE_\" >= '2025-01-01' AND s.\"DATE_\" < '2027-01-01'",
+        [Y2021, Y2026, items_old, items_new], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert "LG_211_01_STLINE" in sql and "LG_411_01_STLINE" in sql, sql   # dönemi taşıyan taraf yayılır
+    assert sql.upper().count("LG_211_ITEMS") + sql.upper().count("LG_411_ITEMS") == 1, sql

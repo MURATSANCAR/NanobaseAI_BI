@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
-from semantic_layer.naming import is_shadow_copy, physical_name
+from semantic_layer.naming import is_shadow_copy, physical_name, source_rank
 from semantic_layer.runtime import periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
@@ -259,17 +259,36 @@ class DeterministicCompiler:
             return None, f"no date column on {entity}"
         return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
 
-    def _source(self, entity: str, q: SemanticQuery, needed: set[str], alias: str) -> tuple[str, list[str], str]:
+    def _source(self, entity: str, q: SemanticQuery, needed: set[str], alias: str, *, spread: bool = True,
+                anchor: Optional[dict[str, str]] = None) -> tuple[str, list[str], str]:
         """The FROM target for one entity: a table, or the periods a question spans, unioned.
 
         Which tables that is comes from the window each was measured to hold, so a source that splits an
         entity by year and one that does not are compiled by the same rule.
+
+        `spread=False` for a table that is joined rather than filtered by date. The period belongs to
+        the side the question dates — the sales lines — and a dimension beside it holds the same rows
+        whichever year is asked. Its measured window is the range of its own creation dates, which
+        says nothing about periods, so spreading it reads the same reference rows twice and doubles
+        every figure joined through them. It would also join one firm's facts to another firm's
+        reference rows, where an identifier of the same name stands for something else.
         """
         d = self.d
         available = self.tables_of.get(entity) or []
         first = min((t.start for t in q.temporal if t.start), default=None)
         last = max((t.end for t in q.temporal if t.end), default=None)
-        chosen = periods.tables_for(available, first, last) or available[:1]
+        if not spread:
+            # The copy belonging to the same firm as the rows being read. In this source the firm
+            # number is part of the table name and the key spaces are per firm, so joining 2026 sales
+            # lines to another firm's products matches rows that have nothing to do with each other.
+            fits = [p for p in available
+                    if all(p.context.get(k) == v for k, v in (anchor or {}).items() if k in p.context)]
+            cands = fits or available
+            pick = min(cands, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
+                                             -(x.row_count or 0), x.table_name)) if cands else None
+            chosen = [pick] if pick is not None else []
+        else:
+            chosen = periods.tables_for(available, first, last) or available[:1]
         names = [d.table(p.schema_name, physical_name(p.table_pattern, {**p.context, **self.context})) for p in chosen]
         tables = [p.table_name for p in chosen]
         if len(names) == 1:
@@ -397,6 +416,19 @@ class DeterministicCompiler:
                 explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
         sql = "SELECT " + ", ".join(select)
         source, read_tables, span_note = self._source(plan.entity, q, self._needed_columns(plan.entity, plan, q), alias)
+        # Which firm/period the rows come from, so a joined dimension is read from the same one. Where
+        # several were read, the one whose own window begins latest — the same tie-break the period
+        # chooser uses, and the one a question about now means.
+        read = [p for p in (self.tables_of.get(plan.entity) or []) if p.table_name in read_tables]
+        anchor: dict[str, str] = {}
+        if read:
+            anchor = dict(max(read, key=lambda x: (str(x.time_window[0]) if x.time_window else "", x.table_name)).context)
+        # Reference rows are keyed per firm, so one join cannot serve facts read from two of them:
+        # every row of the second firm would match some unrelated reference row. This compiler writes
+        # one join, so it says it cannot rather than answering with the names silently swapped.
+        if plan.joins and len({p.context.get("n0") for p in read if p.context.get("n0")}) > 1:
+            log.debug("deterministic compile refused: joined query reads more than one firm")
+            return None
         if span_note:
             explain.append(span_note)
         sql += f"\nFROM {source} AS {alias}"
@@ -404,10 +436,11 @@ class DeterministicCompiler:
             joined = ref_ent if ref_ent != plan.entity else ent
             # Only the join column that belongs to *this* side. Both were added here, so an entity
             # whose years are read as a UNION got the other table's column in its projection and the
-            # database refused the query: "Invalid column name 'STOCKREF'". Invisible until an entity
-            # both spans periods and is joined — the shape a product breakdown produces.
+            # database refused the query as an invalid column name. Invisible until an entity both
+            # spans periods and is joined — the shape a breakdown by a joined dimension produces.
             own = ({col} if ent == joined else set()) | ({ref_col} if ref_ent == joined else set())
-            j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined)
+            j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined,
+                                                       spread=False, anchor=anchor)
             read_tables += j_tables
             if j_note:
                 explain.append(j_note)

@@ -150,6 +150,21 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             seen_tables.setdefault(found.table_pattern, set()).add(found.table_name)
     already_spread = {pattern: len(names) for pattern, names in seen_tables.items()}
 
+    # Which relation the period actually constrains. A period is spread over the rows the question
+    # dates, not over everything the query mentions: a reference table joined beside them holds the
+    # same rows whichever year is asked, and its own measured window is the range of its creation
+    # dates. Spread anyway, it is read once per period and every row it is joined to is matched more
+    # than once — the figure comes back multiplied, and nothing about the query looks wrong.
+    dated_aliases: set[str] = set()
+    for cmp_ in tree.find_all(exp.Between, exp.GTE, exp.GT, exp.LTE, exp.LT):
+        cols = [c for c in cmp_.find_all(exp.Column)]
+        lits = [l for l in cmp_.find_all(exp.Literal) if l.is_string] + list(cmp_.find_all(exp.Cast))
+        if not cols or not lits:
+            continue
+        for c in cols:
+            if c.table:
+                dated_aliases.add(c.table.upper())
+
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
             raw = node.name
@@ -162,7 +177,10 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
             if prof is None:
                 return node
-            wanted = spread(prof)
+            # Where the query says which relation carries the period, only that one is spread.
+            name_here = (node.alias or node.name or "").upper()
+            wanted = spread(prof) if (not dated_aliases or name_here in dated_aliases
+                                      or prof.entity.upper() in dated_aliases) else [prof]
             if len(wanted) > 1:
                 # One entity, several years: read them as one relation so everything the model wrote
                 # around it — the joins, the filters, the aggregate — is untouched.

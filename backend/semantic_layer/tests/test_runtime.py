@@ -1045,3 +1045,25 @@ def test_two_copies_of_a_dated_table_are_not_read_as_two_periods_of_it():
     # ...ama farklı desenler farklı şeylerdir ve ikisi de elde kalır
     mixed = same + [_p("LV_411_ITEMS", "LV_{n0}_ITEMS", 32322)]
     assert len(P.tables_for(mixed, date(2026, 1, 1), date(2027, 1, 1))) == 2
+
+
+def test_a_join_is_read_from_the_same_firm_as_the_rows_it_is_joined_to(catalog, profiles):
+    """Referans satırları firma başına anahtarlanır: bir firmanın satırlarını başka bir firmanın
+    referansına bağlamak, ilgisiz kayıtları eşleştirir ve isimler sessizce yer değiştirir."""
+    from copy import deepcopy
+    from semantic_layer.models import utcnow
+
+    _certify(catalog, "urun", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    older = deepcopy(next(p for p in profiles if p.entity == "ITEMS"))
+    older.table_name, older.context, older.scanned_at = "LG_211_ITEMS", {"n0": "211"}, utcnow()
+    older.row_count = 10
+    spread = profiles + [older]
+
+    r = SemanticResolver(catalog, TENANT, DS, spread)
+    c = DeterministicCompiler(spread, {}, "tsql")
+    out = c.compile(r.resolve("2026 ürün bazında satış tutarı", today=date(2026, 7, 20)), catalog)
+    if out is None:
+        return                                   # birden çok firma okunuyorsa reddetmek de doğru cevap
+    assert "LG_211_ITEMS" not in out.sql, out.sql
