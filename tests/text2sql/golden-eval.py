@@ -19,6 +19,12 @@ from datetime import date
 from pathlib import Path
 
 
+def answer_block_reason(sq):
+    # A clarification is still not a delivered answer. Moving a question from
+    # rejection to clarification must not make the acceptance score look better.
+    return sq.refusal_reason or ("CLARIFICATION" if sq.clarification else None)
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--golden", default="tests/text2sql/golden-timas.json")
@@ -57,7 +63,7 @@ def main(argv: list[str]) -> int:
         got = set(sent)
         rows.append({
             "id": case["id"], "question": case["question"],
-            "state": sq.state, "refusal": sq.refusal_reason,
+            "state": sq.state, "refusal": answer_block_reason(sq),
             "expected": sorted(want), "sent": sorted(got),
             "missing": sorted(want - got), "extra": sorted(got - want),
             "recall": (len(want & got) / len(want)) if want else None,

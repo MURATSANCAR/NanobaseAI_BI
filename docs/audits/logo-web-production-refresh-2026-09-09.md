@@ -1,0 +1,37 @@
+# Logo sözlüğü — üretim katalog ve indeks yenilemesi
+
+Kullanıcının web sözlüğünü öncelikli kaynak olarak kullanma ve üretimde indeksleme onayıyla
+hazırlanan yayın. Sadece mevcut profil kolonlarının açıklamaları güncellenir; müşteri ERP'sinde
+DDL, veri değişikliği veya yeni fiziksel kolon oluşturma işlemi yoktur.
+
+## Hazırlık
+
+- Üretim kataloğu: 4.121 profil.
+- Özel aday katalog: 965 profil, 18 tablo açıklaması ve 28.331 kolon açıklaması güncellendi.
+- Canlı SQL tipleri, ölçülen değerler, birincil anahtarlar ve portal açıklamaları korunur.
+- Önceki Qdrant koleksiyonu `semantic_catalog_logo`: 22.475 kayıt.
+- Aday koleksiyon `semantic_catalog_logo_web_20260909`: 17.345 kayıt ile tamamlandı; durum `green`, 1.529 entity.
+  Aynı entity/kolon/metin mali yıl kopyaları arasında tekilleştirilir. Önceki koleksiyondan
+  5.027 değişmeyen kayıt yeniden kullanılır; 12.318 metin yeniden gömülür.
+- Üç eski vektörün güncel embedding modeliyle kosinüs benzerliği 0,9997 üzerindedir.
+- `refresh_logo_catalog.py` mevcut kataloğu özel SQLite kopyasına taşır.
+  `build_catalog_index_candidate.py` canlı koleksiyonu silmeden yeni koleksiyon hazırlar;
+  vektör sayısını doğrular ve ara kayıt bırakır.
+
+## Giderilen üretim engeli
+
+Qdrant yeni koleksiyon oluştururken `Too many open files` hatası verdi. Container'ın soft
+`nofile` sınırı 1.024'tü. Mevcut image (`qdrant/qdrant:v1.13.2`), veri bind mount'u, localhost
+portu ve restart politikası korunarak sınır kalıcı 65.536 soft / 524.288 hard yapıldı.
+Eski container durdurulmuş olarak `nanobase-bi-qdrant-before-logo-web` adıyla tutulur.
+Yeniden başlatma sonrası eski koleksiyon sağlıklı ve 22.475 kayıtla doğrulandı.
+Müşteri kurulum compose dosyasına da 65.536 sınırı eklendi.
+
+## Yayın kanıtı
+
+Hazırlık/yayın kayıtları ve geri dönüş kopyaları sunucuda
+`/data/nanobaseai/bi/backups/logo-web-release-20260909/` altındadır.
+Kalite ölçümleri diğer çalışan ölçümün dosya kilidine uyarak sıraya alınır.
+Aday kalite kapısı geçmeden canlı katalog yayımlanmaz.
+
+Yayın durumu: doğrulama devam ediyor; sonuçlar tamamlanınca bu bölüm güncellenir.

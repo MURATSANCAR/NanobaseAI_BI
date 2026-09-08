@@ -455,9 +455,30 @@ class SemanticResolver:
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
 
         self._account_modifiers(sq, qf, consumed, index)
+        metric_entities = {s.mapping.entity for s in sq.metrics if s.mapping}
         for slot in sq.filters:
             if slot.mapping and slot.mapping.column:
-                slot.explain["equivalent_bindings"] = self.conventions.filter_bindings(slot.mapping)
+                bindings = self.conventions.filter_bindings(slot.mapping)
+                # A declared business equivalence can bind the same restriction
+                # directly to the measure. A join or matching column name alone
+                # cannot authorize this substitution.
+                target = next(iter(metric_entities)) if len(metric_entities) == 1 else None
+                choices = [b for b in bindings if b["entity"] == target
+                           and b["source"] == "declared_business_filter"]
+                if (slot.status in ("CERTIFIED", "INFERRED") and target in self.by_entity
+                        and target != slot.mapping.entity and len(choices) == 1):
+                    binding = choices[0]
+                    original = slot.mapping
+                    slot.mapping = replace(original, entity=target,
+                        table_pattern=self.by_entity[target].table_pattern,
+                        column=binding["column"], operator=binding["operator"], values=list(binding["values"]))
+                    slot.status = "INFERRED"
+                    slot.explain["binding_substitution"] = {
+                        "from": {"entity":original.entity,"column":original.column,"values":list(original.values)},
+                        "to":dict(binding), "source":"declared_business_filter"}
+                    sq.explanation.append(f"'{slot.term}' filtresi katalogdaki eşdeğerlik tanımıyla ölçünün tablosuna bağlandı: {target}.{binding['column']}")
+                    bindings = self.conventions.filter_bindings(slot.mapping)
+                slot.explain["equivalent_bindings"] = bindings
         # A qualitative price judgment needs a business definition, not a
         # similarly named numeric column or a threshold invented by the model.
         for k, token in enumerate(qf.tokens):
