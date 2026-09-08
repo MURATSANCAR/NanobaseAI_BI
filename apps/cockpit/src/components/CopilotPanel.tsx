@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ArrowUp, Bot, Check, ChevronDown, ChevronUp, Database, FileSpreadsheet, LayoutDashboard, Loader2, Maximize2, Minimize2, RotateCcw, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
-import { ask, runSql, sendFeedback, type SemanticTrace, type SqlResult, EngineError } from '../lib/engine';
+import { ask, sendFeedback, storedResult, type AskResult, type SemanticTrace, type SqlResult, EngineError } from '../lib/engine';
 import { ResultChart } from './ResultChart';
 import { pinId, type Tile } from '../lib/board';
 import { downloadXlsx, questionToFileBase } from '../lib/xlsx';
@@ -21,6 +21,8 @@ type Msg =
       queryId?: string;
       /** Cevabın hangi soruya ait olduğu — masaya iliştirilirken kartın başlığı bu. */
       question?: string;
+      /** Motorun bu cevabı hesapladığı yürütme. Excel aktarımı tam sonucu bununla ister. */
+      resultId?: string;
     };
 
 const SUGGESTIONS = [
@@ -31,6 +33,23 @@ const SUGGESTIONS = [
 ];
 
 const now = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+
+/** Motorun bu cevabı hesaplarken çalıştırdığı sonuç. Yalnız gerçekten yürütülmüş bir cevapta vardır:
+ *  reddedilen SQL yanıtta tanı amacıyla durur ve hiçbir şeyi çalıştırmaz. */
+function resultOf(a: AskResult): SqlResult | undefined {
+  if (a.type !== 'TEXT_TO_SQL' || !Array.isArray(a.records) || !Array.isArray(a.columns)) return undefined;
+  return {
+    id: String(a.resultId ?? a.id ?? ''),
+    columns: a.columns as SqlResult['columns'],
+    records: a.records as SqlResult['records'],
+    totalRows: Number(a.totalRows ?? a.rowCount ?? (a.records as unknown[]).length),
+    truncated: a.truncated as boolean | undefined,
+    cached: a.cached as boolean | undefined,
+    ageSec: a.ageSec as number | undefined,
+    computedAt: a.computedAt as number | undefined,
+    widget: a.widget as SqlResult['widget'],
+  };
+}
 
 /** `net_ciro` → `Net ciro`. Kolonun makine adı ne başlıkta ne de cümlede öyle durmalı. */
 export function columnLabel(name: string): string {
@@ -75,14 +94,17 @@ export function CopilotPanel({
     try {
       const a = await ask(q, threadId);
       if (a.threadId) setThreadId(a.threadId);
-      let result: SqlResult | undefined;
-      if (a.sql) result = await runSql(a.sql, 50, q);
+      // Tek yürütme: özet, tablo, grafik ve Excel hepsi motorun çalıştırdığı AYNI sonuçtan okur.
+      // SQL'i ikinci kez /run_sql'e göndermek üç ayrı hataya yol açıyordu — dönem taşınmadığı için
+      // yıllara bölünmüş tablolarda özetle tablo farklı sayı gösteriyor, sorgu iki kez çalışıyor, ve
+      // motorun REDDETTİĞİ SQL (tanı için yanıtta duruyor) yine de çalıştırılıyordu.
+      const result: SqlResult | undefined = resultOf(a);
       const text =
         a.summary?.trim() ||
         (result ? `${result.totalRows} satır döndü.` : (a.explanation?.trim() || 'Motor bu soru için SQL üretmedi.'));
       setMsgs((m) => [
         ...m.slice(0, -1),
-        { role: 'assistant', text, sql: a.sql, result, at: now(), semantic: a.semantic, queryId: a.queryId, question: q },
+        { role: 'assistant', text, sql: a.sql, result, at: now(), semantic: a.semantic, queryId: a.queryId, question: q, resultId: a.resultId },
       ]);
     } catch (e) {
       const msg = e instanceof EngineError ? `${e.message}${e.code ? ` (${e.code})` : ''}` : e instanceof Error ? e.message : String(e);
@@ -371,12 +393,18 @@ function ExportButton({ m, result }: { m: Extract<Msg, { role: 'assistant' }>; r
     setBusy(true);
     setFailed(null);
     try {
+      // Aynı yürütmenin TAM sonucu. Ekrandaki sayfa "tam sonuç" diye indirilmemeli; SQL'i yeniden
+      // koşturmak da başka bir yürütme demektir — veri değişmiş olabilir, dönem taşınmaz.
       let full = result;
-      if (m.sql) {
-        // Tam sonuç alınamazsa elde olanı aktarmak, hiç aktarmamaktan iyidir.
+      let stale: string | null = null;
+      if (m.resultId) {
         try {
-          full = await runSql(m.sql, 100_000);
-        } catch {
+          full = await storedResult(m.resultId);
+        } catch (e) {
+          const gone = e instanceof EngineError && e.code === 'RESULT_GONE';
+          stale = gone
+            ? 'Bu sonucun saklama süresi dolmuş; dosyada ekranda görünen satırlar var. Tamamı için aynı soruyu tekrar sorun.'
+            : 'Tam sonuç alınamadı; dosyada ekranda görünen satırlar var.';
           full = result;
         }
       }
@@ -386,11 +414,17 @@ function ExportButton({ m, result }: { m: Extract<Msg, { role: 'assistant' }>; r
         rows: full.records,
         question: m.question,
         sql: m.sql,
-        meta: full.truncated
-          ? [{ label: 'Uyarı', value: `Sonuç sunucu satır sınırında kesildi: ilk ${full.records.length} satır aktarıldı, sorgu bunun ötesinde devam ediyor.` }]
-          : [],
+        meta: [
+          ...(full.truncated
+            ? [{ label: 'Uyarı', value: `Sonuç sunucu satır sınırında kesildi: ${full.records.length} satır aktarıldı, sorgu bunun ötesinde devam ediyor.` }]
+            : []),
+          ...(stale ? [{ label: 'Uyarı', value: stale }] : []),
+          ...(full.records.length < (full.totalRows || 0)
+            ? [{ label: 'Uyarı', value: `Bu dosyada ${full.records.length} satır var; yürütme ${full.totalRows} satır döndürdü.` }]
+            : []),
+        ],
       });
-      setNote({ file, rows: full.records.length, partial: Boolean(full.truncated) });
+      setNote({ file, rows: full.records.length, partial: Boolean(full.truncated) || Boolean(stale) });
     } catch (e) {
       setFailed(e instanceof Error ? e.message : String(e));
     } finally {

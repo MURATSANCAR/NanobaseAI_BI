@@ -112,14 +112,31 @@ export type SemanticTrace = {
 
 export type AskResult = {
   id: string;
+  type?: string;
   sql?: string;
   summary?: string;
   threadId?: string;
   explanation?: string;
   queryId?: string;
   semantic?: SemanticTrace;
+  /** Motorun bu cevabı hesaplarken çalıştırdığı sonuç — tek yürütme. Ekranda gösterilen sayfa
+   *  `records`te, tamamı köprüde `resultId` altında saklı. */
+  resultId?: string;
+  columns?: SqlColumn[];
+  records?: Record<string, unknown>[];
+  shownRows?: number;
+  totalRows?: number;
+  rowCount?: number;
+  truncated?: boolean;
+  widget?: WidgetSpec;
   [k: string]: unknown;
 };
+
+/** Bir yürütmenin saklanan TAM sonucu. Yeniden çalıştırma değildir: sonuç düşmüşse 410 döner ve
+ *  eski SQL sessizce tekrar koşturulmaz. */
+export function storedResult(resultId: string): Promise<SqlResult & { question?: string; sql?: string }> {
+  return get<SqlResult & { question?: string; sql?: string }>(`/api/v1/result/${encodeURIComponent(resultId)}`);
+}
 
 /** Kullanıcının "doğru/yanlış" işareti: doğrulanmış çift havuzuna yazılır, gece madenciliğine girer. */
 export function sendFeedback(queryId: string, validated: boolean): Promise<{ ok: boolean }> {

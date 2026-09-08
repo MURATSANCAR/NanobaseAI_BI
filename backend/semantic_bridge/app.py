@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import OrderedDict
 import logging
 import os
 import re
@@ -65,6 +66,11 @@ class Runtime:
         self.queue = queue or LlmQueue.from_env(self.store.engine)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
         self._engine_lock = threading.Lock()
+        # Executed results, kept whole so the table, the chart and the export read the same rows.
+        self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
+        self._results_lock = threading.Lock()
+        self._results_max = int(os.environ.get("SEMANTIC_RESULT_KEEP", "64"))
+        self._result_ttl = float(os.environ.get("SEMANTIC_RESULT_TTL_SEC", "1800"))
         self.threads: dict[str, list[dict[str, str]]] = {}
         self.profiles = one_entity_per_pattern(self.store.list_profiles(settings.datasource_id),
                                               self.store.concept_entities(settings.tenant_id, settings.datasource_id))
@@ -366,6 +372,61 @@ class Runtime:
                     self._waiting -= 1
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
 
+    def remember_result(self, result: dict[str, Any], *, question: str, sql: str) -> None:
+        """Keep the whole executed result so everything downstream reads the same rows.
+
+        The display shows a page of it and the export needs all of it; without this the export had to
+        run the query again, which is a different execution against data that can have changed, and
+        it went out without the period the answer was computed with. Bound to the tenant this bridge
+        serves and dropped after `_result_ttl`; a caller asking for one that is gone is told so
+        rather than quietly served a fresh run of the same SQL.
+        """
+        rid = result.get("id")
+        if not rid:
+            return
+        with self._results_lock:
+            self._results[rid] = {
+                "tenant_id": self.settings.tenant_id,
+                "at": time.time(),
+                "question": question,
+                "sql": sql,
+                "physicalSql": result.get("physicalSql"),
+                "columns": result.get("columns") or [],
+                "records": result.get("records") or [],
+                "totalRows": result.get("totalRows") or 0,
+                "truncated": bool(result.get("truncated")),
+            }
+            while len(self._results) > self._results_max:
+                self._results.popitem(last=False)
+
+    def stored_result(self, rid: str) -> Optional[dict[str, Any]]:
+        with self._results_lock:
+            snap = self._results.get(rid)
+            if snap is None:
+                return None
+            if time.time() - snap["at"] > self._result_ttl:
+                self._results.pop(rid, None)
+                return None
+            if snap["tenant_id"] != self.settings.tenant_id:
+                return None
+            return snap
+
+    def attach_widget(self, result: dict[str, Any], question: str) -> None:
+        """The chart spec for a result set, decided in the backend so every surface draws the same one."""
+        try:
+            from nanobase_api.chat_widgets import widgets_from_query_result  # optional, same as legacy bridge
+
+            widgets = widgets_from_query_result(columns=result.get("columns"), rows=result.get("records"),
+                                                title=(question or "").strip() or None)
+            if widgets:
+                w = dict(widgets[0])
+                w.pop("sql", None)
+                if w.get("type") != "multi_card":
+                    w.pop("data", None)
+                result["widget"] = w
+        except Exception:  # noqa: BLE001
+            pass
+
     def _served(self, out: dict[str, Any], computed_at: float) -> dict[str, Any]:
         """Sonucun bu isteğe ait kopyası. Yaş cevabın içinde gider: arayüz rakamın ne zaman
         hesaplandığını söyleyebilsin, "canlı" etiketi bir dakikalık kopyanın üstünde durmasın."""
@@ -605,7 +666,9 @@ class Runtime:
             return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq)), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
         t = time.perf_counter()
         try:
-            result = self.run_sql(sql, sample_size, self._asked_period(sq))
+            # Executed once, whole. The client is shown a page of it; the export needs all of it, and
+            # asking twice would be a second execution against data that can have moved.
+            result = self.run_sql(sql, self.settings.max_rows, self._asked_period(sq))
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)
@@ -618,6 +681,9 @@ class Runtime:
                                     if down else f"Sorgu çalıştırılamadı: {err}"),
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
+        self.attach_widget(result, question)
+        self.remember_result(result, question=question, sql=sql)
+        shown = list(result["records"])[: max(1, int(sample_size or 50))]
         t = time.perf_counter()
         summary = self.summarize(question, sql, result, sq)
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
@@ -633,8 +699,24 @@ class Runtime:
             "sql": sql,
             "physicalSql": result.get("physicalSql"),
             "summary": summary,
+            # The rows this answer was computed from, carried with it. The client used to re-send the
+            # SQL to /run_sql to fill its table, and that second execution went out without the
+            # period: a question spanning years read one table instead of the union, so the summary
+            # said one number and the table under it showed another. It also ran the query twice and
+            # ran it for answers that had already been refused. One execution, one set of rows,
+            # everything downstream — table, chart, export — reads these.
+            "resultId": result["id"],
+            "columns": result["columns"],
+            "records": shown,
+            "shownRows": len(shown),
+            "truncated": result.get("truncated"),
+            "cached": result.get("cached"),
+            "ageSec": result.get("ageSec"),
+            "computedAt": result.get("computedAt"),
+            "widget": result.get("widget"),
             "threadId": thread_id,
             "rowCount": result["totalRows"],
+            "totalRows": result["totalRows"],
             "latency_ms": int((time.perf_counter() - t0) * 1000),
             "repairs": repairs,
             "timings": timings,
@@ -1106,19 +1188,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             # reads to the user as "your question was wrong" and to the client as "do not retry" —
             # both false, and both send people looking for a fault that is not there.
             raise _sql_failure(e) from e
-        try:
-            from nanobase_api.chat_widgets import widgets_from_query_result  # optional, same as legacy bridge
-
-            widgets = widgets_from_query_result(columns=result.get("columns"), rows=result.get("records"), title=(body.question or "").strip() or None)
-            if widgets:
-                w = dict(widgets[0])
-                w.pop("sql", None)
-                if w.get("type") != "multi_card":
-                    w.pop("data", None)
-                result["widget"] = w
-        except Exception:  # noqa: BLE001
-            pass
+        r.attach_widget(result, body.question or "")
         return result
+
+    @app.get("/api/v1/result/{result_id}")
+    def stored_result(result_id: str, request: Request) -> dict[str, Any]:
+        """The whole result of one execution, for a client that showed a page of it.
+
+        Not a re-run: if this execution is gone the caller is told so and asks its question again.
+        Serving a fresh run of the same SQL under the same identity would hand back numbers the user
+        never saw, computed at a different moment, with the same air of being "the same result".
+        """
+        _require_caller(request)
+        snap = rt().stored_result(result_id)
+        if snap is None:
+            raise HTTPException(status_code=410, detail={
+                "code": "RESULT_GONE",
+                "message": "Bu sonucun saklama süresi doldu. Aynı soruyu tekrar sorun — eski SQL sessizce yeniden çalıştırılmaz."})
+        return {"id": result_id, "columns": snap["columns"], "records": snap["records"],
+                "totalRows": snap["totalRows"], "truncated": snap["truncated"],
+                "question": snap["question"], "sql": snap["sql"], "computedAt": snap["at"]}
 
     @app.post("/api/v1/ask")
     def ask(body: AskIn, request: Request) -> dict[str, Any]:

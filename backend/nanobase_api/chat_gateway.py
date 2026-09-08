@@ -761,6 +761,18 @@ async def stream_chat_via_gateway(
                 datasource_id=datasource_id,
                 question=message,
             )
+            if hit and hit.sql and hit.match != "exact":
+                # A near match is not the same question. Similarity here is period compatibility plus
+                # token overlap, and no part of it compares the constraints: "İstanbul müşterilerini
+                # listele" and "Ankara müşterilerini listele" score 0.6 and the stored SQL still says
+                # İstanbul. Kept as a candidate the model may learn from, never run as the answer.
+                yield _sse(
+                    "status",
+                    {"phase": "learned_cache_candidate", "learned_id": hit.id, "match": hit.match,
+                     "score": hit.score, "prior_question": hit.question[:200],
+                     "detail": "benzer soru bulundu, doğrudan çalıştırılmadı"},
+                ).encode()
+                hit = None
             if hit and hit.sql:
                 sql = hit.sql
                 sql_source = "learned_cache"
