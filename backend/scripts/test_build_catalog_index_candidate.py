@@ -15,3 +15,10 @@ def test_every_column_is_indexed_without_inventing_descriptions():
     assert len([p for p in points if p.column=='CODE'])==1
     assert len([p for p in points if p.column is None])==2
     assert [p.id for p in points]==list(range(1,len(points)+1))
+
+
+def test_standard_indexer_also_keeps_undocumented_columns():
+    from index_catalog_qdrant import points_for
+    profile=SchemaProfile(datasource_id='logo',table_name='LG_411_BANKACC',table_pattern='LG_{firm}_BANKACC',entity='BANKACC',columns=[ColumnProfile('IBAN',data_type='varchar')])
+    points=points_for([profile])
+    assert any(p.column=='IBAN' and p.text=='BANKACC.IBAN — SQL tipi: varchar' for p in points)

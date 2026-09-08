@@ -21,9 +21,10 @@ from semantic_layer.store.catalog_store import open_store
 def catalog_points(profiles):
     unique={}
     generated=points_for(profiles)
+    covered={(p.entity,p.table,p.column) for p in generated}
     for profile in profiles:
         for col in profile.columns:
-            if not (col.meaning() or '').strip():
+            if (profile.entity,profile.table_name,col.name) not in covered:
                 generated.append(Point(0,profile.entity,profile.table_name,col.name,
                                        f'{profile.entity}.{col.name} — SQL tipi: {col.data_type}'))
     for point in generated:

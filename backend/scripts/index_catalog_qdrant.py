@@ -8,7 +8,7 @@ What is indexed is the catalog, not the database — the profiles the pipeline b
 the vendor dictionary supplied. Two kinds of point per table:
 
   * the table itself: its name, what it is, and the columns it holds
-  * every column that anybody described, on its own
+  * every profiled column, using its SQL type when no description is available
 
 A column hit routes to its table, which is what makes "iskonto oranı" reach the invoice table through
 `TOTALDISCOUNTS` rather than through the word "fatura" never appearing in the question.
@@ -110,7 +110,7 @@ def points_from_dictionary(entities: set[str]) -> list[Point]:
 
 
 def points_for(profiles) -> list[Point]:
-    """One point for the table, one for every column anybody described.
+    """One point for the table and every profiled column, including undocumented ones.
 
     A table's own point carries its column names, so a question naming a column reaches the table even
     when that column carries no description of its own.
@@ -133,7 +133,7 @@ def points_for(profiles) -> list[Point]:
         for c in p.columns:
             meaning = (c.meaning() or "").strip()
             if not meaning:
-                continue
+                meaning = f"SQL tipi: {c.data_type}"
             values = ""
             if c.is_enum() and c.meaningful_values():
                 values = " · değerler: " + ", ".join(v for v, _ in c.meaningful_values()[:10])
