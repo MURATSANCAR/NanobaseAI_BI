@@ -39,6 +39,9 @@ from semantic_layer.normalize import (
     verb_root,
 )
 from semantic_layer.naming import is_shadow_copy, source_rank
+from dataclasses import replace
+from datetime import timedelta
+
 from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -47,6 +50,21 @@ _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap 
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
 _DOMINANT = 1.5
+
+
+def _next_span(start, end):
+    """The period that follows [start, end) — by the calendar where the span is a calendar unit.
+
+    Shifting by the number of days puts the month after a 31-day August at the 2nd of October.
+    A month is compared with a month and a year with a year, so the unit is what moves.
+    """
+    if start.day == 1 and end.day == 1:
+        months = (end.year - start.year) * 12 + (end.month - start.month)
+        if months >= 1:
+            y, m = end.year, end.month + months
+            y, m = y + (m - 1) // 12, (m - 1) % 12 + 1
+            return date(y, m, 1)
+    return end + (end - start)
 
 
 def _one_measure_under_two_names(concepts) -> bool:
@@ -938,7 +956,14 @@ class SemanticResolver:
         reference = sq.temporal[0]
         if not (reference.start and reference.end):
             return
-        current = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
+        # The period compared against must be the same size as the one it is compared to: "geçen aya
+        # göre" is this month against last month, not this *year* against last month. Taken from the
+        # deployment's default window, the two sides were different lengths and the comparison meant
+        # nothing. The period immediately after the reference is that same size by construction.
+        current = TemporalSlot(
+            text="", primitive=reference.primitive, grain=reference.grain,
+            start=reference.end, end=_next_span(reference.start, reference.end),
+        ) if reference.end and reference.start else None
         if current is None or not (current.start and current.end):
             # Neye göre karşılaştırılacağı belli değil. Tek dönemlik cevabı karşılaştırma diye
             # sunmaktansa istek kayda geçer ve denetim bunu yakalar.
@@ -948,6 +973,20 @@ class SemanticResolver:
             return
         if (current.start, current.end) == (reference.start, reference.end):
             return
+        # The default period's own label is an internal word ("varsayılan") and it ends up as a column
+        # name the reader sees. Name it by what it is.
+        if current.start and (not current.text or "varsay" in fold(current.text)):
+            # This label becomes a column name the reader sees, so it says what the period is rather
+            # than repeating an internal word. The end is exclusive: 2026-01-01 … 2027-01-01 is the
+            # year 2026, not a span of two.
+            last = (current.end - timedelta(days=1)) if current.end else current.start
+            if current.start == date(current.start.year, 1, 1) and last == date(current.start.year, 12, 31):
+                label = "bu yıl"
+            elif (current.start.day, current.start.year, current.start.month) == (1, last.year, last.month):
+                label = "bu ay"
+            else:
+                label = "bu dönem"
+            current = replace(current, text=label)
         sq.temporal = [current, reference]
         sq.comparison = {"kind": "PERIOD", "reference": reference.to_dict(), "current": current.to_dict(),
                          "satisfied": False}

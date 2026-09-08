@@ -277,7 +277,13 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                     findings.append(Finding("FANOUT", "warn",
                         f"{agg.sql(dialect=dialect)}: join'in iki tarafı da anahtar değil; satırlar çoğalıyor olabilir."))
             if isinstance(agg, (exp.Sum, exp.Avg)):
-                for c in cols:
+                # A column inside a CASE's WHEN is a condition, not a summed value:
+                # SUM(CASE WHEN tarih >= '…' THEN tutar END) sums an amount and tests a date. Counted
+                # among the summed columns, the date made every conditional aggregate look like a sum
+                # over a non-numeric column — and a period comparison is written exactly this way.
+                tested = {id(col) for pred in (inner.find_all(exp.Predicate) if isinstance(inner, exp.Expression) else [])
+                          for col in pred.find_all(exp.Column)}
+                for c in [x for x in cols if id(x) not in tested]:
                     prof = tables.get((c.table or "").upper()) if c.table else (next(iter(tables.values())) if len(tables) == 1 else None)
                     if prof is None:
                         continue

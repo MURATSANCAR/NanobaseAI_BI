@@ -430,7 +430,10 @@ class DeterministicCompiler:
             for s_ in plan.metrics:
                 formula = self._formula_sql(s_.mapping.formula, plan.entity)
                 for t, span in zip(ranges, spans_sql):
-                    palias = f"{_snake(t.text)}_{_alias_of(s_)}"
+                    # "2019" → "d2019": a column alias may not begin with a digit, and a period the
+                    # user names by year alone produced SQL the database refused to parse.
+                    part = _snake(t.text) or "donem"
+                    palias = f"{'d' + part if part[0].isdigit() else part}_{_alias_of(s_)}"
                     rebuilt.append(f"{_wrap_condition(formula, span)} AS {palias}")
                     metric_aliases.append(palias)
                     explain.append(f"dönem sütunu: '{t.text}' [{t.start}, {t.end})")

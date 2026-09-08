@@ -10,6 +10,8 @@ with what the SQL actually says, both read through the same predicate extractor 
 
 from __future__ import annotations
 
+import re
+
 from typing import Any, Optional
 
 from semantic_layer.history.sql_facts import extract_sql_facts
@@ -71,7 +73,16 @@ def _period_in_sql(period: dict, sql: str) -> bool:
     start = str(period.get("start") or "")
     if not start:
         return False
-    return start[:10] in sql or (period.get("grain") == "YEAR" and start[:4] in sql)
+    text = " ".join((sql or "").split())
+    # As a lower bound, not merely present: "2026-01-01" is also the upper bound of 2025, so a query
+    # restricted to last year alone contains the string and would look like it carried both periods.
+    day = re.escape(start[:10])
+    if re.search(rf"(>=|>|BETWEEN)\s*'?{day}'?", text, re.I):
+        return True
+    if period.get("grain") == "YEAR":
+        year = re.escape(start[:4])
+        return bool(re.search(rf"(YEAR\s*\([^)]*\)|DATEPART\s*\([^)]*\))\s*(=|IN\s*\()\s*'?{year}'?", text, re.I))
+    return False
 
 
 def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
