@@ -28,7 +28,7 @@ ENV_FILE=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
 # Keep operator overlays (Superset, embed key, etc.) across redeploys
 PRESERVE_ENV="$(mktemp)"
 if [[ -f "$ENV_FILE" ]]; then
-  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE|FORECAST_)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
+  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE|FORECAST_|JWT_SECRET)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
 fi
 umask 077
 cat > "$ENV_FILE" <<EOF
@@ -39,7 +39,8 @@ LLM_MODEL_NAME=nanobaseai-bi-llm
 NANOBASE_ACTIVE_DB=bi_reporting
 QUERY_GATEWAY_BASE=http://127.0.0.1:8792
 PYTHONPATH=${ROOT}/backend
-AUTH_MODE=dev
+AUTH_MODE=jwt
+NANOBASE_ENV=production
 DEV_TENANT_ID=default
 NANOBASE_TEXT2SQL_EXECUTION_MODE=QUERY_GATEWAY
 ARQ_ENABLED=1
@@ -99,6 +100,21 @@ if [[ -s "$PRESERVE_ENV" ]]; then
   log "Restored preserved env overlays from prior nanobase_api.env"
 fi
 rm -f "$PRESERVE_ENV"
+# Never deploy anonymous administrator mode or the shipped development key.
+python3 - "$ENV_FILE" <<'PY_AUTH'
+import sys, secrets
+from pathlib import Path
+p = Path(sys.argv[1])
+lines = p.read_text().splitlines()
+values = dict(line.split("=", 1) for line in lines if "=" in line and not line.startswith("#"))
+key = values.get("JWT_SECRET", "").strip('"')
+if not key or key == "nanobase-dev-jwt-secret-change-me":
+    key = secrets.token_urlsafe(48)
+lines = [line for line in lines if not line.startswith("JWT_SECRET=")]
+p.write_text("\n".join(lines + ["JWT_SECRET=" + key]) + "\n")
+p.chmod(0o600)
+PY_AUTH
+
 chmod 600 "$ENV_FILE"
 
 log "Running Alembic migrations"
