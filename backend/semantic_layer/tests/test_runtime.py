@@ -1143,3 +1143,37 @@ def test_a_word_that_only_appears_among_a_column_s_values_is_not_read_as_that_co
     sq = r.resolve("kitapçı bazında 2026 net ciro")
     bad = [s for s in sq.slots if s.explain.get("source") == "column_index" and s.mapping.column == "SPECODE2"]
     assert bad == [], [s.term for s in bad]
+
+
+# --- erişim: CTE adı katalog iznini aşamaz ---------------------------------------------------
+
+def test_a_cte_name_cannot_excuse_a_table_the_catalog_never_profiled(profiles):
+    """CTE adları tek bir küresel kümede toplanıp ADI eşleşen her başvuru denetimden çıkarılıyordu.
+    Şemayla nitelenmiş bir ad ise hiçbir zaman CTE olamaz — `dbo.X` her koşulda fiziksel tablodur.
+    Sonuç: sorgu hiç tablo görmemiş sayılıyor, tablo görmeyen bir denetim de her şeye izin veriyordu."""
+    ctx = {"n0": "411", "n1": "01"}
+    ok, _ = allowed_tables("SELECT 1 FROM dbo_LG_411_01_INVOICE", profiles, ctx, "tsql")
+    assert ok
+
+    for sql in (
+        "SELECT * FROM master.dbo.sysusers",
+        "WITH sysusers AS (SELECT 1 AS x) SELECT * FROM master.dbo.sysusers",
+        "WITH dbo_sysusers AS (SELECT 1 AS x) SELECT * FROM dbo_sysusers",
+        # iç kapsamda tanımlanan ad dış kapsamdaki başvuruyu mazur göstermez
+        "WITH a AS (WITH sysusers AS (SELECT 1 AS x) SELECT x FROM sysusers) SELECT * FROM master.dbo.sysusers",
+    ):
+        blocked, why = allowed_tables(sql, profiles, ctx, "tsql")
+        assert not blocked, sql
+        assert why, sql
+
+    # gerçek CTE kullanımı çalışmaya devam eder
+    good = "WITH t AS (SELECT * FROM dbo_LG_411_01_INVOICE) SELECT COUNT(*) FROM t"
+    assert allowed_tables(good, profiles, ctx, "tsql")[0]
+
+
+def test_a_statement_that_cannot_be_read_is_refused_not_permitted(profiles):
+    """Okunamayan ifade zararsız değildir: tablolarını adlandıramayan bir denetim, tam da gerektiği
+    yerde yok demektir."""
+    ctx = {"n0": "411", "n1": "01"}
+    assert not allowed_tables("SELECT * FROM ((((", profiles, ctx, "tsql")[0]
+    assert not allowed_tables("SELECT 1", profiles, ctx, "tsql")[0]

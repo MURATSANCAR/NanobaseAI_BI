@@ -53,6 +53,18 @@ class Settings:
         )
         if self.environment == "production" and self.execution_mode == ExecutionMode.TEST_DIRECT:
             raise RuntimeError("TEST_DIRECT cannot be enabled in production.")
+        # Dev auth answers every request as ADMIN + DATA_ANALYST + DATA_ENGINEER, with or without a
+        # token. That is a development convenience and it must not be reachable by a deployment that
+        # calls itself production — the compose file shipped `NANOBASE_ENV: production` beside
+        # `AUTH_MODE: ${AUTH_MODE:-dev}` and published port 80 on every interface. Refusing at start
+        # is the only place this can be caught before the first anonymous request is served.
+        if self.environment == "production" and self.auth_mode == AuthMode.DEV:
+            raise RuntimeError(
+                "AUTH_MODE=dev cannot be used in production: every request would be served as an "
+                "administrator. Set AUTH_MODE=jwt and configure JWT_SECRET."
+            )
+        if self.environment == "production" and self.jwt_secret == "nanobase-dev-jwt-secret-change-me":
+            raise RuntimeError("JWT_SECRET is still the shipped development value in production.")
         # Faz 7 semantic governance
         self.semantic_catalog_enabled = os.environ.get("SEMANTIC_CATALOG_ENABLED", "1") == "1"
         self.semantic_shadow_mode = os.environ.get("SEMANTIC_SHADOW_MODE", "0") == "1"

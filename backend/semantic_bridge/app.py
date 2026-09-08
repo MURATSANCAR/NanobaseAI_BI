@@ -1014,6 +1014,23 @@ def _require_admin(request: Any) -> None:
         raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
 
 
+def _require_caller(request: Any) -> None:
+    """Who may send this service SQL to run.
+
+    This bridge has its own front door: it does not share the portal's session, so the main API's
+    auth mode protects nothing here. `/api/v1/run_sql` takes SQL from the caller and runs it against
+    the customer database, which makes an unauthenticated reachable bridge a read-anything console
+    over everything the database login can see — the catalog check narrows which tables, not who is
+    asking. Configure SEMANTIC_CALLER_TOKEN wherever the bridge is reachable by more than loopback.
+    """
+    token = os.environ.get("SEMANTIC_CALLER_TOKEN", "")
+    if not token:
+        return                      # not configured: the loopback binding is the only control
+    supplied = request.headers.get("x-semantic-caller", "") or request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not secrets_compare(supplied, token):
+        raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "caller token required"})
+
+
 def secrets_compare(a: str, b: str) -> bool:
     import hmac
 
@@ -1079,7 +1096,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return HTTPException(status_code=400, detail={"code": type(e).__name__, "message": str(e)[:1200]})
 
     @app.post("/api/v1/run_sql")
-    def run_sql_ep(body: RunSqlIn) -> dict[str, Any]:
+    def run_sql_ep(body: RunSqlIn, request: Request) -> dict[str, Any]:
+        _require_caller(request)
         r = rt()
         try:
             result = r.run_sql(body.sql, body.limit or r.settings.max_rows)
@@ -1103,7 +1121,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return result
 
     @app.post("/api/v1/ask")
-    def ask(body: AskIn) -> dict[str, Any]:
+    def ask(body: AskIn, request: Request) -> dict[str, Any]:
+        _require_caller(request)
         q = body.question.strip()
         if not q:
             raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})

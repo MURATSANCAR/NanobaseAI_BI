@@ -27,7 +27,9 @@ x-backend-env: &backend-env
   QG_SERVICE_JWT_SECRET: ${QG_SERVICE_JWT_SECRET}
   QG_HMAC_SECRET: ${QG_HMAC_SECRET}
   JWT_SECRET: ${JWT_SECRET}
-  AUTH_MODE: ${AUTH_MODE:-dev}
+  # Dev auth serves every request as an administrator; the API refuses to start with it when
+  # NANOBASE_ENV=production. Set AUTH_MODE and JWT_SECRET in .env before bringing this up.
+  AUTH_MODE: ${AUTH_MODE:-jwt}
   DEV_TENANT_ID: ${DEV_TENANT_ID:-default}
   SECRETS_ROOT: /secrets
   BI_DIR: /data

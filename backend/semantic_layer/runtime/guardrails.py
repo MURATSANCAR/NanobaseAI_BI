@@ -7,6 +7,7 @@ from typing import Optional
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.optimizer.scope import build_scope
 
 from semantic_layer.models import SchemaProfile
 from semantic_layer.naming import logical_table, physical_name, source_rank, strip_quotes
@@ -56,7 +57,14 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
         known.update({p.entity.upper(), phys, p.table_name.upper()})
         if p.schema_name:
             schemas.add(p.schema_name.upper())
-    for name in referenced_tables(sql, dialect):
+    names = _physical_references(sql, dialect)
+    if names is None:
+        # Unreadable is not harmless: a statement this cannot parse is one whose tables it cannot
+        # name, and permitting it makes the check absent exactly where it is needed.
+        return False, "sql could not be parsed for a table check"
+    if not names:
+        return False, "no table could be resolved from this statement"
+    for name in names:
         raw = strip_quotes(name).upper()
         bare = raw.split(".")[-1]
         candidates = {raw, bare, logical_table(raw).entity.upper()}
@@ -209,20 +217,45 @@ def strip_trailing_semicolon(sql: str) -> str:
     return (sql or "").strip().rstrip(";").strip()
 
 
-def referenced_tables(sql: str, dialect: Optional[str] = "tsql") -> list[str]:
+def _physical_references(sql: str, dialect: Optional[str] = "tsql") -> Optional[list[str]]:
+    """Every physical table this statement reads, or None when the statement cannot be read.
+
+    Resolved per scope rather than by name. A common table expression is a name that exists only
+    inside the statement, and the previous reading collected those names into one global set and
+    excused *every* reference that matched — including a schema-qualified one, which can never be a
+    CTE. `WITH X AS (SELECT 1) SELECT * FROM dbo.X` therefore reported no tables at all, and a check
+    that sees no tables permits everything: the statement read `dbo.X` from the database with nothing
+    in the catalog saying it could.
+
+    `build_scope` resolves each source to what it actually is — a CTE reference becomes that CTE's
+    scope, a real table stays a table — and it does so per scope, so a name defined in an inner
+    query does not excuse a reference in an outer one. What comes back as a table is a table.
+    """
     try:
         tree = sqlglot.parse_one(sql, read=dialect)
-    except Exception:
+    except Exception:  # noqa: BLE001
         try:
             tree = sqlglot.parse_one(sql)
-        except Exception:
-            return []
-    ctes = {c.alias.upper() for c in tree.find_all(exp.CTE) if c.alias}
-    out = []
-    for t in tree.find_all(exp.Table):
-        if t.name and t.name.upper() not in ctes:
-            out.append(((t.db + ".") if t.db else "") + t.name)
+        except Exception:  # noqa: BLE001
+            return None
+    try:
+        root = build_scope(tree)
+    except Exception:  # noqa: BLE001
+        return None
+    if root is None:
+        return None
+    out: list[str] = []
+    for scope in root.traverse():
+        for source in scope.sources.values():
+            if isinstance(source, exp.Table) and source.name:
+                out.append(((source.db + ".") if source.db else "") + source.name)
     return list(dict.fromkeys(out))
+
+
+def referenced_tables(sql: str, dialect: Optional[str] = "tsql") -> list[str]:
+    """The physical tables read, best effort. Callers deciding access must use `allowed_tables`,
+    which refuses a statement this cannot read rather than reading it as "no tables"."""
+    return _physical_references(sql, dialect) or []
 
 
 # SQLSTATE class 08 is the standard "connection exception" class, and HYT00 is a connection timeout.
