@@ -1031,7 +1031,7 @@ def test_two_copies_of_a_dated_table_are_not_read_as_two_periods_of_it():
     """Tarihi olmayan bir tablonun dönemi de yoktur: aynı desenin iki kopyası iki yarım değil, iki
     kopyadır. Birleştirilince her ürün satırı ikizleniyor ve ürün bazlı her rakam iki katına çıkıyordu
     — üstelik bir firmanın satır tablosu başka bir firmanın ürünlerine bağlanıyordu."""
-    from semantic_layer.models import utcnow
+    from semantic_layer.models import SchemaProfile, utcnow
     from semantic_layer.runtime import periods as P
 
     def _p(name, pattern, rows):
