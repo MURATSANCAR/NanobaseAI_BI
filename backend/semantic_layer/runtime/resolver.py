@@ -22,6 +22,7 @@ from semantic_layer.models import (
 )
 from semantic_layer.normalize import (
     METRIC_VOCAB_S,
+    normalize_term,
     MODIFIERS_S,
     STOPWORDS_S,
     cardinal,
@@ -46,6 +47,22 @@ _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap 
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
 _DOMINANT = 1.5
+
+
+def _one_measure_under_two_names(concepts) -> bool:
+    """Are these the same measure named twice, according to the catalog itself?
+
+    Only a declared synonym counts — a name one of them carries in its own `synonyms` list, written
+    by whoever defined it. Nothing is inferred from the words looking alike: "satış adedi" and
+    "satış tutarı" share every word and are different measures.
+    """
+    items = list(concepts)
+    if len(items) < 2:
+        return True
+    names = {normalize_term(c.term) for c in items}
+    declared = {normalize_term(s) for c in items for s in (getattr(c, "synonyms", None) or [])}
+    # every name but one has to be claimed by another concept in the group
+    return len(names - declared) <= 1
 
 
 def _identifier_words(name: str) -> set[str]:
@@ -540,13 +557,27 @@ class SemanticResolver:
                       "recovered": not is_participle(tok) and not is_negative(tok)}
             # A full certified phrase already supplies its meaning. A join edge
             # or two neighbouring slots never supplies verb direction.
-            if covering and all(s.status == "CERTIFIED" and s.mapping is not None for s in covering):
+            if covering and all(s.mapping is not None for s in covering):
+                # Something already placed this word — a certified phrase, or the verb-root bridge in
+                # step 4a. Its meaning is accounted for; recording it a second time would put the same
+                # measure in the query twice.
                 record.update(decision="SEMANTIC", evidence_source="catalog",
-                              concept_ids=[s.concept_id for s in covering])
+                              concept_ids=[s.concept_id for s in covering],
+                              resolved_as=",".join(sorted({f"{s.semantic_type}:{s.status}" for s in covering})))
             elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
                 sq.shape = "ABSENCE"
                 record.update(decision="ABSENCE", evidence_source="catalog")
                 sq.explanation.append(f"'{tok}' olumsuz: '{named[0][0]}' ölçüsünün hiç gerçekleşmediği kayıtlar isteniyor")
+            elif not is_negative(tok) and (metric := self._metric_from_verb(tok, k, index)) is not None:
+                # The word is the verbal form of a measure this catalog defines: "en çok satan" ranks
+                # by "satış". Not grammar to be discarded — a measure to be used, recorded with the
+                # concept it came from. Bridging is refused where it would change meaning: a negative
+                # never reaches here, and a root that reaches two different measures returns nothing.
+                sq.slots.append(metric)
+                record.update(decision="SEMANTIC", evidence_source="catalog",
+                              concept_ids=[metric.concept_id],
+                              resolved_as=f"{metric.semantic_type}:{metric.explain.get('evidence_key')}")
+                sq.explanation.append(f"'{tok}' → '{metric.explain.get('evidence_key')}' ölçüsü (fiil kökünden, sertifikalı değil)")
             elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
                 record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
             if record["decision"] == "UNKNOWN":
@@ -676,6 +707,22 @@ class SemanticResolver:
         for k, tok in enumerate(qf.tokens):
             if k in consumed:
                 continue
+            slot = self._metric_from_verb(tok, k, index)
+            if slot is not None:
+                consumed.add(k)
+                return slot
+        return None
+
+    def _metric_from_verb(self, tok: str, k: int, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[ResolvedSlot]:
+        """"satan" → the measure the catalog keys on the same root ("satış"), or nothing.
+
+        The form of the word gets us here; the catalog decides. A root that reaches no certified
+        measure, or reaches two different ones, returns nothing rather than a guess — and a negative
+        never bridges, because "satmayan" is the opposite of "satış" and bridging it would invert the
+        answer. What comes back is a measure slot, not a verdict that the word was noise: nothing is
+        dropped, and which concept was used is written into the slot.
+        """
+        for _ in (0,):
             root = verb_root(tok)
             if not root or is_negative(tok):
                 continue        # "satmayan" is the opposite of "satış": bridging it would invert the answer
@@ -689,9 +736,12 @@ class SemanticResolver:
                 matches = nominal
             if len(matches) > 1:
                 # several keys may be names of the same measure ("satış" and "satış tutarı"); that is not
-                # ambiguity. Different measures are.
-                concepts = {c.id for _, senses in matches for c, _ in senses if c.semantic_type == SemanticType.METRIC}
-                if len(concepts) > 1:
+                # ambiguity. Different measures are, and the catalog says which is which: a concept that
+                # declares another's name among its synonyms is that measure under a second name. Read
+                # as two, this refused "en çok satan" outright — the root reaches "satış" and "satış
+                # tutarı", and treating a declared synonym pair as a disagreement says nothing at all.
+                found = {c.id: c for _, senses in matches for c, _ in senses if c.semantic_type == SemanticType.METRIC}
+                if len(found) > 1 and not _one_measure_under_two_names(found.values()):
                     continue                 # genuinely different measures: say nothing rather than guess
                 matches = [min(matches, key=lambda m: (len(m[0].split()), len(m[0])))]
             key, senses = matches[0]
@@ -701,7 +751,8 @@ class SemanticResolver:
             slot.status = "INFERRED"
             slot.confidence = min(slot.confidence, 0.7)
             slot.explain["why"] = f"'{tok}' fiilinin kökü ({root}) yalnız '{key}' ölçüsüyle eşleşiyor"
-            consumed.add(k)
+            slot.explain["source"] = "verb_root"
+            slot.explain["evidence_key"] = key
             return slot
         return None
 
