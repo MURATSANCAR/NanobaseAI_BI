@@ -10,7 +10,7 @@ DDL, veri değişikliği veya yeni fiziksel kolon oluşturma işlemi yoktur.
 - Özel aday katalog: 965 profil, 18 tablo açıklaması ve 28.331 kolon açıklaması güncellendi.
 - Canlı SQL tipleri, ölçülen değerler, birincil anahtarlar ve portal açıklamaları korunur.
 - Önceki Qdrant koleksiyonu `semantic_catalog_logo`: 22.475 kayıt.
-- Aday koleksiyon `semantic_catalog_logo_web_20260909`: 17.345 kayıt ile tamamlandı; durum `green`, 1.529 entity.
+- İlk aday koleksiyon `semantic_catalog_logo_web_20260909`: 17.345 kayıt ile tamamlandı; durum `green`, 1.529 entity.
   Aynı entity/kolon/metin mali yıl kopyaları arasında tekilleştirilir. Önceki koleksiyondan
   5.027 değişmeyen kayıt yeniden kullanılır; 12.318 metin yeniden gömülür.
 - Üç eski vektörün güncel embedding modeliyle kosinüs benzerliği 0,9997 üzerindedir.
@@ -35,3 +35,15 @@ Kalite ölçümleri diğer çalışan ölçümün dosya kilidine uyarak sıraya 
 Aday kalite kapısı geçmeden canlı katalog yayımlanmaz.
 
 Yayın durumu: doğrulama devam ediyor; sonuçlar tamamlanınca bu bölüm güncellenir.
+
+## Açıklamasız kolon kapsamı
+
+İlk adayın son incelemesinde `points_for` fonksiyonunun açıklaması olmayan kolonları
+ayrı arama kaydına dönüştürmediği görüldü (örnek: BANKACC.IBAN). Yeni aday oluşturucu
+bu kolonları gerçek kolon adı ve SQL tipi ile indeksler; açıklama veya iş anlamı üretmez.
+Yazmadan önce bütün profil entity/kolon çiftlerinin kapsandığı programatik olarak doğrulanır.
+Son aday koleksiyon: `semantic_catalog_logo_web_all_20260909`.
+
+Doğrulama: yerelde 16 sözlük/indeksleyici testi; üretim Python ortamında 2 katalog yenileme
+ve bütün kolonların indeks kapsamına alınması testi geçti. Compose YAML ve Python derleme
+kontrolleri geçti.
