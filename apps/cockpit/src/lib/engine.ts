@@ -262,8 +262,10 @@ export type ReviewItem = {
   mapping: { entity: string; column: string | null; operator: string | null; values: string[]; formula: string | null } | null;
   evidence: Record<string, number>;
   evidenceCount: number;
-  observed: Array<{ value: string; rows: number }>;
+  observed: Array<{ value: string; rows: number; label: string | null }>;
   columnMeaning: string | null;
+  /** Terimin tek cümlelik hâli — köprüde, kaynağın kendi kolon ve kod adlarıyla kuruluyor. */
+  plain: string;
   counterEvidence: number;
 };
 
@@ -271,7 +273,16 @@ export function reviewQueue(source: 'used' | 'all' = 'used', limit = 100): Promi
   return get(`/api/v1/semantic/review?source=${source}&limit=${limit}`);
 }
 
-/** Kararın kendisi kanıttır: onay insan kanıtı olarak yazılır, gece koşusu onu geri alamaz. */
-export function reviewConcept(id: string, decision: 'APPROVE' | 'REJECT', note = '', by = 'kokpit'): Promise<{ ok: boolean; certified: Record<string, number> }> {
-  return post(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/review`, { decision, note, by });
+/** Kararın kendisi kanıttır: onay insan kanıtı olarak yazılır, gece koşusu onu geri alamaz.
+ *
+ *  CORRECT üçüncü yoldur: terim yanlış ama kişi doğrusunu biliyor. Açıklama zorunlu, kolon isteğe
+ *  bağlı — kolon verilirse yanlış okuma emekliye ayrılır ve doğrusu onun adına tanımlanır. */
+export function reviewConcept(
+  id: string,
+  decision: 'APPROVE' | 'REJECT' | 'CORRECT',
+  note = '',
+  extra: { column?: string; term?: string } = {},
+  by = 'kokpit',
+): Promise<{ ok: boolean; certified: Record<string, number>; corrected_to?: string | null }> {
+  return post(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/review`, { decision, note, by, ...extra });
 }

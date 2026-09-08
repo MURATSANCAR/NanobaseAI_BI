@@ -35,6 +35,7 @@ from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import load_project_pairs
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.models import Annotation, ConceptStatus, Evidence, EvidenceType, SchemaProfile, SemanticQuery, TemporalSlot
+from semantic_layer.models import Mapping as SLMapping, SemanticType
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
@@ -826,6 +827,76 @@ def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optiona
     return Runtime(settings, store=store, connector=connector, llm=llm)
 
 
+def _decode(meaning: str | None, value: str) -> str | None:
+    """What the source itself calls this code.
+
+    Logo writes its enumerations into the column description — "Fatura türü (1=Mal alım faturası,
+    ..., 8=Toptan satış faturası)". A reviewer asked to approve `TRCODE IN (8)` has to know Logo's
+    own manual to answer; asked to approve "faturanın türü Toptan satış faturası olanlar", they can
+    answer from their own work. Nothing here is written by us: the labels come from the source.
+    """
+    if not meaning or value is None:
+        return None
+    for k, v in re.findall(r"(\w+)\s*=\s*([^,()]+)", meaning):
+        if k.strip() == str(value).strip():
+            return v.strip()
+    return None
+
+
+def _plain(term: str, kind: str, mapping: dict[str, Any] | None, meaning: str | None,
+           table_said: str | None, readable=lambda f: f) -> str:
+    """One sentence a person can agree or disagree with, without knowing the table.
+
+    The row used to read «kanal» → CLCARD.SPECODE2. Nobody outside the data team can judge that, and
+    a reviewer who cannot judge either approves everything or nothing. Both are worse than no queue.
+    """
+    if not mapping:
+        return f"«{term}» bir şeye bağlanmamış."
+    where = table_said or {"CLCARD": "cari kartı", "ITEMS": "malzeme kartı", "INVOICE": "fatura",
+                           "STLINE": "fatura satırı"}.get(mapping.get("entity", ""), mapping.get("entity", ""))
+    field = (meaning or "").split("(")[0].strip() or mapping.get("column") or ""
+    if mapping.get("formula"):
+        return f"«{term}» bir hesap: {readable(mapping['formula'])}"
+    if mapping.get("operator") == "JOIN":
+        return f"«{term}» iki tabloyu birbirine bağlar: {mapping.get('entity')}.{mapping.get('column')} → {', '.join(mapping.get('values') or [])}"
+    vals = mapping.get("values") or []
+    if vals:
+        labels = [(_decode(meaning, v) or v) for v in vals]
+        return f"«{term}» dendiğinde: {where} kayıtlarından, {field.lower() or 'alanı'} {' veya '.join(labels)} olanlar."
+    return f"«{term}» dendiğinde {where}ndaki «{field}» alanı kastediliyor."
+
+
+def _formula_reader(prof, said: dict) -> Any:
+    """Read a metric back in the words the source uses for its own columns.
+
+    `SUM(CASE WHEN INVOICE.TRCODE IN (2,3) THEN INVOICE.NETTOTAL ELSE 0 END)` is a correct answer to
+    a question nobody asked. What a reviewer needs is which column and which codes, in the names Logo
+    itself prints on them — then "iade tutarı" is either right or wrong, and they can say which.
+    """
+    def head(col: str) -> str:
+        c = prof.column(col) if prof else None
+        m = c.meaning(said.get((prof.entity, col.upper()))) if c and prof else None
+        return (m or "").split("(")[0].strip() or col
+
+    def one(f: str) -> str:
+        out = f
+        for ent, col in sorted(set(re.findall(r"\b(\w+)\.\"?(\w+)\"?", f)), key=lambda x: -len(x[1])):
+            c = prof.column(col) if prof else None
+            if c is None:
+                continue
+            label = head(col)
+            meaning = c.meaning(said.get((prof.entity, col.upper()))) if prof else None
+            def codes(mo, meaning=meaning):
+                vals = [v.strip() for v in mo.group(2).split(",")]
+                return mo.group(1) + ", ".join(_decode(meaning, v) or v for v in vals) + mo.group(3)
+            out = re.sub(rf"({re.escape(ent)}\.\"?{col}\"?\s+IN\s*\()([^)]*)(\))", codes, out)
+            out = re.sub(rf"({re.escape(ent)}\.\"?{col}\"?\s*=\s*)(\w+)()",
+                         lambda mo, meaning=meaning: mo.group(1) + (_decode(meaning, mo.group(2)) or mo.group(2)), out)
+            out = out.replace(f"{ent}.\"{col}\"", label).replace(f"{ent}.{col}", label)
+        return out
+    return one
+
+
 def _require_admin(request: Any) -> None:
     """Reading and asking sit behind the site's own authentication; changing the catalog needs a token.
     Without this, anything that can reach the cockpit's API path could recertify the semantics."""
@@ -1044,10 +1115,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """
         _require_admin(request)
         r = rt()
+        s = r.settings
         decision = str((body or {}).get("decision") or "").strip().upper()
-        if decision not in ("APPROVE", "REJECT"):
+        if decision not in ("APPROVE", "REJECT", "CORRECT"):
             raise HTTPException(status_code=400, detail={"code": "BAD_DECISION",
-                                                         "message": "decision APPROVE ya da REJECT olmalı"})
+                                                         "message": "decision APPROVE, REJECT ya da CORRECT olmalı"})
         bundle = r.store.concept_bundle(concept_id)
         if not bundle:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
@@ -1063,6 +1135,41 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                           support_count=1, weight=1.0,
                                           payload={"snippet": note or "portalden onaylandı", "by": who}))
             eng.human_certify(concept_id, who, reason=note)
+        elif decision == "CORRECT":
+            # "Neither of your two buttons." A reviewer who can see the term is wrong usually knows
+            # what is right, and that sentence is the most valuable thing this screen can collect —
+            # more than the rejection. So a correction does three things: it retires the wrong
+            # reading, it keeps the person's own words where the model reads them, and, when they
+            # point at the right column, it certifies that instead. Anything less throws the
+            # knowledge away and asks them again tomorrow.
+            if not note.strip():
+                raise HTTPException(status_code=400, detail={"code": "NOTE_REQUIRED",
+                                                             "message": "düzeltme için açıklama gerekli"})
+            bundle_maps = bundle.get("mappings") or []
+            entity = str((body or {}).get("entity") or (bundle_maps[0].get("entity") if bundle_maps else ""))
+            column = str((body or {}).get("column") or "").strip().upper()
+            pattern = bundle_maps[0].get("table_pattern") if bundle_maps else ""
+            prof = r.resolver.by_entity.get(entity)
+            if column and (prof is None or prof.column(column) is None):
+                raise HTTPException(status_code=400, detail={"code": "NO_SUCH_COLUMN",
+                                                             "message": f"{entity} tablosunda {column} yok"})
+            eng.human_reject(concept_id, who, reason=f"düzeltildi: {note}")
+            said_of = column or None
+            r.add_annotation(prof.table_pattern if prof else pattern, said_of, note, who)
+            fixed = None
+            if column:
+                term = str((body or {}).get("term") or bundle["concept"]["term"])
+                m = SLMapping("", entity, prof.table_pattern, column=column)
+                c2, _ = r.store.upsert_concept(s.tenant_id, s.datasource_id, term,
+                                               bundle["concept"]["semantic_type"], mapping=m,
+                                               status=ConceptStatus.CANDIDATE)
+                r.store.add_evidence(Evidence(c2.id, EvidenceType.HUMAN_ANNOTATION, f"portal:{who}",
+                                              support_count=1, weight=1.0,
+                                              payload={"snippet": note, "by": who, "corrects": concept_id}))
+                eng.human_certify(c2.id, who, reason=note)
+                fixed = c2.id
+            return {"ok": True, "concept_id": concept_id, "status": decision, "corrected_to": fixed,
+                    "certified": r.store.status_counts(s.tenant_id, s.datasource_id)}
         else:
             eng.human_reject(concept_id, who, reason=note)
         # No rebuild here on purpose: certifying moves the catalog fingerprint, and the runtime's own
@@ -1089,6 +1196,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r = rt()
         s = r.settings
         rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
+        # Two kinds of proposal are not questions for a person, and both are recognisable from the
+        # catalog rather than from a list somebody has to maintain:
+        #
+        #  - the deployment's own default filter. Every generated query carries `CANCELLED = 0`, so
+        #    every word in every question gets seen next to it and proposed as its meaning. That is
+        #    how "kartindaki" and "satisi" ended up in a queue meant for business terms.
+        #  - a term that is simply a column's name. "trcode" is what the schema calls the field; a
+        #    business vocabulary is the words people use *instead* of that.
+        def target(m) -> tuple:
+            # what a filter actually selects, regardless of how it was written: `= 0` and `IN (0)`
+            # are the same restriction, and the queue must not treat them as two different claims.
+            return (m.entity, (m.column or "").upper(), tuple(sorted(m.values or [])))
+        defaults = {target(m) for c in r.store.find_concepts(
+                        s.tenant_id, s.datasource_id, semantic_type=SemanticType.DEFAULT_FILTER, limit=200)
+                    for m in r.store.list_mappings(c.id)}
+        schema_words = {c.name.upper() for p in r.profiles for c in p.columns}
+        def routine(x) -> bool:
+            m = x["mapping"]
+            return bool(m and (target(m) in defaults or x["concept"].term.upper() in schema_words))
+        rows = [x for x in rows if not routine(x)] if source != "all" else rows
         used = [x for x in rows if any(k in _USED for k in x["evidence"])]
         pool = rows if source == "all" else used
         pool.sort(key=lambda x: (-(x["concept"].confidence or 0), -x["evidenceCount"]))
@@ -1098,13 +1225,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             c, m = x["concept"], x["mapping"]
             prof = r.resolver.by_entity.get(m.entity) if m else None
             col = prof.column(m.column) if prof and m and m.column else None
+            meaning = col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None
             out.append({
                 "id": c.id, "term": c.term, "type": c.semantic_type, "confidence": c.confidence,
                 "mapping": m.to_dict() if m else None,
                 "evidence": x["evidence"], "evidenceCount": x["evidenceCount"],
                 # what the data itself shows about the column this term claims
-                "observed": [{"value": v, "rows": n} for v, n in (col.top_values or [])[:6]] if col else [],
-                "columnMeaning": col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None,
+                "observed": [{"value": v, "rows": n, "label": _decode(meaning, v)}
+                             for v, n in (col.top_values or [])[:6]] if col else [],
+                "columnMeaning": meaning,
+                "plain": _plain(c.term, c.semantic_type, m.to_dict() if m else None, meaning,
+                                said.get((m.entity, None)) if m else None,
+                                readable=_formula_reader(prof, said)),
                 "counterEvidence": x["counterEvidence"],
             })
         return {"waiting": len(pool), "used": len(used), "total": len(rows), "source": source, "items": out}

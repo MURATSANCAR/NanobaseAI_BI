@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, MessagesSquare, ScrollText, Sigma, Table2, X } from 'lucide-react';
+import { Check, MessagesSquare, Pencil, ScrollText, Sigma, Table2, X } from 'lucide-react';
 import clsx from 'clsx';
-import { reviewConcept, reviewQueue, type ReviewItem } from '../lib/engine';
+import { catalogTable, reviewConcept, reviewQueue, type ReviewItem } from '../lib/engine';
 
 /** Onay kuyruğu — sistemin öğrendiği, ama henüz kimsenin doğrulamadığı iş terimleri.
  *
@@ -86,107 +86,137 @@ function Tab({ active, onClick, label, n }: { active: boolean; onClick: () => vo
   );
 }
 
+type Decision = { decision: 'APPROVE' | 'REJECT' | 'CORRECT'; column?: string };
+
 function Row({ it, source }: { it: ReviewItem; source: string }) {
   const qc = useQueryClient();
   const [note, setNote] = useState('');
-  const [done, setDone] = useState<'APPROVE' | 'REJECT' | null>(null);
+  const [fixing, setFixing] = useState(false);
+  const [column, setColumn] = useState('');
+  const [done, setDone] = useState<'APPROVE' | 'REJECT' | 'CORRECT' | null>(null);
+  // Kolon listesi yalnız düzeltme açıldığında istenir: kuyruk yüz satır, envanter sekiz megabayt.
+  const cols = useQuery({
+    queryKey: ['catalog-table', it.mapping?.entity],
+    queryFn: () => catalogTable(it.mapping!.entity),
+    enabled: fixing && Boolean(it.mapping?.entity),
+    staleTime: 10 * 60_000,
+  });
   const m = useMutation({
-    mutationFn: (decision: 'APPROVE' | 'REJECT') => reviewConcept(it.id, decision, note),
-    onSuccess: (_r, decision) => {
-      setDone(decision);
+    mutationFn: (d: Decision) => reviewConcept(it.id, d.decision, note, { column: d.column }),
+    onSuccess: (_r, d) => {
+      setDone(d.decision);
       void qc.invalidateQueries({ queryKey: ['review', source] });
     },
   });
   const t = TYPE[it.type] ?? { label: it.type.toLowerCase(), icon: ScrollText };
   const Icon = t.icon;
-  const target = it.mapping
-    ? `${it.mapping.entity}.${it.mapping.column ?? ''}${it.mapping.values?.length ? ` ${it.mapping.operator ?? '='} ${it.mapping.values.join(', ')}` : ''}`
-    : '—';
 
   if (done) {
     return (
       <div className="card flex items-center gap-2 p-3 text-[12px] text-ink-muted">
-        <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-semibold', done === 'APPROVE' ? 'bg-ok/15 text-ok' : 'bg-line text-ink-faint')}>
-          {done === 'APPROVE' ? 'onaylandı' : 'reddedildi'}
+        <span className={clsx('rounded px-1.5 py-0.5 text-[10px] font-semibold',
+          done === 'APPROVE' ? 'bg-ok/15 text-ok' : done === 'CORRECT' ? 'bg-brand-soft text-brand-deep' : 'bg-line text-ink-faint')}>
+          {done === 'APPROVE' ? 'onaylandı' : done === 'CORRECT' ? 'düzeltildi' : 'reddedildi'}
         </span>
-        <b className="text-ink">{it.term}</b> → {target}
+        <span className="min-w-0 flex-1 truncate">{it.plain}</span>
       </div>
     );
   }
 
   return (
     <div className="card p-3.5">
-      <div className="flex flex-wrap items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand-deep">
-              <Icon size={10} /> {t.label}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand-deep">
+          <Icon size={10} /> {t.label}
+        </span>
+        {/* Kararın verildiği cümle. Tablo adı değil — tablo adını okuyabilen kişi zaten bu ekrana
+            ihtiyaç duymuyor; bu ekran işi bilen ama şemayı bilmeyen kişi için var. */}
+        <p className="min-w-0 flex-1 text-[13.5px] leading-snug text-ink">{it.plain}</p>
+      </div>
+
+      {/* Verinin kendisi: bir eşlemenin doğru olup olmadığının en kolay kanıtı, o alanda gerçekten
+          ne yazdığıdır. Seçilen değerler koyu, gerisi bağlam. */}
+      {it.observed.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1 text-[11px]">
+          <span className="rounded bg-ok/10 px-1 py-0.5 text-[10px] text-ok">alanda ne var</span>
+          {it.observed.map((o) => (
+            <span key={o.value} className={clsx('rounded px-1.5 py-0.5 text-[10px]',
+              it.mapping?.values?.includes(o.value) ? 'bg-brand text-white' : 'bg-[#F6F3F0] text-ink-muted')}>
+              {o.label ?? (o.value || '(boş)')} · {o.rows.toLocaleString('tr-TR')}
             </span>
-            <b className="font-display text-[15px]">{it.term}</b>
-            <span className="text-ink-faint">→</span>
-            <code className="rounded bg-[#F6F3F0] px-1.5 py-0.5 text-[11px] text-ink">{target}</code>
-            {it.mapping?.formula && (
-              <code className="max-w-full truncate rounded bg-[#F6F3F0] px-1.5 py-0.5 text-[11px] text-ink-muted">{it.mapping.formula}</code>
-            )}
-          </div>
+          ))}
+        </div>
+      )}
 
-          {/* Kaynağın kendi açıklaması: kolonun ne olduğunu Logo'nun sözlüğü söylüyorsa, kararı veren
-              kişinin tabloyu tanımasına gerek kalmaz. */}
-          {it.columnMeaning && (
-            <div className="mt-1.5 text-[11px] text-ink-muted"><span className="rounded bg-line px-1 text-[10px]">kaynak</span> {it.columnMeaning}</div>
-          )}
-
-          {/* Verinin kendisi. Bir değer eşlemesi doğru mu — en kolay cevabı, o kolonda gerçekten
-              hangi değerlerin kaç satırda geçtiğidir. */}
-          {it.observed.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px]">
-              <span className="rounded bg-ok/10 px-1 text-[10px] text-ok">veride</span>
-              {it.observed.map((o) => (
-                <span key={o.value} className={clsx('rounded px-1.5 py-0.5 text-[10px]',
-                  it.mapping?.values?.includes(o.value) ? 'bg-brand text-white' : 'bg-[#F6F3F0] text-ink-muted')}>
-                  {o.value} · {o.rows.toLocaleString('tr-TR')}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] text-ink-faint">
-            <MessagesSquare size={10} />
-            {Object.entries(it.evidence).map(([k, n]) => (
-              <span key={k} className="rounded bg-[#F6F3F0] px-1.5 py-0.5">{SOURCE[k] ?? k.toLowerCase()}{n > 1 ? ` ×${n}` : ''}</span>
-            ))}
-            {it.counterEvidence > 0 && <span className="rounded bg-brand-accent/15 px-1.5 py-0.5 text-brand-accent">{it.counterEvidence} çelişen kanıt</span>}
-          </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1 text-[10px] text-ink-faint">
+          <MessagesSquare size={10} />
+          {Object.entries(it.evidence).map(([k, n]) => (
+            <span key={k} className="rounded bg-[#F6F3F0] px-1.5 py-0.5">{SOURCE[k] ?? k.toLowerCase()}{n > 1 ? ` ×${n}` : ''}</span>
+          ))}
+          {it.counterEvidence > 0 && <span className="rounded bg-brand-accent/15 px-1.5 py-0.5 text-brand-accent">{it.counterEvidence} çelişen kanıt</span>}
+          <span className="text-ink-faint/70">· {it.mapping?.entity}{it.mapping?.column ? `.${it.mapping.column}` : ''}</span>
         </div>
 
-        <div className="flex shrink-0 flex-col items-stretch gap-1.5" style={{ width: 190 }}>
-          <input
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="not (isteğe bağlı)"
-            className="rounded-lg border border-line px-2 py-1 text-[11px] outline-none focus:border-brand"
-          />
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              disabled={m.isPending}
-              onClick={() => m.mutate('APPROVE')}
-              className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-brand px-2 py-1.5 text-[11px] font-medium text-white disabled:opacity-50"
-            >
-              <Check size={11} /> doğru
-            </button>
-            <button
-              type="button"
-              disabled={m.isPending}
-              onClick={() => m.mutate('REJECT')}
-              className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-line bg-white px-2 py-1.5 text-[11px] text-ink-muted disabled:opacity-50"
-            >
-              <X size={11} /> yanlış
-            </button>
-          </div>
-          {m.isError && <div className="text-[10px] text-brand-accent">kaydedilemedi</div>}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button type="button" disabled={m.isPending} onClick={() => m.mutate({ decision: 'APPROVE' })}
+            className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-medium text-white disabled:opacity-50">
+            <Check size={11} /> doğru
+          </button>
+          <button type="button" disabled={m.isPending} onClick={() => setFixing((v) => !v)}
+            className={clsx('inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] disabled:opacity-50',
+              fixing ? 'border-brand bg-brand-soft text-brand-deep' : 'border-line bg-white text-ink-muted')}>
+            <Pencil size={11} /> düzelt
+          </button>
+          <button type="button" disabled={m.isPending} onClick={() => m.mutate({ decision: 'REJECT' })}
+            className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-[11px] text-ink-muted disabled:opacity-50">
+            <X size={11} /> yanlış
+          </button>
         </div>
       </div>
+
+      {/* Üçüncü yol. "Yanlış" bilgiyi atar; "düzelt" onu alır. Kişinin kendi cümlesi tabloya not
+          olarak yazılır ve modelin gördüğü yere gider — doğru kolonu da seçerse terim onun adına
+          o kolona tanımlanır. */}
+      {fixing && (
+        <div className="mt-2.5 rounded-xl border border-dashed border-brand/40 bg-brand-soft/30 p-2.5">
+          <label className="block text-[11px] font-medium text-brand-deep">Bu terim sizce ne demek?</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder={`Örnek: "${it.term}" bizde ${it.mapping?.entity === 'CLCARD' ? 'müşterinin satış kanalını' : 'başka bir şeyi'} anlatır, çünkü…`}
+            className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-[12px] outline-none focus:border-brand"
+          />
+          <div className="mt-1.5 flex flex-wrap items-end gap-2">
+            <div>
+              <label className="block text-[10px] text-ink-muted">doğru alan (biliyorsanız)</label>
+              <select
+                value={column}
+                onChange={(e) => setColumn(e.target.value)}
+                className="mt-0.5 rounded-lg border border-line bg-white px-2 py-1 text-[11px] outline-none focus:border-brand"
+              >
+                <option value="">— değiştirme, sadece açıklama —</option>
+                {(cols.data?.tables?.[0]?.columns ?? []).map((c) => (
+                  <option key={c.name} value={c.name}>
+                    {c.name}{c.description ? ` — ${c.description.split('(')[0].trim()}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              disabled={m.isPending || !note.trim()}
+              onClick={() => m.mutate({ decision: 'CORRECT', column: column || undefined })}
+              className="rounded-lg bg-brand px-3 py-1.5 text-[11px] font-medium text-white disabled:opacity-40"
+            >
+              düzeltmeyi kaydet
+            </button>
+            {!note.trim() && <span className="text-[10px] text-ink-faint">açıklama olmadan kaydedilmez</span>}
+          </div>
+        </div>
+      )}
+      {m.isError && <div className="mt-1 text-[10px] text-brand-accent">kaydedilemedi</div>}
     </div>
   );
 }
