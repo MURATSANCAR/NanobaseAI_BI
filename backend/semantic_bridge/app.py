@@ -827,6 +827,29 @@ def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optiona
     return Runtime(settings, store=store, connector=connector, llm=llm)
 
 
+def _lower_tr(text: str) -> str:
+    """Turkish lowercase. `"İptal".lower()` gives "i̇ptal" — an i with a stray combining dot, which is
+    what the review screen was printing at the start of every sentence."""
+    return (text or "").replace("İ", "i").replace("I", "ı").lower()
+
+
+def _head(meaning: str | None) -> str:
+    """The column's name for itself, without its parenthetical code list.
+
+    Splitting on the first "(" is not enough: Logo writes "(İndirim, masraf, promosyon satırları
+    için) Hesaplama türü (1=Yüzde, 2=Miktar…)" and that leaves a dangling ")" mid-sentence."""
+    t = (meaning or "").strip()
+    out, depth = [], 0
+    for ch in t:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth = max(0, depth - 1)
+        elif depth == 0:
+            out.append(ch)
+    return " ".join("".join(out).split()).strip(" ,;-")
+
+
 def _decode(meaning: str | None, value: str) -> str | None:
     """What the source itself calls this code.
 
@@ -854,7 +877,7 @@ def _plain(term: str, kind: str, mapping: dict[str, Any] | None, meaning: str | 
         return f"«{term}» bir şeye bağlanmamış."
     where = table_said or {"CLCARD": "cari kartı", "ITEMS": "malzeme kartı", "INVOICE": "fatura",
                            "STLINE": "fatura satırı"}.get(mapping.get("entity", ""), mapping.get("entity", ""))
-    field = (meaning or "").split("(")[0].strip() or mapping.get("column") or ""
+    field = _head(meaning) or mapping.get("column") or ""
     if mapping.get("formula"):
         return f"«{term}» bir hesap: {readable(mapping['formula'])}"
     if mapping.get("operator") == "JOIN":
@@ -862,7 +885,12 @@ def _plain(term: str, kind: str, mapping: dict[str, Any] | None, meaning: str | 
     vals = mapping.get("values") or []
     if vals:
         labels = [(_decode(meaning, v) or v) for v in vals]
-        return f"«{term}» dendiğinde: {where} kayıtlarından, {field.lower() or 'alanı'} {' veya '.join(labels)} olanlar."
+        joined = " veya ".join(labels)
+        # The operator is half the claim. `OUTCOST <> 0` and `OUTCOST = 0` select opposite halves of
+        # the table, and a sentence that drops the operator asks a reviewer to approve the wrong one.
+        op = (mapping.get("operator") or "IN").upper()
+        tail = "olmayanlar" if op in ("<>", "!=", "NOT IN") else "olanlar"
+        return f"«{term}» dendiğinde: {where} kayıtlarından, {_lower_tr(field) or 'alanı'} {joined} {tail}."
     return f"«{term}» dendiğinde {where}ndaki «{field}» alanı kastediliyor."
 
 
@@ -876,7 +904,7 @@ def _formula_reader(prof, said: dict) -> Any:
     def head(col: str) -> str:
         c = prof.column(col) if prof else None
         m = c.meaning(said.get((prof.entity, col.upper()))) if c and prof else None
-        return (m or "").split("(")[0].strip() or col
+        return _head(m) or col
 
     def one(f: str) -> str:
         out = f
@@ -1212,13 +1240,41 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         s.tenant_id, s.datasource_id, semantic_type=SemanticType.DEFAULT_FILTER, limit=200)
                     for m in r.store.list_mappings(c.id)}
         schema_words = {c.name.upper() for p in r.profiles for c in p.columns}
+        # Two more that are not questions for a person:
+        #
+        #  - a mapping onto something that is not a table. A query's own CTE aliases (RANKED, FATURA,
+        #    ISKONTO) get mined as if they were entities; nobody can rule on a name that exists only
+        #    inside one SELECT, and approving it would certify a mapping that can never resolve.
+        #  - a mapping onto a table with no rows. Whatever the term means, this deployment holds no
+        #    evidence either way, so the reviewer would be guessing and the answer would change
+        #    nothing today.
+        empty = {p.entity for p in r.profiles if p.row_count == 0}
         def routine(x) -> bool:
             m = x["mapping"]
-            return bool(m and (target(m) in defaults or x["concept"].term.upper() in schema_words))
+            if not m:
+                return False
+            if m.entity not in r.resolver.by_entity or m.entity in empty:
+                return True
+            return target(m) in defaults or x["concept"].term.upper() in schema_words
         rows = [x for x in rows if not routine(x)] if source != "all" else rows
         used = [x for x in rows if any(k in _USED for k in x["evidence"])]
         pool = rows if source == "all" else used
         pool.sort(key=lambda x: (-(x["concept"].confidence or 0), -x["evidenceCount"]))
+        # The same word pointing at the same place is one decision, not three. Senses genuinely
+        # differ by what they select, so that — not the concept id — is what makes a row distinct;
+        # the strongest-supported copy is the one shown, and approving it settles the question.
+        seen: set[tuple] = set()
+        deduped = []
+        for x in pool:
+            m = x["mapping"]
+            k = (x["concept"].term, x["concept"].semantic_type,
+                 m.entity if m else None, (m.column or "").upper() if m else None,
+                 tuple(sorted(m.values or [])) if m else (), (m.formula or "") if m else "")
+            if k in seen:
+                continue
+            seen.add(k)
+            deduped.append(x)
+        pool = deduped
         said = getattr(r.existing, "annotations", None) or {}
         out = []
         for x in pool[:limit]:

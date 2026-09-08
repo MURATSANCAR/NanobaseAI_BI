@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, MessagesSquare, Pencil, ScrollText, Sigma, Table2, X } from 'lucide-react';
+import { Check, Link2, MessagesSquare, Pencil, ScrollText, Sigma, Table2, X } from 'lucide-react';
 import clsx from 'clsx';
 import { catalogTable, reviewConcept, reviewQueue, type ReviewItem } from '../lib/engine';
 
@@ -19,6 +19,8 @@ const TYPE: Record<string, { label: string; icon: typeof Table2 }> = {
   COLUMN: { label: 'kolon', icon: Table2 },
   DIMENSION_VALUE: { label: 'değer', icon: ScrollText },
   ENTITY: { label: 'tablo', icon: Table2 },
+  RELATIONSHIP: { label: 'bağlantı', icon: Link2 },
+  DEFAULT_FILTER: { label: 'varsayılan süzgeç', icon: ScrollText },
 };
 
 /** Kanıtın kaynağı — bir terimin arkasında ne durduğunu tek kelimeyle söyler. */

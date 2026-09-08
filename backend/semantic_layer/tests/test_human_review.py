@@ -93,3 +93,43 @@ def test_a_rejection_survives_it_too(store):
     eng.human_reject(c.id, "ayse", reason="bu terim satış demek değil")
     eng.run(TENANT, DS, [_profile()], scoped=False)
     assert store.get_concept(c.id).status == ConceptStatus.REJECTED
+
+
+def test_the_nightly_run_never_deprecates_a_decided_term(store):
+    """Even when the table really is gone.
+
+    Drift is the one path that can retire a certified concept without re-scoring it, and it used to
+    apply to human decisions as well: a scan that could not see the table would deprecate the term a
+    person approved, and the loop then skipped it forever. The clash is worth reporting — it belongs
+    on the review screen — but the decision is not the engine's to reverse.
+    """
+    c = _candidate(store)
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    eng.human_certify(c.id, "ayse", reason="onaylandı")
+    report = eng.detect_drift(TENANT, DS, {}, scoped=False)          # table not there at all
+    assert store.get_concept(c.id).status == ConceptStatus.CERTIFIED
+    assert any(r.get("kept") == "insan kararı" for r in report), "çelişki rapor edilmeli, sessizce yutulmamalı"
+
+
+def test_a_sense_clash_does_not_unseat_a_decided_term(store):
+    c = _candidate(store, "toptan")
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    eng.human_certify(c.id, "ayse")
+    rival = Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE", column="TRCODE", operator="IN", values=["7"])
+    c2, _ = store.upsert_concept(TENANT, DS, "toptan", "DIMENSION_VALUE", mapping=rival,
+                                 status=ConceptStatus.CANDIDATE)
+    store.add_evidence(Evidence(c2.id, EvidenceType.VALIDATED_SQL, "q9", support_count=5, weight=0.5))
+    eng.resolve_senses(TENANT, DS, {"INVOICE": _profile()})
+    assert store.get_concept(c.id).status == ConceptStatus.CERTIFIED
+
+
+def test_the_measurement_is_still_recorded_so_it_can_be_reviewed(store):
+    """Not overruling is not the same as not looking. The score keeps moving; only the status is
+    protected, so a decision whose evidence has collapsed can still be surfaced to a person."""
+    c = _candidate(store)
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    eng.human_certify(c.id, "ayse")
+    eng.run(TENANT, DS, [_profile()], scoped=False)
+    after = store.get_concept(c.id)
+    assert after.status == ConceptStatus.CERTIFIED
+    assert after.explain.get("score") is not None

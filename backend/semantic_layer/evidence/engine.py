@@ -238,6 +238,18 @@ class EvidenceEngine:
         }
         return Evaluation(concept.id, status, score, raw, gate_passed, gate_reasons, breakdown, validated, doc, human, r_contra, explain)
 
+    @staticmethod
+    def decided_by_a_person(c: Concept) -> bool:
+        """Did somebody decide this, rather than the engine inferring it?
+
+        Everything else in this file is a measurement, and a measurement may be revised by the next
+        one. A person's decision is not a measurement. The engine may disagree with it, may record
+        that it disagrees, and may show that on the review screen — but it does not overturn it and
+        it does not delete it. Otherwise the portal is a suggestion box: the reviewer spends their
+        morning on the vocabulary and the 02:00 run takes it back.
+        """
+        return bool(c.explain.get("human_certified_by") or c.explain.get("human_rejected_by"))
+
     # ------------------------------------------------------------------ sense conflicts
     def resolve_senses(self, tenant_id: str, datasource_id: str, profiles: dict[str, SchemaProfile]) -> list[dict[str, Any]]:
         """Compare sibling senses; add counter-evidence / mark conflicts. Returns a report."""
@@ -280,6 +292,8 @@ class EvidenceEngine:
                 for c, m, sup, _ in senses:
                     others = [s[1].values for s in senses if s[0].id != c.id]
                     self.store.add_counter_evidence(CounterEvidence(c.id, "sense:conflict", "SENSE_CONFLICT", payload={"other_values": others, "support": sum(s[2] for s in senses if s[0].id != c.id)}, severity="MEDIUM"))
+                    if self.decided_by_a_person(c):
+                        continue        # the clash is recorded and visible; the decision stands
                     self.store.update_concept(c.id, status=ConceptStatus.SENSE_CONFLICT, explain={"sense_conflict": {"others": others}})
                 report.append({"term": term, "entity": entity, "column": column, "conflict": [list(s[1].values) for s in senses]})
         return report
@@ -324,16 +338,25 @@ class EvidenceEngine:
                     self.store.update_concept(c.id, explain={"schema_drift": None})
                 out.append({"concept": c.term, "drift": "resolved"})
         for c in self.store.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000):
+            human = self.decided_by_a_person(c)
             for m in self.store.list_mappings(c.id):
                 prof = profiles.get(m.entity)
                 if prof is None:
                     if scoped:
                         continue      # out of scope this run — say nothing rather than decertify
+                    if human:
+                        out.append({"concept": c.term, "drift": "table_missing", "table": m.table_pattern,
+                                    "kept": "insan kararı"})
+                        break
                     self.store.add_counter_evidence(CounterEvidence(c.id, "drift:table", "DRIFT", payload={"missing_table": m.table_pattern, "support": 3}, severity="BLOCKING"))
                     self.store.update_concept(c.id, status=ConceptStatus.DEPRECATED, explain={"schema_drift": f"table {m.table_pattern} missing"})
                     out.append({"concept": c.term, "drift": "table_missing", "table": m.table_pattern})
                     break
                 if m.column and prof.column(m.column) is None:
+                    if human:
+                        out.append({"concept": c.term, "drift": "column_missing",
+                                    "column": f"{m.entity}.{m.column}", "kept": "insan kararı"})
+                        break
                     self.store.add_counter_evidence(CounterEvidence(c.id, "drift:column", "DRIFT", payload={"missing_column": f"{m.entity}.{m.column}", "support": 3}, severity="BLOCKING"))
                     self.store.update_concept(c.id, status=ConceptStatus.DEPRECATED, explain={"schema_drift": f"column {m.entity}.{m.column} missing"})
                     out.append({"concept": c.term, "drift": "column_missing", "column": f"{m.entity}.{m.column}"})
@@ -343,6 +366,10 @@ class EvidenceEngine:
                     known = {v for v, _ in col.top_values}
                     gone = [v for v in m.values if v not in known]
                     if gone:
+                        if human:
+                            out.append({"concept": c.term, "drift": "values_gone", "values": gone,
+                                        "kept": "insan kararı"})
+                            break
                         self.store.add_counter_evidence(CounterEvidence(c.id, "drift:values", "DRIFT", payload={"values_gone": gone, "support": 3}, severity="BLOCKING"))
                         self.store.update_concept(c.id, status=ConceptStatus.DEPRECATED, explain={"schema_drift": f"values {gone} no longer observed in {m.entity}.{m.column}"})
                         out.append({"concept": c.term, "drift": "values_gone", "values": gone})
@@ -432,6 +459,11 @@ class EvidenceEngine:
                 continue      # leave it exactly as it was
             if c.status == ConceptStatus.SENSE_CONFLICT and any(x.conflict_type == "SENSE_CONFLICT" for x in self.store.list_counter_evidence(c.id)):
                 new_status = ConceptStatus.SENSE_CONFLICT
+            if self.decided_by_a_person(c):
+                # Keep the measurement — the review screen shows it, and a term whose evidence has
+                # collapsed is worth someone looking at again. Do not act on it.
+                self.store.update_concept(c.id, confidence=ev.score, explain=ev.explain)
+                continue
             if new_status != c.status:
                 changed[new_status].append(c.term)
             self.store.update_concept(c.id, status=new_status, confidence=ev.score, explain=ev.explain)
