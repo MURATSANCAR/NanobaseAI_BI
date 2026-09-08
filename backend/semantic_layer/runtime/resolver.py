@@ -191,6 +191,41 @@ class SemanticResolver:
         self.columns: Any = None
         self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
 
+    @staticmethod
+    def _measure_expressions(question, qf, sq):
+        """Reserve subtraction operands before noun lookup can turn them into filters.
+
+        An arithmetic request is not evidence that its operands share a unit or
+        grain. Until a certified expression binds them, retain the request and
+        ask; neither deterministic nor fallback SQL may silently omit it.
+        """
+        if "eksi" not in qf.tokens:
+            return set()
+        folded = fold(question)
+        spans = [(m.start(), m.end(), m.group()) for m in re.finditer(r"\([^()]*\)", folded)
+                 if "eksi" in tokenize(m.group())]
+        # Without a parenthesized boundary the operands' extent is not known.
+        # Reserve the whole request rather than invent a boundary around a noun.
+        covered = {k for a,b,_ in spans for k in range(len(tokenize(folded[:a])), len(tokenize(folded[:b])))}
+        if any(t == "eksi" and k not in covered for k,t in enumerate(qf.tokens)):
+            spans = [(0, len(folded), folded)]
+        reserved = set()
+        for a,b,text in spans:
+            start, end = len(tokenize(folded[:a])), len(tokenize(folded[:b]))
+            if qf.tokens[start:end] != tokenize(text):
+                start,end,text = 0,len(qf.tokens),folded
+            reserved.update(range(start,end))
+            expression = text.strip("() ")
+            sq.measure_expressions.append({"text":expression,"operator":"SUBTRACT",
+                                           "span":[start,end],"status":"NEEDS_DEFINITION"})
+            sq.unhandled.append(expression)
+            sq.clarification.append(
+                f"‘{expression}’ hesabında hangi ölçüden hangisini çıkarmalıyım? "
+                "Tutar mı, adet mi; hangi dönem ve işlem kapsamı kullanılmalı?"
+            )
+            sq.explanation.append(f"'{expression}' bir hesap ifadesi; bileşenleri satır filtresine dönüştürülmedi")
+        return reserved
+
     # ------------------------------------------------------------------ public
     def resolve(self, question: str, today: Optional[date] = None) -> SemanticQuery:
         qf = extract_question_facts(question)
@@ -208,6 +243,8 @@ class SemanticResolver:
         #     the sentence is written, and in this catalog "2" and "3" are also TRCODE values, so a
         #     later pass reads the item numbers as a returns filter and the question quietly narrows.
         consumed: set[int] = set()
+        expression_idx = self._measure_expressions(question, qf, sq)
+        consumed.update(expression_idx)
         frame_idx, projection = self._report_frame(qf, consumed, index)
         if frame_idx:
             consumed.update(frame_idx)
@@ -243,7 +280,7 @@ class SemanticResolver:
             # column somewhere in the schema. Read as a code it silently adds CIRO = 3 to the query —
             # a filter nobody asked for, on a question that otherwise looks answered.
             at = [k for k, tok in enumerate(qf.tokens) if tok in values]
-            if at and all(k in frame_idx for k in at):
+            if at and all(k in frame_idx or k in expression_idx for k in at):
                 continue
             entity = self._entity_for_column(col, hits)
             if entity:

@@ -168,7 +168,8 @@ def test_what_a_person_wrote_survives_and_a_machine_count_gets_its_labels():
     written = {c["name"]: c for c in _offline().columns("", "LG_411_01_STLINE")}
 
     machine = cols["CARDTYPE"]["description"]
-    assert machine.startswith("Kart tipi"), machine
+    label = ld.column_description("LG_411_CLCARD", "CARDTYPE")
+    assert label and machine.startswith(label), machine
     assert "1=Alıcı" in machine, "the codes are still unnamed"
     assert "[enum]" in machine, "the counts this run derived were thrown away"
 

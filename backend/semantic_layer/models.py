@@ -375,6 +375,7 @@ class SemanticQuery:
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
     temporal_binding: Optional[dict[str, Any]] = None
     absence_contract: Optional[dict[str, Any]] = None
+    measure_expressions: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -442,6 +443,7 @@ class SemanticQuery:
             "shape": self.shape,
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
+            "measureExpressions": [dict(x) for x in self.measure_expressions],
             "comparison": dict(self.comparison) if self.comparison else None,
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,

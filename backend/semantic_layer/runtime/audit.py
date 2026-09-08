@@ -333,6 +333,8 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
         expected = (sq.absence_contract or {}).get("sql")
         if not expected or parse_sql(expected) != tree:
             out.append("yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı")
+    if sq.measure_expressions:
+        out.append("hesap ifadesinin bileşenleri ve işlemi sertifikalı bir formülle doğrulanmadı")
     if sq.unhandled or sq.clarification:
         out.append("çözümlenmemiş soru koşulları var; netleştirme gerekiyor")
     return out

@@ -6,6 +6,8 @@ exact text matches from the previous collection; all other texts are embedded af
 from __future__ import annotations
 import argparse
 import json
+import math
+import gzip
 import os
 from pathlib import Path
 import sys
@@ -23,8 +25,9 @@ def main():
     p.add_argument('--out',type=Path,required=True)
     args=p.parse_args()
     existing=_http_json('GET',QDRANT_URL+'/collections')['result']['collections']
-    if args.collection in {c['name'] for c in existing}:
-        raise SystemExit('Candidate already exists; choose a fresh collection name')
+    present=args.collection in {c['name'] for c in existing}
+    if present and _http_json('GET',QDRANT_URL+'/collections/'+args.collection)['result']['points_count']:
+        raise SystemExit('Candidate already has points; choose a fresh collection name')
     s=SemanticSettings.from_env();store=open_store(s.store_dsn,create=False)
     profiles=one_entity_per_pattern(store.list_profiles(s.datasource_id),store.concept_entities(s.tenant_id,s.datasource_id))
     unique={}
@@ -45,13 +48,29 @@ def main():
             if text and isinstance(vector,list) and len(vector)==VECTOR_SIZE:cached[text]=vector
         offset=result.get('next_page_offset')
         if offset is None:break
+    # A matching text is reusable only when the current embedding model agrees with the old one.
+    sample=list(cached)[:3]
+    key=os.environ.get('BI_EMBED_API_KEY') or os.environ.get('CONTRACT_API_KEY','')
+    if sample:
+        checked=embed(sample,key)
+        def cosine(a,b):
+            return sum(x*y for x,y in zip(a,b))/(math.sqrt(sum(x*x for x in a))*math.sqrt(sum(y*y for y in b)))
+        if len(checked)!=len(sample) or any(cosine(cached[t],v)<0.999 for t,v in zip(sample,checked)):
+            cached.clear()
     missing=list(dict.fromkeys(p.text for p in points if p.text not in cached))
     missing_set=set(missing)
     print(json.dumps({'points':len(points),'reuse':len(points)-sum(p.text in missing_set for p in points),'new_texts':len(missing)}),flush=True)
+    checkpoint=args.out.with_suffix('.vectors.json.gz')
+    if checkpoint.exists():
+        with gzip.open(checkpoint,'rt') as f: saved=json.load(f)
+        cached.update(saved)
+        missing=list(dict.fromkeys(p.text for p in points if p.text not in cached))
     fresh=embed(missing,os.environ.get('BI_EMBED_API_KEY') or os.environ.get('CONTRACT_API_KEY',''))
     if len(fresh)!=len(missing) or any(len(v)!=VECTOR_SIZE for v in fresh):raise RuntimeError('Incomplete embedding response')
     cached.update(zip(missing,fresh))
-    _http_json('PUT',QDRANT_URL+'/collections/'+args.collection,{'vectors':{'size':VECTOR_SIZE,'distance':'Cosine'}})
+    with gzip.open(checkpoint,'wt') as f:json.dump({p.text:cached[p.text] for p in points},f)
+    if not present:
+        _http_json('PUT',QDRANT_URL+'/collections/'+args.collection,{'vectors':{'size':VECTOR_SIZE,'distance':'Cosine'}})
     for i in range(0,len(points),256):
         batch=[{'id':p.id,'vector':cached[p.text],'payload':{'entity':p.entity,'table':p.table,'column':p.column,'text':p.text}} for p in points[i:i+256]]
         _http_json('PUT',QDRANT_URL+'/collections/'+args.collection+'/points?wait=true',{'points':batch})
