@@ -91,7 +91,16 @@ def extract_question_facts(question: str) -> QuestionFacts:
             terms.append((base + i, base + j, key))
             surface.setdefault(key, " ".join(window))
 
-    explicit_codes = [(col.upper(), _split_codes(vals)) for col, vals in _CODE_HINT.findall(raw)]
+    explicit_codes = []
+    for match in _CODE_HINT.finditer(raw):
+        # Month names can also be physical column names in a wide ERP schema.
+        # A parsed date must not acquire a second, unrelated COLUMN = YEAR meaning.
+        phrase = fold(match.group(0)).strip()
+        if "=" not in phrase and ":" not in phrase and any(
+                re.search(r"(?<!\w)" + re.escape(phrase) + r"(?!\w)", fold(t.text)) for t in temporal):
+            continue
+        col, vals = match.groups()
+        explicit_codes.append((col.upper(), _split_codes(vals)))
     explicit_bindings: list[tuple[str, str, tuple[str, ...]]] = []
     for phrase, col, vals in _EXPLICIT.findall(folded):
         codes = _split_codes(vals)

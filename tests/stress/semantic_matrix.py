@@ -11,7 +11,7 @@ from semantic_layer.tests.test_runtime import catalog as catalog_fixture
 from semantic_layer.profiler.connectors import SQLiteConnector
 from semantic_layer.profiler.profiler import Profiler
 from semantic_layer.store.catalog_store import open_store
-from semantic_layer.models import Mapping,SemanticType,ConceptStatus
+from semantic_layer.models import Mapping,SemanticType,ConceptStatus,ColumnProfile
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.runtime.compiler import DeterministicCompiler,default_filters_provider
 from semantic_layer.runtime.audit import unmet_obligations
@@ -34,6 +34,11 @@ for year,month,city,channel,kind,cancel in itertools.product(range(2024,2027),ra
  rows.append((year,month,city,channel,kind,cancel,amount))
 c.commit()
 profiles=Profiler(SQLiteConnector(conn=c),enum_max_distinct=16).profile(DS,"main","LG_411_%")
+# Wide-schema distractors reproduce production month-name columns. They must
+# never turn a parsed month/year into an unrelated physical-code restriction.
+for profile in profiles:
+ if profile.entity == "ITEMS":
+  profile.columns.extend(ColumnProfile(name=m.upper(),data_type="int") for m in months)
 store=open_store("sqlite://")
 catalog_fixture.__wrapped__(store,profiles)
 for term,entity,column in [(v,"CLCARD","CITY") for v in cities]+[(v,"CLCARD","SPECODE2") for v in channels]:
