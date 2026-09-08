@@ -24,5 +24,5 @@ for q,start,end,codes,kind in cases:
  if actual and isinstance(actual[0],dict):actual=[[row.get(c["name"]) for c in a["columns"]] for row in actual]
  correct=a.get("type")=="TEXT_TO_SQL" and norm(rows)==norm(actual)
  item={"q":q,"type":a.get("type"),"correct":correct,"referenceSql":ref,"generatedSql":a.get("sql"),"referenceRows":len(rows),"answerRows":len(actual),"explanation":a.get("explanation"),"trace":(a.get("semantic") or {}).get("query"),"seconds":round(time.monotonic()-t,1)}
- out.append(item);Path("/tmp/fresh-reference-results.json").write_text(json.dumps(out,ensure_ascii=False,indent=2));print(json.dumps({k:v for k,v in item.items() if k not in ["referenceSql","generatedSql"]},ensure_ascii=False),flush=True)
+ out.append(item);Path("/tmp/fresh-reference-results.json").write_text(json.dumps(out,ensure_ascii=False,indent=2));print(json.dumps({k:v for k,v in item.items() if k not in ["referenceSql","generatedSql","trace"]},ensure_ascii=False),flush=True)
 if r.connector:r.connector.close()
