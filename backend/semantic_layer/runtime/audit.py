@@ -59,3 +59,42 @@ def audit_sql(sq: SemanticQuery, sql: str, *, conventions: Any = None) -> list[s
 
 
 __all__ = ["audit_sql"]
+
+def _period_in_sql(period: dict, sql: str) -> bool:
+    """Is this period actually restricted in the statement?
+
+    Read from the literals the query carries: the compiler and the model both write the boundary as
+    a date, and a year-grain period may be written as the year alone. Textual on purpose — the point
+    is to catch a period that is *absent*, and a period nobody wrote cannot be present under another
+    spelling.
+    """
+    start = str(period.get("start") or "")
+    if not start:
+        return False
+    return start[:10] in sql or (period.get("grain") == "YEAR" and start[:4] in sql)
+
+
+def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
+    """What the question asked for and the statement does not deliver.
+
+    Separate from `audit_sql`, which reports disagreements: this reports *absences*, and only where
+    the question stated the requirement plainly enough that its absence cannot be a matter of style.
+    A comparison is the first of them — "geçen yıla göre" names two periods, and a statement carrying
+    one of them answers a different question while looking like a complete answer.
+
+    It checks that both periods reached the statement. Whether the two figures are then presented
+    side by side is the compiler's shape, not something readable from the SQL text; that part is
+    guaranteed structurally by the multi-period path rather than audited here.
+    """
+    out: list[str] = []
+    comp = getattr(sq, "comparison", None)
+    if comp:
+        current, reference = comp.get("current"), comp.get("reference")
+        if not current:
+            out.append(str(comp.get("why") or "karşılaştırma için ikinci dönem belirlenemedi"))
+        else:
+            missing = [p for p in (current, reference) if p and not _period_in_sql(p, sql)]
+            if missing:
+                names = ", ".join(f"{p.get('start')}–{p.get('end')}" for p in missing)
+                out.append(f"karşılaştırma istendi ama sorguda şu dönem yok: {names}")
+    return out

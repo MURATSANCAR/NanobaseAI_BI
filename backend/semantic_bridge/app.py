@@ -44,7 +44,7 @@ from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompile
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
-from semantic_layer.runtime.audit import audit_sql
+from semantic_layer.runtime.audit import audit_sql, unmet_obligations
 from semantic_layer.runtime import critic
 from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
@@ -594,6 +594,18 @@ class Runtime:
         ok, why = validate_sql(sql)
         if not ok:
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Guardrail: {why}", "threadId": thread_id, "timings": timings, "semantic": semantic}
+        # What the question asked for and the statement does not deliver. Checked for every query,
+        # certified or not: a comparison is built by the deterministic compiler too, and a single
+        # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
+        unmet = unmet_obligations(sq, sql)
+        if unmet:
+            reason = "Soru bir karşılaştırma istiyor ama üretilen sorgu bunu vermiyor: " + "; ".join(unmet)
+            log.warning("obligation unmet q=%r %s", question[:80], unmet)
+            semantic["unmetObligations"] = unmet
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+            return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "sql": sql, "explanation": reason,
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+
         # The prompt asks the model to honour the certified catalog; this is where we check that it did.
         # A query that contradicts a certified fact answers a different question than the one asked.
         if not compiled.certified:
