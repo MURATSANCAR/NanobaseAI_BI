@@ -369,6 +369,9 @@ class SemanticQuery:
     # Katalogda karşılığı olmayan bir kelime için veride bulunan aday kolonlar. Karar değildir:
     # biri yeterince baskınsa slota dönüşür, değilse modele "bu kelime şuna benziyor" diye gider.
     candidates: list[dict[str, Any]] = field(default_factory=list)
+    # Soru bir karşılaştırma istiyorsa: hangi dönem neye göre, ve bu istek yerine getirildi mi.
+    # Karşılaştırma isteyen bir soru, karşılaştırma üretilmeden başarılı sayılamaz.
+    comparison: Optional[dict[str, Any]] = None
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -436,6 +439,7 @@ class SemanticQuery:
             "shape": self.shape,
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
+            "comparison": dict(self.comparison) if self.comparison else None,
             "fullyResolved": self.fully_resolved,
             "state": self.state,
             "refusalReason": self.refusal_reason,

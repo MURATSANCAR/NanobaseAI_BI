@@ -70,6 +70,8 @@ def _identifier_words(name: str) -> set[str]:
     return {w for w in re.split(r"[^a-z0-9]+", fold(name or "")) if w}
 
 
+# "geçen yıla göre", "2025'e kıyasla" — ikinci dönem söylenmez, "göre" onu ima eder.
+_COMPARE_TO = re.compile(r"\b(gore|kiyasla|karsi|nazaran|oranla)\b")
 _ORDINAL_WORDS = frozenset(stem(w) for w in "birinci ikinci ucuncu dorduncu besinci altinci yedinci sekizinci dokuzuncu onuncu".split())
 _GROUP_MARKERS = re.compile(r"\b(bazinda|bazli|gore|kiriliminda|kirilimi|dagilimi|dagilim|itibariyla)\b")
 _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money", "smallmoney", "bigint", "smallint", "tinyint")
@@ -377,6 +379,7 @@ class SemanticResolver:
             if fallback is not None:
                 sq.temporal = [fallback]
                 sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
+        self._read_comparison(sq, qf, question)
         for t in sq.temporal:
             sq.explanation.append(describe(t))
         if not sq.grain and _asks_for_a_trend(question):
@@ -919,6 +922,39 @@ class SemanticResolver:
                 span=(k, k + 1),
             )
         return None
+
+    def _read_comparison(self, sq: SemanticQuery, qf: Any, question: str) -> None:
+        """"geçen yıla göre" — bir karşılaştırma isteği, tek bir dönem değil.
+
+        Bu ifade tek bir dönem olarak ayrıştırılıyordu ve seçilen dönem *referans* olandı: soru "bu
+        yıl geçen yıla göre nasıl" iken cevap yalnız geçen yılın rakamıydı. Ne karşılaştırma vardı,
+        ne de eksikliği söyleniyordu — cevap tek bir sayı olarak, başarılı görünerek dönüyordu.
+
+        Buradaki iş yalnız ikinci dönemi eklemek değil: isteğin kendisi kaydediliyor, ki çalıştırma
+        öncesinde "iki dönem gerçekten plana ve SQL'e taşındı mı" diye sorulabilsin.
+        """
+        if len(sq.temporal) != 1 or not _COMPARE_TO.search(fold(question)):
+            return
+        reference = sq.temporal[0]
+        if not (reference.start and reference.end):
+            return
+        current = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
+        if current is None or not (current.start and current.end):
+            # Neye göre karşılaştırılacağı belli değil. Tek dönemlik cevabı karşılaştırma diye
+            # sunmaktansa istek kayda geçer ve denetim bunu yakalar.
+            sq.comparison = {"kind": "PERIOD", "reference": reference.to_dict(), "current": None,
+                             "satisfied": False, "why": "karşılaştırılacak güncel dönem belirlenemedi"}
+            sq.explanation.append(f"'{reference.text}' bir karşılaştırma isteği ama güncel dönem belirlenemedi")
+            return
+        if (current.start, current.end) == (reference.start, reference.end):
+            return
+        sq.temporal = [current, reference]
+        sq.comparison = {"kind": "PERIOD", "reference": reference.to_dict(), "current": current.to_dict(),
+                         "satisfied": False}
+        sq.explanation.append(
+            f"'{reference.text}' karşılaştırma isteği: {current.start}–{current.end} ile "
+            f"{reference.start}–{reference.end} yan yana istendi"
+        )
 
     def _points_at(self, root: str, hops: int = 1) -> set[str]:
         """Bir `root` satırından TEK bir satırına gidilebilen varlıklar — yabancı anahtarın yönü.
