@@ -169,7 +169,9 @@ def main(argv=None) -> int:
         return 0
     from semantic_layer.runtime.resolver import SemanticResolver
 
-    resolver = SemanticResolver(store, s.tenant_id, s.datasource_id, profiles)
+    from semantic_layer.history.sources import load_project_pairs
+
+    resolver = SemanticResolver(store, s.tenant_id, s.datasource_id, profiles, verified_pairs=load_project_pairs(s.project_dir))
     if args.cmd == "resolve":
         _dump(resolver.resolve(args.question).to_dict())
         return 0

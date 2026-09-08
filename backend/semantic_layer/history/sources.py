@@ -32,7 +32,7 @@ def load_pairs_export(path: Path) -> list[ValidatedPair]:
         if not nl or not sql:
             continue
         src = str(p.get("source") or "user")
-        out.append(ValidatedPair(_pid(nl, sql), nl, sql, src, str(p.get("created_at") or ""), p.get("datasource"), weight=0.2 if src == "seed" else 1.0))
+        out.append(ValidatedPair(_pid(nl, sql), nl, sql, src, str(p.get("created_at") or ""), p.get("datasource"), weight=0.2 if src == "seed" else 1.0, human_verified=p.get("human_verified") is True))
     return out
 
 
@@ -50,7 +50,7 @@ def load_knowledge_sql_dir(path: Path) -> list[ValidatedPair]:
             continue
         nl, sql = str(meta.get("nl") or ""), str(meta.get("sql") or "")
         if nl and sql:
-            out.append(ValidatedPair(_pid(nl, sql), nl, sql, str(meta.get("source") or "user"), str(meta.get("created_at") or ""), meta.get("datasource")))
+            out.append(ValidatedPair(_pid(nl, sql), nl, sql, str(meta.get("source") or "user"), str(meta.get("created_at") or ""), meta.get("datasource"), human_verified=meta.get("human_verified") is True))
     return out
 
 
@@ -67,7 +67,7 @@ def dedupe(pairs: Iterable[ValidatedPair]) -> list[ValidatedPair]:
     seen: dict[str, ValidatedPair] = {}
     for p in pairs:
         key = _pid(p.nl, p.sql)
-        if key not in seen or (seen[key].source == "seed" and p.source != "seed"):
+        if key not in seen or (seen[key].source == "seed" and p.source != "seed") or (p.human_verified and not seen[key].human_verified):
             seen[key] = p
     return list(seen.values())
 
@@ -92,7 +92,7 @@ def export_pack(store, settings, out_dir: Path) -> dict[str, Any]:
     payload = {
         "version": 1,
         "datasource": settings.datasource_id,
-        "pairs": [{"nl": p.nl, "sql": p.sql, "source": p.source, "created_at": p.created_at} for p in pairs],
+        "pairs": [{"nl": p.nl, "sql": p.sql, "source": p.source, "created_at": p.created_at, "human_verified": p.human_verified} for p in pairs],
     }
     (out_dir / "knowledge" / "pairs-export.yml").write_text(yaml.safe_dump(payload, allow_unicode=True, sort_keys=False), encoding="utf-8")
     copied = 0

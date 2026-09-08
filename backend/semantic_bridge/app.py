@@ -143,7 +143,7 @@ class Runtime:
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()
-        self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions)
+        self.resolver = SemanticResolver(self.store, s.tenant_id, s.datasource_id, self.profiles, default_temporal=default_temporal, conventions=self.conventions, verified_pairs=self.pairs)
         det = DeterministicCompiler(self.profiles, s.context, s.dialect, default_filters=default_filters_provider(self.store, s.tenant_id, s.datasource_id), conventions=self.conventions)
         existing = None
         if self.llm is not None:
@@ -512,6 +512,14 @@ class Runtime:
         semantic = {"query": sq.to_dict(), "compiler": compiled.compiler, "certified": compiled.certified, "explain": compiled.explain, "catalogVersion": compiled.catalog_version}
         if queued:
             semantic["queue"] = queued
+        if compiled.compiler == "clarification":
+            reason = " ".join(compiled.explain)
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
+                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                      resolved=sq.to_dict(), executed=False)
+            thread.extend([{"role": "user", "content": question}, {"role": "assistant", "content": reason}])
+            return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
+                    "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if not compiled.sql:
             reason = "; ".join(compiled.explain)[:500]
             if sq.out_of_scope:

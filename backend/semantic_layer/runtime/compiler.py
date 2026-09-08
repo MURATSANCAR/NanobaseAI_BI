@@ -217,6 +217,8 @@ class DeterministicCompiler:
             return None, "conflicting filters on " + ", ".join(q.conflicts)
         if q.out_of_scope:
             return None, "period outside the data window: " + ", ".join(q.out_of_scope)
+        if q.clarification:
+            return None, "clarification required: " + "; ".join(q.clarification)
         if q.unhandled:
             return None, "qualifiers with no certified meaning: " + ", ".join(q.unhandled)
         if q.shape:
@@ -1406,6 +1408,9 @@ class CompilerRouter:
         if reason := q.refusal_reason:
             return CompiledQuery(sql="", compiler="refused", catalog_version=q.catalog_version,
                                  explain=[refusal_for(q)], certified=False, refusal=reason)
+        if q.clarification:
+            return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
+                                 explain=q.clarification, certified=False)
         if self.primary:
             comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
             if comp is not None:

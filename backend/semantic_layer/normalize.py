@@ -19,7 +19,7 @@ _WS = re.compile(r"\s+")
 STOPWORDS: frozenset[str] = frozenset(
     """
     ve veya ile icin bu su o bir da de ki mi mu mi ne nedir nelerdir kac hangi hangileri hangisi
-    olan olarak olup gore bazinda bazli bazinda baz kirilim kiriliminda listele goster getir ver
+    olarak olup gore bazinda bazli bazinda baz kirilim kiriliminda listele goster getir ver
     ver yap hesapla karsilastir sirala sirasiyla sirayla sirada azalan artan siraya siral en cok az
     ilk son top ayrica her icin icindeki icinde uzerinde ustunde altinda arasinda arasindaki
     yalniz yalnizca sadece kimler kim nerede nasil neden var yok mi midir dir dur tur tir
@@ -29,7 +29,7 @@ STOPWORDS: frozenset[str] = frozenset(
     yoksa taraf tarafi tarafini yani sekilde bakimindan acisindan
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
-    alan eden olan yapan veren gelen giden sahip ait
+    sahip ait
     """.split()
 )
 
@@ -388,7 +388,7 @@ _NEGATIVE_TAILS = (
     "mayan", "meyen", "mayacak", "meyecek", "madan", "meden", "madi", "medi", "madı", "medi",
     "miyor", "mıyor", "muyor", "müyor", "maz", "mez", "mam", "mem", "mamis", "memis", "mamış", "memiş",
 )
-# Light verbs make a compound with the noun beside them ("iade edilen") and add nothing of their own.
+# Lexical hints only. Whether a verb contributes a constraint needs contextual evidence.
 _LIGHT_ROOTS = frozenset("et ed edil edil ol olun olus yap yapil kil bulun gerceklestir gerceklas gecir".split())
 
 
@@ -410,6 +410,6 @@ def is_negative(token: str) -> bool:
 
 
 def is_light_verb(token: str) -> bool:
-    """"iade edilen" — the participle only carries the noun beside it, so it modifies nothing on its own."""
+    """Return a lexical hint, never proof that a token can be discarded."""
     root = verb_root(token)
     return bool(root) and root in _LIGHT_ROOTS

@@ -115,9 +115,12 @@ def _rooted(key: str) -> str:
 
 
 class SemanticResolver:
-    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None):
+    def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None, verified_pairs=()):
         from semantic_layer.conventions import Conventions
 
+        from semantic_layer.history.modifiers import ModifierHistory
+
+        self.modifier_history = ModifierHistory(verified_pairs, datasource_id)
         self.store = store
         self.tenant_id = tenant_id
         self.datasource_id = datasource_id
@@ -310,7 +313,7 @@ class SemanticResolver:
         #     and then a certified term that contains it and belongs to exactly one concept ("alım"
         #     occurs only inside "mal alım"). Both are INFERRED, never certified by this step.
         for k, tok in enumerate(qf.tokens):
-            if k in consumed or not is_domain_candidate(tok) or is_participle(tok):
+            if k in consumed or not is_domain_candidate(tok) or self._modifier_candidate(qf.tokens, k, consumed):
                 continue
             slot = self._backoff(tok, k, index)
             if slot is not None:
@@ -365,9 +368,11 @@ class SemanticResolver:
         for k, tok in enumerate(qf.tokens):
             if k in consumed or not (_is_trend_cue(tok) or _COUNT_CUE.fullmatch(fold(tok))):
                 continue
-            if is_participle(tok) and self._modifies_a_noun(qf.tokens, k, consumed):
+            if self._modifier_candidate(qf.tokens, k, consumed) and self._modifies_a_noun(qf.tokens, k, consumed):
                 continue            # "artan ürünler" narrows the subject; it is not just a trend cue
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
+
+        self._account_modifiers(sq, qf, consumed, index)
 
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
@@ -381,35 +386,6 @@ class SemanticResolver:
             if tok.upper() in self.column_names or _GROUP_MARKERS.fullmatch(st) or _GROUP_MARKERS.fullmatch(tok):
                 continue
             if st in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
-                continue
-            if is_light_verb(tok):
-                # "iade edilen" — the compound's meaning is in the noun beside it, not in this word
-                if tok not in sq.ignored:
-                    sq.ignored.append(tok)
-                continue
-            if is_negative(tok):
-                root = verb_root(tok)
-                named = self._metric_keys_for_root(root, index) if root else []
-                if named:
-                    # "hiç satmayan ürünler": the measure is known, what is being asked for is records
-                    # with none of it. That is an anti-join, a shape this compiler cannot write but the
-                    # model can — and it is not the positive question, which is what must never happen.
-                    sq.shape = "ABSENCE"
-                    sq.explanation.append(
-                        f"'{tok}' olumsuz: '{named[0][0]}' ölçüsünün hiç gerçekleşmediği kayıtlar isteniyor"
-                    )
-                    if tok not in sq.ignored:
-                        sq.ignored.append(tok)
-                    continue
-            if is_participle(tok) or is_negative(tok):
-                # A participle is grammar, but an attributive one narrows the subject ("bekleyen
-                # siparişler"): dropping it would answer a wider question than the one that was asked.
-                if is_light_verb(tok) or not self._modifies_a_noun(qf.tokens, k, consumed):
-                    if tok not in sq.ignored:
-                        sq.ignored.append(tok)
-                elif tok not in sq.unhandled:
-                    sq.unhandled.append(tok)
-                    sq.explanation.append(f"'{tok}' konuyu daraltıyor ama katalogda karşılığı yok; yok sayılırsa daha geniş bir soru cevaplanmış olur")
                 continue
             if not is_domain_candidate(tok):
                 # an inflected verb, a pronoun or a question particle says nothing about the catalog
@@ -532,6 +508,54 @@ class SemanticResolver:
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
         return sq
+
+    def _modifier_candidate(self, tokens, k, consumed):
+        tok = tokens[k]
+        if is_participle(tok) or is_negative(tok):
+            return True
+        # Ambiguous -an/-en is only a candidate in noun context, never a global
+        # morphological fact ("en çok", brands and catalog terms keep their reading).
+        return (len(tok) >= 4 and tok.endswith(("an", "en")) and stem(tok) == tok
+                and self._modifies_a_noun(tokens, k, consumed))
+
+    def _account_modifiers(self, sq, qf, consumed, index):
+        for k, tok in enumerate(qf.tokens):
+            if (any(tok in tokenize(t.text) for t in qf.temporal)
+                    or (stem(tok) in STOPWORDS_S | MODIFIERS_S
+                        and not self._modifies_a_noun(qf.tokens, k, consumed))):
+                continue
+            if not self._modifier_candidate(qf.tokens, k, consumed):
+                continue
+            covering = [s for s in sq.slots if s.span[0] <= k < s.span[1]]
+            if k in consumed and not covering:
+                continue  # a previously explained report/time/trend cue
+            if covering and all(s.status == "CERTIFIED" and s.span == (k, k + 1) for s in covering) and not (is_participle(tok) or is_negative(tok)):
+                # A certified noun ending in -en is not an unresolved modifier.
+                continue
+            left = [s for s in sq.slots if s.span[1] == k]
+            right = [s for s in sq.slots if s.span[0] == k + 1]
+            record = {"token": tok, "position": k, "decision": "UNKNOWN",
+                      "evidence_source": "none", "structural_candidate": bool(left and right),
+                      "light_verb_hint": is_light_verb(tok),
+                      "recovered": not is_participle(tok) and not is_negative(tok)}
+            # A full certified phrase already supplies its meaning. A join edge
+            # or two neighbouring slots never supplies verb direction.
+            if covering and all(s.status == "CERTIFIED" and s.mapping is not None for s in covering):
+                record.update(decision="SEMANTIC", evidence_source="catalog",
+                              concept_ids=[s.concept_id for s in covering])
+            elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
+                sq.shape = "ABSENCE"
+                record.update(decision="ABSENCE", evidence_source="catalog")
+                sq.explanation.append(f"'{tok}' olumsuz: '{named[0][0]}' ölçüsünün hiç gerçekleşmediği kayıtlar isteniyor")
+            elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
+                record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
+            if record["decision"] == "UNKNOWN":
+                if tok not in sq.unhandled:
+                    sq.unhandled.append(tok)
+                sq.clarification.append(f"‘{tok}’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?")
+            consumed.add(k)
+            sq.modifiers.append(record)
+            sq.explanation.append(f"'{tok}' niteleyici: {record['decision']} (kanıt: {record['evidence_source']})")
 
     def explain_term(self, term: str) -> dict[str, Any]:
         key = " ".join(stem(t) for t in tokenize(term))

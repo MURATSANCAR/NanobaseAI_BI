@@ -286,6 +286,7 @@ class ValidatedPair:
     created_at: Optional[str] = None
     datasource_id: Optional[str] = None
     weight: float = 1.0
+    human_verified: bool = False  # successful execution alone is not semantic approval
 
 
 # ---------------------------------------------------------------- runtime
@@ -356,6 +357,8 @@ class SemanticQuery:
     # "satmayan ürünler"). Dropping it would answer a wider question than the one that was asked,
     # so it blocks the deterministic path and is handed to the model spelled out.
     unhandled: list[str] = field(default_factory=list)
+    modifiers: list[dict[str, Any]] = field(default_factory=list)
+    clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can
     # ("payı yüzde kaç" needs a denominator). Unlike `unhandled`, this is a request to write different
     # SQL, not a meaning nobody has defined — so it routes to the model instead of refusing.
@@ -377,7 +380,7 @@ class SemanticQuery:
 
     @property
     def fully_resolved(self) -> bool:
-        return not self.unresolved and not self.unhandled and not self.conflicts and not self.out_of_scope and not any(t.ambiguous for t in self.temporal)
+        return not self.unresolved and not self.unhandled and not self.clarification and not self.conflicts and not self.out_of_scope and not any(t.ambiguous for t in self.temporal)
 
     @property
     def state(self) -> str:
@@ -427,6 +430,9 @@ class SemanticQuery:
             "ignored": list(self.ignored),
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
+            "modifiers": list(self.modifiers),
+            "clarification": list(self.clarification),
+            "modifierTelemetry": self.modifier_telemetry,
             "shape": self.shape,
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
@@ -434,6 +440,20 @@ class SemanticQuery:
             "state": self.state,
             "refusalReason": self.refusal_reason,
             "explanation": list(self.explanation),
+        }
+
+    @property
+    def modifier_telemetry(self) -> dict[str, Any]:
+        silent = sum(m["token"] in self.ignored and m["decision"] == "UNKNOWN" for m in self.modifiers)
+        return {
+            "modifier_seen": len(self.modifiers),
+            **{f"modifier_{role.lower()}": sum(m["decision"] == role for m in self.modifiers)
+               for role in ("GRAMMATICAL", "SEMANTIC", "UNKNOWN", "ABSENCE")},
+            "modifier_historical_confirmed": sum(m["evidence_source"] == "history" for m in self.modifiers),
+            "modifier_catalog_confirmed": sum(m["evidence_source"] == "catalog" for m in self.modifiers),
+            "modifier_recovered": sum(m.get("recovered", False) for m in self.modifiers),
+            "modifier_silently_ignored": silent,
+            "silent_modifier_drop_rate": silent / len(self.modifiers) if self.modifiers else 0.0,
         }
 
 
