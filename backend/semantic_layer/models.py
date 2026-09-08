@@ -360,6 +360,9 @@ class SemanticQuery:
     # ("payı yüzde kaç" needs a denominator). Unlike `unhandled`, this is a request to write different
     # SQL, not a meaning nobody has defined — so it routes to the model instead of refusing.
     shape: Optional[str] = None
+    # Çıktının biçimi soruda tarif edildiyse istenen kolonlar, sorulduğu sırayla ("1. kolon kanal
+    # adı 2. kolon yıl"). Anlamı değil sunumu belirler: neyin hangi sırayla görüneceğini söyler.
+    projection: list[str] = field(default_factory=list)
 
     @property
     def metrics(self) -> list[ResolvedSlot]:
@@ -422,6 +425,7 @@ class SemanticQuery:
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
             "shape": self.shape,
+            "projection": list(self.projection),
             "fullyResolved": self.fully_resolved,
             "state": self.state,
             "refusalReason": self.refusal_reason,

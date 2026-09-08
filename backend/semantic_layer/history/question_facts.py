@@ -35,6 +35,7 @@ GENERIC_S = frozenset(
     fatura faturalar musteri musteriler cari cariler tedarikci kitap kitaplar urun urunler malzeme
     stok kanal kanallar yayinevi siparis siparisler satir satirlar hareket belge tablo kolon
     deger degeri kod kodu ad adi unvan tarih satan satilan satis alim alinan verilen
+    rakam rakami sutun sutunu hane kalem baslik bilgi bilgisi
     """.split()
 )
 

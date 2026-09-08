@@ -111,6 +111,7 @@ def _derived_rel(scope: "Scope", by_table: dict, by_entity: dict, cache: dict) -
         if list(inner.find_all(exp.AggFunc)):
             aggregated.add(name)
     keys: set[str] = set()
+    grain_label = ""
     group = sel.args.get("group")
     if group is not None:
         for g in group.expressions:
@@ -126,10 +127,11 @@ def _derived_rel(scope: "Scope", by_table: dict, by_entity: dict, cache: dict) -
             if src is not None and src.keys and {g.name.upper()} >= src.keys:
                 nm = by_sql.get(g.sql()) or g.name.upper()
                 keys = {nm}
+                grain_label = src.entity          # "LOGICALREF seviyesinde" değil, "INVOICE seviyesinde"
                 break
     rel = _Rel(entity=(scope.expression.parent.alias_or_name if isinstance(scope.expression.parent, exp.CTE) else "alt sorgu") or "alt sorgu",
                keys=frozenset(keys), aggregated=frozenset(aggregated),
-               grain=", ".join(sorted(keys)) if keys else "")
+               grain=grain_label or (", ".join(sorted(keys)) if keys else ""))
     cache[key] = rel
     return rel
 
@@ -239,6 +241,8 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 uncertain.update(sides)
 
         for agg in select.find_all(exp.AggFunc):
+            if not _in_scope(agg, select):
+                continue
             inner = agg.this
             distinct = isinstance(inner, exp.Distinct)
             if distinct:
@@ -250,11 +254,25 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                       ([None] if isinstance(agg, exp.Count) and repeated else [])
                 if hit:
                     aliases = ({(c.table or "").upper() for c in cols if c is not None} & repeated) or repeated
-                    who = ", ".join(sorted(tables[a].entity for a in aliases if a in tables))
-                    findings.append(Finding("FANOUT", "block",
-                        f"{agg.sql(dialect=dialect)} şişirilmiş: {who} tablosunun satırları join yüzünden "
-                        f"tekrarlanıyor ve toplama her tekrarı bir daha sayıyor. Toplamı tekrarlanmayan tarafta al, "
-                        f"ya da önce alt sorguda tekilleştir."))
+                    who = ", ".join(sorted(rels[a].entity for a in aliases if a in rels))
+                    # Summing a column a CTE already aggregated is the same fault one level up, and
+                    # worth naming as such: the figure was correct at its own grain and is being
+                    # re-added once per row of the finer table it was joined to.
+                    twice = [c for c in (hit if cols else []) if c is not None
+                             and c.name.upper() in rels.get((c.table or "").upper(), _Rel("", frozenset())).aggregated]
+                    if twice:
+                        c0 = twice[0]
+                        r0 = rels[(c0.table or "").upper()]
+                        findings.append(Finding("FANOUT", "block",
+                            f"{agg.sql(dialect=dialect)} şişirilmiş: {c0.name} zaten {r0.grain or r0.entity} seviyesinde "
+                            f"toplanmış bir tutar ve join onu daha ince taneli tarafın her satırında bir daha sayıyor. "
+                            f"Toplamı tek bir taneciklikte al: ya kendi seviyesinde topla, ya da ince tarafta tutulan "
+                            f"satır tutarını kullan."))
+                    else:
+                        findings.append(Finding("FANOUT", "block",
+                            f"{agg.sql(dialect=dialect)} şişirilmiş: {who} tablosunun satırları join yüzünden "
+                            f"tekrarlanıyor ve toplama her tekrarı bir daha sayıyor. Toplamı tekrarlanmayan tarafta al, "
+                            f"ya da önce alt sorguda tekilleştir."))
                 elif cols and any((c.table or "").upper() in uncertain for c in cols):
                     findings.append(Finding("FANOUT", "warn",
                         f"{agg.sql(dialect=dialect)}: join'in iki tarafı da anahtar değil; satırlar çoğalıyor olabilir."))
@@ -274,6 +292,8 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
         # arithmetically fine and means nothing — and no error, no empty result and no odd-looking
         # number gives it away.
         for agg in select.find_all((exp.Sum, exp.Avg)):
+            if not _in_scope(agg, select):
+                continue
             bases: dict[str, list[str]] = {}
             for col in agg.find_all(exp.Column):
                 prof = tables.get((col.table or "").upper()) if col.table else (next(iter(tables.values())) if len(tables) == 1 else None)
@@ -290,6 +310,8 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
         # something that is not in it returns nothing, and an empty result reads as "none this month"
         # rather than as a filter that could never have matched.
         for eq in select.find_all(exp.EQ):
+            if not _in_scope(eq, select):
+                continue
             for col, lit in ((eq.left, eq.right), (eq.right, eq.left)):
                 if not (isinstance(col, exp.Column) and isinstance(lit, exp.Literal)):
                     continue
@@ -314,7 +336,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
 
         # A column the catalog says the table does not have.
         for c in select.find_all(exp.Column):
-            if not c.table:
+            if not c.table or not _in_scope(c, select):
                 continue
             prof = tables.get(c.table.upper())
             if prof is None or not prof.columns or c.name == "*":

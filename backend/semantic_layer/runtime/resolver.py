@@ -37,12 +37,14 @@ from semantic_layer.normalize import (
     tokenize,
     verb_root,
 )
+from semantic_layer.history.question_facts import GENERIC_S
 from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
+_ORDINAL_WORDS = frozenset(stem(w) for w in "birinci ikinci ucuncu dorduncu besinci altinci yedinci sekizinci dokuzuncu onuncu".split())
 _GROUP_MARKERS = re.compile(r"\b(bazinda|bazli|gore|kiriliminda|kirilimi|dagilimi|dagilim|itibariyla)\b")
 _NUMERIC_TYPES = ("int", "float", "double", "decimal", "numeric", "real", "money", "smallmoney", "bigint", "smallint", "tinyint")
 _AVG_WORDS = frozenset(stem(w) for w in "ortalama ortalamasi".split())
@@ -330,6 +332,19 @@ class SemanticResolver:
                 continue            # "artan ürünler" narrows the subject; it is not just a trend cue
             consumed.add(k)         # a cue that shaped the query is accounted for, not missing
 
+        # 5c) report frame: "1. kolon kanal adı 2. kolon yıl" — the shape of the deliverable, not the
+        #     subject. Consumed here so the words that describe the output never reach step 6 and get
+        #     reported as business terms nobody defined; what they framed becomes the projection.
+        frame_idx, projection = self._report_frame(qf, consumed, index)
+        if frame_idx:
+            consumed.update(frame_idx)
+            for k in sorted(frame_idx):
+                if qf.tokens[k] not in sq.ignored and not qf.tokens[k].isdigit():
+                    sq.ignored.append(qf.tokens[k])   # izde görünsün: yutuldu ama saklanmadı
+            sq.projection = projection
+            if projection:
+                sq.explanation.append("istenen kolonlar (sorulan sıra): " + " | ".join(projection))
+
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
             if k in consumed:
@@ -374,6 +389,13 @@ class SemanticResolver:
                 continue
             if not is_domain_candidate(tok):
                 # an inflected verb, a pronoun or a question particle says nothing about the catalog
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
+                continue
+            if st in GENERIC_S and k > 0 and (k - 1) in consumed:
+                # "toplam satış rakamı": a generic head noun sitting on a term that did resolve is
+                # part of that phrase, not a second concept the catalog is missing. Only next to a
+                # resolved word — on its own, "kod" is still a word the catalog may well define.
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 continue
@@ -837,6 +859,64 @@ class SemanticResolver:
         if len(owners) == 1:
             return owners[0]
         return self.conventions.preferred_entity(owners, hint=primary)
+
+    def _knows_word(self, word: str, index: dict) -> bool:
+        """Katalog bu kelimeyi tanıyor mu — terim, kolon adı ya da varlık adı olarak."""
+        st = stem(word)
+        if st in index or word.upper() in self.column_names or st in _ENTITY_WORDS:
+            return True
+        return bool(self._by_root(index).get(_rooted(word)))
+
+    def _report_frame(self, qf, consumed: set[int], index: dict) -> tuple[set[int], list[str]]:
+        """"1. kolon kanal adı 2. kolon yıl 3. kolon toplam satış" — çıktının iskeleti.
+
+        Rol kelimesi ("kolon") bir listeden değil durduğu yerden tanınır: sıra sayısının hemen
+        ardında, en az iki kez aynı biçimde tekrarlanan ve katalogda karşılığı olmayan bir kelime,
+        veriyi değil teslimatın şeklini anlatıyordur. Liste tutmanın sonu yok — yarın "sütun", öbür
+        gün "hane" gelir; tekrar eden konum ise dilin kendisinde.
+
+        Katalogda karşılığı olan kelime asla çerçeve sayılmaz: "1. bölge cirosu 2. bölge cirosu"
+        diye soran biri bölgeden vazgeçmiş olmaz. Bu yüzden reddi kaldırmak yetmez, çerçevenin
+        çerçeve olduğu kanıtlanmalı.
+
+        Döndürdüğü: tüketilecek belirteç indeksleri ve istenen kolonlar (sorulan sırayla).
+        """
+        toks = qf.tokens
+        marks: list[tuple[int, int]] = []                 # (sıra belirteci, rol kelimesi)
+        for k in range(len(toks) - 1):
+            tok = toks[k]
+            if k in consumed or not (tok.isdigit() or stem(tok) in _ORDINAL_WORDS):
+                continue
+            r = k + 1
+            if r in consumed or self._knows_word(toks[r], index):
+                continue
+            marks.append((k, r))
+        if len(marks) < 3:
+            return set(), []
+        roles = [stem(toks[r]) for _, r in marks]
+        common = max(set(roles), key=roles.count)
+        hits = [m for m, role in zip(marks, roles) if role == common]
+        # Üç kez: iki kez tekrar bir çerçeve değil, bir karşılaştırma da olabilir ("1. bölge cirosu
+        # 2. bölge cirosu"). Üçüncü tekrar dilin kendisinde nadirdir; sayarak konuşan bir rapor
+        # siparişinde ise kuraldır.
+        if len(hits) < 3:
+            return set(), []
+        # Her slotun içeriği: rol kelimesinden sonraki sözcükler, bir SONRAKİ sıra belirtecine kadar
+        # — kullanıcı her maddede rol kelimesini tekrar etmeyebilir ("4. ürün kırılımı").
+        ordinals = sorted(k for k in range(len(toks)) if toks[k].isdigit() or stem(toks[k]) in _ORDINAL_WORDS)
+        order: list[str] = []
+        for _, r in hits:
+            nxt = next((o for o in ordinals if o > r), len(toks))
+            words = [toks[i] for i in range(r + 1, nxt)]
+            if words:
+                order.append(" ".join(words))
+        # Aynı içerik tekrar ediyorsa bu bir çıktı listesi değil, aynı şeyin farklı örnekleri:
+        # sıra sayısı kolonu değil konuyu numaralandırıyordur. Böyle bir cümlede rol kelimesini
+        # yutmak, sorulandan daha geniş bir soruyu cevaplamak olur.
+        if len(set(order)) < len(order):
+            return set(), []
+        idx = {k for k, _ in hits} | {r for _, r in hits}
+        return idx, order
 
     @staticmethod
     def _primary_entity(hits: list[ResolvedSlot]) -> Optional[str]:

@@ -60,6 +60,82 @@ def test_a_join_the_catalog_knows_nothing_about_is_only_a_warning_and_only_when_
     assert not any(x.kind == "UNKNOWN_JOIN" for x in review(sql, bare))
 
 
+# --- CTE'ler: modelin en sevdiği kalıp, ve kritiğin uzun süre okuyamadığı yer ---------------
+
+INVOICE = _t("INVOICE", "LG_411_01_INVOICE", [("LOGICALREF", "int"), ("CLIENTREF", "int"), ("DATE_", "datetime"), ("NETTOTAL", "decimal(18,2)")])
+STLINE2 = _t("STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("INVOICEREF", "int"), ("STOCKREF", "int"), ("AMOUNT", "float"), ("TOTAL", "decimal(18,2)")])
+PC = [INVOICE, STLINE2, ITEMS]
+
+# Fatura seviyesinde toplanmış ciro, fatura×ürün tanecikli satır toplamlarıyla birleştirilip yeniden
+# toplanıyor: bir faturada kaç ürün varsa o faturanın cirosu o kadar kez sayılıyor.
+_CTE_FANOUT = """
+WITH invoice_totals AS (
+    SELECT i.LOGICALREF, YEAR(i.DATE_) AS yil, SUM(i.NETTOTAL) AS net_ciro
+    FROM dbo.LG_411_01_INVOICE i GROUP BY i.LOGICALREF, YEAR(i.DATE_)
+),
+line_totals AS (
+    SELECT sl.INVOICEREF, sl.STOCKREF, SUM(sl.AMOUNT) AS net_adet
+    FROM dbo.LG_411_01_STLINE sl GROUP BY sl.INVOICEREF, sl.STOCKREF
+)
+SELECT it.yil, itm.CODE, SUM(lt.net_adet) AS net_adet, SUM(it.net_ciro) AS net_ciro
+FROM invoice_totals it
+JOIN line_totals lt ON lt.INVOICEREF = it.LOGICALREF
+JOIN dbo.LG_411_ITEMS itm ON itm.LOGICALREF = lt.STOCKREF
+GROUP BY it.yil, itm.CODE
+"""
+
+
+def test_a_total_aggregated_in_a_cte_and_re_summed_after_a_join_is_caught():
+    f = review(_CTE_FANOUT, PC)
+    fan = [x for x in f if x.kind == "FANOUT" and x.severity == "block"]
+    assert fan, [x.to_dict() for x in f]
+    assert "net_ciro" in fan[0].message
+    # ...ve adet doğru: satır tanecikli taraf join'de çoğalmıyor, onun için bulgu yok.
+    assert "net_adet" not in " ".join(x.message for x in fan)
+
+
+def test_a_cte_grouped_by_a_primary_key_is_one_row_per_key_even_with_other_group_columns():
+    """YEAR(tarih) gruplama listesine girmesi tanecikliği inceltmez: LOGICALREF zaten süperanahtar."""
+    f = review(_CTE_FANOUT, PC)
+    assert any(x.kind == "FANOUT" and "seviyesinde" in x.message for x in f)
+
+
+def test_a_cte_join_that_covers_the_whole_grain_is_not_a_fan_out():
+    sql = """
+    WITH line_totals AS (
+        SELECT sl.INVOICEREF, sl.STOCKREF, SUM(sl.TOTAL) AS tutar
+        FROM dbo.LG_411_01_STLINE sl GROUP BY sl.INVOICEREF, sl.STOCKREF
+    )
+    SELECT itm.CODE, SUM(lt.tutar) AS tutar
+    FROM line_totals lt JOIN dbo.LG_411_ITEMS itm ON itm.LOGICALREF = lt.STOCKREF
+    GROUP BY itm.CODE
+    """
+    assert [x.kind for x in review(sql, PC) if x.severity == "block"] == []
+
+
+def test_a_finding_inside_a_cte_is_still_found():
+    """Kapsam ayrımı, iç sorgunun kendi hatasını görmezden gelmek anlamına gelmemeli."""
+    sql = """
+    WITH per_item AS (
+        SELECT itm.CODE, SUM(itm.PRICE) AS fiyat
+        FROM dbo.LG_411_01_STLINE sl JOIN dbo.LG_411_ITEMS itm ON sl.STOCKREF = itm.LOGICALREF
+        GROUP BY itm.CODE
+    )
+    SELECT * FROM per_item
+    """
+    assert any(x.kind == "FANOUT" and x.severity == "block" for x in review(sql, PC))
+
+
+def test_a_column_of_an_inner_query_is_not_checked_against_the_outer_tables():
+    """Eskiden `find_all` alt sorgulara iniyordu: iç sorgunun kolonu dış kapsamın tablosunda aranıp
+    'böyle kolon yok' denebiliyordu. Kapsam ayrımı bunu bitirir."""
+    sql = """
+    SELECT itm.CODE FROM dbo.LG_411_ITEMS itm
+    WHERE itm.LOGICALREF IN (SELECT sl.STOCKREF FROM dbo.LG_411_01_STLINE sl WHERE sl.INVOICEREF > 0)
+    """
+    assert [x.kind for x in review(sql, PC)] == []
+
+
 def test_unreadable_sql_gets_no_findings_not_a_refusal():
     assert review("SELECT FROM WHERE (((", P) == []
 
