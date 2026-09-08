@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 
 from semantic_layer.candidates.llm_client import FakeLlm
 from semantic_layer.evidence.engine import EvidenceEngine
-from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, Mapping, SemanticType
+from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, Mapping, SemanticType, TemporalSlot
 from semantic_layer.runtime.compiler import DeterministicCompiler, default_filters_provider
 from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql, strip_comments, validate_sql
 from semantic_layer.runtime.resolver import SemanticResolver
@@ -1067,3 +1067,37 @@ def test_a_join_is_read_from_the_same_firm_as_the_rows_it_is_joined_to(catalog, 
     if out is None:
         return                                   # birden çok firma okunuyorsa reddetmek de doğru cevap
     assert "LG_211_ITEMS" not in out.sql, out.sql
+
+
+def test_a_question_that_spans_copies_joins_inside_each_one_and_unions_the_results(catalog, profiles):
+    """En eski veriden bugüne tek soru: her kopya kendi referansıyla eşleşmeli. Tek bir join iki
+    kopyaya birden hizmet edemez — ikinci kopyanın her satırı ilgisiz bir referansa denk gelir."""
+    from copy import deepcopy
+    from semantic_layer.models import utcnow
+
+    _certify(catalog, "urun", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    _certify(catalog, "satır tutarı", SemanticType.METRIC,
+             Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+                     formula="SUM(STLINE.TOTAL)"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+
+    old_line = deepcopy(next(p for p in profiles if p.entity == "STLINE"))
+    old_line.table_name, old_line.context = "LG_211_01_STLINE", {"n0": "211", "n1": "01"}
+    old_line.time_window, old_line.scanned_at = ("2021-01-01", "2025-12-31"), utcnow()
+    old_items = deepcopy(next(p for p in profiles if p.entity == "ITEMS"))
+    old_items.table_name, old_items.context, old_items.scanned_at = "LG_211_ITEMS", {"n0": "211"}, utcnow()
+    spread = profiles + [old_line, old_items]
+
+    r = SemanticResolver(catalog, TENANT, DS, spread)
+    c = DeterministicCompiler(spread, {}, "tsql")
+    sq = r.resolve("ürün bazında satır tutarı", today=date(2026, 7, 20))
+    sq.temporal = [TemporalSlot(text="2021'den bugüne", primitive="RANGE",
+                                start=date(2021, 1, 1), end=date(2026, 12, 31))]
+    out = c.compile(sq, catalog)
+    assert out is not None, sq.to_dict()
+    assert "UNION ALL" in out.sql
+    # her iki taraf da kopya damgası taşır ve join o damgayla kapanır
+    assert out.sql.count("__nb_firm") >= 5, out.sql
+    assert "STLINE.[__nb_firm] = ITEMS.[__nb_firm]" in out.sql or "ITEMS.[__nb_firm] = STLINE.[__nb_firm]" in out.sql, out.sql
+    assert "LG_211_ITEMS" in out.sql and "LG_411_ITEMS" in out.sql, out.sql

@@ -34,6 +34,11 @@ class SemanticQueryCompiler(Protocol):
 
 # ---------------------------------------------------------------------- dialect helpers
 
+# The column each branch of a period union carries so a join can only match rows from the same copy
+# of the schema. Named with a prefix no source column uses.
+_FIRM_COL = "__nb_firm"
+
+
 class Dialect:
     """Per-engine SQL shapes. Unknown engines fall back to the standard-SQL family (date_trunc/LIMIT),
     which is what every non-SQL-Server target this product connects to speaks."""
@@ -259,8 +264,34 @@ class DeterministicCompiler:
             return None, f"no date column on {entity}"
         return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
 
+    @staticmethod
+    def _firm_of(p: SchemaProfile) -> str:
+        """Which copy of the schema a table belongs to. Identifiers are keyed within one, not across."""
+        return str(p.context.get("n0") or p.table_name)
+
+    def _chosen(self, entity: str, q: SemanticQuery, *, spread: bool = True,
+                anchor: Optional[dict[str, str]] = None) -> list[SchemaProfile]:
+        """The tables this entity is read from for this question."""
+        available = self.tables_of.get(entity) or []
+        if not spread:
+            # The copy belonging to the same firm as the rows being read. In this source the firm
+            # number is part of the table name and the key spaces are per firm, so joining one year's
+            # sales lines to another firm's products matches rows that have nothing to do with each
+            # other.
+            fits = [p for p in available
+                    if all(p.context.get(k) == v for k, v in (anchor or {}).items() if k in p.context)]
+            cands = fits or available
+            if not cands:
+                return []
+            return [min(cands, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
+                                              -(x.row_count or 0), x.table_name))]
+        first = min((t.start for t in q.temporal if t.start), default=None)
+        last = max((t.end for t in q.temporal if t.end), default=None)
+        return periods.tables_for(available, first, last) or available[:1]
+
     def _source(self, entity: str, q: SemanticQuery, needed: set[str], alias: str, *, spread: bool = True,
-                anchor: Optional[dict[str, str]] = None) -> tuple[str, list[str], str]:
+                anchor: Optional[dict[str, str]] = None, chosen: Optional[list[SchemaProfile]] = None,
+                firm_tag: bool = False) -> tuple[str, list[str], str]:
         """The FROM target for one entity: a table, or the periods a question spans, unioned.
 
         Which tables that is comes from the window each was measured to hold, so a source that splits an
@@ -275,26 +306,19 @@ class DeterministicCompiler:
         """
         d = self.d
         available = self.tables_of.get(entity) or []
-        first = min((t.start for t in q.temporal if t.start), default=None)
-        last = max((t.end for t in q.temporal if t.end), default=None)
-        if not spread:
-            # The copy belonging to the same firm as the rows being read. In this source the firm
-            # number is part of the table name and the key spaces are per firm, so joining 2026 sales
-            # lines to another firm's products matches rows that have nothing to do with each other.
-            fits = [p for p in available
-                    if all(p.context.get(k) == v for k, v in (anchor or {}).items() if k in p.context)]
-            cands = fits or available
-            pick = min(cands, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
-                                             -(x.row_count or 0), x.table_name)) if cands else None
-            chosen = [pick] if pick is not None else []
-        else:
-            chosen = periods.tables_for(available, first, last) or available[:1]
+        if chosen is None:
+            chosen = self._chosen(entity, q, spread=spread, anchor=anchor)
         names = [d.table(p.schema_name, physical_name(p.table_pattern, {**p.context, **self.context})) for p in chosen]
         tables = [p.table_name for p in chosen]
-        if len(names) == 1:
+        if len(names) == 1 and not firm_tag:
             return names[0], tables, periods.describe(chosen, available)
         cols = ", ".join(d.q(c) for c in sorted(needed)) or "*"
-        union = " UNION ALL ".join(f"SELECT {cols} FROM {n}" for n in names)
+        parts = []
+        for p, n in zip(chosen, names):
+            # The copy each row came from, carried into the join so rows only ever meet their own.
+            tag = f"'{self._firm_of(p)}' AS {d.q(_FIRM_COL)}, " if firm_tag else ""
+            parts.append(f"SELECT {tag}{cols} FROM {n}")
+        union = " UNION ALL ".join(parts)
         return f"({union})", tables, periods.describe(chosen, available)
 
     def _needed_columns(self, entity: str, plan: "_Plan", q: SemanticQuery) -> set[str]:
@@ -415,20 +439,33 @@ class DeterministicCompiler:
                 where.append(f"{col} >= '{t.start.isoformat()}' AND {col} < '{t.end.isoformat()}'")
                 explain.append(f"dönem: {t.primitive} [{t.start}, {t.end})")
         sql = "SELECT " + ", ".join(select)
-        source, read_tables, span_note = self._source(plan.entity, q, self._needed_columns(plan.entity, plan, q), alias)
-        # Which firm/period the rows come from, so a joined dimension is read from the same one. Where
-        # several were read, the one whose own window begins latest — the same tie-break the period
-        # chooser uses, and the one a question about now means.
-        read = [p for p in (self.tables_of.get(plan.entity) or []) if p.table_name in read_tables]
+        read = self._chosen(plan.entity, q)
+        firms = {self._firm_of(p) for p in read}
+        # Reference rows are keyed within one copy of the schema, so facts read from several of them
+        # cannot share one join: every row of the second copy would match an unrelated reference row.
+        # Each side is therefore read as its own per-copy union, and the join carries the copy along —
+        # a row only ever meets a row from where it came from. Nothing above this line changes: the
+        # aggregate, the filters and the breakdown are written against the same two aliases as before.
+        joined_per_firm: dict[str, list[SchemaProfile]] = {}
+        by_firm = len(firms) > 1 and bool(plan.joins)
+        if by_firm:
+            for ent, col, ref_ent, ref_col in plan.joins:
+                other = ref_ent if ref_ent != plan.entity else ent
+                have = {self._firm_of(p): p for p in (self.tables_of.get(other) or [])}
+                picked = [have[f] for f in sorted(firms) if f in have]
+                if len(picked) != len(firms):
+                    # One of the copies has no counterpart for this table. Reading the years that do
+                    # match would answer a narrower question than the one asked, without saying so.
+                    log.debug("deterministic compile refused: %s has no table for every period read", other)
+                    return None
+                joined_per_firm[other] = picked
+        source, read_tables, span_note = self._source(plan.entity, q, self._needed_columns(plan.entity, plan, q), alias,
+                                                      chosen=read, firm_tag=by_firm)
+        # Where several copies were read and no per-copy join is needed, the reference table is taken
+        # from the one whose own window begins latest — the same tie-break the period chooser uses.
         anchor: dict[str, str] = {}
         if read:
             anchor = dict(max(read, key=lambda x: (str(x.time_window[0]) if x.time_window else "", x.table_name)).context)
-        # Reference rows are keyed per firm, so one join cannot serve facts read from two of them:
-        # every row of the second firm would match some unrelated reference row. This compiler writes
-        # one join, so it says it cannot rather than answering with the names silently swapped.
-        if plan.joins and len({p.context.get("n0") for p in read if p.context.get("n0")}) > 1:
-            log.debug("deterministic compile refused: joined query reads more than one firm")
-            return None
         if span_note:
             explain.append(span_note)
         sql += f"\nFROM {source} AS {alias}"
@@ -440,11 +477,16 @@ class DeterministicCompiler:
             # spans periods and is joined — the shape a breakdown by a joined dimension produces.
             own = ({col} if ent == joined else set()) | ({ref_col} if ref_ent == joined else set())
             j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined,
-                                                       spread=False, anchor=anchor)
+                                                      spread=False, anchor=anchor,
+                                                      chosen=joined_per_firm.get(joined), firm_tag=by_firm)
             read_tables += j_tables
             if j_note:
                 explain.append(j_note)
-            sql += f"\nJOIN {j_source} AS {joined} ON {ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            on = f"{ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            if by_firm:
+                on += f" AND {ent}.{d.q(_FIRM_COL)} = {ref_ent}.{d.q(_FIRM_COL)}"
+                explain.append(f"join dönem içinde kapalı: {ent} ↔ {ref_ent}, her dönem kendi kaydıyla")
+            sql += f"\nJOIN {j_source} AS {joined} ON {on}"
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
