@@ -339,6 +339,20 @@ class MSSQLConnector(_DbApiBase):
     # Wall-clock timings taken while the scan itself was running suggested the opposite and were the
     # scan's own noise. Measure page reads *and* CPU, in isolation, before trying this again.
 
+    def search_values(self, schema: str, table: str, column: str, needle: str, limit: int) -> list[tuple[str, int]]:
+        """Values of one column that contain `needle`, with how many rows carry each.
+
+        Asked once per unplaced word in a question, so it is written to be cheap and to be safe with
+        whatever the person typed: the needle is a parameter, never concatenated into the statement,
+        and the wildcards it could otherwise smuggle in are escaped.
+        """
+        safe = needle.replace("[", "[[]").replace("%", "[%]").replace("_", "[_]")
+        sql = (f"SELECT TOP {int(limit)} {self.q(column)} AS v, COUNT_BIG(*) AS n "
+               f"FROM {self.q(schema)}.{self.q(table)} WHERE {self.q(column)} LIKE ? "
+               f"GROUP BY {self.q(column)} ORDER BY n DESC{self.probe_hint}")
+        _, rows = self._rows(sql, (f"%{safe}%",))
+        return [(str(_norm(r[0])), int(r[1])) for r in rows]
+
     def row_count(self, schema: str, table: str) -> Optional[int]:
         try:
             _, rows = self._rows(
