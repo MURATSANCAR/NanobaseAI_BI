@@ -405,7 +405,8 @@ class CandidateGenerator:
         ordered = sorted(self.profiles, key=lambda p: (p.entity not in named, -(p.row_count or 0)))
         ctx_lines = []
         for p in ordered[:12]:
-            enum_cols = [f"{c.name} {{{', '.join(v for v, _ in c.top_values[:8])}}}" for c in p.columns if c.is_enum()]
+            enum_cols = [f"{c.name} {{{', '.join(f'{v}={lbl}' if lbl else v for v, lbl in c.labelled_values()[:8])}}}"
+                         for c in p.columns if c.is_enum()]
             ctx_lines.append(f"- {p.entity} ({p.table_pattern}): {', '.join(c.name for c in p.columns[:30])}" + (f" | enum: {'; '.join(enum_cols[:6])}" if enum_cols else ""))
         prompt = (
             "Sen bir ERP semantik analistisin. Aşağıdaki şema profiline bakarak verilen Türkçe iş terimlerinin olası fiziksel karşılıklarını öner. "

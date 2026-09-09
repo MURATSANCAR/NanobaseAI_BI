@@ -1,4 +1,13 @@
-"""Fill only missing CRM catalog labels from exported published source metadata."""
+"""Fill only missing CRM catalog labels from exported published source metadata.
+
+Three things come across: what the source calls a table, what it calls a column, and what it calls
+each of a coded column's values. The last one is the difference between a prompt that reads
+`statuscode {1, 2, 100000001}` and one that reads `statuscode {1=Taslak, 100000001=İptal Edildi}` —
+and between a question about cancelled orders finding nothing and finding the code it means.
+
+Nothing already written is overwritten: a description the catalog holds, from whatever source, stands.
+Run without --apply first; the report says exactly what would change.
+"""
 import argparse
 from collections import defaultdict
 from copy import deepcopy
@@ -7,6 +16,7 @@ import json
 from pathlib import Path
 import sqlalchemy as sa
 from semantic_layer.config import SemanticSettings
+from semantic_layer.profiler.sensitivity import VALUE_SHAPE_REASONS as SHAPE_REASONS
 from semantic_layer.store.catalog_store import open_store
 from semantic_layer.store import schema as S
 
@@ -27,15 +37,37 @@ def label_text(rows, name_key):
     return None, 'NO_LABEL'
 
 
+def option_labels(rows):
+    """{code: word} for one column, in the source's own words.
+
+    A code named twice in the same language is dropped rather than picked between: two published
+    labels for one value means the customisation is ambiguous, and inventing a winner would put a
+    wrong word in front of every question that reads this column.
+    """
+    for language in ('1055', '1033'):
+        chosen = defaultdict(set)
+        for r in rows:
+            if str(r.get('LanguageId')) == language and str(r.get('Label') or '').strip():
+                chosen[str(r['Value'])].add(str(r['Label']).strip())
+        named = {code: next(iter(words)) for code, words in chosen.items() if len(words) == 1}
+        if named:
+            return named, language
+    return {}, 'NO_LABEL'
+
+
 def enrich(store, datasource, source, output, apply=False):
     attrs = defaultdict(list)
     entities = defaultdict(list)
+    options = defaultdict(list)
     for row in source['attributeLabels']:
         attrs[(row['BaseTableName'].upper(), row['PhysicalName'].upper())].append(row)
     for row in source['entityLabels']:
         entities[row['BaseTableName'].upper()].append(row)
+    for row in source.get('optionLabels') or []:
+        options[(row['BaseTableName'].upper(), row['PhysicalName'].upper())].append(row)
     report = {'applied': apply, 'source': 'Timas_MSCRM.MetadataSchema, published ComponentState=0',
-              'filledTables': 0, 'filledColumns': 0, 'tables': [], 'unresolved': []}
+              'filledTables': 0, 'filledColumns': 0, 'filledValueLabels': 0, 'namedCodes': 0,
+              'tables': [], 'unresolved': [], 'unflagged': []}
     before = []
     with store._lock, store.engine.begin() as conn:
         rows = conn.execute(sa.select(S.sl_schema_profile).where(
@@ -51,10 +83,35 @@ def enrich(store, datasource, source, output, apply=False):
                 if description:
                     report['filledTables'] += 1
                     changed = True
-            filled = 0
+            filled = coded = 0
             for col in cols:
+                key = (row['table_name'].upper(), col['name'].upper())
+                # The words for this column's codes, kept whether or not the column already has a
+                # description: they are a different fact about it, and one does not stand in for the
+                # other. Only the codes the data actually carries are kept — a status no row holds is
+                # not a filter anyone can usefully be offered.
+                named, _ = option_labels(options[key])
+                if named and not col.get('value_labels'):
+                    seen = {str(v) for v, _ in (col.get('top_values') or [])}
+                    kept = {c: w for c, w in named.items() if not seen or c in seen}
+                    if kept:
+                        col['value_labels'] = kept
+                        report['filledValueLabels'] += 1
+                        report['namedCodes'] += len(kept)
+                        coded += 1
+                        changed = True
+                # The source declaring this an option set settles what the values are, and a column
+                # of option codes holds no personal data. Only a guess made from the shape of the
+                # data is withdrawn: Dynamics numbers its options 100000001, which is nine digits and
+                # read as a phone number. A column whose *name* says personal data keeps its mark —
+                # the source naming its codes says nothing about what the column is for.
+                if named and col.get('sensitive') and col.get('sensitivity_reason') in SHAPE_REASONS:
+                    col['sensitive'] = False
+                    col['sensitivity_reason'] = None
+                    report['unflagged'].append({'table': row['table_name'], 'column': col['name']})
+                    changed = True
                 if col.get('description'): continue
-                text, language = label_text(attrs[(row['table_name'].upper(), col['name'].upper())], 'DisplayName')
+                text, language = label_text(attrs[key], 'DisplayName')
                 if text:
                     col['description'] = text
                     col.setdefault('derived', []).append({'source': 'crm_metadata_' + language, 'text': text})
@@ -63,7 +120,8 @@ def enrich(store, datasource, source, output, apply=False):
                     changed = True
                 else:
                     report['unresolved'].append({'table': row['table_name'], 'column': col['name'], 'status': language})
-            report['tables'].append({'table': row['table_name'], 'columns': len(cols), 'filledColumns': filled, 'description': description})
+            report['tables'].append({'table': row['table_name'], 'columns': len(cols), 'filledColumns': filled,
+                                     'filledValueLabels': coded, 'description': description})
             if changed:
                 before.append(dict(row))
                 if apply:

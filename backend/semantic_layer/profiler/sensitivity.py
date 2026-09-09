@@ -46,9 +46,29 @@ def name_is_sensitive(column: str) -> Optional[str]:
     return None
 
 
-def values_are_sensitive(values: Iterable[str], *, threshold: float = 0.6) -> Optional[str]:
+#: reasons drawn from the shape of the data rather than the name of the column
+VALUE_SHAPE_REASONS = frozenset(why for _, why in _VALUE_PATTERNS)
+
+#: Above this many distinct values a column is a list of things about people; at or below it, it is a
+#: set of codes. The same number the profiler uses to decide a column is an enum.
+CODE_SET_MAX = 64
+
+
+def values_are_sensitive(values: Iterable[str], *, threshold: float = 0.6,
+                         complete: bool = False) -> Optional[str]:
+    """Why these values look like personal data, or None.
+
+    `complete` says the values are the column's whole distinct set, not a sample. That changes what
+    the shapes can mean: a phone column holds one number per person, so a column whose entire
+    contents are a handful of values is a set of codes whatever those codes look like. Dynamics
+    numbers its options 100000001, which is nine digits and matched the phone shape exactly — 33
+    columns were withdrawn from the engine on that resemblance, among them the sales channel every
+    channel question needs and the order status that says which orders were cancelled.
+    """
     sample = [str(v) for v in values if str(v).strip()]
     if len(sample) < 3:
+        return None
+    if complete and len(sample) <= CODE_SET_MAX:
         return None
     for rx, why in _VALUE_PATTERNS:
         hits = sum(1 for v in sample if rx.match(v))

@@ -1264,7 +1264,11 @@ class ExistingCompiler:
                 if c.sensitive:
                     desc = " [kişisel veri — seçme/gruplama, değerleri istemde yok]"
                 elif c.is_enum() and c.meaningful_values():
-                    desc = " {" + ", ".join(v for v, _ in c.meaningful_values()[:10]) + "}"
+                    # A code with the source's word beside it, where the source gave one. Written as
+                    # `100000001=İptal Edildi`, so the model can both read the meaning and write the
+                    # filter — the value stays the code, which is what the column holds.
+                    desc = " {" + ", ".join(
+                        f"{v}={lbl}" if lbl else v for v, lbl in c.labelled_values()[:10]) + "}"
                 elif c.ref_entity:
                     desc = f" → {c.ref_entity}.{c.ref_column}"
                 if c.sentinel_values and not c.sensitive:

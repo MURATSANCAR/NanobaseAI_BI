@@ -375,7 +375,10 @@ class Profiler:
                 hint = self.c.distinct_hint(table, col["name"]) if hasattr(self.c, "distinct_hint") else None
                 # A column named innocuously can still hold personal data — check the sample too,
                 # and drop it before anything is stored.
-                reason = sensitivity.values_are_sensitive([v for v, _ in top])
+                # `top` is the column's complete distinct set when it fits under the enum ceiling —
+                # the query asks for one more than the ceiling precisely so this is knowable.
+                reason = sensitivity.values_are_sensitive(
+                    [v for v, _ in top], complete=len(top) <= self.enum_max_distinct)
                 if reason:
                     cp.sensitive, cp.sensitivity_reason, top = True, reason, []
                 if top and len(top) <= self.enum_max_distinct:

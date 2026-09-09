@@ -93,7 +93,13 @@ class ValueProbe:
             for col in p.columns:
                 if col.sensitive or not col.data_type:
                     continue
-                if not any(col.data_type.lower().startswith(t) for t in self.TEXT_TYPES):
+                # A coded column is not text and would be skipped here, which is exactly why
+                # "iptal edilen siparişler" used to find nothing: the words live in the source's own
+                # dictionary of those codes, not in the column. A column that carries that dictionary
+                # is searchable whatever its storage type — the search reads the words and returns
+                # the code they stand for.
+                if not col.value_labels and not any(
+                        col.data_type.lower().startswith(t) for t in self.TEXT_TYPES):
                     continue
                 # Every text column is a candidate; the ranking decides which are looked at first
                 # within the budget. Scoring only the inventoried ones and dropping the rest was a
@@ -103,6 +109,8 @@ class ValueProbe:
                 rank = 1.0
                 if (p.entity, col.name.upper()) in reached:
                     rank += 2.0
+                if col.value_labels:
+                    rank += 2.5          # the source named these values: its own words beat a guess
                 if col.is_enum():
                     rank += 1.5          # a short value list is what a category looks like
                 elif col.top_values:
@@ -129,7 +137,10 @@ class ValueProbe:
             # finds nothing and the question is refused over an accent.
             needle = fold(term)
             for value, count in (col.top_values or []):
-                if needle in fold(str(value)):
+                # The word the source gave this code counts as the value's own text. The hit still
+                # reports the code, because the code is what a filter has to be written against.
+                label = col.label_of(value) or ""
+                if needle in fold(str(value)) or (label and needle in fold(label)):
                     key = (prof.entity, col.name, str(value))
                     if key not in seen:
                         seen.add(key)
@@ -140,6 +151,11 @@ class ValueProbe:
             # every distinct value there is, so asking the database again can only return the same
             # rows more slowly. Everything else is asked.
             if col.is_enum() and col.top_values:
+                continue
+            # Likewise for a coded column: the dictionary above is the whole of what its values mean,
+            # and a LIKE over integers cannot add to it.
+            if col.value_labels and not any(
+                    col.data_type.lower().startswith(t) for t in self.TEXT_TYPES):
                 continue
             try:
                 for value, count in self._like(prof, col.name, term, self.budget - (time.perf_counter() - started)):

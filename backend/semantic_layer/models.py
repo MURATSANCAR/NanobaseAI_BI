@@ -169,9 +169,28 @@ class ColumnProfile:
     sensitivity_reason: Optional[str] = None
     sentinel_values: list[str] = field(default_factory=list)  # values that mean "absent" (0 on a reference, …)
     unit: Optional[str] = None            # documented unit/basis ("KDV dahil", "birim maliyet"): guards mixing
+    # What the source calls each coded value: {"100000001": "İptal Edildi"}. A code column profiles as
+    # a list of integers, and integers answer no question a person asks — "iptal edilen siparişler"
+    # matches nothing in {1, 2, 100000000, 100000001}. Where the source ships its own dictionary of
+    # those codes (a CRM option set, an ERP code table), the words go here: the value search reads
+    # them, and the prompt shows the code with its word rather than the code alone. Not a guess and
+    # not a derivation — the source's own words, kept beside its own codes.
+    value_labels: dict[str, str] = field(default_factory=dict)
 
     def is_enum(self) -> bool:
         return bool(self.top_values) and (self.distinct_count or 0) <= 64
+
+    def label_of(self, value: Any) -> Optional[str]:
+        """The source's word for one coded value, if it named it."""
+        return self.value_labels.get(str(value)) if self.value_labels else None
+
+    def labelled_values(self) -> list[tuple[str, Optional[str]]]:
+        """Observed values with the source's word beside each, sentinels removed.
+
+        Values the source named but the data never carries are left out: the prompt describes this
+        table as it is, and offering a status no row has invites a filter that returns nothing.
+        """
+        return [(v, self.label_of(v)) for v, _ in self.meaningful_values()]
 
     #: derived entries that describe the data rather than define the column
     FACTS = ("freshness",)
@@ -198,8 +217,14 @@ class ColumnProfile:
         return [d["text"] for d in self.derived if d.get("source") in self.FACTS]
 
     def meaningful_values(self) -> list[tuple[str, int]]:
-        """Observed values with the sentinels removed — what a business term may actually mean."""
-        return [(v, n) for v, n in self.top_values if v not in self.sentinel_values]
+        """Observed values with the sentinels removed — what a business term may actually mean.
+
+        A code the source itself named is never a sentinel, whatever it looks like. `statecode` is 0
+        on 332.463 of 333.063 orders and the detector read that as "no value entered"; the source
+        calls 0 "Etkin". Dropping it hid the only state nearly every row is in.
+        """
+        return [(v, n) for v, n in self.top_values
+                if v not in self.sentinel_values or v in self.value_labels]
 
 
 @dataclass
