@@ -1241,3 +1241,27 @@ def test_a_table_in_another_database_on_the_same_server_is_named_in_full():
     # ve izin listesi bu adı tanır, tanımadığını hâlâ reddeder
     assert allowed_tables(sql, [crm], {}, "tsql")[0]
     assert not allowed_tables("SELECT * FROM Timas_MSCRM.dbo.AuditBase", [crm], {}, "tsql")[0]
+
+
+def test_explicit_quantity_in_top_n_is_not_replaced_by_sales_amount(catalog, profiles):
+    _certify(catalog, "kitap", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    resolver = SemanticResolver(catalog, TENANT, DS, profiles)
+    for question in ["En çok satan 10 kitap (adet)", "En çok satan 5 kitap adet", "En çok satan on kitap adet", "kitap bazında satılan adet ilk 10"]:
+        sq = resolver.resolve(question, today=date(2026, 9, 9))
+        metrics = [slot for slot in sq.slots if slot.semantic_type == SemanticType.METRIC]
+        assert len(metrics) == 1, sq.to_dict()
+        assert "STLINE.AMOUNT" in metrics[0].mapping.formula
+        assert any(slot.mapping.entity == "ITEMS" for slot in sq.group_by)
+        assert not sq.clarification, sq.to_dict()
+
+
+def test_a_year_after_a_measure_is_not_a_physical_column_filter(catalog, profiles):
+    resolver = SemanticResolver(catalog, TENANT, DS, profiles)
+    resolver.column_names.add("CIRO")
+    for question in ["kanal bazında net ciro 2025", "net ciro 2024"]:
+        sq = resolver.resolve(question, today=date(2026, 9, 9))
+        assert not any(slot.status == "EXPLICIT" for slot in sq.slots), sq.to_dict()
+        assert not sq.unhandled, sq.to_dict()
+        assert sq.temporal[0].start.year in (2024, 2025)

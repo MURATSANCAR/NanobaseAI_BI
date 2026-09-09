@@ -1,0 +1,1542 @@
+[
+  {
+    "question": "2026 iade adedi",
+    "answer": {
+      "id": "cf3fee08aafd4e67b292a18f005e84b2",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "summary": "Iade adet: 740.413,00",
+      "resultId": "cf3fee08aafd4e67b292a18f005e84b2",
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "iade_adet",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "iade_adet": 740413.0
+        }
+      ],
+      "shownRows": 1,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788966839.949,
+      "widget": {
+        "id": "chat_dd5ee8c044c0",
+        "type": "kpi",
+        "title": "2026 iade adedi",
+        "value_key": "iade_adet",
+        "format": "number"
+      },
+      "threadId": "1f4b136bf8164d6fb1546c60fa3c7950",
+      "rowCount": 1,
+      "totalRows": 1,
+      "latency_ms": 26965,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 65,
+        "compile_ms": 21,
+        "run_sql_ms": 4689,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "2026 iade adedi",
+          "slots": [
+            {
+              "term": "iade adedi",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_e3f15b0bcd82",
+              "mapping": {
+                "concept_id": "sem_e3f15b0bcd82",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "iade_adedi"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "id": "map_0236f5a6e3c4"
+              },
+              "confidence": 0.65,
+              "explain": {
+                "normalized": "iade adet",
+                "sense": 1,
+                "version": 2,
+                "support": {
+                  "doc": 0,
+                  "llm": 0,
+                  "human": 1,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "HUMAN_ANNOTATION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": []
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2026",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "2026",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2026' → YEAR [2026-01-01, 2027-01-01)",
+            "'iade adedi' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) [CERTIFIED, 1 doğrulanmış sorgu, doküman 0, insan 1]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "ölçü: 'iade adedi' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END)",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "ölçü kapsamı: STLINE.[LINETYPE] = 0",
+          "ölçü kapsamı: STLINE.[TRCODE] IN (2, 3, 7, 8)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_d9063786bf10"
+    },
+    "status": "LIVE_PASS",
+    "referenceSQL": "WITH lines AS (SELECT AMOUNT,TRCODE FROM dbo.LG_211_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8) UNION ALL SELECT AMOUNT,TRCODE FROM dbo.LG_411_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8)) SELECT SUM(CASE WHEN TRCODE IN (2,3) THEN AMOUNT ELSE 0 END) value FROM lines",
+    "reference": [
+      {
+        "value": 740413.0
+      }
+    ],
+    "fullResult": {
+      "computedAt": 1788966839.949,
+      "question": "2026 iade adedi",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "columns": [
+        {
+          "name": "iade_adet",
+          "type": "float"
+        }
+      ],
+      "totalRows": 1,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "cf3fee08aafd4e67b292a18f005e84b2",
+      "records": [
+        {
+          "iade_adet": 740413.0
+        }
+      ]
+    }
+  },
+  {
+    "question": "2026 iade adet",
+    "answer": {
+      "id": "d9f14b50b8a34d54a6254f1c046bbe8c",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "summary": "Iade adet: 740.413,00",
+      "resultId": "d9f14b50b8a34d54a6254f1c046bbe8c",
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "iade_adet",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "iade_adet": 740413.0
+        }
+      ],
+      "shownRows": 1,
+      "truncated": false,
+      "cached": true,
+      "ageSec": 7.2,
+      "computedAt": 1788966839.949,
+      "widget": {
+        "id": "chat_7101fdf9852d",
+        "type": "kpi",
+        "title": "2026 iade adet",
+        "value_key": "iade_adet",
+        "format": "number"
+      },
+      "threadId": "da44b7f0da844264bcafcf1ca7576f61",
+      "rowCount": 1,
+      "totalRows": 1,
+      "latency_ms": 1467,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 120,
+        "compile_ms": 32,
+        "run_sql_ms": 187,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "2026 iade adet",
+          "slots": [
+            {
+              "term": "iade adet",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_e3f15b0bcd82",
+              "mapping": {
+                "concept_id": "sem_e3f15b0bcd82",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "iade_adedi"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "id": "map_0236f5a6e3c4"
+              },
+              "confidence": 0.65,
+              "explain": {
+                "normalized": "iade adet",
+                "sense": 1,
+                "version": 2,
+                "support": {
+                  "doc": 0,
+                  "llm": 0,
+                  "human": 1,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "HUMAN_ANNOTATION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": []
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2026",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "2026",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2026' → YEAR [2026-01-01, 2027-01-01)",
+            "'iade adet' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) [CERTIFIED, 1 doğrulanmış sorgu, doküman 0, insan 1]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "ölçü: 'iade adet' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END)",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "ölçü kapsamı: STLINE.[LINETYPE] = 0",
+          "ölçü kapsamı: STLINE.[TRCODE] IN (2, 3, 7, 8)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_6c156243eca5"
+    },
+    "status": "LIVE_PASS",
+    "referenceSQL": "WITH lines AS (SELECT AMOUNT,TRCODE FROM dbo.LG_211_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8) UNION ALL SELECT AMOUNT,TRCODE FROM dbo.LG_411_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8)) SELECT SUM(CASE WHEN TRCODE IN (2,3) THEN AMOUNT ELSE 0 END) value FROM lines",
+    "reference": [
+      {
+        "value": 740413.0
+      }
+    ],
+    "fullResult": {
+      "computedAt": 1788966839.949,
+      "question": "2026 iade adet",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) AS iade_adet FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "columns": [
+        {
+          "name": "iade_adet",
+          "type": "float"
+        }
+      ],
+      "totalRows": 1,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "d9f14b50b8a34d54a6254f1c046bbe8c",
+      "records": [
+        {
+          "iade_adet": 740413.0
+        }
+      ]
+    }
+  },
+  {
+    "question": "2026 iade oranı",
+    "answer": {
+      "id": "a9f28b0293024e0aab4544f7d41a606c",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[AMOUNT] ELSE 0 END), 0) AS iade_ora\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[AMOUNT] ELSE 0 END), 0) AS iade_ora FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "summary": "Iade ora: 0,09",
+      "resultId": "a9f28b0293024e0aab4544f7d41a606c",
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "iade_ora",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "iade_ora": 0.09158654324883332
+        }
+      ],
+      "shownRows": 1,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788966851.256,
+      "widget": {
+        "id": "chat_746bb81fe6de",
+        "type": "kpi",
+        "title": "2026 iade oranı",
+        "value_key": "iade_ora",
+        "format": "number"
+      },
+      "threadId": "2229e4cd37274e039f74a1a57ad1ca38",
+      "rowCount": 1,
+      "totalRows": 1,
+      "latency_ms": 2743,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 115,
+        "compile_ms": 37,
+        "run_sql_ms": 1340,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "2026 iade oranı",
+          "slots": [
+            {
+              "term": "iade orani",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_1198b0ef9333",
+              "mapping": {
+                "concept_id": "sem_1198b0ef9333",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END), 0)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "RATIO",
+                  "aliases": [
+                    "adet_iade_orani"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "id": "map_98426df42420"
+              },
+              "confidence": 0.65,
+              "explain": {
+                "normalized": "iade ora",
+                "sense": 1,
+                "version": 11,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": []
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2026",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "2026",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2026' → YEAR [2026-01-01, 2027-01-01)",
+            "'iade orani' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END), 0) [CERTIFIED, 1 doğrulanmış sorgu, doküman 1, insan 0]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "ölçü: 'iade orani' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END), 0)",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "ölçü kapsamı: STLINE.[LINETYPE] = 0",
+          "ölçü kapsamı: STLINE.[TRCODE] IN (2, 3, 7, 8)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_1d39a0d9e591"
+    },
+    "status": "LIVE_PASS",
+    "referenceSQL": "WITH lines AS (SELECT AMOUNT,TRCODE FROM dbo.LG_211_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8) UNION ALL SELECT AMOUNT,TRCODE FROM dbo.LG_411_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (2,3,7,8)) SELECT SUM(CASE WHEN TRCODE IN (2,3) THEN AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN TRCODE IN (7,8) THEN AMOUNT ELSE 0 END),0) value FROM lines",
+    "reference": [
+      {
+        "value": 0.09158654324883332
+      }
+    ],
+    "fullResult": {
+      "computedAt": 1788966851.256,
+      "question": "2026 iade oranı",
+      "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[AMOUNT] ELSE 0 END), 0) AS iade_ora\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[AMOUNT] ELSE 0 END), 0) AS iade_ora FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "columns": [
+        {
+          "name": "iade_ora",
+          "type": "float"
+        }
+      ],
+      "totalRows": 1,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "a9f28b0293024e0aab4544f7d41a606c",
+      "records": [
+        {
+          "iade_ora": 0.09158654324883332
+        }
+      ]
+    }
+  },
+  {
+    "question": "2026 kitap bazında satış tutarı ilk 10",
+    "answer": {
+      "id": "cc4d0c33422a475ca9974732dd1eaea8",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(STLINE.[LINENET]) AS satis_tutar\nFROM (SELECT '211' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[NAME]\nORDER BY satis_tutar DESC",
+      "physicalSql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(STLINE.[LINENET]) AS satis_tutar FROM (SELECT '211' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE JOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm] WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01' GROUP BY ITEMS.[NAME] ORDER BY satis_tutar DESC",
+      "summary": "10 satır döndü. İlk 3:\n1. Satis tutar 14.634.335,33 · İYİLİK TİMİ\n2. Satis tutar 10.726.309,39 · YILDIZLARA YAKIN\n3. Satis tutar 10.406.354,11 · ZERDALİ - DEDEMLE BİR YIL",
+      "resultId": "cc4d0c33422a475ca9974732dd1eaea8",
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "kitap",
+          "type": "str"
+        },
+        {
+          "name": "satis_tutar",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "kitap": "İYİLİK TİMİ",
+          "satis_tutar": 14634335.327852502
+        },
+        {
+          "kitap": "YILDIZLARA YAKIN",
+          "satis_tutar": 10726309.385328466
+        },
+        {
+          "kitap": "ZERDALİ - DEDEMLE BİR YIL",
+          "satis_tutar": 10406354.110000037
+        },
+        {
+          "kitap": "ANNE TERLİĞİ",
+          "satis_tutar": 9704192.133156493
+        },
+        {
+          "kitap": "VATANIN KALBİ",
+          "satis_tutar": 9615408.060236644
+        },
+        {
+          "kitap": "ŞİFAYI KAPTIK HASTANESİ",
+          "satis_tutar": 9100919.483138693
+        },
+        {
+          "kitap": "İÇİMDEKİ MÜZİK",
+          "satis_tutar": 8534220.914057063
+        },
+        {
+          "kitap": "SÖZCÜKLERİN KAMERA ARKASI",
+          "satis_tutar": 7970357.448016604
+        },
+        {
+          "kitap": "RAMAZAN HEDİYEM RAMAZAN PAKETİ",
+          "satis_tutar": 7700700.070000014
+        },
+        {
+          "kitap": "17 HAZİRAN",
+          "satis_tutar": 7529839.39
+        }
+      ],
+      "shownRows": 10,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788966855.168,
+      "widget": {
+        "id": "chat_800bbb722fe9",
+        "type": "bar",
+        "title": "2026 kitap bazında satış tutarı ilk 10",
+        "x_key": "kitap",
+        "y_key": "satis_tutar",
+        "label_key": "kitap",
+        "value_key": "satis_tutar"
+      },
+      "threadId": "f1202c88e21a4ae99909316956ecc76d",
+      "rowCount": 10,
+      "totalRows": 10,
+      "latency_ms": 2628,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 123,
+        "compile_ms": 41,
+        "run_sql_ms": 1408,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "2026 kitap bazında satış tutarı ilk 10",
+          "slots": [
+            {
+              "term": "satis tutari",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_67d025bf42fb",
+              "mapping": {
+                "concept_id": "sem_766d19b4056c",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(STLINE.LINENET)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "grain": "STLINE",
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (7,8)"
+                  ],
+                  "definition_source": "Positive-sales counterpart of certified net ciro sem_8542c8254c47"
+                },
+                "id": "map_d50fd1034624"
+              },
+              "confidence": 0.7,
+              "explain": {
+                "normalized": "satis tutar",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 2
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_8237ba62c988",
+                    "entity": "INVOICE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(INVOICE.NETTOTAL)",
+                    "extra": {
+                      "func": "SUM",
+                      "aliases": [
+                        "satis"
+                      ],
+                      "conditions": [
+                        "INVOICE.TRCODE IN (7,8,9)"
+                      ]
+                    },
+                    "confidence": 0.65
+                  },
+                  {
+                    "conceptId": "sem_766d19b4056c",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(STLINE.LINENET)",
+                    "extra": {
+                      "func": "SUM",
+                      "grain": "STLINE",
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)",
+                        "STLINE.TRCODE IN (7,8)"
+                      ],
+                      "definition_source": "Positive-sales counterpart of certified net ciro sem_8542c8254c47"
+                    },
+                    "confidence": 0.0
+                  }
+                ],
+                "grain_switch": "INVOICE → STLINE"
+              }
+            },
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "group_by"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2026",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "group_by"
+              }
+            }
+          ],
+          "limit": 10,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "2026",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'satis tutari' INVOICE seviyesinde tanımlı ama kırılım 'kitap' (ITEMS) daha ince; aynı terimin STLINE seviyesindeki tanımı kullanıldı",
+            "'2026' → YEAR [2026-01-01, 2027-01-01)",
+            "'satis tutari' → SUM(STLINE.LINENET) [CERTIFIED, 2 doğrulanmış sorgu, doküman 1, insan 0]",
+            "'kitap' → ITEMS.NAME [CERTIFIED]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "grup: 'kitap' → ITEMS.NAME",
+          "ölçü: 'satis tutari' → SUM(STLINE.LINENET)",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "ölçü kapsamı: STLINE.[LINETYPE] = 0",
+          "ölçü kapsamı: STLINE.[TRCODE] IN (7, 8)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)",
+          "ITEMS: dönemle kesişen tablolar okundu (LG_211_ITEMS, LG_411_ITEMS)",
+          "join dönem içinde kapalı: STLINE ↔ ITEMS, her dönem kendi kaydıyla"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_7fbba46364e9"
+    },
+    "status": "LIVE_PASS",
+    "referenceSQL": "WITH sales AS (SELECT p.NAME label,l.LINENET value FROM dbo.LG_211_01_STLINE l JOIN dbo.LG_211_ITEMS p ON p.LOGICALREF=l.STOCKREF WHERE l.DATE_ >= '20260101' AND l.DATE_ < '20270101' AND l.CANCELLED=0 AND l.LINETYPE=0 AND l.TRCODE IN (7,8) UNION ALL SELECT p.NAME label,l.LINENET value FROM dbo.LG_411_01_STLINE l JOIN dbo.LG_411_ITEMS p ON p.LOGICALREF=l.STOCKREF WHERE l.DATE_ >= '20260101' AND l.DATE_ < '20270101' AND l.CANCELLED=0 AND l.LINETYPE=0 AND l.TRCODE IN (7,8)) SELECT TOP 10 label,SUM(value) value FROM sales GROUP BY label ORDER BY value DESC",
+    "reference": [
+      {
+        "label": "İYİLİK TİMİ",
+        "value": 14634335.327852502
+      },
+      {
+        "label": "YILDIZLARA YAKIN",
+        "value": 10726309.385328466
+      },
+      {
+        "label": "ZERDALİ - DEDEMLE BİR YIL",
+        "value": 10406354.110000037
+      },
+      {
+        "label": "ANNE TERLİĞİ",
+        "value": 9704192.133156493
+      },
+      {
+        "label": "VATANIN KALBİ",
+        "value": 9615408.060236644
+      },
+      {
+        "label": "ŞİFAYI KAPTIK HASTANESİ",
+        "value": 9100919.483138692
+      },
+      {
+        "label": "İÇİMDEKİ MÜZİK",
+        "value": 8534220.914057063
+      },
+      {
+        "label": "SÖZCÜKLERİN KAMERA ARKASI",
+        "value": 7970357.448016604
+      },
+      {
+        "label": "RAMAZAN HEDİYEM RAMAZAN PAKETİ",
+        "value": 7700700.070000014
+      },
+      {
+        "label": "17 HAZİRAN",
+        "value": 7529839.39
+      }
+    ],
+    "fullResult": {
+      "computedAt": 1788966855.168,
+      "question": "2026 kitap bazında satış tutarı ilk 10",
+      "sql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(STLINE.[LINENET]) AS satis_tutar\nFROM (SELECT '211' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[NAME]\nORDER BY satis_tutar DESC",
+      "physicalSql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(STLINE.[LINENET]) AS satis_tutar FROM (SELECT '211' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [STOCKREF], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE JOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm] WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01' GROUP BY ITEMS.[NAME] ORDER BY satis_tutar DESC",
+      "columns": [
+        {
+          "name": "kitap",
+          "type": "str"
+        },
+        {
+          "name": "satis_tutar",
+          "type": "float"
+        }
+      ],
+      "totalRows": 10,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "cc4d0c33422a475ca9974732dd1eaea8",
+      "records": [
+        {
+          "kitap": "İYİLİK TİMİ",
+          "satis_tutar": 14634335.327852502
+        },
+        {
+          "kitap": "YILDIZLARA YAKIN",
+          "satis_tutar": 10726309.385328466
+        },
+        {
+          "kitap": "ZERDALİ - DEDEMLE BİR YIL",
+          "satis_tutar": 10406354.110000037
+        },
+        {
+          "kitap": "ANNE TERLİĞİ",
+          "satis_tutar": 9704192.133156493
+        },
+        {
+          "kitap": "VATANIN KALBİ",
+          "satis_tutar": 9615408.060236644
+        },
+        {
+          "kitap": "ŞİFAYI KAPTIK HASTANESİ",
+          "satis_tutar": 9100919.483138693
+        },
+        {
+          "kitap": "İÇİMDEKİ MÜZİK",
+          "satis_tutar": 8534220.914057063
+        },
+        {
+          "kitap": "SÖZCÜKLERİN KAMERA ARKASI",
+          "satis_tutar": 7970357.448016604
+        },
+        {
+          "kitap": "RAMAZAN HEDİYEM RAMAZAN PAKETİ",
+          "satis_tutar": 7700700.070000014
+        },
+        {
+          "kitap": "17 HAZİRAN",
+          "satis_tutar": 7529839.39
+        }
+      ]
+    }
+  }
+]

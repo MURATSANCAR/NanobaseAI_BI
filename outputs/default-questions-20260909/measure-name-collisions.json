@@ -1,0 +1,276 @@
+[
+  {
+    "name": "satilan adet",
+    "senses": [
+      {
+        "id": "sem_0777c0af5563",
+        "term": "adet",
+        "version": 10,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(STLINE.AMOUNT)",
+            "{\"aliases\": [\"adet\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (7,8)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_c7c4b595ee6a",
+        "term": "satilan adet",
+        "version": 2,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END)",
+            "{\"aliases\": [\"satilan_adet\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (2,3,7,8)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "brut kar marj",
+    "senses": [
+      {
+        "id": "sem_41756fb8ce6e",
+        "term": "brut kar marji",
+        "version": 12,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "1 - SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+            "{\"aliases\": [\"brut_kar_marji\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (2,3,7,8)\"], \"func\": \"EXPR\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_43e580d82434",
+        "term": "brut kar marji",
+        "version": 12,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "(1 - SUM(STLINE.AMOUNT * STLINE.OUTCOST) / NULLIF(SUM(STLINE.TOTAL), 0)) * 100",
+            "{\"aliases\": [\"brut_kar_marji_yuzde\"], \"conditions\": [\"STLINE.LINETYPE = (0)\"], \"func\": \"EXPR\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_dc50518f2b7e",
+        "term": "brut kar marji",
+        "version": 12,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "1 - SUM(CASE WHEN STLINE.LINETYPE = 0 AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.LINETYPE = 0 AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+            "{\"aliases\": [\"brut_kar_marji\"], \"conditions\": [\"STLINE.TRCODE IN (7,8)\"], \"func\": \"EXPR\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "net ciro",
+    "senses": [
+      {
+        "id": "sem_027f9813d2a7",
+        "term": "net ciro",
+        "version": 10,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"INVOICE.TRCODE IN (2,3,7,8,9)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_8542c8254c47",
+        "term": "net ciro",
+        "version": 14,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (2,3,7,8)\"], \"func\": \"SUM\", \"grain\": \"STLINE\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "net satis tutar",
+    "senses": [
+      {
+        "id": "sem_8e786faea0cc",
+        "term": "net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"INVOICE.TRCODE IN (2,3,7,8,9)\"], \"definition_source\": \"Existing certified net ciro sem_027f9813d2a7\", \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_7906e54d434d",
+        "term": "net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (2,3,7,8)\"], \"definition_source\": \"Existing certified net ciro sem_8542c8254c47\", \"func\": \"SUM\", \"grain\": \"STLINE\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "perakende net satis tutar",
+    "senses": [
+      {
+        "id": "sem_b27051be5e7a",
+        "term": "perakende net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"INVOICE.TRCODE IN (2,7)\"], \"definition_source\": \"Existing certified net ciro sem_027f9813d2a7\", \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_07f26b7c8865",
+        "term": "perakende net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (2,7)\"], \"definition_source\": \"Existing certified net ciro sem_8542c8254c47\", \"func\": \"SUM\", \"grain\": \"STLINE\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "satis",
+    "senses": [
+      {
+        "id": "sem_8237ba62c988",
+        "term": "satis",
+        "version": 2,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(INVOICE.NETTOTAL)",
+            "{\"aliases\": [\"satis\"], \"conditions\": [\"INVOICE.TRCODE IN (7,8,9)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_67d025bf42fb",
+        "term": "satis tutari",
+        "version": 10,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+            "{\"aliases\": [\"satis_tutari\"], \"conditions\": [\"INVOICE.TRCODE IN (2,3,7,8,9)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "satis tutar",
+    "senses": [
+      {
+        "id": "sem_8237ba62c988",
+        "term": "satis",
+        "version": 2,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(INVOICE.NETTOTAL)",
+            "{\"aliases\": [\"satis\"], \"conditions\": [\"INVOICE.TRCODE IN (7,8,9)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_67d025bf42fb",
+        "term": "satis tutari",
+        "version": 10,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+            "{\"aliases\": [\"satis_tutari\"], \"conditions\": [\"INVOICE.TRCODE IN (2,3,7,8,9)\"], \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_766d19b4056c",
+        "term": "satis tutari",
+        "version": 2,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(STLINE.LINENET)",
+            "{\"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (7,8)\"], \"definition_source\": \"Positive-sales counterpart of certified net ciro sem_8542c8254c47\", \"func\": \"SUM\", \"grain\": \"STLINE\"}"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "toptan net satis tutar",
+    "senses": [
+      {
+        "id": "sem_4c0cccf6db24",
+        "term": "toptan net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "INVOICE",
+            null,
+            "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"INVOICE.TRCODE IN (3,8)\"], \"definition_source\": \"Existing certified net ciro sem_027f9813d2a7\", \"func\": \"SUM\"}"
+          ]
+        ]
+      },
+      {
+        "id": "sem_9ca861f646b5",
+        "term": "toptan net satış tutarı",
+        "version": 2,
+        "signature": [
+          [
+            "STLINE",
+            null,
+            "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+            "{\"aliases\": [\"net_ciro\"], \"conditions\": [\"STLINE.LINETYPE = (0)\", \"STLINE.TRCODE IN (3,8)\"], \"definition_source\": \"Existing certified net ciro sem_8542c8254c47\", \"func\": \"SUM\", \"grain\": \"STLINE\"}"
+          ]
+        ]
+      }
+    ]
+  }
+]

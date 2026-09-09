@@ -1,0 +1,1555 @@
+[
+  {
+    "question": "En çok iade alan 10 müşteri",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "358670d873e4487cbf7d3bf096075893",
+      "type": "CLARIFICATION",
+      "needs_clarification": true,
+      "explanation": "‘alan’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?",
+      "threadId": "6fc4150ebfae48e2a9e1d63ae6824e40",
+      "timings": {
+        "resolve_ms": 115,
+        "compile_ms": 0
+      },
+      "semantic": {
+        "query": {
+          "question": "En çok iade alan 10 müşteri",
+          "slots": [
+            {
+              "term": "iade",
+              "semanticType": "DIMENSION_VALUE",
+              "status": "CERTIFIED",
+              "conceptId": "sem_0fbd7eef76c0",
+              "mapping": {
+                "concept_id": "sem_0fbd7eef76c0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "TRCODE",
+                "operator": "IN",
+                "values": [
+                  "2",
+                  "3"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_e295a16f3718"
+              },
+              "confidence": 0.75,
+              "explain": {
+                "normalized": "iade",
+                "sense": 3,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "EXECUTION",
+                  "PROFILE",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_7a0ff9c9f8d2",
+                    "entity": "APPROVAL",
+                    "tablePattern": "LG_{n0}_{n1}_APPROVAL",
+                    "column": "TRCODE",
+                    "operator": "IN",
+                    "values": [
+                      "2",
+                      "3"
+                    ],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.0
+                  }
+                ],
+                "equivalent_bindings": [
+                  {
+                    "entity": "INVOICE",
+                    "column": "TRCODE",
+                    "operator": "IN",
+                    "values": [
+                      "2",
+                      "3"
+                    ],
+                    "join": [
+                      "STLINE",
+                      "INVOICEREF",
+                      "INVOICE",
+                      "LOGICALREF"
+                    ],
+                    "source": "declared_business_filter",
+                    "reason": "Satış iadesi kodları 2 ve 3, fatura başlığı ve bağlı satış satırında aynı işlemi seçer."
+                  }
+                ]
+              }
+            },
+            {
+              "term": "musteri",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_94d9bdabac96",
+              "mapping": {
+                "concept_id": "sem_94d9bdabac96",
+                "entity": "CLCARD",
+                "table_pattern": "LG_{n0}_CLCARD",
+                "column": "DEFINITION_",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {
+                  "join_kind": "LEFT",
+                  "registered_by": "enduser-10000-20260909",
+                  "definition_source": {
+                    "payment": "line-specific plan when nonzero, otherwise invoice plan; unresolved reference retained as NULL",
+                    "customer": "invoice customer for invoice-based sales reporting",
+                    "salesperson": "invoice salesperson for invoice-based sales reporting",
+                    "source_payment": "https://www.sdmyazilim.com.tr/var/uploads/1500469815-finans.pdf",
+                    "source_salesperson": "https://www.sdmyazilim.com.tr/var/uploads/1500477553-fatura.pdf"
+                  },
+                  "reference_resolution": {
+                    "STLINE": {
+                      "via": "INVOICE",
+                      "via_key": "LOGICALREF",
+                      "via_column": "INVOICEREF",
+                      "target_column": "LOGICALREF",
+                      "fallback_column": "CLIENTREF"
+                    }
+                  }
+                },
+                "id": "map_fe37ac3a42f4"
+              },
+              "confidence": 0.0,
+              "explain": {
+                "normalized": "muster",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [],
+                "alternatives": []
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "varsayılan",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026,
+                "default": true
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [
+            "alan"
+          ],
+          "modifiers": [
+            {
+              "token": "alan",
+              "position": 3,
+              "decision": "UNKNOWN",
+              "evidence_source": "none",
+              "structural_candidate": false,
+              "light_verb_hint": false,
+              "recovered": true
+            }
+          ],
+          "clarification": [
+            "‘alan’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+          ],
+          "modifierTelemetry": {
+            "modifier_seen": 1,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 1,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 1,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [],
+          "temporalBinding": null,
+          "absenceContract": null,
+          "fullyResolved": false,
+          "state": "PARTIAL",
+          "refusalReason": null,
+          "explanation": [
+            "dönem belirtilmedi → varsayılan YEAR uygulandı",
+            "'varsayılan' → YEAR [2026-01-01, 2027-01-01)",
+            "'alan' niteleyici: UNKNOWN (kanıt: none)",
+            "'iade' → STLINE.TRCODE IN (2, 3) [CERTIFIED, 1 doğrulanmış sorgu, doküman 1, insan 0]",
+            "'musteri' → CLCARD.DEFINITION_ [CERTIFIED]",
+            "karşılanamayan niteleyiciler: alan"
+          ]
+        },
+        "compiler": "clarification",
+        "certified": false,
+        "explain": [
+          "‘alan’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_fbf893bee79f"
+    },
+    "responseType": "CLARIFICATION",
+    "note": "Non-SQL response; not counted as semantic answer success."
+  },
+  {
+    "question": "iptal edilen kaç sipariş var",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "fcd130a7a1704d1cbb5b1772ade63610",
+      "type": "CLARIFICATION",
+      "needs_clarification": true,
+      "explanation": "‘edilen’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?",
+      "threadId": "a494a5bdbdc0491b9ddbf2f8cd630850",
+      "timings": {
+        "resolve_ms": 131,
+        "compile_ms": 0
+      },
+      "semantic": {
+        "query": {
+          "question": "iptal edilen kaç sipariş var",
+          "slots": [
+            {
+              "term": "siparis",
+              "semanticType": "METRIC",
+              "status": "INFERRED",
+              "conceptId": "sem_3a353cbf5de7",
+              "mapping": {
+                "concept_id": "sem_3a353cbf5de7",
+                "entity": "ORFICHE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_ORFICHE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "COUNT(DISTINCT ORFICHE.LOGICALREF)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "COUNT_DISTINCT",
+                  "aliases": [
+                    "siparis_sayisi"
+                  ],
+                  "conditions": []
+                },
+                "id": "map_387be3a9ba8b"
+              },
+              "confidence": 0.65,
+              "explain": {
+                "normalized": "siparis sayi",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "why": "'siparis' katalogda yalnız 'siparis sayi' teriminin içinde geçiyor"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "varsayılan",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026,
+                "default": true
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [
+            "edilen"
+          ],
+          "modifiers": [
+            {
+              "token": "edilen",
+              "position": 1,
+              "decision": "UNKNOWN",
+              "evidence_source": "none",
+              "structural_candidate": false,
+              "light_verb_hint": true,
+              "recovered": true
+            }
+          ],
+          "clarification": [
+            "‘edilen’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+          ],
+          "modifierTelemetry": {
+            "modifier_seen": 1,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 1,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 1,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [
+            {
+              "term": "iptal",
+              "column": "IPTAL_DURUMU",
+              "entities": [
+                "MIND_CARI_HAREKET_ANALIZI"
+              ],
+              "score": 31.72,
+              "runnerUp": 11.88
+            }
+          ],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "ORFICHE",
+              "period": {
+                "text": "varsayılan",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026,
+                  "default": true
+                }
+              },
+              "status": "PARTIAL_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2026-08-17",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "ORFICHE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": []
+          },
+          "absenceContract": null,
+          "fullyResolved": false,
+          "state": "PARTIAL",
+          "refusalReason": null,
+          "explanation": [
+            "dönem belirtilmedi → varsayılan YEAR uygulandı",
+            "'varsayılan' → YEAR [2026-01-01, 2027-01-01)",
+            "'edilen' niteleyici: UNKNOWN (kanıt: none)",
+            "'varsayılan' dönemi kısmen gözleniyor: ORFICHE kayıtları 2015-01-01–2026-08-17. Yükleme bütünlüğü doğrulanmadı; sonuç yalnız mevcut kayıtlara aittir.",
+            "'siparis' → COUNT(DISTINCT ORFICHE.LOGICALREF) [INFERRED, 1 doğrulanmış sorgu, doküman 1, insan 0]",
+            "karşılanamayan niteleyiciler: edilen"
+          ]
+        },
+        "compiler": "clarification",
+        "certified": false,
+        "explain": [
+          "‘edilen’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+        ],
+        "catalogVersion": 14
+      },
+      "queryId": "q_9cb2bd075eb3"
+    },
+    "responseType": "CLARIFICATION",
+    "note": "Non-SQL response; not counted as semantic answer success."
+  },
+  {
+    "question": "kitap olmayanlardan en çok 10 satılan ürün",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "8d7c0970eced44c08a26f6d2e0cfd9f9",
+      "type": "NON_SQL_QUERY",
+      "explanation": "Bu soruyu cevaplayamıyorum: 'olmayanlardan' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz.",
+      "threadId": "d03ef326864a4cbab9a89c9381d0f938",
+      "timings": {
+        "resolve_ms": 164,
+        "compile_ms": 4241,
+        "llm_ms": 4171,
+        "queue_wait_ms": 15
+      },
+      "semantic": {
+        "query": {
+          "question": "kitap olmayanlardan en çok 10 satılan ürün",
+          "slots": [
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "rank_group_by"
+              }
+            },
+            {
+              "term": "urun",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "urun",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [],
+                "role": "rank_group_by"
+              }
+            },
+            {
+              "term": "satilan",
+              "semanticType": "METRIC",
+              "status": "INFERRED",
+              "conceptId": "sem_0777c0af5563",
+              "mapping": {
+                "concept_id": "sem_0777c0af5563",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(STLINE.AMOUNT)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "adet"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (7,8)"
+                  ]
+                },
+                "id": "map_506aa75c8b0e"
+              },
+              "confidence": 0.65,
+              "explain": {
+                "normalized": "satilan adet",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 1
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_c7c4b595ee6a",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END)",
+                    "extra": {
+                      "func": "SUM",
+                      "aliases": [
+                        "satilan_adet"
+                      ],
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)",
+                        "STLINE.TRCODE IN (2,3,7,8)"
+                      ]
+                    },
+                    "confidence": 0.65
+                  }
+                ],
+                "why": "'satilan' fiilinin kökü (satil) yalnız 'satilan adet' ölçüsüyle eşleşiyor",
+                "source": "verb_root",
+                "evidence_key": "satilan adet"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [
+            "olmayanlardan"
+          ],
+          "temporal": [
+            {
+              "text": "varsayılan",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026,
+                "default": true
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "rank_group_by"
+              }
+            },
+            {
+              "term": "urun",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "urun",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [],
+                "role": "rank_group_by"
+              }
+            }
+          ],
+          "limit": 10,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [
+            {
+              "token": "satilan",
+              "position": 5,
+              "decision": "SEMANTIC",
+              "evidence_source": "catalog",
+              "structural_candidate": false,
+              "light_verb_hint": false,
+              "recovered": true,
+              "concept_ids": [
+                "sem_0777c0af5563"
+              ],
+              "resolved_as": "METRIC:INFERRED"
+            }
+          ],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 1,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 1,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 1,
+            "modifier_recovered": 1,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "varsayılan",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026,
+                  "default": true
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": false,
+          "state": "PARTIAL",
+          "refusalReason": null,
+          "explanation": [
+            "dönem belirtilmedi → varsayılan YEAR uygulandı",
+            "'varsayılan' → YEAR [2026-01-01, 2027-01-01)",
+            "'satilan' niteleyici: SEMANTIC (kanıt: catalog)",
+            "'kitap' → ITEMS.NAME [CERTIFIED]",
+            "'urun' → ITEMS.NAME [CERTIFIED]",
+            "'satilan' → SUM(STLINE.AMOUNT) [INFERRED, 1 doğrulanmış sorgu, doküman 1, insan 0]",
+            "katalogda karşılığı olmayan terimler: olmayanlardan"
+          ]
+        },
+        "compiler": "existing_llm",
+        "certified": false,
+        "explain": [
+          "Bu soruyu cevaplayamıyorum: 'olmayanlardan' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_8e3d5ae9e333"
+    },
+    "responseType": "NON_SQL_QUERY",
+    "note": "Non-SQL response; not counted as semantic answer success."
+  },
+  {
+    "question": "En çok satan 10 kitap",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "f7b4285d8ea84d6b8b0aa0f95c172403",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_WFTASK] AS WFTASK ON INVOICE.[WFLOWCRDREF] = WFTASK.[LOGICALREF]\nJOIN [dbo].[LG_411_ITEMS] AS ITEMS ON WFTASK.[RECORDREF] = ITEMS.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[NAME]\nORDER BY satis DESC",
+      "physicalSql": "SELECT TOP 10 ITEMS.[NAME] AS kitap, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis FROM [dbo].[LG_411_01_INVOICE] AS INVOICE JOIN [dbo].[LG_411_WFTASK] AS WFTASK ON INVOICE.[WFLOWCRDREF] = WFTASK.[LOGICALREF] JOIN [dbo].[LG_411_ITEMS] AS ITEMS ON WFTASK.[RECORDREF] = ITEMS.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01' GROUP BY ITEMS.[NAME] ORDER BY satis DESC",
+      "summary": "Sorgu sonuç döndürmedi. 'varsayılan' dönemi kısmen gözleniyor: INVOICE kayıtları 2015-01-01–2026-08-17. Yükleme bütünlüğü doğrulanmadı; sonuç yalnız mevcut kayıtlara aittir.",
+      "resultId": "f7b4285d8ea84d6b8b0aa0f95c172403",
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "varsayılan",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026,
+              "default": true
+            }
+          },
+          "status": "PARTIAL_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "kitap",
+          "type": "str"
+        },
+        {
+          "name": "satis",
+          "type": "float"
+        }
+      ],
+      "records": [],
+      "shownRows": 0,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788967350.061,
+      "widget": null,
+      "threadId": "5d62921be5bf4f6e84f4585e8e4ff894",
+      "rowCount": 0,
+      "totalRows": 0,
+      "latency_ms": 4083,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 64,
+        "compile_ms": 27,
+        "queue_wait_ms": 15,
+        "run_sql_ms": 623,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "En çok satan 10 kitap",
+          "slots": [
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "rank_group_by"
+              }
+            },
+            {
+              "term": "satan",
+              "semanticType": "METRIC",
+              "status": "INFERRED",
+              "conceptId": "sem_67d025bf42fb",
+              "mapping": {
+                "concept_id": "sem_67d025bf42fb",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "satis_tutari"
+                  ],
+                  "conditions": [
+                    "INVOICE.TRCODE IN (2,3,7,8,9)"
+                  ]
+                },
+                "id": "map_79f6fb6e7da3"
+              },
+              "confidence": 0.7,
+              "explain": {
+                "normalized": "satis",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 2
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_8237ba62c988",
+                    "entity": "INVOICE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(INVOICE.NETTOTAL)",
+                    "extra": {
+                      "func": "SUM",
+                      "aliases": [
+                        "satis"
+                      ],
+                      "conditions": [
+                        "INVOICE.TRCODE IN (7,8,9)"
+                      ]
+                    },
+                    "confidence": 0.65
+                  }
+                ],
+                "why": "'satan' fiilinin kökü (sat) yalnız 'satis' ölçüsüyle eşleşiyor",
+                "source": "verb_root",
+                "evidence_key": "satis"
+              }
+            },
+            {
+              "term": "invoice default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_f5496ecdb504",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_ba0006d12709"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "varsayılan",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026,
+                "default": true
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kitap",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_92ac0bd37a50",
+              "mapping": {
+                "concept_id": "sem_92ac0bd37a50",
+                "entity": "ITEMS",
+                "table_pattern": "LG_{n0}_ITEMS",
+                "column": "NAME",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_cb1e6ae53808"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "normalized": "kitap",
+                "sense": 1,
+                "version": 2,
+                "support": {},
+                "evidence_types": [
+                  "HUMAN_ANNOTATION"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_85d8ed139fdc",
+                    "entity": "ITEMS",
+                    "tablePattern": "DBO_LG_{n0}_ITEMS",
+                    "column": "NAME",
+                    "operator": "COLUMN",
+                    "values": [],
+                    "formula": null,
+                    "extra": {},
+                    "confidence": 0.8
+                  }
+                ],
+                "role": "rank_group_by"
+              }
+            }
+          ],
+          "limit": 10,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [
+            {
+              "token": "satan",
+              "position": 2,
+              "decision": "SEMANTIC",
+              "evidence_source": "catalog",
+              "structural_candidate": false,
+              "light_verb_hint": false,
+              "recovered": true,
+              "concept_ids": [
+                "sem_67d025bf42fb"
+              ],
+              "resolved_as": "METRIC:INFERRED"
+            }
+          ],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 1,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 1,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 1,
+            "modifier_recovered": 1,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "INVOICE",
+              "period": {
+                "text": "varsayılan",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026,
+                  "default": true
+                }
+              },
+              "status": "PARTIAL_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2026-08-17",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "INVOICE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "STLINE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'satan' INVOICE seviyesinde ölçülüyor; 'kitap' (ITEMS) kırılımı daha ince ve bu ölçüyü satırlara bölecek bir tanım katalogda yok — bölünürse çıkan rakam her satırda tekrar eder",
+            "dönem belirtilmedi → varsayılan YEAR uygulandı",
+            "'varsayılan' → YEAR [2026-01-01, 2027-01-01)",
+            "'satan' niteleyici: SEMANTIC (kanıt: catalog)",
+            "'varsayılan' dönemi kısmen gözleniyor: INVOICE kayıtları 2015-01-01–2026-08-17. Yükleme bütünlüğü doğrulanmadı; sonuç yalnız mevcut kayıtlara aittir.",
+            "'kitap' → ITEMS.NAME [CERTIFIED]",
+            "'satan' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END) [INFERRED, 2 doğrulanmış sorgu, doküman 1, insan 0]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "grup: 'kitap' → ITEMS.NAME",
+          "ölçü: 'satan' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+          "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+          "ölçü kapsamı: INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "INVOICE: dönemle kesişen tablolar okundu (LG_411_01_INVOICE)",
+          "WFTASK: dönemle kesişen tablolar okundu (LG_411_WFTASK); aynı dönemin ikinci kopyası okunmadı: LG_211_WFTASK (okunan: LG_411_WFTASK) — iki kez sayılmasın diye",
+          "ITEMS: dönemle kesişen tablolar okundu (LG_411_ITEMS)"
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_fae9bedc1e29"
+    },
+    "responseType": "TEXT_TO_SQL",
+    "note": "SQL response; no independent business oracle for this ambiguous wording."
+  },
+  {
+    "question": "2026 brüt kâr marjı",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "763dab440c844865819b0698146139f6",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT 1 - SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[AMOUNT] * STLINE.[OUTCOST] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[TOTAL] ELSE 0 END), 0) AS brut_kar_marj\nFROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [OUTCOST], [TOTAL], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [OUTCOST], [TOTAL], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "physicalSql": "SELECT 1 - SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[AMOUNT] * STLINE.[OUTCOST] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[TOTAL] ELSE 0 END), 0) AS brut_kar_marj FROM (SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [OUTCOST], [TOTAL], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT [AMOUNT], [CANCELLED], [DATE_], [LINETYPE], [OUTCOST], [TOTAL], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE WHERE STLINE.[CANCELLED] = 0 AND STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND STLINE.[TRCODE] IN (2, 3, 7, 8) AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'",
+      "summary": "Brut kar marj: 0,86",
+      "resultId": "763dab440c844865819b0698146139f6",
+      "dataCoverage": [
+        {
+          "entity": "STLINE",
+          "period": {
+            "text": "2026",
+            "primitive": "YEAR",
+            "start": "2026-01-01",
+            "end": "2027-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2026
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2030-03-20",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "brut_kar_marj",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "brut_kar_marj": 0.8643811707976318
+        }
+      ],
+      "shownRows": 1,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788967352.215,
+      "widget": {
+        "id": "chat_160affeb17b1",
+        "type": "kpi",
+        "title": "2026 brüt kâr marjı",
+        "value_key": "brut_kar_marj",
+        "format": "number"
+      },
+      "threadId": "2d795a111dd94ed3acebe8067ec8052e",
+      "rowCount": 1,
+      "totalRows": 1,
+      "latency_ms": 2143,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 115,
+        "compile_ms": 39,
+        "queue_wait_ms": 15,
+        "run_sql_ms": 1173,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "2026 brüt kâr marjı",
+          "slots": [
+            {
+              "term": "brut kar marji",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_41756fb8ce6e",
+              "mapping": {
+                "concept_id": "sem_41756fb8ce6e",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "1 - SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "EXPR",
+                  "aliases": [
+                    "brut_kar_marji"
+                  ],
+                  "conditions": [
+                    "STLINE.LINETYPE = (0)",
+                    "STLINE.TRCODE IN (2,3,7,8)"
+                  ]
+                },
+                "id": "map_0166b6be886d"
+              },
+              "confidence": 0.7,
+              "explain": {
+                "normalized": "brut kar marj",
+                "sense": 1,
+                "version": 12,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 2
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_43e580d82434",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "(1 - SUM(STLINE.AMOUNT * STLINE.OUTCOST) / NULLIF(SUM(STLINE.TOTAL), 0)) * 100",
+                    "extra": {
+                      "func": "EXPR",
+                      "aliases": [
+                        "brut_kar_marji_yuzde"
+                      ],
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)"
+                      ]
+                    },
+                    "confidence": 0.65
+                  },
+                  {
+                    "conceptId": "sem_dc50518f2b7e",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "1 - SUM(CASE WHEN STLINE.LINETYPE = 0 AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.LINETYPE = 0 AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+                    "extra": {
+                      "func": "EXPR",
+                      "aliases": [
+                        "brut_kar_marji"
+                      ],
+                      "conditions": [
+                        "STLINE.TRCODE IN (7,8)"
+                      ]
+                    },
+                    "confidence": 0.65
+                  }
+                ]
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_73301e73363a",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_bd18802c7cd4"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            },
+            {
+              "term": "stline default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_6a7a890e4cb0",
+                "entity": "STLINE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_STLINE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_4f2bb102e9c1"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2026",
+              "primitive": "YEAR",
+              "start": "2026-01-01",
+              "end": "2027-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2026
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "STLINE",
+              "period": {
+                "text": "2026",
+                "primitive": "YEAR",
+                "start": "2026-01-01",
+                "end": "2027-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2026
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2030-03-20",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "STLINE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "INVOICE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2026' → YEAR [2026-01-01, 2027-01-01)",
+            "'brut kar marji' → 1 - SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0) [CERTIFIED, 2 doğrulanmış sorgu, doküman 1, insan 0]"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "ölçü: 'brut kar marji' → 1 - SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "varsayılan filtre: STLINE.CANCELLED = ['0']",
+          "ölçü kapsamı: STLINE.[LINETYPE] = 0",
+          "ölçü kapsamı: STLINE.[TRCODE] IN (2, 3, 7, 8)",
+          "dönem: YEAR [2026-01-01, 2027-01-01)",
+          "STLINE: dönemle kesişen tablolar okundu (LG_211_01_STLINE, LG_411_01_STLINE)"
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_46ed56dcce30"
+    },
+    "responseType": "TEXT_TO_SQL",
+    "note": "SQL response; no independent business oracle for this ambiguous wording."
+  },
+  {
+    "question": "test",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "bea0dbe462144563804a962b1450ea6b",
+      "type": "MODULE_INTRO",
+      "module": "bi",
+      "explanation": "Ben ZEKİ AI. İş zekâsı modülünde satış, finans, stok ve müşteri verilerinizi analiz etmek ve raporlamak için buradayım. Verilerinizle ilgili ne öğrenmek istersiniz?",
+      "threadId": "68024589261f4026b992f4a3a6e27852",
+      "timings": {}
+    },
+    "responseType": "MODULE_INTRO",
+    "note": "Non-SQL response; not counted as semantic answer success."
+  },
+  {
+    "question": "sen kimsin?",
+    "status": "DOĞRULANAMADI",
+    "answer": {
+      "id": "ea595d7f188b4afcbf53927eca2ab48b",
+      "type": "MODULE_INTRO",
+      "module": "bi",
+      "explanation": "Ben ZEKİ AI. İş zekâsı modülünde satış, finans, stok ve müşteri verilerinizi analiz etmek ve raporlamak için buradayım. Verilerinizle ilgili ne öğrenmek istersiniz?",
+      "threadId": "898202d07ebc4e9bb1d95883047cd46e",
+      "timings": {}
+    },
+    "responseType": "MODULE_INTRO",
+    "note": "Non-SQL response; not counted as semantic answer success."
+  }
+]
