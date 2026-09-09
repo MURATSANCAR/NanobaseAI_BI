@@ -1,0 +1,25 @@
+{
+  "url": "https://portal.nanobase.ai/timas/",
+  "widths": [
+    {
+      "width": 320,
+      "scrollWidth": 320
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1440
+    }
+  ],
+  "source411Title": "Kaynak 411",
+  "companyTitles": 0,
+  "mobileScreenshotInspected": 390,
+  "asset": "index-source-topology-e518d2e4727e.js"
+}
