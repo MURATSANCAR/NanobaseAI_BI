@@ -33,6 +33,11 @@ Ayrıca deterministik derleyicinin fiziksel tablo birleşimlerini kapsam daralt�
 derleyici veya sonraki kapsam belirtilmemiş sorgu değiştirilmez. Son kod değişikliği
 öncesindeki 56/100 başarılı koşu arşivlendi; yeni sürüm için kabul baştan çalıştırılır.
 
+Dönem karşılaştırması kontrolünde `411 firmasında 2025 ve 2026` ifadesindeki
+yılların ikinci firma listesi sanıldığı da bulundu ve düzeltildi. Önceden bağlı
+firma değerinden sonra gelen dönem listesi fiziksel kapsamı değiştirmez. Bu
+senaryo ve `ile` varyantı yerel regresyona eklendi.
+
 Kapsam eşlemesi `SEMANTIC_PATTERN_LABELS` yapılandırmasını kullanır; koda firma
 numarası veya müşteri adı eklenmez. Bu kaynağın ilk fiziksel parametresi `Firma`
 olarak etiketlendi. Bilinmeyen, çoklu veya negatif kapsam örneklerinin sessizce
@@ -40,7 +45,7 @@ tek firmaya çevrilmemesi gerçek API üzerinden de doğrulandı.
 
 ## Doğrulama ayrımı
 
-- Yerel semantik regresyon: **533 geçti**. Bunlar gerçek DB kabulünün yerine geçmez.
+- Yerel semantik regresyon: **535 geçti**. Bunlar gerçek DB kabulünün yerine geçmez.
 - Havuz arama kontrolü: 55/55 ifade kendi kaydına ulaştı. Üretilmiş eşleşmelerde
   hedeflenen 100 kolonun 32'si mevcut kolon aramasında, 100'ü genişletilmiş aramada
   bulundu; 45 ifadenin kolon kapsamı genişledi. Bu sentetik arama kontrolü doğal
@@ -55,6 +60,13 @@ tek firmaya çevrilmemesi gerçek API üzerinden de doğrulandı.
   doğruluk kanıtı olarak kullanılmıyor. Nihai sorular ve referanslar açıkça 411
   firmasını belirtiyor.
 
+100 karmaşık soru, mevcut soru üreticisindeki çok tablolu senaryolardan seçilmiş
+regresyon kümesidir. Gerçek üretim API'sinde çalıştırılır; soru üreticisinin
+kullanılması kontrollü veri tabanı kullanıldığı anlamına gelmez. Bu küme 100
+bağımsız insan ifade biçimini veya tüm üretilmiş havuz anlamlarını doğrulamaz.
+Havuzun arama kapsamı, bağlı DB sonuç doğruluğu ve dil çözümleme eksikleri ayrı
+raporlanır.
+
 ## Açık kalanlar
 
 1. `aktif malzeme kartları`: havuz ITEMS.ACTIVE/CODE adayını buluyor; eski resolver
@@ -65,6 +77,22 @@ tek firmaya çevrilmemesi gerçek API üzerinden de doğrulandı.
    dönüşmediği için netleştirme isteniyor.
 3. `e-mağaza kodu NULL veya boş metin olmayan malzeme kartları`: mevcut anlam
    çözümleme akışı sayısal sonuç üretmiyor. Havuz bu engeli atlamıyor.
+
+4. `411 firmasında 2025 ve 2026 satış tutarı karşılaştırması`: firma/yıl ayrımı
+   düzeltildi; mevcut çözümleyici `karşılaştırması` sözcüğünü ayrıca tanımsız
+   saydığı için sonuç üretemiyor. Bu ifade başarılı sayılmıyor.
+
+Sekiz tablolu ilk bağımsız referansta aynı adlı açıklama kolonları benzersiz
+alias taşımadığından Python kayıt sözlüğünde çakıştı. Referans kolon kimlikleri
+ayrıştırılarak aynı gerçek API akışı yeniden sınandı; ilk denemenin kanıtı
+`release-4-partial-acceptance/scoped-acceptance-initial-oracle.json` içinde korunur.
+
+Yıl karşılaştırmasının ilk referansı, veri olmayan yıl için `ELSE 0` nedeniyle
+sıfır üretiyordu. Her yılı ayrı filtreleyip toplama yapan bağımsız referansla
+tekrar kontrol edildi; gerçek API önceki yılın boş sonucunu NULL olarak korudu.
+İlk referans `scoped-year-initial-oracle.json` içinde korunur ve doğruluk kanıtı
+sayılmaz. `411 firmasında geçen yıla göre satış tutarı` son referansla eşleşti;
+dönem kapsamlarının eşitliği veya veri yükünün bütünlüğü bu eşleşmeyle kanıtlanmaz.
 
 Canlı kaynakta beklemeler ve geçici `DATA_SOURCE_UNAVAILABLE` yanıtı gözlendi.
 İlk 10 kitap sorusu yeniden denemede bağımsız referansla eşleşti; ilk başarısız

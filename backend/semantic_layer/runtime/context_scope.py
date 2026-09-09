@@ -32,7 +32,7 @@ def extract_scope(question, labels, profiles):
             if pos >= 3 and words[pos - 2] in {'ve', 'veya', 'ile'} and words[pos - 3].isdigit():
                 errors.append(f'{label} kapsamı birden çok değer içeriyor; tek kapsam belirtin.')
                 continue
-            if pos + 3 < len(words) and right.isdigit() and words[pos + 2] in {'ve', 'veya', 'ile'} and words[pos + 3].isdigit():
+            if not left.isdigit() and pos + 3 < len(words) and right.isdigit() and words[pos + 2] in {'ve', 'veya', 'ile'} and words[pos + 3].isdigit():
                 errors.append(f'{label} kapsamı birden çok değer içeriyor; tek kapsam belirtin.')
                 continue
             found.append(number)

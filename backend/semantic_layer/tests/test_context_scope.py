@@ -69,3 +69,9 @@ def test_deterministic_compiler_binds_scope_before_it_emits_physical_unions():
     ordinary=compiler.compile(q,None)
     assert ordinary is not None and 'ERP_211_ACCOUNT' in ordinary.sql and 'ERP_411_ACCOUNT' in ordinary.sql
     assert compiler.profiles is ps and compiler.context=={}
+
+
+@pytest.mark.parametrize('question', ['411 firmasında 2025 ve 2026 satış tutarı karşılaştırması',
+                                     '411 firmasında 2025 ile 2026 satış tutarı karşılaştırması'])
+def test_year_comparison_after_a_bound_scope_is_not_a_second_scope(question):
+    assert extract_scope(question, ['Firma'], profiles()) == ({'n0': '411'}, [])

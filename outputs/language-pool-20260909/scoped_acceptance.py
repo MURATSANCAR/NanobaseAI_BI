@@ -30,9 +30,14 @@ WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN(7,8)
 AND S.DATE_ >= '2026-01-01' AND S.DATE_ < '2026-02-01' GROUP BY {dims}'''
 refcmp="""SELECT SUM(CASE WHEN DATE_ >= '2026-09-01' AND DATE_ < '2026-10-01' THEN NETTOTAL END) AS current_value,SUM(CASE WHEN DATE_ >= '2026-08-01' AND DATE_ < '2026-09-01' THEN NETTOTAL END) AS previous_value FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN(7,8,9) AND DATE_ >= '2026-08-01' AND DATE_ < '2026-10-01'"""
 cases=[('S04','411 firmasında 2026 iade adedi',"SELECT SUM(AMOUNT) AS value FROM dbo.LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN(2,3) AND DATE_ >= '2026-01-01' AND DATE_ < '2027-01-01'",'scalar'),('S05','411 firmasında '+case['prompt'],ref8,'eight'),('S06','411 firmasında geçen aya göre satış tutarı',refcmp,'comparison')]
-refyear="SELECT SUM(CASE WHEN DATE_ >= '2026-01-01' AND DATE_ < '2027-01-01' AND TRCODE IN(7,8,9) THEN NETTOTAL ELSE 0 END) AS current_value,SUM(CASE WHEN DATE_ >= '2025-01-01' AND DATE_ < '2026-01-01' AND TRCODE IN(7,8,9) THEN NETTOTAL ELSE 0 END) AS previous_value FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN(2,3,7,8,9) AND DATE_ >= '2025-01-01' AND DATE_ < '2027-01-01'"
+refyear="SELECT (SELECT SUM(NETTOTAL) FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN(7,8,9) AND DATE_ >= '2026-01-01' AND DATE_ < '2027-01-01') AS current_value,(SELECT SUM(NETTOTAL) FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN(7,8,9) AND DATE_ >= '2025-01-01' AND DATE_ < '2026-01-01') AS previous_value"
 cases.append(('S07','411 firmasında 2025 ve 2026 satış tutarı karşılaştırması',refyear,'year'))
-rows=[]
+cases.append(('S08','411 firmasında geçen yıla göre satış tutarı',refyear,'year'))
+selected=set(filter(None,os.environ.get('SCOPED_IDS','').split(',')))
+rows=json.loads((root/'scoped-acceptance-final.json').read_text()) if selected else []
+if selected:
+ cases=[item for item in cases if item[0] in selected]
+ rows=[item for item in rows if item['id'] not in selected]
 for ident,q,ref,kind in cases:
  t=time.monotonic();row={'id':ident,'question':q,'referenceSQL':ref,'status':'DOĞRULANAMADI'}
  try:
@@ -65,3 +70,6 @@ for ident,q,ref,kind in cases:
  (root/'scoped-acceptance-final.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2,default=str))
  print(json.dumps({k:row.get(k) for k in ['id','status','referenceRows','answerRows','seconds','error']},ensure_ascii=False),flush=True)
 c.close()
+
+status={r['id']:r['status'] for r in rows}
+assert all(status.get(i)=='LIVE_PASS' for i in ['S04','S05','S08']) and status.get('S06')=='GUARD_PASS', 'Scoped acceptance gate failed; inspect evidence before broad regression'
