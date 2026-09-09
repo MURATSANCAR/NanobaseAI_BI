@@ -78,9 +78,16 @@ def enrich(store, datasource, source, output, apply=False):
             if isinstance(cols, str): cols = json.loads(cols)
             description = row['description']
             changed = False
+            derived = deepcopy(row['derived_json']) if row['derived_json'] else []
+            if isinstance(derived, str): derived = json.loads(derived)
             if not description:
                 description, language = label_text(entities[row['table_name'].upper()], 'LocalizedName')
                 if description:
+                    # Where a table's description came from, recorded the same way a column's is.
+                    # Without it the catalog holds "Sipariş" with no account of who said so, and the
+                    # next scan cannot tell the source's own word from something this system guessed.
+                    if not any(d.get('text') == description for d in derived):
+                        derived.append({'source': 'crm_metadata_' + language, 'text': description})
                     report['filledTables'] += 1
                     changed = True
             filled = coded = 0
@@ -126,7 +133,7 @@ def enrich(store, datasource, source, output, apply=False):
                 before.append(dict(row))
                 if apply:
                     conn.execute(S.sl_schema_profile.update().where(S.sl_schema_profile.c.id == row['id']).values(
-                        description=description, columns_json=cols))
+                        description=description, columns_json=cols, derived_json=derived))
         if apply:
             backup = output.with_suffix('.before.json')
             if backup.exists(): raise RuntimeError('Backup already exists; use a new output path')

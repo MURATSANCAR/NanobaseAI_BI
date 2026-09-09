@@ -647,6 +647,7 @@ class CatalogStore:
             "context_json": dict(p.context),
             "row_count": p.row_count,
             "description": p.description,
+            "derived_json": [dict(d) for d in p.derived],
             "time_window_json": list(p.time_window) if p.time_window else None,
             "scanned_at": p.scanned_at,
         }
@@ -720,6 +721,7 @@ class CatalogStore:
                     relationships=list(_json(r["relationships_json"]) or []),
                     row_count=r["row_count"],
                     description=r["description"],
+                    derived=[dict(d) for d in (_json(r.get("derived_json")) or []) if isinstance(d, dict)],
                     time_window=tuple(_json(r["time_window_json"])) if r.get("time_window_json") else None,
                     context=dict(_json(r["context_json"]) or {}),
                     scanned_at=_dt(r["scanned_at"]),

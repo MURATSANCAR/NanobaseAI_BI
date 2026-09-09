@@ -308,3 +308,18 @@ def test_the_reader_asks_in_batches_and_one_bad_answer_costs_only_its_batch(stor
     assert len(asked) >= 2, "asked more than once"
     assert all(len(p) < 20_000 for p in asked), "no single request carries the whole schema"
     assert rep["proposed"] >= 1 and rep["asked"] >= 2, rep
+
+
+def test_a_table_description_remembers_where_it_came_from(store):
+    """`derived` was on the dataclass, read by the compiler, and stored nowhere: it came back empty
+    from every load, so a description the source wrote and one this system guessed were the same
+    thing in the catalog."""
+    from semantic_layer.models import SchemaProfile
+
+    p = SchemaProfile(datasource_id="d", table_name="new_siparisBase", table_pattern="NEW_SIPARISBASE",
+                      entity="NEW_SIPARISBASE", schema_name="Timas_MSCRM.dbo", description="Sipariş",
+                      derived=[{"source": "crm_metadata_1055", "text": "Sipariş"}])
+    store.upsert_profile(p)
+    back = next(x for x in store.list_profiles("d") if x.table_name == "new_siparisBase")
+    assert back.derived == [{"source": "crm_metadata_1055", "text": "Sipariş"}]
+    assert back.schema_name == "Timas_MSCRM.dbo", "and which database it lives in"

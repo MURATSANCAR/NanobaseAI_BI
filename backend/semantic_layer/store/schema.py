@@ -163,6 +163,8 @@ sl_schema_profile = sa.Table(
     sa.Column("context_json", sa.JSON(), nullable=False, default=dict),
     sa.Column("row_count", sa.Integer()),
     sa.Column("description", sa.Text()),
+    # Where the description came from, tagged by source — the same account columns keep.
+    sa.Column("derived_json", sa.JSON(), nullable=False, default=list, server_default="[]"),
     sa.Column("time_window_json", sa.JSON()),
     sa.Column("scanned_at", sa.DateTime(timezone=True), nullable=False),
     # One row per physical table, not per pattern. A logical entity often lives in several tables that
