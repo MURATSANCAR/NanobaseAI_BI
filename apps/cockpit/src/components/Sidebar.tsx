@@ -1,84 +1,32 @@
-import { BookOpen, Landmark, Stamp, Table2 } from 'lucide-react';
-import clsx from 'clsx';
+import { useState } from 'react';
+import { BookOpen, Menu, X, Search } from 'lucide-react';
+import { moduleGroups } from './ModulePage';
 
-/** Tek masa: Finans & Bütçe. Diğer masalar (satış/kanal, yayınevi, cari, stok, satınalma) veri modeli
- *  ve doğrulanmış sorguları hazır olduğunda eklenir — çalışmayan bağlantı gösterilmez. */
-export type View = 'desk' | 'catalog' | 'review';
-
+export type View = 'desk' | 'catalog' | 'review' | `module:${string}`;
 export function Sidebar({ engineOk, modelCount, view, onView, waiting = 0 }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void; waiting?: number }) {
-  return (
-    <aside className="hidden lg:flex w-[236px] shrink-0 flex-col bg-rail border-r border-line px-4 py-5">
-      <div className="flex items-center gap-3 px-1">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white shadow-card">
-          <BookOpen size={20} strokeWidth={2.2} />
-        </div>
-        <div className="leading-tight">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-lg font-semibold tracking-wide">TİMAŞ</span>
-            <span className="rounded-md bg-brand-soft px-1.5 py-0.5 text-[10px] font-bold text-brand-deep">BI</span>
-          </div>
-          <div className="text-[10px] font-semibold tracking-[0.16em] text-ink-muted">KURUMSAL YAYIN ATLASI</div>
-        </div>
-      </div>
-
-      <div className="eyebrow mt-8 px-2">Masa & Çalışma Alanları</div>
-      <nav className="mt-3 flex flex-col gap-1" aria-label="Masalar">
-        <NavItem icon={Landmark} label="Finans & Bütçe Masası" active={view === 'desk'} onClick={() => onView('desk')} />
-        <NavItem icon={Table2} label="Veri Sözlüğü" active={view === 'catalog'} onClick={() => onView('catalog')} />
-        <NavItem icon={Stamp} label="Onay Bekleyenler" active={view === 'review'} onClick={() => onView('review')} badge={waiting} />
+  const [mobile, setMobile] = useState(false);
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState<Record<string,boolean>>({});
+  const choose = (v: View) => { onView(v); setMobile(false); };
+  const button = (v: View, text: string) => <button key={v} type="button" aria-current={view===v?'page':undefined} onClick={() => choose(v)} className={`block w-full rounded-lg px-3 py-2 text-left text-[13px] leading-relaxed ${view===v?'bg-brand text-white':'text-ink-muted hover:bg-brand-soft hover:text-brand-deep'}`}>{text}</button>;
+  return <>
+    <button className="fixed right-3 top-3 z-40 rounded-xl border border-line bg-white p-3 shadow-card lg:hidden" aria-label="Modül menüsünü aç" onClick={() => setMobile(true)}><Menu size={20}/></button>
+    {mobile && <button className="fixed inset-0 z-40 bg-black/30 lg:hidden" aria-label="Menüyü kapat" onClick={() => setMobile(false)}/>}
+    <aside className={`${mobile?'fixed inset-y-0 left-0 z-50 flex':'hidden'} w-[290px] max-w-[90vw] shrink-0 flex-col border-r border-line bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen`}>
+      <header className="flex items-center gap-3 p-5"><span className="rounded-xl bg-brand p-3 text-white"><BookOpen size={22}/></span><div><strong className="font-display text-xl">TİMAŞ AI</strong><p className="text-[9px] tracking-widest text-ink-muted">KURUMSAL ÇALIŞMA PLATFORMU</p></div><button aria-label="Menüyü kapat" className="ml-auto lg:hidden" onClick={() => setMobile(false)}><X size={18}/></button></header>
+      <label className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-line bg-white p-2"><Search size={15}/><input aria-label="Modül ara" placeholder="Modül veya kod ara…" value={search} onChange={e => setSearch(e.target.value)} className="min-w-0 w-full bg-transparent text-xs outline-none"/></label>
+      <nav aria-label="Modüller" className="scroll-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4">
+        {moduleGroups.map(group => {
+          const children=group.modules.filter(m => `${group.title} ${m.title}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')));
+          if (!children.length) return null;
+          if (group.modules.length===1) return button(`module:${children[0].id}`,children[0].title.replace(/^[^\p{L}\p{N}]+/u,''));
+          const expanded=search.length>0 || (open[group.title] ?? children.some(m => view===`module:${m.id}`));
+          return <section key={group.title}><button type="button" aria-expanded={expanded} onClick={() => setOpen(prev => ({...prev,[group.title]:!expanded}))} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold text-ink"><span>{group.title.replace(/^[A-L] — /,'').replace(/\s*\(M.*\)$/,'')}</span><span className="ml-2 text-ink-faint">{expanded?'−':'+'}</span></button>{expanded && <div className="ml-2 space-y-1 border-l border-line pl-2">{children.map(m => button(`module:${m.id}`,m.title))}</div>}</section>;
+        })}
+        {search && !moduleGroups.some(g => g.modules.some(m => `${g.title} ${m.title}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR')))) && <p className="p-3 text-xs text-ink-muted">Eşleşen modül yok.</p>}
+        <div className="border-t border-line pt-3"><p className="eyebrow px-3 pb-2">Mevcut araçlar</p>{button('desk','Finans & Bütçe Masası')}{button('catalog','Veri Sözlüğü')}{button('review',`İş Sözlüğünü Geliştir · ${waiting}`)}</div>
       </nav>
-
-      {/* Zeki AI — sütunu dolduran maskot; GIF 960×600, karakter sol tarafta → kırpılarak sığdırılır */}
-      <div className="mt-5 flex min-h-0 flex-1 flex-col">
-        <div className="relative flex-1 overflow-hidden rounded-2xl border border-line bg-[#F4EEE9] shadow-card" style={{ minHeight: 260, maxHeight: 440 }}>
-          <img
-            src={`${import.meta.env.BASE_URL}zeki-ai.gif`}
-            alt="Zeki AI — Timaş Yayın Grubu"
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{ objectPosition: '36% 50%' }}
-            draggable={false}
-          />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#F4EEE9] via-[#F4EEE9]/90 to-transparent px-3 pb-2.5 pt-8">
-            <div className="font-display text-[15px] font-semibold leading-none tracking-tight text-ink">Zeki AI</div>
-            <div className="mt-1 text-[9px] font-semibold tracking-[0.18em] text-brand">TİMAŞ YAYIN GRUBU</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="card p-3">
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className={clsx('h-2 w-2 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-brand-accent' : 'bg-ink-faint')} />
-            Semantik Motor {engineOk ? 'Aktif' : engineOk === false ? 'Model deploy bekliyor' : 'Kontrol ediliyor'}
-          </div>
-          <div className="mt-1 text-[11px] text-ink-muted">
-            {modelCount != null ? `${modelCount} veri modeli` : 'Veri modelleri'} · salt-okunur
-          </div>
-        </div>
-      </div>
+      <footer className="border-t border-line px-5 pb-14 pt-3 text-[11px] text-ink-muted"><span className={engineOk?'text-ok':'text-ink-faint'}>●</span> Semantik Motor {engineOk?'Aktif':engineOk===false?'Erişilemiyor':'Kontrol ediliyor'}<p className="mt-1">{modelCount ?? '—'} veri modeli</p></footer>
     </aside>
-  );
-}
-
-function NavItem({ icon: Icon, label, active, onClick, badge = 0 }: { icon: typeof Landmark; label: string; active: boolean; onClick: () => void; badge?: number }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? 'page' : undefined}
-      className={clsx(
-        'flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition',
-        active ? 'bg-brand text-white shadow-card' : 'text-ink-muted hover:bg-brand-soft hover:text-brand-deep',
-      )}
-    >
-      <Icon size={16} strokeWidth={2} className={active ? 'text-white' : 'text-ink-faint'} />
-      <span className="min-w-0 flex-1 truncate">{label}</span>
-      {badge > 0 && (
-        <span className={clsx('shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums',
-          active ? 'bg-white/25 text-white' : 'bg-brand text-white')}>
-          {badge > 99 ? '99+' : badge}
-        </span>
-      )}
-    </button>
-  );
+  </>;
 }

@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, ChevronRight, Percent, ShoppingCart, Stamp, TrendingUp, Undo2 } from 'lucide-react';
+import { ModulePage, modules } from './components/ModulePage';
 import { Sidebar, type View } from './components/Sidebar';
 import { CatalogExplorer } from './components/CatalogExplorer';
 import { TermReview } from './components/TermReview';
@@ -36,7 +37,19 @@ export default function App() {
   const d = cockpit.data;
   const copilotInput = useRef<HTMLInputElement>(null);
   const [splash, setSplash] = useState(true);
-  const [view, setView] = useState<View>('desk');
+  const readView = (): View => {
+    const hash = window.location.hash.slice(1);
+    if (['desk','catalog','review'].includes(hash)) return hash as View;
+    if (hash.startsWith('module:') && modules.some(m => m.id === hash.slice(7))) return hash as View;
+    return 'module:home';
+  };
+  const [view, changeView] = useState<View>(readView);
+  const setView = (next: View) => { changeView(next); window.location.hash = next; };
+  useEffect(() => {
+    const sync = () => changeView(readView());
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
   const [editing, setEditing] = useState(false);
   const board = useBoard();
   const closeSplash = useCallback(() => setSplash(false), []);
@@ -56,7 +69,7 @@ export default function App() {
       <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} view={view} onView={setView} waiting={waiting} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar
+        {view === 'desk' && <TopBar
           lastDate={d?.summary.lastDate ?? ''}
           live={d?.source === 'live'}
           engineOk={engineOk}
@@ -70,7 +83,7 @@ export default function App() {
           ageSec={d?.ageSec ?? 0}
           refreshing={cockpit.isFetching || periods.isFetching}
           failed={failed || periods.isError}
-        />
+        />}
 
         <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
@@ -80,6 +93,7 @@ export default function App() {
             {view === 'desk' && waiting > 0 && (
               <ReviewNudge n={waiting} onGo={() => setView('review')} />
             )}
+            {view.startsWith('module:') && <ModulePage key={view} id={view.slice(7)} onView={setView} />}
             {view === 'catalog' && <CatalogExplorer />}
             {view === 'review' && <TermReview />}
             {view === 'desk' && !d && !failed && !periods.isError && <DeskSkeleton />}
@@ -125,7 +139,7 @@ export default function App() {
             )}
           </main>
 
-          <CopilotPanel engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />
+          {view === 'desk' && <CopilotPanel engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />}
         </div>
       </div>
     </div>
