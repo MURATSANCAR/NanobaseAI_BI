@@ -66,7 +66,7 @@ def enrich(store, datasource, source, output, apply=False):
     for row in source.get('optionLabels') or []:
         options[(row['BaseTableName'].upper(), row['PhysicalName'].upper())].append(row)
     report = {'applied': apply, 'source': 'Timas_MSCRM.MetadataSchema, published ComponentState=0',
-              'filledTables': 0, 'filledColumns': 0, 'filledValueLabels': 0, 'namedCodes': 0,
+              'filledTables': 0, 'filledColumns': 0, 'filledValueLabels': 0, 'namedCodes': 0, 'taggedTables': 0,
               'tables': [], 'unresolved': [], 'unflagged': []}
     before = []
     with store._lock, store.engine.begin() as conn:
@@ -80,16 +80,19 @@ def enrich(store, datasource, source, output, apply=False):
             changed = False
             derived = deepcopy(row['derived_json']) if row['derived_json'] else []
             if isinstance(derived, str): derived = json.loads(derived)
-            if not description:
-                description, language = label_text(entities[row['table_name'].upper()], 'LocalizedName')
-                if description:
-                    # Where a table's description came from, recorded the same way a column's is.
-                    # Without it the catalog holds "Sipariş" with no account of who said so, and the
-                    # next scan cannot tell the source's own word from something this system guessed.
-                    if not any(d.get('text') == description for d in derived):
-                        derived.append({'source': 'crm_metadata_' + language, 'text': description})
-                    report['filledTables'] += 1
-                    changed = True
+            said, language = label_text(entities[row['table_name'].upper()], 'LocalizedName')
+            if not description and said:
+                description = said
+                report['filledTables'] += 1
+                changed = True
+            # Where a table's description came from, recorded the same way a column's is. Without it
+            # the catalog holds "Sipariş" with no account of who said so, and the compiler's fallback
+            # to it can never fire. Claimed only where the stored description is word for word what
+            # the source says: a description somebody else wrote is not this source's to sign.
+            if said and description == said and not any(d.get('text') == said for d in derived):
+                derived.append({'source': 'crm_metadata_' + language, 'text': said})
+                report['taggedTables'] += 1
+                changed = True
             filled = coded = 0
             for col in cols:
                 key = (row['table_name'].upper(), col['name'].upper())
