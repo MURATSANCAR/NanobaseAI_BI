@@ -1,0 +1,11 @@
+{
+  "total": 10000,
+  "counts": {
+    "NOT_TESTED_MODEL_FALLBACK": 10000
+  },
+  "seconds": 41.3,
+  "fixture_rows": 2160,
+  "ground_truth": "independent Python row oracle",
+  "scope": "generated controlled fixture, Runtime.ask with SQL execution; not production data accuracy",
+  "source_sha256": "53e94dcbaf98103f6caf420b0b04a275883a968907a3ed347d5a226757a6ec98"
+}
