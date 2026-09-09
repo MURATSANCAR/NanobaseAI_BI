@@ -1,3 +1,4 @@
+import { BI_CHAT } from './lib/chatModules';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, BadgePercent, ChevronRight, Percent, ShoppingCart, Stamp, TrendingUp, Undo2 } from 'lucide-react';
 import { ModulePage, modules } from './components/ModulePage';
@@ -139,7 +140,7 @@ export default function App() {
             )}
           </main>
 
-          <CopilotPanel engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />
+          <CopilotPanel module={BI_CHAT} engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />
         </div>
       </div>
     </div>

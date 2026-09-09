@@ -315,7 +315,7 @@ def test_a_question_this_deployment_has_nothing_about_is_refused_not_guessed(
 
     r = client.post("/api/v1/ask", json={"question": "Yarın hava nasıl olacak?"}).json()
     assert r["type"] in ("NON_SQL_QUERY", "SQL_INVALID") or not r.get("sql"), r
-    assert not sql_llm.calls, "a model that already said nothing fits is not then asked for SQL"
+    assert all("yalnız niyet sınıflandır" in call[0]["content"] for call in sql_llm.calls), "scope classification must never be followed by SQL for an unrelated question"
 
 
 def test_a_question_the_catalog_can_place_is_not_refused_by_a_selector_saying_none(

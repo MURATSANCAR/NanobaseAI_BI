@@ -33,7 +33,15 @@ export type DataCoverage = {
   completeness: string;
 };
 
+export type PresentationSpec = {
+  metrics: { key: string; label: string; additive: boolean }[];
+  dimensions: { key: string; label: string; temporal: boolean }[];
+  comparisons: { currentKey: string; referenceKey: string; label: string; currentLabel: string; referenceLabel: string }[];
+};
+export type QueryStage = 'understanding' | 'querying' | 'presenting';
+
 export type SqlResult = {
+  presentation?: PresentationSpec;
   dataCoverage?: DataCoverage[];
   id: string;
   columns: SqlColumn[];
@@ -154,8 +162,36 @@ export function sendFeedback(queryId: string, validated: boolean): Promise<{ ok:
 }
 
 /** Doğal dil soru → SQL (+ özet). threadId verilirse takip sorusu olarak işlenir. */
-export function ask(question: string, threadId?: string): Promise<AskResult> {
-  return post<AskResult>('/api/v1/ask', { question, language: 'TR', sampleSize: 50, ...(threadId ? { threadId } : {}) }, 240_000);
+export async function ask(question: string, threadId?: string, onStage?: (stage: QueryStage) => void): Promise<AskResult> {
+  const ctl = new AbortController();
+  const timeout = setTimeout(() => ctl.abort(), 240_000);
+  try {
+    const response = await fetch(`${BASE}/api/v1/ask/stream`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+      body: JSON.stringify({ question, language: 'TR', sampleSize: 50, ...(threadId ? { threadId } : {}) }),
+    });
+    if (!response.ok || !response.body) throw new EngineError(`Sorgu servisi yanıt vermedi (HTTP ${response.status}).`, undefined, response.status);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        if (done && buffer.trim()) lines.push(buffer);
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line);
+          if (event.event === 'stage' && ['understanding', 'querying', 'presenting'].includes(event.stage)) onStage?.(event.stage);
+          if (event.event === 'error') throw new EngineError(event.message);
+          if (event.event === 'result') return event.result as AskResult;
+        }
+        if (done) throw new EngineError('Bağlantı sonuç gelmeden kapandı. Sorgu otomatik tekrarlanmadı.');
+      }
+    } finally { await reader.cancel(); }
+  } finally { clearTimeout(timeout); }
 }
 
 /** Sonuç için Türkçe özet (motorun kendi özetleyicisi). */

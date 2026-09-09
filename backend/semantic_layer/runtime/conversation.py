@@ -11,6 +11,33 @@ from semantic_layer.runtime.temporal import parse_temporal
 def compose_followup(question, previous):
     text = fold(question).strip(" ?.! ")
     text = re.sub(r"^(?:peki|ya)\s+", "", text)
+    # These are explicit editing commands, not a semantic vocabulary or a fuzzy intent match.
+    edit = re.sub(r"^(?:bunu|bunu da)\s+", "", text)
+    monthly = edit in {"aylara bol", "aylik goster", "ay bazinda goster"}
+    ranking = re.fullmatch(r"ilk (\d{1,3})(?:'?[ui])? goster", edit)
+    compare = edit in {"gecen yilla karsilastir", "gecen yila gore karsilastir"}
+    if monthly or ranking or compare:
+        if previous is None:
+            return None, "Önce bir analiz çalıştırın; hangi sonucu değiştireceğim belli değil."
+        base = fold(previous.question)
+        if monthly:
+            base = re.sub(r"\b(?:gunluk|haftalik|yillik|aylik)\b", " ", base)
+            return " ".join((base + " aylık").split()), None
+        if ranking:
+            limit = int(ranking.group(1))
+            if not 1 <= limit <= 100:
+                return None, "İlk kaç kayıt gösterilsin? 1 ile 100 arasında bir sayı belirtin."
+            base = re.sub(r"\b(?:ilk|top)\s+\d+\b", " ", base)
+            return " ".join((base + f" ilk {limit}").split()), None
+        periods = [p for p in previous.temporal if p.start and p.end]
+        if len(periods) != 1 or periods[0].primitive != "YEAR":
+            return None, "Yıllık karşılaştırma için önce tek bir yılı içeren analiz seçin."
+        period = periods[0]
+        if period.start.month != 1 or period.start.day != 1 or period.end.year != period.start.year + 1:
+            return None, "Hangi iki dönemi karşılaştırmak istediğinizi açıkça belirtin."
+        base = re.sub(r"(?<!\w)" + re.escape(fold(period.text)) + r"(?!\w)", " ", base)
+        year = period.start.year
+        return " ".join((base + f" {year} ve {year - 1} karşılaştır").split()), None
     periods, _ = parse_temporal(text)
     remainder = text
     for period in periods:

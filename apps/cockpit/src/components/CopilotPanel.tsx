@@ -1,3 +1,4 @@
+import { type ChatModule } from '../lib/chatModules';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ArrowUp, Bot, Check, ChevronDown, ChevronUp, Database, FileSpreadsheet, LayoutDashboard, Loader2, Maximize2, Minimize2, RotateCcw, ShieldCheck, ThumbsDown, ThumbsUp } from 'lucide-react';
 import clsx from 'clsx';
@@ -24,13 +25,6 @@ type Msg =
       /** Motorun bu cevabı hesapladığı yürütme. Excel aktarımı tam sonucu bununla ister. */
       resultId?: string;
     };
-
-const SUGGESTIONS = [
-  '2026 kanal bazında net ciro',
-  'En çok iade alan 10 müşteri',
-  'Aylık iskonto oranı',
-  'En çok satan 10 kitap (adet)',
-];
 
 const now = () => new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 
@@ -66,8 +60,9 @@ function headline(text: string): string {
 }
 
 export function CopilotPanel({
-  engineOk, inputRef, onPin, pinned,
+  engineOk, inputRef, onPin, pinned, module,
 }: {
+  module: ChatModule;
   engineOk: boolean | null;
   inputRef?: RefObject<HTMLInputElement>;
   /** Cevabı masaya iliştir. Verilmezse düğme çıkmaz — panel başka bir yerde de kullanılabilir. */
@@ -123,8 +118,8 @@ export function CopilotPanel({
         </div>
         <div className="min-w-0 flex-1 leading-tight">
           <div className="flex items-center gap-2">
-            <span className="font-display text-[15px] font-semibold">Timaş Finans</span>
-            <span className="rounded-md bg-page px-1.5 py-0.5 text-[10px] font-bold text-ink-muted">NL→SQL</span>
+            <span className="font-display text-[15px] font-semibold">ZEKİ AI</span>
+            <span className="rounded-md bg-page px-1.5 py-0.5 text-[10px] font-bold text-ink-muted">{module.title}</span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-ink-muted">
             <span className={clsx('h-1.5 w-1.5 rounded-full', engineOk ? 'bg-ok' : engineOk === false ? 'bg-warn' : 'bg-ink-faint')} />
@@ -151,11 +146,11 @@ export function CopilotPanel({
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Finansal veriyle konuş…"
-            className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-ink-faint"
+            placeholder={module.placeholder}
+            className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-ink-faint"
             disabled={busy}
           />
-          <button type="submit" disabled={busy || !input.trim()} className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-white disabled:opacity-40">
+          <button type="submit" disabled={busy || !input.trim()} className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand text-white disabled:opacity-40">
             {busy ? <Loader2 size={15} className="animate-spin" /> : <ArrowUp size={15} />}
           </button>
         </div>
@@ -165,7 +160,7 @@ export function CopilotPanel({
         </div>
       </form>
       <div className="mx-4 mt-3 rounded-xl bg-page px-3 py-2 text-[11px] text-ink-muted">
-        <span className="font-semibold text-ink">Aktif bağlam:</span> fatura, malzeme hareketi, cari ve sipariş modelleri. Cevaplar deterministik SQL ile üretilir; SQL her yanıtta görünür.
+        {module.scope}
       </div>
 
       <div ref={listRef} className="scroll-thin flex-1 space-y-3 overflow-y-auto px-4 py-3">
@@ -173,7 +168,7 @@ export function CopilotPanel({
           <div className="pt-2 text-[12px] text-ink-muted">
             Verilerinize Türkçe soru sorun. Örnek:
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {SUGGESTIONS.map((s) => (
+              {module.suggestions.map((s) => (
                 <button key={s} onClick={() => send(s)} className="chip hover:border-brand hover:text-brand">
                   {s}
                 </button>
@@ -302,7 +297,7 @@ function AssistantCard({
     <div className="rounded-2xl border border-line bg-white p-3">
       <div className="flex items-center gap-2 text-[11px] font-semibold text-ink-muted">
         {m.pending ? <Loader2 size={12} className="animate-spin text-brand" /> : <Bot size={12} className="text-brand" />}
-        Timaş Finans · {m.at}
+        ZEKİ AI · {m.at}
       </div>
       <p className={clsx('mt-1.5 whitespace-pre-line text-[13px] leading-snug', m.error && 'text-brand-accent')}>
         {rows.length > 0 ? headline(m.text) : m.text}
