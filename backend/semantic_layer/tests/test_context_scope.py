@@ -53,3 +53,19 @@ def test_explicit_sql_cannot_expand_back_out_of_question_scope(name):
 def test_unscoped_requests_keep_the_existing_profile_selection():
     ps = profiles()
     assert execution_profiles('SELECT ID FROM ACCOUNT', ps, {}, 'tsql') is ps
+
+
+def test_deterministic_compiler_binds_scope_before_it_emits_physical_unions():
+    from semantic_layer.models import Mapping, ResolvedSlot, SemanticQuery, SemanticType
+    from semantic_layer.runtime.compiler import DeterministicCompiler
+    ps=profiles()
+    compiler=DeterministicCompiler(ps,{},'tsql')
+    q=SemanticQuery('kayıt sayısı','t','d',context_scope={'n0':'411'})
+    q.slots=[ResolvedSlot(term='kayıt sayısı',semantic_type=SemanticType.METRIC,status='CERTIFIED',
+                          mapping=Mapping('', 'ACCOUNT', 'ERP_{n0}_ACCOUNT', formula='COUNT(ACCOUNT.ID)'))]
+    scoped=compiler.compile(q,None)
+    assert scoped is not None and 'ERP_411_ACCOUNT' in scoped.sql and 'ERP_211_ACCOUNT' not in scoped.sql
+    q.context_scope={}
+    ordinary=compiler.compile(q,None)
+    assert ordinary is not None and 'ERP_211_ACCOUNT' in ordinary.sql and 'ERP_411_ACCOUNT' in ordinary.sql
+    assert compiler.profiles is ps and compiler.context=={}

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "datasourceId": "logo",
+  "entries": [
+    {
+      "phrase": "Satış yöneticisi tanımını ve kodunu göster",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "CODE",
+          "role": "dimension"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "ba3c1d2d428c99a09daba0eb",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    }
+  ],
+  "batches": {
+    "7887eeabe0bddc52f258f9914fb26a5115f42f797a5217f9646439b2ad18390e": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 1,
+      "rejected": [
+        "invalid operation"
+      ]
+    }
+  }
+}

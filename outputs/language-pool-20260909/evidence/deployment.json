@@ -1,0 +1,38 @@
+{
+  "files": {
+    "/data/nanobaseai/bi/frontend/backend/semantic_bridge/app.py": "4920bf82b405e56a49fe35d0f035becd57893898bdcfc7682b6bc6f263ee36b7",
+    "/data/nanobaseai/bi/frontend/backend/semantic_layer/runtime/compiler.py": "bf854a06ad80804f756f8beafd061bd235bf90f014d9cd1076e935ba358d65df",
+    "/data/nanobaseai/bi/frontend/backend/semantic_layer/models.py": "1abbbc1299872c7cb9f59ad254d61f0811bc2d6e70d0064e2d2674110dcf18c1",
+    "/data/nanobaseai/bi/frontend/backend/semantic_layer/runtime/language_pool.py": "80bb8f53878bdf1b0a6db5b71b430d068774dfdbecb513874166e4850eae5dd7",
+    "/data/nanobaseai/bi/frontend/backend/scripts/build_language_pool.py": "0d61080f7fb6abdc8afea9d410e79f034cfc70d5a55cfaf099b3e7d03a8e4ba5",
+    "/data/nanobaseai/bi/frontend/backend/semantic_layer/runtime/context_scope.py": "01cb383027f6a49ddca43644e58190ee9b280a6bb226cd7361a19d594b33fd1e"
+  },
+  "poolFileSha256": "c4e6274ee5770c1dd6734441583812889c16c5ddfa5bced0d681c513dfc24df1",
+  "poolHash": "aed56bd7cee10e053efc875d841e891631eac46ec7f4749c540d149e31bc5d0e",
+  "poolCandidates": 55,
+  "health": {
+    "status": "ok",
+    "service": "nanobaseai-bi-semantic-bridge",
+    "version": "1.0.0",
+    "profiles": 4874,
+    "catalog": {
+      "DISCOVERED": 0,
+      "CANDIDATE": 556,
+      "CERTIFIED": 103,
+      "REJECTED": 372,
+      "SENSE_CONFLICT": 0,
+      "DEPRECATED": 1
+    },
+    "llm": true,
+    "db": true,
+    "pid": 939061,
+    "cache": {
+      "entries": 0,
+      "hot": 0,
+      "ttlSec": 300,
+      "refreshSec": 15.0,
+      "refreshing": true
+    }
+  },
+  "deployedAt": "2026-09-09T19:21:58+0300"
+}

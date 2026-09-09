@@ -1,0 +1,1247 @@
+{
+  "version": 1,
+  "datasourceId": "logo",
+  "entries": [
+    {
+      "phrase": "Kullanımda olan cari hesap kartlarının adres ilk satır bilgilerini listele.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ACTIVE",
+          "role": "filter"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "ADDR1",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "1e1f095b9dc091452ce2a708",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Otomatik ödeme banka kodu tanımlı cari hesap kartlarını göster.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "AUTOPAIDBANK",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "9d709011893e99c9eebece64",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Referans listesine eklenmiş cari hesap kartlarının logical ref numaralarını getir.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ADDTOREFLIST",
+          "role": "filter"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "LOGICALREF",
+          "role": "key"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "cf80236f21b079561b1d8d1c",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Adres ikinci satırı boş olmayan cari hesap kartlarını say.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ADDR2",
+          "role": "filter"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "d5bff38020fe86e50e6f7ada",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "İptal edilmiş faturaların muhasebeleştirme işleminin iptal edilip edilmediğini kontrol et.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "CANCELLED",
+          "role": "filter"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "CANCELLEDACC",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "a87a614856d9a3c09e7b7671",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Belirli bir cari hesaba ait faturaların genel muhasebe fişi referanslarını listele.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "ACCFICHEREF",
+          "role": "dimension"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "CLIENTREF",
+          "role": "filter"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "3adbd3cbdf476461c3690f13",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Satıra uygulanan ek masrafların toplam tutarını işyerine göre grupla.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "ADDEXPENSES",
+          "role": "measure"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "BRANCH",
+          "role": "dimension"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "f987ede3d401249ea9d1a0a2",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Banka hareket referansı olan faturaların tarihini ve iptal açıklamasını göster.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "BNTRANSREF",
+          "role": "filter"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "CANCELEXP",
+          "role": "dimension"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "DATE_",
+          "role": "time"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "b7c12f816114a2b5ca673484",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Riski etkileyen faturaların muhasebeleştirme sayısını karşılaştır.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "ACCOUNTEDCNT",
+          "role": "measure"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "AFFECTRISK",
+          "role": "filter"
+        }
+      ],
+      "operation": "compare",
+      "ambiguities": [],
+      "id": "b6a9e3b3ee4cab8c87f5ce9d",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Dağıtım emri referansına bağlı faturaların fiyat farkı durumunu incele.",
+      "columns": [
+        {
+          "entity": "INVOICE",
+          "column": "DECPRDIFF",
+          "role": "dimension"
+        },
+        {
+          "entity": "INVOICE",
+          "column": "DISTORDERREF",
+          "role": "filter"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "2689ab99bf76673911697161",
+      "sourceHashes": {
+        "INVOICE": "b670debb20e607608330f663984a2bc67a7a1179b92d6da39b5b7c99075e13d9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartında tanımlı birinci banka şube numarası nedir?",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "BANKBRANCHS1",
+          "role": "dimension"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "f435c5811c1bdb73fbf6e763",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Otomatik ödeme için belirlenen banka kodunu göster.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "AUTOPAIDBANK",
+          "role": "dimension"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "0016549c028b36ce20d5bbff",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Kullanım dışı olan cari hesap kartlarını listele.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ACTIVE",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "be9aa02687a1a0f4d24ab7aa",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari kartın bağlı olduğu ödeme planı grubu referansını getir.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "PPGROUPREF",
+          "role": "key"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "55a0bf98dc1e77a0bf2da1e8",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Adres satır 1 ve adres satır 2 bilgilerini birlikte göster.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ADDR1",
+          "role": "dimension"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "ADDR2",
+          "role": "dimension"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "c16a29ddedb3514785bc5851",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Referans listesine eklenmiş cari hesap kartlarını say.",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "ADDTOREFLIST",
+          "role": "filter"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [
+        "ADDTOREFLIST kolonunun 0/1 veya diğer değerlerinin 'eklenmiş' durumunu nasıl temsil ettiği şemada belirtilmemiştir."
+      ],
+      "id": "e1d6ca7d314e48fe4aea9661",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Aktif malzeme kartlarını listele",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "ACTIVE",
+          "role": "filter"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "06f8b700f302f029b79bfdd7",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Ticari mal türündeki malzemelerin ortalama stokta kalma süresi ne kadar?",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "AVRWHDURATION",
+          "role": "measure"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CARDTYPE",
+          "role": "filter"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "c7c58ef715364cdcecfc99eb",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Otomatik lot numarası artışı açık olan malzemeler hangileri?",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "AUTOINCSL",
+          "role": "filter"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "7168eec08836ab5ec0ab8b39",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Amortisman oranı en yüksek sabit kıymetler",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "CARDTYPE",
+          "role": "filter"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CODE",
+          "role": "dimension"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "DEPRRATE",
+          "role": "measure"
+        }
+      ],
+      "operation": "rank",
+      "ambiguities": [],
+      "id": "150e646775a2f0794a01c4f0",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "E-mağaza kodu tanımlı malzemeler",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "B2CCODE",
+          "role": "filter"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "628807da4a67224ec02c5630",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Kampanya puanı 10'un üzerinde olan malzemeler",
+      "columns": [
+        {
+          "entity": "ITEMS",
+          "column": "CAMPPOINT",
+          "role": "filter"
+        },
+        {
+          "entity": "ITEMS",
+          "column": "CODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "e83dd56f546640a2dd87dd58",
+      "sourceHashes": {
+        "ITEMS": "998eaa5f0814b04314ddc2ba707bdf06b51016f7c602564178acf0fee9d69573"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Sipariş satırındaki miktar ne kadar?",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "AMOUNT",
+          "role": "measure"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "4ae07d74a9810bf1deb01949",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Ek vergi tutarı yüksek olan sipariş hareketleri",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "ADDTAXAMOUNT",
+          "role": "measure"
+        }
+      ],
+      "operation": "rank",
+      "ambiguities": [],
+      "id": "95bd078fc81ab5fbc7538b34",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Kampanya puanı 1 değeri 0'dan farklı olan satırlar",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "CAMPPOINTS1",
+          "role": "measure"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "01527b7d16b38f76742a511a",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "İptal edilmemiş sipariş satırlarının ek vergi oranı",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "ADDTAXRATE",
+          "role": "measure"
+        },
+        {
+          "entity": "LG_ORFLINE",
+          "column": "CANCELLED",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [
+        "İptal edilmemiş durumu için CANCELLED kolonunun spesifik değeri (0 veya 1) şemada belirtilmemiştir."
+      ],
+      "id": "64884c14b9175ecca30e9b30",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Masraf merkezi referansına göre sipariş miktarı toplamı",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "AMOUNT",
+          "role": "measure"
+        },
+        {
+          "entity": "LG_ORFLINE",
+          "column": "CENTERREF",
+          "role": "dimension"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "85b287e01c61166bf48f553a",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap referansı ile ilişkili sipariş satırlarının ek vergi matrahı",
+      "columns": [
+        {
+          "entity": "LG_ORFLINE",
+          "column": "ADDTAXVATMATRAH",
+          "role": "measure"
+        },
+        {
+          "entity": "LG_ORFLINE",
+          "column": "CLIENTREF",
+          "role": "key"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "19e99e4a18817c6b52fe173d",
+      "sourceHashes": {
+        "LG_ORFLINE": "1b65a16fa493e0446185171cbf9e11e9946aaa8e96c24601e5d948d7d511ccb9"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "İptal edilmemiş sipariş fişlerinin ek masraflar toplamı",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ADDEXPENSES",
+          "role": "measure"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "CANCELLED",
+          "role": "filter"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [
+        "CANCELLED kolonunun 0/1 değerleri şemada tanımlı değil, iptal edilmemiş durumu için kesin filtre değeri belirsiz."
+      ],
+      "id": "8588ee0382db79d509256941",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Belirli bir cari hesaba ait sipariş fişlerinin ek indirim tutarları",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ADDDISCOUNTS",
+          "role": "measure"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "CLIENTREF",
+          "role": "filter"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "c6ae5c364107535cde859d7f",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Riski etkileyen sipariş fişlerinin genel muhasebe hesap referansları",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ACCOUNTREF",
+          "role": "dimension"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "AFFECTRISK",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [
+        "AFFECTRISK kolonunun 'etkiler' durumunu belirten spesifik değer şemada tanımlı değil."
+      ],
+      "id": "87d66c5730742738bef8a1db",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Oluşturulma tarihine göre sipariş fişlerinin ek masraf dağılımı",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ADDEXPENSES",
+          "role": "measure"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "CAPIBLOCK_CREADEDDATE",
+          "role": "time"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "c55ae7071188f40a7d0b3313",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Müşteri cari hesap referansı ile sipariş fişi ek indirimleri",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ADDDISCOUNTS",
+          "role": "measure"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "RECVREF",
+          "role": "dimension"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "2b266abf2edefbe5cdbb4af1",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "İşyeri bazında sipariş fişlerinin ek masraflar ortalaması",
+      "columns": [
+        {
+          "entity": "ORFICHE",
+          "column": "ADDEXPENSES",
+          "role": "measure"
+        },
+        {
+          "entity": "ORFICHE",
+          "column": "BRANCH",
+          "role": "dimension"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "453bf7823977676b82212c6e",
+      "sourceHashes": {
+        "ORFICHE": "82e174262094b36acfd2aa84be1181b7cab3148c49f5c76402dfe976223877ff"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Ödeme planı kodu ve açıklaması",
+      "columns": [
+        {
+          "entity": "PAYPLANS",
+          "column": "CODE",
+          "role": "dimension"
+        },
+        {
+          "entity": "PAYPLANS",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "912a946d0c31b234eab75039",
+      "sourceHashes": {
+        "PAYPLANS": "278aad74760888252eeac66f4c23962e343c4f9b287bd35c6c05d04aa67d8b95"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Geç ödeme faizi yüksek olanlar",
+      "columns": [
+        {
+          "entity": "PAYPLANS",
+          "column": "CODE",
+          "role": "dimension"
+        },
+        {
+          "entity": "PAYPLANS",
+          "column": "LATEINTEREST",
+          "role": "measure"
+        }
+      ],
+      "operation": "rank",
+      "ambiguities": [
+        "Yükseklik için sıralama yönü veya limit sayısı belirsiz."
+      ],
+      "id": "cd007e19c231b37565b4491e",
+      "sourceHashes": {
+        "PAYPLANS": "278aad74760888252eeac66f4c23962e343c4f9b287bd35c6c05d04aa67d8b95"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Ödeme planı grup koduna göre sayı",
+      "columns": [
+        {
+          "entity": "PAYPLANS",
+          "column": "LOGICALREF",
+          "role": "measure"
+        },
+        {
+          "entity": "PAYPLANS",
+          "column": "PPGROUPCODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "4d5bc8498e63ed968718d45d",
+      "sourceHashes": {
+        "PAYPLANS": "278aad74760888252eeac66f4c23962e343c4f9b287bd35c6c05d04aa67d8b95"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Satış yöneticisi kodu 100 olan kaydı getir.",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "CODE",
+          "role": "filter"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "15e2c51b15eca56fb89aa05e",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Aktif olmayan satış yöneticilerini listele.",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "ACTIVE",
+          "role": "filter"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        }
+      ],
+      "operation": "absence",
+      "ambiguities": [
+        "ACTIVE kolonundaki 'aktif olmayan' durumu için spesifik bir değer (0, NULL vb.) belirtilmemiş."
+      ],
+      "id": "530c78121cce23e1360d9b89",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Departman ID'si 5 olan satış yöneticilerinin tanımlarını göster.",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "DEPTID",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "4efecf487c223be9bee74ff0",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Son değiştirilme tarihi 2023 sonrası olan satış yöneticileri.",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "CAPIBLOCK_MODIFIEDDATE",
+          "role": "time"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "DEFINITION_",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "750804ab43efb89f567cde73",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Kart tipi 1 olan satış yöneticisi sayısı kaçtır?",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "CARDTYPE",
+          "role": "filter"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "LOGICALREF",
+          "role": "measure"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "8ef27bedb21c077dc1605dc8",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Özel kodu 'VIP' olan satış yöneticilerinin pozisyonlarını listele.",
+      "columns": [
+        {
+          "entity": "SLSMAN",
+          "column": "POSITION_",
+          "role": "dimension"
+        },
+        {
+          "entity": "SLSMAN",
+          "column": "SPECODE",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "ecbc2830dec5f37ffaf29104",
+      "sourceHashes": {
+        "SLSMAN": "1c72b7334836d2645f461a253265730f2407ff1dd36a71fb2659974e9d5af270"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "İptal edilmemiş malzeme hareketlerinin miktarlarını listeleyin.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "AMOUNT",
+          "role": "measure"
+        },
+        {
+          "entity": "STLINE",
+          "column": "CANCELLED",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "a88fdf62bcc3c34c7acb958a",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Faturalanmış hareketlerdeki AB KDV tutarlarını toplayın.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "ABVATAMOUNT",
+          "role": "measure"
+        },
+        {
+          "entity": "STLINE",
+          "column": "BILLED",
+          "role": "filter"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "1ddfd74c9fd5f92bfd5ff7fa",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Ek vergi oranı yüksek olan hareketlerin ek vergi tutarlarını gösterin.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "ADDTAXAMOUNT",
+          "role": "measure"
+        },
+        {
+          "entity": "STLINE",
+          "column": "ADDTAXRATE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "rank",
+      "ambiguities": [],
+      "id": "5beb9c3849680b7c3ba0aebd",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Kampanya puanı 1'i sıfır olmayan hareketlerin miktarlarını bulun.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "AMOUNT",
+          "role": "measure"
+        },
+        {
+          "entity": "STLINE",
+          "column": "CAMPPOINTS1",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "0ed0751c39f79dab201c28c4",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Riski etkileyen hareketlerin ek vergi maliyetlerini raporlama dövizi cinsinden listele.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "ADDTAXPRCOSTCURR",
+          "role": "measure"
+        },
+        {
+          "entity": "STLINE",
+          "column": "AFFECTRISK",
+          "role": "filter"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "d7993fd37c48d806c7331d9b",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Alternatif promosyon uygulanmış hareketlerin kampanya puanlarını karşılaştır.",
+      "columns": [
+        {
+          "entity": "STLINE",
+          "column": "ALTPROMFLAG",
+          "role": "filter"
+        },
+        {
+          "entity": "STLINE",
+          "column": "CAMPPOINT",
+          "role": "measure"
+        }
+      ],
+      "operation": "compare",
+      "ambiguities": [],
+      "id": "2f7d80052ed253ec74355791",
+      "sourceHashes": {
+        "STLINE": "853142776f3be486331bfdd5b6149009f0352417e2a36b406476ec529c9d646a"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartı kodu ve engelleme durumu",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "BLOCKED",
+          "role": "filter"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "CODE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "6b0d200c47f943306287d226",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Alıcı olan cari hesapların şehir bilgisi",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "CARDTYPE",
+          "role": "filter"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "CITY",
+          "role": "dimension"
+        }
+      ],
+      "operation": "lookup",
+      "ambiguities": [],
+      "id": "db467950410fce0b90dd447d",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartının oluşturulma tarihi ve saati",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "CAPIBLOCK_CREADEDDATE",
+          "role": "time"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "CAPIBLOCK_CREATEDHOUR",
+          "role": "time"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "6b9daf52dff02e2eca5c4ba9",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartına bağlı ödeme planı referansı",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "CODE",
+          "role": "dimension"
+        },
+        {
+          "entity": "CLCARD",
+          "column": "PAYMENTREF",
+          "role": "key"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "78bce5dabf6279f16ec3408f",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartının değiştirilme tarihini göster",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "CAPIBLOCK_MODIFIEDDATE",
+          "role": "time"
+        }
+      ],
+      "operation": "detail",
+      "ambiguities": [],
+      "id": "9188aa01f1e36b7d940fb80b",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    },
+    {
+      "phrase": "Cari hesap kartı türüne göre sayı",
+      "columns": [
+        {
+          "entity": "CLCARD",
+          "column": "CARDTYPE",
+          "role": "dimension"
+        }
+      ],
+      "operation": "aggregate",
+      "ambiguities": [],
+      "id": "9e9e15c434f30153b2af4f0a",
+      "sourceHashes": {
+        "CLCARD": "d10f9bc11508abf8d6832f86c9cba5e8a7f4a7686d05906fb67920442e3900b8"
+      },
+      "status": "SCHEMA_CHECKED_CANDIDATE"
+    }
+  ],
+  "batches": {
+    "5110583f03cde7279524633e7bd06899ea535258a35bb23162ee5dd1871ec065": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 4,
+      "rejected": [
+        "disconnected table combination",
+        "disconnected table combination"
+      ]
+    },
+    "cc2ee7420f106b2a4ad54ca6ea83e70a041faec2184e55db7ea48f9e234fb7c9": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "6ca551d554836386d5fe7b26347ea3072a632f9ec56819523f64e76ab3995b0d": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "6802436503920b3d98bc919978d4de22bf047b02ea9024b8e182da7175924bbf": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "dad4e6732a51d397517253c004b16e3a38def5e8896c7c5e3f5b52e2f75d5e0a": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "c1aa759ce26d2cbff2c6ecd60db2d45d96b4986519f4ca33737c2a7994ce61e4": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "693eb2fa71f467b22e3b39f792d5109a8470e29f6c8ff97038e00611852f1a5d": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 3,
+      "rejected": [
+        "invalid operation",
+        "invalid operation",
+        "unknown or sensitive column"
+      ]
+    },
+    "fca1ed00fddd0c5f411c2523aaf6badef45183d3db183d114c8b15efac2eb572": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "47bc2eb10eea0e853e9d818883c5990ae668d49adb5c15e5106dc34990ca705d": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    },
+    "f901b45108fd6b11b2859b71eae3a7677857c535b169c63dc58748cb249173ca": {
+      "status": "COMPLETE",
+      "model": "nanobaseai-bi-llm",
+      "accepted": 6,
+      "rejected": []
+    }
+  }
+}

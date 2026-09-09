@@ -51,7 +51,7 @@ sorusu sırasında havuz genişletmek için ek LLM çağrısı yapılmaz. Tüm k
 Doğrulanan aday dosyasını servis kullanıcısının okuyabileceği bir yola atomik olarak
 koyun ve `SEMANTIC_LANGUAGE_POOL=/absolute/path/pool.json` ayarlayın. Ortam değişkeni
 ilk eklendiğinde servis yeniden başlatılır. Sonraki atomik dosya güncellemeleri
-normal katalog yenileme kontrolünde, en fazla yaklaşık 30 saniye sonra görülür.
+normal katalog yenileme kontrolünde görülür; kontrol aralığı yaklaşık 30 saniyedir ve katalog yükleme süresi buna eklenir.
 Değişken yoksa veya dosya geçersizse havuz boş kalır; katalog araması çalışmaya devam eder.
 
 API yanıtındaki `semantic.query.languageCandidates` ilgili arama kanıtlarını,

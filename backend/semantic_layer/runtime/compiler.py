@@ -395,6 +395,13 @@ class DeterministicCompiler:
         return {c for c in used if c.upper() in names}
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]:
+        if q.context_scope and not getattr(self, "_context_bound", False):
+            from semantic_layer.runtime.context_scope import select_profiles
+            scoped = DeterministicCompiler(select_profiles(self.profiles, q.context_scope),
+                                           {**self.context, **q.context_scope}, self.d.name,
+                                           default_filters=self._default_filters, conventions=self.conventions)
+            scoped._context_bound = True
+            return scoped.compile(q, catalog)
         if q.analytics:
             from semantic_layer.runtime.monthly_analysis import compile_monthly
             return compile_monthly(self, q, catalog)
