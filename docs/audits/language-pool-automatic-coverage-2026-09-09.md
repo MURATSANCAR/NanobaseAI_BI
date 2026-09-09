@@ -59,7 +59,30 @@ Bakım servisi: `nanobase-language-pool.service`; zamanlayıcı: aynı adlı `.t
 Kurulum betiği: `scripts/server/deploy-language-pool-worker.sh`.
 Ana semantic bridge kurulumuna da çağrısı eklendi.
 
-Gerçek API kabulü ve bakım servisi işletim sonucu aşağıda kaydedilecektir.
+Gerçek üretim API'sinde 10 soru çalıştırıldı: **3 başarılı, 2 başarısız,
+5 DOĞRULANAMADI**. Koşu boyunca aktif havuz dosyası değişmedi. İki başarılı veri
+sorusunun API tam sonucu bağımsız `LG_SLSMAN` referanslarıyla kolon kimlikleri,
+satır sayıları ve değerler bakımından eşleşti. Üçüncü başarı, `test` mesajının SQL
+üretmeden `MODULE_INTRO` dönmesidir.
+
+İki yeni ifade aramada bulundu, fakat resolver `oluşturan` ve `zaman` sözcükleri
+hakkında anlamsız netleştirme istedi. Bu iki soru **başarısızdır**; ifade araması
+başarısını uçtan uca ürün başarısı olarak göstermiyoruz. Bu resolver sorunları
+bu bakım değişikliğiyle düzeltilmedi.
+
+Dört çok tablolu sorgu ve bir dönem karşılaştırması gerçek DB'de yürüdü. Ancak
+yedek seçimi için geçerli bağımsız iş referansı olmadığından sayısal doğrulukları
+**DOĞRULANAMADI**. API'nin aynı yürütmelerine ait tam sonuçlar okundu. Tüm veri
+sorularında toplam 217,344 sonuç satırı, 155,247 NULL hücre görüldü; tam sonuçlar
+kesilmedi. Bu koşuda sıfır sayısal hücreye rastlanmadı; sıfır değer davranışı için
+yeni kapsam kanıtı sayılmıyor.
+
+[Sorular, statüler ve üretilen SQL](../../outputs/language-pool-auto-20260909/api-prompts-status-sql.md).
+Sonuç kayıtlarını içermeyen kanıt JSON'u ve hashler aynı dizinde tutuluyor.
+
+Zamanlayıcı üretimde etkinleştirildi. Bakım servisi aynı checkpoint üzerinden
+çalışmayı sürdürüyor; yeni turların ürettiği havuzları bu ilk 77 adaylık API koşusuyla
+sayısal olarak doğrulanmış saymayın.
 
 ## Açık sınırlar
 
@@ -75,3 +98,17 @@ Yerel birim testi, mock, fixture veya sentetik DB çalıştırılmadı. Gerçek 
 kontrolleri ve API kabulü sunucuda yürütülür. Kanıt dizini:
 `outputs/language-pool-auto-20260909/`; sunucu arşivi:
 `/data/nanobaseai/bi/backups/language-pool-auto-20260909/`.
+
+
+## İşletim doğrulaması
+
+Zamanlayıcı `enabled/active`. Servis tamamlanan `NEW_URETIMBASE` ve
+`NEW_KITAPBASE` gruplarını atlayarak `CONTACTBASE` ile devam etti; sonraki grupta
+8 hedef kolon için 12 yeni aday checkpoint'e yazıldı. Bunlar ilk 77 adaylık
+kabul havuzunun dışında, sonraki yayını bekleyen adaylardır. Eşzamanlı `--plan-only`
+isteği LLM çağrısı başlamadan kilit nedeniyle reddedildi. Kabul sonrasında izlenen
+kod dosyalarında değişiklik bulunmadı.
+
+Operasyon kanıtı: `maintenance-operation.json`. İlk yayın kapsam raporu:
+`coverage-first-publication.json`. Bu rapor anlık tüm-katalog tamamlanma iddiası
+olarak okunmamalıdır; güncel durum sunucudaki checkpoint/kapsam dosyalarındadır.

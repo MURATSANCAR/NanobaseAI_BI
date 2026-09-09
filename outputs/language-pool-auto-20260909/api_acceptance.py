@@ -22,15 +22,12 @@ cases=[('A01','Satış temsilcilerinin toplam sayısı kaç?', 'SELECT COUNT(*) 
 for i,e in enumerate(new[:2],3):cases.append((f'A{i:02d}',e['phrase'],None,None))
 selected=[]
 for size in (7,8):
- for r in complex_rows:
-  tree=sqlglot.parse_one(r['sql'],read='tsql');families={t.name.split('_')[-1] for t in tree.find_all(exp.Table)}
-  if len(families)==size:
-   selected.append(r)
-   if sum(len({t.name.split('_')[-1] for t in sqlglot.parse_one(z['sql'],read='tsql').find_all(exp.Table)})==size for z in selected)>=2:break
+ selected.extend([r for r in complex_rows if len(r.get('entities',[]))==size][:2])
 for i,r in enumerate(selected,5):cases.append((f'A{i:02d}',r['prompt'],None,None))
 cases += [('A09','2025 ve 2026 satış tutarlarını karşılaştır.',None,None),('A10','test',None,None)]
-results=[];initial_pool=hashlib.sha256(Path(os.environ['SEMANTIC_LANGUAGE_POOL']).read_bytes()).hexdigest()
+results=json.loads((out/'api-acceptance.json').read_text()) if (out/'api-acceptance.json').exists() else [];initial_pool=hashlib.sha256(Path(os.environ['SEMANTIC_LANGUAGE_POOL']).read_bytes()).hexdigest()
 for ident,prompt,reference,keys in cases:
+ if any(row['id']==ident for row in results):continue
  started=time.monotonic();r={'id':ident,'prompt':prompt,'status':'DOĞRULANAMADI','referenceSQL':reference}
  try:
   answer=call('/api/v1/ask',{'question':prompt,'sampleSize':500,'execute':True});r['answer']=answer

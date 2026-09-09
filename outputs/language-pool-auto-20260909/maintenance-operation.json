@@ -1,0 +1,53 @@
+{
+  "changedCodeFilesAfterAcceptance": [],
+  "timerEnabled": "enabled",
+  "timerActive": "active",
+  "jobs": [
+    {
+      "entity": "NEW_URETIMBASE",
+      "status": "COMPLETE",
+      "covered": [
+        "CREATEDBY",
+        "CREATEDON",
+        "CREATEDONBEHALFBY",
+        "EXCHANGERATE",
+        "IMPORTSEQUENCENUMBER",
+        "MODIFIEDBY",
+        "MODIFIEDON",
+        "MODIFIEDONBEHALFBY"
+      ],
+      "attempts": 1
+    },
+    {
+      "entity": "NEW_KITAPBASE",
+      "status": "COMPLETE",
+      "covered": [
+        "CREATEDBY",
+        "CREATEDON",
+        "CREATEDONBEHALFBY",
+        "EXCHANGERATE",
+        "IMPORTSEQUENCENUMBER",
+        "MODIFIEDBY",
+        "MODIFIEDON",
+        "MODIFIEDONBEHALFBY"
+      ],
+      "attempts": 1
+    },
+    {
+      "entity": "CONTACTBASE",
+      "status": "COMPLETE",
+      "covered": [
+        "ACCOUNTROLECODE",
+        "AGING30",
+        "AGING30_BASE",
+        "AGING60",
+        "AGING60_BASE",
+        "AGING90",
+        "AGING90_BASE",
+        "ANNIVERSARY"
+      ],
+      "attempts": 1
+    }
+  ],
+  "singleWriterGuard": "A concurrent plan-only request was rejected with exit 1 before generation"
+}

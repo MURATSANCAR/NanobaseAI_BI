@@ -1,0 +1,12 @@
+{
+  "questions": 10,
+  "statuses": {
+    "LIVE_PASS": 3,
+    "LIVE_FAIL": 2,
+    "DOĞRULANAMADI": 5
+  },
+  "initialPoolFileHash": "591eaed493c675f3d202369607b6af8d8ddb6f2e9199b05398378d27f2f38df0",
+  "finalPoolFileHash": "591eaed493c675f3d202369607b6af8d8ddb6f2e9199b05398378d27f2f38df0",
+  "poolStable": true,
+  "interpretation": "A03/A04 are semantic resolution failures, not merely missing numeric references."
+}
