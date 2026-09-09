@@ -77,3 +77,12 @@ hedefine gidiyor; kolon açıklamaları farklı anlamlar veriyor. WSREF, WFLOWCR
 STLINEREF örneklerinde ilişki hedefi İngilizce açıklamayı desteklese de adlandırmayla
 uyuşmuyor. Aynı kaynakta kopyalanmış ilişki hataları da bulunduğundan bu alanlar
 bağımsız sürüm dokümanı/uygulama doğrulaması olmadan kesin iş anlamı sayılmadı.
+
+## 48 soruluk kalite sonucu
+
+Mevcut üretim ölçümüyle aynı 48 soru ve değişmeyen eşiklerle kontrol geçti.
+Doğru tabloya erişim (recall) 1,0 → 1,0; tablo beklenen 39 sorunun tamamında tablolar bulundu;
+etkili ret/netleştirme sayısı 12 → 12. Soru bazında yeni ret ve yeni tablo kaybı yok.
+İzleme metrikleri: tablo isabeti 0,218 → 0,214; ortalama gönderilen tablo 8,5 → 9,1;
+ortalama istem 9.312 → 9.330 token. Kapsam korunurken isabet küçük ölçüde düştü;
+tüm aramaların kusursuz olduğu iddia edilmez.

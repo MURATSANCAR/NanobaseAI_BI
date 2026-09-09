@@ -48,6 +48,13 @@ export function LoginGate({ children }: { children: ReactNode }) {
           setUsername(data.username); setPassword(data.password); setTest(true);
         } else if (response.ok) setUser(data.username);
         else if (invitation) setError(data.error || 'Test bağlantısının süresi dolmuş. Hesabınızla giriş yapabilirsiniz.');
+        else if (response.status === 401) {
+          const remembered = await fetch(auth + 'prefill', { cache: 'no-store' });
+          if (remembered.ok && active) {
+            const saved = await remembered.json();
+            if (active) { setUsername(saved.username); setPassword(saved.password); setTest(true); }
+          }
+        }
       } catch { if (active) setError('Giriş servisine ulaşılamadı. Lütfen sayfayı yenileyin.'); }
       finally { if (active) setReady(true); }
     })();

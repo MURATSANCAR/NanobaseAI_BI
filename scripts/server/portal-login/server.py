@@ -93,8 +93,11 @@ class Handler(BaseHTTPRequestHandler):
                 with open(INVITE) as f:
                     config = json.load(f)
                 supplied = self.headers.get('X-Test-Invite', '')
+                if not supplied:
+                    remembered = SimpleCookie(self.headers.get('Cookie', '')).get('__Secure-timas_invite')
+                    supplied = remembered.value if remembered else ''
                 if supplied and hmac.compare_digest(supplied, config['token']) and time.time() < config['expires']:
-                    return self.reply(200, {k: config[k] for k in ('username', 'password', 'expires')})
+                    return self.reply(200, {k: config[k] for k in ('username', 'password', 'expires')}, cookie=f"__Secure-timas_invite={supplied}; Path=/timas/auth/; Secure; HttpOnly; SameSite=Strict; Max-Age={max(0, int(config['expires'] - time.time()))}")
             except (OSError, ValueError, KeyError):
                 pass
             return self.reply(403, {'error': 'Test daveti geçersiz veya süresi dolmuş.'})

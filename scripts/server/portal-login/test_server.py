@@ -64,10 +64,14 @@ class Sessions(unittest.TestCase):
         self.assertEqual(self.request('/prefill')[0], 403)
         self.assertEqual(self.request('/prefill', headers={'X-Test-Invite': 'wrong'})[0], 403)
         headers = {'X-Test-Invite': config['token']}
-        self.assertEqual(self.request('/prefill', headers=headers)[0], 200)
+        status, response_headers, _ = self.request('/prefill', headers=headers)
+        self.assertEqual(status, 200)
+        remembered = {'Cookie': response_headers['Set-Cookie'].split(';')[0]}
+        self.assertEqual(self.request('/prefill', headers=remembered)[0], 200)
         config['expires'] = time.time() - 1
         pathlib.Path(login.INVITE).write_text(json.dumps(config))
         self.assertEqual(self.request('/prefill', headers=headers)[0], 403)
+        self.assertEqual(self.request('/prefill', headers=remembered)[0], 403)
 
     def test_expired_session_denied(self):
         with login.connection() as db:
