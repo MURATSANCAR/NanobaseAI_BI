@@ -1,0 +1,249 @@
+{
+  "connectedDatabase": {
+    "rows": [
+      {
+        "database_name": "LOGO_DB"
+      }
+    ],
+    "truncated": false
+  },
+  "visibleDatabases": {
+    "rows": [
+      {
+        "name": "LOGO_DB",
+        "state_desc": "ONLINE"
+      },
+      {
+        "name": "Timas_MSCRM",
+        "state_desc": "ONLINE"
+      }
+    ],
+    "truncated": false
+  },
+  "sourceTables": [
+    {
+      "table": "LG_105_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "105",
+        "n1": "01"
+      },
+      "rows": 48194,
+      "window": [
+        "2015-01-01",
+        "2015-12-31"
+      ]
+    },
+    {
+      "table": "LG_105_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "105",
+        "n1": "01"
+      },
+      "rows": 2565228,
+      "window": [
+        "2015-01-01",
+        "2015-12-31"
+      ]
+    },
+    {
+      "table": "LG_115_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "115",
+        "n1": "01"
+      },
+      "rows": 48244,
+      "window": [
+        "2016-01-01",
+        "2016-12-31"
+      ]
+    },
+    {
+      "table": "LG_115_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "115",
+        "n1": "01"
+      },
+      "rows": 2613570,
+      "window": [
+        "2016-01-01 00:00:00",
+        "2016-12-31 00:00:00"
+      ]
+    },
+    {
+      "table": "LG_171_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "171",
+        "n1": "01"
+      },
+      "rows": 46986,
+      "window": [
+        "2017-01-02",
+        "2017-12-31"
+      ]
+    },
+    {
+      "table": "LG_171_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "171",
+        "n1": "01"
+      },
+      "rows": 2488451,
+      "window": [
+        "2017-01-01",
+        "2018-01-15"
+      ]
+    },
+    {
+      "table": "LG_181_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "181",
+        "n1": "01"
+      },
+      "rows": 47980,
+      "window": [
+        "2018-01-02",
+        "2018-12-31"
+      ]
+    },
+    {
+      "table": "LG_181_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "181",
+        "n1": "01"
+      },
+      "rows": 2345632,
+      "window": [
+        "2018-01-01",
+        "2019-01-23"
+      ]
+    },
+    {
+      "table": "LG_191_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "191",
+        "n1": "01"
+      },
+      "rows": 50870,
+      "window": [
+        "2019-01-02",
+        "2019-12-31"
+      ]
+    },
+    {
+      "table": "LG_191_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "191",
+        "n1": "01"
+      },
+      "rows": 2276710,
+      "window": [
+        "2019-01-01",
+        "2020-01-15"
+      ]
+    },
+    {
+      "table": "LG_201_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "201",
+        "n1": "01"
+      },
+      "rows": 58253,
+      "window": [
+        "2020-01-02 00:00:00",
+        "2020-12-31 00:00:00"
+      ]
+    },
+    {
+      "table": "LG_201_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "201",
+        "n1": "01"
+      },
+      "rows": 2289133,
+      "window": [
+        "2020-01-01",
+        "2021-04-14"
+      ]
+    },
+    {
+      "table": "LG_211_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "211",
+        "n1": "01"
+      },
+      "rows": 502826,
+      "window": [
+        "2021-01-02",
+        "2025-12-31"
+      ]
+    },
+    {
+      "table": "LG_211_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "211",
+        "n1": "01"
+      },
+      "rows": 12195380,
+      "window": [
+        "2021-01-01",
+        "2030-03-20"
+      ]
+    },
+    {
+      "table": "LG_411_01_INVOICE",
+      "schema": "dbo",
+      "entity": "LG_INVOICE",
+      "context": {
+        "n0": "411",
+        "n1": "01"
+      },
+      "rows": 81801,
+      "window": [
+        "2026-01-01 00:00:00",
+        "2026-08-17 00:00:00"
+      ]
+    },
+    {
+      "table": "LG_411_01_STLINE",
+      "schema": "dbo",
+      "entity": "LG_STLINE",
+      "context": {
+        "n0": "411",
+        "n1": "01"
+      },
+      "rows": 1720142,
+      "window": [
+        "2026-01-01",
+        "2027-03-23"
+      ]
+    }
+  ]
+}
