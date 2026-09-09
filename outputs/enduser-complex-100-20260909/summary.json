@@ -1,0 +1,19 @@
+{
+  "total": 100,
+  "passed": 100,
+  "failed": 0,
+  "unverified": 0,
+  "first_attempt_passed": 98,
+  "fixed_and_retested": 2,
+  "logical_entities_each": 8,
+  "metrics": {
+    "satılan adet": 25,
+    "satış tutarı": 25,
+    "satış satırı sayısı": 25,
+    "net satış tutarı": 25
+  },
+  "full_result_rows_min": 7089,
+  "full_result_rows_max": 85703,
+  "preview_limit": 500,
+  "regression_tests": 477
+}
