@@ -101,7 +101,10 @@ class _DbApiBase:
             rows = cur.fetchall()
             return cols, rows
         except Exception:
-            self._drop_if_broken()
+            if getattr(self, '_probe_only', False):
+                self.close()
+            else:
+                self._drop_if_broken()
             raise
         finally:
             try:
@@ -126,6 +129,27 @@ class _DbApiBase:
         truncated = len(raw) > limit
         rows = [{c["name"]: _norm(v) for c, v in zip(cols, r)} for r in raw[:limit]]
         return cols, rows, truncated
+
+    def batches(self, sql: str, batch_size: int = 1000):
+        """One execution, bounded fetch buffers; closing the generator closes the cursor."""
+        cur = self.conn().cursor()
+        try:
+            cur.execute(sql)
+            cols = [{"name": d[0], "type": str(getattr(d[1], '__name__', d[1]))}
+                    for d in (cur.description or [])]
+            if len({c['name'] for c in cols}) != len(cols):
+                raise ValueError('Duplicate output column names require distinct aliases')
+            yield cols, []
+            while True:
+                raw = cur.fetchmany(batch_size)
+                if not raw:
+                    break
+                yield cols, [{c['name']: _norm(v) for c, v in zip(cols, row)} for row in raw]
+        except Exception:
+            self._drop_if_broken()
+            raise
+        finally:
+            cur.close()
 
     def _drop_if_broken(self) -> None:
         """Forget a connection the driver can no longer use, so the next call reconnects instead of
@@ -185,7 +209,7 @@ class MSSQLConnector(_DbApiBase):
                 c.get("driver", "FreeTDS"), c["host"], c.get("port", 1433), c["database"], c["user"], c["password"], c.get("tds_version", "7.4"))
             for k, v in (c.get("kwargs") or {}).items():
                 cs += f";{k}={v}"
-            self._conn = pyodbc.connect(cs, timeout=30, readonly=True, autocommit=True)
+            self._conn = pyodbc.connect(cs, timeout=int(c.get("login_timeout", 30)), readonly=True, autocommit=True)
             self._conn.timeout = self.query_timeout        # per-query timeout, not just login
             try:
                 self._conn.setdecoding(pyodbc.SQL_CHAR, encoding="utf-8")

@@ -27,6 +27,9 @@ def audit_sql(sq: SemanticQuery, sql: str, *, conventions: Any = None) -> list[s
     CASE or a subquery, and guessing about that would cost more good answers than it saves bad ones.
     Only a direct disagreement on the same column is reported, which cannot be a matter of style.
     """
+    if sq.analytics:
+        from semantic_layer.runtime.monthly_analysis import check
+        return check(sq, sql, audit_sql, conventions=conventions)
     facts = extract_sql_facts(sql, conventions=conventions)
     if facts.parse_error:
         return []
@@ -231,6 +234,9 @@ def _period_outputs(tree, period, scope, binding=None):
 
 def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
     """Fail closed when the final SQL does not demonstrate a resolved requirement."""
+    if sq.analytics:
+        from semantic_layer.runtime.monthly_analysis import check
+        return check(sq, sql, unmet_obligations)
     out: list[str] = []
     try:
         tree = parse_sql(sql)

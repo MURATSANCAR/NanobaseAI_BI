@@ -290,7 +290,7 @@ function AssistantCard({
 }) {
   const [showSql, setShowSql] = useState(false);
   const [showTable, setShowTable] = useState(false);
-  const cols = m.result?.columns.slice(0, wide ? 8 : 5) ?? [];
+  const cols = m.result?.columns ?? [];
   const rows = m.result?.records.slice(0, wide ? 20 : 8) ?? [];
   const widget = m.result?.widget;
   // Grafik çizilebiliyorsa tablo katlanır; çizilemiyorsa (table tipi ya da uygunsuz veri) eskisi gibi açık gelir.
@@ -307,6 +307,13 @@ function AssistantCard({
       <p className={clsx('mt-1.5 whitespace-pre-line text-[13px] leading-snug', m.error && 'text-brand-accent')}>
         {rows.length > 0 ? headline(m.text) : m.text}
       </p>
+      {m.result && (
+        <p className="mt-2 break-words text-xs leading-relaxed text-ink-muted">
+          {m.result.truncated ? `Sonuç kesildi; en az ${m.result.totalRows} satır var. ` : `${m.result.totalRows} satır; ekranda ilk ${rows.length} satır. `}
+          {m.result.computedAt ? `Hesaplanma: ${new Date(m.result.computedAt * 1000).toLocaleString('tr-TR')}. ` : ''}
+          {m.result.cached ? `Önbellekten (${Math.round(m.result.ageSec ?? 0)} saniye önce).` : ''}
+        </p>
+      )}
       {m.error && <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-page p-2 text-[10px] text-ink-muted">{m.error}</pre>}
       {chart}
       {rows.length > 0 && !chart && <ResultTable cols={cols} rows={rows} totalRows={m.result?.totalRows ?? rows.length} />}

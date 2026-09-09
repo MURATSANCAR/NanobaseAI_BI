@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from semantic_layer import SEMANTIC_LAYER_VERSION
@@ -68,7 +68,10 @@ class Runtime:
         self._engine_lock = threading.Lock()
         # Executed results, kept whole so the table, the chart and the export read the same rows.
         self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
-        self._results_lock = threading.Lock()
+        self._results_lock = threading.RLock()
+        self._complete_cache = OrderedDict()
+        from semantic_bridge.result_files import ResultFiles
+        self.result_files = ResultFiles()
         self._results_max = int(os.environ.get("SEMANTIC_RESULT_KEEP", "64"))
         self._result_ttl = float(os.environ.get("SEMANTIC_RESULT_TTL_SEC", "1800"))
         self.threads: dict[str, list[dict[str, str]]] = {}
@@ -378,6 +381,50 @@ class Runtime:
                     self._waiting -= 1
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
 
+    def run_complete(self, sql: str, period=None) -> dict[str, Any]:
+        ok, why = validate_sql(sql)
+        if not ok:
+            raise ValueError(why)
+        ok, why = allowed_tables(sql, self.profiles, self.settings.context, self.settings.dialect or None)
+        if not ok:
+            raise ValueError(why)
+        phys = self._physical(sql, period)
+        if not hasattr(self.connector, 'batches'):
+            # Non-DB adapters retain their explicit bounded execution contract.
+            return self.run_sql(sql, self.settings.max_rows, period)
+        with self._wait_lock:
+            self._waiting += 1
+        try:
+            with self._engine_lock:
+                key = hashlib.sha256(phys.encode()).hexdigest()
+                cached = self._complete_cache.get(key)
+                if cached and self._cache_ttl > 0 and time.time() - cached[0] < self._cache_ttl and Path(cached[1]['_result_file']).exists():
+                    return dict(self._served(cached[1], cached[0]), cached=True)
+                with self._results_lock:
+                    for rid, snap in list(self._results.items()):
+                        if time.time() - snap['at'] > self._result_ttl:
+                            self._discard_result(rid)
+                    # Reserve room before execution; older downloadable snapshots expire first.
+                    reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
+                    while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
+                        self._discard_result(next(iter(self._results)))
+                out = self.result_files.write(self.connector.batches(phys), self.settings.max_rows)
+                out.update(physicalSql=phys, cached=False)
+                self._complete_cache[key] = (time.time(), out)
+                self._complete_cache.move_to_end(key)
+                while len(self._complete_cache) > 64:
+                    self._complete_cache.popitem(last=False)
+        finally:
+            with self._wait_lock:
+                self._waiting -= 1
+        out.update(physicalSql=phys, cached=False)
+        return self._served(out, time.time())
+
+    def _discard_result(self, rid):
+        old = self._results.pop(rid, None)
+        if old and old.get('_result_file') and not any(s.get('_result_file') == old['_result_file'] for s in self._results.values()):
+            self.result_files.remove(old['_result_file'])
+
     def remember_result(self, result: dict[str, Any], *, question: str, sql: str) -> None:
         """Keep the whole executed result so everything downstream reads the same rows.
 
@@ -394,29 +441,36 @@ class Runtime:
             self._results[rid] = {
                 "tenant_id": self.settings.tenant_id,
                 "at": time.time(),
+                "computedAt": result.get("computedAt", time.time()),
                 "question": question,
                 "sql": sql,
                 "physicalSql": result.get("physicalSql"),
                 "columns": result.get("columns") or [],
-                "records": result.get("records") or [],
+                "records": [] if result.get("_result_file") else result.get("records") or [],
+                "_result_file": result.get("_result_file"),
                 "totalRows": result.get("totalRows") or 0,
                 "truncated": bool(result.get("truncated")),
                 "dataCoverage": result.get("dataCoverage", []),
                 "comparison": result.get("comparison"),
             }
+            for old_id, old in list(self._results.items()):
+                if time.time() - old['at'] > self._result_ttl:
+                    self._discard_result(old_id)
             while len(self._results) > self._results_max:
-                self._results.popitem(last=False)
+                self._discard_result(next(iter(self._results)))
 
-    def stored_result(self, rid: str) -> Optional[dict[str, Any]]:
+    def stored_result(self, rid: str, *, load_rows: bool = True) -> Optional[dict[str, Any]]:
         with self._results_lock:
             snap = self._results.get(rid)
             if snap is None:
                 return None
             if time.time() - snap["at"] > self._result_ttl:
-                self._results.pop(rid, None)
+                self._discard_result(rid)
                 return None
             if snap["tenant_id"] != self.settings.tenant_id:
                 return None
+            if load_rows and snap.get("_result_file"):
+                return dict(snap, records=self.result_files.read(snap["_result_file"]))
             return snap
 
     def attach_widget(self, result: dict[str, Any], question: str) -> None:
@@ -431,6 +485,12 @@ class Runtime:
                 w.pop("sql", None)
                 if w.get("type") != "multi_card":
                     w.pop("data", None)
+                # Multiple grouping dimensions cannot be collapsed into one label.
+                names = [c['name'] for c in result.get('columns', [])]
+                sample = result.get('records') or []
+                categorical = [n for n in names if any(isinstance(row.get(n), str) for row in sample)]
+                if len(categorical) > 1:
+                    w = {'id': w.get('id'), 'type': 'table', 'title': question}
                 result["widget"] = w
         except Exception:  # noqa: BLE001
             pass
@@ -446,6 +506,8 @@ class Runtime:
 
     def _remember(self, key: str, out: dict[str, Any], duration: float) -> None:
         if self._cache_ttl <= 0 or len(out.get("records") or []) > 200:
+            with self._hot_lock:
+                self._hot.pop(key, None)
             return
         self._cache[key] = (time.time(), out)
         self._cache.move_to_end(key)
@@ -546,6 +608,8 @@ class Runtime:
                 note += " " + sq.absence_contract.get("scope_note", "")
             if note:
                 note = " " + note
+        if result.get('truncated'):
+            note += " Sonuç sınırda kesildi; toplam satır sayısı bilinmiyor."
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
@@ -725,7 +789,7 @@ class Runtime:
         try:
             # Executed once, whole. The client is shown a page of it; the export needs all of it, and
             # asking twice would be a second execution against data that can have moved.
-            result = self.run_sql(sql, self.settings.max_rows, self._asked_period(sq))
+            result = self.run_complete(sql, self._asked_period(sq))
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)
@@ -746,7 +810,7 @@ class Runtime:
         t = time.perf_counter()
         summary = self.summarize(question, sql, result, sq)
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
-        fp = result_fingerprint([c["name"] for c in result["columns"]], result["records"])
+        fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
         qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
         self.thread_plans[thread_id] = sq
         thread.append({"role": "user", "content": question})
@@ -1253,7 +1317,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return result
 
     @app.get("/api/v1/result/{result_id}")
-    def stored_result(result_id: str, request: Request) -> dict[str, Any]:
+    def stored_result(result_id: str, request: Request):
         """The whole result of one execution, for a client that showed a page of it.
 
         Not a re-run: if this execution is gone the caller is told so and asks its question again.
@@ -1261,14 +1325,39 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         never saw, computed at a different moment, with the same air of being "the same result".
         """
         _require_caller(request)
-        snap = rt().stored_result(result_id)
+        runtime = rt()
+        stream = None
+        # Pin the open file while eviction is excluded. An open descriptor survives unlink.
+        with runtime._results_lock:
+            snap = runtime.stored_result(result_id, load_rows=False)
+            if snap and snap.get('_result_file'):
+                try:
+                    stream = open(snap['_result_file'], 'rb')
+                except FileNotFoundError:
+                    snap = None
         if snap is None:
             raise HTTPException(status_code=410, detail={
                 "code": "RESULT_GONE",
                 "message": "Bu sonucun saklama süresi doldu. Aynı soruyu tekrar sorun — eski SQL sessizce yeniden çalıştırılmaz."})
+        if snap.get('_result_file'):
+            meta = {k: v for k, v in snap.items() if k not in ('_result_file', 'records', 'tenant_id', 'at')}
+            meta.update(id=result_id, computedAt=snap.get('computedAt', snap['at']))
+            def chunks():
+                try:
+                    yield (json.dumps(meta, ensure_ascii=False)[:-1] + ', "records":[').encode()
+                    first = True
+                    for line in stream:
+                        if not first:
+                            yield b','
+                        yield line.rstrip(b'\n')
+                        first = False
+                    yield b']}'
+                finally:
+                    stream.close()
+            return StreamingResponse(chunks(), media_type='application/json')
         return {"id": result_id, "columns": snap["columns"], "records": snap["records"],
                 "totalRows": snap["totalRows"], "truncated": snap["truncated"],
-                "question": snap["question"], "sql": snap["sql"], "computedAt": snap["at"],
+                "question": snap["question"], "sql": snap["sql"], "computedAt": snap.get("computedAt", snap["at"]),
                 "dataCoverage": snap.get("dataCoverage", []), "comparison": snap.get("comparison")}
 
     @app.post("/api/v1/ask")

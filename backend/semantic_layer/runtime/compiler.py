@@ -388,6 +388,9 @@ class DeterministicCompiler:
         return {c for c in used if c.upper() in names}
 
     def compile(self, q: SemanticQuery, catalog: CatalogStore) -> Optional[CompiledQuery]:
+        if q.analytics:
+            from semantic_layer.runtime.monthly_analysis import compile_monthly
+            return compile_monthly(self, q, catalog)
         if q.shape == "ABSENCE":
             from semantic_layer.runtime.absence import compile_absence
             return compile_absence(self, q)
@@ -1676,6 +1679,8 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
     (değerin kendisi zaten kendini anlatıyor) verilir.
     """
     def fmt(v: Any) -> str:
+        if v is None:
+            return "Belirtilmemiş"
         if isinstance(v, bool):
             return "evet" if v else "hayır"
         if isinstance(v, int):
@@ -1696,9 +1701,11 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
     if total == 1:
         return " · ".join(f"{column_label(c)}: {fmt(rows[0].get(c))}" for c in columns[:6])
     head = rows[:3]
+    measures = [c for c in columns if any(isinstance(r.get(c), (int, float)) and not isinstance(r.get(c), bool) for r in head)]
+    display = list(dict.fromkeys(measures + columns))[:4]
     lines = [f"{total} satır döndü. İlk {len(head)}:"]
     for i, r in enumerate(head, 1):
-        lines.append(f"{i}. " + " · ".join(cell(c, r.get(c)) for c in columns[:4]))
+        lines.append(f"{i}. " + " · ".join(cell(c, r.get(c)) for c in display))
     return "\n".join(lines)
 
 

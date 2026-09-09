@@ -5,7 +5,7 @@
  * /api/v1/engine, /api/v1/feedback. Bu dosya yalnız istemci sarmalayıcıdır.
  */
 
-const BASE = ((import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '');
+const BASE = ((import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? import.meta.env.BASE_URL.replace(/\/$/, ''));
 
 export type SqlColumn = { name: string; type: string };
 

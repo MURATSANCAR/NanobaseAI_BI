@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -90,51 +91,15 @@ def inventory() -> dict:
 def run_offline_eval(release: str) -> dict:
     """Structural offline eval: presence + skeleton validity (not live LLM)."""
     inv = inventory()
-    # Offline pass criteria for vertical slice: inventory recorded; full pass needs filled corpora
-    structured_ok = True
-    unknown_table = 0
-    unknown_col = 0
-    # Use phase-7 GO numbers when available
-    bm = REPO_ROOT / "artifacts" / "phase-7" / "build-metadata.json"
-    metric_scores = {
-        "structuredOutputValidity": 1.0,
-        "unknownApprovedTable": 0,
-        "unknownApprovedColumn": 0,
-        "mandatoryFilterApplication": 1.0,
-        "financialCurrencyCorrectness": 1.0,
-        "sapLedgerCorrectness": 1.0 if inv["buckets"]["sap"]["count"] >= 150 else 0.0,
-        "sapReversalCorrectness": 1.0 if inv["buckets"]["sap"]["count"] >= 150 else 0.0,
-        "executionResultEquivalence": 0.95,
-        "businessAnswerCorrectness": 0.96,
-        "followUpContextAccuracy": 0.95,
-        "requiredClarificationAccuracy": 0.95,
-        "criticalFinancialCorrectness": 1.0 if inv["buckets"]["sap"]["count"] >= 50 else 0.0,
-    }
-    if bm.exists():
-        data = json.loads(bm.read_text(encoding="utf-8"))
-        b = data.get("checks", {}).get("benchmark300", {})
-        if b:
-            metric_scores["mandatoryFilterApplication"] = b.get("mandatoryFilterApplication", 1.0)
-            metric_scores["financialCurrencyCorrectness"] = b.get("currencyPolicyCorrectness", 1.0)
-            metric_scores["requiredClarificationAccuracy"] = b.get("clarificationAccuracy", 1.0)
-
-    failures = []
-    for k, target in TARGETS.items():
-        val = metric_scores.get(k)
-        if isinstance(target, float):
-            if val is None or val < target:
-                failures.append(f"{k}: {val} < {target}")
-        else:
-            if val != target:
-                failures.append(f"{k}: {val} != {target}")
+    # Inventory establishes no answer-quality measurement. Missing observations
+    # must never inherit thresholds or historical scores as today's result.
+    metric_scores = {name: None for name in TARGETS}
+    failures = [f"{name}: UNKNOWN (live execution evidence required)" for name in TARGETS]
 
     # Vertical-slice mode: pass inventory gate when gap documented and postgres bucket strong
     offline_slice_pass = (
         inv["buckets"]["postgres"]["count"] >= 300
         and inv["buckets"]["oracle"]["count"] >= 250
-        and unknown_table == 0
-        and unknown_col == 0
-        and structured_ok
     )
     # Full gate pass requires 1100 + metric targets
     full_pass = inv["gap"] == 0 and not failures
@@ -150,13 +115,14 @@ def run_offline_eval(release: str) -> dict:
         "offlineVerticalSlicePass": offline_slice_pass,
         "fullPass": full_pass,
         "pass": offline_slice_pass,
-        "note": "Fill SAP/cross corpora and run live eval for fullPass; offline slice uses inventory+phase7 metrics",
+        "note": "Inventory only; all answer metrics UNKNOWN until measured by a live evaluator",
     }
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", default="1.0.0-rc.1")
+    parser.add_argument('--live-evidence', type=Path, help='Measured cases with hashed response/reference artifacts')
     parser.add_argument(
         "--require-full",
         action="store_true",
@@ -165,6 +131,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     ensure_artifacts()
     result = run_offline_eval(args.release)
+    if args.live_evidence:
+        result = evaluate_live_evidence(args.live_evidence, args.release, result)
     if args.require_full:
         result["pass"] = bool(result.get("fullPass"))
     write_json(ARTIFACTS / "text2sql-quality-results.json", result)
@@ -182,6 +150,50 @@ def main(argv: list[str] | None = None) -> int:
     if args.require_full:
         return 0 if result["pass"] else 1
     return 0 if result["offlineVerticalSlicePass"] else 1
+
+
+def evaluate_live_evidence(path, release, result):
+    """No inferred scores: only explicitly assessed, traceable cases contribute."""
+    evidence = json.loads(path.read_text())
+    errors = []
+    if evidence.get('release') != release or evidence.get('mode') != 'live':
+        errors.append('Evidence release/mode mismatch')
+    for key in ('codeRevision', 'catalogHash', 'datasource', 'generatedAt'):
+        if not evidence.get(key):
+            errors.append(f'Missing evidence provenance: {key}')
+    assessed = {k: [] for k in TARGETS}
+    seen = set()
+    valid_cases = set()
+    for case in evidence.get('cases', []):
+        if not case.get('id') or case['id'] in seen or not case.get('question'):
+            errors.append('Missing/duplicate case identity')
+        seen.add(case.get('id'))
+        valid = True
+        for kind in ('response', 'reference'):
+            artifact = case.get(kind, {})
+            target = (path.parent / artifact.get('path', '')).resolve()
+            if (not target.is_relative_to(path.parent.resolve()) or not target.is_file()
+                    or hashlib.sha256(target.read_bytes()).hexdigest() != artifact.get('sha256')):
+                errors.append(f"{case.get('id')}: {kind} evidence missing or changed")
+                valid = False
+        if valid and case.get('id') and case.get('question'):
+            valid_cases.add(case['id'])
+            for metric, value in case.get('checks', {}).items():
+                if metric not in assessed or not isinstance(value, bool):
+                    errors.append(f'Invalid assessment {metric}')
+                else:
+                    assessed[metric].append(value)
+    if len(valid_cases) < result['inventory']['targetTotal']:
+        errors.append(f"Measured case gap: {len(valid_cases)}/{result['inventory']['targetTotal']}")
+    metrics = {k: (None if not values else (sum(not v for v in values) if TARGETS[k] == 0
+                 else sum(values) / len(values))) for k, values in assessed.items()}
+    for key, target in TARGETS.items():
+        value = metrics[key]
+        if value is None or (value != 0 if target == 0 else value < target):
+            errors.append(f'{key}: {value if value is not None else "UNKNOWN"}; target={target}')
+    result.update(mode='live_evidence', metrics=metrics, validCaseCount=len(valid_cases), measuredCases={k: len(v) for k,v in assessed.items()},
+                  failures=errors, fullPass=not errors and result['inventory']['gap'] == 0)
+    return result
 
 
 if __name__ == "__main__":

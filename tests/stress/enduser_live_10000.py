@@ -13,8 +13,7 @@ cols,rows,tr=r.connector.execute("SELECT CAST(DATABASEPROPERTYEX(DB_NAME(), 'Col
 collation=str(rows[0]['collation'])
 assert (collation.lower().startswith('turkish') or 'cp1254_ci_' in collation.lower()) and '_ci_' in collation.lower(),collation
 (out/'collation.json').write_text(json.dumps({'collation':collation,'comparison':'Turkish case-insensitive labels, numeric rounding 5 decimals'}))
-def norm(rows):
- return sorted([tuple(sorted(('n',round(float(v),5)) if isinstance(v,(int,float,Decimal)) else ('s',str(v).strip().translate(str.maketrans({'I':'ı','İ':'i'})).lower()) for v in row)) for row in rows])
+from result_comparison import norm, aligned_rows
 def reference(c):
   if c['metric'] in ('satış tutarı','net satış tutarı') and c['level']==1:
    assert c['level']==1, 'Header amount requires an independently established allocation rule for product dimensions'
@@ -88,8 +87,10 @@ with (out/'results.jsonl').open('a') as f:
      ref=reference(c)
      cols,rows,tr=r.connector.execute(ref,100000)
      truth=norm([[row.get(col['name']) for col in cols] for row in rows])
-     ac,ar,at=r.connector.execute(r._physical(a['sql']),100000)
-     actual=norm([[row.get(col['name']) for col in ac] for row in ar])
+     req=urllib.request.Request('http://127.0.0.1:8795/api/v1/result/'+a['resultId'],headers={'X-Semantic-Caller':os.environ['SEMANTIC_CALLER_TOKEN']})
+     with urllib.request.urlopen(req,timeout=180) as resp: saved=json.load(resp)
+     at=saved.get('truncated',True)
+     actual=norm(aligned_rows(saved,c))
      ok=not tr and not at and truth==actual
      item.update(reference_sql=ref,reference_rows=len(truth),answer_rows=len(actual),numeric_match=ok,status=('LIVE_PASS_SQL_PREVIEW_LIMITED' if a.get('truncated') else 'LIVE_PASS') if ok else 'LIVE_TRUNCATED' if tr or at else 'LIVE_FAIL',reference_sha256=hashlib.sha256(repr(truth).encode()).hexdigest(),answer_sha256=hashlib.sha256(repr(actual).encode()).hexdigest())
   except Exception as exc:item.update(status='LIVE_EXCEPTION',reason=str(exc)[:800])

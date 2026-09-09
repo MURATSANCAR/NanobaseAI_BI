@@ -16,8 +16,7 @@ cols,rows,tr=r.connector.execute("SELECT CAST(DATABASEPROPERTYEX(DB_NAME(), 'Col
 collation=str(rows[0]['collation'])
 assert (collation.lower().startswith('turkish') or 'cp1254_ci_' in collation.lower()) and '_ci_' in collation.lower(),collation
 (out/'collation.json').write_text(json.dumps({'collation':collation,'comparison':'Turkish case-insensitive labels, numeric rounding 5 decimals'}))
-def norm(rows):
- return sorted([tuple(sorted(('n',round(float(v),5)) if isinstance(v,(int,float,Decimal)) else ('s',str(v).strip().translate(str.maketrans({'I':'ı','İ':'i'})).lower()) for v in row)) for row in rows])
+from result_comparison import norm, aligned_rows
 with (out/'results.jsonl').open('w') as f:
  for c in corpus():
   if c['id'] not in wanted:continue
@@ -47,11 +46,13 @@ with (out/'results.jsonl').open('w') as f:
    truth=norm([[row.get(col['name']) for col in cols] for row in rows])
    req=urllib.request.Request('http://127.0.0.1:8795/api/v1/ask',data=json.dumps({'question':c['prompt'],'sampleSize':100000}).encode(),headers={'Content-Type':'application/json','X-Semantic-Caller':os.environ['SEMANTIC_CALLER_TOKEN']})
    with urllib.request.urlopen(req,timeout=180) as resp:a=json.load(resp)
-   actual=norm([list(row.values()) for row in a.get('records',[])])
-   generated_truncated=False
-   if a.get('type')=='TEXT_TO_SQL' and a.get('sql'):
-    actual_cols,actual_rows,generated_truncated=r.connector.execute(r._physical(a['sql']),100000)
-    actual=norm([[row.get(col['name']) for col in actual_cols] for row in actual_rows])
+   actual=[]
+   generated_truncated=True
+   if a.get('type')=='TEXT_TO_SQL' and a.get('resultId'):
+    req=urllib.request.Request('http://127.0.0.1:8795/api/v1/result/'+a['resultId'],headers={'X-Semantic-Caller':os.environ['SEMANTIC_CALLER_TOKEN']})
+    with urllib.request.urlopen(req,timeout=180) as resp:saved=json.load(resp)
+    generated_truncated=saved.get('truncated',True)
+    actual=norm(aligned_rows(saved,c))
    ok=a.get('type')=='TEXT_TO_SQL' and not truncated and not generated_truncated and truth==actual
    status=('LIVE_PASS_SQL_PREVIEW_LIMITED' if a.get('truncated') else 'LIVE_PASS') if ok else 'LIVE_TRUNCATED' if truncated or generated_truncated else 'LIVE_FAIL' if a.get('type')=='TEXT_TO_SQL' else 'LIVE_'+str(a.get('type'))
    item.update(status=status,response_type=a.get('type'),sql=a.get('sql'),reason=a.get('explanation'),compiler=(a.get('semantic') or {}).get('compiler'),reference_rows=len(truth),answer_rows=len(actual),numeric_match=ok,preview_truncated=a.get('truncated'),preview_rows=len(a.get('records',[])),

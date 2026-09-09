@@ -228,14 +228,19 @@ class SemanticResolver:
 
     # ------------------------------------------------------------------ public
     def resolve(self, question: str, today: Optional[date] = None) -> SemanticQuery:
+        from semantic_layer.runtime.monthly_analysis import resolve_frame
+        framed = resolve_frame(self, question, today)
+        if framed is not None:
+            return framed
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
         # Certified phrases may exceed three words. Splitting one can change
         # the measure's scope, for example dropping returns from net sales.
         n_max = max([3] + [len(key.split()) for key in index])
         qf = extract_question_facts(question, n_max=n_max)
+        version, content_hash = self.store.publish_runtime_snapshot(self.tenant_id, self.datasource_id, index)
         self._refresh_column_caches(index)
-        latest = self.store.latest_version(self.tenant_id, self.datasource_id)
-        sq = SemanticQuery(question=question, tenant_id=self.tenant_id, datasource_id=self.datasource_id, catalog_version=latest["version"] if latest else 0)
+        sq = SemanticQuery(question=question, tenant_id=self.tenant_id, datasource_id=self.datasource_id, catalog_version=version)
+        sq.catalog_hash = content_hash
         if today is not None:
             from semantic_layer.runtime.temporal import parse_temporal
 

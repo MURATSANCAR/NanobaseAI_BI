@@ -348,6 +348,7 @@ class SemanticQuery:
     group_by: list[ResolvedSlot] = field(default_factory=list)
     limit: Optional[int] = None
     order_desc: bool = True
+    catalog_hash: Optional[str] = None
     catalog_version: Optional[int] = None
     explanation: list[str] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
@@ -371,6 +372,7 @@ class SemanticQuery:
     candidates: list[dict[str, Any]] = field(default_factory=list)
     # Soru bir karşılaştırma istiyorsa: hangi dönem neye göre, ve bu istek yerine getirildi mi.
     # Karşılaştırma isteyen bir soru, karşılaştırma üretilmeden başarılı sayılamaz.
+    analytics: Optional[dict[str, Any]] = None
     comparison: Optional[dict[str, Any]] = None
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
     temporal_binding: Optional[dict[str, Any]] = None
@@ -432,6 +434,7 @@ class SemanticQuery:
             "groupBy": [s.to_dict() for s in self.group_by],
             "limit": self.limit,
             "orderDesc": self.order_desc,
+            "catalogHash": self.catalog_hash,
             "catalogVersion": self.catalog_version,
             "conflicts": list(self.conflicts),
             "ignored": list(self.ignored),
@@ -444,6 +447,7 @@ class SemanticQuery:
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
             "measureExpressions": [dict(x) for x in self.measure_expressions],
+            "analytics": dict(self.analytics) if self.analytics else None,
             "comparison": dict(self.comparison) if self.comparison else None,
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,

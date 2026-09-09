@@ -456,6 +456,33 @@ class CatalogStore:
         ]
 
     # ------------------------------------------------------------------ versions
+    def publish_runtime_snapshot(self, tenant_id, datasource_id, index):
+        """Persist the exact certified index supplied to a resolver, not just its count."""
+        from dataclasses import asdict
+        import hashlib
+        concepts = {}
+        for pairs in index.values():
+            for concept, mappings in pairs:
+                concepts[concept.id] = {'concept': asdict(concept),
+                    'mappings': sorted((asdict(m) for m in mappings), key=lambda m: json.dumps(m, sort_keys=True, default=str))}
+        payload = json.loads(json.dumps([concepts[k] for k in sorted(concepts)], default=str))
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        with self._lock, self.engine.begin() as conn:
+            if conn.dialect.name == 'postgresql':
+                lock_id = int.from_bytes(hashlib.sha256(f'{tenant_id}/{datasource_id}'.encode()).digest()[:8], 'big', signed=True)
+                conn.execute(sa.text('SELECT pg_advisory_xact_lock(:key)'), {'key': lock_id})
+            latest = conn.execute(sa.select(S.sl_catalog_version).where(
+                S.sl_catalog_version.c.tenant_id == tenant_id,
+                S.sl_catalog_version.c.datasource_id == datasource_id).order_by(S.sl_catalog_version.c.version.desc()).limit(1)).mappings().first()
+            if latest and (_json(latest['snapshot_json']) or {}).get('contentHash') == digest:
+                return int(latest['version']), digest
+            version = int(latest['version']) + 1 if latest else 1
+            conn.execute(S.sl_catalog_version.insert().values(id=new_id('cv'), tenant_id=tenant_id,
+                datasource_id=datasource_id, version=version, certified_count=len(concepts),
+                snapshot_json={'certified_count': len(concepts), 'contentHash': digest, 'concepts': payload},
+                note='immutable runtime certified index', created_at=utcnow()))
+            return version, digest
+
     def latest_version(self, tenant_id: str, datasource_id: str) -> Optional[dict[str, Any]]:
         rows = self._rows(
             sa.select(S.sl_catalog_version)

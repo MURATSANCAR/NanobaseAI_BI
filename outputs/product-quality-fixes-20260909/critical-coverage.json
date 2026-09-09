@@ -1,0 +1,481 @@
+{
+  "scope": "Columns used by certified mappings and metric conditions; not the entire ERP",
+  "requiredColumns": 37,
+  "unresolved": 0,
+  "columns": [
+    {
+      "entity": "APPROVAL",
+      "column": "TRCODE",
+      "physicalTables": 2,
+      "status": "DEFINED",
+      "descriptions": [],
+      "certifiedTerms": [
+        "iade",
+        "perakende",
+        "toptan"
+      ]
+    },
+    {
+      "entity": "CLCARD",
+      "column": "ACTIVE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Kullanım durumu (0=Kullanımda, 1=Kullanım dışı)"
+      ],
+      "certifiedTerms": [
+        "aktif",
+        "pasif"
+      ]
+    },
+    {
+      "entity": "CLCARD",
+      "column": "CODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Kodu (Account Receivable / Payable Code)"
+      ],
+      "certifiedTerms": [
+        "cari kodu",
+        "kodu"
+      ]
+    },
+    {
+      "entity": "CLCARD",
+      "column": "DEFINITION_",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Ünvanı (Account Receivable / Payable Title)"
+      ],
+      "certifiedTerms": [
+        "muster adi",
+        "müşteri",
+        "tedarikc adi",
+        "unvaniyla"
+      ]
+    },
+    {
+      "entity": "CLCARD",
+      "column": "LOGICALREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Kartı Logical Ref. (Account Receivable / Payable Card Logical Reference)"
+      ],
+      "certifiedTerms": [
+        "CLCARD.LOGICALREF -> INVOICE.CLIENTREF"
+      ]
+    },
+    {
+      "entity": "CLCARD",
+      "column": "SPECODE2",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Özel kod 2 (Auxiliary Code2)"
+      ],
+      "certifiedTerms": [
+        "kanal",
+        "kanal kodu",
+        "satis kanal"
+      ]
+    },
+    {
+      "entity": "CLFLINE",
+      "column": "CLIENTREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [],
+      "certifiedTerms": [
+        "CLFLINE.CLIENTREF -> CLCARD.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "CANCELLED",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "İptal Edilmiş (Cancelled)"
+      ],
+      "certifiedTerms": [
+        "invoice default cancelled",
+        "trcode"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "CLIENTREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Ref. (Account Receivable / Payable Reference)"
+      ],
+      "certifiedTerms": [
+        "INVOICE.CLIENTREF -> CLCARD.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "GRPCODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Grup Kodu (1=Alış Faturası, 2=Satış Faturası)"
+      ],
+      "certifiedTerms": [
+        "kurumsal grup",
+        "perakende grup"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "LOGICALREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Fatura Log. Ref. (Invoice Logical Reference)"
+      ],
+      "certifiedTerms": [
+        "INVOICE.LOGICALREF -> STLINE.INVOICEREF"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "NETTOTAL",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Net Toplam (Net Total)"
+      ],
+      "certifiedTerms": [
+        "ciro",
+        "satis tutar"
+      ]
+    },
+    {
+      "entity": "INVOICE",
+      "column": "TRCODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Fatura Türü (1=Mal alım faturası, 2=Perakende satış iade faturası, 3=Toptan satış iade faturası, 4=Alınan hizmet faturası, 5=Alınan proforma fatura, 6=alım iade faturası, 7=Perakende satış faturası, 8=Toptan satış faturası)"
+      ],
+      "certifiedTerms": [
+        "alim iade",
+        "alinan hizmet",
+        "mal alim",
+        "perakende",
+        "perakende iade",
+        "perakende satis",
+        "perakende satis iade",
+        "satis iade",
+        "toptan",
+        "toptan iade",
+        "toptan satis",
+        "toptan satis iade",
+        "verilen hizmet"
+      ]
+    },
+    {
+      "entity": "ITEMS",
+      "column": "CARDTYPE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Kartı Türü (1=(TM) Ticari Mal, 2=(KK) Karma Koli, 3=(DM) Depozitolu Mal, 4=(SK) Sabit Kıymet, 10=(HM) Hammadde, 11=(YM) Yarı Mamul, 12=(MM) Mamul, 13=(TK) Tüketim Malı, 20=(MS) Malzeme Sınıfı (Genel), 21=(MT) Malzeme Sınıfı (Tablolu))"
+      ],
+      "certifiedTerms": [
+        "mamul",
+        "ticari mal"
+      ]
+    },
+    {
+      "entity": "ITEMS",
+      "column": "CODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Kartı Kodu (Item Card Code)"
+      ],
+      "certifiedTerms": [
+        "stok kodu"
+      ]
+    },
+    {
+      "entity": "ITEMS",
+      "column": "LOGICALREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Kartı (Item Card Logical Reference)"
+      ],
+      "certifiedTerms": [
+        "ITEMS.LOGICALREF -> STLINE.STOCKREF"
+      ]
+    },
+    {
+      "entity": "ITEMS",
+      "column": "NAME",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Kartı Açıklaması (Item Card Definition)"
+      ],
+      "certifiedTerms": [
+        "kitap",
+        "kitap adi",
+        "ürün"
+      ]
+    },
+    {
+      "entity": "ITEMS",
+      "column": "SPECODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Özel Kod (Aux. Code)"
+      ],
+      "certifiedTerms": [
+        "dizi",
+        "imprint",
+        "yayinevi"
+      ]
+    },
+    {
+      "entity": "ORFICHE",
+      "column": "CLIENTREF",
+      "physicalTables": 10,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Ref. (Account Receivable / Payable Reference)"
+      ],
+      "certifiedTerms": [
+        "ORFICHE.CLIENTREF -> CLCARD.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "ORFICHE",
+      "column": "LOGICALREF",
+      "physicalTables": 10,
+      "status": "DEFINED",
+      "descriptions": [
+        "Sipariş fişi log. Ref. (Order Voucher Logical Reference)"
+      ],
+      "certifiedTerms": []
+    },
+    {
+      "entity": "ORFICHE",
+      "column": "NETTOTAL",
+      "physicalTables": 10,
+      "status": "DEFINED",
+      "descriptions": [
+        "Net Toplam (NetTotal)"
+      ],
+      "certifiedTerms": [
+        "siparis tutar"
+      ]
+    },
+    {
+      "entity": "PAYPLANS",
+      "column": "DEFINITION_",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Ödeme planı açıklaması (Payment Plan Description)"
+      ],
+      "certifiedTerms": [
+        "fatura ödeme planı",
+        "ödeme planı"
+      ]
+    },
+    {
+      "entity": "SHIPINFO",
+      "column": "CITY",
+      "physicalTables": 10,
+      "status": "DEFINED",
+      "descriptions": [
+        "Şehir Açıklaması (City Description)"
+      ],
+      "certifiedTerms": [
+        "teslimat şehri"
+      ]
+    },
+    {
+      "entity": "SLSMAN",
+      "column": "DEFINITION_",
+      "physicalTables": 1,
+      "status": "DEFINED",
+      "descriptions": [
+        "Satış Temsilcisi Açıklaması (Sales Representative Description)"
+      ],
+      "certifiedTerms": [
+        "satış temsilcisi"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "AMOUNT",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Miktar (Quantity)"
+      ],
+      "certifiedTerms": [
+        "adet"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "CANCELLED",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "İptal Edilmiş (0=Hayır, 1=Evet)"
+      ],
+      "certifiedTerms": [
+        "stline default cancelled"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "CLIENTREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Cari Hesap Referansı (Accounts Receivable & Payable Reference)"
+      ],
+      "certifiedTerms": [
+        "STLINE.CLIENTREF -> CLCARD.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "GLOBTRANS",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "(İndirim, Masraf, Promosyon satırları için) Fiş geneline uygulanan (0=Detay) (1- Evet, 1=Genel)"
+      ],
+      "certifiedTerms": [
+        "islem muhasep"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "INVOICEREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Fatura Ref. (Invoice Reference)"
+      ],
+      "certifiedTerms": [
+        "STLINE.INVOICEREF -> INVOICE.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "LINENET",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Net Satır Toplamı (Net Line Total)"
+      ],
+      "certifiedTerms": []
+    },
+    {
+      "entity": "STLINE",
+      "column": "LINETYPE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Satır türü (0=Malzeme, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozit, 6=Karma koli, 7=Karma koli satırı, 8=Sabit kıymet, 9=Ek Malzeme, 10=Malzeme sınıfı, 11=Fason1)"
+      ],
+      "certifiedTerms": [
+        "hizmet satırı",
+        "iskonto",
+        "iskonto satir",
+        "mal satırı",
+        "malzem satir",
+        "masraf satırı"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "LOGICALREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Hareketi Log. Ref. (Item Transaction Logical Reference)"
+      ],
+      "certifiedTerms": []
+    },
+    {
+      "entity": "STLINE",
+      "column": "OUTCOST",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Çıkış fişi maliyeti (Output Vouchers Output Cost)"
+      ],
+      "certifiedTerms": [
+        "maliyetli"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "STOCKREF",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Malzeme Kartı Referansı (Item Card Reference)"
+      ],
+      "certifiedTerms": [
+        "STLINE.STOCKREF -> ITEMS.LOGICALREF"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "TOTAL",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Toplam (Total)"
+      ],
+      "certifiedTerms": [
+        "satir ciro",
+        "yayinev ciro"
+      ]
+    },
+    {
+      "entity": "STLINE",
+      "column": "TRCODE",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Bağlı Fiş Türü (15=Kullanıcı Tanımlı Giriş Fişi, 16=Kullanıcı Tanımlı Giriş Fişi, 17=Kullanıcı Tanımlı Giriş Fişi, 18=Kullanıcı Tanımlı Giriş Fişi, 19=Kullanıcı Tanımlı Giriş Fişi, 20=Kullanıcı Tanımlı Çıkış Fişi, 21=Kullanıcı Tanımlı Çıkış Fişi, 22=Kullanıcı Tanımlı Çıkış Fişi, 23=Kullanıcı Tanımlı Çıkış Fişi, 24=Kullanıcı Tanımlı Çıkış Fişi, 30=Kullanıcı Tanımlı Satınalma İrsaliyesi, 31=Kullanıcı Tanımlı Satınalma İrsaliyesi, 32=Kullanıcı Tanımlı Satınalma İrsaliyesi, 33=Kullanıcı Tanımlı Satınalma İrsaliyesi, 34=Kullanıcı Tanımlı Satınalma İrsaliyesi, 35=Kullanıcı Tanımlı Satış İrsaliyesi3, 36=Kullanıcı Tanımlı Satış İrsaliyesi3, 37=Kullanıcı Tanımlı Satış İrsaliyesi3, 38=Kullanıcı Tanımlı Satış İrsaliyesi3, 39=Kullanıcı Tanımlı Satış İrsaliyesi3)"
+      ],
+      "certifiedTerms": [
+        "iade",
+        "perakende",
+        "satis iade",
+        "toptan",
+        "toptan satis faturalari"
+      ]
+    },
+    {
+      "entity": "UNITSETL",
+      "column": "NAME",
+      "physicalTables": 8,
+      "status": "DEFINED",
+      "descriptions": [
+        "Birim açıklaması (Unit Description)"
+      ],
+      "certifiedTerms": [
+        "birim"
+      ]
+    }
+  ]
+}

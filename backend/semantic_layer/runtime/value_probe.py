@@ -51,6 +51,13 @@ class ValueProbe:
     def __init__(self, connector: Any, profiles: list[SchemaProfile], *,
                  max_columns: int = 0, budget_seconds: float = 0.0, top: int = 0):
         self.c = connector
+        import threading
+        self._lock = threading.Lock()
+        self._isolated = getattr(connector, 'dialect', '') == 'tsql' and hasattr(connector, 'cfg')
+        if self._isolated:
+            from semantic_layer.profiler.connectors import MSSQLConnector
+            self.c = MSSQLConnector(dict(connector.cfg))
+            self.c._probe_only = True
         self.profiles = profiles
         self.max_columns = max_columns or int(os.environ.get("SEMANTIC_PROBE_COLUMNS", "12"))
         self.budget = budget_seconds or float(os.environ.get("SEMANTIC_PROBE_SECONDS", "6"))
@@ -135,7 +142,7 @@ class ValueProbe:
             if col.is_enum() and col.top_values:
                 continue
             try:
-                for value, count in self._like(prof, col.name, term):
+                for value, count in self._like(prof, col.name, term, self.budget - (time.perf_counter() - started)):
                     key = (prof.entity, col.name, str(value))
                     if key not in seen:
                         seen.add(key)
@@ -146,10 +153,31 @@ class ValueProbe:
                 break
         return hits[: self.top]
 
-    def _like(self, prof: SchemaProfile, column: str, term: str) -> list[tuple[str, int]]:
+    def _like(self, prof: SchemaProfile, column: str, term: str, remaining: float) -> list[tuple[str, int]]:
         if not hasattr(self.c, "search_values"):
             return []
-        return self.c.search_values(prof.schema_name, prof.table_name, column, term, self.top)
+        started = time.perf_counter()
+        if remaining < 1 or not self._lock.acquire(timeout=max(0, remaining)):
+            return []
+        try:
+            remaining -= time.perf_counter() - started
+            if remaining < 1:
+                return []
+            if self._isolated:
+                self.c.query_timeout = max(1, int(remaining))
+                self.c.cfg['login_timeout'] = self.c.query_timeout
+                connection = self.c.conn()
+                remaining -= time.perf_counter() - started
+                if remaining < 1:
+                    return []
+                connection.timeout = max(1, int(remaining))
+            return self.c.search_values(prof.schema_name, prof.table_name, column, term, self.top)
+        finally:
+            # Only probe-owned connections are closed. Driver failure cannot poison
+            # the shared report connection, and idle probes retain no DB session.
+            if self._isolated:
+                self.c.close()
+            self._lock.release()
 
 
 def facts_block(hits: list[ValueHit]) -> str:
