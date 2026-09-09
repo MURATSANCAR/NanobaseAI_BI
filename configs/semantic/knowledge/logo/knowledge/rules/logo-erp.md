@@ -26,7 +26,7 @@ Siparişler (dbo_LG_411_01_ORFICHE / ORFLINE): bu kurulumda TRCODE = 1 fişleri 
 Örnek sorular: açık siparişler; sevk edilmeyen sipariş; sipariş tutarı
 
 ## Kural 6
-Veri 2026 yılına (firma 411, Ocak–Ağustos) aittir; yıl belirtilmeyen sorular 2026 YTD kabul edilir. Para birimi TL. Tarih kırılımı için EXTRACT(MONTH FROM DATE_) / EXTRACT(YEAR FROM DATE_) kullan. Türkçe yanıt ver.
+Bu kurulum tek şirketin farklı zamanlara ait yedek/anlık görüntülerini kullanır. Teknik tablo kodları ayrı şirket değildir. Dönem seçimi doğrulanmış kaynak kapsamı ve uygulamanın zaman kuralıyla yapılır; geçmiş yılların yokluğu varsayılmaz. Para birimi TL. Tarih kırılımı için EXTRACT(MONTH FROM DATE_) / EXTRACT(YEAR FROM DATE_) kullan. Türkçe yanıt ver.
 
 Örnek sorular: bu yıl; aylık; geçen ay
 

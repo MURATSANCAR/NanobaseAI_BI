@@ -1,0 +1,14 @@
+{
+  "source": "Existing full result IDs from completed acceptance; no SQL re-execution",
+  "subset": [
+    {
+      "id": "P09860",
+      "resultId": "067d01ec0db14ad2ab15850be5feb4ee",
+      "rows": 38852,
+      "nullCells": 27098,
+      "numericZeroCells": 668,
+      "resultHash": "421729d08a576aabefc93cca2a0560ae42b859a98c50b9831a58dd8d9a49a274",
+      "sameOriginalExecutionVerified": true
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import hashlib,json,os,shlex,subprocess
 from pathlib import Path
 root=Path(__file__).resolve().parent;evidence=root/'evidence';evidence.mkdir(exist_ok=True)
 remote='/data/nanobaseai/bi/backups/language-pool-20260909/'
-files={name:name for name in ['final-summary.json','complex-final-results.json','feature-final-results.json','prompts-final-status.md','source-before-final.json','source-before-targeted.json','source-after-final.json','pool-check.json','acceptance-harness-hashes-final.json']}
+files={name:name for name in ['final-summary.json','result-cell-evidence.json','complex-final-results.json','feature-final-results.json','prompts-final-status.md','source-before-final.json','source-before-targeted.json','source-after-final.json','pool-check.json','acceptance-harness-hashes-final.json']}
 files.update({'compiler-deployment.json':'release-4-compiler/deployment.json','scope-deployment.json':'release-5-scope/deployment.json'})
 for name,path in files.items():
  dest=evidence/name;tmp=dest.with_suffix(dest.suffix+'.tmp')

@@ -1,0 +1,73 @@
+{
+  "complex": {
+    "completed": 100,
+    "counts": {
+      "LIVE_PASS": 100
+    },
+    "entityCounts": {
+      "7": 32,
+      "8": 68
+    },
+    "maxFullRows": 85703,
+    "nonemptyQuestions": 100,
+    "totalComparedRows": 4274127,
+    "catalogHashes": [
+      "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736"
+    ],
+    "poolHashes": [
+      "aed56bd7cee10e053efc875d841e891631eac46ec7f4749c540d149e31bc5d0e"
+    ],
+    "queriesWithLanguageHits": 100
+  },
+  "targetedCounts": {
+    "NO_NUMERIC_ANSWER": 4,
+    "LIVE_PASS": 10,
+    "GUARD_PASS": 6
+  },
+  "featureCounts": {
+    "NO_NUMERIC_ANSWER": 3,
+    "LIVE_PASS": 5,
+    "GUARD_PASS": 2
+  },
+  "lookupCounts": {
+    "LIVE_PASS": 2
+  },
+  "scopedCounts": {
+    "LIVE_PASS": 3,
+    "GUARD_PASS": 1,
+    "NO_NUMERIC_ANSWER": 1
+  },
+  "contextGuardCounts": {
+    "GUARD_PASS": 3
+  },
+  "sourceChangedDuringAcceptance": [],
+  "sourceChangedSinceTargeted": [],
+  "sameTargetedServiceProcess": true,
+  "sameServiceProcess": true,
+  "retrieval": {
+    "poolHash": "aed56bd7cee10e053efc875d841e891631eac46ec7f4749c540d149e31bc5d0e",
+    "poolCandidates": 55,
+    "sourceRejected": 0,
+    "selfRetrieval": 55,
+    "targetColumns": 100,
+    "baseCovered": 32,
+    "expandedCovered": 100,
+    "phrasesImproved": 45,
+    "note": "Generated phrase/reference pairs test schema retrieval only, not independent business correctness."
+  },
+  "unscopedLookupInitialOracle": "DOĞRULANAMADI: original reference assumed both firms without establishing the default period scope; final tests explicitly ask firm 411.",
+  "resultCellEvidence": {
+    "source": "Existing full result IDs from completed acceptance; no SQL re-execution",
+    "subset": [
+      {
+        "id": "P09860",
+        "resultId": "067d01ec0db14ad2ab15850be5feb4ee",
+        "rows": 38852,
+        "nullCells": 27098,
+        "numericZeroCells": 668,
+        "resultHash": "421729d08a576aabefc93cca2a0560ae42b859a98c50b9831a58dd8d9a49a274",
+        "sameOriginalExecutionVerified": true
+      }
+    ]
+  }
+}

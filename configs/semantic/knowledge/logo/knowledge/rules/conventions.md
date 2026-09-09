@@ -25,7 +25,7 @@ Kolon/enum/varsayılan filtre boşluklarını kapatmak için yazılmıştır; `l
 - Ay kovası: `DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1)` ve kolon adı `ay`; ay adı gerekiyorsa uygulama tarafı çevirir.
 
 ## External identifiers
-- `LOGICALREF` firmaya (yıl tablosuna) özel dahili anahtardır; firmalar arası eşleşmez. Firma/yıl tabloları arasında cari için `CLCARD.CODE`, malzeme için `ITEMS.CODE` sabit anahtardır (örtüşme: CLCARD ≈ %99,5, ITEMS ≈ %92).
+- `LOGICALREF` kaynak anlık görüntüsü içindeki dahili anahtardır. Başka yedekte aynı numaranın bulunması tek başına aynı kaydı kanıtlamaz. Kaynaklar arası varlık eşleştirmesinde doğrulanmış iş anahtarları ve ilişkiler kullanılmalıdır. Bu teknik ayrım ayrı şirketler olduğu anlamına gelmez.
 - `*REF` kolonlarında (SALESMANREF, PROJECTREF, CLIENTREF, STOCKREF…) boş değer `0`'dır, NULL değil; `LEFT JOIN … ON x.REF = y.LOGICALREF` 0 için eşleşmez, saymak için `REF <> 0` kullan.
 - e-Fatura alanları (EINVOICE, PROFILEID, ESTATUS) yalnız bayraktır; GİB / dış sistem kimlik eşlemesi bu projede tanımlı değildir.
 
@@ -36,7 +36,7 @@ Kolon/enum/varsayılan filtre boşluklarını kapatmak için yazılmıştır; `l
 - KDV: NETTOTAL KDV dahil; STLINE.TOTAL KDV hariç (satır KDV'si VATAMNT). Marj/iskonto oranları KDV hariç satır tutarlarından, ciro KDV dahil başlıktan hesaplanır — ikisini karıştırma.
 
 ## Canonical tables
-- Firma = yıl anlık görüntüsü. Bu projede yalnız `LG_411_*` (2026) modellenmiştir. `LG_211_*` = 2021–2025 (tek dönem), 201 = 2020, 191 = 2019, 181 = 2018, 171 = 2017, 15/16/105/115 = 2015–16 — modellenmemiştir; 2025 ve öncesi sorulursa SQL üretme (NO_SQL) ve verinin bu projede olmadığını söyle.
+- Tek şirket vardır; farklı veri kaynakları yıllar içindeki yedek/anlık görüntülerdir. Tablo önekleri şirket kimliği değildir. Yıl kapsamı ve yedek önceliği doğrulanmış kaynak eşlemesinden alınmalıdır. Örtüşen yedekler ayrı şirketler gibi toplanamaz; yalnız tablo adı veya tek bir ileri tarihli kayıttan kaynak dönemi çıkarılamaz.
 - Ciro/satış/iade/alım için fatura başlığı `dbo_LG_411_01_INVOICE` kanoniktir; sipariş modülü (`ORFICHE`) tüm satışları kapsamaz, sipariş dışında ciro için kullanma. Ürün / yayınevi / adet / marj için `dbo_LG_411_01_STLINE`.
 - Hazır nesneler: aylık seri `v_monthly_sales`, kanal `v_channel_net`, yayınevi `v_imprint_perf`; ölçüler `sales_cube`, `line_cube`. SQL Server'da küp kırılımı (dimensions) upstream hatası verir — kırılım için görünümleri kullan, küpleri yalnız toplam ölçü için.
 - Cari hareket `dbo_LG_411_01_CLFLINE` borç/alacak analizine uygundur; ancak `PAYTRANS.PAID` beslenmez (vade/yaşlandırma yapılamaz) ve `STINVTOT` boştur (stok STLINE'dan hesaplanır) — bunları kaynak olarak önerme.

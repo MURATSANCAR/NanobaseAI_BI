@@ -1,6 +1,40 @@
 # Şemaya bağlı ifade havuzu: geliştirme ve canlı kabul
 
-**Durum: canlı geniş kabul koşusu sürüyor. Bu belge sonuçlar tamamlandığında güncellenecek.**
+> **2026-09-09 düzeltmesi:** Tek şirket vardır; farklı kaynaklar yıllar içindeki yedeklerdir. Bu rapordaki “411/211 firması” yorumları geri çekilmiştir. Önceki sayısal karşılaştırmalar tarihsel ölçümlerdir; yedek seçimi, örtüşme ve tekilleştirmenin iş açısından doğruluğunu kanıtlamaz. Aşağıdaki kabul tamamlandı ifadesi bu düzeltmeden önceki değerlendirmedir. Güncel durum: [kaynak anlamı düzeltmesi](source-topology-correction-2026-09-09.md).
+
+**Durum: ifade havuzu yayında; son sürümün canlı kabulü tamamlandı. Dört dil çözümleme senaryosu açık. Bu rapor bütün BI ürününün eksiksiz üretime hazır olduğu iddiasını taşımaz.**
+
+## Son sürümün canlı kabul sonucu
+
+| Kontrol | Sonuç |
+|---|---|
+| Yerel semantik regresyon | 535 geçti; 2 mevcut bağımlılık kullanım uyarısı |
+| Gerçek API + bağlı DB, 100 karmaşık soru | 100 başarılı; 0 başarısız; 0 doğrulanamayan |
+| Karmaşıklık | 32 soru 7, 68 soru 8 farklı tablo türü kullanıyor |
+| Tam sonuçlar | 100 soru da dolu; sorular boyunca toplam 4.274.127 satır karşılaştırıldı |
+| En büyük tek sonuç | 85.703 satır; tam sonuç kesilmedi |
+| Ek 20 hedefli kontrol | 10 tam sonuç eşleşmesi, 6 beklenen koruma davranışı, 4 cevaplanamayan ifade |
+| Sürüm bütünlüğü | İzlenen 114 dosya değişmedi; hedefli ve geniş kabul boyunca aynı servis süreci |
+
+Başarı, aynı API yürütmesinin `resultId` üzerinden alınan tam sonucu ile bağımsız
+kaynak sorgusunun kolon kimlikleri, satır sayıları ve değerlerinin eşleşmesidir.
+SQL'i tekrar çalıştırıp benzer sonuç görmek başarı ölçütü yapılmadı. Büyük sonuçların
+önizlemesi ile tam sonuç ayrıldı. Yerel testteki beş özellik kaynak dosyasının
+hashleri yayınlanan dosyalarla da birebir eşleşti.
+
+NULL ve sıfır için ek kanıt: P09860'ın aynı yürütmeden saklanan 38.852 satırlık
+sonucunda 27.098 NULL hücre ve 668 sayısal sıfır hücresi bulundu. Tam sonuç yeniden
+SQL çalıştırılmadan alındı; normalize edilmiş hash hem önce kaydedilen API tam
+sonucuyla hem bağımsız referansla aynı kaldı. Bu sayılar yalnız bu sonuç kümesine
+aittir. Ayrıca S08'de veri olmayan önceki yıl NULL olarak korundu.
+
+- [120 sorunun nihai listesi ve statüleri](../../outputs/language-pool-20260909/evidence/prompts-final-status.md)
+- [Özet ölçümler](../../outputs/language-pool-20260909/evidence/final-summary.json)
+- [100 karmaşık sorunun SQL, referans ve sonuç hashleri](../../outputs/language-pool-20260909/evidence/complex-final-results.json)
+- [20 hedefli kontrolün ayrıntıları](../../outputs/language-pool-20260909/evidence/feature-final-results.json)
+- [Son kaynak sürümü](../../outputs/language-pool-20260909/evidence/source-after-final.json)
+- [Kanıt dosyalarının hashleri](../../outputs/language-pool-20260909/evidence/evidence-manifest.json)
+
 
 ## Yapılan geliştirme
 
@@ -26,12 +60,12 @@ Soru: `411 firmasında kullanım dışı cari hesap kartlarının sayısı nedir
 İlk sürümde fiziksel SQL 211 ve 411 firmalarını birlikte okuyarak 27.811 döndürdü.
 Bağımsız `dbo.LG_411_CLCARD WHERE ACTIVE=1` referansı 27.790 idi. Açık firma kapsamı
 katalogdaki fiziksel parametreden yürütmeye taşındı. Düzeltme sonrası aynı soru,
-aynı bağımsız referansla **27.790 = 27.790** olarak doğrulandı.
+aynı bağımsız referansla **27.790 = 27.790** olarak doğrulandı. Son sürümün L03 kontrolü de geçti.
 
 Ayrıca deterministik derleyicinin fiziksel tablo birleşimlerini kapsam daraltılmadan
 üretmesi giderildi. Kapsam, istek için ayrılmış derleyici örneğine uygulanır; ortak
 derleyici veya sonraki kapsam belirtilmemiş sorgu değiştirilmez. Son kod değişikliği
-öncesindeki 56/100 başarılı koşu arşivlendi; yeni sürüm için kabul baştan çalıştırılır.
+öncesindeki 56/100 başarılı koşu arşivlendi; yeni sürüm için kabul baştan çalıştırıldı ve 100/100 tamamlandı.
 
 Dönem karşılaştırması kontrolünde `411 firmasında 2025 ve 2026` ifadesindeki
 yılların ikinci firma listesi sanıldığı da bulundu ve düzeltildi. Önceden bağlı

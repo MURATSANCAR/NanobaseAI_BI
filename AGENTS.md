@@ -12,7 +12,9 @@ Kullanıcının açık talebi: bu projede yaptığımız bütün tasarımlar mob
 
 Kullanıcının kalıcı talebi: ürünün veri alma, SQL üretme, hesaplama, raporlama veya sonuç sunma davranışını etkileyen her değişiklik, bağlı gerçek veritabanı ve gerçek uygulama/API akışı üzerinden doğrulanmadan tamamlanmış veya üretime hazır sayılmaz.
 
-- Birim testleri ve kontrollü test verileri regresyon kontrolü için kullanılabilir; gerçek DB kabul testinin yerine geçmez. Bu iki test türünün sonuçlarını ayrı raporlayın.
+- Kullanıcının açık yasağı: testleri yerel çalışma ortamında çalıştırmayın. Kullanıcı ayrıca açıkça istemedikçe yerel birim testleri, mock, fixture, SQLite veya kontrollü/sentetik veriyle test koşusu başlatmayın. Önceki yerel regresyon izni bu kuralla kaldırılmıştır.
+- Ürün testlerini bağlı gerçek DB'yi kullanan gerçek uygulama/API ortamında yürütün. Bağımsız referans hesapları da aynı bağlı gerçek DB üzerinde yapılmalıdır. Yerelden bir uzak koşuyu yönetmek, testin yerel veya yapay veriyle çalıştırılması anlamına gelmez; raporda yürütme ortamını, API'yi ve gerçek veri kaynağını açıkça belirtin.
+- Gerçek DB kabulü yerine yerel test sayısı sunmayın. Kullanıcının ayrıca istediği bir yerel test varsa sonucunu gerçek DB kabulünden ayrı gösterin; hiçbir şekilde üretim doğruluğu kanıtı saymayın.
 - Etkilenen akışları basitten karmaşığa doğru sınayın. SQL/semantik katman ve katalog değişikliklerinde çok tablolu sorguları; ilgiliyse 7–8 tablolu JOIN, dönem karşılaştırması, NULL/sıfır değerler ve büyük sonuçları kapsayın. Mevcut 100 karmaşık soru setini ilgili geniş regresyonlarda kullanın; yeni doğrulanmış hata senaryolarını sete ekleyerek kapsamı geliştirin.
 - Başarıyı yalnız SQL'in çalışmasına göre vermeyin. Gerçek API'nin kullanıcıya sunduğu aynı yürütmenin tam sonucunu, bağımsız referans sorgu/hesapla karşılaştırın. Kolon kimliklerini, satır sayısını, sayısal değerleri ve kesilme bilgisini kontrol edin. Uygulamanın ürettiği SQL'i yeniden çalıştırmak, uygulamanın verdiği cevabı doğrulamak yerine geçmez.
 - Tablo, grafik veya dışa aktarım değiştiyse ilgili gerçek kullanıcı akışını da doğrulayın. Önizleme sınırını tam sonuç sınırıyla karıştırmayın.
@@ -22,3 +24,9 @@ Kullanıcının kalıcı talebi: ürünün veri alma, SQL üretme, hesaplama, ra
 - Gerçek veri testlerini salt okunur ve kontrollü yükle yürütün; aynı ağır koşunun birden fazla kopyasını başlatmayın. Canlı kabul sonucu, doğrulanan yayın sürümüne ait olmalıdır.
 
 Bu bir çalışma/kabul kuralıdır; zamanlanmış otomasyon talebi değildir. Yalnız dokümantasyon gibi ürün davranışını etkilemeyen değişikliklerde gerçek DB sorgusu çalıştırmak gerekmez.
+
+## Bu kurulumun veri anlamı: tek şirket, yıllara ait yedekler
+
+Kullanıcının 2026-09-09 düzeltmesi bağlayıcıdır: tek şirket vardır; farklı veritabanları şirketin yıllar içinde alınan yedekleridir. `411`, `211` gibi teknik kodlardan ayrı firma/şirket üretmeyin, kullanıcıya bu kodlarla şirket seçtirmeyin. Fiziksel nesne adları korunabilir; teknik kaynak kimliğini iş anlamındaki şirket kimliğiyle karıştırmayın.
+
+Veritabanı–yedek tarihi–işlem dönemi eşlemesi ve örtüşen kayıtlarda esas alınacak kaynak doğrulanmadan yedekleri bağımsız şirketler gibi toplamayın. Sırf SQL sonuçları aynı çıktı diye yanlış kaynak varsayımına dayanan bir referansı iş doğruluğu kanıtı saymayın. Önceki ayrı-firma varsayımı ve bu varsayıma dayanan kabul yorumları geçersizdir.

@@ -63,23 +63,16 @@ DB sorgularıyla karşılaştıran kabul koşusu yapılır. Şema kontrolü, ara
 SQL yürütme başarısı ve sayısal sonuç doğruluğu ayrı ölçülür. Bağımsız iş tanımı
 olmayan yeni ifade, yalnız SQL çalıştı diye başarılı sayılmaz.
 
-## Canlı kontrolde düzeltilen fiziksel kapsam
+## Kaynak kapsamı: tek şirketin yedekleri
 
-Açıkça belirtilen fiziksel bağlamın kaybolması, ifade aramasından bağımsız bir sonuç
-hatasıydı: `411 firmasında` denmesine rağmen iki firmanın kartları birlikte
-okunabiliyordu. `context_scope.py`, veri kaynağının mevcut
-`SEMANTIC_PATTERN_LABELS` yapılandırmasındaki adları kullanarak bitişik sayısal
-kapsamı katalogdaki `n0`, `n1` değerleriyle eşler. Bu Logo dağıtımında ilk bağlamın
-etiketi `Firma` olarak yapılandırıldı; uygulama kodunda `411`, `211`, firma veya
-Logo tablo isimleri sabitlenmedi.
+Bu kurulum tek şirket içerir. Farklı veritabanları yıllar içinde alınmış yedeklerdir;
+411 ve 211 gibi teknik kodlar şirket kimliği değildir. Önceki iki firma yorumu
+kullanıcının 2026-09-09 düzeltmesiyle geri çekilmiştir.
 
-`semantic.query.contextScope` doğrulanan kapsamı kaydeder. Aynı kapsam modelin
-şema seçimine, deterministik SQL derlemesine, ön SQL kontrolüne, tam sonuç yürütmesine ve dolayısıyla sonuç
-önbelleğinin fiziksel SQL anahtarına taşınır. Kapsam dışı açık fiziksel tablo
-isimleri reddedilir. Katalogda olmayan, çelişkili veya desteklenmeyen çoklu/negatif
-kapsamlar tek firmaya sessizce daraltılmaz; netleştirme istenir. Kapsam belirtilmeyen
-soruların mevcut dönem seçimi değişmez.
+Genel `context_scope.py` mekanizması teknik kaynak kapsamını taşıyabilir; bu
+kurulumda `SEMANTIC_PATTERN_LABELS=Firma` kaldırılmıştır. Kaynak önceliği ve
+örtüşme çözümü doğrulanmış veritabanı/yedek/dönem eşlemesine dayanmalıdır.
+Mevcut dönem seçicinin bu koşulu tüm sorgularda sağladığı henüz doğrulanmamıştır.
+Tek şirket kuralının model bilgisine eklenmesi deterministik tekilleştirme kanıtı değildir.
 
-Bu eşleme üretilmiş ifade anlamını onaylamaz. Mevcut resolver'ın bir sözcüğü yanlış
-varlığa bağlaması ve henüz çözülemeyen niteleyiciler ayrı sorunlardır; havuz bunların
-kontrollerini atlamaz.
+[Güncel kaynak anlamı düzeltmesi](../audits/source-topology-correction-2026-09-09.md).

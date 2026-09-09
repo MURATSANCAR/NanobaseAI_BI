@@ -37,16 +37,15 @@ export function CatalogExplorer() {
     staleTime: 5 * 60_000,
   });
 
-  // Katalogda hangi firmalar var, ve her firma hangi yılları taşıyor. İkisini birleştirmek gerekir:
-  // katalog firma numarasını bilir ama yılını bilmez, dönem tablosu yılı bilir ama katalogda o
-  // firmanın tablosu olup olmadığını bilmez. Yıl bilinmiyorsa numara yazılır — uydurulmaz.
+  // Tek şirketin teknik kaynak grupları, katalog ve dönem metaverisiyle gösterilir.
+  // Sayısal kaynak kodları ayrı şirketler değildir; dönem bilinmiyorsa yıl uydurulmaz.
   const choices = useMemo(() => {
-    const byFirm = new Map<string, number[]>();
+    const bySource = new Map<string, number[]>();
     for (const [year, p] of yearIndex(periods.data ?? [])) {
-      byFirm.set(p.firm, [...(byFirm.get(p.firm) ?? []), year]);
+      bySource.set(p.firm, [...(bySource.get(p.firm) ?? []), year]);
     }
     return (list.data?.scopes ?? []).map(({ code, tables }) => {
-      const years = (byFirm.get(code) ?? []).sort((a, b) => a - b);
+      const years = (bySource.get(code) ?? []).sort((a, b) => a - b);
       const label = years.length === 0 ? code
         : years.length === 1 ? String(years[0])
         : `${years[0]}–${years[years.length - 1]}`;
@@ -96,7 +95,7 @@ export function CatalogExplorer() {
             </span>
             <FilterChip active={scope === ''} onClick={() => pick('')} label="tümü" count={choices.reduce((a, c) => a + c.tables, 0)} />
             {choices.map((c) => (
-              <FilterChip key={c.code} active={scope === c.code} onClick={() => pick(c.code)} label={c.label} count={c.tables} title={`firma ${c.code}`} />
+              <FilterChip key={c.code} active={scope === c.code} onClick={() => pick(c.code)} label={c.label} count={c.tables} title={`Kaynak ${c.code}`} />
             ))}
           </div>
         ) : null}

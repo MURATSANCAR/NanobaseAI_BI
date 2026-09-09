@@ -1,0 +1,32 @@
+{
+  "path": "/data/nanobaseai/bi/frontend/backend/semantic_layer/runtime/compiler.py",
+  "sha256": "fd144f8cff227bed39b2e56d88712d13fbd314e22ed9e7c13ea2d9c26f70a5c5",
+  "deployedAt": "2026-09-09T19:53:56+0300",
+  "runtimeRestarted": true,
+  "activePoolChanged": false,
+  "verifiedAt": "2026-09-09T19:57:09+0300",
+  "health": {
+    "status": "ok",
+    "service": "nanobaseai-bi-semantic-bridge",
+    "version": "1.0.0",
+    "profiles": 4874,
+    "catalog": {
+      "DISCOVERED": 0,
+      "CANDIDATE": 556,
+      "CERTIFIED": 103,
+      "REJECTED": 372,
+      "SENSE_CONFLICT": 0,
+      "DEPRECATED": 1
+    },
+    "llm": true,
+    "db": true,
+    "pid": 1198228,
+    "cache": {
+      "entries": 7,
+      "hot": 7,
+      "ttlSec": 300,
+      "refreshSec": 15.0,
+      "refreshing": true
+    }
+  }
+}

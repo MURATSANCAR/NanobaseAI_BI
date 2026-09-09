@@ -1,4 +1,4 @@
-# Veri uyarıları (Logo LOGO_DB, firma 411 = 2026)
+# Veri uyarıları (Logo LOGO_DB, tek şirketin kaynakları)
 
 - NETTOTAL KDV dahildir; 2026 satışlarında KDV payı ≈ %0,5 (KDV hariç ≈ 917,9 M TL).
 - Fatura başlığı (INVOICE) ile hareket satırı (STLINE) toplamları arasında ≈ %0,6 fark vardır (hizmet satırları, yuvarlama); kartlar başlıktan, marj/iskonto satırdan hesaplanır.
@@ -8,4 +8,4 @@
 - Döviz faturaları (TRCURR ≠ 0, 74 adet) TL karşılığıyla dahildir.
 - Aylık/gruplu ortalama için bağımsız skaler alt sorgu yazma (her satıra aynı değeri döndürür); aynı GROUP BY veya CTE kullan.
 - Başlık tablosundan sayım yaparken satır tablosuna JOIN etme veya COUNT(DISTINCT başlık.LOGICALREF) kullan (fan-out).
-- Firma 411 yalnız 2026-01..08 içerir; 2021-2025 ayrı firmada (211) tutulur, bu projede yoktur.
+- Tek şirket vardır. Farklı kaynaklar yıllar içindeki yedeklerdir; teknik kodlar ayrı şirket değildir. Dönem kapsamı ve yedek önceliği doğrulanmış kaynak eşlemesinden belirlenir.
