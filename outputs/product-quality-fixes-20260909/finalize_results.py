@@ -1,9 +1,12 @@
 import json,csv,collections,re,statistics
 from pathlib import Path
-import sys
+import sys,hashlib
 root=Path(sys.argv[1]); rows=[json.loads(line) for line in (root/'results.jsonl').read_text().splitlines()]
 byid={r['id']:r for r in rows};rows=list(byid.values())
-for row in rows:
+for position,row in enumerate(rows,1):
+ stagefile = root.parent / ('app-before-retention.py' if position<=30 else 'app-before-timestamp.py' if position<=53 else 'app-before-buffered-transfer.py')
+ row['runtime_stage'] = 'initial' if position<=30 else 'retention' if position<=53 else 'timestamp' if position<=57 else 'buffered-transfer'
+ row['app_sha256'] = hashlib.sha256(stagefile.read_bytes()).hexdigest() if position<=57 else json.loads((root.parent/'source-manifest.json').read_text())['backend/semantic_bridge/app.py']
  answer=json.loads((root/(row['id']+'.json')).read_text()) if (root/(row['id']+'.json')).exists() else {}
  row['api_seconds']=round(answer.get('latency_ms',0)/1000,3) if answer.get('latency_ms') is not None else None
  row['catalog_hash']=((answer.get('semantic') or {}).get('query') or {}).get('catalogHash')
@@ -12,7 +15,7 @@ for row in rows:
  entities={re.sub(r'^LG_(?:[0-9]+_)*','',t) for t in tables}
  row['physical_table_count']=len(tables);row['entity_count']=len(entities)
 (root/'final-list.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2))
-fields=['id','prompt','status','metric','level','entity_count','physical_table_count','answer_rows','reference_rows','numeric_match','api_seconds','seconds','catalog_version','catalog_hash','answer_sha256','reference_sha256']
+fields=['id','prompt','status','metric','level','entity_count','physical_table_count','answer_rows','reference_rows','numeric_match','api_seconds','seconds','catalog_version','catalog_hash','runtime_stage','app_sha256','answer_sha256','reference_sha256']
 with (root/'final-list.csv').open('w',encoding='utf-8-sig',newline='') as f:
  w=csv.DictWriter(f,fieldnames=fields,extrasaction='ignore');w.writeheader();w.writerows(rows)
 counts=dict(collections.Counter(r['status'] for r in rows));dur=sorted(r['seconds'] for r in rows)
