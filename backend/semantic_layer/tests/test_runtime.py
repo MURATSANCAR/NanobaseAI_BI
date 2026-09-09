@@ -1178,3 +1178,16 @@ def test_a_statement_that_cannot_be_read_is_refused_not_permitted(profiles):
     ctx = {"n0": "411", "n1": "01"}
     assert not allowed_tables("SELECT * FROM ((((", profiles, ctx, "tsql")[0]
     assert not allowed_tables("SELECT 1", profiles, ctx, "tsql")[0]
+
+
+def test_generic_information_after_composed_measure_is_not_an_unknown_concept(catalog, profiles):
+    _certify(catalog, "perakende satis", SemanticType.DIMENSION_VALUE,
+             Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="TRCODE", operator="IN", values=["7"]))
+    _certify(catalog, "satis tutar", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="NETTOTAL", operator="COLUMN"))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Ocak 2026 dönemindeki perakende satış tutarı bilgisini raporla.")
+    assert "bilgisini" not in sq.unresolved
+    assert any(s.semantic_type == SemanticType.METRIC and s.mapping for s in sq.slots)
+    assert "bilgisini" in r.resolve("Bilgisini raporla").unresolved

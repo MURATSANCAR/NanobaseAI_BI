@@ -550,7 +550,13 @@ class SemanticResolver:
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 continue
-            if st in GENERIC_S and k > 0 and (k - 1) in consumed:
+            generic_anchor = k - 1
+            # A composed measure may leave its head ("tutari") unconsumed after
+            # resolving "perakende satis". Follow only adjacent measure words
+            # back to a resolved term, retaining standalone information fields.
+            while generic_anchor >= 0 and generic_anchor not in consumed and folded_tokens[generic_anchor] in METRIC_VOCAB_S:
+                generic_anchor -= 1
+            if st in GENERIC_S and generic_anchor >= 0 and generic_anchor in consumed:
                 # "toplam satış rakamı": a generic head noun sitting on a term that did resolve is
                 # part of that phrase, not a second concept the catalog is missing. Only next to a
                 # resolved word — on its own, "kod" is still a word the catalog may well define.
