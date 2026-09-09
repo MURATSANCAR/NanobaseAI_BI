@@ -6,6 +6,7 @@ gate=json.loads((root/'acceptance-verification.json').read_text())
 rows=json.loads((root/'complex-final-results.json').read_text())
 assert summary['completed']==100 and gate['status']=='PASS', 'Do not publish a passing report for incomplete acceptance'
 assert sum(summary['counts'].values())==100
+distribution="; ".join(f"{count} soruda {number} tablo" for number,count in summary["entityCounts"].items())
 report=f"""# Hazır sorular ve doğal dil kalite kabulü — 9 Eylül 2026
 
 Dört hazır soru düzeltildi ve yayımlandı. Mevcut sertifikalı iş tanımlarıyla gerçek sonuç doğrulaması geçti. **Ürünün her serbest ifadeyi doğru anladığı veya bütünüyle üretime hazır olduğu sonucu çıkarılamaz:** aşağıdaki dil boşlukları ve katalog riski açık.
@@ -31,7 +32,7 @@ Dört hazır soru düzeltildi ve yayımlandı. Mevcut sertifikalı iş tanımlar
 | Kaynak ve katalog tutarlılığı | PASS | acceptance-verification.json |
 | Arayüz | Üretimde gerçek sorular; 320/390/768/1440 genişlik kontrolü | ui-checks.json |
 
-Karmaşık sette tablo türü dağılımı: {summary['entityCounts']}. En büyük tam sonuç {max(r['answer_rows'] for r in rows):,} satırdır. API'nin aynı yürütmeye ait saklanan **tam** sonucu bağımsız referans sorguyla karşılaştırıldı; üretilen SQL'i yeniden çalıştırmak doğrulama olarak kullanılmadı. Kolon kimlikleri, satır çokluğu, sayısal değerler ve kesilme bilgisi kontrol edildi. NULL, boş metin ve sayı ayrımı korunur; sayılar beş ondalık basamak, metinler doğrulanan Türkçe büyük/küçük harf duyarsız DB kuralıyla kıyaslanır.
+Karmaşık sette tablo türü dağılımı: {distribution}. En büyük tam sonuç {max(r['answer_rows'] for r in rows)} satırdır. API'nin aynı yürütmeye ait saklanan **tam** sonucu bağımsız referans sorguyla karşılaştırıldı; üretilen SQL'i yeniden çalıştırmak doğrulama olarak kullanılmadı. Kolon kimlikleri, satır çokluğu, sayısal değerler ve kesilme bilgisi kontrol edildi. NULL, boş metin ve sayı ayrımı korunur; sayılar beş ondalık basamak, metinler doğrulanan Türkçe büyük/küçük harf duyarsız DB kuralıyla kıyaslanır.
 
 Hazır soruların beklenen satır sayıları: kanal net cirosu 17, iade tutarı sıralaması 10, aylık iskonto 8, en çok satan kitaplar 10. Kitap kırılımı sertifikalı ITEMS.NAME tanımıdır; aynı adlı farklı stok kodlarının ayrı kitap sayıldığı iddia edilmez. Satılan adet pozitif satış miktarıdır, net/iade düşülmüş adet değildir.
 

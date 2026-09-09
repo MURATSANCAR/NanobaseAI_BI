@@ -23,7 +23,7 @@ Dört hazır soru düzeltildi ve yayımlandı. Mevcut sertifikalı iş tanımlar
 | Kaynak ve katalog tutarlılığı | PASS | acceptance-verification.json |
 | Arayüz | Üretimde gerçek sorular; 320/390/768/1440 genişlik kontrolü | ui-checks.json |
 
-Karmaşık sette tablo türü dağılımı: {'7': 32, '8': 68}. En büyük tam sonuç 85,703 satırdır. API'nin aynı yürütmeye ait saklanan **tam** sonucu bağımsız referans sorguyla karşılaştırıldı; üretilen SQL'i yeniden çalıştırmak doğrulama olarak kullanılmadı. Kolon kimlikleri, satır çokluğu, sayısal değerler ve kesilme bilgisi kontrol edildi. NULL, boş metin ve sayı ayrımı korunur; sayılar beş ondalık basamak, metinler doğrulanan Türkçe büyük/küçük harf duyarsız DB kuralıyla kıyaslanır.
+Karmaşık sette tablo türü dağılımı: 32 soruda 7 tablo; 68 soruda 8 tablo. En büyük tam sonuç 85703 satırdır. API'nin aynı yürütmeye ait saklanan **tam** sonucu bağımsız referans sorguyla karşılaştırıldı; üretilen SQL'i yeniden çalıştırmak doğrulama olarak kullanılmadı. Kolon kimlikleri, satır çokluğu, sayısal değerler ve kesilme bilgisi kontrol edildi. NULL, boş metin ve sayı ayrımı korunur; sayılar beş ondalık basamak, metinler doğrulanan Türkçe büyük/küçük harf duyarsız DB kuralıyla kıyaslanır.
 
 Hazır soruların beklenen satır sayıları: kanal net cirosu 17, iade tutarı sıralaması 10, aylık iskonto 8, en çok satan kitaplar 10. Kitap kırılımı sertifikalı ITEMS.NAME tanımıdır; aynı adlı farklı stok kodlarının ayrı kitap sayıldığı iddia edilmez. Satılan adet pozitif satış miktarıdır, net/iade düşülmüş adet değildir.
 
