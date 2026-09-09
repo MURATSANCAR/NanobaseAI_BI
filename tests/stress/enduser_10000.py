@@ -163,6 +163,15 @@ def canonical(rows):
                                 for v in row)) for row in rows])
 
 
+class TrackedModel:
+    def __init__(self, inner):
+        self.inner, self.calls = inner, 0
+        self.model = getattr(inner, 'model', '')
+    def chat(self, messages, **kwargs):
+        self.calls += 1
+        return self.inner.chat(messages, **kwargs)
+
+
 class NoModel:
     calls = 0
     def chat(self, messages):
@@ -181,7 +190,7 @@ def run(args):
     conn, store, facts = fixture()
     settings = SemanticSettings(tenant_id='acceptance',datasource_id='acceptance',dialect='sqlite',
                                 context={'n0':'411','n1':'01'},max_rows=10000,recall_enabled=False)
-    model = LlmClient(os.environ['OPENAI_API_BASE'],os.environ['LLM_MODEL_NAME'],os.environ.get('OPENAI_API_KEY',''),120) if args.llm else NoModel()
+    model = TrackedModel(LlmClient(os.environ['OPENAI_API_BASE'],os.environ['LLM_MODEL_NAME'],os.environ.get('OPENAI_API_KEY',''),120)) if args.llm else NoModel()
     rt = Runtime(settings,store=store,connector=SQLiteConnector(conn=conn),llm=model)
     cases = corpus()
     args.out.mkdir(parents=True,exist_ok=True)
@@ -189,11 +198,12 @@ def run(args):
     selected = cases[args.start:args.start+args.limit] if args.limit else cases[args.start:]
     if args.ids:
         wanted=set(args.ids.split(','));selected=[c for c in cases if c['id'] in wanted]
-    source_hash=hashlib.sha256((ROOT/'backend/semantic_layer/runtime/resolver.py').read_bytes()).hexdigest()
+    source_hashes={name:hashlib.sha256((ROOT/'backend/semantic_layer/runtime'/name).read_bytes()).hexdigest()
+                   for name in ('resolver.py','compiler.py','audit.py')}
     counts=collections.Counter();started=time.monotonic()
     with (args.out/'results.jsonl').open('w') as stream:
         for case in selected:
-            t=time.monotonic();truth=expected(case,facts)
+            t=time.monotonic();truth=expected(case,facts);calls_before=model.calls
             item={**case,'mode':'controlled_runtime_real_model_fallback' if args.llm else 'controlled_runtime_deterministic_preflight',
                   'expected_result':truth,'model_fallback_enabled':args.llm}
             try:
@@ -213,15 +223,16 @@ def run(args):
                             semantic_query=(answer.get('semantic') or {}).get('query'))
             except Exception as exc:
                 item.update(status='NOT_TESTED_MODEL_FALLBACK' if 'MODEL_FALLBACK_NOT_TESTED' in str(exc) else 'FAIL_EXCEPTION',reason=str(exc)[:800])
+            item['model_calls']=model.calls-calls_before
             item['seconds']=round(time.monotonic()-t,4);counts[item['status']]+=1
             stream.write(json.dumps(item,ensure_ascii=False,default=str)+'\n');stream.flush()
             if sum(counts.values())%100==0:
                 progress={'tested':sum(counts.values()),'counts':dict(counts),'seconds':round(time.monotonic()-started,1)}
                 (args.out/'progress.json').write_text(json.dumps(progress));print(json.dumps(progress),flush=True)
     summary={'total':sum(counts.values()),'counts':dict(counts),'seconds':round(time.monotonic()-started,1),
-             'fixture_rows':len(facts),'ground_truth':'independent Python row oracle',
+             'fixture_rows':len(facts),'model_calls':model.calls,'ground_truth':'independent Python row oracle',
              'scope':'generated controlled fixture, Runtime.ask with SQL execution; not production data accuracy',
-             'source_sha256':source_hash}
+             'source_hashes':source_hashes}
     (args.out/'summary.json').write_text(json.dumps(summary,indent=2));print(json.dumps(summary),flush=True)
 
 

@@ -661,6 +661,22 @@ class SemanticResolver:
             sq.explanation.append("katalogda karşılığı olmayan terimler: " + ", ".join(sq.unresolved))
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
+        # Default row scopes belong to the semantic contract too. Otherwise the
+        # model fallback can omit cancelled/non-item exclusions while deterministic
+        # SQL applies them, returning different totals for the same measure.
+        metric_entities = {slot.mapping.entity for slot in sq.metrics if slot.mapping}
+        seen_defaults = set()
+        for candidates in index.values():
+            for concept, mappings in candidates:
+                if concept.semantic_type != SemanticType.DEFAULT_FILTER:
+                    continue
+                for mapping in mappings:
+                    key = (concept.id, mapping.entity, mapping.column)
+                    if mapping.entity in metric_entities and key not in seen_defaults:
+                        seen_defaults.add(key)
+                        sq.slots.append(ResolvedSlot(term=concept.term, semantic_type=SemanticType.DEFAULT_FILTER,
+                            status="CERTIFIED", mapping=mapping, confidence=1.0,
+                            explain={"source": "catalog_default", "why": "ölçünün varsayılan satır kapsamı"}))
         return sq
 
     def _modifier_candidate(self, tokens, k, consumed):

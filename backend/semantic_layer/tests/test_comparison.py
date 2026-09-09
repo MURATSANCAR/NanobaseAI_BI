@@ -55,7 +55,7 @@ def test_a_statement_that_dropped_one_period_is_reported_not_answered(catalog, p
 
     both = ("SELECT SUM(CASE WHEN INVOICE.DATE_ >= '2026-01-01' AND INVOICE.DATE_ < '2027-01-01' THEN INVOICE.NETTOTAL END) AS bu_yil, "
             "SUM(CASE WHEN INVOICE.DATE_ >= '2025-01-01' AND INVOICE.DATE_ < '2026-01-01' THEN INVOICE.NETTOTAL END) AS gecen_yil "
-            "FROM LG_411_01_INVOICE AS INVOICE")
+            "FROM LG_411_01_INVOICE AS INVOICE WHERE INVOICE.CANCELLED = 0")
     assert unmet_obligations(sq, both) == []
 
 

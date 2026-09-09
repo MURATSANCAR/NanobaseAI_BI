@@ -159,9 +159,9 @@ def _client(catalog, logo_connector, settings, replies):
 #: counted once per invoice they have, so the answer is the number of invoices wearing the name of
 #: the number of customers. The database returns it without complaint.
 _INFLATED = ('```sql\nSELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
-             'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
+             'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
 _CORRECT = ('```sql\nSELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
-            'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
+            'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
 
 
 def test_an_inflated_count_is_sent_back_to_the_model_and_the_corrected_query_is_what_runs(

@@ -289,14 +289,15 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
 
     # Do not collect predicates from all scopes: an unused CTE or a SELECT CASE
     # cannot establish a restriction on the rows of the actual answer.
-    if sq.filters:
+    required_filters = sq.filters + [s for s in sq.slots if s.semantic_type == SemanticType.DEFAULT_FILTER]
+    if required_filters:
         if not isinstance(tree, exp.Select):
             out.append("sonuç kapsamındaki filtreler doğrulanamadı")
         else:
             scope = _AnswerScope(tree)
             where = tree.args.get("where")
             predicates = _predicates_from(where.this, scope, "where", None) if where else []
-            for slot in sq.filters:
+            for slot in required_filters:
                 m = slot.mapping
                 if not m or not m.column or slot.status not in ("CERTIFIED", "INFERRED"):
                     continue

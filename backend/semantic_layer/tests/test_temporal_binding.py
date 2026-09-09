@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 from semantic_layer.conventions import Conventions
-from semantic_layer.models import ColumnProfile
+from semantic_layer.models import ColumnProfile, SemanticType
 from semantic_layer.runtime.audit import unmet_obligations
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.tests.conftest import DS, TENANT, PROJECT
@@ -44,8 +44,12 @@ def test_without_a_measure_a_card_date_is_not_a_temporal_obligation(catalog, pro
 
 
 def sale_plan(catalog, profiles):
-    return SemanticResolver(catalog, TENANT, DS, profiles, conventions=configured(profiles)).resolve(
+    sq = SemanticResolver(catalog, TENANT, DS, profiles, conventions=configured(profiles)).resolve(
         "bu yıl en çok satan 10 kitap", today=date(2026,7,20))
+    # These unit cases isolate date equivalence, not the full row-scope contract.
+    # Default-scope enforcement is exercised by test_enduser_10000 and Runtime tests.
+    sq.slots = [s for s in sq.slots if s.semantic_type != SemanticType.DEFAULT_FILTER]
+    return sq
 
 
 def test_line_grain_answer_can_use_its_declared_business_date(catalog, profiles):
@@ -99,9 +103,9 @@ def test_equivalent_date_cannot_hide_a_period_dropped_by_the_header_where(catalo
         "geçen yıla göre satış tutarı", today=date(2026,7,20))
     sql = """SELECT SUM(CASE WHEN s.DATE_ >= '2026-01-01' AND s.DATE_ < '2027-01-01' THEN i.NETTOTAL END),
              SUM(CASE WHEN s.DATE_ >= '2025-01-01' AND s.DATE_ < '2026-01-01' THEN i.NETTOTAL END)
-             FROM LG_411_01_INVOICE i JOIN LG_411_01_STLINE s ON s.INVOICEREF = i.LOGICALREF"""
+             FROM LG_411_01_INVOICE i JOIN LG_411_01_STLINE s ON s.INVOICEREF = i.LOGICALREF WHERE i.CANCELLED = 0"""
     assert unmet_obligations(sq, sql) == []
-    assert unmet_obligations(sq, sql + " WHERE i.DATE_ >= '2025-01-01' AND i.DATE_ < '2026-01-01'")
+    assert unmet_obligations(sq, sql + " AND i.DATE_ >= '2025-01-01' AND i.DATE_ < '2026-01-01'")
 
 
 def test_profiler_measures_business_dates_not_maintenance_dates():

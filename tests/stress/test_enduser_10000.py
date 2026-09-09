@@ -76,3 +76,17 @@ def test_indirect_path_rejects_missing_unique_key_and_ambiguity(setup):
     assert compiler._join_chain('STLINE', 'CLCARD') is None
     # Header -> line -> unit would multiply a header measure and is not a safe path.
     assert compiler._join_chain('INVOICE', 'UNITSETL') is None
+
+
+def test_model_sql_must_keep_default_row_scope(setup):
+    from semantic_layer.runtime.audit import unmet_obligations
+    from semantic_layer.runtime.compiler import ExistingCompiler
+    _, store, _ = setup
+    sq = SemanticResolver(store, 'acceptance', 'acceptance', store.list_profiles('acceptance')).resolve('Ocak 2026 satılan adet')
+    base = "SELECT SUM(s.AMOUNT) FROM LG_411_01_STLINE s WHERE s.DATE_ >= '2026-01-01' AND s.DATE_ < '2026-02-01' AND s.TRCODE IN (7,8)"
+    missing = unmet_obligations(sq, base)
+    assert any('CANCELLED' in reason for reason in missing)
+    assert any('LINETYPE' in reason for reason in missing)
+    assert not unmet_obligations(sq, base + ' AND s.CANCELLED=0 AND s.LINETYPE=0')
+    # A condition in a comment or unused CTE is not proof of filtering output rows.
+    assert unmet_obligations(sq, base + ' /* CANCELLED=0 AND LINETYPE=0 */')
