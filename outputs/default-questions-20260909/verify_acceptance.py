@@ -13,6 +13,9 @@ for path,digest in json.loads((root/'source-manifest.json').read_text())['files'
  if '/backend/' not in path:continue
  p=Path(path)
  if not p.exists() or hashlib.sha256(p.read_bytes()).hexdigest()!=digest:errors.append('Changed production source: '+path)
+runner=Path('/data/nanobaseai/bi/frontend/tests/stress/enduser_live_10000.py')
+runner_hash=hashlib.sha256(runner.read_bytes()).hexdigest()
+if {r.get('runner_sha256') for r in rows}!={runner_hash}:errors.append('Acceptance runner source changed')
 hashes=set()
 for row in rows:
  p=run/(row['id']+'.json')

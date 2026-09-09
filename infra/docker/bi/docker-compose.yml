@@ -1,0 +1,59 @@
+# NanobaseAI BI — taşınabilir yığın. Müşteriye tek `docker compose up -d` ile gider.
+# Ağ `bi_net` dışarıdan da bağlanabilir (NPM konteyneri buraya `docker network connect` ile eklenir,
+# böylece ön kapı `web` konteynerine ada göre proxy yapar; host-port hilesi yok).
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bi_meta
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: bi_meta
+    volumes:
+      - bi_pgdata:/var/lib/postgresql/data
+    networks: [bi_net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bi_meta -d bi_meta"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  bridge:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/bi/bridge.Dockerfile
+    image: nanobase-bi-bridge:latest
+    env_file: .env
+    environment:
+      # Katalog artık db konteynerinde; SQL doğrudan müşteri sunucusunda (connection.json).
+      SEMANTIC_STORE_DSN: postgresql+psycopg2://bi_meta:${PG_PASSWORD}@db:5432/bi_meta
+      SEMANTIC_CONNECTION_FILE: /app/secrets/logo-mssql-connection.json
+      SEMANTIC_KNOWLEDGE_DIR: /app/configs/semantic/knowledge/logo
+    volumes:
+      - ./secrets/logo-mssql-connection.json:/app/secrets/logo-mssql-connection.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [bi_net]
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/bi/web.Dockerfile
+    image: nanobase-bi-web:latest
+    environment:
+      CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
+    ports:
+      - "8088:80"          # geçici doğrudan erişim + doğrulama; NPM devreye girince kaldırılabilir
+    depends_on: [bridge]
+    networks: [bi_net]
+    restart: unless-stopped
+
+networks:
+  bi_net:
+    name: bi_net
+
+volumes:
+  bi_pgdata:
+    name: bi_pgdata

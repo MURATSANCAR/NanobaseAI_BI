@@ -1,5 +1,5 @@
 {
-  "asset": "index-Cyvm4uWc.js",
+  "asset": "index-CzLs4emz.js",
   "method": "CUA real production browser",
   "ratioAxis": [
     "0",
@@ -42,5 +42,35 @@
       1440
     ],
     "horizontalOverflow": false
-  }
+  },
+  "finalBookAndTouch": [
+    {
+      "width": 320,
+      "scrollWidth": 320,
+      "lastBook": true,
+      "minButtonHeight": 44,
+      "minButtonWidth": 44
+    },
+    {
+      "width": 390,
+      "scrollWidth": 390,
+      "lastBook": true,
+      "minButtonHeight": 44,
+      "minButtonWidth": 44
+    },
+    {
+      "width": 768,
+      "scrollWidth": 768,
+      "lastBook": true,
+      "minButtonHeight": 44,
+      "minButtonWidth": 44
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1440,
+      "lastBook": true,
+      "minButtonHeight": 44,
+      "minButtonWidth": 44
+    }
+  ]
 }

@@ -1,0 +1,11 @@
+{
+  "default_questions_verified": true,
+  "complex_cases_passed": 100,
+  "production_ready": false,
+  "open_items": [
+    "natural phrasing gaps",
+    "unspecified ranking measure",
+    "gross margin catalog ambiguity",
+    "unverified broader product scope"
+  ]
+}
