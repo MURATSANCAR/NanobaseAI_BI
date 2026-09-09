@@ -67,3 +67,13 @@ kefiller, özellik seti. Bu sınırlı kontrol tüm iş sorularının doğruluğ
 Kalite referansı önceki yayının gerçekten ölçülen `stage/published-quality.json` dosyasıdır;
 soru kümesi, ret tanımı veya eşikler değiştirilmez. Mevcut 3 kesin ret ve 9 netleştirme
 isteği adayın resolver/compiler karşılaştırmasında aynı kaldı.
+
+## Ek kaynak kontrolü
+
+Açıklaması tümüyle boş 13 kolonun web HTML hücreleri de boş ve sözlükte ilişki tanımı yok.
+Bazı çelişkiler için aynı kaynakta farklı işaretler bulundu: `VRNTINVENS.VARIANTREF`
+ilişkisi `VARIANT.LOGICALREF`, `BNCREDITCARD.REPAYPLANREF` ilişkisi `REPAYPLAN.LOGICALREF`
+hedefine gidiyor; kolon açıklamaları farklı anlamlar veriyor. WSREF, WFLOWCRDREF ve
+STLINEREF örneklerinde ilişki hedefi İngilizce açıklamayı desteklese de adlandırmayla
+uyuşmuyor. Aynı kaynakta kopyalanmış ilişki hataları da bulunduğundan bu alanlar
+bağımsız sürüm dokümanı/uygulama doğrulaması olmadan kesin iş anlamı sayılmadı.
