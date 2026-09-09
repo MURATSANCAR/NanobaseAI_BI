@@ -1,0 +1,64 @@
+{
+  "results": [
+    {
+      "question": "test",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "şişt",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "Sen kimsin?",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "asdfghjkl",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "Bana bir aşk şiiri yaz",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "Türkiye başkenti neresi?",
+      "type": "MODULE_INTRO",
+      "passed": true
+    },
+    {
+      "question": "2026 toptan satış tutarı",
+      "passed": true,
+      "type": "TEXT_TO_SQL",
+      "actual": {
+        "computedAt": 1788960742.309,
+        "question": "2026 toptan satış tutarı",
+        "sql": "SELECT SUM(INVOICE.[NETTOTAL]) AS satis_tutari\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (8)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+        "physicalSql": "SELECT SUM(INVOICE.[NETTOTAL]) AS satis_tutari FROM [dbo].[LG_411_01_INVOICE] AS INVOICE WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (8) AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+        "columns": [
+          {
+            "name": "satis_tutari",
+            "type": "float"
+          }
+        ],
+        "totalRows": 1,
+        "truncated": false,
+        "dataCoverage": [],
+        "comparison": null,
+        "id": "10489d048915462eab9a0222f52e5e4e",
+        "records": [
+          {
+            "satis_tutari": 874629058.61
+          }
+        ]
+      },
+      "referenceSQL": "SELECT SUM(NETTOTAL) AS total FROM dbo.LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE=8 AND DATE_ >= '20260101' AND DATE_ < '20270101'",
+      "expected": "874629058.6100003"
+    }
+  ],
+  "appSHA": "794f8e95b18dca82f022ddc1ea8076db855bbaa3141796e613e97162ce981e5d"
+}

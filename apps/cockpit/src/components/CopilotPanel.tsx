@@ -126,7 +126,7 @@ export function CopilotPanel({
             {engineOk ? 'Veri modelleri canlı' : engineOk === false ? 'Model deploy bekliyor' : 'Bağlantı kontrol ediliyor'}
           </div>
         </div>
-        <button type="button" className="text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
+        <button type="button" className="grid h-11 w-11 shrink-0 place-items-center text-ink-faint hover:text-ink" title="Yeni sohbet" onClick={() => { setMsgs([]); setThreadId(undefined); }}>
           <RotateCcw size={15} />
         </button>
         <button type="button" className="hidden text-ink-faint hover:text-ink lg:block" title={wide ? 'Daralt' : 'Genişlet'} aria-pressed={wide} onClick={() => setWide((v) => !v)}>
@@ -169,7 +169,7 @@ export function CopilotPanel({
             Verilerinize Türkçe soru sorun. Örnek:
             <div className="mt-2 flex flex-wrap gap-1.5">
               {module.suggestions.map((s) => (
-                <button key={s} onClick={() => send(s)} className="chip hover:border-brand hover:text-brand">
+                <button key={s} onClick={() => send(s)} className="chip min-h-11 hover:border-brand hover:text-brand">
                   {s}
                 </button>
               ))}
