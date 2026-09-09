@@ -74,7 +74,28 @@ join_keys:
       Hedefler ürünü barkodla tutuyor; new_itemno Logo ITEMS.CODE ile eşleşmiyor (0/8.568).
       Ürüne ulaşmak için UNITBARCODE üzerinden ITEMS'a geçilir.
 
-# Anahtarı OLMAYAN bağ — tahmin edilmemeli:
-# CRM siparişi ile Logo faturası/sipariş fişi arasında referans yok. new_name Logo ORFICHE.DOCODE'da
-# hiç geçmiyor. Yalnız new_logoyaaktarildi bayrağı var ve siparişlerin %28'i işaretli.
-# Müşteri+tarih+tutar eşleştirmesi bir tahmindir; sessiz yanlış üretir, yapılmaz.
+  # Ölçüldü 2026-09-09, CRM'in kendi metadata'sından çıkan kolonlarla.
+  - left:  {entity: AccountBase, column: new_logicalref}
+    right: {entity: CLCARD, column: LOGICALREF}
+    cast: int
+    reason: >
+      CRM carisinin Logo satır referansı. 26.691 dolu kayıttan 26.329'u eşleşiyor (%98,6).
+      Sayısal alan, collation gerekmez; new_CariKodu yolundan daha ucuz.
+  - left:  {entity: new_sevkiyatBase, column: new_siparisid}
+    right: {entity: new_siparisBase, column: new_siparisId}
+    reason: "CRM içi. 286.601 sevkiyatın 286.591'i bir siparişe bağlı; 223.134 siparişin sevkiyatı var."
+  - left:  {entity: new_siparissatiriBase, column: new_siparisid}
+    right: {entity: new_siparisBase, column: new_siparisId}
+    reason: "CRM içi sipariş satırı. 9.745.521 satırın 9.430.239'u bir siparişe bağlı."
+  - left:  {entity: new_sevkiyatBase, column: new_faturanumarasi}
+    right: {entity: INVOICE, column: FICHENO}
+    collate: Turkish_CI_AI
+    reason: >
+      CRM sevkiyatı ile Logo faturası. 240.920 farklı fatura numarasının 154.373'ü LG_211_01,
+      20.540'ı LG_411_01 faturasıyla eşleşiyor; kalanı 2019-2020, Logo kapsamı dışında.
+
+# CRM siparişi Logo faturasına DOĞRUDAN bağlanmaz; yol sevkiyattan geçer:
+#   new_siparisBase -> new_sevkiyatBase.new_siparisid -> new_faturanumarasi -> INVOICE.FICHENO
+# Ölçüldü: 120.658 sipariş, 154.376 fatura, net 2.400.390.375,43. Sevkiyatı olmayan 109.929 sipariş
+# bu yoldan görünmez (iptal, bekleyen, taslak) — "kaç sipariş" ile "ne kadar faturalandı" aynı şey değil.
+# Müşteri+tarih+tutar eşleştirmesi hâlâ yasak: bu zincir varken tahmine gerek yok.
