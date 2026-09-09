@@ -356,8 +356,9 @@ class Runtime:
                     out["cached"] = True
                     return out
         out, duration = self._execute(phys, limit, interactive=True)
-        self._remember(key, out, duration)
-        served = self._served(out, time.time())
+        computed_at = time.time()
+        self._remember(key, out, duration, computed_at=computed_at)
+        served = self._served(out, computed_at)
         served["cached"] = False
         return served
 
@@ -410,7 +411,8 @@ class Runtime:
                         self._discard_result(next(iter(self._results)))
                 out = self.result_files.write(self.connector.batches(phys), self.settings.max_rows)
                 out.update(physicalSql=phys, cached=False)
-                self._complete_cache[key] = (time.time(), out)
+                computed_at = time.time()
+                self._complete_cache[key] = (computed_at, out)
                 self._complete_cache.move_to_end(key)
                 while len(self._complete_cache) > 64:
                     self._complete_cache.popitem(last=False)
@@ -418,7 +420,7 @@ class Runtime:
             with self._wait_lock:
                 self._waiting -= 1
         out.update(physicalSql=phys, cached=False)
-        return self._served(out, time.time())
+        return self._served(out, computed_at)
 
     def _discard_result(self, rid):
         old = self._results.pop(rid, None)
@@ -504,12 +506,12 @@ class Runtime:
         copy["ageSec"] = round(max(0.0, time.time() - computed_at), 1)
         return copy
 
-    def _remember(self, key: str, out: dict[str, Any], duration: float) -> None:
+    def _remember(self, key: str, out: dict[str, Any], duration: float, *, computed_at: Optional[float] = None) -> None:
         if self._cache_ttl <= 0 or len(out.get("records") or []) > 200:
             with self._hot_lock:
                 self._hot.pop(key, None)
             return
-        self._cache[key] = (time.time(), out)
+        self._cache[key] = (time.time() if computed_at is None else computed_at, out)
         self._cache.move_to_end(key)
         budget = int(os.environ.get("SEMANTIC_CACHE_MAX_ROWS", "5000"))
         while len(self._cache) > 64 or sum(len(v[1].get("records") or []) for v in self._cache.values()) > budget:
@@ -1346,12 +1348,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 try:
                     yield (json.dumps(meta, ensure_ascii=False)[:-1] + ', "records":[').encode()
                     first = True
+                    buffer = bytearray()
                     for line in stream:
                         if not first:
-                            yield b','
-                        yield line.rstrip(b'\n')
+                            buffer.extend(b',')
+                        buffer.extend(line.rstrip(b'\n'))
                         first = False
-                    yield b']}'
+                        if len(buffer) >= 65536:
+                            yield bytes(buffer)
+                            buffer.clear()
+                    buffer.extend(b']}')
+                    yield bytes(buffer)
                 finally:
                     stream.close()
             return StreamingResponse(chunks(), media_type='application/json')

@@ -1,6 +1,8 @@
 # Üretim ürün kalitesi incelemesi — 9 Eylül 2026
 
-Karar: Mevcut kanıtlarla ürünün tamamına üretime hazır onayı verilemez. Satış toplama sorgularındaki ilerleme gerçek; büyük sonuç teslimi, gelişmiş analiz ve doğrulama mekanizmalarında açıklar var. Kullanıcı girişi ve yetkilendirme kapsam dışıdır.
+> Bu belge ilk incelemenin tarihsel bulgularıdır. Uygulanan düzeltmeler ve güncel kabul kanıtları: [düzeltme raporu](production-product-quality-fixes-2026-09-09.md).
+
+İlk inceleme kararı: Mevcut kanıtlarla ürünün tamamına üretime hazır onayı verilemez. Satış toplama sorgularındaki ilerleme gerçek; büyük sonuç teslimi, gelişmiş analiz ve doğrulama mekanizmalarında açıklar var. Kullanıcı girişi ve yetkilendirme kapsam dışıdır.
 
 ## Kanıt ve sınırlar
 

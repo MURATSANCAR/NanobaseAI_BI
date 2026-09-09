@@ -56,7 +56,13 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
         phys = physical_name(p.table_pattern, {**p.context, **(context or {})}).upper()
         known.update({p.entity.upper(), phys, p.table_name.upper()})
         if p.schema_name:
-            schemas.add(p.schema_name.upper())
+            qual = p.schema_name.upper()
+            schemas.add(qual)
+            # "Timas_MSCRM.dbo" is one qualifier and also two: a reference may spell either.
+            for part in qual.split("."):
+                if part:
+                    schemas.add(part)
+            known.update({f"{qual}.{phys}", f"{qual}.{p.table_name.upper()}"})
     names = _physical_references(sql, dialect)
     if names is None:
         # Unreadable is not harmless: a statement this cannot parse is one whose tables it cannot
@@ -210,7 +216,15 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
 
 def _physical_table(prof: SchemaProfile, context: dict[str, str]) -> exp.Table:
     phys = physical_name(prof.table_pattern, {**prof.context, **context})
-    return exp.Table(this=exp.to_identifier(phys, quoted=True), db=exp.to_identifier(prof.schema_name, quoted=True))
+    # `schema_name` may be "database.schema" — a source whose tables live in more than one database
+    # on one server. Written as two parts, the name resolves wherever the connection is pointed.
+    parts = [x for x in (prof.schema_name or "").split(".") if x]
+    node = exp.Table(this=exp.to_identifier(phys, quoted=True))
+    if parts:
+        node.set("db", exp.to_identifier(parts[-1], quoted=True))
+    if len(parts) > 1:
+        node.set("catalog", exp.to_identifier(parts[-2], quoted=True))
+    return node
 
 
 def strip_trailing_semicolon(sql: str) -> str:

@@ -1221,3 +1221,23 @@ def test_composed_measure_uses_normalized_key_for_line_grain(catalog, profiles):
     metrics=[s for s in sq.slots if s.semantic_type==SemanticType.METRIC]
     assert len(metrics)==1 and metrics[0].mapping.entity=="STLINE"
     assert metrics[0].explain.get("grain_switch")=="INVOICE → STLINE"
+
+
+def test_a_table_in_another_database_on_the_same_server_is_named_in_full():
+    """Bir kaynak, tablolarını aynı sunucuda birden çok veritabanında tutabilir. İki parçalı ad
+    bağlantının bakmakta olduğu veritabanında çözülür — yani yanlış veritabanında."""
+    from semantic_layer.models import ColumnProfile, SchemaProfile
+    from semantic_layer.runtime.compiler import Dialect
+    from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql
+
+    crm = SchemaProfile(datasource_id="d", table_name="new_siparisBase", table_pattern="new_siparisBase",
+                        entity="SIPARIS", schema_name="Timas_MSCRM.dbo",
+                        columns=[ColumnProfile(name="new_CariKodu", data_type="nvarchar")])
+    assert Dialect("tsql").table("Timas_MSCRM.dbo", "new_siparisBase") == "[Timas_MSCRM].[dbo].[new_siparisBase]"
+
+    sql = physicalize_sql("SELECT new_CariKodu FROM SIPARIS", [crm], {}, dialect="tsql")
+    assert "[Timas_MSCRM].[dbo].[new_siparisBase]" in sql, sql
+
+    # ve izin listesi bu adı tanır, tanımadığını hâlâ reddeder
+    assert allowed_tables(sql, [crm], {}, "tsql")[0]
+    assert not allowed_tables("SELECT * FROM Timas_MSCRM.dbo.AuditBase", [crm], {}, "tsql")[0]

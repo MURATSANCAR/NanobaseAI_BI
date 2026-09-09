@@ -1,11 +1,11 @@
-# Product quality implementation — verification continues
+# Active verification
 
-Base release deployed successfully to nanobase-direct, nanobase-semantic-bridge port 8795. Backup and deployment hashes: /data/nanobaseai/bi/backups/product-quality-20260909. Health OK, 104 certified concepts, 4121 profiles. Runtime catalog version 13.
+All code fixes deployed, latest app includes disk reserve, atomic file open, exact computedAt reuse, 64KiB buffered HTTP transfer. Health OK pid2525408. Source22 SHA256 comparisons passed. Frontend index-DfnMGJ23.js deployed; browser 320/390/768/1440 no page overflow, all columns accessible, input16px/touch44px. Downloaded Excel actual files verified 61865rows7cols and5255rows6cols.
 
-Actual connected DB independent reference comparisons passed: 61,865 rows for eight-table report; 5,255 rows for monthly ranking/change including prior December. Production API returns all 61,865 rows without truncation. Critical mapped business columns: 37/37 grounded. Custom schema business definitions still require source documents; do not invent them.
+Latest broad suite469 passed2warnings52.72s. Real DB references61865/5255 passed. Monthlymissing1955zero12negative174Januaryprior432 correct. Critical actualSQL+mapping coverage47/47 defined. Full customERP meanings remain source dependent.
 
-Broad suite 464 passed; subsequent snapshot disk pressure/missing-file regression suite 7 passed. Frontend TypeScript/Vite build passes. Fixed API /timas base and hidden columns; latest bundle index-DfnMGJ23.js deployment underway.
+100 actual API snapshot/reference run:63/100 LIVE_PASS latest. Remote /tmp/quality-100-progress.log; backup /data/nanobaseai/bi/backups/product-quality-20260909/live-100. Active exec session75564. Do not stop; buffer greatly speeds final43cases. Pauses after30,53,57 for retention/timestamp/transfer fixes, all sameSQL semantics. Prior app copies inbackup.
 
-100 corrected actual API snapshot/reference cases running remotely via /tmp/run-quality-100.sh. /tmp/quality-100-progress.log, backup directory live-100/results.jsonl. 21/100 LIVE_PASS at last inspection. Runner supports STOP file and resumes from results.jsonl. Do not interrupt mid-case or restart service before it pauses.
+Finalizer /tmp/product-quality-finalize.py ready, local outputs/.../finalize_results.py. Run on live-100 after100complete; retrieve final-list.csv/json/md,summary.json andevidence. Current final deployment manifest includes22sourcehashes+3frontendhashes+health.
 
-Latest local backend additional fixes need deploy: reserve snapshot disk space by expiring older reports; open HTTP snapshot file under eviction lock; missing file returns 410. Finish mobile browser checks/export, gate evidence tests, 100 real cases, final audit artifact. No final completion claim yet.
+Final concurrency rerun underway (previous slow transfer comparison saved concurrency-before-buffer.json). Read latest concurrency.json. Probe actual independent DB search1.677seconds, originalmainconnectionpreserved andSELECT1works, probeconnclosed. Update final audit docs/audits/production-product-quality-fixes-2026-09-09.md and originalaudit link, fetchevidence, no false wholeproduct prodready claim. Need100done beforefinal. Memorycitation required MEMORY.md114-122 rollout01a07e23-d10b-74e1-89a1-2361260449e2.

@@ -58,7 +58,12 @@ class Dialect:
         return f"[{ident}]" if self.family == "tsql" else f'"{ident}"'
 
     def table(self, schema: str, name: str) -> str:
-        return f"{self.q(schema)}.{self.q(name)}" if schema and self.family != "sqlite" else self.q(name)
+        """A qualified table name. `schema` may carry a database too ("Timas_MSCRM.dbo"): a source
+        can hold its tables in more than one database on the same server, and a two-part name would
+        resolve in whichever database the connection happens to be pointed at."""
+        if not schema or self.family == "sqlite":
+            return self.q(name)
+        return ".".join(self.q(part) for part in schema.split(".") if part) + "." + self.q(name)
 
     def bucket(self, col: str, grain: str) -> str:
         if self.family == "tsql":
