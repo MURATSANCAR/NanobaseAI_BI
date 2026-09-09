@@ -10,7 +10,7 @@ from pathlib import Path
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
-from semantic_layer.runtime.language_pool import LanguagePool, VERSION, atomic_write, digest, schema_documents, validate_candidate
+from semantic_layer.runtime.language_pool import LanguagePool, VERSION, MAX_ENTRIES, atomic_write, digest, schema_documents, validate_candidate
 from semantic_layer.store.catalog_store import open_store
 
 SYSTEM = """Veritabanı şemasına bağlı Türkçe iş dili arama belgeleri üret.
@@ -108,7 +108,7 @@ def extend_pool(llm, profiles, datasource_id, output, *, annotations=None, entit
                     entry = validate_candidate(raw, docs)
                     valid += 1
                     if entry["id"] not in entries:
-                        if len(entries) >= 20000:
+                        if len(entries) >= MAX_ENTRIES:
                             raise ValueError("pool capacity reached")
                         entries[entry["id"]] = entry
                         accepted += 1

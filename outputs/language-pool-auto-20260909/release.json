@@ -1,0 +1,32 @@
+[
+  {
+    "path": "backend/scripts/build_language_pool.py",
+    "before": "2276c463518cc50f0980691cd18ea0d7339bf3fb83f54fdd95319844114cdbc2",
+    "after": "c6d88f9b2f09d05dabba3368c4b9dc707f26b07945916231a6acaa3a7abcfcb0",
+    "source": "build_language_pool.py"
+  },
+  {
+    "path": "backend/scripts/maintain_language_pool.py",
+    "before": null,
+    "after": "d1271f41ded95ff349c682d9295741104d92ee4e3af135e593b793b21f713a4c",
+    "source": "maintain_language_pool.py"
+  },
+  {
+    "path": "backend/semantic_layer/runtime/language_pool.py",
+    "before": "80bb8f53878bdf1b0a6db5b71b430d068774dfdbecb513874166e4850eae5dd7",
+    "after": "05298bee286a5d7d5d0a4361296a1790dc9a5b8a5be0d1b602a46d7e1dee76a5",
+    "source": "language_pool.py"
+  },
+  {
+    "path": "backend/semantic_layer/runtime/llm_queue.py",
+    "before": "1183354ec3ab597debb86342669b32a38837e5c91928098021ea886f1b94310c",
+    "after": "71d442342f140a2d41146b7a321d1074047f22f9c64ebe2c29930d1f05c70fe7",
+    "source": "llm_queue.py"
+  },
+  {
+    "path": "scripts/server/deploy-language-pool-worker.sh",
+    "before": null,
+    "after": "063fdb1c5f657539e8f7c4ff1f26c32a9f205080f0693ea4852dfe4c5bcf8171",
+    "source": "deploy-language-pool-worker.sh"
+  }
+]

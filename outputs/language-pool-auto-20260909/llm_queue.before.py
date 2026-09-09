@@ -212,19 +212,12 @@ class LlmQueue:
             # on the production database. Starts responsive, settles to a light poll.
             self.poll_seconds = min(self.poll_seconds * 1.5, 5.0)
             if time.monotonic() > deadline:
-                if self._is_background_ticket(ticket_id):
-                    raise TimeoutError("Background LLM work yielded after queue wait limit")
                 # Never fail the user's question on queueing alone: take the slot and let the model decide.
                 log.warning("llm queue wait exceeded %ss for %s — proceeding", self.max_wait_seconds, ticket_id)
                 with self.engine.begin() as conn:
                     conn.execute(S.sl_llm_queue.update().where(S.sl_llm_queue.c.id == ticket_id).values(status="RUNNING", started_at=_now(), heartbeat_at=_now(), worker=self.worker))
                 return ahead_at_start
             time.sleep(self.poll_seconds)
-
-    def _is_background_ticket(self, ticket_id: str) -> bool:
-        with self.engine.connect() as conn:
-            purpose = conn.execute(sa.select(S.sl_llm_queue.c.purpose).where(S.sl_llm_queue.c.id == ticket_id)).scalar()
-        return str(purpose or "").startswith("bg:")
 
     def _finish(self, ticket_id: str) -> None:
         try:

@@ -13,6 +13,8 @@ from semantic_layer.normalize import fold, stem
 from semantic_layer.runtime.column_index import tokens
 
 VERSION = 1
+MAX_ENTRIES = 200000
+MAX_BYTES = 256 * 1024 * 1024
 OPERATIONS = {"lookup", "detail", "aggregate", "rank", "compare", "absence"}
 ROLES = {"measure", "dimension", "filter", "time", "key"}
 
@@ -138,15 +140,15 @@ class LanguagePool:
     def load(cls, path, profiles, datasource_id, annotations=None):
         if not path or not Path(path).is_file():
             return cls()
-        if Path(path).stat().st_size > 32 * 1024 * 1024:
-            raise ValueError("language pool exceeds 32 MiB")
+        if Path(path).stat().st_size > MAX_BYTES:
+            raise ValueError("language pool exceeds its byte limit")
         payload = json.loads(Path(path).read_text())
         if not isinstance(payload, dict):
             raise ValueError("invalid pool document")
         if payload.get("version") != VERSION or payload.get("datasourceId") != datasource_id:
             raise ValueError("language pool version/data source differs")
         rows = payload.get("entries")
-        if not isinstance(rows, list) or len(rows) > 20000:
+        if not isinstance(rows, list) or len(rows) > MAX_ENTRIES:
             raise ValueError("invalid pool size")
         docs = schema_documents(profiles, annotations)
         hashes = {e: digest(d) for e, d in docs.items()}

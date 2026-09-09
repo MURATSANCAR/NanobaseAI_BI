@@ -232,6 +232,8 @@ ExecStart=${VENV}/bin/python -m semantic_layer.cli pipeline --llm --note nightly
 ExecStartPost=-/usr/bin/curl -fsS -H "X-Semantic-Admin: \${SEMANTIC_ADMIN_TOKEN}" -m 30 -X POST http://127.0.0.1:${PORT}/api/v1/semantic/reload
 WORKEREOF
 sudo cp "${ROOT}/infra/systemd/nanobase-semantic-worker.timer" /etc/systemd/system/
+ROOT="$ROOT" VENV="$VENV" ENV_FILE="$ENV_FILE" SERVICE_USER="${SERVICE_USER:-administrator}" \
+  bash "$ROOT/scripts/server/deploy-language-pool-worker.sh"
 # Watchdog: a port check is not health — this one asks the bridge a real question every five minutes.
 sudo cp "${ROOT}/infra/systemd/nanobase-semantic-watchdog.service" "${ROOT}/infra/systemd/nanobase-semantic-watchdog.timer" /etc/systemd/system/
 sudo -E systemctl daemon-reload
