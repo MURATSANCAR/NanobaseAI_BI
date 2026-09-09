@@ -1,0 +1,22 @@
+{
+  "completed": 100,
+  "counts": {
+    "LIVE_PASS": 100
+  },
+  "maxRows": 85703,
+  "minRows": 7089,
+  "medianEndToEndSeconds": 15.99,
+  "p95EndToEndSeconds": 36.39,
+  "scope": "Eight-table aggregate questions; actual API snapshots vs independent connected DB references. Durations include reference query and full transfer, not API latency.",
+  "apiMedianSeconds": 6.474,
+  "apiP95Seconds": 11.041,
+  "metrics": {
+    "satılan adet": 25,
+    "satış tutarı": 25,
+    "satış satırı sayısı": 25,
+    "net satış tutarı": 25
+  },
+  "entities": {
+    "8": 100
+  }
+}

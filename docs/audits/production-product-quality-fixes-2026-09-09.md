@@ -10,17 +10,17 @@ Canlı test 30., 53. ve 57. sorulardan sonra güvenli biçimde duraklatılıp s�
 
 ## Bulguların durumu
 
-| # | Bulgu | Uygulanan çözüm | Kabul kanıtı / sınır |
-|---|---|---|---|
-| 1 | Tam rapor 500 satırda kesiliyordu | Tek DB yürütmesi, parçalı okuma, özel disk dosyası, 64 KiB aktarım, aynı resultId ile tam indirme | Gerçek API 61.865 satır; bağımsız referansla tam eşleşme. Excel 61.865 veri satırı/7 kolon ve 5.255 veri satırı/6 kolon. |
-| 2 | Aylık sıralama/değişim sorusu çalışmıyordu | Onaylı temel toplama üzerinde aylık DENSE_RANK, önceki takvim ayı ve ilk ay için önceki yıl verisi | 5.255 satır bağımsız SQL+Python referansıyla eşleşti. Desteklenen aylık soru çerçevesi; tüm analitik soru biçimleri için genel başarı iddiası yok. |
-| 3 | Karşılaştırıcı kolon rollerini kaybediyordu | Kolon eşlemesi korunuyor; gerçek API'nin saklanan cevabı karşılaştırılıyor; cevabın SQL'i yeniden yürütülmüyor | Kolon değişimi, NULL/boş ayrımı regresyonları geçti. 100 gerçek soru tekrarı sürüyor. |
-| 4 | Kalite kapısı ölçülmemiş başarı oranı yayımlıyordu | Ölçülmeyen metrik UNKNOWN; tam geçiş kapalı. Canlı kanıt için dosya hashleri, kaynak/sürüm/kimlik ve ölçülmüş vaka sayısı zorunlu | Envanterin tek başına geçemediği, değiştirilmiş kanıtın reddedildiği test edildi. SAP/Oracle vb. ölçülmeyen kapsam başarılı ilan edilmiyor. |
-| 5 | Grafik/özet kapsamı yanıltıcıydı | Çok boyutlu sonuç tablo; tüm kolonlar korunuyor; gerçek önizleme sayısı, hesaplanma zamanı ve önbellek yaşı gösteriliyor | 320/390/768/1440 piksel tarayıcı kontrolü; sayfa taşması yok. Geniş tablo kendi içinde kayıyor. |
-| 6 | Büyük sorgular faydasız arka plan tekrarına giriyordu | Saklanmayan sonuç sıcak listeden çıkarılıyor; tam sonuç disk önbelleğinde tekrar kullanılıyor | Üç eşzamanlı istek aynı zaman/hash/5.255 satırı önbellekten aldı. Bu sınırlı eşzamanlılık kontrolüdür, kapasite/yük sertifikası değildir. |
-| 7 | Değer araması ortak bağlantıyı ve süre bütçesini aşıyordu | MSSQL probe için ayrı bağlantı/kilit, kalan süreye göre login/sorgu timeout; bağlantı sonlandırma | Gerçek ayrı bağlantı araması 1,677 sn; ana bağlantı korundu, arama bağlantısı kapandı ve ana SELECT başarılı. Bir önceki denemede sürücü timeout uyguladı. Kasıtlı ağ kesintisi oluşturulmadı. |
-| 8 | İş anlamı kapsamı eksikti | Onaylı eşlemeler, metrik koşulları, gerçek JOIN/tarih kolonları mevcut kaynaklarla tarandı | Kritik sorgu kapsamında 47/47 kolon tanımlı. Tüm ERP'deki özel alanların iş anlamı tamamlanmış değildir; ek kaynak bekleniyor. |
-| 9 | Katalog sürümü içerikle örtüşmüyordu | Çözücünün kullandığı tam onaylı içerik değişmez snapshot/hash olarak yayınlanıyor; sorgu izine yazılıyor | Canlı katalog v13, 104 kavram. Aynı sayıda kavramla eşleme değiştiğinde hash ve sürümün değiştiği test edildi. |
+| # | Durum | Bulgu | Uygulanan çözüm | Kabul kanıtı / sınır |
+|---|---|---|---|---|
+| 1 | DÜZELTİLDİ | Tam rapor 500 satırda kesiliyordu | Tek DB yürütmesi, parçalı okuma, özel disk dosyası, 64 KiB aktarım, aynı resultId ile tam indirme | Gerçek API 61.865 satır; bağımsız referansla tam eşleşme. Excel 61.865 veri satırı/7 kolon ve 5.255 veri satırı/6 kolon. |
+| 2 | DÜZELTİLDİ | Aylık sıralama/değişim sorusu çalışmıyordu | Onaylı temel toplama üzerinde aylık DENSE_RANK, önceki takvim ayı ve ilk ay için önceki yıl verisi | 5.255 satır bağımsız SQL+Python referansıyla eşleşti. Desteklenen aylık soru çerçevesi; tüm analitik soru biçimleri için genel başarı iddiası yok. |
+| 3 | DÜZELTİLDİ | Karşılaştırıcı kolon rollerini kaybediyordu | Kolon eşlemesi korunuyor; gerçek API'nin saklanan cevabı karşılaştırılıyor; cevabın SQL'i yeniden yürütülmüyor | Kolon değişimi, NULL/boş ayrımı regresyonları geçti. **100/100 gerçek soru geçti**, sıfır hata/kesilme. |
+| 4 | DÜZELTİLDİ | Kalite kapısı ölçülmemiş başarı oranı yayımlıyordu | Ölçülmeyen metrik UNKNOWN; tam geçiş kapalı. Canlı kanıt için dosya hashleri, kaynak/sürüm/kimlik ve ölçülmüş vaka sayısı zorunlu | Envanterin tek başına geçemediği, değiştirilmiş kanıtın reddedildiği test edildi. SAP/Oracle vb. ölçülmeyen kapsam başarılı ilan edilmiyor. |
+| 5 | DÜZELTİLDİ | Grafik/özet kapsamı yanıltıcıydı | Çok boyutlu sonuç tablo; tüm kolonlar korunuyor; gerçek önizleme sayısı, hesaplanma zamanı ve önbellek yaşı gösteriliyor | 320/390/768/1440 piksel tarayıcı kontrolü; sayfa taşması yok. Geniş tablo kendi içinde kayıyor. |
+| 6 | DÜZELTİLDİ | Büyük sorgular faydasız arka plan tekrarına giriyordu | Saklanmayan sonuç sıcak listeden çıkarılıyor; tam sonuç disk önbelleğinde tekrar kullanılıyor | Üç eşzamanlı istek aynı zaman/hash/5.255 satırı önbellekten aldı. Bu sınırlı eşzamanlılık kontrolüdür, kapasite/yük sertifikası değildir. |
+| 7 | DÜZELTİLDİ | Değer araması ortak bağlantıyı ve süre bütçesini aşıyordu | MSSQL probe için ayrı bağlantı/kilit, kalan süreye göre login/sorgu timeout; bağlantı sonlandırma | Gerçek ayrı bağlantı araması 1,677 sn; ana bağlantı korundu, arama bağlantısı kapandı ve ana SELECT başarılı. Bir önceki denemede sürücü timeout uyguladı. Kasıtlı ağ kesintisi oluşturulmadı. |
+| 8 | KRİTİK KAPSAM DOĞRULANDI / GENEL KAPSAM AÇIK | İş anlamı kapsamı eksikti | Onaylı eşlemeler, metrik koşulları, gerçek JOIN/tarih kolonları mevcut kaynaklarla tarandı | Kritik sorgu kapsamında 47/47 kolon tanımlı. Tüm ERP'deki özel alanların iş anlamı tamamlanmış değildir; ek kaynak bekleniyor. |
+| 9 | DÜZELTİLDİ | Katalog sürümü içerikle örtüşmüyordu | Çözücünün kullandığı tam onaylı içerik değişmez snapshot/hash olarak yayınlanıyor; sorgu izine yazılıyor | Canlı katalog v13, 104 kavram. Aynı sayıda kavramla eşleme değiştiğinde hash ve sürümün değiştiği test edildi. |
 
 ## Gerçek veri sınır durumları
 
@@ -38,10 +38,16 @@ Tam sonuç varsayılanları: rapor başına 1.000.000 satır / 256 MiB; toplam d
 - Mobil: 320/390/768/1440 genişliklerinde document.scrollWidth == viewport width. Mobil giriş 16px/44px; Excel düğmesi 44px yüksek.
 - TypeScript/Vite derlemesi geçti. Paket büyüklüğü uyarısı mevcut; derleme hatası yok.
 - Son kodla birleşik regresyon: **469 geçti**, iki uyarı, 52,72 saniye. Bunlar birim/entegrasyon kontrolleridir; müşteri verisi kabulü yukarıdaki canlı karşılaştırmalarla ayrı yürütüldü.
-- 100 soru çalışması sürüyor. Son liste ve statüler tamamlanınca bu kayıt güncellenecek.
+- **100/100 karmaşık soru LIVE_PASS**. Hepsi sekiz farklı tablo türü içeriyor. Satılan adet, satış tutarı, satış satırı sayısı ve net satış tutarı için 25'er soru; gerçek yanıtlar 7.089–85.703 satır. Bağımsız referanslarla tüm satır ve kolonlar karşılaştırıldı.
+- Bu 100 koşuda API'nin bildirdiği işleme süresi medyan 6,474 sn; p95 11,041 sn. API aktarımı ve bağımsız referansı da içeren test adımı medyan 15,99 sn; p95 36,39 sn. Farklı ara yayınları ve test yükünü içerir; genel üretim SLA'sı değildir.
+- Nihai [CSV liste](../../outputs/product-quality-fixes-20260909/live-100/final-list.csv), [okunabilir liste](../../outputs/product-quality-fixes-20260909/live-100/final-list.md), [JSON kanıtı](../../outputs/product-quality-fixes-20260909/live-100/final-list.json). Her soruda prompt, durum, satır sayıları, süre, cevap/referans hashleri ve çalışma sürümü bulunur.
 
 ## Açık kapsam
 
 Özel ERP tablolarının tamamına iş anlamı atanmadı. İlk incelemedeki 87.721 UNDEFINED kolon toplamı indeks eksikliği sayısı değildir; tümünü tahmini açıklamalarla doldurmak doğru olmaz. Kritik 47 kolon için açıklama/onaylı kavram var; özel iş akışları kaynak doküman ve ayrı gerçek veri kabul soruları gerektiriyor.
 
 Bu kanıtlar test edilen satış/aylık analiz kapsamını destekler; tüm ürün, tüm doğal dil soruları veya ölçülmeyen veri kaynakları için hatasızlık garantisi değildir.
+
+## Eşzamanlı çalışma alanı değişikliği
+
+Nihai kontrolde çalışma alanındaki `compiler.py`, test edilen yayın dosyasından farklıydı: `Dialect.table` içinde çok parçalı veritabanı/şema adlarının ayrı ayrı tırnaklanması eklenmişti (dosya zamanı 13:33:37). Bu çalışmanın dışındaki yeni değişiklik korunmuştur; 100 soru kabulüne veya bu yayına dahil edildiği iddia edilmez. Üretimdeki 22 dosya yayın manifestiyle tekrar karşılaştırıldı. Kabul sonucu manifestteki sürüme aittir; sonradan değişen çalışma ağacının tamamı için değildir.

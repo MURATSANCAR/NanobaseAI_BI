@@ -1,0 +1,41 @@
+{
+  "warmup": {
+    "type": "TEXT_TO_SQL",
+    "rows": 5255,
+    "truncated": false,
+    "computedAt": 1788948919.069,
+    "cached": false,
+    "seconds": 8.813,
+    "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+  },
+  "simultaneous": [
+    {
+      "type": "TEXT_TO_SQL",
+      "rows": 5255,
+      "truncated": false,
+      "computedAt": 1788948919.069,
+      "cached": true,
+      "seconds": 15.885,
+      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+    },
+    {
+      "type": "TEXT_TO_SQL",
+      "rows": 5255,
+      "truncated": false,
+      "computedAt": 1788948919.069,
+      "cached": true,
+      "seconds": 16.0,
+      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+    },
+    {
+      "type": "TEXT_TO_SQL",
+      "rows": 5255,
+      "truncated": false,
+      "computedAt": 1788948919.069,
+      "cached": true,
+      "seconds": 15.972,
+      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+    }
+  ],
+  "passed": true
+}

@@ -3,38 +3,38 @@
     "type": "TEXT_TO_SQL",
     "rows": 5255,
     "truncated": false,
-    "computedAt": 1788948919.069,
+    "computedAt": 1788949828.303,
     "cached": false,
-    "seconds": 8.813,
-    "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+    "seconds": 5.004,
+    "hash": "25b1ca2e3bcf9d2223da2ddb8ecc751a5e2a2f0d7855e3983ad43aa73650fb9e"
   },
   "simultaneous": [
     {
       "type": "TEXT_TO_SQL",
       "rows": 5255,
       "truncated": false,
-      "computedAt": 1788948919.069,
+      "computedAt": 1788949828.303,
       "cached": true,
-      "seconds": 15.885,
-      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+      "seconds": 7.387,
+      "hash": "25b1ca2e3bcf9d2223da2ddb8ecc751a5e2a2f0d7855e3983ad43aa73650fb9e"
     },
     {
       "type": "TEXT_TO_SQL",
       "rows": 5255,
       "truncated": false,
-      "computedAt": 1788948919.069,
+      "computedAt": 1788949828.303,
       "cached": true,
-      "seconds": 16.0,
-      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+      "seconds": 7.506,
+      "hash": "25b1ca2e3bcf9d2223da2ddb8ecc751a5e2a2f0d7855e3983ad43aa73650fb9e"
     },
     {
       "type": "TEXT_TO_SQL",
       "rows": 5255,
       "truncated": false,
-      "computedAt": 1788948919.069,
+      "computedAt": 1788949828.303,
       "cached": true,
-      "seconds": 15.972,
-      "hash": "63690e8703aaf93024921d49ce412a4a908b4211a4fbc2543632f5da399fd38b"
+      "seconds": 7.447,
+      "hash": "25b1ca2e3bcf9d2223da2ddb8ecc751a5e2a2f0d7855e3983ad43aa73650fb9e"
     }
   ],
   "passed": true

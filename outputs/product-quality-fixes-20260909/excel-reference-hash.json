@@ -1,0 +1,5 @@
+{
+  "rows": 61865,
+  "normalizedSha256": "bcc2f889b84ec4c99aee7419c1e7a5de2cf80e56c1aeb54421ab2904dd2bfce9",
+  "xlsxBlankPolicy": "SQL NULL and empty strings are displayed as blank cells; API comparison keeps them distinct"
+}
