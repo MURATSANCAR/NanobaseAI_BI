@@ -92,6 +92,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 with open(INVITE) as f:
                     config = json.load(f)
+                # Explicit runtime opt-in for the public test environment only.
+                if config.get('public_demo') is True and time.time() < config['expires']:
+                    return self.reply(200, {k: config[k] for k in ('username', 'password', 'expires')})
                 supplied = self.headers.get('X-Test-Invite', '')
                 if not supplied:
                     remembered = SimpleCookie(self.headers.get('Cookie', '')).get('__Secure-timas_invite')

@@ -352,12 +352,31 @@ class SemanticResolver:
         # 4) group-by: "<term> bazında / göre", or a named column that also carries value filters
         #    ("KITAPCI, E-TICARET ve DAGITICI kanalları için …" → filter on those channels, broken down by channel)
         folded_tokens = [stem(t) for t in qf.tokens]
+        # A trailing marker scopes a coordinated list: "müşteri, ürün ve birim bazında".
+        # Keep the raw separators so a sentence boundary cannot silently join two lists.
+        surface = fold(question)
+        surface_tokens = list(re.finditer(r"[a-z0-9%]+", surface))
+        aligned = [m.group() for m in surface_tokens] == qf.tokens
+        columns_by_end = {s.span[1]: s for s in hits
+                          if s.span and s.semantic_type == SemanticType.COLUMN}
         for k, tok in enumerate(qf.tokens):
-            if _GROUP_MARKERS.fullmatch(stem(tok)) or _GROUP_MARKERS.fullmatch(tok):
-                for slot in hits:
-                    if slot.span and slot.span[1] == k and slot.semantic_type == SemanticType.COLUMN and slot not in sq.group_by:
-                        sq.group_by.append(slot)
-                        slot.explain["role"] = "group_by"
+            if not (_GROUP_MARKERS.fullmatch(stem(tok)) or _GROUP_MARKERS.fullmatch(tok)):
+                continue
+            cursor = k
+            while cursor in columns_by_end:
+                slot = columns_by_end[cursor]
+                if slot not in sq.group_by:
+                    sq.group_by.append(slot)
+                    slot.explain["role"] = "group_by"
+                start = slot.span[0]
+                previous_end = start - 1 if start and qf.tokens[start - 1] in ("ve", "ile") else start
+                previous = columns_by_end.get(previous_end)
+                if not previous or not aligned:
+                    break
+                separator = surface[surface_tokens[previous.span[1] - 1].end():surface_tokens[start].start()]
+                if not re.fullmatch(r"\s*(?:,\s*)?(?:(?:ve|ile)\s+)?", separator):
+                    break
+                cursor = previous_end
         filtered_columns = {(s_.mapping.entity, (s_.mapping.column or "").upper()) for s_ in hits if s_.semantic_type == SemanticType.DIMENSION_VALUE and s_.mapping}
         for slot in hits:
             if slot.semantic_type != SemanticType.COLUMN or slot in sq.group_by or not slot.mapping:

@@ -255,19 +255,21 @@ class DeterministicCompiler:
         joins: list[tuple[str, str, str, str]] = []
         for s in filters:
             if s.mapping.entity != entity:
-                j = self._join(entity, s.mapping.entity)
-                if j is None:
+                path = self._join_chain(entity, s.mapping.entity)
+                if path is None:
                     return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
-                if j not in joins:
-                    joins.append(j)
+                for j in path:
+                    if j not in joins:
+                        joins.append(j)
         group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
         for s in group_cols:
             if s.mapping.entity != entity:
-                j = self._join(entity, s.mapping.entity)
-                if j is None:
+                path = self._join_chain(entity, s.mapping.entity)
+                if path is None:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
-                if j not in joins:
-                    joins.append(j)
+                for j in path:
+                    if j not in joins:
+                        joins.append(j)
         # A measure kept on the "one" side of a join is repeated once per row on the "many" side, so a
         # header total broken down by a line-level column silently multiplies. Refuse and say so; the
         # honest answer needs a pre-aggregate, not a bigger number.
@@ -556,6 +558,43 @@ class DeterministicCompiler:
     # -- helpers
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
         return self.conventions.join_path(entity, other)
+
+    def _join_chain(self, entity: str, other: str) -> Optional[list[tuple[str, str, str, str]]]:
+        """Unique shortest reference path, with no new one-to-many expansion.
+
+        Preserve the existing direct-join checks. For indirect paths, every step must
+        reference a single-column primary key, so a fact cannot be multiplied by a
+        bridge. Competing shortest paths require a semantic choice, not a tie-break.
+        """
+        direct = self._join(entity, other)
+        if direct is not None:
+            return [direct]
+        frontier = {entity: ([], 1)}
+        seen = {entity}
+        for _ in range(7):
+            following = {}
+            for current, (path, count) in frontier.items():
+                for column, (target, key) in self.conventions.ref_columns.get(current, {}).items():
+                    profile = self.by_entity.get(target)
+                    if target in seen or profile is None:
+                        continue
+                    primary = profile.primary_key or [c.name for c in profile.columns if c.is_primary_key]
+                    if [c.upper() for c in primary] != [key.upper()]:
+                        continue
+                    edge = (current, column, target, key)
+                    if target in following:
+                        old_path, old_count = following[target]
+                        following[target] = (old_path, min(2, old_count + count))
+                    else:
+                        following[target] = (path + [edge], count)
+            if other in following:
+                path, count = following[other]
+                return path if count == 1 else None
+            if not following:
+                return None
+            seen.update(following)
+            frontier = following
+        return None
 
     def _formula_sql(self, formula: str, entity: str) -> str:
         d = self.d

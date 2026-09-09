@@ -73,6 +73,17 @@ class Sessions(unittest.TestCase):
         self.assertEqual(self.request('/prefill', headers=headers)[0], 403)
         self.assertEqual(self.request('/prefill', headers=remembered)[0], 403)
 
+    def test_public_demo_requires_opt_in_and_expires(self):
+        config = {'public_demo': True, 'username': 'Demo', 'password': 'test-only', 'expires': time.time() + 100}
+        pathlib.Path(login.INVITE).write_text(json.dumps(config))
+        status, headers, data = self.request('/prefill')
+        self.assertEqual(status, 200)
+        self.assertEqual(data['username'], 'Demo')
+        self.assertEqual(headers['Cache-Control'], 'no-store')
+        config['expires'] = time.time() - 1
+        pathlib.Path(login.INVITE).write_text(json.dumps(config))
+        self.assertEqual(self.request('/prefill')[0], 403)
+
     def test_expired_session_denied(self):
         with login.connection() as db:
             db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (login.digest('expired'), 'test', time.time() - 1))
