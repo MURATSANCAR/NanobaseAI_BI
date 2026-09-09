@@ -11,6 +11,8 @@ source /etc/nanobase/semantic-bridge.env
 set +a
 export PYTHONPATH=/data/nanobaseai/bi/frontend/backend
 /data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/snapshot.py before-final
+/data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/scoped_acceptance.py
+/data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/context_guards.py
 /data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/feature_acceptance_final.py
 /data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/lookup_acceptance_final.py
 /data/nanobaseai/bi/semantic-venv/bin/python /tmp/language-pool-release/pool_check.py

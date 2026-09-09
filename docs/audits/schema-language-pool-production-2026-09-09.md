@@ -28,6 +28,11 @@ Bağımsız `dbo.LG_411_CLCARD WHERE ACTIVE=1` referansı 27.790 idi. Açık fir
 katalogdaki fiziksel parametreden yürütmeye taşındı. Düzeltme sonrası aynı soru,
 aynı bağımsız referansla **27.790 = 27.790** olarak doğrulandı.
 
+Ayrıca deterministik derleyicinin fiziksel tablo birleşimlerini kapsam daraltılmadan
+üretmesi giderildi. Kapsam, istek için ayrılmış derleyici örneğine uygulanır; ortak
+derleyici veya sonraki kapsam belirtilmemiş sorgu değiştirilmez. Son kod değişikliği
+öncesindeki 56/100 başarılı koşu arşivlendi; yeni sürüm için kabul baştan çalıştırılır.
+
 Kapsam eşlemesi `SEMANTIC_PATTERN_LABELS` yapılandırmasını kullanır; koda firma
 numarası veya müşteri adı eklenmez. Bu kaynağın ilk fiziksel parametresi `Firma`
 olarak etiketlendi. Bilinmeyen, çoklu veya negatif kapsam örneklerinin sessizce
@@ -35,7 +40,7 @@ tek firmaya çevrilmemesi gerçek API üzerinden de doğrulandı.
 
 ## Doğrulama ayrımı
 
-- Yerel semantik regresyon: **532 geçti**. Bunlar gerçek DB kabulünün yerine geçmez.
+- Yerel semantik regresyon: **533 geçti**. Bunlar gerçek DB kabulünün yerine geçmez.
 - Havuz arama kontrolü: 55/55 ifade kendi kaydına ulaştı. Üretilmiş eşleşmelerde
   hedeflenen 100 kolonun 32'si mevcut kolon aramasında, 100'ü genişletilmiş aramada
   bulundu; 45 ifadenin kolon kapsamı genişledi. Bu sentetik arama kontrolü doğal

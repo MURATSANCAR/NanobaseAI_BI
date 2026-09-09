@@ -74,7 +74,7 @@ etiketi `Firma` olarak yapılandırıldı; uygulama kodunda `411`, `211`, firma 
 Logo tablo isimleri sabitlenmedi.
 
 `semantic.query.contextScope` doğrulanan kapsamı kaydeder. Aynı kapsam modelin
-şema seçimine, ön SQL kontrolüne, tam sonuç yürütmesine ve dolayısıyla sonuç
+şema seçimine, deterministik SQL derlemesine, ön SQL kontrolüne, tam sonuç yürütmesine ve dolayısıyla sonuç
 önbelleğinin fiziksel SQL anahtarına taşınır. Kapsam dışı açık fiziksel tablo
 isimleri reddedilir. Katalogda olmayan, çelişkili veya desteklenmeyen çoklu/negatif
 kapsamlar tek firmaya sessizce daraltılmaz; netleştirme istenir. Kapsam belirtilmeyen
