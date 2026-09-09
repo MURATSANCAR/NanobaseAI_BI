@@ -2,51 +2,38 @@ import { useEffect, useState } from 'react';
 
 const MASCOT = `${import.meta.env.BASE_URL}zeki-ai.gif`;
 const SHOW_MS = 5000;
-/** GIF'in kendi zemin rengi (köşe pikselleri): ekranla dikiş yeri kalmasın diye birebir aynı. */
-const CANVAS = '#F6EFE8';
 
-/** Açılış ekranı: sayfa ilk yüklendiğinde Zeki AI ~5 sn görünür, sonra solarak kapanır (tıklayınca hemen geçer). */
+/** The artwork already contains the brand: keep one visual signature. */
 export function Splash({ onDone }: { onDone: () => void }) {
   const [leaving, setLeaving] = useState(false);
+  const [reducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   useEffect(() => {
-    const t = setTimeout(() => setLeaving(true), SHOW_MS);
-    return () => clearTimeout(t);
-  }, []);
+    if (reducedMotion) { onDone(); return; }
+    const timer = setTimeout(() => setLeaving(true), SHOW_MS);
+    return () => clearTimeout(timer);
+  }, [onDone, reducedMotion]);
   useEffect(() => {
     if (!leaving) return;
-    const t = setTimeout(onDone, 450);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDone, 450);
+    return () => clearTimeout(timer);
   }, [leaving, onDone]);
+  if (reducedMotion) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-label="Timaş Yayın Grubu yapay zekâ portalı açılışı"
-      onClick={() => setLeaving(true)}
-      className={`fixed inset-0 z-[100] flex cursor-pointer flex-col items-center justify-center gap-6 overflow-hidden p-4 transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}
-      style={{ backgroundColor: CANVAS }}
-    >
+    <div role="dialog" aria-modal="true" aria-label="ZEKİ AI karşılama ekranı"
+      className={`fixed inset-0 z-[100] flex h-[100dvh] flex-col items-center justify-center bg-[#F6EFE8] px-4 py-6 transition-opacity duration-500 ${leaving ? 'opacity-0' : 'opacity-100'}`}>
       <div className="flex min-h-0 w-full flex-1 items-center justify-center">
-        <img
-          src={MASCOT}
-          alt="Zeki AI — Timaş Yayın Grubu"
-          className="h-auto max-h-full w-auto max-w-[min(94vw,1040px)] object-contain"
+        <img src={MASCOT} alt="ZEKİ AI — Timaş Yayın Grubu" draggable={false}
+          className="h-auto max-h-[78dvh] w-[min(100%,1120px)] object-contain mix-blend-multiply"
           style={{
-            /* GIF karesinin kenarları zemine erisin: dikdörtgen sınırı görünmesin. */
-            WebkitMaskImage: 'radial-gradient(closest-side, #000 78%, transparent 100%)',
-            maskImage: 'radial-gradient(closest-side, #000 78%, transparent 100%)',
-          }}
-          draggable={false}
-        />
+            WebkitMaskImage: 'radial-gradient(ellipse farthest-side, #000 65%, transparent 100%)',
+            maskImage: 'radial-gradient(ellipse farthest-side, #000 65%, transparent 100%)',
+          }} />
       </div>
-      <div className="flex shrink-0 flex-col items-center gap-2">
-        <div className="font-display text-[24px] font-semibold tracking-tight text-ink">Zeki AI</div>
-        <div className="text-[12px] text-ink-muted">Timaş Yayın Grubu · yapay zekâ destekli iş zekâsı</div>
-        <div className="mt-1 h-1 w-56 overflow-hidden rounded-full bg-line">
-          <div className="h-1 rounded-full bg-brand" style={{ animation: `splash-progress ${SHOW_MS}ms linear forwards` }} />
-        </div>
-        <div className="text-[10px] text-ink-faint">geçmek için tıklayın</div>
-      </div>
+      <button type="button" autoFocus onClick={() => setLeaving(true)}
+        className="mb-[env(safe-area-inset-bottom)] flex min-h-11 shrink-0 items-center gap-3 rounded-full border border-brand/15 bg-white/35 px-5 py-2 text-xs text-ink-muted transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">
+        Çalışma alanına geç <span aria-hidden>→</span>
+      </button>
     </div>
   );
 }
