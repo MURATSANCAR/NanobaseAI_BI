@@ -153,7 +153,7 @@ export function ResultChart({
     if (cards.length === 0) return null;
     return (
       <Frame>
-        <div className={`grid gap-2 ${cards.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+        <div className={`grid gap-2 ${cards.length > 2 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {cards.map((r, i) => (
             <div key={i} className="rounded-lg bg-page px-2 py-1.5">
               <div className="truncate text-[10px] text-ink-muted" title={String(r[lk])}>{String(r[lk])}</div>

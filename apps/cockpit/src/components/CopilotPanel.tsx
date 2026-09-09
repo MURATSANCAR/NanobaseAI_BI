@@ -116,7 +116,7 @@ export function CopilotPanel({
   }
 
   return (
-    <aside className={clsx('card flex h-full min-h-[420px] w-full flex-col overflow-hidden sm:min-h-[560px] lg:shrink-0', wide ? 'lg:w-[560px]' : 'lg:w-[330px]')}>
+    <aside className={clsx('card flex h-full min-h-[420px] w-full flex-col overflow-hidden sm:min-h-[560px] 2xl:shrink-0', wide ? '2xl:w-[560px]' : '2xl:w-[330px]')}>
       <div className="flex items-center gap-3 border-b border-line px-4 py-3">
         <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white">
           <Bot size={18} />

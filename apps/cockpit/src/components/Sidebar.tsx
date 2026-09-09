@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BookOpen, Menu, X, Search } from 'lucide-react';
 import { moduleGroups } from './ModulePage';
 
@@ -6,13 +6,20 @@ export type View = 'desk' | 'catalog' | 'review' | `module:${string}`;
 export function Sidebar({ engineOk, modelCount, view, onView, waiting = 0 }: { engineOk: boolean | null; modelCount: number | null; view: View; onView: (v: View) => void; waiting?: number }) {
   const [mobile, setMobile] = useState(false);
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    if (!mobile) return;
+    const close = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobile(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [mobile]);
   const [open, setOpen] = useState<Record<string,boolean>>({});
   const choose = (v: View) => { onView(v); setMobile(false); };
   const button = (v: View, text: string) => <button key={v} type="button" aria-current={view===v?'page':undefined} onClick={() => choose(v)} className={`block w-full rounded-lg px-3 py-2 text-left text-[13px] leading-relaxed ${view===v?'bg-brand text-white':'text-ink-muted hover:bg-brand-soft hover:text-brand-deep'}`}>{text}</button>;
   return <>
-    <button className="fixed right-3 top-3 z-40 rounded-xl border border-line bg-white p-3 shadow-card lg:hidden" aria-label="Modül menüsünü aç" onClick={() => setMobile(true)}><Menu size={20}/></button>
+    <div className="mobile-platform-bar fixed inset-x-0 top-0 z-30 flex h-16 items-center border-b border-line bg-page px-4 text-sm font-semibold lg:hidden">Zeki AI · Timaş</div>
+    <button className="fixed right-3 top-3 z-40 rounded-xl border border-line bg-white p-3 shadow-card lg:hidden" aria-expanded={mobile} aria-label="Modül menüsünü aç" onClick={() => setMobile(true)}><Menu size={20}/></button>
     {mobile && <button className="fixed inset-0 z-40 bg-black/30 lg:hidden" aria-label="Menüyü kapat" onClick={() => setMobile(false)}/>}
-    <aside className={`${mobile?'fixed inset-y-0 left-0 z-50 flex':'hidden'} w-[290px] max-w-[90vw] shrink-0 flex-col border-r border-line bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen`}>
+    <aside className={`${mobile?'fixed inset-y-0 left-0 z-50 flex h-[100dvh]':'hidden'} w-[290px] max-w-[90vw] shrink-0 flex-col border-r border-line bg-rail lg:sticky lg:top-0 lg:flex lg:h-screen`}>
       <header className="flex items-center gap-3 p-5"><span className="rounded-xl bg-brand p-3 text-white"><BookOpen size={22}/></span><div><strong className="font-display text-xl">TİMAŞ AI</strong><p className="text-[9px] tracking-widest text-ink-muted">KURUMSAL ÇALIŞMA PLATFORMU</p></div><button aria-label="Menüyü kapat" className="ml-auto lg:hidden" onClick={() => setMobile(false)}><X size={18}/></button></header>
       <label className="mx-4 mb-3 flex items-center gap-2 rounded-xl border border-line bg-white p-2"><Search size={15}/><input aria-label="Modül ara" placeholder="Modül veya kod ara…" value={search} onChange={e => setSearch(e.target.value)} className="min-w-0 w-full bg-transparent text-xs outline-none"/></label>
       <nav aria-label="Modüller" className="scroll-thin min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-4">
