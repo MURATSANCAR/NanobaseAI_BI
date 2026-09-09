@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, ChevronDown, Link2, MessagesSquare, Pencil, ScrollText, Search, Sigma, Table2, X } from 'lucide-react';
 import clsx from 'clsx';
-import { catalogTable, conceptProvenance, reviewConcept, reviewQueue, type Provenance, type ReviewItem } from '../lib/engine';
+import { EngineError, catalogTable, conceptProvenance, reviewConcept, reviewQueue, type Provenance, type ReviewItem } from '../lib/engine';
 
 /** Onay kuyruğu — sistemin öğrendiği, ama henüz kimsenin doğrulamadığı iş terimleri.
  *
@@ -15,10 +15,10 @@ import { catalogTable, conceptProvenance, reviewConcept, reviewQueue, type Prove
  *  terimi kuyruğa geri atamıyor; yoksa harcanan dakika her gece boşa giderdi. */
 
 const TYPE: Record<string, { label: string; icon: typeof Table2 }> = {
-  METRIC: { label: 'ölçü', icon: Sigma },
-  COLUMN: { label: 'kolon', icon: Table2 },
-  DIMENSION_VALUE: { label: 'değer', icon: ScrollText },
-  ENTITY: { label: 'tablo', icon: Table2 },
+  METRIC: { label: 'Hesaplama', icon: Sigma },
+  COLUMN: { label: 'Bilgi alanı', icon: Table2 },
+  DIMENSION_VALUE: { label: 'Kayıt seçimi', icon: ScrollText },
+  ENTITY: { label: 'Veri grubu', icon: Table2 },
   RELATIONSHIP: { label: 'bağlantı', icon: Link2 },
   DEFAULT_FILTER: { label: 'varsayılan süzgeç', icon: ScrollText },
 };
@@ -39,24 +39,31 @@ export function TermReview() {
   const [source, setSource] = useState<'used' | 'all'>('used');
   const q = useQuery({ queryKey: ['review', source], queryFn: () => reviewQueue(source, 150), staleTime: 60_000 });
   const d = q.data;
+  const [search, setSearch] = useState('');
+  const [deferred, setDeferred] = useState<Set<string>>(new Set());
+  const items = d?.items.filter(it => !deferred.has(it.id) && `${it.term} ${it.plain}`.toLocaleLowerCase('tr-TR').includes(search.toLocaleLowerCase('tr-TR'))) ?? [];
 
   return (
     <div className="space-y-4">
       <header className="card p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-lg font-semibold">Onay Bekleyen Terimler</h2>
+            <h2 className="font-display text-lg font-semibold">İş Sözlüğünü Geliştir</h2>
             <p className="mt-1 max-w-2xl text-[12px] text-ink-muted">
-              Sistem bu kelimeleri verinizden ve çalışmış sorgulardan çıkardı, ama hangisinin gerçekten
-              işinizde kullandığınız anlama geldiğini bilemez. Onayladığınız her terim, o kelimeyi
-              içeren soruların cevaplanmasını sağlar.
+              Bu önerileri inceleyerek sistemin şirketinizde kullanılan terimleri daha doğru anlamasına
+              yardımcı olun. Önerilen anlamı ve kapsamını kontrol edin; emin değilseniz sonraya bırakın.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1 rounded-xl border border-line bg-white p-1">
-            <Tab active={source === 'used'} onClick={() => setSource('used')} label="kullanımdan gelenler" n={d?.used} />
-            <Tab active={source === 'all'} onClick={() => setSource('all')} label="tümü" n={d?.total} />
+            <Tab active={source === 'used'} onClick={() => setSource('used')} label="Sorularda kullanılanlar" n={d?.used} />
+            <Tab active={source === 'all'} onClick={() => setSource('all')} label="Tüm öneriler" n={d?.total} />
           </div>
         </div>
+        <label className="mt-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2.5">
+          <Search size={16} className="text-ink-muted" />
+          <input aria-label="Terim veya anlam ara" placeholder="Terim veya anlam ara…" value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-transparent text-sm outline-none" />
+        </label>
+        <p className="mt-2 text-xs text-ink-muted">{items.length} öneri gösteriliyor{deferred.size > 0 && <> · {deferred.size} öneri bu oturumda sonraya bırakıldı. <button className="underline" onClick={() => setDeferred(new Set())}>Tekrar göster</button></>}</p>
       </header>
 
       {q.isLoading && <div className="card p-6 text-sm text-ink-muted">Kuyruk okunuyor…</div>}
@@ -66,7 +73,8 @@ export function TermReview() {
       )}
 
       <div className="space-y-2">
-        {d?.items.map((it) => <Row key={it.id} it={it} source={source} />)}
+        {items.map((it) => <Row key={it.id} it={it} onDefer={() => setDeferred(prev => new Set([...prev, it.id]))} />)}
+        {d && d.items.length > 0 && items.length === 0 && <p className="card p-6 text-sm text-ink-muted">Bu görünümde öneri kalmadı. Aramanızı değiştirin veya sonraya bıraktıklarınızı tekrar gösterin.</p>}
       </div>
       {d && d.items.length < d.waiting && (
         <div className="text-center text-[11px] text-ink-faint">{d.waiting - d.items.length} terim daha var.</div>
@@ -90,7 +98,7 @@ function Tab({ active, onClick, label, n }: { active: boolean; onClick: () => vo
 
 type Decision = { decision: 'APPROVE' | 'REJECT' | 'CORRECT'; column?: string };
 
-function Row({ it, source }: { it: ReviewItem; source: string }) {
+function Row({ it, onDefer }: { it: ReviewItem; onDefer: () => void }) {
   const qc = useQueryClient();
   const [note, setNote] = useState('');
   const [fixing, setFixing] = useState(false);
@@ -108,7 +116,7 @@ function Row({ it, source }: { it: ReviewItem; source: string }) {
     mutationFn: (d: Decision) => reviewConcept(it.id, d.decision, note, { column: d.column }),
     onSuccess: (_r, d) => {
       setDone(d.decision);
-      void qc.invalidateQueries({ queryKey: ['review', source] });
+      void qc.invalidateQueries({ queryKey: ['review'] });
     },
   });
   const t = TYPE[it.type] ?? { label: it.type.toLowerCase(), icon: ScrollText };
@@ -127,19 +135,19 @@ function Row({ it, source }: { it: ReviewItem; source: string }) {
   }
 
   return (
-    <div className="card p-3.5">
+    <div className="card p-5 sm:p-6">
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex items-center gap-1 rounded bg-brand-soft px-1.5 py-0.5 text-[10px] font-semibold text-brand-deep">
           <Icon size={10} /> {t.label}
         </span>
         {/* Kararın verildiği cümle. Tablo adı değil — tablo adını okuyabilen kişi zaten bu ekrana
             ihtiyaç duymuyor; bu ekran işi bilen ama şemayı bilmeyen kişi için var. */}
-        <p className="min-w-0 flex-1 text-[13.5px] leading-snug text-ink">{it.plain}</p>
+        <div className="min-w-0 flex-1"><h3 className="font-display text-xl font-semibold">{it.term}</h3><p className="mt-3 text-xs font-semibold text-ink-muted">ÖNERİLEN ANLAM</p><p className="mt-1 text-sm leading-relaxed text-ink">{it.plain}</p><p className="mt-2 text-xs text-ink-muted">Bu anlam ve kapsam şirketinizdeki kullanıma uygun mu?</p></div>
       </div>
 
       {/* Verinin kendisi: bir eşlemenin doğru olup olmadığının en kolay kanıtı, o alanda gerçekten
           ne yazdığıdır. Seçilen değerler koyu, gerisi bağlam. */}
-      {it.observed.length > 0 && (
+      {why && it.observed.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center gap-1 text-[11px]">
           <span className="rounded bg-ok/10 px-1 py-0.5 text-[10px] text-ok">alanda ne var</span>
           {it.observed.map((o) => (
@@ -160,32 +168,30 @@ function Row({ it, source }: { it: ReviewItem; source: string }) {
           className="flex flex-wrap items-center gap-1 text-left text-[10px] text-ink-faint hover:text-ink-muted"
         >
           <MessagesSquare size={10} />
-          {Object.entries(it.evidence).map(([k, n]) => (
-            <span key={k} className="rounded bg-[#F6F3F0] px-1.5 py-0.5">{SOURCE[k] ?? k.toLowerCase()}{n > 1 ? ` ×${n}` : ''}</span>
-          ))}
           {it.counterEvidence > 0 && <span className="rounded bg-brand-accent/15 px-1.5 py-0.5 text-brand-accent">{it.counterEvidence} çelişen kanıt</span>}
-          <span className="text-ink-faint/70">· {it.mapping?.entity}{it.mapping?.column ? `.${it.mapping.column}` : ''}</span>
+          
           <span className={clsx('ml-0.5 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-medium',
             why ? 'bg-brand-soft text-brand-deep' : 'text-brand-deep/70')}>
-            <Search size={9} /> nereden çıktı
+            <Search size={9} /> Örnekleri ve dayanakları göster
             <ChevronDown size={9} className={clsx('transition', why && 'rotate-180')} />
           </span>
         </button>
 
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button type="button" disabled={m.isPending} onClick={() => m.mutate({ decision: 'APPROVE' })}
             className="inline-flex items-center gap-1 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-medium text-white disabled:opacity-50">
-            <Check size={11} /> doğru
+            <Check size={14} /> Bu anlam doğru
           </button>
           <button type="button" disabled={m.isPending} onClick={() => setFixing((v) => !v)}
             className={clsx('inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] disabled:opacity-50',
               fixing ? 'border-brand bg-brand-soft text-brand-deep' : 'border-line bg-white text-ink-muted')}>
-            <Pencil size={11} /> düzelt
+            <Pencil size={14} /> Anlamını düzelt
           </button>
           <button type="button" disabled={m.isPending} onClick={() => m.mutate({ decision: 'REJECT' })}
             className="inline-flex items-center gap-1 rounded-lg border border-line bg-white px-2.5 py-1.5 text-[11px] text-ink-muted disabled:opacity-50">
-            <X size={11} /> yanlış
+            <X size={14} /> Bu anlam yanlış
           </button>
+          <button type="button" disabled={m.isPending} onClick={onDefer} className="rounded-lg px-3 py-2 text-xs text-ink-muted underline">Emin değilim · Sonraya bırak</button>
         </div>
       </div>
 
@@ -232,7 +238,16 @@ function Row({ it, source }: { it: ReviewItem; source: string }) {
           </div>
         </div>
       )}
-      {m.isError && <div className="mt-1 text-[10px] text-brand-accent">kaydedilemedi</div>}
+      {m.isPending && <p role="status" className="mt-3 text-sm text-ink-muted">Kararınız kaydediliyor…</p>}
+      {m.isError && <div role="alert" className="mt-3 rounded-xl border border-brand/20 bg-brand-soft/40 p-3 text-sm text-brand-deep">
+        {m.error instanceof EngineError && m.error.status === 403
+          ? 'Bu tanımı değiştirmek için sözlük yöneticisi yetkisi gerekiyor. Kararınız kaydedilmedi.'
+          : m.error instanceof EngineError && m.error.status === 401
+            ? 'Oturumunuz sona ermiş olabilir. Yeniden giriş yapın. Kararınız kaydedilmedi.'
+            : m.error instanceof EngineError && m.error.status === 429
+              ? 'Çok fazla işlem yapıldı. Biraz bekleyip tekrar deneyin. Kararınız kaydedilmedi.'
+              : 'Kararınız kaydedilemedi. Yazdığınız açıklama korunuyor; bağlantınızı kontrol edip tekrar deneyin.'}
+      </div>}
     </div>
   );
 }
