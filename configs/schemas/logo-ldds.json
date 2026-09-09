@@ -87544,7 +87544,7 @@
           "type": "Longint",
           "size": 4,
           "description": "General Ledger Account of Promotion VAT",
-          "description_tr": "Promosyon KDV Genel Muhasebe Hesabı Numarası",
+          "description_tr": "Promosyon KDV muhasebe hesabı",
           "description_tr_provenance": {
             "method": "reviewed-translation",
             "source_description": "General Ledger Account of Promotion VAT",
@@ -88263,7 +88263,7 @@
           "type": "Longint",
           "size": 4,
           "description": "Point Campaign Card Reference",
-          "description_tr": "Kampanya puanı ref.",
+          "description_tr": "Puan kampanyası kartı referansı",
           "description_tr_provenance": {
             "method": "reviewed-translation",
             "source_description": "Point Campaign Card Reference",

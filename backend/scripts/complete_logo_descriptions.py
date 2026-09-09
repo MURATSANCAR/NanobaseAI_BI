@@ -80,6 +80,11 @@ def main():
     tables = json.loads((directory / 'logo-table-translations.json').read_text())
     evidence = json.loads((directory / 'logo-table-description-evidence.json').read_text())['entries']
     additions = complete(data, maps, tables, evidence, set(caveats))
+    if args.audit.exists():
+        if not additions:
+            print(json.dumps({'additions': 0, 'audit_preserved': str(args.audit)}))
+            return
+        raise FileExistsError('Existing audit: choose a new --audit path for this run')
     args.dictionary.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
     args.audit.write_text(json.dumps({'additions': additions, 'count': len(additions),
                                      'source_conflicts_not_translated': caveats}, ensure_ascii=False, indent=2) + '\n')

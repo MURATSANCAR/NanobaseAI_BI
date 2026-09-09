@@ -13865,7 +13865,7 @@
     },
     {
       "location": "PURCHOFFERLN.PRVATACCREF",
-      "description_tr": "Promosyon KDV Genel Muhasebe Hesabı Numarası",
+      "description_tr": "Promosyon KDV muhasebe hesabı",
       "method": "reviewed-translation",
       "source_description": "General Ledger Account of Promotion VAT",
       "source": "configs/schemas/logo-column-translations-reused.json"
@@ -14320,7 +14320,7 @@
     },
     {
       "location": "PURCHOFFERLN.POINTCAMPREF",
-      "description_tr": "Kampanya puanı ref.",
+      "description_tr": "Puan kampanyası kartı referansı",
       "method": "reviewed-translation",
       "source_description": "Point Campaign Card Reference",
       "source": "configs/schemas/logo-column-translations-reused.json"

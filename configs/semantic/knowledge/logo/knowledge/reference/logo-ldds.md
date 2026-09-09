@@ -8161,7 +8161,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `VATCENTERREF` — KDV masraf merkezi ref.
 - `PRACCREF` — Promosyon muhasebe hesabı ref.
 - `PRCENTERREF` — Promosyon Masraf Merkezi Referansı
-- `PRVATACCREF` — Promosyon KDV Genel Muhasebe Hesabı Numarası
+- `PRVATACCREF` — Promosyon KDV muhasebe hesabı
 - `PRVATCENREF` — Promosyon KDV Masraf Merkezi Ref.
 - `PROMREF` — Promosyon kartı ref.
 - `SPECODE` — Özel Kod
@@ -8226,7 +8226,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
 - `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
 - `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
-- `POINTCAMPREF` — Kampanya puanı ref.
+- `POINTCAMPREF` — Puan kampanyası kartı referansı
 - `CAMPPOINT` — Kampanya Puanı
 - `PROMCLASITEMREF` — Promosyon sınıfı ref. (kampanyadan)
 - `REASONFORNOTSHP` — Sevk edilememe nedeni
