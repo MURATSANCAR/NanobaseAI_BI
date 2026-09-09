@@ -19128,5 +19128,49 @@
   "validation": {
     "focused_tests_passed": 25,
     "existing_dictionary_metadata_unchanged": true
+  },
+  "production": {
+    "state": "complete",
+    "index": {
+      "collection": "semantic_catalog_logo_tr_20260909",
+      "points": 50809,
+      "entities": 1529,
+      "column_pairs": 39957,
+      "unindexed_columns": 0,
+      "status": "green",
+      "review_corrections": 6,
+      "additional_refresh": {
+        "profiles": 4121,
+        "tables_updated": 0,
+        "columns_updated": 24,
+        "profiles_updated": 16
+      }
+    },
+    "quality": {
+      "cases": 48,
+      "table_recall": 1.0,
+      "table_precision": 0.214,
+      "fully_recalled": 39,
+      "mean_tables_sent": 9.1,
+      "mean_extra_tables": 7.1,
+      "mean_tokens": 9330,
+      "refused": 12,
+      "states": {
+        "RESOLVED": 22,
+        "PARTIAL": 21,
+        "UNRESOLVED": 5
+      }
+    },
+    "live_description_counts": {
+      "profiles": 4121,
+      "columns": 129574,
+      "tables_description_missing": 3060,
+      "tables_effective_missing": 3060,
+      "columns_description_missing": 87740,
+      "columns_effective_missing": 84792,
+      "distinct_pattern_columns_effective_missing": 31805
+    },
+    "source_files_verified": 12,
+    "catalog_matches_tested_candidate": true
   }
 }

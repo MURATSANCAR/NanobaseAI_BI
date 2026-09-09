@@ -33,7 +33,7 @@ Tam eklemeler, kaynak metinleri, çelişkiler ve kalan tüm adlar aynı adlı JS
 ## Üretim durumu
 
 Aday katalog hazırlandı: 4.121 profilden 877 profil, 443 tablo açıklaması ve 10.905 kolon
- açıklaması güncellendi. Üretime geçiş ve indeks/kalite doğrulaması devam ediyor.
+açıklaması güncellendi. **Üretim yayını tamamlandı.**
 Yayın kayıtları: `/data/nanobaseai/bi/backups/logo-description-completion-20260909`.
 
 ## Hiçbir dilde açıklaması olmayan kolonlar
@@ -86,3 +86,31 @@ etkili ret/netleştirme sayısı 12 → 12. Soru bazında yeni ret ve yeni tablo
 İzleme metrikleri: tablo isabeti 0,218 → 0,214; ortalama gönderilen tablo 8,5 → 9,1;
 ortalama istem 9.312 → 9.330 token. Kapsam korunurken isabet küçük ölçüde düştü;
 tüm aramaların kusursuz olduğu iddia edilmez.
+
+## Yayın sonrası doğrulama
+
+`publication.json` durumu `complete`. Canlı katalog, test edilen adayın tüm yayınlanan
+kayıtlarıyla birebir karşılaştırıldı; fark yok. Servis sağlıklı; çalışan prosesin etkin
+koleksiyonu `semantic_catalog_logo_tr_20260909`. Üretim HTTP API'sinde BNCREDITCARD,
+WFTASKPER ve ANBDGTREVFC Türkçe açıklamaları doğrulandı. Yayınlanan 12 kaynak dosyasının
+SHA-256 değerleri yerel sürümle aynı. Tam 48 soruluk model kontrolü yayın öncesi bu adayda
+çalıştırıldı; yayın sonrası kontrol katalog eşitliği, çalışan proses, dosyalar ve HTTP API
+üzerinden yapıldı. Eski katalog/indeks ve dosyalar geri dönüş için saklandı.
+
+## Canlı katalogda kalan açıklama eksikleri
+
+| Kalıcı canlı katalog ölçümü | Önce | Sonra |
+|---|---:|---:|
+| Etkili açıklaması olmayan fiziksel tablo | 3.222 | 3.060 |
+| Etkili açıklaması olmayan fiziksel kolon | 84.792 | 84.792 |
+| Açıklamasız farklı tablo kalıbı/kolon çifti | 31.805 | 31.805 |
+
+Bu tur, mevcut İngilizce kolon açıklamalarının Türkçe kapsamını artırdı; tamamen belgesiz
+canlı kolon sayısını azaltmadı. Mevcut türetilmiş anlamlar ve aktif portal notları sayıldı;
+çalışma anındaki ek zenginleştirme kapsam dışı. Firma/dönem tekrarları fiziksel sayılara
+dahildir. Yeni bir iş anlamı bulunamayan alanlar teknik ad ve SQL tipiyle indekslenir.
+Sözlükte 52 tablo ve 13 kolon hiçbir dilde açıklama içermiyor; Türkçe açıklaması eksik toplam
+56 tablo / 51 kolon var. Bütün katalog açıklamalarının tamamlandığı iddia edilmez.
+
+Yayın kanıtları `logo-description-completion-2026-09-09/` klasöründedir.
+Güncel canlı tam eksik listesi `logo-description-completion-live-2026-09-09.json`.

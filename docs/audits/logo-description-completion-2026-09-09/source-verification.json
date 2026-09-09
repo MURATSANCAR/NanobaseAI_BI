@@ -1,0 +1,14 @@
+{
+  "configs/schemas/logo-ldds.json": true,
+  "configs/semantic/knowledge/logo/knowledge/reference/logo-ldds.md": true,
+  "backend/scripts/index_catalog_qdrant.py": true,
+  "backend/scripts/refresh_logo_catalog.py": true,
+  "backend/scripts/build_catalog_index_candidate.py": true,
+  "backend/scripts/complete_logo_descriptions.py": true,
+  "backend/scripts/test_complete_logo_descriptions.py": true,
+  "configs/schemas/logo-column-translations-reused.json": true,
+  "configs/schemas/logo-column-translations-a.json": true,
+  "configs/schemas/logo-column-translations-b.json": true,
+  "configs/schemas/logo-table-translations.json": true,
+  "configs/schemas/logo-table-description-evidence.json": true
+}
