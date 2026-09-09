@@ -214,8 +214,22 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     return out.sql(dialect=dialect if dialect != "generic" else None)
 
 
+def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
+    """The name as the database spells it.
+
+    A pattern is upper-cased so one shape matches across periods, and for a source whose tables are
+    already upper case that costs nothing. Elsewhere it does: under a Turkish collation `I` is the
+    capital of `ı`, not of `i`, so an ASCII upper-case of `new_siparisBase` names a table the server
+    does not have. Where the pattern carries no placeholder there is nothing to substitute, and the
+    stored name is the truth.
+    """
+    if "{" not in (prof.table_pattern or ""):
+        return prof.table_name or prof.table_pattern
+    return physical_name(prof.table_pattern, {**prof.context, **context})
+
+
 def _physical_table(prof: SchemaProfile, context: dict[str, str]) -> exp.Table:
-    phys = physical_name(prof.table_pattern, {**prof.context, **context})
+    phys = _spelling(prof, context)
     # `schema_name` may be "database.schema" — a source whose tables live in more than one database
     # on one server. Written as two parts, the name resolves wherever the connection is pointed.
     parts = [x for x in (prof.schema_name or "").split(".") if x]

@@ -353,7 +353,8 @@ class DeterministicCompiler:
         available = self.tables_of.get(entity) or []
         if chosen is None:
             chosen = self._chosen(entity, q, spread=spread, anchor=anchor)
-        names = [d.table(p.schema_name, physical_name(p.table_pattern, {**p.context, **self.context})) for p in chosen]
+        from semantic_layer.runtime.guardrails import _spelling
+        names = [d.table(p.schema_name, _spelling(p, self.context)) for p in chosen]
         tables = [p.table_name for p in chosen]
         if len(names) == 1 and not firm_tag:
             return names[0], tables, periods.describe(chosen, available)
