@@ -1191,3 +1191,17 @@ def test_generic_information_after_composed_measure_is_not_an_unknown_concept(ca
     assert "bilgisini" not in sq.unresolved
     assert any(s.semantic_type == SemanticType.METRIC and s.mapping for s in sq.slots)
     assert "bilgisini" in r.resolve("Bilgisini raporla").unresolved
+
+
+def test_long_certified_metric_is_not_split_into_narrower_filter(catalog, profiles):
+    _certify(catalog, "toptan net satis tutari", SemanticType.METRIC,
+             Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+                     formula="SUM(CASE WHEN INVOICE.TRCODE = 8 THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+                     extra={"conditions":["INVOICE.TRCODE IN (3,8)"]}))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Ocak 2026 toptan net satış tutarı nedir?")
+    metrics=[s for s in sq.slots if s.semantic_type==SemanticType.METRIC]
+    assert len(metrics)==1 and metrics[0].term=="toptan net satis tutari"
+    assert not [s for s in sq.slots if s.semantic_type==SemanticType.DIMENSION_VALUE]
+    assert sq.unresolved==[]

@@ -64,7 +64,7 @@ def is_content_word(w: str) -> bool:
     return w not in STOPWORDS_S and w not in MODIFIERS_S and not w.isdigit()
 
 
-def extract_question_facts(question: str) -> QuestionFacts:
+def extract_question_facts(question: str, n_max: int = 3) -> QuestionFacts:
     raw = question or ""
     folded = fold(raw)
     temporal, grain = parse_temporal(raw)
@@ -80,7 +80,7 @@ def extract_question_facts(question: str) -> QuestionFacts:
         base = len(tokens)
         tokens.extend(ctoks)
         stems = [stem(t) for t in ctoks]
-        for i, j, _ in ngrams(ctoks, 3):
+        for i, j, _ in ngrams(ctoks, n_max):
             window = ctoks[i:j]
             wst = stems[i:j]
             if any(w in time_words or w in STOPWORDS_S or w.isdigit() for w in window):

@@ -228,8 +228,11 @@ class SemanticResolver:
 
     # ------------------------------------------------------------------ public
     def resolve(self, question: str, today: Optional[date] = None) -> SemanticQuery:
-        qf = extract_question_facts(question)
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        # Certified phrases may exceed three words. Splitting one can change
+        # the measure's scope, for example dropping returns from net sales.
+        n_max = max([3] + [len(key.split()) for key in index])
+        qf = extract_question_facts(question, n_max=n_max)
         self._refresh_column_caches(index)
         latest = self.store.latest_version(self.tenant_id, self.datasource_id)
         sq = SemanticQuery(question=question, tenant_id=self.tenant_id, datasource_id=self.datasource_id, catalog_version=latest["version"] if latest else 0)
