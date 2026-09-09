@@ -90,3 +90,24 @@ def test_model_sql_must_keep_default_row_scope(setup):
     assert not unmet_obligations(sq, base + ' AND s.CANCELLED=0 AND s.LINETYPE=0')
     # A condition in a comment or unused CTE is not proof of filtering output rows.
     assert unmet_obligations(sq, base + ' /* CANCELLED=0 AND LINETYPE=0 */')
+
+
+def test_unsolicited_outer_limit_does_not_truncate_report(setup):
+    from semantic_layer.runtime.compiler import ExistingCompiler
+    from semantic_layer.models import SemanticQuery
+    from semantic_layer.candidates.llm_client import FakeLlm
+    _, store, _ = setup
+    compiler = ExistingCompiler(FakeLlm(), store.list_profiles('acceptance'), {}, dialect='sqlite')
+    q = SemanticQuery(question='satış raporu', tenant_id='acceptance', datasource_id='acceptance')
+    import sqlite3
+    conn = sqlite3.connect(':memory:')
+    conn.execute('CREATE TABLE report (value INT)')
+    conn.executemany('INSERT INTO report VALUES (?)', [(i,) for i in range(60)])
+    sql = 'SELECT value FROM report ORDER BY value LIMIT 50'
+    assert len(conn.execute(compiler._requested_row_limit(sql, q)).fetchall()) == 60
+    q.limit = 50
+    assert len(conn.execute(compiler._requested_row_limit(sql, q)).fetchall()) == 50
+    q.limit = None
+    nested = 'SELECT value FROM (SELECT value FROM report ORDER BY value DESC LIMIT 1) AS latest LIMIT 50'
+    assert conn.execute(compiler._requested_row_limit(nested, q)).fetchall() == [(59,)]
+    conn.close()

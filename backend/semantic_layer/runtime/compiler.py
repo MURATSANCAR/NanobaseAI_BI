@@ -613,7 +613,7 @@ Kurallar:
 - SQL lehçesi ve tarih kırılımı örnekleri "## Lehçe" bölümündedir; oradaki kalıpları kullan.
 - SERTİFİKALI KATALOG bloğundaki eşlemeler kesindir: bir terim için verilen kolon/değer kümesini AYNEN kullan, başka değer uydurma.
 - "## İş kuralları" bölümündeki varsayılan filtrelere ve tanımlara mutlaka uy.
-- Yalnız SELECT üret; DML/DDL yok. Sonuç satır sayısını makul tut (TOP 50 gibi).
+- Yalnız SELECT üret; DML/DDL yok. Kullanıcı açıkça bir sayı ile sınır istemediyse dış sorguya TOP/LIMIT ekleme. Önizleme ve sayfalama uygulama tarafından yapılır; raporu SQL içinde 50 satıra kesme.
 - Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
@@ -1425,6 +1425,26 @@ class ExistingCompiler:
         msgs.append({"role": "user", "content": q.question})
         return msgs
 
+    def _requested_row_limit(self, sql: Optional[str], q: SemanticQuery) -> Optional[str]:
+        """Pagination belongs to the application, unless the question asks for top N.
+
+        Remove only an unsolicited outer cap. A nested TOP 1 can define the most
+        recent transaction and must retain its business meaning.
+        """
+        if not sql or q.limit is not None:
+            return sql
+        from semantic_layer.history.sql_facts import parse_sql
+        try:
+            tree = parse_sql(sql)
+            if tree.args.get("limit") is None and tree.args.get("offset") is None:
+                return sql
+            tree.set("limit", None)
+            tree.set("offset", None)
+            return tree.sql(dialect=self.dialect)
+        except Exception:
+            # Existing parse/SQL guards still reject an unparseable statement.
+            return sql
+
     def compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[CompiledQuery]:
         t0 = time.perf_counter()
         report: dict = {}
@@ -1441,7 +1461,7 @@ class ExistingCompiler:
                                  certified=False, refusal="NO_FITTING_TABLE")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
-        sql = extract_sql(text)
+        sql = self._requested_row_limit(extract_sql(text), q)
         if not sql:
             # The model's own words never reach the person asking. Its job here is to write SQL; when it
             # cannot, what the user is told is decided by what the resolver established, not by whatever
@@ -1459,7 +1479,7 @@ class ExistingCompiler:
         messages = self.build_messages(q, thread or [], recall=recall)
         messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})
-        return extract_sql(self.llm.chat(messages))
+        return self._requested_row_limit(extract_sql(self.llm.chat(messages)), q)
 
 
 # ---------------------------------------------------------------------- router
