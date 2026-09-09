@@ -16,7 +16,7 @@ assert (collation.lower().startswith('turkish') or 'cp1254_ci_' in collation.low
 def norm(rows):
  return sorted([tuple(sorted(('n',round(float(v),5)) if isinstance(v,(int,float,Decimal)) else ('s',str(v).strip().translate(str.maketrans({'I':'ı','İ':'i'})).lower()) for v in row)) for row in rows])
 def reference(c):
-  if c['metric'] in ('satış tutarı','net satış tutarı'):
+  if c['metric'] in ('satış tutarı','net satış tutarı') and c['level']==1:
    assert c['level']==1, 'Header amount requires an independently established allocation rule for product dimensions'
    net=c['metric']=='net satış tutarı'
    codes={'': '2,3,7,8,9' if net else '7,8,9','toptan':'3,8' if net else '8','perakende':'2,7' if net else '7'}[c['kind']]
@@ -33,6 +33,10 @@ def reference(c):
   if 'birim' in c['dimensions']:joins+=['LEFT JOIN dbo.LG_411_UNITSETL U ON S.UOMREF=U.LOGICALREF']
   columns=', '.join(dims[d] for d in c['dimensions']);m=c['month']
   ref=f"""SELECT {columns + ", " if columns else ""}SUM(S.AMOUNT) AS adet FROM dbo.LG_411_01_STLINE S {' '.join(joins)} WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (7,8) AND S.DATE_ >= '{c['year']}-{m:02d}-01' AND S.DATE_ < '{c['year'] + (m == 12)}-{m % 12 + 1:02d}-01' {"GROUP BY " + columns if columns else ""}"""
+  if c['metric']=='satış tutarı':ref=ref.replace('SUM(S.AMOUNT)','SUM(S.LINENET)')
+  if c['metric']=='net satış tutarı':
+   ref=ref.replace('SUM(S.AMOUNT)','SUM(CASE WHEN S.TRCODE IN (2,3) THEN -S.LINENET ELSE S.LINENET END)').replace('S.TRCODE IN (7,8)','S.TRCODE IN (2,3,7,8)')
+   if c['kind']:ref=ref.replace('S.TRCODE IN (2,3,7,8)', 'S.TRCODE IN (2,7)' if c['kind']=='perakende' else 'S.TRCODE IN (3,8)')
   if c['metric']=='satış satırı sayısı':ref=ref.replace('SUM(S.AMOUNT)','COUNT(S.LOGICALREF)')
   if c['kind']=='perakende':ref=ref.replace('S.TRCODE IN (7,8)','S.TRCODE = 7')
   # Independent business oracle: sold units exclude returns; combine the two
@@ -80,7 +84,7 @@ with (out/'results.jsonl').open('a') as f:
    item['status']='LIVE_RESPONSE_UNVERIFIED'
    if a.get('type')=='TEXT_TO_SQL' and a.get('sql'):
     item['status']='LIVE_SQL_UNVERIFIED'
-    if c['metric'] in ('satılan adet','satış satırı sayısı') or c['level']==1:
+    if c['metric'] in ('satılan adet','satış satırı sayısı','satış tutarı','net satış tutarı'):
      ref=reference(c)
      cols,rows,tr=r.connector.execute(ref,100000)
      truth=norm([[row.get(col['name']) for col in cols] for row in rows])
