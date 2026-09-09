@@ -9,8 +9,8 @@ os.environ['SEMANTIC_REFRESH_SEC']='0'
 from enduser_10000 import corpus
 from semantic_bridge.app import build_runtime
 from semantic_layer.runtime.compiler import DeterministicCompiler,default_filters_provider
-r=build_runtime();out=Path('/tmp/enduser-production');out.mkdir(exist_ok=True)
-cases=corpus();counts=collections.Counter();started=time.monotonic()
+r=build_runtime();out=Path(os.environ.get('ENDUSER_READINESS_OUT','/tmp/enduser-production'));out.mkdir(exist_ok=True)
+cases=corpus()[int(os.environ.get('ENDUSER_START','0')):int(os.environ.get('ENDUSER_END','10000'))];counts=collections.Counter();started=time.monotonic()
 det=DeterministicCompiler(r.profiles,r.settings.context,r.settings.dialect,
     default_filters=default_filters_provider(r.store,r.settings.tenant_id,r.settings.datasource_id),conventions=r.conventions)
 with (out/'readiness.jsonl').open('w') as f:
@@ -21,6 +21,9 @@ with (out/'readiness.jsonl').open('w') as f:
   f.write(json.dumps(row,ensure_ascii=False)+'\n');counts[status]+=1
   if (i+1)%1000==0:print(json.dumps({'planned':i+1,'counts':dict(counts),'seconds':round(time.monotonic()-started,1)}),flush=True)
 (out/'readiness-summary.json').write_text(json.dumps(dict(counts)))
+if os.environ.get('ENDUSER_PLANNING_ONLY')=='1':
+ if r.connector:r.connector.close()
+ sys.exit(0)
 # January/February 2026, same question text as the delivered corpus, one of each level.
 selected=[]
 for level in range(1,6):

@@ -111,3 +111,76 @@ def test_unsolicited_outer_limit_does_not_truncate_report(setup):
     nested = 'SELECT value FROM (SELECT value FROM report ORDER BY value DESC LIMIT 1) AS latest LIMIT 50'
     assert conn.execute(compiler._requested_row_limit(nested, q)).fetchall() == [(59,)]
     conn.close()
+
+
+@pytest.mark.parametrize("global_table,multi_firm", [(False,False),(True,False),(True,True)])
+@pytest.mark.parametrize("missing_header", [False, True])
+def test_effective_reference_uses_line_override_then_header(setup, missing_header, global_table, multi_firm):
+    from semantic_layer.models import ColumnProfile, Mapping, SemanticType
+    from semantic_layer.runtime.audit import unmet_obligations
+    conn, store, facts = setup
+    conn.execute('ALTER TABLE LG_411_01_STLINE ADD COLUMN PAYDEFREF INTEGER DEFAULT 0')
+    conn.execute('UPDATE LG_411_01_STLINE SET PAYDEFREF=6 WHERE LOGICALREF % 3=0')
+    if missing_header:
+        conn.execute('UPDATE LG_411_01_INVOICE SET PAYDEFREF=0')
+    conn.commit()
+    profiles = store.list_profiles('acceptance')
+    payment_pattern='LG_{n0}_PAYPLANS'
+    if global_table:
+        conn.execute('ALTER TABLE LG_411_PAYPLANS RENAME TO LG_PAYPLANS')
+        pay=next(p for p in profiles if p.entity=='PAYPLANS')
+        pay.table_name=pay.table_pattern=payment_pattern='LG_PAYPLANS'
+        pay.context={}
+        store.upsert_profile(pay)
+        store.prune_profiles('acceptance',[p.table_pattern for p in profiles])
+    st = next(p for p in profiles if p.entity=='STLINE')
+    st.columns.append(ColumnProfile('PAYDEFREF','INTEGER'))
+    st.relationships.append({'column':'PAYDEFREF','ref_entity':'PAYPLANS','ref_column':'LOGICALREF'})
+    store.upsert_profile(st)
+    mapping=Mapping('', 'PAYPLANS', payment_pattern, column='DEFINITION_', operator='COLUMN', extra={'join_kind':'LEFT',
+        'reference_resolution': {'STLINE': {'via':'INVOICE','via_column':'INVOICEREF','via_key':'LOGICALREF','primary_column':'PAYDEFREF',
+            'fallback_column':'PAYDEFREF','target_column':'LOGICALREF','empty_value':0}}})
+    concept,_=store.upsert_concept('acceptance','acceptance','ödeme planı',SemanticType.COLUMN,status='CERTIFIED',mapping=mapping)
+    store.replace_mappings(concept.id,[mapping])
+    if multi_firm:
+        from copy import deepcopy
+        for original in store.list_profiles('acceptance'):
+            if not original.context:continue
+            copy=deepcopy(original);copy.table_name=original.table_name.replace('_411_','_211_');copy.context={**original.context,'n0':'211'}
+            conn.execute(f'CREATE TABLE {copy.table_name} AS SELECT * FROM {original.table_name}')
+            if copy.entity=='STLINE':
+                original.time_window=('2026-01-01','2026-01-15');store.upsert_profile(original)
+                copy.time_window=('2025-12-01','2026-01-31')
+                conn.execute(f"UPDATE {copy.table_name} SET AMOUNT=AMOUNT*2, DATE_='2026-01-20' WHERE DATE_='2026-01-15'")
+            store.upsert_profile(copy)
+    settings=SemanticSettings(tenant_id='acceptance',datasource_id='acceptance',dialect='sqlite',context={} if multi_firm else {'n0':'411','n1':'01'},max_rows=10000,recall_enabled=False)
+    runtime=Runtime(settings,store=store,connector=SQLiteConnector(conn=conn),llm=NoModel())
+    question='Ocak 2026 ödeme planı bazında satılan adet'
+    answer=runtime.ask(question,thread_id=None,sample_size=10000)
+    assert answer['type']=='TEXT_TO_SQL',answer
+    # Independent arithmetic: every third line explicitly overrides the header.
+    from collections import defaultdict
+    truth=defaultdict(float)
+    for idx,row in enumerate(facts,1):
+        if row['year']==2026 and row['month']==1 and row['code'] in (7,8) and not row['cancelled'] and not row['line_type']:
+            truth['payment-6' if idx%3==0 else None if missing_header else row['payment']]+=row['quantity']*(3 if multi_firm else 1)
+    assert canonical([list(r.values()) for r in answer['records']])==canonical([[k,v] for k,v in truth.items()])
+    sq=runtime.resolver.resolve(question)
+    assert not unmet_obligations(sq,answer['sql'])
+    wrong=answer['sql'].replace('COALESCE(NULLIF(STLINE."PAYDEFREF", 0), INVOICE."PAYDEFREF")','INVOICE."PAYDEFREF"')
+    assert unmet_obligations(sq,wrong)
+
+    assert unmet_obligations(sq,answer['sql'].replace('LEFT JOIN', 'JOIN'))
+
+
+@pytest.mark.parametrize('separator,expected_metrics', [(' ',1),(', ',2),(' ve ',2)])
+def test_ambiguous_value_modifies_adjacent_explicit_measure(setup,separator,expected_metrics):
+    from semantic_layer.models import Mapping,SemanticType
+    conn,store,facts=setup
+    store.upsert_concept('acceptance','acceptance','perakende',SemanticType.METRIC,status='CERTIFIED',
+        mapping=Mapping('','INVOICE','LG_{n0}_{n1}_INVOICE',formula='COUNT(INVOICE.LOGICALREF)'))
+    q=SemanticResolver(store,'acceptance','acceptance',store.list_profiles('acceptance')).resolve(
+        'Ocak 2026 perakende'+separator+'satılan adet nedir?')
+    assert len(q.metrics)==expected_metrics
+    if expected_metrics==1:
+        assert any(s.mapping.entity=='STLINE' and s.mapping.values==['7'] for s in q.filters)

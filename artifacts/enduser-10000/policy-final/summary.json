@@ -1,0 +1,18 @@
+{
+  "total": 10000,
+  "counts": {
+    "PASS": 10000
+  },
+  "seconds": 234.2,
+  "fixture_rows": 2160,
+  "model_calls": 0,
+  "ground_truth": "independent Python row oracle",
+  "scope": "generated controlled fixture, Runtime.ask with SQL execution; not production data accuracy",
+  "source_hashes": {
+    "resolver.py": "ee8a31123005b3b4c96efe24768093f2f48246378b0861b7b73ebe67c0e57bb1",
+    "compiler.py": "820c05f146dec1066f45ec9a9d876de5438475da0bbcad9a2c951ec50643f939",
+    "audit.py": "49ed36ac01b1e91adbdaa15e8e45fe9beeb67bd0eb91789f614df9c2fcca88a4",
+    "reference_contracts.py": "bc06b7cceaa0861a8329c2584d52412910ea31f39f7378bf8f84dcf90c395236",
+    "../profiler/logo_dictionary.py": "05b47dfe85fc0436d7c0584f9c1d8254688b1f836b5cc59a97302d3a4ed0f514"
+  }
+}

@@ -300,3 +300,12 @@ def test_a_question_naming_a_value_finds_the_column_that_holds_it():
 
     # A column nobody described and nothing matches is not returned as a weak best guess.
     assert idx.entities("kaç adet uçak bileti kesilmiş") == []
+
+
+def test_global_lg_table_keeps_documented_salesperson_reference():
+    from semantic_layer.profiler.logo_dictionary import parts, foreign_keys, table_description
+    assert parts('LG_SLSMAN') == ('SLSMAN', None, None)
+    assert table_description('LG_SLSMAN')
+    keys = foreign_keys(['LG_411_01_INVOICE', 'LG_411_01_STLINE', 'LG_SLSMAN'])
+    assert {k['table'] for k in keys if k['column']=='SALESMANREF' and k['ref_table']=='LG_SLSMAN'} == {'LG_411_01_INVOICE','LG_411_01_STLINE'}
+    assert not foreign_keys(['LG_411_01_INVOICE','LG_SLSMAN29122016'])

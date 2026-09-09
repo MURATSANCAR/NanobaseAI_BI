@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 #: `LG_411_01_STLINE` → prefix + base. The dictionary names a table once; a database holds one copy
 #: per firm (`LG_<firm>_X`) and one per firm-period (`LG_<firm>_<period>_X`), plus the global `L_X`.
-_PHYSICAL = re.compile(r"^(?P<prefix>L_|LG_(?P<firm>\d+)_(?:(?P<period>\d+)_)?)(?P<base>[A-Z][A-Z0-9_]*)$")
+_PHYSICAL = re.compile(r"^(?P<prefix>L_|LG_(?:(?P<firm>\d+)_(?:(?P<period>\d+)_)?)?)(?P<base>[A-Z][A-Z0-9_]*)$")
 
 
 def parts(table_name: str) -> tuple[str, Optional[str], Optional[str]]:
@@ -196,9 +196,10 @@ def _resolve(target: str, tables: dict, firm: str, period: Optional[str], presen
         "period": f"LG_{firm}_{period}_{target}" if period else "",
         "firm": f"LG_{firm}_{target}",
         "database": f"L_{target}",
+        "global_lg": f"LG_{target}",
     }
     scope = (tables.get(target) or {}).get("scope", "firm")
-    order = [scope] + [k for k in ("period", "firm", "database") if k != scope]
+    order = [scope] + [k for k in ("period", "firm", "database", "global_lg") if k != scope]
     for key in order:
         candidate = forms.get(key)
         if candidate and candidate in present:

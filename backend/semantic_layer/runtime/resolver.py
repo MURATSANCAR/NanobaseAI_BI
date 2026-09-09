@@ -336,6 +336,26 @@ class SemanticResolver:
                 hits.remove(slot)
                 sq.explanation.append(f"'{slot.term} {nxt}' bir belge türü olarak okundu, ölçü değil")
 
+        # An adjacent explicit measure gives a single-word, ambiguous label its
+        # modifier reading when the catalog certifies that value on the measure's entity.
+        for pos, slot in enumerate(list(hits)):
+            if slot.semantic_type != SemanticType.METRIC or slot.span[1] - slot.span[0] != 1:
+                continue
+            following = [h for h in hits if h is not slot and h.semantic_type == SemanticType.METRIC
+                         and h.mapping and h.span[0] == slot.span[1]]
+            if len(following) != 1:
+                continue
+            measure = following[0]
+            if not re.search(r"\b" + re.escape(fold(slot.term)) + r"\s+" + re.escape(fold(measure.term)) + r"\b", fold(question)):
+                continue
+            senses = index.get(slot.explain.get("normalized", "")) or []
+            values = [(c, [m for m in maps if m.entity == measure.mapping.entity]) for c, maps in senses
+                      if c.semantic_type == SemanticType.DIMENSION_VALUE]
+            values = [(c,maps) for c,maps in values if maps]
+            if len(values) == 1:
+                replacement = self._slot_from_senses(slot.explain["normalized"], slot.term, values, slot.span)
+                if replacement:
+                    hits[pos] = replacement
         sq.slots = hits
         # 3) primary entity → choose among alternatives on other slots
         primary = self._primary_entity(hits)

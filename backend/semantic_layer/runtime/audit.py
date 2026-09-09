@@ -343,6 +343,43 @@ def unmet_obligations(sq: SemanticQuery, sql: str) -> list[str]:
                     covered = bool(matches) and (any(matches) if len(pivot_values) > 1 else all(matches))
                 if not covered:
                     out.append(f"'{slot.term}' koşulu sonuç kapsamında doğrulanamadı: {m.entity}.{m.column} {op} {sorted(expected)}")
+    # A certified dimension can define which reference wins when header and line
+    # values differ. Merely mentioning the target table cannot establish this.
+    from semantic_layer.runtime.reference_contracts import reference_rule, reference_predicate, via_predicate
+    for metric in sq.metrics:
+        if not metric.mapping:
+            continue
+        fact = metric.mapping.entity
+        for slot in sq.group_by:
+            if not slot.mapping:
+                continue
+            rule = reference_rule(slot.mapping, fact)
+            if not rule:
+                continue
+            scope = _AnswerScope(tree)
+            def equality(node, context):
+                if not isinstance(node, exp.EQ):
+                    return None
+                return frozenset((_normalise_formula(node.left, context), _normalise_formula(node.right, context)))
+            actual = {equality(part, scope) for join in tree.args.get("joins") or []
+                      if join.args.get("on") is not None for part in _split_and(join.args["on"])}
+            for expression in (via_predicate(fact, rule), reference_predicate(slot.mapping, fact, rule)):
+                expected_tree = parse_sql(expression)
+                expected_scope = _Scope(expected_tree, None)
+                # Static physical names may differ from their certified entity alias.
+                # Parameterized patterns already resolve to the logical entity above.
+                if "{" not in slot.mapping.table_pattern:
+                    from semantic_layer.naming import logical_table
+                    expected_scope.alias_to_entity[slot.mapping.entity.upper()] = logical_table(slot.mapping.table_pattern).entity
+                expected = equality(expected_tree, expected_scope)
+                if expected not in actual:
+                    out.append(f"'{slot.term}' ilişki önceliği doğrulanamadı: {expression}")
+                elif (expression == reference_predicate(slot.mapping, fact, rule)
+                      and (slot.mapping.extra or {}).get("join_kind") == "LEFT"
+                      and not any(str(join.args.get("side", "")).upper() == "LEFT"
+                                  and any(equality(part, scope) == expected for part in _split_and(join.args["on"]))
+                                  for join in tree.args.get("joins") or [] if join.args.get("on") is not None)):
+                    out.append(f"'{slot.term}' atanmamış değerleri koruyan ilişki doğrulanamadı")
     if sq.shape == "ABSENCE":
         # Presence of the word NOT is insufficient: until a correlated anti-join
         # is certified against the plan, do not serve a positive list as absence.

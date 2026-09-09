@@ -205,6 +205,9 @@ class _Plan:
     group_cols: list[ResolvedSlot]
     joins: list[tuple[str, str, str, str]] = field(default_factory=list)   # (entity, column, ref_entity, ref_column)
     date_column: Optional[str] = None
+    join_overrides: dict = field(default_factory=dict)
+    extra_columns: dict = field(default_factory=dict)
+    join_kinds: dict = field(default_factory=dict)
 
 
 class DeterministicCompiler:
@@ -253,23 +256,38 @@ class DeterministicCompiler:
             return None, f"entity {entity} not profiled"
         filters = [s for s in q.filters if s.mapping]
         joins: list[tuple[str, str, str, str]] = []
+        overrides, extra_columns, join_kinds = {}, {}, {}
         for s in filters:
             if s.mapping.entity != entity:
-                path = self._join_chain(entity, s.mapping.entity)
+                path, custom_on, required = self._mapping_joins(entity, s.mapping)
                 if path is None:
                     return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
                     if j not in joins:
+                        if any(old[2] == j[2] for old in joins):
+                            return None, "conflicting relationship bindings"
                         joins.append(j)
+                if path and (s.mapping.extra or {}).get("join_kind") == "LEFT":
+                    join_kinds[path[-1]] = "LEFT"
+                overrides.update(custom_on)
+                for owner, cols in required.items():
+                    extra_columns.setdefault(owner, set()).update(cols)
         group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
         for s in group_cols:
             if s.mapping.entity != entity:
-                path = self._join_chain(entity, s.mapping.entity)
+                path, custom_on, required = self._mapping_joins(entity, s.mapping)
                 if path is None:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
                     if j not in joins:
+                        if any(old[2] == j[2] for old in joins):
+                            return None, "conflicting relationship bindings"
                         joins.append(j)
+                if path and (s.mapping.extra or {}).get("join_kind") == "LEFT":
+                    join_kinds[path[-1]] = "LEFT"
+                overrides.update(custom_on)
+                for owner, cols in required.items():
+                    extra_columns.setdefault(owner, set()).update(cols)
         # A measure kept on the "one" side of a join is repeated once per row on the "many" side, so a
         # header total broken down by a line-level column silently multiplies. Refuse and say so; the
         # honest answer needs a pre-aggregate, not a bigger number.
@@ -284,7 +302,7 @@ class DeterministicCompiler:
         date_col = self.conventions.time_column(entity)
         if (q.temporal or q.grain) and not date_col:
             return None, f"no date column on {entity}"
-        return _Plan(entity, metrics, filters, group_cols, joins, date_col), "ok"
+        return _Plan(entity, metrics, filters, group_cols, joins, date_col, overrides, extra_columns, join_kinds), "ok"
 
     @staticmethod
     def _firm_of(p: SchemaProfile) -> str:
@@ -346,7 +364,7 @@ class DeterministicCompiler:
     def _needed_columns(self, entity: str, plan: "_Plan", q: SemanticQuery) -> set[str]:
         prof = self.by_entity[entity]
         names = {c.name.upper() for c in prof.columns}
-        used: set[str] = set()
+        used: set[str] = set(plan.extra_columns.get(entity, set()))
         if plan.date_column:
             used.add(plan.date_column)
         for s_ in plan.metrics + plan.filters + plan.group_cols:
@@ -502,11 +520,20 @@ class DeterministicCompiler:
         # a row only ever meets a row from where it came from. Nothing above this line changes: the
         # aggregate, the filters and the breakdown are written against the same two aliases as before.
         joined_per_firm: dict[str, list[SchemaProfile]] = {}
+        shared_entities = set()
         by_firm = len(firms) > 1 and bool(plan.joins)
         if by_firm:
             for ent, col, ref_ent, ref_col in plan.joins:
                 other = ref_ent if ref_ent != plan.entity else ent
-                have = {self._firm_of(p): p for p in (self.tables_of.get(other) or [])}
+                candidates = self.tables_of.get(other) or []
+                if len(candidates) == 1 and not candidates[0].context and "{" not in candidates[0].table_pattern:
+                    # A single globally keyed lookup is shared by every firm.
+                    if [k.upper() for k in candidates[0].primary_key] != [ref_col.upper()]:
+                        return None
+                    joined_per_firm[other] = candidates
+                    shared_entities.add(other)
+                    continue
+                have = {self._firm_of(p): p for p in candidates}
                 picked = [have[f] for f in sorted(firms) if f in have]
                 if len(picked) != len(firms):
                     # One of the copies has no counterpart for this table. Reading the years that do
@@ -533,15 +560,18 @@ class DeterministicCompiler:
             own = ({col} if ent == joined else set()) | ({ref_col} if ref_ent == joined else set())
             j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined,
                                                       spread=False, anchor=anchor,
-                                                      chosen=joined_per_firm.get(joined), firm_tag=by_firm)
+                                                      chosen=joined_per_firm.get(joined), firm_tag=by_firm and joined not in shared_entities)
             read_tables += j_tables
             if j_note:
                 explain.append(j_note)
-            on = f"{ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
-            if by_firm:
+            on = plan.join_overrides.get((ent,col,ref_ent,ref_col)) or f"{ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            if by_firm and ent in shared_entities and ref_ent not in shared_entities:
+                return None  # a shared lookup cannot determine a firm-specific target
+            if by_firm and ent not in shared_entities and ref_ent not in shared_entities:
                 on += f" AND {ent}.{d.q(_FIRM_COL)} = {ref_ent}.{d.q(_FIRM_COL)}"
                 explain.append(f"join dönem içinde kapalı: {ent} ↔ {ref_ent}, her dönem kendi kaydıyla")
-            sql += f"\nJOIN {j_source} AS {joined} ON {on}"
+            kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
+            sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
         if where:
             sql += "\nWHERE " + "\n  AND ".join(where)
         if group:
@@ -558,6 +588,35 @@ class DeterministicCompiler:
     # -- helpers
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
         return self.conventions.join_path(entity, other)
+
+    def _mapping_joins(self, entity, mapping):
+        from semantic_layer.runtime.reference_contracts import reference_rule, reference_predicate
+        rule = reference_rule(mapping, entity)
+        if not rule:
+            return self._join_chain(entity, mapping.entity), {}, {}
+        via = rule.get("via")
+        first, last = self._join(entity, via), self._join(via, mapping.entity)
+        if not first or not last or first[0] != entity or first[2] != via or last[0] != via or last[2] != mapping.entity:
+            return None, {}, {}
+        if (rule.get("via_column") != first[1] or rule.get("via_key") != first[3]
+                or rule.get("fallback_column") != last[1] or rule.get("target_column") != last[3]):
+            return None, {}, {}
+        for edge in (first,last):
+            profile = self.by_entity.get(edge[2])
+            if not profile or [c.upper() for c in profile.primary_key] != [edge[3].upper()]:
+                return None, {}, {}
+        custom_on, required = {}, {}
+        if rule.get("primary_column"):
+            primary, fallback, key = rule["primary_column"], rule.get("fallback_column"), rule.get("target_column")
+            if (self.conventions.ref_columns.get(entity,{}).get(primary) != (mapping.entity,key)
+                    or self.conventions.ref_columns.get(via,{}).get(fallback) != (mapping.entity,key)
+                    or last[1] != fallback or last[3] != key):
+                return None, {}, {}
+            if not self.by_entity[entity].column(primary) or not self.by_entity[via].column(fallback):
+                return None, {}, {}
+            custom_on[last] = reference_predicate(mapping, entity, rule, self.d.q)
+            required[entity] = {primary}
+        return [first,last], custom_on, required
 
     def _join_chain(self, entity: str, other: str) -> Optional[list[tuple[str, str, str, str]]]:
         """Unique shortest reference path, with no new one-to-many expansion.
@@ -1420,6 +1479,19 @@ class ExistingCompiler:
             "## Doğrulanmış örnek soru→SQL çiftleri\n" + (examples or "(yok)"),
             "## Şema bağlamı\n" + self.schema_context(q, recalled, entities),
         ]
+        from semantic_layer.runtime.reference_contracts import reference_rule, reference_predicate, via_predicate
+        for metric in q.metrics:
+            if not metric.mapping:
+                continue
+            fact = metric.mapping.entity
+            for slot in q.group_by:
+                if not slot.mapping:
+                    continue
+                rule = reference_rule(slot.mapping, fact)
+                if rule:
+                    predicate = via_predicate(fact, rule) + " AND " + reference_predicate(slot.mapping, fact, rule)
+                    ctx.append("## ZORUNLU İLİŞKİ\n" + (predicate or f"{fact} → {rule['via']} → {slot.mapping.entity}") +
+                               "; kayıt olmayan referans değeri 0'dır; bu ilişkiyi doğrudan başka alanla değiştirme.")
         msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n\n".join(ctx)}]
         msgs.extend(thread[-6:])
         msgs.append({"role": "user", "content": q.question})

@@ -199,7 +199,7 @@ def run(args):
     if args.ids:
         wanted=set(args.ids.split(','));selected=[c for c in cases if c['id'] in wanted]
     source_hashes={name:hashlib.sha256((ROOT/'backend/semantic_layer/runtime'/name).read_bytes()).hexdigest()
-                   for name in ('resolver.py','compiler.py','audit.py')}
+                   for name in ('resolver.py','compiler.py','audit.py','reference_contracts.py','../profiler/logo_dictionary.py')}
     counts=collections.Counter();started=time.monotonic()
     with (args.out/'results.jsonl').open('w') as stream:
         for case in selected:

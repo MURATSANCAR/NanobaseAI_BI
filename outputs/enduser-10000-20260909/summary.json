@@ -1,0 +1,27 @@
+{
+  "status": {
+    "PASS": 10000
+  },
+  "before_status": {
+    "PASS": 4000,
+    "NOT_TESTED_MODEL_FALLBACK": 6000
+  },
+  "readiness_status": {
+    "DETERMINISTIC_PLAN_READY": 8954,
+    "MODEL_REQUIRED": 861,
+    "DATA_UNAVAILABLE": 185
+  },
+  "live_status": {
+    "NOT_LIVE_TESTED": 9984,
+    "LIVE_PASS": 4,
+    "LIVE_PASS_SQL_PREVIEW_LIMITED": 12
+  },
+  "expected_table_count": {
+    "1": 2000,
+    "2": 2000,
+    "4": 2000,
+    "6": 2000,
+    "7": 1000,
+    "8": 1000
+  }
+}
