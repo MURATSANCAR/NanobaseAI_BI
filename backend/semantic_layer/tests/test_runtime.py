@@ -1205,3 +1205,19 @@ def test_long_certified_metric_is_not_split_into_narrower_filter(catalog, profil
     assert len(metrics)==1 and metrics[0].term=="toptan net satis tutari"
     assert not [s for s in sq.slots if s.semantic_type==SemanticType.DIMENSION_VALUE]
     assert sq.unresolved==[]
+
+
+def test_composed_measure_uses_normalized_key_for_line_grain(catalog, profiles):
+    _certify(catalog, "perakende satis", SemanticType.DIMENSION_VALUE,
+             Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="TRCODE", operator="IN", values=["7"]))
+    _certify(catalog, "satis tutar", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="NETTOTAL", operator="COLUMN"))
+    _certify(catalog, "urun", SemanticType.COLUMN,
+             Mapping(concept_id="", entity="ITEMS", table_pattern="LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    _certify(catalog, "satis tutari", SemanticType.METRIC,
+             Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE", formula="SUM(STLINE.TOTAL)", extra={"grain":"STLINE","conditions":["STLINE.TRCODE IN (7,8)","STLINE.LINETYPE = (0)"]}))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Ocak 2026 ürün bazında perakende satış tutarı göster.")
+    metrics=[s for s in sq.slots if s.semantic_type==SemanticType.METRIC]
+    assert len(metrics)==1 and metrics[0].mapping.entity=="STLINE"
+    assert metrics[0].explain.get("grain_switch")=="INVOICE → STLINE"

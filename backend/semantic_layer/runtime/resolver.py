@@ -1240,7 +1240,7 @@ class SemanticResolver:
 
     def _sense_at_grain(self, metric: ResolvedSlot, target: str, index: dict) -> Optional[Mapping]:
         """Aynı terimin, istenen kırılımı taşıyabilen başka bir anlamı."""
-        key = metric.explain.get("normalized") or metric.term
+        key = metric.explain.get("normalized") or normalize_term(metric.term)
         for sense in (index.get(key) or []):
             concept, mappings = sense if isinstance(sense, tuple) else (sense, [])
             for m in mappings or []:

@@ -1,0 +1,1268 @@
+{
+  "source": "/Users/msancar/Yandex.Disk.localized/TİMAŞ/Modeüller/ZEKİ_Moduller3.html",
+  "note": "Document inventory, not deployed capability. outputSections are candidate tabs, not confirmed navigation. cards may describe inputs rather than screens.",
+  "groups": [
+    {
+      "title": "📊 Genel Bakış",
+      "modules": [
+        {
+          "sourceIndex": 0,
+          "title": "📊 Genel Bakış — ZEKİ Sistem",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": []
+        }
+      ]
+    },
+    {
+      "title": "🗺 İlişki Haritası",
+      "modules": [
+        {
+          "sourceIndex": 1,
+          "title": "🗺 İlişki Haritası — Modül Akışı",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": []
+        }
+      ]
+    },
+    {
+      "title": "📚 Hazırlıklar",
+      "modules": [
+        {
+          "sourceIndex": 2,
+          "title": "🗂 Kategori Ağacı Modülü",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": [
+            "KİTAP KÜNYESİ",
+            "KATEGORİ MİMARİSİ",
+            "KİTAP ÖZELLİKLERİ",
+            "İÇERİK & KARAKTER",
+            "EMSAL BİLGİLERİ"
+          ]
+        },
+        {
+          "sourceIndex": 3,
+          "title": "📖 Okuyucu Veri Tabanı Entegrasyonu",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": [
+            "OKUYUCU PROFİLİ",
+            "SEGMENTASYON MİMARİSİ",
+            "TOPLULUK YAPISI",
+            "KİŞİSELLEŞTİRME",
+            "ANALİTİK & RAPORLAMA"
+          ]
+        },
+        {
+          "sourceIndex": 4,
+          "title": "🛒 E-Ticaret Müşteri Yönetimi Entegrasyonu",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": [
+            "MÜŞTERİ PROFİLİ",
+            "SEGMENTASYON MİMARİSİ",
+            "HİPERKİŞİSELLEŞTİRME",
+            "OTOMATİK KAMPANYALAR",
+            "PERFORMANS METRİKLERİ"
+          ]
+        },
+        {
+          "sourceIndex": 5,
+          "title": "📧 Kurumsal E-posta Yönetimi",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": [
+            "E-POSTA KATEGORİLERİ  (ZEKİ Tespiti)",
+            "OTOMATİK YANITLAR  (Kategori Bazlı)",
+            "YÖNLENDIRME & ATAMA",
+            "TAKİP & RAPORLAMA",
+            "CRM / İK ENTEGRASYONu"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "A — Editoryal Süreç (M1–M8)",
+      "modules": [
+        {
+          "sourceIndex": 6,
+          "title": "M1: Yeni Kitap Başvuru, Editoryal Değerlendirme ve Yayın Kurulu",
+          "cards": [
+            "Başvuru Dosyası (Web Formu)",
+            "Katalog & PDF Arşivi (CRM + RAG)",
+            "Satış & Pazar Verisi (CRM + Logo)"
+          ],
+          "dataSources": [
+            "Başvuru Formu",
+            "Katalog & PDF Arşivi",
+            "Satış & Pazar Verisi"
+          ],
+          "outputSections": [
+            "EDİTÖR DEĞERLENDİRME RAPORU",
+            "YAYIN KURULU RAPORU",
+            "PUANLAMA SİSTEMİ",
+            "CRM PROJE KARTI (Otomatik)",
+            "YAZIŞMA ŞABLONLARİ"
+          ]
+        },
+        {
+          "sourceIndex": 7,
+          "title": "M2: Editör Atama ve İş Planlaması",
+          "cards": [
+            "Yeni Dosya (M1'den Gelen)",
+            "Editör Profilleri & Uzmanlık Haritası",
+            "Redaksiyon Takvimi & İş Yükü (CRM)"
+          ],
+          "dataSources": [
+            "Editör Profil Veritabanı",
+            "Aktif Proje Listesi",
+            "Kategori-Editör Kural Tablosu"
+          ],
+          "outputSections": [
+            "ATAMA ÖNERİSİ (ZEKİ Üretimi)",
+            "REDAKSIYON TAKVİMİ",
+            "EDİTÖR GÖREV PANELİ",
+            "UYARI & ESKALASYON",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 8,
+          "title": "M3: Metin İşleme, Üsluplandırma ve Redaksiyon",
+          "cards": [
+            "Editör Onaylı Ham Metin (M2'den)",
+            "Üslup Referans Arşivi (RAG)",
+            "Çeviri Metni (M4 — Yabancı Dil Eserlerde)"
+          ],
+          "dataSources": [
+            "Metin Dosyası",
+            "Üslup Arşivi & TDK",
+            "Revizyon Geçmişi"
+          ],
+          "outputSections": [
+            "DİLBİLGİSİ & İMLÂ RAPORU",
+            "ÜSLUP UYUM RAPORU",
+            "REDAKSİYON VERSİYON ARŞİVİ",
+            "OKUNABİLİRLİK ANALİZİ",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 9,
+          "title": "M4: Çeviri Yönetimi",
+          "cards": [
+            "Kaynak Metin (Orijinal Yabancı Dil)",
+            "Terminoloji Bankası & Çevirmen Profilleri",
+            "Sözleşme & Telif Bilgisi (M6)"
+          ],
+          "dataSources": [
+            "Kaynak Metin Dosyası",
+            "Terminoloji Bankası",
+            "Çevirmen Profil Veritabanı"
+          ],
+          "outputSections": [
+            "HAM ÇEVİRİ TASLAGI (ZEKİ)",
+            "KALİTE SKORLAMA RAPORU",
+            "ÇEVİRMEN HAVUZU YÖNETİMİ",
+            "TERMİNOLOJİ BANKASI GÜNCELLEMESİ",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 10,
+          "title": "M5: Son Okuma ve Yayın Onayı",
+          "cards": [
+            "Onaylı Redaksiyon Metni (M3'ten)",
+            "Mizanpaj PDF'i (M14'ten)",
+            "ISBN / Telif / Künye (CRM + M6)"
+          ],
+          "dataSources": [
+            "Onaylı Metin Dosyası",
+            "Mizanpaj PDF",
+            "ISBN & Künye Kayıtları"
+          ],
+          "outputSections": [
+            "OTOMATİK KONTROL RAPORU",
+            "BASIN ÖNCESİ RİSK RAPORU",
+            "YAYIN ONAY KAYDI",
+            "DOSYA ARŞİVİ",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 11,
+          "title": "M6: Telif Hakkı ve Sözleşme Yönetimi",
+          "cards": [
+            "Sözleşme Arşivi (Dynamics CRM)",
+            "Standart Sözleşme Şablonları (Hukuk)",
+            "LOGO Muhasebe — Telif Ödeme Takvimi"
+          ],
+          "dataSources": [
+            "Sözleşme Arşivi (CRM)",
+            "Standart Şablonlar",
+            "Telif Ödeme Takvimi"
+          ],
+          "outputSections": [
+            "SÖZLEŞME TASLAGI (ZEKİ)",
+            "TELİF ÖDEME TAKVİMİ",
+            "SÖZLEŞME ARŞİVİ & VERSİYON",
+            "UYARI & ESKALASYON",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 12,
+          "title": "M7: Yazarla İlişki ve Gelişim Takibi",
+          "cards": [
+            "Yazar Profili (Dynamics CRM)",
+            "Satış & Performans Verisi (CRM + Logo)",
+            "Sosyal Medya & Etkinlik Verisi"
+          ],
+          "dataSources": [
+            "Yazar Profili (CRM)",
+            "Satış Verisi",
+            "Sosyal Medya API"
+          ],
+          "outputSections": [
+            "YAZAR PROFİL KARTI",
+            "SATIŞ & MİLESTONE RAPORU",
+            "İLİŞKİ ISI HARİTASI",
+            "YENİ PROJE ÖNERİLERİ",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 13,
+          "title": "M8: Çizer ve Freelancer (Dış Kaynak) Yönetimi",
+          "cards": [
+            "Freelancer Havuzu (CRM)",
+            "Proje Bazlı Kapasite Görünümü",
+            "Sözleşme & Ödeme Takibi (M6 + LOGO)"
+          ],
+          "dataSources": [
+            "Freelancer Profil Veritabanı",
+            "Aktif Proje Listesi",
+            "Ödeme & Sözleşme Verisi"
+          ],
+          "outputSections": [
+            "FREELANCER EŞLEŞTİRME ÖNERİSİ",
+            "KAPASİTE GÖRÜNÜMÜ PANOSU",
+            "PROJE KARTI & TAKİP",
+            "ÖDEME & FATURA YÖNETİMİ",
+            "ENTEGRASYONLAR"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "B — Fiyatlama & Üretim (M9–M12)",
+      "modules": [
+        {
+          "sourceIndex": 14,
+          "title": "M9: Fiyatlama ve Maliyet Analizi",
+          "cards": [
+            "LOGO Muhasebe — Geçmiş Maliyet Verisi",
+            "Emsal Kitap Veritabanı (CRM + Pazar)",
+            "Teknik Özellikler (M3/M5/M14'ten)"
+          ],
+          "dataSources": [
+            "LOGO Muhasebe (Üretim Maliyetleri)",
+            "Emsal Fiyat Tarama",
+            "Teknik Özellikler (M5/M14)"
+          ],
+          "outputSections": [
+            "TAHMİNİ MALİYET RAPORU (Aşama 1)",
+            "KESİN FİYAT ANALİZİ (Aşama 2)",
+            "EMSAL & RAKİP FİYAT RAPORU",
+            "BACKLIST FİYAT REVİZYONU",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 15,
+          "title": "M10: Üretim ve Satış Tahmini (İlk Baskı)",
+          "cards": [
+            "Emsal Kitap Satış Geçmişi (CRM)",
+            "Lansman Pazarlama Planı (M15)",
+            "Yazar Bilinirlik & Sosyal Medya (M7)"
+          ],
+          "dataSources": [
+            "CRM Satış Geçmişi",
+            "Pazarlama Bütçesi & Planı",
+            "Yazar Bilinirlik Verisi"
+          ],
+          "outputSections": [
+            "SATIŞ TAHMİN SENARYOLARI",
+            "ÜRETİM ADEDİ ÖNERİSİ",
+            "TAHMİN vs. GERÇEKLEŞME PANOSU",
+            "DAĞILIM PLANI (Kanal Bazlı)",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 16,
+          "title": "M11: Baskı Tekrarı Öneri Motoru (Backlist)",
+          "cards": [
+            "Anlık Stok Seviyeleri (CRM + M43)",
+            "Satış Hızı Verisi (Logo ERP + CRM)",
+            "Kitap Teknik Özellikleri (CRM / Üretim Kartı)",
+            "Kampanya & Etkinlik Takvimi"
+          ],
+          "dataSources": [
+            "Depo Stok Verisi (M43)",
+            "Satış Hızı (Logo ERP)",
+            "Kitap Teknik Özellikleri (CRM/Üretim Kartı)",
+            "Kampanya & Etkinlik Takvimi"
+          ],
+          "outputSections": [
+            "OPTİMUM BASKI ADEDI ÖNERİSİ",
+            "ACİL BASKITEKRARI UYARISI",
+            "PERİYODİK GÖZDENGEÇİRME (15 Günlük)",
+            "BASKITEKRARI SİMÜLASYONU",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 17,
+          "title": "M12: Üretim Yönetimi",
+          "cards": [
+            "Onaylı Baskı Dosyaları (M13/M14)",
+            "Onaylı Üretim Adedi (M10/M11)",
+            "Matbaa Performans Veritabanı"
+          ],
+          "dataSources": [
+            "Baskı Dosyaları (M13+M14)",
+            "Üretim Adedi ve Aciliyet",
+            "Matbaa & Tedarikçi Veritabanı"
+          ],
+          "outputSections": [
+            "ÜRETİM KARTI (Kitap Bazlı)",
+            "MATBAA SEÇİM RAPORU",
+            "GERİYE DOĞRU TAKVİM",
+            "MATBAA PERFORMANS ANALİZİ",
+            "ENTEGRASYONLAR"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "C — Grafik Tasarım (M13–M14)",
+      "modules": [
+        {
+          "sourceIndex": 18,
+          "title": "M13: Kapak Tasarımı ve Brief Yönetimi",
+          "cards": [
+            "Onaylı Metin & Brief (M3'ten)",
+            "Marka Arşivi & Stil Rehberi",
+            "Çizer İllüstrasyonu (M8'den)",
+            "Kapak Tipi × Satış Performans Verisi (Logo ERP)"
+          ],
+          "dataSources": [
+            "Brief Bilgileri (M3 + Editör)",
+            "Marka & Stil Arşivi",
+            "İllüstrasyon & Görsel Dosyalar",
+            "Kapak × Satış Korelasyon Veritabanı"
+          ],
+          "outputSections": [
+            "KAPAK BRİEF BELGESI (ZEKİ)",
+            "SATIŞ KORELASYONU ANALİZİ",
+            "TASARIM VERSİYON ARŞİVİ",
+            "TEKNİK KONTROL RAPORU",
+            "ENTEGRASYONLAR"
+          ]
+        },
+        {
+          "sourceIndex": 19,
+          "title": "M14: Mizanpaj (Sayfa Düzeni) Yönetimi",
+          "cards": [
+            "Onaylı Redaksiyon Metni (M3'ten)",
+            "İç İllüstrasyon (M8'den)",
+            "Şablon Kütüphanesi & Teknik Şartname"
+          ],
+          "dataSources": [
+            "Metin Dosyası (DOCX/InDesign)",
+            "İç Görsel Dosyalar",
+            "Şablon & Teknik Şartname"
+          ],
+          "outputSections": [
+            "ŞABLON & TİPOGRAFİ ÖNERİSİ",
+            "SAYFA SAYISI RAPORU (Kesin)",
+            "BASKI ÖNCESİ KONTROL RAPORU",
+            "VERSİYON ARŞİVİ",
+            "ENTEGRASYONLAR"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "D — Pazarlama (M15–M28; M53)",
+      "modules": [
+        {
+          "sourceIndex": 20,
+          "title": "M15 — Yeni Kitap Pazarlama Planı",
+          "cards": [
+            "Kitap Karnesi & Hedef Kitle",
+            "Kanal & Bütçe Dağılımı",
+            "Materyal & İçerik Planı"
+          ],
+          "dataSources": [
+            "M46 Bütçe & Satış Hedefleri",
+            "Editöryal Girdiler",
+            "Pazar & Satış Girdileri"
+          ],
+          "outputSections": [
+            "Pazarlama Planı",
+            "İçerik Materyalleri",
+            "Kampanya Kaydı"
+          ]
+        },
+        {
+          "sourceIndex": 21,
+          "title": "M16 — Lansman/Yayın Ayı Pazarlama",
+          "cards": [
+            "Lansman Haftası Yoğunlaşması",
+            "Otomatik Tetikleyiciler",
+            "Lansman Sonrası Değerlendirme"
+          ],
+          "dataSources": [
+            "Lansman Girdileri",
+            "Gerçek Zamanlı Veri"
+          ],
+          "outputSections": [
+            "Lansman Paketi",
+            "Anlık İzleme Panosu",
+            "Lansman Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 22,
+          "title": "M17 — Backlist Kitaplar Pazarlama",
+          "cards": [
+            "Backlist Fırsat Tarama",
+            "Aktivasyon Kampanyası Planı"
+          ],
+          "dataSources": [
+            "M46 Bütçe & Satış Hedefleri",
+            "Backlist Veri Girdileri",
+            "Rekabet Girdileri"
+          ],
+          "outputSections": [
+            "Backlist Fırsat Raporu",
+            "Kampanya Paketleri",
+            "İçerik Çıktıları"
+          ]
+        },
+        {
+          "sourceIndex": 23,
+          "title": "M18 — Aylık Pazarlama Planları",
+          "cards": [
+            "Yeni Kitap & Backlist Plan",
+            "FÖY Üretimi (Yeni Kitaplar)",
+            "Öncelik & Bütçe Dağılımı"
+          ],
+          "dataSources": [
+            "Plan Girdileri",
+            "M46 Satış Hedefleri",
+            "Performans Girdileri"
+          ],
+          "outputSections": [
+            "Aylık İçerik Takvimi",
+            "FÖY Paketi",
+            "Bütçe & Öncelik Planı"
+          ]
+        },
+        {
+          "sourceIndex": 24,
+          "title": "M19 — Pazarlama Görsel Üretim ve Yaratıcı İçerik",
+          "cards": [
+            "AI Görsel Üretimi",
+            "Yaratıcı Metin & Kopya"
+          ],
+          "dataSources": [
+            "Görsel Girdileri",
+            "İçerik Girdileri"
+          ],
+          "outputSections": [
+            "Görsel Varlık Paketi",
+            "Metin Kütüphanesi",
+            "Varlık Arşivi"
+          ]
+        },
+        {
+          "sourceIndex": 25,
+          "title": "M20 — Basın, Medya ve Halkla İlişkiler",
+          "cards": [
+            "Medya Listesi & Hedefleme",
+            "Basın Bülteni & Medya Kiti"
+          ],
+          "dataSources": [
+            "PR Girdileri",
+            "Medya Takip"
+          ],
+          "outputSections": [
+            "PR Paketi",
+            "Gönderim Takip",
+            "Yansıma Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 26,
+          "title": "M21 — Dijital Pazarlama ve Reklam Yönetimi",
+          "cards": [
+            "Kampanya Optimizasyonu",
+            "Strateji & Hedefleme",
+            "Performans Analizi"
+          ],
+          "dataSources": [
+            "Reklam Girdileri",
+            "Dönüşüm Girdileri"
+          ],
+          "outputSections": [
+            "Anlık Dashboard",
+            "Optimizasyon Önerileri",
+            "Aylık Rapor"
+          ]
+        },
+        {
+          "sourceIndex": 27,
+          "title": "M22 — Sosyal Medya Yönetimi",
+          "cards": [
+            "M18 Plan Bazlı İçerik Zamanlama",
+            "İçerik Üretimi & Zenginleştirme",
+            "Topluluk Yönetimi & Kriz"
+          ],
+          "dataSources": [
+            "M18 Plan Girdisi",
+            "Platform & Performans"
+          ],
+          "outputSections": [
+            "M18 Entegre Takvim",
+            "Performans Raporu",
+            "M18 Geri Besleme"
+          ]
+        },
+        {
+          "sourceIndex": 28,
+          "title": "M23 — İnfluencer ve İşbirliği Yönetimi",
+          "cards": [
+            "İnfluencer Veritabanı & Davranış Takibi",
+            "Kitap Bazlı İnfluencer Eşleşme",
+            "Sadakat Otomasyonu & İşbirliği Yönetimi"
+          ],
+          "dataSources": [
+            "İnfluencer Veritabanı",
+            "Kampanya Girdileri"
+          ],
+          "outputSections": [
+            "İnfluencer Veritabanı",
+            "Kampanya Eşleşme Paketi",
+            "Performans & Sadakat Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 29,
+          "title": "M24 — Katalog ve Bülten Yönetimi",
+          "cards": [
+            "Katalog İçeriği & Dizayn Brief",
+            "E-Bülten Otomasyonu"
+          ],
+          "dataSources": [
+            "Katalog Girdileri",
+            "Bülten Girdileri"
+          ],
+          "outputSections": [
+            "Katalog Çıktısı",
+            "Bülten Kampanyaları",
+            "Performans Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 30,
+          "title": "M25 — İçerik Pazarlaması ve SEO",
+          "cards": [
+            "SEO Strateji & Anahtar Kelime",
+            "SEO Uyumlu İçerik Üretimi"
+          ],
+          "dataSources": [
+            "SEO Girdileri",
+            "Arama Verisi"
+          ],
+          "outputSections": [
+            "SEO Raporu",
+            "İçerik Planı",
+            "Performans Takibi"
+          ]
+        },
+        {
+          "sourceIndex": 31,
+          "title": "M26 — Yapay Zekâ Görünürlüğü — GEO",
+          "cards": [
+            "GEO Fırsat Analizi",
+            "GEO Optimizasyon Eylemleri"
+          ],
+          "dataSources": [
+            "GEO Girdileri",
+            "AI Platform Verileri"
+          ],
+          "outputSections": [
+            "GEO Görünürlük Raporu",
+            "Optimizasyon Planı",
+            "llms.txt & Schema"
+          ]
+        },
+        {
+          "sourceIndex": 32,
+          "title": "M27 — Fuar, Etkinlik ve Ödül Yönetimi",
+          "cards": [
+            "Etkinlik & Fuar Takvimi",
+            "Fuar Kitap Seçimi & Stant Planı",
+            "Ödül Başvuru Yönetimi"
+          ],
+          "dataSources": [
+            "Etkinlik Girdileri",
+            "Katalog & Ödül Veritabanı"
+          ],
+          "outputSections": [
+            "Etkinlik & Fuar Planı",
+            "Fuar Kitap & Bundle Paketi",
+            "Ödül & Etkinlik Raporları"
+          ]
+        },
+        {
+          "sourceIndex": 33,
+          "title": "M28 — Kanaat Önderleri, Kurumsal İlişkiler ve Kamu Projeleri",
+          "cards": [
+            "Kanaat Önderi & Kurum İlişkileri",
+            "Kamu Kurumları & Ortak Projeler",
+            "Etki & İmaj İzleme"
+          ],
+          "dataSources": [
+            "İlişki & Proje Girdileri",
+            "İzleme & Araştırma"
+          ],
+          "outputSections": [
+            "Kanaat Önderi Programı",
+            "Kamu Proje Dosyaları",
+            "Etki & İmaj Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 34,
+          "title": "M53 — Hediye, Set ve Promosyon Ürün Yönetimi",
+          "cards": [
+            "Set & Hediye Paketi Tasarımı",
+            "Promosyon Ürün Yönetimi"
+          ],
+          "dataSources": [
+            "Ürün Girdileri",
+            "Satış Girdileri"
+          ],
+          "outputSections": [
+            "Set & Hediye Kataloğu",
+            "Teklif Dökümanları",
+            "Satış Raporu"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "E — Saha Satış & Okul (M29–M33)",
+      "modules": [
+        {
+          "sourceIndex": 35,
+          "title": "M29 — İlk Dağılım Yönetimi",
+          "cards": [
+            "İlk Dağılım Planı",
+            "Dağılım Takip"
+          ],
+          "dataSources": [
+            "M46 Bütçe & Satış Hedefleri",
+            "Dağılım Girdileri",
+            "Satış Girdileri"
+          ],
+          "outputSections": [
+            "Dağılım Planı",
+            "Takip Panosu",
+            "İlk Hafta Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 36,
+          "title": "M30 — Saha Satış Yönetimi ve Tahsilat (BMT)",
+          "cards": [
+            "Kişiselleştirilmiş Müşteri Ziyaret Hazırlığı",
+            "Tahsilat Takibi & Risk"
+          ],
+          "dataSources": [
+            "M46 Satış Hedefleri",
+            "Saha Girdileri",
+            "Performans Girdileri"
+          ],
+          "outputSections": [
+            "Kişiselleştirilmiş Ziyaret Paketi",
+            "Tahsilat Panosu",
+            "Saha Performans Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 37,
+          "title": "M31 — Okul Tanıtım ve Ziyaret Yönetimi",
+          "cards": [
+            "Okul Hedefleme & Sosyoekonomik Profil Bazlı Ziyaret Planı",
+            "Sosyoekonomik Profile Göre Katalog & Bayi Eşleştirme",
+            "Ziyaret Materyalleri & Raporlama"
+          ],
+          "dataSources": [
+            "Okul & Bölge Verileri",
+            "Bayi & Satış Verileri"
+          ],
+          "outputSections": [
+            "Okul Hedef & Ziyaret Listesi",
+            "Profil Bazlı Katalog & Bayi Eşleştirme",
+            "Ziyaret Raporları"
+          ]
+        },
+        {
+          "sourceIndex": 38,
+          "title": "M32 — B2B Web Sitesi ve Kurumsal Satış Yönetimi",
+          "cards": [
+            "B2B Web Sitesi Kişiselleştirme & Kampanya",
+            "Kitap/Kategori/Tema Bazlı Kurumsal Satış Önerileri",
+            "Kurumsal Proje Dosyası & Teklif Yönetimi"
+          ],
+          "dataSources": [
+            "B2B Platform & Müşteri Girdileri",
+            "Pazar & Kampanya Girdileri"
+          ],
+          "outputSections": [
+            "B2B Site Kişiselleştirme",
+            "Kurumsal Proje & Teklif Dosyaları",
+            "Satış Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 39,
+          "title": "M33 — Okul, Kütüphane ve Kamu İhale Takibi",
+          "cards": [
+            "İhale Tarama & Uyarı",
+            "İhale Başvuru Hazırlığı"
+          ],
+          "dataSources": [
+            "İhale Girdileri",
+            "Rekabet Girdileri"
+          ],
+          "outputSections": [
+            "İhale Takip Panosu",
+            "Başvuru Paketi",
+            "Sonuç Analizi"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "F — Dijital & Topluluk (M34–M37)",
+      "modules": [
+        {
+          "sourceIndex": 40,
+          "title": "M34 — E-Ticaret ve Platform Yönetimi",
+          "cards": [
+            "Platform Listeleme & Güncel Tutma",
+            "Platform Performans Optimizasyonu"
+          ],
+          "dataSources": [
+            "Platform Girdileri",
+            "Performans Girdileri"
+          ],
+          "outputSections": [
+            "Platform Dashboard",
+            "Optimizasyon Önerileri",
+            "Senkronizasyon Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 41,
+          "title": "M35 — E-Ticaret Kampanya ve Promosyon Yönetimi",
+          "cards": [
+            "Platform Kampanya Planlaması",
+            "Kampanya Takip & Optimizasyon"
+          ],
+          "dataSources": [
+            "Kampanya Girdileri",
+            "Pazar Girdileri"
+          ],
+          "outputSections": [
+            "Kampanya Planı",
+            "Anlık İzleme",
+            "Sonuç Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 42,
+          "title": "M36 — Dijital Yayın ve e-Kitap Yönetimi",
+          "cards": [
+            "Dijital Platform Dağıtımı",
+            "Dijital Strateji & Fiyatlama"
+          ],
+          "dataSources": [
+            "Dijital Girdiler",
+            "Satış Girdileri"
+          ],
+          "outputSections": [
+            "Platform Dağıtım Raporu",
+            "Dijital Satış Panosu",
+            "Strateji Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 43,
+          "title": "M37 — Okuyucu Topluluğu ve Topluluk Yönetimi (CRM Katmanı)",
+          "cards": [
+            "Okuyucu Segmentasyon & Kişiselleştirme",
+            "Topluluk Etkileşim Kampanyaları"
+          ],
+          "dataSources": [
+            "CRM Girdileri",
+            "Topluluk Girdileri"
+          ],
+          "outputSections": [
+            "Okuyucu Segmentleri",
+            "Topluluk Aktivite Raporu",
+            "CRM Güncelleme"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "G — Müşteri & Pazar (M38–M39)",
+      "modules": [
+        {
+          "sourceIndex": 44,
+          "title": "M38 — Müşteri İlişkileri ve CRM Yönetimi",
+          "cards": [
+            "CRM Veri Hijyeni & Otomasyonu",
+            "Müşteri Analitik & Çıkarımlar"
+          ],
+          "dataSources": [
+            "CRM Girdileri",
+            "Analitik Girdiler"
+          ],
+          "outputSections": [
+            "CRM Sağlık Raporu",
+            "Analitik Çıktılar",
+            "İletişim Planı"
+          ]
+        },
+        {
+          "sourceIndex": 45,
+          "title": "M39 — Pazar Araştırması ve Rekabet Analizi",
+          "cards": [
+            "Pazar Araştırması",
+            "Rekabet Analizi"
+          ],
+          "dataSources": [
+            "Araştırma Girdileri",
+            "Dijital İzleme"
+          ],
+          "outputSections": [
+            "Pazar Araştırma Raporu",
+            "Rekabet Analizi",
+            "Yönetim Özeti"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "H — Platform Yönetimi (M40–M42)",
+      "modules": [
+        {
+          "sourceIndex": 46,
+          "title": "M40 — Trendyol Mağaza Yönetimi",
+          "cards": [
+            "Mağaza Senkronizasyonu",
+            "Mağaza Performans Optimizasyonu"
+          ],
+          "dataSources": [
+            "Trendyol Girdileri",
+            "Performans Girdileri"
+          ],
+          "outputSections": [
+            "Mağaza Dashboard",
+            "Optimizasyon Planı",
+            "Haftalık Rapor"
+          ]
+        },
+        {
+          "sourceIndex": 47,
+          "title": "M41 — Amazon ve Uluslararası Platform Yönetimi",
+          "cards": [
+            "Uluslararası Listeleme Stratejisi",
+            "Amazon Hesap Yönetimi"
+          ],
+          "dataSources": [
+            "Amazon Girdileri",
+            "Pazar Girdileri"
+          ],
+          "outputSections": [
+            "Platform Dashboard",
+            "Listeleme Paketi",
+            "Aylık Rapor"
+          ]
+        },
+        {
+          "sourceIndex": 48,
+          "title": "M42 — Diğer Pazar Yerleri ve D2C Yönetimi",
+          "cards": [
+            "Çok Kanal Yönetimi",
+            "D2C Kanal Büyüme Stratejisi"
+          ],
+          "dataSources": [
+            "Kanal Girdileri",
+            "Karşılaştırma Girdileri"
+          ],
+          "outputSections": [
+            "Çok Kanal Dashboard",
+            "D2C Analizi",
+            "Büyüme Planı"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "I — Lojistik (M43–M44; M52)",
+      "modules": [
+        {
+          "sourceIndex": 49,
+          "title": "M43 — Depo ve Stok Yönetimi",
+          "cards": [
+            "Stok Seviye Yönetimi",
+            "Stok Planlama & Optimizasyon"
+          ],
+          "dataSources": [
+            "Stok Girdileri",
+            "Talep Girdileri"
+          ],
+          "outputSections": [
+            "Stok Dashboard",
+            "Talep Tahmini",
+            "Stok Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 50,
+          "title": "M44 — Lojistik ve Kargo Yönetimi",
+          "cards": [
+            "Kargo Süreç Otomasyonu",
+            "Kargo Maliyet Optimizasyonu"
+          ],
+          "dataSources": [
+            "Lojistik Girdileri",
+            "Performans Girdileri"
+          ],
+          "outputSections": [
+            "Kargo Dashboard",
+            "Maliyet Raporu",
+            "Şikayet Analizi"
+          ]
+        },
+        {
+          "sourceIndex": 51,
+          "title": "M52 — Tedarik Zinciri ve Baskı Yönetimi",
+          "cards": [
+            "Baskı Planlama",
+            "Tedarik Takibi"
+          ],
+          "dataSources": [
+            "Baskı Girdileri",
+            "Tedarik Girdileri"
+          ],
+          "outputSections": [
+            "Baskı Planı",
+            "Üretim Takip",
+            "Maliyet Raporu"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "J — Finans & Risk (M45–M47; M54)",
+      "modules": [
+        {
+          "sourceIndex": 52,
+          "title": "M45 — Finansal Raporlama ve Analiz",
+          "cards": [
+            "Otomatik Finansal Raporlama",
+            "Finansal Analiz & Tahmin"
+          ],
+          "dataSources": [
+            "Finansal Girdiler",
+            "Analitik Girdiler"
+          ],
+          "outputSections": [
+            "Finansal Dashboard",
+            "Analiz Raporları",
+            "Tahmin & Senaryo"
+          ]
+        },
+        {
+          "sourceIndex": 53,
+          "title": "M46 — Bütçe Planlama ve Kontrolü",
+          "cards": [
+            "Yıllık Bütçe & Kitap Bazlı Satış Hedefleri",
+            "Bütçe İzleme, Uyarı & Çapraz Modül Entegrasyonu",
+            "Satış Hedefi Dağıtımı & Modül Entegrasyonu"
+          ],
+          "dataSources": [
+            "Bütçe Girdileri",
+            "Referans Girdiler"
+          ],
+          "outputSections": [
+            "Bütçe & Satış Hedef Planı",
+            "M18/M30 Entegre İzleme",
+            "Hedef Dağıtım Tablosu",
+            "Yönetim Sunumu"
+          ]
+        },
+        {
+          "sourceIndex": 54,
+          "title": "M47 — Risk Yönetimi ve Uyum",
+          "cards": [
+            "Risk Tespit & Değerlendirme",
+            "Risk Azaltma Planları"
+          ],
+          "dataSources": [
+            "Risk Girdileri",
+            "İzleme Girdileri"
+          ],
+          "outputSections": [
+            "Risk Matrisi",
+            "Uyum Raporu",
+            "Yönetim Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 55,
+          "title": "M54 — Yazar Telif ve Sözleşme Yönetimi",
+          "cards": [
+            "Telif Hesaplama & Ödeme",
+            "Sözleşme Yönetimi"
+          ],
+          "dataSources": [
+            "Telif Girdileri",
+            "Sözleşme Girdileri"
+          ],
+          "outputSections": [
+            "Telif Raporu",
+            "Sözleşme Durumu",
+            "Uluslararası Haklar"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "K — Altyapı & Destek (M48–M51)",
+      "modules": [
+        {
+          "sourceIndex": 56,
+          "title": "M48 — IT Altyapı ve Sistem Yönetimi",
+          "cards": [
+            "Sistem İzleme & Uyarı",
+            "Altyapı Planlama"
+          ],
+          "dataSources": [
+            "IT Girdileri",
+            "Planlama Girdileri"
+          ],
+          "outputSections": [
+            "Sistem Dashboard",
+            "Kapasite Raporu",
+            "ZEKİ Altyapı"
+          ]
+        },
+        {
+          "sourceIndex": 57,
+          "title": "M49 — Veri Yönetimi ve Güvenlik",
+          "cards": [
+            "Veri Güvenlik İzleme",
+            "Veri Yönetim Politikası"
+          ],
+          "dataSources": [
+            "Güvenlik Girdileri",
+            "Risk Girdileri"
+          ],
+          "outputSections": [
+            "Güvenlik Dashboard",
+            "Uyum Durumu",
+            "Risk Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 58,
+          "title": "M50 — ZEKİ Model Eğitim ve Geliştirme",
+          "cards": [
+            "Model Performans İzleme",
+            "Model İyileştirme Döngüsü"
+          ],
+          "dataSources": [
+            "Model Girdileri",
+            "Benchmark Girdileri"
+          ],
+          "outputSections": [
+            "Model Performans Raporu",
+            "İyileştirme Planı",
+            "Versiyon Geçmişi"
+          ]
+        },
+        {
+          "sourceIndex": 59,
+          "title": "M51 — Müşteri Hizmetleri ve Destek Yönetimi",
+          "cards": [
+            "Destek Talebi Önceliklendirme",
+            "Hizmet Kalite Yönetimi"
+          ],
+          "dataSources": [
+            "Destek Girdileri",
+            "Kalite Girdileri"
+          ],
+          "outputSections": [
+            "Destek Dashboard",
+            "Kalite Raporu",
+            "Bilgi Bankası"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "L — İnsan Kaynakları (M55–M58)",
+      "modules": [
+        {
+          "sourceIndex": 60,
+          "title": "M55 — İşe Alım ve Yetkin Yönetimi",
+          "cards": [
+            "İşe Alım Süreci",
+            "Yetkinlik Haritası"
+          ],
+          "dataSources": [
+            "IK Girdileri",
+            "Pazar Girdileri"
+          ],
+          "outputSections": [
+            "İşe Alım Panosu",
+            "Yetkinlik Raporu",
+            "IK Dökümanları"
+          ]
+        },
+        {
+          "sourceIndex": 61,
+          "title": "M56 — Performans Yönetimi",
+          "cards": [
+            "Hedef & OKR Yönetimi",
+            "Performans Değerlendirme"
+          ],
+          "dataSources": [
+            "Performans Girdileri",
+            "Karşılaştırma Girdileri"
+          ],
+          "outputSections": [
+            "Performans Panosu",
+            "Değerlendirme Raporları",
+            "Gelişim Planları"
+          ]
+        },
+        {
+          "sourceIndex": 62,
+          "title": "M57 — Eğitim ve Gelişim Yönetimi",
+          "cards": [
+            "Eğitim İhtiyaç Analizi",
+            "Eğitim Takip"
+          ],
+          "dataSources": [
+            "Eğitim Girdileri",
+            "Etki Girdileri"
+          ],
+          "outputSections": [
+            "Eğitim Panosu",
+            "Yetkinlik Takip",
+            "Etki Raporu"
+          ]
+        },
+        {
+          "sourceIndex": 63,
+          "title": "M58 — Çalışan Deneyimi ve Bağlılık",
+          "cards": [
+            "Bağlılık Ölçüm Otomasyonu",
+            "Çalışan Deneyim İyileştirme"
+          ],
+          "dataSources": [
+            "Bağlılık Girdileri",
+            "Karşılaştırma Girdileri"
+          ],
+          "outputSections": [
+            "Bağlılık Panosu",
+            "Analiz Raporu",
+            "Aksiyon Planı"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "⚠️ M59 — Bayi & Kitapçı Risk Yönetimi",
+      "modules": [
+        {
+          "sourceIndex": 64,
+          "title": "M59 — Kitapçı/Bayi Risk ve Performans Yönetimi",
+          "cards": [
+            "Bayi Risk Skoru & Ödeme Takibi",
+            "Bayi Performans Analizi & Aksiyon",
+            "Bayi Ağı Boşluk & Eşleştirme"
+          ],
+          "dataSources": [
+            "Bayi & Alacak Verileri",
+            "Bölge & Pazar Girdileri"
+          ],
+          "outputSections": [
+            "Bayi Risk Panosu",
+            "Performans & Aksiyon Raporu",
+            "Bölge Kapsama & Eşleştirme"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "🏛 DYK — Danışma & Yönetim Kurulu",
+      "modules": [
+        {
+          "sourceIndex": 65,
+          "title": "DYK — Danışma ve Yönetim Kurulu",
+          "cards": [
+            "Stratejik Karar Destek",
+            "Kurumsal Yönetim Desteği",
+            "Kurul Gündem & Karar Takibi"
+          ],
+          "dataSources": [
+            "Stratejik Girdi",
+            "Pazar Girdileri"
+          ],
+          "outputSections": [
+            "Kurul KPI Paneli",
+            "Karar Destek Paketi",
+            "Toplantı Yönetimi"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "📅 ZEKİ Proje Planı",
+      "modules": [
+        {
+          "sourceIndex": 66,
+          "title": "📅 ZEKİ Proje Planı",
+          "cards": [],
+          "dataSources": [],
+          "outputSections": []
+        }
+      ]
+    }
+  ]
+}
