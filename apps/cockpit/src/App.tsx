@@ -64,7 +64,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-shell flex min-h-screen">
+    <div className="app-shell flex min-h-screen pt-16">
       {splash && <Splash onDone={closeSplash} />}
       <Sidebar engineOk={engineOk} modelCount={engine.data?.models ?? null} view={view} onView={setView} waiting={waiting} />
 
@@ -85,7 +85,7 @@ export default function App() {
           failed={failed || periods.isError}
         />}
 
-        <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 2xl:flex-row 2xl:gap-5">
+        <div className="flex flex-1 flex-col gap-4 px-4 pb-6 pt-4 sm:px-6 sm:pb-8 sm:pt-5 lg:flex-row lg:items-start lg:gap-5">
           <main className="min-w-0 flex-1 space-y-4 sm:space-y-5">
             {/* Kuyruk dolduğunda kimsenin haberi olmuyordu: sistem bir soruyu "bu kavram tanımlı
                 değil" diye geri çevirirken, o kavramın tanımı öbür ekranda sırasını bekliyordu.
@@ -139,7 +139,7 @@ export default function App() {
             )}
           </main>
 
-          {view === 'desk' && <CopilotPanel engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />}
+          <CopilotPanel engineOk={engineOk} inputRef={copilotInput} onPin={board.pin} pinned={board.board.tiles.map((t) => t.id)} />
         </div>
       </div>
     </div>
