@@ -34,7 +34,7 @@ Tam sonuç varsayılanları: rapor başına 1.000.000 satır / 256 MiB; toplam d
 
 - Gerçek müşteri DB'si: 61.865 ve 5.255 satırlık bağımsız kabul karşılaştırmaları geçti.
 - Eşzamanlılık: üç istek geçti; son sürümde 7,387–7,506 saniye uçtan uca (başka canlı testler de sürüyordu). Tek warmup 5,004 saniye. Aktarım tamponu öncesindeki üçlü kontrol 15,885–16,000 saniyeydi; bunlar aynı yük altında kontrollü performans karşılaştırması değildir. Genel p95 veya ölçeklenebilirlik sonucu olarak yorumlanmamalı.
-- Excel: indirilen iki XLSX dosyası doğrudan incelendi; 61.865 kayıt/yedi kolon (3.167.369 bayt) ve 5.255 kayıt/altı kolon. Başlık satırı bu sayılara dahil değil.
+- Excel: indirilen iki XLSX dosyası doğrudan incelendi; 61.865 kayıt/yedi kolon (3.167.369 bayt) ve 5.255 kayıt/altı kolon. Başlık satırı bu sayılara dahil değil. 61.865 satırın tüm hücreleri referansla eşleşti (SHA256 `bcc2f889b84ec4c99aee7419c1e7a5de2cf80e56c1aeb54421ab2904dd2bfce9`). XLSX sunumunda NULL/boş metin boş hücredir; bu karşılaştırmada yalnız Excel için bu sunum politikası uygulandı. API doğrulayıcısı NULL ve boş metni ayrı tutar.
 - Mobil: 320/390/768/1440 genişliklerinde document.scrollWidth == viewport width. Mobil giriş 16px/44px; Excel düğmesi 44px yüksek.
 - TypeScript/Vite derlemesi geçti. Paket büyüklüğü uyarısı mevcut; derleme hatası yok.
 - Son kodla birleşik regresyon: **469 geçti**, iki uyarı, 52,72 saniye. Bunlar birim/entegrasyon kontrolleridir; müşteri verisi kabulü yukarıdaki canlı karşılaştırmalarla ayrı yürütüldü.
