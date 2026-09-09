@@ -87,6 +87,8 @@ def test_bridge_returns_question_and_logs_modifier_without_calling_llm(resolver)
     runtime.threads = {}
     runtime.thread_plans = {}
     runtime.ensure_fresh = lambda: None
+    runtime.language_pool = SimpleNamespace(search=lambda question: [], content_hash="")
+    runtime.profiles = []
     runtime.resolver = resolver
     runtime.store = resolver.store
     runtime.router = CompilerRouter(None, None)

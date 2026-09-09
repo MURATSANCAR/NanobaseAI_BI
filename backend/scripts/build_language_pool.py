@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+from collections import deque
 from pathlib import Path
 
 from semantic_layer.catalog import one_entity_per_pattern
@@ -23,17 +24,24 @@ anahtar kolonlarını da belirt. Bir kelimenin anlamını başka bağlamlara gen
 Çıktı yalnız JSON: {"candidates":[{"phrase":"...","operation":"lookup|detail|aggregate|rank|compare|absence",
 "columns":[{"entity":"...","column":"...","role":"measure|dimension|filter|time|key"}],"ambiguities":[]}]}.
 Her phrase en çok 240 karakter. Matematik formülü ve yeni iş kuralı uydurma.
+Her aday rootEntity tablosundan en az bir kolon kullanmalı. İlişkili tabloları yalnız
+bu kök tabloyla anlamlı bir soruda birleştir. Kolonu eksik bir bilgiyi soruya ekleme.
+Teknik referans numaralarını anlatmak yerine iş kullanıcısının soracağı doğal
+ifadeleri tercih et. Her soruda hangi iş nesnesinden söz edildiği açık olsun.
+Bilinmeyen durum kodlarına nonzero, NULL, aktif veya bekleyen gibi anlam atama.
+Farklı sözcüklerle kısa arama ifadeleri ve tam sorular üret; bir soruya alakasız
+kolonları sırf çeşitlilik için birleştirme.
 """
 
 
-def batches(docs, entities=None, page_size=24):
+def _entity_batches(docs, entities, page_size):
     for entity in sorted(entities or docs):
         if entity not in docs:
             raise ValueError(f"Unknown entity: {entity}")
         source = docs[entity]
         names = list(source["columns"])
-        structural = {r[0] for r in source["relationships"] if r[0] in source["columns"]}
-        related = sorted({r[1] for r in source["relationships"] if r[1] in docs})[:3]
+        related = sorted({r[1] for r in source["relationships"] if r[1] in docs and r[1] != entity})[:3]
+        structural = {r[0] for r in source["relationships"] if r[0] in source["columns"] and r[1] in related}
         for start in range(0, len(names), page_size):
             chosen = set(names[start:start + page_size]) | structural
             context = {entity: {**source, "columns": {n: source["columns"][n] for n in sorted(chosen)}}}
@@ -42,12 +50,25 @@ def batches(docs, entities=None, page_size=24):
                 targets = {r[2] for r in source["relationships"] if r[1] == other}
                 cols = set(list(target["columns"])[:12]) | targets
                 context[other] = {**target, "columns": {n: target["columns"][n] for n in sorted(cols) if n in target["columns"]}}
-            yield digest(context), context
+            yield digest({"schema": context, "sourceHashes": {e: digest(docs[e]) for e in context}, "generator": digest(SYSTEM)}), context
+
+
+def batches(docs, entities=None, page_size=24):
+    # A small run should cover several tables, not consume its entire budget on
+    # the first wide table. Resume IDs still depend only on the source context.
+    pending = deque(iter(_entity_batches(docs, [entity], page_size)) for entity in sorted(entities or docs))
+    while pending:
+        iterator = pending.popleft()
+        try:
+            yield next(iterator)
+            pending.append(iterator)
+        except StopIteration:
+            pass
 
 
 def generate(llm, context, count):
     raw = llm.chat([{"role": "system", "content": SYSTEM},
-                    {"role": "user", "content": json.dumps({"count": count, "schema": context}, ensure_ascii=False)}],
+                    {"role": "user", "content": json.dumps({"count": count, "rootEntity": next(iter(context)), "schema": context}, ensure_ascii=False)}],
                    max_tokens=min(6000, count * 400), temperature=0.25)
     text = raw.strip()
     if text.startswith("```"):
@@ -63,6 +84,9 @@ def generate(llm, context, count):
 def extend_pool(llm, profiles, datasource_id, output, *, annotations=None, entities=None, max_batches=8, count=6, page_size=24):
     output = Path(output)
     docs = schema_documents(profiles, annotations)
+    unknown = sorted(set(entities or ()) - set(docs))
+    if unknown:
+        raise ValueError(f"Unknown entities: {', '.join(unknown)}")
     previous = json.loads(output.read_text()) if output.exists() else {"version": VERSION, "datasourceId": datasource_id, "entries": [], "batches": {}}
     # Loading rechecks source hashes and removes stale documents before the next publication.
     loaded = LanguagePool.load(output, profiles, datasource_id, annotations)
@@ -74,12 +98,15 @@ def extend_pool(llm, profiles, datasource_id, output, *, annotations=None, entit
             continue
         if report["completed"] >= max_batches:
             break
-        accepted, rejected = 0, []
+        accepted, valid, rejected = 0, 0, []
         try:
             for raw in generate(llm, context, count):
                 try:
                     validate_candidate(raw, context)
+                    if not any(c["entity"] == next(iter(context)) for c in raw["columns"]):
+                        raise ValueError("candidate omits the root entity")
                     entry = validate_candidate(raw, docs)
+                    valid += 1
                     if entry["id"] not in entries:
                         if len(entries) >= 20000:
                             raise ValueError("pool capacity reached")
@@ -87,7 +114,7 @@ def extend_pool(llm, profiles, datasource_id, output, *, annotations=None, entit
                         accepted += 1
                 except (KeyError, TypeError, ValueError) as e:
                     rejected.append(str(e))
-            previous["batches"][job] = {"status": "COMPLETE", "model": getattr(llm, "model", "configured"), "accepted": accepted, "rejected": rejected}
+            previous["batches"][job] = {"status": "COMPLETE" if valid else "REJECTED", "model": getattr(llm, "model", "configured"), "accepted": accepted, "rejected": rejected}
         except Exception as e:
             previous["batches"][job] = {"status": "FAILED", "error": str(e)[:300]}
             previous["entries"] = list(entries.values())

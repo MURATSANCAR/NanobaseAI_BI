@@ -1,0 +1,19 @@
+--- 
++++ 
+@@ -395,6 +395,8 @@
+     # Katalogda karşılığı olmayan bir kelime için veride bulunan aday kolonlar. Karar değildir:
+     # biri yeterince baskınsa slota dönüşür, değilse modele "bu kelime şuna benziyor" diye gider.
+     candidates: list[dict[str, Any]] = field(default_factory=list)
++    # Generated schema search documents. Never resolution slots or certified rules.
++    language_candidates: list[dict[str, Any]] = field(default_factory=list)
+     # Soru bir karşılaştırma istiyorsa: hangi dönem neye göre, ve bu istek yerine getirildi mi.
+     # Karşılaştırma isteyen bir soru, karşılaştırma üretilmeden başarılı sayılamaz.
+     analytics: Optional[dict[str, Any]] = None
+@@ -471,6 +473,7 @@
+             "shape": self.shape,
+             "projection": list(self.projection),
+             "candidates": [dict(c) for c in self.candidates],
++            "languageCandidates": [dict(c) for c in self.language_candidates],
+             "measureExpressions": [dict(x) for x in self.measure_expressions],
+             "analytics": dict(self.analytics) if self.analytics else None,
+             "comparison": dict(self.comparison) if self.comparison else None,

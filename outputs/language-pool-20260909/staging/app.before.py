@@ -9,7 +9,6 @@ status, certify), /api/v1/schema/* (inventory + annotations for the portal layer
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 from collections import OrderedDict
@@ -26,7 +25,6 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from semantic_layer import SEMANTIC_LAYER_VERSION
@@ -140,8 +138,7 @@ class Runtime:
         except Exception as e:  # noqa: BLE001
             log.debug("catalog version check failed: %s", e)
             return
-        from semantic_layer.runtime.language_pool import file_stamp
-        if version != self._catalog_version or file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+        if version != self._catalog_version:
             log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
             self.rebuild()
 
@@ -281,19 +278,6 @@ class Runtime:
                 log.info("%d portal annotations carried into the model prompt", len(said))
         except Exception as e:  # noqa: BLE001
             log.debug("annotations unavailable: %s", e)
-        from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
-        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
-        self._language_pool_stamp = file_stamp(pool_path)
-        try:
-            self.language_pool = LanguagePool.load(pool_path, self.profiles, s.datasource_id,
-                                                   existing.annotations if existing is not None else {})
-        except (OSError, ValueError, TypeError, KeyError, AttributeError) as e:
-            log.warning("language pool unavailable: %s", e)
-            self.language_pool = LanguagePool()
-        if existing is not None:
-            existing.language_pool = self.language_pool
-        log.info("language pool: %d candidates, %d stale/invalid rejected, hash %s",
-                 len(self.language_pool.entries), self.language_pool.rejected, self.language_pool.content_hash[:12])
         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
 
     # ------------------------------------------------------------------ recall (Memory ON)
@@ -320,15 +304,13 @@ class Runtime:
         return [r for _, r in scored[: self.settings.recall_limit]]
 
     # ------------------------------------------------------------------ execution
-    def _physical(self, sql: str, period: Optional[tuple] = None, *, scope=None) -> str:
+    def _physical(self, sql: str, period: Optional[tuple] = None) -> str:
         """`period` lets an entity split one-table-per-year resolve to the tables that year needs.
 
         Passed only where the question is known. The endpoints that take raw SQL have no question and
         no period, and there the behaviour is what it always was: one entity, one table.
         """
-        from semantic_layer.runtime.context_scope import execution_profiles
-        profiles = execution_profiles(sql, self.profiles, scope, self.settings.dialect or "tsql")
-        return physicalize_sql(strip_trailing_semicolon(sql), profiles, {**self.settings.context, **(scope or {})},
+        return physicalize_sql(strip_trailing_semicolon(sql), self.profiles, self.settings.context,
                                self.settings.dialect, period=period)
 
     @staticmethod
@@ -346,7 +328,7 @@ class Runtime:
         with self._engine_lock:
             self.connector.dry_run(sql)
 
-    def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None) -> dict[str, Any]:
+    def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None) -> dict[str, Any]:
         sql = strip_comments(sql or "")
         ok, why = validate_sql(sql)
         if not ok:
@@ -360,7 +342,7 @@ class Runtime:
         # response reports. Without it the two disagree the moment a question spans a year boundary,
         # and the row the person is looking at came from a table the explanation does not name. It is
         # also part of the cache key by construction: it changes `phys`, and `phys` is what is hashed.
-        phys = self._physical(sql, period, **({"scope": scope} if scope else {}))
+        phys = self._physical(sql, period)
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
@@ -400,17 +382,17 @@ class Runtime:
                     self._waiting -= 1
         return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
 
-    def run_complete(self, sql: str, period=None, *, scope=None) -> dict[str, Any]:
+    def run_complete(self, sql: str, period=None) -> dict[str, Any]:
         ok, why = validate_sql(sql)
         if not ok:
             raise ValueError(why)
         ok, why = allowed_tables(sql, self.profiles, self.settings.context, self.settings.dialect or None)
         if not ok:
             raise ValueError(why)
-        phys = self._physical(sql, period, **({"scope": scope} if scope else {}))
+        phys = self._physical(sql, period)
         if not hasattr(self.connector, 'batches'):
             # Non-DB adapters retain their explicit bounded execution contract.
-            return self.run_sql(sql, self.settings.max_rows, period, **({"scope": scope} if scope else {}))
+            return self.run_sql(sql, self.settings.max_rows, period)
         with self._wait_lock:
             self._waiting += 1
         try:
@@ -641,9 +623,7 @@ class Runtime:
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
-    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None) -> dict[str, Any]:
-        report = progress or (lambda stage: None)
-        report("understanding")
+    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True) -> dict[str, Any]:
         t0 = time.perf_counter()
         timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
@@ -665,12 +645,6 @@ class Runtime:
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
                     "threadId": thread_id, "timings": timings}
         sq = self.resolver.resolve(effective_question)
-        sq.language_candidates = self.language_pool.search(effective_question)
-        sq.language_pool_hash = self.language_pool.content_hash
-        from semantic_layer.runtime.context_scope import extract_scope
-        sq.context_scope, scope_errors = extract_scope(effective_question, getattr(self.settings, "pattern_labels", []), self.profiles)
-        sq.clarification.extend(scope_errors)
-        scope_args = {"scope": sq.context_scope} if sq.context_scope else {}
         # Certified data concepts are positive evidence of a BI request. Only unplaced
         # questions need the conversational classifier; unknown terms remain eligible.
         if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
@@ -754,7 +728,7 @@ class Runtime:
         if self.connector is not None:
             for attempt in range(2):
                 try:
-                    self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
+                    self.dry_run(self._physical(sql, self._asked_period(sq)))
                     error = None
                     # The database has now agreed the query is valid. Whether it returns the number
                     # that was asked for is a different question and the one that costs the most: a
@@ -822,13 +796,12 @@ class Runtime:
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
-            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq), **scope_args), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
+            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq)), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
         t = time.perf_counter()
         try:
             # Executed once, whole. The client is shown a page of it; the export needs all of it, and
             # asking twice would be a second execution against data that can have moved.
-            report("querying")
-            result = self.run_complete(sql, self._asked_period(sq), **scope_args)
+            result = self.run_complete(sql, self._asked_period(sq))
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)
@@ -841,9 +814,6 @@ class Runtime:
                                     if down else f"Sorgu çalıştırılamadı: {err}"),
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
-        report("presenting")
-        from semantic_bridge.presentation import presentation_spec
-        result["presentation"] = presentation_spec(sql, result, sq, compiled.compiler)
         result["dataCoverage"] = list(sq.data_coverage)
         result["comparison"] = sq.comparison
         self.attach_widget(result, question)
@@ -872,8 +842,6 @@ class Runtime:
             # ran it for answers that had already been refused. One execution, one set of rows,
             # everything downstream — table, chart, export — reads these.
             "resultId": result["id"],
-            "presentation": result.get("presentation"),
-            "comparison": result.get("comparison"),
             "dataCoverage": result.get("dataCoverage", []),
             "columns": result["columns"],
             "records": shown,
@@ -1422,45 +1390,6 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except Exception as e:  # noqa: BLE001
             log.exception("ask failed")
             raise HTTPException(status_code=502, detail={"code": type(e).__name__, "message": str(e)[:800]}) from e
-
-    @app.post("/api/v1/ask/stream")
-    async def ask_stream(body: AskIn, request: Request):
-        """One execution, actual lifecycle events, and its final result. Never replay on disconnect."""
-        _require_caller(request)
-        q = body.question.strip()
-        if not q:
-            raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
-        async def events():
-            queue = asyncio.Queue()
-            loop = asyncio.get_running_loop()
-            def progress(stage):
-                loop.call_soon_threadsafe(queue.put_nowait, {"event": "stage", "stage": stage})
-            async def work():
-                try:
-                    answer = await run_in_threadpool(rt().ask, q, thread_id=body.threadId,
-                        sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
-                        execute=bool(body.execute if body.execute is not None else True), progress=progress)
-                    await queue.put({"event": "result", "result": answer})
-                except Exception:
-                    log.exception("stream ask failed")
-                    await queue.put({"event": "error", "message": "Sorgu tamamlanamadı. Lütfen tekrar deneyin."})
-            task = asyncio.create_task(work())
-            try:
-                while True:
-                    try:
-                        event = await asyncio.wait_for(queue.get(), timeout=15)
-                    except asyncio.TimeoutError:
-                        yield json.dumps({"event": "heartbeat"}) + "\n"
-                        continue
-                    yield json.dumps(event, ensure_ascii=False, default=str) + "\n"
-                    if event["event"] in ("result", "error"):
-                        break
-            finally:
-                # Cancelling the await does not retry or start a second database execution.
-                if not task.done():
-                    task.cancel()
-        return StreamingResponse(events(), media_type="application/x-ndjson",
-                                 headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"})
 
     @app.post("/api/v1/generate_summary")
     def generate_summary(body: dict[str, Any]) -> dict[str, Any]:

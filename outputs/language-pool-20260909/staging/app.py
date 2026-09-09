@@ -9,7 +9,6 @@ status, certify), /api/v1/schema/* (inventory + annotations for the portal layer
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 from collections import OrderedDict
@@ -26,7 +25,6 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
-from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from semantic_layer import SEMANTIC_LAYER_VERSION
@@ -641,9 +639,7 @@ class Runtime:
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
-    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None) -> dict[str, Any]:
-        report = progress or (lambda stage: None)
-        report("understanding")
+    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True) -> dict[str, Any]:
         t0 = time.perf_counter()
         timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
@@ -827,7 +823,6 @@ class Runtime:
         try:
             # Executed once, whole. The client is shown a page of it; the export needs all of it, and
             # asking twice would be a second execution against data that can have moved.
-            report("querying")
             result = self.run_complete(sql, self._asked_period(sq), **scope_args)
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
@@ -841,9 +836,6 @@ class Runtime:
                                     if down else f"Sorgu çalıştırılamadı: {err}"),
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
-        report("presenting")
-        from semantic_bridge.presentation import presentation_spec
-        result["presentation"] = presentation_spec(sql, result, sq, compiled.compiler)
         result["dataCoverage"] = list(sq.data_coverage)
         result["comparison"] = sq.comparison
         self.attach_widget(result, question)
@@ -872,8 +864,6 @@ class Runtime:
             # ran it for answers that had already been refused. One execution, one set of rows,
             # everything downstream — table, chart, export — reads these.
             "resultId": result["id"],
-            "presentation": result.get("presentation"),
-            "comparison": result.get("comparison"),
             "dataCoverage": result.get("dataCoverage", []),
             "columns": result["columns"],
             "records": shown,
@@ -1422,45 +1412,6 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except Exception as e:  # noqa: BLE001
             log.exception("ask failed")
             raise HTTPException(status_code=502, detail={"code": type(e).__name__, "message": str(e)[:800]}) from e
-
-    @app.post("/api/v1/ask/stream")
-    async def ask_stream(body: AskIn, request: Request):
-        """One execution, actual lifecycle events, and its final result. Never replay on disconnect."""
-        _require_caller(request)
-        q = body.question.strip()
-        if not q:
-            raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
-        async def events():
-            queue = asyncio.Queue()
-            loop = asyncio.get_running_loop()
-            def progress(stage):
-                loop.call_soon_threadsafe(queue.put_nowait, {"event": "stage", "stage": stage})
-            async def work():
-                try:
-                    answer = await run_in_threadpool(rt().ask, q, thread_id=body.threadId,
-                        sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
-                        execute=bool(body.execute if body.execute is not None else True), progress=progress)
-                    await queue.put({"event": "result", "result": answer})
-                except Exception:
-                    log.exception("stream ask failed")
-                    await queue.put({"event": "error", "message": "Sorgu tamamlanamadı. Lütfen tekrar deneyin."})
-            task = asyncio.create_task(work())
-            try:
-                while True:
-                    try:
-                        event = await asyncio.wait_for(queue.get(), timeout=15)
-                    except asyncio.TimeoutError:
-                        yield json.dumps({"event": "heartbeat"}) + "\n"
-                        continue
-                    yield json.dumps(event, ensure_ascii=False, default=str) + "\n"
-                    if event["event"] in ("result", "error"):
-                        break
-            finally:
-                # Cancelling the await does not retry or start a second database execution.
-                if not task.done():
-                    task.cancel()
-        return StreamingResponse(events(), media_type="application/x-ndjson",
-                                 headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"})
 
     @app.post("/api/v1/generate_summary")
     def generate_summary(body: dict[str, Any]) -> dict[str, Any]:

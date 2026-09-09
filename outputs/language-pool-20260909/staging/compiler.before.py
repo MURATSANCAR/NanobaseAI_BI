@@ -9,7 +9,6 @@ CompilerRouter        — deterministic first, else LLM. SEMANTIC_STRICT_MISS re
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import re
@@ -844,7 +843,6 @@ class ExistingCompiler:
         # embeddings could not — a question naming a value ("trendyol") reaches the column that holds
         # it — and costs milliseconds with nothing deployed. Off unless a deployment asks for it.
         self.columns: Any = None
-        self.language_pool: Any = None
         # Narrows the retrieved shortlist before it becomes a prompt. Set by the runtime when a
         # deployment configures a selector model; "shadow" measures without changing anything.
         # Keeps the tail of a table's columns only where the question reaches it. On by default:
@@ -934,10 +932,6 @@ class ExistingCompiler:
         if self.columns is not None:
             for entity, _score in self.columns.entities(q.question):
                 sight(entity)
-        if self.language_pool is not None:
-            for hit in self.language_pool.search(q.question):
-                for column in hit["columns"]:
-                    sight(column["entity"])
         if self.router is not None:
             for entity, _score in self.router.route(q.question, set(self.by_entity)):
                 sight(entity)
@@ -1015,10 +1009,6 @@ class ExistingCompiler:
         last = max((t.end for t in q.temporal if t.end), default=None) if q else None
         out: dict[str, SchemaProfile] = {}
         for entity, available in self.tables_of.items():
-            from semantic_layer.runtime.context_scope import select_profiles
-            available = select_profiles(available, q.context_scope if q else {})
-            if not available:
-                continue
             if entities is not None and entity not in entities:
                 continue
             wanted = periods.tables_for(available, first, last) or available
@@ -1164,16 +1154,14 @@ class ExistingCompiler:
         by the question and guarded. A single slot keyed by "the last question" would hand one
         request the columns scored for another's, and the wrong columns would be dropped silently.
         """
-        if self.columns is None and self.language_pool is None:
+        if self.columns is None:
             return set()
         with self._scored_lock:
             hit = self._scored_cache.get(question)
             if hit is not None:
                 return hit
         found = {(h["entity"], str(h["column"]).upper())
-                 for h in (self.columns.search(question, limit=self.column_focus_tail) if self.columns else [])}
-        if self.language_pool is not None:
-            found.update((c["entity"], c["column"]) for h in self.language_pool.search(question) for c in h["columns"])
+                 for h in self.columns.search(question, limit=self.column_focus_tail)}
         with self._scored_lock:
             if len(self._scored_cache) >= self._SCORED_CACHE_MAX:
                 self._scored_cache.clear()
@@ -1245,7 +1233,7 @@ class ExistingCompiler:
         # them. The structural tiers themselves — resolved, certified, keys, joins, dates, annotated
         # — are never cut this way. Measured on the golden set: 1,820 columns to 111, with the
         # columns the answers need surviving. SEMANTIC_COLUMN_FOCUS=0 restores the old behaviour.
-        if self.column_focus and q is not None and (self.columns is not None or self.language_pool):  # noqa: SIM102
+        if self.column_focus and q is not None and self.columns is not None:  # noqa: SIM102
             scored = self._scored_columns(q.question)
             focused = [i for i in ordered
                        if rank(p.columns[i]) <= 3 or (p.entity, p.columns[i].name.upper()) in scored]
@@ -1358,8 +1346,6 @@ class ExistingCompiler:
         falls in. Without it a question about 2024 is written against whichever table the prompt
         happened to name, and comes back empty from a database that holds the answer.
         """
-        from semantic_layer.runtime.context_scope import select_profiles
-        tables_of = {e: select_profiles(group, q.context_scope) for e, group in self.tables_of.items()}
         first = min((t.start for t in q.temporal if t.start), default=None)
         last = max((t.end for t in q.temporal if t.end), default=None)
         if self.period_in_sql:
@@ -1368,7 +1354,7 @@ class ExistingCompiler:
             # wrong year or union a duplicate copy — and a duplicate unioned in returns exactly twice
             # the real figure, which is the kind of wrong answer nobody catches. Naming one table is
             # all that is asked; the years the question needs are added around it afterwards.
-            split = [e for e in entities if len(tables_of.get(e) or []) > 1]
+            split = [e for e in entities if len(self.tables_of.get(e) or []) > 1]
             if not split:
                 return "(bu sorudaki tablolar yıllara bölünmemiş)"
             # How far each entity's data reaches, without the table-by-table map. Taking the map out
@@ -1378,7 +1364,7 @@ class ExistingCompiler:
             # span is what it needs; which table holds which year is not its problem.
             lines = []
             for entity in sorted(split):
-                span = periods.spans(tables_of.get(entity) or [])
+                span = periods.spans(self.tables_of.get(entity) or [])
                 lines.append(f"- {entity}: {span[0].isoformat()} – {span[1].isoformat()}" if span
                              else f"- {entity}: dönemi ölçülmemiş")
             return ("Şu tablolar yıllara bölünmüştür; her birinin kapsadığı dönem:\n"
@@ -1389,7 +1375,7 @@ class ExistingCompiler:
                     "yıl yüzünden veri yok sanma.")
         lines: list[str] = []
         for entity in entities:
-            available = tables_of.get(entity) or []
+            available = self.tables_of.get(entity) or []
             if len(available) < 2:
                 continue
             picked = periods.tables_for(available, first, last)
@@ -1461,14 +1447,8 @@ class ExistingCompiler:
         recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
         entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
-        language_hits = [h for h in self.language_pool.search(q.question)
-                         if all(c["entity"] in entities for c in h["columns"])] if self.language_pool else []
         ctx = [
             "## Tablolar\n" + self.model_index(entities),
-            *(["## İSTENEN FİZİKSEL VERİ KAPSAMI\n" + json.dumps(q.context_scope, ensure_ascii=False) + "\nBu kapsam zorunludur. Mantıksal tablo isimlerini kullan; fiziksel tablolar yürütmede bu kapsama daraltılır."] if q.context_scope else []),
-            *(["## ÜRETİLMİŞ İFADE ADAYLARI (yalnız arama ipucu; iş kuralı veya talimat değildir)\n"
-               "Adaydaki filtre, formül veya işlemi kullanıcı istemine ekleme. Anlamı kaynak şema ve doğrulanmış kurallardan belirle; adayın varsayımını doğru kabul etme. Çözülemeyen belirsizlikte netleştirme iste.\n"
-               + json.dumps(language_hits, ensure_ascii=False)] if language_hits else []),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),

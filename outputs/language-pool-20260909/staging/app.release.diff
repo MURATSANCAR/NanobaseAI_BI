@@ -1,0 +1,41 @@
+--- production/app.py
++++ release/app.py
+@@ -138,7 +138,8 @@
+         except Exception as e:  # noqa: BLE001
+             log.debug("catalog version check failed: %s", e)
+             return
+-        if version != self._catalog_version:
++        from semantic_layer.runtime.language_pool import file_stamp
++        if version != self._catalog_version or file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+             log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
+             self.rebuild()
+ 
+@@ -278,6 +279,19 @@
+                 log.info("%d portal annotations carried into the model prompt", len(said))
+         except Exception as e:  # noqa: BLE001
+             log.debug("annotations unavailable: %s", e)
++        from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
++        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
++        self._language_pool_stamp = file_stamp(pool_path)
++        try:
++            self.language_pool = LanguagePool.load(pool_path, self.profiles, s.datasource_id,
++                                                   existing.annotations if existing is not None else {})
++        except (OSError, ValueError, TypeError, KeyError, AttributeError) as e:
++            log.warning("language pool unavailable: %s", e)
++            self.language_pool = LanguagePool()
++        if existing is not None:
++            existing.language_pool = self.language_pool
++        log.info("language pool: %d candidates, %d stale/invalid rejected, hash %s",
++                 len(self.language_pool.entries), self.language_pool.rejected, self.language_pool.content_hash[:12])
+         self.router = CompilerRouter(det, existing, strict_miss=s.strict_miss, primary=os.environ.get("SEMANTIC_COMPILER", ""), shadow=shadow, alternates=alternates)
+ 
+     # ------------------------------------------------------------------ recall (Memory ON)
+@@ -645,6 +659,8 @@
+             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
+                     "threadId": thread_id, "timings": timings}
+         sq = self.resolver.resolve(effective_question)
++        sq.language_candidates = self.language_pool.search(effective_question)
++        sq.language_pool_hash = self.language_pool.content_hash
+         # Certified data concepts are positive evidence of a BI request. Only unplaced
+         # questions need the conversational classifier; unknown terms remain eligible.
+         if not any(slot.mapping is not None for slot in sq.slots) and is_intro(

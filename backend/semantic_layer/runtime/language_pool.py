@@ -9,7 +9,7 @@ import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from semantic_layer.normalize import fold
+from semantic_layer.normalize import fold, stem
 from semantic_layer.runtime.column_index import tokens
 
 VERSION = 1
@@ -56,7 +56,7 @@ def schema_documents(profiles, annotations=None):
     return out
 
 
-def validate_candidate(raw, docs):
+def validate_candidate(raw, docs, *, source_hashes=None):
     if not isinstance(raw, dict) or set(raw) - {"phrase", "columns", "operation", "ambiguities"}:
         raise ValueError("unsupported candidate fields")
     phrase = raw.get("phrase")
@@ -100,7 +100,7 @@ def validate_candidate(raw, docs):
     result = {"phrase": phrase.strip(), "columns": sorted(columns, key=lambda c: (c["entity"], c["column"], c["role"])),
               "operation": raw["operation"], "ambiguities": ambiguities}
     result["id"] = digest({**result, "phrase": fold(result["phrase"])})[:24]
-    result["sourceHashes"] = {e: digest(docs[e]) for e in sorted(entities)}
+    result["sourceHashes"] = {e: source_hashes[e] if source_hashes is not None else digest(docs[e]) for e in sorted(entities)}
     result["status"] = "SCHEMA_CHECKED_CANDIDATE"
     return result
 
@@ -125,11 +125,14 @@ class LanguagePool:
         self.entries = list(entries)
         self.content_hash = pool_hash or digest(self.entries)
         self.rejected = rejected
-        self.bags = [Counter(tokens(e["phrase"])) for e in self.entries]
+        self.bags = [Counter({stem(t) for t in tokens(e["phrase"])}) for e in self.entries]
         self.postings = defaultdict(set)
         for i, bag in enumerate(self.bags):
             for word in bag:
                 self.postings[word].add(i)
+
+    def __bool__(self):
+        return bool(self.entries)
 
     @classmethod
     def load(cls, path, profiles, datasource_id, annotations=None):
@@ -138,6 +141,8 @@ class LanguagePool:
         if Path(path).stat().st_size > 32 * 1024 * 1024:
             raise ValueError("language pool exceeds 32 MiB")
         payload = json.loads(Path(path).read_text())
+        if not isinstance(payload, dict):
+            raise ValueError("invalid pool document")
         if payload.get("version") != VERSION or payload.get("datasourceId") != datasource_id:
             raise ValueError("language pool version/data source differs")
         rows = payload.get("entries")
@@ -150,7 +155,7 @@ class LanguagePool:
             try:
                 if not isinstance(entry, dict) or entry.get("status") != "SCHEMA_CHECKED_CANDIDATE":
                     raise ValueError("invalid candidate status")
-                checked = validate_candidate({k: entry[k] for k in ("phrase", "columns", "operation", "ambiguities")}, docs)
+                checked = validate_candidate({k: entry[k] for k in ("phrase", "columns", "operation", "ambiguities")}, docs, source_hashes=hashes)
                 if checked["id"] != entry.get("id") or not entry.get("sourceHashes") or any(hashes.get(e) != h for e, h in entry["sourceHashes"].items()) or checked["sourceHashes"] != entry["sourceHashes"]:
                     raise ValueError("stale or modified source")
                 if checked["id"] not in seen:
@@ -161,7 +166,7 @@ class LanguagePool:
         return cls(accepted, pool_hash=digest(accepted), rejected=rejected)
 
     def search(self, question, limit=4):
-        words = set(tokens(question))
+        words = {stem(t) for t in tokens(question)}
         candidates = set().union(*(self.postings.get(w, set()) for w in words)) if words else set()
         scored = []
         for i in candidates:

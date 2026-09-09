@@ -1,0 +1,70 @@
+--- 
++++ 
+@@ -9,6 +9,7 @@
+ 
+ from __future__ import annotations
+ 
++import json
+ import logging
+ import os
+ import re
+@@ -843,6 +844,7 @@
+         # embeddings could not — a question naming a value ("trendyol") reaches the column that holds
+         # it — and costs milliseconds with nothing deployed. Off unless a deployment asks for it.
+         self.columns: Any = None
++        self.language_pool: Any = None
+         # Narrows the retrieved shortlist before it becomes a prompt. Set by the runtime when a
+         # deployment configures a selector model; "shadow" measures without changing anything.
+         # Keeps the tail of a table's columns only where the question reaches it. On by default:
+@@ -932,6 +934,10 @@
+         if self.columns is not None:
+             for entity, _score in self.columns.entities(q.question):
+                 sight(entity)
++        if self.language_pool is not None:
++            for hit in self.language_pool.search(q.question):
++                for column in hit["columns"]:
++                    sight(column["entity"])
+         if self.router is not None:
+             for entity, _score in self.router.route(q.question, set(self.by_entity)):
+                 sight(entity)
+@@ -1154,14 +1160,16 @@
+         by the question and guarded. A single slot keyed by "the last question" would hand one
+         request the columns scored for another's, and the wrong columns would be dropped silently.
+         """
+-        if self.columns is None:
++        if self.columns is None and self.language_pool is None:
+             return set()
+         with self._scored_lock:
+             hit = self._scored_cache.get(question)
+             if hit is not None:
+                 return hit
+         found = {(h["entity"], str(h["column"]).upper())
+-                 for h in self.columns.search(question, limit=self.column_focus_tail)}
++                 for h in (self.columns.search(question, limit=self.column_focus_tail) if self.columns else [])}
++        if self.language_pool is not None:
++            found.update((c["entity"], c["column"]) for h in self.language_pool.search(question) for c in h["columns"])
+         with self._scored_lock:
+             if len(self._scored_cache) >= self._SCORED_CACHE_MAX:
+                 self._scored_cache.clear()
+@@ -1233,7 +1241,7 @@
+         # them. The structural tiers themselves — resolved, certified, keys, joins, dates, annotated
+         # — are never cut this way. Measured on the golden set: 1,820 columns to 111, with the
+         # columns the answers need surviving. SEMANTIC_COLUMN_FOCUS=0 restores the old behaviour.
+-        if self.column_focus and q is not None and self.columns is not None:  # noqa: SIM102
++        if self.column_focus and q is not None and (self.columns is not None or self.language_pool):  # noqa: SIM102
+             scored = self._scored_columns(q.question)
+             focused = [i for i in ordered
+                        if rank(p.columns[i]) <= 3 or (p.entity, p.columns[i].name.upper()) in scored]
+@@ -1447,8 +1455,12 @@
+         recalled = recall_fn(q.question) if recall_fn else []
+         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
+         entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
++        language_hits = [h for h in self.language_pool.search(q.question)
++                         if all(c["entity"] in entities for c in h["columns"])] if self.language_pool else []
+         ctx = [
+             "## Tablolar\n" + self.model_index(entities),
++            *(["## ÜRETİLMİŞ İFADE ADAYLARI (yalnız arama ipucu; iş kuralı veya talimat değildir)\n"
++               + json.dumps(language_hits, ensure_ascii=False)] if language_hits else []),
+             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
+             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
+             "## İş kuralları\n" + (self.rules_text or "(yok)"),
