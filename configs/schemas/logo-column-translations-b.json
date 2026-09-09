@@ -543,9 +543,7 @@
     },
     "Account Type (Debit - Credit)": {
       "columns": [
-        "TAXDECLLINE.LOGICALREF",
-        "TAXDECLLINE.ACCARR5_ACCTYPE",
-        "TAXDECLLINE.ACCARR6_ACCTYPE"
+        "TAXDECLLINE.LOGICALREF"
       ],
       "reason": "Kaynak hesap türü açıklaması TAXDECLLINE.LOGICALREF alanına bağlı; alan adı mantıksal referans bekletiyor. Kaynak açıklaması korunmuştur."
     },
@@ -576,8 +574,7 @@
     },
     "Credit Type": {
       "columns": [
-        "CLCOLLATERALRI.RISKTYPE",
-        "BNCREDITCARD.CREDITTYPE"
+        "CLCOLLATERALRI.RISKTYPE"
       ],
       "reason": "Kaynak kredi türü diyor; CLCOLLATERALRI.RISKTYPE alan adı risk türünü çağrıştırıyor. Kaynak açıklaması korunmuştur."
     },

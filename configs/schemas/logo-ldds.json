@@ -82686,7 +82686,13 @@
         "ACCARR5_ACCTYPE": {
           "type": "Byte",
           "size": 1,
-          "description": "Account Type (Debit - Credit)"
+          "description": "Account Type (Debit - Credit)",
+          "description_tr": "Hesap türü (borç - alacak)",
+          "description_tr_provenance": {
+            "method": "reviewed-translation",
+            "source_description": "Account Type (Debit - Credit)",
+            "source": "configs/schemas/logo-column-translations-b.json"
+          }
         },
         "ACCARR5_REMTYPE": {
           "type": "Byte",
@@ -82801,7 +82807,13 @@
         "ACCARR6_ACCTYPE": {
           "type": "Byte",
           "size": 1,
-          "description": "Account Type (Debit - Credit)"
+          "description": "Account Type (Debit - Credit)",
+          "description_tr": "Hesap türü (borç - alacak)",
+          "description_tr_provenance": {
+            "method": "reviewed-translation",
+            "source_description": "Account Type (Debit - Credit)",
+            "source": "configs/schemas/logo-column-translations-b.json"
+          }
         },
         "ACCARR6_REMTYPE": {
           "type": "Byte",
@@ -95596,6 +95608,12 @@
           "values": {
             "1": "Operating Loan",
             "2": "Investment Loan"
+          },
+          "description_tr": "Kredi türü",
+          "description_tr_provenance": {
+            "method": "reviewed-translation",
+            "source_description": "Credit Type",
+            "source": "configs/schemas/logo-column-translations-b.json"
           }
         },
         "CRCALCTYPE": {
@@ -100267,7 +100285,7 @@
     "TRADGRP"
   ],
   "tr_table_count": 129,
-  "tr_column_count": 9262,
+  "tr_column_count": 9265,
   "tr_coded_column_count": 260,
   "doc_only_column_count": 389,
   "untyped_column_count": 0,

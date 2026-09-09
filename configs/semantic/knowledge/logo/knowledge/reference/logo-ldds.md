@@ -271,7 +271,7 @@ Kolonun taşıdığı sayının ne anlama geldiği:
 - `BNCARD.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
 - `BNCARD.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
 - `BNCREDITCARD.CRCARDTYPE` — Banka kredisi türü: 1=Loan Against Check, 2=Loan Against P.Note, 3=Unsecured Credit
-- `BNCREDITCARD.CREDITTYPE` — Credit Type: 1=Operating Loan, 2=Investment Loan
+- `BNCREDITCARD.CREDITTYPE` — Kredi türü: 1=Operating Loan, 2=Investment Loan
 - `BNCREDITCARD.CRCALCTYPE` — Banka kredisi hesap türü: 1=Spot Loan, 2=Debtor Standing Credit (Revolving), 3=Discount - Credit of Redemption Bills
 - `BNCREPAYTR.TRANSTYPE` — Ödeme hareketi türü: 0=Main Records, 1=Back Payment of Main Records
 - `BNFICHE.TRCODE` — Hareket türü: 1=Bnka işlem fişi, 2=Virman Fişi, 3=Gelen havaleler, 4=Gönderilen havaleler
@@ -1230,6 +1230,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `SPECODE` — Banka kredisi özel kodu
 - `CYPHCODE` — Banka kredisi yetki kodu
 - `CRCARDTYPE` — Banka kredisi türü
+- `CREDITTYPE` — Kredi türü
 - `CRCALCTYPE` — Banka kredisi hesap türü
 - `GKSNO` — Kredi sözleşme numarası
 - `BEGDATE` — Kredinin alındığı tarih
@@ -10147,6 +10148,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ACCARR5_ITEMNAME` — Formül açıklaması - Mali tablo grup tanımı
 - `ACCARR5_BEGCODE` — Hesap başlangıç kodu
 - `ACCARR5_ENDCODE` — Hesap bitiş kodu
+- `ACCARR5_ACCTYPE` — Hesap türü (borç - alacak)
 - `ACCARR5_REMTYPE` — Ters bakiye (Listele - Listeleme)
 - `ACCARR5_TOTTYPE` — Hesap tutarı; 1: Bakiye, 2: Borç, 3: Alacak, 4: Borç bakiyesi, 5: Alacak bakiyesi, 6: Artış, 7: Azalış
 - `ACCARR5_FORMULA` — Formül tanımı
@@ -10157,6 +10159,7 @@ Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.jso
 - `ACCARR6_ITEMNAME` — Formül açıklaması - Mali tablo grup tanımı
 - `ACCARR6_BEGCODE` — Hesap başlangıç kodu
 - `ACCARR6_ENDCODE` — Hesap bitiş kodu
+- `ACCARR6_ACCTYPE` — Hesap türü (borç - alacak)
 - `ACCARR6_REMTYPE` — Ters bakiye (Listele - Listeleme)
 - `ACCARR6_TOTTYPE` — Hesap tutarı; 1: Bakiye, 2: Borç, 3: Alacak, 4: Borç bakiyesi, 5: Alacak bakiyesi, 6: Artış, 7: Azalış
 - `ACCARR6_FORMULA` — Formül tanımı

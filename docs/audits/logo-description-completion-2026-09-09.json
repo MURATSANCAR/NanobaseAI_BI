@@ -18764,9 +18764,30 @@
       "method": "reviewed-translation",
       "source_description": "Original Record Logical Reference",
       "source": "configs/schemas/logo-column-translations-reused.json"
+    },
+    {
+      "location": "TAXDECLLINE.ACCARR5_ACCTYPE",
+      "description_tr": "Hesap türü (borç - alacak)",
+      "method": "reviewed-translation",
+      "source_description": "Account Type (Debit - Credit)",
+      "source": "configs/schemas/logo-column-translations-b.json"
+    },
+    {
+      "location": "TAXDECLLINE.ACCARR6_ACCTYPE",
+      "description_tr": "Hesap türü (borç - alacak)",
+      "method": "reviewed-translation",
+      "source_description": "Account Type (Debit - Credit)",
+      "source": "configs/schemas/logo-column-translations-b.json"
+    },
+    {
+      "location": "BNCREDITCARD.CREDITTYPE",
+      "description_tr": "Kredi türü",
+      "method": "reviewed-translation",
+      "source_description": "Credit Type",
+      "source": "configs/schemas/logo-column-translations-b.json"
     }
   ],
-  "count": 2669,
+  "count": 2672,
   "source_conflicts_not_translated": {
     "ORFLINE.WSREF": {
       "source_description": "Standart BOM Costs Reference",
@@ -18864,14 +18885,6 @@
       "source_description": "Account Type (Debit - Credit)",
       "reason": "Kaynak hesap türü açıklaması TAXDECLLINE.LOGICALREF alanına bağlı; alan adı mantıksal referans bekletiyor. Kaynak açıklaması korunmuştur."
     },
-    "TAXDECLLINE.ACCARR5_ACCTYPE": {
-      "source_description": "Account Type (Debit - Credit)",
-      "reason": "Kaynak hesap türü açıklaması TAXDECLLINE.LOGICALREF alanına bağlı; alan adı mantıksal referans bekletiyor. Kaynak açıklaması korunmuştur."
-    },
-    "TAXDECLLINE.ACCARR6_ACCTYPE": {
-      "source_description": "Account Type (Debit - Credit)",
-      "reason": "Kaynak hesap türü açıklaması TAXDECLLINE.LOGICALREF alanına bağlı; alan adı mantıksal referans bekletiyor. Kaynak açıklaması korunmuştur."
-    },
     "VRNTINVENS.VARIANTREF": {
       "source_description": "Variant Tot Reference",
       "reason": "Kaynak varyant toplamı referansı diyor; DSPLNOPCMPPG.WASTEAMNT alan adı fire miktarını çağrıştırıyor ve VRNTINVENS.VARIANTREF yalnızca varyant referansı olabilir. Kaynak açıklaması korunmuştur."
@@ -18893,10 +18906,6 @@
       "reason": "Kaynak teminat mektubu diyor; PORTFOYNO alan adı portföy numarasını çağrıştırıyor. Kaynakta bulunmayan numara anlamı eklenmedi."
     },
     "CLCOLLATERALRI.RISKTYPE": {
-      "source_description": "Credit Type",
-      "reason": "Kaynak kredi türü diyor; CLCOLLATERALRI.RISKTYPE alan adı risk türünü çağrıştırıyor. Kaynak açıklaması korunmuştur."
-    },
-    "BNCREDITCARD.CREDITTYPE": {
       "source_description": "Credit Type",
       "reason": "Kaynak kredi türü diyor; CLCOLLATERALRI.RISKTYPE alan adı risk türünü çağrıştırıyor. Kaynak açıklaması korunmuştur."
     },
@@ -19088,8 +19097,6 @@
       "TAXDECLHDR.YMMINF_TAXIDNR",
       "TAXDECLLINE.LOGICALREF",
       "TAXDECLLINE.TAXDECLREF",
-      "TAXDECLLINE.ACCARR5_ACCTYPE",
-      "TAXDECLLINE.ACCARR6_ACCTYPE",
       "CLCOLLATERALRI.RISKTYPE",
       "CLCOLLATERALRI.RISKTOTAL",
       "COLLATRLCARD.PORTFOYNO",
@@ -19102,7 +19109,6 @@
       "BOMVRNTFORMULA.OPERATOR",
       "BOMVRNTFORMULA.ISITEMREFCBOML",
       "DSPLNOPCMPPG.WASTEAMNT",
-      "BNCREDITCARD.CREDITTYPE",
       "BNCREDITCARD.REPORTRATE",
       "BNCREDITCARD.REPAYPLANREF",
       "BNCREPAYTR.EARLYINTRATE",
@@ -19114,8 +19120,13 @@
     "tables_no_description": 52,
     "tables_no_turkish": 56,
     "columns_no_description": 13,
-    "columns_no_turkish": 54,
+    "columns_no_turkish": 51,
     "tables_added": 145,
-    "columns_added": 2524
+    "columns_added": 2527
+  },
+  "dictionary_sha256": "dc6323cbbac1822d11bc274531781d9661f7d531170b9215870aa27ca7218c80",
+  "validation": {
+    "focused_tests_passed": 25,
+    "existing_dictionary_metadata_unchanged": true
   }
 }
