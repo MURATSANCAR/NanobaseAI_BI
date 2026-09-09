@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # /timas için nginx kimlik doğrulama (HTTP Basic) + hız sınırı. Idempotent.
-#   kullanıcı: timas  · parola: ${SECRETS}/timas-portal.password (yoksa üretilir, asla stdout'a yazılmaz)
+#   kullanıcı: Timas  · parola: ${SECRETS}/timas-portal.password (yoksa üretilir, asla stdout'a yazılmaz)
 #   hız: /timas/api/v1/ask 6 istek/dk (patlama 3), /timas/api/ 120 istek/dk (patlama 30), IP başına
 set -euo pipefail
 SITE="${PORTAL_SITE:-/etc/nginx/sites-enabled/portal.nanobase.ai}"
@@ -12,7 +12,7 @@ if sudo grep -q '# timas-session-login' "$SITE"; then
 fi
 SECRETS="${SECRETS_ROOT:-/data/nanobaseai/bi/secrets}"
 HTPASSWD=/etc/nginx/htpasswd-timas
-USER_NAME="${TIMAS_USER:-timas}"
+USER_NAME="${TIMAS_USER:-Timas}"
 log() { printf '[deploy-timas-auth] %s\n' "$*"; }
 
 # 1) parola dosyası

@@ -48,3 +48,13 @@ invitation expiry. Live release checks must also validate the real nginx
 password verifier and protected API routes; mocked unit tests alone do not
 establish that integration. Verify normal and invited browser entrances,
 responsive layout, login, and logout.
+
+## Default demo account
+
+The default installation username is `Timas` (override with `TIMAS_USER`).
+For an existing session installation, run
+`sudo python3 scripts/server/portal-login/set_demo_username.py`.
+This preserves the exact password hash and invitation password, expiry and
+public-demo policy; it also updates existing session display names. It does not
+create a password or enable public access. A conflicting target account aborts
+before writes. New Basic-only installations use the same `Timas` default.
