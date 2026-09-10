@@ -65,14 +65,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Main app
+      - name: Portal (kanvas arayüz)
         run: |
           npm ci
           npm run build
           npm test --if-present
-      - name: Cockpit
-        working-directory: apps/cockpit
-        run: |
-          npm ci
-          npx tsc -b --pretty false
-          npm run build

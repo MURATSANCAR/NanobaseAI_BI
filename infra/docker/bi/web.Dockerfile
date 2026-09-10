@@ -1,9 +1,14 @@
-# Kokpit: node ile derle, nginx:alpine ile sun. İki aşama — imajda node kalmaz.
+# Portal (kanvas arayüz): node ile derle, nginx:alpine ile sun.
+# İki aşama — imajda node kalmaz.
+#
+# 2026-09-11: apps/cockpit kaldırıldı; tek frontend kök dizindeki portal
+# uygulamasıdır (src/, vite.config.ts). Kanvas ekranları /bi/canvas altında.
 FROM node:20-slim AS build
 WORKDIR /src
-COPY apps/cockpit/package.json apps/cockpit/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
-COPY apps/cockpit ./
+COPY index.html tsconfig.json tsconfig.node.json vite.config.ts tailwind.config.js postcss.config.js ./
+COPY src ./src
 # Kök yoldan sunulur (VM IP / müşteri alan adı): base '/'.
 RUN npm run build
 

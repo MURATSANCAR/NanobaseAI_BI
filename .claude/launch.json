@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "cockpit",
+      "name": "portal",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "apps/cockpit"],
-      "port": 5180
+      "runtimeArgs": ["run", "dev"],
+      "port": 5173
     }
   ]
 }

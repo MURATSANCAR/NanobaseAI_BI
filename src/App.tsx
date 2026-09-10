@@ -22,6 +22,7 @@ const BiQueriesPage = lazy(() => import('@/pages/BiQueriesPage'));
 const BiConnectionPage = lazy(() => import('@/pages/BiConnectionPage'));
 const BiSchemaPage = lazy(() => import('@/pages/BiSchemaPage'));
 const BiPublicPage = lazy(() => import('@/pages/BiPublicPage'));
+const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
 
 function RouteFallback() {
   return (
@@ -48,6 +49,10 @@ export default function App() {
           <Route path="bi/public/:token" element={<BiPublicPage />} />
 
           <Route element={<RequirePortalSession />}>
+            {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
+                sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
+            <Route path="bi/canvas" element={<BiCanvasPage />} />
+            <Route path="bi/canvas/:screen" element={<BiCanvasPage />} />
             <Route element={<Layout />}>
               <Route path="bi" element={<BiSupersetPage />} />
               <Route path="bi/projects" element={<Navigate to="/bi" replace />} />
