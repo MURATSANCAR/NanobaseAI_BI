@@ -39,12 +39,14 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // Uygulama hem /bi/ hem /timas/ altından sunuluyor. Yönlendirici tabanı
+  // derleme tabanından okunur; yoksa /timas/ açıldığında hiçbir rota eşleşmez.
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Suspense fallback={<RouteFallback />}>
         <RoutedErrorBoundary>
         <Routes>
-          <Route path="/" element={<Navigate to="/bi" replace />} />
+          <Route path="/" element={<Navigate to="/bi/canvas" replace />} />
           <Route path="login" element={<Navigate to="/bi" replace />} />
           <Route path="bi/public/:token" element={<BiPublicPage />} />
 
