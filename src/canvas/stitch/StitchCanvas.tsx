@@ -16,7 +16,7 @@ import type { StitchCanvasData } from './data';
  *  üst şerit, ray ve dock ekrana yapıştığı için kutu yalnız aradaki boşluğu
  *  doldurur. */
 const ART_W = 1440;
-const ART_H = 820;
+const ART_H = 700; // kartların gerçek alt sınırı 689px; fazlası boş alan demek
 
 const RAIL_ICONS = [
   (
