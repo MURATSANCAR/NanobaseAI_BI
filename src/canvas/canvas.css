@@ -1,0 +1,93 @@
+/* Kanvas tasarım dili — design/stitch-wow/03-canvas.html'den birebir alındı.
+   Renk ve gölge jetonları tailwind.config.js içindeki `canvas` ad alanında;
+   burada yalnız Tailwind ile ifade edilemeyen yüzeyler var. */
+
+.cv-mesh {
+  background-color: #f7fafc;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 232, 214, 0.95) 0%, rgba(255, 232, 214, 0.3) 38%, transparent 60%),
+    radial-gradient(circle at 50% 45%, rgba(221, 235, 255, 0.9) 0%, rgba(221, 235, 255, 0.35) 45%, transparent 70%),
+    radial-gradient(circle at 88% 82%, rgba(227, 255, 241, 0.95) 0%, rgba(227, 255, 241, 0.3) 40%, transparent 65%);
+}
+
+.cv-dots {
+  background-image: radial-gradient(rgba(30, 41, 59, 0.14) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+.cv-glass {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+.cv-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cv-dock {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Bant etiketi (washi tape) */
+.cv-tape {
+  background: rgba(255, 243, 205, 0.85);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 2px dashed rgba(217, 119, 6, 0.3);
+  border-right: 2px dashed rgba(217, 119, 6, 0.3);
+}
+
+@keyframes cvFlowDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.cv-flow {
+  stroke-dasharray: 6 6;
+  animation: cvFlowDash 2.4s linear infinite;
+}
+
+@keyframes cvFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.cv-float {
+  animation: cvFloat 6s ease-in-out infinite;
+}
+
+/* Kartın kendi eğimi var; hover'da eğimi bozmadan yükselt. */
+.cv-card-hover:hover {
+  box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
+}
+
+.cv-scroll {
+  scrollbar-width: thin;
+}
+.cv-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.cv-scroll::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.2);
+  border-radius: 9999px;
+}
+
+/* Hareketi azalt tercihini dinle: yüzen kartlar ve akan çizgiler dursun. */
+@media (prefers-reduced-motion: reduce) {
+  .cv-flow,
+  .cv-float {
+    animation: none;
+  }
+}
