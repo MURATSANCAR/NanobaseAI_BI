@@ -1,0 +1,525 @@
+{
+  "outputComponents": [
+    {
+      "designSystem": {
+        "designSystem": {
+          "displayName": "Literary Broadsheet",
+          "styleGuidelines": "## Brand & Style\n\nThis design system draws direct inspiration from high-grade literary front matter, classical typography, and traditional broadsheet journalism. Created for a distinguished Turkish publishing house's intelligent literary portal, the system balances intellectual gravitas with rigorous digital utility.\n\nThe aesthetic rejects modern software homogenization—dispensing entirely with rounded corners, synthetic drop shadows, floating cards, and colored surface fills. Hierarchy and architectural order are achieved strictly through master typesetting, deliberate hairline dividers, structured margins, and calibrated whitespace. The interface evokes the quiet authority of cold-set ink on heavy warm rag paper, treating machine intelligence not as a novelty, but as an erudite literary archivist and companion.\n\n## Layout & Spacing\n\nThe layout is built upon an editorial broadsheet grid:\n- **Desktop (>= 1024px)**: 12-column symmetrical layout bounded by a maximum width of `1360px`, framed by `margin: 3rem` margins and `gutter: 1.5rem` gutters. Columns are punctuated by 1px vertical `#D8D0C2` rules to maintain architectural rhythm.\n- **Tablet (768px – 1023px)**: 6-column grid with `2rem` margins. Sub-columns collapse into standard dual-pane broadsheet views.\n- **Mobile (< 768px)**: Single column with `1.25rem` horizontal margins. Vertical borders collapse into stacked horizontal hairlines.\n\nVertical rhythm adheres to a strict 4px/8px modular cadence. Whitespace is generous, functional, and uncrowded, recalling the margin proportions of Renaissance book printing (ratio of inner to outer margins).\n\n## Elevation & Depth\n\nThis design system enforces a zero-elevation paradigm. No drop shadows, ambient blurs, or tinted elevation layers may appear in the interface.\n\nDepth and spatial layering are produced through:\n- **Hairline Rules**: 1px borders in `#D8D0C2` or `#141210` defining cell boundaries and thematic partitions.\n- **Double Rules**: Traditional 3px double-hairline borders (1px solid ink, 1px space, 1px solid ink) used to indicate top-tier headers, major volume breaks, or primary document headers.\n- **Surface Inversion**: Hover and selection states never introduce elevation; they toggle crisp ink-to-paper reversals (e.g., deep ink surface with paper-toned text).\n\n## Components\n\n### Buttons\n- **Primary Action**: Solid `#141210` background, `#F4EFE6` text, 0px border radius, uppercase `Inter` label with letter spacing. Hover transitions to `#D9481B` vermilion background with instantaneous color shift (no easing lag).\n- **Secondary Action**: Transparent background, 1px solid `#141210` border, `#141210` text. Hover inverts the component (ink fill, paper text).\n- **Ghost / Text Action**: Pure text underlined by a 1px solid `#D8D0C2` rule, turning to `#D9481B` on hover.\n\n### Inputs & Chat Prompt Console\n- Rejects enclosed floating pills or rounded boxes.\n- Framed by a 1px `#141210` perimeter rule or bottom-only border.\n- Placeholder text set in italicized `Newsreader` (`#5B554C`).\n- Focus state is communicated via a double hairline rule or a 1px outline in `#D9481B`.\n\n### Lists & Article Indexing\n- Segmented exclusively with horizontal 1px `#D8D0C2` hairlines.\n- Each row includes a leading monospace index number (`001`, `002`), title in `Newsreader`, and right-aligned timestamp or author tag in uppercase `Inter`.\n\n### Cards & Content Containers\n- Zero surface tint variation and zero box shadows.\n- Delimited strictly by 1px `#D8D0C2` perimeter borders or flush gutter hairlines.\n- Header bars are demarcated by a 1px horizontal rule across the top of the container.\n\n### Checkboxes & Radios\n- Sharp 0px squares for checkboxes; sharp diamond (rotated square) or 0px concentric boxes for radio options.\n- 1px `#141210` border. Checked states feature a solid `#141210` or `#D9481B` inset block.\n\n### Tags & Chips\n- Crisp rectangular boundaries with 1px `#D8D0C2` rules.\n- Set in uppercase `label-caps` (`Inter`), no background fill. Active filter chips feature a solid `#141210` fill with `#F4EFE6` text.\n\n### Assistant Chat Turn Indicators\n- Query turns marked with a leading vermilion paragraph mark (`¶`) or block glyph in `#D9481B`.\n- System responses set in full-width editorial serif columns with bookish drop-caps for long-form answers.",
+          "theme": {
+            "bodyFont": "NEWSREADER",
+            "bodyFontFamily": "Newsreader",
+            "colorMode": "LIGHT",
+            "colorVariant": "FIDELITY",
+            "customColor": "#141210",
+            "designMd": "---\nname: Literary Broadsheet\ncolors:\n  surface: '#fef9f0'\n  surface-dim: '#ded9d1'\n  surface-bright: '#fef9f0'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f8f3ea'\n  surface-container: '#f2ede4'\n  surface-container-high: '#ece8df'\n  surface-container-highest: '#e7e2d9'\n  on-surface: '#1d1c16'\n  on-surface-variant: '#4c4640'\n  inverse-surface: '#32302a'\n  inverse-on-surface: '#f5f0e7'\n  outline: '#7d766f'\n  outline-variant: '#cec5bd'\n  surface-tint: '#615e5b'\n  primary: '#000000'\n  on-primary: '#ffffff'\n  primary-container: '#1d1b19'\n  on-primary-container: '#878380'\n  inverse-primary: '#cbc5c2'\n  secondary: '#b02e00'\n  on-secondary: '#ffffff'\n  secondary-container: '#ff6335'\n  on-secondary-container: '#5c1400'\n  tertiary: '#000000'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#1f1b14'\n  on-tertiary-container: '#8a8379'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#e8e1dd'\n  primary-fixed-dim: '#cbc5c2'\n  on-primary-fixed: '#1d1b19'\n  on-primary-fixed-variant: '#494643'\n  secondary-fixed: '#ffdbd1'\n  secondary-fixed-dim: '#ffb5a0'\n  on-secondary-fixed: '#3b0900'\n  on-secondary-fixed-variant: '#872100'\n  tertiary-fixed: '#ebe1d5'\n  tertiary-fixed-dim: '#cec5ba'\n  on-tertiary-fixed: '#1f1b14'\n  on-tertiary-fixed-variant: '#4c463d'\n  background: '#fef9f0'\n  on-background: '#1d1c16'\n  surface-variant: '#e7e2d9'\ntypography:\n  display-xl:\n    fontFamily: Newsreader\n    fontSize: 56px\n    fontWeight: '400'\n    lineHeight: 64px\n    letterSpacing: -0.02em\n  display-xl-mobile:\n    fontFamily: Newsreader\n    fontSize: 38px\n    fontWeight: '400'\n    lineHeight: 44px\n    letterSpacing: -0.015em\n  display-lg:\n    fontFamily: Newsreader\n    fontSize: 40px\n    fontWeight: '400'\n    lineHeight: 48px\n    letterSpacing: -0.015em\n  display-lg-mobile:\n    fontFamily: Newsreader\n    fontSize: 30px\n    fontWeight: '400'\n    lineHeight: 36px\n    letterSpacing: -0.01em\n  headline-md:\n    fontFamily: Newsreader\n    fontSize: 26px\n    fontWeight: '500'\n    lineHeight: 32px\n    letterSpacing: -0.01em\n  headline-sm:\n    fontFamily: Newsreader\n    fontSize: 20px\n    fontWeight: '500'\n    lineHeight: 28px\n  body-lg:\n    fontFamily: Newsreader\n    fontSize: 19px\n    fontWeight: '400'\n    lineHeight: 30px\n  body-md:\n    fontFamily: Newsreader\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 26px\n  label-caps:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '600'\n    lineHeight: 16px\n    letterSpacing: 0.12em\n  label-mono:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 18px\n    letterSpacing: 0.02em\n  caption:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 18px\nspacing:\n  gutter: 1.5rem\n  gutter-mobile: 1rem\n  margin: 3rem\n  margin-mobile: 1.25rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2.5rem\n---\n\n## Brand & Style\n\nThis design system draws direct inspiration from high-grade literary front matter, classical typography, and traditional broadsheet journalism. Created for a distinguished Turkish publishing house's intelligent literary portal, the system balances intellectual gravitas with rigorous digital utility.\n\nThe aesthetic rejects modern software homogenization—dispensing entirely with rounded corners, synthetic drop shadows, floating cards, and colored surface fills. Hierarchy and architectural order are achieved strictly through master typesetting, deliberate hairline dividers, structured margins, and calibrated whitespace. The interface evokes the quiet authority of cold-set ink on heavy warm rag paper, treating machine intelligence not as a novelty, but as an erudite literary archivist and companion.\n\n## Colors\n\nThe palette is restrained to historical print materials:\n- **Base Surface (`#F4EFE6`)**: Unbleached rag paper, providing a warm, glare-free optical ground.\n- **Deep Ink (`#141210`)**: The primary ink tone for body prose, key titling, and dominant structural rules.\n- **Vermilion Accent (`#D9481B`)**: An exacting, historic red-orange reserved exclusively for singular points of emphasis, active prompt indicators, editorial markers, and critical actions. Never used as broad fills.\n- **Secondary Ink (`#5B554C`)**: Aged graphite for metadata, secondary summaries, bylines, and timestamps.\n- **Hairline Rule (`#D8D0C2`)**: Delicate, structural border color simulating blind embossing or crisp paper column divisions.\n\n## Typography\n\nThe typography strategy leverages three deliberate voices:\n1. **The Literary Voice (`Newsreader`)**: Drives all headlines, section heads, longform assistant output, and editorial citations. Display weights utilize optical sizing with classical italics for author names, epigraphs, and volume attributions.\n2. **The Structural Label (`Inter`)**: Set strictly in uppercase with wide tracking (`0.12em`) for navigation, indices, field headers, and classification tags. Provides stark modernist contrast to the serif body.\n3. **The Mechanical Scribe (`JetBrains Mono`)**: Handles timestamps, citation indices, token telemetry, indexing IDs, and raw manuscript parameters.\n\n## Layout & Spacing\n\nThe layout is built upon an editorial broadsheet grid:\n- **Desktop (>= 1024px)**: 12-column symmetrical layout bounded by a maximum width of `1360px`, framed by `margin: 3rem` margins and `gutter: 1.5rem` gutters. Columns are punctuated by 1px vertical `#D8D0C2` rules to maintain architectural rhythm.\n- **Tablet (768px – 1023px)**: 6-column grid with `2rem` margins. Sub-columns collapse into standard dual-pane broadsheet views.\n- **Mobile (< 768px)**: Single column with `1.25rem` horizontal margins. Vertical borders collapse into stacked horizontal hairlines.\n\nVertical rhythm adheres to a strict 4px/8px modular cadence. Whitespace is generous, functional, and uncrowded, recalling the margin proportions of Renaissance book printing (ratio of inner to outer margins).\n\n## Elevation & Depth\n\nThis design system enforces a zero-elevation paradigm. No drop shadows, ambient blurs, or tinted elevation layers may appear in the interface.\n\nDepth and spatial layering are produced through:\n- **Hairline Rules**: 1px borders in `#D8D0C2` or `#141210` defining cell boundaries and thematic partitions.\n- **Double Rules**: Traditional 3px double-hairline borders (1px solid ink, 1px space, 1px solid ink) used to indicate top-tier headers, major volume breaks, or primary document headers.\n- **Surface Inversion**: Hover and selection states never introduce elevation; they toggle crisp ink-to-paper reversals (e.g., deep ink surface with paper-toned text).\n\n## Shapes\n\nThe geometric rule is absolute: `border-radius: 0px` across all elements without exception. \n\nButtons, search inputs, dialog containers, notification ribbons, and context menus retain razor-sharp 90-degree corners. This pure rectangular geometry reinforces the physical reality of trimmed paper, broadsheet newsprint, and bookmaker binding.\n\n## Components\n\n### Buttons\n- **Primary Action**: Solid `#141210` background, `#F4EFE6` text, 0px border radius, uppercase `Inter` label with letter spacing. Hover transitions to `#D9481B` vermilion background with instantaneous color shift (no easing lag).\n- **Secondary Action**: Transparent background, 1px solid `#141210` border, `#141210` text. Hover inverts the component (ink fill, paper text).\n- **Ghost / Text Action**: Pure text underlined by a 1px solid `#D8D0C2` rule, turning to `#D9481B` on hover.\n\n### Inputs & Chat Prompt Console\n- Rejects enclosed floating pills or rounded boxes.\n- Framed by a 1px `#141210` perimeter rule or bottom-only border.\n- Placeholder text set in italicized `Newsreader` (`#5B554C`).\n- Focus state is communicated via a double hairline rule or a 1px outline in `#D9481B`.\n\n### Lists & Article Indexing\n- Segmented exclusively with horizontal 1px `#D8D0C2` hairlines.\n- Each row includes a leading monospace index number (`001`, `002`), title in `Newsreader`, and right-aligned timestamp or author tag in uppercase `Inter`.\n\n### Cards & Content Containers\n- Zero surface tint variation and zero box shadows.\n- Delimited strictly by 1px `#D8D0C2` perimeter borders or flush gutter hairlines.\n- Header bars are demarcated by a 1px horizontal rule across the top of the container.\n\n### Checkboxes & Radios\n- Sharp 0px squares for checkboxes; sharp diamond (rotated square) or 0px concentric boxes for radio options.\n- 1px `#141210` border. Checked states feature a solid `#141210` or `#D9481B` inset block.\n\n### Tags & Chips\n- Crisp rectangular boundaries with 1px `#D8D0C2` rules.\n- Set in uppercase `label-caps` (`Inter`), no background fill. Active filter chips feature a solid `#141210` fill with `#F4EFE6` text.\n\n### Assistant Chat Turn Indicators\n- Query turns marked with a leading vermilion paragraph mark (`¶`) or block glyph in `#D9481B`.\n- System responses set in full-width editorial serif columns with bookish drop-caps for long-form answers.",
+            "font": "NEWSREADER",
+            "headlineFont": "NEWSREADER",
+            "headlineFontFamily": "Newsreader",
+            "labelFont": "INTER",
+            "labelFontFamily": "Inter",
+            "namedColors": {
+              "background": "#fef9f0",
+              "error": "#ba1a1a",
+              "error_container": "#ffdad6",
+              "inverse_on_surface": "#f5f0e7",
+              "inverse_primary": "#cbc5c2",
+              "inverse_surface": "#32302a",
+              "on_background": "#1d1c16",
+              "on_error": "#ffffff",
+              "on_error_container": "#93000a",
+              "on_primary": "#ffffff",
+              "on_primary_container": "#878380",
+              "on_primary_fixed": "#1d1b19",
+              "on_primary_fixed_variant": "#494643",
+              "on_secondary": "#ffffff",
+              "on_secondary_container": "#5c1400",
+              "on_secondary_fixed": "#3b0900",
+              "on_secondary_fixed_variant": "#872100",
+              "on_surface": "#1d1c16",
+              "on_surface_variant": "#4c4640",
+              "on_tertiary": "#ffffff",
+              "on_tertiary_container": "#8a8379",
+              "on_tertiary_fixed": "#1f1b14",
+              "on_tertiary_fixed_variant": "#4c463d",
+              "outline": "#7d766f",
+              "outline_variant": "#cec5bd",
+              "primary": "#000000",
+              "primary_container": "#1d1b19",
+              "primary_fixed": "#e8e1dd",
+              "primary_fixed_dim": "#cbc5c2",
+              "secondary": "#b02e00",
+              "secondary_container": "#ff6335",
+              "secondary_fixed": "#ffdbd1",
+              "secondary_fixed_dim": "#ffb5a0",
+              "surface": "#fef9f0",
+              "surface_bright": "#fef9f0",
+              "surface_container": "#f2ede4",
+              "surface_container_high": "#ece8df",
+              "surface_container_highest": "#e7e2d9",
+              "surface_container_low": "#f8f3ea",
+              "surface_container_lowest": "#ffffff",
+              "surface_dim": "#ded9d1",
+              "surface_tint": "#615e5b",
+              "surface_variant": "#e7e2d9",
+              "tertiary": "#000000",
+              "tertiary_container": "#1f1b14",
+              "tertiary_fixed": "#ebe1d5",
+              "tertiary_fixed_dim": "#cec5ba"
+            },
+            "overrideNeutralColor": "#f4efe6",
+            "overridePrimaryColor": "#141210",
+            "overrideSecondaryColor": "#d9481b",
+            "overrideTertiaryColor": "#5b554c",
+            "spacing": {
+              "gutter": "1.5rem",
+              "gutter-mobile": "1rem",
+              "margin": "3rem",
+              "margin-mobile": "1.25rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              "space-sm": "0.5rem",
+              "space-xl": "2.5rem",
+              "space-xs": "0.25rem"
+            },
+            "spacingScale": 2,
+            "typography": {
+              "body-lg": {
+                "fontFamily": "Newsreader",
+                "fontSize": "19px",
+                "fontWeight": "400",
+                "lineHeight": "30px"
+              },
+              "body-md": {
+                "fontFamily": "Newsreader",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "lineHeight": "26px"
+              },
+              "caption": {
+                "fontFamily": "Inter",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "lineHeight": "18px"
+              },
+              "display-lg": {
+                "fontFamily": "Newsreader",
+                "fontSize": "40px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.015em",
+                "lineHeight": "48px"
+              },
+              "display-lg-mobile": {
+                "fontFamily": "Newsreader",
+                "fontSize": "30px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.01em",
+                "lineHeight": "36px"
+              },
+              "display-xl": {
+                "fontFamily": "Newsreader",
+                "fontSize": "56px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.02em",
+                "lineHeight": "64px"
+              },
+              "display-xl-mobile": {
+                "fontFamily": "Newsreader",
+                "fontSize": "38px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.015em",
+                "lineHeight": "44px"
+              },
+              "headline-md": {
+                "fontFamily": "Newsreader",
+                "fontSize": "26px",
+                "fontWeight": "500",
+                "letterSpacing": "-0.01em",
+                "lineHeight": "32px"
+              },
+              "headline-sm": {
+                "fontFamily": "Newsreader",
+                "fontSize": "20px",
+                "fontWeight": "500",
+                "lineHeight": "28px"
+              },
+              "label-caps": {
+                "fontFamily": "Inter",
+                "fontSize": "11px",
+                "fontWeight": "600",
+                "letterSpacing": "0.12em",
+                "lineHeight": "16px"
+              },
+              "label-mono": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "letterSpacing": "0.02em",
+                "lineHeight": "18px"
+              }
+            }
+          }
+        },
+        "name": "assets/8ab9f7c772504d4b9204fbc39751b2c4",
+        "version": "1"
+      }
+    },
+    {
+      "design": {
+        "screens": [
+          {
+            "designSystem": {
+              "designSystem": {
+                "displayName": "Literary Broadsheet",
+                "styleGuidelines": "## Brand & Style\n\nThis design system draws direct inspiration from high-grade literary front matter, classical typography, and traditional broadsheet journalism. Created for a distinguished Turkish publishing house's intelligent literary portal, the system balances intellectual gravitas with rigorous digital utility.\n\nThe aesthetic rejects modern software homogenization—dispensing entirely with rounded corners, synthetic drop shadows, floating cards, and colored surface fills. Hierarchy and architectural order are achieved strictly through master typesetting, deliberate hairline dividers, structured margins, and calibrated whitespace. The interface evokes the quiet authority of cold-set ink on heavy warm rag paper, treating machine intelligence not as a novelty, but as an erudite literary archivist and companion.\n\n## Layout & Spacing\n\nThe layout is built upon an editorial broadsheet grid:\n- **Desktop (>= 1024px)**: 12-column symmetrical layout bounded by a maximum width of `1360px`, framed by `margin: 3rem` margins and `gutter: 1.5rem` gutters. Columns are punctuated by 1px vertical `#D8D0C2` rules to maintain architectural rhythm.\n- **Tablet (768px – 1023px)**: 6-column grid with `2rem` margins. Sub-columns collapse into standard dual-pane broadsheet views.\n- **Mobile (< 768px)**: Single column with `1.25rem` horizontal margins. Vertical borders collapse into stacked horizontal hairlines.\n\nVertical rhythm adheres to a strict 4px/8px modular cadence. Whitespace is generous, functional, and uncrowded, recalling the margin proportions of Renaissance book printing (ratio of inner to outer margins).\n\n## Elevation & Depth\n\nThis design system enforces a zero-elevation paradigm. No drop shadows, ambient blurs, or tinted elevation layers may appear in the interface.\n\nDepth and spatial layering are produced through:\n- **Hairline Rules**: 1px borders in `#D8D0C2` or `#141210` defining cell boundaries and thematic partitions.\n- **Double Rules**: Traditional 3px double-hairline borders (1px solid ink, 1px space, 1px solid ink) used to indicate top-tier headers, major volume breaks, or primary document headers.\n- **Surface Inversion**: Hover and selection states never introduce elevation; they toggle crisp ink-to-paper reversals (e.g., deep ink surface with paper-toned text).\n\n## Components\n\n### Buttons\n- **Primary Action**: Solid `#141210` background, `#F4EFE6` text, 0px border radius, uppercase `Inter` label with letter spacing. Hover transitions to `#D9481B` vermilion background with instantaneous color shift (no easing lag).\n- **Secondary Action**: Transparent background, 1px solid `#141210` border, `#141210` text. Hover inverts the component (ink fill, paper text).\n- **Ghost / Text Action**: Pure text underlined by a 1px solid `#D8D0C2` rule, turning to `#D9481B` on hover.\n\n### Inputs & Chat Prompt Console\n- Rejects enclosed floating pills or rounded boxes.\n- Framed by a 1px `#141210` perimeter rule or bottom-only border.\n- Placeholder text set in italicized `Newsreader` (`#5B554C`).\n- Focus state is communicated via a double hairline rule or a 1px outline in `#D9481B`.\n\n### Lists & Article Indexing\n- Segmented exclusively with horizontal 1px `#D8D0C2` hairlines.\n- Each row includes a leading monospace index number (`001`, `002`), title in `Newsreader`, and right-aligned timestamp or author tag in uppercase `Inter`.\n\n### Cards & Content Containers\n- Zero surface tint variation and zero box shadows.\n- Delimited strictly by 1px `#D8D0C2` perimeter borders or flush gutter hairlines.\n- Header bars are demarcated by a 1px horizontal rule across the top of the container.\n\n### Checkboxes & Radios\n- Sharp 0px squares for checkboxes; sharp diamond (rotated square) or 0px concentric boxes for radio options.\n- 1px `#141210` border. Checked states feature a solid `#141210` or `#D9481B` inset block.\n\n### Tags & Chips\n- Crisp rectangular boundaries with 1px `#D8D0C2` rules.\n- Set in uppercase `label-caps` (`Inter`), no background fill. Active filter chips feature a solid `#141210` fill with `#F4EFE6` text.\n\n### Assistant Chat Turn Indicators\n- Query turns marked with a leading vermilion paragraph mark (`¶`) or block glyph in `#D9481B`.\n- System responses set in full-width editorial serif columns with bookish drop-caps for long-form answers.",
+                "theme": {
+                  "bodyFont": "NEWSREADER",
+                  "bodyFontFamily": "Newsreader",
+                  "colorMode": "LIGHT",
+                  "colorVariant": "FIDELITY",
+                  "customColor": "#141210",
+                  "designMd": "---\nname: Literary Broadsheet\ncolors:\n  surface: '#fef9f0'\n  surface-dim: '#ded9d1'\n  surface-bright: '#fef9f0'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f8f3ea'\n  surface-container: '#f2ede4'\n  surface-container-high: '#ece8df'\n  surface-container-highest: '#e7e2d9'\n  on-surface: '#1d1c16'\n  on-surface-variant: '#4c4640'\n  inverse-surface: '#32302a'\n  inverse-on-surface: '#f5f0e7'\n  outline: '#7d766f'\n  outline-variant: '#cec5bd'\n  surface-tint: '#615e5b'\n  primary: '#000000'\n  on-primary: '#ffffff'\n  primary-container: '#1d1b19'\n  on-primary-container: '#878380'\n  inverse-primary: '#cbc5c2'\n  secondary: '#b02e00'\n  on-secondary: '#ffffff'\n  secondary-container: '#ff6335'\n  on-secondary-container: '#5c1400'\n  tertiary: '#000000'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#1f1b14'\n  on-tertiary-container: '#8a8379'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#e8e1dd'\n  primary-fixed-dim: '#cbc5c2'\n  on-primary-fixed: '#1d1b19'\n  on-primary-fixed-variant: '#494643'\n  secondary-fixed: '#ffdbd1'\n  secondary-fixed-dim: '#ffb5a0'\n  on-secondary-fixed: '#3b0900'\n  on-secondary-fixed-variant: '#872100'\n  tertiary-fixed: '#ebe1d5'\n  tertiary-fixed-dim: '#cec5ba'\n  on-tertiary-fixed: '#1f1b14'\n  on-tertiary-fixed-variant: '#4c463d'\n  background: '#fef9f0'\n  on-background: '#1d1c16'\n  surface-variant: '#e7e2d9'\ntypography:\n  display-xl:\n    fontFamily: Newsreader\n    fontSize: 56px\n    fontWeight: '400'\n    lineHeight: 64px\n    letterSpacing: -0.02em\n  display-xl-mobile:\n    fontFamily: Newsreader\n    fontSize: 38px\n    fontWeight: '400'\n    lineHeight: 44px\n    letterSpacing: -0.015em\n  display-lg:\n    fontFamily: Newsreader\n    fontSize: 40px\n    fontWeight: '400'\n    lineHeight: 48px\n    letterSpacing: -0.015em\n  display-lg-mobile:\n    fontFamily: Newsreader\n    fontSize: 30px\n    fontWeight: '400'\n    lineHeight: 36px\n    letterSpacing: -0.01em\n  headline-md:\n    fontFamily: Newsreader\n    fontSize: 26px\n    fontWeight: '500'\n    lineHeight: 32px\n    letterSpacing: -0.01em\n  headline-sm:\n    fontFamily: Newsreader\n    fontSize: 20px\n    fontWeight: '500'\n    lineHeight: 28px\n  body-lg:\n    fontFamily: Newsreader\n    fontSize: 19px\n    fontWeight: '400'\n    lineHeight: 30px\n  body-md:\n    fontFamily: Newsreader\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 26px\n  label-caps:\n    fontFamily: Inter\n    fontSize: 11px\n    fontWeight: '600'\n    lineHeight: 16px\n    letterSpacing: 0.12em\n  label-mono:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 18px\n    letterSpacing: 0.02em\n  caption:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 18px\nspacing:\n  gutter: 1.5rem\n  gutter-mobile: 1rem\n  margin: 3rem\n  margin-mobile: 1.25rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2.5rem\n---\n\n## Brand & Style\n\nThis design system draws direct inspiration from high-grade literary front matter, classical typography, and traditional broadsheet journalism. Created for a distinguished Turkish publishing house's intelligent literary portal, the system balances intellectual gravitas with rigorous digital utility.\n\nThe aesthetic rejects modern software homogenization—dispensing entirely with rounded corners, synthetic drop shadows, floating cards, and colored surface fills. Hierarchy and architectural order are achieved strictly through master typesetting, deliberate hairline dividers, structured margins, and calibrated whitespace. The interface evokes the quiet authority of cold-set ink on heavy warm rag paper, treating machine intelligence not as a novelty, but as an erudite literary archivist and companion.\n\n## Colors\n\nThe palette is restrained to historical print materials:\n- **Base Surface (`#F4EFE6`)**: Unbleached rag paper, providing a warm, glare-free optical ground.\n- **Deep Ink (`#141210`)**: The primary ink tone for body prose, key titling, and dominant structural rules.\n- **Vermilion Accent (`#D9481B`)**: An exacting, historic red-orange reserved exclusively for singular points of emphasis, active prompt indicators, editorial markers, and critical actions. Never used as broad fills.\n- **Secondary Ink (`#5B554C`)**: Aged graphite for metadata, secondary summaries, bylines, and timestamps.\n- **Hairline Rule (`#D8D0C2`)**: Delicate, structural border color simulating blind embossing or crisp paper column divisions.\n\n## Typography\n\nThe typography strategy leverages three deliberate voices:\n1. **The Literary Voice (`Newsreader`)**: Drives all headlines, section heads, longform assistant output, and editorial citations. Display weights utilize optical sizing with classical italics for author names, epigraphs, and volume attributions.\n2. **The Structural Label (`Inter`)**: Set strictly in uppercase with wide tracking (`0.12em`) for navigation, indices, field headers, and classification tags. Provides stark modernist contrast to the serif body.\n3. **The Mechanical Scribe (`JetBrains Mono`)**: Handles timestamps, citation indices, token telemetry, indexing IDs, and raw manuscript parameters.\n\n## Layout & Spacing\n\nThe layout is built upon an editorial broadsheet grid:\n- **Desktop (>= 1024px)**: 12-column symmetrical layout bounded by a maximum width of `1360px`, framed by `margin: 3rem` margins and `gutter: 1.5rem` gutters. Columns are punctuated by 1px vertical `#D8D0C2` rules to maintain architectural rhythm.\n- **Tablet (768px – 1023px)**: 6-column grid with `2rem` margins. Sub-columns collapse into standard dual-pane broadsheet views.\n- **Mobile (< 768px)**: Single column with `1.25rem` horizontal margins. Vertical borders collapse into stacked horizontal hairlines.\n\nVertical rhythm adheres to a strict 4px/8px modular cadence. Whitespace is generous, functional, and uncrowded, recalling the margin proportions of Renaissance book printing (ratio of inner to outer margins).\n\n## Elevation & Depth\n\nThis design system enforces a zero-elevation paradigm. No drop shadows, ambient blurs, or tinted elevation layers may appear in the interface.\n\nDepth and spatial layering are produced through:\n- **Hairline Rules**: 1px borders in `#D8D0C2` or `#141210` defining cell boundaries and thematic partitions.\n- **Double Rules**: Traditional 3px double-hairline borders (1px solid ink, 1px space, 1px solid ink) used to indicate top-tier headers, major volume breaks, or primary document headers.\n- **Surface Inversion**: Hover and selection states never introduce elevation; they toggle crisp ink-to-paper reversals (e.g., deep ink surface with paper-toned text).\n\n## Shapes\n\nThe geometric rule is absolute: `border-radius: 0px` across all elements without exception. \n\nButtons, search inputs, dialog containers, notification ribbons, and context menus retain razor-sharp 90-degree corners. This pure rectangular geometry reinforces the physical reality of trimmed paper, broadsheet newsprint, and bookmaker binding.\n\n## Components\n\n### Buttons\n- **Primary Action**: Solid `#141210` background, `#F4EFE6` text, 0px border radius, uppercase `Inter` label with letter spacing. Hover transitions to `#D9481B` vermilion background with instantaneous color shift (no easing lag).\n- **Secondary Action**: Transparent background, 1px solid `#141210` border, `#141210` text. Hover inverts the component (ink fill, paper text).\n- **Ghost / Text Action**: Pure text underlined by a 1px solid `#D8D0C2` rule, turning to `#D9481B` on hover.\n\n### Inputs & Chat Prompt Console\n- Rejects enclosed floating pills or rounded boxes.\n- Framed by a 1px `#141210` perimeter rule or bottom-only border.\n- Placeholder text set in italicized `Newsreader` (`#5B554C`).\n- Focus state is communicated via a double hairline rule or a 1px outline in `#D9481B`.\n\n### Lists & Article Indexing\n- Segmented exclusively with horizontal 1px `#D8D0C2` hairlines.\n- Each row includes a leading monospace index number (`001`, `002`), title in `Newsreader`, and right-aligned timestamp or author tag in uppercase `Inter`.\n\n### Cards & Content Containers\n- Zero surface tint variation and zero box shadows.\n- Delimited strictly by 1px `#D8D0C2` perimeter borders or flush gutter hairlines.\n- Header bars are demarcated by a 1px horizontal rule across the top of the container.\n\n### Checkboxes & Radios\n- Sharp 0px squares for checkboxes; sharp diamond (rotated square) or 0px concentric boxes for radio options.\n- 1px `#141210` border. Checked states feature a solid `#141210` or `#D9481B` inset block.\n\n### Tags & Chips\n- Crisp rectangular boundaries with 1px `#D8D0C2` rules.\n- Set in uppercase `label-caps` (`Inter`), no background fill. Active filter chips feature a solid `#141210` fill with `#F4EFE6` text.\n\n### Assistant Chat Turn Indicators\n- Query turns marked with a leading vermilion paragraph mark (`¶`) or block glyph in `#D9481B`.\n- System responses set in full-width editorial serif columns with bookish drop-caps for long-form answers.",
+                  "font": "NEWSREADER",
+                  "headlineFont": "NEWSREADER",
+                  "headlineFontFamily": "Newsreader",
+                  "labelFont": "INTER",
+                  "labelFontFamily": "Inter",
+                  "namedColors": {
+                    "background": "#fef9f0",
+                    "error": "#ba1a1a",
+                    "error_container": "#ffdad6",
+                    "inverse_on_surface": "#f5f0e7",
+                    "inverse_primary": "#cbc5c2",
+                    "inverse_surface": "#32302a",
+                    "on_background": "#1d1c16",
+                    "on_error": "#ffffff",
+                    "on_error_container": "#93000a",
+                    "on_primary": "#ffffff",
+                    "on_primary_container": "#878380",
+                    "on_primary_fixed": "#1d1b19",
+                    "on_primary_fixed_variant": "#494643",
+                    "on_secondary": "#ffffff",
+                    "on_secondary_container": "#5c1400",
+                    "on_secondary_fixed": "#3b0900",
+                    "on_secondary_fixed_variant": "#872100",
+                    "on_surface": "#1d1c16",
+                    "on_surface_variant": "#4c4640",
+                    "on_tertiary": "#ffffff",
+                    "on_tertiary_container": "#8a8379",
+                    "on_tertiary_fixed": "#1f1b14",
+                    "on_tertiary_fixed_variant": "#4c463d",
+                    "outline": "#7d766f",
+                    "outline_variant": "#cec5bd",
+                    "primary": "#000000",
+                    "primary_container": "#1d1b19",
+                    "primary_fixed": "#e8e1dd",
+                    "primary_fixed_dim": "#cbc5c2",
+                    "secondary": "#b02e00",
+                    "secondary_container": "#ff6335",
+                    "secondary_fixed": "#ffdbd1",
+                    "secondary_fixed_dim": "#ffb5a0",
+                    "surface": "#fef9f0",
+                    "surface_bright": "#fef9f0",
+                    "surface_container": "#f2ede4",
+                    "surface_container_high": "#ece8df",
+                    "surface_container_highest": "#e7e2d9",
+                    "surface_container_low": "#f8f3ea",
+                    "surface_container_lowest": "#ffffff",
+                    "surface_dim": "#ded9d1",
+                    "surface_tint": "#615e5b",
+                    "surface_variant": "#e7e2d9",
+                    "tertiary": "#000000",
+                    "tertiary_container": "#1f1b14",
+                    "tertiary_fixed": "#ebe1d5",
+                    "tertiary_fixed_dim": "#cec5ba"
+                  },
+                  "overrideNeutralColor": "#f4efe6",
+                  "overridePrimaryColor": "#141210",
+                  "overrideSecondaryColor": "#d9481b",
+                  "overrideTertiaryColor": "#5b554c",
+                  "spacing": {
+                    "gutter": "1.5rem",
+                    "gutter-mobile": "1rem",
+                    "margin": "3rem",
+                    "margin-mobile": "1.25rem",
+                    "space-lg": "1.5rem",
+                    "space-md": "1rem",
+                    "space-sm": "0.5rem",
+                    "space-xl": "2.5rem",
+                    "space-xs": "0.25rem"
+                  },
+                  "spacingScale": 2,
+                  "typography": {
+                    "body-lg": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "19px",
+                      "fontWeight": "400",
+                      "lineHeight": "30px"
+                    },
+                    "body-md": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "26px"
+                    },
+                    "caption": {
+                      "fontFamily": "Inter",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "lineHeight": "18px"
+                    },
+                    "display-lg": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "40px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.015em",
+                      "lineHeight": "48px"
+                    },
+                    "display-lg-mobile": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "30px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.01em",
+                      "lineHeight": "36px"
+                    },
+                    "display-xl": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "56px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.02em",
+                      "lineHeight": "64px"
+                    },
+                    "display-xl-mobile": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "38px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.015em",
+                      "lineHeight": "44px"
+                    },
+                    "headline-md": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "26px",
+                      "fontWeight": "500",
+                      "letterSpacing": "-0.01em",
+                      "lineHeight": "32px"
+                    },
+                    "headline-sm": {
+                      "fontFamily": "Newsreader",
+                      "fontSize": "20px",
+                      "fontWeight": "500",
+                      "lineHeight": "28px"
+                    },
+                    "label-caps": {
+                      "fontFamily": "Inter",
+                      "fontSize": "11px",
+                      "fontWeight": "600",
+                      "letterSpacing": "0.12em",
+                      "lineHeight": "16px"
+                    },
+                    "label-mono": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "letterSpacing": "0.02em",
+                      "lineHeight": "18px"
+                    }
+                  }
+                }
+              },
+              "name": "assets/8ab9f7c772504d4b9204fbc39751b2c4",
+              "version": "1"
+            },
+            "deviceType": "DESKTOP",
+            "generatedBy": "figaro_agent",
+            "height": "5006",
+            "htmlCode": {
+              "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzY5YmZlZTk4YTM0ZjRkMzQ5NWU2NTNmMDhjZTM0YjM4EgsSBxDVsMz74wUYAZIBJAoKcHJvamVjdF9pZBIWQhQxMzQyNjgzOTg2MTYwNzI2NTU1Mw&filename=&opi=96797242",
+              "mimeType": "text/html",
+              "name": "projects/13426839861607265553/files/dd2847cd4be04ebe99cd1d3f9f596486"
+            },
+            "id": "c75f37af737c46e69f58eb635f8d2590",
+            "name": "projects/13426839861607265553/screens/c75f37af737c46e69f58eb635f8d2590",
+            "prompt": "Create a LIGHT, editorial, typographic 'print broadsheet' home screen for a publishing house's AI portal (Timaş Yayınları × NanobaseAI, AI assistant 'ZEKİ AI').\n\nAESTHETIC & VIBE:\n- Financial Times × Penguin Classics title page × Swiss typographic grid.\n- NO cards with drop shadows, NO rounded corners (rounded-none everywhere), NO heavy colored block fills. \n- Hierarchy established strictly through serif typography, hairline rules (border-b border-[#D8D0C2]), generous whitespace, and optical alignment.\n- Color Palette: Warm paper background #F4EFE6 (bg-[#F4EFE6]), deep ink text #141210 (text-[#141210]), secondary ink #5B554C (text-[#5B554C]), hairlines #D8D0C2 (border-[#D8D0C2]), ONE accent vermilion #D9481B (text-[#D9481B], border-[#D9481B]) used sparingly.\n- Typography: High-elegance serif display (Newsreader/Playfair font) for headlines and big numbers; clean sans (Inter) in uppercase letter-spaced captions (tracking-widest text-[11px] font-medium uppercase); monospace for tiny metadata and ISBNs.\n\nCONTAINER & MARGINS:\n- Max-width 1440px centered, with 64px padding on left and right (px-16).\n\nSTRUCTURE & SECTIONS:\n\n1. TOP MASTHEAD:\n- Top hairline rule.\n- Header row with 3 columns:\n  - Left: uppercase letter-spaced small caps \"NANOBASEAI · TİMAŞ YAYINLARI\" with a subtle dot.\n  - Center: Monumental literary serif masthead \"Yayın Bülteni\" (font-serif text-5xl md:text-6xl tracking-tight text-[#141210]).\n  - Right: Metadata \"Sayı 214 · 10 Eylül 2026 · Sabah 07:40 · ZEKİ AI tarafından derlendi\".\n- Under the masthead, a horizontal thin nav row of 10 modules formatted as clean underlined text links with hover transitions:\n  \"Verine Sor · Satış & Dağıtım · Stok & Baskı · Telif & Yazarlar · Editoryal Dosyalar · Kapak & Pazarlama · Talep Tahmini · İade & Sevkiyat · Katalog · Uyarılar\".\n- Under the nav, an authentic newspaper double hairline rule (border-t border-b border-[#D8D0C2] h-1.5 my-4).\n\n2. ASK BAR (TYPEWRITER STYLE):\n- Full-width typewriter-style input container: A clean text field with warm paper background, zero border except a crisp vermilion bottom border (border-b-2 border-[#D9481B]).\n- Placeholder / text: \"ZEKİ'ye bir soru yazın… (örn. 'Ekim ayında hangi kitaplar yeniden baskıya girmeli?')\" with a small serif italic action \"Sor →\" on the right in vermilion.\n- Directly below it, 3 italic clickable suggestions:\n  - \"« Kayıp Atlas'ın stok projeksiyonu ve bölgesel tükeniş hızları »\"\n  - \"« Pazaryerlerindeki %14,2 iade oranının başlık bazlı dağılımı »\"\n  - \"« Elif Aydın telif eşiği simülasyonu (20.000 adet senaryosu) »\"\n\n3. LEAD STORY (3-COLUMN GRID with 32px gutters):\n- Column 1 & 2 (Wide, col-span-2 border-r border-[#D8D0C2] pr-8):\n  - Giant serif headline (~56px-64px): \"Satışlar yüzde on sekiz büyüdü; iadeler baskı yaratıyor.\"\n  - Deck paragraph in serif 20px leading-relaxed italic text-[#5B554C]: \"Eylül ayında net ciro ₺12,8 milyona ulaşarak yıllık bazda %18,4 genişleme kaydetti; ancak online pazaryerlerinde artan iade hacmi lojistik birimlerindeki operasyonel yükü artırıyor.\"\n  - Byline: \"ZEKİ AI · Genel Yayın Yönetmeni Emre Berk için hazırlandı\" (uppercase tracked monospace/sans).\n  - Large INK line chart \"12 aylık net satış\": An exquisite SVG broadsheet line chart with clean hairline grid axes, past months in solid ink black (#141210), and the future forecast segment drawn as a dotted vermilion line (#D9481B) labeled with an annotated vermilion marker \"Tahmin (+%31)\".\n  - Two-column running newspaper text below the chart with real paragraphs incorporating AI insights:\n    - Paragraph 1: \"Kayıp Atlas'ın stoğu 9 günde tükenecek; talep tahmini Ekim'de +%31. 6.000 adet yeniden baskı öneriyorum. Dağıtım kanallarında hızla azalan stok seviyeleri özellikle okul sezonu açılışıyla kritik eşiğin altına indi.\"\n    - Pull quote (spanning both columns or full width of this section): A massive italic serif quote with a solid 3px vermilion left border (#D9481B) and generous pl-6: \"« Online pazaryeri iadeleri %14,2 ile hedefin üstünde; 3 başlık iadenin %61'ini oluşturuyor. »\"\n    - Paragraph 2: \"Elif Aydın'ın Eylül telif hakedişi ₺212.400; sözleşmedeki kademe eşiği 15.000 adette aşıldı. Edebiyat dizisindeki güçlü ivme, yazar sözleşmelerindeki ikinci basamak baremlerini erkene çekti.\"\n\n- Column 3 (Narrow, col-span-1 pl-8):\n  - Section header: \"Rakamlarla Eylül\" (Serif bold 22px with a hairline bottom rule).\n  - A serif data table with hairline row dividers:\n    - Net Satış: ₺12,8 Mn (+%18,4)\n    - Satılan Adet: 184.320\n    - Aktif Başlık: 2.146 ISBN\n    - İade Oranı: %11,3 (Hedef %10 — vermilion text #D9481B)\n    - Telif Tahakkuku: ₺1,9 Mn\n    - Yeniden Baskı Bekleyen: 14 Başlık\n    - Editoryal Kuyruk: 37 / 22 Dosya\n  - Engraved Portrait Slot: Exactly one 160x140 px container with id=\"brand-motion-slot\" framed like an engraved classical broadsheet woodcut / etching illustration with a thin ink border and corner accents, featuring an abstract geometric vector art representation of ZEKİ AI, with a caption underneath: \"ZEKİ AI, yayın asistanı (v3.4)\".\n  - A small AI alert box below: \"Acil Eylem: Matbaa kotası için 4 başlığın onay beklediği tespit edildi.\"\n\n4. SECTION \"Bölümler\" (Fihrist / Table of Contents style, full width with top/bottom hairline borders):\n- Styled like a classic book's table of contents across 5 columns:\n  - Entry I: \"Stok & Baskı\" — \"14 başlık yeniden baskı bekliyor; Kayıp Atlas 9 gün.\" ............. s. 04\n  - Entry II: \"Telif & Yazarlar\" — \"Elif Aydın ve Kerem Yalçın barem aşımları hesaplandı.\" ............. s. 08\n  - Entry III: \"Editoryal Dosyalar\" — \"37 başvurudan 22'sinin AI ön okuması tamamlandı.\" ............. s. 12\n  - Entry IV: \"Kapak & Pazarlama\" — \"Ekim vitrini için 6 yeni tipografik kapak hazırlandı.\" ............. s. 16\n  - Entry V: \"Talep Tahmini\" — \"Çocuk dizisinde mevsimsel talep sıçraması: +%31.\" ............. s. 20\n- Authentic dotted leader lines connecting title/description to page numbers.\n\n5. SECTION \"Kısa Kısa\" (Editorial Briefs with Ink Sparklines):\n- 4-column row with vertical hairline dividers between them:\n  - 1. \"Zincir Kitabevleri\": 42.100 adet sevkiyat tamamlandı, stok çevrim hızı 1,4 ay. (With inline SVG ink sparkline)\n  - 2. \"Bağımsız Kitabevleri\": Anadolu dağıtımında %9 artış, özel basım talepleri yükseliyor. (With inline SVG ink sparkline)\n  - 3. \"Katalog & ISBN\": 18 yeni telif tescili onaylandı, bandrol teslimi yarın. (With inline SVG ink sparkline)\n  - 4. \"İade Analizi\": Pazaryerlerinde kargo kaynaklı hasar oranı %2,8'e geriledi. (With inline SVG ink sparkline)\n\n6. SECTION \"Vitrin\" (Typographic Book Covers Showcase):\n- Header: \"Vitrin — Haftanın Öne Çıkan Başlıkları\" with a hairline divider.\n- A horizontal grid of 6 distinct typographic book cover placeholders (aspect-ratio ~ 2/3), designed with master broadsheet typography, ink borders, warm paper background tones, serif titles, author names, imprint badge, and a subtle vermilion rule:\n  1. \"Sessiz Harfler\" · Kerem Yalçın · Edebiyat Dizisi · Haftalık: 4.820 adet\n  2. \"Kayıp Atlas\" · Selin Kara · Çocuk Dizisi · Haftalık: 6.400 adet (Stok kritik)\n  3. \"Zihin Haritaları\" · Dr. Ayşe Tunç · Kişisel Gelişim · Haftalık: 3.150 adet\n  4. \"Denizin Altındaki Şehir\" · Murat Dağ · Çocuk Dizisi · Haftalık: 2.900 adet\n  5. \"Bir Fincan Sabah\" · Elif Aydın · Deneme · Haftalık: 5.120 adet\n  6. \"Zamanın İzinde\" · Mehmet Kaya · Tarih Dizisi · Haftalık: 1.840 adet\n- Under each cover: title in serif, author, imprint, and weekly sales count with old-style figures.\n\n7. FOOTER:\n- Delicate broadsheet footer with hairline top rule.\n- \"Tüm rakamlar örnek veridir · NanobaseAI · Timaş Yayınları Editoryal Zekâ Portalı · 1953'ten bugüne matbuat geleneği.\"\n- Precision typesetting, optical alignment, generous leading, and authentic literary print dignity throughout.",
+            "screenMetadata": {
+              "agentType": "PRO_AGENT",
+              "status": "COMPLETE"
+            },
+            "screenType": "DESIGN",
+            "screenshot": {
+              "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XSoy-rkMAN_jvz3Hd825dDQQ3Ntc8aA25u5gJUQ_aanGE4TZRb6r6cVxfsd7yu35RX7FfCrEdG9kCj5nvMQAg8GA9wpdTxATagwptftlF_zOp-Zvv4pAO10vuqBLc4u6_vHcAGxx-mxUtu4JIqmfAiupJYd5RjEVolMYtYj4HKQsBEoaXeIkW-7oDRWxg3-OSYC6-3oyf6GDVxHzwCKfXzgIWLVm6bcg17xgu5pTFDTi38wPVqJR3yJIk",
+              "name": "projects/13426839861607265553/files/afbb231242d448f49a5502ceb908874a"
+            },
+            "theme": {
+              "bodyFont": "NEWSREADER",
+              "bodyFontFamily": "Newsreader",
+              "colorMode": "LIGHT",
+              "colorVariant": "FIDELITY",
+              "customColor": "#141210",
+              "font": "NEWSREADER",
+              "headlineFont": "NEWSREADER",
+              "headlineFontFamily": "Newsreader",
+              "labelFont": "INTER",
+              "labelFontFamily": "Inter",
+              "namedColors": {
+                "background": "#fef9f0",
+                "error": "#ba1a1a",
+                "error_container": "#ffdad6",
+                "inverse_on_surface": "#f5f0e7",
+                "inverse_primary": "#cbc5c2",
+                "inverse_surface": "#32302a",
+                "on_background": "#1d1c16",
+                "on_error": "#ffffff",
+                "on_error_container": "#93000a",
+                "on_primary": "#ffffff",
+                "on_primary_container": "#878380",
+                "on_primary_fixed": "#1d1b19",
+                "on_primary_fixed_variant": "#494643",
+                "on_secondary": "#ffffff",
+                "on_secondary_container": "#5c1400",
+                "on_secondary_fixed": "#3b0900",
+                "on_secondary_fixed_variant": "#872100",
+                "on_surface": "#1d1c16",
+                "on_surface_variant": "#4c4640",
+                "on_tertiary": "#ffffff",
+                "on_tertiary_container": "#8a8379",
+                "on_tertiary_fixed": "#1f1b14",
+                "on_tertiary_fixed_variant": "#4c463d",
+                "outline": "#7d766f",
+                "outline_variant": "#cec5bd",
+                "primary": "#000000",
+                "primary_container": "#1d1b19",
+                "primary_fixed": "#e8e1dd",
+                "primary_fixed_dim": "#cbc5c2",
+                "secondary": "#b02e00",
+                "secondary_container": "#ff6335",
+                "secondary_fixed": "#ffdbd1",
+                "secondary_fixed_dim": "#ffb5a0",
+                "surface": "#fef9f0",
+                "surface_bright": "#fef9f0",
+                "surface_container": "#f2ede4",
+                "surface_container_high": "#ece8df",
+                "surface_container_highest": "#e7e2d9",
+                "surface_container_low": "#f8f3ea",
+                "surface_container_lowest": "#ffffff",
+                "surface_dim": "#ded9d1",
+                "surface_tint": "#615e5b",
+                "surface_variant": "#e7e2d9",
+                "tertiary": "#000000",
+                "tertiary_container": "#1f1b14",
+                "tertiary_fixed": "#ebe1d5",
+                "tertiary_fixed_dim": "#cec5ba"
+              },
+              "overrideNeutralColor": "#f4efe6",
+              "overridePrimaryColor": "#141210",
+              "overrideSecondaryColor": "#d9481b",
+              "overrideTertiaryColor": "#5b554c",
+              "spacing": {
+                "gutter": "1.5rem",
+                "gutter-mobile": "1rem",
+                "margin": "3rem",
+                "margin-mobile": "1.25rem",
+                "space-lg": "1.5rem",
+                "space-md": "1rem",
+                "space-sm": "0.5rem",
+                "space-xl": "2.5rem",
+                "space-xs": "0.25rem"
+              },
+              "spacingScale": 2,
+              "typography": {
+                "body-lg": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "19px",
+                  "fontWeight": "400",
+                  "lineHeight": "30px"
+                },
+                "body-md": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "lineHeight": "26px"
+                },
+                "caption": {
+                  "fontFamily": "Inter",
+                  "fontSize": "12px",
+                  "fontWeight": "400",
+                  "lineHeight": "18px"
+                },
+                "display-lg": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "40px",
+                  "fontWeight": "400",
+                  "letterSpacing": "-0.015em",
+                  "lineHeight": "48px"
+                },
+                "display-lg-mobile": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "30px",
+                  "fontWeight": "400",
+                  "letterSpacing": "-0.01em",
+                  "lineHeight": "36px"
+                },
+                "display-xl": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "56px",
+                  "fontWeight": "400",
+                  "letterSpacing": "-0.02em",
+                  "lineHeight": "64px"
+                },
+                "display-xl-mobile": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "38px",
+                  "fontWeight": "400",
+                  "letterSpacing": "-0.015em",
+                  "lineHeight": "44px"
+                },
+                "headline-md": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "26px",
+                  "fontWeight": "500",
+                  "letterSpacing": "-0.01em",
+                  "lineHeight": "32px"
+                },
+                "headline-sm": {
+                  "fontFamily": "Newsreader",
+                  "fontSize": "20px",
+                  "fontWeight": "500",
+                  "lineHeight": "28px"
+                },
+                "label-caps": {
+                  "fontFamily": "Inter",
+                  "fontSize": "11px",
+                  "fontWeight": "600",
+                  "letterSpacing": "0.12em",
+                  "lineHeight": "16px"
+                },
+                "label-mono": {
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "12px",
+                  "fontWeight": "400",
+                  "letterSpacing": "0.02em",
+                  "lineHeight": "18px"
+                }
+              }
+            },
+            "title": "Yayın Bülteni — Timaş & ZEKİ AI",
+            "width": "2560"
+          }
+        ],
+        "theme": {}
+      }
+    },
+    {
+      "text": "Timaş Yayınları & NanobaseAI iş birliği için editoryal gazete ve Penguin Classics title page estetiğinde **\"Yayın Bülteni\"** ana sayfası tasarlandı:\n\n### Tasarım ve Tipografi Kararları:\n1. **Editoryal Baskı Estetiği (Broadsheet):**\n   - Sıcak kağıt fonu (`#F4EFE6`), derin mürekkep metinler (`#141210`), ikincil mürekkep (`#5B554C`) ve zarif saç çizgisi ayraçlar (`#D8D0C2`) kullanıldı.\n   - Gölge efektli kartlar ve yuvarlatılmış köşeler tamamen elendi; hiyerarşi klasik mizanpaj, serif başlıklar ve orantılı beyaz alan ritmi ile sağlandı.\n   - Tek bir vermilion (`#D9481B`) vurgusu; projeksiyon çizgilerinde, ZEKİ AI işaretlerinde ve kritik oran göstergelerinde ölçülü şekilde yer aldı.\n\n2. **Bileşenler ve Bölüm Hiyerarşisi:**\n   - **Klasik Gazete Masthead'i:** Timaş Yayınları & NanobaseAI künyesi, büyük serif gazete başlığı (\"Yayın Bülteni\"), bülten sayısı ve derleme künyesi ile 10 modüllü alt çizili navigasyon satırı ve çift saç çizgisi.\n   - **Daktilo Usulü \"Verine Sor\" Çubuğu:** Sadece vermilion alt çizgisi olan minimalist arama satırı ve ZEKİ AI için 3 adet tıklanabilir editoryal sorgu önerisi.\n   - **Manşet & Analiz (3 Sütunlu Izgara):** \n     - 64px serif manşet ve Emre Berk için hazırlanan AI bülten paragrafı.\n     - 12 aylık mürekkep satış grafiği ve vermilion noktalı \"Tahmin (+%31)\" projeksiyonu.\n     - Çift sütunlu akan metin, vermilion sol kenarlıklı geniş çekme alıntı (pull quote) ve telif/stok içgörüleri.\n     - Sağ kolonda *\"Rakamlarla Eylül\"* tablosu, gravür çerçeveli `brand-motion-slot` ZEKİ AI portresi ve matbaa kotası uyarısı.\n   - **Bölümler (Fihrist / İçindekiler):** Kitap içindekiler sayfası düzeninde, romen rakamlı, noktalı bağlama çizgili (dotted leader line) 5 modül özeti.\n   - **Kısa Kısa Matbuat Havadisi:** 4 dağıtım kanalının inline mürekkep sparkline çizgileriyle hızlı operasyonel nabzı.\n   - **Vitrin:** Tipografik kapak tasarımları (Sessiz Harfler, Kayıp Atlas, Zihin Haritaları, Denizin Altındaki Şehir, Bir Fincan Sabah, Zamanın İzinde) ve haftalık tiraj verileri.\n   - **Klasik Altbilgi:** \"Örnek veri\" ve tescil notları içeren tipografik mizanpaj."
+    },
+    {
+      "suggestion": "ZEKİ AI Verine Sor çubuğuna tıklandığında açılan editoryal yanıt katmanını tasarla"
+    },
+    {
+      "suggestion": "Stok & Baskı modülü için detaylı yeniden baskı simülasyon ekranını oluştur"
+    },
+    {
+      "suggestion": "Vitrin'deki kitap kapaklarının üzerine gelince açılan editoryal karne penceresini ekle"
+    }
+  ],
+  "projectId": "13426839861607265553",
+  "sessionId": "9639736367705803589"
+}

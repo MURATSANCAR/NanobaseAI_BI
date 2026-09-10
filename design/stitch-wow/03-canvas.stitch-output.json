@@ -1,0 +1,49 @@
+{
+  "outputComponents": [
+    {
+      "design": {
+        "screens": [
+          {
+            "deviceType": "DESKTOP",
+            "generatedBy": "create_datastore_entry",
+            "height": "2048",
+            "htmlCode": {
+              "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzUxMGY3ZjNiZjQ0MTQwZGFhOTg5MjU5MDI2YzRiYWFiEgsSBxDVsMz74wUYAZIBJAoKcHJvamVjdF9pZBIWQhQxMzQyNjgzOTg2MTYwNzI2NTU1Mw&filename=&opi=96797242",
+              "mimeType": "text/html",
+              "name": "projects/13426839861607265553/files/e69c3b013ffe4b75bdd65af9046fcc2a"
+            },
+            "id": "c35e15036da4447987454f3d130dc5b0",
+            "name": "projects/13426839861607265553/screens/c35e15036da4447987454f3d130dc5b0",
+            "screenMetadata": {
+              "agentType": "PRO_AGENT",
+              "status": "COMPLETE"
+            },
+            "screenType": "DESIGN",
+            "screenshot": {
+              "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1XJuFS4R7rOsSVkDh7IbQJ0otk6teDzQUwPuH9Ib0VnXn9RoGlkiWVjWjkaNmD-vJuOM-_O2hU7lXisU91qFjKAAB-TUM-nQ1D16259B3iB2VNT1x31jOEayUsYGrvl6mXiCl0b2pE_KNiE7ZJ_YiiqLTfC91uPEEMPdtVhB4pY1r3SRf3M0xIiXJDAS0YheZcFng-l0veSkzXxylLYt7W1vD1kjQsRotjquWHxWlNNDp7b5Mg45tyt5nBk",
+              "name": "projects/13426839861607265553/files/f7e5274b841040a4978198d08b4e7062"
+            },
+            "theme": {},
+            "title": "Timaş Yayınları - ZEKİ AI Tuvali",
+            "width": "2880"
+          }
+        ],
+        "theme": {}
+      }
+    },
+    {
+      "text": "**Timaş Yayınları için ZEKİ AI uzamsal \"sonsuz tuval\" (infinite canvas) deneyimi tasarlandı.**\n\n### Tasarım ve Mimari Tercihler:\n1. **Atmosfer & Estetik (Arc × tldraw × Apple Vision Pro):**\n   - **Arka Plan:** Şeftali (`#FFE8D6`), açık gökyüzü (`#DDEBFF`) ve nane ferahlığı (`#E3FFF1`) tonlarında yumuşak bir mesh gradyan üzerine 24px aralıklı mikro nokta kılavuz ızgarası (dot grid).\n   - **Cam Morfizmi & Derinlik:** Çok katmanlı `backdrop-blur`, 24px köşe yuvarlatmaları ve derin gölgeler (`0 20px 60px rgba(20,30,60,0.12)`).\n\n2. **Düşünce Haritası & Takımyıldızı (Constellation Layout):**\n   - **Soru Balonu (Üst Merkez):** Emre Berk (Genel Yayın Yönetmeni) tarafından sorulan *“Kayıp Atlas için yeniden baskı yapalım mı?”* sorusu.\n   - **Kavisli Dinamik Bağlantı Hatları:** Sorudan 5 ayrı analiz kartına fanning yapan akan kesikli SVG eğrileri.\n   - **Hafif Açılı Kartlar (Tilted Cards):**\n     - **Stok Durumu (-3°):** 9 gün kaldı, 1.240 adet depo stoğu ve kırmızıdan kehribara eriyen progress bar.\n     - **Talep Tahmini (+2°):** Ekim ayı için %87 güvenle 6.400 adet beklentisi (+%31) ve mini alan grafiği.\n     - **Kanal Dağılımı (-1.5°):** Zincir mağaza (%42), Online (%31), Okul (%18) ve diğer kanalları gösteren mini donut grafik.\n     - **Telif Etkisi (+1°):** Elif Aydın için kademe eşiğinin 15.000 adette aşıldığını ve ₺212.400 hakedişi özetleyen kart.\n     - **Kanıt & Kaynak (+2.5°):** 3 tablo (Logo ERP, Telif DB, Kanal API) ve 184.320 satır dayanağı, \"SQL'i göster\" bağlantısı ve talep edilen *\"Örnek veri\"* çipi.\n\n3. **ZEKİ AI Karar Kartı & Karakter Alanı:**\n   - Merkezde büyük karar kartı, `id=\"brand-motion-slot\"` (160x140 px) boyutunda ZEKİ yapay zekâ karakter yuvası.\n   - Verbatim metin: *“6.000 adet yeniden baskı öneriyorum. Kasım fuarı öncesi teslim için baskı emri 18 Eylül'e kadar verilmeli.”*\n   - Mercan-mor degrade **\"Baskı emri taslağı oluştur\"** birincil aksiyonu ve alternatifler butonu.\n   - Karar kartının yanına washi-tape efektiyle iliştirilmiş, +6° eğimli degrade **\"Kayıp Atlas\"** çocuk kitabı kapağı sticker'ı.\n\n4. **Navigasyon, Sonsuzluk Hissi ve Kontroller:**\n   - **Sol Ray:** 10 modülün tümü (Verine Sor aktif, Satış, Stok, Telif, Editoryal, Kapak, Talep Tahmini, İade, Katalog, Uyarılar) ve bilgilendirici tooltip'ler.\n   - **Sağ Üst / Alt:** Çoklu kullanıcı avatarları (EB, EA, SK), %80 tuval ölçeği, sağ altta gerçek zamanlı tuval mini-haritası (minimap).\n   - **Alt Dock:** 4 hızlı modül hapı (Sohbet, Panolar, Baskı planı, Uyarılar) ile ZEKİ doğal dil arama ve sesli komut çubuğu.\n   - **Sağ Kenarda Fluluk:** Tuvalin devam ettiğini hissettiren yarı saydam *\"Önceki: İade analizi\"* kart kümesi."
+    },
+    {
+      "suggestion": "Baskı emri taslağı oluşturulduğunda açılan modal veya onay penceresini tasarla"
+    },
+    {
+      "suggestion": "Sağ taraftaki önceki iade analiz kümesine doğru kaydırılmış (pan) görünümü aç"
+    },
+    {
+      "suggestion": "Kayıp Atlas dışındaki diğer 13 yeniden baskı bekleyen kitap için katalog karşılaştırma kartı ekle"
+    }
+  ],
+  "projectId": "13426839861607265553",
+  "sessionId": "14729439449569457406"
+}
