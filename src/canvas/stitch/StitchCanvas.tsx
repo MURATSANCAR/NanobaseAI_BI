@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import ModulesMenu from './ModulesMenu';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
 
@@ -78,6 +79,7 @@ export default function StitchCanvas({
   const artX = Math.max(0, (fitBox.w - ART_W * artScale) / 2);
   const artY = Math.max(0, (fitBox.h - ART_H * artScale) / 2);
 
+  const [modulesOpen, setModulesOpen] = useState(false);
   const [ask, setAsk] = useState('');
   const [showSql, setShowSql] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -160,21 +162,35 @@ export default function StitchCanvas({
             >
               {RAIL_ICONS[i % RAIL_ICONS.length]}
             </Link>
-            <div
-              className={
-                item.badge === 'Aktif'
-                  ? 'absolute left-14 bg-slate-900 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-xl whitespace-nowrap z-50 flex items-center gap-1.5'
-                  : 'absolute left-14 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition duration-150'
-              }
-            >
-              <span>{item.label}</span>
-              {item.badge === 'Aktif' && (
-                <span className="bg-violet-500 text-white text-[9px] px-1.5 py-0.2 rounded font-bold">Aktif</span>
-              )}
+            <div className="absolute left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+              {item.label}
             </div>
           </div>
         ))}
+
+        {/* Modül menüsü: 18 grup, 67 modül. Ekran açmaz, listeler. */}
+        <div className="relative group flex items-center mt-auto">
+          <button
+            type="button"
+            onClick={() => setModulesOpen((v) => !v)}
+            aria-label="Modüller"
+            className={
+              modulesOpen
+                ? 'w-10 h-10 rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
+                : 'w-10 h-10 rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
+            }
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="absolute left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+            Modüller
+          </div>
+        </div>
       </aside>
+
+      <ModulesMenu open={modulesOpen} onClose={() => setModulesOpen(false)} />
 
       {/* ================= INFINITE CANVAS STAGE ================= */}
     <main ref={fitRef} className="absolute inset-x-0 top-[92px] bottom-[96px] overflow-hidden">
@@ -337,10 +353,10 @@ export default function StitchCanvas({
                   </linearGradient>
                 </defs>
                 {/* Spark area */}
-                <path d={d.c2.areaPath} fill="url(#areaGrad)" />
-                <path d={d.c2.linePath} fill="none" stroke="#7C5CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                {d.c2.areaPath ? <path d={d.c2.areaPath} fill="url(#areaGrad)" /> : null}
+                {d.c2.linePath ? <path d={d.c2.linePath} fill="none" stroke="#7C5CFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /> : null}
                 {/* Highlight dot */}
-                <circle cx={d.c2.dot[0]} cy={d.c2.dot[1]} r="3.5" fill="#7C5CFF" stroke="#FFFFFF" strokeWidth="2" />
+                {d.c2.linePath ? <circle cx={d.c2.dot[0]} cy={d.c2.dot[1]} r="3.5" fill="#7C5CFF" stroke="#FFFFFF" strokeWidth="2" /> : <text x="105" y="30" textAnchor="middle" fontSize="11" fill="#94a3b8">Veri yok</text>}
               </svg>
               <div className="flex justify-between text-[9px] text-muted font-semibold mt-1">
                 <span>{d.c2.tick1}</span>
@@ -614,21 +630,7 @@ export default function StitchCanvas({
           </div>
         </div>
 
-        {/* ================= FAINT EARLIER ANSWER CLUSTER (Infinite Canvas Feel) ================= */}
-        <div className="absolute left-[1340px] top-[240px] opacity-40 pointer-events-none filter blur-[0.5px] z-10" style={{transform: 'rotate(-3deg)'}}>
-          <div className="glass-card w-[220px] rounded-[24px] p-4 shadow-md border border-slate-300">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-              <span className="text-[11px] font-extrabold text-slate-700">{d.ghost.title}</span>
-              <span className="text-[9px] font-bold text-amberWarn bg-amber-50 px-1.5 py-0.5 rounded">{d.ghost.badge}</span>
-            </div>
-            <p className="text-[10px] text-slate-600 mt-2 font-medium leading-relaxed">
-              {d.ghost.text}
-            </p>
-            <div className="mt-2 text-[9px] text-slate-400">
-              {d.ghost.foot}
-            </div>
-          </div>
-        </div>
+        
 
       </div>
 
