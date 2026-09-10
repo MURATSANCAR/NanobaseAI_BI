@@ -1,9 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import { alertsData, boardsData, cfoData, overviewData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
-import { ENGINE_ENABLED } from '@/canvas/engine';
+import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
@@ -21,7 +21,7 @@ export default function BiCanvasPage() {
   // Ekran, yolun son parçasından okunur: /timas/uyarilar → 'uyarilar'.
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
-  const navigate = useNavigate();
+
   const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
@@ -78,8 +78,45 @@ export default function BiCanvasPage() {
     dashboards.isLoading,
   ]);
 
-  const ask = (q: string) => navigate(`/bi/chat?prompt=${encodeURIComponent(q)}`);
+  // Soru kutusu başka ürüne gitmez: cevap kanvasın kendi karar kartına düşer.
+  const [answer, setAnswer] = useState<AskAnswer | null>(null);
+  const [asking, setAsking] = useState(false);
+  const [askErr, setAskErr] = useState<string | null>(null);
+  const ask = (q: string) => {
+    if (!ENGINE_ENABLED) return;
+    setAsking(true);
+    setAskErr(null);
+    askEngine(q)
+      .then((a) => setAnswer({ ...a, summary: a.summary ?? a.explanation }))
+      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Motor yanıt vermedi'))
+      .finally(() => setAsking(false));
+  };
   const onZoom = (delta: number) => setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number((z + delta).toFixed(2)))));
+
+  // Cevap geldiyse karar kartı ve kanıt kartı cevabı gösterir.
+  const view = useMemo(() => {
+    if (!answer && !asking && !askErr) return d;
+    const rows = answer?.records?.length ?? 0;
+    return {
+      ...d,
+      main: {
+        ...d.main,
+        subject: 'Verine sor',
+        model: asking ? 'Motor çalışıyor…' : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
+        text: asking ? '“Soru motora gönderildi…”' : askErr ? `“${askErr}.”` : `“${answer?.summary ?? 'Motor özet üretmedi.'}”`,
+        m1: { label: 'Satır:', value: String(rows) },
+        m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
+        m3: { label: 'Tip:', value: answer?.type ?? '—' },
+      },
+      c5: {
+        ...d.c5,
+        title: 'Üretilen SQL',
+        badge: askErr ? 'Hata' : asking ? 'Çalışıyor' : 'Canlı',
+        summary: (answer?.sql ?? (asking ? 'Bekleniyor…' : askErr ?? '')).slice(0, 180),
+        latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
+      },
+    };
+  }, [d, answer, asking, askErr]);
 
   return (
     // Ölçeklenen katman `absolute`: transform düzendeki yeri küçültmediği için
@@ -93,7 +130,7 @@ export default function BiCanvasPage() {
           transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
         }}
       >
-        <StitchCanvas d={d} onAsk={ask} onZoom={onZoom} />
+        <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} />
       </div>
     </div>
   );

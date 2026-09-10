@@ -61,3 +61,20 @@ export async function engineInfo(): Promise<EngineInfo> {
   if (!res.ok) throw new Error(`Motor ${res.status}`);
   return (await res.json()) as EngineInfo;
 }
+
+export type AskAnswer = {
+  id?: string;
+  type?: string;
+  sql?: string;
+  summary?: string;
+  explanation?: string;
+  columns?: Array<{ name: string; type: string }>;
+  records?: Array<Record<string, unknown>>;
+  rowCount?: number;
+  latency_ms?: number;
+};
+
+/** Doğal dil sorusu. Motor SQL üretir, çalıştırır ve özetler. */
+export function ask(question: string): Promise<AskAnswer> {
+  return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
+}
