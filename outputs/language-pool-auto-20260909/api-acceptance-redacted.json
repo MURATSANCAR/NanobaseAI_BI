@@ -1,0 +1,321 @@
+[
+  {
+    "id": "A01",
+    "prompt": "Satış temsilcilerinin toplam sayısı kaç?",
+    "status": "LIVE_PASS",
+    "referenceSQL": "SELECT COUNT(*) AS amount FROM dbo.LG_SLSMAN",
+    "languageHits": 0,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT COUNT(DISTINCT \"LOGICALREF\") AS toplam_sayisi\nFROM dbo_LG_SLSMAN",
+    "resultHash": "68f1bcbc35dd2635b9723719c23077c8b38cee732f6133d27a96793bf8c68ea0",
+    "totalRows": 1,
+    "truncated": false,
+    "nullCells": 0,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "toplam_sayisi",
+        "type": "int"
+      }
+    ],
+    "referenceRows": 1,
+    "referenceTruncated": false,
+    "referenceHash": "6f2b783d9718fa13d4c696b2661e394e6b434b810e22684c1a4d9b47d09d4526",
+    "observedHash": "6f2b783d9718fa13d4c696b2661e394e6b434b810e22684c1a4d9b47d09d4526",
+    "seconds": 49.77,
+    "explanation": null
+  },
+  {
+    "id": "A02",
+    "prompt": "Satış temsilcilerinin kodlarını ve adlarını listele.",
+    "status": "LIVE_PASS",
+    "referenceSQL": "SELECT CODE,DEFINITION_ FROM dbo.LG_SLSMAN",
+    "languageHits": 0,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT \"CODE\", \"DEFINITION_\"\nFROM dbo_LG_SLSMAN",
+    "resultHash": "f31903507915ef6abf5ae084fa4d7502a4494061015d2fd49b837767263b6843",
+    "totalRows": 2358,
+    "truncated": false,
+    "nullCells": 0,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "CODE",
+        "type": "str"
+      },
+      {
+        "name": "DEFINITION_",
+        "type": "str"
+      }
+    ],
+    "referenceRows": 2358,
+    "referenceTruncated": false,
+    "referenceHash": "dea3c2d3703d1291f173d7fab9d63caee89c1cb70d1e94b0dd3f81e440f18836",
+    "observedHash": "dea3c2d3703d1291f173d7fab9d63caee89c1cb70d1e94b0dd3f81e440f18836",
+    "seconds": 40.85,
+    "explanation": null
+  },
+  {
+    "id": "A03",
+    "prompt": "Üretim kaydını oluşturan kullanıcı kim?",
+    "status": "LIVE_FAIL",
+    "referenceSQL": null,
+    "languageHits": 4,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "CLARIFICATION",
+    "sql": null,
+    "reason": "Generated phrase retrieved its schema references, but resolver asked for the meaning of an ordinary phrase word rather than resolving the requested attribute. This is not a successful end-to-end answer.",
+    "seconds": 4.34,
+    "failureStage": "SEMANTIC_RESOLUTION",
+    "explanation": "‘olusturan’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+  },
+  {
+    "id": "A04",
+    "prompt": "Üretim kaydı ne zaman oluşturuldu?",
+    "status": "LIVE_FAIL",
+    "referenceSQL": null,
+    "languageHits": 2,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "CLARIFICATION",
+    "sql": null,
+    "reason": "Generated phrase retrieved its schema references, but resolver asked for the meaning of an ordinary phrase word rather than resolving the requested attribute. This is not a successful end-to-end answer.",
+    "seconds": 1.16,
+    "failureStage": "SEMANTIC_RESOLUTION",
+    "explanation": "‘zaman’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?"
+  },
+  {
+    "id": "A05",
+    "prompt": "Ocak 2026 için müşteri, ürün, ödeme planı, satış temsilcisi, teslimat şehri ve birim bazında satılan adet göster.",
+    "status": "DOĞRULANAMADI",
+    "referenceSQL": null,
+    "languageHits": 3,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT UNITSETL.[NAME] AS bir, SHIPINFO.[CITY] AS teslimat_sehr, SLSMAN.[DEFINITION_] AS satis_temsilc, PAYPLANS.[DEFINITION_] AS odem_pla, ITEMS.[NAME] AS urun, CLCARD.[DEFINITION_] AS muster, SUM(STLINE.[AMOUNT]) AS satilan_adet\nFROM (SELECT '211' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [INVOICEREF], [LINETYPE], [PAYDEFREF], [STOCKREF], [TRCODE], [UOMREF] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [INVOICEREF], [LINETYPE], [PAYDEFREF], [STOCKREF], [TRCODE], [UOMREF] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nLEFT JOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_UNITSETL] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_UNITSETL]) AS UNITSETL ON STLINE.[UOMREF] = UNITSETL.[LOGICALREF] AND STLINE.[__nb_firm] = UNITSETL.[__nb_firm]\nJOIN (SELECT '211' AS [__nb_firm], [CANCELLED], [CLIENTREF], [DATE_], [LOGICALREF], [PAYDEFREF], [SALESMANREF], [SHIPINFOREF] FROM [dbo].[LG_211_01_INVOICE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [CLIENTREF], [DATE_], [LOGICALREF], [PAYDEFREF], [SALESMANREF], [SHIPINFOREF] FROM [dbo].[LG_411_01_INVOICE]) AS INVOICE ON STLINE.[INVOICEREF] = INVOICE.[LOGICALREF] AND STLINE.[__nb_firm] = INVOICE.[__nb_firm]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [CITY], [LOGICALREF] FROM [dbo].[VW_211_SHIPINFO] UNION ALL SELECT '411' AS [__nb_firm], [CITY], [LOGICALREF] FROM [dbo].[VW_411_SHIPINFO]) AS SHIPINFO ON INVOICE.[SHIPINFOREF] = SHIPINFO.[LOGICALREF] AND INVOICE.[__nb_firm] = SHIPINFO.[__nb_firm]\nLEFT JOIN [dbo].[LG_SLSMAN] AS SLSMAN ON INVOICE.[SALESMANREF] = SLSMAN.[LOGICALREF]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_211_PAYPLANS] UNION ALL SELECT '411' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_411_PAYPLANS]) AS PAYPLANS ON PAYPLANS.[LOGICALREF] = COALESCE(NULLIF(STLINE.[PAYDEFREF], 0), INVOICE.[PAYDEFREF]) AND INVOICE.[__nb_firm] = PAYPLANS.[__nb_firm]\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_211_CLCARD] UNION ALL SELECT '411' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_411_CLCARD]) AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] AND INVOICE.[__nb_firm] = CLCARD.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2026-02-01'\nGROUP BY UNITSETL.[NAME], SHIPINFO.[CITY], SLSMAN.[DEFINITION_], PAYPLANS.[DEFINITION_], ITEMS.[NAME], CLCARD.[DEFINITION_]\nORDER BY satilan_adet DESC",
+    "resultHash": "891d5cb3e7a7ad73a34ea3b1196692db38544704ee16540f55f2e37a5e40232b",
+    "totalRows": 65379,
+    "truncated": false,
+    "nullCells": 50278,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "bir",
+        "type": "str"
+      },
+      {
+        "name": "teslimat_sehr",
+        "type": "str"
+      },
+      {
+        "name": "satis_temsilc",
+        "type": "str"
+      },
+      {
+        "name": "odem_pla",
+        "type": "str"
+      },
+      {
+        "name": "urun",
+        "type": "str"
+      },
+      {
+        "name": "muster",
+        "type": "str"
+      },
+      {
+        "name": "satilan_adet",
+        "type": "float"
+      }
+    ],
+    "reason": "Independent business/source oracle unavailable; execution and cell statistics are not correctness certification",
+    "seconds": 9.3,
+    "explanation": null
+  },
+  {
+    "id": "A06",
+    "prompt": "Müşteri, ürün, ödeme planı, satış temsilcisi, teslimat şehri ve birim bazında Şubat 2026 satılan adet hesapla.",
+    "status": "DOĞRULANAMADI",
+    "referenceSQL": null,
+    "languageHits": 3,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT UNITSETL.[NAME] AS bir, SHIPINFO.[CITY] AS teslimat_sehr, SLSMAN.[DEFINITION_] AS satis_temsilc, PAYPLANS.[DEFINITION_] AS odem_pla, ITEMS.[NAME] AS urun, CLCARD.[DEFINITION_] AS muster, SUM(STLINE.[AMOUNT]) AS satilan_adet\nFROM (SELECT '211' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [INVOICEREF], [LINETYPE], [PAYDEFREF], [STOCKREF], [TRCODE], [UOMREF] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [INVOICEREF], [LINETYPE], [PAYDEFREF], [STOCKREF], [TRCODE], [UOMREF] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nLEFT JOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_UNITSETL] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_UNITSETL]) AS UNITSETL ON STLINE.[UOMREF] = UNITSETL.[LOGICALREF] AND STLINE.[__nb_firm] = UNITSETL.[__nb_firm]\nJOIN (SELECT '211' AS [__nb_firm], [CANCELLED], [CLIENTREF], [DATE_], [LOGICALREF], [PAYDEFREF], [SALESMANREF], [SHIPINFOREF] FROM [dbo].[LG_211_01_INVOICE] UNION ALL SELECT '411' AS [__nb_firm], [CANCELLED], [CLIENTREF], [DATE_], [LOGICALREF], [PAYDEFREF], [SALESMANREF], [SHIPINFOREF] FROM [dbo].[LG_411_01_INVOICE]) AS INVOICE ON STLINE.[INVOICEREF] = INVOICE.[LOGICALREF] AND STLINE.[__nb_firm] = INVOICE.[__nb_firm]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [CITY], [LOGICALREF] FROM [dbo].[VW_211_SHIPINFO] UNION ALL SELECT '411' AS [__nb_firm], [CITY], [LOGICALREF] FROM [dbo].[VW_411_SHIPINFO]) AS SHIPINFO ON INVOICE.[SHIPINFOREF] = SHIPINFO.[LOGICALREF] AND INVOICE.[__nb_firm] = SHIPINFO.[__nb_firm]\nLEFT JOIN [dbo].[LG_SLSMAN] AS SLSMAN ON INVOICE.[SALESMANREF] = SLSMAN.[LOGICALREF]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_211_PAYPLANS] UNION ALL SELECT '411' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_411_PAYPLANS]) AS PAYPLANS ON PAYPLANS.[LOGICALREF] = COALESCE(NULLIF(STLINE.[PAYDEFREF], 0), INVOICE.[PAYDEFREF]) AND INVOICE.[__nb_firm] = PAYPLANS.[__nb_firm]\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [NAME] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nLEFT JOIN (SELECT '211' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_211_CLCARD] UNION ALL SELECT '411' AS [__nb_firm], [DEFINITION_], [LOGICALREF] FROM [dbo].[LG_411_CLCARD]) AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] AND INVOICE.[__nb_firm] = CLCARD.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2026-02-01' AND STLINE.[DATE_] < '2026-03-01'\nGROUP BY UNITSETL.[NAME], SHIPINFO.[CITY], SLSMAN.[DEFINITION_], PAYPLANS.[DEFINITION_], ITEMS.[NAME], CLCARD.[DEFINITION_]\nORDER BY satilan_adet DESC",
+    "resultHash": "3980a241af265ea5394c8acc2a563a278c4bdf5017a11b2b73b753d4ad8cc5bb",
+    "totalRows": 76942,
+    "truncated": false,
+    "nullCells": 58657,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "bir",
+        "type": "str"
+      },
+      {
+        "name": "teslimat_sehr",
+        "type": "str"
+      },
+      {
+        "name": "satis_temsilc",
+        "type": "str"
+      },
+      {
+        "name": "odem_pla",
+        "type": "str"
+      },
+      {
+        "name": "urun",
+        "type": "str"
+      },
+      {
+        "name": "muster",
+        "type": "str"
+      },
+      {
+        "name": "satilan_adet",
+        "type": "float"
+      }
+    ],
+    "reason": "Independent business/source oracle unavailable; execution and cell statistics are not correctness certification",
+    "seconds": 8.35,
+    "explanation": null
+  },
+  {
+    "id": "A07",
+    "prompt": "Ocak 2024 için müşteri, ürün, ödeme planı, satış temsilcisi, teslimat şehri ve birim bazında satılan adet göster.",
+    "status": "DOĞRULANAMADI",
+    "referenceSQL": null,
+    "languageHits": 3,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT UNITSETL.[NAME] AS bir, SHIPINFO.[CITY] AS teslimat_sehr, SLSMAN.[DEFINITION_] AS satis_temsilc, PAYPLANS.[DEFINITION_] AS odem_pla, ITEMS.[NAME] AS urun, CLCARD.[DEFINITION_] AS muster, SUM(STLINE.[AMOUNT]) AS satilan_adet\nFROM [dbo].[LG_211_01_STLINE] AS STLINE\nLEFT JOIN [dbo].[LG_211_UNITSETL] AS UNITSETL ON STLINE.[UOMREF] = UNITSETL.[LOGICALREF]\nJOIN [dbo].[LG_211_01_INVOICE] AS INVOICE ON STLINE.[INVOICEREF] = INVOICE.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_SHIPINFO] AS SHIPINFO ON INVOICE.[SHIPINFOREF] = SHIPINFO.[LOGICALREF]\nLEFT JOIN [dbo].[LG_SLSMAN] AS SLSMAN ON INVOICE.[SALESMANREF] = SLSMAN.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_PAYPLANS] AS PAYPLANS ON PAYPLANS.[LOGICALREF] = COALESCE(NULLIF(STLINE.[PAYDEFREF], 0), INVOICE.[PAYDEFREF])\nJOIN [dbo].[LG_211_ITEMS] AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2024-01-01' AND STLINE.[DATE_] < '2024-02-01'\nGROUP BY UNITSETL.[NAME], SHIPINFO.[CITY], SLSMAN.[DEFINITION_], PAYPLANS.[DEFINITION_], ITEMS.[NAME], CLCARD.[DEFINITION_]\nORDER BY satilan_adet DESC",
+    "resultHash": "19a20ff01506d68da7bd67e3a1a1b4f6959ec9001f95f48e5f5ddcf377e0195b",
+    "totalRows": 61865,
+    "truncated": false,
+    "nullCells": 33718,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "bir",
+        "type": "str"
+      },
+      {
+        "name": "teslimat_sehr",
+        "type": "str"
+      },
+      {
+        "name": "satis_temsilc",
+        "type": "str"
+      },
+      {
+        "name": "odem_pla",
+        "type": "str"
+      },
+      {
+        "name": "urun",
+        "type": "str"
+      },
+      {
+        "name": "muster",
+        "type": "str"
+      },
+      {
+        "name": "satilan_adet",
+        "type": "float"
+      }
+    ],
+    "reason": "Independent business/source oracle unavailable; execution and cell statistics are not correctness certification",
+    "seconds": 7.14,
+    "explanation": null
+  },
+  {
+    "id": "A08",
+    "prompt": "Müşteri, ürün, ödeme planı, satış temsilcisi, teslimat şehri ve birim bazında Ocak 2024 perakende satılan adet hesapla.",
+    "status": "DOĞRULANAMADI",
+    "referenceSQL": null,
+    "languageHits": 3,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT UNITSETL.[NAME] AS bir, SHIPINFO.[CITY] AS teslimat_sehr, SLSMAN.[DEFINITION_] AS satis_temsilc, PAYPLANS.[DEFINITION_] AS odem_pla, ITEMS.[NAME] AS urun, CLCARD.[DEFINITION_] AS muster, SUM(STLINE.[AMOUNT]) AS satilan_adet\nFROM [dbo].[LG_211_01_STLINE] AS STLINE\nLEFT JOIN [dbo].[LG_211_UNITSETL] AS UNITSETL ON STLINE.[UOMREF] = UNITSETL.[LOGICALREF]\nJOIN [dbo].[LG_211_01_INVOICE] AS INVOICE ON STLINE.[INVOICEREF] = INVOICE.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_SHIPINFO] AS SHIPINFO ON INVOICE.[SHIPINFOREF] = SHIPINFO.[LOGICALREF]\nLEFT JOIN [dbo].[LG_SLSMAN] AS SLSMAN ON INVOICE.[SALESMANREF] = SLSMAN.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_PAYPLANS] AS PAYPLANS ON PAYPLANS.[LOGICALREF] = COALESCE(NULLIF(STLINE.[PAYDEFREF], 0), INVOICE.[PAYDEFREF])\nJOIN [dbo].[LG_211_ITEMS] AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF]\nLEFT JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[TRCODE] IN (7)\n  AND STLINE.[DATE_] >= '2024-01-01' AND STLINE.[DATE_] < '2024-02-01'\nGROUP BY UNITSETL.[NAME], SHIPINFO.[CITY], SLSMAN.[DEFINITION_], PAYPLANS.[DEFINITION_], ITEMS.[NAME], CLCARD.[DEFINITION_]\nORDER BY satilan_adet DESC",
+    "resultHash": "5195d4ad7ef38df7b8720c6d415052167120a13ee7f7aab1fa9d2a9fdf05e82c",
+    "totalRows": 10798,
+    "truncated": false,
+    "nullCells": 12594,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "bir",
+        "type": "str"
+      },
+      {
+        "name": "teslimat_sehr",
+        "type": "str"
+      },
+      {
+        "name": "satis_temsilc",
+        "type": "str"
+      },
+      {
+        "name": "odem_pla",
+        "type": "str"
+      },
+      {
+        "name": "urun",
+        "type": "str"
+      },
+      {
+        "name": "muster",
+        "type": "str"
+      },
+      {
+        "name": "satilan_adet",
+        "type": "float"
+      }
+    ],
+    "reason": "Independent business/source oracle unavailable; execution and cell statistics are not correctness certification",
+    "seconds": 3.29,
+    "explanation": null
+  },
+  {
+    "id": "A09",
+    "prompt": "2025 ve 2026 satış tutarlarını karşılaştır.",
+    "status": "DOĞRULANAMADI",
+    "referenceSQL": null,
+    "languageHits": 0,
+    "poolHash": "d02b343615116845496bf85f5eb8eb4d0812e740f8fd983adf3ac0f19a94e60b",
+    "responseType": "TEXT_TO_SQL",
+    "sql": "SELECT SUM(CASE WHEN (INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01') THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END END) AS d2025_satis_tutar, SUM(CASE WHEN (INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01') THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END END) AS d2026_satis_tutar\nFROM (SELECT [CANCELLED], [DATE_], [NETTOTAL], [TRCODE] FROM [dbo].[LG_211_01_INVOICE] UNION ALL SELECT [CANCELLED], [DATE_], [NETTOTAL], [TRCODE] FROM [dbo].[LG_411_01_INVOICE]) AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND ((INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01') OR (INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'))",
+    "resultHash": "bca1ff24726ba2f7e1cef6cfe64cbee52667c92aff1bc0c7c02265742a7abd08",
+    "totalRows": 1,
+    "truncated": false,
+    "nullCells": 0,
+    "zeroCells": 0,
+    "columns": [
+      {
+        "name": "d2025_satis_tutar",
+        "type": "float"
+      },
+      {
+        "name": "d2026_satis_tutar",
+        "type": "float"
+      }
+    ],
+    "reason": "Independent business/source oracle unavailable; execution and cell statistics are not correctness certification",
+    "seconds": 8.18,
+    "explanation": null
+  },
+  {
+    "id": "A10",
+    "prompt": "test",
+    "status": "LIVE_PASS",
+    "referenceSQL": null,
+    "languageHits": 0,
+    "poolHash": null,
+    "responseType": "MODULE_INTRO",
+    "sql": null,
+    "reason": "Non-data request must not generate SQL",
+    "seconds": 0.0,
+    "explanation": "Ben ZEKİ AI. İş zekâsı modülünde satış, finans, stok ve müşteri verilerinizi analiz etmek ve raporlamak için buradayım. Verilerinizle ilgili ne öğrenmek istersiniz?"
+  }
+]

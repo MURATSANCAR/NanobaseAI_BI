@@ -1,0 +1,1063 @@
+[
+ {
+  "id": "cx-01",
+  "q": "2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro (satış eksi iade) ve her kanalın o ay içindeki payını yüzde olarak ver; ay ve kanal sırasıyla listele.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    DATEFROMPARTS(YEAR(i.\"DATE_\"), MONTH(i.\"DATE_\"), 1) AS ay,\n    COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)') AS kanal,\n    SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE -i.\"NETTOTAL\" END) AS net_ciro,\n    SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE -i.\"NETTOTAL\" END) * 100.0 / NULLIF(SUM(SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE -i.\"NETTOTAL\" END)) OVER (PARTITION BY DATEFROMPARTS(YEAR(i.\"DATE_\"), MONTH(i.\"DATE_\"), 1)), 0) AS kanal_payi_yuzde\nFROM dbo_LG_411_01_INVOICE i\nJOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\"\nWHERE i.\"CANCELLED\" = 0\n  AND i.\"TRCODE\" IN (2,3,7,8,9)\n  AND i.\"DATE_\" >= '2026-01-01'\n  AND i.\"DATE_\" < '2027-01-01'\n  AND c.\"SPECODE2\" IN ('KITAPCI', 'E-TICARET', 'DAGITICI')\nGROUP BY \n    DATEFROMPARTS(YEAR(i.\"DATE_\"), MONTH(i.\"DATE_\"), 1),\n    COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)')\nORDER BY \n    ay,\n    kanal",
+  "summary": "Sorgu, 2026 yılı için KITAPCI, E-TICARET ve DAGITICI kanallarının ay bazında net ciro ve kanal paylarını içeren 24 satırlık bir veri seti döndürmüştür. Örneğin Ocak ayında KITAPCI kanalı 30.221.818 TL net ciro ile %45,63 pay alırken, E-TICARET 28.443.697 TL ile %42,95, DAGITICI ise 7.561.917 TL ile %11,42 pay elde etmiştir.",
+  "rowCount": 24,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 2603,
+   "llm_ms": 24218,
+   "run_sql_ms": 757,
+   "summary_ms": 10498
+  },
+  "explanation": null,
+  "columns": [
+   "ay",
+   "kanal",
+   "net_ciro",
+   "kanal_payi_yuzde"
+  ],
+  "records": [
+   {
+    "ay": "2026-01-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 7561917.149999999,
+    "kanal_payi_yuzde": 11.418103970375634
+   },
+   {
+    "ay": "2026-01-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 28443697.5,
+    "kanal_payi_yuzde": 42.94851277984625
+   },
+   {
+    "ay": "2026-01-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 30221818.29,
+    "kanal_payi_yuzde": 45.63338324977813
+   },
+   {
+    "ay": "2026-02-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 23009903.23,
+    "kanal_payi_yuzde": 22.048987084557936
+   },
+   {
+    "ay": "2026-02-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 26994044.540000003,
+    "kanal_payi_yuzde": 25.866746742612953
+   },
+   {
+    "ay": "2026-02-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 54354148.779999994,
+    "kanal_payi_yuzde": 52.08426617282911
+   },
+   {
+    "ay": "2026-03-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 18942708.81,
+    "kanal_payi_yuzde": 18.16074175370203
+   },
+   {
+    "ay": "2026-03-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 35059119.61,
+    "kanal_payi_yuzde": 33.611856875149876
+   },
+   {
+    "ay": "2026-03-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 50303981.70000001,
+    "kanal_payi_yuzde": 48.22740137114809
+   },
+   {
+    "ay": "2026-04-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 16966921.459999997,
+    "kanal_payi_yuzde": 17.215130911450167
+   },
+   {
+    "ay": "2026-04-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 22559781.309999995,
+    "kanal_payi_yuzde": 22.8898088260106
+   },
+   {
+    "ay": "2026-04-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 59031487.390000015,
+    "kanal_payi_yuzde": 59.89506026253923
+   },
+   {
+    "ay": "2026-05-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 14940775.069999998,
+    "kanal_payi_yuzde": 26.53810143960195
+   },
+   {
+    "ay": "2026-05-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 13550597.540000001,
+    "kanal_payi_yuzde": 24.068840498496353
+   },
+   {
+    "ay": "2026-05-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 27807964.04,
+    "kanal_payi_yuzde": 49.3930580619017
+   },
+   {
+    "ay": "2026-06-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 9270688.43,
+    "kanal_payi_yuzde": 9.958978957769919
+   },
+   {
+    "ay": "2026-06-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 21045307.91,
+    "kanal_payi_yuzde": 22.607790156904112
+   },
+   {
+    "ay": "2026-06-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 62772747.68999998,
+    "kanal_payi_yuzde": 67.43323088532597
+   },
+   {
+    "ay": "2026-07-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 14225593.209999999,
+    "kanal_payi_yuzde": 17.39677291278666
+   },
+   {
+    "ay": "2026-07-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 27417043.08,
+    "kanal_payi_yuzde": 33.528870491499795
+   },
+   {
+    "ay": "2026-07-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 40128812.24999999,
+    "kanal_payi_yuzde": 49.07435659571354
+   },
+   {
+    "ay": "2026-08-01",
+    "kanal": "DAGITICI",
+    "net_ciro": 20779947.790000003,
+    "kanal_payi_yuzde": 28.330147513441897
+   },
+   {
+    "ay": "2026-08-01",
+    "kanal": "E-TICARET",
+    "net_ciro": 17802943.080000002,
+    "kanal_payi_yuzde": 24.271475978997618
+   },
+   {
+    "ay": "2026-08-01",
+    "kanal": "KITAPCI",
+    "net_ciro": 34766348.77,
+    "kanal_payi_yuzde": 47.39837650756048
+   }
+  ],
+  "wall_s": 39.2
+ },
+ {
+  "id": "cx-02",
+  "q": "Yayınevi bazında 2026 YTD net ciro (satış satırları eksi iade satırları), satılan adet, iade adedi, adet bazlı iade oranı ve maliyetli satırlardan brüt kâr marjı; yalnız net cirosu 20 milyon TL üzerindeki yayınevleri, marja göre azalan sırada.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)') AS yayinevi,\n    SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) THEN sl.\"TOTAL\" ELSE -sl.\"TOTAL\" END) AS net_ciro,\n    SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) THEN sl.\"AMOUNT\" ELSE 0 END) AS satilan_adet,\n    SUM(CASE WHEN sl.\"TRCODE\" IN (2,3) THEN sl.\"AMOUNT\" ELSE 0 END) AS iade_adedi,\n    SUM(CASE WHEN sl.\"TRCODE\" IN (2,3) THEN sl.\"AMOUNT\" ELSE 0 END) / NULLIF(SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) THEN sl.\"AMOUNT\" ELSE 0 END), 0) AS adet_iade_orani,\n    1 - SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) AND sl.\"OUTCOST\" <> 0 THEN sl.\"AMOUNT\" * sl.\"OUTCOST\" ELSE 0 END) / NULLIF(SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) AND sl.\"OUTCOST\" <> 0 THEN sl.\"TOTAL\" ELSE 0 END), 0) AS brut_kar_marji\nFROM dbo_LG_411_01_STLINE sl\nJOIN dbo_LG_411_ITEMS it ON it.\"LOGICALREF\" = sl.\"STOCKREF\"\nWHERE sl.\"CANCELLED\" = 0 \n  AND sl.\"LINETYPE\" = 0 \n  AND sl.\"TRCODE\" IN (2,3,7,8)\n  AND sl.\"DATE_\" >= '2026-01-01' \n  AND sl.\"DATE_\" < '2027-01-01'\nGROUP BY COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)')\nHAVING SUM(CASE WHEN sl.\"TRCODE\" IN (7,8) THEN sl.\"TOTAL\" ELSE -sl.\"TOTAL\" END) > 20000000\nORDER BY brut_kar_marji DESC",
+  "summary": "Net cirosu 20 milyon TL üzerinde olan 15 yayınevi, brüt kâr marjına göre azalan sırada listelenmiştir. En yüksek marja sahip yayınevi %92,33 ile \"Ç\" olurken, en düşük marja sahip yayınevleri %54,43 ile \"Yuzu\" ve %53,58 ile \"Bi Kutu Oy\" olarak sıralanmıştır.",
+  "rowCount": 15,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 3661,
+   "llm_ms": 26911,
+   "run_sql_ms": 1509,
+   "summary_ms": 9628
+  },
+  "explanation": null,
+  "columns": [
+   "yayinevi",
+   "net_ciro",
+   "satilan_adet",
+   "iade_adedi",
+   "adet_iade_orani",
+   "brut_kar_marji"
+  ],
+  "records": [
+   {
+    "yayinevi": "Ç",
+    "net_ciro": 76797811.55222999,
+    "satilan_adet": 221675.0,
+    "iade_adedi": 15290.0,
+    "adet_iade_orani": 0.06897485056952746,
+    "brut_kar_marji": 0.9232902407647023
+   },
+   {
+    "yayinevi": "Genç Timaş",
+    "net_ciro": 229903019.94000015,
+    "satilan_adet": 889443.0,
+    "iade_adedi": 76002.0,
+    "adet_iade_orani": 0.08544898324007272,
+    "brut_kar_marji": 0.9088003292835314
+   },
+   {
+    "yayinevi": "G",
+    "net_ciro": 43861639.179999985,
+    "satilan_adet": 212946.0,
+    "iade_adedi": 14336.0,
+    "adet_iade_orani": 0.06732223192734309,
+    "brut_kar_marji": 0.9034220953542677
+   },
+   {
+    "yayinevi": "İlk Genç T",
+    "net_ciro": 230147044.70000002,
+    "satilan_adet": 1352811.0,
+    "iade_adedi": 89607.0,
+    "adet_iade_orani": 0.06623763408192275,
+    "brut_kar_marji": 0.8961805442874708
+   },
+   {
+    "yayinevi": "Timaş Çocu",
+    "net_ciro": 429305276.44999975,
+    "satilan_adet": 2843838.0,
+    "iade_adedi": 244425.0,
+    "adet_iade_orani": 0.08594898865547193,
+    "brut_kar_marji": 0.894528231034755
+   },
+   {
+    "yayinevi": "Eğlenceli ",
+    "net_ciro": 31318872.729999986,
+    "satilan_adet": 232952.0,
+    "iade_adedi": 37427.0,
+    "adet_iade_orani": 0.1606639994505306,
+    "brut_kar_marji": 0.8909577620384538
+   },
+   {
+    "yayinevi": "Timaş Yayı",
+    "net_ciro": 146780103.50999996,
+    "satilan_adet": 627474.0,
+    "iade_adedi": 83080.0,
+    "adet_iade_orani": 0.13240389243219639,
+    "brut_kar_marji": 0.885107049530739
+   },
+   {
+    "yayinevi": "Sufi Kitap",
+    "net_ciro": 25951030.77,
+    "satilan_adet": 156966.0,
+    "iade_adedi": 11487.0,
+    "adet_iade_orani": 0.07318145330835978,
+    "brut_kar_marji": 0.8805343751704809
+   },
+   {
+    "yayinevi": "T",
+    "net_ciro": 41842083.35000004,
+    "satilan_adet": 155932.0,
+    "iade_adedi": 23995.0,
+    "adet_iade_orani": 0.15388117897545084,
+    "brut_kar_marji": 0.8619835000198153
+   },
+   {
+    "yayinevi": "Timaş Tari",
+    "net_ciro": 36606274.95,
+    "satilan_adet": 108959.0,
+    "iade_adedi": 20885.0,
+    "adet_iade_orani": 0.19167760350223478,
+    "brut_kar_marji": 0.8618787841470436
+   },
+   {
+    "yayinevi": "Timaş İnan",
+    "net_ciro": 38300636.08999999,
+    "satilan_adet": 127993.0,
+    "iade_adedi": 11409.0,
+    "adet_iade_orani": 0.0891376872172697,
+    "brut_kar_marji": 0.8501828320680364
+   },
+   {
+    "yayinevi": "Gülce Çocu",
+    "net_ciro": 46302896.11000001,
+    "satilan_adet": 201387.0,
+    "iade_adedi": 17437.0,
+    "adet_iade_orani": 0.0865845362411675,
+    "brut_kar_marji": 0.8386685627454917
+   },
+   {
+    "yayinevi": "Mavi Kirpi",
+    "net_ciro": 49822997.37,
+    "satilan_adet": 150796.0,
+    "iade_adedi": 29556.0,
+    "adet_iade_orani": 0.19599989389638983,
+    "brut_kar_marji": 0.7609647246259132
+   },
+   {
+    "yayinevi": "Yuzu",
+    "net_ciro": 22847052.119999997,
+    "satilan_adet": 113032.0,
+    "iade_adedi": 16759.0,
+    "adet_iade_orani": 0.1482677471866374,
+    "brut_kar_marji": 0.5443254133191271
+   },
+   {
+    "yayinevi": "Bi Kutu Oy",
+    "net_ciro": 48127914.439999975,
+    "satilan_adet": 201351.0,
+    "iade_adedi": 1946.0,
+    "adet_iade_orani": 0.009664714851180277,
+    "brut_kar_marji": 0.5358258737057886
+   }
+  ],
+  "wall_s": 43.7
+ },
+ {
+  "id": "cx-03",
+  "q": "En çok iade alan 10 müşteri: iade tutarı, aynı müşterinin 2026 satış tutarı, iade/satış oranı ve cari kartındaki kanal kodu; yalnız satışı 1 milyon TL üzerinde olanlar, iade tutarına göre azalan.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT TOP 10\n    c.\"CODE\" AS cari_kodu,\n    c.\"DEFINITION_\" AS unvan,\n    ISNULL(c.\"SPECODE2\", '(boş)') AS satis_kanali,\n    SUM(CASE WHEN i.\"TRCODE\" IN (2,3) THEN i.\"NETTOTAL\" ELSE 0 END) AS iade_tutari,\n    SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE 0 END) AS satis_tutari,\n    CASE \n        WHEN SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE 0 END) = 0 THEN 0\n        ELSE SUM(CASE WHEN i.\"TRCODE\" IN (2,3) THEN i.\"NETTOTAL\" ELSE 0 END) / SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE 0 END)\n    END AS iade_satis_orani\nFROM dbo_LG_411_01_INVOICE i\nJOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\"\nWHERE i.\"CANCELLED\" = 0\n  AND i.\"TRCODE\" IN (2,3,7,8,9)\n  AND i.\"DATE_\" >= '2026-01-01'\n  AND i.\"DATE_\" < '2027-01-01'\nGROUP BY c.\"CODE\", c.\"DEFINITION_\", ISNULL(c.\"SPECODE2\", '(boş)')\nHAVING SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE 0 END) > 1000000\nORDER BY iade_tutari DESC",
+  "summary": "Satışı 1 milyon TL üzerinde olan müşteriler arasında en yüksek iade tutarına sahip ilk 10 firma, TURKUVAZ MÜZİK (5.929.122 TL) ve DMS KİTAP (5.573.096 TL) gibi zincir ve kitapçı kanallarındaki işletmelerdir. İade tutarları 1.271.721 TL ile 5.929.122 TL arasında değişirken, iade/satış oranları %3 ile %83 arasında farklılık göstermektedir. Veriler, iade tutarı en yüksek olan TURKUVAZ'ın %7,3 oranında iade yaptığını, ancak YUNUS EMRE KİTAP gibi bazı firmaların daha düşük satış hacmine rağmen %83 gibi yüksek iade oranlarına sahip olduğunu göstermektedir.",
+  "rowCount": 10,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 134,
+   "llm_ms": 25172,
+   "run_sql_ms": 537,
+   "summary_ms": 12563
+  },
+  "explanation": null,
+  "columns": [
+   "cari_kodu",
+   "unvan",
+   "satis_kanali",
+   "iade_tutari",
+   "satis_tutari",
+   "iade_satis_orani"
+  ],
+  "records": [
+   {
+    "cari_kodu": "12001.01.DO008",
+    "unvan": "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+    "satis_kanali": "ZINCIR",
+    "iade_tutari": 5929122.050000001,
+    "satis_tutari": 81321130.96000001,
+    "iade_satis_orani": 0.07290998022293123
+   },
+   {
+    "cari_kodu": "12001.01.C29100",
+    "unvan": "DMS KİTAP YAYIN DAĞITIM PAZARLAMA VE ORGANİZASYON TİCARET LİMİTED ŞİRKETİ",
+    "satis_kanali": "KITAPCI",
+    "iade_tutari": 5573096.67,
+    "satis_tutari": 15055120.34,
+    "iade_satis_orani": 0.37017948340092777
+   },
+   {
+    "cari_kodu": "12001.01.C10096",
+    "unvan": "PENGUEN KİTAP KASET BASIM YAYIM PAZARLAMA TİCARET A.Ş.",
+    "satis_kanali": "ZINCIR",
+    "iade_tutari": 2695862.2199999997,
+    "satis_tutari": 8974369.3,
+    "iade_satis_orani": 0.3003957303161125
+   },
+   {
+    "cari_kodu": "12001.01.C28652",
+    "unvan": "KİTAPLİFE YAYIMCILIK DAĞITIM ÖZEL EĞİTİM SAN.TİC.LTD.ŞTİ.",
+    "satis_kanali": "KITAPCI",
+    "iade_tutari": 2093865.4,
+    "satis_tutari": 5375936.24,
+    "iade_satis_orani": 0.38948851074915275
+   },
+   {
+    "cari_kodu": "12001.01.C10469",
+    "unvan": "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+    "satis_kanali": "E-TICARET",
+    "iade_tutari": 1532772.6400000001,
+    "satis_tutari": 50576025.830000006,
+    "iade_satis_orani": 0.030306308470184517
+   },
+   {
+    "cari_kodu": "12001.01.BO010",
+    "unvan": "BORA YAYINCILIK DAĞITIM PAZ.SAN.TİC.LTD.ŞTİ.",
+    "satis_kanali": "DAGITICI",
+    "iade_tutari": 1429282.68,
+    "satis_tutari": 9045697.9,
+    "iade_satis_orani": 0.1580068996113611
+   },
+   {
+    "cari_kodu": "12001.01.C28223",
+    "unvan": "İBRAHİM ÖZ - SİNADA KİTABEVİ",
+    "satis_kanali": "KITAPCI",
+    "iade_tutari": 1422596.25,
+    "satis_tutari": 2239716.25,
+    "iade_satis_orani": 0.6351680709554168
+   },
+   {
+    "cari_kodu": "12001.01.DE044",
+    "unvan": "DERYA DAĞITIM A.Ş",
+    "satis_kanali": "DAGITICI",
+    "iade_tutari": 1417416.5799999998,
+    "satis_tutari": 10378770.3,
+    "iade_satis_orani": 0.1365688360980491
+   },
+   {
+    "cari_kodu": "12001.01.C27791",
+    "unvan": "BİRİNCİ KİTAP KIRTASİYE EĞİTİM YAYIN DAĞITIM TURİZM TİCARET LİMİTED ŞİRKETİ",
+    "satis_kanali": "KITAPCI",
+    "iade_tutari": 1415892.25,
+    "satis_tutari": 2286638.75,
+    "iade_satis_orani": 0.6192024210208106
+   },
+   {
+    "cari_kodu": "12001.01.YU004",
+    "unvan": "YUNUS EMRE KİT.KIR.VE BİLG. HİZ.PAZ.TİC.LTD.ŞTİ",
+    "satis_kanali": "KITAPCI",
+    "iade_tutari": 1271721.95,
+    "satis_tutari": 1515400.2,
+    "iade_satis_orani": 0.8391987476311538
+   }
+  ],
+  "wall_s": 39.7
+ },
+ {
+  "id": "cx-04",
+  "q": "2026 Ocak–Ağustos için ay bazında iskonto oranı (iskonto satırları toplamı / brüt malzeme satırları toplamı) ve satış faturası başına ortalama fatura tutarı (NETTOTAL ortalaması, TRCODE 7,8,9).",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay,\n    SUM(CASE WHEN \"LINETYPE\" = 2 THEN \"TOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"LINETYPE\" = 0 THEN \"TOTAL\" ELSE 0 END), 0) AS iskonto_orani,\n    (SELECT AVG(\"NETTOTAL\") \n     FROM dbo_LG_411_01_INVOICE \n     WHERE \"CANCELLED\" = 0 \n       AND \"TRCODE\" IN (7,8,9) \n       AND \"DATE_\" >= '2026-01-01' \n       AND \"DATE_\" < '2026-09-01'\n       AND DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) = DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\n    ) AS ort_fatura_tutari\nFROM dbo_LG_411_01_STLINE\nWHERE \"CANCELLED\" = 0\n  AND \"TRCODE\" IN (7,8)\n  AND \"DATE_\" >= '2026-01-01'\n  AND \"DATE_\" < '2026-09-01'\nGROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\nORDER BY 1",
+  "summary": "2026 Ocak–Ağustos döneminde 8 aylık veride iskonto oranı %44,8 ile %46,7 arasında değişim göstermiştir. Satış faturası başına ortalama tutar tüm aylarda sabit kalarak 13.053,59 olarak gerçekleşmiştir.",
+  "rowCount": 8,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 113,
+   "llm_ms": 22539,
+   "run_sql_ms": 1367,
+   "summary_ms": 7582
+  },
+  "explanation": null,
+  "columns": [
+   "ay",
+   "iskonto_orani",
+   "ort_fatura_tutari"
+  ],
+  "records": [
+   {
+    "ay": "2026-01-01",
+    "iskonto_orani": 0.4551247685122539,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-02-01",
+    "iskonto_orani": 0.4483875202760505,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-03-01",
+    "iskonto_orani": 0.46252932935588126,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-04-01",
+    "iskonto_orani": 0.4646323563901708,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-05-01",
+    "iskonto_orani": 0.459474761754683,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-06-01",
+    "iskonto_orani": 0.4672480651938065,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-07-01",
+    "iskonto_orani": 0.45631683313394444,
+    "ort_fatura_tutari": 13053.58691922343
+   },
+   {
+    "ay": "2026-08-01",
+    "iskonto_orani": 0.4657817038438659,
+    "ort_fatura_tutari": 13053.58691922343
+   }
+  ],
+  "wall_s": 33.7
+ },
+ {
+  "id": "cx-05",
+  "q": "Temmuz 2026'da en çok satan 15 kitap: stok kodu, kitap adı, yayınevi, satılan adet ve brüt satır tutarı; yalnız toptan satış faturaları (TRCODE 8), adede göre azalan.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT TOP 15\n    it.\"CODE\" AS stok_kodu,\n    it.\"NAME\" AS kitap_adi,\n    COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)') AS yayinevi,\n    SUM(sl.\"AMOUNT\") AS satilan_adet,\n    SUM(sl.\"TOTAL\") AS brut_satir_tutari\nFROM dbo_LG_411_01_STLINE sl\nJOIN dbo_LG_411_ITEMS it ON it.\"LOGICALREF\" = sl.\"STOCKREF\"\nWHERE sl.\"CANCELLED\" = 0\n  AND sl.\"LINETYPE\" = 0\n  AND sl.\"TRCODE\" = 8\n  AND sl.\"DATE_\" >= '2026-07-01'\n  AND sl.\"DATE_\" < '2026-08-01'\nGROUP BY it.\"CODE\", it.\"NAME\", COALESCE(NULLIF(it.\"SPECODE\", ''), '(boş)')\nORDER BY SUM(sl.\"AMOUNT\") DESC",
+  "summary": "Temmuz 2026'da toptan satışlarda en çok satan 15 kitap arasında, 18.934 adet ve 3.692.130 TL brüt tutarla \"ÇOK ŞIK HAYALLER\" ilk sırada yer almaktadır. İkinci sıradaki \"MÜDÜRÜN UÇAN PERUĞU\" 15.897 adet ve 3.497.340 TL, üçüncü sıradaki \"ANNE TERLİĞİ\" ise 10.752 adet ve 2.682.900 TL ile listeyi takip etmektedir.",
+  "rowCount": 15,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 124,
+   "llm_ms": 20430,
+   "run_sql_ms": 863,
+   "summary_ms": 10617
+  },
+  "explanation": null,
+  "columns": [
+   "stok_kodu",
+   "kitap_adi",
+   "yayinevi",
+   "satilan_adet",
+   "brut_satir_tutari"
+  ],
+  "records": [
+   {
+    "stok_kodu": "15201.01.6764",
+    "kitap_adi": "ÇOK ŞIK HAYALLER",
+    "yayinevi": "İlk Genç T",
+    "satilan_adet": 18934.0,
+    "brut_satir_tutari": 3692130.0
+   },
+   {
+    "stok_kodu": "15201.01.6756",
+    "kitap_adi": "MÜDÜRÜN UÇAN PERUĞU",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 15897.0,
+    "brut_satir_tutari": 3497340.0
+   },
+   {
+    "stok_kodu": "15201.01.6334",
+    "kitap_adi": "ANNE TERLİĞİ",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 10752.0,
+    "brut_satir_tutari": 2682900.0
+   },
+   {
+    "stok_kodu": "15201.01.3836",
+    "kitap_adi": "BİLİNÇLİ GENÇ OLMAK",
+    "yayinevi": "T",
+    "satilan_adet": 10552.0,
+    "brut_satir_tutari": 2633000.0
+   },
+   {
+    "stok_kodu": "15201.01.6476",
+    "kitap_adi": "YILDIZLARA YAKIN",
+    "yayinevi": "İlk Genç T",
+    "satilan_adet": 7982.0,
+    "brut_satir_tutari": 1672720.0
+   },
+   {
+    "stok_kodu": "15201.01.3985",
+    "kitap_adi": "İÇİMDEKİ MÜZİK",
+    "yayinevi": "G",
+    "satilan_adet": 7855.0,
+    "brut_satir_tutari": 2590855.0
+   },
+   {
+    "stok_kodu": "15201.01.6181",
+    "kitap_adi": "İYİLİK TİMİ",
+    "yayinevi": "İlk Genç T",
+    "satilan_adet": 7570.0,
+    "brut_satir_tutari": 1585300.0
+   },
+   {
+    "stok_kodu": "15701.02.0092",
+    "kitap_adi": "TEMMUZ BÜLTEN 2026",
+    "yayinevi": "Timaş Yayı",
+    "satilan_adet": 7550.0,
+    "brut_satir_tutari": 16500.0
+   },
+   {
+    "stok_kodu": "15201.01.6777",
+    "kitap_adi": "SARIL KALBİNE",
+    "yayinevi": "Timaş İnan",
+    "satilan_adet": 7425.0,
+    "brut_satir_tutari": 2041875.0
+   },
+   {
+    "stok_kodu": "15201.01.6388",
+    "kitap_adi": "HAPI YUTTUK ECZANESİ",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 7413.0,
+    "brut_satir_tutari": 1326340.0
+   },
+   {
+    "stok_kodu": "15201.01.6533",
+    "kitap_adi": "UÇAN ANNE TERLİĞİ",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 7357.0,
+    "brut_satir_tutari": 1834250.0
+   },
+   {
+    "stok_kodu": "15201.01.6622",
+    "kitap_adi": "ŞİFAYI KAPTIK HASTANESİ",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 7117.0,
+    "brut_satir_tutari": 1278005.0
+   },
+   {
+    "stok_kodu": "15201.01.6585",
+    "kitap_adi": "TOP YUTAN ORMANI",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 6366.0,
+    "brut_satir_tutari": 1396520.0
+   },
+   {
+    "stok_kodu": "15201.01.4529",
+    "kitap_adi": "KİRAZ AĞACI İLE ARAMIZDAKİ MESAFE",
+    "yayinevi": "Genç Timaş",
+    "satilan_adet": 5748.0,
+    "brut_satir_tutari": 1666370.0
+   },
+   {
+    "stok_kodu": "15201.01.5800",
+    "kitap_adi": "ÇANTAMDAN FİL ÇIKTI",
+    "yayinevi": "Timaş Çocu",
+    "satilan_adet": 5587.0,
+    "brut_satir_tutari": 1004380.0
+   }
+  ],
+  "wall_s": 34.0
+ },
+ {
+  "id": "cx-06",
+  "q": "2026'da mal alım (TRCODE 1) ve alınan hizmet (TRCODE 4) faturalarında tedarikçi (cari) bazında toplam tutar, fatura sayısı, ilk ve son fatura tarihi; toplam tutara göre ilk 10 tedarikçi, cari unvanıyla.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT TOP 10\n    \"CLCARD\".\"DEFINITION_\" AS \"CARI_UNVANI\",\n    SUM(\"INVOICE\".\"NETTOTAL\") AS \"TOPLAM_TUTAR\",\n    COUNT(\"INVOICE\".\"LOGICALREF\") AS \"FATURA_SAYISI\",\n    MIN(\"INVOICE\".\"DATE_\") AS \"ILK_FATURA_TARIHI\",\n    MAX(\"INVOICE\".\"DATE_\") AS \"SON_FATURA_TARIHI\"\nFROM \"dbo_LG_411_01_INVOICE\" AS \"INVOICE\"\nINNER JOIN \"dbo_LG_411_CLCARD\" AS \"CLCARD\"\n    ON \"INVOICE\".\"CLIENTREF\" = \"CLCARD\".\"LOGICALREF\"\nWHERE \"INVOICE\".\"CANCELLED\" = 0\n    AND \"INVOICE\".\"TRCODE\" IN (1, 4)\n    AND \"INVOICE\".\"DATE_\" >= '2026-01-01'\n    AND \"INVOICE\".\"DATE_\" < '2027-01-01'\nGROUP BY \"CLCARD\".\"DEFINITION_\"\nORDER BY SUM(\"INVOICE\".\"NETTOTAL\") DESC",
+  "summary": "2026 yılında mal alım ve alınan hizmet faturalarında toplam tutara göre ilk 10 tedarikçi listelenmiştir. En yüksek tutarlı tedarikçi 34.419.024,86 TL ile GİRİŞİM KAĞIT SAN. TİC. A.Ş. olurken, onu 27.171.902,89 TL ile UÇAN KİTAP YAYINLARI takip etmektedir. Listede yer alan diğer tedarikçilerin toplam tutarları 14.431.353,00 TL ile 21.477.508,25 TL arasında değişmektedir.",
+  "rowCount": 10,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 365,
+   "llm_ms": 21196,
+   "run_sql_ms": 478,
+   "summary_ms": 10440
+  },
+  "explanation": null,
+  "columns": [
+   "CARI_UNVANI",
+   "TOPLAM_TUTAR",
+   "FATURA_SAYISI",
+   "ILK_FATURA_TARIHI",
+   "SON_FATURA_TARIHI"
+  ],
+  "records": [
+   {
+    "CARI_UNVANI": "GİRİŞİM KAĞIT SAN. TİC. A.Ş.",
+    "TOPLAM_TUTAR": 34419024.859999985,
+    "FATURA_SAYISI": 271,
+    "ILK_FATURA_TARIHI": "2026-01-06T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-07T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "UÇAN KİTAP YAYINLARI SANAYİ TİCARET LİMİTED ŞİRKETİ",
+    "TOPLAM_TUTAR": 27171902.89,
+    "FATURA_SAYISI": 8,
+    "ILK_FATURA_TARIHI": "2026-01-02T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-12T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "YUZU KİTAP YAYINCILIK A.Ş.\r\n",
+    "TOPLAM_TUTAR": 21477508.25,
+    "FATURA_SAYISI": 7,
+    "ILK_FATURA_TARIHI": "2026-01-02T00:00:00",
+    "SON_FATURA_TARIHI": "2026-07-31T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "WPC MATBAACILIK SAN.VE TİC.A.Ş.",
+    "TOPLAM_TUTAR": 19676992.709999997,
+    "FATURA_SAYISI": 265,
+    "ILK_FATURA_TARIHI": "2026-01-05T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-07T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "MİNİK AKADEMİ EĞİTİCİ OYUNCAK VE YAYINCILIK A.Ş.",
+    "TOPLAM_TUTAR": 19177513.02,
+    "FATURA_SAYISI": 42,
+    "ILK_FATURA_TARIHI": "2026-01-09T00:00:00",
+    "SON_FATURA_TARIHI": "2026-07-08T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "ÇINAR MATBAACILIK VE YAY.SAN.TİC.LTD.ŞTİ.",
+    "TOPLAM_TUTAR": 18574262.169999994,
+    "FATURA_SAYISI": 117,
+    "ILK_FATURA_TARIHI": "2026-01-05T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-07T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "GİZA İÇ VE DIŞ TİC. LTD. ŞTİ.",
+    "TOPLAM_TUTAR": 18292416.59,
+    "FATURA_SAYISI": 78,
+    "ILK_FATURA_TARIHI": "2026-01-07T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-03T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "SİBERBOOK TEKNOLOJİ ANONİM ŞİRKETİ",
+    "TOPLAM_TUTAR": 17224896.779999997,
+    "FATURA_SAYISI": 4,
+    "ILK_FATURA_TARIHI": "2026-04-30T00:00:00",
+    "SON_FATURA_TARIHI": "2026-07-31T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "LACiVERT YAYINCILIK SANAYI VE TICARET ANONIM SIRKETI",
+    "TOPLAM_TUTAR": 14826084.5,
+    "FATURA_SAYISI": 4,
+    "ILK_FATURA_TARIHI": "2026-01-02T00:00:00",
+    "SON_FATURA_TARIHI": "2026-07-31T00:00:00"
+   },
+   {
+    "CARI_UNVANI": "ANANAS YAYINCILIK REKLAM ORG. VE TİC. LTD. ŞTİ",
+    "TOPLAM_TUTAR": 14431353.0,
+    "FATURA_SAYISI": 28,
+    "ILK_FATURA_TARIHI": "2026-01-19T00:00:00",
+    "SON_FATURA_TARIHI": "2026-08-12T00:00:00"
+   }
+  ],
+  "wall_s": 33.6
+ },
+ {
+  "id": "cx-07",
+  "q": "Müşteri yoğunlaşması: 2026 net ciroya (satış eksi iade) göre ilk 10 müşterinin toplam net ciro içindeki payı yüzde olarak; her müşteri için net ciro, kümülatif pay ve kanal kodu.",
+  "type": "TEXT_TO_SQL",
+  "sql": "WITH customer_net AS (\n    SELECT \n        c.\"CODE\" AS cari_kodu,\n        c.\"DEFINITION_\" AS unvan,\n        COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)') AS kanal_kodu,\n        SUM(CASE WHEN i.\"TRCODE\" IN (7,8,9) THEN i.\"NETTOTAL\" ELSE -i.\"NETTOTAL\" END) AS net_ciro\n    FROM dbo_LG_411_01_INVOICE i\n    JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\"\n    WHERE i.\"CANCELLED\" = 0\n      AND i.\"TRCODE\" IN (2,3,7,8,9)\n      AND i.\"DATE_\" >= '2026-01-01'\n      AND i.\"DATE_\" < '2027-01-01'\n    GROUP BY c.\"CODE\", c.\"DEFINITION_\", COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)')\n),\nranked AS (\n    SELECT \n        cari_kodu,\n        unvan,\n        kanal_kodu,\n        net_ciro,\n        SUM(net_ciro) OVER (ORDER BY net_ciro DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS kumulatif_ciro,\n        SUM(net_ciro) OVER () AS toplam_net_ciro\n    FROM customer_net\n)\nSELECT TOP 10\n    cari_kodu,\n    unvan,\n    kanal_kodu,\n    net_ciro,\n    (net_ciro / NULLIF(toplam_net_ciro, 0)) * 100 AS pay_yuzde,\n    (kumulatif_ciro / NULLIF(toplam_net_ciro, 0)) * 100 AS kumulatif_pay_yuzde\nFROM ranked\nORDER BY net_ciro DESC",
+  "summary": "2026 net cirosuna göre ilk 10 müşterinin toplam payı %43,46'dır. En yüksek net ciro 75.392.008,91 TL ile TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş.'ye aittir. İlk 10 müşteri arasında ZINCIR, E-TICARET, DAGITICI, KITAPCI ve boş kanal kodlu müşteriler bulunmaktadır.",
+  "rowCount": 10,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 100,
+   "llm_ms": 25751,
+   "run_sql_ms": 502,
+   "summary_ms": 9676
+  },
+  "explanation": null,
+  "columns": [
+   "cari_kodu",
+   "unvan",
+   "kanal_kodu",
+   "net_ciro",
+   "pay_yuzde",
+   "kumulatif_pay_yuzde"
+  ],
+  "records": [
+   {
+    "cari_kodu": "12001.01.DO008",
+    "unvan": "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+    "kanal_kodu": "ZINCIR",
+    "net_ciro": 75392008.91000001,
+    "pay_yuzde": 8.889417396819649,
+    "kumulatif_pay_yuzde": 8.889417396819649
+   },
+   {
+    "cari_kodu": "12001.01.Kİ027",
+    "unvan": "KİTAPYURDU YAYINCILIK VE İLETİŞİM A.Ş.",
+    "kanal_kodu": "E-TICARET",
+    "net_ciro": 70962599.88,
+    "pay_yuzde": 8.367148972643337,
+    "kumulatif_pay_yuzde": 17.256566369462988
+   },
+   {
+    "cari_kodu": "12001.01.D-001",
+    "unvan": "D-MARKET ELEKTRONİK HİZMETLER VE TİC.A.Ş.",
+    "kanal_kodu": "E-TICARET",
+    "net_ciro": 63644956.13,
+    "pay_yuzde": 7.5043308756666125,
+    "kumulatif_pay_yuzde": 24.7608972451296
+   },
+   {
+    "cari_kodu": "12001.01.C10469",
+    "unvan": "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+    "kanal_kodu": "E-TICARET",
+    "net_ciro": 49043253.19,
+    "pay_yuzde": 5.78265461296111,
+    "kumulatif_pay_yuzde": 30.543551858090705
+   },
+   {
+    "cari_kodu": "12001.01.BA104",
+    "unvan": "BAŞARI DAĞITIM KİT.KIRT.YAY.TİC.AŞ.",
+    "kanal_kodu": "DAGITICI",
+    "net_ciro": 25723470.7,
+    "pay_yuzde": 3.033035878114532,
+    "kumulatif_pay_yuzde": 33.57658773620524
+   },
+   {
+    "cari_kodu": "12001.01.KA095",
+    "unvan": "KALITIM BASIM YAYIM DAĞ.BİLGİ SİST.GIDA SAN.VE TİC.LTD.ŞTİ",
+    "kanal_kodu": "DAGITICI",
+    "net_ciro": 21022102.73,
+    "pay_yuzde": 2.4787009714633665,
+    "kumulatif_pay_yuzde": 36.05528870766861
+   },
+   {
+    "cari_kodu": "12001.01.C28445",
+    "unvan": "ÜNİTE KİTAP YAY.EĞT.HİZM.PAZ.TİC.LTD.ŞTİ.",
+    "kanal_kodu": "KITAPCI",
+    "net_ciro": 18249786.83,
+    "pay_yuzde": 2.1518192031268963,
+    "kumulatif_pay_yuzde": 38.2071079107955
+   },
+   {
+    "cari_kodu": "12001.01.TE035",
+    "unvan": "TEKROM TEKNOLOJİ A.Ş. ",
+    "kanal_kodu": "(boş)",
+    "net_ciro": 16979373.529999938,
+    "pay_yuzde": 2.0020256871635134,
+    "kumulatif_pay_yuzde": 40.20913359795901
+   },
+   {
+    "cari_kodu": "12001.01.C27594",
+    "unvan": "İBRAHİMOĞULLARI BİLGİ TEKNOLOJİLERİ ELEKT.TİC.VE SAN.LTD.ŞTİ.",
+    "kanal_kodu": "KITAPCI",
+    "net_ciro": 14768714.0,
+    "pay_yuzde": 1.7413684163394165,
+    "kumulatif_pay_yuzde": 41.95050201429843
+   },
+   {
+    "cari_kodu": "12001.01.C27758",
+    "unvan": "OFEL TURİZM HİZMETLERI A.Ş.",
+    "kanal_kodu": "KITAPCI",
+    "net_ciro": 12805002.97,
+    "pay_yuzde": 1.5098286650476422,
+    "kumulatif_pay_yuzde": 43.46033067934608
+   }
+  ],
+  "wall_s": 37.3
+ },
+ {
+  "id": "cx-08",
+  "q": "Kanal bazında brüt kâr marjı: satış hareket satırlarında (TRCODE 7,8, LINETYPE 0, maliyeti işlenmiş satırlar) faturanın cari kartındaki kanal koduna göre maliyetli ciro, maliyet ve marj yüzdesi; maliyetli cirosu 10 milyon TL üzerindeki kanallar, marja göre azalan.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)') AS kanal,\n    SUM(s.\"TOTAL\") AS maliyetli_ciro,\n    SUM(s.\"AMOUNT\" * s.\"OUTCOST\") AS toplam_maliyet,\n    (1 - SUM(s.\"AMOUNT\" * s.\"OUTCOST\") / NULLIF(SUM(s.\"TOTAL\"), 0)) * 100 AS brut_kar_marji_yuzde\nFROM dbo_LG_411_01_STLINE s\nJOIN dbo_LG_411_01_INVOICE i ON i.\"LOGICALREF\" = s.\"INVOICEREF\"\nJOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\"\nWHERE s.\"CANCELLED\" = 0\n  AND s.\"LINETYPE\" = 0\n  AND s.\"OUTCOST\" <> 0\n  AND i.\"CANCELLED\" = 0\n  AND i.\"TRCODE\" IN (7, 8)\nGROUP BY COALESCE(NULLIF(c.\"SPECODE2\", ''), '(boş)')\nHAVING SUM(s.\"TOTAL\") > 10000000\nORDER BY brut_kar_marji_yuzde DESC",
+  "summary": "Maliyetli cirosu 10 milyon TL üzerinde olan 7 kanal, brüt kâr marjına göre azalan sıralandığında en yüksek marj %89,05 ile Dağıtıcı kanalında, en düşük marj ise %75,19 ile boş kanal kodlu grupta gerçekleşmiştir. Dağıtıcı kanalının maliyetli cirosu 176.314.101 TL, Zıncir kanalının 133.105.650 TL ve Kitapçı kanalının 603.527.911 TL olarak hesaplanmıştır.",
+  "rowCount": 7,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 107,
+   "llm_ms": 21563,
+   "run_sql_ms": 1576,
+   "summary_ms": 9415
+  },
+  "explanation": null,
+  "columns": [
+   "kanal",
+   "maliyetli_ciro",
+   "toplam_maliyet",
+   "brut_kar_marji_yuzde"
+  ],
+  "records": [
+   {
+    "kanal": "DAGITICI",
+    "maliyetli_ciro": 176314100.91,
+    "toplam_maliyet": 19304912.358995132,
+    "brut_kar_marji_yuzde": 89.05084036990928
+   },
+   {
+    "kanal": "ZINCIR",
+    "maliyetli_ciro": 133105649.88000008,
+    "toplam_maliyet": 15934061.08293056,
+    "brut_kar_marji_yuzde": 88.0290122190187
+   },
+   {
+    "kanal": "KITAPCI",
+    "maliyetli_ciro": 603527910.8499995,
+    "toplam_maliyet": 72916879.51192537,
+    "brut_kar_marji_yuzde": 87.91822578524491
+   },
+   {
+    "kanal": "KURUM",
+    "maliyetli_ciro": 31103271.32,
+    "toplam_maliyet": 4965800.818635338,
+    "brut_kar_marji_yuzde": 84.0344741633584
+   },
+   {
+    "kanal": "E-TICARET",
+    "maliyetli_ciro": 270951730.40000045,
+    "toplam_maliyet": 45063393.16875986,
+    "brut_kar_marji_yuzde": 83.3684792851355
+   },
+   {
+    "kanal": "MAGAZA",
+    "maliyetli_ciro": 11239189.309999999,
+    "toplam_maliyet": 2339015.2967351186,
+    "brut_kar_marji_yuzde": 79.18875434677487
+   },
+   {
+    "kanal": "(boş)",
+    "maliyetli_ciro": 22982506.53000047,
+    "toplam_maliyet": 5702161.097722728,
+    "brut_kar_marji_yuzde": 75.18912443131758
+   }
+  ],
+  "wall_s": 34.6
+ },
+ {
+  "id": "cx-09",
+  "q": "Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır: her ay için fatura sayısı, NETTOTAL toplamı ve ortalama fatura tutarı; ayrıca perakendenin o ayın toplam satışındaki payı.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay,\n    SUM(CASE WHEN \"TRCODE\" = 7 THEN 1 ELSE 0 END) AS perakende_fatura_sayisi,\n    SUM(CASE WHEN \"TRCODE\" = 7 THEN \"NETTOTAL\" ELSE 0 END) AS perakende_toplam,\n    SUM(CASE WHEN \"TRCODE\" = 7 THEN \"NETTOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"TRCODE\" = 7 THEN 1 ELSE 0 END), 0) AS perakende_ortalama,\n    SUM(CASE WHEN \"TRCODE\" = 8 THEN 1 ELSE 0 END) AS toptan_fatura_sayisi,\n    SUM(CASE WHEN \"TRCODE\" = 8 THEN \"NETTOTAL\" ELSE 0 END) AS toptan_toplam,\n    SUM(CASE WHEN \"TRCODE\" = 8 THEN \"NETTOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"TRCODE\" = 8 THEN 1 ELSE 0 END), 0) AS toptan_ortalama,\n    SUM(CASE WHEN \"TRCODE\" = 7 THEN \"NETTOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"TRCODE\" IN (7,8) THEN \"NETTOTAL\" ELSE 0 END), 0) AS perakende_payi\nFROM dbo_LG_411_01_INVOICE\nWHERE \"CANCELLED\" = 0\n  AND \"TRCODE\" IN (7, 8)\n  AND \"DATE_\" >= '2026-01-01'\n  AND \"DATE_\" < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\nORDER BY 1",
+  "summary": "2026 yılının ilk sekiz ayında perakende satışları aylık 3.328 ile 8.042 fatura arasında değişirken, toptan satışlar 1.249 ile 4.106 fatura arasında gerçekleşmiştir. Toptan satışların aylık toplamı 84.082.304 TL ile 133.487.255 TL aralığında seyrederek, perakende payının %2,7 ile %5,3 arasında kalmasına neden olmuştur. Ortalama fatura tutarı toptanda 32.510 TL ile 68.455 TL arasında iken, perakendede 719 TL ile 928 TL arasında kalmıştır.",
+  "rowCount": 8,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 1658,
+   "llm_ms": 24990,
+   "run_sql_ms": 542,
+   "summary_ms": 11529
+  },
+  "explanation": null,
+  "columns": [
+   "ay",
+   "perakende_fatura_sayisi",
+   "perakende_toplam",
+   "perakende_ortalama",
+   "toptan_fatura_sayisi",
+   "toptan_toplam",
+   "toptan_ortalama",
+   "perakende_payi"
+  ],
+  "records": [
+   {
+    "ay": "2026-01-01",
+    "perakende_fatura_sayisi": 5879,
+    "perakende_toplam": 5458129.009999999,
+    "perakende_ortalama": 928.4111260418437,
+    "toptan_fatura_sayisi": 3053,
+    "toptan_toplam": 101598649.53999999,
+    "toptan_ortalama": 33278.29988208319,
+    "perakende_payi": 0.05098349757881819
+   },
+   {
+    "ay": "2026-02-01",
+    "perakende_fatura_sayisi": 8042,
+    "perakende_toplam": 5951605.399999995,
+    "perakende_ortalama": 740.0653320069628,
+    "toptan_fatura_sayisi": 4106,
+    "toptan_toplam": 133487255.88999999,
+    "toptan_ortalama": 32510.29125426205,
+    "perakende_payi": 0.042682544485371655
+   },
+   {
+    "ay": "2026-03-01",
+    "perakende_fatura_sayisi": 5879,
+    "perakende_toplam": 5036773.119999997,
+    "perakende_ortalama": 856.7397720700795,
+    "toptan_fatura_sayisi": 2986,
+    "toptan_toplam": 118979798.50000001,
+    "toptan_ortalama": 39845.88027461487,
+    "perakende_payi": 0.04061371036310541
+   },
+   {
+    "ay": "2026-04-01",
+    "perakende_fatura_sayisi": 6860,
+    "perakende_toplam": 6010032.210000001,
+    "perakende_ortalama": 876.0979897959185,
+    "toptan_fatura_sayisi": 2947,
+    "toptan_toplam": 120247154.16999999,
+    "toptan_ortalama": 40803.24199864268,
+    "perakende_payi": 0.047601505960313616
+   },
+   {
+    "ay": "2026-05-01",
+    "perakende_fatura_sayisi": 4917,
+    "perakende_toplam": 4401725.439999999,
+    "perakende_ortalama": 895.2054992881835,
+    "toptan_fatura_sayisi": 2090,
+    "toptan_toplam": 84082304.38999999,
+    "toptan_ortalama": 40230.767650717695,
+    "perakende_payi": 0.04974598747883449
+   },
+   {
+    "ay": "2026-06-01",
+    "perakende_fatura_sayisi": 7706,
+    "perakende_toplam": 6768252.78,
+    "perakende_ortalama": 878.3094705424345,
+    "toptan_fatura_sayisi": 2310,
+    "toptan_toplam": 120744156.94000001,
+    "toptan_ortalama": 52270.197809523816,
+    "perakende_payi": 0.0530791692735019
+   },
+   {
+    "ay": "2026-07-01",
+    "perakende_fatura_sayisi": 6937,
+    "perakende_toplam": 6040896.0799999945,
+    "perakende_ortalama": 870.8225573014263,
+    "toptan_fatura_sayisi": 2268,
+    "toptan_toplam": 109989165.56000002,
+    "toptan_ortalama": 48496.10474426809,
+    "perakende_payi": 0.052063198059333494
+   },
+   {
+    "ay": "2026-08-01",
+    "perakende_fatura_sayisi": 3328,
+    "perakende_toplam": 2393258.93,
+    "perakende_ortalama": 719.1282842548078,
+    "toptan_fatura_sayisi": 1249,
+    "toptan_toplam": 85500573.62,
+    "toptan_ortalama": 68455.22307445957,
+    "perakende_payi": 0.027228974554483695
+   }
+  ],
+  "wall_s": 39.6
+ },
+ {
+  "id": "cx-10",
+  "q": "Sipariş fişlerinde (ORFICHE) 2026 ay bazında açılan sipariş sayısı ve toplam tutar; hangi kolonların tutar ve tarih olduğunu modelden bul, emin değilsen NO_SQL yaz.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT \n    DATEFROMPARTS(YEAR(\"dbo_LG_411_01_ORFICHE\".\"DATE_\"), MONTH(\"dbo_LG_411_01_ORFICHE\".\"DATE_\"), 1) AS \"AY\",\n    COUNT(\"dbo_LG_411_01_ORFICHE\".\"LOGICALREF\") AS \"SIPARIS_SAYISI\",\n    SUM(\"dbo_LG_411_01_ORFLINE\".\"TOTAL\") AS \"TOPLAM_TUTAR\"\nFROM \"dbo_LG_411_01_ORFICHE\"\nJOIN \"dbo_LG_411_01_ORFLINE\" ON \"dbo_LG_411_01_ORFICHE\".\"LOGICALREF\" = \"dbo_LG_411_01_ORFLINE\".\"ORDFICHEREF\"\nWHERE \"dbo_LG_411_01_ORFICHE\".\"CANCELLED\" = 0\n  AND YEAR(\"dbo_LG_411_01_ORFICHE\".\"DATE_\") = 2026\nGROUP BY DATEFROMPARTS(YEAR(\"dbo_LG_411_01_ORFICHE\".\"DATE_\"), MONTH(\"dbo_LG_411_01_ORFICHE\".\"DATE_\"), 1)\nORDER BY \"AY\"",
+  "summary": "ORFICHE tablosundan elde edilen verilere göre 2026 yılının Ocak ayından Ağustos ayına kadar olan 8 aylık dönemde aylık bazda sipariş sayısı ve toplam tutar bilgileri listelenmiştir. En yüksek sipariş sayısı 28.206 ile Haziran ayında gerçekleşirken, en yüksek toplam tutar 26.997.545,42 ile yine Haziran ayında kaydedilmiştir. En düşük sipariş sayısı 14.652 ile Ağustos ayında, en düşük toplam tutar ise 3.668.048,57 ile Mart ayında görülmüştür.",
+  "rowCount": 8,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 2102,
+   "llm_ms": 15842,
+   "run_sql_ms": 764,
+   "summary_ms": 9136
+  },
+  "explanation": null,
+  "columns": [
+   "AY",
+   "SIPARIS_SAYISI",
+   "TOPLAM_TUTAR"
+  ],
+  "records": [
+   {
+    "AY": "2026-01-01",
+    "SIPARIS_SAYISI": 24425,
+    "TOPLAM_TUTAR": 7938942.370000009
+   },
+   {
+    "AY": "2026-02-01",
+    "SIPARIS_SAYISI": 24960,
+    "TOPLAM_TUTAR": 5221169.489999973
+   },
+   {
+    "AY": "2026-03-01",
+    "SIPARIS_SAYISI": 20051,
+    "TOPLAM_TUTAR": 3668048.5699999714
+   },
+   {
+    "AY": "2026-04-01",
+    "SIPARIS_SAYISI": 23250,
+    "TOPLAM_TUTAR": 5050870.719999966
+   },
+   {
+    "AY": "2026-05-01",
+    "SIPARIS_SAYISI": 17577,
+    "TOPLAM_TUTAR": 5216079.680000039
+   },
+   {
+    "AY": "2026-06-01",
+    "SIPARIS_SAYISI": 28206,
+    "TOPLAM_TUTAR": 26997545.419999745
+   },
+   {
+    "AY": "2026-07-01",
+    "SIPARIS_SAYISI": 27930,
+    "TOPLAM_TUTAR": 9176220.450000007
+   },
+   {
+    "AY": "2026-08-01",
+    "SIPARIS_SAYISI": 14652,
+    "TOPLAM_TUTAR": 4622678.77999999
+   }
+  ],
+  "wall_s": 28.6
+ }
+]

@@ -1,0 +1,424 @@
+{
+ "ran_at": "2026-09-06T21:57:31",
+ "datasource": "logo",
+ "catalog_version": 1,
+ "compilers": [
+  "deterministic"
+ ],
+ "summary": {
+  "deterministic": {
+   "compiled": "16/20",
+   "compiled_ratio": 0.8,
+   "behaviour": "18/20",
+   "behaviour_ratio": 0.9,
+   "executable_ratio": 1.0,
+   "result_correct": "n/a",
+   "result_ratio": null,
+   "certified_ratio": 0.8,
+   "latency_ms_mean": 0,
+   "latency_ms_median": 0
+  }
+ },
+ "verdict": {
+  "baseline": "deterministic",
+  "promote": null,
+  "reason": "tek derleyici koşuldu"
+ },
+ "results": [
+  {
+   "id": "cs-01",
+   "q": "Son 30 günde toptan satış ne kadar?",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[TRCODE] IN (8)\n  AND INVOICE.[DATE_] >= '2026-08-07' AND INVOICE.[DATE_] < '2026-09-07'",
+     "ms": 1,
+     "certified": true,
+     "explain": [
+      "ölçü: 'satis' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+      "ölçü kapsamı: INVOICE.TRCODE IN (2,3,7,8,9)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-02",
+   "q": "2026 toplam net ciro nedir?",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+      "ölçü kapsamı: INVOICE.TRCODE IN (2,3,7,8,9)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-03",
+   "q": "2026 yılında aylık net ciro",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "kırılım: MONTH (DATE_)",
+      "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-04",
+   "q": "Perakende ile toptan satışları 2026 ay bazında karşılaştır",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS perakende_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (8) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS toptan_satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[TRCODE] IN (7, 8)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
+     "ms": 7,
+     "certified": true,
+     "explain": [
+      "kırılım: MONTH (DATE_)",
+      "pivot: 'perakende' → INVOICE.[TRCODE] IN (7) için 'satislari'",
+      "pivot: 'toptan' → INVOICE.[TRCODE] IN (8) için 'satislari'"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-05",
+   "q": "Temmuz 2026 iade oranı nedir?",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (2, 3) THEN STLINE.[AMOUNT] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[AMOUNT] ELSE 0 END), 0) AS iade_oran\nFROM [dbo].[LG_411_01_STLINE] AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-07-01' AND STLINE.[DATE_] < '2026-08-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'iade orani' → SUM(CASE WHEN STLINE.TRCODE IN (2, 3) THEN STLINE.AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.AMOUNT ELSE 0 END), 0)",
+      "varsayılan filtre: STLINE.CANCELLED = ['0']",
+      "ölçü kapsamı: STLINE.LINETYPE = (0)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-06",
+   "q": "Kanal bazında net ciro",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "grup: 'kanal' → CLCARD.SPECODE2",
+      "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-07",
+   "q": "2026 iade tutarı kanal bazında",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(INVOICE.[NETTOTAL]) AS iade_tutari\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY iade_tutari DESC",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "grup: 'kanal' → CLCARD.SPECODE2",
+      "ölçü: 'iade tutari' → SUM(INVOICE.NETTOTAL)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-08",
+   "q": "Yayınevi bazında 2026 satılan adet",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT ITEMS.[SPECODE] AS yayinev, SUM(STLINE.[AMOUNT]) AS satilan_adet\nFROM [dbo].[LG_411_01_STLINE] AS STLINE\nJOIN [dbo].[LG_411_ITEMS] AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[SPECODE]\nORDER BY satilan_adet DESC",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "grup: 'yayinevi' → ITEMS.SPECODE",
+      "ölçü: 'satilan adet' → SUM(STLINE.AMOUNT)",
+      "varsayılan filtre: STLINE.CANCELLED = ['0']"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-09",
+   "q": "Geçen ay perakende satış tutarı",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END) AS satis_tutar\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[TRCODE] IN (7)\n  AND INVOICE.[DATE_] >= '2026-08-01' AND INVOICE.[DATE_] < '2026-09-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'satis tutari' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+      "ölçü kapsamı: INVOICE.TRCODE IN (2,3,7,8,9)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-10",
+   "q": "Günlük satış tutarı (son günler) nedir?",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": true,
+   "compilers": {
+    "deterministic": {
+     "sql": "",
+     "ms": 0,
+     "certified": false,
+     "explain": [
+      "compiler returned None"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cs-11",
+   "q": "2026 Ocak–Ağustos brüt kâr marjı",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT 1 - SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[AMOUNT] * STLINE.[OUTCOST] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[TOTAL] ELSE 0 END), 0) AS brut_kar_marj\nFROM [dbo].[LG_411_01_STLINE] AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2026-09-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'brut kar marji' → 1 - SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.AMOUNT * STLINE.OUTCOST ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.TRCODE IN (7, 8) AND STLINE.OUTCOST <> 0 THEN STLINE.TOTAL ELSE 0 END), 0)",
+      "varsayılan filtre: STLINE.CANCELLED = ['0']",
+      "ölçü kapsamı: STLINE.LINETYPE = (0)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-12",
+   "q": "Mal alım faturaları 2026 toplam tutar",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(INVOICE.[NETTOTAL]) AS toplam_tutar\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (1)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'toplam tutar' → SUM(INVOICE.NETTOTAL)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+      "filtre: 'mal alim' → INVOICE.[TRCODE] IN (1)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-13",
+   "q": "Bu yıl toptan iade tutarı",
+   "unresolved": [],
+   "conflicts": [
+    "INVOICE.TRCODE"
+   ],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "",
+     "ms": 0,
+     "certified": false,
+     "explain": [
+      "compiler returned None"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cs-14",
+   "q": "2026 ay bazında sipariş sayısı",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT DATEFROMPARTS(YEAR(ORFICHE.[DATE_]), MONTH(ORFICHE.[DATE_]), 1) AS ay, COUNT(DISTINCT ORFICHE.[LOGICALREF]) AS siparis_sayi\nFROM [dbo].[LG_411_01_ORFICHE] AS ORFICHE\nWHERE ORFICHE.[DATE_] >= '2026-01-01' AND ORFICHE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(ORFICHE.[DATE_]), MONTH(ORFICHE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(ORFICHE.[DATE_]), MONTH(ORFICHE.[DATE_]), 1)",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "kırılım: MONTH (DATE_)",
+      "ölçü: 'siparis sayisi' → COUNT(DISTINCT ORFICHE.LOGICALREF)",
+      "dönem: YEAR [2026-01-01, 2027-01-01)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-15",
+   "q": "Bölgesel performans son 90 gün",
+   "unresolved": [
+    "bolgesel",
+    "performans"
+   ],
+   "conflicts": [],
+   "refusalExpected": true,
+   "compilers": {
+    "deterministic": {
+     "sql": "",
+     "ms": 0,
+     "certified": false,
+     "explain": [
+      "compiler returned None"
+     ]
+    }
+   }
+  },
+  {
+   "id": "cs-16",
+   "q": "2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[SPECODE2] IN ('DAGITICI', 'E-TICARET', 'KITAPCI')\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1), CLCARD.[SPECODE2]\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "kırılım: MONTH (DATE_)",
+      "grup: 'kanallari' → CLCARD.SPECODE2",
+      "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-17",
+   "q": "Toptan satış faturaları (TRCODE 8) Temmuz 2026 satılan adet",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN STLINE.[TRCODE] IN (8) THEN STLINE.[AMOUNT] ELSE 0 END) AS toptan_satilan_adet, SUM(CASE WHEN STLINE.[TRCODE] IN (8) THEN STLINE.[AMOUNT] ELSE 0 END) AS trcode_8_satilan_adet\nFROM [dbo].[LG_411_01_STLINE] AS STLINE\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (7, 8)\n  AND STLINE.[TRCODE] IN (8)\n  AND STLINE.[DATE_] >= '2026-07-01' AND STLINE.[DATE_] < '2026-08-01'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "pivot: 'toptan' → STLINE.[TRCODE] IN (8) için 'satilan adet'",
+      "pivot: 'TRCODE 8' → STLINE.[TRCODE] IN (8) için 'satilan adet'",
+      "ölçü: 'satilan adet' → SUM(STLINE.AMOUNT)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-18",
+   "q": "Yıl başından beri net ciro",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2026-09-07'",
+     "ms": 0,
+     "certified": true,
+     "explain": [
+      "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+      "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+      "ölçü kapsamı: INVOICE.TRCODE IN (2,3,7,8,9)"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-19",
+   "q": "Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır: her ay için fatura sayısı, NETTOTAL toplamı ve ortalama fatura tutarı; ayrıca perakendenin o ayın toplam satışındaki payı.",
+   "unresolved": [],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS perakende_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (8) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS toptan_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS perakende_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS trcode_7_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (8) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS trcode_8_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS perakende_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (8) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS toptan_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS perakende_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (7) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS trcode_7_satis, SUM(CASE WHEN INVOICE.[TRCODE] IN (8) THEN CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE 0 END ELSE 0 END) AS trcode_8_satis\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[TRCODE] IN (7, 8)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
+     "ms": 3,
+     "certified": true,
+     "explain": [
+      "kırılım: MONTH (DATE_)",
+      "pivot: 'perakende' → INVOICE.[TRCODE] IN (7) için 'satislari'",
+      "pivot: 'toptan' → INVOICE.[TRCODE] IN (8) için 'satislari'"
+     ],
+     "guardrail": "ok"
+    }
+   }
+  },
+  {
+   "id": "cs-20",
+   "q": "Kanal bazında brüt kâr marjı: satış hareket satırlarında maliyetli ciro, maliyet ve marj yüzdesi",
+   "unresolved": [
+    "maliyetli"
+   ],
+   "conflicts": [],
+   "refusalExpected": false,
+   "compilers": {
+    "deterministic": {
+     "sql": "",
+     "ms": 0,
+     "certified": false,
+     "explain": [
+      "compiler returned None"
+     ]
+    }
+   }
+  }
+ ]
+}

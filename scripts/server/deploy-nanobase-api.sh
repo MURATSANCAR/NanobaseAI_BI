@@ -28,7 +28,7 @@ ENV_FILE=/data/nanobaseai/bi/frontend/backend/nanobase_api.env
 # Keep operator overlays (Superset, embed key, etc.) across redeploys
 PRESERVE_ENV="$(mktemp)"
 if [[ -f "$ENV_FILE" ]]; then
-  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
+  grep -E '^(BI_SUPERSET_|BI_EMBED_API_KEY|OPENAI_API_KEY|OPENAI_API_BASE|LLM_MODEL_NAME|MODEL_MAX_CONCURRENCY|BI_SOURCES_FILE|FORECAST_|JWT_SECRET)=' "$ENV_FILE" >"$PRESERVE_ENV" || true
 fi
 umask 077
 cat > "$ENV_FILE" <<EOF
@@ -39,7 +39,8 @@ LLM_MODEL_NAME=nanobaseai-bi-llm
 NANOBASE_ACTIVE_DB=bi_reporting
 QUERY_GATEWAY_BASE=http://127.0.0.1:8792
 PYTHONPATH=${ROOT}/backend
-AUTH_MODE=dev
+AUTH_MODE=jwt
+NANOBASE_ENV=production
 DEV_TENANT_ID=default
 NANOBASE_TEXT2SQL_EXECUTION_MODE=QUERY_GATEWAY
 ARQ_ENABLED=1
@@ -61,6 +62,9 @@ MODEL_MAX_CONCURRENCY=2
 LLM_REPEAT_PENALTY=1.0
 TEXT2SQL_MAX_COMPLETION_TOKENS=2048
 TEXT2SQL_CONTEXT_CHARS=9000
+# Forecast API (:8793, TimesFM 3.0) — scripts/server/deploy-forecast.sh; chat branch before the LLM path
+FORECAST_API_BASE=http://127.0.0.1:8793
+FORECAST_CHAT_ENABLED=true
 EOF
 # Prefer shared contract embedding key when present (BGE-M3 :8083)
 if [[ -z "${BI_EMBED_API_KEY:-}" ]]; then
@@ -89,11 +93,28 @@ if [[ -s "$PRESERVE_ENV" ]]; then
   while IFS= read -r line; do
     k="${line%%=*}"
     [[ "$k" == "BI_EMBED_API_KEY" ]] && grep -q '^BI_EMBED_API_KEY=' "$ENV_FILE" && continue
+    # operator value wins over the heredoc default (FORECAST_*, LLM_MODEL_NAME, ...)
+    grep -q "^${k}=" "$ENV_FILE" && sed -i "/^${k}=/d" "$ENV_FILE"
     printf '%s\n' "$line" >> "$ENV_FILE"
   done <"$PRESERVE_ENV"
   log "Restored preserved env overlays from prior nanobase_api.env"
 fi
 rm -f "$PRESERVE_ENV"
+# Never deploy anonymous administrator mode or the shipped development key.
+python3 - "$ENV_FILE" <<'PY_AUTH'
+import sys, secrets
+from pathlib import Path
+p = Path(sys.argv[1])
+lines = p.read_text().splitlines()
+values = dict(line.split("=", 1) for line in lines if "=" in line and not line.startswith("#"))
+key = values.get("JWT_SECRET", "").strip('"')
+if not key or key == "nanobase-dev-jwt-secret-change-me":
+    key = secrets.token_urlsafe(48)
+lines = [line for line in lines if not line.startswith("JWT_SECRET=")]
+p.write_text("\n".join(lines + ["JWT_SECRET=" + key]) + "\n")
+p.chmod(0o600)
+PY_AUTH
+
 chmod 600 "$ENV_FILE"
 
 log "Running Alembic migrations"
@@ -126,5 +147,16 @@ sudo systemctl enable nanobase-bi-api
 sudo systemctl restart nanobase-bi-api
 sleep 2
 curl -fsS http://127.0.0.1:8790/health | python3 -m json.tool
-curl -fsS http://127.0.0.1:8790/api/v1/bi/sources | python3 -c 'import sys,json; d=json.load(sys.stdin); print("sources", len(d.get("sources") or []), "active", d.get("active_id"))'
+# Smoke the authenticated path without printing or persisting a bearer token.
+(set -a; source "$ENV_FILE"; set +a; "${VENV}/bin/python" - <<'PY_SMOKE'
+import os, time, json, urllib.request, jwt
+claims = {"sub": "deployment-check", "tenant_id": os.environ.get("DEV_TENANT_ID", "default"),
+          "roles": ["ADMIN"], "exp": int(time.time()) + 60}
+token = jwt.encode(claims, os.environ["JWT_SECRET"], algorithm="HS256")
+req = urllib.request.Request("http://127.0.0.1:8790/api/v1/bi/sources", headers={"Authorization": "Bearer " + token})
+with urllib.request.urlopen(req, timeout=15) as response:
+    data = json.load(response)
+print("sources", len(data.get("sources") or []))
+PY_SMOKE
+)
 log "nanobase-bi-api active on :8790 (bridge :8789 unchanged)"

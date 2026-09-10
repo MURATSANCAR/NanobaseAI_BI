@@ -1,0 +1,10 @@
+{
+  "scope": "deterministic resolver/router only; no LLM",
+  "total": 432,
+  "unique_questions": 432,
+  "counts": {
+    "clarification": 288,
+    "none": 144
+  },
+  "failures": []
+}

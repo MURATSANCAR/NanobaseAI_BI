@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/conventions.py
+# hypothesis_version: 6.168.0
+
+['-1', '0', '1', 'CAPIBLOCK', 'CREATEDAT', 'CREATEDDATE', 'CREATETIME', 'CREATIONDATE', 'Conventions', 'DELETEDAT', 'E', 'F', 'FALSE', 'H', 'IN', 'INSERTEDAT', 'LASTMODIFIED', 'LASTUPDATED', 'MODIFIEDAT', 'MODIFIEDDATE', 'MODIFYTIME', 'N', 'NO', 'NULL', 'T', 'TRUE', 'UPDATEDAT', 'UPDATEDDATE', 'UPDATETIME', 'Y', 'YES', '[^A-Z0-9]', 'absence_queries', 'alternatives', 'bigint', 'column', 'columns', 'date', 'datetime', 'decimal', 'double', 'entity', 'equivalent_dates', 'equivalent_filters', 'float', 'int', 'join', 'joins', 'left', 'money', 'numeric', 'operator', 'real', 'reason', 'ref_column', 'ref_entity', 'resolved_metric', 'right', 'smalldatetime', 'smallint', 'source', 'time', 'timestamp', 'tinyint', 'utf-8', 'values']

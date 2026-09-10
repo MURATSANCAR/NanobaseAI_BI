@@ -1,0 +1,16 @@
+{
+  "total": 3,
+  "counts": {
+    "PASS": 3
+  },
+  "seconds": 49.4,
+  "fixture_rows": 2160,
+  "model_calls": 3,
+  "ground_truth": "independent Python row oracle",
+  "scope": "generated controlled fixture, Runtime.ask with SQL execution; not production data accuracy",
+  "source_hashes": {
+    "resolver.py": "ee8a31123005b3b4c96efe24768093f2f48246378b0861b7b73ebe67c0e57bb1",
+    "compiler.py": "f684de8e49a470bd191bf8c14e9edc83da88a685d48e4691b56f013bcab614df",
+    "audit.py": "cfec0bdab72a39120dd182d735dc79239f6c3e893405d0e45d9bff70d3801adc"
+  }
+}

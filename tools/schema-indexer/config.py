@@ -53,7 +53,17 @@ class IndexerConfig:
     )
     vector_size: int = field(default_factory=lambda: int(_env("BI_EMBED_DIM", "1024") or "1024"))
     embed_batch: int = 8
-    max_tables: int = field(default_factory=lambda: int(_env("BI_SCHEMA_MAX_TABLES", "200") or "200"))
+    # No cap. A scan reports on the database it was pointed at, all of it: a count limit makes the
+    # catalogue disagree with the database, and planning and reporting are then done against a number
+    # nobody can reconcile. Scope is expressed as scope — `table_patterns` — never as "the first N".
+    # BI_SCHEMA_MAX_TABLES stays available for an operator who deliberately wants a bounded run;
+    # 0 (the default) means every matching table.
+    max_tables: int = field(default_factory=lambda: int(_env("BI_SCHEMA_MAX_TABLES", "0") or "0"))
+    # Filled in by the scanner so the run can say what it saw and what it left out. A cap that
+    # drops tables silently is indistinguishable, from the outside, from a database that does
+    # not have them.
+    discovered_tables: int = 0
+    truncated_tables: list[str] = field(default_factory=list)
     skip_samples: bool = False
     skip_profile: bool = False
     recreate_collection: bool = False

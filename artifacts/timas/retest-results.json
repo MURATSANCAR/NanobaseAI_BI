@@ -1,0 +1,130 @@
+[
+ {
+  "id": "cx-04",
+  "q": "2026 Ocak–Ağustos için ay bazında iskonto oranı (iskonto satırları toplamı / brüt malzeme satırları toplamı) ve satış faturası başına ortalama fatura tutarı (NETTOTAL ortalaması, TRCODE 7,8,9).",
+  "type": "TEXT_TO_SQL",
+  "sql": "WITH iskonto AS (\n  SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay,\n         SUM(CASE WHEN \"LINETYPE\" = 2 THEN \"TOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"LINETYPE\" = 0 THEN \"TOTAL\" ELSE 0 END), 0) AS iskonto_orani\n  FROM dbo_LG_411_01_STLINE \n  WHERE \"CANCELLED\" = 0 \n    AND \"TRCODE\" IN (7,8) \n    AND \"DATE_\" >= '2026-01-01' \n    AND \"DATE_\" < '2026-09-01'\n  GROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\n), fatura AS (\n  SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay, \n         AVG(\"NETTOTAL\") AS ortalama_fatura_tutari\n  FROM dbo_LG_411_01_INVOICE \n  WHERE \"CANCELLED\" = 0 \n    AND \"TRCODE\" IN (7,8,9) \n    AND \"DATE_\" >= '2026-01-01' \n    AND \"DATE_\" < '2026-09-01'\n  GROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\n)\nSELECT i.ay, \n       i.iskonto_orani, \n       f.ortalama_fatura_tutari\nFROM iskonto i \nJOIN fatura f ON f.ay = i.ay \nORDER BY i.ay",
+  "summary": "2026 Ocak–Ağustos döneminde 8 aylık veriye göre iskonto oranı %44,8 ile %46,7 arasında değişirken, ortalama fatura tutarı 11.509 TL ile 19.203 TL aralığında seyretmiştir. En yüksek ortalama fatura tutarı 19.203 TL ile Ağustos ayında, en düşük tutar ise 11.509 TL ile Şubat ayında gerçekleşmiştir. İskonto oranı açısından en yüksek değer %46,7 ile Haziran, en düşük değer ise %44,8 ile Şubat ayında kaydedilmiştir.",
+  "rowCount": 8,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 1115,
+   "llm_ms": 24493,
+   "run_sql_ms": 1296,
+   "summary_ms": 9407
+  },
+  "explanation": null,
+  "columns": [
+   "ay",
+   "iskonto_orani",
+   "ortalama_fatura_tutari"
+  ],
+  "records": [
+   {
+    "ay": "2026-01-01",
+    "iskonto_orani": 0.45512476851225353,
+    "ortalama_fatura_tutari": 12064.737847719132
+   },
+   {
+    "ay": "2026-02-01",
+    "iskonto_orani": 0.4483875202760511,
+    "ortalama_fatura_tutari": 11509.229917736096
+   },
+   {
+    "ay": "2026-03-01",
+    "iskonto_orani": 0.46252932935588187,
+    "ortalama_fatura_tutari": 14003.008381424685
+   },
+   {
+    "ay": "2026-04-01",
+    "iskonto_orani": 0.4646323563901706,
+    "ortalama_fatura_tutari": 13010.792642239208
+   },
+   {
+    "ay": "2026-05-01",
+    "iskonto_orani": 0.45947476175468255,
+    "ortalama_fatura_tutari": 12635.6629098945
+   },
+   {
+    "ay": "2026-06-01",
+    "iskonto_orani": 0.46724806519380624,
+    "ortalama_fatura_tutari": 12783.827132894992
+   },
+   {
+    "ay": "2026-07-01",
+    "iskonto_orani": 0.45631683313394616,
+    "ortalama_fatura_tutari": 12740.343671790444
+   },
+   {
+    "ay": "2026-08-01",
+    "iskonto_orani": 0.46578170384386186,
+    "ortalama_fatura_tutari": 19203.371760978815
+   }
+  ],
+  "wall_s": 41.2
+ },
+ {
+  "id": "cx-10",
+  "q": "Sipariş fişlerinde (ORFICHE) 2026 ay bazında açılan sipariş sayısı ve toplam tutar; hangi kolonların tutar ve tarih olduğunu modelden bul, emin değilsen NO_SQL yaz.",
+  "type": "TEXT_TO_SQL",
+  "sql": "SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay,\n       COUNT(DISTINCT \"LOGICALREF\") AS siparis_sayisi,\n       SUM(\"NETTOTAL\") AS toplam_tutar\nFROM dbo_LG_411_01_ORFICHE\nWHERE \"CANCELLED\" = 0\n  AND \"DATE_\" >= '2026-01-01'\n  AND \"DATE_\" < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1)\nORDER BY ay",
+  "summary": "ORFICHE tablosundan elde edilen verilere göre 2026 yılının ilk sekiz ayında toplam 48.687 sipariş açılmış ve bu siparişlerin toplam tutarı 44.525.593,24 olarak hesaplanmıştır. Aylık bazda en yüksek sipariş sayısı 7.888 ile Şubat ayında, en yüksek toplam tutar ise 13.117.946,92 ile Haziran ayında gerçekleşmiştir.",
+  "rowCount": 8,
+  "repairs": 0,
+  "timings": {
+   "context_ms": 158,
+   "llm_ms": 12465,
+   "run_sql_ms": 339,
+   "summary_ms": 8304
+  },
+  "explanation": null,
+  "columns": [
+   "ay",
+   "siparis_sayisi",
+   "toplam_tutar"
+  ],
+  "records": [
+   {
+    "ay": "2026-01-01",
+    "siparis_sayisi": 5794,
+    "toplam_tutar": 5219018.2500000065
+   },
+   {
+    "ay": "2026-02-01",
+    "siparis_sayisi": 7888,
+    "toplam_tutar": 4629187.059999983
+   },
+   {
+    "ay": "2026-03-01",
+    "siparis_sayisi": 5697,
+    "toplam_tutar": 3578752.559999968
+   },
+   {
+    "ay": "2026-04-01",
+    "siparis_sayisi": 6634,
+    "toplam_tutar": 4325953.649999969
+   },
+   {
+    "ay": "2026-05-01",
+    "siparis_sayisi": 5433,
+    "toplam_tutar": 3955104.2900000247
+   },
+   {
+    "ay": "2026-06-01",
+    "siparis_sayisi": 7052,
+    "toplam_tutar": 13117946.920000099
+   },
+   {
+    "ay": "2026-07-01",
+    "siparis_sayisi": 6803,
+    "toplam_tutar": 6429393.19000002
+   },
+   {
+    "ay": "2026-08-01",
+    "siparis_sayisi": 3386,
+    "toplam_tutar": 3270337.320000005
+   }
+  ],
+  "wall_s": 21.9
+ }
+]

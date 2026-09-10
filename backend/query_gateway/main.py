@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+from query_gateway.api.dependencies import AuthExecute, AuthValidate
 from query_gateway.api.exception_handlers import register_exception_handlers
 from query_gateway.api.v1 import execution as execution_routes
 from query_gateway.api.v1 import health as health_routes
@@ -98,7 +99,7 @@ def create_app() -> FastAPI:
         }
 
     @app.get("/api/v1/query/datasources")
-    def list_datasources() -> dict[str, Any]:
+    def list_datasources(auth: dict = AuthValidate) -> dict[str, Any]:
         ds = load_datasources(settings)
         return {
             "datasources": [
@@ -232,7 +233,7 @@ def create_app() -> FastAPI:
             conn.close()
 
     @app.post("/api/v1/query/validate")
-    def validate_sql(body: LegacyExecuteRequest) -> dict[str, Any]:
+    def validate_sql(body: LegacyExecuteRequest, auth: dict = AuthValidate) -> dict[str, Any]:
         ds = load_datasources(settings).get(body.datasource_id)
         if not ds:
             raise HTTPException(404, f"datasource not registered: {body.datasource_id}")
@@ -271,8 +272,11 @@ def create_app() -> FastAPI:
             "parameters": body.parameters or {},
         }
 
+    # The same service identity, signature and replay checks the current endpoint applies. Left
+    # open, this path reached the executor with only a caller-supplied datasource id: anything that
+    # could reach the gateway network could run a query, and QG_AUTH_REQUIRED did not close it.
     @app.post("/api/v1/query/execute")
-    def execute_sql(body: LegacyExecuteRequest) -> dict[str, Any]:
+    def execute_sql(body: LegacyExecuteRequest, auth: dict = AuthExecute) -> dict[str, Any]:
         ds = load_datasources(settings).get(body.datasource_id)
         if not ds:
             raise HTTPException(404, f"datasource not registered: {body.datasource_id}")

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/forecasting/app/engines/naive.py
+# hypothesis_version: 6.168.0
+
+['1.0', 'naive', 'seasonal_naive']

@@ -27,7 +27,9 @@ x-backend-env: &backend-env
   QG_SERVICE_JWT_SECRET: ${QG_SERVICE_JWT_SECRET}
   QG_HMAC_SECRET: ${QG_HMAC_SECRET}
   JWT_SECRET: ${JWT_SECRET}
-  AUTH_MODE: ${AUTH_MODE:-dev}
+  # Dev auth serves every request as an administrator; the API refuses to start with it when
+  # NANOBASE_ENV=production. Set AUTH_MODE and JWT_SECRET in .env before bringing this up.
+  AUTH_MODE: ${AUTH_MODE:-jwt}
   DEV_TENANT_ID: ${DEV_TENANT_ID:-default}
   SECRETS_ROOT: /secrets
   BI_DIR: /data
@@ -106,6 +108,10 @@ services:
   qdrant:
     image: qdrant/qdrant:v1.12.4
     restart: unless-stopped
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - qdrant-data:/qdrant/storage
     healthcheck:
@@ -186,9 +192,11 @@ services:
     image: nanobaseai-bi/forecast:latest
     restart: unless-stopped
     environment:
-      FORECAST_ENGINE: ${FORECAST_ENGINE:-seasonal_naive}
+      FORECAST_ENGINE: ${FORECAST_ENGINE:-timesfm3}
       FORECAST_THREADS: ${FORECAST_THREADS:-4}
-      FORECAST_MODEL_ID: ${FORECAST_MODEL_ID:-google/timesfm-2.5-200m-pytorch}
+      FORECAST_MODEL3_ID: ${FORECAST_MODEL3_ID:-google/timesfm-3.0-pytorch}
+      FORECAST_ALLOW_NONCOMMERCIAL: ${FORECAST_ALLOW_NONCOMMERCIAL:-1}
+      FORECAST_DEVICE: cpu
       HF_HOME: /models/forecast
     volumes:
       - ${MODELS_DIR:-./models}:/models

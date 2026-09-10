@@ -95,3 +95,39 @@ def test_http_surface(monkeypatch):
     assert body["forecast"][0]["timestamp"] == "2026-09-01"
     bad = client.post("/forecast", json={"bundle": b.model_dump(mode="json"), "engine": "nope"})
     assert bad.status_code == 400
+
+
+# --- TimesFM 3.0 (opt-in: needs the upstream package + checkpoint) --------------
+
+
+@pytest.mark.skipif(
+    __import__("os").environ.get("FORECAST_TEST_MODEL") != "1",
+    reason="set FORECAST_TEST_MODEL=1 (and FORECAST_MODEL3_ID / FORECAST_ALLOW_NONCOMMERCIAL=1) to run TimesFM 3.0",
+)
+def test_timesfm3_real_model_quantiles():
+    from forecasting.app.engines.timesfm3 import TimesFM3Engine
+
+    eng = TimesFM3Engine()
+    eng.load()
+    assert eng.ready
+    b = _seasonal_bundle(n=48, horizon=6)
+    out = eng.forecast(b)
+    assert len(out.points) == 6
+    assert all(p.p10 <= p.p50 <= p.p90 for p in out.points)
+    assert all(p.p10 >= 0 for p in out.points)  # non-negative history → floor at 0
+    assert out.points[0].timestamp == date(2026, 9, 1)
+    # A trended seasonal series must not collapse to a constant.
+    assert len({round(p.p50, 3) for p in out.points}) > 1
+    # Determinism: same bundle → same numbers.
+    again = eng.forecast(b)
+    assert [p.p50 for p in again.points] == [p.p50 for p in out.points]
+
+
+def test_timesfm3_refuses_without_licence_flag(monkeypatch):
+    monkeypatch.delenv("FORECAST_ALLOW_NONCOMMERCIAL", raising=False)
+    from forecasting.app.engines.timesfm3 import TimesFM3Engine
+
+    eng = TimesFM3Engine()
+    assert not eng.ready
+    with pytest.raises(RuntimeError, match="FORECAST_ALLOW_NONCOMMERCIAL"):
+        eng.load()

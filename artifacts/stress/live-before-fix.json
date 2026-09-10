@@ -1,0 +1,90 @@
+[
+  {
+    "q": "Mart 2026 toptan satış tutarı",
+    "type": "INCOMPLETE_ANSWER",
+    "correct": false,
+    "referenceSql": "SELECT SUM(I.NETTOTAL) FROM dbo.LG_411_01_INVOICE I WHERE I.CANCELLED=0 AND I.TRCODE IN (8) AND I.DATE_ >= '2026-03-01' AND I.DATE_ < '2026-04-01'",
+    "generatedSql": null,
+    "referenceRows": 1,
+    "answerRows": 0,
+    "explanation": "Sorudaki koşulların tamamı doğrulanamadı: çözümlenmemiş soru koşulları var; netleştirme gerekiyor",
+    "seconds": 48.1,
+    "resolver": {
+      "unresolved": [],
+      "unhandled": [
+        "MART 2026"
+      ],
+      "clarification": [],
+      "modifiers": [
+        {
+          "token": "toptan",
+          "position": 2,
+          "decision": "SEMANTIC",
+          "evidence_source": "catalog",
+          "structural_candidate": false,
+          "light_verb_hint": false,
+          "recovered": true,
+          "concept_ids": [
+            "sem_2d71ee814cd0"
+          ],
+          "resolved_as": "DIMENSION_VALUE:CERTIFIED"
+        }
+      ]
+    }
+  },
+  {
+    "q": "Mayıs 2026 perakende satış tutarı",
+    "type": "TEXT_TO_SQL",
+    "correct": false,
+    "referenceSql": "SELECT SUM(I.NETTOTAL) FROM dbo.LG_411_01_INVOICE I WHERE I.CANCELLED=0 AND I.TRCODE IN (7) AND I.DATE_ >= '2026-05-01' AND I.DATE_ < '2026-06-01'",
+    "generatedSql": "SELECT SUM(INVOICE.[NETTOTAL]) AS satis_tutari\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (7)\n  AND INVOICE.[DATE_] >= '2026-05-01' AND INVOICE.[DATE_] < '2026-06-01'",
+    "referenceRows": 1,
+    "answerRows": 1,
+    "explanation": null,
+    "seconds": 1.3,
+    "resolver": {
+      "unresolved": [],
+      "unhandled": [],
+      "clarification": [],
+      "modifiers": []
+    },
+    "reference_equals_generated": true
+  },
+  {
+    "q": "Şubat 2026 net ciro",
+    "type": "TEXT_TO_SQL",
+    "correct": false,
+    "referenceSql": "SELECT SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE -I.NETTOTAL END) FROM dbo.LG_411_01_INVOICE I WHERE I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_ >= '2026-02-01' AND I.DATE_ < '2026-03-01'",
+    "generatedSql": "SELECT SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-02-01' AND INVOICE.[DATE_] < '2026-03-01'",
+    "referenceRows": 1,
+    "answerRows": 1,
+    "explanation": null,
+    "seconds": 1.3,
+    "resolver": {
+      "unresolved": [],
+      "unhandled": [],
+      "clarification": [],
+      "modifiers": []
+    },
+    "reference_equals_generated": true
+  },
+  {
+    "q": "Nisan 2026 kanal bazında net ciro",
+    "type": "INCOMPLETE_ANSWER",
+    "correct": false,
+    "referenceSql": "SELECT C.SPECODE2, SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE -I.NETTOTAL END) FROM dbo.LG_411_01_INVOICE I JOIN dbo.LG_411_CLCARD C ON I.CLIENTREF=C.LOGICALREF WHERE I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_ >= '2026-04-01' AND I.DATE_ < '2026-05-01' GROUP BY C.SPECODE2",
+    "generatedSql": null,
+    "referenceRows": 15,
+    "answerRows": 0,
+    "explanation": "Sorudaki koşulların tamamı doğrulanamadı: çözümlenmemiş soru koşulları var; netleştirme gerekiyor",
+    "seconds": 43.9,
+    "resolver": {
+      "unresolved": [],
+      "unhandled": [
+        "NISAN 2026"
+      ],
+      "clarification": [],
+      "modifiers": []
+    }
+  }
+]

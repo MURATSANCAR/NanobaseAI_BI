@@ -50,3 +50,30 @@ def test_time_series_becomes_line():
 
 def test_empty_result_returns_no_widgets():
     assert widgets_from_query_result(columns=["a"], rows=[], sql="SELECT 1") == []
+
+
+def test_code_and_name_columns_label_by_name():
+    """Kod + ad birlikte gelince eksen adla etiketlenir (Logo: cari_kodu + unvan)."""
+    widgets = widgets_from_query_result(
+        columns=["cari_kodu", "unvan", "iade_tutari"],
+        rows=[
+            {"cari_kodu": "120.01.0001", "unvan": "DR MAĞAZACILIK A.Ş.", "iade_tutari": 4_200_000},
+            {"cari_kodu": "120.01.0002", "unvan": "KİTAPYURDU DAĞITIM", "iade_tutari": 3_100_000},
+        ],
+        sql="SELECT cari_kodu, unvan, iade_tutari FROM t",
+        title="En çok iade alan müşteriler",
+    )
+    assert widgets[0]["x_key"] == "unvan"
+    assert widgets[0]["label_key"] == "unvan"
+    assert widgets[0]["y_key"] == "iade_tutari"
+
+
+def test_two_code_like_columns_falls_back_to_first():
+    """Açıklayıcı kolon yoksa davranış değişmez — ilk kategori kolonu kullanılır."""
+    widgets = widgets_from_query_result(
+        columns=["kanal", "sube", "net"],
+        rows=[{"kanal": "BAYI", "sube": "A", "net": 10}, {"kanal": "WEB", "sube": "B", "net": 20}],
+        sql="SELECT kanal, sube, net FROM t",
+        title="Kanal",
+    )
+    assert widgets[0]["x_key"] == "kanal"

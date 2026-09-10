@@ -1,0 +1,553 @@
+{
+  "entries": {
+    "GNTOTST": {
+      "description_tr": "Genel ambar toplamları",
+      "source_column": "LOGICALREF",
+      "source_description": "General Warehouse Totals Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "GNTOTCL": {
+      "description_tr": "Aylık cari hesap toplamları",
+      "source_column": "LOGICALREF",
+      "source_description": "Monthly AR /AP Totals Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "GNTOTBN": {
+      "description_tr": "Aylık banka toplamları",
+      "source_column": "LOGICALREF",
+      "source_description": "Monthly Bank Totals Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "GNTOTCSH": {
+      "description_tr": "Aylık kasa toplamları",
+      "source_column": "LOGICALREF",
+      "source_description": "Safe Deposit Monthly Totals Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "EXPCREDITLN": {
+      "description_tr": "İhracat kredisi satırları",
+      "source_column": "LOGICALREF",
+      "source_description": "Export Credit Line Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "DIIB": {
+      "description_tr": "Dahilde işleme izin belgesi",
+      "source_column": "LOGICALREF",
+      "source_description": "Inward Processing License Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "DIIBBOMLINE": {
+      "description_tr": "DIIB ürün reçetesi satırları",
+      "source_column": "LOGICALREF",
+      "source_description": "DIIB BOM lines Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "WSTATPART": {
+      "description_tr": "İş istasyonu malzemeleri",
+      "source_column": "LOGICALREF",
+      "source_description": "Workstation Items Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "POACCREF": {
+      "description_tr": "Üretim emri ile muhasebe hesabı bağlantıları",
+      "source_column": "LOGICALREF",
+      "source_description": "P.Orders G.L. Acc. Connection Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "ORDPEGGING": {
+      "description_tr": "Karşı sipariş takibi",
+      "source_column": "LOGICALREF",
+      "source_description": "Counter Order Tracking Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "REPAYPLANS": {
+      "description_tr": "Geri ödeme planları",
+      "source_column": "LOGICALREF",
+      "source_description": "Back Payment Plan Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "REPAYPLANSLN": {
+      "description_tr": "Geri ödeme planı satırları",
+      "source_column": "LOGICALREF",
+      "source_description": "Back Payment Plan Lines Logical reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "MRPITEM": {
+      "description_tr": "MRP malzemeleri",
+      "source_column": "LOGICALREF",
+      "source_description": "MRP Item Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "EXIMBUSTYP": {
+      "description_tr": "İhracat / ithalat iş türleri",
+      "source_column": "LOGICALREF",
+      "source_description": "Export / Import Business Typ Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "MRPITEMCHG": {
+      "description_tr": "Değiştirilen MRP malzemeleri",
+      "source_column": "LOGICALREF",
+      "source_description": "Changed MRP Items Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "SLSOHISTORY": {
+      "description_tr": "Satış fırsatları geçmişi",
+      "source_column": "LOGICALREF",
+      "source_description": "Sales Opportunities History Table Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "CONTSPECDAYS": {
+      "description_tr": "İlgili kişilerin özel günleri",
+      "source_column": "LOGICALREF",
+      "source_description": "Contact Special Days Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "FINTBLHEADER": {
+      "description_tr": "Mali tablo kayıtları",
+      "source_column": "LOGICALREF",
+      "source_description": "Financial Table Records Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "EXIMDISTFC": {
+      "description_tr": "Dağıtım fişleri",
+      "source_column": "LOGICALREF",
+      "source_description": "Distribution Slips Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "EXIMDISTLN": {
+      "description_tr": "Dağıtım fişi satırları",
+      "source_column": "LOGICALREF",
+      "source_description": "Distribution Slip Lines Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "EXIMHISTORY": {
+      "description_tr": "İthalat geçmişi",
+      "source_column": "LOGICALREF",
+      "source_description": "Import History Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "GUARANTOR": {
+      "description_tr": "Kefiller",
+      "source_column": "LOGICALREF",
+      "source_description": "Guarantor Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "VRNTINVENS": {
+      "description_tr": "Varyant toplamları",
+      "source_column": "LOGICALREF",
+      "source_description": "Variant Tot Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "STLINEEXCH": {
+      "description_tr": "Malzeme satırı döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Material Line Amounts in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "INVOICEEXCH": {
+      "description_tr": "Fatura döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Invoice Amoun in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "STFEXCH": {
+      "description_tr": "Malzeme fişi döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Material Slips Amount in F. Currency Logical reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "ORDFEXCH": {
+      "description_tr": "Sipariş fişi döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Order Slips Amount in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "ORDLINEEXCH": {
+      "description_tr": "Sipariş satırı döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Order Line Amount in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "OFFFCEXCH": {
+      "description_tr": "Teklif fişi döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Proposal Slip Amount in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "OFFLINEEXCH": {
+      "description_tr": "Teklif satırı döviz tutarları",
+      "source_column": "LOGICALREF",
+      "source_description": "Proposal Line Amoun in F. Currency Logical Reference",
+      "method": "table purpose from documented primary record description",
+      "source_field": "description"
+    },
+    "DIIBLINE": {
+      "description_tr": "DIIB satırları",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "DIIB Satırı Log. Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "DISCPAYLINES": {
+      "description_tr": "İndirim ödeme satırları",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İndirim Ödeme Satırları Log. Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "DISCPAYTRANS": {
+      "description_tr": "İndirim ödeme hareketleri",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İndirim Ödeme Hareketleri Log. Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "EXIMWHFC": {
+      "description_tr": "İthalat / ihracat ambar fişleri",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İthalat / İhracat Ambar Fişi Referansı",
+      "method": "table purpose from documented primary record description"
+    },
+    "EXIMWHTRANS": {
+      "description_tr": "İthalat / ihracat ambar hareketleri",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İthalat / İhracat Ambar Hareketi Log. Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "WORKFLOWCARD": {
+      "description_tr": "İş akışları",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İş akışı log. Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "WFLOWROLE": {
+      "description_tr": "İş akışı rolleri",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "İş Akışı Rolü Ref.",
+      "method": "table purpose from documented primary record description"
+    },
+    "ACCDISTTEMPLN": {
+      "description_tr": "Hesap dağıtım şablonları",
+      "source_column": "LOGICALREF",
+      "source_field": "description_tr",
+      "source_description": "Hesap Dağıtım Şablonu LOGICALREF",
+      "method": "table purpose from documented primary record description"
+    },
+    "PROJECT": {
+      "description_tr": "Projeler",
+      "source_column": "CODE",
+      "source_field": "description",
+      "source_description": "Project Code",
+      "method": "table purpose from documented entity code description"
+    },
+    "ACCDISTTEMP": {
+      "description_tr": "Genel muhasebe dağıtım şablonları",
+      "source_column": "CODE",
+      "source_field": "description",
+      "source_description": "G/L Distribution Template Code",
+      "method": "table purpose from documented entity code description"
+    },
+    "MARK": {
+      "description_tr": "Markalar",
+      "source_column": "CODE",
+      "source_field": "description",
+      "source_description": "Brand Code",
+      "method": "table purpose from documented entity code description"
+    }
+  },
+  "excluded": {
+    "STBCODE": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "STNUMS": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PERMFILE": {
+      "source_column": "LOGICALREF",
+      "source_description": "Not In Use",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "SELINSCH": {
+      "source_column": "LOGICALREF",
+      "source_description": "Not In Use",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "FAANNCOST": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DEFNFLDSCARDV": {
+      "source_column": "LOGICALREF",
+      "source_description": "DEFNFLDSCARDV Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DEFNFLDSTRANV": {
+      "source_column": "LOGICALREF",
+      "source_description": "DEFNFLDSTRANV Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "MBSCRMRELF": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "MBSCRMRELP": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "STLNINFCOEF": {
+      "source_column": "LOGICALREF",
+      "source_description": "Not In Use",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "EMFLNINFCOEF": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DEMANDFICHE": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DEMANDLINE": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DEMANDPEGGING": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "ACCDISTDETLN": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "COMPANSEACC": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PACKAGEFICHE": {
+      "source_column": "LOGICALREF",
+      "source_description": "UNITSETL LOGICALREF",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PACKAGEFCLN": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PACKAGEASGN": {
+      "source_column": "LOGICALREF",
+      "source_description": "Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "KSDISTDETLINES": {
+      "source_column": "LOGICALREF",
+      "source_description": "KSDISTDETLINES LOGICALREF",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "GLASSGN": {
+      "source_column": "LOGICALREF",
+      "source_description": "GLASSGN Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "REMINDHIST": {
+      "source_column": "LOGICALREF",
+      "source_description": "Item Vouchers Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DATAEXCHHISTOR": {
+      "source_column": "LOGICALREF",
+      "source_description": "Unique ID",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "IMPSRVREL": {
+      "source_column": "LOGICALREF",
+      "source_description": "IMPSRVREL Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "INVEXIMLINES": {
+      "source_column": "LOGICALREF",
+      "source_description": "INVEXIMLINES Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "EXIMDISTPEG": {
+      "source_column": "LOGICALREF",
+      "source_description": "EXIMDISTPEG Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "GERMANYDEF": {
+      "source_column": "LOGICALREF",
+      "source_description": "GERMANYDEF Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "STFCEXTINF": {
+      "source_column": "LOGICALREF",
+      "source_description": "STFCEXTINF Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "INSTALCARD": {
+      "source_column": "LOGICALREF",
+      "source_description": "Total Count of Printed",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "WORKFLOWLINE": {
+      "source_column": "LOGICALREF",
+      "source_description": "WORKFLOWLINE Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "WFLOWROLELN": {
+      "source_column": "LOGICALREF",
+      "source_description": "WFLOWROLELN Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "GAUGPARAM": {
+      "source_column": "LOGICALREF",
+      "source_description": "GAUGPARAM Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "APPPARAM": {
+      "source_column": "LOGICALREF",
+      "source_description": "APPPARAM Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "ACCFCASGN": {
+      "source_column": "LOGICALREF",
+      "source_description": "ACCFCASGN Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "EMDEMDETLN": {
+      "source_column": "LOGICALREF",
+      "source_description": "Not In Use",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "COSTDISTPEG": {
+      "source_column": "LOGICALREF",
+      "source_description": "COSTDISTPEG Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "CLCOLLATERALRI": {
+      "source_column": "LOGICALREF",
+      "source_description": "CLCollateralRisk Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "COLLATRLCARD": {
+      "source_column": "LOGICALREF",
+      "source_description": "COLLATRLCARD Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "COLLATRLROLL": {
+      "source_column": "LOGICALREF",
+      "source_description": "CollatrlRoll Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "COLLATRLTRAN": {
+      "source_column": "LOGICALREF",
+      "source_description": "CollatrlTran Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PURCHOFFER": {
+      "source_column": "LOGICALREF",
+      "source_description": "Last Revision Info",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "PURCHOFFERLN": {
+      "source_column": "LOGICALREF",
+      "source_description": "PURCHOFFERLN Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "GENMODP": {
+      "source_column": "LOGICALREF",
+      "source_description": "GENMODP Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "CHARSETASGN": {
+      "source_column": "LOGICALREF",
+      "source_description": "CHARSETASGN Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "GNTOTVRNT": {
+      "source_column": "LOGICALREF",
+      "source_description": "Consignments Received",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "VRNTGENERICINF": {
+      "source_column": "LOGICALREF",
+      "source_description": "Original Record Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "STLNIOPEGGING": {
+      "source_column": "LOGICALREF",
+      "source_description": "STLNIOPEGGING Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "DSPLNOPCMPPG": {
+      "source_column": "LOGICALREF",
+      "source_description": "DSPLNOPCMPPG Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "LDDS-RES": {
+      "source_column": "LOGICALREF",
+      "source_description": "L_DISTLIST Logical Reference",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "LDXRECDELREQ": {
+      "source_column": "LOGICALREF",
+      "source_description": "Data Processing Site",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "RPFILTS001": {
+      "source_column": "LOGICALREF",
+      "source_description": "",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    },
+    "RPLAYS_001": {
+      "source_column": "LOGICALREF",
+      "source_description": "",
+      "reason": "Primary record description does not unambiguously establish table purpose; no explicit corroborating table definition located."
+    }
+  }
+}

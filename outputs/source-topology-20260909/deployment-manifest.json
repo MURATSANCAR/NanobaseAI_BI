@@ -1,0 +1,50 @@
+[
+  {
+    "path": "/data/nanobaseai/bi/frontend/configs/semantic/knowledge/logo/knowledge/agent-short.md",
+    "before": "3a5a505209b1df62d9de2cca4559aba532ce3c51988582ebf2dc0e437dfb8730",
+    "after": "8df7bd2ea8a8d2459bbf48637051c95128470dcf75b90e54f943a7ccd7c668d4",
+    "backup": "0"
+  },
+  {
+    "path": "/data/nanobaseai/bi/frontend/configs/semantic/knowledge/logo/knowledge/rules/conventions.md",
+    "before": "a8f72eec996be415a3ec6f8ceec1ebd039da5ace1cf5d538ce424c9d615483f3",
+    "after": "1d70b0d2276641c69605fabfc866c572e7bc1d29f0ae574383dfefb2a6aa5a94",
+    "backup": "1"
+  },
+  {
+    "path": "/data/nanobaseai/bi/frontend/configs/semantic/knowledge/logo/knowledge/rules/logo-erp.md",
+    "before": "d1efe412644ef560d6db4f67ce18774882eeeb1608dce6bd5b81cc0b14a1a9f2",
+    "after": "c4e4bc91948f8f05a1291349bb2cb4526e7bf7a73c0afab91c1e715e4f5cf54f",
+    "backup": "2"
+  },
+  {
+    "path": "/data/nanobaseai/bi/frontend/configs/semantic/knowledge/logo/knowledge/00-source-topology.md",
+    "before": null,
+    "after": "d01e5fe5daac638ff108c76059940fbcb7ae707e2d41366e34f4bc78c66159f9",
+    "backup": null
+  },
+  {
+    "path": "/etc/nanobase/semantic-bridge.env",
+    "before": "e7da2be6d4fd2455bfdc1b359f3169736934294a2c968f52b317279f1bcf6439",
+    "after": "084ccf4ca86f71288520e13a61367b14c15697469179caa792d1f13737ff3b2a",
+    "backup": "4"
+  },
+  {
+    "path": "/data/nanobaseai/bi/cockpit/dist/assets/index-source-topology-e518d2e4727e.js",
+    "before": null,
+    "after": "e518d2e4727eb9464f0e15b27cdf3d03b34ef9578ff6ed139faf7ed7b3c5095d",
+    "backup": null
+  },
+  {
+    "path": "/data/nanobaseai/bi/frontend/apps/cockpit/src/components/CatalogExplorer.tsx",
+    "before": "860cc2338643010ce4eee88fe75d295acfbae68a4e2a46d3683991f93739a5e3",
+    "after": "0cbc99730ebd1e76bb862da171940739850fd5b719f8c2af2cd2f85dfed74aec",
+    "backup": "6"
+  },
+  {
+    "path": "/data/nanobaseai/bi/cockpit/dist/index.html",
+    "before": "6a13cb617ea1b488f33d6528b380079fc8bdcad06e6f614b2cc659aa1f65da3d",
+    "after": "435da1323ae570d34b75ca8b1449d297ce590bef02ea15d30bb6bdcab3985164",
+    "backup": "7"
+  }
+]

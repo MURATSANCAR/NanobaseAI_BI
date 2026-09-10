@@ -1,0 +1,72 @@
+[
+  {
+    "query": "banka kredileri",
+    "expected": "BNCREDITCARD",
+    "found_top10": true,
+    "entities": [
+      "CREDITLETTERS",
+      "BNCREDITCARD"
+    ]
+  },
+  {
+    "query": "dahilde işleme izin belgesi",
+    "expected": "DIIB",
+    "found_top10": true,
+    "entities": [
+      "DIIBLINE",
+      "DIIBBOMLINE",
+      "DIIB",
+      "APPROVAL",
+      "ACCOUNTTEMPLATES"
+    ]
+  },
+  {
+    "query": "bütçe revizyon fişleri",
+    "expected": "ANBDGTREVFC",
+    "found_top10": true,
+    "entities": [
+      "ANBDGTREVLN",
+      "ANBDGTREVFC",
+      "ANBUDGETLN",
+      "EMFICHE",
+      "ANBUDGETPRD",
+      "ANBDGTREVPRD",
+      "EMDEMFICHE",
+      "EMDEMFLINE"
+    ]
+  },
+  {
+    "query": "iş akışı dönemleri",
+    "expected": "WFTASKPER",
+    "found_top10": true,
+    "entities": [
+      "WFTASKPER",
+      "WFTASK",
+      "WORKFLOWLINE",
+      "WORKFLOWCARD"
+    ]
+  },
+  {
+    "query": "kefiller",
+    "expected": "GUARANTOR",
+    "found_top10": true,
+    "entities": [
+      "GUARANTOR",
+      "COLLATRLCARD",
+      "LG_CSCARD"
+    ]
+  },
+  {
+    "query": "özellik seti",
+    "expected": "CHARSET",
+    "found_top10": true,
+    "entities": [
+      "CHARSET",
+      "CHARSETASGN",
+      "ITEMS",
+      "DIIBLINE",
+      "SETLI",
+      "PRODORD"
+    ]
+  }
+]

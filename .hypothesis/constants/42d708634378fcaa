@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/history/sql_facts.py
+# hypothesis_version: 6.168.0
+
+[300, ' AS DATE)', '"', '-', '.', '0', '1', '<', '<=', '<>', '=', '>', '>=', 'AVG', 'BETWEEN', 'CAST(', 'COUNT', 'COUNT_DISTINCT', 'DATEFROMPARTS', 'DATEPART(WEEK', "DATE_TRUNC('DAY'", "DATE_TRUNC('MONTH'", 'DAY', 'EOMONTH', 'EXPR', 'EXTRACT(MONTH', 'EXTRACT(YEAR', 'IN', 'MAX', 'MIN', 'MONTH', 'NOT IN', 'NULL', 'RATIO', 'SUM', 'UNKNOWN', 'WEEK', 'YEAR', '\\bDAY\\(', '\\bMONTH\\(', '\\bYEAR\\(', '^\\d{4}-\\d{2}-\\d{2}', 'case', 'having', 'high', 'ifs', 'limit', 'low', 'on', 'postgres', 'scope', 'tsql', 'where']

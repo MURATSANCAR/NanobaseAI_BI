@@ -1,0 +1,29 @@
+{
+  "state": "complete",
+  "health": {
+    "status": "ok",
+    "service": "nanobaseai-bi-semantic-bridge",
+    "version": "1.0.0",
+    "profiles": 4121,
+    "catalog": {
+      "DISCOVERED": 0,
+      "CANDIDATE": 557,
+      "CERTIFIED": 88,
+      "REJECTED": 372,
+      "SENSE_CONFLICT": 0,
+      "DEPRECATED": 0
+    },
+    "llm": true,
+    "db": true,
+    "pid": 3765236,
+    "cache": {
+      "entries": 0,
+      "hot": 0,
+      "ttlSec": 300,
+      "refreshSec": 15.0,
+      "refreshing": true
+    }
+  },
+  "collection": "semantic_catalog_logo_tr_20260909",
+  "points": 50809
+}

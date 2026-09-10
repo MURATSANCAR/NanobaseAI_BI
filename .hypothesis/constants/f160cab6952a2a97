@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/llm_operator.py
+# hypothesis_version: 6.168.0
+
+[0.25, 0.45, 0.5, 0.9, 1.0, 10.0, 30.0, -2000, 400, 500, 800, 2048, 3000, 6000, '/', '0', '1', '1.0', '3', '30', '90', 'Authorization', 'Content-Type', 'LLM_HEALTH_CACHE_SEC', 'LLM_MODEL_NAME', 'LLM_REPEAT_PENALTY', 'LLM_SAMPLER_PIN', 'LLM_TIMEOUT_SEC', 'MODEL_QUEUE_FULL', 'MODEL_QUEUE_TIMEOUT', 'OPENAI_API_BASE', 'OPENAI_API_KEY', 'POST', 'TEXT2SQL_API_BASE', 'TEXT2SQL_API_KEY', 'TEXT2SQL_MODEL', 'TEXT2SQL_PREFER', 'TEXT2SQL_TIMEOUT_SEC', '[DONE]', 'application/json', 'arctic', 'arctic-text2sql', 'chat', 'choices', 'content', 'data:', 'default', 'delta', 'false', 'finish_reason', 'general', 'max_tokens', 'message', 'messages', 'model', 'nanobase-local', 'nanobaseai-bi-llm', 'no', 'off', 'repeat_penalty', 'role', 'sql_plan', 'sql_repair', 'stream', 'system', 'temperature', 'text2sql', 'top_p', 'user', 'waiting']

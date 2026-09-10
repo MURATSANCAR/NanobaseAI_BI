@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_api/application/series.py
+# hypothesis_version: 6.168.0
+
+['D', 'GATEWAY_FAILED', 'INVALID_GRAIN', 'M', 'METRIC_UNAVAILABLE', 'Q', 'W', 'Y', 'astFingerprint', 'code', 'columns', 'day', 'dimensionFilters', 'error', 'frequency', 'from', 'grain', 'logicalPlan', 'message', 'metricCode', 'month', 'name', 'ok', 'period', 'quarter', 'rowCount', 'rows', 'sql', 'sqlSource', 'to', 'truncated', 'value', 'week', 'year']

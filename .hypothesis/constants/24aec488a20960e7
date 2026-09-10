@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/guardrails.py
+# hypothesis_version: 6.168.0
+
+[500, ' dbms_lock', ' execute immediate', ' for share', ' for update', ' into ', ' nextval(', ' pg_sleep(', ' setval(', ' utl_file', ' utl_http', '"', '*', '.', ';', '`', 'alias_or_name', 'empty SQL', 'limit', 'mssql', 'mssqlserver', 'postgres', 'postgresql', 'q', 'sql_server', 'sqlserver', 'tsql', 'unable to parse SQL']

@@ -1,0 +1,13 @@
+{
+  "completed": 100,
+  "counts": {
+    "LIVE_PASS": 100
+  },
+  "catalogHashes": [
+    "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736"
+  ],
+  "entityCounts": {
+    "7": 32,
+    "8": 68
+  }
+}

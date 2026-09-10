@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from threading import RLock
@@ -14,6 +15,11 @@ from nanobase_api.scenario_engine.domain.scenario import (
     ScenarioParaphrase,
 )
 from nanobase_api.scenario_engine.domain.status import ScenarioStatus, is_retrieval_eligible
+
+log = logging.getLogger(__name__)
+
+# Ayni satir icin ust uste bu kadar SQL yazma hatasindan sonra devre acilir.
+_MIRROR_FAIL_LIMIT = 3
 
 
 class ScenarioSqlPort(Protocol):
@@ -44,6 +50,47 @@ class ScenarioStore:
     backend: str = "memory"
     _lock: RLock = field(default_factory=RLock)
     _hydrated: bool = False
+    _mirror_failures: dict[tuple[str, str], int] = field(default_factory=dict, repr=False)
+
+    def _mirror(self, op: str, key: str, write) -> None:
+        """SQL aynasina yaz; israrla dusen satiri bir sure sonra birak.
+
+        Bellekteki kopya cagiran tarafindan zaten yazildi ve yetkili olan o.
+        Bir satir DB kisitini ihlal ediyorsa (eksik ust kayit, PUBLISHED hash
+        cakismasi) eskiden her yenileme turunda sessizce yeniden denenirdi;
+        PostgreSQL her denemede dusen ifadenin tamamini loga basiyordu. Bir
+        konteyner logunu uc gunde 24 GB'a cikaran mekanizma buydu.
+        """
+        if self.sql_repo is None:
+            return
+        slot = (op, key)
+        with self._lock:
+            if self._mirror_failures.get(slot, 0) >= _MIRROR_FAIL_LIMIT:
+                return
+        try:
+            write()
+        except Exception as e:
+            with self._lock:
+                fails = self._mirror_failures.get(slot, 0) + 1
+                self._mirror_failures[slot] = fails
+            if fails >= _MIRROR_FAIL_LIMIT:
+                log.warning(
+                    "scenario SQL mirror %s %s: %d denemede basarisiz, birakiliyor: %s",
+                    op, key, fails, e,
+                )
+            return
+        with self._lock:
+            self._mirror_failures.pop(slot, None)
+
+    def reset_mirror_failures(self) -> None:
+        """Dusen yazmalarin nedeni giderildiginde write-through'u yeniden kur."""
+        with self._lock:
+            self._mirror_failures.clear()
+
+    def mirror_failure_count(self) -> int:
+        """Su an devresi acik olan satir sayisi (saglik ucu icin)."""
+        with self._lock:
+            return sum(1 for v in self._mirror_failures.values() if v >= _MIRROR_FAIL_LIMIT)
 
     def attach_sql(self, repo: ScenarioSqlPort, *, hydrate: bool = True) -> None:
         self.sql_repo = repo
@@ -62,11 +109,7 @@ class ScenarioStore:
     def save_instance(self, inst: ScenarioInstance) -> None:
         with self._lock:
             self.instances[inst.id] = inst
-        if self.sql_repo is not None:
-            try:
-                self.sql_repo.upsert_instance(inst)
-            except Exception:
-                pass
+        self._mirror("instance", inst.id, lambda: self.sql_repo.upsert_instance(inst))
 
     def get_instance(self, scenario_id: str) -> ScenarioInstance | None:
         return self.instances.get(scenario_id)
@@ -90,11 +133,7 @@ class ScenarioStore:
     def save_paraphrase(self, p: ScenarioParaphrase) -> None:
         with self._lock:
             self.paraphrases[p.id] = p
-        if self.sql_repo is not None:
-            try:
-                self.sql_repo.upsert_paraphrase(p)
-            except Exception:
-                pass
+        self._mirror("paraphrase", p.id, lambda: self.sql_repo.upsert_paraphrase(p))
 
     def find_by_normalized_hash(
         self, *, tenant_id: str, datasource_id: str, qhash: str
@@ -124,11 +163,7 @@ class ScenarioStore:
     def save_compilation(self, c: ScenarioCompilation) -> None:
         with self._lock:
             self.compilations[c.id] = c
-        if self.sql_repo is not None:
-            try:
-                self.sql_repo.upsert_compilation(c)
-            except Exception:
-                pass
+        self._mirror("compilation", c.id, lambda: self.sql_repo.upsert_compilation(c))
 
     def get_compilation(self, scenario_id: str, dialect: str = "postgres") -> ScenarioCompilation | None:
         for c in self.compilations.values():
@@ -139,27 +174,24 @@ class ScenarioStore:
     def save_batch(self, b: PublishBatch) -> None:
         with self._lock:
             self.batches[b.id] = b
-        if self.sql_repo is not None:
-            try:
-                self.sql_repo.upsert_batch(b)
-            except Exception:
-                pass
+        self._mirror("batch", b.id, lambda: self.sql_repo.upsert_batch(b))
 
     def set_active_batch(self, tenant_id: str, datasource_id: str, batch_id: str) -> None:
         with self._lock:
             self.active_version[(tenant_id, datasource_id)] = batch_id
             batch = self.batches.get(batch_id)
-        if self.sql_repo is not None and batch is not None:
-            try:
-                self.sql_repo.set_active_version(
+        if batch is not None:
+            self._mirror(
+                "active_version",
+                f"{tenant_id}/{datasource_id}",
+                lambda: self.sql_repo.set_active_version(
                     tenant_id,
                     datasource_id,
                     batch_id,
                     batch.schema_version,
                     batch.semantic_version,
-                )
-            except Exception:
-                pass
+                ),
+            )
 
     def get_active_batch_id(self, tenant_id: str, datasource_id: str) -> str | None:
         return self.active_version.get((tenant_id, datasource_id))
@@ -188,16 +220,12 @@ class ScenarioStore:
                     for p in self.paraphrases_for_scenario(inst.id):
                         if p.status == ScenarioStatus.PUBLISHED:
                             p.status = ScenarioStatus.STALE
-                            if self.sql_repo is not None:
-                                try:
-                                    self.sql_repo.upsert_paraphrase(p)
-                                except Exception:
-                                    pass
-                    if self.sql_repo is not None:
-                        try:
-                            self.sql_repo.upsert_instance(inst)
-                        except Exception:
-                            pass
+                            self._mirror(
+                                "paraphrase", p.id, lambda p=p: self.sql_repo.upsert_paraphrase(p)
+                            )
+                    self._mirror(
+                        "instance", inst.id, lambda inst=inst: self.sql_repo.upsert_instance(inst)
+                    )
         return stale_ids
 
     def suggested_questions(
@@ -242,15 +270,16 @@ class ScenarioStore:
             usage_snap = dict(u)
             inst = self.instances.get(scenario_id)
         if self.sql_repo is not None and inst is not None:
-            try:
-                self.sql_repo.save_usage(
+            self._mirror(
+                "usage",
+                scenario_id,
+                lambda: self.sql_repo.save_usage(
                     scenario_id,
                     usage_snap,
                     tenant_id=inst.tenant_id,
                     datasource_id=inst.datasource_id,
-                )
-            except Exception:
-                pass
+                ),
+            )
 
 
 _STORE: ScenarioStore | None = None

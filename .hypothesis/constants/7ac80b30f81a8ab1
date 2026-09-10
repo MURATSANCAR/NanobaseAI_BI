@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/profiler/logo_dictionary.py
+# hypothesis_version: 6.168.0
+
+[', ', 'LOGO_LDDS_PATH', 'base', 'column', 'column_count', 'columns', 'configs', 'database', 'description', 'description_tr', 'firm', 'indexes', 'logo-ldds.json', 'period', 'ref_column', 'ref_table', 'relation_count', 'relations', 'schemas', 'scope', 'table', 'table_count', 'tables', 'to', 'to_column', 'unique', 'utf-8', 'values', 'values_tr']

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/candidates/doc_miner.py
+# hypothesis_version: 6.168.0
+
+[100, 120, 160, 200, 400, '!=', '"“”', '*.md', ',', '-?\\d+', '.', '. ', ';', '<>', 'IN', '[,;]', '[\\s/]+', '\\s*/\\s*', '^##\\s+([^\\n]+)$', '_', 'column', 'column_values', 'documented_values', 'entities', 'enum_columns', 'icin', 'knowledge', 'metric', 'olan', 'soru', 'sorularinda', 'sql', 'synonyms', 'unit', 'utf-8', 'value', '|']

@@ -1,0 +1,15 @@
+{
+  "collection": "semantic_catalog_logo_tr_20260909",
+  "points": 50809,
+  "entities": 1529,
+  "column_pairs": 39957,
+  "unindexed_columns": 0,
+  "status": "green",
+  "review_corrections": 6,
+  "additional_refresh": {
+    "profiles": 4121,
+    "tables_updated": 0,
+    "columns_updated": 24,
+    "profiles_updated": 16
+  }
+}

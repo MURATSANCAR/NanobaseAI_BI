@@ -1,0 +1,78 @@
+name: CI
+
+# The release gate only runs when the gate's own files change. Everything this product is made of —
+# the resolver, the compiler, the API, the cockpit — could change without a single test running, and
+# there was no pull-request trigger at all. This is the ordinary check for ordinary changes.
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-semantic.txt
+          pip install pytest pytest-asyncio
+      - name: Semantic layer
+        # The table selector calls a model over the network; offline runs must not depend on it.
+        env:
+          PYTHONPATH: backend
+          SEMANTIC_TABLE_SELECTOR: "off"
+        run: python -m pytest backend/semantic_layer/tests -q --disable-warnings
+
+  gateway-and-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/nanobase_api/requirements.txt -r backend/query_gateway/requirements.txt
+          pip install pytest pytest-asyncio
+      - name: API, gateway, catalog, scenario, AWEL, forecasting
+        env:
+          PYTHONPATH: backend
+          SEMANTIC_TABLE_SELECTOR: "off"
+        run: |
+          python -m pytest \
+            backend/nanobase_api/tests \
+            backend/nanobase_api/semantic_catalog/tests \
+            backend/nanobase_api/scenario_engine/tests \
+            backend/query_gateway/tests \
+            backend/nanobase_awel/tests \
+            backend/forecasting/tests \
+            -q --disable-warnings --tb=short
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Main app
+        run: |
+          npm ci
+          npm run build
+          npm test --if-present
+      - name: Cockpit
+        working-directory: apps/cockpit
+        run: |
+          npm ci
+          npx tsc -b --pretty false
+          npm run build

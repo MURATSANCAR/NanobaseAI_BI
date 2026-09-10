@@ -1,0 +1,412 @@
+/**
+ * Semantik motor istemcisi — NanobaseAI Semantic Bridge (backend/semantic_bridge, :8795).
+ * Tüm çağrılar aynı origin'deki /api altına gider; geliştirmede vite proxy, üretimde reverse proxy
+ * bunları köprüye iletir. Sözleşme: /api/v1/ask, /api/v1/run_sql, /api/v1/generate_summary,
+ * /api/v1/engine, /api/v1/feedback. Bu dosya yalnız istemci sarmalayıcıdır.
+ */
+
+const BASE = ((import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? import.meta.env.BASE_URL.replace(/\/$/, ''));
+
+export type SqlColumn = { name: string; type: string };
+
+/** Köprünün sonuç setinden çıkardığı görselleştirme spec'i (BiWidget sözleşmesi).
+ *  Karar deterministik ve backend'de: backend/nanobase_api/chat_widgets.py — ana uygulamayla ortak.
+ *  `data` yalnız multi_card'da dolu gelir; diğer tiplerde satırlar `records`tedir. */
+export type WidgetSpec = {
+  id: string;
+  type: 'kpi' | 'multi_card' | 'line' | 'bar' | 'pie' | 'table' | (string & {});
+  title: string;
+  x_key?: string;
+  y_key?: string;
+  label_key?: string;
+  value_key?: string;
+  format?: 'number' | 'percent' | 'currency';
+  data?: { columns: string[]; rows: Record<string, unknown>[]; row_count?: number };
+};
+
+export type DataCoverage = {
+  entity: string;
+  period: { text: string; start: string; end: string };
+  status: string;
+  observedStart: string;
+  observedEnd: string;
+  completeness: string;
+};
+
+export type PresentationSpec = {
+  metrics: { key: string; label: string; additive: boolean }[];
+  dimensions: { key: string; label: string; temporal: boolean }[];
+  comparisons: { currentKey: string; referenceKey: string; label: string; currentLabel: string; referenceLabel: string }[];
+};
+export type QueryStage = 'understanding' | 'querying' | 'presenting';
+
+export type SqlResult = {
+  presentation?: PresentationSpec;
+  dataCoverage?: DataCoverage[];
+  id: string;
+  columns: SqlColumn[];
+  records: Record<string, unknown>[];
+  totalRows: number;
+  /** Sonuç istenen satır sınırında kesildi mi — köprü sınırın bir fazlasını okuyup bakıyor.
+   *  Excel'e aktarırken kesilmiş bir sonucu sessizce tam sanmamak için gerekli. */
+  truncated?: boolean;
+  /** Köprünün önbelleğinden mi geldi ve sonuç kaç saniye önce hesaplandı. Köprü aynı sorguyu arka
+   *  planda sıcak tutar (SEMANTIC_REFRESH_SEC); rakamın yaşı bu yüzden cevapla birlikte gelir ve
+   *  arayüz "canlı" derken kaç saniyelik bir canlılıktan söz ettiğini söyleyebilir. */
+  cached?: boolean;
+  ageSec?: number;
+  computedAt?: number;
+  threadId?: string;
+  widget?: WidgetSpec;
+};
+
+export class EngineError extends Error {
+  constructor(message: string, public code?: string, public status?: number) {
+    super(message);
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function once<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: ctl.signal,
+    });
+    const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    // FastAPI wraps a raised error under `detail`; read through it, otherwise every failure reaches
+    // the user as a bare "HTTP 400" and the sentence explaining what happened is thrown away.
+    const data = (raw.detail && typeof raw.detail === 'object' ? (raw.detail as Record<string, unknown>) : raw);
+    if (!res.ok || data.code === 'INVALID_SQL_ERROR' || (typeof data.error === 'string' && data.error)) {
+      throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+    }
+    return raw as T;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Retryable means the source was busy, not that the request was wrong — waiting is the whole fix. */
+function retryable(e: unknown): boolean {
+  return e instanceof EngineError && (e.status === 503 || e.code === 'DATA_SOURCE_UNAVAILABLE');
+}
+
+async function post<T>(path: string, body: unknown, timeoutMs = 120_000): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await once<T>(path, body, timeoutMs);
+    } catch (e) {
+      if (attempt >= 2 || !retryable(e)) throw e;
+      await sleep(1500 * (attempt + 1));
+    }
+  }
+}
+
+/** Deterministik SQL çalıştırır (model adlarıyla: dbo_LG_411_01_INVOICE ...).
+ *  `question` verilirse köprü sonuç setine göre bir `widget` spec'i de döndürür (grafik başlığı = soru). */
+export function runSql(sql: string, limit = 500, question?: string): Promise<SqlResult> {
+  return post<SqlResult>('/api/v1/run_sql', { sql, limit, ...(question ? { question } : {}) });
+}
+
+/** Köprünün her cevaba iliştirdiği anlam izi: hangi terim neye çözümlendi, hangi derleyici üretti. */
+export type SemanticTrace = {
+  compiler?: 'deterministic' | 'existing_llm' | 'supersonic' | (string & {});
+  certified?: boolean;
+  catalogVersion?: number;
+  explain?: string[];
+  query?: {
+    slots?: Array<{ term: string; semanticType: string; status: string; mapping?: Record<string, unknown> | null; confidence?: number }>;
+    unresolved?: string[];
+    conflicts?: string[];
+    temporal?: Array<{ text: string; primitive: string; start?: string | null; end?: string | null; ambiguous?: boolean }>;
+    explanation?: string[];
+  };
+};
+
+export type AskResult = {
+  id: string;
+  type?: string;
+  sql?: string;
+  summary?: string;
+  threadId?: string;
+  explanation?: string;
+  queryId?: string;
+  semantic?: SemanticTrace;
+  /** Motorun bu cevabı hesaplarken çalıştırdığı sonuç — tek yürütme. Ekranda gösterilen sayfa
+   *  `records`te, tamamı köprüde `resultId` altında saklı. */
+  resultId?: string;
+  columns?: SqlColumn[];
+  records?: Record<string, unknown>[];
+  shownRows?: number;
+  totalRows?: number;
+  rowCount?: number;
+  truncated?: boolean;
+  widget?: WidgetSpec;
+  [k: string]: unknown;
+};
+
+/** Bir yürütmenin saklanan TAM sonucu. Yeniden çalıştırma değildir: sonuç düşmüşse 410 döner ve
+ *  eski SQL sessizce tekrar koşturulmaz. */
+export function storedResult(resultId: string): Promise<SqlResult & { question?: string; sql?: string }> {
+  return get<SqlResult & { question?: string; sql?: string }>(`/api/v1/result/${encodeURIComponent(resultId)}`);
+}
+
+/** Kullanıcının "doğru/yanlış" işareti: doğrulanmış çift havuzuna yazılır, gece madenciliğine girer. */
+export function sendFeedback(queryId: string, validated: boolean): Promise<{ ok: boolean }> {
+  return post<{ ok: boolean }>('/api/v1/feedback', { queryId, validated }, 30_000);
+}
+
+/** Doğal dil soru → SQL (+ özet). threadId verilirse takip sorusu olarak işlenir. */
+export async function ask(question: string, threadId?: string, onStage?: (stage: QueryStage) => void): Promise<AskResult> {
+  const ctl = new AbortController();
+  const timeout = setTimeout(() => ctl.abort(), 240_000);
+  try {
+    const response = await fetch(`${BASE}/api/v1/ask/stream`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctl.signal,
+      body: JSON.stringify({ question, language: 'TR', sampleSize: 50, ...(threadId ? { threadId } : {}) }),
+    });
+    if (!response.ok || !response.body) throw new EngineError(`Sorgu servisi yanıt vermedi (HTTP ${response.status}).`, undefined, response.status);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        if (done && buffer.trim()) lines.push(buffer);
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line);
+          if (event.event === 'stage' && ['understanding', 'querying', 'presenting'].includes(event.stage)) onStage?.(event.stage);
+          if (event.event === 'error') throw new EngineError(event.message);
+          if (event.event === 'result') return event.result as AskResult;
+        }
+        if (done) throw new EngineError('Bağlantı sonuç gelmeden kapandı. Sorgu otomatik tekrarlanmadı.');
+      }
+    } finally { await reader.cancel(); }
+  } finally { clearTimeout(timeout); }
+}
+
+/** Sonuç için Türkçe özet (motorun kendi özetleyicisi). */
+export function generateSummary(question: string, sql: string, sampleSize = 50): Promise<{ summary?: string }> {
+  return post<{ summary?: string }>('/api/v1/generate_summary', { question, sql, language: 'TR', sampleSize }, 180_000);
+}
+
+
+/** Motor durumu: bağlı veri kaynağı, profillenmiş model sayısı ve katalog sürümü (GET /api/v1/engine). */
+export async function engineStatus(): Promise<{ dataSource: string; models: number; deployed: boolean }> {
+  const res = await fetch(`${BASE}/api/v1/engine`);
+  const d = (await res.json().catch(() => ({}))) as { dataSource?: string; models?: number; deployed?: boolean; error?: string };
+  if (!res.ok) throw new EngineError(String(d.error ?? `HTTP ${res.status}`), undefined, res.status);
+  return { dataSource: d.dataSource ?? 'mssql', models: Number(d.models ?? 0), deployed: Boolean(d.deployed) };
+}
+
+// ---------------------------------------------------------------- veri sözlüğü
+
+/** Bir kolon hakkında bilinenler. Üç ayrı okuma yan yana durur ve hiçbiri diğerini ezmez:
+ *  kaynağın kendi yorumu, bu sistemin veriden çıkardığı, ve bir kişinin buraya yazdığı. */
+export type CatalogColumn = {
+  name: string;
+  type: string;
+  nullable?: boolean;
+  isPrimaryKey?: boolean;
+  ref?: string | null;
+  sensitive?: boolean;
+  sensitivityReason?: string | null;
+  sentinelValues?: string[];
+  distinct?: number | null;
+  topValues?: Array<[string, number]>;
+  description?: string | null;
+  derived?: Array<{ source: string; text: string }>;
+  unit?: string | null;
+  /** Sistemin şemayı kendi okumasıyla önerdiği anlam. Tanım değildir: kabul eden kişi tanım yapar. */
+  suggestion?: { id: string; text: string; confidence: number; model?: string } | null;
+  annotations: Array<{ id: string; text: string; author: string; createdAt: string }>;
+  concepts: Array<{ id: string; term: string; type: string; status: string; values?: string[]; formula?: string }>;
+  status: 'CERTIFIED' | 'CANDIDATE' | 'DESCRIBED' | 'UNDEFINED' | (string & {});
+};
+
+export type CatalogTable = {
+  entity: string;
+  tableName: string;
+  tablePattern: string;
+  schema: string;
+  /** Tablonun ait olduğu firma numarası (Logo'da: yıl). Böyle bir öneki olmayan tabloda null. */
+  scope?: string | null;
+  /** Firma içindeki dönem numarası. */
+  scopeSub?: string | null;
+  description?: string | null;
+  rowCount?: number | null;
+  primaryKey: string[];
+  relationships: Array<{ column: string; ref_entity: string; ref_column: string }>;
+  annotations: Array<{ id: string; text: string; author: string; createdAt: string }>;
+  columns: CatalogColumn[];
+  columnCount: number;
+  certifiedColumns?: number;
+  undefinedColumns: number;
+};
+
+export type CatalogPage = {
+  tables: CatalogTable[];
+  tableCount: number;
+  total: number;
+  /** Katalogda hangi firmalar var ve her birinde kaç tablo — sayfalamadan önce, tamamı üzerinden
+   *  sayılır. Ekrandaki filtre seçeneklerini bu besler. */
+  scopes?: Array<{ code: string; tables: number }>;
+  /** Katalog okunamadığında dolu gelir — boş liste "veri yok" demek değildir. */
+  warning?: string;
+};
+
+async function get<T>(path: string, timeoutMs = 60_000): Promise<T> {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${BASE}${path}`, { signal: ctl.signal });
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!res.ok) throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+    return data as T;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Tablo listesi. Kolon ayrıntısı istenmez — tüm envanter sekiz megabayt, liste birkaç kilobayt. */
+export function catalogTables(search: string, limit = 60, offset = 0, scope = ''): Promise<CatalogPage> {
+  const qs = new URLSearchParams({ columns: 'false', limit: String(limit), offset: String(offset) });
+  if (search.trim()) qs.set('q', search.trim());
+  if (scope) qs.set('scope', scope);
+  return get<CatalogPage>(`/api/v1/schema/inventory?${qs.toString()}`);
+}
+
+/** Tek bir tablonun kolonları — açıldığında istenir. */
+export function catalogTable(entity: string): Promise<CatalogPage> {
+  return get<CatalogPage>(`/api/v1/schema/inventory?entity=${encodeURIComponent(entity)}`);
+}
+
+export function writeLabel(tablePattern: string, column: string | null, text: string, author = 'kokpit'): Promise<{ annotation: { id: string } }> {
+  return post('/api/v1/schema/annotations', { tablePattern, column, text, author });
+}
+
+/** Düzeltme yeni bir cümledir: eskisi geri çekilir, kayıtta kalır, modele yalnız yenisi gider. */
+export async function rewriteLabel(id: string, tablePattern: string, column: string | null, text: string, author = 'kokpit'): Promise<{ annotation: { id: string } }> {
+  const res = await fetch(`${BASE}/api/v1/schema/annotations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tablePattern, column, text, author }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new EngineError(String(data.error ?? data.message ?? `HTTP ${res.status}`), data.code as string | undefined, res.status);
+  return data as { annotation: { id: string } };
+}
+
+/** Öneriyi kabul etmek bir kişinin işidir ve onun adına kaydedilir. */
+export function acceptSuggestion(id: string): Promise<{ ok?: boolean }> {
+  return post(`/api/v1/schema/suggestions/${encodeURIComponent(id)}/accept`, {});
+}
+
+export function dismissSuggestion(id: string): Promise<{ ok: boolean }> {
+  return post(`/api/v1/schema/suggestions/${encodeURIComponent(id)}/dismiss`, {});
+}
+
+/** Onay bekleyen iş terimleri.
+ *
+ *  Motor bir terimi kendi başına önerebilir ama sertifikalayamaz: "iskonto" hangi kolon, "toptan"
+ *  hangi kod — bunu ancak işi bilen biri söyler. Kuyruk, gerçek kullanımdan çıkanları önce getirir;
+ *  Logo'nun kendi alan etiketlerinden türeyen yüzlerce parça `source: 'all'` ile görülür. */
+export type ReviewItem = {
+  id: string;
+  term: string;
+  type: string;
+  confidence: number | null;
+  mapping: { entity: string; column: string | null; operator: string | null; values: string[]; formula: string | null } | null;
+  evidence: Record<string, number>;
+  evidenceCount: number;
+  observed: Array<{ value: string; rows: number; label: string | null }>;
+  columnMeaning: string | null;
+  /** Terimin tek cümlelik hâli — köprüde, kaynağın kendi kolon ve kod adlarıyla kuruluyor. */
+  plain: string;
+  counterEvidence: number;
+};
+
+/** Bir terimin arkasındaki her şey — kararı verecek kişinin bakacağı yer.
+ *
+ *  Kuyruk satırı terimin ne demek olduğunu söyler, neden öyle bilindiğini söylemez. Bu, onun
+ *  dayanağıdır: terimin geçtiği sorular ve o soruları cevaplayan SQL, kaynağın kendi cümlesi,
+ *  kolonda ölçülen sayılar — ve onaylandığında sorgulara girecek SQL parçasının kendisi. */
+export type Provenance = {
+  id: string;
+  term: string;
+  type: string;
+  status: string;
+  confidence: number | null;
+  plain: string;
+  target: {
+    entity: string;
+    /** kataloğun tuttuğu kalıp (LG_{n0}_{n1}_INVOICE) ve karşılığı olan gerçek tablo */
+    table: string | null;
+    tableExample: string | null;
+    tableRows: number | null;
+    column: string | null;
+    operator: string | null;
+    values: string[];
+    formula: string | null;
+    columnType: string | null;
+    columnMeaning: string | null;
+    /** kaynağın kendi açıklaması — bizim çıkardığımız `derived`den ayrı tutulur */
+    columnDoc: string | null;
+    derived: Array<{ source: string; text: string }>;
+    /** onaylandığında derleyicinin üreteceği parçanın aynısı */
+    sql: string | null;
+    readable: string | null;
+  } | null;
+  evidence: Array<{
+    kind: string;
+    source: string;
+    support: number | null;
+    weight: number | null;
+    at: string | null;
+    /** kanıtın dayandığı sorgu sayısı ve bunlardan kaçı artık bulunamıyor */
+    seenIn: number;
+    missing: number;
+    examples: Array<{ question: string; lines: string[]; hits: number[]; source: string; at: string | null }>;
+    detail: Record<string, unknown>;
+  }>;
+  conflicts: Array<{ type: string; severity: string; source: string; at: string | null; detail: Record<string, unknown> }>;
+  producedBy: Array<{ by: string; how: string; model: string | null; at: string | null; detail: Record<string, unknown> }>;
+};
+
+/** Kart açıldığında istenir: kuyruk yüz satır, kanıt tek terim için onlarca sorgu demek. */
+export function conceptProvenance(id: string): Promise<Provenance> {
+  return get<Provenance>(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/provenance`);
+}
+
+/** Kaç terim bir kişinin kararını bekliyor. Kuyruğun kendisi değil, yalnız sayısı — masa bunu
+ *  dakikada bir sorar ve bir satır bile çekmemesi gerekir. */
+export function reviewCount(): Promise<{ waiting: number }> {
+  return get('/api/v1/semantic/review?limit=0');
+}
+
+export function reviewQueue(source: 'used' | 'all' = 'used', limit = 100): Promise<{ waiting: number; used: number; total: number; items: ReviewItem[] }> {
+  return get(`/api/v1/semantic/review?source=${source}&limit=${limit}`);
+}
+
+/** Kararın kendisi kanıttır: onay insan kanıtı olarak yazılır, gece koşusu onu geri alamaz.
+ *
+ *  CORRECT üçüncü yoldur: terim yanlış ama kişi doğrusunu biliyor. Açıklama zorunlu, kolon isteğe
+ *  bağlı — kolon verilirse yanlış okuma emekliye ayrılır ve doğrusu onun adına tanımlanır. */
+export function reviewConcept(
+  id: string,
+  decision: 'APPROVE' | 'REJECT' | 'CORRECT',
+  note = '',
+  extra: { column?: string; term?: string } = {},
+  by = 'kokpit',
+): Promise<{ ok: boolean; certified: Record<string, number>; corrected_to?: string | null }> {
+  return post(`/api/v1/semantic/concepts/${encodeURIComponent(id)}/review`, { decision, note, by, ...extra });
+}

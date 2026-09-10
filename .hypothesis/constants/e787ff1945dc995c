@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/guardrails.py
+# hypothesis_version: 6.168.0
+
+["'", '*/', '--', '--|/\\*|\\*/', '.', '/*', '08001', '08003', '08004', '08006', '08007', '08S01', ';', 'DBO', 'HY000', 'HYT00', 'MAIN', 'PUBLIC', '_', 'alias', 'broken pipe', 'connection is closed', 'connection refused', 'connection reset', 'empty', 'generic', 'login timeout', 'multiple statements', 'not accessible', 'ok', 'server is not found', 'tsql', 'unable to connect']

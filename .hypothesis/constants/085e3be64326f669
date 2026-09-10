@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/query_gateway/infrastructure/parser/sqlglot_parser.py
+# hypothesis_version: 6.168.0
+
+[100, 400, 1024, ' for share', ' for update', '"', '*', '1', ';', 'Boş SQL.', 'CROSS', 'Case', 'Cast', 'If', 'Paren', 'SQL ayrıştırılamadı.', 'TRUE', 'TryCast', '`', 'alias_or_name', 'from', 'group', 'into', 'kind', 'limit', 'name', 'on', 'postgres', 'q', 'using', 'utf-8']

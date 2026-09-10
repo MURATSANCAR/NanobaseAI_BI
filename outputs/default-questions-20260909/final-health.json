@@ -1,0 +1,1 @@
+{"status":"ok","service":"nanobaseai-bi-semantic-bridge","version":"1.0.0","profiles":4874,"catalog":{"DISCOVERED":0,"CANDIDATE":556,"CERTIFIED":103,"REJECTED":372,"SENSE_CONFLICT":0,"DEPRECATED":1},"llm":true,"db":true,"pid":476115,"cache":{"entries":7,"hot":7,"ttlSec":300,"refreshSec":15.0,"refreshing":true}}

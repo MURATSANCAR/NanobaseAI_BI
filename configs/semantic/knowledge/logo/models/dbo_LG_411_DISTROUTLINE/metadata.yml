@@ -1,0 +1,36 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_DISTROUTLINE"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_DISTROUTLINE"
+properties:
+  "displayName": "dbo.LG_411_DISTROUTLINE"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "DISTROUTREF"
+    type: "INTEGER"
+  - name: "LINENR"
+    type: "SMALLINT"
+  - name: "SALESMANREF"
+    type: "INTEGER"
+  - name: "BCOUNTRYCODE"
+    type: "VARCHAR(13)"
+  - name: "BCITYCODE"
+    type: "VARCHAR(13)"
+  - name: "BTOWNCODE"
+    type: "VARCHAR(13)"
+  - name: "BDISTRICTCODE"
+    type: "VARCHAR(13)"
+  - name: "ECOUNTRYCODE"
+    type: "VARCHAR(13)"
+  - name: "ECITYCODE"
+    type: "VARCHAR(13)"
+  - name: "ETOWNCODE"
+    type: "VARCHAR(13)"
+  - name: "EDISTRICTCODE"
+    type: "VARCHAR(13)"

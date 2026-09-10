@@ -1,0 +1,40 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_AUTOCTEMPLATE"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_AUTOCTEMPLATE"
+properties:
+  "displayName": "dbo.L_AUTOCTEMPLATE"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "TYP"
+    type: "SMALLINT"
+  - name: "ITEMREF"
+    type: "INTEGER"
+  - name: "INCREMENT_"
+    type: "SMALLINT"
+  - name: "CHARREF"
+    type: "INTEGER"
+  - name: "LENGTH"
+    type: "SMALLINT"
+  - name: "SSTART"
+    type: "VARCHAR(25)"
+  - name: "SEND"
+    type: "VARCHAR(25)"
+  - name: "CHARVALREF"
+    type: "INTEGER"
+  - name: "CHARABBREV"
+    type: "VARCHAR(25)"
+  - name: "LINENR"
+    type: "SMALLINT"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

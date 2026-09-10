@@ -1,0 +1,57 @@
+{
+  "security": {
+    "unauth_sql": 401,
+    "unauth_ask": 401,
+    "no_admin_reload": 403
+  },
+  "queries": [
+    {
+      "q": "2026 kanal bazında net ciro",
+      "http": 200,
+      "type": "TEXT_TO_SQL",
+      "rows": 17,
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "summary": "17 satır döndü. İlk 3:\n1. KITAPCI · Net ciro 359.387.308,91\n2. E-TICARET · Net ciro 192.872.534,57\n3. DAGITICI · Net ciro 125.698.455,15 '2026' dönemi kısmen gözleniyor: INVOICE kayıtları 2015-01-01–2026-08-17. Yükleme bütünlüğü doğrulanmadı; sonuç yalnız mevcut kayıtlara aittir.",
+      "explanation": null,
+      "compiler": "deterministic",
+      "truncated": false,
+      "snapshots_ok": true
+    },
+    {
+      "q": "Peki geçen yıl?",
+      "http": 200,
+      "type": "TEXT_TO_SQL",
+      "rows": 17,
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "summary": "17 satır döndü. İlk 3:\n1. KITAPCI · Net ciro 442.051.595,11\n2. E-TICARET · Net ciro 330.389.716,91\n3. DAGITICI · Net ciro 161.225.320,95",
+      "explanation": null,
+      "compiler": "deterministic",
+      "truncated": false,
+      "snapshots_ok": true
+    },
+    {
+      "q": "Sadece Ankara",
+      "http": 200,
+      "type": "TEXT_TO_SQL",
+      "rows": 3,
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[CITYCODE] = 'ANKARA'\n  AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "summary": "3 satır döndü. İlk 3:\n1. DAGITICI · Net ciro 6.925.063,13\n2. ZINCIR · Net ciro 1.091.179,98\n3. KITAPCI · Net ciro 512.308,05",
+      "explanation": null,
+      "compiler": "deterministic",
+      "truncated": false,
+      "snapshots_ok": true
+    },
+    {
+      "q": "hiç satmayan ürünler",
+      "http": 200,
+      "type": "TEXT_TO_SQL",
+      "rows": 500,
+      "sql": "SELECT ITEMS.[LOGICALREF], ITEMS.[CODE], ITEMS.[NAME] FROM [dbo].[LG_411_ITEMS] AS ITEMS WHERE NOT EXISTS (SELECT 1 FROM [dbo].[LG_411_01_STLINE] AS STLINE JOIN [dbo].[LG_411_01_INVOICE] AS INVOICE ON STLINE.[INVOICEREF] = INVOICE.[LOGICALREF] WHERE STLINE.[CANCELLED] = 0 AND STLINE.[LINETYPE] = 0 AND INVOICE.[TRCODE] IN (7, 8, 9) AND INVOICE.[CANCELLED] = 0 AND STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01') ORDER BY ITEMS.[LOGICALREF]",
+      "summary": "500 satır döndü. İlk 3:\n1. LOGICALREF 1 · ÿ · \n2. LOGICALREF 12 · 15201.01.0013 · DERDİMİ SEVİYORUM 1\n3. LOGICALREF 13 · 15201.01.0014 · KURANI KERİM  2026-01-01–2027-01-01 dönemindeki mevcut kayıtlarda satış hareketi bulunmayan ürünler. Yükleme bütünlüğü doğrulanmadı; tüm geçmişte hiç satılmadığı anlamına gelmez.",
+      "explanation": null,
+      "compiler": "deterministic_absence",
+      "truncated": true,
+      "snapshots_ok": true
+    }
+  ]
+}

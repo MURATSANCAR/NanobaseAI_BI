@@ -1,0 +1,410 @@
+[
+  {
+    "question": "2026 kanal bazında net ciro",
+    "passed": true,
+    "actualRows": 17,
+    "referenceRows": 17,
+    "referenceSQL": "SELECT c.SPECODE2 label, SUM(CASE WHEN i.TRCODE IN (2,3) THEN -i.NETTOTAL ELSE i.NETTOTAL END) value FROM dbo.LG_411_01_INVOICE i INNER JOIN dbo.LG_411_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.DATE_ >= '20260101' AND i.DATE_ < '20270101' AND i.CANCELLED=0 AND i.TRCODE IN (2,3,7,8,9) GROUP BY c.SPECODE2",
+    "expected": [
+      [
+        "",
+        "32865585.14000"
+      ],
+      [
+        "DAGITICI",
+        "125698455.15000"
+      ],
+      [
+        "DIGER",
+        "4548791.37000"
+      ],
+      [
+        "E-TICARET",
+        "192872534.57000"
+      ],
+      [
+        "FUAR",
+        "4886841.35000"
+      ],
+      [
+        "HAVUZ",
+        "2584531.62000"
+      ],
+      [
+        "KITAPCI",
+        "359387308.91000"
+      ],
+      [
+        "KURUM",
+        "17213504.45000"
+      ],
+      [
+        "MAGAZA",
+        "9196553.38000"
+      ],
+      [
+        "MARKET",
+        "-22525.00000"
+      ],
+      [
+        "MERKEZ",
+        "-500.00000"
+      ],
+      [
+        "OKUL",
+        "557727.45000"
+      ],
+      [
+        "PERSONEL",
+        "35494.00000"
+      ],
+      [
+        "YAZAR",
+        "2861701.18000"
+      ],
+      [
+        "YURTDIŞI",
+        "2126271.60000"
+      ],
+      [
+        "ZINCIR",
+        "92808104.52000"
+      ],
+      [
+        "ZİNCİR MAĞ",
+        "489294.37000"
+      ]
+    ],
+    "observed": [
+      [
+        "",
+        "32865585.14000"
+      ],
+      [
+        "DAGITICI",
+        "125698455.15000"
+      ],
+      [
+        "DIGER",
+        "4548791.37000"
+      ],
+      [
+        "E-TICARET",
+        "192872534.57000"
+      ],
+      [
+        "FUAR",
+        "4886841.35000"
+      ],
+      [
+        "HAVUZ",
+        "2584531.62000"
+      ],
+      [
+        "KITAPCI",
+        "359387308.91000"
+      ],
+      [
+        "KURUM",
+        "17213504.45000"
+      ],
+      [
+        "MAGAZA",
+        "9196553.38000"
+      ],
+      [
+        "MARKET",
+        "-22525.00000"
+      ],
+      [
+        "MERKEZ",
+        "-500.00000"
+      ],
+      [
+        "OKUL",
+        "557727.45000"
+      ],
+      [
+        "PERSONEL",
+        "35494.00000"
+      ],
+      [
+        "YAZAR",
+        "2861701.18000"
+      ],
+      [
+        "YURTDIŞI",
+        "2126271.60000"
+      ],
+      [
+        "ZINCIR",
+        "92808104.52000"
+      ],
+      [
+        "ZİNCİR MAĞ",
+        "489294.37000"
+      ]
+    ],
+    "resultId": "b72b7fc090eb4acb9f3be10dd9e7bb90"
+  },
+  {
+    "question": "İade tutarına göre ilk 10 müşteri",
+    "passed": true,
+    "actualRows": 10,
+    "referenceRows": 10,
+    "referenceSQL": "SELECT TOP 10 c.DEFINITION_ label, SUM(i.NETTOTAL) value FROM dbo.LG_411_01_INVOICE i LEFT JOIN dbo.LG_411_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.DATE_ >= '20260101' AND i.DATE_ < '20270101' AND i.CANCELLED=0 AND i.TRCODE IN (2,3) GROUP BY c.DEFINITION_ ORDER BY value DESC",
+    "expected": [
+      [
+        "BORA YAYINCILIK DAĞITIM PAZ.SAN.TİC.LTD.ŞTİ.",
+        "1429282.68000"
+      ],
+      [
+        "BİRİNCİ KİTAP KIRTASİYE EĞİTİM YAYIN DAĞITIM TURİZM TİCARET LİMİTED ŞİRKETİ",
+        "1415892.25000"
+      ],
+      [
+        "DERYA DAĞITIM A.Ş",
+        "1417416.58000"
+      ],
+      [
+        "DMS KİTAP YAYIN DAĞITIM PAZARLAMA VE ORGANİZASYON TİCARET LİMİTED ŞİRKETİ",
+        "5573096.67000"
+      ],
+      [
+        "KİTAPLİFE YAYIMCILIK DAĞITIM ÖZEL EĞİTİM SAN.TİC.LTD.ŞTİ.",
+        "2093865.40000"
+      ],
+      [
+        "PENGUEN KİTAP KASET BASIM YAYIM PAZARLAMA TİCARET A.Ş.",
+        "2695862.22000"
+      ],
+      [
+        "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+        "1532772.64000"
+      ],
+      [
+        "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+        "5929122.05000"
+      ],
+      [
+        "ÖMER BARAN - YONCALI KÜLTÜR",
+        "2073277.20000"
+      ],
+      [
+        "İBRAHİM ÖZ - SİNADA KİTABEVİ",
+        "1422596.25000"
+      ]
+    ],
+    "observed": [
+      [
+        "BORA YAYINCILIK DAĞITIM PAZ.SAN.TİC.LTD.ŞTİ.",
+        "1429282.68000"
+      ],
+      [
+        "BİRİNCİ KİTAP KIRTASİYE EĞİTİM YAYIN DAĞITIM TURİZM TİCARET LİMİTED ŞİRKETİ",
+        "1415892.25000"
+      ],
+      [
+        "DERYA DAĞITIM A.Ş",
+        "1417416.58000"
+      ],
+      [
+        "DMS KİTAP YAYIN DAĞITIM PAZARLAMA VE ORGANİZASYON TİCARET LİMİTED ŞİRKETİ",
+        "5573096.67000"
+      ],
+      [
+        "KİTAPLİFE YAYIMCILIK DAĞITIM ÖZEL EĞİTİM SAN.TİC.LTD.ŞTİ.",
+        "2093865.40000"
+      ],
+      [
+        "PENGUEN KİTAP KASET BASIM YAYIM PAZARLAMA TİCARET A.Ş.",
+        "2695862.22000"
+      ],
+      [
+        "POİNT İNTERNET TEKNOLOJİLERİ VE LOJİSTİK ANONİM ŞİRKETİ",
+        "1532772.64000"
+      ],
+      [
+        "TURKUVAZ MÜZİK KİTAP MAĞAZACILIK PAZARLAMA A.Ş",
+        "5929122.05000"
+      ],
+      [
+        "ÖMER BARAN - YONCALI KÜLTÜR",
+        "2073277.20000"
+      ],
+      [
+        "İBRAHİM ÖZ - SİNADA KİTABEVİ",
+        "1422596.25000"
+      ]
+    ],
+    "resultId": "3df624f133d248638fabef706c3ee538"
+  },
+  {
+    "question": "Aylık iskonto oranı",
+    "passed": true,
+    "actualRows": 8,
+    "referenceRows": 8,
+    "referenceSQL": "WITH raw AS (SELECT DATE_,LINETYPE,TOTAL FROM dbo.LG_211_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND TRCODE IN (7,8) UNION ALL SELECT DATE_,LINETYPE,TOTAL FROM dbo.LG_411_01_STLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND TRCODE IN (7,8)), totals AS (SELECT MONTH(DATE_) m, LINETYPE, SUM(TOTAL) amount FROM raw GROUP BY MONTH(DATE_),LINETYPE) SELECT DATEFROMPARTS(2026,m,1) label, SUM(CASE WHEN LINETYPE=2 THEN amount ELSE 0 END)/NULLIF(SUM(CASE WHEN LINETYPE=0 THEN amount ELSE 0 END),0) value FROM totals GROUP BY m",
+    "expected": [
+      [
+        "2026-01-01",
+        "0.45512"
+      ],
+      [
+        "2026-02-01",
+        "0.44839"
+      ],
+      [
+        "2026-03-01",
+        "0.46253"
+      ],
+      [
+        "2026-04-01",
+        "0.46463"
+      ],
+      [
+        "2026-05-01",
+        "0.45947"
+      ],
+      [
+        "2026-06-01",
+        "0.46725"
+      ],
+      [
+        "2026-07-01",
+        "0.45632"
+      ],
+      [
+        "2026-08-01",
+        "0.46578"
+      ]
+    ],
+    "observed": [
+      [
+        "2026-01-01",
+        "0.45512"
+      ],
+      [
+        "2026-02-01",
+        "0.44839"
+      ],
+      [
+        "2026-03-01",
+        "0.46253"
+      ],
+      [
+        "2026-04-01",
+        "0.46463"
+      ],
+      [
+        "2026-05-01",
+        "0.45947"
+      ],
+      [
+        "2026-06-01",
+        "0.46725"
+      ],
+      [
+        "2026-07-01",
+        "0.45632"
+      ],
+      [
+        "2026-08-01",
+        "0.46578"
+      ]
+    ],
+    "resultId": "9ed8e21c6a8a4dc0ab20cc1102e60e21"
+  },
+  {
+    "question": "En çok satan 10 kitap (adet)",
+    "passed": true,
+    "actualRows": 10,
+    "referenceRows": 10,
+    "referenceSQL": "WITH sales AS (SELECT p.NAME title,SUM(l.AMOUNT) quantity FROM dbo.LG_211_01_STLINE l INNER JOIN dbo.LG_211_ITEMS p ON p.LOGICALREF=l.STOCKREF WHERE l.DATE_ >= '20260101' AND l.DATE_ < '20270101' AND l.CANCELLED=0 AND l.LINETYPE=0 AND l.TRCODE IN (7,8) GROUP BY p.NAME UNION ALL SELECT p.NAME,SUM(l.AMOUNT) FROM dbo.LG_411_01_STLINE l INNER JOIN dbo.LG_411_ITEMS p ON p.LOGICALREF=l.STOCKREF WHERE l.DATE_ >= '20260101' AND l.DATE_ < '20270101' AND l.CANCELLED=0 AND l.LINETYPE=0 AND l.TRCODE IN (7,8) GROUP BY p.NAME) SELECT TOP 10 title label,SUM(quantity) value FROM sales GROUP BY title ORDER BY value DESC",
+    "expected": [
+      [
+        "ANNE TERLİĞİ",
+        "88353.00000"
+      ],
+      [
+        "DÜNYAYI OKUYAN ÇOCUK",
+        "67946.00000"
+      ],
+      [
+        "ROBONLAR",
+        "64536.00000"
+      ],
+      [
+        "SÖZCÜKLERİN KAMERA ARKASI",
+        "80305.00000"
+      ],
+      [
+        "UÇAN ANNE TERLİĞİ",
+        "69348.00000"
+      ],
+      [
+        "VATANIN KALBİ",
+        "74556.00000"
+      ],
+      [
+        "YILDIZLARA YAKIN",
+        "107579.00000"
+      ],
+      [
+        "ZERDALİ - DEDEMLE BİR YIL",
+        "105844.00000"
+      ],
+      [
+        "İYİLİK TİMİ",
+        "148662.00000"
+      ],
+      [
+        "ŞİFAYI KAPTIK HASTANESİ",
+        "129850.00000"
+      ]
+    ],
+    "observed": [
+      [
+        "ANNE TERLİĞİ",
+        "88353.00000"
+      ],
+      [
+        "DÜNYAYI OKUYAN ÇOCUK",
+        "67946.00000"
+      ],
+      [
+        "ROBONLAR",
+        "64536.00000"
+      ],
+      [
+        "SÖZCÜKLERİN KAMERA ARKASI",
+        "80305.00000"
+      ],
+      [
+        "UÇAN ANNE TERLİĞİ",
+        "69348.00000"
+      ],
+      [
+        "VATANIN KALBİ",
+        "74556.00000"
+      ],
+      [
+        "YILDIZLARA YAKIN",
+        "107579.00000"
+      ],
+      [
+        "ZERDALİ - DEDEMLE BİR YIL",
+        "105844.00000"
+      ],
+      [
+        "İYİLİK TİMİ",
+        "148662.00000"
+      ],
+      [
+        "ŞİFAYI KAPTIK HASTANESİ",
+        "129850.00000"
+      ]
+    ],
+    "resultId": "999d6c4671f243fd8811118ef0468eba"
+  }
+]

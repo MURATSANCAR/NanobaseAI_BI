@@ -1,0 +1,28 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_SATI"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_SATI"
+properties:
+  "displayName": "dbo.LG_411_SATI"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "USERID"
+    type: "INTEGER"
+  - name: "CUSTOM"
+    type: "SMALLINT"
+  - name: "ITEMTYP"
+    type: "SMALLINT"
+  - name: "ITEMEXP"
+    type: "VARCHAR(25)"
+  - name: "PARENTREF"
+    type: "INTEGER"
+  - name: "HASCHILD"
+    type: "SMALLINT"
+  - name: "FILTERREF"
+    type: "INTEGER"

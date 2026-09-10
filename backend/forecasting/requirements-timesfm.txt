@@ -1,5 +1,7 @@
-# Learned engine (TimesFM 2.5, Apache-2.0). CPU torch wheel keeps the image small.
+# Learned engine: TimesFM 3.0 from the upstream repository (google-research/timesfm),
+# pinned to the commit validated on the BI server (2026-09-06). CPU torch wheel keeps the image small.
+# Weights: google/timesfm-3.0-pytorch (HF hub; non-commercial upstream licence → FORECAST_ALLOW_NONCOMMERCIAL=1).
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch>=2.4
-timesfm>=2.5.0
+timesfm @ git+https://github.com/google-research/timesfm.git@0df95ae62085a6ac0d0afd1ad40dee2e6c1356ab
 huggingface_hub>=0.25

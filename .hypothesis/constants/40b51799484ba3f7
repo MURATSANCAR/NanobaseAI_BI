@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/history/miner.py
+# hypothesis_version: 6.168.0
+
+[0.5, 0.75, 1.0, "'\\d{4}-\\d{2}-\\d{2}", ';', '<>', '=', 'AVG', 'COLUMN', 'COUNT', 'COUNT_DISTINCT', 'DATE_', 'EXPR', 'IN', 'JOIN', 'MAX', 'MIN', 'NOT IN', 'RATIO', 'SUM', 'UNKNOWN', '_', 'alias', 'aliases', 'case', 'column', 'columns', 'conditions', 'correlations', 'created', 'default_filters', 'defaults', 'end', 'entity', 'explicit', 'formula', 'func', 'history_miner', 'metrics', 'pair', 'pairs', 'pairs_real', 'pairs_total', 'parse_errors', 'precision', 'primitive', 'ratio', 'raw_precision', 'recall', 'ref_column', 'ref_entity', 'ref_pattern', 'relationships', 'schema', 'scope', 'seed', 'start', 'strong_correlations', 'support', 'term_total', 'text', 'updated', 'where', '|']

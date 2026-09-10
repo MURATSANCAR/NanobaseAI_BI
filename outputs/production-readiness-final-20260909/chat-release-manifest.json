@@ -1,0 +1,34 @@
+{
+  "files": {
+    "/tmp/zeki-chat-candidate-app.py": "794f8e95b18dca82f022ddc1ea8076db855bbaa3141796e613e97162ce981e5d",
+    "backend/semantic_bridge/chat_scope.py": "718abd8a3d4c542ad777dcc0359de1f0fe48d36d4ceb4445efe8733ea112b2f2",
+    "/tmp/zeki-chat-frontend/src/lib/engine.ts": "d668be21dfd4a68fbbd037c4fab7ead925a989409fa1bc386aa007ed1314842f",
+    "/tmp/zeki-chat-frontend/dist/assets/index-Cdd2ex6f.js": "dc2c77ae3b95c3ac584eb8c46843ba01f6800901761617897379b7bfba7688ed",
+    "/tmp/zeki-chat-frontend/dist/assets/index-BW9Tnd1Q.css": "272982c86cb515bd8ef9f97abc8aade70f03181f9b9797120a67f3dd64a6a165",
+    "/tmp/zeki-chat-frontend/dist/index.html": "06cf4e0e8556ab33a4e31e39ec40df5c04451683315057bfaabf5c3d72a4a2d8"
+  },
+  "mobile": [
+    {
+      "width": 320,
+      "pageOverflow": false,
+      "introVisible": true
+    },
+    {
+      "width": 390,
+      "pageOverflow": false,
+      "introVisible": true
+    },
+    {
+      "width": 768,
+      "pageOverflow": false,
+      "introVisible": true
+    },
+    {
+      "width": 1440,
+      "pageOverflow": false,
+      "introVisible": true
+    }
+  ],
+  "unitTests": 499,
+  "publication": "Isolated chat patch on existing production backend; frontend ask uses existing /api/v1/ask endpoint. Concurrent stream/presentation changes are not included."
+}

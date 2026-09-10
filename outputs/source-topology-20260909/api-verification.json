@@ -1,0 +1,17 @@
+{
+  "tableCount": 2,
+  "total": 4874,
+  "contexts": [
+    {
+      "n0": "000"
+    },
+    {
+      "n0": "211",
+      "n1": "01"
+    }
+  ],
+  "patternLabels": "",
+  "context_has_firma": false,
+  "first_rule_single_company": true,
+  "old_only_2026_claim": false
+}

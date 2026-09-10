@@ -1,0 +1,14 @@
+{
+  "state": "complete",
+  "files": {
+    "backend/semantic_layer/runtime/resolver.py": "ee8a31123005b3b4c96efe24768093f2f48246378b0861b7b73ebe67c0e57bb1",
+    "backend/semantic_layer/runtime/compiler.py": "f684de8e49a470bd191bf8c14e9edc83da88a685d48e4691b56f013bcab614df",
+    "backend/semantic_layer/runtime/audit.py": "cfec0bdab72a39120dd182d735dc79239f6c3e893405d0e45d9bff70d3801adc",
+    "tests/stress/enduser_10000.py": "ca31e09903c8cda79264d66976e58154a1823f5aa9e905af5da4686a1e66ffdf",
+    "tests/stress/test_enduser_10000.py": "bec88a90ceba45d28739775a323183b2f9661083a7c3a12211e46fe0c0832084"
+  },
+  "completed_at": "2026-09-09T03:32:23+0300",
+  "unit_tests_passed": 463,
+  "service": "nanobase-semantic-bridge",
+  "health": "ok"
+}

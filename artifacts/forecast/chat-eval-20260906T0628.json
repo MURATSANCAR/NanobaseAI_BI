@@ -1,0 +1,34 @@
+{
+  "passed": 2,
+  "total": 2,
+  "results": [
+    {
+      "id": "fc-logo-001",
+      "question": "Toplam ciro önümüzdeki 6 ay tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 4.3,
+      "phases": [
+        "preparing",
+        "forecast_intent",
+        "forecast_series_hit",
+        "forecast_declined"
+      ],
+      "detail": "code=INSUFFICIENT_HISTORY",
+      "error": null
+    },
+    {
+      "id": "fc-logo-002",
+      "question": "Segment bazında önümüzdeki 6 ay satış tahmini",
+      "expect": "declined",
+      "ok": true,
+      "elapsed_s": 0.0,
+      "phases": [
+        "preparing",
+        "forecast_declined"
+      ],
+      "detail": "code=UNSUPPORTED_SHAPE",
+      "error": null
+    }
+  ]
+}

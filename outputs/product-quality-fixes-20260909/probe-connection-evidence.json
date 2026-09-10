@@ -1,0 +1,9 @@
+{
+  "isolated": true,
+  "mainConnectionPreserved": true,
+  "mainQueryOk": true,
+  "probeConnectionClosed": true,
+  "probeSeconds": 1.677,
+  "hits": 0,
+  "probeError": null
+}

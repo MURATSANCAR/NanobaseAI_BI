@@ -1,0 +1,32 @@
+{
+  "baseHashes": {
+    "agent-short.md": "3a5a505209b1df62d9de2cca4559aba532ce3c51988582ebf2dc0e437dfb8730",
+    "rules/conventions.md": "a8f72eec996be415a3ec6f8ceec1ebd039da5ace1cf5d538ce424c9d615483f3",
+    "rules/logo-erp.md": "d1efe412644ef560d6db4f67ce18774882eeeb1608dce6bd5b81cc0b14a1a9f2"
+  },
+  "replacements": {
+    "agent-short.md": [
+      [
+        "Veri yalnız 2026 (firma 411, Ocak–Ağustos); 2025 ve öncesi bu projede yok.",
+        "Bu kurulum tek şirketin yıllar içindeki yedek/anlık görüntü kaynaklarını kullanır. Teknik kaynak kodlarından ayrı şirket üretme; yıl kapsamını doğrulanmış kaynak metaverisinden belirle."
+      ]
+    ],
+    "rules/conventions.md": [
+      [
+        "- `LOGICALREF` firmaya (yıl tablosuna) özel dahili anahtardır; firmalar arası eşleşmez. Firma/yıl tabloları arasında cari için `CLCARD.CODE`, malzeme için `ITEMS.CODE` sabit anahtardır (örtüşme: CLCARD ≈ %99,5, ITEMS ≈ %92).",
+        "- `LOGICALREF` kaynak anlık görüntüsü içindeki dahili anahtardır. Başka yedekte aynı numaranın bulunması tek başına aynı kaydı kanıtlamaz. Kaynaklar arası varlık eşleştirmesinde doğrulanmış iş anahtarları ve ilişkiler kullanılmalıdır. Bu teknik ayrım ayrı şirketler olduğu anlamına gelmez."
+      ],
+      [
+        "- Firma = yıl anlık görüntüsü. Bu projede yalnız `LG_411_*` (2026) modellenmiştir. `LG_211_*` = 2021–2025 (tek dönem), 201 = 2020, 191 = 2019, 181 = 2018, 171 = 2017, 15/16/105/115 = 2015–16 — modellenmemiştir; 2025 ve öncesi sorulursa SQL üretme (NO_SQL) ve verinin bu projede olmadığını söyle.",
+        "- Tek şirket vardır; farklı veri kaynakları yıllar içindeki yedek/anlık görüntülerdir. Tablo önekleri şirket kimliği değildir. Yıl kapsamı ve yedek önceliği doğrulanmış kaynak eşlemesinden alınmalıdır. Örtüşen yedekler ayrı şirketler gibi toplanamaz; yalnız tablo adı veya tek bir ileri tarihli kayıttan kaynak dönemi çıkarılamaz."
+      ]
+    ],
+    "rules/logo-erp.md": [
+      [
+        "Veri 2026 yılına (firma 411, Ocak–Ağustos) aittir; yıl belirtilmeyen sorular 2026 YTD kabul edilir.",
+        "Bu kurulum tek şirketin farklı zamanlara ait yedek/anlık görüntülerini kullanır. Teknik tablo kodları ayrı şirket değildir. Dönem seçimi doğrulanmış kaynak kapsamı ve uygulamanın zaman kuralıyla yapılır; geçmiş yılların yokluğu varsayılmaz."
+      ]
+    ]
+  },
+  "contract": "# Bu kurulumun kaynak anlamı — kullanıcı tarafından doğrulandı\n\nTek şirket vardır. Kullanıcının 2026-09-09 açıklamasına göre farklı veritabanları, bu şirketin yıllar içinde alınmış yedekleridir.\n\n- Teknik veritabanı/tablo kodlarından yeni şirket, müşteri veya tüzel kişilik üretme. Özellikle 411 ve 211 teknik kodlarını şirket adı/numarası olarak sunma; bunlara göre şirket seçimi isteme.\n- SQL'de mevcut fiziksel nesne adları kullanılabilir; bu adların sayısal önekleri iş anlamı taşıyan şirket kimliği değildir.\n- Kaynak kimliği, yedek tarihi, işlem tarihi ve şirket kimliği farklı kavramlardır. Teknik önekten yedek yılı ya da önceliği tahmin etme.\n- Dönem sorularını doğrulanmış veritabanı/yedek/dönem eşlemesiyle karşıla. İleri tarihli tek kayıt veya min/max tarih aralığı yedeğin yetkili dönemini kanıtlamaz.\n- Aynı kayıt farklı yedeklerde bulunabilir. Örtüşen kaynakları bağımsız şirketler gibi UNION ALL ile toplamak doğru kabul edilmez. Tekilleştirme ve hangi yedeğin esas alınacağı doğrulanmalıdır.\n- Kaynak eşlemesi/örtüşme çözümü doğrulanmadıysa başarılı sonuç iddiasında bulunma. Eksik kaynak yapılandırmasını hayali şirket seçimiyle çözmeye çalışma.\n"
+}

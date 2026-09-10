@@ -1,0 +1,10841 @@
+# Logo kod sözlüğü (LDDS'den üretildi)
+
+Kaynak: `LDDS.xls` · üretim: `backend/scripts/import_logo_ldds.py` · 2026-09-07T12:27:28+00:00
+
+> Bu dosya üretilmiştir; elle düzenlemeyin. Değişiklik için üreticiyi çalıştırın.
+
+## Cari hesap fişi türleri (CLFLINE.MODULENR + CLFLINE.TRCODE)
+
+Fiş türü iki kolonun birlikte okunmasıyla belirlenir: aynı TRCODE farklı modülde başka bir belgedir.
+
+### Bordrolar — MODULENR = 3
+
+- Çek Girişi: `MODULENR = 3 AND TRCODE = 61`
+- Senet Girişi: `MODULENR = 3 AND TRCODE = 62`
+- Çek Çıkış (Cari Hesaba): `MODULENR = 3 AND TRCODE = 63`
+- Senet Çıkış (Cari Hesaba): `MODULENR = 3 AND TRCODE = 64`
+
+### Faturalar — MODULENR = 4
+
+- Mal Alım Faturası: `MODULENR = 4 AND TRCODE = 31`
+- Perakende Satış Iade Faturası: `MODULENR = 4 AND TRCODE = 32`
+- Toptan Satış Iade Faturası: `MODULENR = 4 AND TRCODE = 33`
+- Alınan Hizmet Faturası: `MODULENR = 4 AND TRCODE = 34`
+- Alım Iade Faturası: `MODULENR = 4 AND TRCODE = 36`
+- Perakende Satış Faturası: `MODULENR = 4 AND TRCODE = 37`
+- Toptan Satış Faturası: `MODULENR = 4 AND TRCODE = 38`
+- Verilen Hizmet Faturası: `MODULENR = 4 AND TRCODE = 39`
+- Satınalma Fiyat Farkı Faturası: `MODULENR = 4 AND TRCODE = 43`
+- Satış Fiyat Farkı Faturası: `MODULENR = 4 AND TRCODE = 44`
+- Müstahsil Makbuzu: `MODULENR = 4 AND TRCODE = 56`
+
+### Cari Hesap Fişleri — MODULENR = 5
+
+- Nakit Tahsilat: `MODULENR = 5 AND TRCODE = 1`
+- Nakit Ödeme: `MODULENR = 5 AND TRCODE = 2`
+- Borç Dekontu: `MODULENR = 5 AND TRCODE = 3`
+- Alacak Dekontu: `MODULENR = 5 AND TRCODE = 4`
+- Virman Fişi: `MODULENR = 5 AND TRCODE = 5`
+- Kur Farkı Işlemi: `MODULENR = 5 AND TRCODE = 6`
+- Özel Fiş: `MODULENR = 5 AND TRCODE = 12`
+- Açılış Fişi: `MODULENR = 5 AND TRCODE = 14`
+- Verilen Vade Farkı Faturası: `MODULENR = 5 AND TRCODE = 41`
+- Alınan Vade Farkı Faturası: `MODULENR = 5 AND TRCODE = 42`
+- Verilen Serbest Meslek Makbuzu: `MODULENR = 5 AND TRCODE = 45`
+- Alınan Serbest Meslek Makbuzu: `MODULENR = 5 AND TRCODE = 46`
+- Kredi Kartı Fişi: `MODULENR = 5 AND TRCODE = 70`
+- Kredi Kartı Iade Fişi: `MODULENR = 5 AND TRCODE = 71`
+- Firma Kredi Kartı Fişi: `MODULENR = 5 AND TRCODE = 72`
+- Firma Kredi Kartı Fişi İade: `MODULENR = 5 AND TRCODE = 73`
+
+### Banka Fişleri — MODULENR = 7
+
+- Gelen Havaleler: `MODULENR = 7 AND TRCODE = 20`
+- Gönderilen Havaleler: `MODULENR = 7 AND TRCODE = 21`
+- Döviz Alış Belgesi: `MODULENR = 7 AND TRCODE = 24`
+- Döviz Satış Belgesi: `MODULENR = 7 AND TRCODE = 25`
+- Alınan Hizmet Faturası: `MODULENR = 7 AND TRCODE = 26`
+- Verilen Hizmet Faturası: `MODULENR = 7 AND TRCODE = 29`
+- Müstahsil Makbuzu: `MODULENR = 7 AND TRCODE = 30`
+
+### Kasa Işlemleri — MODULENR = 10
+
+- Gider Pusulası: `MODULENR = 10 AND TRCODE = 75`
+
+## Döviz kodları (TRCURR / CURRSEL)
+
+Logo dövizi kendi küçük tamsayı koduyla saklar; ISO kodu bu tablodan gelir.
+
+- ABD Doları (USD): `TRCURR = 1`
+- Euro (EUR): `TRCURR = 20`
+- İngiliz Sterlini (GBP): `TRCURR = 17`
+- Alman Markı (DEM): `TRCURR = 2`
+- Avustralya Doları (AUD): `TRCURR = 3`
+- Avusturya Şilini (ATS): `TRCURR = 4`
+- Belçika Frangı (BEF): `TRCURR = 5`
+- Danimarka Kronu (DKK): `TRCURR = 6`
+- Fin Markkası (FIM): `TRCURR = 7`
+- Fransız Frangı (FRF): `TRCURR = 8`
+- Hollanda Florini (NLG): `TRCURR = 9`
+- İsveç Kronu (SEK): `TRCURR = 10`
+- İsviçre Frangı (CHF): `TRCURR = 11`
+- İtalyan Lireti (ITL): `TRCURR = 12`
+- Japon Yeni (JPY): `TRCURR = 13`
+- Kanada Doları (CAD): `TRCURR = 14`
+- Kuveyt Dinarı (KWD): `TRCURR = 15`
+- Norveç Kronu (NOK): `TRCURR = 16`
+- S. Arabistan Riyali (SAR): `TRCURR = 18`
+- Avrupa Para Birimi (XEU): `TRCURR = 19`
+- Azerbaycan Manatı (AZM): `TRCURR = 21`
+- Brezilya Cruzeirosu (BRL): `TRCURR = 22`
+- Bulgar Levası (BGN): `TRCURR = 23`
+- Çek Kuronu (CZK): `TRCURR = 24`
+- Çin Yüeni (CNY): `TRCURR = 25`
+- Estonya Kuronu (EEK): `TRCURR = 26`
+- Gürcistan Larisi (GEL): `TRCURR = 27`
+- Hindistan Rupisi (INR): `TRCURR = 28`
+- Hongkong Doları (HKD): `TRCURR = 29`
+- Irak Dinarı (IQD): `TRCURR = 30`
+- İran Riyali (IRR): `TRCURR = 31`
+- İrlanda Lirası (IEP): `TRCURR = 32`
+- İspanyol Pesetası (ESP): `TRCURR = 33`
+- İsrail Şekeli (ILS): `TRCURR = 34`
+- İzlanda Kuronu (ISK): `TRCURR = 35`
+- Kıbrıs Lirası (CYP): `TRCURR = 36`
+- Kırgızistan Somu (KGS): `TRCURR = 37`
+- Letonya Latsı (LVL): `TRCURR = 38`
+- Libya Dinarı (LYD): `TRCURR = 39`
+- Lübnan Lirası (LBP): `TRCURR = 40`
+- Litvanya Litası (LTL): `TRCURR = 41`
+- Lüksemburg Frangı (LUF): `TRCURR = 42`
+- Macaristan Forinti (HUF): `TRCURR = 43`
+- Malezya Ringgiti (MYR): `TRCURR = 44`
+- Meksika Pesosu (MXN): `TRCURR = 45`
+- Mısır Lirası (EGP): `TRCURR = 46`
+- Barbados Doları (BBD): `TRCURR = 47`
+- Polonya Zlotisi (PLN): `TRCURR = 48`
+- Portekiz Escudosu (PTE): `TRCURR = 49`
+- Romen Leyi (ROL): `TRCURR = 50`
+- Rus Rublesi (RUR): `TRCURR = 51`
+- Tayvan Doları (TWD): `TRCURR = 52`
+- Türk Lirası (TRY): `TRCURR = 53`
+- Ürdün Dinarı (JOD): `TRCURR = 54`
+- Yunan Drahmisi (GRD): `TRCURR = 55`
+- Arjantin Pesosu (ARS): `TRCURR = 56`
+- Laos Kipi (LAK): `TRCURR = 57`
+- Andorra Pesetası (ADP): `TRCURR = 58`
+- BAE Dirhemi (AED): `TRCURR = 59`
+- Afganistan Afganisi (AFN): `TRCURR = 60`
+- Arnavutluk Leki (ALL): `TRCURR = 61`
+- Hollanda Antilleri Florini (ANG): `TRCURR = 62`
+- Angola Kwanzası (AOA): `TRCURR = 63`
+- Bengaldeş Takası (BDT): `TRCURR = 64`
+- Bahreyn Dinarı (BHD): `TRCURR = 65`
+- Burundi Frangı (BIF): `TRCURR = 66`
+- Bermuda Doları (BMD): `TRCURR = 67`
+- Brunei Doları (BND): `TRCURR = 68`
+- Bolivya Bolivianosu (BOB): `TRCURR = 69`
+- Bahama Doları (BSD): `TRCURR = 70`
+- Butan Lirası (BTN): `TRCURR = 71`
+- Botswana Pulası (BWP): `TRCURR = 72`
+- Belize Doları (BZD): `TRCURR = 73`
+- Şili Pesosu (CLP): `TRCURR = 74`
+- Kolombiya Pesosu (COP): `TRCURR = 75`
+- Kosta Rika Kolonu (CRC): `TRCURR = 76`
+- Küba Pesosu (CUP): `TRCURR = 77`
+- Cape Verde Esküdosu (CVE): `TRCURR = 78`
+- Cibuti Frangı (DJF): `TRCURR = 79`
+- Dominik Pesosu (DOP): `TRCURR = 80`
+- Cezayir Dinarı (DZD): `TRCURR = 81`
+- Ekvator Sucresi (ECS): `TRCURR = 82`
+- Etyopya Birri (ETB): `TRCURR = 83`
+- Fiji Adaları Doları (FJD): `TRCURR = 84`
+- Falkland Adaları Sterlini (FKP): `TRCURR = 85`
+- Gana Cedisi (GHS): `TRCURR = 86`
+- Cebelitarık Sterlini (GIP): `TRCURR = 87`
+- Gambia Dalasisi (GMD): `TRCURR = 88`
+- Gine Frangı (GNF): `TRCURR = 89`
+- Guatemala Quetzali (GTQ): `TRCURR = 90`
+- Gine-Bisse Pesosu (GWP): `TRCURR = 91`
+- Guyana Doları (GYD): `TRCURR = 92`
+- Honduras Lempirası (HNL): `TRCURR = 93`
+- Haiti Gourdesi (HTG): `TRCURR = 94`
+- Endonezya Rupisi (IDR): `TRCURR = 95`
+- Jamaika Doları (JMD): `TRCURR = 96`
+- Kenya Şilingi (KES): `TRCURR = 97`
+- Kamboçya Rieli (KHR): `TRCURR = 98`
+- Komor Frangi (KMF): `TRCURR = 99`
+- Kuzey Kore Wonu (KPW): `TRCURR = 100`
+- Güney Kore Wonu (KRW): `TRCURR = 101`
+- Cayman Adaları Doları (KYD): `TRCURR = 102`
+- Sri Lanka Rupisi (LKR): `TRCURR = 103`
+- Liberya Doları (LRD): `TRCURR = 104`
+- Lesoto Lotisi (LSL): `TRCURR = 105`
+- Fas Dirhemi (MAD): `TRCURR = 106`
+- Moğol Tugriki (MNT): `TRCURR = 107`
+- Macau Patacası (MOP): `TRCURR = 108`
+- Moritanya Ogiyası (MRO): `TRCURR = 109`
+- Malta Lirası (MTL): `TRCURR = 110`
+- Mauritius Rupisi (MUR): `TRCURR = 111`
+- Maldiv Rufiyası (MVR): `TRCURR = 112`
+- Malavi Kwachası (MWK): `TRCURR = 113`
+- Mozambik Meticali (MZN): `TRCURR = 114`
+- Nijerya Nairası (NGN): `TRCURR = 115`
+- Nikaragua Cordoba Orosu (NIO): `TRCURR = 116`
+- Nepal Rupisi (NPR): `TRCURR = 117`
+- Yeni Zelanda Doları (NZD): `TRCURR = 118`
+- Umman Riyali (OMR): `TRCURR = 119`
+- Panama Balboası (PAB): `TRCURR = 120`
+- Peru Solu (PEN): `TRCURR = 121`
+- Papua Yeni Gine Kinası (PGK): `TRCURR = 122`
+- Filipin Pesosu (PHP): `TRCURR = 123`
+- Pakistan Rupisi (PKR): `TRCURR = 124`
+- Paraguay Guaranisi (PYG): `TRCURR = 125`
+- Katar Riyali (QAR): `TRCURR = 126`
+- Ruanda Frangı (RWF): `TRCURR = 127`
+- Solomon Adaları Doları (SBD): `TRCURR = 128`
+- Seyşel Adaları Rupisi (SCR): `TRCURR = 129`
+- Sudan Dinarı (SDG): `TRCURR = 130`
+- Singapur Doları (SGD): `TRCURR = 131`
+- St. Helen Lirası (SHP): `TRCURR = 132`
+- Sierra Leone Leonesi (SLL): `TRCURR = 133`
+- Somali Şilini (SOS): `TRCURR = 134`
+- Surinam Florini (SRD): `TRCURR = 135`
+- Sao Tome Dobrası (STD): `TRCURR = 136`
+- El Salvador Colonu (SVC): `TRCURR = 137`
+- Suriye Lirası (SYP): `TRCURR = 138`
+- Swaziland Lilangenisi (SZL): `TRCURR = 139`
+- Tayland Bahtı (THB): `TRCURR = 140`
+- Tunus Dinarı (TND): `TRCURR = 141`
+- Doğu Timor Esküdosu (TPE): `TRCURR = 142`
+- Trinidad ve Tobago Doları (TTD): `TRCURR = 143`
+- Tanzanya Şilini (TZS): `TRCURR = 144`
+- Uganda Şilini (UGX): `TRCURR = 145`
+- Uruguay Pesosu (UYU): `TRCURR = 146`
+- Venezuella Bolivarı (VEB): `TRCURR = 147`
+- Vietnam Dongu (VND): `TRCURR = 148`
+- Samoa Talası (WST): `TRCURR = 149`
+- Yemen Dinarı (YDD): `TRCURR = 150`
+- Yemen Riyali (YER): `TRCURR = 151`
+- Yugoslav Dinarı (YUD): `TRCURR = 152`
+- Güney Afrika Randı (ZAR): `TRCURR = 153`
+- Zambia Kwachası (ZMK): `TRCURR = 154`
+- Zimbabwe Doları (ZWL): `TRCURR = 155`
+- Kazak Tengesi (KZT): `TRCURR = 156`
+- Ukrayna Grevniyası (UAH): `TRCURR = 157`
+- Türkmenistan Manatı (TMT): `TRCURR = 158`
+- Özbekistan Somu (UZS): `TRCURR = 159`
+- Türk Lirası (TL): `TRCURR = 160`
+- Romen Yeni Leyi (RON): `TRCURR = 161`
+- Azerbaycan Yeni Manatı (AZN): `TRCURR = 162`
+- Ermeni Dramı (AMD): `TRCURR = 164`
+- Aruba Florini (AWG): `TRCURR = 165`
+- Konvertibıl Mark (BAM): `TRCURR = 166`
+- Beyaz Rusya Rublesi (BYR): `TRCURR = 167`
+- Kongo Frangı (CDF): `TRCURR = 168`
+- Eritre Nakfası (ERN): `TRCURR = 169`
+- Hırvatistsan Kunası (HRK): `TRCURR = 170`
+- Moldova Leyi (MDL): `TRCURR = 171`
+- Malgaş ariarysi (MGA): `TRCURR = 172`
+- Makedonya Dinarı (MKD): `TRCURR = 173`
+- Kyat (MMK): `TRCURR = 174`
+- Namibya Doları (NAD): `TRCURR = 175`
+- Sırp Dinarı (RSD): `TRCURR = 176`
+- Somoni (TJS): `TRCURR = 177`
+- Pa'anga (TOP): `TRCURR = 178`
+- Venezuela Bolivarı (VEF): `TRCURR = 179`
+- Vanuatu Vatusu (VUV): `TRCURR = 180`
+- Central African CFA Franc (XAF): `TRCURR = 181`
+- Doğu Karayip Doları (XCD): `TRCURR = 182`
+- CFA Frangı (XOF): `TRCURR = 183`
+- CFP Frangı (XPF): `TRCURR = 184`
+
+## Kolon kod kümeleri
+
+Kolonun taşıdığı sayının ne anlama geldiği:
+
+- `ACCDISTTEMP.TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet: 0=Hayır
+- `ACCFCASGN.TYP` — CGS bağlantısı: 0=SMM Connection, 1=Tecil/Terkin Connection0
+- `ACTOVRHDDIST.LINETYPE` — Satır Tipi (0: Direct: 1=Indirect
+- `ADDTAXLINE.TAXTYPE` — Vergi türü: 0=Oran, 1=Tutar
+- `ANBDGTALLOCFC.TEXTINC` — Detay açıklama içerir: 0=No, 1=Yes
+- `ANBDGTREVFC.TEXTINC` — Detay açıklama içerir: 0=No, 1=Yes
+- `ANBUDGET.BDGTTYPE` — Bütçe türü: 0=Budget, 1=General Budget
+- `ANBUDGET.TEXTINC` — Detay açıklama içerir: 0=No, 1=Yes
+- `ASCOND.USETYPE` — Satınalma / Satış: 1=Satınalma için (fiş satırı), 2=Satınalma için (fiş geneli), 3=Satış için (fiş satırı), 4=Satış için (fiş geneli)
+- `ASCOND.LINETYPE` — Satır Tipi: 1=İndirim, 2=Masraf, 3=Promosyon
+- `ASCOND.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `BANKACC.CARDTYPE` — Kart Türü: 1=ticari hesap, 2=kredi hesabı, 3=dövizli ticari, 4=dövizli kredi
+- `BANKACC.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `BANKACC.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `BNCARD.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `BNCARD.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `BNCREDITCARD.CRCARDTYPE` — Banka kredisi türü: 1=Loan Against Check, 2=Loan Against P.Note, 3=Unsecured Credit
+- `BNCREDITCARD.CREDITTYPE` — Kredi türü: 1=Operating Loan, 2=Investment Loan
+- `BNCREDITCARD.CRCALCTYPE` — Banka kredisi hesap türü: 1=Spot Loan, 2=Debtor Standing Credit (Revolving), 3=Discount - Credit of Redemption Bills
+- `BNCREPAYTR.TRANSTYPE` — Ödeme hareketi türü: 0=Main Records, 1=Back Payment of Main Records
+- `BNFICHE.TRCODE` — Hareket türü: 1=Bnka işlem fişi, 2=Virman Fişi, 3=Gelen havaleler, 4=Gönderilen havaleler
+- `BNFICHE.MODULENR` — Modül Numarası: 6=Çek/Senet, 7=Banka, 10=Kasa
+- `BNFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet: 0=Hayır, 1=Evet
+- `BNFICHE.CRCARDWZD` — Ödeme sihirbazı tarafından mı oluşturuldu?: 0=It has not been generated by payment wizard, 1=Payment Wizard+Credit Card, 2=Payment Wizard+Credit Card Return Slip
+- `BNFLINE.TRANSTYPE` — Hareket türü: 1=teminat senetleri, 2=teminat çekleri, 3=Ticari hesap, 4=Kredi hesabı
+- `BNFLINE.TRCODE` — Hareket türü: 1=banka Işlem, 2=virman işlemi, 3=gelen hava, 4=gönd.hava, 5=açılış işlemi
+- `BNFLINE.MODULENR` — Modül Numarası: 6=Çek/Senet, 7=Banka, 10=Kasa
+- `BNFLINE.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet); CLBNBRANCHNO
+- `BNFLINE.CRCARDWZD` — Ödeme sihirbazı tarafından mı oluşturuldu?: 0=It has not been generated by payment wizard., 1=Payment Wizard+Credit Card, 2=Payment Wizard+Credit Card Return Slip0
+- `BNFLINE.COMSTYPE` — Komisyon Türü: 1=Puan Komisyonu, 2=Hizmet Komisyonu
+- `BNFLINE.BNCRSOURCE` — Banka işlem fişi: 0=Bank Credit Purchase Slip, 1=Bank Credit Payment Slip
+- `BOMASTER.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `BOMASTER.DEMONTAJ` — Demontaj: 0=Hayır, 1=Evet
+- `BOMLINE.LINECLSTYPE` — Satır Tipi (0: Malzeme: 10=Malzeme Sınıfı
+- `BOMLINE.BYDEFAULTEXISTS` — Ortak ürün veya yan ürün için varsayılan üretim durumu: 0=Her zaman, 1=İhtiyaç Durumunda
+- `BOMREVSN.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `CAMPAIGN.CARDTYPE` — Kart Türü: 1=Satınalma, 2=Satış
+- `CHARASGN.MATRIXLOC` — Matris Stok Yeri Bilgisi: 0=Satır, 1=Sütun
+- `CHARCODE.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `CHARCODE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `CLCARD.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `CLCARD.CARDTYPE` — Cari Hesap Kart Türü: 1=Alıcı, 2=Satıcı, 3=Alıcı+Satıcı
+- `CLCARD.BLOCKED` — Engellenmiş: 0=Evet, 1=Hayır
+- `CLCARD.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `CLCARD.PAYMENTPROC` — Borç izleme (0: döviz: 1=Mixed
+- `CLFICHE.TRCODE` — Hareket türü: 1=Nakit tahsilat, 2=Borç ödeme, 3=Borç dekontu, 4=Alacak dekontu, 5=Virman fişi, 6=Kur farkı fişi, 12=Özel fiş, 14=Açılış fişi, 41=Verilen vade farkı faturası, 42=Alınan vade farkı faturası
+- `CLFICHE.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet
+- `CLFICHE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
+- `CLFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `CLFLINE.MODULENR` — Modül Numarası: 4=Fatura, 5=Cari Hesap, 6=çek/senet, 7=banka, 10=Kasa
+- `CLFLINE.TRCODE` — Hareket türü: 01=Nakit tahsilat, 02=Nakit ödeme, 03=Borç dekontu, 04=Alacak dekontu, 05=Virman Işlemi, 06=Kur farkı işlemi, 12=Özel işlem, 20=Gelen havaleler, 21=Gönderilen havaleler, 31=Mal alım fat, 32=Perakende satış iade fat, 33=Toptan satış iade fat, 34=Alınan hizmet fat, 35=Alınan proforma fat, 36=Alım iade fat, 37=Perakende satış fat, 38=Toptan satış fat, 39=Verilen hizmet faturası, 40=Verilen proforma fat, 41=Verilen vade farkı fat, 42=Alınan Vade farkı fat, 43=Alınan fiyat farkı fat, 44=Verilen fiyat farkı fat, 56=Müsthsil makbuzu, 61=Çek girişi, 62=Senet girişi, 63=Çek çıkış cari hesaba, 64=Senet çıkış cari hesaba
+- `CLFLINE.SIGN` — Borç/Alacak İşareti: 0=Borç, 1=Alacak
+- `CLFLINE.TRGFLAG` — Trigger işareti: 0=Trigger kullanılacak, 1=Trigger kullanılmayacak
+- `CLFLINE.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect0
+- `CMPGNLINE.LINETYPE` — Satır Tipi: 1=İndirim, 2=Masraf, 3=Promosyon, 4=Puan
+- `CMPGNLINE.APPLYTYPE` — Uygulama Türü: 0=Satıra, 1=Genele
+- `COLLATRLCARD.COLLUSETYPE` — Teminat mektubu türü: 1=Temporary, 2=Advance, 3=Final2
+- `COLLATRLCARD.BANKPROCTYPE` — Nakit detay işlem türü: 2=Money Orders, 3=EFT
+- `COLLATRLCARD.TEXTINC` — Detay açıklama içerir: 1=Yes, 2=No0
+- `COLLATRLCARD.COMPAYOWNER` — Müşteri teminatı: 0=Customer, 1=We
+- `COLLATRLROLL.TRCODE` — Hareket türü: 1=(01) Collateral Received, 2=(02) Collateral Issued, 3=(03) İşlem Bordrosu (Müşteri Teminatı), 4=(04) İşlem Bordrosu (Kendi Teminatımız)1
+- `COLLATRLTRAN.STATUS` — Durumu: 1=In Portfolio, 2=In Collateral, 3=Returned, 4=Çözdürüldü2
+- `COMPANSEACC.MIRRORACC` — Karşı hesap: 0=Hayır, 1=Evet
+- `CONTACTS.TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet: 0=Hayır
+- `COSTDISTLN.SRVDISTTYPE` — Dağıtım Türü: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount
+- `CRDACREF.TRCODE` — Kart Türü: 1=Malzeme, 3=Alınan Hizmet, 4=Satılan Hizmet, 5=Cari Hesap, 8=Kasa Hareketi, 9=Alış Promosyonu, 10=Satış Promosyonu, 11=Alış İndirimi, 12=Satış İndirimi, 13=Alış Masrafı, 14=Satış Masrafı
+- `CRDACREF.TYP` — Hareket türü: 1=hizmetler, 2=hizmet indirimleri, 3=hizmet masraflar, 4=hizmet promosyonlar, 5=hizmet iadeleri, 6=fire, 7=diğer giriş, 8=kullanıcı tanımlı giriş, 9=kullanıcı tanımlı çıkış, 10=alım  iade, 11=satış iade, 12=alım indirim, 13=satış indirim, 14=alım masraf, 15=satış masraf, 16=alınan promosyon, 17=verilen promosyon, 18=prom KDV, 19=satışta kar/zarar, 20=amortisman tükenme payları, 21=yeniden değerlendirmeler, 22=sonraki yıl indirelecek, 23=birikmiş amortismanlar, 24=sabit kıymet giderleri); (trcode=3 için
+- `CSCARD.DOC` — Çek / Senet Türü: 1=müşteri çeki, 2=müşteri senedi, 3=kendi çekimiz, 4=borç senedimiz
+- `CSCARD.CURRSTAT` — Mevcut Durum: 1=Müşteriden iade, 2=Müşteri-de tahsil, 3=Müşteride protesto, 4=Tahsil edilemiyor, 5=Bankada protestolu, 6=Müşteriden portföye iade, 7=Bankadan portföye iade, 8=Müşteriden protestolu iade, 9=Cirodan tahsil, A:Tahsil edilemiyor); (doc=3 ise
+- `CSCARD.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet
+- `CSCARD.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `CSROLL.TRCODE` — Hareket türü: 1=Çek girişi, 2=Senet girişi, 3=Çek çıkış(cari hesaba, 4=Senet çıkış (cari hesaba, 5=Çek çıkış(banka tahsil, 6=Senet çıkış (Banka tahsil, 7=Çek çıkış (banka teminat, 8=Senet çıkış (banka teminat, 9=İşlem Bordrosu (müşteri çeki, 10=İşlem bordrosu (müşteri senedi, 11=İşlem bordrosu (kendi çekimiz, 12=İşlem bordrosu (borç senedimiz
+- `CSROLL.CARDMD` — Kart Modül Numarası: -8=banka(7, -4=cari hesap (5) 5, 1=4 Cari Hesap (5), 5=8 Banka Hesabı (7)
+- `CSROLL.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
+- `CSROLL.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `CSTRANS.STATUS` — Durumu: 1=Portföyde, 2=Ciro edildi, 3=Teminata verildi, 4=Tahsile verildi, 5=Protestolu tahsile verildi, 6=İade edildi, 7=Protesto edildi, Tahsil edildi, Kendi çekimiz, 10=Borç senedimiz, 11=Karşılığı yok, 12=Tahsil edilemiyor
+- `CSTRANS.CARDMD` — Kart Modül Numarası: 1=4 Cari Hesap (5), 5=8 Banka Hesabı (7)
+- `CSTRANS.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect1
+- `CSTVND.CARDTYPE` — Kart Türü: 1=Customer, 2=Vendor
+- `DATAEXCHHISTOR.DOCTYPE` — Belge / Modül Türü: 1=İrsaliye, 3=Sipariş, 4=Fatura, 6=Çek/Senet Fişi, 7=Gelen havale, 9=Genel muhasebe, 101=Malzeme, 105=Cari hesap
+- `DECARDS.CARDTYPE` — İndirim / Masraf Kart Türü: 1=Alış indirim, 2=Satış indirim, 3=Alış masraf, 4=Satış masraf
+- `DECARDS.ACTIVE` — İndirim / Masraf Kart Durumu: 0=Kullanımda, 1=Kullanım dışı
+- `DEFNFLDSCARDV.MODULENR` — Modül Numarası: 4=Fatura, 5=Cari Hesap, 6=Malzeme
+- `DEFNFLDSCARDV.LEVEL_` — Seviye: 0=Ana Kayıt, 1=Satır
+- `DEFNFLDSTRANV.MODULENR` — Modül Numarası: 4=Fatura, 5=Cari Hesap, 6=Malzeme
+- `DEMANDLINE.MEETTYPE` — Teslimat Şekli: 0==Alış Siparişi, 1==Üretim Emri, 2==Ambar Fişi
+- `DEMANDLINE.MRPHEADTYPE` — Talep/Teklif Planlama Türü: 1==MPS 2=MRP
+- `DEMANDPEGGING.PARENTTYPE` — Talep/Kaynak Türü: 0==Manüel 1=MPS 2=MRP
+- `DEMANDPEGGING.CHILDTYPE` — Talep Karşılama Türü: 0==Verilen sipariş, 1==Üretim emri, 2==Ambar fişi, 3==Stoktan Karşılanan
+- `DEMANDPEGGING.CHILDREF` — ALTMALZREF: 0==Manual, 1==MPS, 2==MRP
+- `DIIB.FICHETYPE` — Fiş Türü: 0==DIIB, 1== Geçici Kabul
+- `DIIBLINE.LINETYPE` — Satır türü: 1=İthaline izin verilen malzeme, 2=İhracı taahüt edilen malzeme
+- `DIIBLINE.TRNET` — İşlem dövizi tutarı: 1=CIF İhtar, 2=FOB Tutar
+- `DISCPAYTRANS.TRCODE` — Hareket türü: 1=1, 12=Cari hesap,, 21=22: Banka, 31=39: Fatura,, 61=64 : Çek/Senet,, 71=74 Kasa
+- `DISCPAYTRANS.MODULENR` — Kart Modül Numarası: 10=Kasa
+- `DISPLINE.LINESTATUS` — Satır Durumu: 0=Başlamadı, 1=Devam Ediyor, 2=Durduruldu, 3=Tamamlandı, 4=Kapandı
+- `DISTORD.STATUS` — Durumu: 0=Öneri, 1=Sevk Edilebilir, 2=Sevk Edildi
+- `DISTORD.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect7
+- `DISTORDLINE.LINETYPE` — Satır Tipi: 1=İndirim, 2=Promosyon, 7=Karma Koli
+- `DISTORDLINE.RISKSTATUS` — Risk durumu: 0=Riskli Değil, 1=Riskli, 2=Stok Yetersiz
+- `DISTORDLINE.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect8
+- `EMCENTER.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EMDEMFICHE.TEXTINC` — Detay açıklama içerir: 0=No, 1=Yes
+- `EMDEMFICHE.CROSSFLAG` — Ters işaretleme: 0=Original, 1=Inverse
+- `EMDEMFICHE.DOCTYPE` — Fiş satış maliyeti durumu: 0=Normal, 1=Cost Of Sales, 2=Differences Of Cost Of Sales
+- `EMDEMFLINE.NOTINFLATED` — Enflasyon İşareti: 0==Join, 1==Not Join
+- `EMDEMFLINE.NOTCALCULATED` — Enflasyon Hesaplama İşareti: 0==Join, 1==Not Join
+- `EMFICHE.TRCODE` — Fiş türü: 1=açılış, 2=tahsil, 3=tediye, 4=mahsup, 5=özel, 6=kur farkı hesabı
+- `EMFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `EMFICHE.CROSSFLAG` — Ters işaretleme: 0=Orijinal, 1=Ters
+- `EMFICHE.DOCTYPE` — Fiş satış maliyeti durumu: 0=Normal, 1=Satış maliyeti, 2=Satış maliyeti farkları
+- `EMFICHE.BDGTFCTYPE` — Bütçe muhasebe fişi türü: 0=Journal Slip (G/L), 1=Journal Slip (General Budget approval), 2=Journal Slip (Revision)1
+- `EMFLINE.TRCODE` — Fiş türü: 2=tahsil, 3=tediye, 4=mahsup, 5=özel, 6=kur farkı hesabı
+- `EMFLINE.NOTINFLATED` — Enflasyon İşareti: 0==Birleştir, 1==Birleştirme
+- `EMFLINE.NOTCALCULATED` — Enflasyon Hesaplama İşareti: 0==Birleştir, 1==Birleştirme
+- `EMFLINE.BDGTLINETYPE` — Bütçe satır türü: 0=G/L Line, 1=Budget Line, 2=Budget Offsetting Line, 3=Allocation Line 4: Allocation Offsetting Line
+- `EMFLINE.BDGTFCTYPE` — Bütçe muhasebe fişi türü: 0=Journal Slip (G/L), 1=Journal Slip (General Budget approval), 2=Journal Slip (Revision)
+- `EMPGROUP.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EMPGROUP.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `EMPLOYEE.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EMPLOYEE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `EMUHACC.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EMUHACC.ACCTYPE` — Hesap Türü: 0=Borç, 1=Alacak, 2=Borç+Alacak
+- `EMUHACC.PROJECTCTRL` — Proje kontrol: 0==İşleme devam edilecek, 1== Kullanıcı uyarılacak, 2== İşlem durdurulacak
+- `EMUHACC.NOTINFLATED` — Enflasyon Hesaplama İşareti: 0==Birleştir, 1==Birleştirme
+- `EMUHTOT.TOTTYPE` — Hesap Özeti Toplam Türü: 1=muhasebe tl toplam, 2=muh. dövizli toplam, 3=muh. Birimli toplam, 4=mas.mer. tl toplam, 5=mas.mer. dövizli toplam
+- `ENGCLINE.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `EXCEPT.SOURCETYPE` — Kaynak Tipi: 0=Çalışan, 1=Çalışan Grubu, 2=İş İstasyonu, 3=İş İstasyonu Grubu
+- `EXIMDISTLN.SRVDISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount01
+- `EXIMDISTLN.FICHETYPE` — Satır fiş türü: 0=Service Purchased Invoice, 1=Debit Note
+- `EXIMWHTRANS.LINETYPE` — Satır türü: 0=Malzeme, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozito, 6=Karma koli, 7=Karma koli satırı, 8=Sabit kıymet, 9=Ek malzeme, 10=Malzeme sınıfı, 11=Fason02
+- `EXIMWHTRANS.DETLINE` — Malzeme Sınıfı Satır Ayrıntısı: 0=Hayır, 1=Evet
+- `EXPCREDITCRD.CREDITTYPE` — Kredi Tipi: 1=Döviz Kredisi, 2=Eximbank Kredisi
+- `EXPCREDITCRD.STATUS` — Durumu: 1=Kapandı, 2=Yürürlükte
+- `FAANNCOST.TABLETY` — Tablo türü: 0=Normal, 1=Alternatif
+- `FAREGIST.TRANSFER` — Devir / Yeni Kayıt: 0=Satınalma için, 1=Aktarım İçin
+- `FAYEAR.DTYPE` — Amortisman Türü: 1=Normal, 2=Azalan Bakiyeler
+- `FINTABLEITEM.ITEMTYPE` — Malzeme tipi: 1=Grup, 2=Hesap, 3=Hesap aralığı, 4=Ara toplam, 6=Kar /Zarar, 8=Sayfa düzeni, 9=Formül
+- `GAUGPARAM.ANTIALS` — Kenar yumuşatma: 0== None, 1== Level 1, 2== Level 2, 3== Level 31
+- `GERMANYDEF.DEFTYPE` — Ticaret cinsi: 1=Ticaret cinsi, 2=Verkehrszweign, 3=Verfahren (Export-Import)
+- `GLASSGN.MODULENR` — Modül Numarası: 5=Cari Hesap, 6=Çek/Senet, 7=Banka, 9=Hesap, 10=Kasa
+- `IMPSRVREL.DISTTYPE` — Distribution Type: 1=Material Value, 2=Material Quantity, 3=Weight, 4=Volume, 5=Rate, 6=Amount03
+- `INVDEF.MINLEVELCTRL` — Asgari Stok Seviye Kontrolü: 0=Yapılmayacak, 1=Kullanıcı uyarılacak, 2=İşlem durdurulacak
+- `INVDEF.MAXLEVELCTRL` — Azami Stok Seviyesi Kontrolü: 0=Yapılmayacak, 1=Kullanıcı uyarılacak, 2=İşlem durdurulacak
+- `INVDEF.SAFELEVELCTRL` — Güvenlik stok seviyesi kontrolü: 0=Yapılmayacak, 1=Kullanıcı uyarılacak, 2=İşlem durdurulacak
+- `INVDEF.NEGLEVELCTRL` — Negatif Seviye Kontrolü: 0=Yapılmayacak, 1=Kullanıcı uyarılacak, 2=İşlem durdurulacak
+- `INVEXIMINFO.COUNTRYTYPE` — Varış - Çıkış Ülke Tipi: 1=Member States of European Union (EU), 2=Member States of European Coal and Steel Community (ECSC), 3=Member States of European Free Trade Association (EFTA), 4=Pan-European System of Cumulation of Origin, 5=The States
+- `INVOICE.GRPCODE` — Grup Kodu: 1=Alış Faturası, 2=Satış Faturası
+- `INVOICE.TRCODE` — Fatura Türü: 1=Mal alım faturası, 2=Perakende satış iade faturası, 3=Toptan satış iade faturası, 4=Alınan hizmet faturası, 5=Alınan proforma fatura, 6=alım iade faturası, 7=Perakende satış faturası, 8=Toptan satış faturası
+- `INVOICE.ENTEGSET` — Discounts / Surcharges / Promotions have been distributed: 0=Discounts Will Be Distributed to GL, 1=Discounts Will Be Distributed to Item Cost
+- `INVOICE.GVATINC` — KDV dahil / hariç: 0=Dahil, 1=Hariç
+- `INVOICE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
+- `INVOICE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `INVOICE.AFFECTCOLLATRL` — Teminatı etkileme: 0=Don't Affect, 1=Affect0
+- `ITEMS.ACTIVE` — Malzeme Kartı Durumu: 0=Aktif, 1=Pasif
+- `ITEMS.CARDTYPE` — Malzeme Kartı Türü: 1=(TM) Ticari Mal, 2=(KK) Karma Koli, 3=(DM) Depozitolu Mal, 4=(SK) Sabit Kıymet, 10=(HM) Hammadde, 11=(YM) Yarı Mamul, 12=(MM) Mamul, 13=(TK) Tüketim Malı, 20=(MS) Malzeme Sınıfı (Genel), 21=(MT) Malzeme Sınıfı (Tablolu)
+- `ITEMS.CLASSTYPE` — Sınıf Türü: 0=Malzeme, 20=Malzeme sınıfı
+- `ITEMS.TRACKTYPE` — İzleme Yöntemi: 0=İzleme Yapılmayacak, 1=Lot Numarasına Göre, 2=Seri Numarasına Göre
+- `ITEMS.LOCTRACKING` — Stok Yeri Takibi: 0=Hayır, 1=Evet
+- `ITEMS.TOOL` — Araç: 0=Hayır, 1=Evet
+- `ITEMS.AUTOINCSL` — Otomatik Lot/Seri Numarası Artırımı: 0=Hayır, 1=Evet
+- `ITEMS.DIVLOTSIZE` — Bölünebilir Lot Büyüklüğü: 0=Hayır, 1=Evet
+- `ITEMS.SHELFDATE` — Son Kullanma Tarihi: 0=Gün, 1=Hafta, 2=Ay, 3=Yıl
+- `ITEMS.IMAGEINC` — Resim İçeriyor: 0=Hayır, 1=Evet
+- `ITEMS.TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet: 0=Hayır, 1=Evet
+- `ITEMS.CANUSEINTRNS` — Hareketlerde Kullanılabilir: 1=Evet 0- Hayır
+- `ITMBOMAS.RELTYPE` — Malzeme - Reçete İlişkisi Türü: 0=Genel, 1=Mühendislik, 2=Üretim, 3=Maliyetlendirme
+- `ITMFACTP.SPECIALIZED` — Kullanımda Değil: 0=Hayır, 1=Evet
+- `ITMFACTP.PROCURECLASS` — Temin türü: 0=Satınalma, 1=Üretim
+- `ITMFACTP.AUTOLOTOUTMTD` — Sarf ve Firelerde Lot Belirleme Yöntemi: 0=FIFO, 1=LIFO
+- `KSCARD.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `KSDISTDETLINES.CSDISTTEMPLINE` — Kasa hesabı: 0=Karşı hesap, 1=Kasa
+- `KSDISTDETLINES.TRCODE` — Hareket türü: 1=1, 12=Cari hesap,, 21=22: Banka, 31=39: Fatura,, 61=64 : Çek/Senet,, 71=74 Kasa
+- `KSDISTDETLINES.DISTTEMPLNTYP` — Kasa muhasebe dağıtım satır tipi: 1=Kasa, 2=Hareket, 3=KDV
+- `KSLINES.TRCODE` — Hareket türü: -64=çek/senet, 71-74 Kasa, -39=Fatura, 61, -22=Banka, 31, 1=1, 11=Cari hesap Tahsilat, 12=Cari hesap,, 21=22: Banka, 31=39: Fatura,, 61=64 : Çek/Senet,, 71=74 Kasa
+- `KSLINES.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
+- `KSLINES.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `KSLINES.GPOPTYPE` — Gider Pusulası Hizmet Türü (0: Malzeme: 1=Hizmet
+- `KSLINES.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect3
+- `LDXRECDELREQ.DOCTYPE` — Belge türü: 1=Dispatch, 3=Order, 4=Invoice, 6=Check/P.Note (Bank), 7=Bank Slip, 9=G/L Slip, 101=Material, 105=AR/AP, 210=Import/Export Oper, 211=Export Registered Invoice, 1001=Material Slip, 1051=AR/AP Slip, 1061=Check/P.Note (B2B)
+- `LNGEXCSETS.DOCID` — Kayıt Tipi: 1=Malzeme, 2=Cari Hesap, 3=Banka, 4=Muhasebe
+- `LNGEXCSETS.FIELDID` — Alan tipi: 1=Malzeme Açıklaması, 2=Cari hesap ünvanı, 3=Banka adı, 4=Muhasebe hesabı açıklaması
+- `LOGREP.LINETYPE` — Log satır türü: 0=Açıklama, 1=Geçerli hareket, 2=Hatalı hareket
+- `MRPHEAD.RUNTYPE` — Planlama türü: 1=MPS, 2=MRP
+- `MRPHEAD.DEPMPS` — Bağımlı/Bağımsız MRP: 0=Bağımsız, 1=Bağımlı
+- `MRPHEAD.CHKRESOCC` — Kaynak kullanımı: 0=Bakılmasın, 1=Bakılsın
+- `MRPLINE.LINETYPE` — Satır Tipi: 1=MPS, 2=MRP
+- `MRPPEGGING.PARENTTYPE` — Üst kayıt türü: 1=Sales Order, 2=User Demand, 3=MRP Line, 4=MRP Proposal, 5=Purchase Order, 6=Production Order, 7=Subcontracting Order
+- `MRPPEGGING.CHILDTYPE` — Alt Malzeme: 3=MRP Satır, 4=MRP Öneri, 5=Alış Sip., 6=Üretim Emri, 7=Fason Sip.
+- `MRPPROPOSAL.PROPOSALTYPE` — Öneri türü: 0=Verilen sipariş, 1=Üretim emri, 2=Fason siparişi
+- `MRPPROPOSAL.SOURCETYPE` — Kaynak türü: 1=MPS, 2=MRP
+- `OCCUPATION.OCCSTATUS` — Kaynak durumu: 1=Planlanan, 2=Gerçekleşen
+- `OCCUPATN.OCCTYPE` — Kaynak tipi: 1=Çalışan, 2=Araç
+- `OFFALTER.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect2
+- `OFFER.TYP` — Kart Türü: 1=Satış İçin, 2=Satınalma İçin
+- `OFFER.TRCODE` — Kart Türü: 1=Satış İçin, 2=Satınalma İçin
+- `OFFTRNS.LINETYPE` — Satır tipi: 0=Malzeme satırı, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozito, 6=Karma koli satırı, 7=Karma koli detay, 8=Sabit kıymet satırı
+- `OFFTRNS.TRCODE` — Kart Türü: 1=Satış İçin, 2=Alış İçin
+- `OFFTRNS.GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları: 0=Satır, 1=Genel
+- `OFFTRNS.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect4
+- `OFFTRNS.FCTYP` — Satın alma teklif fişleri: 6=Order, 7=Bidding, 8=Agreement5
+- `OPERTION.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `ORDPEGGING.PARENTTYPE` — Talep/Kaynak Türü: 0==Manüel 1=MPS 2=MRP 4=Satış Siparişleri
+- `ORFICHE.TRCODE` — Fiş Türü: 1=Alınan siparişler, 2=Verilen siparişler
+- `ORFICHE.STATUS` — Durumu: 1=Öneri, 2=Sevkedilemez, 4=Sevkedilebilir
+- `ORFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `ORFICHE.TYP` — Değer: 0=Sipariş1
+- `ORFLINE.LINETYPE` — Satır türü: 0=Malzeme satırı, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozito, 6=Karma koli satırı, 7=Karma koli detayı, 8=Sabit kıymet satırı
+- `ORFLINE.DETLINE` — Malzeme Sınıfı Detay Satırı: 0=Hayır, 1=Evet
+- `ORFLINE.TRCODE` — Fiş Türü: 1=Alınan siparişler, 2=Verilen siparişler
+- `ORFLINE.GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları: 0=Satır, 1=Genel
+- `ORFLINE.CALCTYPE` — Hesaplama Türü: 0=Yüzde %, 1=Fonksiyon f(x), 2=Tutar TL
+- `ORFLINE.STATUS` — Onay Bilgisi: 1=Öneri, 2=Sevkedilemez, 4=Sevkedilebilir
+- `ORFLINE.TRGFLAG` — Trigger işareti: 0=Trigger kullanılacak, 1=Trigger kullanılmayacak
+- `ORFLINE.FCTYP` — Satın alma teklif fişleri: 6=Order, 7=Offer, 8=Agreement1
+- `OVRHDCENTERLN.LINETYPE` — Satır Tipi (0: Direct: 1=Indirect
+- `PACKAGEASGN.ASGNFICHETYPE` — İlişkili fiş türü: 1=Sipariş, 2=İrsaliye
+- `PACKAGEASGN.ASGNFICHEREF` — Fiş Atama Ref. 1. Sipariş: 2=İrsaliye
+- `PACKAGEASGN.ASGNTRANSREF` — Hareket Atama Ref. 1. Sipariş: 2=İrsaliye
+- `PAYPLANS.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `PAYTRANS.MODULENR` — Kart Modül Numarası: -62=çek/senet -  cari hesap hareketi, 4=fatura, 5=cari hesap, 6=çek/senet, 7=banka, 10=Kasa
+- `PAYTRANS.PAYMENTTYPE` — Ödeme türü: 0=İşlem yapılmayacak, 1=Nakit, 2=Çek, 3=Senet, 4=Kredi kartı, 5=Mağaza kartı
+- `PAYTRANS.INSTALTYPE` — Taksit Türü: 1=Taksit Ödemesi, 2=Tahsilat
+- `PEGGING.PEGTYPE` — Hareket bağlantısı türü: 0=Giriş bağlantısı, 1=Çıkış bağlantısı
+- `PEGGING.RELTYPE` — İlişki türü: 0=Üretim emri, 1=Alınan Sipariş
+- `POLINE.LINECLSTYPE` — Satır Tipi (0: Malzeme: 10=Malzeme Sınıfı
+- `POLINE.MEETTYPE` — Toplu malzeme temini teslimat türü: 0=Purchasing, 1=Production Order, 2=Warehouse Transfer
+- `POLINE.INVUSEPARAM` — Toplu malzeme temini - ambar kullanım türü: 0=Check All Warehouses, 1=Check Selected Warehouses
+- `PRCARDS.CARDTYPE` — Kart Türü: 1=Alış Promosyonu, 2=Satış Promosyonu
+- `PRCARDS.ACTIVE` — Promosyon kartı durumu: 0=Kullanımda, 1=Kullanım dışı
+- `PRCARDS.ORDFCMODUL` — Siparişte kullanım yeri: 1=Alınan sipariş, 2=Verilen sipariş
+- `PRCLIST.PTYPE` — Fiyat türü: 1=Satınalam fiyatı, 2=Satış fiyatı
+- `PRCLIST.PRCALTERTYP1` — Alt düzey yetkili türü: 0=Percent, 1=Amount
+- `PRCLIST.PRCALTERTYP2` — Orta düzey yetkili türü: 0=Percent, 1=Amount
+- `PRCLIST.PRCALTERTYP3` — Üst düzey yetkili türü: 0=Percent, 1=Amount
+- `PRODORD.RELEASED` — Serbest bırakılmış: 0=Hayır, 1=Evet
+- `PRODORD.METHOD` — Metod: 0=Geri, 1=İleri
+- `PRODORD.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `PURCHOFFER.TRCODE` — Fiş türü: 1=for Sales Order, 2=for Purchase Order
+- `PURCHOFFER.TYP` — Değer: 0=Order
+- `PURCHOFFER.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect5
+- `PURCHOFFERLN.LINETYPE` — Satır türü: 0=Item Line, 1=Promotion, 2=Discount, 3=Surcharge, 4=Service, 5=Deposit, 6=Mixed, 7=Mixed Case Details0
+- `PURCHOFFERLN.TRCODE` — Fiş türü: 1=Sales Orders, 2=Purchase Orders1
+- `PURCHOFFERLN.GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları: 0=Line, 1=General2
+- `PURCHOFFERLN.CALCTYPE` — Hesaplama Türü: 0=Percentage %, 1=Function f(x), 2=Amount TL3
+- `PURCHOFFERLN.TRGFLAG` — Trigger işareti: 0=Trigger Will Be Used, 1=Trigger Won't Be Used
+- `PURCHOFFERLN.AFFECTCOLLATRL` — Teminatı etkiler: 0=Don't Affect, 1=Affect0
+- `PURCHOFFERLN.FCTYP` — Satınalma teklif fişi türü: 6=Order, 7=Offer, 8=Agreement1
+- `QASGN.ASGNTYPE` — Atama Türü: 0=Malzeme, 2=Operasyon
+- `QCSET.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `QCSLINE.QTYPE` — Kalite Kontrol Tipi: 0=Nicel, 1=Nitel
+- `QPRODUCT.PRODTYPE` — Ürün tipi: 1=Ürün, 2=Parçalama
+- `REFLECTASGN.FICHETYPE` — Fiş Türü: 1=Yansıtma1, 2=Yansıtma2, 3=Gider Kapatma Fişi, 4=Gelir Kapatma Fişi
+- `REPAYPLAN.DEALINGTYPE` — Ödeme Türü: 0=Nakit, 1=Taksit, 2=Hepsi
+- `ROUTING.APPROVED` — Onay Bilgisi: 0=Onaylı, 1=Onaysız
+- `ROUTING.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `RPFILTS001.DEFAULTFLG` — Default bayrağı: 0=Değil, 1=Default
+- `RPLAYS_001.DEFAULTFLG` — Default bayrağı: 0=Değil, 1=Default
+- `RTNGLINE.COSTRELATED` — Bağlı Maliyet: 0=Hayır, 1=Evet
+- `RTNGLINE.PLANRELATED` — Planlama (related): 0=Hayır, 1=Evet
+- `SERILOTN.SLTYPE` — Lot / Seri Türü: 1=Seri, 2=Lot
+- `SHFTASGN.SOURCETYPE` — Kaynak Tipi: 0=Çalışan, 1=Çalışan Grubu, 2=İş İstasyonu, 3=İş İstasyonu Grubu
+- `SLQCASGN.ASGNTYPE` — Atama Türü: 0=Malzeme, 2=Operasyon
+- `SLQCASGN.QTYPE` — Kalite Kontrol Tipi: 0=Nicel, 1=Nitel
+- `SLQCASGN.CONFIRMED` — Kalite Kontrol Değeri Uygunluğu: 0=Hayır, 1=Evet
+- `SLQCASGN.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet
+- `SLSMAN.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `SLTRANS.IOCODE` — Girdi / Çıktı kodu: 1=Girdi, 2=Ambardan giriş, 3=Ambardan çıkış, 4=Çıktı
+- `SLTRANS.SLTYPE` — Lot / Seri Türü: 1=Lot, 2=Seri
+- `SLTRANS.SERIQCOK` — Kalite Kontrol Uygunluğu: 0=uygun değil, 1=uygun
+- `SLTRANS.LPRODSTAT` — Durumu: 0=Güncel, 1=Planlanan
+- `SLTRANS.SOURCETYPE` — Kaynak Tipi: 0=Ambar, 1=İş İstasyonu
+- `SLTRANS.MADEOFSHRED` — Parçalama Yoluyla Oluşmuş: 0=Hayır, 1=Evet
+- `SLTRANS.STATUS` — Durumu: 0=Actual, 1=Proposal0
+- `SPECODES.CODETYPE` — Kod Türü: 1=Özel kod, 2=Yetki kodu, 4=Satış Hedefi Stok Kodu, 5=Satıcı Posizyon Kodu
+- `SPECODES.SPECODETYPE` — Özel Kod Türleri: 1=Stok kartı,, 2=Stok fişi,, 3=Stok fişi satırı,, 4=Alınan hizmet kartları,, 5=Verilen hizmet kartları,, 6=Alış indirim kart, 7=Alış masraf kartları, 8=Satış indirim kartları,, 9=Satış masraf kartları,, 10=Alış promosyon kartları,, 11=Satış prom. Kartları, 14=Alınan siparişler, 15=Verilen siparişler,, 16=Alınan sip.fiş satırları,, 17=Verilen sip.fiş satırları, 18=Alım irsaliyeleri,, 19=Satış irsaliyeleri, 20=Alım irsaliye satırları,, 21=Satış irsaliye satırları, 22=Alım faturaları,, 23=Satış faturaları
+- `SRVCARD.ACTIVE` — Hizmet Kartı Durumu: 0=Kullanımda, 1=Kullanım dışı
+- `SRVCARD.CARDTYPE` — Hizmet Kartı Türü: 1=Alınan hizmet kartları, 2=Verilen hizmet kartları
+- `STDCOST.RESTYPE` — Kaynak Tipi: 1=Çalışan, 8=İş istasyonu
+- `STFICHE.GRPCODE` — Grup Kodu: 1=Satınalma, 2=Satış, 3=Malzeme Yönetimi
+- `STFICHE.TRCODE` — Fiş Türü: 1=Mal alım irsaliyesi, 2=Per. sat. iade irs, 3=Topt.sat. iade irs, 4=Kons. çıkış iade irs, 5=Konsinye giriş irs, 6=Alım iade irs, 7=Perakende satış irs, 8=Toptan satış irs, 9=Konsinye çıkış irs, 10=Konsinye giriş iade irs, 11=Fire fişi, 12=Sarf fişi, 13=üretimden giriş fişi, 14=Devir fişi, 25=Ambar fişi
+- `STFICHE.IOCODE` — Girdi/Çıktı kodu: 1=Girdi, 2=Ambar, 3=Çıktı
+- `STFICHE.SOURCETYPE` — Kaynak Tipi: 0=Ambar, 1=İş İstasyonu
+- `STFICHE.DESTTYPE` — Hedef Türü: 0=Ambar, 1=İş İstasyonu
+- `STFICHE.PRODSTAT` — Fiş Durumu: 0=Güncel, 1=Planlanan
+- `STFICHE.CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş: 0=Hayır, 1=Evet
+- `STFICHE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `STINVTOT.INVENNO` — Ambar Numarası ( -1 tüm ambarlar): -1=tüm ambarlar
+- `STLINE.LINETYPE` — Satır türü: 0=Malzeme, 1=Promosyon, 2=İndirim, 3=Masraf, 4=Hizmet, 5=Depozit, 6=Karma koli, 7=Karma koli satırı, 8=Sabit kıymet, 9=Ek Malzeme, 10=Malzeme sınıfı, 11=Fason1
+- `STLINE.DETLINE` — Malzeme Sınıfı Satır Ayrıntısı: 0=Hayır, 1=Evet
+- `STLINE.TRCODE` — Bağlı Fiş Türü: 15=Kullanıcı Tanımlı Giriş Fişi, 16=Kullanıcı Tanımlı Giriş Fişi, 17=Kullanıcı Tanımlı Giriş Fişi, 18=Kullanıcı Tanımlı Giriş Fişi, 19=Kullanıcı Tanımlı Giriş Fişi, 20=Kullanıcı Tanımlı Çıkış Fişi, 21=Kullanıcı Tanımlı Çıkış Fişi, 22=Kullanıcı Tanımlı Çıkış Fişi, 23=Kullanıcı Tanımlı Çıkış Fişi, 24=Kullanıcı Tanımlı Çıkış Fişi, 30=Kullanıcı Tanımlı Satınalma İrsaliyesi, 31=Kullanıcı Tanımlı Satınalma İrsaliyesi, 32=Kullanıcı Tanımlı Satınalma İrsaliyesi, 33=Kullanıcı Tanımlı Satınalma İrsaliyesi, 34=Kullanıcı Tanımlı Satınalma İrsaliyesi, 35=Kullanıcı Tanımlı Satış İrsaliyesi3, 36=Kullanıcı Tanımlı Satış İrsaliyesi3, 37=Kullanıcı Tanımlı Satış İrsaliyesi3, 38=Kullanıcı Tanımlı Satış İrsaliyesi3, 39=Kullanıcı Tanımlı Satış İrsaliyesi3
+- `STLINE.GLOBTRANS` — (İndirim, Masraf, Promosyon satırları için) Fiş geneline uygulanan: 0=Detay) (1- Evet, 1=Genel
+- `STLINE.CALCTYPE` — (İndirim, Masraf, Promosyon satırları için) Hesaplama türü: 0=Yüzde, 1=Miktar, 2=Formül
+- `STLINE.SOURCETYPE` — Kaynak Tipi: 0=Ambar, 1=İş İstasyonu
+- `STLINE.DESTTYPE` — Hedef Türü: 0=Ambar, 1=İş istasyonu
+- `STLINE.IOCODE` — Girdi/Çıktı kodu: 1=Girdi, 2=Ambardan giriş, 3=Ambardan çıkış, 4=Çıktı8
+- `STLINE.VATINC` — KDV Dahil/Hariç: 0=Hariç, 1=Dahil
+- `STLINE.RETCOSTTYPE` — İade hareketi maliyet türü: 0=Çıkış, 1=O anki, 2=Tutar
+- `STLINE.CANCELLED` — İptal Edilmiş: 0=Hayır, 1=Evet
+- `STLINE.DECPRDIFF` — Fiyat farkı (0: azalan: 0=arttırıcı, 1=artan
+- `STLINE.LPRODSTAT` — Durumu: 0=Güncel, 1=Planlanan
+- `STLINE.TRANSQCOK` — Kalite Kontrol Uygunluğu: 0=uygun değil, 1=uygun
+- `STLINE.EISRVDSTTYP` — Hizmet dağıtım türü: 0=Ambarlara göre, 1=Genel
+- `STLINE.MADEOFSHRED` — Parçalama Yoluyla Oluşmuş: 0=Hayır, 1=Evet
+- `SUPPASGN.SPECIALIZED` — Kullanımda Değil: 0=No, 1=Yes
+- `TAXDECLLINE.LISTTYP` — Liste türü: -1=Social Security Organisations -2: Related Professional Association 0: Static Fields 1...n: Other Lists
+- `UNITSETF.CARDTYPE` — Kayıt türü: 1=Uzunluk ölçüleri, 2=Alan ölçüleri, 3=Hacim ölçüleri, 4=Ağırlık ölçüleri, 5=Kullanıcı tanımlı ölçüler
+- `UNITSETF.SPECITEM` — Sadece Malzeme / Hizmet Kartları İçin: 0=Hayır, 1=Evet
+- `UNITSETL.MAINUNIT` — Ana Birim: 0=Hayır, 1=Evet
+- `UNITSETL.DIVUNIT` — Bölünebilir: 0=Hayır, 1=Evet
+- `WFTASK.RECORDCUROP` — Görevin oluşumu: 1== New, 2== Update, 4== Copy, 8== Delete, 16== By Next Workflow2
+- `WFTASK.SENDMAILREPORT` — Raporu e-posta ile gönder; 0: Gönderme: 1=Send
+- `WHLIST.TYP` — Ambar listesi türü: 1=Temin Ambarları, 2=MPS Ambarları
+- `WORKFLOWLINE.REMINDER` — Hatırlatılacak: 1=Active, 2=Passive0
+- `WORKSTAT.APPROVED` — Onay Bilgisi: 0=Onaylı, 1=Onaysız
+- `WORKSTAT.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `WORKSTAT.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `WSCHCODE.APPROVED` — Onay Bilgisi: 0=Onaylı, 1=Onaysız
+- `WSCHCODE.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `WSCHCODE.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+- `WSGRPF.APPROVED` — Onay Bilgisi: 0=Onaylı, 1=Onaysız
+- `WSGRPF.ACTIVE` — Kullanım durumu: 0=Kullanımda, 1=Kullanım dışı
+- `WSGRPF.TEXTINC` — Ayrıntılı Açıklama İçerir: 0=Hayır, 1=Evet
+
+## Tablo ve kolon açıklamaları (Türkçe — `LOGO_TABLE_YAPISI.DOC`)
+
+Türkçe yapı dokümanı ve web referansından; kaynak önceliği logo-ldds.json web_reference.policy alanındadır.
+
+### ABUDGETPRD — Bütçe dönemleri
+
+- `LOGICALREF` — Bütçe dönemleri mantıksal referansı
+- `CODE` — Bütçe dönemi kodu
+- `NAME` — Bütçe dönemi başlığı (0: Ay, 1: Yıl)
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş tarihi
+- `APPROVED` — Onay Bilgisi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `SUBPRDNUM` — Alt dönem
+- `SUBPRDTYPE` — Alt dönem türü
+- `ORGLOGOID` — Veri Merkezi
+
+### ACCCODES — Entegrasyon bağlantı kodları
+
+- `LOGICALREF` — Entegrasyon Bağlantı Kodu Log. Ref.
+- `MODNR` — Modül Numarası
+- `GRPFILTER` — Grup filtresi
+- `VATRATE` — KDV oranı
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `LINEEXP` — Satır Açıklaması
+- `CALCFORMULA` — Hesaplanan Formül
+- `INDEXCODE` — İndeks Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `PREVALUE` — Öndeğer olarak kullanılacak
+- `PRDIFF` — Fiyatlar
+- `PROJECTREF` — Proje Referansı
+- `BRANCHNR` — İşyeri
+- `EFFECTIVECOST` — Malzeme maliyeti etkilenecek: 0: Evet; 1: Hayır
+
+### ACCDISTDETLN — ACCDISTDETLN
+
+- `LOGICALREF` — Logical Reference
+- `ACCFICHEREF` — EMFICHE LOGICALREF
+- `LINENR` — Satır Numarası
+- `ACCOUNTREF` — EMUHACC LOGICALREF
+- `PREVLINEREF` — Proje Log. Ref.
+- `CENTERREF` — EMCENTER LOGICALREF
+- `PROJECTREF` — Proje Log. Ref.
+- `BRANCH` — İşyeri
+- `DISTRATE` — Dağıtım Oranı
+- `CREDEBNET` — Borç/Alacak Net Tutar
+- `EMUCREDEBNET` — Borç/Alacak Net Tutar (EURO)
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRCODE` — Fiş türü
+- `DATE_` — Tarih
+- `TSIGN` — Borç/Alacak İşareti
+- `CANCELLED` — İptal Edilmiş
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `DEPARTMENT` — Bölüm
+- `STATUS` — Durumu
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+
+### ACCDISTTEMP — Genel muhasebe dağıtım şablonları
+
+- `LOGICALREF` — Logical Reference
+- `ACCOUNTREF` — EMUHACC LOGICALREF
+- `CODE` — Genel Muh. Dağıtım Şablonu Kodu
+- `NAME` — Genel Muh. Dağıtım Şablonu Açıklaması
+- `SPECODE` — Genel Muh. Dağıtım Şablonu Özel Kodu
+- `CYPHCODE` — Genel Muh. Dağıtım Şablonu Yetki Kodu
+- `PRIORITY` — Öncelik
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet
+- `WFSTATUS` — Kullanımda Değil
+
+### ACCDISTTEMPLN — Hesap dağıtım şablonları
+
+- `LOGICALREF` — Hesap Dağıtım Şablonu LOGICALREF
+- `DISTTEMPREF` — Hesap Dağıtım Şablonu LOGICALREF
+- `CENTERREF` — EMCENTER LOGICALREF
+- `PROJECTREF` — Proje Log. Ref.
+- `DISTFACT` — Dağıtım Katsayısı
+- `LINENR` — Satır Numarası
+
+### ACCFCASGN — ACCFCASGN
+
+- `LOGICALREF` — ACCFCASGN mantıksal referansı
+- `ACCFCREF` — Genel Muhasebe Fişleri Referansı
+- `FCREF` — Fatura Referansı
+- `TYP` — CGS bağlantısı
+
+### ACTIVITYAMNT — Aktivite miktarları
+
+- `LOGICALREF` — Aktivite Tutarı Logical Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `DISPLINEREF` — İş emri ref.
+- `OVHDTRREF` — Standart genel gider ref.
+- `DATE_` — Tarih
+- `AMOUNT` — Tutar
+
+### ACTOVRHDDIST — Fiili genel gider yüklemeleri
+
+- `LOGICALREF` — Gerçekleşen Genel Gider Logical Ref.
+- `EXPCENTERREF` — Masraf Merkezi Ref.
+- `ACCOUNTREF` — Genel Muh. Hes. Ref.
+- `OVHDCLNREF` — Genel gider - Malzeme satırı Ref.
+- `LINETYPE` — Satır Tipi (0: Direct
+- `PARENTREF` — Üst satır ref.
+- `TOTAL` — Toplam
+- `RDTOTAL` — Raporlama dövizi - Toplam
+- `REALCAPACITY` — Gerçek Kapasite
+- `ACTUNITCOST` — Gerçekleşen Birim Maliyeti
+- `POSTEDPRDREF` — Yükleme Periyodu Ref.
+- `LOADRATE` — Yükleme Oranı
+- `ACCOUNTED` — Muhasebeleşmiş
+
+### ACTPEPL — Aktivite katılımcıları
+
+- `LOGICALREF` — Faaliyet katılımcıları mantıksal referansı
+- `NAME` — Adı
+- `MIDINIT` — İkinci adın baş harfi
+- `FAMNAME` — Soyadı
+- `ACTREF` — Aktivite Referansı
+- `EMAILADDR` — E-Posta Adresi
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `RECSTATUS` — Kayıt Durumu
+
+### ADDTAX — Ek vergiler
+
+- `LOGICALREF` — Ek Vergi Logical Ref.
+- `TAXGROUPID` — Ek Vergi Grubu ID
+- `TAXCODE` — Ek Vergi Kodu
+- `TAXDEF` — Ek Vergi Açıklaması
+- `ADDTOCOST` — Ek Vergi Maliyeti
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `EFFECTKDV` — KDV matrahını etkiler / KDV matrahını etkilemez
+
+### ADDTAXLINE — Ek vergi satırları
+
+- `LOGICALREF` — Ek Vergi Satırı Logical Ref.
+- `ADDTAXREF` — Ek Vergi Referansı
+- `BEGDATE` — Başlangıç Tarihi
+- `TAXTYPE` — Vergi türü
+- `RATE` — Oran
+- `AMOUNT` — Tutar
+- `UNITTYPE` — Birim türü
+- `UNITSETREF` — Birim Seti Referansı
+- `UNITREF` — Birim referansı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `DISCAMOUNT` — İndirim Tutarı
+- `EXCEPTRATE` — İstisna oranı
+- `EXCEPTAMOUNT` — İstisna tutarı
+- `COLLECTRATE` — Tahsil edilecek oran
+- `COLLECTAMOUNT` — Tahsil edilecek tutar
+
+### ANBDGTALLOCFC — Bütçe dağıtım fişleri
+
+- `LOGICALREF` — Bütçe ödenek fişleri mantıksal referansı
+- `FICHENO` — Ödenek fişi numarası
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `SRCBDGTREF` — Bütçe kartları referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+- `TEXTINC` — Detay açıklama içerir
+
+### ANBDGTALLOCLN — Bütçe dağıtım fişi satırları
+
+- `LOGICALREF` — Bütçe ödenek fişi satırları mantıksal referansı
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `SRCBDGTREF` — Bütçe kartları referansı
+- `DSTBDGTREF` — Bütçe kartları referansı
+- `BDALLOCFCREF` — Bütçe ödenek fişleri referansı
+- `LINENO_` — Satır numarası
+- `SRCACCREF` — Genel Muhasebe Hesapları Referansı
+- `SRCCRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `SRCCRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `SACCCORPCODE1` — Çıkış kurumsal kodu 1
+- `SACCCORPCODE2` — Çıkış kurumsal kodu 2
+- `SACCCORPCODE3` — Çıkış kurumsal kodu 3
+- `SACCCORPCODE4` — Çıkış kurumsal kodu 4
+- `SACCFUNCCODE1` — Çıkış fonksiyonel kodu 1
+- `SACCFUNCCODE2` — Çıkış fonksiyonel kodu 2
+- `SACCFUNCCODE3` — Çıkış fonksiyonel kodu 3
+- `SACCFUNCCODE4` — Çıkış fonksiyonel kodu 4
+- `SACCFINCODE` — Çıkış finansal kodu
+- `SACCECOCODE1` — Çıkış ekonomik kodu 1
+- `SACCECOCODE2` — Çıkış ekonomik kodu 2
+- `SACCECOCODE3` — Çıkış ekonomik kodu 3
+- `SACCECOCODE4` — Çıkış ekonomik kodu 4
+- `DSTACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTCRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTCRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `DACCCORPCODE1` — Giriş kurumsal kodu 1
+- `DACCCORPCODE2` — Giriş kurumsal kodu 2
+- `DACCCORPCODE3` — Giriş kurumsal kodu 3
+- `DACCCORPCODE4` — Giriş kurumsal kodu 4
+- `DACCFUNCCODE1` — Giriş fonksiyonel kodu 1
+- `DACCFUNCCODE2` — Giriş fonksiyonel kodu 2
+- `DACCFUNCCODE3` — Giriş fonksiyonel kodu 3
+- `DACCFUNCCODE4` — Giriş fonksiyonel kodu 4
+- `DACCFINCODE` — Giriş finansal kodu
+- `DACCECOCODE1` — Giriş ekonomik kodu 1
+- `DACCECOCODE2` — Giriş ekonomik kodu 2
+- `DACCECOCODE3` — Giriş ekonomik kodu 3
+- `DACCECOCODE4` — Giriş ekonomik kodu 4
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `LINEEXP` — Satır Açıklaması
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### ANBDGTALLOCPRD — Bütçe dağıtımının dönem satırları
+
+- `LOGICALREF` — Bütçe ödeneği dönem satırları mantıksal referansı
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `SRCBDGTREF` — Bütçe kartları referansı
+- `DSTBDGTREF` — Bütçe kartları referansı
+- `BDALLOCFCREF` — Bütçe ödenek fişleri referansı
+- `BDALLOCLNREF` — Bütçe ödenek fişi satırları referansı
+- `SRCACCREF` — Genel Muhasebe Hesapları Referansı
+- `SRCCRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `SRCCRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTCRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTCRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `LINENO_` — Satır numarası
+- `PRDNO` — Periyot numarası
+- `PRDBEGDATE` — Periyot başlama tarihi
+- `PRDENDDATE` — Dönem bitiş tarihi
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### ANBDGTREVFC — Bütçe revizyon fişleri
+
+- `LOGICALREF` — Bütçe revizyon fişleri mantıksal referansı
+- `FICHENO` — Revizyon fişi numarası
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `BDGTREF` — Bütçe kartları referansı
+- `BDALLOCFCREF` — Bütçe ödenek fişleri referansı
+- `DIFFACCFCCRE` — Fark yevmiye fişi (Oluşturuldu/Oluşturulmadı)
+- `PRVBDRVFCREF` — Bütçe revizyon fişleri referansı
+- `PRVBDRVNO` — Önceki revizyon numarası
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+- `TEXTINC` — Detay açıklama içerir
+
+### ANBDGTREVLN — Bütçe revizyon fişi satırları
+
+- `LOGICALREF` — Bütçe revizyon fişi satırları mantıksal referansı
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `BDGTREF` — Bütçe kartları referansı
+- `BDALLOCFCREF` — Bütçe ödenek fişleri referansı
+- `BDREVFCREF` — Bütçe revizyon fişleri
+- `LINENO_` — Satır numarası
+- `ACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `ACCCORPCODE1` — Kurumsal kod 1
+- `ACCCORPCODE2` — Kurumsal kod 2
+- `ACCCORPCODE3` — Kurumsal kod 3
+- `ACCCORPCODE4` — Kurumsal kod 4
+- `ACCFUNCCODE1` — Fonksiyonel kod 1
+- `ACCFUNCCODE2` — Fonksiyonel kod 2
+- `ACCFUNCCODE3` — Fonksiyonel kod 3
+- `ACCFUNCCODE4` — Fonksiyonel kod 4
+- `ACCFINCODE` — Finansal kod
+- `ACCECOCODE1` — Ekonomik kod 1
+- `ACCECOCODE2` — Ekonomik kod 2
+- `ACCECOCODE3` — Ekonomik kod 3
+- `ACCECOCODE4` — Ekonomik kod 4
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `LINEEXP` — Satır Açıklaması
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### ANBDGTREVPRD — Bütçe revizyonunun dönem satırları
+
+- `LOGICALREF` — Bütçe revizyonu dönem satırları mantıksal referansı
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `STATUS` — Durumu
+- `BDGTREF` — Bütçe kartları referansı
+- `BDALLOCFCREF` — Bütçe ödenek fişleri referansı
+- `BDREVFCREF` — Bütçe revizyon fişleri referansı
+- `BDREVLNREF` — Bütçe revizyon fişi satırları referansı
+- `ACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `LINENO_` — Satır numarası
+- `PRDNO` — Periyot numarası
+- `PRDBEGDATE` — Periyot başlama tarihi
+- `PRDENDDATE` — Periyot kapanış tarihi
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### ANBUDGET — Bütçe kartları
+
+- `LOGICALREF` — Bütçe kartları mantıksal referansı
+- `CODE` — Bütçe kodu
+- `DEFINITION_` — Bütçe açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `STATUS` — Durumu
+- `BDGTTYPE` — Bütçe türü
+- `BDGTPRDREF` — Bütçe dönemleri referansı
+- `BDGTREVFCREF` — Bütçe revizyon fişleri referansı
+- `BDGTREVNO` — Bütçe revizyon numarası
+- `PARBDGTREF` — Bütçe kartları referansı
+- `LOWLEVELCODES1` — Hiyerarşi kodu 1
+- `LOWLEVELCODES2` — Hiyerarşi kodu 2
+- `LOWLEVELCODES3` — Hiyerarşi kodu 3
+- `LOWLEVELCODES4` — Hiyerarşi kodu 4
+- `LOWLEVELCODES5` — Hiyerarşi kodu 5
+- `LOWLEVELCODES6` — Hiyerarşi kodu 6
+- `LOWLEVELCODES7` — Hiyerarşi kodu 7
+- `LOWLEVELCODES8` — Hiyerarşi kodu 8
+- `LOWLEVELCODES9` — Hiyerarşi kodu 9
+- `LOWLEVELCODES10` — Hiyerarşi kodu 10
+- `TOTALDEBIT` — Toplam borç
+- `TOTALCREDIT` — Toplam alacak
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+- `TEXTINC` — Detay açıklama içerir
+
+### ANBUDGETLN — Bütçe kartı satırları
+
+- `LOGICALREF` — Bütçe kartı satırları mantıksal referansı
+- `BDGTREF` — Bütçe kartları
+- `BDGTPRDREF` — Bütçe dönemleri
+- `SPECODE` — Özel Kod
+- `LINEEXP` — Satır Açıklaması
+- `LINENO_` — Satır numarası
+- `ACCREF` — Genel Muhasebe Hesapları
+- `CRSACCREF` — Genel Muhasebe Hesapları
+- `CRSRACCREF` — Genel Muhasebe Hesapları
+- `ACCCORPCODE1` — Kurumsal kod 1
+- `ACCCORPCODE2` — Kurumsal kod 2
+- `ACCCORPCODE3` — Kurumsal kod 3
+- `ACCCORPCODE4` — Kurumsal kod 4
+- `ACCFUNCCODE1` — Fonksiyonel kod 1
+- `ACCFUNCCODE2` — Fonksiyonel kod 2
+- `ACCFUNCCODE3` — Fonksiyonel kod 3
+- `ACCFUNCCODE4` — Fonksiyonel kod 4
+- `ACCFINCODE` — Finansal kod
+- `ACCECOCODE1` — Ekonomik kod 1
+- `ACCECOCODE2` — Ekonomik kod 2
+- `ACCECOCODE3` — Ekonomik kod 3
+- `ACCECOCODE4` — Ekonomik kod 4
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `BDGTREVFCREF` — Bütçe revizyon fişleri referansı
+- `BDGTREVNO` — Bütçe revizyon numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### ANBUDGETPRD — Bütçe kartı satırlarının dönem satırları
+
+- `LOGICALREF` — Bütçe kartı satırının dönem satırları mantıksal referansı
+- `BDGTREF` — Bütçe kartları
+- `BDGTLNREF` — Bütçe kartı satırları
+- `BDGTPRDREF` — Bütçe dönemleri
+- `PRDNO` — Periyot numarası
+- `PRDBEGDATE` — Periyot başlama tarihi
+- `PRDENDDATE` — Dönem bitiş tarihi
+- `ACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSRACCREF` — Genel Muhasebe Hesapları Referansı
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `BDGTREVFCREF` — Bütçe revizyon fişleri referansı
+- `BDGTREVNO` — Bütçe revizyon numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### APPPARAM — APPPARAM
+
+- `LOGICALREF` — APPPARAM mantıksal referansı
+- `USERNR` — Kullanıcı numarası
+- `TOPTENTYPE` — İlk on türü
+- `TOPTENINTERVAL` — İlk on güncelleme süresi (saniye)
+- `ITEMTREEVIEW` — Malzeme ağacı
+- `CLTREEVIEW` — Cari hesap ağacının son görüntüleme durumu (kullanıcı)
+- `BDGTTREEVIEW` — Bütçe ağacının son görüntüleme durumu (kullanıcı)
+- `PAYDATETYPE` — 3: Bugün; 1: Bu hafta; 2: Bu ay; 0: Tümü
+
+### ASCOND — Alış/Satış koşulları
+
+- `LOGICALREF` — Satınalma / Satış koşulları log. Ref.
+- `USETYPE` — Satınalma / Satış
+- `LINENO_` — Satır Numarası
+- `CARDREF` — Kart Referansı
+- `LINETYPE` — Satır Tipi
+- `ACTIVE` — Kullanım durumu
+- `PRIORITY` — Öncelik
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `STCODES` — Malzeme Kodu
+- `CICODES` — Cari Hesap Kodu
+- `PAYCODES` — Ödeme kodu
+- `ITEMTYPE` — Malzeme Kartı Türü
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### AUTOCTEMPLATE — Otomatik kart oluşturma şablonu
+
+- `LOGICALREF` — Otomatik kart oluşturma şablonu mantıksal referansı
+- `TYP` — 0: Varyant
+- `ITEMREF` — Malzeme kartı referansı
+- `INCREMENT_` — 0: Özellik, 1: Sabit, 2: Artan (harf), 3: Artan (sayı)
+- `CHARREF` — Özellik kodları referansı
+- `LENGTH` — Uzunluk
+- `SSTART` — Başlangıç
+- `SEND` — Bitiş
+- `CHARVALREF` — Özellik değerleri referansı
+- `CHARABBREV` — Özellik kısaltması
+- `LINENR` — Satır numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### AVGCURRS — Ortalama döviz kurları
+
+- `LOGICALREF` — Ortalama Döviz Logical Ref.
+- `CURRTYPE` — Döviz Türü
+- `PERIODREF` — Periyot ref.
+- `AVGCURRVAL` — Ortalama Döviz Değeri
+
+### BANKACC — Banka hesapları
+
+- `LOGICALREF` — Banka Hesabı Logical Ref.
+- `CARDTYPE` — Kart Türü
+- `CODE` — Banka Hesap Kodu
+- `DEFINITION_` — Banka Hesabı Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BANKREF` — Banka Referansı
+- `CHECKMARGIN` — Çek Kredi Marjı
+- `NOTEMARGIN` — Senet kredi marjı
+- `CHECKLIMIT` — Çek Kredi Limiti
+- `NOTELIMIT` — Senet kredi limiti
+- `CUSTINTEREST` — Cari Hesap Faizi
+- `SKINTEREST` — Senet karşılığı kredi (Aylık)
+- `CKINTEREST` — Çek karşılığı kredi (Aylık)
+- `STOPAJPER` — Stopaj oranı
+- `FONPER` — Fon Oranı
+- `CURRENCY` — Hesap Para Birimi
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `ACCOUNTNO` — Genel Muhasebe Hesabı Numarası
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `KKUSAGE` — Kredi Kartı Hareketleri
+- `COLLATRLLIMIT` — Teminat limiti
+- `CURRATETYPE` — Döviz kuru türü
+- `WTHCLTRLINTEREST` — Teminatsız kredi faiz oranı
+- `WTHCLTRLLIMIT` — Teminatsız kredi limiti
+
+### BNCARD — Bankalar
+
+- `LOGICALREF` — Banka Logical Referansı
+- `ACTIVE` — Kullanım durumu
+- `CODE` — Banka Kodu
+- `DEFINITION_` — Banka Adı
+- `BRANCH` — Banka Şubesi
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BRANCHNO` — Şube Numarası
+- `ADDR1` — Adres Satırı 1
+- `ADDR2` — İkinci adres satırı
+- `CITY` — Şehir
+- `COUNTRY` — Ülke
+- `POSTCODE` — Posta kodu
+- `TELNRS1` — Telefon Numarası 1
+- `TELNRS2` — Telefon Numarası 2
+- `FAXNR` — Faks Numarası
+- `INCHARGE` — İlgili
+- `EMAILADDR` — E-Posta Adresi
+- `WEBADDR` — WEB adresi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `CNTRYCODE` — Ülke Kodu
+- `TOWN` — İlçe
+- `DISTRICT` — Semt
+
+### BNCREDITCARD — Banka kredileri (Port)
+
+- `LOGICALREF` — Banka kredileri (Port) mantıksal referansı
+- `CODE` — Banka kredisi kodu
+- `NAME_` — Banka kredisi açıklaması
+- `SPECODE` — Banka kredisi özel kodu
+- `CYPHCODE` — Banka kredisi yetki kodu
+- `CRCARDTYPE` — Banka kredisi türü
+- `CREDITTYPE` — Kredi türü
+- `CRCALCTYPE` — Banka kredisi hesap türü
+- `GKSNO` — Kredi sözleşme numarası
+- `BEGDATE` — Kredinin alındığı tarih
+- `ENDDATE` — Kredi vade tarihi
+- `TRCURR` — Döviz kuru türü
+- `TRTOTAL` — Kredi anaparası (tutar)
+- `TRRATECR` — Döviz kuru (kredi hesabı)
+- `TRRATEACC` — Döviz kuru (cari hesap)
+- `BNCRACCREF` — Banka Hesapları Referansı
+- `BNCRREF` — Banka Hesapları Referansı
+- `BNACCREF` — Banka Referansı
+- `BNREF` — Banka Referansı
+- `INTRATE` — Faiz Oranı
+- `INTTOTAL` — Faiz Tutarı
+- `BSMVRATE` — Banka ve sigorta muameleleri vergisi oranı
+- `BSMVTOTAL` — Banka ve sigorta muameleleri vergisi tutarı
+- `KKDFRATE` — KKDF oranı
+- `KKDFTOTAL` — KKDF tutarı
+- `COMMTOTAL` — Masraf / komisyon tutarı
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### BNCREPAYTR — Banka kredisi hareketi (Port)
+
+- `LOGICALREF` — Banka kredisi hareket (Port) mantıksal referansı
+- `CREDITREF` — Banka kredileri (Port) referansı
+- `PERNR` — Dönem bilgisi
+- `TRANSTYPE` — Ödeme hareketi türü
+- `PARENTREF` — Banka kredisi hareket (Port) referansı
+- `DUEDATE` — Vade
+- `OPRDATE` — Hareket tarihi
+- `LINENR` — Taksit Numarası
+- `TOTAL` — Anapara tutarı
+- `INTTOTAL` — Anapara faiz tutarı
+- `BSMVTOTAL` — Toplam banka ve sigorta muameleleri vergisi tutarı
+- `KKDFTOTAL` — KKDF toplam tutarı
+- `BNFCHREF` — Banka Fişleri Referansı
+- `MODIFIED` — Değiştirildi
+- `BNACCREF` — Banka Referansı
+- `TRRATECR` — Kredi hesabı döviz kuru
+- `TRRATEACC` — Cari hesap döviz kuru
+- `LATEINTRATE` — Gecikme faiz oranı
+- `LATEINTTOT` — Gecikme faiz tutarı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `RECSTATUS` — Kayıt Durumu
+- `WFSTATUS` — Kullanımda Değil
+
+### BNFICHE — Banka fişleri
+
+- `LOGICALREF` — Banka Fişi Logical Ref.
+- `DATE_` — Tarih
+- `FICHENO` — Fiş Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BRANCH` — İşyeri
+- `DEPARMENT` — Bölüm
+- `TRCODE` — Hareket türü
+- `MODULENR` — Modül Numarası
+- `SOURCEFREF` — Bağlı fiş ref.
+- `ACCOUNTED` — Muhasebeleştirildi
+- `CANCELLED` — İptal Edilmiş
+- `SIGN` — Borç/Alacak İşareti
+- `DEBITTOT` — Borç Toplamı
+- `CREDITTOT` — Alacak Toplamı
+- `GENEXP1` — Açıklama
+- `GENEXP2` — Açıklama
+- `GENEXP3` — Açıklama
+- `GENEXP4` — Açıklama
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `REPDEBIT` — Borç (RD)
+- `REPCREDIT` — Alacak (RD)
+- `TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet
+- `WFSTATUS` — Kullanımda Değil
+- `CRCARDWZD` — Ödeme sihirbazı tarafından mı oluşturuldu?
+- `BNACCOUNTREF` — Banka Hesapları Referansı
+- `TRANGRPNO` — Hareket grup numarası (fiş)
+- `PROJECTREF` — Proje Referansı
+- `COLLATROLLREF` — COLLATRLROLL referansı
+- `COLLATTRNREF` — COLLATRLTRAN referansı
+- `BNCRREF` — Banka kredileri (Port) referansı
+- `ORGLOGOID` — Veri Merkezi
+- `REFLECTED` — KDV aktarıldı mı?
+- `REFLACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `CANCELLEDREFLACC` — İptal edilen faturanın KDV tutarı aktarıldı mı?
+
+### BNFLINE — Banka hareketleri
+
+- `LOGICALREF` — Banka Hareketi Logical Ref.
+- `BANKREF` — Banka Referansı
+- `BNACCREF` — Banka Hesabı Referansı
+- `CLIENTREF` — Cari Hesap Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `BNACCOUNTREF` — Banka Genel Muhasebe Hesabı Referansı
+- `BNCENTERREF` — Banka Masraf Merkezi Referansı
+- `VIRMANREF` — Virman satırı ref.
+- `SOURCEFREF` — Tanımlanmış satırda fiş referansı
+- `TRANSTYPE` — Hareket türü
+- `DATE_` — Tarih
+- `DEPARTMENT` — Bölüm
+- `BRANCH` — İşyeri
+- `SIGN` — Borç/Alacak İşareti
+- `TRCODE` — Hareket türü
+- `MODULENR` — Modül Numarası
+- `LINENR` — Satır Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `TRANNO` — Hareket numarası
+- `DOCODE` — Belge Numarası
+- `LINEEXP` — Açıklama
+- `ACCOUNTED` — Muhasebeleştirildi
+- `TRCURR` — İD Türü
+- `AMOUNT` — Tutar
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `CANCELLED` — İptal Edilmiş
+- `CLBNBRANCHNO` — Cari Hesap Banka Numarası
+- `CLBNACCOUNTNO` — Cari Hesap Banka Hesap Numarası
+- `BNTRACKINGNO` — Banka İzleme Numarası
+- `TRNSTATE` — Hareket durumu
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `DISCFLAG` — İndirim Satırı (Evet / Hayır)
+- `DISCRATE` — İndirim Oranı
+- `VATRATE` — KDV oranı
+- `ARCLOSEAMOUNT` — Belirsiz
+- `DISCACCREF` — İndirim Genel Muhasebe Hesabı Ref.
+- `DISCCENREF` — İndirim Masraf Merkezi Ref.
+- `VATRACCREF` — KDV muhasebe hesabı ref.
+- `VATRCENREF` — KDV masraf merkezi ref.
+- `PAYMENTREF` — Ödeme Planı Referansı
+- `BANKPROCTYPE` — Banka Hareket Türü
+- `BANKPROCCODE` — Banka Hareket Kodu
+- `TRANSDUEDATE` — Hareket tarihi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `OPSTAT` — Hareket durumu
+- `INFIDX` — Enflasyon Endeksi
+- `EXIMFICHENO` — İthalat/İhracat Fiş Nr.
+- `BNTRANVATINC` — KDV dahil / hariç
+- `BNTRANVATRAT` — KDV oranı
+- `BNTRANVATACCREF` — KDV muhasebe hesabı ref.
+- `BNTRANVATCENREF` — KDV masraf merkezi ref.
+- `BNTRANVATTOT` — KDV tutarı
+- `CHEQINFO` — Çek Bilgisi
+- `EXIMINFOREF` — INVEXIMINFO Reference
+- `EXIMINFOPAR` — Eximbank kredisi paritesi
+- `EXCREREF` — İhracat Kredisi Ref.
+- `CRCARDWZD` — Ödeme sihirbazı tarafından mı oluşturuldu?
+- `COMSTYPE` — Komisyon Türü
+- `PROVISIONREF` — Kullanımda Değil
+- `TRANGRPLINENO` — Hareket grup numarası (fiş satırı)
+- `PROJECTREF` — Proje Referansı
+- `TRANGRPDATE` — Hareket grup tarihi
+- `TRANGRPNO` — Hareket grup numarası (öndeğer)
+- `BANKREFNR` — Banka Referans Numarası
+- `CUSTOMDOCNR` — Gümrük beyannamesi (ihracat) numarası
+- `DABLNREF` — Banka işlemleri mantıksal referansı
+- `TRANSREF` — Entegrasyon bağlantı kodları mantıksal referansı
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `COLLATROLLREF` — COLLATRLROLL referansı
+- `COLLATTRNREF` — COLLATRLTRAN referansı
+- `COLLATCARDREF` — COLLATRLCARD referansı
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `AFFECTRISK` — Riski etkiler
+- `BNCRSOURCE` — Banka işlem fişi
+- `BNCRREF` — Banka kredileri (Port) referansı
+- `BNCRLNTYPE` — 0: Anapara; 1: Faiz; 2: Banka ve sigorta muameleleri vergisi; 3: KKDF; 4: Masraf ve komisyon ödeme fişi
+- `ORGLOGOID` — Veri Merkezi
+- `CSTRANSREF` — Çek / senet kartları
+- `REFLECTED` — KDV aktarıldı mı?
+- `REFLACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+
+### BNTOTFIL — Banka aylık toplamları
+
+- `LOGICALREF` — Aylık Banka Top. Log. Ref.
+- `CARDREF` — Banka Hesabı Logical Ref.
+- `TOTTYP` — Banka Toplam Türü
+- `MONTH_` — Ay
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `YEAR_` — Yıl
+
+### BOMASTER — Ürün reçeteleri
+
+- `LOGICALREF` — Ürün Reçetesi Logical Ref.
+- `CODE` — Ürün Reçetesi Kodu
+- `NAME` — Ürün Reçetesi Açıklaması
+- `VALIDREVREF` — Geçerli revizyon ref.
+- `MAINPRODREF` — Ana Ürün Ref.
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `DEMONTAJ` — Demontaj
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `ROUTINGREF` — Üretim rotası ref.
+- `PRODUCTLINEREF` — Üretim satırı ref.
+- `PRINTCNT` — Basılmış Olanların Sayısı
+
+### BOMLINE — Ürün reçete satırları
+
+- `LOGICALREF` — Ürün Reçetesi Satırı Logical Ref.
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `LINETYPE` — Satır Tipi
+- `LINENO_` — Satır Numarası
+- `OUTITEMREF` — Koşul Malzeme (Sınıf) Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `AMOUNT` — Miktar
+- `SCRAPFACT` — Fire Faktörü
+- `SCRAPCALC` — Fire Hesaplama Yöntemi
+- `SCALABLE` — Ölçeklenebilir
+- `ALTITEMUSE` — Alternatif malzeme kullanımı
+- `TEMPINUSE` — Konsinye kullanımı
+- `NEXTLEVELBOMREF` — Ürün Reçetesi Referansı
+- `SPECODE` — Özel Kod
+- `BOMLINEEXP` — Ürün Reçetesi Satır Açıklaması
+- `INVENNO` — Ambar Numarası
+- `ENGINEERING` — Mühendislik
+- `PRODUCTION` — Üretim
+- `COST` — Maliyet
+- `COSTRATE` — Maliyet Oranı
+- `FORMULA` — Formül
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `LINECLSTYPE` — Satır Tipi (0: Malzeme
+- `DETLINE` — Detay Satırı
+- `PREVLINEREF` — Üst malzeme satır ref.
+- `ROUTLINEREF` — Üretim rota satırı ref.
+- `OPERATIONREF` — İşlem ref.
+- `FORMULAITEMREF` — Malzeme Formül Ref.
+- `NEXTLEVREVREF` — Reçete Revizyon Ref. Sonraki Seviye
+- `EFFECTOPTIME` — Operasyon Süresini Etkiler
+- `DREF` — Dağıtım Şablonu Ref.
+- `BYDEFAULTEXISTS` — Ortak ürün veya yan ürün için varsayılan üretim durumu
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `USESTDCOST` — Standart maliyet kullanımı
+
+### BOMPARAM — Ürün reçetesi parametreleri
+
+- `LOGICALREF` — Ürün Reçetesi Parametresi Logical Ref.
+- `PARAMREF` — Parametre ref.
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `LINENR` — Satır Numarası
+- `PARAMDEFAULT` — Ürün Reçetesi Sabiti Öndeğeri
+
+### BOMREVSN — Ürün reçete revizyonları
+
+- `LOGICALREF` — Ürün Reçetesi Revizyonu Logical Ref.
+- `CODE` — Ürün Reçetesi Revizyon Kodu
+- `NAME` — Ürün Reçetesi Revizyon Açıklaması
+- `ACTIVE` — Kullanım durumu
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `ROUTINGREF` — Üretim rotası ref.
+- `ENGCHGREF` — Mühendislik Değişikliği Hareketleri Ref.
+- `REVDATE` — Geçerlilik tarihi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `QTYDEPTTIME` — Kullanımda Değil
+- `QTYUNDEPTTIME` — Kullanımda Değil
+- `STDOVHDFORMULA` — Standart genel gider maliyet formülü
+- `STDOVHDRPFORMULA` — Standart genel gider maliyet formülü (RD)
+- `QTYDEPDURATION` — Zamana bağımlı miktar (saat)
+- `QTYINDEPDURATION` — Zaman bağımsız miktar (saat)
+- `OVERLAPTYPE` — Örtüşme tipi
+- `OVERLAPAMNT` — Örtüşme miktarı
+- `OVERLAPPERC` — Örtüşme oranı
+- `STDOVHDFORMULA2` — Genel gider formülü 2 (yerel para birimi)
+- `STDOVHDRPFORMULA2` — Genel gider formülü 2 (raporlama dövizi)
+- `STDOVHDFORMULA3` — Genel gider formülü 3 (yerel para birimi)
+- `STDOVHDRPFORMULA3` — Genel gider formülü 3 (raporlama dövizi)
+- `STDOVHDFORMULA4` — Genel gider formülü 4 (yerel para birimi)
+- `STDOVHDRPFORMULA4` — Genel gider formülü 4 (raporlama dövizi)
+- `STDOVHDFORMULA5` — Genel gider formülü 5 (yerel para birimi)
+- `STDOVHDRPFORMULA5` — Genel gider formülü 5 (raporlama dövizi)
+
+### BOMVRNTFORMULA — Ürün reçetesi satırı varyant formülü (Port)
+
+- `LOGICALREF` — Ürün reçetesi satırı varyant formülü (Port) mantıksal referansı
+- `BOMLREF` — Ürün reçetesi satırları referansı
+- `TYP` — 1: Formül, 2: Koşul
+- `LINENR` — Satır numarası
+- `MAINITEMREF` — Malzeme kartı referansı
+- `MAINCHARREF` — Özellik kodları referansı
+- `ASGTYP` — 1=> Malzeme, 2=> Özellik
+- `CARDREF` — ASGTYPE 1=> Malzeme kartı referansı, 2=> Özellik değerleri
+- `LOGICOP` — 1=> VE, 2=> VEYA
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `MAINVALREF` — Özellik değerleri referansı
+
+### CAMPAIGN — Kampanya kartları
+
+- `LOGICALREF` — Kampanya Kartı Logial Ref.
+- `ACTIVE` — Kullanım durumu
+- `CARDTYPE` — Kart Türü
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BEGDATE` — Kampanya başlangıç tarihi
+- `ENDDATE` — Kampanya Bitiş Tarihi
+- `PRIORITYGRP` — Öncelik grubu
+- `PRIORITY` — Öncelik
+- `DONTFIXLINES` — Kampanya Koşullarını Sağlayan Malzeme Satırları Dağıtılabilir
+- `CLIENTCODE` — Cari Hesap Kodu
+- `CLSPECODE` — Cari Hesap Özel Kodu
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `PAYPLANCODE` — Ödeme planı kodu
+- `PPGROUPCODE` — Ödeme planı grup kodu
+- `TOWNCODE` — İlçe kodu
+- `DISTRICTCODE` — Semt Kodu
+- `CITYCODE` — Şehir Kodu
+- `COUNTRYCODE` — Ülke Kodu
+- `VARIABLEDEFS1` — Değişken tanımı 1
+- `VARIABLEDEFS2` — Değişken tanımı 2
+- `VARIABLEDEFS3` — Değişken tanımı 3
+- `VARIABLEDEFS4` — Değişken tanımı 4
+- `VARIABLEDEFS5` — Değişken tanımı 5
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `ORGLOGOID` — Veri Merkezi
+- `DOCDOCODE` — Fiş belge numarası
+- `DOCSPECODE` — Fiş özel kodu
+- `DOCCYPHCODE` — Fiş yetki kodu
+- `CLSPECODE2` — Cari hesap özel kodu 2
+- `CLSPECODE3` — Cari hesap özel kodu 3
+- `CLSPECODE4` — Cari hesap özel kodu 4
+- `CLSPECODE5` — Cari hesap özel kodu 5
+
+### CAPIDEF — Kuruluş bilgileri (ambar, işyer, fabrika vb.)
+
+- `LREF` — Fiziksel adres
+- `TYP` — İç kullanım
+- `OWNER` — İç kullanım
+- `ID` — İç kullanım
+- `LDATA` — İç kullanım
+
+### CDBTMP — Form boyutları
+
+- `LREF` — Fiziksel adres
+- `MODULE_` — İç kullanım
+- `INFOTYPE` — İç kullanım
+- `OBJID` — İç kullanım
+- `INSTID` — İç kullanım
+- `LDATA` — İç kullanım
+
+### CHARASGN — Malzeme özellik ataması
+
+- `LOGICALREF` — Malzeme Özellik Ataması Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `CHARCODEREF` — Malzeme Özellik Kodu Ref.
+- `CHARVALREF` — Malzeme Özellik Değeri Ref.
+- `LINENR` — Satır Numarası
+- `MATRIXLOC` — Matris Stok Yeri Bilgisi
+- `PRIORITY` — Öncelik
+
+### CHARCODE — Özellik kodları
+
+- `LOGICALREF` — Özellik Kodu Logical Ref.
+- `CODE` — Özellik Kodu
+- `NAME` — Özellik Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### CHARSET — Özellik seti (Port)
+
+- `LOGICALREF` — Özellik seti (Port) mantıksal referansı
+- `CODE` — Özellik seti kodu
+- `NAME` — Özellik seti adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### CHARSETASGN — CHARSETASGN
+
+- `LOGICALREF` — CHARSETASGN mantıksal referansı
+- `CHARSETREF` — Özellik seti (Port) referansı
+- `CHARCODEREF` — Özellik kodları referansı
+- `LINENR` — Satır numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### CHARVAL — Özellik değerleri
+
+- `LOGICALREF` — Özellik Değeri Logical Ref.
+- `CHARCODEREF` — Özellik Kodu Referansı
+- `VALNO` — Değer numarası
+- `CODE` — Değer kodu
+- `NAME` — Değer açıklaması
+
+### CITY — Şehirler
+
+- `LOGICALREF` — Fiziksel adres
+- `COUNTRY` — Ülke
+- `NAME` — Şehir adı
+
+### CLCARD — Cari hesap kartları
+
+- `LOGICALREF` — Cari Hesap Kartı Logical Ref.
+- `ACTIVE` — Kullanım durumu
+- `CARDTYPE` — Cari Hesap Kart Türü
+- `CODE` — Cari Hesap Kodu
+- `DEFINITION_` — Cari Hesap Ünvanı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ADDR1` — Adres İlk Satır
+- `ADDR2` — Adres İkinci Satır
+- `CITY` — Şehir Açıklaması
+- `COUNTRY` — Ülke Açıklaması
+- `POSTCODE` — Posta kodu
+- `TELNRS1` — Telefon Numarası 1
+- `TELNRS2` — Telefon Numarası 2
+- `FAXNR` — Faks Numarası
+- `TAXNR` — Vergi numarası
+- `TAXOFFICE` — Vergi dairesi
+- `INCHARGE` — İlgili
+- `DISCRATE` — İndirim yüzdesi
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `PAYMENTREF` — Ödeme Planı Referansı
+- `EMAILADDR` — E-Posta Adresi
+- `WEBADDR` — WEB adresi
+- `WARNMETHOD` — İhtar metodu
+- `WARNEMAILADDR` — E-Posta Adresi (İhtar)
+- `WARNFAXNR` — Faks Numarası
+- `CLANGUAGE` — Dil
+- `VATNR` — KDV numarası
+- `BLOCKED` — Engellenmiş
+- `BANKBRANCHS1` — Banka Şubesi Numarası 1
+- `BANKBRANCHS2` — Banka Şubesi Numarası 2
+- `BANKBRANCHS3` — Banka Şubesi Numarası 3
+- `BANKBRANCHS4` — Banka Şubesi Numarası 4
+- `BANKBRANCHS5` — Banka Şubesi Numarası 5
+- `BANKBRANCHS6` — Banka Şubesi Numarası 6
+- `BANKBRANCHS7` — Banka Şubesi Numarası 7
+- `BANKACCOUNTS1` — Banka Hesabı Numarası 1
+- `BANKACCOUNTS2` — Banka Hesabı Numarası 2
+- `BANKACCOUNTS3` — Banka Hesabı Numarası 3
+- `BANKACCOUNTS4` — Banka Hesabı Numarası 4
+- `BANKACCOUNTS5` — Banka Hesabı Numarası 5
+- `BANKACCOUNTS6` — Banka Hesabı Numarası 6
+- `BANKACCOUNTS7` — Banka Hesabı Numarası 7
+- `DELIVERYMETHOD` — Teslimat Şekli
+- `DELIVERYFIRM` — Taşıyıcı
+- `CCURRENCY` — Döviz Türü
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `EDINO` — Veri Aktarım No
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `PAYMENTPROC` — Borç izleme (0: döviz
+- `CRATEDIFFPROC` — Belirsiz
+- `WFSTATUS` — Kullanımda Değil
+- `PPGROUPCODE` — Ödeme planı grup kodu
+- `PPGROUPREF` — Ödeme Planları Grup Ref.
+- `TAXOFFCODE` — Vergi dairesi kodu
+- `TOWNCODE` — İlçe kodu
+- `TOWN` — İlçe açıklaması
+- `DISTRICTCODE` — Semt Kodu
+- `DISTRICT` — Semt Açıklaması
+- `CITYCODE` — Şehir Kodu
+- `COUNTRYCODE` — Ülke Kodu
+- `ORDSENDMETHOD` — Sipariş formu gönderim metodu
+- `ORDSENDEMAILADDR` — Sipariş formu gönderimi (e-mail adresi)
+- `ORDSENDFAXNR` — Sipariş formu gönderimi (faks numarası)
+- `DSPSENDMETHOD` — İrsaliye form gönderimi metodu
+- `DSPSENDEMAILADDR` — İrsaliye form gönderimi (e-mail adresi)
+- `DSPSENDFAXNR` — İrsaliye form gönderimi (faks numarası)
+- `INVSENDMETHOD` — Fatura Gönderim Metodu
+- `INVSENDEMAILADDR` — Fatura Gönderimi (E-Mail)
+- `INVSENDFAXNR` — Fatura Gönderimi (Faks)
+- `SUBSCRIBERSTAT` — Abone durumu
+- `SUBSCRIBEREXT` — Abone ek bilgi
+- `AUTOPAIDBANK` — Otomatik Ödeme Banka Kodu
+- `PAYMENTTYPE` — Ödeme türü
+- `LASTSENDREMLEV` — İhtar işlemleri seviyesi
+- `EXTACCESSFLAGS` — 1. E-iş ortamında erişilebilir 2. Satış noktalarında erişilebilir
+- `ORDSENDFORMAT` — Sipariş formu gönderim formatı
+- `DSPSENDFORMAT` — İrsaliye Formu Gönderim Formatı
+- `INVSENDFORMAT` — Fatura Gönderim Formatı
+- `REMSENDFORMAT` — İhtar formu gönderim formatı
+- `STORECREDITCARDNO` — Mağaza kredi kartı num.
+- `CLORDFREQ` — Sipariş sıklığı (gün)
+- `ORDDAY` — Sipariş Günleri
+- `LOGOID` — Logo ID
+- `LIDCONFIRMED` — Logo ID Onaylansın mı? (Evet / Hayır)
+- `EXPREGNO` — İhracat Birlik Plaka Numarası
+- `EXPDOCNO` — İhracat Belge Numarası
+- `EXPBUSTYPREF` — İhracat liman izni
+- `INVPRINTCNT` — Fatura Basım Sayısı
+- `PIECEORDINFLICT` — Parçalı sipariş teslimatı
+- `COLLECTINVOICING` — Toplu Faturalama
+- `EBUSDATASENDTYPE` — E-İş Veri Gönderim Bilgileri
+- `INISTATUSFLAGS` — Banka Fişi Ve Satış Faturaları İçin Öndeğer
+- `SLSORDERSTATUS` — Cari hesaptan LDX aracılığıyla gelen sipariş hareketlerinin içeriye hangi statüde alınacağını belirler.
+- `SLSORDERPRICE` — Cari hesaptan LDX aracılığıyla gelen sipariş hareketlerinin içeriye hangi statüde alınacağını belirler.
+- `LTRSENDMETHOD` — Mektup Yollama Metodu
+- `LTRSENDEMAILADDR` — E-Posta Adresi
+- `LTRSENDFAXNR` — Faks Numarası
+- `LTRSENDFORMAT` — Mektup Yollama Formatı
+- `IMAGEINC` — Resim
+- `CELLPHONE` — GSM Nr.
+- `SAMEITEMCODEUSE` — Aynı malzeme kodları kullanılacak
+- `STATECODE` — Eyalet Kodu
+- `STATENAME` — Eyalet İsmi
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+- `PARENTCLREF` — Cari hesap mantıksal referansı
+- `LOWLEVELCODES1` — Hiyerarşi kodu 1
+- `LOWLEVELCODES2` — Hiyerarşi kodu 2
+- `LOWLEVELCODES3` — Hiyerarşi kodu 3
+- `LOWLEVELCODES4` — Hiyerarşi kodu 4
+- `LOWLEVELCODES5` — Hiyerarşi kodu 5
+- `LOWLEVELCODES6` — Hiyerarşi kodu 6
+- `LOWLEVELCODES7` — Hiyerarşi kodu 7
+- `LOWLEVELCODES8` — Hiyerarşi kodu 8
+- `LOWLEVELCODES9` — Hiyerarşi kodu 9
+- `LOWLEVELCODES10` — Hiyerarşi kodu 10
+- `TELCODES1` — Alan kodu 1 (telefon)
+- `TELCODES2` — Alan kodu 2 (telefon)
+- `FAXCODE` — Alan kodu (faks)
+- `PURCHBRWS` — Satın alma için
+- `SALESBRWS` — Satış ve dağıtım için
+- `IMPBRWS` — İthalat için
+- `EXPBRWS` — İhracat için
+- `FINBRWS` — Finans için
+- `ORGLOGOID` — Veri Merkezi
+- `ADDTOREFLIST` — Referans listesine ekle
+- `TEXTREFTR` — GO sayfa düzenleyicisi (Türkçe)
+- `TEXTREFEN` — GO sayfa düzenleyicisi (İngilizce)
+- `ARPQUOTEINC` — Yorum
+- `CLCRM` — Cari hesap CRM içinde kullanılıyor mu?
+- `GRPFIRMNR` — Grup şirketi numarası
+- `CONSCODEREF` — CONSCODES referansı
+- `SPECODE2` — Özel kod 2
+- `SPECODE3` — Özel kod 3
+- `SPECODE4` — Özel kod 4
+- `SPECODE5` — Özel kod 5
+- `OFFSENDMETHOD` — Teklif/sözleşme gönderim yöntemi
+- `OFFSENDEMAILADDR` — Teklif/sözleşme e-posta adresi
+- `OFFSENDFAXNR` — Teklif/sözleşme faks numarası
+- `OFFSENDFORMAT` — Teklif/sözleşme gönderim biçimi
+- `EBANKNO` — Elektronik bankacılık
+- `LOANGRPCTRL` — Borç takip işlemleri grup şirketi bazında yapılacak
+- `BANKNAMES1` — Banka adı 1
+- `BANKNAMES2` — Banka adı 2
+- `BANKNAMES3` — Banka adı 3
+- `BANKNAMES4` — Banka adı 4
+- `BANKNAMES5` — Banka adı 5
+- `BANKNAMES6` — Banka adı 6
+- `BANKNAMES7` — Banka adı 7
+- `LDXFIRMNR` — Veri aktarımının şirketi
+
+### CLCOLLATERALRI — CLCOLLATERALRI
+
+- `LOGICALREF` — CLCollateralRisk mantıksal referansı
+- `CLCARDREF` — Cari Hesap Ref.
+- `RISKOVER` — Risk Kontrolü
+- `ORDRISKOVER` — Sipariş risk aşımı
+- `DESPRISKOVER` — İrsaliye risk aşımı
+- `USEREPRISK` — Risk takibinde kullanılacak
+- `PCOLLATRLTOTAL` — Alınan teminatlar toplamı
+- `REPPCOLLATRLTOTAL` — Alınan teminatlar toplamı (raporlama dövizi)
+- `SCOLLATRLTOTAL` — Verilen teminatlar toplamı
+- `REPSCOLLATRLTOTAL` — Verilen teminatlar toplamı (raporlama dövizi)
+- `REPRISKTOTAL` — RD risk toplamı
+- `DESPRISKTOTAL` — İrsaliye Risk Toplamı
+- `REPDESPRISKTOTAL` — RD irsaliye risk toplamı
+- `RISKLIMIT` — Risk Limiti
+- `REPRISKLIMIT` — RD risk limiti
+- `RISKBALANCED` — Sevkedilen (Ayarlanan) Risk
+- `REPRISKBALANCED` — RD ayarlanmış risk
+- `ORDRISKTOTAL` — Sipariş risk limiti
+- `REPORDRISKTOTAL` — Sipariş Risk Limiti (Raporlama Dövizi)
+- `ORDRISKTOTALSUGG` — Sipariş risk limiti (öneri)
+- `REPORDRISKTOTALSUGG` — Sipariş Risk Limiti (Öneri, Raporlama Dövizi)
+
+### CLFICHE — Cari hesap fişeri
+
+- `LOGICALREF` — Cari Hesap Fişi Logical Ref.
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `DOCODE` — Belge Numarası
+- `TRCODE` — Hareket türü
+- `SPECCODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `GENEXP1` — Açıklama
+- `GENEXP2` — Açıklama
+- `GENEXP3` — Açıklama
+- `GENEXP4` — Açıklama
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `REPDEBIT` — Borç (RD)
+- `REPCREDIT` — Alacak (RD)
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACCOUNTED` — Muhasebeleşen hesap ref.
+- `INVOREF` — Cari Hesap Hareketi Logical Ref.
+- `CASHACCREF` — Kasa muhasebe hesabı ref.
+- `CASHCENREF` — Kasa masraf merkezi ref.
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CANCELLED` — İptal Edilmiş
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `TIME` — Zaman
+- `CLCARDREF` — Müşteri Kartı Log. Ref.
+- `BANKACCREF` — Banka Hesabı Logical Ref.
+- `BNACCREF` — EMUHACC LOGICALREF
+- `BNCENTERREF` — EMCENTER LOGICALREF
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `POSCOMMACCREF` — Genel Muhasebe Hesapları Referansı
+- `POSCOMMCENREF` — Masraf Merkezi Referansı
+- `POINTCOMMACCREF` — Genel Muhasebe Hesapları Referansı
+- `POINTCOMMCENREF` — Masraf Merkezi Referansı
+- `PROJECTREF` — Proje Referansı
+- `STATUS` — Durumu
+- `WFLOWCRDREF` — İş akış kartı referansı
+- `ORGLOGOID` — Veri Merkezi
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `AFFECTRISK` — Riski etkiler
+- `POSTERMINALNR` — Kullanımda Değil
+- `POSTERMINALNUM` — POS terminal numarası
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### CLFLINE — Cari hesap hareketleri
+
+- `LOGICALREF` — Cari Hesap Hareketi Logical Ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `CLACCREF` — Cari Hesap Muhasebe Hesabı Ref.
+- `CLCENTERREF` — Cari Hesap Masraf Merkezi Ref.
+- `CASHCENTERREF` — Kasa masraf merkezi ref.
+- `CASHACCOUNTREF` — Kasa muhasebe hesabı ref.
+- `VIRMANREF` — Virman satırı ref.
+- `SOURCEFREF` — Tanımlanmış modülde fiş referansı
+- `DATE_` — Tarih
+- `DEPARTMENT` — Bölüm
+- `BRANCH` — İşyeri
+- `MODULENR` — Modül Numarası
+- `TRCODE` — Hareket türü
+- `LINENR` — Hareket türü: virman
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `TRANNO` — Hareket numarası
+- `DOCODE` — Belge Numarası
+- `LINEEXP` — Hareket açıklaması
+- `ACCOUNTED` — Muhasebeleştirildi
+- `SIGN` — Borç/Alacak İşareti
+- `AMOUNT` — Tutar
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `CANCELLED` — İptal Edilmiş
+- `TRGFLAG` — Trigger işareti
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `ONLYONEPAYLINE` — Tek satırlı ödeme planı
+- `DISCFLAG` — İndirim Satırı İşareti
+- `DISCRATE` — İndirim Oranı
+- `VATRATE` — KDV oranı
+- `CASHAMOUNT` — Nakit (İndirimli)
+- `DISCACCREF` — İndirim Genel Muhasebe Hesabı Ref.
+- `DISCCENREF` — İndirim Masraf Merkezi Ref.
+- `VATRACCREF` — KDV muhasebe hesabı ref.
+- `VATRCENREF` — KDV masraf merkezi ref.
+- `PAYMENTREF` — Ödeme Planı Referansı
+- `VATAMOUNT` — KDV tutarı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `INFIDX` — Enflasyon Endeksi
+- `POSCOMMACCREF` — Genel Muhasebe Hesapları Referansı
+- `POSCOMMCENREF` — Masraf Merkezi Referansı
+- `POINTCOMMACCREF` — Genel Muhasebe Hesapları Referansı
+- `POINTCOMMCENREF` — Masraf Merkezi Referansı
+- `CHEQINFO` — Çek Bilgisi
+- `CREDITCNO` — Açıklama 2
+- `CLPRJREF` — Proje Referansı
+- `STATUS` — Durumu
+- `EXIMFILEREF` — INVEXIMINFO mantıksal referansı
+- `EXIMPROCNR` — İthalat / ihracat işlem numarası
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+- `FUNDSHARERAT` — Fon payı oranı
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `REFLVATACCREF` — Genel Muhasebe Hesapları Referansı
+- `REFLVATOTHACCREF` — Genel Muhasebe Hesapları Referansı
+- `AFFECTRISK` — Riski etkiler
+- `BATCHNR` — Kullanımda Değil
+- `APPROVENR` — Kullanımda Değil
+- `BATCHNUM` — Parti numarası
+- `APPROVENUM` — Onay numarası
+- `EUVATSTATUS` — KDV hesaplama durumu
+- `ORGLOGOID` — Veri Merkezi
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### CLINTEL — Cari hesap istihbarat bilgileri
+
+- `LOGICALREF` — Cari Hesap İstihbarat Bilgisi Logical Ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `LINENUM` — Satır Numarası
+- `INTELLINE` — İstihbarat Bilgileri Satırı
+
+### CLRNUMS — Cari hesap risk tabloları
+
+- `LOGICALREF` — Cari Hesap Alacak Tablosu Logical Ref.
+- `CLCARDREF` — Cari Hesap Ref.
+- `RISKTYPE` — Risk Türü
+- `RISKOVER` — Risk Kontrolü
+- `PS` — Protestolu Senetler
+- `KC` — Karşılıksız Çekler
+- `RISKTOTAL` — Risk Toplamı
+- `DESPRISKTOTAL` — İrsaliye Risk Toplamı
+- `RISKLIMIT` — Risk Limiti
+- `RISKBALANCED` — Sevkedilen (Ayarlanan) Risk
+- `CEKRISKFACTOR` — Çek Risk Faktörü
+- `SENETRISKFACTOR` — Senet risk faktörü
+- `CEK0_DEBIT` — Çek (Borç)
+- `CEK0_CREDIT` — Çek (Alacak)
+- `CEK1_DEBIT` — Çek (Borç)
+- `CEK1_CREDIT` — Çek (Alacak)
+- `SENET0_DEBIT` — Senet - Borç
+- `SENET0_CREDIT` — Senet - Alacak
+- `SENET1_DEBIT` — Senet - Borç
+- `SENET1_CREDIT` — Senet - Alacak
+- `CEKCURR0_DEBIT` — Çek (Borç)
+- `CEKCURR0_CREDIT` — Çek (Alacak)
+- `CEKCURR1_DEBIT` — Çek (Borç)
+- `CEKCURR1_CREDIT` — Çek (Alacak)
+- `SENETCURR0_DEBIT` — Senet - Borç
+- `SENETCURR0_CREDIT` — Senet - Alacak
+- `SENETCURR1_DEBIT` — Senet - Borç
+- `SENETCURR1_CREDIT` — Senet - Alacak
+- `ORDRISKOVER` — Sipariş risk aşımı
+- `DESPRISKOVER` — İrsaliye risk aşımı
+- `USEREPRISK` — Risk takibinde kullanılacak
+- `REPRISKTOTAL` — RD risk toplamı
+- `REPDESPRISKTOTAL` — RD irsaliye risk toplamı
+- `REPRISKLIMIT` — RD risk limiti
+- `REPRISKBALANCED` — RD ayarlanmış risk
+- `REPPS` — RD protestolu senetler
+- `REPKC` — RD karşılıksız çekler
+- `ORDRISKTOTAL` — Sipariş risk limiti
+- `ORDRISKTOTALSUGG` — Sipariş risk limiti (öneri)
+- `REPORDRISKTOTAL` — RD sipariş risk toplamı
+- `REPORDRISKTOTALSUGG` — RD sipariş risk toplamı (öneri)
+- `RISKTYPES1` — Risk tipi 1
+- `RISKTYPES2` — Risk tipi 2
+- `RISKTYPES3` — Risk tipi 3
+- `RISKTYPES4` — Risk tipi 4
+- `RISKTYPES5` — Risk tipi 5
+- `RISKTYPES6` — Risk tipi 6
+- `RISKTYPES7` — Risk tipi 7
+- `RISKTYPES8` — Risk tipi 8
+- `RISKTYPES9` — Risk tipi 9
+- `RISKTYPES10` — Risk tipi 10
+- `RISKTYPES11` — Risk tipi 11
+- `RISKTYPES12` — Risk tipi 12
+- `RISKTYPES13` — Risk tipi 13
+- `RISKTYPES14` — Risk tipi 14
+- `RISKTYPES15` — Risk tipi 15
+- `CSTCEKRISKFACTOR` — Müşteri çeki risk oranı
+- `CSTSENETRISKFACTOR` — Müşteri senedi risk oranı
+- `RISKGRPCONTROL` — Risk işlemleri grup şirketi bazında yapılacak
+- `ACCRISKOVER` — Açık hesap risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `CSTCSRISKOVER` — Müşteri çek/senet risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `MYCSRISKOVER` — Firma çek/senet risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `RISKCTRLTYPE` — Risk kontrolü işlemler bazında yapılacak: 1: Evet; 0: Hayır
+- `ACCRISKTOTAL` — Açık hesap risk toplamı
+- `REPACCRISKTOTAL` — Açık hesap risk toplamı (raporlama dövizi)
+- `CSTCSRISKTOTAL` — Müşteri çek/senet risk toplamı
+- `REPCSTCSRISKTOTAL` — Müşteri çek/senet risk toplamı (raporlama dövizi)
+- `MYCSRISKTOTAL` — Firma çek/senet risk toplamı
+- `REPMYCSRISKTOTAL` — Firma çek/senet risk toplamı (raporlama dövizi)
+- `ACCRISKLIMIT` — Açık hesap risk limiti
+- `REPACCRISKLIMIT` — Açık hesap risk limiti (raporlama dövizi)
+- `CSTCSRISKLIMIT` — Müşteri çeki risk limiti
+- `REPCSTCSRISKLIMIT` — Müşteri çeki risk limiti (raporlama dövizi)
+- `MYCSRISKLIMIT` — Firma çeki risk limiti
+- `REPMYCSRISKLIMIT` — Firma çeki risk limiti (raporlama dövizi)
+- `DESPRISKLIMIT` — İrsaliye risk limiti
+- `REPDESPRISKLIMIT` — İrsaliye risk limiti (raporlama dövizi)
+- `ORDRISKLIMIT` — Sipariş risk limiti (sevk edilebilir)
+- `REPORDRISKLIMIT` — Sipariş risk limiti (sevk edilebilir) (raporlama dövizi)
+- `ORDRISKLIMITSUGG` — Sipariş risk limiti (öneri)
+- `REPORDRISKLIMITSUGG` — Sipariş risk limiti (öneri) (raporlama dövizi)
+- `ACCRSKBLNCED` — Açık hesap kapanan riski
+- `REPACCRSKBLNCED` — Açık hesap kapanan riski (raporlama dövizi)
+- `CSTCSRSKBLNCED` — Müşteri çeki / müşteri senedi kapanan riski
+- `REPCSTCSRSKBLNCED` — Müşteri çeki / müşteri senedi kapanan riski (raporlama dövizi)
+- `MYCSRSKBLNCED` — Firma çeki / firma senedi kapanan riski
+- `REPMYCSRSKBLNCED` — Firma çeki / firma senedi kapanan riski (raporlama dövizi)
+- `DESPRSKBLNCED` — İrsaliye kapanan riski
+- `REPDESPRSKBLNCED` — İrsaliye kapanan riski (raporlama dövizi)
+- `ORDRSKBLNCED` — Sipariş kapanan riski (sevk edilebilir)
+- `REPORDRSKBLNCED` — Sipariş kapanan riski (sevk edilebilir) (raporlama dövizi)
+- `ORDRSKBLNCEDSUG` — Sipariş kapanan riski (öneri)
+- `REPORDRSKBLNCEDSUG` — Sipariş kapanan riski (öneri) (raporlama dövizi)
+
+### CLTOTFIL — Cari hesap aylık toplamları
+
+- `LOGICALREF` — Aylık Cari Hesap Top. Log. Ref.
+- `CARDREF` — Müşteri Kartı Log. Ref.
+- `TOTTYP` — Cari Hesap Toplam Türü
+- `MONTH_` — Ay
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `YEAR_` — Yıl
+
+### CMPGNLINE — Kampanya satırları
+
+- `LOGICALREF` — Kampanya Satırı Logical Ref.
+- `CAMPCARDREF` — Kampanya Kartı Referansı
+- `LINENR` — Satır Numarası
+- `LINETYPE` — Satır Tipi
+- `APPLYTYPE` — Uygulama Türü
+- `CONDITEMCODE` — Koşul Malzeme Kodu
+- `CONDITION` — Koşul
+- `FORMULA` — Formül
+- `ITEMREF` — Malzeme Kartı Referansı
+- `USREF` — Birim Seti Referansı
+- `UOMREF` — Birim referansı
+- `PROMISCLASS` — Malzeme Sınıfı
+- `LINEEXP` — Satır Açıklaması
+- `ACCOUNTREF` — EMUHACC LOGICALREF
+- `CENTERREF` — EMCENTER LOGICALREF
+- `VARIANTREF` — Varyant (Port) referansı
+
+### CNTSLSMASG — İlgili kişi ile satış temsilcisi eşleştirmeleri
+
+- `LOGICALREF` — İlgili Kişiler - Satış Temsilcisi Ataması Log. Ref.
+- `SLSMREF` — Satış Temsilcisi Referansı
+- `CONTREF` — İlgili Kişi Ref.
+- `ENTRYID` — Microsoft Outlook Account Ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### COLLATRLCARD — COLLATRLCARD
+
+- `LOGICALREF` — COLLATRLCARD mantıksal referansı
+- `DOC` — Teminat türü
+- `CURRSTAT` — Mevcut Durum
+- `PERIODIC` — Süre bilgisi; 0: Süresiz, 1: Süreli
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş tarihi
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `COLLATRLTYPE` — Teminat türü 1
+- `COLLUSETYPE` — Teminat mektubu türü
+- `PROJECTREF` — Proje Referansı
+- `BANKREF` — Banka Hesapları Referansı
+- `BANKPROCTYPE` — Nakit detay işlem türü
+- `CLCARDREF` — Cari Hesap Ref.
+- `CLBANKNAME` — Banka adı (müşteri)
+- `CLBANKBRANCH` — Şube kodu (müşteri)
+- `CLBANKACCNO` — Hesap numarası (müşteri)
+- `LINEEXCTYP` — Döviz Türü
+- `TEXTINC` — Detay açıklama içerir
+- `AMOUNT` — Tutar
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `COMMTYPE` — Teminat mektubu komisyon türü
+- `COMMRATE` — Teminat mektubu komisyon oranı
+- `COMMAMOUNT` — Teminat mektubu komisyon tutarı
+- `BSMV` — BSMV tutarı
+- `STAMPTAX` — Damga vergisi tutarı
+- `CANCELLED` — İptal Edilmiş
+- `RISKFACTOR` — Teminat risk çarpanı
+- `DEFINITION_` — Tanım (teminat)
+- `OWING` — Borçlu
+- `SERINO` — Seri numarası
+- `MUHABIR` — Muhabir Şube
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `CITY` — Ödeme yeri
+- `KEFIL` — Kefil
+- `STAMPAMOUNT` — Pul (çek/senet)
+- `COMPAYOWNER` — Müşteri teminatı
+- `COMPAYBANKREF` — Banka Hesapları Referansı
+- `MORTGTYPE` — İpotek türü
+- `MORTGRANK` — İpotek derecesi
+- `MORTGYEVMINO` — İpotek yevmiye numarası
+- `MORTGCILTNO` — İpotek cilt numarası
+- `MORTGPAGENO` — İpotek sayfa numarası
+- `MORTGLINENO` — İpotek sıra numarası
+- `MORTGDATE` — İpotek tarihi
+- `MORTGPAFTANO` — İpotek pafta numarası
+- `MORTGADANO` — İpotek ada numarası
+- `MORTGPARSELNO` — İpotek parsel numarası
+- `MORTGAREA` — İpotek alanı
+- `MORTGBUILDAMNT` — İpotek arsa payı
+- `MORTGBLOCKNO` — İpotek blok numarası
+- `MORTGLAYERNO` — İpotek kat numarası
+- `MORTGINDPARTNO` — İpotek bağımsız bölüm numarası
+- `MORTGADDR1` — İpotek adresi 1
+- `MORTGADDR2` — İpotek adresi 2
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirme dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### COLLATRLROLL — COLLATRLROLL
+
+- `LOGICALREF` — CollatrlRoll mantıksal referansı
+- `CLCARDREF` — Cari Hesap Ref.
+- `CENTERREF` — Masraf merkezleri
+- `ROLLNO` — Fiş numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DATE_` — Tarih
+- `TRCODE` — Hareket türü
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `PROCTYPE` — Grup işlem fişi türü (yalnızca grup işlem fişleri için; diğerleri için 0)
+- `ACCOUNTED` — Muhasebeleştirildi
+- `DOCCNT` — Fişlere Ait Çek/Senet Sayısı
+- `PRINTCNT` — Toplam Basım Sayısı
+- `TOTAL` — Tutar
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — Hareket tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `GENEXP1` — Açıklama 1
+- `GENEXP2` — Açıklama 2
+- `GENEXP3` — Açıklama 3
+- `GENEXP4` — Açıklama 4
+- `ACCFICHEREF` — Muhasebe fişleri
+- `ACCREF` — Genel Muhasebe Hesapları
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturma saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirme dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirme saniyesi
+- `CANCELLED` — İptal Edilmiş
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PROJECTREF` — Proje Referansı
+
+### COLLATRLTRAN — COLLATRLTRAN
+
+- `LOGICALREF` — CollatrlTran mantıksal referansı
+- `DATE_` — Tarih
+- `COLLCARDREF` — COLLATRLCARD referansı
+- `COLLROLLREF` — COLLATRLROLL referansı
+- `TRCODE` — Hareket türü
+- `PROCTYPE` — Grup işlem fişi türü (yalnızca grup işlem fişleri için; diğerleri için 0)
+- `ACCOUNTED` — Muhasebeleştirildi
+- `STATUS` — Durumu
+- `CLCARDREF` — Cari Hesap Ref.
+- `BANKREF` — Banka Hesapları Referansı
+- `STATNO` — Statü numarası
+- `LINENO_` — Fişin hangi satır numarası
+- `ACCREF` — Genel Muhasebe Hesapları Referansı
+- `COSTREF` — Masraf Merkezi Referansı
+- `CRSACCREF` — Genel Muhasebe Hesapları Referansı
+- `CRSCOSTREF` — Masraf Merkezi Referansı
+- `CANCELLED` — İptal Edilmiş
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### COMPANSEACC — COMPANSEACC
+
+- `LOGICALREF` — Logical Reference
+- `CARDREF` — Hesap Kartı Logical Ref.
+- `ACCOUNTREF` — Karşı Hesap Log. Ref.
+- `TRNTYPE` — Hareket türü
+- `MIRRORACC` — Karşı hesap
+
+### CONTACTS — Müşteri / tedarikçi bağlantıları
+
+- `LOGICALREF` — Müşteri / Tedarikçi Bağlantısı
+- `NAME` — Adı
+- `MIDINIT` — İkinci adın baş harfi
+- `FAMNAME` — Soyadı
+- `TITLE` — Ünvan
+- `CSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `JOBTITLE` — İş Tanımı (Ünvanı)
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `WORKPHONE` — İş telefonu
+- `HOMEPHONE` — Ev Tel.
+- `MOBPHONE` — Mobil Telefon
+- `ASSTPHONE` — Asistan telefonu
+- `OFFICEFAX` — Ofis faks num.
+- `EMAILADDR` — E-Posta Adresi
+- `ADDR1` — Adres İlk Satır
+- `ADDR2` — Adres İkinci Satır
+- `CITY` — Şehir
+- `COUNTRY` — Ülke
+- `POSTCODE` — Posta kodu
+- `CONTCAT` — Kategori
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet
+- `COUNTRYCODE` — Ülke Kodu
+- `CITYCODE` — Şehir Kodu
+- `TOWNCODE` — İlçe kodu
+- `TOWN` — İlçe açıklaması
+- `DISTRICTCODE` — Semt Kodu
+- `DISTRICT` — Semt Açıklaması
+- `RECSTATUS` — Kayıt Durumu
+- `WORKPHCOD` — Alan kodu (iş telefonu)
+- `HOMEPHCOD` — Alan kodu (ev telefonu)
+- `MOBPHCOD` — Alan kodu (cep telefonu)
+- `ASSTPHCOD` — Alan kodu (asistan telefonu)
+- `OFFFAXCOD` — Alan kodu (ofis faksı)
+
+### CONTSPECDAYS — İlgili kişilerin özel günleri
+
+- `LOGICALREF` — İlgili Kişi Özel Günler Log. Ref.
+- `CONTREF` — Müşteri / Tedarikçi Bağlantıları
+- `SPECDATE` — Özel gün tarihi
+- `SPEDAYCAT` — Özel gün kategorisi
+- `PERSNOTE` — Özel not
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### COPRDBOM — Reçete-ek ürün ataması
+
+- `LOGICALREF` — Ürün Reçetesi - Ek Ürün Ataması Logical Ref.
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `COPRODREF` — Ek Ürün Ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### COSTDISTFC — Maliyet dağıtım fişleri
+
+- `LOGICALREF` — Muhasebeleştirildi
+- `FICHENO` — Maliyet dağıtım fişi numarası
+- `DATE_` — Maliyet dağıtım fişi tarihi
+- `FTIME` — Maliyet dağıtım fişi saati
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ACCOUNTED` — 1: Muhasebeleştiriliyor 0: Muhasebeleştirilmemiş
+- `ACCFICHEREF` — Muhasebe fişleri mantıksal referansı
+- `ACCOUNTEDCNT` — Muhasebeleştirme sayısı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### COSTDISTLN — Maliyet dağıtım fişi satırları
+
+- `LOGICALREF` — Maliyet dağıtım fişi satırları mantıksal referansı
+- `SRVREF` — Hizmet Kartları Mantıksal Referansı
+- `DATE_` — Fiş tarihi
+- `FTIME` — Fiş saati
+- `COSTDISTFCREF` — Maliyet dağıtım fişleri mantıksal referansı
+- `SRVFICHEREF` — Faturalar mantıksal referansı
+- `SRVTRANSREF` — Malzeme hareketleri mantıksal referansı
+- `LINENR` — Satır numarası
+- `SRVDISTTYPE` — Dağıtım Türü
+- `DISTTOTAL` — Dağılacak Toplam
+- `SRVACCREF` — Muhasebe hesapları mantıksal referansı
+- `SRVCENTERREF` — Masraf Merkezi Log. Ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### COSTDISTPEG — COSTDISTPEG
+
+- `LOGICALREF` — COSTDISTPEG mantıksal referansı
+- `COSTDISTFCREF` — Maliyet dağıtım fişleri mantıksal referansı
+- `COSTDISTLNREF` — Maliyet dağıtım fişi satırları mantıksal referansı
+- `SRVFICHEREF` — Faturalar mantıksal referansı
+- `SRVTRANSREF` — Malzeme hareketleri mantıksal referansı
+- `INVOICEREF` — Faturalar mantıksal referansı
+- `STFICHEREF` — Malzeme Fişleri Log. Ref.
+- `STTRANSREF` — Malzeme hareketleri mantıksal referansı
+- `PARENTSTTRREF` — Malzeme hareketleri mantıksal referansı
+- `EXIMWHFCREF` — İthalat / İhracat Ambar Fişi Referansı
+- `EXIMWHLNREF` — İthalat / İhracat Ambar Hareketi Log. Ref.
+- `LINENR` — Satır numarası
+- `ITEMREF` — Malzeme mantıksal referansı
+- `TOTALAMNT` — Miktar
+- `UNITPRICE` — Birim fiyat
+- `UNITRPPRICE` — Birim fiyat (RD)
+- `ADDEXPENSE` — Dağıtılan Masraf
+- `ADDRPEXPENSE` — Dağıtılan Masraf (RD)
+- `ISDISTRIBUTED` — 0: Maliyeti dağıtma, 1: Maliyeti dağıt
+- `DISTRATE` — Dağıtım Oranı
+- `DISTTOTAL` — Dağıtım Tutarı
+- `STACCREF` — Muhasebe hesapları mantıksal referansı
+- `STCENTERREF` — Masraf Merkezi Log. Ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `RECVSTTRANSREF` — Malzeme hareketleri mantıksal referansı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### COUNTRY — Ülkeler
+
+- `LOGICALREF` — Fiziksel adres
+- `CODE` — Ülke kodu
+- `NAME` — Ülke adı
+- `COUNTRYNR` — Ülke numarası
+- `STATESTR` — Eyalet için ayrılan alan
+
+### CRDACREF — Kart-Muhasbe kodları
+
+- `LOGICALREF` — Kart - Genel Muhasebe Kodu Logical Ref.
+- `TRCODE` — Kart Türü
+- `CARDREF` — Cari Hesap Kartı Ref.
+- `TYP` — Hareket türü
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `PROJECTREF` — Proje Referansı
+
+### CSCARD — Çek/Senet kartları
+
+- `LOGICALREF` — Çek / Senet Kartı Logical Ref.
+- `DOC` — Çek / Senet Türü
+- `CURRSTAT` — Mevcut Durum
+- `OURBANKREF` — Banka Çeki
+- `PORTFOYNO` — Portföy numarası
+- `SERINO` — Çek Numarası
+- `BANKNAME` — Banka Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CITY` — Şehir (Ödeme Yeri)
+- `OWING` — Borçlu - Çek/Senet
+- `KEFIL` — Kefil
+- `MUHABIR` — Muhabir
+- `BRANCH` — Şube
+- `DUEDATE` — Vade
+- `SETDATE` — Tanzim Tarihi
+- `STAMP` — Pul
+- `AMOUNT` — Tutar
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `RISKUPDATE` — Riskten düşülecek
+- `DEVIR` — Devir
+- `INUSE` — Kullanımda
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `COLLREPRATE` — Tahsilatta RD Kuru
+- `COLLTRRATE` — Tahsilatta işlem dövizi kuru
+- `CANCELLED` — İptal Edilmiş
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `BNBRANCHNO` — Banka Şubesi Numarası
+- `BNACCOUNTNO` — Banka Hesabı Numarası
+- `DEPTADDR1` — Borçlu Adresi 1
+- `DEPTADDR2` — Borçlu Adresi 2
+- `DEPTCITY` — Borçlu - Şehir Açıklaması
+- `DEPTCITYCODE` — Borçlu - Şehir Kodu
+- `DEPTCOUNTRY` — Borçlu - Ülke Açıklaması
+- `DEPTCOUNTRYCODE` — Borçlu - Ülke Kodu
+- `DEPTPOSTCODE` — Borçlu - Posta Kodu
+- `DEPTTELNRS1` — Borçlu - Telefon Numarası 1
+- `DEPTTELNRS2` — Borçlu - Telefon Numarası 2
+- `DEPTFAXNR` — Borçlu - Faks Numarası
+- `DEPTTOWN` — Borçlu - İlçe Açıklaması
+- `DEPTTOWNCODE` — Borçlu - İlçe Kodu
+- `DEPTDISTRICT` — Borçlu - Semt Açıklaması
+- `DEPTDISTRICTCODE` — Borçlu - Semt Kodu
+- `OPSTAT` — Hareket durumu
+- `PRINTCNT` — Basılmış Olanların Sayısı
+- `NEWSERINO` — Yeni seri num.
+- `PROJECTREF` — Proje Referansı
+- `TELCODES1` — Alan kodu 1 (telefon)
+- `TELCODES2` — Alan kodu 2 (telefon)
+- `FAXCODE` — Alan kodu 1 (faks)
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `COLLATROLLREF` — COLLATRLROLL referansı
+- `COLLATCARDREF` — COLLATRLCARD referansı
+- `AFFECTRISK` — Riski etkiler
+- `GIROREPRATE` — Ciro tahsilat kuru (raporlama dövizi)
+- `GIROTRRATE` — Ciro tahsilat kuru (işlem dövizi)
+- `ORGLOGOID` — Veri Merkezi
+- `GIROAMOUNT` — Ciro tutarı
+- `GIROREPNET` — Ciro raporlama tutarı
+- `USEGIRORATE` — Cari hesap bakiyesi etkilenecek: 1: Evet; 0: Hayır
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### CSHTOTS — Kasa aylık toplamları
+
+- `LOGICALREF` — Kasa aylık toplamları log. Ref.
+- `CARDREF` — KSCARD LOGICALREF
+- `TOTTYPE` — Nakit Toplam Türü
+- `DAY_` — Gün
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `DATE_` — Tarih
+
+### CSROLL — Çek/Senet bordroları
+
+- `LOGICALREF` — Çek / Senet Fişi Logical Ref.
+- `CARDREF` — Banka Hesabı Referansı
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ROLLNO` — Fiş numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DATE_` — Tarih
+- `TRCODE` — Hareket türü
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `DESTBRANCH` — Hedef işyeri
+- `DESTDEPARTMENT` — Hedef bölüm
+- `CARDMD` — Kart Modül Numarası
+- `PROCTYPE` — İşlem Bordrosu Türü
+- `ONEPAYLINE` — (Ortalama) Tek Satırdaki Ödeme
+- `FROMCASH` — Kasadan
+- `ACCOUNTED` — Muhasebeleştirildi
+- `AVERAGEAGE` — Ortalama Yaş
+- `DOCCNT` — Fişlere Ait Çek/Senet Sayısı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `TOTAL` — Tutar
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — Hareket tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `GENEXP1` — Açıklama
+- `GENEXP2` — Açıklama
+- `GENEXP3` — Açıklama
+- `GENEXP4` — Açıklama
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `CASHTRANSREF` — Kasa hareketi ref.
+- `ACCREF` — Genel Muhasebe Hesabı Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `CANCELLED` — İptal Edilmiş
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `OPSTAT` — Hareket durumu
+- `INFIDX` — Enflasyon Endeksi
+- `PROJECTREF` — Proje Referansı
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `COLLATROLLREF` — COLLATRLROLL referansı
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `AFFECTRISK` — Riski etkiler
+- `BNCREREF` — Banka kredileri (Port) referansı
+- `ORGLOGOID` — Veri Merkezi
+- `FROMBANK` — Bankadan
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### CSTRANS — Çek/Senet hareketleri
+
+- `LOGICALREF` — Çek / Senet Hareketi Logical Ref.
+- `DATE_` — Tarih
+- `CSREF` — Çek / Senet Kartı Ref.
+- `ROLLREF` — Fiş ref.
+- `TRCODE` — Hareket türü
+- `ACCOUNTED` — Muhasebeleştirildi
+- `DEVIR` — Devir
+- `STATUS` — Durumu
+- `CARDMD` — Kart Modül Numarası
+- `CARDREF` — Kart Referansı
+- `STATNO` — Statü numarası
+- `LINENO_` — Fişin hangi satır numarası
+- `ACCREF` — Genel Muhasebe Hesabı Ref.
+- `COSTREF` — Masraf Merkezi Ref.
+- `CRSACCREF` — Kapanmış Hesabın Genel Muhasebe Hesabı Ref.
+- `CRSCOSTREF` — Kapanmış Hesap Masraf Merkezi Ref.
+- `FROMCASH` — Kasadan
+- `CANCELLED` — İptal Edilmiş
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `OPSTAT` — Hareket durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `PROVLNACCREF` — Muhasebe hesapları mantıksal referansı
+- `PROVLNCOSTREF` — Masraf Merkezi Log. Ref.
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `AFFECTRISK` — Riski etkiler
+- `ORGLOGOID` — Veri Merkezi
+- `USEGIRORATE` — Cari hesap bakiyesi etkilenecek: 1: Evet; 0: Hayır
+- `FROMBANK` — Bankadan
+
+### CSTVND — Müşteri / tedarikçi bilgileri
+
+- `LOGICALREF` — Müşteri / Tedarikçi Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `CARDTYPE` — Kart Türü
+- `CODE` — Kod
+- `TITLE` — Ünvan
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ADDR1` — Adres İlk Satır
+- `ADDR2` — Adres İkinci Satır
+- `CITY` — Şehir
+- `COUNTRY` — Ülke
+- `ORIGIN` — Geldiği Ülke
+- `POSTCODE` — Posta kodu
+- `TELNR1` — Telefon Numarası 1
+- `TELNR2` — Telefon Numarası 2
+- `FAXNR` — Faks Numarası
+- `CLANGUAGE` — Dil
+- `CCURRENCY` — Döviz
+- `WEBURL` — WEB adresi
+- `CUSTCAT` — Tür (kategori)
+- `GROUPORG` — Şirket Grubu
+- `PARENTORG` — Ana Firma
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `PRIMARYCONTREF` — İlgili Kişiler Log. Ref.
+- `COUNTRYCODE` — Ülke Kodu
+- `CITYCODE` — Şehir Kodu
+- `TOWNCODE` — İlçe kodu
+- `TOWN` — İlçe açıklaması
+- `DISTRICTCODE` — Semt Kodu
+- `DISTRICT` — Semt Açıklaması
+- `RECSTATUS` — Kayıt Durumu
+- `RIVALFIRM` — Rakip Firma
+- `TELCODES1` — Alan kodu 1 (telefon)
+- `TELCODES2` — Alan kodu 2 (telefon)
+- `FAXCODE` — Alan kodu (faks)
+
+### CVARPASG — Müşteri / tedarikçi ile cari hesap eşleştirmeleri
+
+- `LOGICALREF` — Müşteri / Tedarikçi - Cari Hesap Ataması
+- `CSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `ARPREF` — Cari Hesap Ref.
+- `FIRMNO` — Firma Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `DEFAULTFLG` — Cari Hesap Öndeğer
+
+### CVINDASG — Müşteri / tedarikçi ile sektör eşleştirmeleri
+
+- `LOGICALREF` — Müşteri / Tedarikçi - Sektör Ataması
+- `CSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `INDREF` — Sektör referansı
+- `PRIMARYFLG` — Ana Sektör İşareti
+- `ANNVOLUME` — Yıllık Hacim
+- `VOLCURR` — Hacim numarası için döviz
+- `ANNVOLUMERC` — Yıllık Hacim (Raporlama Dövizi)
+- `EMPLOYEECNT` — Çalışan sayısı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DAILYEXCHANGES — Günlük döviz kurları
+
+- `LREF` — Fiziksel adres
+- `DATE_` — Tarih
+- `CRTYPE` — Döviz türü
+- `RATES1` — Oran1
+- `RATES2` — Oran2
+- `RATES3` — Oran3
+- `RATES4` — Oran4
+
+### DATAEXCHHISTOR — DATAEXCHHISTOR
+
+- `LOGICALREF` — Özel ID
+- `DOCTYPE` — Belge / Modül Türü
+- `DOCREF` — İlgili belge ref.
+- `LOGOID` — Logo ID
+- `SAVETYPE` — Kayıt türü
+- `OPTYPE` — 0: Ekleme 1: Güncelleme 2: Silme
+- `TRANSID` — Özel ID
+- `TRANSTYPE` — 1. Gönderilmiş 2. Alım İrsaliyesi
+- `CREATEDDATE` — Oluşturulma Tarihi
+- `CREATEDTIME` — Oluşturulma Zamanı
+- `DESCRIPTION` — Açıklama
+- `DOCMODDATE` — Belge değiştirilme tarihi
+- `DOCMODHOUR` — Belge değiştirilme saati
+- `DOCMODMIN` — Belge değiştirilme dakikası
+- `DOCMODSEC` — Belge değiştirilme saniyesi
+- `RECVPACKID` — LDX paket numarası
+
+### DECARDS — İndirim/Masraf kartları
+
+- `LOGICALREF` — İndirim / Masraf Kartı Log. Ref.
+- `CARDTYPE` — İndirim / Masraf Kart Türü
+- `CODE` — İndirim / Masraf Kart Kodu
+- `DEFINITION_` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FORMULA` — Formül
+- `RNDVAL` — Yuvarlama tabanı
+- `VAT` — KDV
+- `COUNTER` — Sayaç
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `UNITSTR` — Birim
+- `LPRODSTAT` — Üretim durumu
+- `ACTIVE` — İndirim / Masraf Kart Durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `EXTACCESSFLAGS` — Satış noktalarında erişilebilir
+
+### DEFNFLDSCARDV — DEFNFLDSCARDV
+
+- `LOGICALREF` — DEFNFLDSCARDV Logical Reference
+- `MODULENR` — Modül Numarası
+- `LEVEL_` — Seviye
+- `PARENTREF` — Modül Numarası Ref.
+- `OWNERREF` — Malzeme Hareketleri Ref.
+- `TEXTFLDS1` — Kullanıcı tanımlı alan 1 (text)
+- `TEXTFLDS2` — Kullanıcı tanımlı alan 2 (text)
+- `TEXTFLDS3` — Kullanıcı tanımlı alan 3 (text)
+- `TEXTFLDS4` — Kullanıcı tanımlı alan 4 (text)
+- `TEXTFLDS5` — Kullanıcı tanımlı alan 5 (text)
+- `TEXTFLDS6` — Kullanıcı tanımlı alan 6 (text)
+- `TEXTFLDS7` — Kullanıcı tanımlı alan 7 (text)
+- `TEXTFLDS8` — Kullanıcı tanımlı alan 8 (text)
+- `TEXTFLDS9` — Kullanıcı tanımlı alan 9 (text)
+- `TEXTFLDS10` — Kullanıcı tanımlı alan 10 (text)
+- `TEXTFLDS11` — Kullanıcı tanımlı alan 11 (text)
+- `TEXTFLDS12` — Kullanıcı tanımlı alan 12 (text)
+- `TEXTFLDS13` — Kullanıcı tanımlı alan 13 (text)
+- `TEXTFLDS14` — Kullanıcı tanımlı alan 14 (text)
+- `TEXTFLDS15` — Kullanıcı tanımlı alan 15 (text)
+- `TEXTFLDS16` — Kullanıcı tanımlı alan 16 (text)
+- `TEXTFLDS17` — Kullanıcı tanımlı alan 17 (text)
+- `TEXTFLDS18` — Kullanıcı tanımlı alan 18 (text)
+- `TEXTFLDS19` — Kullanıcı tanımlı alan 19 (text)
+- `TEXTFLDS20` — Kullanıcı tanımlı alan 20 (text)
+- `TEXTFLDS21` — Kullanıcı tanımlı alan 21 (text)
+- `TEXTFLDS22` — Kullanıcı tanımlı alan 22 (text)
+- `TEXTFLDS23` — Kullanıcı tanımlı alan 23 (text)
+- `TEXTFLDS24` — Kullanıcı tanımlı alan 24 (text)
+- `TEXTFLDS25` — Kullanıcı tanımlı alan 25 (text)
+- `TEXTFLDS26` — Kullanıcı tanımlı alan 26 (text)
+- `TEXTFLDS27` — Kullanıcı tanımlı alan 27 (text)
+- `TEXTFLDS28` — Kullanıcı tanımlı alan 28 (text)
+- `TEXTFLDS29` — Kullanıcı tanımlı alan 29 (text)
+- `TEXTFLDS30` — Kullanıcı tanımlı alan 30 (text)
+- `TEXTFLDS31` — Kullanıcı tanımlı alan 31 (text)
+- `TEXTFLDS32` — Kullanıcı tanımlı alan 32 (text)
+- `TEXTFLDS33` — Kullanıcı tanımlı alan 33
+- `TEXTFLDS34` — Kullanıcı tanımlı alan 34
+- `TEXTFLDS35` — Kullanıcı tanımlı alan 35
+- `TEXTFLDS36` — Kullanıcı tanımlı alan 36
+- `TEXTFLDS37` — Kullanıcı tanımlı alan 37
+- `TEXTFLDS38` — Kullanıcı tanımlı alan 38
+- `TEXTFLDS39` — Kullanıcı tanımlı alan 39
+- `TEXTFLDS40` — Kullanıcı tanımlı alan 40
+- `TEXTFLDS41` — Kullanıcı tanımlı alan 41
+- `TEXTFLDS42` — Kullanıcı tanımlı alan 42
+- `TEXTFLDS43` — Kullanıcı tanımlı alan 43
+- `TEXTFLDS44` — Kullanıcı tanımlı alan 44 (text)
+- `TEXTFLDS45` — Kullanıcı tanımlı alan 45 (text)
+- `TEXTFLDS46` — Kullanıcı tanımlı alan 46 (text)
+- `TEXTFLDS47` — Kullanıcı tanımlı alan 47 (text)
+- `TEXTFLDS48` — Kullanıcı tanımlı alan 48 (text)
+- `TEXTFLDS49` — Kullanıcı tanımlı alan 49 (text)
+- `TEXTFLDS50` — Kullanıcı tanımlı alan 50 (text)
+- `NUMFLDS1` — Kullanıcı tanımlı alan 1 (numerik)
+- `NUMFLDS2` — Kullanıcı tanımlı alan 2 (numerik)
+- `NUMFLDS3` — Kullanıcı tanımlı alan 3 (numerik)
+- `NUMFLDS4` — Kullanıcı tanımlı alan 4 (numerik)
+- `NUMFLDS5` — Kullanıcı tanımlı alan 5 (numerik)
+- `NUMFLDS6` — Kullanıcı tanımlı alan 6 (numerik)
+- `NUMFLDS7` — Kullanıcı tanımlı alan 7 (numerik)
+- `NUMFLDS8` — Kullanıcı tanımlı alan 8 (numerik)
+- `NUMFLDS9` — Kullanıcı tanımlı alan 9 (numerik)
+- `NUMFLDS10` — Kullanıcı tanımlı alan 10 (numerik)
+- `NUMFLDS11` — Kullanıcı tanımlı alan 11 (numerik)
+- `NUMFLDS12` — Kullanıcı tanımlı alan 12 (numerik)
+- `NUMFLDS13` — Kullanıcı tanımlı alan 13 (numerik)
+- `NUMFLDS14` — Kullanıcı tanımlı alan 14 (numerik)
+- `NUMFLDS15` — Kullanıcı tanımlı alan 15 (numerik)
+- `NUMFLDS16` — Kullanıcı tanımlı alan 16 (numerik)
+- `NUMFLDS17` — Kullanıcı tanımlı alan 17 (numerik)
+- `NUMFLDS18` — Kullanıcı tanımlı alan 18 (numerik)
+- `NUMFLDS19` — Kullanıcı tanımlı alan 19 (numerik)
+- `NUMFLDS20` — Kullanıcı tanımlı alan 20 (numerik)
+- `NUMFLDS21` — Kullanıcı tanımlı alan 21 (numerik)
+- `NUMFLDS22` — Kullanıcı tanımlı alan 22 (numerik)
+- `NUMFLDS23` — Kullanıcı tanımlı alan 23 (numerik)
+- `NUMFLDS24` — Kullanıcı tanımlı alan 24 (numerik)
+- `NUMFLDS25` — Kullanıcı tanımlı alan 25 (numerik)
+- `NUMFLDS26` — Kullanıcı tanımlı alan 26 (numerik)
+- `NUMFLDS27` — Kullanıcı tanımlı alan 27 (numerik)
+- `NUMFLDS28` — Kullanıcı tanımlı alan 28 (numerik)
+- `NUMFLDS29` — Kullanıcı tanımlı alan 29 (numerik)
+- `NUMFLDS30` — Kullanıcı tanımlı alan 30 (numerik)
+- `NUMFLDS31` — Kullanıcı tanımlı alan 31 (numerik)
+- `NUMFLDS32` — Kullanıcı tanımlı alan 32 (numerik)
+- `NUMFLDS33` — Kullanıcı tanımlı alan 33 (numerik)
+- `NUMFLDS34` — Kullanıcı tanımlı alan 34 (numerik)
+- `NUMFLDS35` — Kullanıcı tanımlı alan 35 (numerik)
+- `NUMFLDS36` — Kullanıcı tanımlı alan 36 (numerik)
+- `NUMFLDS37` — Kullanıcı tanımlı alan 37 (numerik)
+- `NUMFLDS38` — Kullanıcı tanımlı alan 38 (numerik)
+- `NUMFLDS39` — Kullanıcı tanımlı alan 39 (numerik)
+- `NUMFLDS40` — Kullanıcı tanımlı alan 40 (numerik)
+- `NUMFLDS41` — Kullanıcı tanımlı alan 41 (numerik)
+- `NUMFLDS42` — Kullanıcı tanımlı alan 42 (numerik)
+- `NUMFLDS43` — Kullanıcı tanımlı alan 43 (numerik)
+- `NUMFLDS44` — Kullanıcı tanımlı alan 44 (numerik)
+- `NUMFLDS45` — Kullanıcı tanımlı alan 45 (numerik)
+- `NUMFLDS46` — Kullanıcı tanımlı alan 46 (numerik)
+- `NUMFLDS47` — Kullanıcı tanımlı alan 47 (numerik)
+- `NUMFLDS48` — Kullanıcı tanımlı alan 48 (numerik)
+- `NUMFLDS49` — Kullanıcı tanımlı alan 49 (numerik)
+- `NUMFLDS50` — Kullanıcı tanımlı alan 50 (numerik)
+- `RECSTATUS` — Kayıt Durumu
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DEFNFLDSTRANV — DEFNFLDSTRANV
+
+- `LOGICALREF` — DEFNFLDSTRANV Logical Reference
+- `MODULENR` — Modül Numarası
+- `LEVEL_` — Seviye
+- `PARENTREF` — Modül Numarası Ref.
+- `OWNERREF` — Malzeme Hareketi Ref.
+- `TEXTFLDS1` — Kullanıcı tanımlı alan 1 (text)
+- `TEXTFLDS2` — Kullanıcı tanımlı alan 2 (text)
+- `TEXTFLDS3` — Kullanıcı tanımlı alan 3 (text)
+- `TEXTFLDS4` — Kullanıcı tanımlı alan 4 (text)
+- `TEXTFLDS5` — Kullanıcı tanımlı alan 5 (text)
+- `TEXTFLDS6` — Kullanıcı tanımlı alan 6 (text)
+- `TEXTFLDS7` — Kullanıcı tanımlı alan 7 (text)
+- `TEXTFLDS8` — Kullanıcı tanımlı alan 8 (text)
+- `TEXTFLDS9` — Kullanıcı tanımlı alan 9 (text)
+- `TEXTFLDS10` — Kullanıcı tanımlı alan 10 (text)
+- `TEXTFLDS11` — Kullanıcı tanımlı alan 11 (text)
+- `TEXTFLDS12` — Kullanıcı tanımlı alan 12 (text)
+- `TEXTFLDS13` — Kullanıcı tanımlı alan 13 (text)
+- `TEXTFLDS14` — Kullanıcı tanımlı alan 14 (text)
+- `TEXTFLDS15` — Kullanıcı tanımlı alan 15 (text)
+- `TEXTFLDS16` — Kullanıcı tanımlı alan 16 (text)
+- `TEXTFLDS17` — Kullanıcı tanımlı alan 17 (text)
+- `TEXTFLDS18` — Kullanıcı tanımlı alan 18 (text)
+- `TEXTFLDS19` — Kullanıcı tanımlı alan 19 (text)
+- `TEXTFLDS20` — Kullanıcı tanımlı alan 20 (text)
+- `TEXTFLDS21` — Kullanıcı tanımlı alan 21 (text)
+- `TEXTFLDS22` — Kullanıcı tanımlı alan 22 (text)
+- `TEXTFLDS23` — Kullanıcı tanımlı alan 23 (text)
+- `TEXTFLDS24` — Kullanıcı tanımlı alan 24 (text)
+- `TEXTFLDS25` — Kullanıcı tanımlı alan 25 (text)
+- `TEXTFLDS26` — Kullanıcı tanımlı alan 26 (text)
+- `TEXTFLDS27` — Kullanıcı tanımlı alan 27 (text)
+- `TEXTFLDS28` — Kullanıcı tanımlı alan 28 (text)
+- `TEXTFLDS29` — Kullanıcı tanımlı alan 29 (text)
+- `TEXTFLDS30` — Kullanıcı tanımlı alan 30 (text)
+- `TEXTFLDS31` — Kullanıcı tanımlı alan 31 (text)
+- `TEXTFLDS32` — Kullanıcı tanımlı alan 32 (text)
+- `TEXTFLDS33` — Kullanıcı tanımlı alan 33 (text)
+- `TEXTFLDS34` — Kullanıcı tanımlı alan 34 (text)
+- `TEXTFLDS35` — Kullanıcı tanımlı alan 35 (text)
+- `TEXTFLDS36` — Kullanıcı tanımlı alan 36 (text)
+- `TEXTFLDS37` — Kullanıcı tanımlı alan 37 (text)
+- `TEXTFLDS38` — Kullanıcı tanımlı alan 38 (text)
+- `TEXTFLDS39` — Kullanıcı tanımlı alan 39 (text)
+- `TEXTFLDS40` — Kullanıcı tanımlı alan 40 (text)
+- `TEXTFLDS41` — Kullanıcı tanımlı alan 41 (text)
+- `TEXTFLDS42` — Kullanıcı tanımlı alan 42 (text)
+- `TEXTFLDS43` — Kullanıcı tanımlı alan 43 (text)
+- `TEXTFLDS44` — Kullanıcı tanımlı alan 44 (text)
+- `TEXTFLDS45` — Kullanıcı tanımlı alan 45 (text)
+- `TEXTFLDS46` — Kullanıcı tanımlı alan 46 (text)
+- `TEXTFLDS47` — Kullanıcı tanımlı alan 47 (text)
+- `TEXTFLDS48` — Kullanıcı tanımlı alan 48 (text)
+- `TEXTFLDS49` — Kullanıcı tanımlı alan 49 (text)
+- `TEXTFLDS50` — Kullanıcı tanımlı alan 50 (text)
+- `NUMFLDS1` — Kullanıcı tanımlı alan 1 (numerik)
+- `NUMFLDS2` — Kullanıcı tanımlı alan 2 (numerik)
+- `NUMFLDS3` — Kullanıcı tanımlı alan 3 (numerik)
+- `NUMFLDS4` — Kullanıcı tanımlı alan 4 (numerik)
+- `NUMFLDS5` — Kullanıcı tanımlı alan 5 (numerik)
+- `NUMFLDS6` — Kullanıcı tanımlı alan 6 (numerik)
+- `NUMFLDS7` — Kullanıcı tanımlı alan 7 (numerik)
+- `NUMFLDS8` — Kullanıcı tanımlı alan 8 (numerik)
+- `NUMFLDS9` — Kullanıcı tanımlı alan 9 (numerik)
+- `NUMFLDS10` — Kullanıcı tanımlı alan 10 (numerik)
+- `NUMFLDS11` — Kullanıcı tanımlı alan 11 (numerik)
+- `NUMFLDS12` — Kullanıcı tanımlı alan 12 (numerik)
+- `NUMFLDS13` — Kullanıcı tanımlı alan 13 (numerik)
+- `NUMFLDS14` — Kullanıcı tanımlı alan 14 (numerik)
+- `NUMFLDS15` — Kullanıcı tanımlı alan 15 (numerik)
+- `NUMFLDS16` — Kullanıcı tanımlı alan 16 (numerik)
+- `NUMFLDS17` — Kullanıcı tanımlı alan 17 (numerik)
+- `NUMFLDS18` — Kullanıcı tanımlı alan 18 (numerik)
+- `NUMFLDS19` — Kullanıcı tanımlı alan 19 (numerik)
+- `NUMFLDS20` — Kullanıcı tanımlı alan 20 (numerik)
+- `NUMFLDS21` — Kullanıcı tanımlı alan 21 (numerik)
+- `NUMFLDS22` — Kullanıcı tanımlı alan 22 (numerik)
+- `NUMFLDS23` — Kullanıcı tanımlı alan 23 (numerik)
+- `NUMFLDS24` — Kullanıcı tanımlı alan 24 (numerik)
+- `NUMFLDS25` — Kullanıcı tanımlı alan 25 (numerik)
+- `NUMFLDS26` — Kullanıcı tanımlı alan 26 (numerik)
+- `NUMFLDS27` — Kullanıcı tanımlı alan 27 (numerik)
+- `NUMFLDS28` — Kullanıcı tanımlı alan 28 (numerik)
+- `NUMFLDS29` — Kullanıcı tanımlı alan 29 (numerik)
+- `NUMFLDS30` — Kullanıcı tanımlı alan 30 (numerik)
+- `NUMFLDS31` — Kullanıcı tanımlı alan 31 (numerik)
+- `NUMFLDS32` — Kullanıcı tanımlı alan 32 (numerik)
+- `NUMFLDS33` — Kullanıcı tanımlı alan 33 (numerik)
+- `NUMFLDS34` — Kullanıcı tanımlı alan 34 (numerik)
+- `NUMFLDS35` — Kullanıcı tanımlı alan 35 (numerik)
+- `NUMFLDS36` — Kullanıcı tanımlı alan 36 (numerik)
+- `NUMFLDS37` — Kullanıcı tanımlı alan 37 (numerik)
+- `NUMFLDS38` — Kullanıcı tanımlı alan 38 (numerik)
+- `NUMFLDS39` — Kullanıcı tanımlı alan 39 (numerik)
+- `NUMFLDS40` — Kullanıcı tanımlı alan 40 (numerik)
+- `NUMFLDS41` — Kullanıcı tanımlı alan 41 (numerik)
+- `NUMFLDS42` — Kullanıcı tanımlı alan 42 (numerik)
+- `NUMFLDS43` — Kullanıcı tanımlı alan 43 (numerik)
+- `NUMFLDS44` — Kullanıcı tanımlı alan 44 (numerik)
+- `NUMFLDS45` — Kullanıcı tanımlı alan 45 (numerik)
+- `NUMFLDS46` — Kullanıcı tanımlı alan 46 (numerik)
+- `NUMFLDS47` — Kullanıcı tanımlı alan 47 (numerik)
+- `NUMFLDS48` — Kullanıcı tanımlı alan 48 (numerik)
+- `NUMFLDS49` — Kullanıcı tanımlı alan 49 (numerik)
+- `NUMFLDS50` — Kullanıcı tanımlı alan 50 (numerik)
+- `RECSTATUS` — Kayıt Durumu
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Ref.
+
+### DEMANDFICHE — DEMANDFICHE
+
+- `LOGICALREF` — Logical Reference
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `DOCODE` — Belge Numarası
+- `STATUS` — Durumu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `SOURCEINDEX` — Kaynak Ambar Numarası
+- `BRANCH` — Şube
+- `DEPARTMENT` — Bölüm
+- `FACTORYNR` — Fabrika Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `DEMANDTYPE` — Talep Türü
+- `DEMANDREF` — MRPHEAD Ref.
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `USERNO` — Kullanıcı numarası
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+
+### DEMANDLINE — DEMANDLINE
+
+- `LOGICALREF` — Logical Reference
+- `DEMANDFICHEREF` — Talep Fişi Log. Ref.
+- `ITEMREF` — Malzemeler Log. Ref.
+- `CLIENTREF` — Müşteri Kartı Log. Ref.
+- `AMOUNT` — Tutar
+- `MEETAMNT` — Sevkedilen Miktar
+- `CANCAMOUNT` — Birim seti log. Ref.
+- `UOMREF` — Birim seti log. Ref.
+- `USREF` — Birim seti log. Ref.
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Çevrim Katsayısı
+- `UINFO4` — Çevrim Katsayısı
+- `UINFO5` — Çevrim Katsayısı
+- `UINFO6` — Çevrim Katsayısı
+- `UINFO7` — Çevrim Katsayısı
+- `UINFO8` — Çevrim Katsayısı
+- `MEETTYPE` — Teslimat Şekli
+- `PROCUREDATE` — Temin tarihi
+- `SOURCEINDEX` — Kaynak Ambar Numarası
+- `BRANCH` — Şube
+- `DEPARTMENT` — Bölüm
+- `FACTORYNR` — Fabrika Numarası
+- `BOMMASTERREF` — Ürün reçetesi ana kaydı mantıksal referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `SPECODE` — Özel Kod
+- `LINEEXP` — Satır Açıklaması
+- `STATUS` — Durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PAYDEFREF` — Ödeme planı log. Ref.
+- `LINETYPE` — Satır Tipi
+- `CYPHCODE` — Yetki Kodu
+- `CPSTFLAG` — Karma Koli Satırı
+- `DETLINE` — Detay Satırı
+- `PREVLINEREF` — Malzemeler Log. Ref.
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `LINENO_` — Satır Numarası
+- `USERNAME` — Kullanıcı adı
+- `FICHEDATE` — Fiş Tarihi
+- `MRPLINEREF` — MRPLINEREF LOGICAL REFERENCE
+- `MRPHEADREF` — MRPHEADREF LOGICAL REFERENCE
+- `ALTITEMUSE` — Alternatif malzeme kullanımı
+- `MRPHEADTYPE` — Talep/Teklif Planlama Türü
+- `ORDPEGUSE` — Verilen sipariş bağlantıları
+- `ORDPEGAMOUNT` — Verilen sipariş bağlantıları miktarı
+- `PRICE` — Birim fiyat
+- `PROCURETIME` — Temin tarihi
+- `INVUSEPARAM` — 0: Tüm Ambarlar Kontrol Edilecek 1: Seçilen Ambarlar Kontrol Edilecek
+- `PRODORDREF` — Üretim Emirleri Ref.
+- `POLINEREF` — Üretim Emri Satırları Ref.
+- `DISPLINEREF` — İş emirleri ref.
+- `PLNSTFCREF` — Malzeme Fişleri Referansı
+- `PLNSTLREF` — Malzeme Hareketleri Ref.
+- `PLNFICHEPER` — Planlanan fiş periyodu
+- `REALSRCINDEX` — Talep Satırı Kaynak Ambarı
+- `ACCOUNTREF` — Genel Muhasebe Hesapları Referansı
+- `CENTERREF` — Masraf Merkezi Referansı
+- `PROJECTREF` — Proje Referansı
+- `CRSACCOUNTREF` — Genel Muhasebe Hesapları Referansı
+- `CRSCENTERREF` — Masraf Merkezi Referansı
+- `CRSPROJECTREF` — Proje Referansı
+- `PRCURR` — Fiyatlandırma dövizi türü
+- `PRPRICE` — Detay açıklama fiyatı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### DEMANDPEGGING — DEMANDPEGGING
+
+- `LOGICALREF` — Logical Reference
+- `DEMANDLINEREF` — Talep Satırı Log. Ref.
+- `DEMANDFICHEREF` — Talep Fişi Log. Ref.
+- `PARENTTYPE` — Talep/Kaynak Türü
+- `PARENTREF` — MRPHEAD
+- `CHILDTYPE` — Talep Karşılama Türü
+- `CHILDREF` — ALTMALZREF
+- `ITEMALTER` — Alternatif Malzeme Temini
+- `ITEMREF` — Malzemeler Log. Ref.
+- `UNITREF` — Birim seti log. Ref.
+- `MAINITEMREF` — Malzemeler Log. Ref.
+- `MAINUNITREF` — Birim seti log. Ref.
+- `MEETAMNT` — Karşılama Miktarı
+- `MAINMEETAMNT` — Sevkedilen Ana Malzeme Miktarı
+- `ORDPERIOD` — Periyot numarası
+- `CLIENTREF` — Müşteri Kartı Log. Ref.
+- `BOMMASTERREF` — Ürün reçetesi ana kaydı mantıksal referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `LINETYPE` — Satır Tipi
+- `DETLINE` — Detay Satırı
+- `PREVLINEREF` — Talep Tespiti Log. Ref.
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `LINENO_` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `PAYPLANREF` — Ödeme Planları
+- `PRICE` — Fiyat
+- `PROJECTREF` — Proje Referansı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `MAINVARIANTREF` — Varyant (Port) mantıksal referansı
+
+### DIIB — Dahilde işleme izin belgesi
+
+- `LOGICALREF` — Dahilde İşleme İzin Belgesi Log. Ref.
+- `FICHENO` — Fiş numarası
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `DOCODE` — Belge Numarası
+- `STATUS` — Durumu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `TRCURR` — İD Türü
+- `CANCELLED` — Kullanımda Değil
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `FICHETYPE` — Fiş Türü
+
+### DIIBBOMLINE — DIIB ürün reçetesi satırları
+
+- `LOGICALREF` — DIIB Ürün Reçetesi Satırı Log. Ref.
+- `DIIBFICHEREF` — Dahilde İşleme İzin Belgesi Ref.
+- `EXPLINEREF` — DIIB Satırı Ref.
+- `IMPLINEREF` — DIIB Satırı Ref.
+- `LINENO_` — Satır Numarası
+- `AMOUNT` — Kullanım miktarı
+- `SCRAPPER` — Fire Faktörü
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DIIBLINE — DIIB satırları
+
+- `LOGICALREF` — DIIB Satırı Log. Ref.
+- `DIIBFICHEREF` — Dahilde İşleme İzin Belgesi Ref.
+- `LINETYPE` — Satır türü
+- `LINENO_` — Satır Numarası
+- `GTIPCODE` — GTIP Kodu
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `AMOUNT` — Tutar
+- `TRNET` — İşlem dövizi tutarı
+- `TRCURR` — İD Türü
+- `USAGEAMOUNT` — Miktar
+- `LINEEXP` — Satır Açıklaması
+- `SPECODE` — Özel Kod
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DISCPAYLINES — İndirim ödeme satırları
+
+- `LOGICALREF` — İndirim Ödeme Satırları Log. Ref.
+- `PAYPLANREF` — Ödeme planı log. Ref.
+- `PAYLINEREF` — Ödeme satırları log. Ref.
+- `DAY_` — Gün
+- `DISCRATE` — İndirim Oranı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### DISCPAYTRANS — İndirim ödeme hareketleri
+
+- `LOGICALREF` — İndirim Ödeme Hareketleri Log. Ref.
+- `PAYTRANREF` — KSLINES LOGICALREF
+- `CARDREF` — KSCARD LOGICALREF
+- `TRCODE` — Hareket türü
+- `MODULENR` — Kart Modül Numarası
+- `TSIGN` — Borç/Alacak İşareti
+- `FICHEREF` — Fiş ref.
+- `FICHELINEREF` — Fiş satırı ref.
+- `DISCRATE` — İndirim Oranı
+- `DISCDUEDATE` — Geçerlilik tarihi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### DISPLINE — İş emirleri
+
+- `LOGICALREF` — İş emirleri log. Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `BOMLEVEL` — Ürün Reçetesi Seviyesi
+- `REVREF` — Ürün Reçetesi Revizyonu Referansı
+- `LINENO_` — Satır Numarası
+- `ROUTLINEREF` — Üretim rota satırı ref.
+- `OPERATIONREF` — İşlem ref.
+- `QCOPOK` — Kalite Kontrol Sonucu Uygun
+- `OPREQREF` — Operasyon İhtiyaçları Ref.
+- `WSREF` — İş İstasyonu Ref.
+- `WSDAILYOPTIME` — İş İstasyonu Günlük Çalışma Saati
+- `WSWORKINGDAYS` — İş İstasyonu Çalışma Günleri
+- `SCHEDULED` — Çizelgelenen
+- `RELEASED` — Serbest bırakılmış
+- `SETUPTIME` — Kurulum süresi
+- `QUEUETIME` — Kuyruk süresi
+- `RUNBATCH` — İşlem partisi
+- `RUNTIME` — İşlem süresi
+- `MOVEBATCH` — Taşıma partisi
+- `MOVETIME` — Taşıma süresi
+- `INSPTIME` — Kontrol Zamanı
+- `HEADTIME` — Operasyon öncesi bekleme süresi
+- `TAILTIME` — Operasyon sonrası bekleme süresi
+- `OPBEGDATE` — Planlanan işlem başlangıç tarihi
+- `OPBEGTIME` — Planlanan işlem başlangıç zamanı
+- `OPDUEDATE` — Planlanan işlem bitiş tarihi
+- `OPDUETIME` — Planlanan işlem bitiş zamanı
+- `PLNDURATION` — Planlanan süre
+- `ACTBEGDATE` — Gerçekleşen İşlem Başlangıç Tarihi
+- `ACTBEGTIME` — Gerçekleşen İşlem Başlangıç Zamanı
+- `ACTDUEDATE` — Gerçekleşen İşlem Bitiş Tarihi
+- `ACTDUETIME` — Gerçekleşen İşlem Bitiş Zamanı
+- `ACTDURATION` — Gerçekleşen Süre
+- `LINESTATUS` — Satır Durumu
+- `STDMATERIALCOST` — Standart malzeme maliyeti
+- `STDEQUIPTCOST` — Standart araç maliyeti
+- `STDWSCOST` — Standart iş istasyonu maliyeti
+- `STDLABORCOST` — Standart işgücü maliyeti
+- `STDOVERHCOST` — Standart genel gider payı
+- `STDTOTALCOST` — Standart toplam maliyet
+- `STDMATERIALRPCOST` — RD standart malzeme maliyeti
+- `STDEQUIPTRPCOST` — RD standart araç maliyeti
+- `STDWSRPCOST` — RD standart iş istasyonu maliyeti
+- `STDLABORRPCOST` — RD standart işgücü maliyeti
+- `STDOVERHRPCOST` — RD standart genel gider payı
+- `STDTOTALRPCOST` — RD standart toplam maliyet
+- `ACTMATERIALCOST` — Gerçekleşen Malzeme Maliyeti
+- `ACTEQUIPTCOST` — Gerçekleşen Araç Maliyeti
+- `ACTWSCOST` — Gerçekleşen İş İstasyonu Maliyeti
+- `ACTLABORCOST` — Gerçekleşen Çalışan Maliyeti
+- `ACTOVERHCOST` — Gerçekleşen Genel Gider Payı
+- `ACTTOTALCOST` — Gerçekleşen Toplam Maliyet
+- `ACTMATERIALRPCOST` — Raporlama dövizi gerçekleşen malzeme maliyeti
+- `ACTEQUIPTRPCOST` — Raporlama dövizi gerçekleşen araç maliyeti
+- `ACTWSRPCOST` — Raporlama dövizi gerçekleşen ambar maliyeti
+- `ACTLABORRPCOST` — Raporlama dövizi gerçekleşen işgücü maliyeti
+- `ACTOVERHRPCOST` — Raporlama dövizi gerçekleşen genel gider payı
+- `ACTTOTALRPCOST` — Raporlama dövizi gerçekleşen toplam maliyet
+- `STDOVHDFORMULA` — Standart genel gider formülü
+- `STDOVHDRPFORMULA` — RD standart genel gider formülü
+- `ACTOVHDFORMULA` — Gerçekleşen Genel Gider Formülü
+- `ACTOVHDRPFORMULA` — Raporlama dövizi gerçekleşen genel gider formülü
+- `ITEMREF` — Malzeme Kartı Referansı
+- `OPWSBEGDATE` — İş İstasyonu Başlangıç Tarihi
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `STPDURATION` — Durma süresi
+- `STPCOSTDURATION` — Durma süresi
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `PROJECTREF` — Proje Referansı
+- `DOCOUNTING` — Çevrim merkezi mi?
+- `VARIANTREF` — Varyant (Port) referansı
+
+### DISTLINE — Dağıtım şablonu satırları
+
+- `LOGICALREF` — Dağıtım Şablonu Satırı Log. Ref.
+- `DISTTEMPREF` — Dağıtım Şablonu Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `DISTFACT` — Dağıtım Katsayısı
+- `LINENO_` — Satır Numarası
+
+### DISTORD — Dağıtım emirleri
+
+- `LOGICALREF` — Dağıtım Emri Log. Ref.
+- `FICHENO` — Dağıtım Emri Fiş Numarası
+- `DATE_` — Tarih
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `VEHICLEREF` — Araç ref.
+- `ROUTREF` — Dağıtım Rotası Ref.
+- `STATUS` — Durumu
+- `MAXCLIENTLIMIT` — Azami Müşteri Limiti
+- `LOADRATE` — Yükleme Oranı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `GODATE` — Dağıtım aracı başlangıç tarihi
+- `RETURNDATE` — Dağıtım aracı iade tarihi
+- `ORDFCWITHPAY` — Teslimatta tahsilatlı sipariş fişi aktarıldı
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `AFFECTRISK` — Riski etkiler
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+
+### DISTORDLINE — Dağıtım emri satırları
+
+- `LOGICALREF` — Dağıtım Emri Satırı Log. Ref.
+- `DISTORDERREF` — Dağıtım Emri Referansı
+- `ITEMREF` — Malzeme Ref.
+- `LINETYPE` — Satır Tipi
+- `ORDFICHEREF` — Sipariş fişi Ref.
+- `ORDLINEREF` — Sipariş fiş satırı ref.
+- `CLIENTREF` — Müşteri Ref.
+- `SALESMAN` — Satış Temsilcisi Referansı
+- `DATE_` — Tarih
+- `DUEDATE` — Sevkiyat tarihi
+- `ORDERAMOUNT` — Sipariş satırında kalan miktar
+- `SHIPAMOUNT` — Sevkiyat miktarı
+- `REMAMOUNT` — Dağıtım kalan miktar
+- `UOMREF` — Birim referansı
+- `COUNTRYCODE` — Ülke Kodu
+- `CITYCODE` — Şehir Kodu
+- `TOWNCODE` — İlçe kodu
+- `DISTRICTCODE` — Semt Kodu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `FACTORY` — Fabrika Numarası
+- `SOURCEINDEX` — Ambar Numarası
+- `RISKSTATUS` — Risk durumu
+- `CAMPAIGNREFS1` — Kampanya Kartı Referansı 1
+- `CAMPAIGNREFS2` — Kampanya Kartı Referansı 2
+- `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
+- `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
+- `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
+- `POINTCAMPREF` — Kampanya puanı ref.
+- `ITEMTRACKTYPE` — Malzeme İzleme Tipi
+- `LOCTRACKING` — Stok Yeri Takibi
+- `LINENR` — Satır Numarası
+- `REASONFORNOTSHP` — Sevk edilememe nedeni
+- `CMPGLINEREF` — Kampanya Satırı Referansı
+- `DORDSTATUS` — Dağıtım Emri Durumu
+- `DORDGODATE` — Dağıtım Emri Sevkiyat Tarihi
+- `DORDRETURNDATE` — Dağıtım Emri İade Tarihi
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `ORDLNWITHPAY` — Ödemeli sipariş satırı
+- `POINTCAMPREFS1` — Kampanya kartları referansı 1
+- `POINTCAMPREFS2` — Kampanya kartları referansı 2
+- `POINTCAMPREFS3` — Kampanya kartları referansı 3
+- `POINTCAMPREFS4` — Kampanya kartları referansı 4
+- `CMPGLINEREFS1` — Kampanya satırları referansı 1
+- `CMPGLINEREFS2` — Kampanya satırları referansı 2
+- `CMPGLINEREFS3` — Kampanya satırları referansı 3
+- `CMPGLINEREFS4` — Kampanya satırları referansı 4
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `AFFECTRISK` — Riski etkiler
+
+### DISTROUTING — Dağıtım rotaları
+
+- `LOGICALREF` — Dağıtım Rotası Log. Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+
+### DISTROUTLINE — Dağıtım rotası satırları
+
+- `LOGICALREF` — Dağıtım Rotası Satırı Log. Ref.
+- `DISTROUTREF` — Dağıtım Rotası Ref.
+- `LINENR` — Satır Numarası
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `BCOUNTRYCODE` — Başlangıç ülke kodu
+- `BCITYCODE` — Başlangıç şehir kodu
+- `BTOWNCODE` — Başlangıç ilçe kodu
+- `BDISTRICTCODE` — Başlangıç semt kodu
+- `ECOUNTRYCODE` — Bitiş Ülke Kodu
+- `ECITYCODE` — Bitiş Şehir Kodu
+- `ETOWNCODE` — Bitiş İlçe Kodu
+- `EDISTRICTCODE` — Bitiş Semt Kodu
+
+### DISTTEMP — Dağıtım şablonları
+
+- `LOGICALREF` — Dağıtım Şablonu Log. Ref.
+- `CODE` — Dağıtım Şablonu Kodu
+- `NAME` — Dağıtım Şablonu Açıklaması
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UOMREF` — Birim referansı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `BARCODE` — Barkod
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### DISTVEHICLE — Dağıtıcı araçları
+
+- `LOGICALREF` — Dağıtıcı Vasıtası Log. Ref.
+- `CODE` — Kod
+- `DEFINITION` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `PLAQUE` — Plaka
+- `WIDTH` — Genişlik
+- `LENGTH` — Uzunluk
+- `HEIGHT` — Yükseklik
+- `AREA` — Alan
+- `VOLUME_` — Hacim
+- `WEIGHT` — Ağırlık
+- `WIDTHREF` — Genişlik ref.
+- `LENGTHREF` — Uzunluk Ref.
+- `HEIGHTREF` — Yükseklik Ref.
+- `AREAREF` — Alan Referansı
+- `VOLUMEREF` — Hacim ref.
+- `WEIGHTREF` — Ağırlık ref.
+- `SCORE` — Puan
+- `USER1` — Kullanıcı 1
+- `USER2` — Kullanıcı 2
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+
+### DSPLNOPCMPPG — DSPLNOPCMPPG
+
+- `LOGICALREF` — DSPLNOPCMPPG mantıksal referansı
+- `PRODORDREF` — Üretim emirleri mantıksal referansı
+- `DISPLINEREF` — İş emirleri log. Ref.
+- `ITEMREF` — Malzeme kartları mantıksal referansı
+- `DETLINE` — Detay satırı; 0: Değil, 1: Detay satırı
+- `PARENTITEMREF` — Malzeme kartları mantıksal referansı
+- `LINENO_` — Sıra numarası
+- `CONSUMPAMNT` — Kullanım miktarı
+- `VARIANTREF` — Varyant (Port) referansı
+
+### EMCENTER — Masraf malzemeleri
+
+- `LOGICALREF` — Masraf Merkezi Log. Ref.
+- `CODE` — Genel gider kodu
+- `DEFINITION_` — Genel gider açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `UNITS` — Birim
+- `ADDINFOREF` — Ek Bilgi Ref.
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### EMDEMDETLN — EMDEMDETLN
+
+- `LOGICALREF` — Kullanımda Değil
+- `ACCFICHEREF` — Kullanımda Değil
+- `LINENR` — Kullanımda Değil
+- `ACCOUNTREF` — Kullanımda Değil
+- `PREVLINEREF` — Kullanımda Değil
+- `CENTERREF` — Kullanımda Değil
+- `PROJECTREF` — Kullanımda Değil
+- `BRANCH` — Kullanımda Değil
+- `DISTRATE` — Kullanımda Değil
+- `CREDEBNET` — Kullanımda Değil
+- `EMUCREDEBNET` — Kullanımda Değil
+- `TRCURR` — Kullanımda Değil
+- `TRRATE` — Kullanımda Değil
+- `TRNET` — Kullanımda Değil
+- `REPORTRATE` — Kullanımda Değil
+- `REPORTNET` — Kullanımda Değil
+- `LINEEXCTYP` — Kullanımda Değil
+- `TRCODE` — Kullanımda Değil
+- `DATE_` — Kullanımda Değil
+- `TSIGN` — Kullanımda Değil
+- `CANCELLED` — Kullanımda Değil
+- `SITEID` — Kullanımda Değil
+- `RECSTATUS` — Kullanımda Değil
+- `ORGLOGICREF` — Kullanımda Değil
+- `WFSTATUS` — Kullanımda Değil
+- `DEPARTMENT` — Kullanımda Değil
+- `STATUS` — Kullanımda Değil
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+
+### EMDEMFICHE — Muhasebe talep fişleri
+
+- `LOGICALREF` — Muhasebe talep fişleri mantıksal referansı
+- `TRCODE` — Harcama talebi
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `MODULENO` — Kullanımda Değil
+- `SOURCEFREF` — Kullanımda Değil
+- `EXTENREF` — Ek Dosya Referansı
+- `GENEXP1` — Genel açıklama 1
+- `GENEXP2` — Genel açıklama 2
+- `GENEXP3` — Genel açıklama 3
+- `GENEXP4` — Genel açıklama 4
+- `JOURNALNO` — Yevmiye Madde Numarası
+- `TOTALACTIVE` — Toplam aktif
+- `TOTALPASSIVE` — Toplam Pasif
+- `CANCELLED` — İptal Edilmiş
+- `PRINTCNT` — Toplam Basım Sayısı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `MODULENR` — Modül Numarası
+- `CANCFREF` — Kullanımda Değil
+- `EMUTOTACTIVE` — Toplam aktif (EURO)
+- `EMUTOTPASSIVE` — Toplam Pasif (EURO)
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `REPTOTACTIVE` — Toplam aktif (RD)
+- `REPTOTPASSIVE` — Toplam Pasif (Raporlama Dövizi)
+- `TEXTINC` — Detay açıklama içerir
+- `WFSTATUS` — Kullanımda Değil
+- `CROSSFREF` — Ters Kayıt Ref.
+- `CROSSFLAG` — Ters işaretleme
+- `DOCTYPE` — Fiş satış maliyeti durumu
+- `ORGLOGOID` — Veri Merkezi
+- `STATUS` — Durumu
+- `BDGTFCTYPE` — Bütçe fişi türü
+- `BDGTFCREF` — Bütçe kartları / bütçe revizyon fişleri referansı
+- `FROMDEMTYPE` — Gider talebi mi?
+- `EMDEMFCREF` — Muhasebe talep fişleri referansı
+- `WFLOWCRDREF` — İş akışı log. Ref.
+- `VIAAUTOGL` — Otomatik muhasebeleştirme işareti
+
+### EMDEMFLINE — Muhasebe talep hareketleri
+
+- `LOGICALREF` — Muhasebe talep hareketi mantıksal referansı
+- `DATE_` — Tarih
+- `SIGN` — Borç/Alacak İşareti
+- `ACCOUNTREF` — Genel Muhasebe Hesapları Referansı
+- `ACCFICHEREF` — Genel Muhasebe Hesapları Referansı
+- `CENTERREF` — Masraf Merkezi Referansı
+- `TRCODE` — Fiş türü
+- `BRANCH` — İşyeri
+- `KEBIRCODE` — Defter-i Kebir Kodu
+- `ACCOUNTCODE` — Genel Muhasebe Hesap Kodu
+- `SPECODE` — Özel Kod
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `LINENO_` — Satır numarası
+- `LINEEXP` — Satır Açıklaması
+- `CANCELLED` — İptal Edilmiş
+- `TRCURR` — İD Türü
+- `CURRDIFFCALC` — Döviz Kuru Farkı Hes.
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `TRRATE` — İD Kuru
+- `TRNET` — İşlem dövizi tutarı
+- `AMNT` — Tutar
+- `EXTENREF` — Ek Dosya Referansı
+- `EMUDEBIT` — Borç (EURO)
+- `EMUCREDIT` — Alacak (EURO)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `CROSSCODE` — Karşı hesap kodu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `INFIDX` — Enflasyon Endeksi
+- `NOTINFLATED` — Enflasyon İşareti
+- `NOTCALCULATED` — Enflasyon Hesaplama İşareti
+- `FROMWHERE` — Nereden
+- `OWNERACCREF` — Genel Muhasebe Hesapları Referansı
+- `DEPARTMENT` — Bölüm
+- `BDGTLINETYPE` — Muhasebe bütçe satırı türü
+- `STATUS` — Durumu
+- `BDGTFCTYPE` — Bütçe muhasebe fişi türü
+- `BDGTFCREF` — Bütçe kartları / bütçe revizyon fişleri referansı
+- `BDGTFCLNREF` — Bütçe kartı satırları / bütçe revizyon fişi satırları referansı
+- `BDGTFCPRDREF` — Bütçe kartı satırları / bütçe revizyon fişi satırları referansı
+- `FROMDEMTYPE` — Harcama talepleri mi?
+- `EMDEMFCREF` — Muhasebe talep fişleri referansı
+- `EMDEMLNREF` — Muhasebe talep işlemi referansı
+- `PARENTLNREF` — Muhasebe işlemleri referansı
+- `PAIDTOTAL` — Ödenen tutar
+- `CLOSED` — Kapalı
+- `OUTFCTYPE` — Rezerve fiş türü
+- `OUTFCREF` — DEMANDFICHE / sipariş fişleri / malzeme fişleri / faturalar referansı
+- `CREATEBDGTLN` — Bütçe hareketi oluştur (Evet/Hayır)
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `INVOICENO` — Fatura Numarası
+- `CLDEF` — Cari hesap unvanı
+- `TAXNR` — Cari hesap vergi kimlik numarası
+- `FORTAXDECL` — BA ve BS formlarında kullanılabilir
+
+### EMFICHE — Muhasebe fişleri
+
+- `LOGICALREF` — Genel Muhasebe Fişi Log. Ref.
+- `TRCODE` — Fiş türü
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `DOCODE` — Belge Numarası
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `MODULENO` — Kullanımda Değil
+- `SOURCEFREF` — Kullanımda Değil
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `GENEXP1` — Genel Açıklama
+- `GENEXP2` — Genel Açıklama
+- `GENEXP3` — Genel Açıklama
+- `GENEXP4` — Genel Açıklama
+- `JOURNALNO` — Yevmiye Madde Numarası
+- `TOTALACTIVE` — Toplam aktif
+- `TOTALPASSIVE` — Kullanım dışı toplamı
+- `CANCELLED` — İptal Edilmiş
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `MODULENR` — Modül Numarası
+- `CANCFREF` — Kullanımda Değil
+- `EMUTOTACTIVE` — Toplam aktif (EURO)
+- `EMUTOTPASSIVE` — Kullanım dışı toplamı (EURO)
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `REPTOTACTIVE` — Toplam aktif (RD)
+- `REPTOTPASSIVE` — Kullanım dışı toplamı (RD)
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+- `CROSSFREF` — Ters Kayıt Ref.
+- `CROSSFLAG` — Ters işaretleme
+- `DOCTYPE` — Fiş satış maliyeti durumu
+- `ORGLOGOID` — Veri Merkezi
+- `STATUS` — Durumu
+- `BDGTFCTYPE` — Bütçe muhasebe fişi türü
+- `BDGTFCREF` — Bütçe kartları / bütçe revizyon fişleri referansı
+- `FROMDEMTYPE` — Gider talebi mi?
+- `EMDEMFCREF` — Muhasebe talep fişleri referansı
+- `WFLOWCRDREF` — İş akışı log. Ref.
+- `VIAAUTOGL` — Otomatik muhasebeleştirme işareti
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği Saniye
+
+### EMFLINE — Muhasebe hareketleri
+
+- `LOGICALREF` — Genel Muhasebe Hareketi Log. Ref.
+- `DATE_` — Tarih
+- `SIGN` — Borç/Alacak İşareti
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `CENTERREF` — Masraf Merkezi Ref.
+- `TRCODE` — Fiş türü
+- `BRANCH` — İşyeri
+- `KEBIRCODE` — Defter-i Kebir Kodu
+- `ACCOUNTCODE` — Genel Muhasebe Hesap Kodu
+- `SPECODE` — Özel Kod
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `LINENO_` — Satır Numarası
+- `LINEEXP` — Satır Açıklaması
+- `CANCELLED` — İptal Edilmiş
+- `TRCURR` — İD Türü
+- `CURRDIFFCALC` — Döviz Kuru Farkı Hes.
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `AMNT` — Miktar
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `EMUDEBIT` — Borç (EURO)
+- `EMUCREDIT` — Alacak (EURO)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `CROSSCODE` — Karşı hesap kodu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `INFIDX` — Enflasyon Endeksi
+- `NOTINFLATED` — Enflasyon İşareti
+- `NOTCALCULATED` — Enflasyon Hesaplama İşareti
+- `FROMWHERE` — Nereden
+- `OWNERACCREF` — Genel Muhasebe Hesapları Referansı
+- `DEPARTMENT` — Bölüm
+- `BDGTLINETYPE` — Bütçe satır türü
+- `STATUS` — Durumu
+- `BDGTFCTYPE` — Bütçe muhasebe fişi türü
+- `BDGTFCREF` — Genel Muhasebe Fişleri Referansı
+- `BDGTFCLNREF` — Bütçe kartı satırları / bütçe revizyon fişi satırları referansı
+- `BDGTFCPRDREF` — Bütçe kartı satırının dönem satırları / bütçe revizyonunun dönem satırları referansı
+- `FROMDEMTYPE` — Gider talebi mi?
+- `EMDEMFCREF` — Muhasebe talep fişleri referansı
+- `EMDEMLNREF` — Muhasebe talep işlemi referansı
+- `PARENTLNREF` — Muhasebe işlemleri referansı
+- `PAIDTOTAL` — Gider talebinin ödenen tutarı
+- `CLOSED` — Satır durumu (kapalı olup olmadığı)
+- `OUTFCTYPE` — Kullanımda Değil
+- `OUTFCREF` — Kullanımda Değil
+- `CREATEBDGTLN` — Bütçe işlemi oluştur (evet/hayır)
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `INVOICENO` — Fatura Numarası
+- `CLDEF` — Cari hesap unvanı
+- `TAXNR` — Cari hesap vergi kimlik numarası
+- `FORTAXDECL` — BA ve BS formlarında kullanılabilir
+
+### EMFLNINFCOEF — EMFLNINFCOEF
+
+- `LOGICALREF` — Logical Reference
+- `FICHEREF` — Emfiche Logical Reference
+- `INVREF` — Fatura Log. Ref.
+- `LINEREF` — Emfline Logical Reference
+- `FICHEDATE` — Hesap Fiş Türü
+- `COEFARR0` — Enflasyon Katsayısı 0
+- `COEFARR1` — Enflasyon Katsayısı 1
+- `COEFARR2` — Enflasyon Katsayısı 2
+- `COEFARR3` — Enflasyon Katsayısı 3
+- `COEFARR4` — Enflasyon Katsayısı 4
+- `COEFARR5` — Enflasyon Katsayısı 5
+- `COEFARR6` — Enflasyon Katsayısı 6
+- `COEFARR7` — Enflasyon Katsayısı 7
+- `COEFARR8` — Enflasyon Katsayısı 8
+- `COEFARR9` — Enflasyon Katsayısı 9
+- `COEFARR10` — Enflasyon Katsayısı 10
+- `COEFARR11` — Enflasyon Katsayısı 11
+- `COEFARR12` — Enflasyon Katsayısı 12
+- `COEFARR13` — Enflasyon Katsayısı 13
+
+### EMGRPASS — Çalışan-Grup ataması
+
+- `LOGICALREF` — Çalışan Grup Ataması Log. Ref.
+- `EMPGRPREF` — Çalışan Grup Ref.
+- `PRIORITY` — Öncelik
+- `EMPREF` — Çalışan Ref.
+- `DOMINSHFTGRP` — Kullanılacak Vardiya
+
+### EMPGROUP — Çalışan grubu
+
+- `LOGICALREF` — Çalışan Grup Log. Ref.
+- `CODE` — Çalışan Grup Kodu
+- `NAME` — Çalışan Grup Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FACTORYNR` — Fabrika Numarası
+- `APPROVED` — Onay Bilgisi
+- `OPERATIONTIME` — Günlük Çalışma Saati
+- `HOURLYSTDCOST` — Saatlik Maliyet
+- `HOURLYSTDRPCOST` — Saatlik Maliyet (RD)
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `IMAGEINC` — Resim İçeriyor
+- `WFSTATUS` — Kullanımda Değil
+
+### EMPLOYEE — Çalışanlar
+
+- `LOGICALREF` — Çalışan Log. Ref.
+- `CODE` — Çalışan Kodu
+- `NAME` — Çalışan Açıklaması
+- `FACTORYDIVNR` — Fabrika İşyeri
+- `FACTORYNR` — Fabrika Numarası
+- `CALENDARREF` — Takvim Referansı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `PERSCARDREF` — Çalışan kartı ref. (İK)
+- `APPROVED` — Onay Bilgisi
+- `OPERATIONTIME` — Günlük Çalışma Saati
+- `HOURLYSTDCOST` — Saatlik Maliyet
+- `HOURLYSTDRPCOST` — Saatlik Maliyet (RD)
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `IMAGEINC` — Resim İçeriyor
+- `WFSTATUS` — Kullanımda Değil
+- `SHFTGRPREF` — Vardiya Tarafından Kullanılan Çalışan Grubu Referansı
+
+### EMUHACC — Muhasebe hesapları
+
+- `LOGICALREF` — Genel Muhasebe Hesabı Log. Ref.
+- `ACTIVE` — Kullanım durumu
+- `CODE` — Genel Muhasebe Hesap Kodu
+- `DEFINITION_` — Açıklama
+- `EXTNAME` — İkinci açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `UNITS` — Birim
+- `ADDINFOPTR` — Ek Bilgi Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `CURRDIFREF` — Döviz Kuru Farkı Hes. Ref.
+- `SUBACCOUNTS` — Alt Hesap Sayısı (Bayi Kullanımı)
+- `LEVEL_` — Seviye
+- `GROUPCODE` — Grup Kodu
+- `ACCTYPE` — Hesap Türü
+- `QUANCTRL` — Seviye Kontrolü
+- `CENTERCTRL` — Masraf Merkezi Kontrolü
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `POSTINGONLY` — Kullanımda Değil
+- `CATEGORY` — Kullanımda Değil
+- `FTFLAGS` — Kullanımda Değil
+- `MONETARY` — Parasal / Parasal Olmayan
+- `PROJECTCTRL` — Proje kontrol
+- `NOTINFLATED` — Enflasyon Hesaplama İşareti
+- `CURRDIFFDEBTREF` — EMUHACC LOGICALREF
+- `INFDIFFACCREF` — Enflasyon Fark Hesabı Ref.
+- `ISANBDGTLINE` — Bütçe kalemi
+- `BDGTACCREF` — Genel Muhasebe Hesapları Referansı
+- `BDREFLACCREF` — Genel Muhasebe Hesapları Referansı
+- `BDGTPAYAREF` — Genel Muhasebe Hesapları Referansı
+- `BDPAYREFLAREF` — Genel Muhasebe Hesapları Referansı
+- `CRBDGTACCLN` — Bütçeye göre takip
+- `CRBDGTPAYALN` — Ödeneğe göre takip
+- `CORPCODE1` — Kurumsal kod 1
+- `CORPCODE2` — Kurumsal kod 2
+- `CORPCODE3` — Kurumsal kod 3
+- `CORPCODE4` — Kurumsal kod 4
+- `FUNCCODE1` — Fonksiyonel kod 1
+- `FUNCCODE2` — Fonksiyonel kod 2
+- `FUNCCODE3` — Fonksiyonel kod 3
+- `FUNCCODE4` — Fonksiyonel kod 4
+- `FINCODE` — Finansal kod
+- `ECOCODE1` — Ekonomik kod 1
+- `ECOCODE2` — Ekonomik kod 2
+- `ECOCODE3` — Ekonomik kod 3
+- `ECOCODE4` — Ekonomik kod 4
+- `VATREFLAREF` — Genel Muhasebe Hesapları Referansı
+- `VATREFLOTHAREF` — Genel Muhasebe Hesapları Referansı
+- `CCURRENCY` — Döviz türü
+- `CURRATETYPE` — Döviz kuru türü
+- `FIXEDCURRTYPE` — İşlemde döviz türü değiştirilebilir (evet/hayır)
+- `CLDEF` — Cari hesap unvanı
+- `TAXNR` — Cari hesap vergi kimlik numarası
+- `FORTAXDECL` — BA ve BS formlarında kullanılabilir
+- `VATACC` — KDV hesabı
+
+### EMUHTOT — Muhasebe aylık toplamları
+
+- `LOGICALREF` — Aylık Genel Muhasebe Top. Log. Ref.
+- `ACCOUNTREF` — EMUHACC LOGICALREF
+- `TRANCOUNT` — Hareket sayısı
+- `TOTTYPE` — Hesap Özeti Toplam Türü
+- `MONTH_` — Ay
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+- `DEBITREM` — Kullanımda Değil
+- `CREDITREM` — Kullanımda Değil
+- `DEBITINFL` — Enflasyon Borç Toplamı
+- `CREDITINFL` — Enflasyon Alacak Toplamı
+- `YEAR_` — Yıl
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `DEBITRESRV` — Rezerve borç
+- `CREDITRESRV` — Rezerve alacak
+- `CURRTYP` — Döviz türü
+
+### ENGCLINE — Mühendislik değişikliği işlemi
+
+- `LOGICALREF` — Mühendislik Değişikliği Hareketleri Log. Ref.
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `APPSTATUS` — Durumu
+- `REASON` — Sebep
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `OLDREVREF` — Eski reçete revizyonu referansı
+- `NEWREVREF` — Yeni Reçete Revizyon Ref.
+- `METHOD` — Metod
+- `DATEFROM` — Geçerlilik tarihi
+- `SERILOTFROM` — Lot / Seri Numarası
+- `BOMLINEREF` — Ürün Reçetesi Satırı Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `VALIDDATE` — Geçerlilik tarihi
+- `VALIDSTATUS` — Geçerlilik durumu
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### EXCEPT — İstisnalar
+
+- `LOGICALREF` — İstisnai Durum Atamaları Log. Ref.
+- `BEGDATE` — Başlangıç Tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `BEGTIME` — Başlangıç Zamanı
+- `ENDTIME` — Bitiş Tarihi
+- `WORKINGDAY` — Çalışma Günü
+- `LINEEXP` — Satır Açıklaması
+- `SOURCETYPE` — Kaynak Tipi
+- `SOURCEREF` — Kaynak ref.
+- `LINENR` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `COSTFACTOR` — Maliyet Katsayısı
+- `RECSTATUS` — Kayıt Durumu
+
+### EXCEPTAS — İstisna atamaları
+
+- `LOGICALREF` — İstisnai Durum Atamaları Log. Ref.
+- `CONNECTIONREF` — Entegrasyon Bağlantı Kodu Log. Ref.
+- `SELNR` — Filtre Türü
+- `SELTYPE` — Rezerve
+- `GRPVALUE` — Rezerve
+- `BEGVALUE` — Başlangıç Değeri
+- `ENDVALUE` — Bitiş Değeri
+
+### EXIMBUSTYP — İhracat / ithalat iş türleri
+
+- `LOGICALREF` — İthalat / İhracat Ticaret Cinsi Log. Ref.
+- `CODE` — İthalat/İhracat İş Kodu
+- `DEFINITION_` — İthalat/İhracat İş Açıklaması
+
+### EXIMDISTFC — Dağıtım fişleri
+
+- `LOGICALREF` — Dağıtım Fişleri Log. Ref.
+- `FICHENO` — Dağıtım Fişi Numarası
+- `DATE_` — Dağıtım Fişi Tarihi
+- `FTIME` — Dağıtım Fişi Saati
+- `DOCODE` — Dağıtım Fişi Belge Numarası
+- `SPECODE` — Dağıtım Fişi Özel Kodu
+- `CYPHCODE` — Dağıtım Fişi Yetki Kodu
+- `SOURCEINDEX` — Dağıtım Fişi Ambarı
+- `FACTORYNR` — Dağıtım Fişi Fabrika Numarası
+- `BRANCH` — Dağıtım Fişi İşyeri
+- `DEPARTMENT` — Dağıtım Fişi Bölümü
+- `EXIMINFOREF` — INVEXIMINFO Reference
+- `PROCESSNR` — İşlem Sırası
+- `ACCOUNTED` — 1: Muhasebeleştiriliyor 0: Muhasebeleştirilmemiş
+- `ACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `ACCOUNTEDCNT` — Muhasebeleştirme sayısı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `EISRVDSTTYP` — Dağıtım Türü
+
+### EXIMDISTLN — Dağıtım fişi satırları
+
+- `LOGICALREF` — Dağıtım Fişi Satırları Log. Ref.
+- `SRVREF` — Hizmet Kartları Ref.
+- `DATE_` — Fiş tarihi
+- `FTIME` — Fiş saati
+- `SOURCEINDEX` — Ambar
+- `EXIMINFOREF` — INVEXIMINFO Reference
+- `EXIMDISTFCREF` — EXIMDISTFC Reference
+- `PROCESSNR` — İşlem Sırası
+- `SRVTRANSREF` — Malzeme Hareketleri Ref.
+- `LINENR` — Satır Numarası
+- `SRVDISTTYPE` — Distribution Type
+- `DISTTOTAL` — Dağılacak Toplam
+- `SRVACCREF` — Genel Muhasebe Hesapları Referansı
+- `SRVCENTERREF` — Masraf Merkezi Referansı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `FICHETYPE` — Satır fiş türü
+
+### EXIMDISTPEG — EXIMDISTPEG
+
+- `LOGICALREF` — EXIMDISTPEG Logical Reference
+- `EXIMINFOREF` — INVEXIMINFO Reference
+- `EXIMDISTFCREF` — EXIMDISTFC Reference
+- `EXIMDISTLNREF` — EXIMDISTLN Reference
+- `PROCESSNR` — İşlem Sırası
+- `SRVTRANSREF` — Malzeme Hareketleri Ref.
+- `STTRANSREF` — Malzeme Hareketleri Ref.
+- `LINENR` — Satır Numarası
+- `ITEMREF` — Malzeme Kartları Referansı
+- `TOTALAMNT` — Miktar
+- `UNITPRICE` — Birim fiyat
+- `UNITRPPRICE` — Birim fiyat (RD)
+- `ADDEXPENSE` — Dağıtılan Masraf
+- `ADDRPEXPENSE` — Dağıtılan Masraf (RD)
+- `ISDISTRIBUTED` — 0: Maliyetler Dağıtılmayacak 1: Maliyetler Dağıtılacak
+- `DISTRATE` — Dağıtım Oranı
+- `DISTTOTAL` — Dağıtım Tutarı
+- `STACCREF` — Genel Muhasebe Hesapları Referansı
+- `STCENTERREF` — Masraf Merkezi Referansı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `IMPPRICE` — İthalat birim fiyatı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### EXIMHISTORY — İthalat geçmişi
+
+- `LOGICALREF` — İthalat Tarihçesi Log. Ref.
+- `EXIMINFOREF` — INVEXIMINFO Reference
+- `SOURCETYPE` — 1: İthalat İşlem Fişi 2: Dolaşım Fişi 3: Millileştirme Fişi 4: Mal Alım Faturası 5: Dağıtım Fişi
+- `SOURCEREF` — Kaynak türü ref.
+- `PROCESSNR` — İşlem Sırası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### EXIMWHFC — İthalat / ihracat ambar fişleri
+
+- `LOGICALREF` — İthalat / İhracat Ambar Fişi Referansı
+- `TRCODE` — 1: Malzeme Dolaşım Fişi 2: Millileştirme Fişi
+- `FICHENO` — Fiş numarası
+- `DATE_` — Fiş tarihi
+- `FTIME` — Saat
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `EXIMFILEREF` — INVEXIMINFO Reference
+- `EXIMPROCNR` — İşlem Sırası
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `FACTORY` — Fabrika
+- `SOURCEINDEX` — Ambar
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `GENEXCTYPE` — Döviz Türü Genel Toplamları
+- `LINEEXCTYPE` — Satır Toplamları Döviz Türü
+- `NETTOTAL` — Tutar
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `REPORTRATE` — RD Kuru
+- `ACCOUNTED` — 0: Muhasebeleştiriliyor 1: Muhasebeleşmiş
+- `ACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `ACCOUNTEDCNT` — Muhasebeleştirme sayısı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `EXPTOTAL` — Toplam masraf
+- `EXIMTOTAL` — İthalat toplamı
+
+### EXIMWHTRANS — İthalat / ihracat ambar hareketleri
+
+- `LOGICALREF` — İthalat / İhracat Ambar Hareketi Log. Ref.
+- `EXIMWHFCREF` — İthalat / İhracat Ambar Fişi Referansı
+- `TRCODE` — Kullanımda Değil
+- `ITEMREF` — Malzeme Kartları Referansı
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `FACTORY` — Fabrika
+- `SOURCEINDEX` — Ambar
+- `DESTINDEX` — Hedef Ambar Numarası
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `AMOUNT` — Hareket Miktarı
+- `PRICE` — Birim fiyat
+- `TOTAL` — İD Türü
+- `TRCURR` — İD Kuru
+- `TRRATE` — İD Kuru
+- `REPORTRATE` — RD oranı
+- `SPECODE` — Hareket özel kodu
+- `LINEEXP` — Satır Açıklaması
+- `LINENO_` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `AVAMOUNT` — Kullanılabilir Miktar
+- `UINFO1` — Çevrim Katsayısı 1
+- `UINFO2` — Çevrim Katsayısı 2
+- `UINFO3` — Boyut Katsayısı3
+- `UINFO4` — Boyut Katsayısı4
+- `UINFO5` — Boyut Katsayısı5
+- `UINFO6` — Boyut Katsayısı6
+- `UINFO7` — Boyut Katsayısı7
+- `UINFO8` — Boyut Katsayısı8
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `LINETYPE` — Satır türü
+- `PREVLINEREF` — İthalat / İhracat Ambar Hareketi Referansı
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `DETLINE` — Malzeme Sınıfı Satır Ayrıntısı
+- `PRCURR` — Fiyatlandırma dövizi türü
+- `PRRATE` — Fiyatlandırma dövizi kuru
+- `PRPRICE` — Fiyat (Fiyatlandırma dövizi)
+- `SRCACCREF` — İthalat / İhracat Ambar Hareketi Referansı
+- `SRCCENTERREF` — Masraf Merkezi Referansı
+- `DSTACCREF` — Genel Muhasebe Hesapları Referansı
+- `DSTCENTERREF` — Masraf Merkezi Referansı
+- `IMPPRICE` — İthalat birim fiyatı
+- `UNITEXPENSE` — İthalat birim masrafı
+- `IMPCURR` — İthalat döviz türü
+- `IMPRATE` — İthalat döviz kuru
+- `TEXTINC` — Detay açıklama içerir
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### EXPCREDITCRD — LG_EXPCREDITCRD
+
+- `LOGICALREF` — İhracat Kredisi Kartı Log. Ref.
+- `CODE` — Kod
+- `NAME_` — Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CREDITTYPE` — Kredi Tipi
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `TRCURR` — İD Türü
+- `TRTOTAL` — Alacak (İD)
+- `TRRATE` — İD Kuru
+- `REPORTRATE` — Kur (Raporlama Dövizi)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `STATUS` — Durumu
+- `INTRATE` — Faiz Oranı
+- `INTTOTAL` — Faiz Tutarı
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `BANKACCREF` — Banka Hesapları Referansı
+- `BANKREF` — Masraf Merkezi Referansı
+
+### EXPCREDITLN — İhracat kredisi satırları
+
+- `LOGICALREF` — İhracat Kredisi Satırı Log. Ref.
+- `EXCREDITREF` — İhracat Kredisi Ref.
+- `GTIPCODE` — GTIP Kodu
+- `UNITSETREF` — Birim Seti Referansı
+- `UOMREF` — Birim referansı
+- `AMOUNT` — Tutar
+- `TRCURR` — İD Türü
+- `TRTOTAL` — Alacak (İD)
+- `TRRATE` — İD Kuru
+- `REPORTRATE` — Kur (Raporlama Dövizi)
+- `LINENO_` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### FAANNCOST — FAANNCOST
+
+- `LOGICALREF` — Logical Reference
+- `FREGREF` — Sabit Kıymet Kayıtları Log. Ref.
+- `DT` — Tarih
+- `ANNVAL` — Yıllık Maliyet
+- `ROFMVAL` — ROFM
+- `TABLETY` — Tablo türü
+
+### FAEXPENSE — Sabit kıymet gider atamaları
+
+- `LOGICALREF` — Sabit kıymet masraf ataması mantıksal referansı
+- `FAREGISTREF` — Sabit kıymet kayıtları referansı
+- `FAEXPITEMREF` — Malzeme Kartları Referansı
+- `FAEXSTFCREF` — Malzeme Fişleri Referansı
+- `FAEXSTLINEREF` — Malzeme Hareketleri Ref.
+- `FAEXPTYP` — Sabit kıymet gider türü
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### FAPRODNUMS — Sabit kıymet üretim numaraları
+
+- `LOGICALREF` — Sabit kıymet üretim numaraları referansı
+- `FAREGREF` — Sabit Kıymet Kaydı Log. Ref.
+- `YEAR_` — Yıl
+- `MONTH_` — Ay
+- `AMOUNT` — Tutar
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### FAREGIST — Sabit kıymet kayıtları
+
+- `LOGICALREF` — Sabit Kıymet Kaydı Log. Ref.
+- `REGCODE` — Kayıt kodu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `TRANSFER` — Devir / Yeni Kayıt
+- `CRDREF` — Kart Referansı
+- `FICHEREF` — Hareket Ref. (Malzeme fişi / İrsaliye)
+- `DATEIN` — Alım Tarihi
+- `DATEOFDEPR` — Amortisman Başlangıcı
+- `QUANTITY` — Miktar
+- `TOTOUT` — İndirilen Miktar
+- `INVALUE` — Giriş Maliyeti
+- `VATAMOUNT` — İndirilecek KDV
+- `VATDUR` — KDV süresi
+- `DEPRRATE` — Amortisman Oranı
+- `DEPRDUR` — Amortisman Periyodu
+- `DEPRTYPE` — Amortisman Türü
+- `REVFLAG` — Değerleme İşareti
+- `REVDEPFLAG` — Değerleme Amortisman İşareti
+- `PARTDEP` — Parçalı Amortisman
+- `CANCELLED` — İptal Edilmiş
+- `REPORTRATE` — RD Kuru
+- `INVALUEX` — Giriş Maliyeti (RD)
+- `EXPTOTAL` — Toplam masraf
+- `ACCUMDEPR` — Toplam amortisman
+- `ACCUMREVAL` — Toplam yeniden değerleme
+- `EXPTOTALX` — Toplam masraf (RD)
+- `ACCUMDEPRX` — Birikmiş Amortisman (Raporlama Dövizi)
+- `ACCUMREVALX` — Yeniden Değerleme (RD)
+- `DEPRTYPE2` — Alternatif Amortisman Türü
+- `DEPRRATE2` — Alternatif Amortisman Oranı
+- `DEPRDUR2` — Alternatif Amortisman Periyodu
+- `REVALFLAG2` — Alternatif Yeniden Değerleme İşareti
+- `REVDEPRFLAG2` — Alternatif Amortisman Değerleme İşareti
+- `BEGREVAL` — Kayıtlı sabit kıymet değerleme
+- `BEGDEPR` — Kayıtlı sabit kıymet amortismanı
+- `BEGREVDEPR` — Kayıtlı sabit kıymet değerleme amortismanı
+- `BEGREVALX` — Kayıtlı sabit kıymet değerleme (RD)
+- `BEGDEPRX` — Kayıtlı sabit kıymet amortismanı (RD)
+- `BEGREVDEPRX` — Kayıtlı sabit kıymet değerleme amortismanı (RD)
+- `OPVALS_BEGREVAL` — Kayıtlı sabit kıymet değerleme (açılışta)
+- `OPVALS_BEGDEPR` — Kayıtlı sabit kıymet amortismanı (açılışta)
+- `OPVALS_BEGREVDEPR` — Kayıtlı sabit kıymet değerleme amortismanı (açılışta)
+- `OPVALSX_BEGREVAL` — Kayıtlı sabit kıymet değerleme (açılışta, RD)
+- `OPVALSX_BEGDEPR` — Kayıtlı sabit kıymet amortismanı (açılışta, RD)
+- `OPVALSX_BEGREVDEPR` — Kayıtlı sabit kıymet değerleme amortismanı (açılışta, RD)
+- `DATEOFDEPR2` — Amortisman Başlangıcı 2
+- `PARTDEP2` — Parçalı Amortisman 2
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `DEPRTYPE3` — Enflasyon Muhasebesi Amortisman Türü
+- `DEPRRATE3` — Enflasyon Muhasebesi Amortisman Oranı
+- `DEPRDUR3` — Enflasyon Muhasebesi Amortisman Periyodu
+- `PARTDEP3` — Enflasyon Muhasebesi Parçalı Amortisman
+- `DATEOFDEPR3` — Enflasyon Muhasebesi Amortisman Tarihi
+- `OPVALSINF_BEGREVAL` — Enflasyon Muhasebesi Amortisman Artırımı
+- `OPVALSINF_BEGDEPR` — Enflasyon Muhasebesi Sabit Kıymet Amortismanı (Devir)
+- `OPVALSINF_BEGREVDEPR` — Enflasyon Muhasebesi Sabit Kıymet Değerleme Amortismanı (Devir)
+- `OPVALSINFX_BEGREVAL` — Enflasyon Muhasebesi Sabit Kıymet Değerleme (Devir, RD)
+- `OPVALSINFX_BEGDEPR` — Enflasyon Muhasebesi Sabit Kıymet Amortismanı (Devir, RD)
+- `OPVALSINFX_BEGREVDEPR` — Enflasyon Muhasebesi Sabit Kıymet Değerleme Amortismanı (Devir, RD)
+- `DIFFPRICE` — Fiyat farkı
+- `DIFFREPPRICE` — Fiyat farkı (RD)
+- `INFIDX` — Enflasyon Endeksi
+- `INVDISCINCL` — Yatırım İndirim Oranı
+- `INVDISCRATE` — Yatırım İndirim Oranı
+- `ANNUALDISTVAL` — Yıllara Yaygın Maliyet Kullanılacak
+- `INFLBASEDVALUE` — Enf. Düz. Esas Tutar
+- `REGDEFINITION` — Sabit Kıymet Kaydı Açıklaması
+- `DEPRTYPE4` — Enflasyon Muhasebesi Amortisman Türü
+- `DEPRRATE4` — Enflasyon Muhasebesi Amortisman Oranı
+- `DEPRDUR4` — Enflasyon Muhasebesi Amortisman Periyodu
+- `PARTDEP4` — Enflasyon Muhasebesi Parçalı Amortisman
+- `DATEOFDEPR4` — Enflasyon Muhasebesi Amortisman Tarihi
+- `OPVALSINF2_BEGREVAL` — Enflasyon Muhasebesi Amortisman Artırımı
+- `OPVALSINF2_BEGDEPR` — Enflasyon Muhasebesi Sabit Kıymet Amortismanı (Devir)
+- `OPVALSINF2_BEGREVDEPR` — Enflasyon Muhasebesi Sabit Kıymet Değerleme Amortismanı (Devir)
+- `OPVALSINFX2_BEGREVAL` — Enflasyon Muhasebesi Sabit Kıymet Değerleme (Devir, RD)
+- `OPVALSINFX2_BEGDEPR` — Enflasyon Muhasebesi Sabit Kıymet Amortismanı (Devir, RD)
+- `OPVALSINFX2_BEGREVDEPR` — Enflasyon Muhasebesi Sabit Kıymet Değerleme Amortismanı (Devir, RD)
+- `INFIDX2` — Enflasyon Endeksi2
+- `ANNUALDISTVAL2` — Yıllara Yaygın Maliyet Kullanılacak
+- `INFLBASEDVALUE2` — Enf. Düz. Esas Tutar
+- `DATEACTIVE` — Aktif Tarihi
+- `TAXEXPRATE2` — Vergi gider oranı (%)
+- `TAXACCFLAG` — Vergi giderini muhasebeleştir
+- `ACCFICHEREF` — Muhasebe fişleri mantıksal referansı
+- `REGTYPCOD` — Kayıt türü kodu (sabit kıymet kaydı)
+- `REGTYPDEF` — Kayıt türü açıklaması (sabit kıymet kaydı)
+- `REGEXPENSCOD` — Kayıt gider yeri kodu (sabit kıymet kaydı)
+- `REGEXPENSDEF` — Kayıt gider yeri açıklaması (sabit kıymet kaydı)
+- `DEPRSTPREASN` — Amortisman durdurma nedeni
+- `DEPRSTPDATE` — Durdurma tarihi
+- `PRODCAPACITY` — Üretim kapasitesi
+- `CAPACITYUNIT` — Üretim birimi
+- `TAXEXPTYP2` — Vergi oranı türü: 0: Oran; 1: Tutar
+
+### FAYEAR — Sabit kıymet yıllık kaydı
+
+- `LREF` — Sabit Kıymet Yıllık Kaydı Log. Ref.
+- `TABLETY` — Tablo türü
+- `FREGREF` — Sabit Kıymet Kaydı Ref.
+- `YEAR_` — Yıl
+- `DRATE` — Amortisman Oranı
+- `REVRATE` — Yeniden değerleme oranı
+- `DTYPE` — Amortisman Türü
+- `QUANOUT` — İndirilen Miktar
+- `LOCFIGS_COSTOP` — Yerel para birimi başlangıç num.
+- `LOCFIGS_EXPUSUAL` — Değerlemeye Tabi Giderler (Yerel Para Birimi için)
+- `LOCFIGS_EXPOUTREV` — Değerleme Harici Giderler (Yerel Para Birimi için)
+- `LOCFIGS_CUMEXPOR` — Değerleme Harici Giderler (Yerel Para Birimi için)
+- `LOCFIGS_AMOUNTOUT` — İndirilen Değer (Yerel Para Birimi İçin)
+- `LOCFIGS_AMOUNTOUTR` — Değerleme Harici İndirilen Tutar (Yerel Para Birimi İçin)
+- `LOCFIGS_BOOKVALOP` — Değerleme Öncesi Sabit Kıymet Değeri (Yerel Para Birimi için)
+- `LOCFIGS_ACCDEPROP` — Değerleme Öncesi Birikmiş Amortisman (Yerel Para Birimi için)
+- `LOCFIGS_ACCDPOUT` — Birikmiş Amortismandan Düşülecek Tutar (Yerel Para Birimi için)
+- `LOCFIGS_BOOKVALRV` — Değerleme Sonrası Sabit Kıymet Değeri (Yerel Para Birimi için)
+- `LOCFIGS_ACCDEPRRV` — Değerleme Sonrası Birikmiş Amortisman (Yerel Para Birimi için)
+- `LOCFIGS_DEPRANN` — Yıllık Amortisman Tutarı (Yerel Para Birimi)
+- `LOCFIGS_ACCDEPREOY` — Yıl Sonu Birikmiş Amortisman (Yerel Para Birimi için)
+- `LOCFIGS_ACCDEPRCST` — Maliyetlendirme İçin Birikmiş Amortisman (Yerel Para Birimi için)
+- `CURFIGS_COSTOP` — Raporlama dövizi başlangıç num.
+- `CURFIGS_EXPUSUAL` — Değerlemeye Tabi Giderler (RD için)
+- `CURFIGS_EXPOUTREV` — Değerleme Harici Giderler (RD için)
+- `CURFIGS_CUMEXPOR` — Değerleme Harici Giderler (Raporlama Dövizi için)
+- `CURFIGS_AMOUNTOUT` — İndirilen Değer (RD İçin)
+- `CURFIGS_AMOUNTOUTR` — Değerleme Harici İndirilen Tutar (RD İçin)
+- `CURFIGS_BOOKVALOP` — Değerleme Öncesi Sabit Kıymet Değeri (RD için)
+- `CURFIGS_ACCDEPROP` — Değerleme Öncesi Birikmiş Amortisman (Raporlama Dövizi için)
+- `CURFIGS_ACCDPOUT` — Birikmiş Amortismandan Düşülecek Tutar (Raporlama Dövizi için)
+- `CURFIGS_BOOKVALRV` — Değerleme Sonrası Sabit Kıymet Değeri (RD için)
+- `CURFIGS_ACCDEPRRV` — Değerleme Sonrası Birikmiş Amortisman (Raporlama Dövizi için)
+- `CURFIGS_DEPRANN` — Yıllık Amortisman Tutarı (RD)
+- `CURFIGS_ACCDEPREOY` — Yıl Sonu Birikmiş Amortisman (RD için)
+- `CURFIGS_ACCDEPRCST` — Maliyetlendirme İçin Birikmiş Amortisman (Raporlama Dövizi için)
+- `VATPOSTED` — Muhasebeleşmiş KDV
+- `DACCFLAG` — Amortisman Muhasebe İşareti
+- `RACCFLAG` — Değerleme Muhasebeleştirme İşareti
+- `VACCFLAG` — KDV muhasebeleştirme işareti
+- `CALCMON` — Hesaplanan Dönem Sonu
+- `ACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `LOCFIGS2_PERDREVAL` — Periyodik aktif değerleme
+- `LOCFIGS2_PERDACCDEPRRV` — Periyodik birikmiş amortisman değerlemesi
+- `LOCFIGS2_PERDDEPR` — Periyodik amortisman
+- `CURFIGS2_PERDREVAL` — Periyodik aktif değerleme (RD)
+- `CURFIGS2_PERDACCDEPRRV` — Periyodik birikmiş amortisman değerlemesi (RD)
+- `CURFIGS2_PERDDEPR` — Periyodik amortisman (RD)
+- `INFIDX` — Enflasyon Endeksi
+- `CLOSED` — Amortisman Tablosu Kapama
+- `FAEXPITEMREF` — Malzeme Kartları Referansı
+- `FAEXPTYPE` — Sabit kıymet gider türü
+- `PRODAMOUNT` — Dönemsel amortisman üretim miktarı
+
+### FCACCREF — Üretim emri ile muhasebe hesabı bağlantıları
+
+- `LOGICALREF` — Üretim Emri Genel Muh. Hes. Bağlantısı Log. Ref.
+- `FICHEREF` — Fiş ref.
+- `TYP` — Genel Muh. Bağlantı Türü
+- `WSREF` — İş İstasyonu Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `OVHDREF` — Genel gider (çıkış) kart ref.
+- `STREF` — Malzeme Ref.
+- `OVHDTRANTYP` — Genel gider hareket türü
+
+### FINTABLEITEM — Mali tablo tanımları
+
+- `LOGICALREF` — Logical Reference
+- `LINENO_` — Satır Numarası
+- `SIDE` — Hangi taraf
+- `ITEMLEVEL` — Hesabın hangi seviyesi
+- `CALCTYPE` — Hareket türü
+- `REMTYPE` — Ters Bakiye
+- `LINETYPE` — Satır Tipi
+- `ITEMTYPE` — Malzeme tipi
+- `TOTTYPE` — Hesap Türü
+- `ACCTYPE` — Hesap Türü
+- `PRINTINREPORT` — Rapor basımı
+- `CURRTYPE` — Döviz Türü
+- `TOTALTL` — Toplam TL
+- `TOTALCURR` — Toplam döviz
+- `ITEMNAME` — Malzeme Adı
+- `ITEMCODE` — Hesap Kodu
+- `BEGCODE` — Hesap aralığı başlangıç kodu
+- `ENDCODE` — Hesap Aralığı Bitiş Kodu
+- `FORMULA` — Formül
+- `RATES1` — (Bayi Kullanımı İçin)
+- `RATES2` — (Bayi Kullanımı İçin)
+- `RATES3` — (Bayi Kullanımı İçin)
+- `RATES4` — (Bayi Kullanımı İçin)
+- `TABLEREF` — Finans Tablosu Ref.
+
+### FINTBLHEADER — Mali tablo kayıtları
+
+- `LOGICALREF` — Finans Tablosu Kaydı Log. Ref.
+- `TABTYPE` — Tablo türü
+- `TABNAME` — Tablo adı
+- `ITEMSZ` — Kullanımda Değil
+- `TOTALTYP` — Toplam tipi
+- `CURRTYP` — Döviz Türü
+- `REPLEVEL` — Rapor seviyesi
+- `TABLEMULT` — Tablo katsayısı
+- `TABLEGENEXP` — Tablo açıklaması
+- `TABLEEXP` — Tablo açıklaması
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### FIRMDOC — Döküman katalog girişi(watermark)
+
+- `LREF` — Fiziksel adres
+- `INFOTYP` — İç kullanım
+- `INFOREF` — İç kullanım
+- `DOCTYP` — İç kullanım
+- `DOCNR` — İç kullanım
+- `LDATA` — İç kullanım
+
+### FOLDER — Döküman katalog  bilgileri (watermark varsa)
+
+- `LOGICALREF` — Belge Katalog Bilgisi Log. Ref.
+- `LINETYPE` — Satır Tipi
+- `FPATH` — Dosya yolu
+
+### FRMPRDPARAM — Firma üretim parametreleri
+
+- `LOGICALREF` — Firma Üretim Parametreleri Log. Ref.
+- `FIRMNR` — Firma Numarası
+- `PARAMCODE` — Parametre kodu
+- `PARAMNAME` — Parametre açıklaması
+- `PARAMDEFAULT` — Parametre öndeğeri
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `SETCODE` — Firma Üretim Sabiti Kümesi Kodu
+
+### GAUGPARAM — GAUGPARAM
+
+- `LOGICALREF` — GAUGPARAM Reference
+- `USERNR` — Kullanıcı numarası
+- `GAUGTYPE` — Gösterge Türü
+- `CARDREF` — ITEMS / CLCARD / KSCARD / BANKACC referansı
+- `BRANCH` — İşyeri
+- `CURRTYPE` — Döviz Türü
+- `CARDTYPE` — Kart Türü
+- `ANTIALS` — Kenar yumuşatma
+- `SHOWMARGIN` — Kenar boşluğunu göster
+- `SHOWCIRCLES` — Daireleri göster
+- `SHOWMAINTICKS` — Ana çizgileri göster
+- `SHOWSUBTICKS` — Detay çizgilerini göster
+- `SHOWINDICATORMIN` — Minimum göstergeyi göster
+- `SHOWINDICATORMID` — Orta göstergeyi göster
+- `SHOWINDICATORMAX` — Maksimum göstergeyi göster
+- `SHOWVALUES` — Değerleri göster
+- `SHOWCENTER` — Merkezi göster
+- `SHOWFRAME` — Kenarlığı göster
+- `SHOW3D` — Üç boyutlu göster
+- `SHOWCAPTION` — Başlığı göster
+- `INDMIN` — Asgari Değer
+- `INDMAX` — Azami Değer
+- `SCALE` — Ölçek değeri
+- `SCALEST` — Ölçek başlangıç değeri
+- `ANGLE` — Ölçek açısı
+- `AWIDTH` — Ok genişliği
+- `NMAINT` — Ana çizgi sayısı
+- `LMAINT` — Ana çizgi uzunluğu
+- `LSUBT` — Detay çizgisi uzunluğu
+- `CAPT` — Başlık
+- `MINC` — Minimum renk
+- `MIDC` — Orta renk
+- `MAXC` — Maksimum renk
+- `FACEC` — Yüzey rengi
+- `TICKSC` — Çizgi rengi
+- `VALUEC` — Değer rengi
+- `CAPTIONC` — Başlık rengi
+- `ARROWC` — Ok rengi
+- `MARGINC` — Kenar boşluğu rengi
+- `CENTERC` — Merkez rengi
+- `CIRCLEC` — Daire rengi
+- `TIMEINTERVAL` — Güncelleme süresi (saniye)
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş tarihi
+- `HORZROTATE` — Yatay döndürme oranı
+- `VERTROTATE` — Dikey döndürme oranı
+- `RATE3B` — Üç boyut oranı
+- `ENLARGERATE` — Yakınlaştırma oranı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### GENMODP — GENMODP
+
+- `LOGICALREF` — GENMODP mantıksal referansı
+- `MODULENR` — Modül Numarası
+- `LEVEL_` — Seviye; 0: Fiş/kart başlığı, 1: Fiş satırı
+- `PARENTREF` — Kullanımda Değil
+- `OWNERREF` — Cari Hesap
+- `INDEX_` — Form indeksi
+- `IVALUE` — Form tasarımı referansı
+
+### GERMANYDEF — GERMANYDEF
+
+- `LOGICALREF` — GERMANYDEF Logical Reference
+- `DEFTYPE` — Ticaret cinsi
+- `DEFCODE` — Kod
+- `DEFEXP1` — Açıklama 1
+- `DEFEXP2` — Açıklama 2
+- `DEFEXP3` — Açıklama 3
+- `DEFEXP4` — Açıklama 4
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### GLASSGN — GLASSGN
+
+- `LOGICALREF` — GLASSGN Logical Reference
+- `MODULENR` — Modül Numarası
+- `TRANTYPE` — Hareket türü
+- `TRANREF` — Malzeme Fişleri Referansı
+- `ACCREF` — Genel Muhasebe Hesapları Referansı
+- `CCENTERREF` — Masraf Merkezi Referansı
+- `PROJECTREF` — Proje Referansı
+- `ACCDISTTEMPREF` — Hesap Dağıtım Şablonu Referansı
+- `EXPLAIN` — Mahsup Fişi Satır Açıklaması
+
+### GNTOTBN — Aylık banka toplamları
+
+- `LOGICALREF` — Aylık Banka Top. Log. Ref.
+- `CARDREF` — Banka Hesabı Logical Ref.
+- `TOTTYP` — Banka Toplam Türü
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+
+### GNTOTCL — Aylık cari hesap toplamları
+
+- `LOGICALREF` — Aylık Cari Hesap Top. Log. Ref.
+- `CARDREF` — Müşteri Kartı Log. Ref.
+- `TOTTYP` — Cari Hesap Toplam Türü
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+
+### GNTOTCSH — Aylık kasa toplamları
+
+- `LOGICALREF` — Kasa aylık toplamları log. Ref.
+- `CARDREF` — KSCARD LOGICALREF
+- `TOTTYPE` — Nakit Toplam Türü
+- `DEBIT` — Borç
+- `CREDIT` — Alacak
+
+### GNTOTST — Genel ambar toplamları
+
+- `LOGICALREF` — Genel Ambar Toplamları Log. Ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `INVENNO` — Ambar Numarası ( -1 tüm ambarlar)
+- `PLNPRODIN` — Planlama (üretimden girişler)
+- `PLNPRODOUT` — Planlama Sarflar/Fireler
+- `PLNOTHERIN` — Planlama (diğer girişler)
+- `PLNOTHEROUT` — Planlama (diğer çıkışlar)
+- `PLNWHOUSEIN` — Planlama (ambardan girişler)
+- `PLNWHOUSEOUT` — Planlama (ambardan çıkışlar)
+- `TEMPIN` — Konsinye Girişler
+- `TEMPOUT` — Konsinye Çıkışlar
+- `RESERVED` — Rezerve miktarı
+- `ACTPORDER` — Verilen siparişler
+- `RECEIVED` — Sevkedilen Alış Siparişleri
+- `ACTPRODIN` — Gerçekleşen Üretimden Girişler
+- `ACTOTHERIN` — Gerçekleşen Diğer Girişler
+- `ACTSORDER` — Alınan Siparişler
+- `SHIPPED` — Sevkedilmiş verilen siparişler
+- `ACTWASTE` — Gerçekleşen Sarf / Fire
+- `ACTOTHEROUT` — Gerçekleşen Diğer Çıkışlar
+- `TRANSFERRED` — Açılış tutarı
+- `AVGVALUE` — Ortalama Değer
+- `AVGCURRVAL` — Ortalama Değer (Raporlama Dövizi)
+- `PURAMNT` — Alımlar Miktarı
+- `PURCASH` — Alımlar Tutarı
+- `PURCURR` — Alımlar Tutarı (RD)
+- `SALAMNT` — Satış Miktarı
+- `SALCASH` — Satış Tutarı
+- `SALCURR` — Satış Tutarı (RD)
+- `LASTTRDATE` — Son Hareket Tarihi
+- `ONHAND` — Eldekiler
+- `ACTWHOUSEIN` — Gerçekleşen Ambar Girişleri
+- `ACTWHOUSEOUT` — Gerçekleşen Ambar Çıkışları
+- `COUNTADD` — Sayım Fazlası
+- `COUNTDEC` — Sayım Eksiği
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### GNTOTVRNT — GNTOTVRNT
+
+- `LOGICALREF` — Konsinye Girişler
+- `STOCKREF` — Malzeme Kartları Referansı
+- `INVENNO` — Ambar numarası (tüm ambarlar)
+- `PLNPRODIN` — Planlama (üretimden girişler)
+- `PLNPRODOUT` — Planlama Sarflar/Fireler
+- `PLNOTHERIN` — Planlama (diğer girişler)
+- `PLNOTHEROUT` — Planlama (diğer çıkışlar)
+- `PLNWHOUSEIN` — Planlama (ambardan girişler)
+- `PLNWHOUSEOUT` — Planlama (ambardan çıkışlar)
+- `TEMPIN` — Konsinye Girişler
+- `TEMPOUT` — Konsinye Çıkışlar
+- `RESERVED` — Rezerve miktarı
+- `ACTPORDER` — Verilen siparişler
+- `RECEIVED` — Sevkedilen Alış Siparişleri
+- `ACTPRODIN` — Gerçekleşen Üretimden Girişler
+- `ACTOTHERIN` — Gerçekleşen Diğer Girişler
+- `ACTSORDER` — Alınan Siparişler
+- `SHIPPED` — Sevk Edilmiş Satış Siparişleri
+- `ACTWASTE` — Gerçekleşen Sarf / Fire
+- `ACTOTHEROUT` — Gerçekleşen Diğer Çıkışlar
+- `TRANSFERRED` — Açılış tutarı
+- `AVGVALUE` — Ortalama Değer
+- `AVGCURRVAL` — Ortalama Değer (Raporlama Dövizi)
+- `PURAMNT` — Alımlar Miktarı
+- `PURCASH` — Alımlar Tutarı
+- `PURCURR` — Alımlar Tutarı (RD)
+- `SALAMNT` — Satış Miktarı
+- `SALCASH` — Satış Tutarı
+- `SALCURR` — Satış Tutarı (RD)
+- `LASTTRDATE` — Son Hareket Tarihi
+- `ONHAND` — Eldekiler
+- `ACTWHOUSEIN` — Gerçekleşen Ambar Girişleri
+- `ACTWHOUSEOUT` — Gerçekleşen Ambar Çıkışları
+- `COUNTADD` — Sayım Fazlası
+- `COUNTDEC` — Sayım Eksiği
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `VARIANTREF` — Varyant (Port) referansı
+
+### GOUSERS — Kullanıcılar
+
+- `LOGICALREF` — Fiziksel adres
+- `USRNR` — Kullanıcı No
+- `TERMNR` — Terminal No
+- `LLOGINDATE` — Programa giriş tarihi
+- `LLOGINTIME` — Programa giriş saati
+- `LLOGOUTDATE` — Programdan çıkış tarihi
+- `LLOGOUTTIME` — Programdan çıkış saati
+- `ABNTERMS` — İç kullanım
+- `TDEFERRORS` — İç kullanım
+
+### GUARANTOR — Kefiller
+
+- `LOGICALREF` — Kefil Log. Ref.
+- `FICHETYPE` — Fiş Türü
+- `FICHEREF` — Kefil Ref.
+- `GUARANTORNR` — Taksit Numarası
+- `GNAMESURNAME` — Taksit Soyadı
+- `ADDR1` — Taksit Adresi 1
+- `ADDR2` — Taksit Adresi 2
+- `DISTRICT` — Semt
+- `TOWN` — İlçe
+- `CITY` — Şehir
+- `COUNTRY` — Ülke
+- `POSTCODE` — Posta kodu
+- `TELNRS1` — Telefon numarası 1
+- `TELNRS2` — Telefon numarası 2
+- `FAXNR` — Faks Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `TAXNR` — Vergi numarası
+- `TAXOFFICE` — Vergi dairesi
+- `TAXOFFCODE` — Vergi dairesi kodu
+- `BANKBRANCHS` — Banka Şubesi Numarası
+- `BANKACCOUNTS` — Banka Hesabı Numarası
+
+### IMPSRVREL — IMPSRVREL
+
+- `LOGICALREF` — IMPSRVREL Logical Reference
+- `SRVCRDREF` — Hizmet Kartları Ref.
+- `INVOICEREF` — Fatura Referansı
+- `DISTTYPE` — Distribution Type
+
+### INDUSTRY — Sektörler
+
+- `LOGICALREF` — Ayrıntılı Açıklama İçerir
+- `CODE` — Sektör kodu
+- `DESCRIPTION` — Sektör açıklaması
+- `INDCAT` — Sektör kategorisi
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `RECSTATUS` — Kayıt Durumu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+
+### INSTALCARD — INSTALCARD
+
+- `LOGICALREF` — Basılmış Toplam Hesap
+- `INSTALNO` — Taksit Numarası
+- `FICHETYPE` — Fiş Türü (Fatura - Sipariş)
+- `FICHEREF` — Sipariş fişi Ref. - Fatura ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `DATE_` — Tanzim Tarihi
+- `DUEDATE` — Vade
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `SERINO` — Seri numarası
+- `GUARANTOR1` — Kefil1
+- `GUARANTOR2` — Kefil2
+- `STAMP` — Pul
+- `TRCURR` — İD Türü
+- `TRANSFER` — Devirden
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `RETURN_` — İade tutarı
+
+### INVDEF — Malzeme-Ambar bilgileri
+
+- `LOGICALREF` — Malzeme - Ambar Bilgisi Log. Ref.
+- `INVENNO` — Ambar Numarası
+- `ITEMREF` — Malzeme Kartı Referansı
+- `MINLEVEL` — Asgari Stok Seviyesi
+- `MAXLEVEL` — Azami Stok Seviyesi
+- `SAFELEVEL` — Güvenlik stok seviyesi
+- `LOCATIONREF` — Öndeğer Stok Yeri Ref.
+- `PERCLOSEDATE` — Periyot kapanış tarihi
+- `ABCCODE` — ABC Kodu
+- `MINLEVELCTRL` — Asgari Stok Seviye Kontrolü
+- `MAXLEVELCTRL` — Azami Stok Seviyesi Kontrolü
+- `SAFELEVELCTRL` — Güvenlik stok seviyesi kontrolü
+- `NEGLEVELCTRL` — Negatif Seviye Kontrolü
+- `IOCTRL` — Giriş / Çıkış Kontrolü
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### INVEXIMINFO — İthalat / ihracat işlem fişleri
+
+- `LOGICALREF` — Dosya Kodu
+- `EXIMGRPTYPE` — 1: İthalat 2: İhracat
+- `EXIMFCTYPE` — 1: İthalat İşlem Fişi 2: İhracat İşlem Fişi 3: Serbest Bölgeye İhracat Fişi
+- `EXIMFILECODE` — Dosya Kodu
+- `EXIMFILENAME` — Dosya Adı
+- `INVOICEREF` — Fatura Referansı
+- `NOTIFYCLREF` — Cari Hesap
+- `CONSULTCLREF` — Cari Hesap
+- `FREIGHTCLREF` — Cari Hesap
+- `COUNTRYTYPE` — Varış - Çıkış Ülke Tipi
+- `CUSTDOCNO` — GÇB / GGB No
+- `CUSTDOCDATE` — GGB/GÇB Tarihi
+- `VEHICLENO` — Araç numarası
+- `RESULTDATE` — İntaç Tarihi
+- `CURRCREREF` — İhracat Kredisi Ref.
+- `CURRCREPAR` — Döviz paritesi
+- `TOTFREIGHT` — Navlun
+- `TOTINSURANCE` — Sigorta
+- `EXPRACCREF` — Genel Muhasebe Hesapları
+- `EXPRCNTRREF` — Masraf Merkezi Referansı
+- `FILELINENR` — İthalat / ihracat dosya numarası
+
+### INVEXIMLINES — INVEXIMLINES
+
+- `LOGICALREF` — INVEXIMLINES Logical Reference
+- `INVOICEREF` — Fatura Referansı
+- `STTRANSREF` — Malzeme Hareketleri Ref.
+- `DIIBLINEREF` — DIIB Satırı Ref.
+- `EXIMCREDITREF` — İhracat Kredisi Ref.
+- `PRODCLREF` — Cari Hesap Ref.
+- `CUSTDOCNO` — GGB Formu Numarası
+- `CUSTDOCDATE` — GGB Formu Tarihi
+- `EXIMCREPAR` — Eximbank Paritesi
+- `DIIBPAR` — DİİB Paritesi
+- `COUNTRYTYPE` — Varış Ülke Tipi
+- `PRESTATDOCNO` — Ön Statü Belge No
+- `FZONEOUTDOCNO` — Serbest Bölge Belge Kodu
+- `CIFTOTAL` — CIF Tutar
+- `TMPALINEREF` — DIIB Satırı Ref.
+- `TMPAPAR` — Geçici kabul paritesi
+- `TMPAREF` — DIIB referansı
+- `LINEFREIGHT` — Navlun
+- `LINEINSURANCE` — Sigorta
+
+### INVOICE — Faturalar
+
+- `LOGICALREF` — Fatura Log. Ref.
+- `GRPCODE` — Grup Kodu
+- `TRCODE` — Fatura Türü
+- `FICHENO` — Fatura Numarası
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLIENTREF` — Cari Hesap Ref.
+- `RECVREF` — Borçlu Cari Hesabın (Teslimat) Referansı
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Ambar maliyet grubu
+- `CANCELLED` — İptal Edilmiş
+- `ACCOUNTED` — Muhasebeleştirildi
+- `PAIDINCASH` — Ödenmiş
+- `FROMKASA` — Kasadan Fatura
+- `ENTEGSET` — Discounts / Surcharges / Promotions have been distributed
+- `VAT` — KDV
+- `ADDDISCOUNTS` — Satıra Uygulanan Ek İndirimler
+- `TOTALDISCOUNTS` — Toplam İndirimler
+- `TOTALDISCOUNTED` — İndirimler Satır Toplamı
+- `ADDEXPENSES` — Satıra Uygulanan Ek Masraflar
+- `TOTALEXPENSES` — Toplam Masraflar
+- `DISTEXPENSE` — Malzemelere Dağıtılacak Maliyet
+- `TOTALDEPOZITO` — Toplam Depozito
+- `TOTALPROMOTIONS` — Toplam Promosyonlar
+- `VATINCGROSS` — KDV Dahil Tutar
+- `TOTALVAT` — Toplam KDV
+- `GROSSTOTAL` — Toplam
+- `NETTOTAL` — Net Toplam
+- `GENEXP1` — Fiş Genel Açıklaması
+- `GENEXP2` — Fiş Genel Açıklaması
+- `GENEXP3` — Fiş Genel Açıklaması
+- `GENEXP4` — Fiş Genel Açıklaması
+- `INTERESTAPP` — Vade Farkı
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `ONLYONEPAYLINE` — Tek satırlı ödeme planı
+- `KASTRANSREF` — Kasa hareketi ref.
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `GVATINC` — KDV dahil / hariç
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `ADDEXPACCREF` — Ek Masraflar Genel Muhasebe Hesabı Referansı
+- `ADDEXPCENTREF` — Ek Masraflar Masraf Merkezi Referansı
+- `DECPRDIFF` — Fiyat farkı (t: azalan, f: artan)
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `SHPTYPCOD` — Teslimat Şekli
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `TRACKNR` — Paket/Koli No
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `SHIPINFOREF` — Teslimat Bilgisi Ref.
+- `DISTORDERREF` — Dağıtım Emri Referansı
+- `SENDCNT` — Gönderilenlerin Sayısı
+- `DLVCLIENT` — Teslimat Adresi Müşteri Tipi
+- `COSTOFSALEFCREF` — Satılan malların maliyeti, yevmiye fişi
+- `OPSTAT` — Hareket durumu
+- `DOCTRACKINGNR` — Belge İzleme Numarası
+- `TOTALADDTAX` — Ek Vergi Toplamı
+- `PAYMENTTYPE` — Ödeme türü
+- `INFIDX` — Enflasyon Endeksi
+- `ACCOUNTEDCNT` — Muhasebeleştirme sayısı
+- `ORGLOGOID` — Veri Merkezi
+- `FROMEXIM` — İthalat/İhracat İlişkisi
+- `FRGTYPCOD` — Taşıma türü kodu
+- `EXIMFCTYPE` — İthalat / İhracat Fiş Türü
+- `FROMORDWITHPAY` — Ödemeli / Ödemesiz Sipariş?
+- `PROJECTREF` — Proje Referansı
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+- `STATUS` — Durumu
+- `DEDUCTIONPART1` — Tevkifat payı 1
+- `DEDUCTIONPART2` — Tevkifat paydası 2
+- `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+- `EXACCOUNTED` — Tecil-terkin muhasebeleştirildi mi?
+- `FROMBANK` — Bankadan
+- `BNTRANSREF` — Banka Hareket Referansı
+- `AFFECTCOLLATRL` — Teminatı etkileme
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `AFFECTRISK` — Riski etkiler
+- `CONTROLINFO` — Kontrol bilgisi
+- `POSTRANSFERINFO` — POS fatura aktarım bilgisi
+- `TAXFREECHX` — Vergisiz satış işareti
+- `PASSPORTNO` — Pasaport numarası
+- `CREDITCARDNO` — Kredi kartı numarası
+- `INEFFECTIVECOST` — Malzeme maliyeti etkilenecek: 0: Evet; 1: Hayır
+- `REFLECTED` — KDV aktarıldı mı?
+- `REFLACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `CANCELLEDREFLACC` — İptal edilen faturanın KDV tutarı aktarıldı mı?
+- `GENEXP5` — Fiş genel açıklaması
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### INVOICEEXCH — Fatura döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden fatura tutarı mantıksal referansı
+- `FICHEREF` — Fatura Ref.
+- `ADDDISCOUNTSX` — Döviz cinsinden ek indirimler
+- `TOTALDISCOUNTSX` — Döviz cinsinden toplam indirimler
+- `TOTALDISCOUNTEDX` — Döviz cinsinden satır indirimleri sonrası toplam
+- `ADDEXPENSESX` — Döviz cinsinden satıra uygulanan ek masraflar
+- `TOTALEXPENSESX` — Döviz cinsinden toplam masraflar
+- `DISTEXPENSEX` — Döviz cinsinden malzeme maliyetine dağıtılacak masraf
+- `TOTALDEPOZITOX` — Döviz cinsinden toplam depozito
+- `TOTALPROMOTIONSX` — Döviz cinsinden toplam promosyon
+- `VATINCGROSSX` — Döviz cinsinden dahil KDV tutarı
+- `TOTALVATX` — Döviz cinsinden toplam KDV
+- `GROSSTOTALX` — Döviz cinsinden toplam
+- `TOTALADDTAXX` — Döviz cinsinden ek vergi toplamı
+- `TOTALEXADDTAXX` — Döviz cinsinden toplam istisna ek vergi tutarı
+- `BAGKURX` — Döviz cinsinden Bağ-Kur
+- `STOPAJX` — Döviz cinsinden stopaj
+- `SSDFX` — Döviz cinsinden SSDF
+- `BORSAX` — Döviz cinsinden borsa
+- `KOMISYONX` — Döviz cinsinden komisyon
+- `KOMKDVX` — Döviz cinsinden komisyon KDV'si
+- `EK1X` — Döviz cinsinden ek 1 tutarı
+- `EK2X` — Döviz cinsinden ek 2 tutarı
+- `EK3X` — Döviz cinsinden ek 3 tutarı
+- `EK4X` — Döviz cinsinden ek 4 tutarı
+- `EK5X` — Döviz cinsinden ek 5 tutarı
+
+### INVOICEINTEL — Fatura ek notları
+
+- `LOGICALREF` — Fatura İstihbarat Bilgisi Log. Ref.
+- `INVOICEREF` — Fatura Ref.
+- `CLIENTREF` — Cari Hesap Referansı
+- `INVOICEINFO1` — Fatura İstihbarat Bilgisi 1
+- `INVOICEINFO2` — Fatura İstihbarat Bilgisi 2
+- `INVOICEINFO3` — Fatura İstihbarat Bilgisi 3
+- `INVOICEINFO4` — Fatura İstihbarat Bilgisi 4
+- `INVOICEINFO5` — Fatura İstihbarat Bilgisi 5
+- `INVOICEINFO6` — Fatura İstihbarat Bilgisi 6
+- `INVOICEINFO7` — Fatura İstihbarat Bilgisi 7
+- `INVOICEINFO8` — Fatura İstihbarat Bilgisi 8
+- `INVOICEINFO9` — Fatura İstihbarat Bilgisi 9
+- `INVOICEINFO10` — Fatura İstihbarat Bilgisi 10
+- `INTELDESC` — Ek Açıklama
+- `LINENUM` — Satır Numarası
+
+### ITEMCATEGORY — Malzeme kategorisi (Port)
+
+- `LOGICALREF` — Malzeme kategorisi (Port) mantıksal referansı
+- `CODE` — Kod
+- `NAME` — Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `WEBUSAGE` — Web üzerinde kullanılacak
+- `ACTIVE` — Kullanımda / Kullanım Dışı
+- `TEXTINC` — Detay açıklama içerir
+- `IMAGEINC` — Resim İçeriyor
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### ITEMCATEGORYLI — Malzeme kategorisi satırı (Port)
+
+- `LOGICALREF` — Malzeme kategorisi (Port)
+- `ITEMCATEGORYREF` — Malzeme kategorisi (Port) referansı
+- `ITEMREF` — Malzeme kartı referansı
+- `LINENO_` — Satır numarası
+
+### ITEMS — Malzemeler
+
+- `LOGICALREF` — Malzeme Kartı
+- `ACTIVE` — Malzeme Kartı Durumu
+- `CARDTYPE` — Malzeme Kartı Türü
+- `CODE` — Malzeme Kartı Kodu
+- `NAME` — Malzeme Kartı Açıklaması
+- `STGRPCODE` — Malzeme Grup Kodu
+- `PRODUCERCODE` — Üretici Kodu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLASSTYPE` — Sınıf Türü
+- `PURCHBRWS` — Satınalma Kullanım Yeri
+- `SALESBRWS` — Satış ve Dağıtım Kullanım Yeri
+- `MTRLBRWS` — Malzeme Yönetimi Kullanım Yeri
+- `VAT` — KDV
+- `PAYMENTREF` — Ödeme Planı Referansı PAYPLANS
+- `TRACKTYPE` — İzleme Yöntemi
+- `LOCTRACKING` — Stok Yeri Takibi
+- `TOOL` — Araç
+- `AUTOINCSL` — Otomatik Lot/Seri Numarası Artırımı
+- `DIVLOTSIZE` — Bölünebilir Lot Büyüklüğü
+- `SHELFLIFE` — Raf Ömrü
+- `SHELFDATE` — Son Kullanma Tarihi
+- `DOMINANTREFS1` — Genel Bilgiler (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS2` — Ambar Parametreleri (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS3` — Fabrika Parametreleri (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS4` — İş İstasyonu Parametreleri (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS5` — Birimler (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS6` — Fiyatlar (Üst Malzeme Sınıfı Referansı) ITEMS
+- `DOMINANTREFS7` — Tablolu Malzeme Sınıfı Referansı
+- `DOMINANTREFS8` — Müşteri/Tedarikçi Bağlantıları (Üst Malzeme Sınıfı Referansı)
+- `DOMINANTREFS9` — Genel Muhasebe Hesabı Kodları (Üst Malzeme Sınıfı Referansı)
+- `DOMINANTREFS10` — Kalite Kontrol Kriteri Setleri (Üst Malzeme Sınıfı Referansı)
+- `DOMINANTREFS11` — Reçete Bağlantıları (Üst Malzeme Sınıfı Referansı)
+- `DOMINANTREFS12` — Kullanımda Değil
+- `IMAGEINC` — Resim İçeriyor
+- `TEXTINC` — Ayrıntılı Açıklama İçerir (1- Evet
+- `DEPRTYPE` — Amortisman Türü
+- `DEPRRATE` — Amortisman Oranı
+- `DEPRDUR` — Amortisman Süresi
+- `SALVAGEVAL` — Hurda Değeri
+- `REVALFLAG` — Yeniden Değerleme
+- `REVDEPRFLAG` — Değerleme Amortismanı
+- `PARTDEP` — Parçalı Amortisman
+- `DEPRTYPE2` — Ulusal Amortisman Türü
+- `DEPRRATE2` — Ulusal Amortisman Oranı
+- `DEPRDUR2` — Ulusal Amortisman Süresi
+- `REVALFLAG2` — Ulusal Yeniden Değerleme
+- `REVDEPRFLAG2` — Ulusal Değerleme Amortismanı
+- `PARTDEP2` — Ulusal Parçalı Amortisman
+- `APPROVED` — Onaylama Bilgisi
+- `UNITSETREF` — Birim Seti Kayıt Referansı
+- `QCCSETREF` — Kalite Kontrol Kriter Seti Referansı
+- `DISTAMOUNT` — Tablolu Malzeme Sınıfı Dağıtım Miktarı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `UNIVID` — Kullanımda Değil
+- `DISTLOTUNITS` — Lot Birimleri Dağıtılabilir
+- `COMBLOTUNITS` — Lot Birimleri Birleştirilebilir
+- `WFSTATUS` — Kullanımda Değil
+- `DISTPOINT` — Dağıtım Noktası
+- `CAMPPOINT` — Kampanya Puanı
+- `CANUSEINTRNS` — Hareketlerde Kullanılabilir
+- `ISONR` — Malzeme ISO Numarası
+- `GROUPNR` — Intrastat Numarası
+- `PRODCOUNTRY` — Üretildiği Ülke
+- `ADDTAXREF` — Ek Vergi Referansı
+- `QPRODAMNT` — Hızlı Üretim Miktarı
+- `QPRODUOM` — Hızlı Üretim Birimi
+- `QPRODSRCINDEX` — Hızlı Üretim Ambarı
+- `EXTACCESSFLAGS` — 1. E-iş ortamında erişilebilir 2. Satış noktalarında erişilebilir
+- `PACKET` — Paket
+- `SALVAGEVAL2` — Uluslararası Hurda Değeri
+- `SELLVAT` — Satışlar KDV Oranı
+- `RETURNVAT` — İade KDV Oranı
+- `LOGOID` — Logo ID
+- `LIDCONFIRMED` — Logo ID Onaylansın mı? (Evet / Hayır)
+- `GTIPCODE` — GTIP Kodu
+- `EXPCTGNO` — İhracat Kategori Numarası
+- `B2CCODE` — E-Mağaza Kodu
+- `MARKREF` — İşaretle
+- `IMAGE2INC` — Resim
+- `AVRWHDURATION` — Stokta Kalma Süresi
+- `EXTCARDFLAGS` — Firma İlişkisi
+- `MINORDAMOUNT` — Asgari Sipariş
+- `FREIGHTPLACE` — Sevkiyat Çıkış Yeri
+- `FREIGHTTYPCODE1` — Sevkiyat Türü1
+- `FREIGHTTYPCODE2` — Sevkiyat Türü2
+- `FREIGHTTYPCODE3` — Sevkiyat Türü3
+- `FREIGHTTYPCODE4` — Sevkiyat Türü4
+- `FREIGHTTYPCODE5` — Sevkiyat Türü5
+- `FREIGHTTYPCODE6` — Sevkiyat Türü6
+- `FREIGHTTYPCODE7` — Sevkiyat Türü7
+- `FREIGHTTYPCODE8` — Sevkiyat Türü8
+- `FREIGHTTYPCODE9` — Sevkiyat Türü9
+- `FREIGHTTYPCODE10` — Sevkiyat Türü10
+- `STATECODE` — Eyalet Kodu
+- `STATENAME` — Eyalet İsmi
+- `EXPCATEGORY` — İhraç Kategorisi
+- `LOSTFACTOR` — Fire Faktörü
+- `TEXTINCENG` — Ayrıntılı Açıklama İçerir (İng)
+- `EANBARCODE` — Ürün Barkodu (EAN)
+- `DEPRCLASSTYPE` — Hizmet Kartları
+- `WFLOWCRDREF` — İş Akışı Kartı
+- `SELLPRVAT` — Perakende satış KDV oranı (%)
+- `RETURNPRVAT` — Perakende satış iadesi KDV oranı (%)
+- `LOWLEVELCODES1` — Hiyerarşi kodu 1
+- `LOWLEVELCODES2` — Hiyerarşi kodu 2
+- `LOWLEVELCODES3` — Hiyerarşi kodu 3
+- `LOWLEVELCODES4` — Hiyerarşi kodu 4
+- `LOWLEVELCODES5` — Hiyerarşi kodu 5
+- `LOWLEVELCODES6` — Hiyerarşi kodu 6
+- `LOWLEVELCODES7` — Hiyerarşi kodu 7
+- `LOWLEVELCODES8` — Hiyerarşi kodu 8
+- `LOWLEVELCODES9` — Hiyerarşi kodu 9
+- `LOWLEVELCODES10` — Hiyerarşi kodu 10
+- `ORGLOGOID` — Veri Merkezi
+- `QPRODDEPART` — Bölüm bilgisi (hızlı üretim fişi)
+- `CANCONFIGURE` — Malzeme varyant seçimi
+- `CHARSETREF` — Özellik seti (Port) mantıksal referansı
+- `CANDEDUCT` — Tevkifat uygula
+- `CONSCODEREF` — CONSCODES referansı
+- `SPECODE2` — Özel kod 2
+- `SPECODE3` — Özel kod 3
+- `SPECODE4` — Özel kod 4
+- `SPECODE5` — Özel kod 5
+- `EXPENSE` — 0: Sabit kıymet; 1: Sabit kıymet gideri
+- `ORIGIN` — Ürünün menşei
+
+### ITEMSUBS — Malzeme alternatifleri
+
+- `LOGICALREF` — Fiziksel adres
+- `MAINITEMREF` — Ana malzeme sınıfı referansı
+- `SUBITEMREF` — Alt malzeme sınıfı referansı
+- `LINENO_` — Satır no
+- `PRIORITY` — Öncelik
+- `CONVFACT1` — Çarpan 1
+- `CONVFACT2` — Çarpan 2
+- `MAXQUANTITY` — Azami miktar
+- `MINQUANTITY` — Asgari miktar
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş tarihi
+- `SITEID` — Veri işleme merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `MAINVRNTREF` — Varyant (Port) referansı
+- `SUBVRNTREF` — Varyant (Port) referansı
+
+### ITMBOMAS — Malzeme-Ürecetesi ataması
+
+- `LOGICALREF` — Malzeme - Reçete Ataması Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `BOMREF` — Ürün Reçetesi Referansı
+- `RELTYPE` — Malzeme - Reçete İlişkisi Türü
+- `FACTORYNR` — Fabrika Numarası
+- `PRIORITY` — Öncelik
+- `LINENR` — Satır Numarası
+- `MAXQUANTITY` — Azami Miktar
+- `MINQUANTITY` — Asgari Miktar
+- `BEGDATE` — Başlangıç tarihi
+- `STDCOSTFLAG` — Bu reçete standart malzeme maliyetinde kullanılacak
+- `FORMRP` — MRP için kullanılacak
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ENDDATE` — Bitiş tarihi
+
+### ITMCLSAS — Malzeme-Malzeme sınıfı ataması
+
+- `LOGICALREF` — Malzeme - Malzeme Sınıfı Ataması Log. Ref.
+- `PARENTREF` — Üst malzeme sınıfı ref.
+- `CHILDREF` — Alt Malzeme / Malzeme Sınıfı Kart Referansı
+- `UPLEVEL` — Atama (Bağlantı) Seviyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### ITMFACTP — Malzeme-Fabrika bilgileri
+
+- `LOGICALREF` — Malzeme - Fabrika Bilgisi Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `ITEMREF` — Malzeme Kartı Referansı
+- `SPECIALIZED` — Kullanımda Değil
+- `PROCURECLASS` — Temin türü
+- `LOWLEVELCODE` — Düşük Seviye Kodu
+- `DIVLOTSIZE` — Bölünebilir Lot Büyüklüğü
+- `MRPCNTRL` — Kullanımda Değil
+- `PLANPOLICY` — Planlama metodu
+- `LOTSIZINGMTD` — Lot belirleme yöntemi
+- `FIXEDLOTSIZE` — Sabit Lot Büyüklüğü
+- `YIELD` — Verimlilik
+- `MINORDERQTY` — Asgari Sipariş Miktarı
+- `MAXORDERQTY` — Azami Sipariş Miktarı
+- `MULTORDERQTY` — Tam Katları
+- `MINORDERDAY` — Asgari Sipariş (Gün)
+- `MAXORDERDAY` — Azami Sipariş (Gün bazında)
+- `REORDERPOINT` — Yeniden sipariş noktası
+- `AUTOMTRISSUE` — Otomatik Malzeme Çekişi
+- `PLANNERREF` — Planlayan ref.
+- `BUYERREF` — Müşteri Ref.
+- `SELADMINREF` — Satış yönetimi ref.
+- `CSTANALYSTREF` — Maliyet Analizi Ref.
+- `DEFSERILOTNO` — Lot / Seri Numarası İlk Değeri
+- `AUTOLOTOUTMTD` — Sarf ve Firelerde Lot Belirleme Yöntemi
+- `LOTPARTY` — Üretimden Giriş Lot Büyüklüğü
+- `OUTLOTSIZE` — Çıkışlar Lot Büyüklüğü
+- `COUNTFORMPS` — MPS ye Giriş
+- `LOTSIZINGMTD2` — Lot belirleme yöntemi 2
+- `FIXEDLOTSIZE2` — Sabit Lot Büyüklüğü 2
+- `YIELD2` — Verimlilik 2
+- `MINORDERQTY2` — Asgari Sipariş Miktarı 2
+- `MAXORDERQTY2` — Azami Sipariş Miktarı 2
+- `MULTORDERQTY2` — Tam Katları 2
+- `CHECKALLINVENS` — Tüm Ambarlara Bakılacak
+- `PRODUCTIONFACT` — Üretim fabrikası
+- `PROCUREINVEN` — Temin ambarı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### ITMUNITA — Malzeme-Birim ataması
+
+- `LOGICALREF` — Malzeme - Birim Ataması Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı (ITEMS)
+- `LINENR` — Satır Numarası
+- `UNITLINEREF` — Birim referansı(UNITSETL)
+- `BARCODE` — Barkod
+- `MTRLCLAS` — Malzeme Yönetimi Kullanım Yeri
+- `PURCHCLAS` — Satınalma Kullanım Yeri
+- `SALESCLAS` — Satış ve Dağıtım Kullanım Yeri
+- `MTRLPRIORITY` — Malzeme Yönetimi Önceliği
+- `PURCHPRIORTY` — Alış önceliği
+- `SALESPRIORITY` — Satış dağıtım önceliği
+- `WIDTH` — Genişlik
+- `LENGTH` — Uzunluk
+- `HEIGHT` — Yükseklik
+- `AREA` — Alan
+- `VOLUME_` — Hacim
+- `WEIGHT` — Ağırlık
+- `WIDTHREF` — Genişlik birim ref.
+- `LENGTHREF` — Uzunluk Birim Ref.
+- `HEIGHTREF` — Yükseklik Birimi Ref.
+- `AREAREF` — Alan Birim Referansı
+- `VOLUMEREF` — Birim hacim ref.
+- `WEIGHTREF` — Ağırlık birim ref.
+- `GROSSVOLUME` — Bürüt Hacim
+- `GROSSWEIGHT` — Bürüt Ağırlık
+- `GROSSVOLREF` — Bürüt Hacim Birim Ref.
+- `GROSSWGHTREF` — Bürüt Ağırlık Birim Ref.
+- `CONVFACT1` — Çevrim Katsayısı
+- `CONVFACT2` — Çevrim Katsayısı
+- `EXTACCESSFLAGS` — 1. E-iş ortamında geçerli 2. Satış noktalarında geçerli
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `BARCODE2` — Barkod 2
+- `BARCODE3` — Barkod 3
+- `WBARCODE` — Birimli barkod
+- `WBARCODESHIFT` — Ondalık basamak (birimli barkod)
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### ITMWSDEF — Malzeme-İş ist. bilgileri
+
+- `LOGICALREF` — Malzeme - İş İstasyonu Bilgisi Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `WSREF` — İş İstasyonu Ref.
+- `MINLEVEL` — Asgari Stok Seviyesi
+- `MAXLEVEL` — Azami Stok Seviyesi
+- `SAFELEVEL` — Güvenlik stok seviyesi
+- `MINLEVELCTRL` — Asgari Stok Seviye Kontrolü
+- `MAXLEVELCTRL` — Azami Stok Seviyesi Kontrolü
+- `SAFELEVELCTRL` — Güvenlik stok seviyesi kontrolü
+
+### ITMWSTOT — Malzeme-İş ist. Toplamları (günlük)
+
+- `LOGICALREF` — Kullanımda Değil
+- `ITEMREF` — Kullanımda Değil
+- `WSREF` — Kullanımda Değil
+- `DATE_` — Kullanımda Değil
+- `PLNPRODIN` — Kullanımda Değil
+- `PLNPRODOUT` — Kullanımda Değil
+- `PLNOTHERIN` — Kullanımda Değil
+- `PLNOTHEROUT` — Kullanımda Değil
+- `PLNWHOUSEIN` — Kullanımda Değil
+- `PLNWHOUSEOUT` — Kullanımda Değil
+- `ACTPRODIN` — Kullanımda Değil
+- `ACTPRODOUT` — Kullanımda Değil
+- `ACTOTHERIN` — Kullanımda Değil
+- `ACTOTHEROUT` — Kullanımda Değil
+- `ACTWHOUSEIN` — Kullanımda Değil
+- `ACTWHOUSEOUT` — Kullanımda Değil
+- `ONHAND` — Kullanımda Değil
+- `LASTTRDATE` — Kullanımda Değil
+- `TRANSFERRED` — Kullanımda Değil
+- `AVGVALUE` — Kullanımda Değil
+- `AVGCURRVAL` — Kullanımda Değil
+- `RESERVED` — Fiili stok
+
+### KSCARD — Kasalar
+
+- `LOGICALREF` — Kasa log. Ref.
+- `CODE` — Hesap Kodu
+- `NAME` — Hesap Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `EXPLAIN` — Açıklama
+- `ADDR1` — Adres Satırı
+- `ADDR2` — Adres Satırı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `CCURRENCY` — Kasa döviz türü
+- `CURRATETYPE` — Kasa döviz kuru türü
+- `FIXEDCURRTYPE` — İşlemde döviz türü değiştirilebilir (evet/hayır)
+
+### KSDISTDETLINES — KSDISTDETLINES
+
+- `LOGICALREF` — KSDISTDETLINES LOGICALREF
+- `CARDREF` — KSCARD LOGICALREF
+- `CASHTRANSREF` — KSLINES LOGICALREF
+- `LINENR` — Satır Numarası
+- `CSDISTTEMPLINE` — Kasa hesabı
+- `ACCREF` — EMUHACC LOGICALREF
+- `CENTERREF` — EMCENTER LOGICALREF
+- `PROJECTREF` — Proje Log. Ref.
+- `DISTRATE` — Dağıtım Oranı
+- `DATE_` — Tarih
+- `TRCODE` — Hareket türü
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `AMOUNT` — Tutar
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `TRCURR` — İD Türü
+- `SIGN` — Borç/Alacak İşareti
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `DISTTEMPLNTYP` — Kasa muhasebe dağıtım satır tipi
+
+### KSLINES — Kasa işlemleri
+
+- `LOGICALREF` — Kasa hareketi log. Ref.
+- `CARDREF` — Kasa kart ref.
+- `VCARDREF` — Virman yapılan kasa ref.
+- `TRANSREF` — Tanımlanmış modül hareketleri ref.
+- `ACCREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `CSACCREF` — Karşı Kasanın Genel Muhasebe Hesabı Ref.
+- `CSCENTERREF` — Karşı Kasa Masraf Merkezi Ref.
+- `DATE_` — Tarih
+- `HOUR_` — Saat
+- `MINUTE_` — Dakika
+- `TRCODE` — Hareket türü
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `DESTBRANCH` — Hedef işyeri
+- `DESTDEPARTMENT` — Hedef bölüm
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FICHENO` — Fiş Numarası
+- `CUSTTITLE` — Kasa açıklaması
+- `LINEEXP` — Satır Açıklaması
+- `AMOUNT` — Tutar
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `TRCURR` — İD Türü
+- `SIGN` — Borç/Alacak İşareti
+- `ACCOUNTED` — Muhasebeleştirildi
+- `CANCELLED` — İptal Edilmiş
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `GPOPTYPE` — Gider Pusulası Hizmet Türü (0: Malzeme
+- `GPINCOMETACRAT` — Gider Pusulası Stopaj Oranı
+- `GPFUNDSHARERAT` — Gider Pusulası Fon Payı Oranı
+- `GPPLATE` — Gider Pusulası
+- `GPTAXACC` — Gider Pusulası Stopaj Genel Muhasebe Hesabı Ref.
+- `GPFUNDACC` — Gider Pusulası Fon Payı Genel Muhasebe Hesabı Ref.
+- `GPADDR` — Gider Pusulası Adresi
+- `SMMVATRATE` — Serbest meslek makbuzu KDV oranı
+- `SMMVATACREF` — Serbest meslek makbuzu KDV muhasebe hesabı ref.
+- `SMMVATCENTREF` — Serbest meslek makbuzu KDV masraf merkezi ref.
+- `SMMDOCODE` — Serbest meslek makbuzu belge numarası
+- `INFIDX` — Enflasyon Endeksi
+- `TRANGRPNO` — İşlem grup num.
+- `TRANGRPLINENO` — İşlem grubu satır num.
+- `ORGLOGOID` — Veri Merkezi
+- `VATINC` — KDV dahil / hariç
+- `VATRAT` — KDV oranı
+- `VATACCREF` — KDV muhasebe hesabı ref.
+- `VATTOT` — KDV tutarı
+- `PROJECTREF` — Proje Referansı
+- `CSTRANSREF` — Çek / senet kartları mantıksal referansı
+- `STATUS` — Durumu
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `TRANNO` — Hareket numarası
+- `DOCODE` — Belge Numarası
+- `AFFECTRISK` — Riski etkiler
+- `REFLECTED` — KDV aktarıldı mı?
+- `REFLACCFICHEREF` — Genel Muhasebe Fişleri Referansı
+- `CANCELLEDREFLACC` — İptal edilen faturanın KDV tutarı aktarıldı mı?
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### LABORREQ — Çalışan ihtiyaçları
+
+- `LOGICALREF` — Çalışan İhtiyacı Log. Ref.
+- `OPREQREF` — Operasyon İhtiyaçları Ref.
+- `LINENO_` — Satır Numarası
+- `GROUP_` — Çalışan Grubu
+- `EMPREF` — Çalışan Kartı Ref.
+- `AMOUNT` — Çalışan sayısı
+
+### LDDS-RES — LDDS-RES
+
+- `LOGICALREF` — L_DISTLIST mantıksal referansı
+- `TSUSERNR` — Dağıtım listesi kullanıcı numarası
+- `TSNAME` — Dağıtım listesi kullanıcı adı
+- `TSLOGOADR` — Dağıtım listesi kullanıcısının Logo mesaj adresi
+- `TSMAILADR` — Dağıtım listesi kullanıcısının e-posta adresi
+
+### LDOCNUM — Döküman numaralama şablonları
+
+- `LOGICALREF` — Fiziksel adres
+- `DOCIDEN` — Döküman no
+- `APPMODULE` — Modül no
+- `FIRMID` — Firma no
+- `DIVISID` — Bölüm no
+- `WHID` — Ambar no
+- `FACTID` — Fabrika no
+- `GROUPID` — Şablonu kullanabilecek gruplar
+- `ROLEID` — Şablonu kullanabilecek roller
+- `USERID` — Şablonu kullanabilecek kullanıcılar
+- `FIRSTNUM` — Başlangıç numarası
+- `LASTNUM` — Bitiş numarası
+- `EFFSDATE` — Atama başlangıç tarihi
+- `EFFEDATE` — Atama bitiş tarihi
+- `NUMFORM` — Numara formatı sayı/metin
+- `LASTASGND` — Son atama tarihi
+- `SEGMENTS1_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS1_SEGEND` — Aralık bitişi
+- `SEGMENTS1_SEGLEN` — Karakter sayısı
+- `SEGMENTS1_FILLCH` — Boşluk karakteri
+- `SEGMENTS1_SEGFORM` — Sıralama
+- `SEGMENTS1_INCREM` — Artırımlı
+- `SEGMENTS1_TXTLANG` — Dili
+- `SEGMENTS1_RESVD1` — Rezerve alan 1
+- `SEGMENTS1_RESVD2` — Rezerve alan 2
+- `SEGMENTS2_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS2_SEGEND` — Aralık bitişi
+- `SEGMENTS2_SEGLEN` — Karakter sayısı
+- `SEGMENTS2_FILLCH` — Boşluk karakteri
+- `SEGMENTS2_SEGFORM` — Sıralama
+- `SEGMENTS2_INCREM` — Artırımlı
+- `SEGMENTS2_TXTLANG` — Dili
+- `SEGMENTS2_RESVD1` — Rezerve alan 1
+- `SEGMENTS2_RESVD2` — Rezerve alan 2
+- `SEGMENTS3_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS3_SEGEND` — Aralık bitişi
+- `SEGMENTS3_SEGLEN` — Karakter sayısı
+- `SEGMENTS3_FILLCH` — Boşluk karakteri
+- `SEGMENTS3_SEGFORM` — Format
+- `SEGMENTS3_INCREM` — Artırımlı
+- `SEGMENTS3_TXTLANG` — Dili
+- `SEGMENTS3_RESVD1` — Rezerve alan 1
+- `SEGMENTS3_RESVD2` — Rezerve alan 2
+- `SEGMENTS4_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS4_SEGEND` — Aralık bitişi
+- `SEGMENTS4_SEGLEN` — Karakter sayısı
+- `SEGMENTS4_FILLCH` — Boşluk karakteri
+- `SEGMENTS4_SEGFORM` — Format
+- `SEGMENTS4_INCREM` — Artırımlı
+- `SEGMENTS4_TXTLANG` — Dili
+- `SEGMENTS4_RESVD1` — Rezerve alan 1
+- `SEGMENTS4_RESVD2` — Rezerve alan 2
+- `SEGMENTS5_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS5_SEGEND` — Aralık bitişi
+- `SEGMENTS5_SEGLEN` — Karakter sayısı
+- `SEGMENTS5_FILLCH` — Boşluk karakteri
+- `SEGMENTS5_SEGFORM` — Format
+- `SEGMENTS5_INCREM` — Artırımlı
+- `SEGMENTS5_TXTLANG` — Dili
+- `SEGMENTS5_RESVD1` — Rezerve alan 1
+- `SEGMENTS5_RESVD2` — Rezerve alan 2
+- `SEGMENTS6_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS6_SEGEND` — Aralık bitişi
+- `SEGMENTS6_SEGLEN` — Karakter sayısı
+- `SEGMENTS6_FILLCH` — Boşluk karakteri
+- `SEGMENTS6_SEGFORM` — Format
+- `SEGMENTS6_INCREM` — Artırımlı
+- `SEGMENTS6_TXTLANG` — Dili
+- `SEGMENTS6_RESVD1` — Rezerve alan 1
+- `SEGMENTS6_RESVD2` — Rezerve alan 2
+- `SEGMENTS7_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS7_SEGEND` — Aralık bitişi
+- `SEGMENTS7_SEGLEN` — Karakter sayısı
+- `SEGMENTS7_FILLCH` — Boşluk karakteri
+- `SEGMENTS7_SEGFORM` — Format
+- `SEGMENTS7_INCREM` — Artırımlı
+- `SEGMENTS7_TXTLANG` — Dili
+- `SEGMENTS7_RESVD1` — Rezerve alan 1
+- `SEGMENTS7_RESVD2` — Rezerve alan 2
+- `SEGMENTS8_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS8_SEGEND` — Aralık bitişi
+- `SEGMENTS8_SEGLEN` — Karakter sayısı
+- `SEGMENTS8_FILLCH` — Boşluk karakteri
+- `SEGMENTS8_SEGFORM` — Format
+- `SEGMENTS8_INCREM` — Artırımlı
+- `SEGMENTS8_TXTLANG` — Dili
+- `SEGMENTS8_RESVD1` — Rezerve alan 1
+- `SEGMENTS8_RESVD2` — Rezerve alan 2
+- `SEGMENTS9_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS9_SEGEND` — Aralık bitişi
+- `SEGMENTS9_SEGLEN` — Karakter sayısı
+- `SEGMENTS9_FILLCH` — Boşluk karakteri
+- `SEGMENTS9_SEGFORM` — Format
+- `SEGMENTS9_INCREM` — Artırımlı
+- `SEGMENTS9_TXTLANG` — Dili
+- `SEGMENTS9_RESVD1` — Rezerve alan 1
+- `SEGMENTS9_RESVD2` — Rezerve alan 2
+- `SEGMENTS10_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS10_SEGEND` — Aralık bitişi
+- `SEGMENTS10_SEGLEN` — Karakter sayısı
+- `SEGMENTS10_FILLCH` — Boşluk karakteri
+- `SEGMENTS10_SEGFORM` — Format
+- `SEGMENTS10_INCREM` — Artırımlı
+- `SEGMENTS10_TXTLANG` — Dili
+- `SEGMENTS10_RESVD1` — Rezerve alan 1
+- `SEGMENTS10_RESVD2` — Rezerve alan 2
+- `SEGMENTS11_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS11_SEGEND` — Aralık bitişi
+- `SEGMENTS11_SEGLEN` — Karakter sayısı
+- `SEGMENTS11_FILLCH` — Boşluk karakteri
+- `SEGMENTS11_SEGFORM` — Format
+- `SEGMENTS11_INCREM` — Artırımlı
+- `SEGMENTS11_TXTLANG` — Dili
+- `SEGMENTS11_RESVD1` — Rezerve alan 1
+- `SEGMENTS11_RESVD2` — Rezerve alan 2
+- `SEGMENTS12_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS12_SEGEND` — Aralık bitişi
+- `SEGMENTS12_SEGLEN` — Karakter sayısı
+- `SEGMENTS12_FILLCH` — Boşluk karakteri
+- `SEGMENTS12_SEGFORM` — Format
+- `SEGMENTS12_INCREM` — Artırımlı
+- `SEGMENTS12_TXTLANG` — Dili
+- `SEGMENTS12_RESVD1` — Rezerve alan 1
+- `SEGMENTS12_RESVD2` — Rezerve alan 2
+- `SEGMENTS13_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS13_SEGEND` — Aralık bitişi
+- `SEGMENTS13_SEGLEN` — Karakter sayısı
+- `SEGMENTS13_FILLCH` — Boşluk karakteri
+- `SEGMENTS13_SEGFORM` — Format
+- `SEGMENTS13_INCREM` — Artırımlı
+- `SEGMENTS13_TXTLANG` — Dili
+- `SEGMENTS13_RESVD1` — Rezerve alan 1
+- `SEGMENTS13_RESVD2` — Rezerve alan 2
+- `SEGMENTS14_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS14_SEGEND` — Aralık bitişi
+- `SEGMENTS14_SEGLEN` — Karakter sayısı
+- `SEGMENTS14_FILLCH` — Boşluk karakteri
+- `SEGMENTS14_SEGFORM` — Format
+- `SEGMENTS14_INCREM` — Artırımlı
+- `SEGMENTS14_TXTLANG` — Dili
+- `SEGMENTS14_RESVD1` — Rezerve alan 1
+- `SEGMENTS14_RESVD2` — Rezerve alan 2
+- `SEGMENTS15_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS15_SEGEND` — Aralık bitişi
+- `SEGMENTS15_SEGLEN` — Karakter sayısı
+- `SEGMENTS15_FILLCH` — Boşluk karakteri
+- `SEGMENTS15_SEGFORM` — Format
+- `SEGMENTS15_INCREM` — Artırımlı
+- `SEGMENTS15_TXTLANG` — Dili
+- `SEGMENTS15_RESVD1` — Rezerve alan 1
+- `SEGMENTS15_RESVD2` — Rezerve alan 2
+- `SEGMENTS16_SEGSTART` — Aralık başlangıcı
+- `SEGMENTS16_SEGEND` — Aralık bitişi
+- `SEGMENTS16_SEGLEN` — Karakter sayısı
+- `SEGMENTS16_FILLCH` — Boşluk karakteri
+- `SEGMENTS16_SEGFORM` — Format
+- `SEGMENTS16_INCREM` — Artırımlı
+- `SEGMENTS16_TXTLANG` — Dili
+- `SEGMENTS16_RESVD1` — Rezerve alan 1
+- `SEGMENTS16_RESVD2` — Rezerve alan 2
+
+### LDXRECDELREQ — LDXRECDELREQ
+
+- `LOGICALREF` — Veri Merkezi
+- `DOCTYPE` — Belge türü
+- `DOCTRCODE` — Belge işlem kodu (fatura - sipariş - makbuz)
+- `DOCNUMBER` — Belge numarası (fatura - sipariş - makbuz)
+- `DOCDATE` — Belge tarihi
+- `DOCAUXCODE` — Belge özel kodu
+- `DOCDESC` — Belge açıklaması
+- `ARPLID` — Cari hesap Logo kimliği
+- `ORGLOGOID` — Veri Merkezi
+
+### LNGEXCSETS — Bazı kayıtların diğer dillerdeki açıklamaları
+
+- `LOGICALREF` — Fiziksel adres
+- `DOCID` — Kayıt Tipi
+- `DOCREF` — Kayıt referansı
+- `FIELDID` — Alan tipi
+- `LANGID` — Seçilen dil
+
+### LNOPASGN — Operasyon-Malzeme ilişkisi
+
+- `LOGICALREF` — İşlem - Malzeme bağlantı log. Ref.
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `BOMLINEREF` — Ürün Reçetesi Satırı Ref.
+- `ROUTINGREF` — Üretim rotası ref.
+- `ROUTLINEREF` — Üretim rota satırı ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UOMREF` — Birim referansı
+- `AMOUNT` — Miktar
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### LOCATION — Stok yerleri
+
+- `LOGICALREF` — Stok Yeri Log. Ref.
+- `INVENNR` — Ambar Numarası
+- `CODE` — Stok Yeri Kodu
+- `NAME` — Stok Yeri Açıklaması
+- `WIDTH` — Raf genişliği
+- `LENGTH` — Raf uzunluğu
+- `HEIGHT` — Raf yüksekliği
+- `WIDTHREF` — Genişlik birim ref.
+- `LENGTHREF` — Uzunluk Birim Ref.
+- `HEIGHTREF` — Yükseklik Birimi Ref.
+- `MINLEVEL` — Raf Asgari Seviyesi
+- `MAXLEVEL` — Azami Seviye (Raf)
+- `SHELFTYPE` — Raf Türü Sınıfları
+- `CONTENTTYPE` — Raf içerik (satır) türü
+- `PRIORITY` — Aynı türden malzemeler için öncelik
+- `USETREF` — Birim Seti Referansı
+- `UOMREF` — Birim referansı
+- `ISEUROPALETTE` — Raf İçeriği EUROPALETTE
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### LOGREP — LOG (izleme) kaydı
+
+- `LOGICALREF` — İzleme Kaydı Log. Ref.
+- `LOGTYPE` — İzleme Türü
+- `LINENR` — Satır Numarası
+- `LINETYPE` — Log satır türü
+- `LINEEXP` — Satır Açıklaması
+- `MSGNUM1` — Mesaj Numarası 1
+- `MSGNUM2` — Mesaj Numarası 2
+
+### MARK — Markalar
+
+- `LOGICALREF` — İşaretle
+- `CODE` — Marka Kodu
+- `DESCR` — Marka Tanımı
+- `SPECODE` — Marka Özel Kodu
+- `CYPHCODE` — Marka Yetki Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### MARKET — Malzeme pazar bilgileri (Port)
+
+- `LOGICALREF` — Malzeme market bilgisi (Port) mantıksal referansı
+- `ITEMREF` — Malzeme Ref.
+- `SCALES` — Terazi bağlantısı
+- `SCALENR` — Terazi içerik numarası
+- `KDVDEPNR` — KDV departman numarası
+- `SITEID` — Veri Merkezi
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+- `RECSTATUS` — Kayıt Durumu
+
+### MBSCRMRELF — MBSCRMRELF
+
+- `LOGICALREF` — Logical Reference
+- `RECTYPE` — Kayıt türü
+- `LOGOREF` — Kayıt ref. (LOGO)
+- `LOGOCREATEDDATE` — Oluşturulma Tarihi (LOGO)
+- `LOGOCREATEDHOUR` — Oluşturulma Saati (LOGO)
+- `LOGOCREATEDMIN` — Oluşturulma Dakikası (LOGO)
+- `LOGOCREATEDSEC` — Oluşturulma Saniyesi (LOGO)
+- `LOGOMODIFIEDDATE` — Değiştirilme Tarihi (LOGO)
+- `LOGOMODIFIEDHOUR` — Değiştirilme Saati (LOGO)
+- `LOGOMODIFIEDMIN` — Değiştirilme Dakikası (LOGO)
+- `LOGOMODIFIEDSEC` — Değiştirilme Saniyesi (LOGO)
+- `CRMGUID` — Kayıt ref. (CRM)
+- `CRMCREATEDDATE` — Oluşturulma Tarihi (CRM)
+- `CRMCREATEDHOUR` — Oluşturulma Saati (CRM)
+- `CRMCREATEDMIN` — Oluşturulma Dakikası (CRM)
+- `CRMCREATEDSEC` — Oluşturulma Saniyesi (CRM)
+- `CRMMODIFIEDDATE` — Değiştirilme Tarihi (CRM)
+- `CRMMODIFIEDHOUR` — Değiştirilme Saati (CRM)
+- `CRMMODIFIEDMIN` — Değiştirilme Dakikası (CRM)
+- `CRMMODIFIEDSEC` — Değiştirilme Saniyesi (CRM)
+
+### MBSCRMRELP — MBSCRMRELP
+
+- `LOGICALREF` — Logical Reference
+- `RECTYPE` — Kayıt türü
+- `LOGOREF` — Kayıt ref. (LOGO)
+- `LOGOCREATEDDATE` — Oluşturulma Tarihi (LOGO)
+- `LOGOCREATEDHOUR` — Oluşturulma Saati (LOGO)
+- `LOGOCREATEDMIN` — Oluşturulma Dakikası (LOGO)
+- `LOGOCREATEDSEC` — Oluşturulma Saniyesi (LOGO)
+- `LOGOMODIFIEDDATE` — Değiştirilme Tarihi (LOGO)
+- `LOGOMODIFIEDHOUR` — Değiştirilme Saati (LOGO)
+- `LOGOMODIFIEDMIN` — Değiştirilme Dakikası (LOGO)
+- `LOGOMODIFIEDSEC` — Değiştirilme Saniyesi (LOGO)
+- `CRMGUID` — Kayıt ref. (CRM)
+- `CRMCREATEDDATE` — Oluşturulma Tarihi (CRM)
+- `CRMCREATEDHOUR` — Oluşturulma Saati (CRM)
+- `CRMCREATEDMIN` — Oluşturulma Dakikası (CRM)
+- `CRMCREATEDSEC` — Oluşturulma Saniyesi (CRM)
+- `CRMMODIFIEDDATE` — Değiştirilme Tarihi (CRM)
+- `CRMMODIFIEDHOUR` — Değiştirilme Saati (CRM)
+- `CRMMODIFIEDMIN` — Değiştirilme Dakikası (CRM)
+- `CRMMODIFIEDSEC` — Değiştirilme Saniyesi (CRM)
+
+### MRPHEAD — MRP ve MPS başlıkları
+
+- `LOGICALREF` — Başlık Log. Ref.
+- `CODE` — Kod
+- `DEFINITION_` — Açıklama
+- `RUNTYPE` — Planlama türü
+- `RUNDATE` — Planlama tarihi
+- `USERNO` — Kullanıcı numarası
+- `FACTNO` — Fabrika Numarası
+- `BEGDATE` — Başlangıç Tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `ACTIVE` — Kullanım durumu
+- `DAYCNT` — Gün sayısı
+- `WEEKCNT` — Hafta sayısı
+- `MONTHCNT` — Ay sayısı
+- `FROZCNT` — Sabitlenecek Günler
+- `CHANGEFROZ` — Kesinleşen Günler Değişim Durumu
+- `WKDYPAR` — Haftadan Günlere Dağıtım Parametreleri
+- `MODYPAR` — Aydan Günlere Dağıtım Parametreleri
+- `TMPINPAR` — Konsinye Girişleri Eklenecek
+- `SALORDPAR` — İndirilecek Alınan Siparişler
+- `PURORDPAR` — Verilen siparişler eklenecek
+- `PLNINPAR` — Planlanan girişler eklenecek
+- `PLNOUTPAR` — İndirilecek planlanan çıkışlar
+- `SALREZPAR` — Sadece rezerve satış siparişleri indirilecektir
+- `WHLIST1` — Ambar listesi 1
+- `WHLIST2` — Ambar listesi 2
+- `WHLIST3` — Ambar listesi 3
+- `WHLIST4` — Ambar listesi 4
+- `MPSFORSORD` — Siparişler için MPS
+- `DEMFICHEPAR` — Talep Fişleri Silinecek
+- `DEPMPS` — Bağımlı/Bağımsız MRP
+- `CHKRESOCC` — Kaynak kullanımı
+- `WHLIST5` — Ambar parametreleri 5
+- `WHLIST6` — Ambar parametreleri 6
+- `WHLIST7` — Ambar parametreleri 7
+- `WHLIST8` — Ambar parametreleri 8
+
+### MRPITEM — MRP malzemeleri
+
+- `LOGICALREF` — MRP Kalemi Log. Ref.
+- `HEADERREF` — MRP ve MPS Başlık Ref.
+- `ITEMREF` — Malzeme Kartları Referansı
+- `CHANGED` — Değişmiş / Değişmemiş
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### MRPITEMCHG — Değiştirilen MRP malzemeleri
+
+- `LOGICALREF` — Değişmiş MRP Kalemleri Logical Ref.
+- `ITEMREF` — Malzeme Kartları Referansı
+- `PARITEMREF` — Malzeme Kartları Referansı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### MRPLINE — MRP satırları
+
+- `LOGICALREF` — MRP Satırı Log. Ref.
+- `USERNO` — Kullanıcı numarası
+- `FACTNO` — Fabrika Numarası
+- `RUNDATE` — Planlama tarihi
+- `LINETYPE` — Satır Tipi
+- `DUEDATE` — Vade
+- `PARITEMREF` — Malzeme Sınıfı Referansı (Malzeme sınıfı detayı içeren satırlar için)
+- `ITEMREF` — Malzeme Ref.
+- `UNITREF` — Ana Birim Ref.
+- `REQAMOUNT` — Toplam gereksinim miktarı
+- `PRODAMOUNT` — Toplam üretim miktarı
+- `FROZEN` — Bu kayıt kesin mi?
+- `CUSTORDERS` — Müşteri Siparişleri Tutarı
+- `USERDEMAND` — Kullanıcı talepleri miktarı
+- `UNSIZEDAMOUNT` — Başlangıç Kullanıcı Tutarı
+- `PARENTLINEREF` — Üst MRP satırı ref.
+- `HEADERREF` — Başlık Ref.
+- `USERINVEN` — Hedef stok
+- `DEMANDTOTAL` — Talep Fişleri Toplamı
+- `PLNINVENCHG` — Planlanan stok seviyesi değişimi
+- `BOMREVREF` — Ürün Reçetesi Revizyonları Referansı
+- `SUPPLIERREF` — Cari Hesap Ref.
+- `PRIORITY` — Öncelik
+- `ORDLINEREF` — Sipariş hareketleri Ref.
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `OPERATIONREF` — Kontrol işlemleri referansı
+
+### MRPPEGGING — MRP atamaları
+
+- `LOGICALREF` — MRP Ataması Log. Ref.
+- `PARENTTYPE` — Üst kayıt türü
+- `PARENTREF` — Ana ref.
+- `CHILDTYPE` — Alt Malzeme
+- `CHILDREF` — Alt Malzeme
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UNITREF` — Ana Birim Ref. (Malz. Kartı)
+- `AMOUNT` — Tutar
+- `ORDPERIOD` — Periyot numarası
+- `HEADERREF` — Başlık Ref.
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### MRPPROPOSAL — MRP önerileri
+
+- `LOGICALREF` — MRP Önerisi Log. Ref.
+- `PROPOSALTYPE` — Öneri türü
+- `PROPOSALDATE` — Öneri tarihi
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UNITREF` — Birim referansı
+- `AMOUNT` — Tutar
+- `CLREF` — Müşteri Ref.
+- `BOMREF` — Ürün Reçetesi Referansı
+- `REVREF` — Ürün Reçetesi Revizyonu Referansı
+- `PEGGEDAMOUNT` — Gerçekleşen miktar
+- `PARENTPROPREF` — Ana Öneri ref.
+- `SOURCETYPE` — Kaynak türü
+- `SOURCEREF` — Kaynak ref.
+- `MOVEDTODEMAND` — Talep Kısmına
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### NET — Network kontrolü (kimlerin hangi firma ve dönemle çalıştığı)
+
+- `LOGICALREF` — Fiziksel adres
+- `LOCKSTR` — Lock açıklaması
+- `COUNTER` — Sayaç
+
+### OCCUPATION — Üretimde kaynak kullanımları
+
+- `LOGICALREF` — Kaynak kullanımı
+- `PRODORDREF` — Üretim Emri Referansı
+- `DISPLINEREF` — İş emri ref.
+- `OCCSTATUS` — Kaynak durumu
+- `OCCTYPE` — Kaynak Tipi
+- `LABORREQREF` — İşgücü İhtiyacı Ref.
+- `EMPREF` — Çalışan Ref.
+- `TOOLREQREF` — Araç gereksinimi ref.
+- `TOOLREF` — Araç ref.
+- `AMOUNT` — Miktar
+- `BEGDATE` — Başlangıç tarihi (OCCSTATUS)
+- `BEGTIME` — Başlangıç zamanı (OCCSTATUS)
+- `ENDDATE` — Bitiş Tarihi
+- `ENDTIME` — Bitiş Tarihi
+- `DURATION` — Süre (OCCSTATUS)
+- `WIZENTRY` — Kullanıcı girişi
+- `COSTFACTOR` — Maliyet Katsayısı
+- `OPDURATION` — İşlem süresi
+- `OPAMOUNT` — İşlem miktarı
+- `SETUPTIME` — Kurulum Zamanı
+- `RUNBATCH` — İşlem partisi
+- `RUNTIME` — İşlem süresi
+- `MOVEBATCH` — Taşıma partisi
+- `MOVETIME` — Taşıma süresi
+- `CALCTYP` — İşlem süresi hesaplama türü
+
+### OCCUPATN — Kaynak kullanımları (üretim)
+
+- `LOGICALREF` — Fiziksel adres
+- `PRODORDREF` — Üretim emirleri kartı
+- `POLINEREF` — İş emri ref
+- `OCCTYPE` — Kaynak tipi
+- `OCCEXP` — Kaynak açıklaması
+- `LABORREQREF` — Çalışan ihtiyaçları kartı
+- `EMPREF` — Çalışan kartı referansı
+- `TOOLREQREF` — Araç ihtiyaçları referansı
+- `TOOLREF` — Araç kartı referansı
+- `BEGDATE` — Başlangıç tarihi
+- `BEGTIME` — Başlangıç saati
+- `ENDDATE` — Bitiş tarihi
+- `ENDTIME` — Bitiş saati
+- `DURATION` — süre
+- `ACTBEGDATE` — Gerçekleşen başlangıç tarihi
+- `ACTBEGTIME` — Gerçekleşen başlangıç zamanı
+- `ACTENDDATE` — Gerçekleşen bitiş tarihi
+- `ACTENDTIME` — Gerçekleşen bitiş zamanı
+- `ACTDURATION` — Gerçekleşen süre
+- `AMOUNT` — Miktar
+
+### OFFALTER — Teklif alternatifleri
+
+- `LOGICALREF` — Teklif Alternatif log. ref.
+- `TRCODE` — Kullanımda Değil
+- `FICHENO` — Anlaşma Numarası
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLIENTREF` — Kullanımda Değil
+- `RECVREF` — Kullanımda Değil
+- `ACCOUNTREF` — Kullanımda Değil
+- `CENTERREF` — Kullanımda Değil
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Kaynak Ambar Maliyet Grubu
+- `UPDCURR` — (Bayi Kullanımı İçin)
+- `ADDDISCOUNTS` — Ek İndirimler
+- `TOTALDISCOUNTS` — Toplam İndirim
+- `TOTALDISCOUNTED` — İndirimler Satır Toplamı
+- `ADDEXPENSES` — Ek Masraflar
+- `TOTALEXPENSES` — Toplam Masraflar
+- `TOTALPROMOTIONS` — Toplam Promosyonlar
+- `TOTALVAT` — Toplam KDV
+- `GROSSTOTAL` — Bürüt Toplam
+- `NETTOTAL` — Net Toplam
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `GENEXP1` — Fiş Genel Açıklaması 1
+- `GENEXP2` — Fiş Genel Açıklaması 2
+- `GENEXP3` — Fiş Genel Açıklaması 3
+- `GENEXP4` — Fiş Genel Açıklaması 4
+- `EXTENREF` — Kullanımda Değil
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `STATUS` — Durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `SHPTYPCOD` — Teslimat Şekli
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `SHIPINFOREF` — Teslimat Bilgisi Ref.
+- `CUSTORDNO` — Müşteri Sipariş Fişi Numarası
+- `SENDCNT` — Gönderilenlerin Sayısı
+- `DLVCLIENT` — Teslimat Adresi Müşteri Tipi
+- `DOCTRACKINGNR` — Belge İzleme Numarası
+- `CANCELLED` — İptal Edilmiş
+- `ORGLOGOID` — Veri Merkezi
+- `OFFERREF` — Teklif ref.
+- `OFFALTREF` — Teklif ref.
+- `TYP` — Teklif Alternatif log. ref.
+- `ALTNR` — Alternatif Numara
+- `ADVANCEPAYM` — Avans
+- `TRCURR` — İD Türü
+- `TRRATE` — İD Kuru
+- `TRNET` — İD Net Tutar
+- `PAYMENTTYPE` — Ödeme türü
+- `ONLYONEPAYLINE` — Tek satırlı ödeme hareketi
+- `OPSTAT` — Hareket durumu
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+- `UPDTRCURR` — İşlem Dövizi
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `POFFERBEGDT` — Teklif / sözleşme başlangıç tarihi
+- `POFFERENDDT` — Teklif / sözleşme bitiş tarihi
+- `REVISNR` — Revizyon numarası
+- `LASTREVISION` — Son revizyon bilgisi
+- `CHECKAMOUNT` — Sözleşme siparişe atanırken miktarlar kontrol edilsin mi?
+- `SLSOPPRREF` — Satış fırsatları referansı
+- `SLSACTREF` — Satış faaliyetleri referansı
+- `SLSCUSTREF` — Müşteri / tedarikçi bilgileri referansı
+- `AFFECTRISK` — Riski etkiler
+- `TOTALADDTAX` — Ek Vergi Toplamı
+- `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+
+### OFFER — Teklifler
+
+- `LOGICALREF` — Kayıt Durumu
+- `TYP` — Kart Türü
+- `TRCODE` — Kart Türü
+- `VALIDITY` — Geçerlilik
+- `REVISNR` — Teklif revizyon num.
+- `REVISREF` — Revizyon ref.
+- `CUSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `CUSTREFNO` — Müşteri Ref. Numarası
+- `ACTIVITYREF` — Aktivite Referansı
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `SHPTYPCOD` — Teslimat Şekli Kodu
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `APPROVAL` — Teklif durumu
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `VALIDALTNR` — Geçerli alternatif numarası
+- `OPPORREF` — Satış fırsatları ref.
+- `RECSTATUS` — Kayıt Durumu
+
+### OFFFCEXCH — Teklif fişi döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden teklif fişi tutarı mantıksal referansı
+- `FICHEREF` — Teklif fişleri referansı
+- `ADDDISCOUNTSX` — Döviz cinsinden ek indirimler
+- `TOTALDISCOUNTSX` — Döviz cinsinden toplam indirimler
+- `TOTALDISCOUNTEDX` — Döviz cinsinden satır indirimleri sonrası toplam
+- `ADDEXPENSESX` — Döviz cinsinden satıra uygulanan ek masraflar
+- `TOTALEXPENSESX` — Döviz cinsinden toplam masraflar
+- `DISTEXPENSEX` — Döviz cinsinden malzeme maliyetine dağıtılacak masraf
+- `TOTALDEPOZITOX` — Döviz cinsinden toplam depozito
+- `TOTALPROMOTIONSX` — Döviz cinsinden toplam promosyon
+- `VATINCGROSSX` — Döviz cinsinden dahil KDV tutarı
+- `TOTALVATX` — Döviz cinsinden toplam KDV
+- `GROSSTOTALX` — Döviz cinsinden toplam
+- `TOTALADDTAXX` — Döviz cinsinden ek vergi toplamı
+- `TOTALEXADDTAXX` — Döviz cinsinden toplam istisna ek vergi tutarı
+- `BAGKURX` — Döviz cinsinden Bağ-Kur
+- `STOPAJX` — Döviz cinsinden stopaj
+- `SSDFX` — Döviz cinsinden SSDF
+- `BORSAX` — Döviz cinsinden borsa
+- `KOMISYONX` — Döviz cinsinden komisyon
+- `KOMKDVX` — Döviz cinsinden komisyon KDV'si
+- `EK1X` — Döviz cinsinden ek 1 tutarı
+- `EK2X` — Döviz cinsinden ek 2 tutarı
+- `EK3X` — Döviz cinsinden ek 3 tutarı
+- `EK4X` — Döviz cinsinden ek 4 tutarı
+- `EK5X` — Döviz cinsinden ek 5 tutarı
+
+### OFFLINEEXCH — Teklif satırı döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden teklif satırı tutarı mantıksal referansı
+- `TRANSREF` — Teklif satırı referansı
+- `PRICEX` — Döviz cinsinden birim fiyat
+- `TOTALX` — Döviz cinsinden toplam
+- `DISTCOSTX` — Döviz cinsinden satıra dağıtılan maliyet
+- `DISTDISCX` — Döviz cinsinden satıra dağıtılan indirim
+- `DISTEXPX` — Döviz cinsinden satıra dağıtılan masraf
+- `DISTPROMX` — Döviz cinsinden satıra dağıtılan promosyon
+- `VATAMNTX` — Döviz cinsinden net KDV tutarı
+- `VATMATRAHX` — Döviz cinsinden KDV matrahı
+- `LINENETX` — Döviz cinsinden net satır toplamı
+- `DISTADDEXPX` — Döviz cinsinden satıra dağıtılan ek masraf
+- `NETDISCAMNTX` — Döviz cinsinden net indirim tutarı
+- `VATCALCDIFFX` — Döviz cinsinden satınalma faturası KDV farkı
+- `EUVATAMOUNTX` — Döviz cinsinden Avrupa Birliği KDV tutarı
+- `ADDTAXAMOUNTX` — Döviz cinsinden ek vergi tutarı
+- `ADDTAXCONVFACTX` — Döviz cinsinden ek vergi çevrim katsayısı
+- `ADDTAXDISCAMOUNTX` — Döviz cinsinden ek vergi indirim miktarı
+- `EXADDTAXAMNTX` — Döviz cinsinden istisna ek vergi tutarı
+- `EXADDTAXCONVFX` — Döviz cinsinden istisna ek vergi çevrim katsayısı
+- `ADDTAXVATMATRAHX` — Ek vergi matrahı
+
+### OFFTRNS — Teklif hareketleri
+
+- `LOGICALREF` — Teklif işlemi log. Ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `ORDFICHEREF` — Teklifler log. Ref.
+- `CLIENTREF` — Teklif Alternatif log. ref.
+- `LINETYPE` — Satır tipi
+- `PREVLINEREF` — Üst Malzeme Sınıfı Satır Referansı
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `DETLINE` — Malzeme Sınıfı Detay Satırı
+- `LINENO_` — Satır Numarası
+- `TRCODE` — Kart Türü
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları
+- `CALCTYPE` — Hesaplama Türü
+- `CENTERREF` — Kullanımda Değil
+- `ACCOUNTREF` — Kullanımda Değil
+- `VATACCREF` — Kullanımda Değil
+- `VATCENTERREF` — Kullanımda Değil
+- `PRACCREF` — Kullanımda Değil
+- `PRCENTERREF` — Kullanımda Değil
+- `PRVATACCREF` — Kullanımda Değil
+- `PRVATCENREF` — Kullanımda Değil
+- `PROMREF` — Promosyon kartı ref.
+- `SPECODE` — Özel Kod
+- `DELVRYCODE` — Teslimat Kodu
+- `AMOUNT` — Miktar
+- `PRICE` — Fiyat
+- `TOTAL` — Toplam
+- `SHIPPEDAMOUNT` — Sevkedilen Miktar
+- `DISCPER` — İndirim yüzdesi
+- `DISTCOST` — Satıra Dağıtılan Maliyet
+- `DISTDISC` — Satıra Dağıtılan İndirim
+- `DISTEXP` — Satıra Dağıtılan Masraf
+- `DISTPROM` — Satıra Dağıtılan Promosyon
+- `VAT` — KDV
+- `VATAMNT` — Net KDV Tutarı
+- `VATMATRAH` — KDV matrahı
+- `LINEEXP` — Satır Açıklaması
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `VATINC` — KDV dahil / hariç
+- `CLOSED` — Kapanmış Teklif
+- `DORESERVE` — Malzeme Rezerve Edilecek
+- `INUSE` — Kullanımda
+- `DUEDATE` — Teslimat Tarihi
+- `PRCURR` — Fiyatlandırma dövizi kuru
+- `PRPRICE` — Fiyat (Fiyatlandırma dövizi)
+- `REPORTRATE` — Fiyat (Raporlama dövizi)
+- `BILLEDITEM` — Kullanımda Değil
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `EXTENREF` — Kullanımda Değil
+- `CPSTFLAG` — Karma Koli Satırı
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Ambar maliyet grubu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `LINENET` — Net Satır Toplamı
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `STATUS` — Kullanımda Değil
+- `DREF` — Dağıtım Şablonu Ref.
+- `TRGFLAG` — Kullanımda Değil
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Kullanımda Değil
+- `WFSTATUS` — Kullanımda Değil
+- `NETDISCFLAG` — Net İndirim Satırı ve Tutar İşareti
+- `NETDISCPERC` — Net İndirim Oranı (%)
+- `NETDISCAMNT` — Net İndirim Tutarı
+- `CONDITIONREF` — Kullanımda Değil
+- `DISTRESERVED` — Kullanımda Değil
+- `ONVEHICLE` — Kullanımda Değil
+- `CAMPAIGNREFS1` — Kampanya Kartı Referansı 1
+- `CAMPAIGNREFS2` — Kampanya Kartı Referansı 2
+- `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
+- `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
+- `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
+- `POINTCAMPREF` — Kampanya puanı ref.
+- `CAMPPOINT` — Kampanya Puanı
+- `PROMCLASITEMREF` — Promosyon sınıfı ref. (kampanyadan)
+- `REASONFORNOTSHP` — Sevk edilememe nedeni
+- `CMPGLINEREF` — Kampanya Satırı Referansı
+- `PRRATE` — Fiyatlandırma dövizi kuru
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `CANCELLED` — İptal Edilmiş
+- `DEMPEGGEDAMNT` — Talep karşılamada kullanılan miktar
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `OFFERREF` — Teklif ref.
+- `ORDERPARAM` — Kullanımda Değil
+- `ITEMASGREF` — Kullanımda Değil
+- `EXIMAMOUNT` — Kullanımda Değil
+- `OFFTRANSREF` — Kullanımda Değil
+- `ORDEREDAMOUNT` — Sipariş miktarı
+- `ORGLOGOID` — Veri Merkezi
+- `TRCURR` — İD Türü
+- `TRRATE` — İD Kuru
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `POINTCAMPREFS1` — Kampanya kartları referansı 1
+- `POINTCAMPREFS2` — Kampanya kartları referansı 2
+- `POINTCAMPREFS3` — Kampanya kartları referansı 3
+- `POINTCAMPREFS4` — Kampanya kartları referansı 4
+- `CAMPPOINTS1` — Kampanya puanı 1
+- `CAMPPOINTS2` — Kampanya puanı 2
+- `CAMPPOINTS3` — Kampanya puanı 3
+- `CAMPPOINTS4` — Kampanya puanı 4
+- `CMPGLINEREFS1` — Kampanya satırları referansı 1
+- `CMPGLINEREFS2` — Kampanya satırları referansı 2
+- `CMPGLINEREFS3` — Kampanya satırları referansı 3
+- `CMPGLINEREFS4` — Kampanya satırları referansı 4
+- `PRCLISTREF` — Satın alma / satış fiyatları mantıksal referansı
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `FCTYP` — Satın alma teklif fişleri
+- `PURCHOFFNR` — Alternatif Numara
+- `DEMFICHEREF` — DEMANDFICHE referansı
+- `DEMTRANSREF` — DEMANDLINE referansı
+- `ALTPROMFLAG` — Alternatif promosyon uygulandı mı?
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `REFLVATACCREF` — Genel Muhasebe Hesapları Referansı
+- `REFLVATOTHACCREF` — Genel Muhasebe Hesapları Referansı
+- `PRIORITY` — Sipariş teslimat önceliği
+- `AFFECTRISK` — Riski etkiler
+- `BOMREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonları Referansı
+- `ROUTINGREF` — Üretim rotaları referansı
+- `OPERATIONREF` — Kontrol işlemleri referansı
+- `ADDTAXRATE` — Ek Vergi Oranı
+- `ADDTAXCONVFACT` — Ek Vergi Çevrim Katsayısı
+- `ADDTAXAMOUNT` — Ek Vergi Tutarı
+- `ADDTAXACCREF` — Genel Muhasebe Hesapları Referansı
+- `ADDTAXCENTERREF` — Masraf Merkezi Referansı
+- `ADDTAXAMNTISUPD` — Ek Vergi Düzenlendi
+- `ADDTAXDISCAMOUNT` — Ek Vergi İndirim Miktarı
+- `EXADDTAXRATE` — İstisna ek vergi oranı
+- `EXADDTAXCONVF` — İstisna ek vergi çevrim katsayısı
+- `EXADDTAXAMNT` — İstisna ek vergi tutarı
+- `EUVATSTATUS` — KDV hesaplama durumu
+- `ADDTAXVATMATRAH` — Ek vergi matrahı
+
+### OPATTASG — Operasyon-Özellik ataması
+
+- `LOGICALREF` — İşlem - Özellik ataması log. Ref.
+- `WSATTASGREF` — İş İstasyonu Özellik Atamaları Ref.
+- `WSATTVALREF` — İş İstasyonu Özellik Değeri Atamaları Ref.
+- `OPREQREF` — Operasyon İhtiyaçları Ref.
+
+### OPERTION — Operasyonlar
+
+- `LOGICALREF` — İşlem log. Ref.
+- `CODE` — İşlem kodu
+- `NAME` — İşlem açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `QCCSETREF` — Kalite Kontrol Seti Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PRINTCNT` — Basılmış Olanların Sayısı
+- `DISTTYPE` — Dağıtım Türü
+- `DOCOUNTING` — Çevrim merkezi mi?
+
+### OPREQACTIVITY — Operasyon gereksinimi aktiviteleri
+
+- `LOGICALREF` — Operasyon İhtiyaçları Etkinliği Log. Ref.
+- `OPREQREF` — Operasyon İhtiyaçları Ref.
+- `OVHDREF` — Genel gider (çıkış) ref.
+- `FORMULA` — Formül
+- `AMOUNT` — Tutar
+- `WHENHAPPEN` — Aktivite Zamanı
+
+### OPRTREQ — Operasyon ihtiyacları
+
+- `LOGICALREF` — Operasyon İhtiyaçları Log. Ref.
+- `OPERATIONREF` — İşlem kartı ref.
+- `LINENO_` — Satır Numarası
+- `GROUP_` — İş İstasyonu Grup Kodu
+- `WSREF` — İş İstasyonu Ref.
+- `BEGDATE` — Başlangıç tarihi
+- `FIXEDSETUPTIME` — Kurulum Zamanı
+- `BATCHQUANTITY` — İşlem partisi
+- `RUNTIME` — İşlem süresi
+- `TRANSBATCHQTY` — Taşıma partisi
+- `TRANSBATCHTIME` — Taşıma süresi
+- `INSPTIME` — Kontrol Zamanı
+- `QUETIME` — Kuyruk süresi
+- `HEADTIME` — Operasyon öncesi bekleme süresi
+- `TAILTIME` — Operasyon sonrası bekleme süresi
+- `USAGEPER` — Aktif çalışan
+- `EFFICIENCY` — Verimlilik
+- `PRIORITY` — Öncelik
+- `MINAMOUNT` — Asgari Miktar
+- `MAXAMOUNT` — Azami Miktar
+- `CONDITION` — İş istasyonunun dağıtıma katılım ölçütü
+- `LINEUPDELAY` — Kuyrukta azami bekleme süresi
+- `DELAYUNIT` — Kuyrukta azami bekleme süresi birimi: 0: Dakika; 1: Saat; 2: Gün
+
+### ORDFEXCH — Sipariş fişi döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden sipariş fişleri tutarı mantıksal referansı
+- `FICHEREF` — Sipariş fişleri referansı
+- `ADDDISCOUNTSX` — Döviz cinsinden ek indirimler
+- `TOTALDISCOUNTSX` — Döviz cinsinden toplam indirimler
+- `TOTALDISCOUNTEDX` — Döviz cinsinden satır indirimleri sonrası toplam
+- `ADDEXPENSESX` — Döviz cinsinden satıra uygulanan ek masraflar
+- `TOTALEXPENSESX` — Döviz cinsinden toplam masraflar
+- `DISTEXPENSEX` — Döviz cinsinden malzeme maliyetine dağıtılacak masraf
+- `TOTALDEPOZITOX` — Döviz cinsinden toplam depozito
+- `TOTALPROMOTIONSX` — Döviz cinsinden toplam promosyon
+- `VATINCGROSSX` — Döviz cinsinden dahil KDV tutarı
+- `TOTALVATX` — Döviz cinsinden toplam KDV
+- `GROSSTOTALX` — Döviz cinsinden toplam
+- `TOTALADDTAXX` — Döviz cinsinden ek vergi toplamı
+- `TOTALEXADDTAXX` — Döviz cinsinden toplam istisna ek vergi tutarı
+- `BAGKURX` — Döviz cinsinden Bağ-Kur
+- `STOPAJX` — Döviz cinsinden stopaj
+- `SSDFX` — Döviz cinsinden SSDF
+- `BORSAX` — Döviz cinsinden borsa
+- `KOMISYONX` — Döviz cinsinden komisyon
+- `KOMKDVX` — Döviz cinsinden komisyon KDV'si
+- `EK1X` — Döviz cinsinden ek 1 tutarı
+- `EK2X` — Döviz cinsinden ek 2 tutarı
+- `EK3X` — Döviz cinsinden ek 3 tutarı
+- `EK4X` — Döviz cinsinden ek 4 tutarı
+- `EK5X` — Döviz cinsinden ek 5 tutarı
+
+### ORDLINEEXCH — Sipariş satırı döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden sipariş satırı tutarı mantıksal referansı
+- `TRANSREF` — Sipariş hareketi referansı
+- `PRICEX` — Döviz cinsinden birim fiyat
+- `TOTALX` — Döviz cinsinden toplam
+- `DISTCOSTX` — Döviz cinsinden satıra dağıtılan maliyet
+- `DISTDISCX` — Döviz cinsinden satıra dağıtılan indirim
+- `DISTEXPX` — Döviz cinsinden satıra dağıtılan masraf
+- `DISTPROMX` — Döviz cinsinden satıra dağıtılan promosyon
+- `VATAMNTX` — Döviz cinsinden net KDV tutarı
+- `VATMATRAHX` — Döviz cinsinden KDV matrahı
+- `LINENETX` — Döviz cinsinden net satır toplamı
+- `DISTADDEXPX` — Döviz cinsinden satıra dağıtılan ek masraf
+- `NETDISCAMNTX` — Döviz cinsinden net indirim tutarı
+- `VATCALCDIFFX` — Döviz cinsinden satınalma faturası KDV farkı
+- `EUVATAMOUNTX` — Döviz cinsinden Avrupa Birliği KDV tutarı
+- `ADDTAXAMOUNTX` — Döviz cinsinden ek vergi tutarı
+- `ADDTAXCONVFACTX` — Döviz cinsinden ek vergi çevrim katsayısı
+- `ADDTAXDISCAMOUNTX` — Döviz cinsinden ek vergi indirim miktarı
+- `EXADDTAXAMNTX` — Döviz cinsinden istisna ek vergi tutarı
+- `EXADDTAXCONVFX` — Döviz cinsinden istisna ek vergi çevrim katsayısı
+- `ADDTAXVATMATRAHX` — Ek vergi matrahı
+
+### ORDPEGGING — Karşı sipariş takibi
+
+- `LOGICALREF` — Karşı Sipariş İzleme Log. Ref.
+- `PURORDLNREF` — Verilen sipariş satır ref.
+- `PURORDFREF` — Verilen sipariş fiş ref.
+- `PARENTTYPE` — Talep/Kaynak Türü
+- `PARENTREF` — Alınan sipariş ref.
+- `ITEMALTER` — Alternatif Malzeme Kullanımı
+- `ITEMREF` — Alternatif Malzeme Referansı
+- `UNITREF` — Alternatif Birim Referansı
+- `MAINITEMREF` — Malzeme Ref.
+- `MAINUNITREF` — Birim referansı
+- `MEETAMNT` — Alternatif İlişkili Miktar
+- `MAINMEETAMNT` — İlişkili Miktar
+- `SUPPLIERREF` — Verilen sipariş cari hesap ref.
+- `CUSTREF` — Alınan sipariş cari hesap ref.
+- `LINETYPE` — Satır Tipi
+- `DETLINE` — Detay Satırı
+- `PREVLINEREF` — Talep Tespiti Log. Ref.
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `LINENO_` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `MAINVARIANTREF` — Varyant (Port) mantıksal referansı
+- `SALEORDFREF` — Sipariş fişleri referansı
+
+### ORFICHE — Sipariş fişleri
+
+- `LOGICALREF` — Sipariş fişi log. Ref.
+- `TRCODE` — Fiş Türü
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLIENTREF` — Cari Hesap Ref.
+- `RECVREF` — Müşteri Cari Hesap Referansı
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Kaynak Ambar Maliyet Grubu
+- `UPDCURR` — İrsaliyeye ya da faturaya aktarıldığında fiyatlandırma dövizi güncellenecek
+- `ADDDISCOUNTS` — Ek İndirimler
+- `TOTALDISCOUNTS` — Toplam İndirimler
+- `TOTALDISCOUNTED` — İndirimler Satır Toplamı
+- `ADDEXPENSES` — Ek Masraflar
+- `TOTALEXPENSES` — Toplam Masraflar
+- `TOTALPROMOTIONS` — Toplam Promosyonlar
+- `TOTALVAT` — Toplam KDV
+- `GROSSTOTAL` — Toplam
+- `NETTOTAL` — Net Toplam
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `GENEXP1` — Fiş Genel Açıklaması
+- `GENEXP2` — Fiş Genel Açıklaması
+- `GENEXP3` — Fiş Genel Açıklaması
+- `GENEXP4` — Fiş Genel Açıklaması
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `STATUS` — Durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `SHPTYPCOD` — Teslimat Şekli
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `SHIPINFOREF` — Teslimat Bilgisi Ref.
+- `CUSTORDNO` — Müşteri Sipariş Fişi Numarası
+- `SENDCNT` — Gönderilenlerin Sayısı
+- `DLVCLIENT` — Teslimat Adresi Müşteri Tipi
+- `DOCTRACKINGNR` — Belge İzleme Numarası
+- `CANCELLED` — İptal Edilmiş
+- `ORGLOGOID` — Veri Merkezi
+- `OFFERREF` — Teklifler log. Ref.
+- `OFFALTREF` — Teklif Alternatif log. ref.
+- `TYP` — Değer
+- `ALTNR` — Kullanımda Değil
+- `ADVANCEPAYM` — Kullanımda Değil
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `PAYMENTTYPE` — Ödeme türü
+- `ONLYONEPAYLINE` — Tek satırlı ödeme hareketi
+- `OPSTAT` — Hareket durumu
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+- `UPDTRCURR` — Güncellenen İşlem Dövizi
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `POFFERBEGDT` — Teklif / sözleşme başlangıç tarihi
+- `POFFERENDDT` — Teklif / sözleşme bitiş tarihi
+- `REVISNR` — Revizyon numarası
+- `LASTREVISION` — Son revizyon bilgisi
+- `CHECKAMOUNT` — Sözleşme siparişe atanırken miktarlar kontrol edilsin mi?
+- `SLSOPPRREF` — Satış fırsatları referansı
+- `SLSACTREF` — Satış faaliyetleri referansı
+- `SLSCUSTREF` — Müşteri / tedarikçi bilgileri referansı
+- `AFFECTRISK` — Riski etkiler
+- `TOTALADDTAX` — Ek Vergi Toplamı
+- `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+- `GENEXP5` — Fiş genel açıklaması
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### ORFLINE — Sipariş hareketleri
+
+- `LOGICALREF` — Sipariş hareketi log. Ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `ORDFICHEREF` — Sipariş fişi Ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `LINETYPE` — Satır türü
+- `PREVLINEREF` — Üst Malzeme Sınıfı Satır Referansı
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `DETLINE` — Malzeme Sınıfı Detay Satırı
+- `LINENO_` — Satır Numarası
+- `TRCODE` — Fiş Türü
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları
+- `CALCTYPE` — Hesaplama Türü
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `VATACCREF` — KDV muhasebe hesabı ref.
+- `VATCENTERREF` — KDV masraf merkezi ref.
+- `PRACCREF` — Promosyon muhasebe hesabı ref.
+- `PRCENTERREF` — Promosyom masraf merkezi ref.
+- `PRVATACCREF` — Promosyon KDV Genel Muhasebe Hesabı Numarası
+- `PRVATCENREF` — Promosyon KDV Masraf Merkezi Ref.
+- `PROMREF` — Promosyon kartı ref.
+- `SPECODE` — Özel Kod
+- `DELVRYCODE` — Teslimat Kodu
+- `AMOUNT` — Miktar
+- `PRICE` — Fiyat
+- `TOTAL` — Toplam
+- `SHIPPEDAMOUNT` — Sevkedilen Miktar
+- `DISCPER` — İndirim yüzdesi
+- `DISTCOST` — Satıra Dağıtılan Maliyet (Karma Koli)
+- `DISTDISC` — Satıra Dağıtılan İndirim (Karma Koli)
+- `DISTEXP` — Satıra Dağıtılan Masraf (Karma Koli)
+- `DISTPROM` — Satıra Dağıtılan Promosyon (Karma Koli)
+- `VAT` — KDV
+- `VATAMNT` — Net KDV Tutarı
+- `VATMATRAH` — KDV matrahı
+- `LINEEXP` — Satır Açıklaması
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `VATINC` — KDV dahil / hariç
+- `CLOSED` — Sipariş kapandı
+- `DORESERVE` — Malzeme Rezerve Edilecek
+- `INUSE` — Kullanımda
+- `DUEDATE` — Teslimat Tarihi
+- `PRCURR` — Fiyatlandırma dövizi kuru
+- `PRPRICE` — Fiyat (Fiyatlandırma dövizi)
+- `REPORTRATE` — Fiyat (Raporlama dövizi)
+- `BILLEDITEM` — Faturalanacak Malzeme
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `CPSTFLAG` — Karma Koli Satırı
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Ambar maliyet grubu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `LINENET` — Net Satır Toplamı
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `STATUS` — Onay Bilgisi
+- `DREF` — Satır Dağıtım Şablonları Kayıt Referansı
+- `TRGFLAG` — Trigger işareti
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `NETDISCFLAG` — Net İndirim Satırı ve Tutar İşareti
+- `NETDISCPERC` — Net İndirim Oranı (%)
+- `NETDISCAMNT` — Net İndirim Tutarı
+- `CONDITIONREF` — Satınalma / Satış koşulları ref.
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `CAMPAIGNREFS1` — Kampanya Kartı Referansı 1
+- `CAMPAIGNREFS2` — Kampanya Kartı Referansı 2
+- `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
+- `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
+- `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
+- `POINTCAMPREF` — Kampanya puanı ref.
+- `CAMPPOINT` — Kampanya Puanı
+- `PROMCLASITEMREF` — Promosyon sınıfı ref. (kampanyadan)
+- `REASONFORNOTSHP` — Sevk edilememe nedeni
+- `CMPGLINEREF` — Kampanya Satırı Referansı
+- `PRRATE` — Fiyatlandırma dövizi kuru
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `CANCELLED` — İptal Edilmiş
+- `DEMPEGGEDAMNT` — Talep karşılamada kullanılan miktar
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `OFFERREF` — Teklifler Ref.
+- `ORDERPARAM` — Kullanımda Değil
+- `ITEMASGREF` — Kullanımda Değil
+- `EXIMAMOUNT` — İthalat/İhracat Miktarı
+- `OFFTRANSREF` — Teklif işlemi log. Ref.
+- `ORDEREDAMOUNT` — Sipariş miktarı
+- `ORGLOGOID` — Veri Merkezi
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `POINTCAMPREFS1` — Kampanya kartları referansı 1
+- `POINTCAMPREFS2` — Kampanya kartları referansı 2
+- `POINTCAMPREFS3` — Kampanya kartları referansı 3
+- `POINTCAMPREFS4` — Kampanya kartları referansı 4
+- `CAMPPOINTS1` — Kampanya puanı 1
+- `CAMPPOINTS2` — Kampanya puanı 2
+- `CAMPPOINTS3` — Kampanya puanı 3
+- `CAMPPOINTS4` — Kampanya puanı 4
+- `CMPGLINEREFS1` — Kampanya satırları referansı 1
+- `CMPGLINEREFS2` — Kampanya satırları referansı 2
+- `CMPGLINEREFS3` — Kampanya satırları referansı 3
+- `CMPGLINEREFS4` — Kampanya satırları referansı 4
+- `PRCLISTREF` — Satın alma / satış fiyatları mantıksal referansı
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `FCTYP` — Satın alma teklif fişleri
+- `PURCHOFFNR` — Alternatif Numara
+- `DEMFICHEREF` — DEMANDFICHE referansı
+- `DEMTRANSREF` — DEMANDLINE referansı
+- `ALTPROMFLAG` — Alternatif promosyon uygulandı mı?
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `REFLVATACCREF` — Genel Muhasebe Hesapları Referansı
+- `REFLVATOTHACCREF` — Genel Muhasebe Hesapları Referansı
+- `PRIORITY` — Sipariş teslimat önceliği
+- `AFFECTRISK` — Riski etkiler
+- `BOMREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün reçetesi revizyonları referansı
+- `ROUTINGREF` — Üretim rotaları referansı
+- `OPERATIONREF` — Kontrol işlemi referansı
+- `ADDTAXRATE` — Ek Vergi Oranı
+- `ADDTAXCONVFACT` — Ek Vergi Çevrim Katsayısı
+- `ADDTAXAMOUNT` — Ek Vergi Tutarı
+- `ADDTAXACCREF` — Genel Muhasebe Hesapları Referansı
+- `ADDTAXCENTERREF` — Masraf Merkezi Referansı
+- `ADDTAXAMNTISUPD` — Ek Vergi Düzenlendi
+- `ADDTAXDISCAMOUNT` — Ek Vergi İndirim Miktarı
+- `EXADDTAXRATE` — İstisna ek vergi oranı
+- `EXADDTAXCONVF` — İstisna ek vergi çevrim katsayısı
+- `EXADDTAXAMNT` — İstisna ek vergi tutarı
+- `EUVATSTATUS` — KDV hesaplama durumu
+- `ADDTAXVATMATRAH` — Ek vergi matrahı
+
+### OVERHEADS — Genel gider kartları
+
+- `LOGICALREF` — Genel gider (çıkış) kartı log. Ref.
+- `CODE` — Kod
+- `DEFINITION` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `UNITCODE` — Birim kodu
+- `ACTIVE` — Kullanım durumu
+- `ACTIVITY` — Genel Gider Türü Aktivitesi
+- `REFLECTACCREF` — Yansıtılan Genel Muhasebe Hesabı Ref.
+- `BUDGETDIFACCREF` — Bütçe Farkları Genel Muhasebe Hesabı Referansı
+- `CPCTYDIFACCREF` — Kapasite Farkı Muhasebe Hesabı Referansı
+- `PRDCTVDIFACCREF` — Verimlilik Farkı Muhasebe Hesabı Ref.
+- `REFLECTCENTER` — Yansıtma masraf merkezi ref.
+- `BUDGETCENTER` — Bütçe Farkları Masraf Merkezi Referansı
+- `CPCTYCENTER` — Kapasite Farkı Masraf Merkezi Referansı
+- `PRDCTVCENTER` — Verimlilik Farkı Masraf Merkezi Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+
+### OVHCDISTRATE — Hizmet dağıtım kartları
+
+- `LOGICALREF` — Hizmet dağıtım log. ref.
+- `CARDREF` — Genel gider - Malzeme Ref._Hizmet Tipi
+- `COSTPRDREF` — Maliyet Periyodu Ref.
+- `CENTERREF` — Genel gider - Malzeme Ref._Üretim Tipi
+- `DISTRATE` — Hizmet dağıtım türü
+
+### OVHDTRANS — Standart genel giderler
+
+- `LOGICALREF` — Standart genel gider log. Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `WORKORDREF` — İş emirleri ref.
+- `OVHDCLNREF` — Genel gider - Malzeme satırı Ref.
+- `OPACTIVITYREF` — Operasyon İhtiyaçları Etkinliği Ref.
+- `ACCOUNTED` — Muhasebeleşmiş
+- `ACTIVITY` — Aktivite
+- `TRANTYPE` — Tür
+- `TRANBEGDATE` — Hareket başlangıç tarihi
+- `TRANENDDATE` — Hareket bitiş tarihi
+- `AMOUNT` — Tutar
+- `UNITCOST` — Birim maliyeti
+- `TOTAL` — Toplam
+- `RDTOTAL` — Raporlama dövizi - Toplam
+- `CREATEDBYACT` — Oluşturan
+
+### OVRHDACCREF — Genel gider ile hesap eşleştirmeleri
+
+- `LOGICALREF` — Genel gider - Hesap ataması log. Ref.
+- `CARDREF` — Genel gider ref.
+- `ACCOUNTREF` — Genel gider - Genel muhasebe hesabı ref.
+
+### OVRHDCENTER — Genel gider kalemleri
+
+- `LOGICALREF` — Genel gider (çıkış) log. ref.
+- `CODE` — Kod
+- `DEFINITION` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `EXPCENTERREF` — Masraf Merkezi Hesap Referansı
+- `CENTERTYPE` — Genel gider malzeme türü
+- `CPCTYDRIVER` — Kapasite Birimi
+- `ACTIVE` — Kullanım durumu
+- `DISTRATE` — Hizmet dağıtım oranı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+- `PRINTCNT` — Basılmış Olanların Sayısı
+
+### OVRHDCENTERLN — Genel gider kalemi satırları
+
+- `LOGICALREF` — Genel gider - Malzeme satırı log. Ref.
+- `OVRHDCENTERREF` — Genel gider - Malzeme Ref.
+- `COSTPRDREF` — Maliyet Periyodu Ref.
+- `OVERHEADREF` — Genel gider (çıkış) kart ref.
+- `CAPACITY` — Kapasite
+- `TOTAL` — Toplam
+- `REPORTRATE` — RD Kuru
+- `ACTIVITYAMOUNT` — Aktivite Kapasitesi
+- `OVHDSTDUNITCOST` — Genel gider standart birim maliyeti
+- `PRDLINENR` — Periyot satır numarası
+- `LINENR` — Satır Numarası
+- `LINETYPE` — Satır Tipi (0: Direct
+- `INDIRECTREF` — Üst satır ref.
+- `DISTRATEREF` — Hizmet dağıtım ref.
+- `RDTOTAL` — Raporlama dövizi - Toplam
+
+### PACKAGEASGN — PACKAGEASGN
+
+- `LOGICALREF` — Logical Reference
+- `PACKFICHEREF` — Paket fişi log. Ref.
+- `PACKLNREF` — Paket fişi satırı log. Ref.
+- `PARENTPACKLNREF` — Paket fişi satırı log. Ref.
+- `ITEMREF` — Malzemeler Log. Ref.
+- `UOMREF` — Birim seti log. Ref.
+- `ASGNFICHETYPE` — İlişkili fiş türü
+- `ASGNFICHEREF` — Fiş Atama Ref. 1. Sipariş
+- `ASGNTRANSREF` — Hareket Atama Ref. 1. Sipariş
+- `AMOUNT` — Tutar
+- `ASGNSLTRANREF` — SLTRANS LOGICALREF
+- `MAINITEMLNREF` — Paket fişi satırı log. Ref.
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### PACKAGEFCLN — PACKAGEFCLN
+
+- `LOGICALREF` — Logical Reference
+- `PACKFICHEREF` — Paket fişi log. Ref.
+- `DATE_` — Paket fişi satır türü
+- `TIME_` — Paket fişi satırı (zaman)
+- `PARENTPACKLNREF` — Paket fişi satırı log. Ref.
+- `INGREDIENTTYPE` — Paket fiş içerik tipi (1. paket 2. malzeme)
+- `INGREDIENTREF` — Malzemeler Log. Ref.
+- `AMOUNT` — Tutar
+- `LINEBARCODE` — Paket barkodu
+- `PACKAGENUMBER` — Paket numarası
+- `LINENO_` — Satır Numarası
+- `LINEINDEX` — Paket seviyesi
+- `PACKUINFO1` — Net Ağırlık (Paket)
+- `PACKUINFO2` — Bürüt Ağırlık (Paket)
+- `PACKUINFO3` — Net Hacim (Paket)
+- `PACKUINFO4` — Bürüt Hacim (Paket)
+- `UOMREF` — Birim seti log. Ref.
+- `FILLEDRATE` — Paket Doluluk Oranı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### PACKAGEFICHE — PACKAGEFICHE
+
+- `LOGICALREF` — Birim seti log. Ref.
+- `FICHENO` — Paket fişi num.
+- `DATE_` — Paket fiş tarihi
+- `TIME_` — Paket fişi (zaman)
+- `USERNO` — Paket fişi kullanıcı num.
+- `SPECODE` — Paket fişi özel kodu
+- `EXPLAIN` — Paket fişi açıklaması
+- `GROSSWEIGHT` — Bürüt Ağırlık (Fiş geneli)
+- `NETWEIGHT` — Net Ağırlık (fiş geneli)
+- `CYPHCODE` — Paket fişi yetki kodu
+- `BRANCHNO` — Paket fişi işyeri num.
+- `DEPARTMENTNO` — Paket fişi bölüm num.
+- `FACTORYNO` — Paket fişi fabrika num.
+- `INVENNO` — Paket fişi ambar num.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `GROSSWEIGHTREF` — Bürüt Ağırlık Birim Ref.
+- `NETWEIGHTREF` — Birim seti log. Ref.
+- `COMPINGREDPACK` — Karma Koli İçerikleri Paketlenecektir
+
+### PARAMASGN — Üretim parametresi atamaları
+
+- `LOGICALREF` — Üretim Parametreleri Ataması Log. Ref.
+- `BOMPARAMREF` — Ürün Reçetesi Parametresi Referansı
+- `PRODORDREF` — Üretim Emri Referansı
+- `PARAMVAL` — Parametre değeri
+
+### PAYLINES — Ödeme plan satırları
+
+- `LOGICALREF` — Ödeme planı satırı log. ref.
+- `PAYPLANREF` — Ödeme Planı Referansı
+- `LINENO_` — Satır Numarası
+- `AFTERDAYS` — Tarihe eklenecek değer
+- `FORMULA` — Formül
+- `CONDITION` — Koşul
+- `DAY_` — Gün
+- `MOUNTH` — Ay
+- `YEAR_` — Yıl
+- `RNDVALUE` — Yuvarlama tabanı
+- `ABSDATE` — Tarih
+- `DATETYPE` — Tarih Türü
+- `DISCRATE` — İndirim Oranı
+- `PAYMENTTYPE` — Ödeme türü
+- `BANKACCREF` — Banka Hesabı Referansı
+- `REPAYDEFREF` — Geri Ödeme Planları Referansı
+- `TRCURR` — İD Türü
+
+### PAYPLANS — Ödeme planları
+
+- `LOGICALREF` — Ödeme Planları Log. Ref.
+- `CODE` — Ödeme planı kodu
+- `DEFINITION_` — Ödeme planı açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `EARLYINTEREST` — Erken ödeme faizi
+- `LATEINTEREST` — Geç Ödeme
+- `COUNTER` — Basılmış Toplam Hesap
+- `WRKDAYS` — Çalışma günleri
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PPGROUPCODE` — Ödeme planı grup kodu
+- `PPGROUPREF` — Ödeme planı grup ref.
+- `BANKACCREF` — Banka Hesabı Logical Ref.
+- `DEFINITION2` — Açıklama 2
+
+### PAYTRANS — Ödeme/Tahsilat hareketleri
+
+- `LOGICALREF` — Ödeme /Tahsilat hareketleri log. Ref.
+- `CARDREF` — Cari Hesap Kartı Ref.
+- `DATE_` — Tarih
+- `MODULENR` — Kart Modül Numarası
+- `SIGN` — Borç/Alacak İşareti
+- `FICHEREF` — Fiş ref.
+- `FICHELINEREF` — Fiş satırı ref.
+- `TRCODE` — Tanımlanmış fiş türü
+- `TOTAL` — Toplam
+- `PAID` — Ödenen tutar
+- `EARLYINTRATE` — Erken ödeme faizi
+- `LATELYINTRATE` — Geç Ödeme
+- `CROSSREF` — Kapanmış İşlem Ref.
+- `PAIDINCASH` — Ödenmiş
+- `CANCELLED` — İptal Edilmiş
+- `PROCDATE` — Hareket tarihi
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `REPORTRATE` — RD Kuru
+- `MODIFIED` — Değiştirilmiş (Evet / Hayır)
+- `REMINDLEV` — İhtar seviyesi
+- `REMINDSENT` — İhtar gönderme (evet/hayır)
+- `CROSSCURR` — Kapanmış İşlem Döviz Türü
+- `CROSSTOTAL` — Kapanmış İşlem Toplamı
+- `DISCFLAG` — İndirim Satırı (Evet / Hayır)
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `CLOSINGRATE` — Borç Takip Döviz Türü
+- `DISCDUEDATE` — Kullanımda Değil
+- `OPSTAT` — Hareket durumu
+- `RECSTATUS` — Kayıt Durumu
+- `INFIDX` — Enflasyon Endeksi
+- `PAYNO` — Ödeme num.
+- `DELAYTOTAL` — Gecikme Tutarı
+- `LASTSENDREMLEV` — Gönderim seviyesi
+- `POINTTRANS` — Puan
+- `BANKPAYDATE` — Geri Ödeme Tarihi (Banka)
+- `POSCOMSN` — Hizmet
+- `POINTCOMSN` — Komisyon
+- `BANKACCREF` — Banka Hesabı Logical Ref.
+- `PAYMENTTYPE` — Ödeme türü
+- `CASHACCREF` — Kasa ref.
+- `TRNET` — Malzeme Fişleri Referansı
+- `REPAYPLANREF` — Geri Ödeme Planları Referansı
+- `DUEDIFFCOMSN` — Vade Farkı
+- `CALCTYPE` — Tutar Hesabı
+- `NETTOTAL` — Net Toplam
+- `REPYPLNAPPLIED` — Geri Ödeme Planı Uygulansın?
+- `PAYTRCURR` — Karşı Hareket Ödemesi Döviz Bilgisi
+- `PAYTRRATE` — Karşı Hareket Ödemesi Döviz Kuru
+- `PAYTRNET` — Karşı Hareket Ödeme Tutarı
+- `BNTRCREATED` — Kredi kartı açık tutarı için kk sihirbazı tarafından işlem gördü mü?
+- `BNFCHREF` — Banka Fişleri Referansı
+- `BNFLNREF` — Banka Hareket Referansı
+- `INSTALTYPE` — Taksit Türü
+- `INSTALREF` — Taksit Ref.
+- `MAININSTALREF` — Taksit Ref.
+- `ORGLOGOID` — Veri Merkezi
+- `SPECODE` — Özel Kod
+
+### PEGGING — İşlem bağlantıları (üretim emri, sipariş)
+
+- `LOGICALREF` — Hareket bağlantısı log. Ref.
+- `PEGTYPE` — Hareket bağlantısı türü
+- `PEGREF` — Hareket bağlantısı ref.
+- `RELTYPE` — İlişki türü
+- `PRODORDREF` — Üretim Emri Referansı
+- `SUBCONTREF` — Fason sipariş ref.
+- `PORDFICHEREF` — Sipariş fişi Ref.
+- `PORDLINEREF` — Sipariş satırı ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `AMOUNT` — Miktar
+- `UOMREF` — Birim referansı
+- `CANCHANGE` — Değişebilir
+- `DISPLINEREF` — İş emri ref.
+- `PRODLINEREF` — Üretim Emri Satır Ref.
+- `OTHERPEGREF` — Diğer fiyat tespit referansı
+- `PERIODNR` — Periyot numarası
+- `MRPPROPREF` — MRP Önerisi Ref.
+- `PDEMFICHEREF` — Talep Fişi Log. Ref.
+- `PDEMLINEREF` — Talep Satırı Log. Ref.
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### PERDOC — Döküman bilgileri (örnek malzeme resmi)
+
+- `LREF` — Fiziksel Adres
+- `INFOTYP` — İç kullanım
+- `INFOREF` — İç kullanım
+- `DOCTYP` — İç kullanım
+- `DOCNR` — İç kullanım
+- `LDATA` — İç kullanım
+
+### PERMFILE — PERMFILE
+
+- `LOGICALREF` — Kullanımda Değil
+- `FICHEREF` — Kullanımda Değil
+- `TRANSREF` — Kullanımda Değil
+- `NEWPRICE` — Kullanımda Değil
+- `NEWCOST` — Kullanımda Değil
+- `NEWCRCOST` — Kullanımda Değil
+- `UPDCOST` — Kullanımda Değil
+- `UPDPRICE` — Kullanımda Değil
+- `RETCOST` — Kullanımda Değil
+- `RETCURR` — Kullanımda Değil
+- `UPDRETURNS` — Kullanımda Değil
+
+### POACCREF — Üretim emri ile muhasebe hesabı bağlantıları
+
+- `LOGICALREF` — Satınalma siparişleri genel muh. hes. Bağlantısı log. Ref.
+- `PORDREF` — Üretim Emri Referansı
+- `TYP` — Genel Muh.Hesabı Bağlantı Türü
+- `WSREF` — İş istasyonu ref.
+- `ACCOUNTREF` — Genel Muh. Hes. Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `OVHDREF` — Genel gider (çıkış) kart ref.
+- `STREF` — Malzeme Ref.
+- `OVHDTRANTYP` — Genel gider hareket türü
+
+### POLINE — Üretim emri satırları
+
+- `LOGICALREF` — Üretim Emri Satırları Log. Ref.
+- `PRODORDREF` — Üretim Emirleri Ref.
+- `DISPLINEREF` — İş emirleri ref.
+- `BOMMASTERREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonları Referansı
+- `LINETYPE` — Satır Tipi
+- `LINECLSTYPE` — Satır Tipi (0: Malzeme
+- `LINENO_` — Satır Numarası
+- `OUTITEMREF` — Malzeme Kartları Referansı
+- `ITEMREF` — Malzeme Kartları Referansı
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Çevrim Katsayısı
+- `UINFO4` — Çevrim Katsayısı
+- `UINFO5` — Çevrim Katsayısı
+- `UINFO6` — Çevrim Katsayısı
+- `UINFO7` — Çevrim Katsayısı
+- `UINFO8` — Çevrim Katsayısı
+- `AMOUNT` — Tutar
+- `FORMULA` — Formül
+- `FORMULAITEMREF` — Malzeme Kartları Referansı
+- `SCRAPFACT` — Fire Faktörü (%)
+- `SCRAPCALC` — Fire Hesaplama
+- `SCALABLE` — Ölçeklenebilir
+- `ALTITEMUSE` — Alternatif Malzeme Kullanımı
+- `TEMPINUSE` — Konsinye Kullanımı
+- `NEXTLEVBOMREF` — Ürün Reçetesi Referansı
+- `SPECODE` — Satır Özel Kodu
+- `LINEEXP` — Satır Açıklaması
+- `INVENNO` — Ambar Numarası
+- `ENGINEERING` — Mühendislik
+- `PRODUCTION` — Üretim
+- `COST` — Maliyetlendirme
+- `COSTRATE` — Maliyet Katsayısı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `ROUTLINEREF` — Üretim rota satırı ref.
+- `OPERATIONREF` — İşlem ref.
+- `DETLINE` — Detay Satırı
+- `PREVLINEREF` — Üretim Emri Satırları Ref.
+- `EFFECTOPTIME` — Operasyon Süresini Etkiler
+- `NEXTLEVREVREF` — Ürün Reçetesi Revizyonları Referansı
+- `PARENTID` — Ana bağlantı
+- `CURRENTID` — Bağlantı Numarası
+- `GROSSUINFO1` — Bürüt Birim Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Birim Çevrim Katsayısı 2
+- `USESTDCOST` — Standart maliyet kullanımı
+- `PROJECTREF` — Proje Referansı
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS1` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS2` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS3` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS4` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS5` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS6` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS7` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS8` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS9` — Varyant (Port) mantıksal referansı
+- `FORMULAVRNTREFS10` — Varyant (Port) mantıksal referansı
+- `MEETTYPE` — Toplu malzeme temini teslimat türü
+- `INVUSEPARAM` — Toplu malzeme temini - ambar kullanım türü
+- `FACTORYNR` — Toplu malzeme temini - teslimat fabrikası
+
+### POSTCODE — Posta kodları
+
+- `LOGICALREF` — Fiziksel adres
+- `COUNTRY` — Ülke
+- `CITY` — Şehir
+- `POSTCODE` — Posta Kodu
+
+### PRCARDS — Promosyon kartları
+
+- `LOGICALREF` — Promosyon kartı log. Ref.
+- `CODE` — Promosyon kartı kodu
+- `DEFINITION_` — Promosyon kartı açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CARDTYPE` — Kart Türü
+- `STOCKREF` — Malzeme Kartı Referansı
+- `MTRLTYPE` — Malzeme Türü
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `COUNTER` — Sayaç
+- `PRICE` — Fiyat
+- `PROMLINES1_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES1_FORMULA` — Formül
+- `PROMLINES1_PRICE` — Fiyat
+- `PROMLINES1_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES1_UOMREF` — Birim referansı
+- `PROMLINES1_SITEID` — Veri Merkezi
+- `PROMLINES1_RECSTATUS` — Kayıt Durumu
+- `PROMLINES1_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES1_WFSTATUS` — Kullanımda Değil
+- `PROMLINES1_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES2_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES2_FORMULA` — Formül
+- `PROMLINES2_PRICE` — Fiyat
+- `PROMLINES2_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES2_UOMREF` — Birim referansı
+- `PROMLINES2_SITEID` — Veri Merkezi
+- `PROMLINES2_RECSTATUS` — Kayıt Durumu
+- `PROMLINES2_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES2_WFSTATUS` — Kullanımda Değil
+- `PROMLINES2_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES3_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES3_FORMULA` — Formül
+- `PROMLINES3_PRICE` — Fiyat
+- `PROMLINES3_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES3_UOMREF` — Birim referansı
+- `PROMLINES3_SITEID` — Veri Merkezi
+- `PROMLINES3_RECSTATUS` — Kayıt Durumu
+- `PROMLINES3_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES3_WFSTATUS` — Kullanımda Değil
+- `PROMLINES3_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES4_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES4_FORMULA` — Formül
+- `PROMLINES4_PRICE` — Fiyat
+- `PROMLINES4_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES4_UOMREF` — Birim referansı
+- `PROMLINES4_SITEID` — Veri Merkezi
+- `PROMLINES4_RECSTATUS` — Kayıt Durumu
+- `PROMLINES4_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES4_WFSTATUS` — Kullanımda Değil
+- `PROMLINES4_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES5_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES5_FORMULA` — Formül
+- `PROMLINES5_PRICE` — Fiyat
+- `PROMLINES5_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES5_UOMREF` — Birim referansı
+- `PROMLINES5_SITEID` — Veri Merkezi
+- `PROMLINES5_RECSTATUS` — Kayıt Durumu
+- `PROMLINES5_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES5_WFSTATUS` — Kullanımda Değil
+- `PROMLINES5_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES6_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES6_FORMULA` — Formül
+- `PROMLINES6_PRICE` — Fiyat
+- `PROMLINES6_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES6_UOMREF` — Birim referansı
+- `PROMLINES6_SITEID` — Veri Merkezi
+- `PROMLINES6_RECSTATUS` — Kayıt Durumu
+- `PROMLINES6_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES6_WFSTATUS` — Kullanımda Değil
+- `PROMLINES6_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES7_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES7_FORMULA` — Formül
+- `PROMLINES7_PRICE` — Fiyat
+- `PROMLINES7_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES7_UOMREF` — Birim referansı
+- `PROMLINES7_SITEID` — Veri Merkezi
+- `PROMLINES7_RECSTATUS` — Kayıt Durumu
+- `PROMLINES7_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES7_WFSTATUS` — Kullanımda Değil
+- `PROMLINES7_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES8_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES8_FORMULA` — Formül
+- `PROMLINES8_PRICE` — Fiyat
+- `PROMLINES8_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES8_UOMREF` — Birim referansı
+- `PROMLINES8_SITEID` — Veri Merkezi
+- `PROMLINES8_RECSTATUS` — Kayıt Durumu
+- `PROMLINES8_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES8_WFSTATUS` — Kullanımda Değil
+- `PROMLINES8_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES9_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES9_FORMULA` — Formül
+- `PROMLINES9_PRICE` — Fiyat
+- `PROMLINES9_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES9_UOMREF` — Birim referansı
+- `PROMLINES9_SITEID` — Veri Merkezi
+- `PROMLINES9_RECSTATUS` — Kayıt Durumu
+- `PROMLINES9_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES9_WFSTATUS` — Kullanımda Değil
+- `PROMLINES9_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES10_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES10_FORMULA` — Formül
+- `PROMLINES10_PRICE` — Fiyat
+- `PROMLINES10_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES10_UOMREF` — Birim referansı
+- `PROMLINES10_SITEID` — Veri Merkezi
+- `PROMLINES10_RECSTATUS` — Kayıt Durumu
+- `PROMLINES10_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES10_WFSTATUS` — Kullanımda Değil
+- `PROMLINES10_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES11_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES11_FORMULA` — Formül
+- `PROMLINES11_PRICE` — Fiyat
+- `PROMLINES11_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES11_UOMREF` — Birim referansı
+- `PROMLINES11_SITEID` — Veri Merkezi
+- `PROMLINES11_RECSTATUS` — Kayıt Durumu
+- `PROMLINES11_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES11_WFSTATUS` — Kullanımda Değil
+- `PROMLINES11_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES12_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES12_FORMULA` — Formül
+- `PROMLINES12_PRICE` — Fiyat
+- `PROMLINES12_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES12_UOMREF` — Birim referansı
+- `PROMLINES12_SITEID` — Veri Merkezi
+- `PROMLINES12_RECSTATUS` — Kayıt Durumu
+- `PROMLINES12_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES12_WFSTATUS` — Kullanımda Değil
+- `PROMLINES12_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES13_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES13_FORMULA` — Formül
+- `PROMLINES13_PRICE` — Fiyat
+- `PROMLINES13_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES13_UOMREF` — Birim referansı
+- `PROMLINES13_SITEID` — Veri Merkezi
+- `PROMLINES13_RECSTATUS` — Kayıt Durumu
+- `PROMLINES13_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES13_WFSTATUS` — Kullanımda Değil
+- `PROMLINES13_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES14_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES14_FORMULA` — Formül
+- `PROMLINES14_PRICE` — Fiyat
+- `PROMLINES14_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES14_UOMREF` — Birim referansı
+- `PROMLINES14_SITEID` — Veri Merkezi
+- `PROMLINES14_RECSTATUS` — Kayıt Durumu
+- `PROMLINES14_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES14_WFSTATUS` — Kullanımda Değil
+- `PROMLINES14_VARIANTREF` — Varyant (Port) referansı
+- `PROMLINES15_STOCKREF` — Malzeme Kartı Referansı
+- `PROMLINES15_FORMULA` — Formül
+- `PROMLINES15_PRICE` — Fiyat
+- `PROMLINES15_RNDVAL` — Yuvarlama tabanı
+- `PROMLINES15_UOMREF` — Birim referansı
+- `PROMLINES15_SITEID` — Veri Merkezi
+- `PROMLINES15_RECSTATUS` — Kayıt Durumu
+- `PROMLINES15_ORGLOGICREF` — Orijinal Kayıt Ref.
+- `PROMLINES15_WFSTATUS` — Kullanımda Değil
+- `PROMLINES15_VARIANTREF` — Varyant (Port) referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `FICHEMODUL` — Fiş modül numarası
+- `FICHETYPES1` — Malzeme Fiş Türü
+- `FICHETYPES2` — Satınalma fişleri
+- `FICHETYPES3` — Satış Dağıtım Fişleri
+- `ACTIVE` — Promosyon kartı durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `ORDFCMODUL` — Siparişte kullanım yeri
+
+### PRCLIST — Alış/Satış fiyatları
+
+- `LOGICALREF` — Kod
+- `CARDREF` — Kart Referansı
+- `CLIENTCODE` — Cari Hesap Kodu
+- `CLSPECODE` — Cari Hesap Özel Kodu
+- `PAYPLANREF` — Ödeme Planı Referansı
+- `PRICE` — Birim fiyat
+- `UOMREF` — Birim referansı
+- `INCVAT` — KDV dahil / hariç
+- `CURRENCY` — Döviz Türü
+- `PRIORITY` — Öncelik
+- `PTYPE` — Fiyat türü
+- `MTRLTYPE` — Malzeme Türü
+- `LEADTIME` — Temin Tarihi
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `CONDITION` — Koşul
+- `SHIPTYP` — Teslimat Şekli
+- `SPECIALIZED` — Kullanımda Değil
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `UNITCONVERT` — Birim çevrimi yapılacak
+- `EXTACCESSFLAGS` — 1. E-iş ortamında erişilebilir 2. Satış noktalarında erişilebilir
+- `CYPHCODE` — 1. E-iş ortamında geçerli 2. Satış noktalarında geçerli
+- `ORGLOGOID` — Veri Merkezi
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `BEGTIME` — Başlangıç Zamanı
+- `ENDTIME` — Bitiş Tarihi
+- `DEFINITION_` — Açıklama
+- `CODE` — Kod
+- `GRPCODE` — Grup Kodu
+- `ORDERNR` — Sıralama
+- `GENIUSPAYTYPE` — POS ödeme türü
+- `GENIUSSHPNR` — Genius mağaza numarası
+- `PRCALTERTYP1` — Alt düzey yetkili türü
+- `PRCALTERLMT1` — Alt düzey yetkili limiti
+- `PRCALTERTYP2` — Orta düzey yetkili türü
+- `PRCALTERLMT2` — Orta düzey yetkili limiti
+- `PRCALTERTYP3` — Üst düzey yetkili türü
+- `PRCALTERLMT3` — Üst düzey yetkili limiti
+- `ACTIVE` — Aktif
+- `PURCHCONTREF` — Teklif fişi referansı
+- `BRANCH` — Şube
+- `COSTVAL` — Net satın alma/maliyet
+
+### PRDCOST — Maliyet dönem kapama kayıtları
+
+- `LOGICALREF` — Maliyet Periyodu Kapatma Kaydı Log. Ref.
+- `PRDENDDATE` — Periyot kapanış tarihi
+- `PRDENDTIME` — Periyot kapanış tarihi
+- `PRDCOSTTYPE` — Maliyet Türü
+- `ITEMREF` — Malzeme Kartı Referansı
+- `LINENR` — Satır Numarası
+- `INVENCOSTTYPE` — Kaynak Tipi
+- `INVENCOSTGRPNR` — Ambar maliyet grubu
+- `INVENCOSTWSREF` — İş İstasyonu Ref.
+- `STTRANSREF` — Malzeme Hareketi Ref.
+- `TOTAMNT` — Toplam miktar
+- `TOTVAL` — Toplam değer
+- `TOTCURR` — RD değeri
+- `TOTDIFFVAL` — Fiyat farkı miktarı
+- `TOTDIFFCURR` — RD fiyat farkı tutarı
+- `MAINUNITREF` — Ana Birim Ref.
+- `TOTATAXVAL` — Ek Vergi Toplamı
+- `TOTATAXCURR` — Ek Vergi Toplamı (Raporlama Dövizi)
+- `TOTINF` — Toplam enflasyon değeri
+- `TOTDIFFINF` — Toplam fiyat farkı endeks değeri
+- `VARIANTREF` — Varyant (Port) referansı
+
+### PREVDISPLINE — İş emri ilişkileri
+
+- `LOGICALREF` — İş emirleri ilişkisi log. Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `DISPLINEREF` — İş emri ref.
+- `PREVLINEREF` — Önceki iş emri ref.
+- `OVERLAPPER` — Örtüşme oranı (%)
+- `LINENR` — Satır Numarası
+
+### PROCUREMENT — Üretim için malzeme tedariki
+
+- `LOGICALREF` — Malzeme Temini Log. Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `POLINEREF` — Üretim Emri Satır Ref.
+- `DISPLINEREF` — İş emri ref.
+- `INVENNR` — Hedef Ambar Numarası (Tedarik)
+- `ITEMREF` — Temin edilen malzeme ref.
+- `UOMREF` — Birim referansı
+- `AMOUNT` — Miktar
+- `MAINITEMREF` — Ana Malzeme Ref.
+- `MAINUOMREF` — Ana Birim Ref.
+- `MAINAMOUNT` — Ana miktar
+- `PROCURETYPE` — Temin türü
+- `FICHEREF` — Fiş ref.
+- `FICHELINEREF` — Fiş satırı ref.
+- `CLCARDREF` — Cari Hesap Ref. (Temin Şekli ‘Sipariş’ ise)
+- `PLNSTFICHEREF` — Planlanan malzeme fişi ref.
+- `PLNSTLINEREF` — Planlanan malzeme fişi satırı ref.
+- `UINFO1` — Alternatif Malzeme Birim Çevrim Katsayısı
+- `UINFO2` — Alternatif Malzeme Birim Çevrim Katsayısı
+- `UINFO3` — Alternatif Malzeme Birim Boyut Katsayısı
+- `UINFO4` — Alternatif Malzeme Birim Boyut Katsayısı
+- `UINFO5` — Alternatif Malzeme Birim Boyut Katsayısı
+- `UINFO6` — Alternatif Malzeme Birim Boyut Katsayısı
+- `UINFO7` — Alternatif Malzeme Birim Boyut Katsayısı
+- `UINFO8` — Alternatif Malzeme Birim Boyut Katsayısı
+- `ITEMALTER` — Alternatif malzemeyle temin
+- `ITEMTEMP` — Konsinye malzemeyle temin
+- `MAINUINFO1` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO2` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO3` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO4` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO5` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO6` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO7` — Ana Malzeme Birimi Çevrim Katsayısı
+- `MAINUINFO8` — Ana Malzeme Birimi Çevrim Katsayısı
+- `GROSSUINFO1` — Bürüt Alternatif Malzeme Birimi Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Alternatif Malzeme Birimi Çevrim Katsayısı 2
+- `GROSSMAINUINFO1` — Bürüt Ana Malzeme Birimi Çevrim Katsayısı 1
+- `GROSSMAINUINFO2` — Bürüt Ana Malzeme Birimi Çevrim Katsayısı 2
+- `CONVERTED` — Veri Güncelleme
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `MAINVARIANTREF` — Varyant (Port) mantıksal referansı
+
+### PRODORD — Üretim emirleri
+
+- `LOGICALREF` — Üretim Emri Log. Ref.
+- `FICHETYPE` — Fiş türü
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `GENEXP1` — Genel Açıklama 1
+- `GENEXP2` — Genel Açıklama 2
+- `GENEXP3` — Genel Açıklama 3
+- `GENEXP4` — Genel Açıklama 4
+- `RELEASED` — Serbest bırakılmış
+- `CANCELLED` — İptal Edilmiş
+- `PRIORITY` — Öncelik
+- `METHOD` — Metod
+- `SCHEDULED` — Çizelgelenen
+- `PARTIALDEL` — Ambardan parçalı malzeme çekişi
+- `DIFFWHOUSEUSE` — Safha takibi yapılacaktır
+- `AUTOMTRISSUE` — Otomatik Malzeme Çekişi
+- `REWORK` — Yeniden çalışılabilir
+- `ROUTINGREF` — Üretim rotası ref.
+- `MASTERREF` — Ürün Reçetesi Referansı
+- `REVREF` — Ürün Reçetesi Revizyonu Referansı
+- `FACTORYNR` — Fabrika Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLIENTREF` — Cari Hesap Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `UOMREF` — Birim referansı
+- `USETREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `PLNAMOUNT` — Planlanan miktar
+- `ACTAMOUNT` — Gerçekleşen Miktar
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `DUEDATE` — Vade
+- `STOPDATE` — Durma tarihi
+- `STARTDATE` — Yeniden başlama tarihi
+- `PLNBEGDATE` — Planlanan başlangıç tarihi
+- `PLNENDDATE` — Planlanan bitiş tarihi
+- `PLNDURATION` — Planlanan süre
+- `ACTBEGDATE` — Gerçekleşen Başlangıç Zamanı
+- `ACTENDDATE` — Gerçekleşen Bitiş Tarihi
+- `ACTDURATION` — Gerçekleşen Süre
+- `STATUS` — Durumu
+- `STDMATERIALCOST` — Standart malzeme maliyeti
+- `STDEQUIPTCOST` — Standart araç maliyeti
+- `STDWSCOST` — Standart iş istasyonu maliyeti
+- `STDLABORCOST` — Standart işgücü maliyeti
+- `STDOVERHCOST` — Standart genel gider payı
+- `STDTOTALCOST` — Standart toplam maliyet
+- `STDMATERIALRPCOST` — RD standart malzeme maliyeti
+- `STDEQUIPTRPCOST` — RD standart araç maliyeti
+- `STDWSRPCOST` — RD standart iş istasyonu maliyeti
+- `STDLABORRPCOST` — RD standart işgücü maliyeti
+- `STDOVERHRPCOST` — RD standart genel gider payı
+- `STDTOTALRPCOST` — RD standart toplam maliyet
+- `ACTMATERIALCOST` — Gerçekleşen Malzeme Maliyeti
+- `ACTEQUIPTCOST` — Gerçekleşen Araç Maliyeti
+- `ACTWSCOST` — Gerçekleşen İş İstasyonu Maliyeti
+- `ACTLABORCOST` — Gerçekleşen Çalışan Maliyeti
+- `ACTOVERHCOST` — Gerçekleşen Genel Gider Payı
+- `ACTTOTALCOST` — Gerçekleşen Toplam Maliyet
+- `ACTMATERIALRPCOST` — Raporlama dövizi gerçekleşen malzeme maliyeti
+- `ACTEQUIPTRPCOST` — Raporlama dövizi gerçekleşen araç maliyeti
+- `ACTWSRPCOST` — Raporlama dövizi gerçekleşen ambar maliyeti
+- `ACTLABORRPCOST` — Raporlama dövizi gerçekleşen işgücü maliyeti
+- `ACTOVERHRPCOST` — Raporlama dövizi gerçekleşen genel gider payı
+- `ACTTOTALRPCOST` — Raporlama dövizi gerçekleşen toplam maliyet
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `NEEDRELEASE` — Serbest Bırakma Durumu Gerekli
+- `NEEDPROCURE` — Tedarik Durumu Gerekli
+- `PROCURED` — Temin edilen
+- `BEGTIME` — Başlangıç Zamanı
+- `ENDTIME` — Bitiş Tarihi
+- `PLNBEGTIME` — Planlanan başlangıç zamanı
+- `PLNENDTIME` — Planlanan bitiş zamanı
+- `ACTBEGTIME` — Gerçekleşen Başlama Zamanı
+- `ACTENDTIME` — Gerçekleşen Bitiş Zamanı
+- `PRINTCNT` — Basılmış Olanların Sayısı
+- `STDACCOUNTED` — Planlanan fişler (muhasebeleşen)
+- `ACTACCOUNTED` — Hesaplanan Güncel Fişler
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CHKRESCAP` — Kaynak kullanımı dikkate alınacak / Kaynak kullanımı dikkate alınmayacak
+- `PROJECTREF` — Proje Referansı
+- `ADVICEWS` — İş istasyonu önerisi: 0: Varsayılan; 1: En hızlı iş istasyonu
+- `DUETIME` — Teslimat Zamanı
+- `ACTTOATLCOST` — Gerçekleşen total maliyet
+
+### PRODUCER — Müstahsil faturası
+
+- `LOGICALREF` — Üretici faturası log. Ref.
+- `INVREF` — Fatura Ref.
+- `STOPAJPER` — Stopaj (%)
+- `SSDFPER` — SSDF (%)
+- `BORSAPER` — Borsa (%)
+- `KOMISYONPER` — Komisyon (%)
+- `KOMKDVPER` — Komisyon KDV’si (%)
+- `BAGKURPER` — Bağkur (%)
+- `STOPAJ` — Stopaj
+- `SSDF` — SSDF
+- `BORSA` — Borsa
+- `KOMISYON` — Komisyon
+- `KOMKDV` — Komisyon KDV’si
+- `BAGKUR` — Bağkur
+- `STOPAJACCREF` — Stopaj muhasebe hesabı ref.
+- `SSDFACCREF` — SSDF Genel muhasebe hesabı ref.
+- `BORSAACCREF` — Borsa muhasebe hesabı ref.
+- `KOMISYONACCREF` — Komisyon Genel Muh. Hesabı Ref.
+- `KOMKDVACCREF` — Komisyon KDV’si muhasebe hesabı ref.
+- `BAGKURACCREF` — Bağkur Genel Muhasebe Hesabı Referansı
+- `STOPAJCREF` — Stopaj masraf merkezi ref.
+- `SSDFCREF` — SSDF masraf merkezi ref.
+- `BORSACREF` — Borsa masraf merkezi ref.
+- `KOMISYONCREF` — Komisyon Masraf Merkezi Ref.
+- `KOMKDVCREF` — Komisyon KDV’si masraf merkezi ref.
+- `BAGKURCREF` — Bağkur Masraf Merkezi Referansı
+- `KOMENTRY` — Komisyon Girişi
+- `EK1PER` — Ek 1 Oran (%)
+- `EK2PER` — Ek 2 Oran (%)
+- `EK1` — Ek 1 Tutar
+- `EK2` — Ek 2 Tutar
+- `EK1ACCREF` — Ek 1 Genel Muhasebe Hesap Kodu
+- `EK2ACCREF` — Ek 2 Genel Muhasebe Hesap Kodu
+- `EK1CREF` — Ek 1 Masraf Merkezi Kodu
+- `EK2CREF` — Ek 2 Masraf Merkezi Kodu
+- `EK3` — Ek 3 tutarı
+- `EK4` — Ek 4 tutarı
+- `EK5` — Ek 5 tutarı
+- `EK3PER` — Ek 3 oranı (%)
+- `EK4PER` — Ek 4 oranı (%)
+- `EK5PER` — Ek 5 oranı (%)
+- `EK3ACCREF` — Muhasebe hesapları mantıksal referansı
+- `EK4ACCREF` — Muhasebe hesapları mantıksal referansı
+- `EK5ACCREF` — Muhasebe hesapları mantıksal referansı
+- `EK3CREF` — Masraf Merkezi Log. Ref.
+- `EK4CREF` — Masraf Merkezi Log. Ref.
+- `EK5CREF` — Masraf Merkezi Log. Ref.
+
+### PRODUCTLINEP — Ürün satırları
+
+- `LOGICALREF` — Üretim satırı log. Ref.
+- `ACTIVE` — Kullanım durumu
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FACTORYNR` — Fabrika Numarası
+- `FACTORYDIVNR` — Fabrika İşyeri Numarası
+- `DAILYCAPACHRS` — Günlük Kapasite (Saatler)
+- `MAXCAPACHRS` — Azami Kapasite (saat)
+- `MINCAPACHRS` — Asgari Kapasite (Saat)
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### PROJECT — Projeler
+
+- `LOGICALREF` — Logical Reference
+- `CODE` — Proje kodu
+- `NAME` — Proje açıklaması
+- `SPECODE` — Proje özel kodu
+- `CYPHCODE` — Proje yetki kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu (kullanımda / kullanım dışı)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `PRJRESPON` — Proje yüklenicisi
+
+### PRVOPASG — Öceki operasyon ilişkileri
+
+- `LOGICALREF` — Önceki operasyon ilişkisi log. ref.
+- `ROUTINGREF` — Üretim rotası ref.
+- `ROUTLINEREF` — Rota satır ref.
+- `LINEOPREF` — Satır İşlem Ref.
+- `PREVOPREF` — Önceki operasyon ref.
+- `OVERLAPPER` — Örtüşme oranı
+
+### PURCHOFFER — PURCHOFFER
+
+- `TRCODE` — Fiş türü
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `DOCODE` — Belge Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CLIENTREF` — Cari Hesap Ref.
+- `RECVREF` — Cari Hesap Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesapları Referansı
+- `CENTERREF` — Masraf Merkezi Referansı
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Kaynak Ambar Maliyet Grubu
+- `UPDCURR` — İrsaliyeye ya da faturaya aktarıldığında fiyatlandırma dövizi güncellenecek
+- `ADDDISCOUNTS` — Ek İndirimler
+- `TOTALDISCOUNTS` — Toplam İndirimler
+- `TOTALDISCOUNTED` — Satır İndirimleri Sonrası Toplam
+- `ADDEXPENSES` — Ek Masraflar
+- `TOTALEXPENSES` — Toplam Masraflar
+- `TOTALPROMOTIONS` — Toplam Promosyonlar
+- `TOTALVAT` — Toplam KDV
+- `GROSSTOTAL` — Toplam
+- `NETTOTAL` — Net Toplam
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `GENEXP1` — Fiş Genel Açıklaması 1
+- `GENEXP2` — Fiş Genel Açıklaması 2
+- `GENEXP3` — Fiş Genel Açıklaması 3
+- `GENEXP4` — Fiş Genel Açıklaması 4
+- `EXTENREF` — Hizmet Kartları Ref.
+- `PAYDEFREF` — Ödeme Planları
+- `PRINTCNT` — Toplam Basım Sayısı
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `STATUS` — Durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirme dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirme saniyesi
+- `SALESMANREF` — Ödeme Planları Ref.
+- `SHPTYPCOD` — Teslimat Şekli
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `SHIPINFOREF` — Teslimat bilgileri referansı
+- `CUSTORDNO` — Müşteri Sipariş Fişi Numarası
+- `SENDCNT` — Gönderilenlerin Sayısı
+- `DLVCLIENT` — Teslimat Adresi Müşteri Tipi
+- `DOCTRACKINGNR` — Belge İzleme Numarası
+- `CANCELLED` — İptal Edilmiş
+- `ORGLOGOID` — Veri Merkezi
+- `OFFERREF` — Teklifler Ref.
+- `OFFALTREF` — Teklif alternatifleri referansı
+- `TYP` — Değer
+- `ALTNR` — Kullanımda Değil
+- `ADVANCEPAYM` — Kullanımda Değil
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `TRNET` — İşlem dövizi tutarı
+- `PAYMENTTYPE` — Ödeme türü
+- `ONLYONEPAYLINE` — Tek satırlı ödeme hareketi
+- `OPSTAT` — Hareket durumu
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `WFLOWCRDREF` — İş akışı kartları referansı
+- `UPDTRCURR` — İşlem Dövizi
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `POFFERBEGDT` — Teklif / sözleşme başlangıç tarihi
+- `POFFERENDDT` — Teklif / sözleşme bitiş tarihi
+- `REVISNR` — Revizyon numarası
+- `LASTREVISION` — Son revizyon bilgisi
+- `CHECKAMOUNT` — Miktar kontrolü için
+- `SLSOPPRREF` — Satış fırsatları referansı
+- `SLSACTREF` — Satış faaliyetleri referansı
+- `SLSCUSTREF` — Müşteri / tedarikçi bilgileri referansı
+- `AFFECTRISK` — Riski etkiler
+- `TOTALADDTAX` — Ek Vergi Toplamı
+- `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+
+### PURCHOFFERLN — PURCHOFFERLN
+
+- `LOGICALREF` — PURCHOFFERLN mantıksal referansı
+- `STOCKREF` — Malzeme kartı referansı
+- `ORDFICHEREF` — Sipariş fişi referansı
+- `CLIENTREF` — Cari Hesap Ref.
+- `LINETYPE` — Satır türü
+- `PREVLINEREF` — Üst Malzeme Sınıfı Satır Referansı
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `DETLINE` — Malzeme Sınıfı Detay Satırı
+- `LINENO_` — Satır numarası
+- `TRCODE` — Fiş türü
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `GLOBTRANS` — İndirim / Masraf ve Promosyon Satırları
+- `CALCTYPE` — Hesaplama Türü
+- `CENTERREF` — Masraf merkezi referansı
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `VATACCREF` — KDV muhasebe hesabı ref.
+- `VATCENTERREF` — KDV masraf merkezi ref.
+- `PRACCREF` — Promosyon muhasebe hesabı ref.
+- `PRCENTERREF` — Promosyon Masraf Merkezi Referansı
+- `PRVATACCREF` — Promosyon KDV muhasebe hesabı
+- `PRVATCENREF` — Promosyon KDV Masraf Merkezi Ref.
+- `PROMREF` — Promosyon kartı ref.
+- `SPECODE` — Özel Kod
+- `DELVRYCODE` — Teslimat Kodu
+- `AMOUNT` — Tutar
+- `PRICE` — Fiyat
+- `TOTAL` — Toplam
+- `SHIPPEDAMOUNT` — Sevkedilen Miktar
+- `DISCPER` — İndirim yüzdesi
+- `DISTCOST` — Satıra Dağıtılan Maliyet (Karma Koli)
+- `DISTDISC` — Satıra Dağıtılan İndirim (Karma Koli)
+- `DISTEXP` — Satıra Dağıtılan Masraf (Karma Koli)
+- `DISTPROM` — Satıra Dağıtılan Promosyon (Karma Koli)
+- `VAT` — KDV
+- `VATAMNT` — Net KDV Tutarı
+- `VATMATRAH` — KDV matrahı
+- `LINEEXP` — Satır Açıklaması
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı 1
+- `UINFO2` — Çevrim Katsayısı 2
+- `UINFO3` — Boyut Katsayısı3
+- `UINFO4` — Boyut Katsayısı4
+- `UINFO5` — Boyut Katsayısı5
+- `UINFO6` — Boyut Katsayısı6
+- `UINFO7` — Boyut Katsayısı7
+- `UINFO8` — Boyut Katsayısı8
+- `VATINC` — KDV dahil / hariç
+- `CLOSED` — Sipariş kapandı
+- `DORESERVE` — Malzeme Rezerve Edilecek
+- `INUSE` — Kullanımda
+- `DUEDATE` — Teslimat Tarihi
+- `PRCURR` — Fiyatlandırma dövizi kuru
+- `PRPRICE` — Fiyat (Fiyatlandırma dövizi)
+- `REPORTRATE` — Fiyat (Raporlama dövizi)
+- `BILLEDITEM` — Faturalanacak Malzeme
+- `PAYDEFREF` — Ödeme planı referansı
+- `EXTENREF` — Ek Dosya Referansı
+- `CPSTFLAG` — Karma Koli Satırı
+- `SOURCEINDEX` — Ambar Numarası
+- `SOURCECOSTGRP` — Ambar maliyet grubu
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `LINENET` — Net Satır Toplamı
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `STATUS` — Onay Bilgisi
+- `DREF` — Satır Dağıtım Şablonları Kayıt Referansı
+- `TRGFLAG` — Trigger işareti
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `WFSTATUS` — Kullanımda Değil
+- `NETDISCFLAG` — Net İndirim Satırı ve Tutar İşareti
+- `NETDISCPERC` — Net İndirim Oranı (%)
+- `NETDISCAMNT` — Net İndirim Tutarı
+- `CONDITIONREF` — Satınalma / Satış koşulları ref.
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `CAMPAIGNREFS1` — Kampanya Kartı Referansı 1
+- `CAMPAIGNREFS2` — Kampanya Kartı Referansı 2
+- `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
+- `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
+- `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
+- `POINTCAMPREF` — Puan kampanyası kartı referansı
+- `CAMPPOINT` — Kampanya Puanı
+- `PROMCLASITEMREF` — Promosyon sınıfı ref. (kampanyadan)
+- `REASONFORNOTSHP` — Sevk edilememe nedeni
+- `CMPGLINEREF` — Kampanya Satırı Referansı
+- `PRRATE` — Fiyatlandırma dövizi kuru
+- `GROSSUINFO1` — Brüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Brüt Çevrim Katsayısı 2
+- `CANCELLED` — İptal Edilmiş
+- `DEMPEGGEDAMNT` — Talep karşılamada kullanılan miktar
+- `TEXTINC` — Detay açıklama içerir
+- `OFFERREF` — Teklifler Ref.
+- `ORDERPARAM` — Kullanımda Değil
+- `ITEMASGREF` — Kullanımda Değil
+- `EXIMAMOUNT` — İthalat/İhracat Miktarı
+- `OFFTRANSREF` — Teklif işlemi log. Ref.
+- `ORDEREDAMOUNT` — Sipariş miktarı
+- `ORGLOGOID` — Veri Merkezi
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `WITHPAYTRANS` — Ödemeli / Ödemesiz?
+- `PROJECTREF` — Proje Referansı
+- `POINTCAMPREFS1` — Kampanya kartları referansı 1
+- `POINTCAMPREFS2` — Kampanya kartları referansı 2
+- `POINTCAMPREFS3` — Kampanya kartları referansı 3
+- `POINTCAMPREFS4` — Kampanya kartları referansı 4
+- `CAMPPOINTS1` — Kampanya puanı 1
+- `CAMPPOINTS2` — Kampanya puanı 2
+- `CAMPPOINTS3` — Kampanya puanı 3
+- `CAMPPOINTS4` — Kampanya puanı 4
+- `CMPGLINEREFS1` — Kampanya satırları referansı 1
+- `PRCLISTREF` — Satın alma / satış fiyatları mantıksal referansı
+- `AFFECTCOLLATRL` — Teminatı etkiler
+- `FCTYP` — Satınalma teklif fişi türü
+- `PURCHOFFNR` — Alternatif Numara
+- `DEMFICHEREF` — DEMANDFICHE referansı
+- `DEMTRANSREF` — DEMANDLINE referansı
+- `ALTPROMFLAG` — Alternatif promosyon uygulandı mı?
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `REFLVATACCREF` — Genel Muhasebe Hesapları Referansı
+- `REFLVATOTHACCREF` — Genel Muhasebe Hesapları Referansı
+- `PRIORITY` — Sipariş teslimat önceliği
+- `AFFECTRISK` — Riski etkiler
+- `BOMREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün reçetesi revizyonları referansı
+- `ROUTINGREF` — Üretim rotaları referansı
+- `OPERATIONREF` — Kontrol işlemi referansı
+- `ADDTAXRATE` — Ek Vergi Oranı
+- `ADDTAXCONVFACT` — Ek Vergi Çevrim Katsayısı
+- `ADDTAXAMOUNT` — Ek Vergi Tutarı
+- `ADDTAXACCREF` — Genel Muhasebe Hesapları Referansı
+- `ADDTAXCENTERREF` — Masraf Merkezi Referansı
+- `ADDTAXAMNTISUPD` — Ek Vergi Düzenlendi
+- `ADDTAXDISCAMOUNT` — Ek Vergi İndirim Miktarı
+- `EXADDTAXRATE` — İstisna ek vergi oranı
+- `EXADDTAXCONVF` — İstisna ek vergi çevrim katsayısı
+- `EXADDTAXAMNT` — İstisna ek vergi tutarı
+- `EUVATSTATUS` — KDV hesaplama durumu
+- `ADDTAXVATMATRAH` — Ek vergi matrahı
+
+### QASGN — Kalite kontrol hareketi- Kalite kontrol ataması
+
+- `LOGICALREF` — Kalite Kontrol Ataması Log. Ref.
+- `SETREF` — Kalite Kontrol Seti Ref.
+- `LINEREF` — Kalite Kontrol Satırı Ref.
+- `IMPORTANCE` — Öncelik derecesi
+- `FREQUENCY` — Kalite Kontrol Periyodu
+- `COUNTER` — Kontrol Sayısı
+- `SAMPLESIZE` — Numune miktarı
+- `NOMVAL` — Nominal değer
+- `MINVAL` — Asgari Değer
+- `MINTOL` — (-) Tolerans
+- `MAXVAL` — Azami Değer
+- `PLUSTOL` — (+) Tolerans
+- `INSPPOINT` — Kontrol Noktası
+- `INSPFICHES1` — Malzeme Yönetimi Fişleri
+- `INSPFICHES2` — Satınalma İrsaliyeleri
+- `INSPFICHES3` — Satış dağıtım irsaliyeleri
+- `ASGNREF` — Atama Referansı
+- `OPITEMREF` — Ek malzeme ref.
+- `ASGNTYPE` — Atama Türü
+- `VALREF` — Kalite Kontrol Değeri Ref.
+- `LINENO_` — Satır Numarası
+- `REVISIONNO` — Revizyon numarası
+- `CONFORMRATE` — Kabul Oranı (%)
+- `TOOLCODE` — Arça kodu
+- `CONTROLLER` — Kontrol Sorumlusu
+- `TOOLREF` — Araç ref.
+
+### QCLVAL — Kalite kontrol değerleri
+
+- `LOGICALREF` — Kalite Kontrol Değeri Log. Ref.
+- `CODE` — Kalite Kontrol Değeri Kodu
+- `NAME` — Kalite Kontrol Değeri Açıklaması
+- `SETREF` — Kalite Kontrol Seti Ref.
+- `LINEREF` — Kalite Kontrol Satırı Ref.
+- `TARGETFLAG` — Hedef işareti
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `LINENO_` — Satır Numarası
+
+### QCSET — Kalite kontrol setleri
+
+- `LOGICALREF` — Kalite Kontrol Seti Log. Ref.
+- `CODE` — Kalite Kontrol Kodu
+- `NAME` — Kalite Kontrol Açıklaması
+- `ITYPE` — Kalite Kontrol Tipi
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+
+### QCSLINE — Kalite kontrol satırları
+
+- `LOGICALREF` — Kalite Kontrol Satırı Log. Ref.
+- `CODE` — Kalite Kontrol Satır Kodu
+- `NAME` — Kalite Kontrol Satır Description
+- `SETREF` — Kalite Kontrol Seti Ref.
+- `QTYPE` — Kalite Kontrol Tipi
+- `QUNIT` — Kalite Kontrol Unit
+- `TOOLCODE` — Kalite Kontrol Aracı
+- `CONTROLLER` — Kontrol Sorumlusu
+- `INSPPOINT` — Kontrol Noktası
+- `INSPFICHES1` — Malzeme Yönetimi Fişleri
+- `INSPFICHES2` — Satınalma İrsaliyeleri
+- `INSPFICHES3` — Satış dağıtım irsaliyeleri
+- `IMPORTANCE` — Öncelik derecesi
+- `FREQUENCY` — Kalite Kontrol Periyodu
+- `COUNTER` — Kontrol Sayısı
+- `SAMPLESIZE` — Numune miktarı
+- `NOMVAL` — Nominal değer
+- `MINVAL` — Asgari Değer
+- `MAXVAL` — Azami Değer
+- `MINTOL` — (-) Tolerans
+- `MAXTOL` — (+) Tolerans
+- `EXPLINE` — Açıklama Satırı
+- `CONFORMRATE` — Kabul Oranı (%)
+- `LINENO_` — Satır Numarası
+- `TOOLREF` — Araç ref.
+
+### QPRODLINE — Hızlı üretim satırları
+
+- `LOGICALREF` — Hızlı üretim fişi
+- `STCREF` — Malzeme kartı referansı
+- `AMNT` — Tutar
+- `PRICE` — Fiyat
+- `PERC` — Yüzde
+- `MAINCREF` — Karma Koli Kartı Referansı
+- `LINENO_` — Satır numarası
+- `LOSTFACTOR` — Fire Faktörü
+- `SOURCEINDEX` — Kaynak Ambar Numarası
+- `UOMREF` — Birim referansı
+- `CARDTYPE` — Kart Türü
+- `DEPARTMENT` — Bölüm
+- `QPROFCREF` — Hızlı üretim fişi referansı
+
+### QPRODUCT — Hızlı Üretim
+
+- `LOGICALREF` — Hızlı üretim log. Ref.
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Tarih
+- `FTIME` — Saat
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ITEMREF` — Malzemeler Log. Ref.
+- `UOMREF` — Birim seti log. Ref.
+- `USETREF` — Birim seti log. Ref.
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Çevrim Katsayısı
+- `UINFO4` — Çevrim Katsayısı
+- `UINFO5` — Çevrim Katsayısı
+- `UINFO6` — Çevrim Katsayısı
+- `UINFO7` — Çevrim Katsayısı
+- `UINFO8` — Çevrim Katsayısı
+- `ORDERREF` — Sipariş fişi log. Ref.
+- `AMOUNT` — Tutar
+- `SOURCEINDEX` — Ambar Numarası
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `PRODTYPE` — Ürün tipi
+- `LOSTFACTOR` — Fire Faktörü
+- `PROJECTREF` — Proje Referansı
+- `DEPARTMENT` — Bölüm
+
+### REFLECT — Yansıtmalar
+
+- `LOGICALREF` — Yansıtma log. Ref.
+- `CODE` — Yansıtma kodu
+- `DEFINITION` — Yansıtma açıklaması
+- `EXPACCREF` — Periyot kar/zarar hesabı ref.
+- `EXPACCCODE` — Periyot kar/zarar hesabı kodu
+- `BEGDATE` — Başlangıç Tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `MODULENO` — Modül Numarası
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `BFIRSTFICHE` — Oluşturulan İlk Fiş
+- `BSECONDFICHE` — Oluşturulan İkinci Fiş
+
+### REFLECTASGN — Yansıtma atamaları
+
+- `LOGICALREF` — Yansıtma ataması log. Ref.
+- `REFLECTREF` — Yansıtma ref.
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `FICHETYPE` — Fiş Türü
+- `BRANCH` — İşyeri
+- `BEGDATE` — Başlangıç Tarihi
+- `ENDDATE` — Bitiş Tarihi
+
+### REFLECTTRANS — Yansıtma hareketleri
+
+- `LOGICALREF` — Yansıtma hareketi log. ref.
+- `FICHEREF` — Yansıtma ref.
+- `LINENR` — Satır Numarası
+- `PERLINENR` — Üst satır num.
+- `LINEREF` — Üst satır ref.
+- `EXBEGACCREF` — Başlangıç çıkış hesabı referansı
+- `EXBEGACCCODE` — Başlangıç çıkış hesabı kodu
+- `EXENDACCREF` — Bitiş çıkış hesabı referansı
+- `EXENDACCCODE` — Bitiş çıkış hesabı kodu
+- `EXRATIO` — Çıkış hesabı oranı
+- `YHACCREF` — Çıkış yansıtma hesabı ref.
+- `YHACCCODE` — Çıkış yansıtma hesabı kodu
+- `YHRATIO` — Çıkış yansıtma hesabı oranı
+- `INACCREF` — Yansıtma Hesabı Ref.
+- `INACCCODE` — Yansıtma Hesabı Kodu
+- `INRATIO` — Yansıtma Hesabı Oranı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+
+### REMINDHIST — REMINDHIST
+
+- `LOGICALREF` — Malzeme Fişleri Referansı
+- `CLIENTREF` — Cari Hesap Ref.
+- `SENTDATE` — İhtar gönderim tarihi
+- `REMLEVEL` — İhtar gönderim seviyesi
+- `DEBIT` — Cari Hesap Borç
+- `CREDIT` — Cari Hesap Alacak
+- `PAYTRANSDATE` — Ödeme hareket günü
+- `PAYTRANSTOTAL` — Ödeme hareket toplamı
+- `FICHEREF` — Malzeme Fişleri Referansı
+- `PAYTRANSREF` — Ödeme / Tahsilat hareket ref.
+- `PAYPLANREF` — Ödeme Planları Ref.
+- `PAYTRCURR` — Ödeme kuru
+- `CANCELLED` — İptal Edilmiş
+
+### REPAYPLAN — LG_REPAYPLAN
+
+- `LOGICALREF` — Geri ödeme planı log. Ref.
+- `PRIORITY` — Öncelik
+- `DEALINGTYPE` — Ödeme Türü
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `FIRSTPAYTERM` — Erken ödeme vadesi
+- `REMPAYTERM` — Diğer ödeme vadesi
+- `BANKACCREF` — Banka Hesabı Logical Ref.
+- `POSCOMSN` — Hizmet komisyonu
+- `POINTCOMSN` — Komisyon puanı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICALREF` — Orijinal Kayıt Log. Ref.
+
+### REPAYPLANS — Geri ödeme planları
+
+- `LOGICALREF` — Geri Ödeme Planı Logical Ref.
+- `CODE` — Geri Ödeme Plan Kodu
+- `DEFINITION_` — Geri Ödeme Plan Tanımı
+- `BANKACCREF` — Banka Hesapları Referansı
+- `BEGDATE` — Geri Ödeme Plan Tanımı Başlangıç Tarihi
+- `ENDDATE` — Geri Ödeme Plan Tanımı Bitiş Tarihi
+- `SPECODE` — Geri Ödeme Plan Tanımı Özel Kodu
+- `CYPHCODE` — Geri Ödeme Plan Tanımı Yetki Kodu
+- `WRKDAYS` — Çalışma günleri
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `EARLYINTEREST` — Erken ödeme faiz oranı
+- `LATEINTEREST` — Gecikme faiz oranı
+
+### REPAYPLANSLN — Geri ödeme planı satırları
+
+- `LOGICALREF` — Geri Ödeme Planı Satırları Logical Ref.
+- `REPAYPLANREF` — Geri Ödeme Planları Referansı
+- `LINENO_` — Geri Ödeme Planı Satır Numarası
+- `FORMULA` — Geri Ödeme Planı Formülü
+- `CONDITION` — Geri Ödeme Plan Koşulu
+- `DAY` — Geri Ödeme Plan Günü
+- `MONTH` — Geri Ödeme Planı Ayı
+- `YEAR` — Geri Ödeme Planı Yılı
+- `RNDVALUE` — Geri Ödeme Planı Yuvarlama Tabanı
+- `DISCRATE` — Geri Ödeme Planı İndirim Oranı
+- `POSCOMSN` — Geri Ödeme Planı Hizmet Komisyonu
+- `POINTCOMSN` — Geri Ödeme Planı Puan Komisyonu
+- `DUEDIFFCOMSN` — Geri Ödeme Planı Vade Farkı
+- `CALCTYPE` — Tutar Hesabı
+- `REPAYDAY` — Geri Ödeme Günü
+- `REPAYMONTH` — Geri Ödeme Ayı
+- `FORMULA1` — Formül (faiz oranı)
+- `FORMULA2` — Formül (banka ve sigorta muameleleri vergisi)
+- `FORMULA3` — Formül (KKDF)
+
+### ROUTE — Satış yönetim raporları
+
+- `LOGICALREF` — Satış rotası log. Ref.
+- `CODE` — Rota kodu
+- `DEFINITION_` — Rota açıklaması
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `STATUS` — Durumu
+- `PERIOD` — Periyot
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### ROUTETRS — Satış rota satırları
+
+- `LOGICALREF` — Satış rotası satırı log. Ref.
+- `ROUTEREF` — Rota ref.
+- `LINENO_` — Rota satır numarası
+- `CLIENTREF` — Cari Hesap Ref.
+
+### ROUTING — Üretim rotaları
+
+- `LOGICALREF` — Üretim rota log. ref.
+- `CODE` — Üretim rota kodu
+- `NAME` — Üretim rota açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+- `PRINTCNT` — Basılmış Olanların Sayısı
+
+### RPFILTS001 — RPFILTS001
+
+- `LOGICALREF` — Fiziksel adres
+- `DATATYPE` — Tasarım tipi
+- `OWNERID` — Tasarım no
+- `INSTANCE` — Örnek no
+- `DEFAULTFLG` — Default bayrağı
+- `TEMPNAME` — Tasarım adı
+- `EXPLANATION` — Tasarım açıklaması
+- `DATASIZE` — Veri uzunluğu
+- `UPDATEINFO_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `UPDATEINFO_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `UPDATEINFO_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `UPDATEINFO_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `UPDATEINFO_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `UPDATEINFO_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `UPDATEINFO_MODIFIEDDATE` — Kaydın Değiştirildiği Tarih
+- `UPDATEINFO_MODIFIEDHOUR` — Kaydın Değiştirildiği Saat
+- `UPDATEINFO_MODIFIEDMIN` — Kaydın Değiştirildiği Dakika
+- `UPDATEINFO_MODIFIEDSEC` — Kaydın Değiştirildiği Saniye
+- `LDATA` — İç kullanım
+
+### RPFILTSXXX — Kaydedilen rapor filtreleri
+
+
+### RPLAYS_001 — RPLAYS_001
+
+- `LOGICALREF` — Fiziksel adres
+- `DATATYPE` — Tasarım tipi
+- `OWNERID` — Tasarım no
+- `INSTANCE` — Örnek no
+- `DEFAULTFLG` — Default bayrağı
+- `TEMPNAME` — Tasarım adı
+- `EXPLANATION` — Tasarım açıklaması
+- `DATASIZE` — Veri uzunluğu
+- `UPDATEINFO_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `UPDATEINFO_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `UPDATEINFO_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `UPDATEINFO_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `UPDATEINFO_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `UPDATEINFO_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `UPDATEINFO_MODIFIEDDATE` — Kaydın Değiştirildiği Tarih
+- `UPDATEINFO_MODIFIEDHOUR` — Kaydın Değiştirildiği Saat
+- `UPDATEINFO_MODIFIEDMIN` — Kaydın Değiştirildiği Dakika
+- `UPDATEINFO_MODIFIEDSEC` — Kaydın Değiştirildiği Saniye
+- `LDATA` — İç kullanım
+
+### RPLAYS_XXX — Kaydedilen rapor tasarımları
+
+
+### RTNGLINE — Üretim rota stırları
+
+- `LOGICALREF` — Üretim rota satırı log. Ref.
+- `ROUTINGREF` — Üretim rotası ref.
+- `LINENO_` — Satır Numarası
+- `OPERATIONREF` — İşlem ref.
+- `SPECODE` — Özel Kod
+- `COSTRELATED` — Bağlı Maliyet
+- `PLANRELATED` — Planlama (related)
+- `OUTITEMREF` — Koşul Malzeme (Sınıf) Ref.
+- `LINEEXP` — Satır Açıklaması
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### SATI — Satış aktiviteleri ağacı öğeleri
+
+- `LOGICALREF` — Satış etkinlikleri ağacı malzeme ref.
+- `USERID` — Kullanıcı numarası
+- `CUSTOM` — Genel / Kişisel
+- `ITEMTYP` — Malzeme Türü
+- `ITEMEXP` — Malzeme Açıklaması
+- `PARENTREF` — Satış etkinlikleri ağacı malzeme ref.
+- `HASCHILD` — Alt Malzeme
+- `FILTERREF` — Satış etkinlikleri ağacı malzeme filtreleri ref.
+
+### SATIFILTER — Satış aktiviteleri ağacı öğe filtreleri
+
+- `LOGICALREF` — (Bayi Kullanımı İçin)
+- `DATATYPE` — (Bayi Kullanımı İçin)
+- `OWNERID` — (Bayi Kullanımı İçin)
+- `INSTANCE` — (Bayi Kullanımı İçin)
+- `DEFAULTFLG` — (Bayi Kullanımı İçin)
+- `TEMPNAME` — (Bayi Kullanımı İçin)
+- `EXPLANATION` — (Bayi Kullanımı İçin)
+- `DATASIZE` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_CREATEDBY` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_CREATEDDATE` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_CREATEDHOUR` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_CREATEDMIN` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_CREATEDSEC` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_MODIFIEDBY` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_MODIFIEDDATE` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_MODIFIEDHOUR` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_MODIFIEDMIN` — (Bayi Kullanımı İçin)
+- `UPDATEINFO_MODIFIEDSEC` — (Bayi Kullanımı İçin)
+- `USERDEFAULT` — (Bayi Kullanımı İçin)
+- `USERNR` — (Bayi Kullanımı İçin)
+
+### SELCHVAL — Malzeme-Özellik değerleri
+
+- `LOGICALREF` — Malzeme - Karakteristik Değeri Log. Ref.
+- `CHARASGNREF` — Özellik Ataması Referansı
+- `CHARVALREF` — Özellik Değeri Referansı
+
+### SELINSCH — SELINSCH
+
+- `LOGICALREF` — Kullanımda Değil
+- `CHARASGNREF` — Kullanımda Değil
+- `CHARVALREF` — Kullanımda Değil
+
+### SERILOTN — Malzeme seri lot no. Bilgileri
+
+- `LOGICALREF` — Malzeme Lot/Seri Numarası Bilgisi Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `SLTYPE` — Lot / Seri Türü
+- `CODE` — Lot / Seri Kodu
+- `NAME` — Lot / Seri Açıklaması
+- `STATE` — Durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `ORGLOGOID` — Veri Merkezi
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### SHFTASGN — Vardiya atamaları
+
+- `LOGICALREF` — Vardiya ataması log. Ref.
+- `SOURCETYPE` — Kaynak Tipi
+- `SOURCEREF` — Kaynak ref.
+- `SHIFTREF` — Vardiya ref.
+- `BEGDATE` — Başlangıç Günü
+- `LINENR` — Satır Numarası
+- `SHIFTTREF` — Vardiya zamanı ref.
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### SHFTTIME — Vardiya zamanları
+
+- `LOGICALREF` — Vardiya zamanı log. Ref.
+- `SHIFTREF` — Vardiya ref.
+- `BEGTIME` — Başlangıç Zamanı
+- `ENDTIME` — Bitiş Tarihi
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `RECSTATUS` — Kayıt Durumu
+
+### SHIFT — Vardiyalar
+
+- `LOGICALREF` — Vardiya log. Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `ACTIVE` — Durumu
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREADEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `RECSTATUS` — Kayıt Durumu
+- `COSTFACTOR` — Maliyet Katsayısı
+- `WHOLEDAY` — Tam gün vardiya
+
+### SHIPINFO — Teslimat bilgileri
+
+- `LOGICALREF` — Teslimat Bilgisi Log. Ref.
+- `CLIENTREF` — Cari Hesap Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `ADDR1` — Adres İlk Satır
+- `ADDR2` — Adres İkinci Satır
+- `CITY` — Şehir Açıklaması
+- `COUNTRY` — Ülke Açıklaması
+- `POSTCODE` — Posta kodu
+- `TELNRS1` — Telefon Numarası 1
+- `TELNRS2` — Telefon Numarası 2
+- `FAXNR` — Faks Numarası
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `VATNR` — KDV numarası
+- `TAXNR` — Vergi numarası
+- `TAXOFFICE` — Vergi dairesi
+- `TOWNCODE` — İlçe kodu
+- `TOWN` — İlçe açıklaması
+- `DISTRICTCODE` — Semt Kodu
+- `DISTRICT` — Semt Açıklaması
+- `CITYCODE` — Şehir Kodu
+- `COUNTRYCODE` — Ülke Kodu
+- `ACTIVE` — Kullanım durumu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `EMAILADDR` — E-Posta Adresi
+- `INCHANGE` — İlgili
+- `TELCODES1` — Alan kodu 1 (telefon)
+- `TELCODES2` — Alan kodu 2 (telefon)
+- `FAXCODE` — Alan kodu (faks)
+
+### SHPAGENT — Sevkiyat firmaları
+
+- `LOGICALREF` — Fiziksel adres
+- `CODE` — Sevkiyat firması kodu
+- `TITLE` — Sevkiyat firması ünvanı
+- `EMAIL` — E_mail adresi
+- `WEBADDR` — Internet adresi
+- `TRACKINGFORM` — Izleme formu
+
+### SHPTYPES — Sevkiyat türleri
+
+- `LOGICALREF` — Fiziksel adres
+- `SCODE` — Sevkiyat türü kodu
+- `SDEF` — Sevkiyat türü açıklaması
+
+### SLQCASGN — Kalite kontrol hareketleri
+
+- `LOGICALREF` — Kalite Kontrol Hareketi Log. Ref.
+- `ASGNTYPE` — Atama Türü
+- `ITEMREF` — Malzeme Kartı Referansı
+- `FICHEREF` — Fiş ref.
+- `STTRANSREF` — Malzeme Hareketi Ref.
+- `SLTRANSREF` — Lot / Seri / Stok Yeri Hareket Ref.
+- `QCSETREF` — Kalite Kontrol Seti Ref.
+- `QCCODEREF` — Kalite Kontrol Kodu
+- `QCVALREF` — Kalite Kontrol Değeri Kodu
+- `QCASGNLOGICREF` — Kalite Kontrol Ataması Ref.
+- `QCREVNO` — Kalite Kontrol Ataması Revizyon Numarası
+- `QTYPE` — Kalite Kontrol Tipi
+- `LINENR` — Satır Numarası
+- `AMOUNT` — Miktar
+- `QVALUE` — Kalite Kontrol Değeri
+- `CONFIRMED` — Kalite Kontrol Değeri Uygunluğu
+- `QDATE` — Kalite Kontrol Değeri Giriş Tarihi
+- `CANCELLED` — İptal Edilmiş
+
+### SLSACTIV — Satış aktiviteleri
+
+- `LOGICALREF` — Satış etkinliği log. Ref.
+- `DATE_` — Tarih
+- `TIME_` — Zaman
+- `ACTTYPE` — Aktivite Türü
+- `OPPORREF` — Satış fırsatları ref.
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `CSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `ACTORDER` — Aktivite Emri
+- `DESCRIPTION` — Açıklama
+- `PRIORITY` — Öncelik
+- `APPROVAL` — Durumu
+- `DUEDATE` — Son Tarih
+- `DUETIME` — Son Tarih
+- `SENDVIA` — Tanzim Türü
+- `SENDREF` — Alıcı ref.
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `LASTREVISION` — Son Revizyon
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+
+### SLSCLREL — Satış elemanı-Cari hesap ilişkisi
+
+- `LOGICALREF` — Satış Temsilcisi - Hesap ilişkisi log. Ref.
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `LINENO_` — Satır Numarası
+- `CLIENTREF` — Cari Hesap Ref.
+- `BEGDATE` — Ziyaret başlangıç tarihi
+- `VISITDAY` — Ziyaret günü
+- `VISITPERIOD` — Ziyaret periyodu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### SLSFILES — Aktivite dosyaları
+
+- `LOGICALREF` — Aktivite Dosyası Log. Ref.
+- `PATH` — Dosya yolu
+- `FILENAME_` — Dosya Adı
+- `FILETYPE` — Dosya Türü
+- `INDISK` — Diske kaydedilecek
+- `ACTREF` — Aktivite Referansı
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `RECSTATUS` — Kayıt Durumu
+
+### SLSMAN — Satış elemanları
+
+- `LOGICALREF` — Satış Temsilcisi Log. Referansı
+- `CODE` — Satış Temsilcisi Kodu
+- `DEFINITION_` — Satış Temsilcisi Açıklaması
+- `CARDTYPE` — Kart Türü
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `POSITION_` — Satış Temsilcisi Pozisyon Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `USERID` — Kullanıcı ID
+- `DEPTID` — Bölüm ID
+- `DIVISID` — İşyeri ID
+- `FIRMNR` — Firma Numarası
+- `RECSTATUS` — Kayıt Durumu
+- `TYP` — Satıcı türü
+
+### SLSOHISTORY — Satış fırsatları geçmişi
+
+- `LOGICALREF` — Satış fırsatları tarihçesi tablosu log. Ref.
+- `SLSOPPREF` — Satış fırsatları ref.
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `RECDATE` — Kayıt tarihi
+- `RECTIME` — Kayıt zamanı
+- `STATUS` — Durumu
+- `EXPLANATION` — Açıklama
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### SLSOPPOR — Satış fırsatları
+
+- `LOGICALREF` — Satış fırsatları log. Ref.
+- `OPPNO` — Numara
+- `DESCRIPTION` — Açıklama
+- `DATE_` — Tarih
+- `EXPECDATE` — Tahmini Gerçekleşme Tarihi
+- `CLOSEDATE` — Tahmini Kapanış Tarihi
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `CSTVNDREF` — Müşteri / Tedarikçi Ref.
+- `CONTACTREF` — İlgili Kişi Ref.
+- `EXPECREV` — Tahmini Kazanç
+- `REVCURR` — Döviz Türü
+- `REVRATE` — Döviz Kuru
+- `REVCAMOUNT` — Döviz Türünden Gelir
+- `SUCCPROB` — Başarı oranı
+- `STAGE` — Durumu
+- `COMMENTS` — Açıklama (Başarılı / Hatalı)
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `RECSTATUS` — Kayıt Durumu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `REPORTRATE` — Raporlama dövizi kuru
+
+### SLTRANS — Seri/Lot hareketleri
+
+- `LOGICALREF` — Lot / Seri Hareketi Log. Ref.
+- `STFICHEREF` — Malzeme Fişi Ref.
+- `STTRANSREF` — Malzeme Hareketi Ref.
+- `INTRANSREF` — Giriş Malzeme Hareket Ref.
+- `INSLTRANSREF` — Giriş Lot / Seri / Stok Yeri Hareket Ref.
+- `INSLAMOUNT` — Miktar (Giriş hareket birimi)
+- `LINENR` — Satır Numarası
+- `ITEMREF` — Malzeme Kartı Referansı
+- `DATE_` — Tarih
+- `IOCODE` — Girdi / Çıktı kodu
+- `INVENNO` — Ambar Numarası
+- `FICHETYPE` — Bağlı fiş türü
+- `SLTYPE` — Lot / Seri Türü
+- `SLREF` — Lot / Seri Kayıt Ref.
+- `LOCREF` — Stok Yeri Kaydı Ref.
+- `MAINAMOUNT` — Miktar (ana birim)
+- `UOMREF` — Birim referansı
+- `AMOUNT` — Miktar (satır birimi)
+- `REMAMOUNT` — Ana birim kalan miktar
+- `REMLNUNITAMNT` — Satır birimi kalan miktar
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `EXPDATE` — Son Kul.T.
+- `RATESCORE` — Not
+- `CANCELLED` — İptal Edilmiş
+- `OUTCOST` — Çıkış fişi maliyeti
+- `OUTCOSTCURR` — Çıkış fişi dövizli maliyeti
+- `DIFFPRCOST` — Fiyat Farkı Maliyeti
+- `DIFFPRCOSTCURR` — Fiyat farkından oluşan maliyet (dövizli)
+- `SERIQCOK` — Kalite Kontrol Uygunluğu
+- `LPRODSTAT` — Durumu
+- `SOURCETYPE` — Kaynak Tipi
+- `SOURCEWSREF` — Kaynak İş İstasyonu Referansı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `DISTORDREF` — Dağıtım Emri Referansı
+- `DISTORDLNREF` — Dağıtım Emri Satırı Ref.
+- `INDORDSLTRNREF` — Dağıtımda Lot / Seri Hareketi Ref.
+- `GROSSUINFO1` — Bürüt Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Çevrim Katsayısı 2
+- `ATAXPRCOST` — Ek Vergi Maliyeti
+- `ATAXPRCOSTCURR` — Ek Vergi Maliyeti (Raporlama Dövizi)
+- `INFIDX` — Enflasyon Endeksi
+- `ORGLOGOID` — Veri Merkezi
+- `LINEEXP` — Satır Açıklaması
+- `EXIMFCTYPE` — İthalat / İhracat Fiş Türü
+- `EXIMFILEREF` — INVEXIMINFO Reference
+- `EXIMPROCNR` — İthalat / İhracat Hareket Emri
+- `MAINSLLNREF` — Lot / Seri Hareketleri
+- `MADEOFSHRED` — Parçalama Yoluyla Oluşmuş
+- `STATUS` — Durumu
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `GRPBEGCODE` — Seri grubu başlangıç numarası
+- `GRPENDCODE` — Seri grubu bitiş numarası
+
+### SPECODES — Özel kodlar
+
+- `LOGICALREF` — Özel Kod Logical ref.
+- `CODETYPE` — Kod Türü
+- `SPECODETYPE` — Özel Kod Türleri
+- `SPECODE` — Özel Kod
+- `DEFINITION_` — Açıklama
+- `COLOR` — Renk
+- `WINCOLOR` — Pencere rengi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### SRVCARD — Hizmet kartları
+
+- `LOGICALREF` — Hizmet Kartı Log. Ref.
+- `ACTIVE` — Hizmet Kartı Durumu
+- `CARDTYPE` — Hizmet Kartı Türü
+- `CODE` — Hizmet Kartı Kodu
+- `DEFINITION_` — Hizmet Kartı Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `VAT` — KDV
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `PAYMENTREF` — Ödeme Planı Referansı PAYPLANS
+- `UNITSETREF` — Birim Seti Kayıt Referansı UNITSETF
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `RETURNVAT` — Satışlar KDV Oranı
+- `IMPORTEXPNS` — İthalat Giderleri
+- `AFFECTCOST` — Maliyeti Etkiler
+- `ADDTAXREF` — Ek vergiler referansı
+- `DISTTYPE` — Dağıtım Türü
+- `EXTACCESSFLAGS` — Satış noktalarında erişilebilir
+
+### SRVNUMS — Aylık hizmet toplamları
+
+- `LOGICALREF` — Aylık Hizmet Toplamları Log. Ref.
+- `CARDREF` — Hizmet Kartı Ref.
+- `INVENNO` — Ambar Numarası
+- `DURATION` — Süre
+- `ORDERED` — Verilen sipariş miktarı
+- `SHIPPED` — Sevkedilen Miktar
+- `LASTTRDATE` — Son Hareket Tarihi
+
+### SRVTOT — Aylık hizmrt alış/satış toplamları
+
+- `LOGICALREF` — Aylık Hizmet Toplamları Log. Ref.
+- `CARDREF` — Hizmet Kartı SRVCARD
+- `INVENNO` — Ambar Numarası
+- `MONTH_` — Ay
+- `TOTALS_AMOUNT` — Alınan / Verilen Hizmet Miktarı
+- `TOTALS_CASHAMNT` — Toplam (TRL)
+- `TOTALS_CURRAMNT` — Toplam (RD)
+- `YEAR_` — Yıl
+- `TOTALS_CAHAMNT` — Aylık toplam satış tutarları                     (tüm aylar için)
+
+### SRVUNITA — Hizmet kaydı-Birim ataması
+
+- `LOGICALREF` — Hizmet - Birim atama log. Ref.
+- `SRVREF` — Hizmet Kartı Ref.
+- `LINENR` — Satır Numarası
+- `UNITLINEREF` — Birim referansı
+- `PRIORITY` — Öncelik
+
+### STBCODE — STBCODE
+
+- `LOGICALREF` — Logical Reference
+- `STOCKREF` — Malzemeler Log. Ref.
+- `UNITNR` — Birim Numarası
+- `BARCODE` — Barkod
+
+### STCOMPLN — Karma koli satırları
+
+- `LOGICALREF` — Karma Koli Satırı
+- `STCREF` — Malzeme Kartı Referansı
+- `AMNT` — Tutar
+- `PRICE` — Fiyat
+- `PERC` — Yüzde
+- `MAINCREF` — Karma Koli Kartı
+- `LINENO_` — Satır Numarası
+- `LOSTFACTOR` — Fire Faktörü
+- `SOURCEINDEX` — Kaynak Ambar Numarası
+- `UOMREF` — Birim seti log. Ref.
+- `CARDTYPE` — Kart Türü
+- `DEPARTMENT` — Bölüm
+- `QPROFCREF` — Hızlı üretim (Port) referansı
+
+### STDBOMCOST — Standart ürün reçetesi maliyetleri
+
+- `LOGICALREF` — Standart reçete maliyeti log. Ref.
+- `FACTORYNR` — Fabrika Numarası
+- `PERIODREF` — Periyot ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `BOMREF` — Ürün Reçetesi Referansı
+- `BOMREVREF` — Ürün Reçetesi Revizyonu Referansı
+- `REPORTRATE` — RD Kuru
+- `CRTYPE` — Kullanımda Değil
+- `TRCURRDATE` — Kullanımda Değil
+- `STDMTRCOSTLOCAL` — Standart malzeme maliyeti (yerel para birimi)
+- `STDMTRCOSTTRCURR` — Standart malzeme maliyeti (İD)
+- `STDMTRCOSTREPCURR` — Standart malzeme maliyeti (RD)
+- `STDLBRCOSTLOCAL` — Standart çalışan maliyeti (yerel para birimi)
+- `STDLBRCOSTTRCURR` — Standart çalışan maliyeti (İD)
+- `STDLBRCOSTREPCURR` — Standart çalışan maliyeti (RD)
+- `STDWSCOSTLOCAL` — Standart iş istasyonu maliyeti (yerel para birimi)
+- `STDWSCOSTTRCURR` — Standart iş istasyonu maliyeti (İD)
+- `STDWSCOSTREPCURR` — Standart iş istasyonu maliyeti (RD)
+- `STDOVHDCOSTLOCAL` — Standart genel gider maliyeti (yerel para birimi)
+- `STDOVHDCOSTTRCURR` — Standart genel gider maliyeti (İD)
+- `STDOVHDCOSTREPCURR` — Standart genel gider maliyeti (RD)
+- `OVHDCOSTFORMULA` — Genel gider maliyet formülü
+- `OVHDCOSTREPFORMULA` — Genel gider maliyet formülü (RD)
+- `STDUNITCOSTLOCAL` — Standart birim maliyeti (yerel para birimi)
+- `STDUNITCOSTTRCURR` — Standart birim maliyeti (İD)
+- `STDUNITCOSTREPCURR` — Standart birim maliyeti (RD)
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `VARIANTREF` — Varyant (Port) referansı
+- `STDOVHDCOSTLOCAL2` — Genel gider payı 2 (yerel para birimi)
+- `STDOVHDCOSTLOCAL3` — Genel gider payı 3 (yerel para birimi)
+- `STDOVHDCOSTLOCAL4` — Genel gider payı 4 (yerel para birimi)
+- `STDOVHDCOSTLOCAL5` — Genel gider payı 5 (yerel para birimi)
+- `STDOVHDCOSTTRCURR2` — Genel gider payı 2 (işlem dövizi)
+- `STDOVHDCOSTTRCURR3` — Genel gider payı 3 (işlem dövizi)
+- `STDOVHDCOSTTRCURR4` — Genel gider payı 4 (işlem dövizi)
+- `STDOVHDCOSTTRCURR5` — Genel gider payı 5 (işlem dövizi)
+- `STDOVHDCOSTREPCURR2` — Genel gider payı 2 (raporlama dövizi)
+- `STDOVHDCOSTREPCURR3` — Genel gider payı 3 (raporlama dövizi)
+- `STDOVHDCOSTREPCURR4` — Genel gider payı 4 (raporlama dövizi)
+- `STDOVHDCOSTREPCURR5` — Genel gider payı 5 (raporlama dövizi)
+- `OVHDCOSTFORMULA2` — Genel gider payı formülü 2 (yerel para birimi)
+- `OVHDCOSTFORMULA3` — Genel gider payı formülü 3 (yerel para birimi)
+- `OVHDCOSTFORMULA4` — Genel gider payı formülü 4 (yerel para birimi)
+- `OVHDCOSTFORMULA5` — Genel gider payı formülü 5 (yerel para birimi)
+- `OVHDCOSTREPFORMULA2` — Genel gider payı formülü 2 (raporlama dövizi)
+- `OVHDCOSTREPFORMULA3` — Genel gider payı formülü 3 (raporlama dövizi)
+- `OVHDCOSTREPFORMULA4` — Genel gider payı formülü 4 (raporlama dövizi)
+- `OVHDCOSTREPFORMULA5` — Genel gider payı formülü 5 (raporlama dövizi)
+
+### STDCOST — Standart maliyetler
+
+- `LOGICALREF` — Standart maliyet log. Ref.
+- `RESTYPE` — Kaynak Tipi
+- `RESREF` — Kaynak ref. (çalışan veya iş istasyonu)
+- `BEGDATE` — Başlangıç tarihi
+- `UNITREF` — Birim referansı
+- `HOURLYSTDCOST` — Saatlik Standart Maliyet
+- `HOURLYSTDRPCOST` — Saatlik Standart Maliyet (RD)
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### STDCOSTPERIOD — Standart maliyet dönemleri
+
+- `LOGICALREF` — Standart maliyet periyodu log. Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `BEGDATE` — Başlangıç Tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `APPROVED` — Onay Bilgisi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### STDUNITCOST — Standart birim maliyetler
+
+- `LOGICALREF` — Standart birim maliyeti log. Ref.
+- `CARDTYPE` — Kart Türü
+- `CARDREF` — Kart Referansı
+- `PERIODREF` — Periyot ref.
+- `FACTORYNR` — Fabrika Numarası
+- `UNITCOST` — Birim maliyeti
+- `REPUNITCOST` — RD birim maliyeti
+- `TRUNITCOST` — İD birim maliyeti
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `REPORTRATE` — RD Kuru
+- `LINENO_` — Satır Numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### STFCEXTINF — STFCEXTINF
+
+- `LOGICALREF` — STFCEXTINF Logical Reference
+- `STFCREF` — Malzeme Fişleri Referansı
+- `ARTDESGES` — Ticaret Cinsi
+- `VERKEHRSZ` — Verkehrszweign
+- `VERFAHREN` — Verfahren (Export-Import)
+
+### STFEXCH — Malzeme fişi döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden malzeme fişleri tutarı mantıksal referansı
+- `FICHEREF` — Malzeme Fişleri Referansı
+- `ADDDISCOUNTSX` — Döviz cinsinden ek indirimler
+- `TOTALDISCOUNTSX` — Döviz cinsinden toplam indirimler
+- `TOTALDISCOUNTEDX` — Döviz cinsinden satır indirimleri sonrası toplam
+- `ADDEXPENSESX` — Döviz cinsinden satıra uygulanan ek masraflar
+- `TOTALEXPENSESX` — Döviz cinsinden toplam masraflar
+- `DISTEXPENSEX` — Döviz cinsinden malzeme maliyetine dağıtılacak masraf
+- `TOTALDEPOZITOX` — Döviz cinsinden toplam depozito
+- `TOTALPROMOTIONSX` — Döviz cinsinden toplam promosyon
+- `VATINCGROSSX` — Döviz cinsinden dahil KDV tutarı
+- `TOTALVATX` — Döviz cinsinden toplam KDV
+- `GROSSTOTALX` — Döviz cinsinden toplam
+- `TOTALADDTAXX` — Döviz cinsinden ek vergi toplamı
+- `TOTALEXADDTAXX` — Döviz cinsinden toplam istisna ek vergi tutarı
+- `BAGKURX` — Döviz cinsinden Bağ-Kur
+- `STOPAJX` — Döviz cinsinden stopaj
+- `SSDFX` — Döviz cinsinden SSDF
+- `BORSAX` — Döviz cinsinden borsa
+- `KOMISYONX` — Döviz cinsinden komisyon
+- `KOMKDVX` — Döviz cinsinden komisyon KDV'si
+- `EK1X` — Döviz cinsinden ek 1 tutarı
+- `EK2X` — Döviz cinsinden ek 2 tutarı
+- `EK3X` — Döviz cinsinden ek 3 tutarı
+- `EK4X` — Döviz cinsinden ek 4 tutarı
+- `EK5X` — Döviz cinsinden ek 5 tutarı
+
+### STFICHE — Stok fişleri
+
+- `LOGICALREF` — RD Kuru
+- `GRPCODE` — Grup Kodu
+- `TRCODE` — Fiş Türü
+- `IOCODE` — Girdi/Çıktı kodu
+- `FICHENO` — Fiş Numarası
+- `DATE_` — Fiş Tarihi
+- `FTIME` — Fiş Zamanı
+- `DOCODE` — Belge Numarası
+- `INVNO` — Fatura Numarası
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `INVOICEREF` — Fatura Referansı
+- `CLIENTREF` — Cari Hesap Referansı
+- `RECVREF` — Müşteri Cari Hesap Referansı
+- `ACCOUNTREF` — Malzeme Fişleri Log. Ref.
+- `CENTERREF` — Masraf Merkezi Referansı
+- `PRODORDERREF` — Üretim Emri Referansı
+- `PORDERFICHENO` — Üretim Emri Fiş Numarası
+- `SOURCETYPE` — Kaynak Tipi
+- `SOURCEINDEX` — Çıkış (Kaynak) Ambar Numarası
+- `SOURCEWSREF` — Kaynak İş İstasyonu Referansı
+- `SOURCEPOLNREF` — Kaynak İş Emri Referansı
+- `SOURCECOSTGRP` — Kaynak Ambar Maliyet Grubu
+- `DESTTYPE` — Hedef Türü
+- `DESTINDEX` — Giriş (Kaynak) Ambar Numarası
+- `DESTWSREF` — Hedef İş İstasyonu Referansı
+- `DESTPOLNREF` — Hedef İş Emri Referansı
+- `DESTCOSTGRP` — Hedef Ambar Maliyet Grubu
+- `FACTORYNR` — Fabrika
+- `BRANCH` — İşyeri
+- `DEPARTMENT` — Bölüm
+- `COMPBRANCH` — Giriş İşyeri (Ambar Transfer Fişleri)
+- `COMPDEPARTMENT` — Giriş Bölüm (Ambar Transfer Fişleri)
+- `COMPFACTORY` — Giriş Fabrika (Ambar Transfer Fişleri)
+- `PRODSTAT` — Fiş Durumu
+- `DEVIR` — Açılış
+- `CANCELLED` — İptal Edilmiş
+- `BILLED` — Faturalanmış
+- `ACCOUNTED` — Muhasebeleşmiş
+- `UPDCURR` — (Bayi Kullanımı İçin)
+- `INUSE` — Kullanımda
+- `INVKIND` — Fatura Türü
+- `ADDDISCOUNTS` — Ek İndirimler
+- `TOTALDISCOUNTS` — Toplam İndirimler
+- `TOTALDISCOUNTED` — İndirimler Satır Toplamı
+- `ADDEXPENSES` — Ek Masraflar
+- `TOTALEXPENSES` — Toplam Masraflar
+- `TOTALDEPOZITO` — Toplam Depozito
+- `TOTALPROMOTIONS` — Toplam Promosyonlar
+- `TOTALVAT` — Toplam KDV
+- `GROSSTOTAL` — Toplam
+- `NETTOTAL` — Net Toplam
+- `GENEXP1` — Fiş Genel Açıklaması
+- `GENEXP2` — Fiş Genel Açıklaması
+- `GENEXP3` — Fiş Genel Açıklaması
+- `GENEXP4` — Fiş Genel Açıklaması
+- `REPORTRATE` — RD Kuru
+- `REPORTNET` — RD Tutarı
+- `EXTENREF` — Dosya Uzantısı Referansı
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `PRINTCNT` — Basılmış Toplam Hesap
+- `FICHECNT` — Faturalanacak İrsaliye
+- `ACCFICHEREF` — Genel Muhasebe Fişi Referansı
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `CANCELLEDACC` — Muhasebeleştirme İşlemi İptal Edilmiş
+- `SHPTYPCOD` — Teslimat Şekli
+- `SHPAGNCOD` — Taşıyıcı Kodu
+- `TRACKNR` — Paket/Koli No
+- `GENEXCTYP` — Döviz Türü (Genel)
+- `LINEEXCTYP` — Döviz Türü (Satır)
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `SHIPINFOREF` — Teslimat Bilgisi Ref.
+- `DISTORDERREF` — Dağıtım Emri Referansı
+- `SENDCNT` — Gönderilenlerin Sayısı
+- `DLVCLIENT` — Teslimat Adresi Müşteri Tipi
+- `DOCTRACKINGNR` — Belge İzleme Numarası
+- `ADDTAXCALC` — Hesaplanan Ek Vergi
+- `TOTALADDTAX` — Ek Vergi Toplamı
+- `UGIRTRACKINGNO` — Üretimden Giriş Fişi Bağlantılı İzleme Numarası
+- `QPRODFCREF` — Malzeme Fişleri Referansı
+- `VAACCREF` — Genel Muhasebe Hesapları Referansı
+- `VACENTERREF` — Masraf Merkezi Referansı
+- `ORGLOGOID` — Veri Merkezi
+- `FROMEXIM` — İthalat - İhracat İlişkisi
+- `FRGTYPCOD` — Nakliye Türü Kodu (İthalat / İhracat)
+- `TRCURR` — İD Türü
+- `TRRATE` — İD Kuru
+- `TRNET` — İD Net Tutar
+- `EXIMWHFCREF` — İthalat / İhracat Ambar Fişi Referansı
+- `EXIMFCTYPE` — İthalat / İhracat Fiş Türü
+- `MAINSTFCREF` — Ana Malzeme Fiş Türü
+- `FROMORDWITHPAY` — Ödemeli / Ödemesiz Sipariş?
+- `PROJECTREF` — Proje Referansı
+- `WFLOWCRDREF` — İş Akış Kartı Referansı
+- `STATUS` — Durumu
+- `UPDTRCURR` — Güncellenen İşlem Dövizi
+- `TOTALEXADDTAX` — Toplam istisna ek vergi tutarı
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `DEDUCTIONPART1` — Tevkifat oranı payı
+- `DEDUCTIONPART2` — Tevkifat oranı paydası
+- `GRPFIRMTRANS` — Grup şirketi işlemi (doğru/yanlış)
+- `AFFECTRISK` — Riski etkiler
+- `CAPIBLOK_CREATEDBY` — Kaydı Oluşturan Kullanıcının Kodu
+- `CAPIBLOK_CREATEDDATE` — Kaydın Oluşturulduğu Tarih
+- `CAPIBLOK_CREATEDHOUR` — Kaydın Oluşturulduğu Saat
+- `CAPIBLOK_CREATEDMIN` — Kaydın Oluşturulduğu Dakika
+- `CAPIBLOK_CREATEDSEC` — Kaydın Oluşturulduğu Saniye
+- `CAPIBLOK_MODIFIEDBY` — Kaydı Değiştiren Kullanıcının Kodu
+- `CAPIBLOK_MODIFIEDDATE` — Kaydın Değiştirildiği  Tarih
+- `CAPIBLOK_MODIFIEDHOUR` — Kaydın Değiştirildiği  Saat
+- `CAPIBLOK_MODIFIEDMIN` — Kaydın Değiştirildiği  Dakika
+- `CAPIBLOK_MODIFIEDSEC` — Kaydın Değiştirildiği  Saniye
+
+### STINVENS — Malzeme alış/satış aylık toplamları
+
+- `LOGICALREF` — Aylık Alınan / Satılan Malzeme Toplamları
+- `STOCKREF` — Malzemeler Log. Ref. ITEMS
+- `INVENNO` — Ambar Numarası
+- `MONTH_` — Ay
+- `SALES_AMOUNT` — Satış Miktarı
+- `SALES_CASHAMNT` — Satış Tutarı
+- `SALES_CURRAMNT` — Satış Tutarı (RD)
+- `PURCHASES_AMOUNT` — Alımlar Miktarı
+- `PURCHASES_CASHAMNT` — Alımlar Tutarı
+- `PURCHASES_CURRAMNT` — Satış Tutarı (RD)
+- `YEAR_` — Yıl
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+
+### STINVTOT — Günlük malzeme ambar toplamları
+
+- `LOGICALREF` — Günlük Malzeme Ambar Toplamı Log. Ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `INVENNO` — Ambar Numarası ( -1 tüm ambarlar)
+- `DATE_` — Tarih (Kümülatif Toplam)
+- `PLNPRODIN` — Planlama (üretimden girişler)
+- `PLNPRODOUT` — Planlama Sarflar/Fireler
+- `PLNOTHERIN` — Planlama (diğer girişler)
+- `PLNOTHEROUT` — Planlama (diğer çıkışlar)
+- `PLNWHOUSEIN` — Planlama (ambardan girişler)
+- `PLNWHOUSEOUT` — Planlama (ambardan çıkışlar)
+- `TEMPIN` — Konsinye Girişler
+- `TEMPOUT` — Konsinye Çıkışlar
+- `RESERVED` — Rezerve miktarı
+- `ACTPORDER` — Verilen siparişler
+- `RECEIVED` — Sevkedilen Alış Siparişleri
+- `ACTPRODIN` — Gerçekleşen Üretimden Girişler
+- `ACTOTHERIN` — Gerçekleşen Diğer Girişler
+- `ACTSORDER` — Alınan Siparişler
+- `SHIPPED` — Sevkedilmiş verilen siparişler
+- `ACTWASTE` — Gerçekleşen Sarf / Fire
+- `ACTOTHEROUT` — Gerçekleşen Diğer Çıkışlar
+- `TRANSFERRED` — Açılış tutarı
+- `AVGVALUE` — Ortalama Değer
+- `AVGCURRVAL` — Ortalama Değer (Raporlama Dövizi)
+- `PURAMNT` — Alımlar Miktarı
+- `PURCASH` — Alımlar Tutarı
+- `PURCURR` — Alımlar Tutarı (RD)
+- `SALAMNT` — Satış Miktarı
+- `SALCASH` — Satış Tutarı
+- `SALCURR` — Satış Tutarı (RD)
+- `LASTTRDATE` — Son Hareket Tarihi
+- `ONHAND` — Eldekiler
+- `ACTWHOUSEIN` — Gerçekleşen Ambar Girişleri
+- `ACTWHOUSEOUT` — Gerçekleşen Ambar Çıkışları
+- `COUNTADD` — Sayım Fazlası
+- `COUNTDEC` — Sayım Eksiği
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `SITEID` — Bölge no
+- `ORGLOGICREF` — Orjinal kayıt referansı
+
+### STLINE — Malzeme hareketleri
+
+- `LOGICALREF` — Malzeme Hareketi Log. Ref.
+- `STOCKREF` — Malzeme Kartı Referansı
+- `LINETYPE` — Satır türü
+- `PREVLINEREF` — Üst Malzeme Sınıfı Satır Referansı
+- `PREVLINENO` — Üst Malzeme Sınıfı Satır Numarası
+- `DETLINE` — Malzeme Sınıfı Satır Ayrıntısı
+- `TRCODE` — Bağlı Fiş Türü
+- `DATE_` — Fiş Tarihi
+- `FTIME` — Fiş Zamanı
+- `GLOBTRANS` — (İndirim, Masraf, Promosyon satırları için) Fiş geneline uygulanan
+- `CALCTYPE` — (İndirim, Masraf, Promosyon satırları için) Hesaplama türü
+- `PRODORDERREF` — Üretim Emri Referansı
+- `SOURCETYPE` — Kaynak Tipi
+- `SOURCEINDEX` — Kaynak Ambar Numarası
+- `SOURCECOSTGRP` — Kaynak Ambar Maliyet Grubu
+- `SOURCEWSREF` — Kaynak İş İstasyonu Referansı
+- `SOURCEPOLNREF` — Kaynak İş Emri Referansı
+- `DESTTYPE` — Hedef Türü
+- `DESTINDEX` — Hedef Ambar Numarası
+- `DESTCOSTGRP` — Hedef Ambar Maliyet Grubu
+- `DESTWSREF` — Hedef İş İstasyonu Referansı
+- `DESTPOLNREF` — Hedef İş Emri Referansı
+- `FACTORYNR` — Fabrika Numarası
+- `IOCODE` — Girdi/Çıktı kodu
+- `STFICHEREF` — Malzeme Fiş Türü
+- `STFICHELNNO` — Malzeme Fişi Satır Numarası
+- `INVOICEREF` — Fatura Ref.
+- `INVOICELNNO` — Fatura Satır Numarası
+- `CLIENTREF` — Cari Hesap Referansı
+- `ORDTRANSREF` — Sipariş fiş satırı log. Ref.
+- `ORDFICHEREF` — Sipariş fişi ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `VATACCREF` — KDV hesabı ref.
+- `VATCENTERREF` — KDV masraf merkezi ref.
+- `PRACCREF` — Promosyon hesabı ref.
+- `PRCENTERREF` — Promosyom masraf merkezi ref.
+- `PRVATACCREF` — Promosyon KDV’si muhasebe hesabı ref.
+- `PRVATCENREF` — Promosyon KDV’si masraf merkezi ref.
+- `PROMREF` — Promosyon kartı ref.
+- `PAYDEFREF` — Ödeme Planı Referansı
+- `SPECODE` — Özel Kod
+- `DELVRYCODE` — Teslimat Kodu
+- `AMOUNT` — Miktar
+- `PRICE` — Birim fiyat
+- `TOTAL` — Toplam
+- `PRCURR` — Fiyatlandırma dövizi türü
+- `PRPRICE` — Fiyat (Fiyatlandırma dövizi)
+- `TRCURR` — İD Türü
+- `TRRATE` — İşlem dövizi kuru
+- `REPORTRATE` — RD Kuru
+- `DISTCOST` — Satıra Dağıtılan Maliyet
+- `DISTDISC` — Satıra Dağıtılan İndirim
+- `DISTEXP` — Satıra Dağıtılan Masraf
+- `DISTPROM` — Satıra Dağıtılan Promosyon
+- `DISCPER` — İndirim yüzdesi
+- `LINEEXP` — Satır Açıklaması
+- `UOMREF` — Birim referansı
+- `USREF` — Birim Seti Referansı
+- `UINFO1` — Çevrim Katsayısı
+- `UINFO2` — Çevrim Katsayısı
+- `UINFO3` — Boyut Katsayısı
+- `UINFO4` — Boyut Katsayısı
+- `UINFO5` — Boyut Katsayısı
+- `UINFO6` — Boyut Katsayısı
+- `UINFO7` — Boyut Katsayısı
+- `UINFO8` — Boyut Katsayısı
+- `PLNAMOUNT` — Planlanan miktar
+- `VATINC` — KDV Dahil/Hariç
+- `VAT` — KDV
+- `VATAMNT` — Net KDV Tutarı
+- `VATMATRAH` — KDV matrahı
+- `BILLEDITEM` — Faturalanacak Malzeme
+- `BILLED` — Faturalanmış
+- `CPSTFLAG` — Karma Koli Satırı
+- `RETCOSTTYPE` — İade hareketi maliyet türü
+- `SOURCELINK` — Kaynak Hareketleri Bağlantısı (İade)
+- `RETCOST` — İade fişi için iade maliyeti
+- `RETCOSTCURR` — İade fişi için dövizli iade maliyeti
+- `OUTCOST` — Çıkış fişi maliyeti
+- `OUTCOSTCURR` — Çıkış fişi dövizli maliyet
+- `RETAMOUNT` — İade miktarı
+- `FAREGREF` — Sabit Kıymet Kaydı Ref.
+- `FAATTRIB` — Sabit Kıymet Kaydı Bağlantı Türü
+- `CANCELLED` — İptal Edilmiş
+- `LINENET` — Net Satır Toplamı
+- `DISTADDEXP` — Satıra Dağıtılan Ek Masraf
+- `FADACCREF` — Sabit Kiymet Birikmiş Amortisman Hesabı
+- `FADCENTERREF` — Sabit Kiymet Birikmiş Amortisman Masraf Merkezi Ref.
+- `FARACCREF` — Sabit Kıymet Değerleme Hesabı
+- `FARCENTERREF` — Sabit Kıymet Amortisman Değerleme Masraf Merkezi Ref.
+- `DIFFPRICE` — Fiyat farkı toplamı
+- `DIFFPRCOST` — Fiyat Farkı Maliyeti
+- `DECPRDIFF` — Fiyat farkı (0: azalan
+- `LPRODSTAT` — Durumu
+- `PRDEXPTOTAL` — Üretimden girişlere eklenmiş toplam masraf fişi
+- `DIFFREPPRICE` — Toplam fiyat farkı (RD)
+- `DIFFPRCRCOST` — Fiyat farkıyla oluşan RD maliyeti
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `FAPLACCREF` — Sabit Kıymet Kar/Zarar Hesabı
+- `FAPLCENTERREF` — Sabit Kıymet Kar/Zarar Masraf Merkezi Ref.
+- `OUTPUTIDCODE` — Çıkış izleme kodu
+- `DREF` — Dağıtım Şablonu Ref.
+- `COSTRATE` — Üretimden giriş fişi satır maliyeti yüzdesi
+- `XPRICEUPD` — (Bayi Kullanımı İçin)
+- `XPRICE` — (Bayi Kullanımı İçin)
+- `XREPRATE` — (Bayi Kullanımı İçin)
+- `DISTCOEF` — Fiyat farkı dağıtım faktörü
+- `TRANSQCOK` — Kalite Kontrol Uygunluğu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `POLINEREF` — Üretim Emri Satır Ref.
+- `PLNSTTRANSREF` — Planlanan malzeme hareketi ref.
+- `NETDISCFLAG` — Net İndirim Satırı ve Tutar İşareti (evet / hayır)
+- `NETDISCPERC` — Net İndirim Oranı (%)
+- `NETDISCAMNT` — Net İndirim Tutarı
+- `VATCALCDIFF` — Alım faturasında KDV farkı
+- `CONDITIONREF` — Satınalma / Satış koşulları ref.
+- `DISTORDERREF` — Dağıtım Emri Referansı
+- `DISTORDLINEREF` — Dağıtım Emri Satırı Ref.
+- `CAMPAIGNREFS1` — Kampanya Kartı Referansı 1
+- `CAMPAIGNREFS2` — Kampanya Kartı Referansı 2
+- `CAMPAIGNREFS3` — Kampanya Kartı Referansı 3
+- `CAMPAIGNREFS4` — Kampanya Kartı Referansı 4
+- `CAMPAIGNREFS5` — Kampanya Kartı Referansı 5
+- `POINTCAMPREF` — Kampanya puanı ref.
+- `CAMPPOINT` — Kampanya Puanı
+- `PROMCLASITEMREF` — Promosyon sınıfı ref. (kampanyadan)
+- `CMPGLINEREF` — Kampanya Satırı Referansı
+- `PLNSTTRANSPERNR` — Planlanan malzeme hareketi periyot num.
+- `PORDCLSPLNAMNT` — Planlanan kapanış miktarı
+- `VENDCOMM` — Komisyon Oranı
+- `PREVIOUSOUTCOST` — Önceki çıkış maliyeti
+- `COSTOFSALEACCREF` — Satış maliyeti muhasebe hesabı ref.
+- `PURCHACCREF` — Satınalma muhasebe hesabı ref.
+- `COSTOFSALECNTREF` — Satış maliyeti masraf merkezi ref.
+- `PURCHCENTREF` — Satınalma masraf merkezi ref.
+- `PREVOUTCOSTCURR` — Önceki çıkış maliyeti (döviz)
+- `ABVATAMOUNT` — AB KDV Tutarı
+- `ABVATSTATUS` — KDV hesaplama durumu
+- `PRRATE` — Fiyatlandırma dövizi kuru
+- `ADDTAXRATE` — Ek Vergi Oranı
+- `ADDTAXCONVFACT` — Ek Vergi Çevrim Katsayısı
+- `ADDTAXAMOUNT` — Ek Vergi Tutarı
+- `ADDTAXPRCOST` — Ek Vergi Maliyeti
+- `ADDTAXRETCOST` — Ek Vergi İade Maliyeti
+- `ADDTAXRETCOSTCURR` — Ek Vergi İade Maliyeti (Raporlama Dövizi)
+- `GROSSUINFO1` — Bürüt Birim Çevrim Katsayısı 1
+- `GROSSUINFO2` — Bürüt Birim Çevrim Katsayısı 2
+- `ADDTAXPRCOSTCURR` — Ek Vergi Maliyeti (Raporlama Dövizi)
+- `ADDTAXACCREF` — Ek Vergi Genel Muhasebe Hesabı Referansı
+- `ADDTAXCENTERREF` — Ek Vergi Masraf Merkezi Referansı
+- `ADDTAXAMNTISUPD` — Güncel Ek Vergi Tutarı
+- `INFIDX` — Enflasyon Endeksi
+- `ADDTAXCOSACCREF` — İndirilecek ÖTV Muhasebe Hesabı Ref.
+- `ADDTAXCOSCNTREF` — İndirilecek ÖTV Masraf Merkezi Ref.
+- `PREVIOUSATAXPRCOST` — Önceki ek vergi maliyeti
+- `PREVATAXPRCOSTCURR` — Önceki ek vergi maliyeti (RD)
+- `PRDORDTOTCOEF` — Üretimden girişler toplamı (miktar * maliyet katsayısı)
+- `DEMPEGGEDAMNT` — Talep karşılamada kullanılan miktar
+- `STDUNITCOST` — Standart malzeme maliyeti
+- `STDRPUNITCOST` — Standart malzeme maliyeti (RD)
+- `COSTDIFFACCREF` — Ayrıntılı Açıklama İçerir
+- `COSTDIFFCENREF` — Ek Vergi İndirim Tutarı
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `ADDTAXDISCAMOUNT` — Ek Vergi İndirim Tutarı
+- `ORGLOGOID` — Veri Merkezi
+- `EXIMFICHENO` — İthalat/İhracat Dosya Nr.
+- `EXIMFCTYPE` — İthalat / İhracat Fiş Türü
+- `TRANSEXPLINE` — Navlun
+- `INSEXPLINE` — Sigorta Masrafı
+- `EXIMWHFCREF` — İthalat / İhracat Ambar Fişi Referansı
+- `EXIMWHLNREF` — İthalat / İhracat Ambar Hareketi Referansı
+- `EXIMFILEREF` — INVEXIMINFO Reference
+- `EXIMPROCNR` — İthalat / İhracat Hareket Emri
+- `EISRVDSTTYP` — Hizmet dağıtım türü
+- `MAINSTLNREF` — Malzeme Hareketleri Ref.
+- `MADEOFSHRED` — Parçalama Yoluyla Oluşmuş
+- `FROMORDWITHPAY` — Ödemeli / Ödemesiz Sipariş?
+- `PROJECTREF` — Proje Referansı
+- `STATUS` — Durumu
+- `DORESERVE` — Rezerve edilecek / Rezerve edilmeyecek
+- `POINTCAMPREFS1` — Kampanya kartları mantıksal referansı
+- `POINTCAMPREFS2` — Kampanya kartları mantıksal referansı
+- `POINTCAMPREFS3` — Kampanya kartları mantıksal referansı
+- `POINTCAMPREFS4` — Kampanya kartları mantıksal referansı
+- `CAMPPOINTS1` — Kampanya puanı 1
+- `CAMPPOINTS2` — Kampanya puanı 2
+- `CAMPPOINTS3` — Kampanya puanı 3
+- `CAMPPOINTS4` — Kampanya puanı 4
+- `CMPGLINEREFS1` — Kampanya satırları mantıksal referansı 1
+- `CMPGLINEREFS2` — Kampanya satırları mantıksal referansı 2
+- `CMPGLINEREFS3` — Kampanya satırları mantıksal referansı 3
+- `CMPGLINEREFS4` — Kampanya satırları mantıksal referansı 4
+- `PRCLISTREF` — Satın alma / satış fiyatları mantıksal referansı
+- `PORDSYMOUTLN` — Üretim emri yarı mamul çıkış satırı
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+- `EXADDTAXRATE` — İstisna ek vergi oranı
+- `EXADDTAXCONVF` — İstisna ek vergi çevrim katsayısı
+- `EXADDTAXAREF` — Muhasebe hesapları mantıksal referansı
+- `EXADDTAXCREF` — Masraf merkezleri mantıksal referansı
+- `OTHRADDTAXAREF` — Muhasebe hesapları mantıksal referansı
+- `OTHRADDTAXCREF` — Masraf merkezleri mantıksal referansı
+- `EXADDTAXAMNT` — İstisna ek vergi tutarı
+- `AFFECTCOLLATRL` — Teminatı etkileme: 0: Etkilemez; 1: Etkiler
+- `ALTPROMFLAG` — Alternatif promosyon uygulandı mı?
+- `EIDISTFLNNR` — Dağıtım türü: 0: Dosya sıra numarası; 1: Genel
+- `EXIMTYPE` — 0: İthalat; 1: İhracat
+- `VARIANTREF` — Varyant (Port) mantıksal referansı
+- `CANDEDUCT` — Tevkifat uygula
+- `OUTREMAMNT` — Kalan miktar
+- `OUTREMCOST` — Kalan maliyet
+- `OUTREMCOSTCURR` — Kalan maliyet (raporlama dövizi)
+- `REFLVATACCREF` — Genel Muhasebe Hesapları Referansı
+- `REFLVATOTHACCREF` — Genel Muhasebe Hesapları Referansı
+- `PARENTLNREF` — Malzeme Hareketleri Ref.
+- `AFFECTRISK` — Riski etkiler
+- `INEFFECTIVECOST` — Malzeme maliyeti etkilenecek: 0: Evet; 1: Hayır
+- `ADDTAXVATMATRAH` — Ek vergi matrahı
+
+### STLINEEXCH — Malzeme satırı döviz tutarları
+
+- `LOGICALREF` — Döviz cinsinden malzeme satırı tutarları mantıksal referansı
+- `TRANSREF` — Malzeme Hareketleri Ref.
+- `PRICEX` — Döviz cinsinden birim fiyat
+- `TOTALX` — Döviz cinsinden toplam
+- `DISTCOSTX` — Döviz cinsinden satıra dağıtılan maliyet
+- `DISTDISCX` — Döviz cinsinden satıra dağıtılan indirim
+- `DISTEXPX` — Döviz cinsinden satıra dağıtılan masraf
+- `DISTPROMX` — Döviz cinsinden satıra dağıtılan promosyon
+- `VATAMNTX` — Döviz cinsinden net KDV tutarı
+- `VATMATRAHX` — Döviz cinsinden KDV matrahı
+- `LINENETX` — Döviz cinsinden net satır toplamı
+- `DISTADDEXPX` — Döviz cinsinden satıra dağıtılan ek masraf
+- `NETDISCAMNTX` — Döviz cinsinden net indirim tutarı
+- `VATCALCDIFFX` — Döviz cinsinden satınalma faturası KDV farkı
+- `EUVATAMOUNTX` — Döviz cinsinden Avrupa Birliği KDV tutarı
+- `ADDTAXAMOUNTX` — Döviz cinsinden ek vergi tutarı
+- `ADDTAXCONVFACTX` — Döviz cinsinden ek vergi çevrim katsayısı
+- `ADDTAXDISCAMOUNTX` — Döviz cinsinden ek vergi indirim miktarı
+- `EXADDTAXAMNTX` — Döviz cinsinden istisna ek vergi tutarı
+- `EXADDTAXCONVFX` — Döviz cinsinden istisna ek vergi çevrim katsayısı
+- `ADDTAXVATMATRAHX` — Ek vergi matrahı
+
+### STLNINFCOEF — STLNINFCOEF
+
+- `LOGICALREF` — Kullanımda Değil
+- `FICHEREF` — Kullanımda Değil
+- `INVREF` — Kullanımda Değil
+- `LINEREF` — Kullanımda Değil
+- `FICHEDATE` — Kullanımda Değil
+- `COEFARR0` — Kullanımda Değil
+- `COEFARR1` — Kullanımda Değil
+- `COEFARR2` — Kullanımda Değil
+- `COEFARR3` — Kullanımda Değil
+- `COEFARR4` — Kullanımda Değil
+- `COEFARR5` — Kullanımda Değil
+- `COEFARR6` — Kullanımda Değil
+- `COEFARR7` — Kullanımda Değil
+- `COEFARR8` — Kullanımda Değil
+- `COEFARR9` — Kullanımda Değil
+- `COEFARR10` — Kullanımda Değil
+- `COEFARR11` — Kullanımda Değil
+- `COEFARR12` — Kullanımda Değil
+- `COEFARR13` — Kullanımda Değil
+
+### STLNIOPEGGING — STLNIOPEGGING
+
+- `LOGICALREF` — STLNIOPEGGING mantıksal referansı
+- `STOCKREF` — Malzeme kartları mantıksal referansı
+- `OUTSTTRREF` — Malzeme hareketleri mantıksal referansı
+- `OUTSTFCREF` — Malzeme Fişleri Log. Ref.
+- `OUTSTTRDATE` — Çıkış hareketi tarihi
+- `INSTTRREF` — Malzeme hareketleri mantıksal referansı
+- `INSTFCREF` — Malzeme Fişleri Log. Ref.
+- `INSTTRDATE` — Giriş hareketi tarihi
+- `LINENR` — Satır numarası
+- `AMOUNT` — Miktar
+- `VARIANTREF` — Varyant (Port) referansı
+
+### STNUMS — STNUMS
+
+- `LOGICALREF` — Logical Reference
+- `STOCKREF` — Malzemeler Log. Ref.
+- `INVENNO` — Ambar Numarası
+- `MINLEVEL` — Asgari Seviye
+- `MAXLEVEL` — Azami Seviye
+- `LEADTIME` — Temin Tarihi
+- `DELIVERYTIME` — Teslimat Zamanı
+- `SHELFNO` — Raf numarası
+- `PERCLOSEDATE` — Periyot kapanış tarihi
+
+### STOPASGN — İş emri durma nedeni ile iş istasyonu eşleştirmeleri
+
+- `LOGICALREF` — İş emri durma nedeni - İş istasyonu ataması log. Ref.
+- `WSREF` — İş İstasyonu Ref.
+- `CAUSEREF` — Sebep ref.
+- `AFFECTSCOST` — Maliyeti Etkiler
+- `AFFECTSPLAN` — Planı Etkiler
+
+### STOPCAUSE — İş emri durma nedenleri
+
+- `LOGICALREF` — İş emri durma nedeni log. Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `AFFECTSCOST` — Maliyeti Etkiler
+- `AFFECTSPLAN` — Planı Etkiler
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### STOPTRANS — İş emri durma hareketleri
+
+- `LOGICALREF` — İş emri durma nedeni log. Ref.
+- `PRODORDREF` — Üretim Emri Referansı
+- `DISPLINEREF` — İş emri ref.
+- `OPREF` — İşlem ref.
+- `WSREF` — İş İstasyonu Ref.
+- `CAUSEREF` — Durma nedeni ref.
+- `STOPDATE` — Durma tarihi
+- `STOPTIME` — Durma zamanı
+- `STARTDATE` — Başlangıç tarihi
+- `STARTTIME` — Başlangıç zamanı
+- `STOPDURATION` — Durma süresi
+- `AFFECTSCOST` — Maliyeti Etkiler
+- `AFFECTSPLAN` — Planı Etkiler
+- `TRANSEXP` — Hareket açıklaması
+- `LINENR` — Satır Numarası
+- `WSPARTREF` — İş İstasyonu Parçalı Ref.
+- `ACTIVEPARTNUM` — Aktif Parça Sayısı
+
+### SUPPASGN — Malzeme-Tedarikçi ataması
+
+- `LOGICALREF` — Malzeme - Tedarikçi Ataması Log. Ref.
+- `ITEMREF` — Malzeme Kartı Referansı
+- `SUPPLYTYPE` — Müşteri / Tedarikçi Tipi
+- `PRIORITY` — Öncelik
+- `LINENR` — Satır Numarası
+- `CLIENTREF` — Cari Hesap Ref.
+- `TRADINGGRP` — Ticari İşlem Grubu
+- `CLCARDTYPE` — Cari Hesap Türü
+- `KKKCHECK` — Kalite Kontrol İşlemi Yapılmadığında
+- `LEADTIME` — Teslim/Temin Zamanı
+- `MAXQUANTITY` — Azami Miktar
+- `MINQUANTITY` — Asgari Miktar
+- `BEGDATE` — Başlangıç tarihi
+- `SPECIALIZED` — Kullanımda Değil
+- `ICUSTSUPCODE` — Müşteri / Tedarikçi Kodu
+- `ICUSTSUPNAME` — Müşteri / Tedarikçi Açıklaması
+- `QTYDEPLEADTIME` — Miktar bağımlı teslim/temin süresi
+- `PACKETREF` — Malzemeler Log. Ref.
+- `PACKAGINGAMNT` — Paketleme tutarı
+- `PACKAGINGUOMREF` — Birim seti log. Ref.
+- `PACKETUSETYPE` — Paket kullanım türü
+- `ORDPERC` — Cari Hesap Sipariş Oranı (%)
+- `ORDFREQ` — Cari Hesap Sipariş Periyodu (Gün)
+
+### SYSLOG — Sistem günlükleri
+
+- `LOGICALREF` — Logical Reference
+- `USERNAME` — Kullanıcı adı
+- `FIRMNO` — Firma Numarası
+- `DATE_` — Tarih
+- `SECOND_` — İkinci
+- `MINUTE_` — Dakika
+- `HOUR_` — Saat
+- `PROCS11` — Belirsiz
+- `PROCS12` — Belirsiz
+- `PROCS13` — Belirsiz
+- `PROCS14` — Belirsiz
+- `PROCS15` — Belirsiz
+- `PROCS21` — Belirsiz
+- `PROCS22` — Belirsiz
+- `PROCS23` — Belirsiz
+- `PROCS24` — Belirsiz
+- `PROCS25` — Belirsiz
+- `MSGS1` — Mesaj 1
+- `MSGS2` — Mesaj 2
+
+### TARGETS — Satış elemanı hareketleri
+
+- `LOGICALREF` — Hedef log. Ref.
+- `CODE` — Hedef kodu
+- `DEFINITION_` — Hedef açıklama
+- `TYP` — Hedef Türü
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `SALESMANREF` — Satış Temsilcisi Referansı
+- `STCODE` — Malzeme Kodu
+- `STGROUPCODE` — Malzeme Grup Kodu
+- `TARGETSALEAMOUNT` — Hedef satış miktarı
+- `SALEAMOUNTLIMIT` — Satış Miktarı Limiti
+- `NETSALEAMOUNT` — Net Satış Mik.
+- `SALEDISCOUNTLIMIT` — Satış indirimi limiti
+- `SALEEXPENSELIMIT` — Satış masraf limiti
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### TAXDECLHDR — Text Declaration Header Info
+
+- `TYP` — Beyanname türü
+- `TAXDECLNO` — Beyanname numarası
+- `TAXOFFCODE` — Vergi dairesi kodu
+- `PERIODTYP` — Dönem türü
+- `PERIOD` — Periyot
+- `MONTH_` — Ay
+- `YEAR_` — Yıl
+- `BEGDT` — Başlangıç tarihi
+- `ENDDT` — Bitiş tarihi
+- `PAYERINF_NAME` — Mükellefin adı
+- `PAYERINF_SURNAME` — Mükellefin soyadı
+- `PAYERINF_EMAILADD` — Mükellefin e-posta adresi
+- `PAYERINF_CITYTELCD` — Mükellefin telefon şehir kodu
+- `PAYERINF_TELNR` — Mükellefin telefon numarası
+- `PAYERINF_IDENNR` — Mükellefin T.C. kimlik numarası
+- `PAYERINF_TRDREGISNR` — Mükellefin oda/ticaret sicil numarası
+- `PAYERINF_BAGKURNR` — Mükellefin Bağ-Kur numarası
+- `AGENTINF_NAME` — Yurt dışında yerleşik mükellefin adı
+- `AGENTINF_SURNAME` — Yurt dışında yerleşik mükellefin soyadı
+- `AGENTINF_EMAILADD` — Yurt dışında yerleşik mükellefin e-posta adresi
+- `AGENTINF_CITYTELCD` — Yurt dışında yerleşik mükellefin telefon şehir kodu
+- `AGENTINF_TELNR` — Yurt dışında yerleşik mükellefin telefon numarası
+- `AGENTINF_IDENNR` — Yurt dışında yerleşik mükellefin T.C. kimlik numarası
+- `AGENTINF_TRDREGISNR` — Yurt dışında yerleşik mükellefin oda/ticaret sicil numarası
+- `AGENTINF_BAGKURNR` — Yurt dışında yerleşik mükellefin Bağ-Kur numarası
+- `PERINF_NAME` — Beyanname sahibinin adı
+- `PERINF_SURNAME` — Beyanname sahibinin soyadı
+- `PERINF_EMAILADD` — Beyanname sahibinin e-posta adresi
+- `PERINF_CITYTELCD` — Beyanname sahibinin telefon şehir kodu
+- `PERINF_TELNR` — Beyanname sahibinin telefon numarası
+- `PERINF_IDENNR` — Beyanname sahibinin T.C. kimlik numarası
+- `PERINF_TRDREGISNR` — Beyanname sahibinin oda/ticaret sicil numarası
+- `PERINF_BAGKURNR` — Beyanname sahibinin Bağ-Kur numarası
+- `PREPINF_NAME` — Beyannameyi düzenleyenin adı
+- `PREPINF_SURNAME` — Beyannameyi düzenleyenin soyadı
+- `PREPINF_EMAILADD` — Beyannameyi düzenleyenin e-posta adresi
+- `PREPINF_CITYTELCD` — Beyannameyi düzenleyenin telefon şehir kodu
+- `PREPINF_TELNR` — Beyannameyi düzenleyenin telefon numarası
+- `PREPINF_IDENNR` — Beyannameyi düzenleyenin T.C. kimlik numarası
+- `PREPINF_TRDREGISNR` — Beyannameyi düzenleyenin oda/ticaret sicil numarası
+- `PREPINF_BAGKURNR` — Beyannameyi düzenleyenin Bağ-Kur numarası
+- `SENDINF_NAME` — Beyannameyi gönderenin adı
+- `SENDINF_SURNAME` — Beyannameyi gönderenin soyadı
+- `SENDINF_EMAILADD` — Beyannameyi gönderenin e-posta adresi
+- `SENDINF_CITYTELCD` — Beyannameyi gönderenin telefon şehir kodu
+- `SENDINF_TELNR` — Beyannameyi gönderenin telefon numarası
+- `SENDINF_IDENNR` — Beyannameyi gönderenin T.C. kimlik numarası
+- `SENDINF_TRDREGISNR` — Beyannameyi gönderenin oda/ticaret sicil numarası
+- `SENDINF_BAGKURNR` — Beyannameyi gönderenin Bağ-Kur numarası
+- `YMMINF_NAME` — Yeminli mali müşavirin adı
+- `YMMINF_SURNAME` — Yeminli mali müşavirin soyadı
+- `YMMINF_EMAILADD` — Yeminli mali müşavirin e-posta adresi
+- `YMMINF_CITYTELCD` — Yeminli mali müşavirin telefon şehir kodu
+- `YMMINF_TELNR` — Yeminli mali müşavirin telefon numarası
+- `YMMINF_IDENNR` — Yeminli mali müşavirin T.C. kimlik numarası
+- `YMMINF_TRDREGISNR` — Yeminli mali müşavirin oda/ticaret sicil numarası
+- `YMMINF_BAGKURNR` — Yeminli mali müşavirin Bağ-Kur numarası
+- `TAXDECLCHK` — Beyan edilecek bilgilerin durumu
+- `TAXDECLID` — Beyan eden
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+- `OTHSERVTOT` — Diğer malzeme ve hizmet maliyetleri toplamı
+- `WORKERCNT` — Çalışan sayısı
+
+### TAXDECLLINE — Text Declaration Line Info
+
+- `LISTTYP` — Liste türü
+- `LINENR` — Satır numarası
+- `TXTARR1` — Alfasayısal alan 1
+- `TXTARR2` — Alfasayısal alan 2
+- `TXTARR3` — Alfasayısal alan 3
+- `TXTARR4` — Alfasayısal alan 4
+- `TXTARR5` — Alfasayısal alan 5
+- `TXTARR6` — Alfasayısal alan 6
+- `TXTARR7` — Açıklama
+- `DTARR1` — Tarih alanı 1
+- `DTARR2` — Tarih alanı 2
+- `DTARR3` — Tarih alanı 3
+- `NUMARR1` — Sayısal alan 1
+- `NUMARR2` — Sayısal alan 2
+- `NUMARR3` — Sayısal alan 3
+- `NUMARR4` — Sayısal alan 4
+- `NUMARR5` — Sayısal alan 5
+- `NUMARR6` — Sayısal alan 6
+- `NUMARR7` — Sayısal alan 7
+- `NUMARR8` — Sayısal alan 8
+- `NUMARR9` — Sayısal alan 9
+- `NUMARR10` — Sayısal alan 10
+- `INTARR1` — Sayısal alan 1
+- `INTARR2` — Sayısal alan 2
+- `INTARR3` — Sayısal alan 3
+- `ACCARR1_ITEMLEVEL` — Hesap türü alanları 1
+- `ACCARR1_ITEMTYPE` — Hesap türü alanları 1 - Tanım türü
+- `ACCARR1_ITEMCODE` — Hesap türü alanları 1 - Tanım kodu
+- `ACCARR1_ITEMNAME` — Hesap türü alanları 1 - Tanım
+- `ACCARR1_BEGCODE` — Hesap türü alanları 1 - Hesap başlangıç kodu
+- `ACCARR1_ENDCODE` — Hesap türü alanları 1 - Hesap bitiş kodu
+- `ACCARR1_ACCTYPE` — Hesap türü alanları 1 - Hesap türü
+- `ACCARR1_REMTYPE` — Hesap türü alanları 1 - Ters bakiye
+- `ACCARR1_TOTTYPE` — Hesap türü alanları 1 - Hesap tutarı türü
+- `ACCARR1_FORMULA` — Hesap türü alanları 1 - Formül tanımı
+- `ACCARR1_TOTAL` — Hesap türü alanları 1 - Tutar
+- `ACCARR2_ITEMLEVEL` — Hesap türü alanları 2
+- `ACCARR2_ITEMTYPE` — Hesap türü alanları 2 - Tanım türü
+- `ACCARR2_ITEMCODE` — Hesap türü alanları 2 - Tanım kodu
+- `ACCARR2_ITEMNAME` — Hesap türü alanları 2 - Tanım
+- `ACCARR2_BEGCODE` — Hesap türü alanları 2 - Hesap başlangıç kodu
+- `ACCARR2_ENDCODE` — Hesap türü alanları 2 - Hesap bitiş kodu
+- `ACCARR2_ACCTYPE` — Hesap türü alanları 2 - Hesap türü
+- `ACCARR2_REMTYPE` — Hesap türü alanları 2 - Ters bakiye
+- `ACCARR2_TOTTYPE` — Hesap türü alanları 2 - Hesap tutarı türü
+- `ACCARR2_FORMULA` — Hesap türü alanları 2 - Formül tanımı
+- `ACCARR2_TOTAL` — Hesap türü alanları 2 - Tutar
+- `ACCARR3_ITEMLEVEL` — Hesap türü alanları 3
+- `ACCARR3_ITEMTYPE` — Hesap türü alanları 3 - Tanım türü
+- `ACCARR3_ITEMCODE` — Hesap türü alanları 3 - Tanım kodu
+- `ACCARR3_ITEMNAME` — Hesap türü alanları 3 - Tanım
+- `ACCARR3_BEGCODE` — Hesap türü alanları 3 - Hesap başlangıç kodu
+- `ACCARR3_ENDCODE` — Hesap türü alanları 3 - Hesap bitiş kodu
+- `ACCARR3_ACCTYPE` — Hesap türü alanları 3 - Hesap türü
+- `ACCARR3_REMTYPE` — Hesap türü alanları 3 - Ters bakiye
+- `ACCARR3_TOTTYPE` — Hesap türü alanları 3 - Hesap tutarı türü
+- `ACCARR3_FORMULA` — Hesap türü alanları 3 - Formül tanımı
+- `ACCARR3_TOTAL` — Hesap türü alanları 3 - Tutar
+- `ACCARR4_ITEMLEVEL` — Hesap türü alanları 4
+- `ACCARR4_ITEMTYPE` — Hesap türü alanları 4 - Tanım türü
+- `ACCARR4_ITEMCODE` — Hesap türü alanları 4 - Tanım kodu
+- `ACCARR4_ITEMNAME` — Hesap türü alanları 4 - Tanım
+- `ACCARR4_BEGCODE` — Hesap türü alanları 4 - Hesap başlangıç kodu
+- `ACCARR4_ENDCODE` — Hesap türü alanları 4 - Hesap bitiş kodu
+- `ACCARR4_ACCTYPE` — Hesap türü alanları 4 - Hesap türü
+- `ACCARR4_REMTYPE` — Hesap türü alanları 4 - Ters bakiye
+- `ACCARR4_TOTTYPE` — Hesap türü alanları 4 - Hesap tutarı türü
+- `ACCARR4_FORMULA` — Hesap türü alanları 4 - Formül tanımı
+- `ACCARR4_TOTAL` — Hesap türü alanları 4 - Tutar
+- `ACCARR5_ITEMLEVEL` — Liste öğesi seviyesi
+- `ACCARR5_ITEMTYPE` — Liste öğesi türü; 1: 0 ve 1. seviyedeki liste öğesi, 2: Hesap, 3: Hesap aralığı, 9: Formül, 10: Tutar
+- `ACCARR5_ITEMCODE` — Liste öğesi kodu
+- `ACCARR5_ITEMNAME` — Formül açıklaması - Mali tablo grup tanımı
+- `ACCARR5_BEGCODE` — Hesap başlangıç kodu
+- `ACCARR5_ENDCODE` — Hesap bitiş kodu
+- `ACCARR5_ACCTYPE` — Hesap türü (borç - alacak)
+- `ACCARR5_REMTYPE` — Ters bakiye (Listele - Listeleme)
+- `ACCARR5_TOTTYPE` — Hesap tutarı; 1: Bakiye, 2: Borç, 3: Alacak, 4: Borç bakiyesi, 5: Alacak bakiyesi, 6: Artış, 7: Azalış
+- `ACCARR5_FORMULA` — Formül tanımı
+- `ACCARR5_TOTAL` — Tutar
+- `ACCARR6_ITEMLEVEL` — Liste öğesi seviyesi
+- `ACCARR6_ITEMTYPE` — Liste öğesi türü; 1: 0 ve 1. seviyedeki liste öğesi, 2: Hesap, 3: Hesap aralığı, 9: Formül, 10: Tutar
+- `ACCARR6_ITEMCODE` — Liste öğesi kodu
+- `ACCARR6_ITEMNAME` — Formül açıklaması - Mali tablo grup tanımı
+- `ACCARR6_BEGCODE` — Hesap başlangıç kodu
+- `ACCARR6_ENDCODE` — Hesap bitiş kodu
+- `ACCARR6_ACCTYPE` — Hesap türü (borç - alacak)
+- `ACCARR6_REMTYPE` — Ters bakiye (Listele - Listeleme)
+- `ACCARR6_TOTTYPE` — Hesap tutarı; 1: Bakiye, 2: Borç, 3: Alacak, 4: Borç bakiyesi, 5: Alacak bakiyesi, 6: Artış, 7: Azalış
+- `ACCARR6_FORMULA` — Formül tanımı
+- `ACCARR6_TOTAL` — Tutar
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `ORGLOGOID` — Veri Merkezi
+
+### TMPACASGN — Geçici kabul bağlantısı
+
+- `LOGICALREF` — Geçici kabul bağlantıları referansı
+- `DIIBLINEREF` — DIIB Satırı Ref.
+- `INVEXIMLINEREF` — Malzeme Hareketleri Ref.
+- `CLSDAMOUNT` — Kapatılan miktar
+- `CLSDUOMREF` — Birim referansı
+- `CLSDUSREF` — Birim Seti Referansı
+- `CLSDTOTAL` — Kapatılan toplam
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Ref.
+
+### TOOLREQ — Araç ihtiyacları
+
+- `LOGICALREF` — Araç gereksinimi log. Ref.
+- `OPREQREF` — Operasyon İhtiyaçları Ref.
+- `LINENO_` — Satır Numarası
+- `TOOLREF` — Araç ref.
+- `AMOUNT` — Miktar
+- `UOMREF` — Birim referansı
+
+### TRADGRP — Ticari işlem grupları
+
+- `LOGICALREF` — Fiziksel adres
+- `GCODE` — Ticari işlem grubu kodu
+- `GDEF` — Ticari işlem grubu açıklaması
+
+### TRANSAC — Firma dönem bilgileri
+
+- `LOGICALREF` — Firma Periyot Bilgisi Log. Ref.
+- `APPRDATES1` — Onay Tarihi
+- `APPRDATES2` — Onay Tarihi
+- `APPRDATES3` — Onay Tarihi
+- `APPRDATES4` — Onay Tarihi
+- `APPRDATES5` — Onay Tarihi
+- `APPRDATES6` — Onay Tarihi
+- `APPRDATES7` — Onay Tarihi
+- `APPRDATES8` — Onay Tarihi
+- `APPRDATES9` — Onay Tarihi
+- `APPRDATES10` — Onay Tarihi
+- `APPRDATES11` — Onay Tarihi
+- `APPRDATES12` — Onay Tarihi
+- `APPRDATES13` — Onay Tarihi
+- `APPRDATES14` — Onay Tarihi
+- `APPRDATES15` — Onay Tarihi
+- `APPRDATES16` — Onay Tarihi
+- `APPRDATES17` — Onay Tarihi
+- `APPRDATES18` — Onay Tarihi
+- `APPRDATES19` — Onay Tarihi
+- `APPRDATES20` — Onay Tarihi
+- `LASTJNDATE` — Son Yevmiye Tarihi
+- `LASTJNUMBER` — Son Yevmiye No
+- `PERIODNR` — Periyot numarası
+- `PERIODBEGDATE` — Periyot başlama tarihi
+- `PERIODENDDATE` — Periyot kapanış tarihi
+
+### TRGPAR — Trigger parametreleri
+
+- `LOGICALREF` — Trigger parametresi logical. Ref.
+- `RISKTYPE` — Risk Toplamı (Bakiye - İrsaliye)
+- `RISKOVER` — Müşteri Genel Risk Limiti Aşıldığında Uyar
+- `ORDRISKOVER` — Müşteri Siparişi Risk Limiti Aşıldığında Uyar
+- `DESPRISKOVER` — Müşteri İrsaliyesi Risk Limiti Aşıldığında Uyar
+- `USEREPRISK` — Risk İzleme (Yerel Para Birimi veya RD)
+- `PRETURNEFFECTORDER` — İade hareketi siparişi etkileyecek (satınalma)
+- `SRETURNEFFECTORDER` — İade hareketi siparişi etkileyecek (satış)
+- `FIRMCALENDARTYPE` — Firma takvim türü
+- `COLLRISKTYPE` — Teminat risk türü
+- `COLLRISKOVER` — Genel müşteri kredi limiti aşıldığında yapılacak işlem (teminat için)
+- `ORDCOLLRISKOVER` — Müşteri sipariş kredi limiti aşıldığında yapılacak işlem (teminat için)
+- `DESPCOLLRISKOVER` — Müşteri irsaliye kredi limiti aşıldığında yapılacak işlem (teminat için)
+- `USEREPCOLLRISK` — Kredi takibi yerel para birimi veya raporlama döviziyle yapılır (teminat)
+- `RISKTYPES1` — Risk tipi 1
+- `RISKTYPES2` — Risk tipi 2
+- `RISKTYPES3` — Risk tipi 3
+- `RISKTYPES4` — Risk tipi 4
+- `RISKTYPES5` — Risk tipi 5
+- `RISKTYPES6` — Risk tipi 6
+- `RISKTYPES7` — Risk tipi 7
+- `RISKTYPES8` — Risk tipi 8
+- `RISKTYPES9` — Risk tipi 9
+- `RISKTYPES10` — Risk tipi 10
+- `RISKTYPES11` — Risk tipi 11
+- `RISKTYPES12` — Risk tipi 12
+- `RISKTYPES13` — Risk tipi 13
+- `RISKTYPES14` — Risk tipi 14
+- `RISKTYPES15` — Risk tipi 15
+- `ACCRISKOVER` — Açık hesap risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `MYCSRISKOVER` — Firma çek/senet risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `CSTCSRISKOVER` — Müşteri çek/senet risk limiti aşıldığında: 1: Evet; 0: Hayır
+- `RISKGRPCTRL` — Risk işlemleri grup şirketi bazında yapılacak
+- `RISKCTRLTYPE` — 0: Risk kontrolü toplamlar bazında yapılacak; 1: Risk kontrolü işlemler bazında yapılacak
+
+### TSKSHELN — Görev çizelgesi tablosu
+
+- `LOGICALREF` — Görev zamanlama çizelgesi mantıksal referansı
+- `TSLEVEL` — Zamanlanmış görev seviyesi
+- `TSPROCESSNAME` — Zamanlanmış görev adı
+- `TSPROCESSID` — Zamanlanmış görev numarası
+- `TSPARAMS` — Zamanlanmış görev parametresi
+- `TSWAITTIME` — Zamanlanmış görev bekleme süresi
+- `TSBEGINALERT` — Başlangıç uyarısı alıcıları
+- `TSENDALERT` — Bitiş uyarısı alıcıları
+- `LINENR` — Satır numarası bilgisi
+- `TASKREF` — WFTaskP referansı
+- `OLDTASK` — Önceki zamanlanmış görev bilgisi
+- `APPROXTIME` — İstatistiksel bilgi
+
+### UNITBARCODE — Birim-barkod eşleştirmesi (Port)
+
+- `LOGICALREF` — Birim-barkod atama (Port) mantıksal referansı
+- `ITMUNITAREF` — Malzeme - birim atamaları referansı
+- `ITEMREF` — Malzeme Kartları Referansı
+- `VARIANTREF` — Varyant (Port) referansı
+- `UNITLINEREF` — Birim referansı
+- `LINENR` — Satır numarası
+- `BARCODE` — Barkod
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TYP` — Barkod türü; 0: Normal, 1: Birimli
+- `WBARCODESHIFT` — Ondalık basamak (birimli barkod)
+
+### UNITSETC — Birim setleri arası çevrim katsayıları
+
+- `LOGICALREF` — Birim seti çevrim katsayısı log. Ref.
+- `PARENTUSREF` — Ana Birim Ref.
+- `CHILDUSREF` — Alt Birim Ref.
+- `CONVFACT1` — Çevrim Katsayısı
+- `CONVFACT2` — Çevrim Katsayısı
+
+### UNITSETF — Birim setleri
+
+- `LOGICALREF` — Birim seti log. Ref.
+- `CODE` — Birim seti kodu
+- `NAME` — Birim seti açıklaması
+- `CARDTYPE` — Kayıt türü
+- `SPECITEM` — Sadece Malzeme / Hizmet Kartları İçin
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### UNITSETL — Birimler
+
+- `LOGICALREF` — Birim log. Ref.
+- `CODE` — Birim kodu
+- `NAME` — Birim açıklaması
+- `UNITSETREF` — Birim Seti Referansı
+- `LINENR` — Satır Numarası
+- `MAINUNIT` — Ana Birim
+- `CONVFACT1` — Çevrim Katsayısı
+- `CONVFACT2` — Çevrim Katsayısı
+- `WIDTH` — Genişlik
+- `LENGTH` — Uzunluk
+- `HEIGHT` — Yükseklik
+- `AREA` — Alan
+- `VOLUME_` — Hacim
+- `WEIGHT` — Ağırlık
+- `WIDTHREF` — Genişlik birim ref.
+- `LENGTHREF` — Uzunluk Birim Ref.
+- `HEIGHTREF` — Yükseklik Birimi Ref.
+- `AREAREF` — Alan Birim Referansı
+- `VOLUMEREF` — Birim hacim ref.
+- `WEIGHTREF` — Ağırlık birim ref.
+- `DIVUNIT` — Bölünebilir
+
+### VARIANT — Varyant (Port)
+
+- `LOGICALREF` — Varyant (Port) mantıksal referansı
+- `ITEMREF` — Malzeme kartı referansı
+- `CARDTYPE` — Kart Türü
+- `CODE` — Varyant kaydı kodu
+- `NAME` — Adı
+- `ACTIVE` — Kullanımda / Kullanım Dışı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `UNITSETREF` — Birim Seti Referansı
+- `QCCSETREF` — Kalite kontrol setleri referansı
+- `TEXTINC` — Detay açıklama içerir
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+
+### VRNTCHARASGN — Varyant özellik kodu atamaları (Port)
+
+- `LOGICALREF` — Varyant özellik kodu atama (Port) mantıksal referansı
+- `ITEMREF` — Malzeme Kartları Referansı
+- `VARIANTREF` — Varyant (Port) referansı
+- `CHARCODEREF` — Özellik kodları referansı
+- `CHARVALREF` — Özellik değerleri referansı
+- `LINENR` — Satır numarası
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### VRNTGENERICINF — VRNTGENERICINF
+
+- `LOGICALREF` — Orijinal Kayıt Log. Ref.
+- `TYP` — 0: İstisna, 1: Fiyat
+- `CARDREF` — TYP 0=> Malzeme kartı referansı, 1=> Satınalma / satış fiyatları
+- `ITEMREF` — Malzeme kartı referansı
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### VRNTINVENS — Varyant toplamları
+
+- `LOGICALREF` — Varyant toplamı mantıksal referansı
+- `STOCKREF` — Malzeme Kartları Referansı
+- `INVENNO` — Ambar Numarası
+- `MONTH_` — Ay
+- `SALES_AMOUNT` — Satış Miktarı
+- `SALES_CASHAMNT` — Satış Tutarı
+- `SALES_CURRAMNT` — Satış Tutarı (RD)
+- `PURCHASES_AMOUNT` — Alımlar Miktarı
+- `PURCHASES_CASHAMNT` — Alımlar Tutarı
+- `PURCHASES_CURRAMNT` — Satış Tutarı (RD)
+- `YEAR_` — Yıl
+
+### VRNTINVTOT — Varyant ambar toplamları
+
+- `LOGICALREF` — Varyant ambar toplamları mantıksal referansı
+- `STOCKREF` — Malzeme Kartları Referansı
+- `INVENNO` — Ambar numarası (tüm ambarlar)
+- `DATE_` — Tarih (Kümülatif Toplam)
+- `PLNPRODIN` — Planlama (üretimden girişler)
+- `PLNPRODOUT` — Planlama Sarflar/Fireler
+- `PLNOTHERIN` — Planlama (diğer girişler)
+- `PLNOTHEROUT` — Planlama (diğer çıkışlar)
+- `PLNWHOUSEIN` — Planlama (ambardan girişler)
+- `PLNWHOUSEOUT` — Planlanan ambar çıkışları
+- `TEMPIN` — Konsinye Girişler
+- `TEMPOUT` — Konsinye Çıkışlar
+- `RESERVED` — Rezerve miktarı
+- `ACTPORDER` — Verilen siparişler
+- `RECEIVED` — Sevkedilen Alış Siparişleri
+- `ACTPRODIN` — Gerçekleşen Üretimden Girişler
+- `ACTOTHERIN` — Gerçekleşen Diğer Girişler
+- `ACTSORDER` — Alınan Siparişler
+- `SHIPPED` — Sevk Edilmiş Satış Siparişleri
+- `ACTWASTE` — Gerçekleşen Sarf / Fire
+- `ACTOTHEROUT` — Gerçekleşen Diğer Çıkışlar
+- `TRANSFERRED` — Açılış tutarı
+- `AVGVALUE` — Ortalama Değer
+- `AVGCURRVAL` — Ortalama Değer (Raporlama Dövizi)
+- `PURAMNT` — Alımlar Miktarı
+- `PURCASH` — Alımlar Tutarı
+- `PURCURR` — Alımlar Tutarı (RD)
+- `SALAMNT` — Satış Miktarı
+- `SALCASH` — Satış Tutarı
+- `SALCURR` — Satış Tutarı (RD)
+- `LASTTRDATE` — Son Hareket Tarihi
+- `ONHAND` — Eldekiler
+- `ACTWHOUSEIN` — Gerçekleşen Ambar Girişleri
+- `ACTWHOUSEOUT` — Gerçekleşen Ambar Çıkışları
+- `COUNTADD` — Sayım Fazlası
+- `COUNTDEC` — Sayım Eksiği
+- `DISTRESERVED` — Dağıtım rezerve miktarı
+- `ONVEHICLE` — Dağıtımda
+- `VARIANTREF` — Varyant (Port) referansı
+
+### WFLOWROLE — İş akışı rolleri
+
+- `LOGICALREF` — İş Akışı Rolü Ref.
+- `CODE` — Kod
+- `NAME` — Açıklama
+- `SPECODE` — Özel kod
+- `CYPHCODE` — Yetki Kodu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### WFLOWROLELN — WFLOWROLELN
+
+- `LOGICALREF` — İş Akışı Rolü Ref.
+- `LINENR` — Satır Numarası
+- `WFROLEREF` — İş Akışı Rolü Ref.
+- `WFUSERNR` — Kullanıcı numarası
+
+### WFTASK — İş akışı kartları
+
+- `LOGICALREF` — WFTASK mantıksal referansı
+- `CODE` — Görev kodu
+- `WFCARDREF` — İş akışı ref.
+- `WFLINEREF` — İş akışı ref.
+- `LEVEL_` — Seviye
+- `TASKDEF` — Görev açıklaması
+- `BEGDATE` — Başlangıç tarihi
+- `BEGTIME` — Başlangıç zamanı
+- `ENDDATE` — Bitiş tarihi
+- `ENDTIME` — Bitiş Zamanı
+- `STATUS` — Durumu
+- `COMPLETEDPER` — Tamamlanma oranı
+- `USERNR` — Kullanıcı numarası
+- `WFROLEREF` — İş Akışı Rolü Ref.
+- `TASKTYPE` — Görev tipi
+- `PROCESSTYPE` — Hareket türü
+- `PERTASKREF` — İş Akış Kartı Referansı
+- `REMINDCOUNT` — Hatırlatma sayısı
+- `REMINDER` — Hatırlatıcı
+- `REMINDDATE` — Hatırlatma tarihi
+- `REMINDTIME` — Hatırlatma saati
+- `REMINDDAY` — Hatırlatma günü
+- `REMINDMINUTE` — Hatırlatma dakikası
+- `DEFINITION_` — Görev açıklaması
+- `WORKPLACETYPE` — Görev yeri
+- `RECORDREF` — ITEMS / CLCARD / ORFICHE / STFICHE / INVOICE / DEMANDFICHE referansı
+- `RECORDPERIOD` — İlgili kaydın dönemi
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `PARENTTASKREF` — İş Akış Kartı Referansı
+- `RECORDCUROP` — Görevin oluşumu
+- `APPROVESTAT` — Onay durumu
+- `WARNED` — Uyarıldı
+- `TASKGRPNR` — Görev grubu numarası
+- `ACTENDDATE` — Gerçekleşen Bitiş Tarihi
+- `ACTENDTIME` — Gerçekleşen Bitiş Zamanı
+- `DELAYSTATUS` — Gecikme Durumu
+- `SENDWARN` — Uyarı gönder
+- `WARNTYPE` — Uyarı tipi
+- `WARNUSERNR` — Uyarılacak kullanıcının numarası
+- `WARNROLEREF` — İş Akışı Rolü Ref.
+- `BEGINMAILGROUP` — Zamanlanmış görev başlangıç uyarısı alıcıları
+- `ENDMAILGROUP` — Zamanlanmış görev bitiş uyarısı alıcıları
+- `BEGINALERT` — Zamanlanmış görev başlangıcında uyarı (onay kutusu)
+- `ENDALERT` — Zamanlanmış görev bitişinde uyarı (onay kutusu)
+- `REPEATTYPE` — Zamanlanmış görev tekrar kimliği
+- `REPDATE` — Zamanlanmış görev başlangıç tarihi
+- `REPTIME` — Zamanlanmış görev başlangıç saati
+- `REPMONTH` — Zamanlanmış görev için hedef ay
+- `REPDAY36` — Ayın günü (zamanlanmış görevin başlangıcı için)
+- `REPDAY7` — Ayın haftası (zamanlanmış görevin başlangıcı için)
+- `REPDAY6` — Hedef gün (zamanlanmış görevin başlangıcı için)
+- `REPYEARSPIN` — Yıl bilgisi (zamanlanmış görevin başlangıcı için)
+- `REPMONTHSPIN` — Ay bilgisi (zamanlanmış görevin başlangıcı için)
+- `REPDAYSPIN` — Gün bilgisi (zamanlanmış görevin başlangıcı için)
+- `REPHOURSPIN` — Saat bilgisi (zamanlanmış görevin başlangıcı için)
+- `REPMINSPIN` — Dakika bilgisi (zamanlanmış görevin başlangıcı için)
+- `BEGINREPEATINGTIME` — Tekrarlama geçerliliği başlangıç saati
+- `BEGINREPEATINGDATE` — Tekrarlama geçerliliği başlangıç tarihi
+- `ENDREPEATINGTYPE` — Tekrarlama geçerliliği türü
+- `ENDREPEATINGDATE` — Tekrarlama geçerliliği tarihi
+- `ENDREPEATINGTIME` — Tekrarlama geçerliliği saati
+- `ENDREPEATINGCOUNT` — Zamanlanmış görev tekrar sayısı
+- `PRIORITY` — Zamanlanmış görev öncelik durumu
+- `TASKPARAMS` — Zamanlanmış görevin alt işlem parametresi
+- `WAITTIME` — Zamanlanmış görevin alt işlem bekleme süresi
+- `CARDTYPE` — Kart türü (görev / SMS / iş akışı)
+- `BMAILTO` — E-posta alıcıları (zamanlanmış görevin başlangıcı için) (TO)
+- `BMAILCC` — E-posta alıcıları (zamanlanmış görevin başlangıcı için) (CC)
+- `BMAILBCC` — E-posta alıcıları (zamanlanmış görevin başlangıcı için) (BCC)
+- `BMAILUSER` — E-posta kullanıcı bilgisi (zamanlanmış görevin başlangıcı için)
+- `BMAILROLE` — E-posta rol bilgisi (zamanlanmış görevin başlangıcı için)
+- `EMAILTO` — E-posta alıcıları (zamanlanmış görevin bitişi için) (TO)
+- `EMAILCC` — E-posta alıcıları (zamanlanmış görevin bitişi için) (CC)
+- `EMAILBCC` — E-posta alıcıları (zamanlanmış görevin bitişi için) (BCC)
+- `EMAILROLE` — E-posta rol bilgisi (zamanlanmış görevin bitişi için)
+- `EMAILUSER` — E-posta kullanıcı bilgisi (zamanlanmış görevin bitişi için)
+- `MAILTYPE` — E-posta türü
+- `ISSMS` — Görev-SMS entegrasyonu için
+- `SENDMAILREPORT` — Raporu e-posta ile gönder; 0: Gönderme
+
+### WFTASKPER — İş akışı dönemleri
+
+- `LOGICALREF` — WFTASKPER mantıksal referansı
+- `PERIODTYPE` — Kullanımda Değil
+- `PERIOD` — Kullanımda Değil
+- `WEEKDAYS` — Kullanımda Değil
+- `MONTHDAYS` — Kullanımda Değil
+- `PERIODENDDATE` — Kullanımda Değil
+- `NONWORKDAYS` — Kullanımda Değil
+
+### WHLIST — Ambar listeleri
+
+- `LOGICALREF` — Ambar listesi log. Ref.
+- `TYP` — Ambar listesi türü
+- `WHLIST1` — Ambar listesi 1
+- `WHLIST2` — Ambar listesi 2
+- `WHLIST3` — Ambar listesi 3
+- `WHLIST4` — Ambar listesi 4
+- `WHLIST5` — Ambar parametreleri 5
+- `WHLIST6` — Ambar parametreleri 6
+- `WHLIST7` — Ambar parametreleri 7
+- `WHLIST8` — Ambar parametreleri 8
+
+### WORKDAY — Çalışma günleri
+
+- `LOGICALREF` — Çalışma günü log. Ref.
+- `USERNO` — Kullanıcı numarası
+- `FACTORYNR` — Fabrika Numarası
+- `FACTORYDIVNR` — Fabrika İşyeri Numarası
+- `BEGDATE` — Başlangıç Tarihi
+- `BEGTIME` — Başlangıç Zamanı
+- `ENDTIME` — Bitiş Tarihi
+- `WORKINGDAY` — Çalışma Günü
+- `EXPLAIN` — Açıklama
+- `SITEID` — Veri Merkezi
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+### WORKFLOWCARD — İş akışları
+
+- `LOGICALREF` — İş akışı log. Ref.
+- `CODE` — Kod
+- `NAME` — Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `WORKPLACE` — İşyeri
+- `ACTIONTYPE` — Hareket
+- `ACTIVE` — Kullanımda / Kullanım Dışı
+- `PRIORITY` — Öncelik
+- `WFUSERNR` — Kullanıcı numarası
+- `WFROLEREF` — İş Akışı Rolü Ref.
+- `CONDITION` — Koşul
+- `BEGDATE` — Başlangıç tarihi
+- `ENDDATE` — Bitiş Tarihi
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `WFSTATUS` — Kullanımda Değil
+- `NEXTWFREF` — İş akışı ref.
+- `STATUSGRPA` — Malzeme / cari hesap durum bilgisi
+- `STATUSGRPB` — İrsaliye / fatura / cari hesap fişleri durum bilgisi
+- `STATUSGRPC` — Sipariş fişleri durum bilgisi
+- `STATUSGRPD` — Talep fişleri durum bilgisi
+- `STATUSGRPE` — Satın alma teklif yönetimi durum bilgisi
+- `STATUSGRPF` — Durum koşulları (satış teklif fişleri)
+
+### WORKFLOWLINE — WORKFLOWLINE
+
+- `LOGICALREF` — İş akışı ref.
+- `WFCARDREF` — İş akışı ref.
+- `LINENR` — Satır Numarası
+- `LEVEL_` — Seviye
+- `USERNR` — Kullanıcı numarası
+- `ROLEREF` — İş Akışı Rolü Ref.
+- `INFORM` — Bilgilendirilecek
+- `TASKTIMEAMNT` — Görev süresi
+- `TASKTIMEUNIT` — Zaman birimi
+- `DELAYSTATUS` — Gecikme Durumu
+- `SENDWARN` — Uyar
+- `WARNTYPE` — Uyarı tipi
+- `WARNUSERNR` — Uyarılacak kullanıcı sayısı
+- `WARNROLEREF` — İş Akışı Rolü Ref.
+- `CONDITION` — Koşul
+- `TASKTYPE` — Görev tipi
+- `TASKDEF` — Görev Tanımı
+- `PROCESSTYPE` — Hareket türü
+- `REMINDER` — Hatırlatılacak
+
+### WORKSTAT — İş istasyonları
+
+- `LOGICALREF` — İş İstasyonu Log. Ref.
+- `CODE` — İş İstasyonu Kodu
+- `NAME` — İş İstasyonu Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FACTORYDIVNR` — Fabrika İşyeri Numarası
+- `FACTORYNR` — Fabrika Numarası
+- `CALENDARREF` — Takvim Referansı
+- `APPROVED` — Onay Bilgisi
+- `OPERATIONTIME` — Günlük Çalışma Saati
+- `HOURLYSTDCOST` — Saatlik Maliyet
+- `HOURLYSTDRPCOST` — Saatlik Maliyet (RD)
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `IMAGEINC` — Resim İçeriyor
+- `WFSTATUS` — Kullanımda Değil
+- `ININVENNR` — Mamül/Yarı Mamül Ambar Numarası
+- `OUTINVENNR` — Hammadde ambar numarası
+- `SHFTGRPREF` — Vardiya Tarafından Kullanılan İş İstasyonu Grubu Ref.
+- `HOURDIFFACCREF` — Zaman farkı muhasebe hesabı ref.
+- `HOURDIFFCENTER` — Zaman farkı masraf merkezi ref.
+- `PAYDIFFACCREF` — Ödeme fark hesabı ref.
+- `PAYDIFFCENTER` — Ödeme farkları masraf merkezi ref.
+- `PROJECTREF` — Proje Referansı
+
+### WSATTASG — İş ist.-Özellik ataması
+
+- `LOGICALREF` — İş İstasyonu Özellik Atamaları Log. Ref.
+- `WSREF` — İş İstasyonu Ref.
+- `WSATTRIBREF` — Özellik Kodu Referansı
+
+### WSATTVAS — İş ist.-Özellik değeri ataması
+
+- `LOGICALREF` — İş İstasyonu Özellik Değeri Atamaları Log. Ref.
+- `WSATTRIBASGNREF` — İş İstasyonu Özellik Atamaları Ref.
+- `WSATTRIBVALREF` — Özellik Değeri Referansı
+
+### WSCHCODE — İş istasyonu özellikleri
+
+- `LOGICALREF` — İş İstasyonu Özellik Log. Ref.
+- `CODE` — İş İstasyonu Özellik Kodu
+- `NAME` — İş İstasyonu Özellik Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `APPROVED` — Onay Bilgisi
+- `ACTIVE` — Kullanım durumu
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+
+### WSCHVAL — İş istasyonu özellik değerleri
+
+- `LOGICALREF` — İş İstasyonu Özellik Değeri Log. Ref.
+- `CHARCODEREF` — Özellik Kodu Referansı
+- `VALNO` — Değer numarası
+- `CODE` — Değer kodu
+- `NAME` — Değer açıklaması
+
+### WSGRPASS — İş istasyonu-grup ataması
+
+- `LOGICALREF` — İş İstasyonu Grup Ataması Ref.
+- `WSGRPREF` — İş İstasyonu Grubu Ref.
+- `PRIORITY` — Öncelik
+- `WSREF` — İş İstasyonu Ref.
+- `DOMINSHFTGRP` — Kullanılacak Vardiya
+
+### WSGRPF — İş istasyonu grupları
+
+- `LOGICALREF` — İş İstasyonu Grubu Log. Ref.
+- `CODE` — İş İstasyonu Grup Kodu
+- `NAME` — İş İstasyonu Grup Açıklaması
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `FACTORYNR` — Fabrika Numarası
+- `APPROVED` — Onay Bilgisi
+- `OPERATIONTIME` — Günlük Çalışma Saati
+- `HOURLYSTDCOST` — Saatlik Maliyet
+- `HOURLYSTDRPCOST` — Saatlik Maliyet (RD)
+- `ACCOUNTREF` — Genel Muhasebe Hesabı Ref.
+- `CENTERREF` — Masraf Merkezi Ref.
+- `ACTIVE` — Kullanım durumu
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `TEXTINC` — Ayrıntılı Açıklama İçerir
+- `IMAGEINC` — Resim İçeriyor
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+- `WFSTATUS` — Kullanımda Değil
+- `HOURDIFFACCREF` — EMUHACC LOGICALREF
+- `HOURDIFFCENTER` — Zaman farkı masraf merkezi
+- `PAYDIFFACCREF` — EMUHACC LOGICALREF
+- `PAYDIFFCENTER` — Ücret Farkı (Masraf Merkezi)
+- `PLANTNR` — Fabrika No
+- `LOCKSTR` — İç kullanım
+- `COUNTER` — İç kullanım
+
+### WSOVHCASGN — İş istasyonu ile genel gider kalemi eşleştirmeleri
+
+- `LOGICALREF` — İş İstasyonu Genel Gider Atamaları Log. Ref.
+- `WSREF` — İş İstasyonu Log. Ref.
+- `OVHDCENTERREF` — Masraf Merkezi Log. Ref.
+- `HASACTIVITYRIGHT` — Etkinlik doğru mu? (Evet / Hayır)
+
+### WSTATPART — İş istasyonu malzemeleri
+
+- `LOGICALREF` — İş istasyonu kalemleri log. Ref.
+- `CODE` — Kod
+- `NAME` — Adı
+- `SPECODE` — Özel Kod
+- `CYPHCODE` — Yetki Kodu
+- `WORKSTATREF` — İş İstasyonları Ref.
+- `CAPIBLOCK_CREATEDBY` — Oluşturan
+- `CAPIBLOCK_CREADEDDATE` — Oluşturulma Tarihi
+- `CAPIBLOCK_CREATEDHOUR` — Oluşturulma Saati
+- `CAPIBLOCK_CREATEDMIN` — Oluşturulma Dakikası
+- `CAPIBLOCK_CREATEDSEC` — Oluşturulma Saniyesi
+- `CAPIBLOCK_MODIFIEDBY` — Değiştiren
+- `CAPIBLOCK_MODIFIEDDATE` — Değiştirilme Tarihi
+- `CAPIBLOCK_MODIFIEDHOUR` — Değiştirilme Saati
+- `CAPIBLOCK_MODIFIEDMIN` — Değiştirilme Dakikası
+- `CAPIBLOCK_MODIFIEDSEC` — Değiştirilme Saniyesi
+- `ACTIVE` — Kullanım durumu
+- `SITEID` — Veri Merkezi
+- `RECSTATUS` — Kayıt Durumu
+- `ORGLOGICREF` — Orijinal Kayıt Log. Ref.
+
+
+Türkçe açıklama tamamlamalarının tam kaynak metni ve çeviri/türetme yöntemi JSON sözlüğündeki `description_tr_provenance` alanındadır. Kaynaktaki belirsiz açıklamalar tahminle tamamlanmaz.

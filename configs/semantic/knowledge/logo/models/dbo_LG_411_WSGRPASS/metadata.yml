@@ -1,0 +1,22 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_WSGRPASS"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_WSGRPASS"
+properties:
+  "displayName": "dbo.LG_411_WSGRPASS"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "WSGRPREF"
+    type: "INTEGER"
+  - name: "PRIORITY"
+    type: "SMALLINT"
+  - name: "WSREF"
+    type: "INTEGER"
+  - name: "DOMINSHFTGRP"
+    type: "SMALLINT"

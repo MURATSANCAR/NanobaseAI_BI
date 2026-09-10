@@ -1,0 +1,20 @@
+# Semantic Layer + bridge — the whole dependency set, and deliberately not DB-GPT's.
+#
+# `requirements.txt` installs DB-GPT, which pins aiohttp==3.8.4 and is slow and fragile to build.
+# Nothing under semantic_layer/ or semantic_bridge/ imports it: profiling a source, running the
+# pipeline and running the tests need these seven packages and nothing else. Keeping them separate
+# is what lets `./scripts/setup.sh --semantic-only` produce a working environment in seconds.
+#
+# Python 3.11 (see .python-version). On 3.9 pydantic cannot evaluate `int | None` annotations and
+# twenty tests fail for that reason alone.
+
+SQLAlchemy==2.0.52       # catalog store (SQLite locally, Postgres in the deployment)
+PyYAML==6.0.3            # knowledge pack: models/*/metadata.yml, relationships.yml
+sqlglot==30.18.0         # SQL facts miner: reads validated queries as syntax, not as text
+fastapi==0.141.1         # the bridge's HTTP surface
+httpx==0.28.1            # LLM client, and the bridge's own test client
+pydantic==2.13.5         # request/response models
+pytest==9.1.1            # backend/semantic_layer/tests
+
+# Database drivers are deliberately absent: the offline pipeline (ModelFileConnector) needs none,
+# and a live source installs the one it uses — pyodbc for SQL Server, psycopg2 for Postgres.

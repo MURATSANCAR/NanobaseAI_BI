@@ -1,0 +1,23 @@
+[Unit]
+Description=Nanobase Semantic Layer nightly worker (profile → mine → candidates → certify → version)
+After=network-online.target docker.service nanobase-semantic-bridge.service
+Wants=network-online.target
+[Service]
+Type=oneshot
+# The catalog lives in the metadata database; a boot-time catch-up must not start before it is reachable.
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 60); do (echo > /dev/tcp/127.0.0.1/5434) 2>/dev/null && exit 0; sleep 5; done; echo "metadata database not reachable"; exit 1'
+
+User=administrator
+WorkingDirectory=/data/nanobaseai/bi/frontend/backend
+# Same env file the bridge uses: one scope, one catalog, one connection.
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+Environment=PYTHONPATH=/data/nanobaseai/bi/frontend/backend
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=21600
+# The release runner stages, gates, publishes and reloads; failures trigger full catalog rollback.
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/nightly-semantic.sh
+
+[Install]
+WantedBy=multi-user.target

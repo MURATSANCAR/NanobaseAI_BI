@@ -1,0 +1,37 @@
+{
+  "commit": "50665a6f766c97f0779a8adac325ff7d1cf5b6f9",
+  "live_inventory": {
+    "tables": 4121,
+    "columns": 129574,
+    "undefinedColumns": 87721,
+    "tablesWithoutDescriptionOrAnnotation": 3060,
+    "certified": 104,
+    "candidate": 556,
+    "snapshotVersion": 12,
+    "snapshotCertified": 88
+  },
+  "regression": {
+    "passed": 457,
+    "warnings": 2,
+    "seconds": 35.73
+  },
+  "comparator_probe": {
+    "reference": [
+      [
+        "İstanbul",
+        "Ankara",
+        12
+      ]
+    ],
+    "wrong_column_values": [
+      [
+        "Ankara",
+        "İstanbul",
+        12
+      ]
+    ],
+    "wrongly_equal": true
+  },
+  "findings": 9,
+  "production_changed": false
+}

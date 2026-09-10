@@ -1,0 +1,10 @@
+{
+  "catalog_matches_tested_candidate": true,
+  "router_collection": "semantic_catalog_logo_tr_20260909",
+  "source_files_match": true,
+  "api_descriptions_verified": [
+    "BNCREDITCARD",
+    "WFTASKPER",
+    "ANBDGTREVFC"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "state": "complete",
+  "files": {
+    "backend/semantic_layer/runtime/resolver.py": "ee8a31123005b3b4c96efe24768093f2f48246378b0861b7b73ebe67c0e57bb1",
+    "backend/semantic_layer/runtime/compiler.py": "820c05f146dec1066f45ec9a9d876de5438475da0bbcad9a2c951ec50643f939",
+    "backend/semantic_layer/runtime/audit.py": "49ed36ac01b1e91adbdaa15e8e45fe9beeb67bd0eb91789f614df9c2fcca88a4",
+    "backend/semantic_layer/runtime/reference_contracts.py": "bc06b7cceaa0861a8329c2584d52412910ea31f39f7378bf8f84dcf90c395236",
+    "backend/semantic_layer/profiler/logo_dictionary.py": "05b47dfe85fc0436d7c0584f9c1d8254688b1f836b5cc59a97302d3a4ed0f514",
+    "backend/scripts/register_enduser_dimensions.py": "1813e5773bdf456c7896ae095ce6c4a158fdf4a5a7f7ad204541adfe8a8da609",
+    "tests/stress/enduser_10000.py": "ede496d18c6d78837c577f8bea98ee94062d22a140b57e20527d3574956a85ed",
+    "tests/stress/enduser_live_complex.py": "e2dff71210332f4c1b386c5036b3081f4f6906a3d47d575dceddea078fae19ba",
+    "tests/stress/enduser_live_validation.py": "8f6a7237fe17c01c816645bc304c7763103cc77f9d017eed896d7d728b4a0289"
+  },
+  "completed_at": "2026-09-09T03:52:47+0300",
+  "unit_tests_passed": 467,
+  "service": "nanobase-semantic-bridge",
+  "health": "ok"
+}

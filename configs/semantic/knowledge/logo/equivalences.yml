@@ -1,0 +1,101 @@
+# Explicit Logo business-date equivalence confirmed during the live regression review.
+# A generic FK is not date equivalence: do not broaden this to order/due/customer dates.
+equivalent_dates:
+  - left:
+      entity: INVOICE
+      column: DATE_
+    right:
+      entity: STLINE
+      column: DATE_
+    join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    reason: "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+
+# The existing Logo return report uses invoice TRCODE 2/3; the catalog's "iade"
+# binding currently lives on STLINE. Restrict equivalence to these exact codes.
+# Source: knowledge/sql/en-cok-iade-alan-10-musteri-kimler.md and the live review.
+equivalent_filters:
+  - left:
+      entity: STLINE
+      column: TRCODE
+    right:
+      entity: INVOICE
+      column: TRCODE
+    operator: IN
+    values: ["2", "3"]
+    join: [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    reason: "Satış iadesi kodları 2 ve 3, fatura başlığı ve bağlı satış satırında aynı işlemi seçer."
+
+# A sale occurrence uses the certified invoice sales scope (7,8,9), not net
+# balance: a later return does not erase the fact that the product was sold.
+absence_queries:
+  - verb_root: sat
+    subject: ITEMS
+    event: STLINE
+    scope_entity: INVOICE
+    date_column: DATE_
+    joins:
+      - [STLINE, STOCKREF, ITEMS, LOGICALREF]
+      - [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    columns:
+      ITEMS: [LOGICALREF, CODE, NAME]
+      STLINE: [STOCKREF, INVOICEREF, CANCELLED, LINETYPE]
+      INVOICE: [LOGICALREF, DATE_, TRCODE, CANCELLED]
+    predicates:
+      - {entity: STLINE, column: CANCELLED, operator: '=', values: ['0']}
+      - {entity: STLINE, column: LINETYPE, operator: '=', values: ['0']}
+      - {entity: INVOICE, column: TRCODE, operator: IN, values: ['7', '8', '9']}
+      - {entity: INVOICE, column: CANCELLED, operator: '=', values: ['0']}
+    reason: "İptal edilmemiş satış faturalarına (sertifikalı satış kapsamı 7,8,9) bağlı ürün satırının yokluğu; iade satışın gerçekleşmiş olmasını silmez."
+
+# --- CRM (Timas_MSCRM) ile Logo arasındaki bağlar ---------------------------------------------
+# Ölçüldü 2026-09-09: cari kodu 36.250/36.395 (%99,6), barkod 8.567/8.569 (%99,98).
+cross_database:
+  - qualifier: Timas_MSCRM.dbo
+    server: same          # aynı SQL Server örneği; çapraz-veritabanı SQL çalışır, federasyon gerekmez
+    collation: Turkish_CI_AI
+    note: >
+      CRM Turkish_CI_AI, Logo SQL_Latin1_General_CP1254_CI_AS taşıyor. İki taraflı metin
+      karşılaştırmasında COLLATE olmadan sorgu HATA verir (yanlış sonuç değil). İki tarafa da
+      COLLATE Turkish_CI_AI yazılır. BIN2 kullanılmaz: ölçümde 1.132 gerçek müşteri düşüyor,
+      çünkü aynı kod iki veritabanında farklı bayt karşılığıyla duruyor (İ, Ğ, Ş).
+
+join_keys:
+  - left:  {entity: AccountBase, column: new_CariKodu}
+    right: {entity: CLCARD, column: CODE}
+    collate: Turkish_CI_AI
+    reason: "CRM müşterisi ile Logo carisi. Sipariş tablosu da new_CariKodu taşır, AccountBase'e uğramak gerekmez."
+  - left:  {entity: new_siparisBase, column: new_CariKodu}
+    right: {entity: CLCARD, column: CODE}
+    collate: Turkish_CI_AI
+  - left:  {entity: new_satishedefleriBase, column: new_Barkod}
+    right: {entity: UNITBARCODE, column: BARCODE}
+    collate: Turkish_CI_AI
+    reason: >
+      Hedefler ürünü barkodla tutuyor; new_itemno Logo ITEMS.CODE ile eşleşmiyor (0/8.568).
+      Ürüne ulaşmak için UNITBARCODE üzerinden ITEMS'a geçilir.
+
+  # Ölçüldü 2026-09-09, CRM'in kendi metadata'sından çıkan kolonlarla.
+  - left:  {entity: AccountBase, column: new_logicalref}
+    right: {entity: CLCARD, column: LOGICALREF}
+    cast: int
+    reason: >
+      CRM carisinin Logo satır referansı. 26.691 dolu kayıttan 26.329'u eşleşiyor (%98,6).
+      Sayısal alan, collation gerekmez; new_CariKodu yolundan daha ucuz.
+  - left:  {entity: new_sevkiyatBase, column: new_siparisid}
+    right: {entity: new_siparisBase, column: new_siparisId}
+    reason: "CRM içi. 286.601 sevkiyatın 286.591'i bir siparişe bağlı; 223.134 siparişin sevkiyatı var."
+  - left:  {entity: new_siparissatiriBase, column: new_siparisid}
+    right: {entity: new_siparisBase, column: new_siparisId}
+    reason: "CRM içi sipariş satırı. 9.745.521 satırın 9.430.239'u bir siparişe bağlı."
+  - left:  {entity: new_sevkiyatBase, column: new_faturanumarasi}
+    right: {entity: INVOICE, column: FICHENO}
+    collate: Turkish_CI_AI
+    reason: >
+      CRM sevkiyatı ile Logo faturası. 240.920 farklı fatura numarasının 154.373'ü LG_211_01,
+      20.540'ı LG_411_01 faturasıyla eşleşiyor; kalanı 2019-2020, Logo kapsamı dışında.
+
+# CRM siparişi Logo faturasına DOĞRUDAN bağlanmaz; yol sevkiyattan geçer:
+#   new_siparisBase -> new_sevkiyatBase.new_siparisid -> new_faturanumarasi -> INVOICE.FICHENO
+# Ölçüldü: 120.658 sipariş, 154.376 fatura, net 2.400.390.375,43. Sevkiyatı olmayan 109.929 sipariş
+# bu yoldan görünmez (iptal, bekleyen, taslak) — "kaç sipariş" ile "ne kadar faturalandı" aynı şey değil.
+# Müşteri+tarih+tutar eşleştirmesi hâlâ yasak: bu zincir varken tahmine gerek yok.

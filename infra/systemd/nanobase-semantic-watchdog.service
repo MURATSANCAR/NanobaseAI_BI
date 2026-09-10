@@ -1,0 +1,12 @@
+[Unit]
+Description=Semantic Bridge health watchdog (answers a real question, not just a port check)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+User=administrator
+# systemd creates this owned by the service user; without it the watchdog cannot record
+# when it was last healthy, and /run is not writable by a non-root unit.
+RuntimeDirectory=nanobase-semantic
+RuntimeDirectoryPreserve=yes
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/semantic-watchdog.sh

@@ -5,6 +5,8 @@ Reuses the bridge route surface and overlays bi_meta datasources.
 
 from __future__ import annotations
 
+import logging
+
 import contextlib
 import json
 import os
@@ -216,6 +218,12 @@ from nanobase_api.scenario_engine.api import router as scenario_engine_router  #
 app.include_router(semantic_catalog_router)
 app.include_router(analytics_router)
 app.include_router(scenario_engine_router)
+try:  # Semantic Layer V1 portal API (optional: needs backend/semantic_layer on PYTHONPATH)
+    from nanobase_api.semantic_layer_api import router as semantic_layer_router  # noqa: E402
+
+    app.include_router(semantic_layer_router)
+except Exception as _sl_err:  # noqa: BLE001
+    logging.getLogger(__name__).warning("semantic layer API not mounted: %s", _sl_err)
 from nanobase_api.schema_api import fetch_schema  # noqa: E402
 from nanobase_api import budgets as budgets_mod  # noqa: E402
 from nanobase_api import budget_actuals as budget_actuals_mod  # noqa: E402

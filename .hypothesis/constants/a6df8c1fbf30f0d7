@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/nanobase_awel/operators/structured_parser.py
+# hypothesis_version: 6.168.0
+
+[0.4, ' from ', '"', "'", '(?is)^select\\s+\\d+', ';', 'COMPLETE', 'COMPLETED', 'ERROR', 'FAIL', 'FAILED', 'FAILURE', 'OK', 'PLANNED', 'SUCCESS', '\\"', '\\n', '\\r\\n', '\\s*```$', '\\t', '`', '```', '```(?:json|sql)?\\s*', 'ambiguities', 'assumptions', 'columns', 'confidence', 'dialect', 'functions', 'postgres', 'postgresql', 'sql', 'status', 'tables', 'tsql', 'warnings', '{']

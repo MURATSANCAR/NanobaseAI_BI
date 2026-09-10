@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/candidates/llm_client.py
+# hypothesis_version: 6.168.0
+
+[1.0, 3.0, 240.0, 400, 1024, '/', 'Authorization', 'Content-Type', 'NO_SQL: fake', 'application/json', 'choices', 'content', 'fake', 'max_tokens', 'message', 'messages', 'model', 'stream', 'temperature']

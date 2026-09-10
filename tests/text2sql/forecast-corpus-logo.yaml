@@ -1,0 +1,15 @@
+# Forecasting — Logo ERP (SQL Server) datasource acceptance corpus.
+# Run: python3 tests/text2sql/run-forecast-eval.py --api http://127.0.0.1:8790 --datasource logo --corpus tests/text2sql/forecast-corpus-logo.yaml
+# The published `total_revenue` metric points at LG_411_01_INVOICE (firm 411 = 2026-01..08 → 8 closed periods),
+# so the deterministic path must decline visibly with INSUFFICIENT_HISTORY (min 12) — never fall back to the LLM.
+# A multi-year series (LG_211 2021-2025 + LG_411 2026) needs the compiler-side UNION ALL (follow-up).
+version: 1
+cases:
+  - id: fc-logo-001
+    question: "Toplam ciro önümüzdeki 6 ay tahmini"
+    expect: declined
+    code: INSUFFICIENT_HISTORY
+  - id: fc-logo-002
+    question: "Segment bazında önümüzdeki 6 ay satış tahmini"
+    expect: declined
+    code: UNSUPPORTED_SHAPE

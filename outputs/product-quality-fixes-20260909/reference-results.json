@@ -1,0 +1,14 @@
+[
+  {
+    "case": "eight-table",
+    "referenceRows": 61865,
+    "actualRows": 61865,
+    "passed": true
+  },
+  {
+    "case": "monthly-rank-change",
+    "referenceRows": 5255,
+    "actualRows": 5255,
+    "passed": true
+  }
+]

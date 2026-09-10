@@ -1,0 +1,28 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_L_CONTSPECDAYS"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "L_CONTSPECDAYS"
+properties:
+  "displayName": "dbo.L_CONTSPECDAYS"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "CONTREF"
+    type: "INTEGER"
+  - name: "SPECDATE"
+    type: "INTEGER"
+  - name: "SPEDAYCAT"
+    type: "INTEGER"
+  - name: "PERSNOTE"
+    type: "VARCHAR(201)"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

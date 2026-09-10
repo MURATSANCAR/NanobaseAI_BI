@@ -75,7 +75,7 @@ def test_hint_includes_grouped_columns_from_hits(monkeypatch):
 
     import asyncio
 
-    out = asyncio.get_event_loop().run_until_complete(
+    out = asyncio.run(
         auth.retrieve_authorized_schema("2026 ciro", tenant_id="default", datasource_id="erp")
     )
     hint = out["hint_extra"]

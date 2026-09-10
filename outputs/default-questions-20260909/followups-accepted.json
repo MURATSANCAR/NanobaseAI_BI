@@ -1,0 +1,1678 @@
+[
+  {
+    "question": "2025",
+    "answer": {
+      "id": "60c979809ca24c76aeeeace327821a3d",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "summary": "17 satır döndü. İlk 3:\n1. Net ciro 442.051.595,11 · KITAPCI\n2. Net ciro 330.389.716,91 · E-TICARET\n3. Net ciro 161.225.320,95 · DAGITICI",
+      "resultId": "60c979809ca24c76aeeeace327821a3d",
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2025",
+            "primitive": "YEAR",
+            "start": "2025-01-01",
+            "end": "2026-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2025
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 442051595.11
+        },
+        {
+          "kanal": "E-TICARET",
+          "net_ciro": 330389716.9100001
+        },
+        {
+          "kanal": "DAGITICI",
+          "net_ciro": 161225320.94999996
+        },
+        {
+          "kanal": "ZINCIR",
+          "net_ciro": 95021335.85000002
+        },
+        {
+          "kanal": "",
+          "net_ciro": 36304101.43000037
+        },
+        {
+          "kanal": "FUAR",
+          "net_ciro": 27942062.25
+        },
+        {
+          "kanal": "MAGAZA",
+          "net_ciro": 13524175.549999999
+        },
+        {
+          "kanal": "KURUM",
+          "net_ciro": 7206097.17
+        },
+        {
+          "kanal": "DIGER",
+          "net_ciro": 6673314.5
+        },
+        {
+          "kanal": "YURTDIŞI",
+          "net_ciro": 6164898.81
+        },
+        {
+          "kanal": "YAZAR",
+          "net_ciro": 5314958.41
+        },
+        {
+          "kanal": "HAVUZ",
+          "net_ciro": 2721097.3699999996
+        },
+        {
+          "kanal": "MARKET",
+          "net_ciro": 825000.0
+        },
+        {
+          "kanal": "ZİNCİR MAĞ",
+          "net_ciro": 277137.25
+        },
+        {
+          "kanal": "OKUL",
+          "net_ciro": 214908.55
+        },
+        {
+          "kanal": "PERSONEL",
+          "net_ciro": 23190.5
+        },
+        {
+          "kanal": "TUKETICI",
+          "net_ciro": 2056.25
+        }
+      ],
+      "shownRows": 17,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788967486.235,
+      "widget": {
+        "id": "chat_a9434ae9fc35",
+        "type": "bar",
+        "title": "2025",
+        "x_key": "kanal",
+        "y_key": "net_ciro",
+        "label_key": "kanal",
+        "value_key": "net_ciro"
+      },
+      "threadId": "30ec1b03b9534fd2820e68c0ee6f8998",
+      "rowCount": 17,
+      "totalRows": 17,
+      "latency_ms": 2252,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 120,
+        "compile_ms": 26,
+        "queue_wait_ms": 15,
+        "run_sql_ms": 1313,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "kanal bazinda net ciro 2025",
+          "slots": [
+            {
+              "term": "net ciro",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_027f9813d2a7",
+              "mapping": {
+                "concept_id": "sem_027f9813d2a7",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "net_ciro"
+                  ],
+                  "conditions": [
+                    "INVOICE.TRCODE IN (2,3,7,8,9)"
+                  ]
+                },
+                "id": "map_19f0e173a069"
+              },
+              "confidence": 0.85,
+              "explain": {
+                "normalized": "net ciro",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_8542c8254c47",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+                    "extra": {
+                      "func": "SUM",
+                      "grain": "STLINE",
+                      "aliases": [
+                        "net_ciro"
+                      ],
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)",
+                        "STLINE.TRCODE IN (2,3,7,8)"
+                      ]
+                    },
+                    "confidence": 0.7
+                  }
+                ]
+              }
+            },
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            },
+            {
+              "term": "invoice default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_f5496ecdb504",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_ba0006d12709"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2025",
+              "primitive": "YEAR",
+              "start": "2025-01-01",
+              "end": "2026-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2025
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            }
+          ],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "INVOICE",
+              "period": {
+                "text": "2025",
+                "primitive": "YEAR",
+                "start": "2025-01-01",
+                "end": "2026-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2025
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2026-08-17",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "INVOICE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "STLINE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2025' → YEAR [2025-01-01, 2026-01-01)",
+            "'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END) [CERTIFIED, 5 doğrulanmış sorgu, doküman 1, insan 0]",
+            "'kanal' → CLCARD.SPECODE2 [CERTIFIED, 5 doğrulanmış sorgu, doküman 2, insan 0]",
+            "Konuşma bağlamıyla tamamlanan soru: kanal bazinda net ciro 2025"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "grup: 'kanal' → CLCARD.SPECODE2",
+          "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+          "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+          "ölçü kapsamı: INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)",
+          "dönem: YEAR [2025-01-01, 2026-01-01)",
+          "INVOICE: dönemle kesişen tablolar okundu (LG_211_01_INVOICE)",
+          "CLCARD: dönemle kesişen tablolar okundu (LG_211_CLCARD)"
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_536529aa0513"
+    },
+    "status": "LIVE_PASS",
+    "fullResult": {
+      "computedAt": 1788967486.235,
+      "question": "2025",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND INVOICE.[DATE_] >= '2025-01-01' AND INVOICE.[DATE_] < '2026-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "totalRows": 17,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2025",
+            "primitive": "YEAR",
+            "start": "2025-01-01",
+            "end": "2026-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2025
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "60c979809ca24c76aeeeace327821a3d",
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 442051595.11
+        },
+        {
+          "kanal": "E-TICARET",
+          "net_ciro": 330389716.9100001
+        },
+        {
+          "kanal": "DAGITICI",
+          "net_ciro": 161225320.94999996
+        },
+        {
+          "kanal": "ZINCIR",
+          "net_ciro": 95021335.85000002
+        },
+        {
+          "kanal": "",
+          "net_ciro": 36304101.43000037
+        },
+        {
+          "kanal": "FUAR",
+          "net_ciro": 27942062.25
+        },
+        {
+          "kanal": "MAGAZA",
+          "net_ciro": 13524175.549999999
+        },
+        {
+          "kanal": "KURUM",
+          "net_ciro": 7206097.17
+        },
+        {
+          "kanal": "DIGER",
+          "net_ciro": 6673314.5
+        },
+        {
+          "kanal": "YURTDIŞI",
+          "net_ciro": 6164898.81
+        },
+        {
+          "kanal": "YAZAR",
+          "net_ciro": 5314958.41
+        },
+        {
+          "kanal": "HAVUZ",
+          "net_ciro": 2721097.3699999996
+        },
+        {
+          "kanal": "MARKET",
+          "net_ciro": 825000.0
+        },
+        {
+          "kanal": "ZİNCİR MAĞ",
+          "net_ciro": 277137.25
+        },
+        {
+          "kanal": "OKUL",
+          "net_ciro": 214908.55
+        },
+        {
+          "kanal": "PERSONEL",
+          "net_ciro": 23190.5
+        },
+        {
+          "kanal": "TUKETICI",
+          "net_ciro": 2056.25
+        }
+      ]
+    },
+    "referenceSQL": "WITH entries AS (SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_211_01_INVOICE i INNER JOIN dbo.LG_211_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20250101' AND i.DATE_ < '20260101' AND i.TRCODE IN (2,3,7,8,9) UNION ALL SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_411_01_INVOICE i INNER JOIN dbo.LG_411_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20250101' AND i.DATE_ < '20260101' AND i.TRCODE IN (2,3,7,8,9)) SELECT label,SUM(CASE WHEN TRCODE IN (2,3) THEN -NETTOTAL ELSE NETTOTAL END) value FROM entries GROUP BY label",
+    "expected": [
+      [
+        "",
+        "36304101.43000"
+      ],
+      [
+        "DAGITICI",
+        "161225320.95000"
+      ],
+      [
+        "DIGER",
+        "6673314.50000"
+      ],
+      [
+        "E-TICARET",
+        "330389716.91000"
+      ],
+      [
+        "FUAR",
+        "27942062.25000"
+      ],
+      [
+        "HAVUZ",
+        "2721097.37000"
+      ],
+      [
+        "KITAPCI",
+        "442051595.11000"
+      ],
+      [
+        "KURUM",
+        "7206097.17000"
+      ],
+      [
+        "MAGAZA",
+        "13524175.55000"
+      ],
+      [
+        "MARKET",
+        "825000.00000"
+      ],
+      [
+        "OKUL",
+        "214908.55000"
+      ],
+      [
+        "PERSONEL",
+        "23190.50000"
+      ],
+      [
+        "TUKETICI",
+        "2056.25000"
+      ],
+      [
+        "YAZAR",
+        "5314958.41000"
+      ],
+      [
+        "YURTDIŞI",
+        "6164898.81000"
+      ],
+      [
+        "ZINCIR",
+        "95021335.85000"
+      ],
+      [
+        "ZİNCİR MAĞ",
+        "277137.25000"
+      ]
+    ]
+  },
+  {
+    "question": "Peki 2024",
+    "answer": {
+      "id": "d6d248b3226742a8aa89a7feca46ffe0",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "summary": "19 satır döndü. İlk 3:\n1. Net ciro 267.815.508,63 · KITAPCI\n2. Net ciro 149.627.307,08 · E-TICARET\n3. Net ciro 101.789.010,02 · DAGITICI",
+      "resultId": "d6d248b3226742a8aa89a7feca46ffe0",
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2024",
+            "primitive": "YEAR",
+            "start": "2024-01-01",
+            "end": "2025-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2024
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 267815508.6299999
+        },
+        {
+          "kanal": "E-TICARET",
+          "net_ciro": 149627307.07999974
+        },
+        {
+          "kanal": "DAGITICI",
+          "net_ciro": 101789010.02000001
+        },
+        {
+          "kanal": "ZINCIR",
+          "net_ciro": 73017355.27000009
+        },
+        {
+          "kanal": "",
+          "net_ciro": 27966208.320000615
+        },
+        {
+          "kanal": "FUAR",
+          "net_ciro": 19467243.36
+        },
+        {
+          "kanal": "MAGAZA",
+          "net_ciro": 7795831.369999999
+        },
+        {
+          "kanal": "KURUM",
+          "net_ciro": 6089230.92
+        },
+        {
+          "kanal": "DIGER",
+          "net_ciro": 5851541.889999997
+        },
+        {
+          "kanal": "YAZAR",
+          "net_ciro": 3701435.5
+        },
+        {
+          "kanal": "YURTDIŞI",
+          "net_ciro": 3179530.24
+        },
+        {
+          "kanal": "MERKEZ",
+          "net_ciro": 2936333.99
+        },
+        {
+          "kanal": "OKUL",
+          "net_ciro": 433794.46
+        },
+        {
+          "kanal": "HAVUZ",
+          "net_ciro": 313305.95
+        },
+        {
+          "kanal": "ZİNCİR MAĞ",
+          "net_ciro": 117321.25
+        },
+        {
+          "kanal": "PERSONEL",
+          "net_ciro": 84276.5
+        },
+        {
+          "kanal": "NİHAİ",
+          "net_ciro": 61019.61
+        },
+        {
+          "kanal": "MARKET",
+          "net_ciro": 25906.53
+        },
+        {
+          "kanal": "TUKETICI",
+          "net_ciro": 7490.0
+        }
+      ],
+      "shownRows": 19,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788967498.209,
+      "widget": {
+        "id": "chat_3d6e46f6ee2e",
+        "type": "bar",
+        "title": "Peki 2024",
+        "x_key": "kanal",
+        "y_key": "net_ciro",
+        "label_key": "kanal",
+        "value_key": "net_ciro"
+      },
+      "threadId": "30ec1b03b9534fd2820e68c0ee6f8998",
+      "rowCount": 19,
+      "totalRows": 19,
+      "latency_ms": 8743,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 123,
+        "compile_ms": 41,
+        "queue_wait_ms": 15,
+        "run_sql_ms": 805,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "kanal bazinda net ciro 2024",
+          "slots": [
+            {
+              "term": "net ciro",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_027f9813d2a7",
+              "mapping": {
+                "concept_id": "sem_027f9813d2a7",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "net_ciro"
+                  ],
+                  "conditions": [
+                    "INVOICE.TRCODE IN (2,3,7,8,9)"
+                  ]
+                },
+                "id": "map_19f0e173a069"
+              },
+              "confidence": 0.85,
+              "explain": {
+                "normalized": "net ciro",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_8542c8254c47",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+                    "extra": {
+                      "func": "SUM",
+                      "grain": "STLINE",
+                      "aliases": [
+                        "net_ciro"
+                      ],
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)",
+                        "STLINE.TRCODE IN (2,3,7,8)"
+                      ]
+                    },
+                    "confidence": 0.7
+                  }
+                ]
+              }
+            },
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            },
+            {
+              "term": "invoice default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_f5496ecdb504",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_ba0006d12709"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2024",
+              "primitive": "YEAR",
+              "start": "2024-01-01",
+              "end": "2025-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2024
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            }
+          ],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "INVOICE",
+              "period": {
+                "text": "2024",
+                "primitive": "YEAR",
+                "start": "2024-01-01",
+                "end": "2025-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2024
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2026-08-17",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "INVOICE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "STLINE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2024' → YEAR [2024-01-01, 2025-01-01)",
+            "'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END) [CERTIFIED, 5 doğrulanmış sorgu, doküman 1, insan 0]",
+            "'kanal' → CLCARD.SPECODE2 [CERTIFIED, 5 doğrulanmış sorgu, doküman 2, insan 0]",
+            "Konuşma bağlamıyla tamamlanan soru: kanal bazinda net ciro 2024"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "grup: 'kanal' → CLCARD.SPECODE2",
+          "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+          "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+          "ölçü kapsamı: INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)",
+          "dönem: YEAR [2024-01-01, 2025-01-01)",
+          "INVOICE: dönemle kesişen tablolar okundu (LG_211_01_INVOICE)",
+          "CLCARD: dönemle kesişen tablolar okundu (LG_211_CLCARD)"
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_02d6140939eb"
+    },
+    "status": "LIVE_PASS",
+    "fullResult": {
+      "computedAt": 1788967498.209,
+      "question": "Peki 2024",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "totalRows": 19,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2024",
+            "primitive": "YEAR",
+            "start": "2024-01-01",
+            "end": "2025-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2024
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "d6d248b3226742a8aa89a7feca46ffe0",
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 267815508.6299999
+        },
+        {
+          "kanal": "E-TICARET",
+          "net_ciro": 149627307.07999974
+        },
+        {
+          "kanal": "DAGITICI",
+          "net_ciro": 101789010.02000001
+        },
+        {
+          "kanal": "ZINCIR",
+          "net_ciro": 73017355.27000009
+        },
+        {
+          "kanal": "",
+          "net_ciro": 27966208.320000615
+        },
+        {
+          "kanal": "FUAR",
+          "net_ciro": 19467243.36
+        },
+        {
+          "kanal": "MAGAZA",
+          "net_ciro": 7795831.369999999
+        },
+        {
+          "kanal": "KURUM",
+          "net_ciro": 6089230.92
+        },
+        {
+          "kanal": "DIGER",
+          "net_ciro": 5851541.889999997
+        },
+        {
+          "kanal": "YAZAR",
+          "net_ciro": 3701435.5
+        },
+        {
+          "kanal": "YURTDIŞI",
+          "net_ciro": 3179530.24
+        },
+        {
+          "kanal": "MERKEZ",
+          "net_ciro": 2936333.99
+        },
+        {
+          "kanal": "OKUL",
+          "net_ciro": 433794.46
+        },
+        {
+          "kanal": "HAVUZ",
+          "net_ciro": 313305.95
+        },
+        {
+          "kanal": "ZİNCİR MAĞ",
+          "net_ciro": 117321.25
+        },
+        {
+          "kanal": "PERSONEL",
+          "net_ciro": 84276.5
+        },
+        {
+          "kanal": "NİHAİ",
+          "net_ciro": 61019.61
+        },
+        {
+          "kanal": "MARKET",
+          "net_ciro": 25906.53
+        },
+        {
+          "kanal": "TUKETICI",
+          "net_ciro": 7490.0
+        }
+      ]
+    },
+    "referenceSQL": "WITH entries AS (SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_211_01_INVOICE i INNER JOIN dbo.LG_211_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20240101' AND i.DATE_ < '20250101' AND i.TRCODE IN (2,3,7,8,9) UNION ALL SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_411_01_INVOICE i INNER JOIN dbo.LG_411_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20240101' AND i.DATE_ < '20250101' AND i.TRCODE IN (2,3,7,8,9)) SELECT label,SUM(CASE WHEN TRCODE IN (2,3) THEN -NETTOTAL ELSE NETTOTAL END) value FROM entries GROUP BY label",
+    "expected": [
+      [
+        "",
+        "27966208.32000"
+      ],
+      [
+        "DAGITICI",
+        "101789010.02000"
+      ],
+      [
+        "DIGER",
+        "5851541.89000"
+      ],
+      [
+        "E-TICARET",
+        "149627307.08000"
+      ],
+      [
+        "FUAR",
+        "19467243.36000"
+      ],
+      [
+        "HAVUZ",
+        "313305.95000"
+      ],
+      [
+        "KITAPCI",
+        "267815508.63000"
+      ],
+      [
+        "KURUM",
+        "6089230.92000"
+      ],
+      [
+        "MAGAZA",
+        "7795831.37000"
+      ],
+      [
+        "MARKET",
+        "25906.53000"
+      ],
+      [
+        "MERKEZ",
+        "2936333.99000"
+      ],
+      [
+        "NİHAİ",
+        "61019.61000"
+      ],
+      [
+        "OKUL",
+        "433794.46000"
+      ],
+      [
+        "PERSONEL",
+        "84276.50000"
+      ],
+      [
+        "TUKETICI",
+        "7490.00000"
+      ],
+      [
+        "YAZAR",
+        "3701435.50000"
+      ],
+      [
+        "YURTDIŞI",
+        "3179530.24000"
+      ],
+      [
+        "ZINCIR",
+        "73017355.27000"
+      ],
+      [
+        "ZİNCİR MAĞ",
+        "117321.25000"
+      ]
+    ]
+  },
+  {
+    "question": "sadece KITAPCI",
+    "answer": {
+      "id": "ca54e34bd99044f6b3f331205e6da17f",
+      "type": "TEXT_TO_SQL",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[SPECODE2] IN ('KITAPCI')\n  AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND CLCARD.[SPECODE2] IN ('KITAPCI') AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "summary": "Kanal: KITAPCI · Net ciro: 267.815.508,63",
+      "resultId": "ca54e34bd99044f6b3f331205e6da17f",
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2024",
+            "primitive": "YEAR",
+            "start": "2024-01-01",
+            "end": "2025-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2024
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 267815508.63000008
+        }
+      ],
+      "shownRows": 1,
+      "truncated": false,
+      "cached": false,
+      "ageSec": 0.0,
+      "computedAt": 1788967500.197,
+      "widget": {
+        "id": "chat_d72b113901de",
+        "type": "kpi",
+        "title": "sadece KITAPCI",
+        "value_key": "net_ciro",
+        "format": "number"
+      },
+      "threadId": "30ec1b03b9534fd2820e68c0ee6f8998",
+      "rowCount": 1,
+      "totalRows": 1,
+      "latency_ms": 1472,
+      "repairs": 0,
+      "timings": {
+        "resolve_ms": 112,
+        "compile_ms": 41,
+        "queue_wait_ms": 15,
+        "run_sql_ms": 530,
+        "summary_ms": 0
+      },
+      "recallExcluded": false,
+      "semantic": {
+        "query": {
+          "question": "kanal bazinda net ciro 2024 sadece kitapci",
+          "slots": [
+            {
+              "term": "net ciro",
+              "semanticType": "METRIC",
+              "status": "CERTIFIED",
+              "conceptId": "sem_027f9813d2a7",
+              "mapping": {
+                "concept_id": "sem_027f9813d2a7",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": null,
+                "operator": null,
+                "values": [],
+                "formula": "SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+                "time_primitive": null,
+                "extra": {
+                  "func": "SUM",
+                  "aliases": [
+                    "net_ciro"
+                  ],
+                  "conditions": [
+                    "INVOICE.TRCODE IN (2,3,7,8,9)"
+                  ]
+                },
+                "id": "map_19f0e173a069"
+              },
+              "confidence": 0.85,
+              "explain": {
+                "normalized": "net ciro",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 1,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "DOC",
+                  "EXECUTION",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [
+                  {
+                    "conceptId": "sem_8542c8254c47",
+                    "entity": "STLINE",
+                    "tablePattern": "DBO_LG_{n0}_{n1}_STLINE",
+                    "column": null,
+                    "operator": null,
+                    "values": [],
+                    "formula": "SUM(CASE WHEN STLINE.TRCODE IN (7, 8) THEN STLINE.LINENET ELSE -STLINE.LINENET END)",
+                    "extra": {
+                      "func": "SUM",
+                      "grain": "STLINE",
+                      "aliases": [
+                        "net_ciro"
+                      ],
+                      "conditions": [
+                        "STLINE.LINETYPE = (0)",
+                        "STLINE.TRCODE IN (2,3,7,8)"
+                      ]
+                    },
+                    "confidence": 0.7
+                  }
+                ]
+              }
+            },
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            },
+            {
+              "term": "KITAPCI",
+              "semanticType": "DIMENSION_VALUE",
+              "status": "PROFILE",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "",
+                "entity": "CLCARD",
+                "table_pattern": "LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "IN",
+                "values": [
+                  "KITAPCI"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_d426f11d4e49"
+              },
+              "confidence": 0.9,
+              "explain": {
+                "why": "değer profilde gözlendi: CLCARD.SPECODE2",
+                "source": "profile",
+                "equivalent_bindings": []
+              }
+            },
+            {
+              "term": "invoice default cancelled",
+              "semanticType": "DEFAULT_FILTER",
+              "status": "CERTIFIED",
+              "conceptId": null,
+              "mapping": {
+                "concept_id": "sem_f5496ecdb504",
+                "entity": "INVOICE",
+                "table_pattern": "DBO_LG_{n0}_{n1}_INVOICE",
+                "column": "CANCELLED",
+                "operator": "=",
+                "values": [
+                  "0"
+                ],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_ba0006d12709"
+              },
+              "confidence": 1.0,
+              "explain": {
+                "source": "catalog_default",
+                "why": "ölçünün varsayılan satır kapsamı"
+              }
+            }
+          ],
+          "unresolved": [],
+          "temporal": [
+            {
+              "text": "2024",
+              "primitive": "YEAR",
+              "start": "2024-01-01",
+              "end": "2025-01-01",
+              "grain": "YEAR",
+              "ambiguous": false,
+              "params": {
+                "year": 2024
+              }
+            }
+          ],
+          "grain": null,
+          "groupBy": [
+            {
+              "term": "kanal",
+              "semanticType": "COLUMN",
+              "status": "CERTIFIED",
+              "conceptId": "sem_83c8e580c858",
+              "mapping": {
+                "concept_id": "sem_83c8e580c858",
+                "entity": "CLCARD",
+                "table_pattern": "DBO_LG_{n0}_CLCARD",
+                "column": "SPECODE2",
+                "operator": "COLUMN",
+                "values": [],
+                "formula": null,
+                "time_primitive": null,
+                "extra": {},
+                "id": "map_a217ac8bd01e"
+              },
+              "confidence": 0.95,
+              "explain": {
+                "normalized": "kanal",
+                "sense": 1,
+                "version": 10,
+                "support": {
+                  "doc": 2,
+                  "llm": 0,
+                  "human": 0,
+                  "validated_queries": 5
+                },
+                "evidence_types": [
+                  "ALIAS_BINDING",
+                  "DOC",
+                  "VALIDATED_SQL"
+                ],
+                "alternatives": [],
+                "role": "group_by"
+              }
+            }
+          ],
+          "limit": null,
+          "orderDesc": true,
+          "catalogHash": "6474bbad8e2bf3112c619ac2a3dbb93255abf5c33c16cc245de8a4c9341a1736",
+          "catalogVersion": 14,
+          "conflicts": [],
+          "ignored": [],
+          "outOfScope": [],
+          "unhandled": [],
+          "modifiers": [],
+          "clarification": [],
+          "modifierTelemetry": {
+            "modifier_seen": 0,
+            "modifier_grammatical": 0,
+            "modifier_semantic": 0,
+            "modifier_unknown": 0,
+            "modifier_absence": 0,
+            "modifier_historical_confirmed": 0,
+            "modifier_catalog_confirmed": 0,
+            "modifier_recovered": 0,
+            "modifier_silently_ignored": 0,
+            "silent_modifier_drop_rate": 0.0
+          },
+          "shape": null,
+          "projection": [],
+          "candidates": [],
+          "measureExpressions": [],
+          "analytics": null,
+          "comparison": null,
+          "dataCoverage": [
+            {
+              "entity": "INVOICE",
+              "period": {
+                "text": "2024",
+                "primitive": "YEAR",
+                "start": "2024-01-01",
+                "end": "2025-01-01",
+                "grain": "YEAR",
+                "ambiguous": false,
+                "params": {
+                  "year": 2024
+                }
+              },
+              "status": "WITHIN_OBSERVED",
+              "observedStart": "2015-01-01",
+              "observedEnd": "2026-08-17",
+              "completeness": "UNKNOWN",
+              "source": "profile_observed_range"
+            }
+          ],
+          "temporalBinding": {
+            "entity": "INVOICE",
+            "column": "DATE_",
+            "source": "resolved_metric",
+            "alternatives": [
+              {
+                "entity": "STLINE",
+                "column": "DATE_",
+                "join": [
+                  "STLINE",
+                  "INVOICEREF",
+                  "INVOICE",
+                  "LOGICALREF"
+                ],
+                "source": "declared_business_date",
+                "reason": "Fatura başlığı ve ona bağlı satış satırı aynı işlem dönemini taşır."
+              }
+            ]
+          },
+          "absenceContract": null,
+          "fullyResolved": true,
+          "state": "RESOLVED",
+          "refusalReason": null,
+          "explanation": [
+            "'2024' → YEAR [2024-01-01, 2025-01-01)",
+            "'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END) [CERTIFIED, 5 doğrulanmış sorgu, doküman 1, insan 0]",
+            "'kanal' → CLCARD.SPECODE2 [CERTIFIED, 5 doğrulanmış sorgu, doküman 2, insan 0]",
+            "'KITAPCI' → CLCARD.SPECODE2 IN (KITAPCI) [PROFILE]",
+            "Konuşma bağlamıyla tamamlanan soru: kanal bazinda net ciro 2024 sadece kitapci"
+          ]
+        },
+        "compiler": "deterministic",
+        "certified": true,
+        "explain": [
+          "grup: 'kanal' → CLCARD.SPECODE2",
+          "ölçü: 'net ciro' → SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE -INVOICE.NETTOTAL END)",
+          "varsayılan filtre: INVOICE.CANCELLED = ['0']",
+          "ölçü kapsamı: INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)",
+          "filtre: 'KITAPCI' → CLCARD.[SPECODE2] IN ('KITAPCI')",
+          "dönem: YEAR [2024-01-01, 2025-01-01)",
+          "INVOICE: dönemle kesişen tablolar okundu (LG_211_01_INVOICE)",
+          "CLCARD: dönemle kesişen tablolar okundu (LG_211_CLCARD)"
+        ],
+        "catalogVersion": 14,
+        "queue": {
+          "waitedMs": 15,
+          "aheadOnArrival": 0
+        }
+      },
+      "queryId": "q_737ffd5695ec"
+    },
+    "status": "LIVE_PASS",
+    "fullResult": {
+      "computedAt": 1788967500.197,
+      "question": "sadece KITAPCI",
+      "sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_211_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND CLCARD.[SPECODE2] IN ('KITAPCI')\n  AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
+      "physicalSql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro FROM [dbo].[LG_211_01_INVOICE] AS INVOICE JOIN [dbo].[LG_211_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF] WHERE INVOICE.[CANCELLED] = 0 AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9) AND CLCARD.[SPECODE2] IN ('KITAPCI') AND INVOICE.[DATE_] >= '2024-01-01' AND INVOICE.[DATE_] < '2025-01-01' GROUP BY CLCARD.[SPECODE2] ORDER BY net_ciro DESC",
+      "columns": [
+        {
+          "name": "kanal",
+          "type": "str"
+        },
+        {
+          "name": "net_ciro",
+          "type": "float"
+        }
+      ],
+      "totalRows": 1,
+      "truncated": false,
+      "dataCoverage": [
+        {
+          "entity": "INVOICE",
+          "period": {
+            "text": "2024",
+            "primitive": "YEAR",
+            "start": "2024-01-01",
+            "end": "2025-01-01",
+            "grain": "YEAR",
+            "ambiguous": false,
+            "params": {
+              "year": 2024
+            }
+          },
+          "status": "WITHIN_OBSERVED",
+          "observedStart": "2015-01-01",
+          "observedEnd": "2026-08-17",
+          "completeness": "UNKNOWN",
+          "source": "profile_observed_range"
+        }
+      ],
+      "comparison": null,
+      "id": "ca54e34bd99044f6b3f331205e6da17f",
+      "records": [
+        {
+          "kanal": "KITAPCI",
+          "net_ciro": 267815508.63000008
+        }
+      ]
+    },
+    "referenceSQL": "WITH entries AS (SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_211_01_INVOICE i INNER JOIN dbo.LG_211_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20240101' AND i.DATE_ < '20250101' AND i.TRCODE IN (2,3,7,8,9) UNION ALL SELECT c.SPECODE2 label,i.TRCODE,i.NETTOTAL FROM dbo.LG_411_01_INVOICE i INNER JOIN dbo.LG_411_CLCARD c ON c.LOGICALREF=i.CLIENTREF WHERE i.CANCELLED=0 AND i.DATE_ >= '20240101' AND i.DATE_ < '20250101' AND i.TRCODE IN (2,3,7,8,9)) SELECT label,SUM(CASE WHEN TRCODE IN (2,3) THEN -NETTOTAL ELSE NETTOTAL END) value FROM entries WHERE label='KITAPCI' GROUP BY label",
+    "expected": [
+      [
+        "KITAPCI",
+        "267815508.63000"
+      ]
+    ]
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "total": 9000,
+  "unique_sql": 9000,
+  "counts": {
+    "valid_pass": 1000,
+    "missing_city_pass": 1000,
+    "or_widening_pass": 1000,
+    "wrong_city_pass": 1000,
+    "unused_cte_pass": 1000,
+    "decorative_case_pass": 1000,
+    "missing_period_pass": 1000,
+    "wrong_period_pass": 1000,
+    "wrong_date_column_pass": 1000
+  },
+  "failures": [],
+  "seconds": 3.9
+}

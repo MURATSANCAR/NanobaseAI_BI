@@ -1,0 +1,86 @@
+[
+  {
+    "question": "test",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "question": "şişt",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "question": "Sen kimsin?",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 0.0
+  },
+  {
+    "question": "asdfghjkl",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 4.835
+  },
+  {
+    "question": "Bana bir aşk şiiri yaz",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 0.972
+  },
+  {
+    "question": "Türkiye'nin başkenti neresi?",
+    "expectedIntro": true,
+    "actualIntro": true,
+    "passed": true,
+    "seconds": 0.974
+  },
+  {
+    "question": "Test müşterisinin 2026 cirosu",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.974
+  },
+  {
+    "question": "2026 kanal bazında net ciro",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.993
+  },
+  {
+    "question": "Sadece Ankara",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.905
+  },
+  {
+    "question": "Geçen yılla karşılaştır",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.948
+  },
+  {
+    "question": "XYZ alanına göre rapor",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.921
+  },
+  {
+    "question": "Merhaba 2026 satışlarını göster",
+    "expectedIntro": false,
+    "actualIntro": false,
+    "passed": true,
+    "seconds": 0.983
+  }
+]

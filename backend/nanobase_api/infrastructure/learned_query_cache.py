@@ -7,6 +7,7 @@ when a user asks again (exact or highly similar wording), chat skips NL→SQL LL
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import re
 import threading
@@ -18,6 +19,8 @@ from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Engine
+
+log = logging.getLogger(__name__)
 
 _TR_MAP = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
 
@@ -344,7 +347,11 @@ def remember(
     # (chat execute path uses rendered SQL without named binds for gateway)
     norm = normalize_question(q)
     qh = question_hash(q)
-    lid = f"lq-{qh[:16]}"
+    # The primary key is global while the hash was only of the question: the same question learned
+    # for a second tenant or datasource collided with the first row, the insert raised, and a blanket
+    # except swallowed it — learning simply stopped working for everyone after the first.
+    scope = hashlib.sha256(f"{tenant_id}\n{datasource_id}".encode()).hexdigest()[:8]
+    lid = f"lq-{scope}-{qh[:16]}"
     now = datetime.now(timezone.utc)
     try:
         from sqlalchemy import text
@@ -396,7 +403,10 @@ def remember(
         }
         _mem_put(row)
         return lid
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        # Silent for years: a failed insert returned None and the caller could not tell learning
+        # from a deliberate skip. A storage fault that stops the system learning must be visible.
+        log.warning("learned query not stored (tenant=%s datasource=%s): %s", tenant_id, datasource_id, e)
         return None
 
 

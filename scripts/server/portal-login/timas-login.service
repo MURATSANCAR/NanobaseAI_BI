@@ -1,0 +1,19 @@
+[Unit]
+Description=Timas portal session adapter
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+ExecStart=/usr/bin/python3 /opt/timas-login/server.py
+Restart=on-failure
+StateDirectory=timas-login
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/timas-login
+
+[Install]
+WantedBy=multi-user.target

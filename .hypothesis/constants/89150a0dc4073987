@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/forecasting/contracts/__init__.py
+# hypothesis_version: 6.168.0
+
+['FREQUENCIES', 'ForecastPoint', 'ForecastRequest', 'ForecastResponse', 'SeriesBundle', 'SeriesBundleError', 'SeriesPoint', 'build_series_bundle']

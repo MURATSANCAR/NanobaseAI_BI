@@ -1,0 +1,32 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_SHFTASGN"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_SHFTASGN"
+properties:
+  "displayName": "dbo.LG_411_SHFTASGN"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "SOURCETYPE"
+    type: "SMALLINT"
+  - name: "SOURCEREF"
+    type: "INTEGER"
+  - name: "SHIFTREF"
+    type: "INTEGER"
+  - name: "BEGDATE"
+    type: "INTEGER"
+  - name: "LINENR"
+    type: "SMALLINT"
+  - name: "SHIFTTREF"
+    type: "INTEGER"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICREF"
+    type: "INTEGER"

@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/conversation.py
+# hypothesis_version: 6.168.0
+
+[' ?.! ', '(?!\\w)', '(?<!\\w)', '^(?:peki|ya)\\s+', 'sadece ']

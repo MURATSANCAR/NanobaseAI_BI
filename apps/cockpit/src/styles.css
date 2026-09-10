@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-page text-ink font-sans antialiased;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+/* @layer components şart: katmansız tanımlar `@tailwind utilities`ten sonra geldiği için
+   `hidden`, `text-brand`, `border-brand` gibi utility'leri sessizce eziyordu. */
+@layer components {
+  .card {
+    @apply bg-card border border-line rounded-2xl shadow-card;
+  }
+
+  .eyebrow {
+    @apply text-[10px] font-semibold tracking-[0.14em] uppercase text-ink-muted;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1 text-xs text-ink-muted;
+  }
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #e3cfc3;
+  border-radius: 999px;
+}
+
+@keyframes splash-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes think-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@keyframes think-pulse {
+  0%, 100% { transform: scale(0.85); opacity: 0.18; }
+  50% { transform: scale(1.05); opacity: 0.38; }
+}
+@keyframes think-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+@keyframes think-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Portal entrance shares the cockpit palette and typography. */
+.login-page{min-height:100dvh;background:radial-gradient(ellipse at 15% 60%,#efdfd0 0,transparent 55%),#f8f1ec;padding:36px clamp(24px,6vw,100px);display:flex;flex-direction:column;color:#2a1912}
+.login-brand{display:flex;align-items:center;gap:12px}.login-mark{background:#b34630;color:white;border-radius:14px;padding:12px;display:flex}.login-brand strong{font:600 23px Georgia,serif;letter-spacing:1px}.login-brand strong span{font:700 12px Manrope,sans-serif;color:#b34630;background:#f4dcd3;padding:3px 5px;border-radius:4px}.login-brand small{display:block;font-size:9px;letter-spacing:2px;color:#7c6259;margin-top:4px}
+.login-layout{display:grid;grid-template-columns:1.2fr 1fr;gap:clamp(40px,8vw,140px);align-items:center;max-width:1240px;width:100%;margin:auto;padding:52px 0}.login-eyebrow{font-size:10px;letter-spacing:2px;font-weight:700;color:#9b4b36}.login-story h1{font-family:Fraunces,Georgia,serif;font-size:clamp(32px,3.3vw,52px);font-weight:500;line-height:1.18;letter-spacing:-1.6px;margin:20px 0}.login-story h1 em{color:#b34630;font-style:normal}.login-story>p{font-size:14px;line-height:1.9;color:#7c6259}.login-illustration{position:relative;margin-top:24px;height:clamp(320px,30vw,400px);overflow:hidden;border-radius:24px;background:#f6efe8}.login-illustration img{width:100%;height:calc(100% - 24px);object-fit:contain;transform:scale(1.08)}.login-illustration span{position:absolute;bottom:12px;left:20px;color:#7c6259;font-size:11px}
+.login-card{background:#fffdfb;border:1px solid #ead9ce;border-radius:28px;padding:clamp(28px,3.6vw,52px);box-shadow:0 24px 70px -40px #7c625980;max-width:470px;width:100%;justify-self:end}.login-card-icon{display:inline-flex;padding:13px;border-radius:16px;background:#f4e7de;color:#b34630}.login-card h2{font:500 36px Fraunces,Georgia,serif;letter-spacing:-1px;margin:22px 0 8px}.login-intro{font-size:13px;color:#7c6259;margin-bottom:26px}.login-test{background:#f8f1ec;border:1px solid #ead9ce;padding:12px 14px;border-radius:12px;font-size:9px;font-weight:700;letter-spacing:1px;color:#91432e;margin:20px 0}.login-test>span{display:inline-block;width:6px;height:6px;background:#b34630;border-radius:50%;margin-right:7px}.login-test p{font-size:11px;font-weight:400;letter-spacing:0;color:#7c6259;margin-top:5px}.login-card label{display:block;font-size:12px;font-weight:600;margin:18px 0 8px}.login-field{display:flex;align-items:center;gap:10px;border:1px solid #e3d4ca;border-radius:11px;padding:0 14px;height:50px;background:#fff;color:#9a8176}.login-field:focus-within{outline:3px solid #f4dcd3;border-color:#b34630}.login-field input{width:100%;min-width:0;color:#2a1912;background:transparent;outline:none;font-size:14px}.login-field button{display:flex;padding:4px}.login-submit{margin-top:26px;border-radius:11px;background:#b34630;color:white;font-size:13px;font-weight:600;width:100%;padding:16px;display:flex;justify-content:space-between;align-items:center;transition:background .2s}.login-submit:hover{background:#8f3521}.login-submit:disabled{opacity:.6;cursor:wait}.login-footnote{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;color:#9b8276}.login-error{font-size:12px;color:#a53625;margin-top:12px}.login-footer{display:flex;justify-content:space-between;border-top:1px solid #ead9ce;padding-top:20px;font-size:10px;color:#9b8276}
+@media(max-width:760px){.login-page{padding:24px}.login-layout{grid-template-columns:1fr;gap:26px;padding:34px 0}.login-story h1{font-size:32px;margin:12px 0}.login-story>p{display:none}.login-illustration{height:240px;margin-top:20px}.login-illustration span{font-size:10px;left:14px}.login-card{justify-self:center;max-width:460px}.login-story{max-width:460px;width:100%;justify-self:center}.login-card h2{font-size:30px}.login-footer{gap:20px}}
+
+/* Mobile-first product baseline: contain content, never hide page overflow. */
+.app-shell main,.app-shell section,.app-shell article{min-width:0}
+.app-shell main{overflow-wrap:anywhere}
+.app-shell pre{max-width:100%}
+.app-shell select{max-width:100%}
+.login-story,.login-card{min-width:0}
+.login-story h1{overflow-wrap:break-word}
+button:focus-visible,a:focus-visible{outline:3px solid #b34630;outline-offset:3px}
+@media(max-width:1023px){
+ .app-shell{padding-top:64px;padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+ .app-shell button{min-height:44px;min-width:44px}
+ .app-shell input,.app-shell textarea,.app-shell select{font-size:16px;min-height:44px}
+ .app-shell [role=tablist]{gap:8px}
+ .app-shell [role=tab]{flex:1 1 140px}
+ .app-shell aside nav{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+}
+@media(max-width:760px){
+ .login-page{padding:20px max(16px,env(safe-area-inset-left)) calc(24px + env(safe-area-inset-bottom))}
+ .login-layout{padding:24px 0;gap:20px}
+ .login-story h1{font-size:clamp(26px,7.8vw,36px);letter-spacing:-1px}
+ .login-card{padding:24px 20px;border-radius:22px}
+ .login-field input{font-size:16px}
+ .login-field button{min-width:44px;min-height:44px;justify-content:center;align-items:center}
+ .login-illustration{height:clamp(190px,58vw,270px)}
+ .login-illustration img{transform:none;object-fit:contain}
+ .login-footnote{flex-wrap:wrap;text-align:center;line-height:1.6}
+ .login-footer{flex-wrap:wrap}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;animation-duration:0.01ms!important;transition-duration:0.01ms!important}
+}

@@ -1,0 +1,116 @@
+# Logo açıklama tamamlama — 9 Eylül 2026
+
+## Değişiklik
+
+- 330 tablo / 9.316 kolonluk mevcut sözlük korundu.
+- 145 tabloya ve 2.527 kolona Türkçe açıklama eklendi.
+- Tablo eklemelerinin 104 tanesi mevcut kaynak metnin çevirisi/karakter kodlaması onarımı; 41 tanesi açık kolon açıklamasından türetilmiş tablo tanımıdır.
+- Her ekleme `description_tr_provenance` içinde kaynak metnini, dosyasını ve yöntemini taşır.
+- Önceki açıklamalar, türler, kod değerleri, indeksler ve ilişkiler değişmedi; tam JSON karşılaştırmasıyla doğrulandı.
+- 25 odaklı test geçti.
+
+## Kalan kaynak eksikleri
+
+| Kapsam | Önce | Sonra |
+|---|---:|---:|
+| Hiçbir dilde tablo açıklaması yok | 93 | 52 |
+| Türkçe tablo açıklaması yok | 201 | 56 |
+| Hiçbir dilde kolon açıklaması yok | 13 | 13 |
+| Türkçe kolon açıklaması yok | 2.578 | 51 |
+
+Açıklamalar yalnız kaynakta mevcut anlam üzerinden tamamlandı. Kaynakta boş bırakılmış
+13 kolonun anlamı; `Text/Tax`, çap/yarıçap, referans hedefi gibi çelişkiler tahmin edilmedi.
+`Port` terimi kaynakta açıklanmadığı için çevrilmeden korundu. “Kullanımda değil” gibi
+kaynak ifadelerinin çevrilmesi, alanın iş anlamının belgelendiği anlamına gelmez.
+
+Verilen [web sözlüğü](https://ugurozpinar.github.io/Logo/Tablo%20A%C3%A7%C4%B1klamalar%C4%B1%20Yeni/)
+ve aynı deponun eski tablo açıklamaları karşılaştırıldı; boş kolonlara ek tanım bulunamadı.
+Web sözlüğünün kaynak metinleri mevcut JSON'da tutuldu, çeviriler ayrı haritalarda incelendi.
+
+Tam eklemeler, kaynak metinleri, çelişkiler ve kalan tüm adlar aynı adlı JSON dosyasındadır.
+Önceki `logo-missing-descriptions-*-2026-09-09` raporları tamamlamadan önceki denetimdir.
+
+## Üretim durumu
+
+Aday katalog hazırlandı: 4.121 profilden 877 profil, 443 tablo açıklaması ve 10.905 kolon
+açıklaması güncellendi. **Üretim yayını tamamlandı.**
+Yayın kayıtları: `/data/nanobaseai/bi/backups/logo-description-completion-20260909`.
+
+## Hiçbir dilde açıklaması olmayan kolonlar
+
+- `ITEMS.BUFFER`
+- `INVEXIMINFO.COUNTRYREF`
+- `INVEXIMINFO.FREEZONEREF`
+- `INVEXIMINFO.PAYTYPEREF`
+- `INVEXIMINFO.BRBANKREF`
+- `INVEXIMINFO.CUSTOMREF`
+- `INVEXIMINFO.SHPTYPREF`
+- `INVEXIMINFO.SHPAGNREF`
+- `INVEXIMINFO.REGTYPREF`
+- `INVEXIMINFO.BANKREFNR`
+- `INVEXIMLINES.CUSTOMREF`
+- `INVEXIMLINES.COUNTRYREF`
+- `INVEXIMLINES.ORIGINCNTRREF`
+
+## İndeks doğrulaması
+
+Aday `semantic_catalog_logo_tr_20260909`: 50.809 kayıt, 1.529 entity, 39.957 farklı
+entity/kolon çifti, eksik indeks kolonu 0. Tüm payload kayıtları geri okunup beklenen
+metinlerle karşılaştırıldı. İlk oluşturma 43.715 değişmeyen vektörü yeniden kullandı;
+7.094 yeni metin gömüldü. Son incelemenin 8 metin düzeltmesi ayrıca işlendi ve tüm
+koleksiyon yeniden doğrulandı.
+
+Yeni açıklamaları sınayan altı Türkçe aramada beklenen tablo ilk 10 sonuçta bulundu:
+banka kredileri, dahilde işleme izin belgesi, bütçe revizyon fişleri, iş akışı dönemleri,
+kefiller, özellik seti. Bu sınırlı kontrol tüm iş sorularının doğruluğunu kanıtlamaz.
+
+Kalite referansı önceki yayının gerçekten ölçülen `stage/published-quality.json` dosyasıdır;
+soru kümesi, ret tanımı veya eşikler değiştirilmez. Mevcut 3 kesin ret ve 9 netleştirme
+isteği adayın resolver/compiler karşılaştırmasında aynı kaldı.
+
+## Ek kaynak kontrolü
+
+Açıklaması tümüyle boş 13 kolonun web HTML hücreleri de boş ve sözlükte ilişki tanımı yok.
+Bazı çelişkiler için aynı kaynakta farklı işaretler bulundu: `VRNTINVENS.VARIANTREF`
+ilişkisi `VARIANT.LOGICALREF`, `BNCREDITCARD.REPAYPLANREF` ilişkisi `REPAYPLAN.LOGICALREF`
+hedefine gidiyor; kolon açıklamaları farklı anlamlar veriyor. WSREF, WFLOWCRDREF ve
+STLINEREF örneklerinde ilişki hedefi İngilizce açıklamayı desteklese de adlandırmayla
+uyuşmuyor. Aynı kaynakta kopyalanmış ilişki hataları da bulunduğundan bu alanlar
+bağımsız sürüm dokümanı/uygulama doğrulaması olmadan kesin iş anlamı sayılmadı.
+
+## 48 soruluk kalite sonucu
+
+Mevcut üretim ölçümüyle aynı 48 soru ve değişmeyen eşiklerle kontrol geçti.
+Doğru tabloya erişim (recall) 1,0 → 1,0; tablo beklenen 39 sorunun tamamında tablolar bulundu;
+etkili ret/netleştirme sayısı 12 → 12. Soru bazında yeni ret ve yeni tablo kaybı yok.
+İzleme metrikleri: tablo isabeti 0,218 → 0,214; ortalama gönderilen tablo 8,5 → 9,1;
+ortalama istem 9.312 → 9.330 token. Kapsam korunurken isabet küçük ölçüde düştü;
+tüm aramaların kusursuz olduğu iddia edilmez.
+
+## Yayın sonrası doğrulama
+
+`publication.json` durumu `complete`. Canlı katalog, test edilen adayın tüm yayınlanan
+kayıtlarıyla birebir karşılaştırıldı; fark yok. Servis sağlıklı; çalışan prosesin etkin
+koleksiyonu `semantic_catalog_logo_tr_20260909`. Üretim HTTP API'sinde BNCREDITCARD,
+WFTASKPER ve ANBDGTREVFC Türkçe açıklamaları doğrulandı. Yayınlanan 12 kaynak dosyasının
+SHA-256 değerleri yerel sürümle aynı. Tam 48 soruluk model kontrolü yayın öncesi bu adayda
+çalıştırıldı; yayın sonrası kontrol katalog eşitliği, çalışan proses, dosyalar ve HTTP API
+üzerinden yapıldı. Eski katalog/indeks ve dosyalar geri dönüş için saklandı.
+
+## Canlı katalogda kalan açıklama eksikleri
+
+| Kalıcı canlı katalog ölçümü | Önce | Sonra |
+|---|---:|---:|
+| Etkili açıklaması olmayan fiziksel tablo | 3.222 | 3.060 |
+| Etkili açıklaması olmayan fiziksel kolon | 84.792 | 84.792 |
+| Açıklamasız farklı tablo kalıbı/kolon çifti | 31.805 | 31.805 |
+
+Bu tur, mevcut İngilizce kolon açıklamalarının Türkçe kapsamını artırdı; tamamen belgesiz
+canlı kolon sayısını azaltmadı. Mevcut türetilmiş anlamlar ve aktif portal notları sayıldı;
+çalışma anındaki ek zenginleştirme kapsam dışı. Firma/dönem tekrarları fiziksel sayılara
+dahildir. Yeni bir iş anlamı bulunamayan alanlar teknik ad ve SQL tipiyle indekslenir.
+Sözlükte 52 tablo ve 13 kolon hiçbir dilde açıklama içermiyor; Türkçe açıklaması eksik toplam
+56 tablo / 51 kolon var. Bütün katalog açıklamalarının tamamlandığı iddia edilmez.
+
+Yayın kanıtları `logo-description-completion-2026-09-09/` klasöründedir.
+Güncel canlı tam eksik listesi `logo-description-completion-live-2026-09-09.json`.

@@ -1,3 +1,4 @@
+import type { BiSemanticLayerGaps, BiSemanticLayerInventory, BiSemanticLayerStatus, BiSlConcept } from './bi-types';
 import type {
   BiAlertRule,
   BiBrandingSettings,
@@ -59,6 +60,70 @@ export type SemanticTemplateCandidate = {
 
 export function createBiApi() {
   const bi = {
+    semanticLayer: {
+      status: (c: ApiConfig, datasourceId?: string) =>
+        request<BiSemanticLayerStatus>(
+          c,
+          `/api/v1/bi/semantic-layer/status${datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+        ),
+      inventory: (c: ApiConfig, datasourceId?: string) =>
+        request<BiSemanticLayerInventory>(
+          c,
+          `/api/v1/bi/semantic-layer/inventory${datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+        ),
+      gaps: (c: ApiConfig, datasourceId?: string, days = 30) =>
+        request<BiSemanticLayerGaps>(
+          c,
+          `/api/v1/bi/semantic-layer/gaps?days=${days}${datasourceId ? `&datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+        ),
+      addAnnotation: (
+        c: ApiConfig,
+        body: { datasource_id?: string; tablePattern: string; column?: string | null; text: string },
+      ) =>
+        request<{ ok: boolean; annotation: { id: string }; candidates: { created: number; evidence: number } }>(
+          c,
+          '/api/v1/bi/semantic-layer/annotations',
+          { method: 'POST', body: JSON.stringify(body) },
+        ),
+      retireAnnotation: (c: ApiConfig, id: string, datasourceId?: string) =>
+        request<{ ok: boolean }>(
+          c,
+          `/api/v1/bi/semantic-layer/annotations/${encodeURIComponent(id)}${datasourceId ? `?datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+          { method: 'DELETE' },
+        ),
+      concepts: (c: ApiConfig, params: { datasource_id?: string; status?: string; type?: string; q?: string }) => {
+        const qs = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => {
+          if (v) qs.set(k, String(v));
+        });
+        return request<{ items: BiSlConcept[] }>(c, `/api/v1/bi/semantic-layer/concepts?${qs.toString()}`);
+      },
+      explain: (c: ApiConfig, term: string, datasourceId?: string) =>
+        request<{ term: string; normalized: string; certified: Array<{ concept: BiSlConcept['concept']; mappings: BiSlConcept['mappings']; evidence: Array<{ type: string; support: number; source: string }> }>; otherSenses: Array<BiSlConcept['concept']> }>(
+          c,
+          `/api/v1/bi/semantic-layer/explain?term=${encodeURIComponent(term)}${datasourceId ? `&datasource_id=${encodeURIComponent(datasourceId)}` : ''}`,
+        ),
+      certifyRun: (c: ApiConfig, datasourceId?: string) =>
+        request<{ ok: boolean; report: Record<string, unknown> }>(c, '/api/v1/bi/semantic-layer/certify-run', {
+          method: 'POST',
+          body: JSON.stringify({ datasource_id: datasourceId }),
+        }),
+      pipeline: (c: ApiConfig, body: { datasource_id?: string; schema?: string; tableLike?: string }) =>
+        request<{ ok: boolean; report: Record<string, unknown> }>(c, '/api/v1/bi/semantic-layer/pipeline', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        }),
+      certifyConcept: (c: ApiConfig, id: string, reason: string, datasourceId?: string) =>
+        request<{ ok: boolean }>(c, `/api/v1/bi/semantic-layer/concepts/${encodeURIComponent(id)}/certify`, {
+          method: 'POST',
+          body: JSON.stringify({ reason, datasource_id: datasourceId }),
+        }),
+      rejectConcept: (c: ApiConfig, id: string, reason: string, datasourceId?: string) =>
+        request<{ ok: boolean }>(c, `/api/v1/bi/semantic-layer/concepts/${encodeURIComponent(id)}/reject`, {
+          method: 'POST',
+          body: JSON.stringify({ reason, datasource_id: datasourceId }),
+        }),
+    },
     status: (c: ApiConfig) => request<BiStatus>(c, '/api/v1/bi/status'),
     health: (c: ApiConfig) => request<Record<string, unknown>>(c, '/api/v1/bi/health'),
     schema: (c: ApiConfig, datasourceId?: string) =>
@@ -1285,7 +1350,8 @@ export function createBiApi() {
       const q = new URLSearchParams({ limit: String(limit) });
       if (action) q.set('action', action);
       const raw = await request<{ entries?: unknown[] } | unknown[]>(c, `/api/v1/bi/audit?${q}`);
-      if (Array.isArray(raw)) return { entries: raw };
+      if (Array.isArray(raw)) return {
+ entries: raw };
       return { entries: Array.isArray(raw?.entries) ? raw.entries : [] };
     },
     publicShare: (baseUrl: string, token: string, opts?: { live?: boolean }) => {

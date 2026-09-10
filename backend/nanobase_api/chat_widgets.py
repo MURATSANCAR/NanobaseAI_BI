@@ -50,6 +50,36 @@ def _looks_like_time(col: str, rows: list[dict[str, Any]]) -> bool:
     return checked > 0 and hits / checked >= 0.5
 
 
+# Sonuç seti hem kod hem ad kolonu döndürdüğünde ("cari_kodu" + "unvan") eksen kodla etiketleniyordu.
+_CODE_SEG = {"kod", "kodu", "code", "id", "no", "ref", "refno", "key"}
+_LABEL_SEG = {
+    "unvan", "ad", "adi", "adı", "isim", "ismi", "name", "title",
+    "baslik", "başlık", "aciklama", "açıklama", "tanim", "tanım",
+    "label", "desc", "description",
+}
+
+
+def _segments(col: str) -> set[str]:
+    return {s for s in re.split(r"[\W_]+", (col or "").lower()) if s}
+
+
+def _label_col(cats: list[str]) -> str:
+    """Eksen etiketi için en okunur kategori kolonu.
+
+    Tek kategori varsa o. Birden fazlaysa sırayla: ad/unvan gibi açıklayıcı bir kolon,
+    yoksa kod/id olmayan ilk kolon, o da yoksa ilk kolon.
+    """
+    if len(cats) < 2:
+        return cats[0]
+    for col in cats:
+        if _LABEL_SEG & _segments(col):
+            return col
+    for col in cats:
+        if not _CODE_SEG & _segments(col):
+            return col
+    return cats[0]
+
+
 def _numeric_cols(cols: list[str], rows: list[dict[str, Any]]) -> list[str]:
     out: list[str] = []
     for col in cols:
@@ -134,7 +164,7 @@ def widgets_from_query_result(
 
     # Category + measure → bar / line / pie
     if cats and nums and len(clean_rows) >= 2:
-        xk, yk = cats[0], nums[0]
+        xk, yk = _label_col(cats), nums[0]
         if _looks_like_time(xk, clean_rows):
             wtype = "line"
         elif len(clean_rows) <= 8 and len(cats) == 1:

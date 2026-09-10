@@ -1,0 +1,429 @@
+{
+  "FINTABLEITEM": {
+    "source_description": "Financial Table Definitions",
+    "description_tr": "Mali tablo tanımları"
+  },
+  "SYSLOG": {
+    "source_description": "System Logs",
+    "description_tr": "Sistem günlükleri"
+  },
+  "SHIPINFO": {
+    "source_description": "Delivery Informations",
+    "description_tr": "Teslimat bilgileri"
+  },
+  "INDUSTRY": {
+    "source_description": "Sectors",
+    "description_tr": "Sektörler"
+  },
+  "CSTVND": {
+    "source_description": "Customer / Vendor Informations",
+    "description_tr": "Müşteri / tedarikçi bilgileri"
+  },
+  "CVINDASG": {
+    "source_description": "Customer/Vendor-Sector Asgn",
+    "description_tr": "Müşteri / tedarikçi ile sektör eşleştirmeleri"
+  },
+  "CVARPASG": {
+    "source_description": "Customer / Vendor AR / AP Asgn",
+    "description_tr": "Müşteri / tedarikçi ile cari hesap eşleştirmeleri"
+  },
+  "CONTACTS": {
+    "source_description": "Customer / Vendor Connections",
+    "description_tr": "Müşteri / tedarikçi bağlantıları"
+  },
+  "SLSOPPOR": {
+    "source_description": "Sales Opportunities",
+    "description_tr": "Satış fırsatları"
+  },
+  "SLSACTIV": {
+    "source_description": "Sales Activities",
+    "description_tr": "Satış aktiviteleri"
+  },
+  "OFFER": {
+    "source_description": "Offers",
+    "description_tr": "Teklifler"
+  },
+  "OFFALTER": {
+    "source_description": "Offer Alternatives",
+    "description_tr": "Teklif alternatifleri"
+  },
+  "OFFTRNS": {
+    "source_description": "Offer Transactions",
+    "description_tr": "Teklif hareketleri"
+  },
+  "CNTSLSMASG": {
+    "source_description": "Contacts-Sales Rep. Asgn.",
+    "description_tr": "İlgili kişi ile satış temsilcisi eşleştirmeleri"
+  },
+  "ACTPEPL": {
+    "source_description": "People Of Activities",
+    "description_tr": "Aktivite katılımcıları"
+  },
+  "SLSFILES": {
+    "source_description": "Files Of Activities",
+    "description_tr": "Aktivite dosyaları"
+  },
+  "SATI": {
+    "source_description": "Sales Activities Tree Items",
+    "description_tr": "Satış aktiviteleri ağacı öğeleri"
+  },
+  "SATIFILTER": {
+    "source_description": "Sales Act Tree Item Filters",
+    "description_tr": "Satış aktiviteleri ağacı öğe filtreleri"
+  },
+  "MRPHEAD": {
+    "source_description": "MRP and MPS Headers",
+    "description_tr": "MRP ve MPS başlıkları"
+  },
+  "MRPLINE": {
+    "source_description": "MRP Lines",
+    "description_tr": "MRP satırları"
+  },
+  "MRPPEGGING": {
+    "source_description": "MRP Assignments",
+    "description_tr": "MRP atamaları"
+  },
+  "MRPPROPOSAL": {
+    "source_description": "MRP Proposals",
+    "description_tr": "MRP önerileri"
+  },
+  "EXCEPT": {
+    "source_description": "Exceptions",
+    "description_tr": "İstisnalar"
+  },
+  "FRMPRDPARAM": {
+    "source_description": "Firm Production Parameters",
+    "description_tr": "Firma üretim parametreleri"
+  },
+  "BOMPARAM": {
+    "source_description": "Bill Of Material Parameters",
+    "description_tr": "Ürün reçetesi parametreleri"
+  },
+  "SHIFT": {
+    "source_description": "Shifts",
+    "description_tr": "Vardiyalar"
+  },
+  "SHFTTIME": {
+    "source_description": "Shift Times",
+    "description_tr": "Vardiya zamanları"
+  },
+  "SHFTASGN": {
+    "source_description": "Shift Assignments",
+    "description_tr": "Vardiya atamaları"
+  },
+  "PROCUREMENT": {
+    "source_description": "Item Procurement Of Production",
+    "description_tr": "Üretim için malzeme tedariki"
+  },
+  "STDCOST": {
+    "source_description": "Standard Costs",
+    "description_tr": "Standart maliyetler"
+  },
+  "POLINE": {
+    "source_description": "Production Order Lines",
+    "description_tr": "Üretim emri satırları"
+  },
+  "PARAMASGN": {
+    "source_description": "Production Parameters Asgn.",
+    "description_tr": "Üretim parametresi atamaları"
+  },
+  "PREVDISPLINE": {
+    "source_description": "Work Orders Relations",
+    "description_tr": "İş emri ilişkileri"
+  },
+  "PRODUCTLINEP": {
+    "source_description": "Product Lines",
+    "description_tr": "Ürün satırları"
+  },
+  "OCCUPATION": {
+    "source_description": "Resource Usages (Production)",
+    "description_tr": "Üretimde kaynak kullanımları"
+  },
+  "AVGCURRS": {
+    "source_description": "Average Currencies",
+    "description_tr": "Ortalama döviz kurları"
+  },
+  "WHLIST": {
+    "source_description": "Warehouse Lists",
+    "description_tr": "Ambar listeleri"
+  },
+  "STOPCAUSE": {
+    "source_description": "Work Order Stop Reasons",
+    "description_tr": "İş emri durma nedenleri"
+  },
+  "STOPASGN": {
+    "source_description": "Work Order Stop R.-W. Station",
+    "description_tr": "İş emri durma nedeni ile iş istasyonu eşleştirmeleri"
+  },
+  "STOPTRANS": {
+    "source_description": "Work Order Stop Transactions",
+    "description_tr": "İş emri durma hareketleri"
+  },
+  "WORKDAY": {
+    "source_description": "Working Days",
+    "description_tr": "Çalışma günleri"
+  },
+  "EXCEPTAS": {
+    "source_description": "Exception Assignments",
+    "description_tr": "İstisna atamaları"
+  },
+  "STDUNITCOST": {
+    "source_description": "Standart Unit Costs",
+    "description_tr": "Standart birim maliyetler"
+  },
+  "STDCOSTPERIOD": {
+    "source_description": "Standart Cost Periods",
+    "description_tr": "Standart maliyet dönemleri"
+  },
+  "STDBOMCOST": {
+    "source_description": "Standart BOM Costs",
+    "description_tr": "Standart ürün reçetesi maliyetleri"
+  },
+  "FCACCREF": {
+    "source_description": "P. Orders GL Acc. Connections",
+    "description_tr": "Üretim emri ile muhasebe hesabı bağlantıları"
+  },
+  "DISTVEHICLE": {
+    "source_description": "Distrubutor Vehicles",
+    "description_tr": "Dağıtıcı araçları"
+  },
+  "DISTROUTING": {
+    "source_description": "Distribution Routes",
+    "description_tr": "Dağıtım rotaları"
+  },
+  "DISTROUTLINE": {
+    "source_description": "Distribution Route Lines",
+    "description_tr": "Dağıtım rotası satırları"
+  },
+  "DISTORD": {
+    "source_description": "Distribution Orders",
+    "description_tr": "Dağıtım emirleri"
+  },
+  "DISTORDLINE": {
+    "source_description": "Distribution Order Lines",
+    "description_tr": "Dağıtım emri satırları"
+  },
+  "CAMPAIGN": {
+    "source_description": "Campaign Cards",
+    "description_tr": "Kampanya kartları"
+  },
+  "CMPGNLINE": {
+    "source_description": "Capaign Lines",
+    "description_tr": "Kampanya satırları"
+  },
+  "OVERHEADS": {
+    "source_description": "OverHead(OutGoings) Cards",
+    "description_tr": "Genel gider kartları"
+  },
+  "OVRHDACCREF": {
+    "source_description": "Overhead - Account Assignments",
+    "description_tr": "Genel gider ile hesap eşleştirmeleri"
+  },
+  "OVRHDCENTER": {
+    "source_description": "Overhead (outgoings) Items",
+    "description_tr": "Genel gider kalemleri"
+  },
+  "OVRHDCENTERLN": {
+    "source_description": "Overhead Item Lines",
+    "description_tr": "Genel gider kalemi satırları"
+  },
+  "OVHCDISTRATE": {
+    "source_description": "Service Distrubuting Cards",
+    "description_tr": "Hizmet dağıtım kartları"
+  },
+  "WSOVHCASGN": {
+    "source_description": "Workstation-Overhead Item Asgn",
+    "description_tr": "İş istasyonu ile genel gider kalemi eşleştirmeleri"
+  },
+  "OPREQACTIVITY": {
+    "source_description": "Operation Requirements Activit",
+    "description_tr": "Operasyon gereksinimi aktiviteleri"
+  },
+  "INVOICEINTEL": {
+    "source_description": "Invoice Additional Notes",
+    "description_tr": "Fatura ek notları"
+  },
+  "OVHDTRANS": {
+    "source_description": "Standart OverHeads (OutGoings)",
+    "description_tr": "Standart genel giderler"
+  },
+  "REFLECT": {
+    "source_description": "Reflections",
+    "description_tr": "Yansıtmalar"
+  },
+  "REFLECTTRANS": {
+    "source_description": "Reflection Transactions",
+    "description_tr": "Yansıtma hareketleri"
+  },
+  "ACTOVRHDDIST": {
+    "source_description": "Actual Overhead Loadings",
+    "description_tr": "Fiili genel gider yüklemeleri"
+  },
+  "ADDTAX": {
+    "source_description": "Additional Taxes",
+    "description_tr": "Ek vergiler"
+  },
+  "ADDTAXLINE": {
+    "source_description": "Additional Tax Lines",
+    "description_tr": "Ek vergi satırları"
+  },
+  "ACTIVITYAMNT": {
+    "source_description": "Activity Amounts",
+    "description_tr": "Aktivite miktarları"
+  },
+  "REFLECTASGN": {
+    "source_description": "Reflection Assignments",
+    "description_tr": "Yansıtma atamaları"
+  },
+  "INVEXIMINFO": {
+    "source_description": "Import Export Operation Receipts",
+    "description_tr": "İthalat / ihracat işlem fişleri"
+  },
+  "WFTASK": {
+    "source_description": "Work Flow Cards",
+    "description_tr": "İş akışı kartları"
+  },
+  "WFTASKPER": {
+    "source_description": "Work Flow Periods",
+    "description_tr": "İş akışı dönemleri"
+  },
+  "ABUDGETPRD": {
+    "source_description": "Budget Periods",
+    "description_tr": "Bütçe dönemleri"
+  },
+  "ANBUDGET": {
+    "source_description": "Budget Cards",
+    "description_tr": "Bütçe kartları"
+  },
+  "ANBUDGETLN": {
+    "source_description": "Budget Card Lines",
+    "description_tr": "Bütçe kartı satırları"
+  },
+  "ANBUDGETPRD": {
+    "source_description": "Period Lines Of Budget Card Li",
+    "description_tr": "Bütçe kartı satırlarının dönem satırları"
+  },
+  "ANBDGTALLOCFC": {
+    "source_description": "Budget Allocation Fiches",
+    "description_tr": "Bütçe dağıtım fişleri"
+  },
+  "ANBDGTALLOCLN": {
+    "source_description": "Budget Allocation Fiche Lines",
+    "description_tr": "Bütçe dağıtım fişi satırları"
+  },
+  "ANBDGTALLOCPRD": {
+    "source_description": "Period Lines Of Budget Allocat",
+    "description_tr": "Bütçe dağıtımının dönem satırları"
+  },
+  "EMDEMFICHE": {
+    "source_description": "General Ledger Demand Vouchers",
+    "description_tr": "Muhasebe talep fişleri"
+  },
+  "EMDEMFLINE": {
+    "source_description": "General Ledger Demand Transact",
+    "description_tr": "Muhasebe talep hareketleri"
+  },
+  "ANBDGTREVFC": {
+    "source_description": "Budget Revision Fiches",
+    "description_tr": "Bütçe revizyon fişleri"
+  },
+  "ANBDGTREVLN": {
+    "source_description": "Budget Revision Fiche Lines",
+    "description_tr": "Bütçe revizyon fişi satırları"
+  },
+  "ANBDGTREVPRD": {
+    "source_description": "Period Lines Of Budget Revisio",
+    "description_tr": "Bütçe revizyonunun dönem satırları"
+  },
+  "TMPACASGN": {
+    "source_description": "Temporary Admission Connection",
+    "description_tr": "Geçici kabul bağlantısı"
+  },
+  "COSTDISTFC": {
+    "source_description": "Cost Distribution Slips",
+    "description_tr": "Maliyet dağıtım fişleri"
+  },
+  "COSTDISTLN": {
+    "source_description": "Cost Distribution Slip Lines",
+    "description_tr": "Maliyet dağıtım fişi satırları"
+  },
+  "VRNTINVTOT": {
+    "source_description": "Variant Warehouse Totals",
+    "description_tr": "Varyant ambar toplamları"
+  },
+  "AUTOCTEMPLATE": {
+    "source_description": "Auto Card Generation Template",
+    "description_tr": "Otomatik kart oluşturma şablonu"
+  },
+  "QPRODLINE": {
+    "source_description": "Quick Production Lines",
+    "description_tr": "Hızlı üretim satırları"
+  },
+  "TSKSHELN": {
+    "source_description": "Task Shedule Grid",
+    "description_tr": "Görev çizelgesi tablosu"
+  },
+  "FAEXPENSE": {
+    "source_description": "Fixxed Asset Expense Assignmen",
+    "description_tr": "Sabit kıymet gider atamaları"
+  },
+  "FAPRODNUMS": {
+    "source_description": "Fix. asset prod. numbers",
+    "description_tr": "Sabit kıymet üretim numaraları"
+  },
+  "CHARSET": {
+    "source_description": "Characteristic Set Port",
+    "description_tr": "Özellik seti (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "VARIANT": {
+    "source_description": "Variant Port",
+    "description_tr": "Varyant (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "VRNTCHARASGN": {
+    "source_description": "Vrnt. Charac. Codes Asgn. Port",
+    "description_tr": "Varyant özellik kodu atamaları (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "BOMVRNTFORMULA": {
+    "source_description": "BOM Line Variant Formula Port",
+    "description_tr": "Ürün reçetesi satırı varyant formülü (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "ITEMCATEGORY": {
+    "source_description": "Item Category Port",
+    "description_tr": "Malzeme kategorisi (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "ITEMCATEGORYLI": {
+    "source_description": "Item Category Line Port",
+    "description_tr": "Malzeme kategorisi satırı (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "BNCREDITCARD": {
+    "source_description": "Bank Credits Port",
+    "description_tr": "Banka kredileri (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "BNCREPAYTR": {
+    "source_description": "Bank Credit Transaction Port",
+    "description_tr": "Banka kredisi hareketi (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "UNITBARCODE": {
+    "source_description": "Unit-Barcode Assignment Port",
+    "description_tr": "Birim-barkod eşleştirmesi (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "MARKET": {
+    "source_description": "Item Market Information Port",
+    "description_tr": "Malzeme pazar bilgileri (Port)",
+    "method": "translation; ambiguous source terminology Port preserved literally"
+  },
+  "QPRODUCT": {
+    "source_description": "HÄ±zlÄ± Ãœretim",
+    "description_tr": "Hızlı Üretim",
+    "method": "encoding repair"
+  }
+}

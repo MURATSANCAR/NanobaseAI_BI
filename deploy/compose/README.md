@@ -95,8 +95,9 @@ Harici sunucuda servis tanımı örneği: `deploy/llm-server/` (systemd, aynı b
 
 Paket, `forecast` servisini (port 8793) içerir: sohbette "İstanbul satışları önümüzdeki 6 ay nasıl?"
 gibi sorular yönetilen metrik serisi → SeriesBundle → tahmin motoru yoluyla, LLM SQL yazmadan
-cevaplanır. Motor seçimi benchmark kapısına bağlıdır (`FORECAST_ENGINE`; varsayılan `seasonal_naive`,
-öğrenilmiş motor `timesfm25`). Benchmark: `python -m forecasting.evaluation.benchmark --synthetic 8`.
+cevaplanır. Motor: **TimesFM 3.0** (`FORECAST_ENGINE=timesfm3`, upstream repo google-research/timesfm,
+ağırlık `google/timesfm-3.0-pytorch`, `FORECAST_ALLOW_NONCOMMERCIAL=1`). Modelsiz taban çizgisi:
+`FORECAST_ENGINE=seasonal_naive`. Benchmark: `python -m forecasting.evaluation.benchmark --synthetic 8 --engines seasonal_naive,timesfm3`.
 Tasarım: `docs/architecture/forecasting-v1-plan.md`.
 
 ## Günlük işletim

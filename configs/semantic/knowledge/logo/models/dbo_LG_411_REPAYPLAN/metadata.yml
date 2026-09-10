@@ -1,0 +1,38 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_REPAYPLAN"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_REPAYPLAN"
+properties:
+  "displayName": "dbo.LG_411_REPAYPLAN"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "PRIORITY"
+    type: "SMALLINT"
+  - name: "DEALINGTYPE"
+    type: "SMALLINT"
+  - name: "BEGDATE"
+    type: "INTEGER"
+  - name: "ENDDATE"
+    type: "INTEGER"
+  - name: "FIRSTPAYTERM"
+    type: "VARCHAR(8)"
+  - name: "REMPAYTERM"
+    type: "VARCHAR(8)"
+  - name: "BANKACCREF"
+    type: "INTEGER"
+  - name: "POSCOMSN"
+    type: "FLOAT8"
+  - name: "POINTCOMSN"
+    type: "FLOAT8"
+  - name: "SITEID"
+    type: "SMALLINT"
+  - name: "RECSTATUS"
+    type: "SMALLINT"
+  - name: "ORGLOGICALREF"
+    type: "INTEGER"

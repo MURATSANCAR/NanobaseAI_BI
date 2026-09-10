@@ -1,0 +1,21 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 8m;
+
+    # Motor: aynı docker ağındaki bridge konteynerine ada göre proxy. Caller token burada enjekte edilir.
+    location /api/ {
+        proxy_pass http://bridge:8795;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_buffering off;          # /api/v1/ask/stream (SSE) icin
+    }
+
+    # SPA: bilinmeyen yol index.html'e düşer. Giriş/oturum yok (auth müşteri ortamında).
+    location / { try_files $uri $uri/ /index.html; }
+}

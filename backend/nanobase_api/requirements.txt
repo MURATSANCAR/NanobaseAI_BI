@@ -19,3 +19,5 @@ hypothesis>=6.100.0
 sqlglot>=25.0.0
 openpyxl>=3.1.0
 fpdf2>=2.7.0
+# Semantic Layer V1 (backend/semantic_layer): knowledge files + MDL import
+pyyaml>=6.0

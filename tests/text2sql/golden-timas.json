@@ -1,0 +1,996 @@
+{
+ "datasource": "logo",
+ "cases": [
+  {
+   "id": "2026-br-t-k-r-marj-nedir-maliyetlendiril",
+   "question": "2026 brüt kâr marjı nedir (maliyetlendirilmiş satış satırlarında)",
+   "expected_sql": "SELECT 1 - SUM(CASE WHEN \"LINETYPE\" = 0 AND \"OUTCOST\" <> 0 THEN \"AMOUNT\" * \"OUTCOST\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"LINETYPE\" = 0 AND \"OUTCOST\" <> 0 THEN \"TOTAL\" ELSE 0 END), 0) AS brut_kar_marji FROM dbo_LG_411_01_STLINE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (7,8) AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2027-01-01'",
+   "expected_tables": [
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_STLINE"
+   ],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "DATE_",
+    "LINETYPE",
+    "OUTCOST",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-da-mal-al-m-trcode-1-ve-al-nan-hizm",
+   "question": "2026'da mal alım (TRCODE 1) ve alınan hizmet (TRCODE 4) faturalarında tedarikçi",
+   "expected_sql": "\"SELECT TOP 10\\n    \\\"CLCARD\\\".\\\"DEFINITION_\\\" AS \\\"CARI_UNVANI\\\",\\n    SUM(\\\"\\ INVOICE\\\".\\\"NETTOTAL\\\") AS \\\"TOPLAM_TUTAR\\\",\\n    COUNT(\\\"INVOICE\\\".\\\"LOGICALREF\\\"\\ ) AS \\\"FATURA_SAYISI\\\",\\n    MIN(\\\"INVOICE\\\".\\\"DATE_\\\") AS \\\"ILK_FATURA_TARIHI\\\"\\ ,\\n    MAX(\\\"INVOICE\\\".\\\"DATE_\\\") AS \\\"SON_FATURA_TARIHI\\\"\\nFROM \\\"dbo_LG_411_01_INVOICE\\\"\\ \\ AS \\\"INVOICE\\\"\\nINNER JOIN \\\"dbo_LG_411_CLCARD\\\" AS \\\"CLCARD\\\"\\n    ON \\\"INVOICE\\\"\\ .\\\"CLIENTREF\\\" = \\\"CLCARD\\\".\\\"LOGICALREF\\\"\\nWHERE \\\"INVOICE\\\".\\\"CANCELLED\\\" = 0\\n\\ \\    AND \\\"INVOICE\\\".\\\"TRCODE\\\" IN (1, 4)\\n    AND \\\"INVOICE\\\".\\\"DATE_\\\" >= '2026-01-01'\\n\\ \\    AND \\\"INVOICE\\\".\\\"DATE_\\\" < '2027-01-01'\\nGROUP BY \\\"CLCARD\\\".\\\"DEFINITION_\\\"\\ \\nORDER BY SUM(\\\"INVOICE\\\".\\\"NETTOTAL\\\") DESC\"",
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "unknown",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-iskonto-oran-nedir",
+   "question": "2026 iskonto oranı nedir?",
+   "expected_sql": "SELECT SUM(CASE WHEN \"LINETYPE\" = 0 THEN \"TOTAL\" ELSE 0 END) AS brut, SUM(CASE WHEN \"LINETYPE\" = 2 THEN \"TOTAL\" ELSE 0 END) AS iskonto, SUM(CASE WHEN \"LINETYPE\" = 2 THEN \"TOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"LINETYPE\" = 0 THEN \"TOTAL\" ELSE 0 END), 0) AS iskonto_orani FROM dbo_LG_411_01_STLINE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (7,8) AND \"DATE_\" >= '2026-01-01'",
+   "expected_tables": [
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_STLINE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "LINETYPE",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-ocak-a-ustos-i-in-ay-baz-nda-iskont",
+   "question": "2026 Ocak–Ağustos için ay bazında iskonto oranı ve satış faturası başına ortalama",
+   "expected_sql": "\"WITH iskonto AS (\\n  SELECT DATEFROMPARTS(YEAR(\\\"DATE_\\\"), MONTH(\\\"DATE_\\\"),\\ \\ 1) AS ay,\\n         SUM(CASE WHEN \\\"LINETYPE\\\" = 2 THEN \\\"TOTAL\\\" ELSE 0 END)\\ \\ / NULLIF(SUM(CASE WHEN \\\"LINETYPE\\\" = 0 THEN \\\"TOTAL\\\" ELSE 0 END), 0) AS iskonto_orani\\n\\ \\  FROM dbo_LG_411_01_STLINE WHERE \\\"CANCELLED\\\" = 0 AND \\\"TRCODE\\\" IN (7,8) AND\\ \\ \\\"DATE_\\\" >= '2026-01-01' AND \\\"DATE_\\\" < '2026-09-01'\\n  GROUP BY DATEFROMPARTS(YEAR(\\\"\\ DATE_\\\"), MONTH(\\\"DATE_\\\"), 1)\\n), fatura AS (\\n  SELECT DATEFROMPARTS(YEAR(\\\"DATE_\\\"\\ ), MONTH(\\\"DATE_\\\"), 1) AS ay, AVG(\\\"NETTOTAL\\\") AS ortalama_fatura_tutari, COUNT(*)\\ \\ AS fatura_sayisi\\n  FROM dbo_LG_411_01_INVOICE WHERE \\\"CANCELLED\\\" = 0 AND \\\"\\ TRCODE\\\" IN (7,8,9) AND \\\"DATE_\\\" >= '2026-01-01' AND \\\"DATE_\\\" < '2026-09-01'\\n\\ \\  GROUP BY DATEFROMPARTS(YEAR(\\\"DATE_\\\"), MONTH(\\\"DATE_\\\"), 1)\\n)\\nSELECT i.ay,\\ \\ i.iskonto_orani, f.ortalama_fatura_tutari, f.fatura_sayisi\\nFROM iskonto i JOIN\\ \\ fatura f ON f.ay = i.ay ORDER BY i.ay\"",
+   "expected_tables": [
+    "INVOICE",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_01_STLINE"
+   ],
+   "expected_columns": [],
+   "via_view": [
+    "ISKONTO"
+   ],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-toplam-net-ciro-nedir",
+   "question": "2026 toplam net ciro nedir?",
+   "expected_sql": "SELECT SUM(CASE WHEN \"TRCODE\" IN (7,8,9) THEN \"NETTOTAL\" ELSE -\"NETTOTAL\" END) AS net_ciro FROM dbo_LG_411_01_INVOICE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (2,3,7,8,9) AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2027-01-01'",
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-y-l-nda-kitapci-e-ticaret-ve-dagiti",
+   "question": "2026 yılında KITAPCI, E-TICARET ve DAGITICI kanalları için ay bazında net ciro",
+   "expected_sql": "\"SELECT \\n    DATEFROMPARTS(YEAR(i.\\\"DATE_\\\"), MONTH(i.\\\"DATE_\\\"), 1) AS ay,\\n\\ \\    COALESCE(NULLIF(c.\\\"SPECODE2\\\", ''), '(boş)') AS kanal,\\n    SUM(CASE WHEN\\ \\ i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE -i.\\\"NETTOTAL\\\" END) AS net_ciro,\\n\\ \\    SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE -i.\\\"NETTOTAL\\\"\\ \\ END) * 100.0 / NULLIF(SUM(SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\"\\ \\ ELSE -i.\\\"NETTOTAL\\\" END)) OVER (PARTITION BY DATEFROMPARTS(YEAR(i.\\\"DATE_\\\"),\\ \\ MONTH(i.\\\"DATE_\\\"), 1)), 0) AS kanal_payi_yuzde\\nFROM dbo_LG_411_01_INVOICE i\\n\\ JOIN dbo_LG_411_CLCARD c ON c.\\\"LOGICALREF\\\" = i.\\\"CLIENTREF\\\"\\nWHERE i.\\\"CANCELLED\\\"\\ \\ = 0\\n  AND i.\\\"TRCODE\\\" IN (2,3,7,8,9)\\n  AND i.\\\"DATE_\\\" >= '2026-01-01'\\n  AND\\ \\ i.\\\"DATE_\\\" < '2027-01-01'\\n  AND c.\\\"SPECODE2\\\" IN ('KITAPCI', 'E-TICARET', 'DAGITICI')\\n\\ GROUP BY \\n    DATEFROMPARTS(YEAR(i.\\\"DATE_\\\"), MONTH(i.\\\"DATE_\\\"), 1),\\n    COALESCE(NULLIF(c.\\\"\\ SPECODE2\\\", ''), '(boş)')\\nORDER BY \\n    ay,\\n    kanal\"",
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_CLCARD"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "2026-yilinda-aylik-net-satis-tutari-nedi",
+   "question": "2026 yılında aylık net satış tutarı nedir?",
+   "expected_sql": "SELECT yil, ay, satis, iade, net_ciro FROM v_monthly_sales ORDER BY yil, ay",
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [
+    "V_MONTHLY_SALES"
+   ],
+   "expect_refusal": null,
+   "kind": "view",
+   "source": "validated-pair"
+  },
+  {
+   "id": "agustos-2026-net-satis-tutari-nedir",
+   "question": "Ağustos 2026 net satış tutarı nedir?",
+   "expected_sql": "SELECT SUM(CASE WHEN \"TRCODE\" IN (7,8,9) THEN \"NETTOTAL\" ELSE -\"NETTOTAL\" END) AS net_ciro FROM dbo_LG_411_01_INVOICE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (2,3,7,8,9) AND \"DATE_\" >= '2026-08-01' AND \"DATE_\" < '2026-09-01'",
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "aylik-iskonto-orani-ve-ortalama-fatura-t",
+   "question": "2026 Ocak–Ağustos için ay bazında iskonto oranı ve satış faturası başına ortalama fatura tutarı",
+   "expected_sql": "WITH iskonto AS ( SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay, SUM(CASE WHEN \"LINETYPE\" = 2 THEN \"TOTAL\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \"LINETYPE\" = 0 THEN \"TOTAL\" ELSE 0 END), 0) AS iskonto_orani FROM dbo_LG_411_01_STLINE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (7,8) AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2026-09-01' GROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) ), fatura AS ( SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay, AVG(\"NETTOTAL\") AS ortalama_fatura_tutari, COUNT(*) AS fatura_sayisi FROM dbo_LG_411_01_INVOICE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (7,8,9) AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2026-09-01' GROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) ) SELECT i.ay, i.iskonto_orani, f.ortalama_fatura_tutari, f.fatura_sayisi FROM iskonto i JOIN fatura f ON f.ay = i.ay ORDER BY i.ay",
+   "expected_tables": [
+    "INVOICE",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_01_STLINE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "LINETYPE",
+    "NETTOTAL",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [
+    "FATURA",
+    "ISKONTO"
+   ],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "aylik-siparis-sayisi-ve-tutari",
+   "question": "2026 ay bazında açılan sipariş sayısı ve toplam sipariş tutarı (sipariş fişleri)",
+   "expected_sql": "SELECT DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) AS ay, COUNT(DISTINCT \"LOGICALREF\") AS siparis_sayisi, SUM(\"NETTOTAL\") AS toplam_tutar FROM dbo_LG_411_01_ORFICHE WHERE \"CANCELLED\" = 0 AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2027-01-01' GROUP BY DATEFROMPARTS(YEAR(\"DATE_\"), MONTH(\"DATE_\"), 1) ORDER BY ay",
+   "expected_tables": [
+    "ORFICHE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_ORFICHE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "LOGICALREF",
+    "NETTOTAL"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "en-cok-iade-alan-10-musteri-kimler",
+   "question": "En çok iade alan 10 müşteri kimler?",
+   "expected_sql": "SELECT c.\"CODE\" AS cari_kodu, c.\"DEFINITION_\" AS unvan, SUM(i.\"NETTOTAL\") AS iade_tutari, COUNT(*) AS iade_faturasi FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (2,3) GROUP BY c.\"CODE\", c.\"DEFINITION_\" ORDER BY iade_tutari DESC LIMIT 10",
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_CLCARD"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "CODE",
+    "DEFINITION_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "en-ok-iade-alan-10-m-teri-iade-tutar-ayn",
+   "question": "'En çok iade alan 10 müşteri: iade tutarı, aynı müşterinin 2026 satış tutarı,",
+   "expected_sql": "\"SELECT TOP 10\\n    c.\\\"CODE\\\" AS cari_kodu,\\n    c.\\\"DEFINITION_\\\" AS unvan,\\n\\ \\    ISNULL(c.\\\"SPECODE2\\\", '(boş)') AS satis_kanali,\\n    SUM(CASE WHEN i.\\\"TRCODE\\\"\\ \\ IN (2,3) THEN i.\\\"NETTOTAL\\\" ELSE 0 END) AS iade_tutari,\\n    SUM(CASE WHEN i.\\\"\\ TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE 0 END) AS satis_tutari,\\n    CASE \\n\\ \\        WHEN SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE 0 END)\\ \\ = 0 THEN 0\\n        ELSE SUM(CASE WHEN i.\\\"TRCODE\\\" IN (2,3) THEN i.\\\"NETTOTAL\\\"\\ \\ ELSE 0 END) / SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE 0\\ \\ END)\\n    END AS iade_satis_orani\\nFROM dbo_LG_411_01_INVOICE i\\nJOIN dbo_LG_411_CLCARD\\ \\ c ON c.\\\"LOGICALREF\\\" = i.\\\"CLIENTREF\\\"\\nWHERE i.\\\"CANCELLED\\\" = 0\\n  AND i.\\\"\\ TRCODE\\\" IN (2,3,7,8,9)\\n  AND i.\\\"DATE_\\\" >= '2026-01-01'\\n  AND i.\\\"DATE_\\\" <\\ \\ '2027-01-01'\\nGROUP BY c.\\\"CODE\\\", c.\\\"DEFINITION_\\\", ISNULL(c.\\\"SPECODE2\\\", '(boş)')\\n\\ HAVING SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\" ELSE 0 END) > 1000000\\n\\ ORDER BY iade_tutari DESC\"",
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_CLCARD"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "en-ok-satan-10-kitap-hangileri-adet",
+   "question": "En çok satan 10 kitap hangileri (adet)?",
+   "expected_sql": "SELECT it.\"CODE\" AS stok_kodu, it.\"NAME\" AS kitap, SUM(sl.\"AMOUNT\") AS adet, SUM(sl.\"TOTAL\") AS tutar FROM dbo_LG_411_01_STLINE sl JOIN dbo_LG_411_ITEMS it ON it.\"LOGICALREF\" = sl.\"STOCKREF\" WHERE sl.\"CANCELLED\" = 0 AND sl.\"LINETYPE\" = 0 AND sl.\"TRCODE\" IN (7,8) GROUP BY it.\"CODE\", it.\"NAME\" ORDER BY adet DESC LIMIT 10",
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_STLINE",
+    "DBO_LG_411_ITEMS"
+   ],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "CODE",
+    "LINETYPE",
+    "LOGICALREF",
+    "NAME",
+    "STOCKREF",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "gunluk-satis-tutari-son-gunler-nedir",
+   "question": "Günlük satış tutarı (son günler) nedir?",
+   "expected_sql": "SELECT CAST(\"DATE_\" AS DATE) AS gun, SUM(\"NETTOTAL\") AS satis FROM dbo_LG_411_01_INVOICE WHERE \"CANCELLED\" = 0 AND \"TRCODE\" IN (7,8,9) AND \"DATE_\" >= '2026-08-01' GROUP BY CAST(\"DATE_\" AS DATE) ORDER BY 1",
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE"
+   ],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "kanal-baz-nda-br-t-k-r-marj-sat-hareket-",
+   "question": "'Kanal bazında brüt kâr marjı: satış hareket satırlarında (TRCODE 7,8, LINETYPE",
+   "expected_sql": "\"SELECT \\n    COALESCE(NULLIF(c.\\\"SPECODE2\\\", ''), '(boş)') AS kanal,\\n    SUM(s.\\\"\\ TOTAL\\\") AS maliyetli_ciro,\\n    SUM(s.\\\"AMOUNT\\\" * s.\\\"OUTCOST\\\") AS toplam_maliyet,\\n\\ \\    (1 - SUM(s.\\\"AMOUNT\\\" * s.\\\"OUTCOST\\\") / NULLIF(SUM(s.\\\"TOTAL\\\"), 0)) * 100\\ \\ AS brut_kar_marji_yuzde\\nFROM dbo_LG_411_01_STLINE s\\nJOIN dbo_LG_411_01_INVOICE\\ \\ i ON i.\\\"LOGICALREF\\\" = s.\\\"INVOICEREF\\\"\\nJOIN dbo_LG_411_CLCARD c ON c.\\\"LOGICALREF\\\"\\ \\ = i.\\\"CLIENTREF\\\"\\nWHERE s.\\\"CANCELLED\\\" = 0\\n  AND s.\\\"LINETYPE\\\" = 0\\n  AND\\ \\ s.\\\"OUTCOST\\\" <> 0\\n  AND i.\\\"CANCELLED\\\" = 0\\n  AND i.\\\"TRCODE\\\" IN (7, 8)\\n\\ GROUP BY COALESCE(NULLIF(c.\\\"SPECODE2\\\", ''), '(boş)')\\nHAVING SUM(s.\\\"TOTAL\\\")\\ \\ > 10000000\\nORDER BY brut_kar_marji_yuzde DESC\"",
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE",
+    "DBO_LG_411_01_STLINE",
+    "DBO_LG_411_CLCARD"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "kanal-bazinda-net-ciro-nedir",
+   "question": "Kanal bazında net ciro nedir?",
+   "expected_sql": "SELECT kanal, net_ciro, cari_sayisi FROM v_channel_net ORDER BY net_ciro DESC",
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [
+    "V_CHANNEL_NET"
+   ],
+   "expect_refusal": null,
+   "kind": "view",
+   "source": "validated-pair"
+  },
+  {
+   "id": "m-teri-yo-unla-mas-2026-net-ciroya-sat-e",
+   "question": "'Müşteri yoğunlaşması: 2026 net ciroya (satış eksi iade) göre ilk 10 müşterinin",
+   "expected_sql": "\"WITH customer_net AS (\\n    SELECT \\n        c.\\\"CODE\\\" AS cari_kodu,\\n    \\ \\    c.\\\"DEFINITION_\\\" AS unvan,\\n        COALESCE(NULLIF(c.\\\"SPECODE2\\\", ''), '(boş)')\\ \\ AS kanal_kodu,\\n        SUM(CASE WHEN i.\\\"TRCODE\\\" IN (7,8,9) THEN i.\\\"NETTOTAL\\\"\\ \\ ELSE -i.\\\"NETTOTAL\\\" END) AS net_ciro\\n    FROM dbo_LG_411_01_INVOICE i\\n    JOIN\\ \\ dbo_LG_411_CLCARD c ON c.\\\"LOGICALREF\\\" = i.\\\"CLIENTREF\\\"\\n    WHERE i.\\\"CANCELLED\\\"\\ \\ = 0\\n      AND i.\\\"TRCODE\\\" IN (2,3,7,8,9)\\n      AND i.\\\"DATE_\\\" >= '2026-01-01'\\n\\ \\      AND i.\\\"DATE_\\\" < '2027-01-01'\\n    GROUP BY c.\\\"CODE\\\", c.\\\"DEFINITION_\\\"\\ , COALESCE(NULLIF(c.\\\"SPECODE2\\\", ''), '(boş)')\\n),\\nranked AS (\\n    SELECT \\n\\ \\        cari_kodu,\\n        unvan,\\n        kanal_kodu,\\n        net_ciro,\\n  \\ \\      SUM(net_ciro) OVER (ORDER BY net_ciro DESC ROWS BETWEEN UNBOUNDED PRECEDING\\ \\ AND CURRENT ROW) AS kumulatif_ciro,\\n        SUM(net_ciro) OVER () AS toplam_net_ciro\\n\\ \\    FROM customer_net\\n)\\nSELECT TOP 10\\n    cari_kodu,\\n    unvan,\\n    kanal_kodu,\\n\\ \\    net_ciro,\\n    (net_ciro / NULLIF(toplam_net_ciro, 0)) * 100 AS pay_yuzde,\\n\\ \\    (kumulatif_ciro / NULLIF(toplam_net_ciro, 0)) * 100 AS kumulatif_pay_yuzde\\n\\ FROM ranked\\nORDER BY net_ciro DESC\"",
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE"
+   ],
+   "expected_columns": [],
+   "via_view": [
+    "CUSTOMER_NET",
+    "RANKED"
+   ],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "perakende-trcode-7-ile-toptan-trcode-8-s",
+   "question": "'Perakende (TRCODE 7) ile toptan (TRCODE 8) satışları 2026 ay bazında karşılaştır:",
+   "expected_sql": "\"SELECT \\n    DATEFROMPARTS(YEAR(\\\"DATE_\\\"), MONTH(\\\"DATE_\\\"), 1) AS ay,\\n  \\ \\  SUM(CASE WHEN \\\"TRCODE\\\" = 7 THEN 1 ELSE 0 END) AS perakende_fatura_sayisi,\\n\\ \\    SUM(CASE WHEN \\\"TRCODE\\\" = 7 THEN \\\"NETTOTAL\\\" ELSE 0 END) AS perakende_toplam,\\n\\ \\    SUM(CASE WHEN \\\"TRCODE\\\" = 7 THEN \\\"NETTOTAL\\\" ELSE 0 END) / NULLIF(SUM(CASE\\ \\ WHEN \\\"TRCODE\\\" = 7 THEN 1 ELSE 0 END), 0) AS perakende_ortalama,\\n    SUM(CASE\\ \\ WHEN \\\"TRCODE\\\" = 8 THEN 1 ELSE 0 END) AS toptan_fatura_sayisi,\\n    SUM(CASE\\ \\ WHEN \\\"TRCODE\\\" = 8 THEN \\\"NETTOTAL\\\" ELSE 0 END) AS toptan_toplam,\\n    SUM(CASE\\ \\ WHEN \\\"TRCODE\\\" = 8 THEN \\\"NETTOTAL\\\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \\\"TRCODE\\\"\\ \\ = 8 THEN 1 ELSE 0 END), 0) AS toptan_ortalama,\\n    SUM(CASE WHEN \\\"TRCODE\\\" =\\ \\ 7 THEN \\\"NETTOTAL\\\" ELSE 0 END) / NULLIF(SUM(CASE WHEN \\\"TRCODE\\\" IN (7,8) THEN\\ \\ \\\"NETTOTAL\\\" ELSE 0 END), 0) AS perakende_payi\\nFROM dbo_LG_411_01_INVOICE\\nWHERE\\ \\ \\\"CANCELLED\\\" = 0\\n  AND \\\"TRCODE\\\" IN (7, 8)\\n  AND \\\"DATE_\\\" >= '2026-01-01'\\n\\ \\  AND \\\"DATE_\\\" < '2027-01-01'\\nGROUP BY DATEFROMPARTS(YEAR(\\\"DATE_\\\"), MONTH(\\\"\\ DATE_\\\"), 1)\\nORDER BY 1\"",
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_INVOICE"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "temmuz-2026-da-en-ok-satan-15-kitap-stok",
+   "question": "'Temmuz 2026''da en çok satan 15 kitap: stok kodu, kitap adı, yayınevi, satılan",
+   "expected_sql": "\"SELECT TOP 15\\n    it.\\\"CODE\\\" AS stok_kodu,\\n    it.\\\"NAME\\\" AS kitap_adi,\\n\\ \\    COALESCE(NULLIF(it.\\\"SPECODE\\\", ''), '(boş)') AS yayinevi,\\n    SUM(sl.\\\"AMOUNT\\\"\\ ) AS satilan_adet,\\n    SUM(sl.\\\"TOTAL\\\") AS brut_satir_tutari\\nFROM dbo_LG_411_01_STLINE\\ \\ sl\\nJOIN dbo_LG_411_ITEMS it ON it.\\\"LOGICALREF\\\" = sl.\\\"STOCKREF\\\"\\nWHERE sl.\\\"\\ CANCELLED\\\" = 0\\n  AND sl.\\\"LINETYPE\\\" = 0\\n  AND sl.\\\"TRCODE\\\" = 8\\n  AND sl.\\\"\\ DATE_\\\" >= '2026-07-01'\\n  AND sl.\\\"DATE_\\\" < '2026-08-01'\\nGROUP BY it.\\\"CODE\\\"\\ , it.\\\"NAME\\\", COALESCE(NULLIF(it.\\\"SPECODE\\\", ''), '(boş)')\\nORDER BY SUM(sl.\\\"\\ AMOUNT\\\") DESC\"",
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_STLINE",
+    "DBO_LG_411_ITEMS"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "yay-nevi-baz-nda-2026-ytd-net-ciro-sat-s",
+   "question": "Yayınevi bazında 2026 YTD net ciro (satış satırları eksi iade satırları), satılan",
+   "expected_sql": "\"SELECT \\n    COALESCE(NULLIF(it.\\\"SPECODE\\\", ''), '(boş)') AS yayinevi,\\n  \\ \\  SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (7,8) THEN sl.\\\"TOTAL\\\" ELSE -sl.\\\"TOTAL\\\" END)\\ \\ AS net_ciro,\\n    SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (7,8) THEN sl.\\\"AMOUNT\\\" ELSE\\ \\ 0 END) AS satilan_adet,\\n    SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (2,3) THEN sl.\\\"AMOUNT\\\"\\ \\ ELSE 0 END) AS iade_adedi,\\n    SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (2,3) THEN sl.\\\"\\ AMOUNT\\\" ELSE 0 END) / NULLIF(SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (7,8) THEN sl.\\\"AMOUNT\\\"\\ \\ ELSE 0 END), 0) AS adet_iade_orani,\\n    1 - SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (7,8)\\ \\ AND sl.\\\"OUTCOST\\\" <> 0 THEN sl.\\\"AMOUNT\\\" * sl.\\\"OUTCOST\\\" ELSE 0 END) / NULLIF(SUM(CASE\\ \\ WHEN sl.\\\"TRCODE\\\" IN (7,8) AND sl.\\\"OUTCOST\\\" <> 0 THEN sl.\\\"TOTAL\\\" ELSE 0 END),\\ \\ 0) AS brut_kar_marji\\nFROM dbo_LG_411_01_STLINE sl\\nJOIN dbo_LG_411_ITEMS it ON\\ \\ it.\\\"LOGICALREF\\\" = sl.\\\"STOCKREF\\\"\\nWHERE sl.\\\"CANCELLED\\\" = 0 \\n  AND sl.\\\"\\ LINETYPE\\\" = 0 \\n  AND sl.\\\"TRCODE\\\" IN (2,3,7,8)\\n  AND sl.\\\"DATE_\\\" >= '2026-01-01'\\ \\ \\n  AND sl.\\\"DATE_\\\" < '2027-01-01'\\nGROUP BY COALESCE(NULLIF(it.\\\"SPECODE\\\",\\ \\ ''), '(boş)')\\nHAVING SUM(CASE WHEN sl.\\\"TRCODE\\\" IN (7,8) THEN sl.\\\"TOTAL\\\" ELSE\\ \\ -sl.\\\"TOTAL\\\" END) > 20000000\\nORDER BY brut_kar_marji DESC\"",
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [
+    "DBO_LG_411_01_STLINE",
+    "DBO_LG_411_ITEMS"
+   ],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "validated-pair"
+  },
+  {
+   "id": "yayinevi-bazinda-net-ciro-ve-brut-k-r-ma",
+   "question": "Yayınevi bazında net ciro ve brüt kâr marjı nedir?",
+   "expected_sql": "SELECT yayinevi, baslik, net_ciro, satilan_adet, iade_adet, 1 - maliyet / NULLIF(maliyetli_ciro, 0) AS brut_kar_marji FROM v_imprint_perf ORDER BY net_ciro DESC",
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [
+    "V_IMPRINT_PERF"
+   ],
+   "expect_refusal": null,
+   "kind": "view",
+   "source": "validated-pair"
+  },
+  {
+   "id": "gecen-y-la-gore-bu-y-l-ciromuz-nas-l-g",
+   "question": "Geçen yıla göre bu yıl ciromuz nasıl gidiyor?",
+   "expected_sql": null,
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "iki yıl yan yana; iki yıl tablosunu da okur"
+  },
+  {
+   "id": "2024-ile-2026-aras-ndaki-toplam-ciromu",
+   "question": "2024 ile 2026 arasındaki toplam ciromuz ne kadar?",
+   "expected_sql": null,
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "tek aralık, üç yıl tablosuna yayılır"
+  },
+  {
+   "id": "bu-y-l-n-ilk-alt-ay-gecen-y-l-n-ilk-al",
+   "question": "Bu yılın ilk altı ayı geçen yılın ilk altı ayına göre ne durumda?",
+   "expected_sql": null,
+   "expected_tables": [
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "yıl sınırını aşan karşılaştırma"
+  },
+  {
+   "id": "iyilik-timi-kitab-ndan-bu-y-l-kac-adet",
+   "question": "İyilik Timi kitabından bu yıl kaç adet sattık?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "DATE_",
+    "LOGICALREF",
+    "NAME",
+    "STOCKREF",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "kitap adı ITEMS.NAME içinde bir değer"
+  },
+  {
+   "id": "e-ticaret-kanal-ndan-gelen-ciro-ne-kad",
+   "question": "E-TİCARET kanalından gelen ciro ne kadar?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "kanal CLCARD.SPECODE2 içinde bir değer (E-TICARET)"
+  },
+  {
+   "id": "timas-cocuk-yay-nlar-n-n-bu-y-lki-sat-",
+   "question": "Timaş Çocuk yayınlarının bu yılki satışı ne kadar?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "DATE_",
+    "LOGICALREF",
+    "SPECODE",
+    "STOCKREF",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "yayınevi/marka ITEMS.SPECODE içinde bir değer"
+  },
+  {
+   "id": "e-ticaretin-toplam-ciro-icindeki-pay-y",
+   "question": "E-ticaretin toplam ciro içindeki payı yüzde kaç?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "oran: pay, payda ve yüzde birlikte"
+  },
+  {
+   "id": "bu-y-l-hic-sat-lmayan-kitaplar-m-z-han",
+   "question": "Bu yıl hiç satılmayan kitaplarımız hangileri?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CODE",
+    "DATE_",
+    "LOGICALREF",
+    "NAME",
+    "STOCKREF"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "yokluk: NOT EXISTS / LEFT JOIN … IS NULL"
+  },
+  {
+   "id": "bu-y-l-kac-farkl-musteriye-sat-s-yapt-",
+   "question": "Bu yıl kaç farklı müşteriye satış yaptık?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "tekil sayım: join üzerinden COUNT(*) şişer"
+  },
+  {
+   "id": "en-cok-iade-alan-5-yay-nevimiz-hangisi",
+   "question": "En çok iade alan 5 yayınevimiz hangisi?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "DATE_",
+    "LOGICALREF",
+    "SPECODE",
+    "STOCKREF",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "iade = TRCODE (2,3); kırılım yayınevi"
+  },
+  {
+   "id": "2010-y-l-nda-ciromuz-ne-kadard",
+   "question": "2010 yılında ciromuz ne kadardı?",
+   "expected_sql": null,
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": "OUT_OF_SCOPE",
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "bu kurulumda 2010 verisi yok — boş sonuç değil, kapsam dışı denmeli"
+  },
+  {
+   "id": "bu-y-l-performans-m-z-iyi-mi",
+   "question": "Bu yıl performansımız iyi mi?",
+   "expected_sql": null,
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": "VAGUE",
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "hangi ölçü, hangi kırılım belli değil"
+  },
+  {
+   "id": "bu-y-lki-churn-oran-m-z-nedir",
+   "question": "Bu yılki churn oranımız nedir?",
+   "expected_sql": null,
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": "UNKNOWN_TERM",
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "churn bu katalogda tanımlı bir kavram değil"
+  },
+  {
+   "id": "kac-cal-san-m-z-var",
+   "question": "Kaç çalışanımız var?",
+   "expected_sql": null,
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": "UNKNOWN_TERM",
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "Logo personel tablolari (LG_*_EMPLOYEE) var ama hepsi bos: 0 satir. Bos tablolar taramaya girmedigi icin katalogda yoklar, yani terim cozumlenemez. Dogru cevap sayi uydurmak degil, cevaplayamadigini soylemek."
+  },
+  {
+   "id": "yar-n-hava-nas-l-olacak",
+   "question": "Yarın hava nasıl olacak?",
+   "expected_sql": null,
+   "expected_tables": [],
+   "expected_physical_tables": [],
+   "expected_columns": [],
+   "via_view": [],
+   "expect_refusal": "OUT_OF_TOPIC",
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "veri kaynağı dışında; sistem kendisi hakkında da konuşmamalı"
+  },
+  {
+   "id": "trendyol-dan-bu-y-l-ne-kadar-sat-s-yap",
+   "question": "Trendyol'dan bu yıl ne kadar satış yaptık?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "DEFINITION_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "pazaryeri adı CLCARD.DEFINITION_ içinde geçer, ayrı bir alan değil"
+  },
+  {
+   "id": "amazon-ve-trendyol-dan-gelen-ciroyu-ka",
+   "question": "Amazon ve Trendyol'dan gelen ciroyu karşılaştır",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "DEFINITION_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "iki pazaryeri yan yana"
+  },
+  {
+   "id": "pazaryeri-sat-slar-n-n-toplam-ciro-ici",
+   "question": "Pazaryeri satışlarının toplam ciro içindeki payı nedir?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "DEFINITION_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "oran; 'pazaryeri' tanımlı bir kavram değilse reddedilmeli — hangisi olduğu bir iş kararı"
+  },
+  {
+   "id": "kitapc-lar-m-e-ticaret-mi-daha-cok-sat",
+   "question": "Kitapçılar mı e-ticaret mi daha çok satıyor?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "iki kanal kodu karşılaştırması (KITAPCI / E-TICARET)"
+  },
+  {
+   "id": "bayi-kanal-ndan-bu-y-l-kac-adet-kitap-",
+   "question": "Bayi kanalından bu yıl kaç adet kitap gitti?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "adet STLINE'da, kanal CLCARD'da — join gerekir"
+  },
+  {
+   "id": "yurtd-s-sat-slar-m-z-gecen-y-la-gore-n",
+   "question": "Yurtdışı satışlarımız geçen yıla göre nasıl?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "INVOICE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "NETTOTAL",
+    "SPECODE2",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "kanal + yıl sınırını aşan karşılaştırma"
+  },
+  {
+   "id": "her-kanalda-ortalama-siparis-tutar-m-z",
+   "question": "Her kanalda ortalama sipariş tutarımız ne kadar?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "ORFICHE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "SPECODE2"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "sipariş fişi başına ortalama; satır tablosuyla çarpılırsa şişer"
+  },
+  {
+   "id": "cocuk-kitaplar-m-z-hangi-kanalda-daha-",
+   "question": "Çocuk kitaplarımız hangi kanalda daha çok satıyor?",
+   "expected_sql": null,
+   "expected_tables": [
+    "CLCARD",
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "CLIENTREF",
+    "DATE_",
+    "LOGICALREF",
+    "SPECODE",
+    "SPECODE2",
+    "STOCKREF",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "üç tablo: ürün kategorisi × kanal"
+  },
+  {
+   "id": "hangi-kitab-m-zdan-en-cok-iade-geliyor",
+   "question": "Hangi kitabımızdan en çok iade geliyor?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "CODE",
+    "DATE_",
+    "LOGICALREF",
+    "NAME",
+    "STOCKREF",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "iade TRCODE (2,3); kırılım kitap"
+  },
+  {
+   "id": "bir-kitab-n-ortalama-sat-s-fiyat-ne-ka",
+   "question": "Bir kitabın ortalama satış fiyatı ne kadar?",
+   "expected_sql": null,
+   "expected_tables": [
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "DATE_",
+    "TOTAL",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "tutar/adet — iki toplamın oranı, satır ortalaması değil"
+  },
+  {
+   "id": "en-cok-satan-10-kitab-m-z-n-kac-timas-",
+   "question": "En çok satan 10 kitabımızın kaçı Timaş Çocuk'tan?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "STLINE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "AMOUNT",
+    "CANCELLED",
+    "DATE_",
+    "LOGICALREF",
+    "NAME",
+    "SPECODE",
+    "STOCKREF",
+    "TRCODE"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "sıralama + değere göre filtre birlikte"
+  },
+  {
+   "id": "hic-siparis-edilmemis-kitaplar-m-z-var",
+   "question": "Hiç sipariş edilmemiş kitaplarımız var mı?",
+   "expected_sql": null,
+   "expected_tables": [
+    "ITEMS",
+    "ORFICHE"
+   ],
+   "expected_physical_tables": [],
+   "expected_columns": [
+    "CODE",
+    "DATE_",
+    "LOGICALREF",
+    "NAME"
+   ],
+   "via_view": [],
+   "expect_refusal": null,
+   "kind": "base-table",
+   "source": "user-authored",
+   "note": "yokluk, sipariş tarafında"
+  }
+ ]
+}

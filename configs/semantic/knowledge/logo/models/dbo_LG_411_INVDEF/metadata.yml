@@ -1,0 +1,42 @@
+# Generated from the vendor data dictionary by backend/scripts/export_dictionary_models.py.
+# Column meanings, code sets, keys and joins are read from configs/schemas/logo-ldds.json at
+# load time and are deliberately not copied here. Do not edit; re-run the generator.
+generated: true
+name: "dbo_LG_411_INVDEF"
+table_reference:
+  catalog: "LOGO_DB"
+  schema: "dbo"
+  table: "LG_411_INVDEF"
+properties:
+  "displayName": "dbo.LG_411_INVDEF"
+columns:
+  - name: "LOGICALREF"
+    type: "INTEGER"
+  - name: "INVENNO"
+    type: "SMALLINT"
+  - name: "ITEMREF"
+    type: "INTEGER"
+  - name: "MINLEVEL"
+    type: "FLOAT8"
+  - name: "MAXLEVEL"
+    type: "FLOAT8"
+  - name: "SAFELEVEL"
+    type: "FLOAT8"
+  - name: "LOCATIONREF"
+    type: "INTEGER"
+  - name: "PERCLOSEDATE"
+    type: "INTEGER"
+  - name: "ABCCODE"
+    type: "SMALLINT"
+  - name: "MINLEVELCTRL"
+    type: "SMALLINT"
+  - name: "MAXLEVELCTRL"
+    type: "SMALLINT"
+  - name: "SAFELEVELCTRL"
+    type: "SMALLINT"
+  - name: "NEGLEVELCTRL"
+    type: "SMALLINT"
+  - name: "IOCTRL"
+    type: "SMALLINT"
+  - name: "VARIANTREF"
+    type: "INTEGER"

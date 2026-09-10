@@ -141,9 +141,11 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                 WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
                   AND table_type IN ('BASE TABLE', 'VIEW')
                 ORDER BY table_schema, table_name
-                LIMIT 300
                 """
             )
+            # Every table, and every column of every table. Both used to be capped (300 and 80), and
+            # a capped answer is indistinguishable from a smaller database: an ERP table runs to
+            # 100-222 columns, so the column cap alone hid two thirds of the largest table there is.
             rels = list(cur.fetchall())
             tables: list[dict[str, Any]] = []
             nodes: list[dict[str, Any]] = []
@@ -157,7 +159,6 @@ def fetch_schema(datasource_id: str) -> dict[str, Any]:
                     FROM information_schema.columns
                     WHERE table_schema = %s AND table_name = %s
                     ORDER BY ordinal_position
-                    LIMIT 80
                     """,
                     (sch, name),
                 )

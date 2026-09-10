@@ -71,4 +71,11 @@ export default defineConfig({
       },
     },
   },
+  // Vitest okur. Setup dosyası sözlüğü bir kez yükler; testler senkron çeviri beklediği için
+  // olmadan beş test ilk çalıştırmada anahtarın kendisini görüp düşüyordu.
+  test: {
+    environment: 'node',
+    setupFiles: ['tests/vitest.setup.ts'],
+    exclude: ['node_modules/**', 'dist/**', '.claude/**', 'apps/**'],
+  },
 });

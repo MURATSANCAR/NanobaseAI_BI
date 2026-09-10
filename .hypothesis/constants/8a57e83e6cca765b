@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/runtime/periods.py
+# hypothesis_version: 6.168.0
+
+[', ', '; ', 'describe', 'duplicates_of', 'spans', 'tables_for', 'undated']

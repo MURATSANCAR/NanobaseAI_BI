@@ -75,6 +75,9 @@ def run_index(cfg: IndexerConfig) -> ScanReport:
         upserted=upserted,
         soft_deleted=soft_deleted,
         elapsed_s=round(time.time() - t0, 2),
+        tables_discovered=cfg.discovered_tables or len(tables),
+        tables_truncated=len(cfg.truncated_tables),
+        truncated_sample=cfg.truncated_tables[:50],
         points_count=writer.points_count(),
         sample_docs=[d.to_dict() for d in docs[:3]],
         errors=errors,
@@ -97,7 +100,9 @@ def run_index(cfg: IndexerConfig) -> ScanReport:
             json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
     print(
-        f"[schema-indexer] ds={ds} tables={report.tables_scanned} docs={report.documents_total} "
+        f"[schema-indexer] ds={ds} tables={report.tables_scanned}/{report.tables_discovered} "
+        f"{'(TRUNCATED %d) ' % report.tables_truncated if report.tables_truncated else ''}"
+        f"docs={report.documents_total} "
         f"embed={embedded} skip={skipped} delete={soft_deleted} "
         f"points={report.points_count} → {path}"
     )

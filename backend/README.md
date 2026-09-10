@@ -28,6 +28,31 @@ cp .env.example .env
 ./scripts/stop.sh
 ```
 
+## Semantic catalog
+
+The catalog is built here, on our own machines, from the knowledge pack — it reads files in this
+repository and never touches a customer database. The semantic layer imports none of DB-GPT, so it
+installs on its own in seconds:
+
+```bash
+cd backend
+./scripts/setup.sh --semantic-only          # .venv from requirements-semantic.txt (Python 3.11)
+./scripts/build-semantic-catalog.sh         # profile → mine → certify → status
+.venv/bin/python -m pytest semantic_layer/tests/ -q
+```
+
+The store lands in gitignored `backend/var/semantic_layer.db`; it is derived from the pack and the
+source, so it is rebuilt rather than committed. `SEMANTIC_STORE_DSN` overrides it (Postgres in the
+deployment). Pointing the pipeline at a live source is a separate, deliberate act — set
+`SEMANTIC_CONNECTION_FILE` — and installs that source's driver (`pyodbc`, `psycopg2`).
+
+The Logo vendor dictionary behind the catalog is regenerated from the workbook and the Turkish
+structure document:
+
+```bash
+python backend/scripts/import_logo_ldds.py LDDS.xls --doc LOGO_TABLE_YAPISI.DOC
+```
+
 Manual pieces:
 
 ```bash

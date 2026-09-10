@@ -1,0 +1,4 @@
+# file: /Users/msancar/Documents/GitHub/NonobaseAI-BI/backend/semantic_layer/history/sources.py
+# hypothesis_version: 6.168.0
+
+[0.2, 1.0, '*.md', 'created_at', 'datasource', 'datasource_id', 'docs', 'human_verified', 'id', 'knowledge', 'nl', 'out', 'pair_', 'pairs', 'pairs-export.yml', 'question', 'runtime_validated', 'seed', 'source', 'sql', 'sql_text', 'user', 'utf-8', 'version']
