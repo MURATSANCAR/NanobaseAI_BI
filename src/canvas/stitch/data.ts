@@ -13,7 +13,6 @@ export type StitchCanvasData = {
   source: string;
   presence: string;
   zoom: string;
-  minimap: string;
   askPlaceholder: string;
   rail: StitchRailItem[];
   dockLinks: Array<{ to: string; active?: boolean; dot?: boolean }>;

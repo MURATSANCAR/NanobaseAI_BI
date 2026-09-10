@@ -1,7 +1,9 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
-import { alertsData, boardsData, overviewData, schedulesData } from '@/canvas/stitch/screens';
+import { alertsData, boardsData, cfoData, overviewData, schedulesData } from '@/canvas/stitch/screens';
+import { useCfoData } from '@/canvas/cfo';
+import { ENGINE_ENABLED } from '@/canvas/engine';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
@@ -24,7 +26,8 @@ export default function BiCanvasPage() {
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
   const boards = dashboards.data?.dashboards ?? [];
   const status = analyticsStatus.data;
-  const source = on ? 'Portal API · canlı' : 'Bağlantı yok';
+  const cfo = useCfoData();
+  const source = ENGINE_ENABLED ? 'Logo · semantic bridge' : on ? 'Portal API · canlı' : 'Bağlantı yok';
 
   // Tasarım 1440×1000 sabit. Küçük ekranda yeniden akıtmak yerine sahne olduğu
   // gibi ölçekleniyor; yerleşim, eğimler ve bağlantılar bozulmuyor.
@@ -49,6 +52,9 @@ export default function BiCanvasPage() {
   const d = useMemo(() => {
     const z = `%${Math.round(scale * 100)}`;
     if (!isScreen(screen)) {
+      // Genel bakış CFO ekranıdır: rakamlar Logo'dan gelir. Motor yolu tanımlı
+      // değilse (örn. /bi/ altında) portal özetine düşer.
+      if (ENGINE_ENABLED) return { ...cfoData(cfo, source), zoom: z };
       const loading = schedules.isLoading || alerts.isLoading || analyticsStatus.isLoading;
       return { ...overviewData(sched, alert, status, boards.length, loading, source), zoom: z };
     }
@@ -57,6 +63,7 @@ export default function BiCanvasPage() {
     return { ...boardsData(status, boards, dashboards.isLoading, source), zoom: z };
   }, [
     screen,
+    cfo,
     sched,
     alert,
     status,

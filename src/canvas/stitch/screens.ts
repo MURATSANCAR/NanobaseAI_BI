@@ -1,5 +1,6 @@
 import type { AlertSummary, ScheduleSummary } from '../data';
-import { conditionLabel, dateTime, num, recurrenceLabel, relative } from '../format';
+import { conditionLabel, dateTime, money, num, recurrenceLabel, relative } from '../format';
+import type { CfoData } from '../cfo';
 import type { StitchArc, StitchCanvasData, StitchRailItem } from './data';
 
 /** Halka dilimleri: çevre 87.96 (2πr, r=14). Paylar değerlerden hesaplanır. */
@@ -63,7 +64,6 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   source,
   presence: 'canlı veri',
   zoom: '%100',
-  minimap: '1440 × 1000',
   askPlaceholder: ask,
   rail: rail(),
   dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
@@ -549,4 +549,144 @@ export function overviewData(
       foot: 'portal API · canlı',
     },
   };
+}
+
+/* --------------------------- CFO · Genel bakış --------------------------- */
+
+
+const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const trPct = (v: number | null, d = 1) => (v == null ? '—' : `%${v.toFixed(d).replace('.', ',')}`);
+
+/**
+ * CFO ekranı: canlı Logo rakamları. Metinler kısa tutulur; kart başına tek
+ * cümle, gerisi sayı. Veri gelmiyorsa kart sayı uydurmaz, durumu yazar.
+ */
+export function cfoData(c: CfoData, source: string): StitchCanvasData {
+  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Motor yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+  const yok = (v: string) => (durum ? '—' : v);
+  const son = c.totals?.son_fatura?.slice(0, 10);
+  const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';
+  const lastFull = c.months.filter((m) => m.ay < c.observedMonths).slice(-1)[0];
+  const prevSame = c.prevMonths.find((m) => m.ay === lastFull?.ay);
+  const monthYoY = lastFull && prevSame && prevSame.net_ciro > 0 ? (lastFull.net_ciro / prevSame.net_ciro - 1) * 100 : null;
+
+  const net = (t: number) => c.channels.find((x) => x.trcode === t)?.net_ciro ?? 0;
+  const toptan = net(8);
+  const perakende = net(7);
+  const diger = net(9);
+  const iade = Math.abs(net(2) + net(3));
+
+  const top = c.customers[0];
+  const item = c.items[0];
+  const last3 = c.months.slice(-3);
+
+  return {
+    ...base('Genel bakış', source, 'ZEKİ’ye sor… örn. bu ay kanal bazında net ciro', {
+      initials: 'TY',
+      role: `Timaş Yayınları · ${c.year}`,
+      at: durum || `${sonTR} itibarıyla`,
+      text: '“Bu yıl nasıl gidiyoruz?”',
+    }),
+    c1: {
+      icon: '💰',
+      title: 'Net ciro',
+      badge: c.yoyPct == null ? String(c.year) : `${c.yoyPct >= 0 ? '+' : ''}${trPct(c.yoyPct)}`,
+      big: yok(money(c.netYtd)),
+      bigSuffix: '₺',
+      subLabel: 'Geçen yıl aynı dönem:',
+      subValue: yok(`${money(c.netPrevSame)} ₺`),
+      pct: (c.observedMonths / 12) * 100,
+      footL: `${c.observedMonths || 0} / 12 ay`,
+      footR: `Veri: ${sonTR}`,
+      rowLabel: 'Aylık ortalama:',
+      rowValue: yok(`${money(c.observedMonths ? c.netYtd / c.observedMonths : 0)} ₺`),
+    },
+    c2: {
+      title: 'Aylık seyir',
+      badge: `${c.observedMonths || 0} ay`,
+      label: lastFull ? `${AY[lastFull.ay - 1]} (son tam ay)` : 'Ay verisi yok',
+      big: yok(money(lastFull?.net_ciro ?? 0)),
+      unit: '₺',
+      delta: monthYoY == null ? '—' : `${monthYoY >= 0 ? '+' : ''}${trPct(monthYoY)}`,
+      tick1: last3[0] ? `${AY[last3[0].ay - 1]} ${money(last3[0].net_ciro)}` : '—',
+      tick2: last3[1] ? `${AY[last3[1].ay - 1]} ${money(last3[1].net_ciro)}` : '—',
+      tick3: last3[2] ? `${AY[last3[2].ay - 1]} ${money(last3[2].net_ciro)}` : '—',
+      foot: `Kaynak: ${prefixLabel(c.year)}_01_INVOICE`,
+      ...spark(c.months.map((m) => m.net_ciro)),
+    },
+    c3: {
+      title: 'Kanal dağılımı',
+      badge: `${c.year} · brüt`,
+      center: yok(money(toptan + perakende + diger + iade)),
+      arcs: arcs([toptan, perakende, diger, iade]),
+      rows: [
+        { label: 'Toptan:', value: yok(money(toptan)) },
+        { label: 'Perakende:', value: yok(money(perakende)) },
+        { label: 'Diğer:', value: yok(money(diger)) },
+        { label: 'İade:', value: yok(money(iade)) },
+      ],
+      footLabel: 'İade oranı:',
+      footValue: yok(trPct(c.returnPct)),
+    },
+    c4: {
+      title: 'En büyük cari',
+      badge: top && c.netYtd > 0 ? trPct((top.net_ciro / c.netYtd) * 100) : '—',
+      initials: (top?.cari ?? '??').slice(0, 2).toUpperCase(),
+      name: top?.cari ?? yok('Cari yok'),
+      sub: `${c.customers.length} cari listelendi`,
+      valueLabel: 'Net ciro:',
+      value: yok(`${money(top?.net_ciro ?? 0)} ₺`),
+      note: c.customers[1] ? `2. ${c.customers[1].cari.slice(0, 22)}` : '',
+      footLabel: 'İlk 5 payı:',
+      footValue:
+        c.netYtd > 0 ? trPct((c.customers.reduce((a, x) => a + x.net_ciro, 0) / c.netYtd) * 100) : '—',
+    },
+    c5: {
+      title: 'Kanıt & Kaynak',
+      badge: durum ? 'Bağlantı' : 'Canlı',
+      summary: durum || `${money(c.units?.satir ?? 0)} satır · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
+      rows: [
+        { name: `${prefixLabel(c.year)}_01_INVOICE`, tag: 'Fatura' },
+        { name: `${prefixLabel(c.year)}_01_STLINE`, tag: 'Satır' },
+        { name: `${prefixLabel(c.year)}_CLCARD`, tag: 'Cari' },
+      ],
+      latency: durum ? '—' : 'semantic bridge',
+    },
+    main: {
+      badge: 'ZEKİ AI ÖZETİ',
+      subject: `Net ciro · ${c.year}`,
+      model: durum || `${sonTR} itibarıyla`,
+      text: durum
+        ? `“${durum}.”`
+        : `“${money(c.netYtd)} ₺ net ciro, geçen yılın aynı dönemine göre ${trPct(c.yoyPct)}. İade oranı ${trPct(c.returnPct)}.”`,
+      m1: { label: 'Satılan adet:', value: yok(money(c.units?.satilan_adet ?? 0)) },
+      m2: { label: 'Fatura:', value: yok(money(c.totals?.toplam_fatura ?? 0)) },
+      m3: { label: 'İade faturası:', value: yok(money(c.totals?.iade_fatura ?? 0)) },
+      primary: 'Verine sor',
+      primaryTo: '/bi/chat',
+      secondary: 'Uyarılar',
+      secondaryTo: '/bi/canvas/uyarilar',
+      note: `${c.observedMonths || 0} ay gerçekleşti`,
+    },
+    sticker: {
+      kicker: 'En çok satan',
+      meta: item ? `${money(item.adet)} adet` : '—',
+      title: item?.urun ?? yok('VERİ YOK'),
+      sub: item?.kod ?? '',
+      footL: 'net ciro',
+      footR: item ? `${money(item.net_ciro)} ₺` : '—',
+      badge: 'İlk sıra ★',
+    },
+    ghost: {
+      title: 'Önceki: İade',
+      badge: trPct(c.returnPct),
+      text: `“${money(iade)} ₺ iade, brüt satışın ${trPct(c.returnPct)}'i.”`,
+      foot: `${money(c.totals?.iade_fatura ?? 0)} iade faturası`,
+    },
+  };
+}
+
+/** Logo firma öneki etiketi (2026 → LG_411). */
+function prefixLabel(year: number): string {
+  return year >= 2026 ? 'LG_411' : 'LG_211';
 }

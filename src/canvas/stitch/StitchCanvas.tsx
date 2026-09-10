@@ -689,30 +689,7 @@ export default function StitchCanvas({
         </div>
       </div>
 
-      {/* ================= RIGHT EDGE BOTTOM: CANVAS MINIMAP ================= */}
-      <div className="absolute right-7 bottom-6 z-30 glass-panel p-2.5 rounded-2xl shadow-glass-float w-[150px] border border-white">
-        <div className="flex items-center justify-between text-[9px] font-extrabold text-muted mb-1.5 uppercase tracking-wider">
-          <span>Tuval Haritası</span>
-          <span className="text-ink">{d.minimap}</span>
-        </div>
-        {/* Mini radar screen */}
-        <div className="w-full h-20 bg-slate-100/90 rounded-xl relative overflow-hidden border border-slate-200/60 p-1">
-          {/* Viewport rect indicator */}
-          <div className="absolute inset-1.5 border border-violet/70 bg-violet/10 rounded pointer-events-none"></div>
-          {/* Card dots representation */}
-          <div className="absolute left-6 top-3 w-3 h-2 bg-coral/60 rounded-sm"></div>
-          <div className="absolute left-10 top-3 w-3 h-2 bg-violet/60 rounded-sm"></div>
-          <div className="absolute left-14 top-3 w-3 h-2 bg-mintSuccess/60 rounded-sm"></div>
-          <div className="absolute left-18 top-3 w-3 h-2 bg-amberWarn/60 rounded-sm"></div>
-          <div className="absolute left-22 top-3 w-3 h-2 bg-slate-400/60 rounded-sm"></div>
-          {/* Center decision card */}
-          <div className="absolute left-9 top-9 w-12 h-5 bg-ink/70 rounded-sm"></div>
-          {/* Ghost cluster dot */}
-          <div className="absolute right-1 top-4 w-4 h-3 bg-slate-300 rounded-sm"></div>
-        </div>
-      </div>
-
-    </main>
+      </main>
     </div>
   );
 }
