@@ -16,6 +16,7 @@ export type StitchCanvasData = {
   minimap: string;
   askPlaceholder: string;
   rail: StitchRailItem[];
+  dockLinks: Array<{ to: string; active?: boolean; dot?: boolean }>;
   dock: [string, string, string, string];
   q: { initials: string; role: string; at: string; text: string };
   c1: {
@@ -86,7 +87,9 @@ export type StitchCanvasData = {
     m2: StitchRow;
     m3: StitchRow;
     primary: string;
+    primaryTo: string;
     secondary: string;
+    secondaryTo: string;
     note: string;
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };

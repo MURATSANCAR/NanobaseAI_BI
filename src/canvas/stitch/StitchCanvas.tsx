@@ -12,7 +12,15 @@ import type { StitchCanvasData } from './data';
  * Buraya elle düzen değişikliği YAPILMAZ. Tasarım değişecekse Stitch'te
  * değişir, dosya yeniden çevrilir.
  */
-export default function StitchCanvas({ d, onAsk: onSubmitAsk }: { d: StitchCanvasData; onAsk?: (q: string) => void }) {
+export default function StitchCanvas({
+  d,
+  onAsk: onSubmitAsk,
+  onZoom,
+}: {
+  d: StitchCanvasData;
+  onAsk?: (q: string) => void;
+  onZoom?: (delta: number) => void;
+}) {
   const [ask, setAsk] = useState('');
   const onAsk = () => {
     const q = ask.trim();
@@ -64,9 +72,9 @@ export default function StitchCanvas({ d, onAsk: onSubmitAsk }: { d: StitchCanva
 
         {/* Canvas Zoom Indicator & Controls */}
         <div className="glass-panel px-3 py-1.5 rounded-full shadow-glass-float flex items-center gap-2 text-xs font-semibold text-ink">
-          <button className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
+          <button type="button" aria-label="Uzaklaştır" onClick={() => onZoom?.(-0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
           <span className="text-xs font-bold w-9 text-center text-ink">{d.zoom}</span>
-          <button className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
+          <button type="button" aria-label="Yakınlaştır" onClick={() => onZoom?.(0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
         </div>
       </div>
     </header>
@@ -536,7 +544,7 @@ export default function StitchCanvas({ d, onAsk: onSubmitAsk }: { d: StitchCanva
           <div className="flex items-start gap-6">
           
             {/* REQUIRED 160x140 area for brand-motion-slot */}
-            <div id="brand-motion-slot" className="w-[160px] h-[140px] shrink-0 rounded-2xl bg-gradient-to-br from-violet/10 via-coral/10 to-amberWarn/15 border border-white flex flex-col items-center justify-center relative overflow-hidden shadow-inner group"><img src={zekiGif} alt="ZEKİ AI — Timaş Yayınları" width="960" height="600" style={{display: 'block', width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit'}} /></div>
+            <div id="brand-motion-slot" className="w-[160px] h-[140px] shrink-0 rounded-2xl bg-gradient-to-br from-violet/10 via-coral/10 to-amberWarn/15 border border-white flex flex-col items-center justify-center relative overflow-hidden shadow-inner group"><img src={zekiGif} alt="ZEKİ AI — Timaş Yayınları" width="960" height="600" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }} /></div>
 
             {/* Decision Content & Recommended Actions */}
             <div className="flex-1 flex flex-col justify-between min-h-[140px]">
@@ -564,16 +572,16 @@ export default function StitchCanvas({ d, onAsk: onSubmitAsk }: { d: StitchCanva
               {/* Action Buttons */}
               <div className="mt-4 flex items-center gap-3">
                 {/* Primary Gradient Action */}
-                <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
+                <Link to={d.main.primaryTo} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                   {d.main.primary}
-                </button>
+                </Link>
 
                 {/* Ghost Secondary Action */}
-                <button className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-ink text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
+                <Link to={d.main.secondaryTo} className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-ink text-xs font-bold transition-all flex items-center gap-1.5 active:scale-95">
                   <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" /></svg>
                   {d.main.secondary}
-                </button>
+                </Link>
 
                 <div className="ml-auto text-[11px] text-muted/80 font-medium">
                   {d.main.note}
@@ -644,20 +652,21 @@ export default function StitchCanvas({ d, onAsk: onSubmitAsk }: { d: StitchCanva
         
           {/* 4 Quick Module Chips */}
           <div className="flex items-center gap-1.5 pl-1 shrink-0 border-r border-slate-200/80 pr-3">
-            <button className="px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20">
-              <span className="w-2 h-2 rounded-full bg-violet"></span>
-              {d.dock[0]}
-            </button>
-            <button className="px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition">
-              {d.dock[1]}
-            </button>
-            <button className="px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition flex items-center gap-1">
-              <span>{d.dock[2]}</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-amberWarn"></span>
-            </button>
-            <button className="px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition">
-              {d.dock[3]}
-            </button>
+            {d.dockLinks.map((c, i) => (
+              <Link
+                key={c.to}
+                to={c.to}
+                className={
+                  c.active
+                    ? 'px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20'
+                    : 'px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition flex items-center gap-1'
+                }
+              >
+                {c.active && <span className="w-2 h-2 rounded-full bg-violet"></span>}
+                <span>{d.dock[i]}</span>
+                {!c.active && c.dot && <span className="w-1.5 h-1.5 rounded-full bg-amberWarn"></span>}
+              </Link>
+            ))}
           </div>
 
           {/* Wide Rounded AI Input */}

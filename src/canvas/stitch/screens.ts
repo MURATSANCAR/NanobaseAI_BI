@@ -49,7 +49,14 @@ const rail = (certified?: number): StitchRailItem[] => [
   { to: '/bi/alerts', label: 'Uyarılar' },
 ];
 
-const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q']) => ({
+const DOCK = [
+  { to: '/bi/canvas', label: 'Genel bakış' },
+  { to: '/bi/canvas/panolar', label: 'Panolar' },
+  { to: '/bi/canvas/planli-raporlar', label: 'Planlı raporlar', dot: true },
+  { to: '/bi/canvas/uyarilar', label: 'Uyarılar' },
+];
+
+const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q'], activeDock = 0) => ({
   tenant: 'Timaş Yayınları',
   section: 'Yapay Zeka Raporları',
   crumb,
@@ -59,6 +66,7 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   minimap: '1440 × 1000',
   askPlaceholder: ask,
   rail: rail(),
+  dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
   dock: ['Genel bakış', 'Panolar', 'Planlı raporlar', 'Uyarılar'] as [string, string, string, string],
   q,
 });
@@ -76,7 +84,7 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       role: 'Timaş Yayınları · Uyarılar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
       text: '“Hangi eşik patlamak üzere?”',
-    }),
+    }, 3),
     c1: {
       icon: '🔔',
       title: 'Tetiklenenler',
@@ -157,8 +165,10 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       m1: { label: 'Aktif:', value: num(s.active) },
       m2: { label: 'Duraklatılmış:', value: num(s.paused) },
       m3: { label: 'Yalnız tarayıcı:', value: num(s.browserOnly.length) },
-      primary: 'Şimdi kontrol et',
-      secondary: 'Kuralları yönet',
+      primary: 'Kuralları aç',
+      primaryTo: '/bi/alerts',
+      secondary: 'Sohbetten kural kur',
+      secondaryTo: '/bi/chat',
       note: s.neverChecked.length ? `${num(s.neverChecked.length)} kural hiç çalıştırılmamış` : 'Tüm kurallar denenmiş',
     },
     sticker: {
@@ -191,7 +201,7 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
       role: 'Timaş Yayınları · Planlı raporlar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
       text: '“Raporlar zamanında ve doğru kişiye gidiyor mu?”',
-    }),
+    }, 2),
     c1: {
       icon: '📅',
       title: 'Sıradaki gönderim',
@@ -270,8 +280,10 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
       m1: { label: 'Etkin:', value: num(s.active) },
       m2: { label: 'Duraklatılmış:', value: num(s.paused) },
       m3: { label: 'Başarısız:', value: num(s.failed) },
-      primary: 'Raporları yönet',
-      secondary: 'Sohbetten yeni rapor kur',
+      primary: 'Raporları aç',
+      primaryTo: '/bi/schedules',
+      secondary: 'Sohbetten rapor kur',
+      secondaryTo: '/bi/chat',
       note: s.lastFailure?.error ? `Son hata: ${s.lastFailure.error.slice(0, 60)}` : 'Kayıtlarda başarısız gönderim yok',
     },
     sticker: {
@@ -310,7 +322,7 @@ export function boardsData(status: EngineStatus | undefined, boards: Board[], lo
       role: 'Timaş Yayınları · Panolar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
       text: '“Panolarımız güncel mi, boş kalan var mı?”',
-    }),
+    }, 1),
     c1: {
       icon: '📊',
       title: 'Analitik motoru',
@@ -395,7 +407,9 @@ export function boardsData(status: EngineStatus | undefined, boards: Board[], lo
       m2: { label: 'Grafik:', value: num(charts) },
       m3: { label: 'Boş pano:', value: num(empty.length) },
       primary: 'Panoyu aç',
+      primaryTo: '/bi',
       secondary: 'Sohbetten pano kur',
+      secondaryTo: '/bi/chat',
       note: on ? 'Panolar analytics motorundan gelir' : 'analytics_disabled',
     },
     sticker: {
@@ -514,7 +528,9 @@ export function overviewData(
       m2: { label: 'Aktif kural:', value: num(alerts.active) },
       m3: { label: 'Pano:', value: num(boardCount) },
       primary: 'Uyarılara git',
+      primaryTo: '/bi/canvas/uyarilar',
       secondary: 'Planlı raporlara git',
+      secondaryTo: '/bi/canvas/planli-raporlar',
       note: alerts.lastCheckedAt ? `Son kontrol ${relative(alerts.lastCheckedAt)}` : 'Uyarılar henüz kontrol edilmedi',
     },
     sticker: {
