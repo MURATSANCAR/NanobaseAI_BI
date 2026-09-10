@@ -23,6 +23,29 @@ export default {
           mint: '#10B981',
           amber: '#F59E0B',
         },
+        // Stitch kanvas ekranının kendi jeton adları. HTML birebir JSX'e
+        // çevrildiği için sınıf adları da birebir korunuyor.
+        ink: '#1B1F2A',
+        muted: '#6B7280',
+        coral: '#FF6B4A',
+        mintSuccess: '#10B981',
+        amberWarn: '#F59E0B',
+        // `violet` düz jeton olarak eklenirken Tailwind'in kendi violet
+        // ölçeği korunur; yoksa uygulamanın violet-100/500 kullanımları kırılır.
+        violet: {
+          DEFAULT: '#7C5CFF',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
+        },
         surface: {
           DEFAULT: 'rgba(255, 255, 255, 0.55)',
           raised: '#f5f3ff',
@@ -54,6 +77,7 @@ export default {
         canvas: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
+        tape: '0 1px 3px rgba(0,0,0,0.12)',
         'canvas-card': '0 20px 60px -15px rgba(20, 30, 60, 0.12), 0 4px 16px -2px rgba(20, 30, 60, 0.05)',
         'glass-float': '0 12px 36px 0 rgba(26, 38, 70, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
         'dock-shadow': '0 24px 64px -12px rgba(18, 24, 45, 0.18), 0 2px 8px rgba(0, 0, 0, 0.04)',

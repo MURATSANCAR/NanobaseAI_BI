@@ -91,3 +91,73 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Stitch ekranının kendi sınıf adları. HTML birebir JSX'e çevrildiği   */
+/* için sınıf adları da aynen korunur (design/stitch-wow/03-canvas.html)*/
+/* ------------------------------------------------------------------ */
+
+.bg-mesh-canvas {
+  background-color: #f7fafc;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 232, 214, 0.95) 0%, rgba(255, 232, 214, 0.3) 38%, transparent 60%),
+    radial-gradient(circle at 50% 45%, rgba(221, 235, 255, 0.9) 0%, rgba(221, 235, 255, 0.35) 45%, transparent 70%),
+    radial-gradient(circle at 88% 82%, rgba(227, 255, 241, 0.95) 0%, rgba(227, 255, 241, 0.3) 40%, transparent 65%);
+  background-attachment: fixed;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(30, 41, 59, 0.14) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
+}
+
+.glass-dock {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.washi-tape {
+  background: rgba(255, 243, 205, 0.85);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 2px dashed rgba(217, 119, 6, 0.3);
+  border-right: 2px dashed rgba(217, 119, 6, 0.3);
+}
+
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.flowing-line {
+  stroke-dasharray: 6 6;
+  animation: flowDash 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flowing-line {
+    animation: none;
+  }
+  .glass-card:hover {
+    transform: none;
+  }
+}
