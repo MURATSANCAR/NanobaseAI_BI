@@ -55,6 +55,14 @@ export default function StitchCanvas({
   onZoom?: (delta: number) => void;
 }) {
   const [ask, setAsk] = useState('');
+  const [showSql, setShowSql] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const share = () => {
+    void navigator.clipboard?.writeText(window.location.href).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    });
+  };
   const onAsk = () => {
     const q = ask.trim();
     if (q) onSubmitAsk?.(q);
@@ -98,9 +106,9 @@ export default function StitchCanvas({
         </div>
 
         {/* Share Button */}
-        <button className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group">
+        <button type="button" onClick={share} className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group">
           <svg className="w-3.5 h-3.5 text-muted group-hover:text-violet transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-          Paylaş
+          {copied ? 'Kopyalandı' : 'Paylaş'}
         </button>
 
         {/* Canvas Zoom Indicator & Controls */}
@@ -434,9 +442,9 @@ export default function StitchCanvas({
           </div>
 
           <div className="mt-3 space-y-2">
-            <div className="text-xs font-bold text-ink">
-              {d.c5.summary}
-            </div>
+            <div className={showSql ? 'text-[10px] font-mono text-ink break-all max-h-24 overflow-auto' : 'text-xs font-bold text-ink'}>
+            {d.c5.summary}
+          </div>
 
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded-lg border border-slate-100 shadow-sm">
@@ -465,10 +473,10 @@ export default function StitchCanvas({
             </div>
 
             <div className="pt-2 flex items-center justify-between">
-              <a href="#" className="text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
-                <span>SQL'i göster</span>
+              <button type="button" onClick={() => setShowSql((v) => !v)} className="text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
+                <span>{showSql ? 'Gizle' : "SQL'i göster"}</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              </a>
+              </button>
               <span className="text-[10px] text-muted">{d.c5.latency}</span>
             </div>
           </div>
@@ -627,9 +635,6 @@ export default function StitchCanvas({
 
           {/* Mic & Circular Gradient Send Button */}
           <div className="flex items-center gap-2 pr-1 shrink-0">
-            <button className="w-9 h-9 rounded-xl hover:bg-white/90 text-muted hover:text-ink flex items-center justify-center transition" title="Sesli Soru">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-            </button>
 
             <button onClick={onAsk} className="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral to-violet text-white shadow-md hover:shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95" title="Gönder">
               <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
