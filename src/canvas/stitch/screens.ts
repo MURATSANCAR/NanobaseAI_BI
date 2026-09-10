@@ -37,24 +37,20 @@ function spark(values: number[]): { areaPath: string; linePath: string; dot: [nu
 
 /** Raydaki on yuva: tasarımın kendi sırası, uygulamanın gerçek ekranları.
  *  Etiketler src/i18n/tr.json'daki adlarla birebir aynı. */
-const rail = (certified?: number): StitchRailItem[] => [
-  { to: '/bi/chat', label: 'Sohbet', badge: 'Aktif' },
-  { to: '/bi', label: 'Dashboard' },
-  { to: '/bi/semantic-catalog', label: 'Anlamsal Katalog', badge: certified ? `${certified} sertifikalı` : 'katalog' },
-  { to: '/bi/budget', label: 'Bütçe yönetimi' },
-  { to: '/bi/templates', label: 'Şablonlar' },
-  { to: '/bi/queries', label: 'Kayıtlı sorgular' },
-  { to: '/bi/glossary', label: 'Sözlük' },
-  { to: '/bi/sources', label: 'Veri kaynakları' },
-  { to: '/bi/schema', label: 'Şema / ilişkiler' },
-  { to: '/bi/alerts', label: 'Uyarılar' },
+/** Ray yalnız var olan kanvas ekranlarını gösterir. Ölü bağlantı bırakmıyoruz:
+ *  yeni ekran eklendikçe buraya bir satır girer. */
+const rail = (active: string): StitchRailItem[] => [
+  { to: '/', label: 'Genel bakış', badge: active === '/' ? 'Aktif' : undefined },
+  { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
+  { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
+  { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
 ];
 
 const DOCK = [
-  { to: '/bi/canvas', label: 'Genel bakış' },
-  { to: '/bi/canvas/panolar', label: 'Panolar' },
-  { to: '/bi/canvas/planli-raporlar', label: 'Planlı raporlar', dot: true },
-  { to: '/bi/canvas/uyarilar', label: 'Uyarılar' },
+  { to: '/', label: 'Genel bakış' },
+  { to: '/panolar', label: 'Panolar' },
+  { to: '/planli-raporlar', label: 'Planlı raporlar', dot: true },
+  { to: '/uyarilar', label: 'Uyarılar' },
 ];
 
 const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q'], activeDock = 0) => ({
@@ -65,7 +61,7 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   presence: 'canlı veri',
   zoom: '%100',
   askPlaceholder: ask,
-  rail: rail(),
+  rail: rail(DOCK[activeDock]?.to ?? '/'),
   dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
   dock: ['Genel bakış', 'Panolar', 'Planlı raporlar', 'Uyarılar'] as [string, string, string, string],
   q,
@@ -528,9 +524,9 @@ export function overviewData(
       m2: { label: 'Aktif kural:', value: num(alerts.active) },
       m3: { label: 'Pano:', value: num(boardCount) },
       primary: 'Uyarılara git',
-      primaryTo: '/bi/canvas/uyarilar',
+      primaryTo: '/uyarilar',
       secondary: 'Planlı raporlara git',
-      secondaryTo: '/bi/canvas/planli-raporlar',
+      secondaryTo: '/planli-raporlar',
       note: alerts.lastCheckedAt ? `Son kontrol ${relative(alerts.lastCheckedAt)}` : 'Uyarılar henüz kontrol edilmedi',
     },
     sticker: {
@@ -665,7 +661,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
       primary: 'Verine sor',
       primaryTo: '/bi/chat',
       secondary: 'Uyarılar',
-      secondaryTo: '/bi/canvas/uyarilar',
+      secondaryTo: '/uyarilar',
       note: `${c.observedMonths || 0} ay gerçekleşti`,
     },
     sticker: {

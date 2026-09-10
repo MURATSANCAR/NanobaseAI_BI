@@ -1,27 +1,9 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import Layout from '@/components/Layout';
 import { RequirePortalSession } from '@/components/RequireAuth';
 import { t } from '@/i18n';
 
-const BiSupersetPage = lazy(() => import('@/pages/BiSupersetPage'));
-const BiSettingsPage = lazy(() => import('@/pages/BiSettingsPage'));
-const BiChatPage = lazy(() => import('@/pages/BiChatPage'));
-const BiSharesPage = lazy(() => import('@/pages/BiSharesPage'));
-const BiSchedulesPage = lazy(() => import('@/pages/BiSchedulesPage'));
-const BiAlertsPage = lazy(() => import('@/pages/BiAlertsPage'));
-const BiBudgetPage = lazy(() => import('@/pages/BiBudgetPage'));
-const BiAuditPage = lazy(() => import('@/pages/BiAuditPage'));
-const BiGlossaryPage = lazy(() => import('@/pages/BiGlossaryPage'));
-const BiSemanticCatalogPage = lazy(() => import('@/pages/BiSemanticCatalogPage'));
-const BiSemanticLayerPage = lazy(() => import('@/pages/BiSemanticLayerPage'));
-const BiScenarioReviewsPage = lazy(() => import('@/pages/BiScenarioReviewsPage'));
-const BiTemplatesPage = lazy(() => import('@/pages/BiTemplatesPage'));
-const BiQueriesPage = lazy(() => import('@/pages/BiQueriesPage'));
-const BiConnectionPage = lazy(() => import('@/pages/BiConnectionPage'));
-const BiSchemaPage = lazy(() => import('@/pages/BiSchemaPage'));
-const BiPublicPage = lazy(() => import('@/pages/BiPublicPage'));
 const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
 
 function RouteFallback() {
@@ -46,42 +28,19 @@ export default function App() {
       <Suspense fallback={<RouteFallback />}>
         <RoutedErrorBoundary>
         <Routes>
-          <Route path="/" element={<Navigate to="/bi/canvas" replace />} />
-          <Route path="login" element={<Navigate to="/bi" replace />} />
-          <Route path="bi/public/:token" element={<BiPublicPage />} />
+          {/* Kök doğrudan kanvas: /timas/ ve /bi/ adreslerinde araya ikinci bir
+              yol parçası girmiyor. Kanvas ekranları kısa slug taşır. */}
 
           <Route element={<RequirePortalSession />}>
             {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
-            <Route path="bi/canvas" element={<BiCanvasPage />} />
-            <Route path="bi/canvas/:screen" element={<BiCanvasPage />} />
-            <Route element={<Layout />}>
-              <Route path="bi" element={<BiSupersetPage />} />
-              <Route path="bi/projects" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/sources" element={<BiConnectionPage />} />
-              <Route path="bi/settings" element={<BiSettingsPage />} />
-              <Route path="bi/chat" element={<BiChatPage />} />
-              <Route path="bi/analytics" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/superset" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/dashboard" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/reports" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/schema" element={<BiSchemaPage />} />
-              <Route path="bi/schedules" element={<BiSchedulesPage />} />
-              <Route path="bi/queries" element={<BiQueriesPage />} />
-              <Route path="bi/templates" element={<BiTemplatesPage />} />
-              <Route path="bi/glossary" element={<BiGlossaryPage />} />
-              <Route path="bi/semantic-catalog" element={<BiSemanticCatalogPage />} />
-              <Route path="bi/semantic-layer" element={<BiSemanticLayerPage />} />
-              <Route path="bi/scenario-reviews" element={<BiScenarioReviewsPage />} />
-              <Route path="bi/alerts" element={<BiAlertsPage />} />
-              <Route path="bi/budget" element={<BiBudgetPage />} />
-              <Route path="bi/shares" element={<BiSharesPage />} />
-              <Route path="bi/audit" element={<BiAuditPage />} />
-              <Route path="bi/connection" element={<BiConnectionPage />} />
-            </Route>
+            <Route index element={<BiCanvasPage />} />
+            <Route path="panolar" element={<BiCanvasPage />} />
+            <Route path="planli-raporlar" element={<BiCanvasPage />} />
+            <Route path="uyarilar" element={<BiCanvasPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/bi" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </RoutedErrorBoundary>
       </Suspense>

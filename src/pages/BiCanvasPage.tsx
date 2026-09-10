@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import { alertsData, boardsData, cfoData, overviewData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
@@ -18,7 +18,9 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 
 export default function BiCanvasPage() {
-  const { screen } = useParams();
+  // Ekran, yolun son parçasından okunur: /timas/uyarilar → 'uyarilar'.
+  const { pathname } = useLocation();
+  const screen = pathname.split('/').filter(Boolean).pop();
   const navigate = useNavigate();
   const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
 
