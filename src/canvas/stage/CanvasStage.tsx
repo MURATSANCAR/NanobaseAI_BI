@@ -34,7 +34,11 @@ export const ZOOM_MAX = 2;
  */
 export default function CanvasStage({ children, underlay, onView, zoom = 1, onZoomChange }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const innerRef = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState({ w: 0, h: 0 });
+  /** Kartların gerçekten kapladığı alan. Sahne 1440×1000 olsa da ekran bu
+   *  kutuya göre sığdırılır; yoksa boş alt yarı yüzünden her şey küçük kalır. */
+  const [content, setContent] = useState({ w: STAGE_W, h: STAGE_H });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
 
@@ -51,12 +55,12 @@ export default function CanvasStage({ children, underlay, onView, zoom = 1, onZo
   }, []);
 
   const stacked = box.w > 0 && box.w < STACK_BREAKPOINT;
-  const fit = box.w > 0 && box.h > 0 ? Math.min(box.w / STAGE_W, box.h / STAGE_H) : 1;
+  const fit = box.w > 0 && box.h > 0 ? Math.min(box.w / content.w, box.h / content.h) : 1;
   const scale = fit * zoom;
 
   // Sahne kaba sığıyorsa ortala ve kaydırmayı sıfırla; taşıyorsa kullanıcı kaydırır.
-  const overflowX = STAGE_W * scale - box.w;
-  const overflowY = STAGE_H * scale - box.h;
+  const overflowX = content.w * scale - box.w;
+  const overflowY = content.h * scale - box.h;
   const clampPan = useCallback(
     (p: { x: number; y: number }) => ({
       x: overflowX <= 0 ? 0 : Math.min(0, Math.max(-overflowX, p.x)),
@@ -68,6 +72,32 @@ export default function CanvasStage({ children, underlay, onView, zoom = 1, onZo
   useEffect(() => {
     setPan((p) => clampPan(p));
   }, [clampPan]);
+
+  // Kartlar içeriğe göre büyüyüp küçüldüğü için sınırlar her yerleşimde ölçülür.
+  useLayoutEffect(() => {
+    const el = innerRef.current;
+    if (!el || stacked) return;
+    const measure = () => {
+      let right = 0;
+      let bottom = 0;
+      el.querySelectorAll<HTMLElement>('[data-cv-node]').forEach((n) => {
+        right = Math.max(right, n.offsetLeft + n.offsetWidth);
+        bottom = Math.max(bottom, n.offsetTop + n.offsetHeight);
+      });
+      if (!right || !bottom) return;
+      setContent((prev) => {
+        // Soru balonu için üstte sabit pay; sağda yarım kalan hayalet kart kırpılır.
+        const w = Math.min(STAGE_W, Math.max(960, right + 24));
+        const h = Math.min(STAGE_H, Math.max(520, bottom + 24));
+        return Math.abs(prev.w - w) < 2 && Math.abs(prev.h - h) < 2 ? prev : { w, h };
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    el.querySelectorAll<HTMLElement>('[data-cv-node]').forEach((n) => ro.observe(n));
+    return () => ro.disconnect();
+  }, [children, stacked]);
 
   useEffect(() => {
     onView?.({ fit, scale, zoom, stacked, pan });
@@ -117,12 +147,13 @@ export default function CanvasStage({ children, underlay, onView, zoom = 1, onZo
       onWheel={onWheel}
     >
       <div
+        ref={innerRef}
         className="absolute left-0 top-0 origin-top-left"
         style={{
           width: STAGE_W,
           height: STAGE_H,
-          transform: `translate(${pan.x + (overflowX <= 0 ? (box.w - STAGE_W * scale) / 2 : 0)}px, ${
-            pan.y + (overflowY <= 0 ? (box.h - STAGE_H * scale) / 2 : 0)
+          transform: `translate(${pan.x + (overflowX <= 0 ? (box.w - content.w * scale) / 2 : 0)}px, ${
+            pan.y + (overflowY <= 0 ? (box.h - content.h * scale) / 2 : 0)
           }px) scale(${scale})`,
         }}
       >

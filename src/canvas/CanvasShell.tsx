@@ -32,8 +32,17 @@ export default function CanvasShell({ screen, source, engineOk, engineLabel }: P
   const navigate = useNavigate();
   const stacked = view?.stacked ?? false;
 
+  // Yığın kipinde okuma sırası: kartlar aynı yatay bandaysa soldan sağa gider.
+  // Ham `y` ile sıralamak 170 ile 185'i farklı satır sanıp diziyi karıştırıyordu.
   const ordered = useMemo(
-    () => [...screen.cards].sort((a, b) => (a.order ?? a.y) - (b.order ?? b.y) || a.x - b.x),
+    () =>
+      [...screen.cards].sort((a, b) => {
+        if (a.order != null || b.order != null) return (a.order ?? 0) - (b.order ?? 0);
+        // 250'lik bant: yıldız kümesindeki beş kart (y 170-185) tek satır sayılır,
+        // karar kartı (y 445) ve alt şerit (y 700) ayrı satırlara düşer.
+        const band = Math.floor(a.y / 250) - Math.floor(b.y / 250);
+        return band !== 0 ? band : a.x - b.x;
+      }),
     [screen.cards],
   );
 
@@ -86,6 +95,7 @@ export default function CanvasShell({ screen, source, engineOk, engineLabel }: P
               {screen.cards.map((c) => (
                 <div
                   key={c.id}
+                  data-cv-node
                   className="absolute"
                   style={{
                     left: c.x,

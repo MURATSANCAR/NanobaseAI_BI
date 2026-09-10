@@ -174,10 +174,10 @@ export function alertsScreen(s: AlertSummary, loading: boolean, config: ApiConfi
           return (
             <CanvasCard
               stacked={stacked}
-              title="Bildirim kanalı"
+              title="Bildirim"
               accent="amber"
               icon={<Mail className="h-3.5 w-3.5" />}
-              badge={only ? <CardBadge tone="warn">tarayıcıya bağlı</CardBadge> : <CardBadge tone="ok">e-posta var</CardBadge>}
+              badge={only ? <CardBadge tone="warn">tarayıcı</CardBadge> : <CardBadge tone="ok">e-posta var</CardBadge>}
             >
               <div className="text-2xl font-black tracking-tight text-canvas-ink">{num(withMail)}</div>
               <div className="mt-0.5 text-[11px] text-canvas-muted">

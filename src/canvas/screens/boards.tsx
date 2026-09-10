@@ -249,7 +249,7 @@ export function boardsScreen(
         render: ({ stacked }) => (
           <CanvasCard
             stacked={stacked}
-            title="Son güncelleme"
+            title="Güncellik"
             accent="slate"
             icon={<Clock className="h-3.5 w-3.5" />}
             badge={latest ? <CardBadge tone="info">güncel</CardBadge> : <CardBadge tone="muted">kayıt yok</CardBadge>}
