@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import { alertsData, boardsData, cfoData, overviewData, schedulesData } from '@/canvas/stitch/screens';
@@ -12,8 +12,6 @@ const SCREENS = ['panolar', 'planli-raporlar', 'uyarilar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
-const STAGE_W = 1440;
-const STAGE_H = 1000;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 2;
 
@@ -43,95 +41,5 @@ export default function BiCanvasPage() {
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  const fit = box.w > 0 && box.h > 0 ? Math.min(box.w / STAGE_W, box.h / STAGE_H) : 1;
-  const scale = fit * zoom;
-  const offsetX = Math.max(0, (box.w - STAGE_W * scale) / 2);
-  const offsetY = Math.max(0, (box.h - STAGE_H * scale) / 2);
-
-  const d = useMemo(() => {
-    const z = `%${Math.round(scale * 100)}`;
-    if (!isScreen(screen)) {
-      // Genel bakış CFO ekranıdır: rakamlar Logo'dan gelir. Motor yolu tanımlı
-      // değilse (örn. /bi/ altında) portal özetine düşer.
-      if (ENGINE_ENABLED) return { ...cfoData(cfo, source), zoom: z };
-      const loading = schedules.isLoading || alerts.isLoading || analyticsStatus.isLoading;
-      return { ...overviewData(sched, alert, status, boards.length, loading, source), zoom: z };
-    }
-    if (screen === 'planli-raporlar') return { ...schedulesData(sched, schedules.isLoading, source), zoom: z };
-    if (screen === 'uyarilar') return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
-    return { ...boardsData(status, boards, dashboards.isLoading, source), zoom: z };
-  }, [
-    screen,
-    cfo,
-    sched,
-    alert,
-    status,
-    boards,
-    source,
-    scale,
-    schedules.isLoading,
-    alerts.isLoading,
-    analyticsStatus.isLoading,
-    dashboards.isLoading,
-  ]);
-
-  // Soru kutusu başka ürüne gitmez: cevap kanvasın kendi karar kartına düşer.
-  const [answer, setAnswer] = useState<AskAnswer | null>(null);
-  const [asking, setAsking] = useState(false);
-  const [askErr, setAskErr] = useState<string | null>(null);
-  const ask = (q: string) => {
-    if (!ENGINE_ENABLED) return;
-    setAsking(true);
-    setAskErr(null);
-    askEngine(q)
-      .then((a) => setAnswer({ ...a, summary: a.summary ?? a.explanation }))
-      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Motor yanıt vermedi'))
-      .finally(() => setAsking(false));
-  };
-  const onZoom = (delta: number) => setZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number((z + delta).toFixed(2)))));
-
-  // Cevap geldiyse karar kartı ve kanıt kartı cevabı gösterir.
-  const view = useMemo(() => {
-    if (!answer && !asking && !askErr) return d;
-    const rows = answer?.records?.length ?? 0;
-    return {
-      ...d,
-      main: {
-        ...d.main,
-        subject: 'Verine sor',
-        model: asking ? 'Motor çalışıyor…' : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
-        text: asking ? '“Soru motora gönderildi…”' : askErr ? `“${askErr}.”` : `“${answer?.summary ?? 'Motor özet üretmedi.'}”`,
-        m1: { label: 'Satır:', value: String(rows) },
-        m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
-        m3: { label: 'Tip:', value: answer?.type ?? '—' },
-      },
-      c5: {
-        ...d.c5,
-        title: 'Üretilen SQL',
-        badge: askErr ? 'Hata' : asking ? 'Çalışıyor' : 'Canlı',
-        summary: (answer?.sql ?? (asking ? 'Bekleniyor…' : askErr ?? '')).slice(0, 180),
-        latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
-      },
-    };
-  }, [d, answer, asking, askErr]);
-
-  return (
-    // Ölçeklenen katman `absolute`: transform düzendeki yeri küçültmediği için
-    // normal akışta 1440×1000 yer kaplıyor ve sağda/altta beyaz alan bırakıyordu.
-    <div ref={hostRef} className="relative h-[100dvh] w-full overflow-hidden bg-[#f7fafc]">
-      <div
-        className="absolute left-0 top-0 origin-top-left"
-        style={{
-          width: STAGE_W,
-          height: STAGE_H,
-          transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
-        }}
-      >
-        <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} />
-      </div>
-    </div>
-  );
+    return <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} />;
 }

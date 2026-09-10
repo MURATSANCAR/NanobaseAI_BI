@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
@@ -12,6 +12,12 @@ import type { StitchCanvasData } from './data';
  * Buraya elle düzen değişikliği YAPILMAZ. Tasarım değişecekse Stitch'te
  * değişir, dosya yeniden çevrilir.
  */
+/** Kartların çizildiği alan. Tasarımdaki koordinatlar bu kutunun içinde;
+ *  üst şerit, ray ve dock ekrana yapıştığı için kutu yalnız aradaki boşluğu
+ *  doldurur. */
+const ART_W = 1440;
+const ART_H = 820;
+
 const RAIL_ICONS = [
   (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
@@ -49,11 +55,29 @@ export default function StitchCanvas({
   d,
   onAsk: onSubmitAsk,
   onZoom,
+  zoom,
 }: {
   d: StitchCanvasData;
   onAsk?: (q: string) => void;
   onZoom?: (delta: number) => void;
+  zoom?: number;
 }) {
+  const fitRef = useRef<HTMLElement | null>(null);
+  const [fitBox, setFitBox] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const el = fitRef.current;
+    if (!el) return;
+    const measure = () => setFitBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const fit = fitBox.w > 0 ? Math.min(fitBox.w / ART_W, fitBox.h / ART_H) : 1;
+  const artScale = fit * (zoom ?? 1);
+  const artX = Math.max(0, (fitBox.w - ART_W * artScale) / 2);
+  const artY = Math.max(0, (fitBox.h - ART_H * artScale) / 2);
+
   const [ask, setAsk] = useState('');
   const [showSql, setShowSql] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -68,7 +92,7 @@ export default function StitchCanvas({
     if (q) onSubmitAsk?.(q);
   };
   return (
-    <div className="bg-mesh-canvas font-canvas text-ink w-[1440px] h-[1000px] overflow-hidden select-none relative">
+    <div className="bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative">
 
     {/* Interactive Dot Grid Overlay */}
     <div className="absolute inset-0 dot-grid pointer-events-none z-0"></div>
@@ -153,10 +177,14 @@ export default function StitchCanvas({
       </aside>
 
       {/* ================= INFINITE CANVAS STAGE ================= */}
-    <main className="w-full h-full relative overflow-hidden">
+    <main ref={fitRef} className="absolute inset-x-0 top-[92px] bottom-[96px] overflow-hidden">
+        <div
+          className="absolute left-0 top-0 origin-top-left"
+          style={{ width: ART_W, height: ART_H, transform: `translate(${artX}px, ${artY}px) scale(${artScale})` }}
+        >
     
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none z-10" xmlns="http://www.w3.org/2000/svg">
+      <svg className="absolute left-0 top-0 pointer-events-none z-10" width={ART_W} height={ART_H} xmlns="http://www.w3.org/2000/svg">
         <defs>
           {/* Gradients for connectors */}
           <linearGradient id="grad-c1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -219,7 +247,7 @@ export default function StitchCanvas({
       </svg>
 
       {/* ================= CENTER CONSTELLATION CONTAINER ================= */}
-      <div className="relative w-full h-full max-w-[1440px] mx-auto pt-16">
+      <div className="relative" style={{ width: ART_W, height: ART_H }}>
       
         {/* USER'S QUESTION BUBBLE (Center Top Anchor) */}
         <div className="absolute left-1/2 -translate-x-1/2 top-16 z-30 animate-float-slow">
@@ -604,6 +632,9 @@ export default function StitchCanvas({
 
       </div>
 
+        </div>
+      </main>
+
       {/* ================= BOTTOM FLOATING DOCK & ZEKİ CHAT INPUT ================= */}
       <div className="absolute bottom-6 inset-x-0 flex justify-center z-40 pointer-events-none">
         <div className="glass-dock p-2.5 rounded-3xl shadow-dock-shadow flex items-center gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
@@ -644,7 +675,6 @@ export default function StitchCanvas({
         </div>
       </div>
 
-      </main>
     </div>
   );
 }
