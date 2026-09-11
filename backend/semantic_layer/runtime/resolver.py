@@ -155,6 +155,28 @@ def _rooted(key: str) -> str:
 
 
 class SemanticResolver:
+    def _all_years(self, sq: SemanticQuery, today: date) -> "Optional[TemporalSlot]":
+        """"Yıllara göre ciro" bir yılı değil, yılları sorar.
+
+        Dönem söylenmeyen soruya bu yılı vermek "şimdi" demek için doğru; ama yıllık kırılım isteyen
+        soruya tek yıl vermek tek satırlık bir "trend" döndürür ve soruyu cevaplamaz. Bu durumda dönem,
+        ölçünün tablolarında gerçekten gözlenen ilk yıldan bugüne kadar olan aralıktır — uydurulmuş
+        bir başlangıç değil, verinin kendi kapsamı.
+        """
+        from semantic_layer.runtime import periods
+
+        entities = {s.mapping.entity for s in sq.metrics if s.mapping}
+        if len(entities) != 1:
+            return None
+        covered = periods.spans(self.tables_of.get(next(iter(entities)), []))
+        if not covered or not covered[0]:
+            return None
+        first = covered[0].year
+        last = max(first, min(today.year, covered[1].year if covered[1] else today.year))
+        return TemporalSlot(text=f"{first}–{last}", primitive="RANGE", start=date(first, 1, 1),
+                            end=date(last + 1, 1, 1), grain="YEAR",
+                            params={"from": str(first), "to": str(last), "allYears": True})
+
     def __init__(self, store: CatalogStore, tenant_id: str, datasource_id: str, profiles: list[SchemaProfile], *, default_temporal: "Optional[TemporalSlot] | Callable[[], Optional[TemporalSlot]]" = None, conventions: Any = None, verified_pairs=()):
         from semantic_layer.conventions import Conventions
 
@@ -510,6 +532,12 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
+        if not sq.temporal and sq.grain == "YEAR":
+            span = self._all_years(sq, today or date.today())
+            if span is not None:
+                sq.temporal = [span]
+                sq.explanation.append(
+                    f"yıllık kırılım istendi, dönem söylenmedi → verinin tüm yılları ({span.params['from']}–{span.params['to']})")
         if not sq.temporal and self.default_temporal is not None:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
             if fallback is not None:

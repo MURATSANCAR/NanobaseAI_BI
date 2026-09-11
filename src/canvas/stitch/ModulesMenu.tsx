@@ -12,6 +12,10 @@ type Group = { title: string; modules: Array<{ id: string; title: string; sectio
 /** Kanvasta karşılığı olan modüller. Yeni ekran geldikçe buraya satır eklenir. */
 const LIVE: Record<string, string> = {
   home: '/',
+  catalog: '/veri-sozlugu',
+  'catalog-explorer': '/veri-sozlugu',
+  review: '/onaylar',
+  board: '/panolar',
 };
 
 const norm = (s: string) =>
