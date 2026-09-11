@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
+import SessionGate from '@/canvas/stitch/SessionGate';
 import { alertsData, approvalsData, boardsData, cfoData, glossaryData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
 import {
@@ -12,7 +13,7 @@ import {
   review as fetchReview,
   type AskAnswer,
 } from '@/canvas/engine';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
@@ -30,6 +31,7 @@ export default function BiCanvasPage() {
   const screen = pathname.split('/').filter(Boolean).pop();
 
   const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
+  const qc = useQueryClient();
   const cfo = useCfoData();
 
   // Sözlük ve onay kuyruğu motordan gelir; eski sistemdeki iki menünün karşılığı.
@@ -155,5 +157,15 @@ export default function BiCanvasPage() {
 
   if (splash) return <Splash onDone={closeSplash} />;
 
-  return <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />;
+  // Motor 401 diyorsa veri gelmez; sebebini gizlemeyip giriş kapısını açıyoruz.
+  const needsLogin =
+    ENGINE_ENABLED &&
+    (cfo.authRequired || glossary.error instanceof EngineAuthError || approvals.error instanceof EngineAuthError);
+
+  return (
+    <>
+      <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
+      {needsLogin && <SessionGate onDone={() => qc.invalidateQueries()} />}
+    </>
+  );
 }
