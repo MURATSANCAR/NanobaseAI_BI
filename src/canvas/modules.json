@@ -49,42 +49,42 @@
   "modules": [
    {
     "id": "M1",
-    "title": "M1: Yeni Kitap Başvuru, Editoryal Değerlendirme ve Yayın Kurulu",
+    "title": "Yeni Kitap Başvuru, Editoryal Değerlendirme ve Yayın Kurulu",
     "sections": 5
    },
    {
     "id": "M2",
-    "title": "M2: Editör Atama ve İş Planlaması",
+    "title": "Editör Atama ve İş Planlaması",
     "sections": 5
    },
    {
     "id": "M3",
-    "title": "M3: Metin İşleme, Üsluplandırma ve Redaksiyon",
+    "title": "Metin İşleme, Üsluplandırma ve Redaksiyon",
     "sections": 5
    },
    {
     "id": "M4",
-    "title": "M4: Çeviri Yönetimi",
+    "title": "Çeviri Yönetimi",
     "sections": 5
    },
    {
     "id": "M5",
-    "title": "M5: Son Okuma ve Yayın Onayı",
+    "title": "Son Okuma ve Yayın Onayı",
     "sections": 5
    },
    {
     "id": "M6",
-    "title": "M6: Telif Hakkı ve Sözleşme Yönetimi",
+    "title": "Telif Hakkı ve Sözleşme Yönetimi",
     "sections": 5
    },
    {
     "id": "M7",
-    "title": "M7: Yazarla İlişki ve Gelişim Takibi",
+    "title": "Yazarla İlişki ve Gelişim Takibi",
     "sections": 5
    },
    {
     "id": "M8",
-    "title": "M8: Çizer ve Freelancer (Dış Kaynak) Yönetimi",
+    "title": "Çizer ve Freelancer (Dış Kaynak) Yönetimi",
     "sections": 5
    }
   ]
@@ -94,22 +94,22 @@
   "modules": [
    {
     "id": "M9",
-    "title": "M9: Fiyatlama ve Maliyet Analizi",
+    "title": "Fiyatlama ve Maliyet Analizi",
     "sections": 5
    },
    {
     "id": "M10",
-    "title": "M10: Üretim ve Satış Tahmini (İlk Baskı)",
+    "title": "Üretim ve Satış Tahmini (İlk Baskı)",
     "sections": 5
    },
    {
     "id": "M11",
-    "title": "M11: Baskı Tekrarı Öneri Motoru (Backlist)",
+    "title": "Baskı Tekrarı Öneri Motoru (Backlist)",
     "sections": 5
    },
    {
     "id": "M12",
-    "title": "M12: Üretim Yönetimi",
+    "title": "Üretim Yönetimi",
     "sections": 5
    }
   ]
@@ -119,12 +119,12 @@
   "modules": [
    {
     "id": "M13",
-    "title": "M13: Kapak Tasarımı ve Brief Yönetimi",
+    "title": "Kapak Tasarımı ve Brief Yönetimi",
     "sections": 5
    },
    {
     "id": "M14",
-    "title": "M14: Mizanpaj (Sayfa Düzeni) Yönetimi",
+    "title": "Mizanpaj (Sayfa Düzeni) Yönetimi",
     "sections": 5
    }
   ]
@@ -134,77 +134,77 @@
   "modules": [
    {
     "id": "M15",
-    "title": "M15 — Yeni Kitap Pazarlama Planı",
+    "title": "Yeni Kitap Pazarlama Planı",
     "sections": 3
    },
    {
     "id": "M16",
-    "title": "M16 — Lansman/Yayın Ayı Pazarlama",
+    "title": "Lansman/Yayın Ayı Pazarlama",
     "sections": 3
    },
    {
     "id": "M17",
-    "title": "M17 — Backlist Kitaplar Pazarlama",
+    "title": "Backlist Kitaplar Pazarlama",
     "sections": 3
    },
    {
     "id": "M18",
-    "title": "M18 — Aylık Pazarlama Planları",
+    "title": "Aylık Pazarlama Planları",
     "sections": 3
    },
    {
     "id": "M19",
-    "title": "M19 — Pazarlama Görsel Üretim ve Yaratıcı İçerik",
+    "title": "Pazarlama Görsel Üretim ve Yaratıcı İçerik",
     "sections": 3
    },
    {
     "id": "M20",
-    "title": "M20 — Basın, Medya ve Halkla İlişkiler",
+    "title": "Basın, Medya ve Halkla İlişkiler",
     "sections": 3
    },
    {
     "id": "M21",
-    "title": "M21 — Dijital Pazarlama ve Reklam Yönetimi",
+    "title": "Dijital Pazarlama ve Reklam Yönetimi",
     "sections": 3
    },
    {
     "id": "M22",
-    "title": "M22 — Sosyal Medya Yönetimi",
+    "title": "Sosyal Medya Yönetimi",
     "sections": 3
    },
    {
     "id": "M23",
-    "title": "M23 — İnfluencer ve İşbirliği Yönetimi",
+    "title": "İnfluencer ve İşbirliği Yönetimi",
     "sections": 3
    },
    {
     "id": "M24",
-    "title": "M24 — Katalog ve Bülten Yönetimi",
+    "title": "Katalog ve Bülten Yönetimi",
     "sections": 3
    },
    {
     "id": "M25",
-    "title": "M25 — İçerik Pazarlaması ve SEO",
+    "title": "İçerik Pazarlaması ve SEO",
     "sections": 3
    },
    {
     "id": "M26",
-    "title": "M26 — Yapay Zekâ Görünürlüğü — GEO",
+    "title": "Yapay Zekâ Görünürlüğü — GEO",
     "sections": 3
    },
    {
     "id": "M27",
-    "title": "M27 — Fuar, Etkinlik ve Ödül Yönetimi",
+    "title": "Fuar, Etkinlik ve Ödül Yönetimi",
     "sections": 3
    },
    {
     "id": "M28",
-    "title": "M28 — Kanaat Önderleri, Kurumsal İlişkiler ve Kamu Projeleri",
+    "title": "Kanaat Önderleri, Kurumsal İlişkiler ve Kamu Projeleri",
     "sections": 3
    },
    {
     "id": "M53",
-    "title": "M53 — Hediye, Set ve Promosyon Ürün Yönetimi",
+    "title": "Hediye, Set ve Promosyon Ürün Yönetimi",
     "sections": 3
    }
   ]
@@ -214,27 +214,27 @@
   "modules": [
    {
     "id": "M29",
-    "title": "M29 — İlk Dağılım Yönetimi",
+    "title": "İlk Dağılım Yönetimi",
     "sections": 3
    },
    {
     "id": "M30",
-    "title": "M30 — Saha Satış Yönetimi ve Tahsilat (BMT)",
+    "title": "Saha Satış Yönetimi ve Tahsilat (BMT)",
     "sections": 3
    },
    {
     "id": "M31",
-    "title": "M31 — Okul Tanıtım ve Ziyaret Yönetimi",
+    "title": "Okul Tanıtım ve Ziyaret Yönetimi",
     "sections": 3
    },
    {
     "id": "M32",
-    "title": "M32 — B2B Web Sitesi ve Kurumsal Satış Yönetimi",
+    "title": "B2B Web Sitesi ve Kurumsal Satış Yönetimi",
     "sections": 3
    },
    {
     "id": "M33",
-    "title": "M33 — Okul, Kütüphane ve Kamu İhale Takibi",
+    "title": "Okul, Kütüphane ve Kamu İhale Takibi",
     "sections": 3
    }
   ]
@@ -244,22 +244,22 @@
   "modules": [
    {
     "id": "M34",
-    "title": "M34 — E-Ticaret ve Platform Yönetimi",
+    "title": "E-Ticaret ve Platform Yönetimi",
     "sections": 3
    },
    {
     "id": "M35",
-    "title": "M35 — E-Ticaret Kampanya ve Promosyon Yönetimi",
+    "title": "E-Ticaret Kampanya ve Promosyon Yönetimi",
     "sections": 3
    },
    {
     "id": "M36",
-    "title": "M36 — Dijital Yayın ve e-Kitap Yönetimi",
+    "title": "Dijital Yayın ve e-Kitap Yönetimi",
     "sections": 3
    },
    {
     "id": "M37",
-    "title": "M37 — Okuyucu Topluluğu ve Topluluk Yönetimi (CRM Katmanı)",
+    "title": "Okuyucu Topluluğu ve Topluluk Yönetimi (CRM Katmanı)",
     "sections": 3
    }
   ]
@@ -269,12 +269,12 @@
   "modules": [
    {
     "id": "M38",
-    "title": "M38 — Müşteri İlişkileri ve CRM Yönetimi",
+    "title": "Müşteri İlişkileri ve CRM Yönetimi",
     "sections": 3
    },
    {
     "id": "M39",
-    "title": "M39 — Pazar Araştırması ve Rekabet Analizi",
+    "title": "Pazar Araştırması ve Rekabet Analizi",
     "sections": 3
    }
   ]
@@ -284,17 +284,17 @@
   "modules": [
    {
     "id": "M40",
-    "title": "M40 — Trendyol Mağaza Yönetimi",
+    "title": "Trendyol Mağaza Yönetimi",
     "sections": 3
    },
    {
     "id": "M41",
-    "title": "M41 — Amazon ve Uluslararası Platform Yönetimi",
+    "title": "Amazon ve Uluslararası Platform Yönetimi",
     "sections": 3
    },
    {
     "id": "M42",
-    "title": "M42 — Diğer Pazar Yerleri ve D2C Yönetimi",
+    "title": "Diğer Pazar Yerleri ve D2C Yönetimi",
     "sections": 3
    }
   ]
@@ -304,17 +304,17 @@
   "modules": [
    {
     "id": "M43",
-    "title": "M43 — Depo ve Stok Yönetimi",
+    "title": "Depo ve Stok Yönetimi",
     "sections": 3
    },
    {
     "id": "M44",
-    "title": "M44 — Lojistik ve Kargo Yönetimi",
+    "title": "Lojistik ve Kargo Yönetimi",
     "sections": 3
    },
    {
     "id": "M52",
-    "title": "M52 — Tedarik Zinciri ve Baskı Yönetimi",
+    "title": "Tedarik Zinciri ve Baskı Yönetimi",
     "sections": 3
    }
   ]
@@ -324,22 +324,22 @@
   "modules": [
    {
     "id": "M45",
-    "title": "M45 — Finansal Raporlama ve Analiz",
+    "title": "Finansal Raporlama ve Analiz",
     "sections": 3
    },
    {
     "id": "M46",
-    "title": "M46 — Bütçe Planlama ve Kontrolü",
+    "title": "Bütçe Planlama ve Kontrolü",
     "sections": 4
    },
    {
     "id": "M47",
-    "title": "M47 — Risk Yönetimi ve Uyum",
+    "title": "Risk Yönetimi ve Uyum",
     "sections": 3
    },
    {
     "id": "M54",
-    "title": "M54 — Yazar Telif ve Sözleşme Yönetimi",
+    "title": "Yazar Telif ve Sözleşme Yönetimi",
     "sections": 3
    }
   ]
@@ -349,22 +349,22 @@
   "modules": [
    {
     "id": "M48",
-    "title": "M48 — IT Altyapı ve Sistem Yönetimi",
+    "title": "IT Altyapı ve Sistem Yönetimi",
     "sections": 3
    },
    {
     "id": "M49",
-    "title": "M49 — Veri Yönetimi ve Güvenlik",
+    "title": "Veri Yönetimi ve Güvenlik",
     "sections": 3
    },
    {
     "id": "M50",
-    "title": "M50 — ZEKİ Model Eğitim ve Geliştirme",
+    "title": "ZEKİ Model Eğitim ve Geliştirme",
     "sections": 3
    },
    {
     "id": "M51",
-    "title": "M51 — Müşteri Hizmetleri ve Destek Yönetimi",
+    "title": "Müşteri Hizmetleri ve Destek Yönetimi",
     "sections": 3
    }
   ]
@@ -374,32 +374,32 @@
   "modules": [
    {
     "id": "M55",
-    "title": "M55 — İşe Alım ve Yetkin Yönetimi",
+    "title": "İşe Alım ve Yetkin Yönetimi",
     "sections": 3
    },
    {
     "id": "M56",
-    "title": "M56 — Performans Yönetimi",
+    "title": "Performans Yönetimi",
     "sections": 3
    },
    {
     "id": "M57",
-    "title": "M57 — Eğitim ve Gelişim Yönetimi",
+    "title": "Eğitim ve Gelişim Yönetimi",
     "sections": 3
    },
    {
     "id": "M58",
-    "title": "M58 — Çalışan Deneyimi ve Bağlılık",
+    "title": "Çalışan Deneyimi ve Bağlılık",
     "sections": 3
    }
   ]
  },
  {
-  "title": "M59 — Bayi & Kitapçı Risk Yönetimi",
+  "title": "Bayi & Kitapçı Risk Yönetimi",
   "modules": [
    {
     "id": "M59",
-    "title": "M59 — Kitapçı/Bayi Risk ve Performans Yönetimi",
+    "title": "Kitapçı/Bayi Risk ve Performans Yönetimi",
     "sections": 3
    }
   ]

@@ -117,7 +117,9 @@ export function useCfoData(): CfoData {
   // Tek bir sorgu patlarsa ekranın tamamı düşmesin: gelen veriyle çiz, gelmeyeni
   // boş bırak. Önceden `every(isSuccess)` bekleniyordu ve bir hata her kartı
   // "Yükleniyor"da donduruyordu.
-  const ready = ENGINE_ENABLED && !authRequired && q.some((r) => r.isSuccess) && !q.some((r) => r.isLoading);
+  // Gelen ilk sonuçla çizmeye başla: yavaş kalan tek sorgu bütün kartları
+  // bekletmesin. Eksik kart kendi boş durumunu gösterir.
+  const ready = ENGINE_ENABLED && !authRequired && q.some((r) => r.isSuccess);
   const failed = !authRequired && ENGINE_ENABLED && q.every((r) => r.isError);
 
   if (!ready) return { ...EMPTY, ready: false, authRequired, failed };
