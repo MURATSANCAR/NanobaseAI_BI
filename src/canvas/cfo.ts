@@ -1,5 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
-import { ENGINE_ENABLED, EngineAuthError, runSql } from './engine';
+import { useQuery } from '@tanstack/react-query';
+import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, runSql } from './engine';
 
 /**
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
@@ -72,6 +73,8 @@ export type CfoData = {
   netPrevSame: number;
   yoyPct: number | null;
   returnPct: number | null;
+  /** Özet ne zaman üretildi (arka plan dosyası). */
+  generatedAt?: string;
 };
 
 const EMPTY: Omit<CfoData, 'ready' | 'authRequired' | 'failed'> = {
@@ -91,8 +94,84 @@ const EMPTY: Omit<CfoData, 'ready' | 'authRequired' | 'failed'> = {
   returnPct: null,
 };
 
-/** Altı sorgu paralel gider; motor tarafında 5 dakikalık önbellek var. */
+type RawSets = {
+  months: MonthRow[];
+  prevMonths: MonthRow[];
+  totals: TotalsRow | null;
+  units: UnitsRow | null;
+  channels: ChannelRow[];
+  customers: CustomerRow[];
+  items: ItemRow[];
+  returnItems: ReturnItemRow[];
+  generatedAt?: string;
+};
+
+/** Ham sonuç kümelerinden ekranın beklediği özet. Hem arka plandaki dosya
+ *  hem canlı sorgular bu fonksiyondan geçer; hesap tek yerde. */
+function shape(r: RawSets): CfoData {
+  const observedMonths = r.months.length ? Math.max(...r.months.map((x) => x.ay)) : 0;
+  const netYtd = r.months.reduce((a, x) => a + (x.net_ciro ?? 0), 0);
+  const netPrevSame = r.prevMonths.filter((x) => x.ay <= observedMonths).reduce((a, x) => a + (x.net_ciro ?? 0), 0);
+  return {
+    ready: true,
+    authRequired: false,
+    failed: false,
+    year: YEAR,
+    months: r.months,
+    prevMonths: r.prevMonths,
+    totals: r.totals,
+    units: r.units,
+    channels: r.channels,
+    customers: r.customers,
+    items: r.items,
+    returnItems: r.returnItems,
+    generatedAt: r.generatedAt,
+    observedMonths,
+    netYtd,
+    netPrevSame,
+    yoyPct: netPrevSame > 0 ? (netYtd / netPrevSame - 1) * 100 : null,
+    returnPct: r.totals && r.totals.brut_satis > 0 ? (r.totals.iade_tutari / r.totals.brut_satis) * 100 : null,
+  };
+}
+
+/** Arka planda üretilen özet. Ekran açılışında sorgu koşmasın diye önce bu
+ *  okunur; yoksa ya da erişilemezse canlı sorgulara düşülür. */
+async function fetchSnapshot(): Promise<RawSets> {
+  const res = await fetch(`${ENGINE_BASE}/metrics/cfo.json`, {
+    credentials: 'include',
+    signal: AbortSignal.timeout(12_000),
+  });
+  if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+  if (!res.ok) throw new Error(`Özet ${res.status}`);
+  const j = (await res.json()) as Partial<RawSets> & { generatedAt?: string };
+  return {
+    months: j.months ?? [],
+    prevMonths: j.prevMonths ?? [],
+    totals: (j.totals as unknown as TotalsRow[] | undefined)?.[0] ?? (j.totals as TotalsRow | null) ?? null,
+    units: (j.units as unknown as UnitsRow[] | undefined)?.[0] ?? (j.units as UnitsRow | null) ?? null,
+    channels: j.channels ?? [],
+    customers: j.customers ?? [],
+    items: j.items ?? [],
+    returnItems: j.returnItems ?? [],
+    generatedAt: j.generatedAt,
+  };
+}
+
+/**
+ * Önce arka plandaki özet okunur (tek istek, anlık). Ulaşılamazsa sekiz sorgu
+ * canlı koşar; böylece özet üretici durursa ekran boş kalmaz.
+ */
 export function useCfoData(): CfoData {
+  const snap = useQuery({
+    queryKey: ['cfo-snapshot', YEAR],
+    queryFn: fetchSnapshot,
+    enabled: ENGINE_ENABLED,
+    staleTime: 60_000,
+    refetchInterval: 3 * 60_000,
+    retry: false,
+  });
+  const snapFailed = snap.isError && !(snap.error instanceof EngineAuthError);
+
   const q = useQueries({
     queries: [
       { key: 'months', sql: SQL.months(YEAR) },
@@ -106,50 +185,31 @@ export function useCfoData(): CfoData {
     ].map((it) => ({
       queryKey: ['cfo', it.key, YEAR],
       queryFn: () => runSql<Record<string, unknown>>(it.sql),
-      enabled: ENGINE_ENABLED,
+      enabled: ENGINE_ENABLED && snapFailed,
       staleTime: 5 * 60_000,
       retry: false,
     })),
   });
 
+  if (snap.data) return shape(snap.data);
+
+  const authRequired = snap.error instanceof EngineAuthError || q.some((r) => r.error instanceof EngineAuthError);
+  if (authRequired) return { ...EMPTY, ready: false, authRequired: true, failed: false };
+  if (!snapFailed) return { ...EMPTY, ready: false, authRequired: false, failed: false };
+
   const [months, prev, totals, units, channels, customers, items, returnItems] = q;
-  const authRequired = q.some((r) => r.error instanceof EngineAuthError);
-  // Tek bir sorgu patlarsa ekranın tamamı düşmesin: gelen veriyle çiz, gelmeyeni
-  // boş bırak. Önceden `every(isSuccess)` bekleniyordu ve bir hata her kartı
-  // "Yükleniyor"da donduruyordu.
-  // Gelen ilk sonuçla çizmeye başla: yavaş kalan tek sorgu bütün kartları
-  // bekletmesin. Eksik kart kendi boş durumunu gösterir.
-  const ready = ENGINE_ENABLED && !authRequired && q.some((r) => r.isSuccess);
-  const failed = !authRequired && ENGINE_ENABLED && q.every((r) => r.isError);
+  const ready = q.some((r) => r.isSuccess);
+  if (!ready) return { ...EMPTY, ready: false, authRequired: false, failed: q.every((r) => r.isError) };
 
-  if (!ready) return { ...EMPTY, ready: false, authRequired, failed };
-
-  const m = (months.data?.records ?? []) as unknown as MonthRow[];
-  const p = (prev.data?.records ?? []) as unknown as MonthRow[];
-  const t = ((totals.data?.records ?? [])[0] ?? null) as unknown as TotalsRow | null;
-  const u = ((units.data?.records ?? [])[0] ?? null) as unknown as UnitsRow | null;
-
-  const observedMonths = m.length ? Math.max(...m.map((r) => r.ay)) : 0;
-  const netYtd = m.reduce((a, r) => a + (r.net_ciro ?? 0), 0);
-  const netPrevSame = p.filter((r) => r.ay <= observedMonths).reduce((a, r) => a + (r.net_ciro ?? 0), 0);
-
-  return {
-    ready: true,
-    authRequired: false,
-    failed: false,
-    year: YEAR,
-    months: m,
-    prevMonths: p,
-    totals: t,
-    units: u,
-    channels: (channels.data?.records ?? []) as unknown as ChannelRow[],
-    customers: (customers.data?.records ?? []) as unknown as CustomerRow[],
-    items: (items.data?.records ?? []) as unknown as ItemRow[],
-    returnItems: (returnItems.data?.records ?? []) as unknown as ReturnItemRow[],
-    observedMonths,
-    netYtd,
-    netPrevSame,
-    yoyPct: netPrevSame > 0 ? (netYtd / netPrevSame - 1) * 100 : null,
-    returnPct: t && t.brut_satis > 0 ? (t.iade_tutari / t.brut_satis) * 100 : null,
-  };
+  const rec = <T,>(r: (typeof q)[number]) => ((r.data?.records ?? []) as unknown as T[]);
+  return shape({
+    months: rec<MonthRow>(months),
+    prevMonths: rec<MonthRow>(prev),
+    totals: rec<TotalsRow>(totals)[0] ?? null,
+    units: rec<UnitsRow>(units)[0] ?? null,
+    channels: rec<ChannelRow>(channels),
+    customers: rec<CustomerRow>(customers),
+    items: rec<ItemRow>(items),
+    returnItems: rec<ReturnItemRow>(returnItems),
+  });
 }

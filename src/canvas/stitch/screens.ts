@@ -583,7 +583,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     ...base('Genel bakış', source, 'ZEKİ’ye sor… örn. bu ay kanal bazında net ciro', {
       initials: 'TY',
       role: `Timaş Yayınları · ${c.year}`,
-      at: durum || `${sonTR} itibarıyla`,
+      at: durum || (c.generatedAt ? `${c.generatedAt.slice(11, 16)} özeti` : `${sonTR} itibarıyla`),
       text: '“Bu yıl nasıl gidiyoruz?”',
     }),
     c1: {
