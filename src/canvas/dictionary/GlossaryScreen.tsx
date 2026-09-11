@@ -321,7 +321,7 @@ export default function GlossaryScreen() {
       }}
       rail={railFor('/veri-sozlugu')}
     >
-      <main className="absolute inset-x-0 bottom-6 top-[84px] px-6">
+      <main className="absolute bottom-6 left-[92px] right-6 top-[84px]">
         <div className="mx-auto flex h-full w-full max-w-[1760px] gap-4">
           {/* Sol: arama ve liste */}
           <div className="glass-panel flex w-[380px] shrink-0 flex-col rounded-3xl p-4 shadow-glass-float">

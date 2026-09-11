@@ -196,7 +196,7 @@ export default function BoardScreen() {
       rail={railFor('/panolar')}
     >
       {/* Kartlar */}
-      <main className="absolute inset-x-0 bottom-[118px] top-[84px] overflow-auto px-6">
+      <main className="absolute bottom-[118px] left-[92px] right-6 top-[84px] overflow-auto">
         <div className="relative mx-auto w-full max-w-[1760px]" style={{ height }}>
           {!cards.length && !pending && (
             <div className="flex h-[420px] flex-col items-center justify-center text-center">
@@ -277,7 +277,7 @@ export default function BoardScreen() {
       </main>
 
       {/* Önizleme + soru çubuğu */}
-      <div className="absolute inset-x-0 bottom-6 z-40 flex justify-center px-6">
+      <div className="absolute bottom-6 left-[92px] right-6 z-40 flex justify-center">
         <div className="w-full max-w-[980px]">
           {pending && (
             <div className="glass-card mb-3 rounded-3xl p-4 shadow-canvas-card">
