@@ -172,6 +172,19 @@ const INTERACTIVE = 'a, button, input, select, textarea, [role="button"]';
  * bağlantı ve düğmeler çalışmaya devam eder: sürükleme yalnız boş alandan
  * ve 4 pikselden fazla hareket ettiğinde başlar.
  */
+/**
+ * Kanvasın gerçek ölçeği. Sahne CSS `zoom` ile küçülüp büyüyor (sığdırma × kullanıcı yakınlaştırması);
+ * imleç ekran pikseliyle, kart konumu sahne pikseliyle ölçülür. Bölmeden sürüklenen kart imleci geriden izler.
+ */
+function stageScale(el: HTMLElement | null): number {
+  let s = 1;
+  for (let n = el; n; n = n.parentElement) {
+    const z = parseFloat(getComputedStyle(n).zoom || '1');
+    if (Number.isFinite(z) && z > 0 && z !== 1) s *= z;
+  }
+  return s;
+}
+
 export default function Node({
   id,
   tilt = 0,
@@ -193,9 +206,9 @@ export default function Node({
 }) {
   const { boxes, set, stageW, front, bringFront } = useLayout();
   const box = boxes[id];
-  const [drag, setDrag] = useState<{ dx: number; dy: number; x: number; y: number; moved: boolean } | null>(null);
+  const [drag, setDrag] = useState<{ dx: number; dy: number; x: number; y: number; moved: boolean; scale: number } | null>(null);
   const [live, setLive] = useState<Box | null>(null);
-  const resizing = useRef<{ startX: number; startW: number } | null>(null);
+  const resizing = useRef<{ startX: number; startW: number; scale: number } | null>(null);
 
   if (!box) return null;
   const b = live ?? box;
@@ -205,17 +218,17 @@ export default function Node({
     if ((e.target as HTMLElement).dataset.resize) return;
     bringFront(id);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    setDrag({ dx: e.clientX, dy: e.clientY, x: b.x, y: b.y, moved: false });
+    setDrag({ dx: e.clientX, dy: e.clientY, x: b.x, y: b.y, moved: false, scale: stageScale(e.currentTarget as HTMLElement) });
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (resizing.current) {
-      const w = Math.max(minW, Math.min(maxW, resizing.current.startW + (e.clientX - resizing.current.startX)));
+      const w = Math.max(minW, Math.min(maxW, resizing.current.startW + (e.clientX - resizing.current.startX) / resizing.current.scale));
       setLive({ ...b, w });
       return;
     }
     if (!drag) return;
-    const nx = drag.x + (e.clientX - drag.dx);
-    const ny = drag.y + (e.clientY - drag.dy);
+    const nx = drag.x + (e.clientX - drag.dx) / drag.scale;
+    const ny = drag.y + (e.clientY - drag.dy) / drag.scale;
     const moved = drag.moved || Math.abs(e.clientX - drag.dx) > 4 || Math.abs(e.clientY - drag.dy) > 4;
     if (moved) {
       setDrag({ ...drag, moved: true });
@@ -247,7 +260,7 @@ export default function Node({
           onPointerDown={(e) => {
             e.stopPropagation();
             (e.currentTarget.parentElement as HTMLElement).setPointerCapture(e.pointerId);
-            resizing.current = { startX: e.clientX, startW: b.w };
+            resizing.current = { startX: e.clientX, startW: b.w, scale: stageScale(e.currentTarget as HTMLElement) };
           }}
           className="absolute -bottom-1 -right-1 z-50 h-3.5 w-3.5 cursor-ew-resize rounded-full border border-white bg-slate-300/80 opacity-0 shadow transition hover:bg-violet group-hover/node:opacity-100"
         />
