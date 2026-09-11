@@ -198,7 +198,7 @@ class Profiler:
                 cp = ColumnProfile(name=col["name"], data_type=str(col.get("data_type") or ""), nullable=bool(col.get("nullable", True)), is_primary_key=col["name"] in pk or bool(col.get("pk")),
                                    description=col.get("description") or described.get((table, col["name"])))
                 observed = [v for v in sample.get(cp.name.upper(), []) if v is not None and str(v) != ""]
-                reason = sensitivity.name_is_sensitive(cp.name) or sensitivity.values_are_sensitive([str(v) for v in observed])
+                reason = sensitivity.classify(cp.name, [str(v) for v in observed], data_type=cp.data_type)
                 if reason:
                     cp.sensitive, cp.sensitivity_reason = True, reason
                 seen = sample.get(cp.name.upper(), [])

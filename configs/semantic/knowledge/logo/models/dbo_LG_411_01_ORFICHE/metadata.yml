@@ -11,7 +11,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima 0 [enum] 0 · 1 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
+      "description": "İptal bayrağı; daima 0 [enum] 0 · 1 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
