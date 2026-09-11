@@ -35,7 +35,7 @@ export default function App() {
             {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
             <Route index element={<BiCanvasPage />} />
-            <Route path="panolar" element={<BiCanvasPage />} />
+            <Route path="urunler" element={<BiCanvasPage />} />
             <Route path="planli-raporlar" element={<BiCanvasPage />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
           </Route>

@@ -43,12 +43,12 @@ const rail = (active: string): StitchRailItem[] => [
   { to: '/', label: 'Genel bakış', badge: active === '/' ? 'Aktif' : undefined },
   { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
   { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
-  { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
+  { to: '/urunler', label: 'Ürünler', badge: active === '/urunler' ? 'Aktif' : undefined },
 ];
 
 const DOCK = [
   { to: '/', label: 'Genel bakış' },
-  { to: '/panolar', label: 'Panolar' },
+  { to: '/urunler', label: 'Ürünler' },
   { to: '/planli-raporlar', label: 'Planlı raporlar', dot: true },
   { to: '/uyarilar', label: 'Uyarılar' },
 ];
@@ -63,7 +63,7 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   askPlaceholder: ask,
   rail: rail(DOCK[activeDock]?.to ?? '/'),
   dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
-  dock: ['Genel bakış', 'Panolar', 'Planlı raporlar', 'Uyarılar'] as [string, string, string, string],
+  dock: DOCK.map((c) => c.label) as [string, string, string, string],
   q,
 });
 
@@ -685,4 +685,123 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
 /** Logo firma öneki etiketi (2026 → LG_411). */
 function prefixLabel(year: number): string {
   return year >= 2026 ? 'LG_411' : 'LG_211';
+}
+
+/* -------------------------------- Ürünler -------------------------------- */
+
+/**
+ * Ürün ekranı: hangi başlık satıyor, hangisi geri dönüyor. Analitik motoru
+ * kapalı olduğu için boş duran "Panolar" ekranının yerini aldı; buradaki her
+ * rakam Logo'dan canlı gelir.
+ */
+export function productsData(c: CfoData, source: string): StitchCanvasData {
+  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Motor yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+  const yok = (v: string) => (durum ? '—' : v);
+  const top = c.items[0];
+  const ret = c.returnItems[0];
+  const topFive = c.items.slice(0, 5);
+  const retTotal = c.returnItems.reduce((a, r) => a + Math.abs(r.iade_tutar ?? 0), 0);
+  const son = c.totals?.son_fatura?.slice(0, 10);
+  const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';
+
+  return {
+    ...base('Ürünler', source, 'ZEKİ’ye sor… örn. en çok iade edilen 10 kitap', {
+      initials: 'TY',
+      role: `Timaş Yayınları · ${c.year}`,
+      at: durum || `${sonTR} itibarıyla`,
+      text: '“Hangi kitap satıyor, hangisi geri dönüyor?”',
+    }, 1),
+    c1: {
+      icon: '📚',
+      title: 'Satılan adet',
+      badge: String(c.year),
+      big: yok(money(c.units?.satilan_adet ?? 0)),
+      bigSuffix: 'adet',
+      subLabel: 'Farklı başlık:',
+      subValue: yok(money(c.units?.baslik_sayisi ?? 0)),
+      pct: (c.observedMonths / 12) * 100,
+      footL: `${c.observedMonths || 0} / 12 ay`,
+      footR: `Veri: ${sonTR}`,
+      rowLabel: 'Okunan satır:',
+      rowValue: yok(money(c.units?.satir ?? 0)),
+    },
+    c2: {
+      title: 'En çok satan',
+      badge: `${num(topFive.length)} başlık`,
+      label: top?.urun ?? yok('Başlık yok'),
+      big: yok(money(top?.adet ?? 0)),
+      unit: 'adet',
+      delta: top ? `${money(top.net_ciro)} ₺` : '—',
+      tick1: c.items[1] ? `${c.items[1].urun.slice(0, 14)} ${money(c.items[1].adet)}` : '—',
+      tick2: c.items[2] ? `${c.items[2].urun.slice(0, 14)} ${money(c.items[2].adet)}` : '—',
+      tick3: c.items[3] ? `${c.items[3].urun.slice(0, 14)} ${money(c.items[3].adet)}` : '—',
+      foot: 'Adede göre ilk sekiz başlık',
+      ...spark(topFive.map((i) => i.adet)),
+    },
+    c3: {
+      title: 'İlk beşin payı',
+      badge: `${c.year} · adet`,
+      center: yok(money(topFive.reduce((a, i) => a + i.adet, 0))),
+      arcs: arcs(topFive.slice(0, 4).map((i) => i.adet)),
+      rows: [
+        { label: (topFive[0]?.urun ?? '1.').slice(0, 13) + ':', value: yok(money(topFive[0]?.adet ?? 0)) },
+        { label: (topFive[1]?.urun ?? '2.').slice(0, 13) + ':', value: yok(money(topFive[1]?.adet ?? 0)) },
+        { label: (topFive[2]?.urun ?? '3.').slice(0, 13) + ':', value: yok(money(topFive[2]?.adet ?? 0)) },
+        { label: (topFive[3]?.urun ?? '4.').slice(0, 13) + ':', value: yok(money(topFive[3]?.adet ?? 0)) },
+      ],
+      footLabel: 'Toplam satılan:',
+      footValue: yok(money(c.units?.satilan_adet ?? 0)),
+    },
+    c4: {
+      title: 'En çok iade edilen',
+      badge: ret ? 'İncele' : 'Temiz',
+      initials: (ret?.urun ?? '??').slice(0, 2).toUpperCase(),
+      name: ret?.urun ?? yok('İade yok'),
+      sub: ret?.kod ?? '',
+      valueLabel: 'İade tutarı:',
+      value: ret ? `${money(Math.abs(ret.iade_tutar))} ₺` : yok('0'),
+      note: ret ? `${money(Math.abs(ret.iade_adet))} adet geri döndü` : '',
+      footLabel: 'İlk altı iadenin toplamı:',
+      footValue: yok(`${money(retTotal)} ₺`),
+    },
+    c5: {
+      title: 'Kanıt & Kaynak',
+      badge: durum ? 'Bağlantı' : 'Canlı',
+      summary: durum || `${money(c.units?.satir ?? 0)} satır okundu · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
+      rows: [
+        { name: `${c.year >= 2026 ? 'LG_411' : 'LG_211'}_01_STLINE`, tag: 'Satır' },
+        { name: `${c.year >= 2026 ? 'LG_411' : 'LG_211'}_ITEMS`, tag: 'Ürün' },
+        { name: 'TRCODE 2,3', tag: 'İade' },
+      ],
+      latency: durum ? '—' : 'semantic bridge',
+    },
+    main: {
+      badge: 'ZEKİ AI ÖZETİ',
+      subject: `Ürünler · ${c.year}`,
+      model: durum || `${sonTR} itibarıyla`,
+      text: durum
+        ? `“${durum}.”`
+        : `“${money(c.units?.satilan_adet ?? 0)} adet satıldı, ${money(c.units?.baslik_sayisi ?? 0)} farklı başlıkta.${
+            top ? ` En çok satan ${top.urun}: ${money(top.adet)} adet.` : ''
+          }${ret ? ` En çok iade ${ret.urun}.` : ''}”`,
+      m1: { label: 'En çok satan:', value: top ? money(top.adet) : '—' },
+      m2: { label: 'Başlık:', value: yok(money(c.units?.baslik_sayisi ?? 0)) },
+      m3: { label: 'İade oranı:', value: c.returnPct == null ? '—' : `%${c.returnPct.toFixed(1).replace('.', ',')}` },
+      primary: 'Verine sor',
+      primaryTo: '/',
+      secondary: 'Uyarılar',
+      secondaryTo: '/uyarilar',
+      note: `${c.items.length} başlık listelendi`,
+    },
+    sticker: {
+      kicker: 'En çok satan',
+      meta: top ? `${money(top.adet)} adet` : '—',
+      title: top?.urun ?? yok('VERİ YOK'),
+      sub: top?.kod ?? '',
+      footL: 'net ciro',
+      footR: top ? `${money(top.net_ciro)} ₺` : '—',
+      badge: 'İlk sıra ★',
+    },
+    ghost: { title: '', badge: '', text: '', foot: '' },
+  };
 }

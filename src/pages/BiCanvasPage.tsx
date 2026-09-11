@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
-import { alertsData, boardsData, cfoData, overviewData, schedulesData } from '@/canvas/stitch/screens';
+import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
+import { alertsData, cfoData, productsData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
 import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
-const SCREENS = ['panolar', 'planli-raporlar', 'uyarilar'] as const;
+const SCREENS = ['urunler', 'planli-raporlar', 'uyarilar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
@@ -20,14 +21,19 @@ export default function BiCanvasPage() {
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
 
-  const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
+  const { on, schedules, alerts } = useCanvasQueries();
   const cfo = useCfoData();
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
-  const boards = dashboards.data?.dashboards ?? [];
-  const status = analyticsStatus.data;
   const source = ENGINE_ENABLED ? 'Logo · semantic bridge' : on ? 'Portal API · canlı' : 'Bağlantı yok';
+
+  // Açılışta ZEKİ tam sayfada; oturum başına bir kez.
+  const [splash, setSplash] = useState(() => !splashSeen());
+  const closeSplash = () => {
+    markSplashSeen();
+    setSplash(false);
+  };
 
   // Sığdırmayı kanvas kendi içinde yapar; burada yalnız yakınlaştırma tutulur.
   const [zoom, setZoom] = useState(1);
@@ -39,26 +45,20 @@ export default function BiCanvasPage() {
     if (!isScreen(screen)) {
       // Genel bakış CFO ekranıdır: rakamlar Logo'dan gelir. Motor yolu yoksa
       // portal özetine düşer.
-      if (ENGINE_ENABLED) return { ...cfoData(cfo, source), zoom: z };
-      const loading = schedules.isLoading || alerts.isLoading || analyticsStatus.isLoading;
-      return { ...overviewData(sched, alert, status, boards.length, loading, source), zoom: z };
+      return { ...cfoData(cfo, source), zoom: z };
     }
     if (screen === 'planli-raporlar') return { ...schedulesData(sched, schedules.isLoading, source), zoom: z };
     if (screen === 'uyarilar') return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
-    return { ...boardsData(status, boards, dashboards.isLoading, source), zoom: z };
+    return { ...productsData(cfo, source), zoom: z };
   }, [
     screen,
     cfo,
     sched,
     alert,
-    status,
-    boards,
     source,
     zoom,
     schedules.isLoading,
     alerts.isLoading,
-    analyticsStatus.isLoading,
-    dashboards.isLoading,
   ]);
 
   // Soru kutusu başka ürüne gitmez: cevap kanvasın kendi karar kartına düşer.
@@ -103,6 +103,8 @@ export default function BiCanvasPage() {
       },
     };
   }, [d, answer, asking, askErr]);
+
+  if (splash) return <Splash onDone={closeSplash} />;
 
   return <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />;
 }

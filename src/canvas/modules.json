@@ -423,5 +423,55 @@
     "sections": 0
    }
   ]
+ },
+ {
+  "title": "Eski Sistemden Gelenler",
+  "modules": [
+   {
+    "id": "desk",
+    "title": "Finans & Bütçe Masası",
+    "sections": 0
+   },
+   {
+    "id": "catalog",
+    "title": "Veri Sözlüğü",
+    "sections": 0
+   },
+   {
+    "id": "review",
+    "title": "Terim İnceleme ve Onay",
+    "sections": 0
+   },
+   {
+    "id": "board",
+    "title": "Pano (sürüklenebilir kartlar)",
+    "sections": 0
+   },
+   {
+    "id": "copilot",
+    "title": "ZEKİ Sohbet Paneli",
+    "sections": 0
+   },
+   {
+    "id": "catalog-explorer",
+    "title": "Katalog Gezgini",
+    "sections": 0
+   },
+   {
+    "id": "imprint",
+    "title": "Yayın/İmprint Tablosu",
+    "sections": 0
+   },
+   {
+    "id": "channel-mix",
+    "title": "Kanal Kırılımı",
+    "sections": 0
+   },
+   {
+    "id": "cashflow",
+    "title": "Nakit Akışı Grafiği",
+    "sections": 0
+   }
+  ]
  }
 ]

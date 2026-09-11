@@ -29,8 +29,16 @@ export type UnitsRow = { satilan_adet: number; baslik_sayisi: number; satir: num
 export type CustomerRow = { cari: string; net_ciro: number };
 export type ChannelRow = { trcode: number; net_ciro: number; fatura: number };
 export type ItemRow = { urun: string; kod: string; adet: number; net_ciro: number };
+export type ReturnItemRow = { urun: string; kod: string; iade_adet: number; iade_tutar: number };
 
 const SQL = {
+  /** İadesi en yüksek başlıklar: yayıncı için doğrudan aksiyon konusu. */
+  returnItems: (year: number) =>
+    `SELECT TOP 6 IT.[NAME] AS urun, IT.[CODE] AS kod, SUM(L.[AMOUNT]) AS iade_adet, SUM(L.[LINENET]) AS iade_tutar` +
+    ` FROM ${line(year)} AS L INNER JOIN [dbo].[${prefixFor(year)}_ITEMS] AS IT ON IT.[LOGICALREF]=L.[STOCKREF]` +
+    ` WHERE L.[CANCELLED]=0 AND L.[LINETYPE]=0 AND L.[TRCODE] IN (2,3)` +
+    ` AND L.[DATE_]>='${year}-01-01' AND L.[DATE_]<'${year + 1}-01-01'` +
+    ` GROUP BY IT.[NAME], IT.[CODE] ORDER BY iade_tutar DESC`,
   months: (year: number) =>
     `SELECT MONTH(I.[DATE_]) AS ay, ${NET} AS net_ciro, COUNT(*) AS fatura FROM ${inv(year)} AS I WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY MONTH(I.[DATE_]) ORDER BY ay`,
   totals: (year: number) =>
@@ -42,7 +50,7 @@ const SQL = {
   customers: (year: number) =>
     `SELECT TOP 5 C.[DEFINITION_] AS cari, ${NET} AS net_ciro FROM ${inv(year)} AS I INNER JOIN ${card(year)} AS C ON C.[LOGICALREF]=I.[CLIENTREF] WHERE ${SALES_FILTER} AND ${range(year)} GROUP BY C.[DEFINITION_] ORDER BY net_ciro DESC`,
   topItem: (year: number) =>
-    `SELECT TOP 3 IT.[NAME] AS urun, IT.[CODE] AS kod, SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[AMOUNT] ELSE -L.[AMOUNT] END) AS adet, SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[LINENET] ELSE -L.[LINENET] END) AS net_ciro FROM ${line(year)} AS L INNER JOIN [dbo].[${prefixFor(year)}_ITEMS] AS IT ON IT.[LOGICALREF]=L.[STOCKREF] WHERE L.[CANCELLED]=0 AND L.[LINETYPE]=0 AND L.[TRCODE] IN (2,3,7,8,9) AND L.[DATE_]>='${year}-01-01' AND L.[DATE_]<'${year + 1}-01-01' GROUP BY IT.[NAME], IT.[CODE] ORDER BY adet DESC`,
+    `SELECT TOP 8 IT.[NAME] AS urun, IT.[CODE] AS kod, SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[AMOUNT] ELSE -L.[AMOUNT] END) AS adet, SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[LINENET] ELSE -L.[LINENET] END) AS net_ciro FROM ${line(year)} AS L INNER JOIN [dbo].[${prefixFor(year)}_ITEMS] AS IT ON IT.[LOGICALREF]=L.[STOCKREF] WHERE L.[CANCELLED]=0 AND L.[LINETYPE]=0 AND L.[TRCODE] IN (2,3,7,8,9) AND L.[DATE_]>='${year}-01-01' AND L.[DATE_]<'${year + 1}-01-01' GROUP BY IT.[NAME], IT.[CODE] ORDER BY adet DESC`,
 };
 
 export type CfoData = {
@@ -57,6 +65,7 @@ export type CfoData = {
   channels: ChannelRow[];
   customers: CustomerRow[];
   items: ItemRow[];
+  returnItems: ReturnItemRow[];
   /** Yılın kaç ayı gerçekleşmiş (son fatura tarihine göre). */
   observedMonths: number;
   netYtd: number;
@@ -74,6 +83,7 @@ const EMPTY: Omit<CfoData, 'ready' | 'authRequired' | 'failed'> = {
   channels: [],
   customers: [],
   items: [],
+  returnItems: [],
   observedMonths: 0,
   netYtd: 0,
   netPrevSame: 0,
@@ -92,6 +102,7 @@ export function useCfoData(): CfoData {
       { key: 'channels', sql: SQL.channels(YEAR) },
       { key: 'customers', sql: SQL.customers(YEAR) },
       { key: 'items', sql: SQL.topItem(YEAR) },
+      { key: 'returnItems', sql: SQL.returnItems(YEAR) },
     ].map((it) => ({
       queryKey: ['cfo', it.key, YEAR],
       queryFn: () => runSql<Record<string, unknown>>(it.sql),
@@ -101,7 +112,7 @@ export function useCfoData(): CfoData {
     })),
   });
 
-  const [months, prev, totals, units, channels, customers, items] = q;
+  const [months, prev, totals, units, channels, customers, items, returnItems] = q;
   const authRequired = q.some((r) => r.error instanceof EngineAuthError);
   const failed = !authRequired && q.some((r) => r.isError);
   const ready = ENGINE_ENABLED && q.every((r) => r.isSuccess);
@@ -129,6 +140,7 @@ export function useCfoData(): CfoData {
     channels: (channels.data?.records ?? []) as unknown as ChannelRow[],
     customers: (customers.data?.records ?? []) as unknown as CustomerRow[],
     items: (items.data?.records ?? []) as unknown as ItemRow[],
+    returnItems: (returnItems.data?.records ?? []) as unknown as ReturnItemRow[],
     observedMonths,
     netYtd,
     netPrevSame,
