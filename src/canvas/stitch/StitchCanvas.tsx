@@ -123,6 +123,43 @@ function CanvasBody({
 }) {
   const { reset, dirty } = useLayout();
 
+  /**
+   * Dikey sığdırma. Tasarım 1000 piksel yüksekliğe çizildi; alçak
+   * pencerelerde karar kartı ve etiket katlanın altında kalıyordu.
+   * Görünen alan yetmiyorsa sahne kendini küçültür, yeter de artarsa
+   * %100'de kalır. Kullanıcının yakınlaştırması bunun üstüne çarpılır.
+   */
+  const alanRef = useRef<HTMLElement | null>(null);
+  const sigRef = useRef(1);
+  const [sig, setSig] = useState(1);
+  useLayoutEffect(() => {
+    const el = alanRef.current;
+    if (!el) return;
+    const olc = () => {
+      const gorunen = el.clientHeight;
+      const sahne = el.firstElementChild as HTMLElement | null;
+      if (!gorunen || !sahne) return;
+      // offsetTop/offsetHeight sahnenin kendi ölçeksiz eksenindedir;
+      // küçültme uygulansa da değişmez, o yüzden döngüye girmez.
+      let alt = 0;
+      sahne.querySelectorAll<HTMLElement>('[data-node]').forEach((n) => {
+        alt = Math.max(alt, n.offsetTop + n.offsetHeight);
+      });
+      if (!alt) return;
+      const ham = Math.min(1, gorunen / (alt + 16));
+      const q = Math.max(0.9, Math.round(ham * 100) / 100);
+      if (Math.abs(q - sigRef.current) > 0.005) {
+        sigRef.current = q;
+        setSig(q);
+      }
+    };
+    olc();
+    const ro = new ResizeObserver(olc);
+    ro.observe(el);
+    if (el.firstElementChild) ro.observe(el.firstElementChild);
+    return () => ro.disconnect();
+  }, []);
+
   const [ask, setAsk] = useState('');
   const [showSql, setShowSql] = useState(false);
   const onAsk = () => {
@@ -143,8 +180,8 @@ function CanvasBody({
       onZoom={onZoom}
       onReset={dirty ? reset : undefined}
     >
-    <main className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-auto">
-        <div ref={stageRef} className="relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]" style={{ zoom: zoom ?? 1 }}>
+    <main ref={alanRef} className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-auto">
+        <div ref={stageRef} className="relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]" style={{ zoom: (zoom ?? 1) * sig }}>
     
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
       <Connectors />

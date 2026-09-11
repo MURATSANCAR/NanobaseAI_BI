@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Box, Loader2, Plus, RotateCw, Send, Trash2, X } from 'lucide-react';
-import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, ask as askEngine, runSql } from '../engine';
+import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, ask as askEngine, runSql, type SqlResult } from '../engine';
 import Chart, { CHART_LABEL, allowedCharts, suggestChart, type Col, type Row } from './Chart';
-import { loadBoard, newId, nextSlot, saveBoard, type BoardCard, type ChartKind } from './store';
+import { loadBoard, newId, nextSlot, saveBoard, type BoardCard, type ChartKind, loadResults, saveResult, dropResult, type CardResult } from './store';
 import Shell from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 
@@ -128,15 +128,27 @@ export default function BoardScreen() {
     [user],
   );
 
-  // Kayıtlı olan SQL'dir: kartlar her açılışta yeniden koşar, rakam bayatlamaz.
+  const qc = useQueryClient();
+  // Kayıtlı olan SQL'dir. Kart önce son sonucuyla anında çizilir; sonuç
+  // beş dakikadan eskiyse sorgu arka planda koşar ve kart kendini tazeler.
+  const cached = useMemo(() => loadResults(user), [user]);
   const results = useQueries({
-    queries: cards.map((c) => ({
-      queryKey: ['pano', c.id, c.sql],
-      queryFn: () => runSql<Row>(c.sql),
-      enabled: ENGINE_ENABLED && Boolean(c.sql),
-      staleTime: 5 * 60_000,
-      retry: false,
-    })),
+    queries: cards.map((c) => {
+      const hit = cached[c.id];
+      return {
+        queryKey: ['pano', c.id, c.sql],
+        queryFn: async () => {
+          const r = await runSql<Row>(c.sql);
+          saveResult(user, c.id, { ...(r as CardResult), at: Date.now() });
+          return r;
+        },
+        initialData: hit ? (hit as unknown as SqlResult<Row>) : undefined,
+        initialDataUpdatedAt: hit?.at,
+        enabled: ENGINE_ENABLED && Boolean(c.sql),
+        staleTime: 5 * 60_000,
+        retry: false,
+      };
+    }),
   });
 
   const ask = async () => {
@@ -174,12 +186,19 @@ export default function BoardScreen() {
       ...slot,
     };
     persist([...cards, card]);
+    // Önizlemede gelen sonuç zaten elde: kart sorgusuz çizilsin.
+    const seed = { columns: pending.cols, records: pending.rows } as SqlResult<Row>;
+    qc.setQueryData(['pano', card.id, card.sql], seed);
+    saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
     setPending(null);
     setPrompt('');
   };
 
   const patch = (id: string, p: Partial<BoardCard>) => persist(cards.map((c) => (c.id === id ? { ...c, ...p } : c)));
-  const remove = (id: string) => persist(cards.filter((c) => c.id !== id));
+  const remove = (id: string) => {
+    dropResult(user, id);
+    persist(cards.filter((c) => c.id !== id));
+  };
 
   const height = useMemo(() => Math.max(720, ...cards.map((c) => c.y + c.h + 40)), [cards]);
 
@@ -214,7 +233,9 @@ export default function BoardScreen() {
             const r = results[i];
             const cols = (r?.data?.columns ?? []) as Col[];
             const rows = (r?.data?.records ?? []) as Row[];
-            const options = allowedCharts(cols, rows);
+            // Veri gelmeden izinli liste yalnız "Tablo" olur; kayıtlı seçim yine görünsün.
+            const allowed = allowedCharts(cols, rows);
+            const options = allowed.includes(c.chart) ? allowed : [c.chart, ...allowed];
             return (
               <CardFrame
                 key={c.id}
@@ -259,6 +280,11 @@ export default function BoardScreen() {
                         <RotateCw className={['h-3 w-3', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
                       </button>
                       {r?.isError && <span className="text-[10px] font-bold text-red-600">veri gelmedi</span>}
+                      {r?.data?.truncated && (
+                        <span className="text-[10px] font-bold text-amber-600" title="Sonuç motorun satır sınırında kesildi">
+                          ilk {rows.length.toLocaleString('tr-TR')} satır
+                        </span>
+                      )}
                     </div>
                   </>
                 }
@@ -280,7 +306,7 @@ export default function BoardScreen() {
       <div className="absolute bottom-6 left-[92px] right-6 z-40 flex justify-center">
         <div className="w-full max-w-[980px]">
           {pending && (
-            <div className="glass-card mb-3 rounded-3xl p-4 shadow-canvas-card">
+            <div className="mb-3 rounded-3xl border border-white bg-white p-4 shadow-canvas-card ring-1 ring-slate-900/5">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-[12.5px] font-extrabold">{pending.title}</div>

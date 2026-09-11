@@ -130,7 +130,7 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       badge: s.browserOnly.length ? 'Eksik kanal' : 'Tam',
       initials: 'EP',
       name: `${num(withMail)} kuralda e-posta`,
-      sub: 'channels[type=email]',
+      sub: 'e-posta ile bildirim',
       valueLabel: 'Yalnız tarayıcı:',
       value: num(s.browserOnly.length),
       note: 'Tarayıcı kapalıyken bu kurallar duyulmaz',

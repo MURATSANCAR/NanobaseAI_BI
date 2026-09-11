@@ -32,6 +32,27 @@ const EXPLAIN: Record<Decision, string> = {
     'Düzeltirsen yanlış okuma kaldırılır ve senin açıklaman kaydedilir. Doğru kolonu yazarsan onun yerine o onaylanır.',
 };
 
+
+const EVIDENCE_LABEL: Record<string, string> = {
+  DOC: 'Belgelerde geçiyor',
+  EXECUTION: 'Sorguda çalıştı',
+  PROFILE: 'Veri profiline uyuyor',
+  VALIDATED_SQL: 'Doğrulanmış sorguda kullanıldı',
+  LLM: 'Model önerdi',
+  HUMAN: 'İnsan onayı',
+};
+
+/** Onaylanacak şeyin teknik karşılığı; türüne göre ne gösterileceği değişir. */
+function technical(it: ReviewItem): string {
+  const m = it.mapping ?? {};
+  const e = m.entity ?? '—';
+  if (it.type === 'METRIC') return m.formula ?? `${e}.${m.column ?? '?'}`;
+  if (it.type === 'RELATIONSHIP') return `${e}.${m.column ?? '?'} ↔ ${m.extra?.ref_entity ?? '?'}.${m.extra?.ref_column ?? '?'}`;
+  if (it.type === 'DIMENSION_VALUE' || it.type === 'DEFAULT_FILTER')
+    return `${e}.${m.column ?? '?'} ${m.operator ?? '='} (${(m.values ?? []).join(', ')})`;
+  return `${e}.${m.column ?? '?'}`;
+}
+
 export default function ApprovalsScreen() {
   const qc = useQueryClient();
   const [q, setQ] = useState('');
@@ -42,7 +63,7 @@ export default function ApprovalsScreen() {
 
   const queue = useQuery({
     queryKey: ['onay-kuyrugu'],
-    queryFn: () => fetchReview(100),
+    queryFn: () => fetchReview(1000),
     enabled: ENGINE_ENABLED,
     staleTime: 30_000,
     retry: false,
@@ -161,16 +182,30 @@ export default function ApprovalsScreen() {
                   <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.term}</h2>
                 </div>
 
-                {/* Neye onay veriliyor: düz cümle */}
+                {/* Neye onay veriliyor: düz cümle + teknik karşılık */}
                 <div className="rounded-2xl border border-canvas-violet/20 bg-canvas-violet/[0.06] p-4">
                   <p className="text-[13.5px] leading-relaxed text-canvas-ink">
-                    Kullanıcı <strong>“{cur.term}”</strong> dediğinde sistem bunu{' '}
-                    <strong className="font-mono">
-                      {cur.mapping?.entity ?? '—'}
-                      {cur.mapping?.column ? `.${cur.mapping.column}` : ''}
-                    </strong>{' '}
-                    olarak okuyacak. Doğru mu?
+                    {cur.plain ?? (
+                      <>
+                        Kullanıcı <strong>“{cur.term}”</strong> dediğinde sistem bunu kullanacak.
+                      </>
+                    )}{' '}
+                    <strong>Doğru mu?</strong>
                   </p>
+                  <div className="mt-2.5 rounded-xl bg-white/80 px-3 py-2 font-mono text-[12px] font-semibold text-canvas-ink break-all">
+                    {technical(cur)}
+                  </div>
+                  {(cur.mapping?.extra?.conditions?.length ?? 0) > 0 && (
+                    <div className="mt-2 text-[11.5px] text-canvas-muted">
+                      <span className="font-bold">Koşullar:</span>{' '}
+                      <span className="font-mono">{cur.mapping!.extra!.conditions!.join(' · ')}</span>
+                    </div>
+                  )}
+                  {cur.columnMeaning && (
+                    <div className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
+                      <span className="font-bold">Kolonun anlamı:</span> {cur.columnMeaning}
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 text-[12px]">
@@ -189,6 +224,47 @@ export default function ApprovalsScreen() {
                     </div>
                   </div>
                 </div>
+
+                {cur.evidence && Object.keys(cur.evidence).length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Neden önerildi</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {Object.entries(cur.evidence).map(([k, v]) => (
+                        <span key={k} className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-semibold">
+                          {EVIDENCE_LABEL[k] ?? k} · {v}
+                        </span>
+                      ))}
+                      {(cur.counterEvidence ?? 0) > 0 && (
+                        <span className="rounded-lg bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                          Karşı kanıt · {cur.counterEvidence}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {(cur.observed?.length ?? 0) > 0 && (
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Kolonda görülen değerler</div>
+                    <div className="mt-1 overflow-x-auto rounded-xl border border-slate-100">
+                      <table className="w-full text-[11.5px]">
+                        <tbody>
+                          {cur.observed!.map((o) => {
+                            const chosen = (cur.mapping?.values ?? []).map(String).includes(String(o.value));
+                            return (
+                              <tr key={o.value} className={chosen ? 'bg-canvas-violet/10 font-bold' : 'odd:bg-slate-50/60'}>
+                                <td className="px-2.5 py-1 font-mono">{o.value}</td>
+                                <td className="px-2.5 py-1">{o.label ?? '—'}</td>
+                                <td className="px-2.5 py-1 text-right font-mono tabular-nums">{nf.format(o.rows)} satır</td>
+                                <td className="w-16 px-2.5 py-1 text-right text-[10.5px] text-canvas-violet">{chosen ? 'seçilen' : ''}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-[11px] font-bold text-canvas-muted" htmlFor="aciklama">

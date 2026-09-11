@@ -3,6 +3,8 @@
  * kişi kendi panosunu görür. Kayıt tarayıcıda tutulur, sunucuya taşınacaksa
  * değişecek tek yer bu dosyadır.
  */
+import type { SqlResult } from '../engine';
+
 export type ChartKind =
   | 'column'
   | 'bar'
@@ -61,3 +63,42 @@ export function nextSlot(cards: BoardCard[], w = 460, h = 300): { x: number; y: 
 }
 
 export const newId = () => `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/**
+ * Kartların son sonucu. Pano açılınca kart bununla anında çizilir, sorgu
+ * arka planda tazelenir; kullanıcı açılışta beklemez. Düzen anahtarından
+ * ayrı tutulur ki büyük sonuçlar yerleşim kaydını bozmasın.
+ */
+export type CardResult = SqlResult<Record<string, unknown>> & { at: number };
+
+const RKEY = (user: string) => `timas-pano-sonuc-v1:${user || 'anonim'}`;
+
+export function loadResults(user: string): Record<string, CardResult> {
+  try {
+    const raw = window.localStorage.getItem(RKEY(user));
+    const parsed = raw ? (JSON.parse(raw) as Record<string, CardResult>) : {};
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveResult(user: string, id: string, r: CardResult): void {
+  try {
+    const all = loadResults(user);
+    all[id] = r;
+    window.localStorage.setItem(RKEY(user), JSON.stringify(all));
+  } catch {
+    /* sığmazsa önbelleksiz devam: kart yine sorgudan çizilir */
+  }
+}
+
+export function dropResult(user: string, id: string): void {
+  try {
+    const all = loadResults(user);
+    delete all[id];
+    window.localStorage.setItem(RKEY(user), JSON.stringify(all));
+  } catch {
+    /* yok say */
+  }
+}

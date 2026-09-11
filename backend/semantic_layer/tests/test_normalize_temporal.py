@@ -40,3 +40,26 @@ def test_ambiguous_recent_is_not_guessed():
     slots, _ = parse_temporal("Günlük satış tutarı (son günler) nedir?", date(2026, 9, 6))
     amb = [s for s in slots if s.ambiguous]
     assert amb and amb[0].primitive == "AMBIGUOUS_RECENT" and amb[0].start is None
+
+
+def test_grain_plural_gore_forms():
+    """"aylara göre" tek sayı dönüyordu: yalnız "aya göre" tanınıyordu."""
+    today = date(2026, 9, 11)
+    for q, want in [
+        ("aylara göre net ciro", "MONTH"),
+        ("net ciroyu aylara böl", "MONTH"),
+        ("yıllara göre iade tutarı", "YEAR"),
+        ("haftalara göre sipariş sayısı", "WEEK"),
+        ("çeyreklere göre net ciro", "QUARTER"),
+        ("günlere göre fatura adedi", "DAY"),
+    ]:
+        _, grain = parse_temporal(q, today)
+        assert grain == want, (q, grain)
+
+
+def test_singular_gore_is_a_comparison_not_a_grain():
+    """"geçen yıla göre" karşılaştırmadır; yıllık kırılım sanılırsa karşılaştırma bozulur."""
+    today = date(2026, 9, 11)
+    for q in ("geçen yıla göre net ciro", "geçen haftaya göre sipariş", "geçen çeyreğe göre iade"):
+        _, grain = parse_temporal(q, today)
+        assert grain not in ("YEAR", "WEEK", "QUARTER"), (q, grain)

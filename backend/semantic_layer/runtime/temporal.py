@@ -50,15 +50,17 @@ def _quarter_start(d: date) -> date:
 
 
 def _grain_hint(text: str) -> Optional[str]:
-    if re.search(r"\b(ay bazinda|aylik|ay ay|aya gore|ay kiriliminda|her ay)\b", text):
+    # Tekil "yıla/haftaya/çeyreğe göre" karşılaştırmadır ("geçen yıla göre"); kırılım değil.
+    # Kırılımı yalnız çoğul biçim anlatır: "yıllara göre".
+    if re.search(r"\b(ay bazinda|aylar bazinda|aylik|ay ay|aya gore|aylara gore|aylara bol\w*|ay kiriliminda|her ay)\b", text):
         return "MONTH"
-    if re.search(r"\b(gunluk|gun bazinda|gun gun|gune gore)\b", text):
+    if re.search(r"\b(gunluk|gun bazinda|gun gun|gune gore|gunlere gore)\b", text):
         return "DAY"
-    if re.search(r"\b(haftalik|hafta bazinda)\b", text):
+    if re.search(r"\b(haftalik|hafta bazinda|hafta hafta|haftalara gore)\b", text):
         return "WEEK"
-    if re.search(r"\b(ceyrek bazinda|ceyreklik)\b", text):
+    if re.search(r"\b(ceyrek bazinda|ceyreklik|ceyreklere gore)\b", text):
         return "QUARTER"
-    if re.search(r"\b(yillik|yil bazinda)\b", text):
+    if re.search(r"\b(yillik|yil bazinda|yil yil|yillara gore)\b", text):
         return "YEAR"
     return None
 

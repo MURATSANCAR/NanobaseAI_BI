@@ -49,7 +49,8 @@ async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise
 }
 
 /** Kataloğa doğrulatılmış SQL çalıştırır. Motor katalog dışı tabloyu reddeder. */
-export function runSql<T>(sql: string, limit = 200): Promise<SqlResult<T>> {
+/** limit 0: motorun kendi üst sınırı. İstemci ayrıca kesmez; kesilirse `truncated` gelir. */
+export function runSql<T>(sql: string, limit = 0): Promise<SqlResult<T>> {
   return post<SqlResult<T>>('/api/v1/run_sql', { sql, limit });
 }
 
@@ -150,7 +151,23 @@ export type ReviewItem = {
   term: string;
   type: string;
   confidence?: number;
-  mapping?: { entity?: string; column?: string; table_pattern?: string };
+  mapping?: {
+    entity?: string;
+    column?: string | null;
+    table_pattern?: string;
+    operator?: string | null;
+    values?: string[];
+    formula?: string | null;
+    extra?: { conditions?: string[]; ref_entity?: string; ref_column?: string; func?: string };
+  };
+  /** Motorun düz Türkçe cümlesi: bu terim neye karşılık geliyor. */
+  plain?: string;
+  /** Kolonun iş anlamı (varsa değer kodlarıyla birlikte). */
+  columnMeaning?: string | null;
+  /** Kolonda gerçekten görülen değerler ve satır sayıları. */
+  observed?: Array<{ value: string; rows: number; label?: string }>;
+  evidence?: Record<string, number>;
+  counterEvidence?: number;
 };
 
 async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {

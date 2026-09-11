@@ -19,7 +19,6 @@ import {
 export type Box = { x: number; y: number; w: number };
 export type BoxMap = Record<string, Box>;
 
-const DESIGN_W = 1440;
 const KEY = (screen: string) => `timas-kanvas-duzen-v1:${screen}`;
 
 type Ctx = {
@@ -53,14 +52,56 @@ function load(screen: string): BoxMap | null {
   }
 }
 
-/** Tasarım koordinatlarını sahne genişliğine yay; kart dışarı taşmasın. */
+/** Beş kartın tek satırda dizildiği yuvalar. Sıra tasarımdaki sıradır. */
+const ROW = ['c1', 'c2', 'c3', 'c4', 'c5'];
+const GAP_MIN = 16;
+/** Sol menü sahnenin üstünde yüzüyor; kartlar onun altına girmesin. */
+const RAIL = 92;
+
+/**
+ * Varsayılan yerleşimi sahne genişliğine göre kurar.
+ *
+ * Önceden x değerleri orantılanıyordu; ekran 1440'tan darsa konumlar
+ * sıkışıyor ama kart genişlikleri sabit kaldığı için kartlar üst üste
+ * biniyordu. Şimdi satır, aradaki boşluk hesaplanarak diziliyor: sığmazsa
+ * boşluk en aza iner ve satır kaydırılabilir kalır.
+ */
 function spread(defaults: BoxMap, stageW: number): BoxMap {
   if (!stageW) return defaults;
-  const k = stageW / DESIGN_W;
-  const out: BoxMap = {};
-  for (const [id, b] of Object.entries(defaults)) {
-    const x = Math.round(b.x * k);
-    out[id] = { ...b, x: Math.max(8, Math.min(x, Math.max(8, stageW - b.w - 8))) };
+  const out: BoxMap = { ...defaults };
+  const cards = ROW.map((id) => defaults[id]).filter(Boolean);
+  const sumW = cards.reduce((a, b) => a + b.w, 0);
+  const usable = stageW - RAIL - GAP_MIN;
+  const gap = Math.max(GAP_MIN, (usable - sumW) / (cards.length - 1 || 1));
+  let x = RAIL + Math.max(0, (usable - sumW - gap * (cards.length - 1)) / 2);
+  ROW.forEach((id) => {
+    const b = defaults[id];
+    if (!b) return;
+    out[id] = { ...b, x: Math.round(x) };
+    x += b.w + gap;
+  });
+
+  // Karar kartı ortada; etiket sağına, yer yoksa kartın üstüne binmeden altına.
+  const main = defaults.main;
+  if (main) {
+    const w = Math.min(main.w, Math.max(420, usable));
+    out.main = { ...main, w, x: Math.round(RAIL + Math.max(0, (usable - w) / 2)) };
+  }
+  const sticker = defaults.sticker;
+  if (sticker && out.main) {
+    const sagBosluk = stageW - (out.main.x + out.main.w);
+    out.sticker = {
+      ...sticker,
+      x: Math.round(sagBosluk >= sticker.w + 24 ? out.main.x + out.main.w + 24 : Math.max(RAIL, stageW - sticker.w - 8)),
+      y: sagBosluk >= sticker.w + 24 ? sticker.y : out.main.y + 240,
+    };
+  }
+  // Soru balonu ortalanır.
+  const q = defaults.q;
+  // Soru iki satıra kayınca kartların üstüne biniyordu; tek satıra sığsın diye genişler.
+  if (q) {
+    const w = Math.min(760, Math.max(q.w, usable - 2 * GAP_MIN));
+    out.q = { ...q, w, x: Math.round(RAIL + Math.max(0, (usable - w) / 2)) };
   }
   return out;
 }

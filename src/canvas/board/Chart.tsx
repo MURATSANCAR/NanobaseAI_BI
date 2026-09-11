@@ -43,6 +43,18 @@ export function numericCols(cols: Col[], rows: Row[]): string[] {
   return cols.filter((c) => rows.some((r) => isNum(r[c.name]))).map((c) => c.name);
 }
 
+const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+/** Eksen etiketi: ISO tarih "Oca 2026" olur (ayın 1'i ise ay, değilse gün ay yıl). */
+export function prettyLabel(v: unknown): string {
+  const s = String(v ?? '');
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]00:00(?::00(?:\.0+)?)?Z?)?$/.exec(s);
+  if (!m) return s;
+  const [, y, mo, d] = m;
+  const ay = AY[Number(mo) - 1] ?? mo;
+  return d === '01' ? `${ay} ${y}` : `${Number(d)} ${ay} ${y}`;
+}
+
 export function labelCol(cols: Col[], rows: Row[]): string {
   const nums = new Set(numericCols(cols, rows));
   return cols.find((c) => !nums.has(c.name))?.name ?? cols[0]?.name ?? '';
@@ -127,7 +139,7 @@ export default function Chart({
         <div className="font-mono text-4xl font-black tabular-nums tracking-tight text-canvas-ink">
           {isNum(v) ? shortNum(v) : String(v ?? '—')}
         </div>
-        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-canvas-muted">{key}</div>
+        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-canvas-muted">{String(key).replace(/_/g, ' ')}</div>
       </div>
     );
   }
@@ -161,7 +173,7 @@ export default function Chart({
     );
   }
 
-  const data = rows.map((r) => ({ ...r, __label: String(r[label] ?? '') }));
+  const data = rows.map((r) => ({ ...r, __label: prettyLabel(r[label]) }));
   const axis = { tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false, axisLine: false } as const;
   const depthFilter = depth ? 'drop-shadow(0 8px 10px rgba(20,30,60,.22))' : undefined;
 
@@ -172,7 +184,7 @@ export default function Chart({
         <div className="h-full" style={{ transform: depth ? 'rotateX(38deg)' : undefined, filter: depthFilter }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie
+              <Pie animationDuration={500}
                 data={data}
                 dataKey={key}
                 nameKey="__label"
@@ -239,10 +251,11 @@ export default function Chart({
           <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
           {nums.map((n, i) =>
             kind === 'line' ? (
-              <Line key={n} type="monotone" dataKey={n} stroke={SERIES[i % SERIES.length]} strokeWidth={2.5} dot={false} />
+              <Line key={n} animationDuration={500} type="monotone" dataKey={n} stroke={SERIES[i % SERIES.length]} strokeWidth={2.5} dot={false} />
             ) : (
               <Area
                 key={n}
+                animationDuration={500}
                 type="monotone"
                 dataKey={n}
                 stroke={SERIES[i % SERIES.length]}
@@ -280,7 +293,7 @@ export default function Chart({
             )}
             <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(124,92,255,.06)' }} formatter={(v: number) => nf.format(v)} />
             {nums.map((n, i) => (
-              <Bar key={n} dataKey={n} fill={SERIES[i % SERIES.length]} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} />
+              <Bar key={n} animationDuration={500} dataKey={n} fill={SERIES[i % SERIES.length]} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} />
             ))}
             {nums.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           </BarChart>

@@ -263,7 +263,7 @@ export default function GlossaryScreen() {
 
   const conceptsQ = useQuery({
     queryKey: ['sozluk-kavramlar'],
-    queryFn: () => fetchConcepts('CERTIFIED', 400),
+    queryFn: () => fetchConcepts('CERTIFIED', 5000),
     enabled: ENGINE_ENABLED,
     staleTime: 5 * 60_000,
     retry: false,
@@ -277,7 +277,33 @@ export default function GlossaryScreen() {
   });
 
   const authRequired = conceptsQ.error instanceof EngineAuthError || tablesQ.error instanceof EngineAuthError;
-  const rows = useMemo(() => conceptsQ.data?.items ?? [], [conceptsQ.data]);
+  /**
+   * Aynı terim birden çok onaylı kayıtla gelebiliyor (her dönem ya da tablo
+   * için ayrı tanım). Listede tek satır olsun; tanımlar detayda alt alta durur.
+   */
+  const rows = useMemo(() => {
+    const mKey = (m: ConceptMapping) => `${m.entity ?? m.table_pattern ?? ''}.${m.column ?? ''}.${m.formula ?? ''}`;
+    const by = new Map<string, ConceptRow>();
+    for (const r of conceptsQ.data?.items ?? []) {
+      const k = `${norm(r.concept.term)}|${r.concept.semantic_type}`;
+      const cur = by.get(k);
+      if (!cur) {
+        by.set(k, { concept: { ...r.concept }, mappings: [...(r.mappings ?? [])] });
+        continue;
+      }
+      const seen = new Set((cur.mappings ?? []).map(mKey));
+      for (const m of r.mappings ?? []) {
+        if (!seen.has(mKey(m))) {
+          cur.mappings = [...(cur.mappings ?? []), m];
+          seen.add(mKey(m));
+        }
+      }
+      const synonyms = [...new Set([...(cur.concept.synonyms ?? []), ...(r.concept.synonyms ?? [])])];
+      const best = (r.concept.confidence ?? 0) > (cur.concept.confidence ?? 0) ? r.concept : cur.concept;
+      cur.concept = { ...best, synonyms };
+    }
+    return [...by.values()];
+  }, [conceptsQ.data]);
   const types = useMemo(() => [...new Set(rows.map((r) => r.concept.semantic_type))].sort(), [rows]);
 
   const filteredConcepts = useMemo(() => {
@@ -302,7 +328,7 @@ export default function GlossaryScreen() {
     const base = n
       ? list.filter((t) => norm(`${t.tableName} ${t.description ?? ''} ${t.entity ?? ''}`).includes(n))
       : list;
-    return [...base].sort((a, b) => (b.rowCount ?? 0) - (a.rowCount ?? 0)).slice(0, 300);
+    return [...base].sort((a, b) => (b.rowCount ?? 0) - (a.rowCount ?? 0));
   }, [tablesQ.data, q]);
 
   const selectedConcept = filteredConcepts.find((r) => r.concept.id === sel) ?? filteredConcepts[0];
@@ -378,7 +404,7 @@ export default function GlossaryScreen() {
             )}
 
             <div className="mt-2 text-[10.5px] font-semibold text-canvas-muted">
-              {tab === 'terim' ? `${filteredConcepts.length} terim` : `${filteredTables.length} tablo`}
+              {tab === 'terim' ? `${nf.format(filteredConcepts.length)} terim` : `${nf.format(filteredTables.length)} tablo`}
             </div>
 
             <div className="mt-1.5 flex-1 space-y-1 overflow-auto pr-1">
