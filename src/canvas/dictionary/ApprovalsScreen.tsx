@@ -73,7 +73,7 @@ export default function ApprovalsScreen() {
   const filtered = useMemo(() => {
     const n = norm(q.trim());
     if (!n) return items;
-    return items.filter((i) => norm(`${i.term} ${i.mapping?.entity ?? ''} ${i.mapping?.column ?? ''}`).includes(n));
+    return items.filter((i) => norm(`${i.label ?? ''} ${i.term} ${i.mapping?.entity ?? ''} ${i.mapping?.column ?? ''}`).includes(n));
   }, [items, q]);
   const cur: ReviewItem | undefined = filtered.find((i) => i.id === sel) ?? filtered[0];
 
@@ -158,7 +158,7 @@ export default function ApprovalsScreen() {
                     cur?.id === i.id ? 'bg-white shadow-sm' : 'hover:bg-white/70',
                   ].join(' ')}
                 >
-                  <span className="truncate text-[12.5px] font-semibold">{i.term}</span>
+                  <span className="truncate text-[12.5px] font-semibold">{i.label || i.term}</span>
                   <span className="flex items-center gap-2 text-[10.5px] text-canvas-muted">
                     <span>{TYPE_LABEL[i.type] ?? i.type}</span>
                     {i.mapping?.entity && <span className="font-mono">{i.mapping.entity}</span>}
@@ -179,7 +179,10 @@ export default function ApprovalsScreen() {
               <div className="space-y-5">
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[.16em] text-canvas-muted">Karar bekleyen terim</div>
-                  <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.term}</h2>
+                  <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.label || cur.term}</h2>
+                  {cur.label && cur.label !== cur.term && (
+                    <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">motordaki kaydı: {cur.term}</div>
+                  )}
                 </div>
 
                 {/* Neye onay veriliyor: düz cümle + teknik karşılık */}

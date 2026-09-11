@@ -64,12 +64,36 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
+  // Pano izni reddedilirse (odak yok, güvenli bağlam değil) eski yönteme düşer; o da olmazsa bunu söyler.
   const share = () => {
-    void navigator.clipboard?.writeText(window.location.href).then(() => {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    });
+    const url = window.location.href;
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {
+        ok = false;
+      }
+      ta.remove();
+      return ok;
+    };
+    const done = (ok: boolean) => {
+      setCopied(ok ? 'ok' : 'fail');
+      window.setTimeout(() => setCopied(null), 1800);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(url).then(() => done(true), () => done(fallback()));
+    } else {
+      done(fallback());
+    }
   };
   useLocation();
 
@@ -124,7 +148,7 @@ export default function Shell({
         {/* Share Button */}
         <button type="button" onClick={share} className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group">
           <svg className="w-3.5 h-3.5 text-muted group-hover:text-violet transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-          {copied ? 'Kopyalandı' : 'Paylaş'}
+          {copied === 'ok' ? 'Bağlantı kopyalandı' : copied === 'fail' ? 'Kopyalanamadı' : 'Paylaş'}
         </button>
 
         {/* Canvas Zoom Indicator & Controls */}

@@ -75,10 +75,11 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
 export function alertsData(s: AlertSummary, loading: boolean, source: string): StitchCanvasData {
   const hot = s.proximity[0];
   const latest = [...s.triggered].sort((a, b) => ((a.last_triggered_at ?? '') < (b.last_triggered_at ?? '') ? 1 : -1))[0];
-  const withMail = s.total - s.browserOnly.length;
+  const withMail = s.total - s.noRecipient.length;
+  const calm = Math.max(0, s.active - s.triggered.length - s.errored.length);
   const sp = spark(s.proximity.map((p) => p.pct));
   return {
-    ...base('Uyarılar', source, 'ZEKİ’ye sor… örn. stok 500 adedin altına inerse haber ver', {
+    ...base('Uyarılar', source, 'Kural yaz… örn. bu ayın iade tutarı 5 milyonu aşarsa haber ver', {
       initials: 'TY',
       role: 'Timaş Yayınları · Uyarılar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
@@ -86,14 +87,14 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
     }, 3),
     c1: {
       icon: '🔔',
-      title: 'Tetiklenenler',
+      title: 'Eşiği aşanlar',
       badge: s.triggered.length ? 'Kritik' : 'Sakin',
       big: num(s.triggered.length),
       bigSuffix: 'kural',
       subLabel: 'Aktif kural:',
       subValue: num(s.active),
       pct: s.active ? (s.triggered.length / s.active) * 100 : 0,
-      footL: latest ? `Son tetikleme: ${relative(latest.last_triggered_at)}` : 'Tetikleme yok',
+      footL: latest ? `Eşik aşıldı: ${relative(latest.last_triggered_at)}` : 'Aşan kural yok',
       footR: `Toplam: ${num(s.total)}`,
       rowLabel: 'Duraklatılmış:',
       rowValue: num(s.paused),
@@ -115,26 +116,28 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       title: 'Durum dağılımı',
       badge: `${num(s.total)} kural`,
       center: num(s.total),
-      arcs: arcs([Math.max(0, s.active - s.triggered.length), s.triggered.length, s.paused, 0]),
+      arcs: arcs([calm, s.triggered.length, s.paused, s.errored.length]),
       rows: [
-        { label: 'Sakin:', value: num(Math.max(0, s.active - s.triggered.length)) },
-        { label: 'Tetikte:', value: num(s.triggered.length) },
+        { label: 'Sakin:', value: num(calm) },
+        { label: 'Eşik aşıldı:', value: num(s.triggered.length) },
         { label: 'Duraklatıldı:', value: num(s.paused) },
-        { label: 'Diğer:', value: '0' },
+        { label: 'Ölçülemedi:', value: num(s.errored.length) },
       ],
       footLabel: 'Son kontrol:',
-      footValue: s.lastCheckedAt ? relative(s.lastCheckedAt) : 'hiç',
+      footValue: s.lastCheckedAt ? relative(s.lastCheckedAt) : 'henüz yok',
     },
     c4: {
       title: 'Bildirim kanalı',
-      badge: s.browserOnly.length ? 'Eksik kanal' : 'Tam',
+      badge: !s.email.configured ? 'E-posta kapalı' : s.noRecipient.length ? 'Alıcı eksik' : 'Tam',
       initials: 'EP',
-      name: `${num(withMail)} kuralda e-posta`,
-      sub: 'e-posta ile bildirim',
-      valueLabel: 'Yalnız tarayıcı:',
-      value: num(s.browserOnly.length),
-      note: 'Tarayıcı kapalıyken bu kurallar duyulmaz',
-      footLabel: 'Hiç kontrol edilmemiş:',
+      name: `${num(withMail)} kuralda alıcı var`,
+      sub: s.email.configured ? `gönderen: ${s.email.sender ?? ''}` : 'gönderici hesap tanımlı değil',
+      valueLabel: 'Alıcısız kural:',
+      value: num(s.noRecipient.length),
+      note: s.email.configured
+        ? 'Alıcısı olmayan kural eşiği aşınca kimseye yazılmaz'
+        : 'Hesap tanımlanana kadar uyarılar yalnız bu ekranda görünür',
+      footLabel: 'Henüz ölçülmemiş:',
       footValue: num(s.neverChecked.length),
     },
     c5: {
@@ -143,8 +146,8 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       summary: `${num(s.total)} kural · ${num(s.proximity.length)} ölçüm`,
       rows: [
         { name: 'Aktif kural', tag: num(s.active) },
-        { name: 'Tetikte', tag: num(s.triggered.length) },
-        { name: 'Bakılmamış', tag: num(s.neverChecked.length) },
+        { name: 'Eşik aşıldı', tag: num(s.triggered.length) },
+        { name: 'Ölçülemedi', tag: num(s.errored.length) },
       ],
       latency: s.lastCheckedAt ? dateTime(s.lastCheckedAt) : 'kontrol yok',
     },
@@ -155,20 +158,28 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
       text: loading
         ? '“Kurallar okunuyor…”'
         : s.total === 0
-          ? '“Henüz uyarı kuralı yok. Sohbete ‘stok 500 adedin altına inerse haber ver’ yazarak ilkini kurabilirsiniz.”'
-          : `“${num(s.active)} kural aktif${s.triggered.length ? `, ${num(s.triggered.length)} tanesi tetikte` : ''}.${
+          ? '“Henüz uyarı kuralı yok. Aşağıya ‘bu ayın iade tutarı 5 milyonu aşarsa haber ver’ yazarak ilkini kurabilirsiniz.”'
+          : `“${num(s.active)} kural aktif${s.triggered.length ? `, ${num(s.triggered.length)} tanesi eşiği aşmış` : ''}.${
               hot && hot.distance != null
                 ? ` Eşiğe en yakın kural “${hot.rule.title}”: son değer ${num(hot.rule.last_value ?? null)}, eşik ${num(hot.rule.threshold)}.`
                 : ''
-            }${s.neverChecked.length ? ` ${num(s.neverChecked.length)} kural hiç çalıştırılmamış.` : ''}”`,
+            }${s.errored.length ? ` ${num(s.errored.length)} kural ölçülemedi.` : ''}${
+              s.email.configured ? '' : ' E-posta hesabı tanımlı olmadığı için uyarılar şimdilik yalnız bu ekranda.'
+            }”`,
       m1: { label: 'Aktif:', value: num(s.active) },
       m2: { label: 'Duraklatılmış:', value: num(s.paused) },
-      m3: { label: 'Yalnız tarayıcı:', value: num(s.browserOnly.length) },
+      m3: { label: 'Alıcısız:', value: num(s.noRecipient.length) },
       primary: 'Kuralları aç',
-      primaryTo: '/uyarilar',
-      secondary: 'Sohbetten kural kur',
-      secondaryTo: '/',
-      note: s.neverChecked.length ? `${num(s.neverChecked.length)} kural hiç çalıştırılmamış` : 'Tüm kurallar denenmiş',
+      primaryTo: '/uyarilar?panel=kurallar',
+      secondary: 'Yeni kural',
+      secondaryTo: '/uyarilar?panel=yeni',
+      note: s.errored.length
+        ? `${num(s.errored.length)} kural ölçülemedi`
+        : s.neverChecked.length
+          ? `${num(s.neverChecked.length)} kural henüz ölçülmedi`
+          : s.total
+            ? 'Tüm kurallar ölçüldü'
+            : 'Kural yok',
     },
     sticker: {
       kicker: 'Eşiğe en yakın',
@@ -181,8 +192,10 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
     },
     ghost: {
       title: 'Önceki: Bildirim kanalı',
-      badge: num(s.browserOnly.length),
-      text: '“E-posta alıcısı olmayan kurallar yalnız tarayıcı açıkken duyulur.”',
+      badge: num(s.noRecipient.length),
+      text: s.email.configured
+        ? '“Alıcısı olmayan kurallar eşiği aşsa da kimseye e-posta gitmez.”'
+        : '“E-posta gönderici hesabı tanımlanınca bekleyen uyarılar gönderilir.”',
       foot: s.lastCheckedAt ? `${dateTime(s.lastCheckedAt)} · son kontrol` : 'kontrol kaydı yok',
     },
   };

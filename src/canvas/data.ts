@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, isRunnerConfigured } from '@/api/client';
 import { useApiConfig } from '@/context/ApiContext';
-import type { BiAlertRule, BiSchedule } from '@/api/types';
+import type { BiSchedule } from '@/api/types';
+import { ENGINE_ENABLED, alertsApi, type AlertEmail, type AlertRule } from './engine';
 
 /** Kanvasın tüm sorguları buradan geçer; anahtarlar mevcut sayfalarla aynı
  *  ki bir yerde yapılan değişiklik ötekini de tazelesin. */
@@ -15,11 +16,13 @@ export function useCanvasQueries() {
     enabled: on,
   });
 
+  // Uyarılar motorun kendi kurallarıdır; kontrolü sunucu yapar, ekran yalnız durumu okur.
   const alerts = useQuery({
-    queryKey: ['bi-alerts', config],
-    queryFn: () => api.bi.alerts.list(config),
-    enabled: on,
+    queryKey: ['zeki-uyarilar'],
+    queryFn: alertsApi.list,
+    enabled: ENGINE_ENABLED,
     refetchInterval: 60_000,
+    retry: false,
   });
 
   const analyticsStatus = useQuery({
@@ -86,31 +89,29 @@ export function summarizeSchedules(items: BiSchedule[]): ScheduleSummary {
 }
 
 export type AlertSummary = {
-  items: BiAlertRule[];
+  items: AlertRule[];
   total: number;
   active: number;
   paused: number;
-  /** Şu an tetikte olanlar: aktif ve daha önce tetiklenmiş. */
-  triggered: BiAlertRule[];
-  /** Hiç kontrol edilmemişler — `last_checked_at` eski arayüzde hiç görünmüyordu. */
-  neverChecked: BiAlertRule[];
-  /** E-posta kanalı olmayanlar; yalnız tarayıcı bildirimi alır. */
-  browserOnly: BiAlertRule[];
-  /** Eşiğe yakınlık: son değer ile eşik arasındaki mesafe, %0 = eşikte. */
-  proximity: Array<{ rule: BiAlertRule; pct: number; distance: number | null }>;
+  /** Şu an eşiği aşanlar: son kontrolde koşul sağlandı. */
+  triggered: AlertRule[];
+  /** Son kontrolde ölçülemeyenler: soru tek değer döndürmedi ya da sorgu hata verdi. */
+  errored: AlertRule[];
+  /** Henüz hiç ölçülmemişler. */
+  neverChecked: AlertRule[];
+  /** Alıcısı olmayanlar: tetiklenince kimseye e-posta gitmez. */
+  noRecipient: AlertRule[];
+  /** Eşiğe yakınlık: son değer ile eşik arasındaki mesafe, %100 = eşikte ya da aşmış. */
+  proximity: Array<{ rule: AlertRule; pct: number; distance: number | null }>;
   lastCheckedAt: string | null;
+  email: AlertEmail;
 };
 
-function alertRecipients(r: BiAlertRule): string[] {
-  const fromChannels = (r.channels ?? [])
-    .filter((c) => c.type === 'email' && c.to)
-    .map((c) => c.to as string);
-  if (fromChannels.length) return fromChannels;
-  return r.recipient?.trim() ? [r.recipient.trim()] : [];
-}
-
-export function summarizeAlerts(items: BiAlertRule[]): AlertSummary {
-  const active = items.filter((r) => lower(r.status) !== 'paused');
+export function summarizeAlerts(
+  items: AlertRule[],
+  email: AlertEmail = { configured: false, sender: null },
+): AlertSummary {
+  const active = items.filter((r) => r.status !== 'paused');
   const checked = items
     .map((r) => r.last_checked_at)
     .filter((v): v is string => Boolean(v))
@@ -119,25 +120,26 @@ export function summarizeAlerts(items: BiAlertRule[]): AlertSummary {
     items,
     total: items.length,
     active: active.length,
-    paused: items.filter((r) => lower(r.status) === 'paused').length,
-    triggered: active.filter((r) => Boolean(r.last_triggered_at)),
+    paused: items.filter((r) => r.status === 'paused').length,
+    triggered: active.filter((r) => r.state === 'triggered'),
+    errored: active.filter((r) => r.state === 'error'),
     neverChecked: items.filter((r) => !r.last_checked_at),
-    browserOnly: items.filter((r) => alertRecipients(r).length === 0),
+    noRecipient: items.filter((r) => !(r.recipients ?? []).length),
     proximity: active
+      .filter((r) => r.state !== 'error')
       .map((r) => {
         if (r.last_value == null || !Number.isFinite(r.threshold)) {
           return { rule: r, pct: 0, distance: null };
         }
         const span = Math.abs(r.threshold) || 1;
         const distance = r.last_value - r.threshold;
-        // Eşiğe ne kadar yaklaşıldı: 100 = eşikte veya aşmış.
         const pct = Math.max(0, Math.min(100, 100 - (Math.abs(distance) / span) * 100));
-        return { rule: r, pct, distance };
+        return { rule: r, pct: r.state === 'triggered' ? 100 : pct, distance };
       })
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 4),
     lastCheckedAt: checked.length ? checked[checked.length - 1] : null,
+    email,
   };
 }
 
-export { alertRecipients };

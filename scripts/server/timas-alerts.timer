@@ -1,0 +1,10 @@
+[Unit]
+Description=ZEKİ uyarı kontrolü, 15 dakikada bir
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+Unit=timas-alerts.service
+
+[Install]
+WantedBy=timers.target

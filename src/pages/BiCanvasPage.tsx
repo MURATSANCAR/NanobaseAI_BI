@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
@@ -8,6 +8,7 @@ import { useCfoData } from '@/canvas/cfo';
 import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
 import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
+import AlertsPanel, { parseRule, type RuleDraft } from '@/canvas/alerts/AlertsPanel';
 import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
@@ -22,13 +23,18 @@ export default function BiCanvasPage() {
   // Ekran yolun son parçasından okunur: /timas/uyarilar → 'uyarilar'.
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
+  // Uyarılar paneli adresten açılır: ?panel=kurallar | ?panel=yeni. Geri tuşu paneli kapatır.
+  const [params, setParams] = useSearchParams();
+  const panelParam = params.get('panel');
+  const panel = panelParam === 'kurallar' || panelParam === 'yeni' ? panelParam : null;
+  const [draft, setDraft] = useState<RuleDraft | null>(null);
 
   const { on, schedules, alerts } = useCanvasQueries();
   const qc = useQueryClient();
   const cfo = useCfoData();
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
-  const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
+  const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? [], alerts.data?.email), [alerts.data]);
   const source = ENGINE_ENABLED || on ? 'Canlı veri' : 'Bağlantı yok';
 
   // Açılışta ZEKİ tam sayfada; oturum başına bir kez.
@@ -78,6 +84,16 @@ export default function BiCanvasPage() {
       .finally(() => setAsking(false));
   };
 
+  // Uyarılar ekranında soru çubuğu kural yazar: cümle taslağa çevrilir, kişi panelde düzeltip kaydeder.
+  const onAsk = (q: string) => {
+    if (screen === 'uyarilar') {
+      setDraft(parseRule(q));
+      setParams({ panel: 'yeni' });
+      return;
+    }
+    ask(q);
+  };
+
   const view = useMemo(() => {
     if (!answer && !asking && !askErr) return d;
     const rows = answer?.records?.length ?? 0;
@@ -113,7 +129,20 @@ export default function BiCanvasPage() {
 
   return (
     <>
-      <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
+      <StitchCanvas d={view} onAsk={onAsk} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
+      {screen === 'uyarilar' && panel && (
+        <AlertsPanel
+          mode={panel}
+          onMode={(m) => setParams({ panel: m })}
+          onClose={() => {
+            setParams({});
+            setDraft(null);
+          }}
+          rules={alerts.data?.alerts ?? []}
+          email={alerts.data?.email ?? { configured: false, sender: null }}
+          draft={draft}
+        />
+      )}
       {needsLogin && <SessionGate onDone={() => qc.invalidateQueries()} />}
     </>
   );

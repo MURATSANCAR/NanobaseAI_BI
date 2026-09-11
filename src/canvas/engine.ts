@@ -149,6 +149,8 @@ export type TableRow = {
 export type ReviewItem = {
   id: string;
   term: string;
+  /** Kök terimin okunur hâli: "malzem" → "malzeme". Motor dağıtımın kendi kelimelerinden üretir. */
+  label?: string;
   type: string;
   confidence?: number;
   mapping?: {
@@ -210,3 +212,77 @@ export function review(limit = 50) {
     `/api/v1/semantic/review?limit=${limit}`,
   );
 }
+
+/* ------------------------------------------------------------------ */
+/* Uyarılar — kural bir sorudur, kontrolü sunucu yapar                  */
+/* ------------------------------------------------------------------ */
+
+export type AlertCondition = 'gt' | 'gte' | 'lt' | 'lte';
+
+export type AlertRule = {
+  id: string;
+  title: string;
+  question: string;
+  sql: string;
+  column: string | null;
+  condition: AlertCondition;
+  threshold: number;
+  recipients: string[];
+  status: 'active' | 'paused';
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  last_value: number | null;
+  last_checked_at: string | null;
+  last_triggered_at: string | null;
+  state: 'unknown' | 'ok' | 'triggered' | 'error';
+  last_error: string | null;
+  last_notified_at: string | null;
+  last_notify: 'sent' | 'failed' | 'no_smtp' | 'no_recipient' | null;
+};
+
+export type AlertEmail = { configured: boolean; sender: string | null };
+
+export type AlertInput = {
+  title: string;
+  question: string;
+  condition: AlertCondition;
+  threshold: number;
+  recipients: string[];
+  column?: string | null;
+};
+
+/** GET dışı istekler; motorun düz Türkçe hata mesajını olduğu gibi taşır. */
+async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
+  const res = await fetch(`${ENGINE_BASE}${path}`, {
+    method,
+    credentials: 'include',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
+    const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+    throw new Error(msg || `Motor ${res.status}`);
+  }
+  return (await res.json()) as T;
+}
+
+export const alertsApi = {
+  list: () => send<{ alerts: AlertRule[]; email: AlertEmail }>('GET', '/api/v1/alerts'),
+  create: (b: AlertInput) => send<AlertRule>('POST', '/api/v1/alerts', b),
+  update: (id: string, b: Partial<AlertInput> & { status?: 'active' | 'paused' }) =>
+    send<AlertRule>('PATCH', `/api/v1/alerts/${encodeURIComponent(id)}`, b),
+  remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/alerts/${encodeURIComponent(id)}`),
+  check: (id?: string) =>
+    send<{ checked: number; triggered: number; notified: number; errors: Array<{ id: string; error: string }> }>(
+      'POST',
+      `/api/v1/alerts/check${id ? `?id=${encodeURIComponent(id)}` : ''}`,
+      {},
+    ),
+};
