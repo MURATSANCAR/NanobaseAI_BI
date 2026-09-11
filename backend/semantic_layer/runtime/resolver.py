@@ -154,6 +154,10 @@ def _rooted(key: str) -> str:
     return " ".join(short_root(t) for t in key.split())
 
 
+#: "Yıllık ciro" bu yılın yıllık tutarını da anlatabilir; yıllara YAYILMAYI yalnız açık kırılım ister.
+_YEARLY_BREAKDOWN = re.compile(r"\b(yillara gore|yil yil|yil bazinda|yillar bazinda|yillara bol\w*|her yil)\b")
+
+
 class SemanticResolver:
     def _all_years(self, sq: SemanticQuery, today: date) -> "Optional[TemporalSlot]":
         """"Yıllara göre ciro" bir yılı değil, yılları sorar.
@@ -532,7 +536,7 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
-        if not sq.temporal and sq.grain == "YEAR":
+        if not sq.temporal and sq.grain == "YEAR" and _YEARLY_BREAKDOWN.search(fold(question)):
             span = self._all_years(sq, today or date.today())
             if span is not None:
                 sq.temporal = [span]

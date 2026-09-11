@@ -90,3 +90,15 @@ def test_a_named_year_still_wins_over_the_yearly_span(catalog, profiles):
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("2025 yılı yıllara göre net ciro", today=date(2026, 7, 20))
     assert not any(t.params.get("allYears") for t in sq.temporal)
+
+
+def test_annual_alone_is_not_a_breakdown_over_years(catalog, profiles):
+    """"yıllık net ciro" bu yılın tutarı olabilir; yıllara yayılmayı yalnız açık kırılım ister."""
+    from semantic_layer.models import TemporalSlot
+    from semantic_layer.runtime.resolver import SemanticResolver
+    from semantic_layer.tests.conftest import DS, TENANT
+
+    this_year = TemporalSlot(text="bu yıl", primitive="YEAR", start=date(2026, 1, 1), end=date(2027, 1, 1), grain="YEAR")
+    r = SemanticResolver(catalog, TENANT, DS, profiles, default_temporal=this_year)
+    sq = r.resolve("yıllık net ciro", today=date(2026, 7, 20))
+    assert not any(t.params.get("allYears") for t in sq.temporal)

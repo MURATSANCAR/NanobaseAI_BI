@@ -208,7 +208,7 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
   const withRecipient = s.total - s.recipientless.length;
   const sp = spark(s.upcoming.map((_, i) => s.upcoming.length - i));
   return {
-    ...base('Planlı raporlar', source, 'ZEKİ’ye sor… örn. her pazartesi 09:00 satış özeti gönder', {
+    ...base('Planlı raporlar', source, 'ZEKİ’ye sor… örn. geçen haftanın satış özeti', {
       initials: 'TY',
       role: 'Timaş Yayınları · Planlı raporlar',
       at: loading ? 'Yükleniyor' : 'Şimdi',
@@ -282,7 +282,9 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
       badge: 'ZEKİ AI ÖZETİ',
       subject: `Planlı raporlar · ${num(s.total)} kayıt`,
       model: s.recipientless.length ? 'Dikkat gerektiren durum var' : 'Kuyruk sağlıklı',
-      text: loading
+      text: !s.total && !loading
+        ? '“Planlı rapor gönderimi e-posta ile çalışır; gönderici hesap tanımlanınca burada rapor kurulabilecek. O zamana kadar eşik takibi için Uyarılar, kalıcı grafikler için Panolar hazır.”'
+        : loading
         ? '“Rapor kuyruğu okunuyor…”'
         : s.total === 0
           ? '“Henüz planlı rapor yok. Sohbete ‘her pazartesi 09:00 satış özeti gönder’ yazarak ilkini kurabilirsiniz.”'
@@ -292,10 +294,10 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
       m1: { label: 'Etkin:', value: num(s.active) },
       m2: { label: 'Duraklatılmış:', value: num(s.paused) },
       m3: { label: 'Başarısız:', value: num(s.failed) },
-      primary: 'Raporları aç',
-      primaryTo: '/planli-raporlar',
-      secondary: 'Sohbetten rapor kur',
-      secondaryTo: '/',
+      primary: 'Uyarılara git',
+      primaryTo: '/uyarilar',
+      secondary: 'Panolara git',
+      secondaryTo: '/panolar',
       note: s.lastFailure?.error ? `Son hata: ${s.lastFailure.error.slice(0, 60)}` : 'Kayıtlarda başarısız gönderim yok',
     },
     sticker: {

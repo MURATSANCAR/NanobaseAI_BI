@@ -1292,7 +1292,8 @@ def _review_vocabulary(r: "Runtime", said: dict) -> Any:
     """Kuyruktaki kök terimleri okunur yazmak için dağıtımın kendi kelimeleri. Katalog sürümü başına bir kez."""
     from semantic_bridge.labels import Vocabulary
 
-    key = (id(r.profiles), len(r.rules_text or ""), len(said))
+    key = (getattr(r, "_catalog_version", None), id(r.profiles), len(r.profiles), hash(r.rules_text or ""),
+           hash(tuple(sorted((str(k), str(v)) for k, v in said.items()))))
     cached = getattr(r, "_review_vocab", None)
     if cached and cached[0] == key:
         return cached[1]
@@ -1998,12 +1999,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         r, engine, tenant, ds = _alerts()
         try:
-            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=request.headers.get("X-User"))
+            rule = alerts_mod.create_rule(engine, tenant, ds, body)
         except alerts_mod.AlertError as e:
             raise _alert_fail(e) from None
-        # Kurulur kurulmaz ölçülür: kişi değeri ve durumu hemen görsün, ilk tetiklenme 15 dakika beklemesin.
-        _alert_check(r, engine, tenant, ds, only=rule["id"])
-        return alerts_mod.get_rule(engine, tenant, ds, rule["id"]) or rule
+        # Kurulur kurulmaz ölçülür ama istek beklemez: yavaş bir cevap tarayıcıyı zaman aşımına düşürüp
+        # kişiye aynı kuralı ikinci kez kaydettirmesin. Ekran listeyi birkaç saniye sonra yeniden okur.
+        if os.environ.get("ALERT_MEASURE_ON_CREATE", "background") == "sync":
+            _alert_check(r, engine, tenant, ds, only=rule["id"])
+            return alerts_mod.get_rule(engine, tenant, ds, rule["id"]) or rule
+        threading.Thread(target=_alert_check, args=(r, engine, tenant, ds, rule["id"]), daemon=True).start()
+        return rule
 
     @app.patch("/api/v1/alerts/{rule_id}")
     def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -2034,8 +2039,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/alerts/{rule_id}/events")
     def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
         _require_caller(request)
-        _, engine, _t, _d = _alerts()
-        return {"events": alerts_mod.events(engine, rule_id, limit)}
+        _, engine, tenant, ds = _alerts()
+        ev = alerts_mod.events(engine, tenant, ds, rule_id, limit)
+        if ev is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return {"events": ev}
 
     return app
 

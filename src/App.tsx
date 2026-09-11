@@ -1,7 +1,7 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { RequirePortalSession } from '@/components/RequireAuth';
+import RequireTimasSession from '@/canvas/TimasSession';
 import { t } from '@/i18n';
 
 const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
@@ -34,7 +34,7 @@ export default function App() {
           {/* Kök doğrudan kanvas: /timas/ ve /bi/ adreslerinde araya ikinci bir
               yol parçası girmiyor. Kanvas ekranları kısa slug taşır. */}
 
-          <Route element={<RequirePortalSession />}>
+          <Route element={<RequireTimasSession />}>
             {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
             <Route index element={<BiCanvasPage />} />

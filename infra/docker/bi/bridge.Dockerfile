@@ -18,6 +18,9 @@ RUN pip install --no-cache-dir -r /app/backend/requirements-semantic.txt \
 
 COPY backend /app/backend
 COPY configs /app/configs
+# Arka plan işleri (jobs servisi aynı imajı kullanır): ana ekran özeti + uyarı kontrolü
+COPY scripts/server/timas-metrics-build.py /app/jobs/metrics_build.py
+COPY infra/docker/bi/jobs.py /app/jobs/jobs.py
 
 ENV PYTHONPATH=/app/backend
 EXPOSE 8795

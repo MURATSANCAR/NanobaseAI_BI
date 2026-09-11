@@ -70,6 +70,9 @@ _EMAIL = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$")
 
 _ready: set[int] = set()
 _ready_lock = threading.Lock()
+#: Kontroller tek sıradan geçer: zamanlayıcı ile "şimdi kontrol et" aynı anda koşup aynı aşımı iki kez bildirmesin.
+_check_lock = threading.Lock()
+_LOCAL = timezone(timedelta(hours=float(os.environ.get("ALERT_TZ_OFFSET_HOURS", "3"))))
 
 
 class AlertError(ValueError):
@@ -134,6 +137,9 @@ def _recipients(raw: Any) -> list[str]:
             continue
         if not _EMAIL.match(x):
             raise AlertError(f"«{x}» geçerli bir e-posta adresi değil.")
+        allowed = [d.strip().lower() for d in os.environ.get("ALERT_RECIPIENT_DOMAINS", "").split(",") if d.strip()]
+        if allowed and x.rsplit("@", 1)[1].lower() not in allowed:
+            raise AlertError(f"«{x}» izinli bir alan adında değil ({', '.join(allowed)}).")
         if x.lower() not in {o.lower() for o in out}:
             out.append(x)
     return out
@@ -141,7 +147,15 @@ def _recipients(raw: Any) -> list[str]:
 
 def _threshold(raw: Any) -> float:
     try:
-        v = float(str(raw).replace(" ", "").replace(",", "."))
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            v = float(raw)
+        else:
+            t = str(raw).strip().replace(" ", "")
+            if "," in t:                                  # Türkçe: nokta binlik, virgül ondalık
+                t = t.replace(".", "").replace(",", ".")
+            elif re.fullmatch(r"-?\d{1,3}(\.\d{3})+", t):  # "5.000.000" binlik gruplu tam sayı
+                t = t.replace(".", "")
+            v = float(t)
     except (TypeError, ValueError):
         raise AlertError("Eşik bir sayı olmalı.") from None
     if not math.isfinite(v):
@@ -152,13 +166,13 @@ def _threshold(raw: Any) -> float:
 def _clean(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
     out: dict[str, Any] = {}
     if not partial or "question" in body or "sql" in body:
-        q = str(body.get("question") or "").strip()
+        q = " ".join(str(body.get("question") or "").split())
         sql = str(body.get("sql") or "").strip()
         if not q and not sql:
             raise AlertError("Kuralın neyi ölçeceği yazılmalı.")
         out["question"], out["sql"] = q[:2000], sql[:20000]
     if not partial or "title" in body:
-        title = str(body.get("title") or body.get("question") or "").strip()
+        title = " ".join(str(body.get("title") or body.get("question") or "").split())
         if not title:
             raise AlertError("Kurala bir ad verin.")
         out["title"] = title[:300]
@@ -201,7 +215,7 @@ def create_rule(engine: sa.engine.Engine, tenant: str, ds: str, body: dict[str, 
     rid = f"alr-{uuid.uuid4().hex[:12]}"
     vals.update(id=rid, tenant_id=tenant, datasource_id=ds, status=vals.get("status", "active"),
                 column_name=vals.get("column_name") or (str(body.get("column") or "").strip() or None),
-                created_by=(str(by or body.get("created_by") or "").strip()[:120] or None),
+                created_by=(str(by or "").strip()[:120] or None),
                 created_at=now, updated_at=now, state="unknown")
     with engine.begin() as c:
         c.execute(RULES.insert().values(**vals))
@@ -231,7 +245,9 @@ def delete_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str) ->
     return bool(n)
 
 
-def events(engine: sa.engine.Engine, rule_id: str, limit: int = 50) -> list[dict[str, Any]]:
+def events(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, limit: int = 50) -> Optional[list[dict[str, Any]]]:
+    if get_rule(engine, tenant, ds, rule_id) is None:
+        return None
     with engine.connect() as c:
         rows = c.execute(sa.select(EVENTS).where(EVENTS.c.rule_id == rule_id)
                          .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc()).limit(max(1, limit))).mappings().all()
@@ -285,31 +301,39 @@ Notifier = Callable[[dict[str, Any], float], str]
 def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifier: Notifier, *,
           only: Optional[str] = None, now: Optional[datetime] = None,
           remind: Optional[timedelta] = None) -> dict[str, Any]:
-    """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir."""
+    """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir. Aynı anda tek kontrol koşar."""
+    with _check_lock:
+        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind)
+
+
+def _check(engine, tenant, ds, runner, notifier, *, only, now, remind) -> dict[str, Any]:
     now = now or _now()
     remind = remind if remind is not None else timedelta(hours=float(os.environ.get("ALERT_REMIND_HOURS", "24")))
     q = sa.select(RULES).where(RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds)
     q = q.where(RULES.c.id == only) if only else q.where(RULES.c.status == "active")
     with engine.connect() as c:
-        rules = [to_dict(r) for r in c.execute(q).mappings().all()]
-    summary = {"checked": 0, "triggered": 0, "notified": 0, "errors": []}
-    for rule in rules:
+        raws = c.execute(q).mappings().all()
+    summary: dict[str, Any] = {"checked": 0, "triggered": 0, "notified": 0, "errors": []}
+    for raw in raws:
+        rule = to_dict(raw)
+        seen = raw["updated_at"]
         summary["checked"] += 1
         upd: dict[str, Any] = {"last_checked_at": now}
         ev: dict[str, Any] = {"rule_id": rule["id"], "at": now, "triggered": False}
+        # Son geçerli karar "aşıldı" mıydı? Bir ölçüm hatası o kararı silmez: aşım sürerken araya giren
+        # zaman aşımı, ikinci bir "eşik aşıldı" e-postası doğurmamalı. Aşım bildirimi atıldığında
+        # last_notify dolar, değer eşiğin berisine dönünce boşalır.
+        was = rule["state"] == "triggered" or (rule["state"] == "error" and rule["last_notify"] is not None)
         try:
             answer = runner(rule)
             value = value_of(answer, rule["column"])
             trig = breached(value, rule["condition"], float(rule["threshold"]))
             upd.update(last_value=value, state="triggered" if trig else "ok", last_error=None)
             ev.update(value=value, triggered=trig)
-            if answer.get("sql") and not rule["question"]:
-                pass
-            elif answer.get("sql"):
+            if answer.get("sql") and rule["question"]:
                 upd["sql"] = str(answer["sql"])[:20000]
             if trig:
                 summary["triggered"] += 1
-                was = rule["state"] == "triggered"
                 if not was:
                     upd["last_triggered_at"] = now
                 last_sent = _aware(datetime.fromisoformat(rule["last_notified_at"])) if rule["last_notified_at"] else None
@@ -329,8 +353,10 @@ def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifi
             ev["error"] = msg[:500]
             summary["errors"].append({"id": rule["id"], "error": msg[:300]})
         with engine.begin() as c:
-            c.execute(RULES.update().where(RULES.c.id == rule["id"]).values(**upd))
-            c.execute(EVENTS.insert().values(**ev))
+            # Ölçüm sürerken kural değiştirildiyse ya da silindiyse eski kurala göre verilmiş karar yazılmaz.
+            n = c.execute(RULES.update().where(RULES.c.id == rule["id"], RULES.c.updated_at == seen).values(**upd)).rowcount
+            if n:
+                c.execute(EVENTS.insert().values(**ev))
     return summary
 
 
@@ -363,17 +389,19 @@ def _tr(v: float) -> str:
     return s[:-3] if s.endswith(",00") else s
 
 
-def render(rule: dict[str, Any], value: float, link: str = "") -> tuple[str, str]:
-    subject = f"ZEKİ uyarı: {rule['title']}"
+def render(rule: dict[str, Any], value: float, link: str = "", now: Optional[datetime] = None) -> tuple[str, str]:
+    title = " ".join(str(rule["title"]).split())
+    subject = f"ZEKİ uyarı: {title}"
+    verb = "eşiği aştı" if rule["condition"] in ("gt", "gte") else "eşiğin altına indi"
     lines = [
-        f"«{rule['title']}» kuralı eşiği aştı.",
+        f"«{title}» kuralı {verb}.",
         "",
         f"Şu anki değer: {_tr(value)}",
         f"Koşul: değer {CONDITIONS[rule['condition']]} {_tr(float(rule['threshold']))}",
     ]
     if rule.get("question"):
         lines.append(f"Ölçülen: {rule['question']}")
-    lines += ["", f"Kontrol zamanı: {datetime.now().strftime('%d.%m.%Y %H:%M')}"]
+    lines += ["", f"Kontrol zamanı: {(now or _now()).astimezone(_LOCAL).strftime('%d.%m.%Y %H:%M')}"]
     if link:
         lines += ["", f"Ayrıntı: {link}"]
     return subject, "\n".join(lines)
@@ -387,11 +415,11 @@ def email_notifier(link: str = "") -> Notifier:
         cfg = smtp_settings()
         if not cfg:
             return "no_smtp"
-        subject, text = render(rule, value, link)
-        msg = EmailMessage()
-        msg["Subject"], msg["From"], msg["To"] = subject, cfg["sender"], ", ".join(to)
-        msg.set_content(text)
         try:
+            subject, text = render(rule, value, link)
+            msg = EmailMessage()
+            msg["Subject"], msg["From"], msg["To"] = subject, cfg["sender"], ", ".join(to)
+            msg.set_content(text)
             ctx = ssl.create_default_context()
             server = (smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20, context=ctx) if cfg["ssl"]
                       else smtplib.SMTP(cfg["host"], cfg["port"], timeout=20))

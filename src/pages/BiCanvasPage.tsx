@@ -29,13 +29,13 @@ export default function BiCanvasPage() {
   const panel = panelParam === 'kurallar' || panelParam === 'yeni' ? panelParam : null;
   const [draft, setDraft] = useState<RuleDraft | null>(null);
 
-  const { on, schedules, alerts } = useCanvasQueries();
+  const { schedules, alerts } = useCanvasQueries();
   const qc = useQueryClient();
   const cfo = useCfoData();
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? [], alerts.data?.email), [alerts.data]);
-  const source = ENGINE_ENABLED || on ? 'Canlı veri' : 'Bağlantı yok';
+  const source = ENGINE_ENABLED ? 'Canlı veri' : 'Bağlantı yok';
 
   // Açılışta ZEKİ tam sayfada; oturum başına bir kez.
   const [splash, setSplash] = useState(() => !splashSeen());

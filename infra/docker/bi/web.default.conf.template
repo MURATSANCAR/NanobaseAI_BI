@@ -1,21 +1,57 @@
+# ZEKİ AI web ön kapısı — bizim sunucudaki /timas/ yollarının aynısı (portal.nanobase.ai).
+# ${CALLER_TOKEN} ve ${ADMIN_TOKEN} açılışta envsubst ile yazılır; $uri gibi nginx değişkenlerine dokunulmaz.
 server {
     listen 80;
     server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
     client_max_body_size 8m;
 
-    # Motor: aynı docker ağındaki bridge konteynerine ada göre proxy. Caller token burada enjekte edilir.
-    location /api/ {
+    location = / { return 302 /timas/; }
+    location = /timas { return 302 /timas/; }
+
+    # Onay kararı kataloğu değiştirir: yönetici anahtarı YALNIZ bu uca eklenir.
+    location ~ ^/timas/api/v1/semantic/concepts/[^/]+/review$ {
+        rewrite ^/timas(/api/.*)$ $1 break;
         proxy_pass http://bridge:8795;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $remote_addr;
         proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_buffering off;          # /api/v1/ask/stream (SSE) icin
+        proxy_set_header x-semantic-admin "${ADMIN_TOKEN}";
+        proxy_read_timeout 120s;
     }
 
-    # SPA: bilinmeyen yol index.html'e düşer. Giriş/oturum yok (auth müşteri ortamında).
-    location / { try_files $uri $uri/ /index.html; }
+    # Motor: aynı docker ağındaki bridge konteynerine ada göre.
+    location /timas/api/ {
+        proxy_pass http://bridge:8795/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+        proxy_buffering off;          # /api/v1/ask/stream (SSE)
+        client_max_body_size 10M;
+    }
+
+    # Ana ekran özeti: jobs konteyneri 3 dakikada bir yazar; ekran açılışta sorgu koşturmaz.
+    location /timas/metrics/ {
+        alias /usr/share/nginx/metrics/;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # Giriş müşteri ortamındadır; bu yığında giriş servisi yok. Arayüz 404'ü "oturum var" sayar.
+    location /timas/auth/ { return 404; }
+
+    location /timas/assets/ {
+        alias /usr/share/nginx/html/assets/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # SPA: HTML önbelleğe alınmaz — yeni sürüm eski hash'li dosyaları siler, eski kopya boş sayfa olur.
+    location /timas/ {
+        alias /usr/share/nginx/html/;
+        add_header Cache-Control "no-store, must-revalidate" always;
+        try_files $uri $uri/ /timas/index.html;
+    }
 }

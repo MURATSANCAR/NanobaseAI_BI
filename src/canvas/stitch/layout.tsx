@@ -81,20 +81,23 @@ function spread(defaults: BoxMap, stageW: number): BoxMap {
     x += b.w + gap;
   });
 
-  // Karar kartı ortada; etiket sağına, yer yoksa kartın üstüne binmeden altına.
+  // Karar kartı ortada, etiket sağında. Yer darsa önce kart daralır ki etiket yanına sığsın; o da
+  // yetmezse etiket kartın altına iner. Kartın yüksekliği ~250 px; 240 px aşağısı üstüne biniyordu.
   const main = defaults.main;
-  if (main) {
-    const w = Math.min(main.w, Math.max(420, usable));
-    out.main = { ...main, w, x: Math.round(RAIL + Math.max(0, (usable - w) / 2)) };
-  }
   const sticker = defaults.sticker;
-  if (sticker && out.main) {
-    const sagBosluk = stageW - (out.main.x + out.main.w);
-    out.sticker = {
-      ...sticker,
-      x: Math.round(sagBosluk >= sticker.w + 24 ? out.main.x + out.main.w + 24 : Math.max(RAIL, stageW - sticker.w - 8)),
-      y: sagBosluk >= sticker.w + 24 ? sticker.y : out.main.y + 240,
-    };
+  if (main) {
+    const side = sticker ? sticker.w + 24 : 0;
+    const roomForBoth = usable - side >= 560;
+    const w = Math.min(main.w, Math.max(420, roomForBoth ? usable - side : usable));
+    const x = roomForBoth
+      ? Math.round(RAIL + Math.max(0, (usable - w - side) / 2))
+      : Math.round(RAIL + Math.max(0, (usable - w) / 2));
+    out.main = { ...main, w, x };
+    if (sticker) {
+      out.sticker = roomForBoth
+        ? { ...sticker, x: x + w + 24, y: sticker.y }
+        : { ...sticker, x: Math.round(RAIL + Math.max(0, (usable - sticker.w) / 2)), y: main.y + 300 };
+    }
   }
   // Soru balonu ortalanır.
   const q = defaults.q;

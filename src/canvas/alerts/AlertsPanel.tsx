@@ -24,7 +24,10 @@ export type RuleDraft = { question: string; condition: AlertCondition; threshold
 
 const MULT: Record<string, number> = { bin: 1e3, milyon: 1e6, mn: 1e6, m: 1e6, milyar: 1e9, mlr: 1e9 };
 
-/** "5.000.000", "5,5 milyon", "750 bin" → sayı. Anlaşılmazsa null. */
+/**
+ * "5.000.000", "5,5 milyon", "750 bin" → sayı. Arayüz Türkçe: nokta binlik ayraç, virgül ondalık.
+ * "2,750 milyon" 2,75 milyondur, 2,75 milyar değil. Anlaşılmazsa null.
+ */
 export function parseAmount(raw: string): number | null {
   const m = raw
     .trim()
@@ -32,24 +35,37 @@ export function parseAmount(raw: string): number | null {
     .match(/^(-?\d[\d.,]*)\s*(milyar|mlr|milyon|mn|bin|m)?\.?$/);
   if (!m) return null;
   let n = m[1];
-  if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(n)) n = n.replace(/\./g, '').replace(',', '.');
-  else if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) n = n.replace(/,/g, '');
-  else n = n.replace(',', '.');
+  if (n.includes(',')) n = n.replace(/\./g, '').replace(',', '.');
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(n)) n = n.replace(/\./g, '');
   const v = Number(n) * (m[2] ? MULT[m[2]] : 1);
   return Number.isFinite(v) ? v : null;
 }
 
-/** "bu ayın iade tutarı 5 milyonu aşarsa haber ver" → soru + koşul + eşik. Kişi formda düzeltir. */
+const NUM = /(-?\d[\d.,]*)\s*(milyar|mlr|milyon|mn|bin|m)?/giu;
+const UNIT_AFTER = /^\s*(gün|gun|hafta|ay|yıl|yil|saat|dakika)/iu;
+
+/**
+ * "son 30 günün iade tutarı 1 milyonu aşarsa haber ver" → soru + koşul + eşik. Eşik, koşul kelimesine
+ * en yakın sayıdır: "30 gün" bir dönem, "2026" bir yıl; ikisi de eşik değildir. Kişi formda düzeltir.
+ */
 export function parseRule(text: string): RuleDraft {
   const t = text.trim();
   const low = t.toLocaleLowerCase('tr');
   const below = /(alt[ıi]n[ae]|d[üu]şerse|azal[ıi]rsa|inerse|gerilerse|küçük)/.test(low);
-  const m = low.match(/(-?\d[\d.,]*)\s*(milyar|mlr|milyon|mn|bin|m)?(?=[^\dA-Za-zçğıöşü]|[a-zçğıöşü]|$)/);
+  const candidates: Array<{ index: number; raw: string; unit?: string }> = [];
+  for (const m of low.matchAll(NUM)) {
+    const idx = m.index ?? 0;
+    const after = low.slice(idx + m[0].length);
+    if (UNIT_AFTER.test(after) && !m[2]) continue; // "30 gün", "3 ay"
+    if (/^(19|20)\d{2}$/.test(m[1]) && !m[2]) continue; // yıl
+    candidates.push({ index: idx, raw: m[1], unit: m[2] });
+  }
+  const pick = candidates[candidates.length - 1];
   let threshold: number | null = null;
   let question = t;
-  if (m && m.index !== undefined) {
-    threshold = parseAmount(`${m[1]} ${m[2] ?? ''}`.trim());
-    question = t.slice(0, m.index);
+  if (pick) {
+    threshold = parseAmount(`${pick.raw} ${pick.unit ?? ''}`.trim());
+    question = t.slice(0, pick.index);
   }
   question = question
     .replace(/(^|\s)(eğer|şayet)(\s|$)/giu, ' ')
@@ -221,7 +237,9 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
         column: probe?.column ?? null,
       }),
     onSuccess: () => {
+      // Sunucu ilk ölçümü arka planda yapar; durum birkaç saniye içinde gelir.
       void qc.invalidateQueries({ queryKey: QUERY_KEY });
+      for (const ms of [4000, 12000, 30000]) window.setTimeout(() => void qc.invalidateQueries({ queryKey: QUERY_KEY }), ms);
       onSaved();
     },
   });

@@ -186,10 +186,10 @@ export default function BoardScreen() {
       ...slot,
     };
     persist([...cards, card]);
-    // Önizlemede gelen sonuç zaten elde: kart sorgusuz çizilsin.
+    // Önizleme ilk 50 satırdır; kart onunla hemen çizilir ama bayat sayılır ve tam sonuç hemen istenir.
     const seed = { columns: pending.cols, records: pending.rows } as SqlResult<Row>;
-    qc.setQueryData(['pano', card.id, card.sql], seed);
-    saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
+    qc.setQueryData(['pano', card.id, card.sql], seed, { updatedAt: 0 });
+    saveResult(user, card.id, { ...(seed as unknown as CardResult), at: 0 });
     setPending(null);
     setPrompt('');
   };

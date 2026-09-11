@@ -44,8 +44,25 @@ services:
     image: nanobase-bi-web:latest
     environment:
       CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
+      ADMIN_TOKEN: ${SEMANTIC_ADMIN_TOKEN}
+    volumes:
+      - bi_metrics:/usr/share/nginx/metrics:ro
     ports:
       - "8088:80"          # geçici doğrudan erişim + doğrulama; NPM devreye girince kaldırılabilir
+    depends_on: [bridge]
+    networks: [bi_net]
+    restart: unless-stopped
+
+  # Arka plan işleri: ana ekran özeti (3 dk) ve uyarı kontrolü (15 dk). Mantık köprüde; bu yalnız çağırır.
+  jobs:
+    image: nanobase-bi-bridge:latest
+    command: ["python", "/app/jobs/jobs.py"]
+    environment:
+      BRIDGE: http://bridge:8795
+      SEMANTIC_CALLER_TOKEN: ${SEMANTIC_CALLER_TOKEN}
+      OUT: /data/metrics/cfo.json
+    volumes:
+      - bi_metrics:/data/metrics
     depends_on: [bridge]
     networks: [bi_net]
     restart: unless-stopped
@@ -57,3 +74,5 @@ networks:
 volumes:
   bi_pgdata:
     name: bi_pgdata
+  bi_metrics:
+    name: bi_metrics

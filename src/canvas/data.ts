@@ -1,20 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { api, isRunnerConfigured } from '@/api/client';
-import { useApiConfig } from '@/context/ApiContext';
 import type { BiSchedule } from '@/api/types';
 import { ENGINE_ENABLED, alertsApi, type AlertEmail, type AlertRule } from './engine';
 
 /** Kanvasın tüm sorguları buradan geçer; anahtarlar mevcut sayfalarla aynı
  *  ki bir yerde yapılan değişiklik ötekini de tazelesin. */
 export function useCanvasQueries() {
-  const { config } = useApiConfig();
-  const on = isRunnerConfigured(config);
-
-  const schedules = useQuery({
-    queryKey: ['bi-schedules', config],
-    queryFn: () => api.bi.schedules(config),
-    enabled: on,
-  });
+  // Planlı raporlar eski portal servisinden okunuyordu; o servis kaldırılıyor. Gönderim e-postaya
+  // bağlı olduğundan rapor kurma, gönderici hesap tanımlanınca motorda açılacak. O güne kadar liste boş.
+  const schedules = { data: { schedules: [] as BiSchedule[] }, isLoading: false };
 
   // Uyarılar motorun kendi kurallarıdır; kontrolü sunucu yapar, ekran yalnız durumu okur.
   const alerts = useQuery({
@@ -25,20 +18,7 @@ export function useCanvasQueries() {
     retry: false,
   });
 
-  const analyticsStatus = useQuery({
-    queryKey: ['bi-analytics-status', config],
-    queryFn: () => api.bi.analytics.status(config),
-    enabled: on,
-    staleTime: 90_000,
-  });
-
-  const dashboards = useQuery({
-    queryKey: ['bi-analytics-dashboards', config],
-    queryFn: () => api.bi.analytics.dashboards(config),
-    enabled: on,
-  });
-
-  return { config, on, schedules, alerts, analyticsStatus, dashboards };
+  return { schedules, alerts };
 }
 
 /* ------------------------------------------------------------------ */

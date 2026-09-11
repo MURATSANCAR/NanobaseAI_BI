@@ -41,6 +41,9 @@ QUERIES = {
 
 
 def token() -> str:
+    # Konteynerde (müşteri yığını) anahtar ortam değişkeniyle gelir; sunucuda env dosyasından okunur.
+    if os.environ.get("SEMANTIC_CALLER_TOKEN"):
+        return os.environ["SEMANTIC_CALLER_TOKEN"].strip()
     with open(ENV) as fh:
         for line in fh:
             if line.startswith("SEMANTIC_CALLER_TOKEN="):

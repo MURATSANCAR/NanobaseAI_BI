@@ -64,7 +64,7 @@ def test_several_rows_are_an_error_not_a_guess(engine):
     out = A.check(engine, T, D, lambda rule: {"records": [{"v": 1}, {"v": 2}]}, lambda *_: "sent")
     rule = A.get_rule(engine, T, D, r["id"])
     assert rule["state"] == "error" and "tek bir değer" in rule["last_error"]
-    assert out["errors"] and A.events(engine, r["id"])[0]["error"]
+    assert out["errors"] and A.events(engine, T, D, r["id"])[0]["error"]
 
 
 def test_paused_rules_are_not_checked(engine):
@@ -124,6 +124,7 @@ def test_endpoints_measure_a_real_question_on_create(catalog, logo_connector, se
     from semantic_bridge.app import Runtime, create_app
 
     monkeypatch.delenv("ALERT_SMTP_HOST", raising=False)
+    monkeypatch.setenv("ALERT_MEASURE_ON_CREATE", "sync")
     runtime = Runtime(settings, store=catalog, connector=logo_connector, llm=None)
     client = TestClient(create_app(runtime))
     made = client.post("/api/v1/alerts", json={"title": "Net ciro", "question": "2026 yılında net ciro",
@@ -143,3 +144,74 @@ def test_endpoints_measure_a_real_question_on_create(catalog, logo_connector, se
                                                 "recipients": "bozuk"}).status_code == 422
     assert client.delete(f"/api/v1/alerts/{rule['id']}").json() == {"ok": True}
     assert client.get("/api/v1/alerts").json()["alerts"] == []
+
+
+def test_parallel_checks_notify_a_breach_once(engine):
+    import threading
+    import time as _t
+
+    _rule(engine)
+    sent = []
+
+    def slow(rule):
+        _t.sleep(0.2)
+        return {"records": [{"v": 150}]}
+
+    ts = [threading.Thread(target=A.check, args=(engine, T, D, slow, lambda r, v: sent.append(v) or "sent")) for _ in range(2)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert sent == [150], "zamanlayıcı ile 'şimdi kontrol et' aynı aşımı iki kez bildirmemeli"
+
+
+def test_a_failed_measurement_between_breaches_does_not_resend(engine):
+    _rule(engine)
+    sent = []
+    notify = lambda rule, value: sent.append(value) or "sent"  # noqa: E731
+    t0 = datetime(2026, 9, 11, 9, tzinfo=timezone.utc)
+    A.check(engine, T, D, _answer(150), notify, now=t0)
+
+    def boom(rule):
+        raise TimeoutError("yavaş")
+
+    A.check(engine, T, D, boom, notify, now=t0 + timedelta(minutes=15))
+    A.check(engine, T, D, _answer(155), notify, now=t0 + timedelta(minutes=30))
+    assert sent == [150]
+
+
+def test_a_rule_changed_during_measurement_keeps_the_change(engine):
+    r = _rule(engine)
+
+    def edit_midway(rule):
+        A.update_rule(engine, T, D, r["id"], {"threshold": 10**9})
+        return {"records": [{"v": 150}]}
+
+    A.check(engine, T, D, edit_midway, lambda *_: "sent")
+    got = A.get_rule(engine, T, D, r["id"])
+    assert got["threshold"] == 10**9 and got["state"] == "unknown", got
+
+
+@pytest.mark.parametrize("raw, want", [("5.000", 5000.0), ("5.000.000,5", 5000000.5), ("2,5", 2.5), (7, 7.0), ("1e3", 1000.0)])
+def test_thresholds_read_turkish_numbers(engine, raw, want):
+    assert _rule(engine, threshold=raw)["threshold"] == want
+
+
+def test_line_breaks_cannot_reach_the_mail_header(engine):
+    assert "\n" not in _rule(engine, title="İade\nBcc: x@y.z")["title"]
+
+
+def test_mail_says_below_for_below_rules():
+    subject, text = A.render({"title": "Stok", "condition": "lt", "threshold": 500.0, "question": "stok"}, 12,
+                             now=datetime(2026, 9, 11, 9, 0, tzinfo=timezone.utc))
+    assert "altına indi" in text and "12:00" in text, text
+
+
+def test_recipient_domains_can_be_limited(engine, monkeypatch):
+    monkeypatch.setenv("ALERT_RECIPIENT_DOMAINS", "timas.com.tr")
+    with pytest.raises(A.AlertError):
+        _rule(engine, recipients=["biri@gmail.com"])
+    assert _rule(engine, recipients=["cfo@timas.com.tr"])["recipients"] == ["cfo@timas.com.tr"]
+
+
+def test_events_are_scoped_to_the_tenant(engine):
+    r = _rule(engine)
+    assert A.events(engine, "baska-kiraci", D, r["id"]) is None
