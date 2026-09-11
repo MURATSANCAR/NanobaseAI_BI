@@ -193,10 +193,11 @@ export default function StitchCanvas({
       <ModulesMenu open={modulesOpen} onClose={() => setModulesOpen(false)} />
 
       {/* ================= INFINITE CANVAS STAGE ================= */}
-    <main ref={fitRef} className="absolute inset-x-0 top-[92px] bottom-[96px] overflow-hidden">
+    <main className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-y-auto overflow-x-hidden">
         <div
-          className="absolute left-0 top-0 origin-top-left"
-          style={{ width: ART_W, height: ART_H, transform: `translate(${artX}px, ${artY}px) scale(${artScale})` }}
+          ref={stageRef}
+          className="relative mx-auto flex w-full max-w-[1760px] flex-col items-center gap-5 px-6 pb-4 pt-2 xl:px-10"
+          style={{ zoom: zoom ?? 1 }}
         >
     
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
@@ -263,10 +264,10 @@ export default function StitchCanvas({
       </svg>
 
       {/* ================= CENTER CONSTELLATION CONTAINER ================= */}
-      <div className="relative" style={{ width: ART_W, height: ART_H }}>
+      <div className="relative flex w-full flex-col items-center gap-5">
       
         {/* USER'S QUESTION BUBBLE (Center Top Anchor) */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-16 z-30 animate-float-slow">
+        <div ref={qRef} className="relative z-30 animate-float-slow">
           <div className="glass-panel px-6 py-3.5 rounded-full shadow-canvas-card border border-white flex items-center gap-3.5 ring-4 ring-white/40">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-500 text-white font-bold text-sm flex items-center justify-center shadow-md">
               {d.q.initials}
@@ -287,7 +288,8 @@ export default function StitchCanvas({
         {/* ================= 5 CONSTELLATION ANSWER CARDS ================= */}
 
         {/* CARD 1: Stok (Rotated -3°) */}
-        <div className="absolute left-[110px] top-[175px] w-[235px] glass-card rounded-[24px] p-4 shadow-canvas-card z-20" style={{transform: 'rotate(-3deg)'}}>
+        <div className="flex w-full flex-wrap items-start justify-center gap-4 xl:gap-6">
+        <div ref={cardRef(0)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(-3)}deg)` }}>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-coral/10 text-coral flex items-center justify-center text-xs font-bold">{d.c1.icon}</span>
@@ -322,7 +324,7 @@ export default function StitchCanvas({
         </div>
 
         {/* CARD 2: Talep Tahmini (Rotated +2°) */}
-        <div className="absolute left-[365px] top-[170px] w-[250px] glass-card rounded-[24px] p-4 shadow-canvas-card z-20" style={{transform: 'rotate(2deg)'}}>
+        <div ref={cardRef(1)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(2)}deg)` }}>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-violet/10 text-violet flex items-center justify-center text-xs font-bold">📈</span>
@@ -372,7 +374,7 @@ export default function StitchCanvas({
         </div>
 
         {/* CARD 3: Kanal Dağılımı (Rotated -1.5°) */}
-        <div className="absolute left-[635px] top-[185px] w-[240px] glass-card rounded-[24px] p-4 shadow-canvas-card z-20" style={{transform: 'rotate(-1.5deg)'}}>
+        <div ref={cardRef(2)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(-1.5)}deg)` }}>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-emerald-50 text-mintSuccess flex items-center justify-center text-xs font-bold">🍩</span>
@@ -438,7 +440,7 @@ export default function StitchCanvas({
         </div>
 
         {/* CARD 4: Telif Etkisi (Rotated +1°) */}
-        <div className="absolute left-[895px] top-[170px] w-[235px] glass-card rounded-[24px] p-4 shadow-canvas-card z-20" style={{transform: 'rotate(1deg)'}}>
+        <div ref={cardRef(3)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(1)}deg)` }}>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-amber-50 text-amberWarn flex items-center justify-center text-xs font-bold">✍️</span>
@@ -475,7 +477,7 @@ export default function StitchCanvas({
         </div>
 
         {/* CARD 5: Kanıt / Veri Dayanağı (Rotated +2.5°) */}
-        <div className="absolute left-[1150px] top-[175px] w-[215px] glass-card rounded-[24px] p-4 shadow-canvas-card z-20" style={{transform: 'rotate(2.5deg)'}}>
+        <div ref={cardRef(4)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(2.5)}deg)` }}>
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">🔍</span>
@@ -526,8 +528,10 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </div>
+
         {/* ================= MAIN "ZEKİ AI KARARI" CARD ================= */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-[445px] w-[860px] glass-card rounded-[28px] p-6 shadow-canvas-card border-2 border-white/90 z-20">
+        <div ref={mainRef} className="glass-card relative z-20 w-full max-w-[980px] rounded-[28px] border-2 border-white/90 p-6 shadow-canvas-card">
         
           {/* Header badge */}
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100/90">
@@ -596,7 +600,7 @@ export default function StitchCanvas({
 
         {/* ================= STICKER-LIKE BOOK COVER (Kayıp Atlas) ================= */}
         {/* Positioned pinned near the decision card with tape effect, tilted 6° */}
-        <div className="absolute left-[1185px] top-[445px] z-30 group" style={{transform: 'rotate(6deg)'}}>
+        <div className="group absolute -right-2 top-4 z-30 hidden xl:block" style={{ transform: 'rotate(6deg)' }}>
           {/* Washi Tape Pin */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 washi-tape rounded-sm z-40"></div>
         
