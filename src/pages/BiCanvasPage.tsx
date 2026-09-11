@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
-import { alertsData, approvalsData, boardsData, cfoData, glossaryData, schedulesData } from '@/canvas/stitch/screens';
+import { alertsData, approvalsData, cfoData, glossaryData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
 import {
   ENGINE_ENABLED,
@@ -18,7 +18,7 @@ import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/
 import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
-const SCREENS = ['panolar', 'planli-raporlar', 'uyarilar', 'veri-sozlugu', 'onaylar'] as const;
+const SCREENS = ['planli-raporlar', 'uyarilar', 'veri-sozlugu', 'onaylar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
@@ -30,7 +30,7 @@ export default function BiCanvasPage() {
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
 
-  const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
+  const { on, schedules, alerts } = useCanvasQueries();
   const qc = useQueryClient();
   const cfo = useCfoData();
 
@@ -91,7 +91,7 @@ export default function BiCanvasPage() {
         ),
         zoom: z,
       };
-    return { ...boardsData(analyticsStatus.data, dashboards.data?.dashboards ?? [], dashboards.isLoading, source), zoom: z };
+    return { ...cfoData(cfo, source), zoom: z };
   }, [
     screen,
     cfo,
@@ -105,9 +105,6 @@ export default function BiCanvasPage() {
     approvals.data,
     approvals.isLoading,
     approvals.error,
-    analyticsStatus.data,
-    dashboards.data,
-    dashboards.isLoading,
     schedules.isLoading,
     alerts.isLoading,
   ]);
