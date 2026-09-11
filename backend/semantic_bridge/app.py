@@ -1288,6 +1288,26 @@ def secrets_compare(a: str, b: str) -> bool:
     return hmac.compare_digest(str(a or ""), str(b or ""))
 
 
+def _review_vocabulary(r: "Runtime", said: dict) -> Any:
+    """Kuyruktaki kök terimleri okunur yazmak için dağıtımın kendi kelimeleri. Katalog sürümü başına bir kez."""
+    from semantic_bridge.labels import Vocabulary
+
+    key = (id(r.profiles), len(r.rules_text or ""), len(said))
+    cached = getattr(r, "_review_vocab", None)
+    if cached and cached[0] == key:
+        return cached[1]
+    texts: list[Any] = [r.rules_text]
+    for p in r.profiles:
+        texts.append(p.description)
+        for col in p.columns:
+            texts.append(col.description)
+            texts.append(said.get((p.entity, col.name.upper())))
+    texts.extend(v for v in said.values() if isinstance(v, str))
+    vocab = Vocabulary.from_texts(t for t in texts if isinstance(t, str))
+    r._review_vocab = (key, vocab)
+    return vocab
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
 
@@ -1701,6 +1721,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             deduped.append(x)
         pool = deduped
         said = getattr(r.existing, "annotations", None) or {}
+        vocab = _review_vocabulary(r, said)
+
+        # Aynı yere işaret eden, biri ötekinin kısaltması olan iki terim ("kanal payi yuz" ile
+        # "kanal payi yuzd") iki karar değildir; uzun olan kalır, kısa olan ayrıca sorulmaz.
+        def target_key(x) -> tuple:
+            m = x["mapping"]
+            return (x["concept"].semantic_type, m.entity if m else None, (m.column or "").upper() if m else None,
+                    tuple(sorted(m.values or [])) if m else (), (m.formula or "") if m else "")
+        by_target: dict[tuple, list] = {}
+        for x in pool:
+            by_target.setdefault(target_key(x), []).append(x)
+        shadowed = set()
+        for group in by_target.values():
+            for a in group:
+                for b in group:
+                    ta, tb = a["concept"].term, b["concept"].term
+                    if a is not b and len(ta) < len(tb) and tb.startswith(ta):
+                        shadowed.add(id(a))
+        pool = [x for x in pool if id(x) not in shadowed]
         out = []
         for x in pool[:limit]:
             c, m = x["concept"], x["mapping"]
@@ -1708,7 +1747,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             col = prof.column(m.column) if prof and m and m.column else None
             meaning = col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None
             out.append({
-                "id": c.id, "term": c.term, "type": c.semantic_type, "confidence": c.confidence,
+                "id": c.id, "term": c.term, "label": vocab.readable(c.term), "type": c.semantic_type, "confidence": c.confidence,
                 "mapping": m.to_dict() if m else None,
                 "evidence": x["evidence"], "evidenceCount": x["evidenceCount"],
                 # what the data itself shows about the column this term claims
@@ -1924,6 +1963,79 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def retire_annotation(request: Request, annotation_id: str) -> dict[str, Any]:
         _require_admin(request)
         return {"ok": rt().store.retire_annotation(annotation_id)}
+
+    # ------------------------------------------------------------------ uyarılar
+    # Kural bir sorudur; kontrol burada yapılır, zamanlayıcı yalnız /check'i çağırır.
+    from semantic_bridge import alerts as alerts_mod
+
+    def _alerts() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        alerts_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _alert_runner(r: Runtime):
+        def run(rule: dict[str, Any]) -> dict[str, Any]:
+            if (rule.get("question") or "").strip():
+                return r.ask(rule["question"], thread_id=None, sample_size=5, execute=True)
+            return r.run_sql(rule["sql"], 5)
+        return run
+
+    def _alert_check(r: Runtime, engine: Any, tenant: str, ds: str, only: Optional[str] = None) -> dict[str, Any]:
+        return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
+                                alerts_mod.email_notifier(os.environ.get("ALERT_LINK", "")), only=only)
+
+    def _alert_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": str(e)})
+
+    @app.get("/api/v1/alerts")
+    def alerts_list(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        _, engine, tenant, ds = _alerts()
+        return {"alerts": alerts_mod.list_rules(engine, tenant, ds), "email": alerts_mod.email_status()}
+
+    @app.post("/api/v1/alerts")
+    def alerts_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _alerts()
+        try:
+            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=request.headers.get("X-User"))
+        except alerts_mod.AlertError as e:
+            raise _alert_fail(e) from None
+        # Kurulur kurulmaz ölçülür: kişi değeri ve durumu hemen görsün, ilk tetiklenme 15 dakika beklemesin.
+        _alert_check(r, engine, tenant, ds, only=rule["id"])
+        return alerts_mod.get_rule(engine, tenant, ds, rule["id"]) or rule
+
+    @app.patch("/api/v1/alerts/{rule_id}")
+    def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        _, engine, tenant, ds = _alerts()
+        try:
+            rule = alerts_mod.update_rule(engine, tenant, ds, rule_id, body)
+        except alerts_mod.AlertError as e:
+            raise _alert_fail(e) from None
+        if rule is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return rule
+
+    @app.delete("/api/v1/alerts/{rule_id}")
+    def alerts_delete(rule_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        _, engine, tenant, ds = _alerts()
+        if not alerts_mod.delete_rule(engine, tenant, ds, rule_id):
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return {"ok": True}
+
+    @app.post("/api/v1/alerts/check")
+    def alerts_check(request: Request, id: Optional[str] = None) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _alerts()
+        return _alert_check(r, engine, tenant, ds, only=id)
+
+    @app.get("/api/v1/alerts/{rule_id}/events")
+    def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
+        _require_caller(request)
+        _, engine, _t, _d = _alerts()
+        return {"events": alerts_mod.events(engine, rule_id, limit)}
 
     return app
 
