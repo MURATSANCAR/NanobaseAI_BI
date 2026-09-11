@@ -39,19 +39,20 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
     setBusy(true);
     setErr(null);
     try {
+      // Uç JSON gövde bekliyor; Basic başlık 400 döner.
       const res = await fetch(`${ENGINE_BASE}/auth/login`, {
         method: 'POST',
         credentials: 'include',
-        headers: { Authorization: `Basic ${btoa(`${user}:${pass}`)}` },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: user, password: pass }),
       });
       if (res.ok) {
         setPass('');
         onDone();
-      } else if (res.status === 401) {
-        setErr('Kullanıcı adı veya parola hatalı.');
-      } else {
-        setErr(`Giriş yapılamadı (${res.status}).`);
+        return;
       }
+      const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+      setErr(detail?.error ?? (res.status === 401 ? 'Kullanıcı adı veya parola hatalı.' : `Giriş yapılamadı (${res.status}).`));
     } catch {
       setErr('Sunucuya ulaşılamadı.');
     } finally {
