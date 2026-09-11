@@ -52,7 +52,7 @@ export default function BiCanvasPage() {
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
-  const source = ENGINE_ENABLED ? 'Logo · semantic bridge' : on ? 'Portal API · canlı' : 'Bağlantı yok';
+  const source = ENGINE_ENABLED || on ? 'Canlı veri' : 'Bağlantı yok';
 
   // Açılışta ZEKİ tam sayfada; oturum başına bir kez.
   const [splash, setSplash] = useState(() => !splashSeen());
@@ -69,7 +69,7 @@ export default function BiCanvasPage() {
   const d = useMemo(() => {
     const z = `%${Math.round(zoom * 100)}`;
     if (!isScreen(screen)) {
-      // Genel bakış CFO ekranıdır: rakamlar Logo'dan gelir. Motor yolu yoksa
+      // Genel bakış CFO ekranıdır. Motor yolu yoksa
       // portal özetine düşer.
       return { ...cfoData(cfo, source), zoom: z };
     }

@@ -140,11 +140,11 @@ export function alertsData(s: AlertSummary, loading: boolean, source: string): S
     c5: {
       title: 'Kanıt & Kaynak',
       badge: 'Canlı veri',
-      summary: `${num(s.total)} kural · ${num(s.proximity.length)} ölçüm · portal API`,
+      summary: `${num(s.total)} kural · ${num(s.proximity.length)} ölçüm`,
       rows: [
-        { name: 'bi/alerts', tag: 'Portal API' },
-        { name: 'alerts.check-now', tag: 'Motor' },
-        { name: 'last_checked_at', tag: 'Kayıt' },
+        { name: 'Aktif kural', tag: num(s.active) },
+        { name: 'Tetikte', tag: num(s.triggered.length) },
+        { name: 'Bakılmamış', tag: num(s.neverChecked.length) },
       ],
       latency: s.lastCheckedAt ? dateTime(s.lastCheckedAt) : 'kontrol yok',
     },
@@ -257,11 +257,11 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
     c5: {
       title: 'Kanıt & Kaynak',
       badge: 'Canlı veri',
-      summary: `${num(s.total)} kayıt · portal API · bi/schedules`,
+      summary: `${num(s.total)} kayıt · ${num(s.active)} etkin`,
       rows: [
-        { name: 'bi/schedules', tag: 'Portal API' },
-        { name: 'run_at', tag: 'Sıra' },
-        { name: 'error', tag: 'Hata' },
+        { name: 'Etkin', tag: num(s.active) },
+        { name: 'Duraklatılmış', tag: num(s.paused) },
+        { name: 'Başarısız', tag: num(s.failed) },
       ],
       latency: s.lastFailure ? dateTime(s.lastFailure.sent_at ?? s.lastFailure.run_at) : 'hata yok',
     },
@@ -298,7 +298,7 @@ export function schedulesData(s: ScheduleSummary, loading: boolean, source: stri
       title: 'Önceki: Gönderilenler',
       badge: num(s.sent),
       text: '“Kuyruktan çıkmış gönderimler burada birikiyor.”',
-      foot: `${num(s.total)} kayıt · bi/schedules`,
+      foot: `${num(s.total)} kayıt`,
     },
   };
 }
@@ -504,11 +504,11 @@ export function overviewData(
     c5: {
       title: 'Kanıt & Kaynak',
       badge: 'Canlı veri',
-      summary: 'Üç modül · portal API · anlık okuma',
+      summary: 'Üç modül · anlık okuma',
       rows: [
-        { name: 'bi/schedules', tag: 'Rapor' },
-        { name: 'bi/alerts', tag: 'Uyarı' },
-        { name: 'bi/analytics', tag: 'Pano' },
+        { name: 'Planlı rapor', tag: num(sched.total) },
+        { name: 'Uyarı kuralı', tag: num(alerts.total) },
+        { name: 'Pano', tag: num(boardCount) },
       ],
       latency: 'sayfa açılışında okundu',
     },
@@ -557,7 +557,7 @@ const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Ek
 const trPct = (v: number | null, d = 1) => (v == null ? '—' : `%${v.toFixed(d).replace('.', ',')}`);
 
 /**
- * CFO ekranı: canlı Logo rakamları. Metinler kısa tutulur; kart başına tek
+ * CFO ekranı: canlı rakamlar. Metinler kısa tutulur; kart başına tek
  * cümle, gerisi sayı. Veri gelmiyorsa kart sayı uydurmaz, durumu yazar.
  */
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
@@ -610,7 +610,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
       tick1: last3[0] ? `${AY[last3[0].ay - 1]} ${money(last3[0].net_ciro)}` : '—',
       tick2: last3[1] ? `${AY[last3[1].ay - 1]} ${money(last3[1].net_ciro)}` : '—',
       tick3: last3[2] ? `${AY[last3[2].ay - 1]} ${money(last3[2].net_ciro)}` : '—',
-      foot: `Kaynak: ${prefixLabel(c.year)}_01_INVOICE`,
+      foot: `${c.observedMonths || 0} ay gerçekleşti`,
       ...spark(c.months.map((m) => m.net_ciro)),
     },
     c3: {
@@ -645,11 +645,11 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
       badge: durum ? 'Bağlantı' : 'Canlı',
       summary: durum || `${money(c.units?.satir ?? 0)} satır · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
       rows: [
-        { name: `${prefixLabel(c.year)}_01_INVOICE`, tag: 'Fatura' },
-        { name: `${prefixLabel(c.year)}_01_STLINE`, tag: 'Satır' },
-        { name: `${prefixLabel(c.year)}_CLCARD`, tag: 'Cari' },
+        { name: 'Fatura', tag: yok(money(c.totals?.toplam_fatura ?? 0)) },
+        { name: 'Satır', tag: yok(money(c.units?.satir ?? 0)) },
+        { name: 'Cari', tag: yok(num(c.customers.length)) },
       ],
-      latency: durum ? '—' : 'semantic bridge',
+      latency: durum ? '—' : `${c.year} dönemi`,
     },
     main: {
       badge: 'ZEKİ AI ÖZETİ',
@@ -685,10 +685,6 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
   };
 }
 
-/** Logo firma öneki etiketi (2026 → LG_411). */
-function prefixLabel(year: number): string {
-  return year >= 2026 ? 'LG_411' : 'LG_211';
-}
 
 /* ----------------------- Veri Sözlüğü ve Onaylar ------------------------ */
 
@@ -696,7 +692,7 @@ function prefixLabel(year: number): string {
 type Loadable<T> = { data: T | null; loading: boolean; authRequired: boolean };
 
 /** Veri Sözlüğü: motorun sertifikalı kavramları. Eski sistemdeki Katalog
- *  Gezgini'nin yerini tutar; kaynağı semantic bridge. */
+ *  Gezgini'nin yerini tutar. */
 export function glossaryData(q: Loadable<{ items: ConceptRow[] }>, source: string): StitchCanvasData {
   const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Motor yanıt vermedi' : '';
   const items = (q.data?.items ?? []).map((r) => r.concept);
@@ -768,13 +764,13 @@ export function glossaryData(q: Loadable<{ items: ConceptRow[] }>, source: strin
     c5: {
       title: 'Kanıt & Kaynak',
       badge: durum ? 'Bağlantı' : 'Canlı',
-      summary: durum || `${num(items.length)} kavram · semantic katalog`,
+      summary: durum || `${num(items.length)} kavram`,
       rows: [
-        { name: 'semantic/concepts', tag: 'Sözlük' },
-        { name: 'status=CERTIFIED', tag: 'Filtre' },
-        { name: 'semantic/review', tag: 'Kuyruk' },
+        { name: 'Sertifikalı', tag: num(items.length) },
+        { name: 'Metrik', tag: num(byType('METRIC')) },
+        { name: 'Kolon', tag: num(byType('COLUMN')) },
       ],
-      latency: durum ? '—' : 'semantic bridge',
+      latency: durum ? '—' : 'canlı',
     },
     main: {
       badge: 'ZEKİ AI ÖZETİ',
@@ -883,11 +879,11 @@ export function approvalsData(
       badge: durum ? 'Bağlantı' : 'Canlı',
       summary: durum || `${num(d0?.waiting ?? 0)} bekleyen · ${num(d0?.total ?? 0)} aday`,
       rows: [
-        { name: 'semantic/review', tag: 'Kuyruk' },
-        { name: 'semantic/certify', tag: 'Onay' },
-        { name: 'human_certify', tag: 'Kalıcı' },
+        { name: 'Bekleyen', tag: num(d0?.waiting ?? 0) },
+        { name: 'Kullanılan', tag: num(d0?.used ?? 0) },
+        { name: 'Toplam aday', tag: num(d0?.total ?? 0) },
       ],
-      latency: durum ? '—' : 'semantic bridge',
+      latency: durum ? '—' : 'canlı',
     },
     main: {
       badge: 'ZEKİ AI ÖZETİ',

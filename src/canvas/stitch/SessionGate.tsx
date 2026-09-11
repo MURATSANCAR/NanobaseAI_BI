@@ -44,7 +44,7 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
         <div className="text-[11px] font-bold uppercase tracking-[.18em] text-muted">Timaş Yayınları</div>
         <h2 className="mt-1 text-lg font-extrabold tracking-tight text-ink">Oturum kapandı</h2>
         <p className="mt-1.5 text-[12px] leading-snug text-muted">
-          Rakamlar Logo veritabanından okunuyor. Devam etmek için giriş yapın.
+          Devam etmek için giriş yapın.
         </p>
 
         <label className="mt-4 block text-[11px] font-bold text-muted" htmlFor="kullanici">
