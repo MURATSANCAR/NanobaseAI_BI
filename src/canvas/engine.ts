@@ -79,15 +79,56 @@ export function ask(question: string): Promise<AskAnswer> {
   return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
 }
 
-export type ConceptRow = {
-  concept: {
-    term: string;
-    semantic_type: string;
-    status: string;
-    confidence?: number;
-    domain?: string;
-    synonyms?: string[];
+export type ConceptMapping = {
+  id?: string;
+  entity?: string;
+  table_pattern?: string;
+  column?: string | null;
+  operator?: string | null;
+  values?: string[];
+  /** Metriğin hesabı: SUM(STLINE.AMOUNT) gibi. */
+  formula?: string | null;
+  time_primitive?: string | null;
+  extra?: { func?: string; aliases?: string[]; conditions?: string[] };
+};
+
+export type Concept = {
+  id: string;
+  term: string;
+  normalized_term?: string;
+  semantic_type: string;
+  status: string;
+  domain?: string;
+  confidence?: number;
+  version?: number;
+  synonyms?: string[];
+  created_at?: string;
+  updated_at?: string;
+  explain?: {
+    score?: number;
+    human_reason?: string;
+    schema_drift?: string;
+    support?: { doc?: number; llm?: number; human?: number; validated_queries?: number };
+    breakdown?: Record<string, number>;
+    gate?: { passed?: boolean; reasons?: string[]; mode?: string; min_support?: number };
+    human_certified_by?: string;
   };
+};
+
+export type ConceptRow = { concept: Concept; mappings?: ConceptMapping[] };
+
+export type TableRow = {
+  tableName: string;
+  tablePattern?: string;
+  entity?: string;
+  schema?: string;
+  description?: string;
+  rowCount?: number;
+  columnCount?: number;
+  certifiedColumns?: number;
+  primaryKey?: string[];
+  scannedAt?: string;
+  columns?: Array<{ name: string; type?: string; nullable?: boolean; isPrimaryKey?: boolean; sensitive?: boolean }>;
 };
 
 export type ReviewItem = {
@@ -108,6 +149,25 @@ async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
 /** Veri sözlüğü: sertifikalı kavramlar. */
 export function concepts(status = 'CERTIFIED', limit = 200) {
   return get<{ items: ConceptRow[] }>(`/api/v1/semantic/concepts?status=${status}&limit=${limit}`);
+}
+
+/** Şema envanteri: tablolar, açıklamaları, satır sayıları ve kolonları. */
+export function inventory() {
+  return get<{ tables: TableRow[]; tableCount?: number; columnCount?: number }>('/api/v1/schema/inventory', 60_000);
+}
+
+export type Decision = 'APPROVE' | 'REJECT' | 'CORRECT';
+
+/** Bir terim hakkında insanın kararı. CORRECT için açıklama zorunlu. */
+export function decide(
+  conceptId: string,
+  body: { decision: Decision; note?: string; column?: string; entity?: string; term?: string; by?: string },
+) {
+  return post<{ ok?: boolean; status?: string; concept_id?: string }>(
+    `/api/v1/semantic/concepts/${encodeURIComponent(conceptId)}/review`,
+    body,
+    60_000,
+  );
 }
 
 /** Onay kuyruğu: insana sorulmayı bekleyen terimler. */

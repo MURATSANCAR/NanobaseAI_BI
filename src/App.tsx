@@ -6,6 +6,8 @@ import { t } from '@/i18n';
 
 const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
 const BoardScreen = lazy(() => import('@/canvas/board/BoardScreen'));
+const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
+const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 
 function RouteFallback() {
   return (
@@ -37,8 +39,8 @@ export default function App() {
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
             <Route index element={<BiCanvasPage />} />
             <Route path="panolar" element={<BoardScreen />} />
-            <Route path="veri-sozlugu" element={<BiCanvasPage />} />
-            <Route path="onaylar" element={<BiCanvasPage />} />
+            <Route path="veri-sozlugu" element={<GlossaryScreen />} />
+            <Route path="onaylar" element={<ApprovalsScreen />} />
             <Route path="planli-raporlar" element={<BiCanvasPage />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
           </Route>

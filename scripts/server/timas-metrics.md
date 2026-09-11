@@ -16,3 +16,18 @@ Elle çalıştırmak:
 ssh nanobase-direct 'sudo /opt/timas-metrics/build.py'
 systemctl list-timers timas-metrics.timer
 ```
+
+## Onay kararları için nginx bloğu
+
+Onay ekranındaki Onayla / Düzelt / Reddet düğmeleri kataloğu değiştirir, bu yüzden
+motor admin başlığı ister. nginx şu yolda ve yalnız bu yolda başlığı ekler:
+
+```
+location ~ ^/timas/api/v1/semantic/concepts/[^/]+/review$
+```
+
+Oturum şartı API ile aynı (`auth_request /_timas_session_check`). Başlık değeri
+`/etc/nginx/snippets/timas-semantic-admin.conf` içinde, 640 izinli.
+
+Bunun anlamı: Timaş portalına giriş yapan herkes terim onaylayabilir. Yetkiyi
+daraltmak isterseniz değişecek yer bu blok.

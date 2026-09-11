@@ -3,22 +3,15 @@ import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
-import { alertsData, approvalsData, cfoData, glossaryData, schedulesData } from '@/canvas/stitch/screens';
+import { alertsData, cfoData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
-import {
-  ENGINE_ENABLED,
-  EngineAuthError,
-  ask as askEngine,
-  concepts as fetchConcepts,
-  review as fetchReview,
-  type AskAnswer,
-} from '@/canvas/engine';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
+import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
-const SCREENS = ['planli-raporlar', 'uyarilar', 'veri-sozlugu', 'onaylar'] as const;
+const SCREENS = ['planli-raporlar', 'uyarilar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
@@ -33,22 +26,6 @@ export default function BiCanvasPage() {
   const { on, schedules, alerts } = useCanvasQueries();
   const qc = useQueryClient();
   const cfo = useCfoData();
-
-  // Sözlük ve onay kuyruğu motordan gelir; eski sistemdeki iki menünün karşılığı.
-  const glossary = useQuery({
-    queryKey: ['semantic-concepts'],
-    queryFn: () => fetchConcepts(),
-    enabled: ENGINE_ENABLED,
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
-  const approvals = useQuery({
-    queryKey: ['semantic-review'],
-    queryFn: () => fetchReview(),
-    enabled: ENGINE_ENABLED,
-    staleTime: 60_000,
-    retry: false,
-  });
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
@@ -74,24 +51,7 @@ export default function BiCanvasPage() {
       return { ...cfoData(cfo, source), zoom: z };
     }
     if (screen === 'planli-raporlar') return { ...schedulesData(sched, schedules.isLoading, source), zoom: z };
-    if (screen === 'uyarilar') return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
-    if (screen === 'veri-sozlugu')
-      return {
-        ...glossaryData(
-          { data: glossary.data ?? null, loading: glossary.isLoading, authRequired: glossary.error instanceof EngineAuthError },
-          source,
-        ),
-        zoom: z,
-      };
-    if (screen === 'onaylar')
-      return {
-        ...approvalsData(
-          { data: approvals.data ?? null, loading: approvals.isLoading, authRequired: approvals.error instanceof EngineAuthError },
-          source,
-        ),
-        zoom: z,
-      };
-    return { ...cfoData(cfo, source), zoom: z };
+    return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
   }, [
     screen,
     cfo,
@@ -99,12 +59,6 @@ export default function BiCanvasPage() {
     alert,
     source,
     zoom,
-    glossary.data,
-    glossary.isLoading,
-    glossary.error,
-    approvals.data,
-    approvals.isLoading,
-    approvals.error,
     schedules.isLoading,
     alerts.isLoading,
   ]);
@@ -155,9 +109,7 @@ export default function BiCanvasPage() {
   if (splash) return <Splash onDone={closeSplash} />;
 
   // Motor 401 diyorsa veri gelmez; sebebini gizlemeyip giriş kapısını açıyoruz.
-  const needsLogin =
-    ENGINE_ENABLED &&
-    (cfo.authRequired || glossary.error instanceof EngineAuthError || approvals.error instanceof EngineAuthError);
+  const needsLogin = ENGINE_ENABLED && cfo.authRequired;
 
   return (
     <>
