@@ -347,10 +347,10 @@ export default function GlossaryScreen() {
       }}
       rail={railFor('/veri-sozlugu')}
     >
-      <main className="absolute bottom-6 left-[92px] right-6 top-[84px]">
-        <div className="mx-auto flex h-full w-full max-w-[1760px] gap-4">
+      <main className="absolute bottom-2 left-14 right-2 top-16 sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+        <div className="mx-auto flex h-full w-full max-w-[1760px] flex-col gap-3 md:flex-row md:gap-4">
           {/* Sol: arama ve liste */}
-          <div className="glass-panel flex w-[380px] shrink-0 flex-col rounded-3xl p-4 shadow-glass-float">
+          <div className="glass-panel flex max-h-[42vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[380px]">
             <div className="flex gap-1.5">
               {(['terim', 'tablo'] as const).map((t) => (
                 <button
@@ -455,7 +455,7 @@ export default function GlossaryScreen() {
           </div>
 
           {/* Sağ: detay */}
-          <div className="glass-card min-w-0 flex-1 overflow-auto rounded-3xl p-6 shadow-canvas-card">
+          <div className="glass-card min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6">
             {loading ? (
               <div className="flex h-full items-center justify-center text-canvas-muted">
                 <Loader2 className="h-5 w-5 animate-spin" />

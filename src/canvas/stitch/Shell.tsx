@@ -103,29 +103,29 @@ export default function Shell({
     <div className="absolute inset-0 dot-grid pointer-events-none z-0"></div>
 
     {/* ================= TOP FLOATING NAVIGATION ================= */}
-    <header className="absolute top-5 inset-x-7 flex items-center justify-between z-40 pointer-events-none">
+    <header className="absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
       {/* Top-Left Glass Breadcrumb Pill */}
-      <div className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-3 pointer-events-auto transition-transform hover:scale-[1.01]">
-        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-xs shadow-sm">
+      <div className="glass-panel min-w-0 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-2 sm:gap-3 pointer-events-auto transition-transform hover:scale-[1.01]">
+        <div className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-[11px] sm:text-xs shadow-sm">
           T
         </div>
-        <div className="flex items-center text-xs font-semibold tracking-tight text-ink">
-          <span className="text-ink font-bold hover:text-violet cursor-pointer transition">{head.tenant}</span>
-          <svg className="w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-          <span className="text-muted hover:text-ink cursor-pointer transition">{head.section}</span>
-          <svg className="w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-          <span className="bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-violet animate-pulse"></span>
-            {head.crumb}
+        <div className="flex min-w-0 items-center text-xs font-semibold tracking-tight text-ink">
+          <span className="hidden sm:inline text-ink font-bold hover:text-violet cursor-pointer transition">{head.tenant}</span>
+          <svg className="hidden sm:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+          <span className="hidden md:inline text-muted hover:text-ink cursor-pointer transition">{head.section}</span>
+          <svg className="hidden md:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+          <span className="min-w-0 truncate bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-violet animate-pulse"></span>
+            <span className="truncate">{head.crumb}</span>
           </span>
         </div>
-        <span className="text-[10px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>
+        <span className="hidden lg:inline text-[10px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>
       </div>
 
       {/* Top-Right Actions & Collaboration Pill */}
-      <div className="flex items-center gap-3 pointer-events-auto">
+      <div className="flex items-center gap-1.5 sm:gap-3 pointer-events-auto">
         {/* Collaboration Avatars */}
-        <div className="glass-panel px-3 py-1.5 rounded-full shadow-glass-float flex items-center gap-2">
+        <div className="hidden lg:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2">
           <div className="flex -space-x-1.5 items-center">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm" title="Emre Berk (Genel Yayın Yönetmeni)">EB</div>
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm" title="Elif Aydın (Yazar & Danışman)">EA</div>
@@ -139,20 +139,21 @@ export default function Shell({
             type="button"
             onClick={onReset}
             title="Kart düzenini tasarımdaki hâline döndür"
-            className="glass-panel px-3.5 py-2 rounded-full shadow-glass-float text-xs font-bold text-muted hover:text-ink transition"
+            className="glass-panel px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full shadow-glass-float text-[11px] sm:text-xs font-bold text-muted hover:text-ink transition whitespace-nowrap"
           >
-            Düzeni sıfırla
+            <span className="sm:hidden">Sıfırla</span>
+            <span className="hidden sm:inline">Düzeni sıfırla</span>
           </button>
         )}
 
         {/* Share Button */}
-        <button type="button" onClick={share} className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group">
-          <svg className="w-3.5 h-3.5 text-muted group-hover:text-violet transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-          {copied === 'ok' ? 'Bağlantı kopyalandı' : copied === 'fail' ? 'Kopyalanamadı' : 'Paylaş'}
+        <button type="button" onClick={share} className="glass-panel px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group whitespace-nowrap">
+          <svg className="w-3.5 h-3.5 shrink-0 text-muted group-hover:text-violet transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+          <span className="hidden sm:inline">{copied === 'ok' ? 'Bağlantı kopyalandı' : copied === 'fail' ? 'Kopyalanamadı' : 'Paylaş'}</span>
         </button>
 
         {/* Canvas Zoom Indicator & Controls */}
-        <div className="glass-panel px-3 py-1.5 rounded-full shadow-glass-float flex items-center gap-2 text-xs font-semibold text-ink">
+        <div className="hidden sm:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2 text-xs font-semibold text-ink">
           <button type="button" aria-label="Uzaklaştır" onClick={() => onZoom?.(-0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
           <span className="text-xs font-bold w-9 text-center text-ink">{head.zoom}</span>
           <button type="button" aria-label="Yakınlaştır" onClick={() => onZoom?.(0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
@@ -162,43 +163,43 @@ export default function Shell({
 
     {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
       {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. */}
-      <aside className="absolute left-6 top-24 bottom-24 z-30 flex flex-col items-center justify-start gap-2.5 py-4 px-2 w-[54px] glass-panel rounded-3xl shadow-glass-float">
+      <aside className="absolute left-1.5 top-20 bottom-20 sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-3 sm:py-4 px-1.5 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
         {rail.map((item, i) => (
-          <div key={item.to} className="relative group flex items-center">
+          <div key={item.to} className="relative group flex items-center shrink-0">
             <Link
               to={item.to}
               aria-label={item.label}
               className={
                 item.badge === 'Aktif'
-                  ? 'w-10 h-10 rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
-                  : 'w-10 h-10 rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
+                  ? 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105 [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
+                  : 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
               }
             >
               {RAIL_ICONS[i % RAIL_ICONS.length]}
             </Link>
-            <div className="absolute left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+            <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
               {item.label}
             </div>
           </div>
         ))}
 
         {/* Modül menüsü: 18 grup, 67 modül. Ekran açmaz, listeler. */}
-        <div className="relative group flex items-center mt-auto">
+        <div className="relative group flex items-center mt-auto shrink-0">
           <button
             type="button"
             onClick={() => setModulesOpen((v) => !v)}
             aria-label="Modüller"
             className={
               modulesOpen
-                ? 'w-10 h-10 rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
-                : 'w-10 h-10 rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
+                ? 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
+                : 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
             }
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="absolute left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+          <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
             Modüller
           </div>
         </div>

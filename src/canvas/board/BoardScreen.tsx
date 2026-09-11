@@ -215,7 +215,7 @@ export default function BoardScreen() {
       rail={railFor('/panolar')}
     >
       {/* Kartlar */}
-      <main className="absolute bottom-[118px] left-[92px] right-6 top-[84px] overflow-auto">
+      <main className="absolute bottom-[152px] left-14 right-2 top-16 sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[84px] overflow-auto">
         <div className="relative mx-auto w-full max-w-[1760px]" style={{ height }}>
           {!cards.length && !pending && (
             <div className="flex h-[420px] flex-col items-center justify-center text-center">
@@ -303,11 +303,11 @@ export default function BoardScreen() {
       </main>
 
       {/* Önizleme + soru çubuğu */}
-      <div className="absolute bottom-6 left-[92px] right-6 z-40 flex justify-center">
+      <div className="absolute bottom-3 left-14 right-2 sm:bottom-6 sm:left-[92px] sm:right-6 z-40 flex justify-center">
         <div className="w-full max-w-[980px]">
           {pending && (
-            <div className="mb-3 rounded-3xl border border-white bg-white p-4 shadow-canvas-card ring-1 ring-slate-900/5">
-              <div className="flex items-center justify-between gap-3">
+            <div className="mb-3 rounded-2xl sm:rounded-3xl border border-white bg-white p-3 sm:p-4 shadow-canvas-card ring-1 ring-slate-900/5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="truncate text-[12.5px] font-extrabold">{pending.title}</div>
                   <div className="text-[11px] text-canvas-muted">

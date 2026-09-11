@@ -180,7 +180,7 @@ function CanvasBody({
       onZoom={onZoom}
       onReset={dirty ? reset : undefined}
     >
-    <main ref={alanRef} className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-auto">
+    <main ref={alanRef} className="absolute inset-x-0 top-16 bottom-[136px] sm:top-[84px] sm:bottom-[92px] overflow-auto">
         <div ref={stageRef} className="relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]" style={{ zoom: (zoom ?? 1) * sig }}>
     
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
@@ -584,19 +584,19 @@ function CanvasBody({
       </main>
 
       {/* ================= BOTTOM FLOATING DOCK & ZEKİ CHAT INPUT ================= */}
-      <div className="absolute bottom-6 inset-x-0 flex justify-center z-40 pointer-events-none">
-        <div className="glass-dock p-2.5 rounded-3xl shadow-dock-shadow flex items-center gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
-        
+      <div className="absolute bottom-3 inset-x-2 sm:bottom-6 sm:inset-x-0 flex justify-center z-40 pointer-events-none">
+        <div className="glass-dock p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl shadow-dock-shadow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
+
           {/* 4 Quick Module Chips */}
-          <div className="flex items-center gap-1.5 pl-1 shrink-0 border-r border-slate-200/80 pr-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto pl-1 shrink-0 sm:border-r border-slate-200/80 sm:pr-3 pb-1 sm:pb-0">
             {d.dockLinks.map((c, i) => (
               <Link
                 key={c.to}
                 to={c.to}
                 className={
                   c.active
-                    ? 'px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20'
-                    : 'px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition flex items-center gap-1'
+                    ? 'shrink-0 px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20'
+                    : 'shrink-0 px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition flex items-center gap-1'
                 }
               >
                 {c.active && <span className="w-2 h-2 rounded-full bg-violet"></span>}
@@ -606,18 +606,19 @@ function CanvasBody({
             ))}
           </div>
 
-          {/* Wide Rounded AI Input */}
-          <div className="flex-1 flex items-center bg-white/90 hover:bg-white rounded-2xl px-4 py-2 border border-slate-200/80 shadow-inner transition">
-            <svg className="w-4 h-4 text-violet mr-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            <input type="text" placeholder={d.askPlaceholder} value={ask} onChange={(e) => setAsk(e.target.value)} className="w-full bg-transparent text-xs font-semibold text-ink placeholder:text-muted/70 focus:outline-none" />
-          </div>
+          <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+            {/* Wide Rounded AI Input */}
+            <div className="flex-1 min-w-0 flex items-center bg-white/90 hover:bg-white rounded-2xl px-4 py-2 border border-slate-200/80 shadow-inner transition">
+              <svg className="w-4 h-4 text-violet mr-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <input type="text" placeholder={d.askPlaceholder} value={ask} onChange={(e) => setAsk(e.target.value)} className="w-full bg-transparent text-xs font-semibold text-ink placeholder:text-muted/70 focus:outline-none" />
+            </div>
 
-          {/* Mic & Circular Gradient Send Button */}
-          <div className="flex items-center gap-2 pr-1 shrink-0">
-
-            <button onClick={onAsk} className="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral to-violet text-white shadow-md hover:shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95" title="Gönder">
-              <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
-            </button>
+            {/* Mic & Circular Gradient Send Button */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={onAsk} className="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral to-violet text-white shadow-md hover:shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95" title="Gönder">
+                <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+              </button>
+            </div>
           </div>
 
         </div>

@@ -41,7 +41,7 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
   return (
     <>
       <div className="fixed inset-0 z-40" onClick={onClose} aria-hidden="true" />
-      <aside className="glass-panel absolute left-[74px] top-24 bottom-24 z-50 flex w-[320px] flex-col rounded-3xl shadow-canvas-card">
+      <aside className="glass-panel absolute left-1.5 right-1.5 top-20 bottom-20 sm:left-[68px] sm:right-auto sm:top-24 sm:bottom-24 z-50 flex w-auto sm:w-[320px] flex-col rounded-2xl sm:rounded-3xl shadow-canvas-card">
         <div className="border-b border-white/70 px-4 pb-3 pt-4">
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-extrabold tracking-tight text-ink">Modüller</span>
