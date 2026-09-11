@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
+import Node, { LayoutProvider, useLayout, type BoxMap } from './layout';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
 
@@ -16,8 +17,17 @@ import type { StitchCanvasData } from './data';
 /** Kartların çizildiği alan. Tasarımdaki koordinatlar bu kutunun içinde;
  *  üst şerit, ray ve dock ekrana yapıştığı için kutu yalnız aradaki boşluğu
  *  doldurur. */
-const ART_W = 1440;
-const ART_H = 700; // kartların gerçek alt sınırı 689px; fazlası boş alan demek
+/** Tasarımdaki başlangıç yerleşimi. Kullanıcı taşıyınca üzerine yazılır. */
+const DEFAULT_BOXES: BoxMap = {
+  q: { x: 470, y: 8, w: 500 },
+  c1: { x: 110, y: 108, w: 235 },
+  c2: { x: 365, y: 103, w: 250 },
+  c3: { x: 635, y: 118, w: 240 },
+  c4: { x: 895, y: 103, w: 235 },
+  c5: { x: 1150, y: 108, w: 215 },
+  main: { x: 290, y: 378, w: 860 },
+  sticker: { x: 1185, y: 378, w: 125 },
+};
 
 const RAIL_ICONS = [
   (
@@ -52,32 +62,99 @@ const RAIL_ICONS = [
   ),
 ];
 
-export default function StitchCanvas({
-  d,
-  onAsk: onSubmitAsk,
-  onZoom,
-  zoom,
-}: {
+
+const ACCENTS = ['#FF6B4A', '#7C5CFF', '#10B981', '#F59E0B', '#6B7280'];
+
+/** Sorudan kartlara giden eğriler. Kart taşınınca çizgi peşinden gelir. */
+function Connectors() {
+  const { boxes, tick } = useLayout();
+  const paths = useMemo(() => {
+    const q = boxes.q;
+    if (!q) return [];
+    const sx = q.x + q.w / 2;
+    const sy = q.y + 74;
+    return ['c1', 'c2', 'c3', 'c4', 'c5']
+      .map((id, i) => {
+        const b = boxes[id];
+        if (!b) return null;
+        const tx = b.x + b.w / 2;
+        const ty = b.y - 6;
+        const dx = tx - sx;
+        const spread = Math.min(Math.abs(dx) * 0.55, 260);
+        const c1x = sx + Math.sign(dx) * spread;
+        const c2x = tx - Math.sign(dx) * Math.min(Math.abs(dx) * 0.25, 90);
+        return {
+          id,
+          color: ACCENTS[i],
+          d: `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${c1x.toFixed(1)} ${(sy - 4).toFixed(1)}, ${c2x.toFixed(1)} ${(ty - 48).toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`,
+          tx,
+          ty,
+        };
+      })
+      .filter((v): v is { id: string; color: string; d: string; tx: number; ty: number } => v != null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boxes, tick]);
+
+  return (
+    <svg className="pointer-events-none absolute inset-0 z-10 h-full w-full" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        {paths.map((p) => (
+          <linearGradient key={p.id} id={`cv-${p.id}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor={p.color} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={p.color} stopOpacity="0.15" />
+          </linearGradient>
+        ))}
+      </defs>
+      {paths.map((p) => (
+        <g key={p.id}>
+          <path d={p.d} fill="none" stroke={`url(#cv-${p.id})`} strokeWidth={2} strokeLinecap="round" className="flowing-line" />
+          <circle cx={p.tx} cy={p.ty} r={4} fill={p.color} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+export default function StitchCanvas(props: {
   d: StitchCanvasData;
   onAsk?: (q: string) => void;
   onZoom?: (delta: number) => void;
   zoom?: number;
+  screen?: string;
 }) {
-  const fitRef = useRef<HTMLElement | null>(null);
-  const [fitBox, setFitBox] = useState({ w: 0, h: 0 });
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const [stageW, setStageW] = useState(0);
   useLayoutEffect(() => {
-    const el = fitRef.current;
+    const el = stageRef.current;
     if (!el) return;
-    const measure = () => setFitBox({ w: el.clientWidth, h: el.clientHeight });
+    const measure = () => setStageW(el.clientWidth);
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const fit = fitBox.w > 0 ? Math.min(fitBox.w / ART_W, fitBox.h / ART_H) : 1;
-  const artScale = fit * (zoom ?? 1);
-  const artX = Math.max(0, (fitBox.w - ART_W * artScale) / 2);
-  const artY = Math.max(0, (fitBox.h - ART_H * artScale) / 2);
+  return (
+    <LayoutProvider screen={props.screen ?? 'default'} defaults={DEFAULT_BOXES} stageW={stageW}>
+      <CanvasBody {...props} stageRef={stageRef} />
+    </LayoutProvider>
+  );
+}
+
+function CanvasBody({
+  d,
+  onAsk: onSubmitAsk,
+  onZoom,
+  zoom,
+  stageRef,
+}: {
+  d: StitchCanvasData;
+  onAsk?: (q: string) => void;
+  onZoom?: (delta: number) => void;
+  zoom?: number;
+  screen?: string;
+  stageRef: React.MutableRefObject<HTMLDivElement | null>;
+}) {
+  const { reset, dirty } = useLayout();
 
   const [modulesOpen, setModulesOpen] = useState(false);
   const [ask, setAsk] = useState('');
@@ -130,6 +207,17 @@ export default function StitchCanvas({
           </div>
           <span className="text-[11px] font-semibold text-muted pl-1">{d.presence}</span>
         </div>
+
+        {dirty && (
+          <button
+            type="button"
+            onClick={reset}
+            title="Kart düzenini tasarımdaki hâline döndür"
+            className="glass-panel px-3.5 py-2 rounded-full shadow-glass-float text-xs font-bold text-muted hover:text-ink transition"
+          >
+            Düzeni sıfırla
+          </button>
+        )}
 
         {/* Share Button */}
         <button type="button" onClick={share} className="glass-panel px-4 py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group">
@@ -193,81 +281,19 @@ export default function StitchCanvas({
       <ModulesMenu open={modulesOpen} onClose={() => setModulesOpen(false)} />
 
       {/* ================= INFINITE CANVAS STAGE ================= */}
-    <main className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-y-auto overflow-x-hidden">
-        <div
-          ref={stageRef}
-          className="relative mx-auto flex w-full max-w-[1760px] flex-col items-center gap-5 px-6 pb-4 pt-2 xl:px-10"
-          style={{ zoom: zoom ?? 1 }}
-        >
+    <main className="absolute inset-x-0 top-[84px] bottom-[92px] overflow-auto">
+        <div ref={stageRef} className="relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]" style={{ zoom: zoom ?? 1 }}>
     
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
-      <svg className="absolute left-0 top-0 pointer-events-none z-10" width={ART_W} height={ART_H} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          {/* Gradients for connectors */}
-          <linearGradient id="grad-c1" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF6B4A" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#FF6B4A" stopOpacity="0.15" />
-          </linearGradient>
-          <linearGradient id="grad-c2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#7C5CFF" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#7C5CFF" stopOpacity="0.15" />
-          </linearGradient>
-          <linearGradient id="grad-c3" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#10B981" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#10B981" stopOpacity="0.15" />
-          </linearGradient>
-          <linearGradient id="grad-c4" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.6" />
-            <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.15" />
-          </linearGradient>
-          <linearGradient id="grad-c5" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#6B7280" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#6B7280" stopOpacity="0.15" />
-          </linearGradient>
-          {/* Marker Dots */}
-          <marker id="dot-coral" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
-            <circle cx="5" cy="5" r="3.5" fill="#FF6B4A" />
-          </marker>
-          <marker id="dot-violet" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6">
-            <circle cx="5" cy="5" r="3.5" fill="#7C5CFF" />
-          </marker>
-        </defs>
-
-        {/* Center question anchor: ~ (720, 118) */}
-        {/* Line to 1. Stok (approx 215, 205) */}
-        <path d="M 640 115 C 440 115, 300 145, 235 200" fill="none" stroke="url(#grad-c1)" strokeWidth="2" strokeLinecap="round" className="flowing-line" />
-        <circle cx="235" cy="200" r="4" fill="#FF6B4A" />
-
-        {/* Line to 2. Talep Tahmini (approx 475, 210) */}
-        <path d="M 690 120 C 580 150, 520 160, 480 205" fill="none" stroke="url(#grad-c2)" strokeWidth="2" strokeLinecap="round" className="flowing-line" />
-        <circle cx="480" cy="205" r="4" fill="#7C5CFF" />
-
-        {/* Line to 3. Kanal Dağılımı (approx 720, 220) */}
-        <path d="M 720 124 C 720 160, 725 170, 725 210" fill="none" stroke="url(#grad-c3)" strokeWidth="2" strokeLinecap="round" className="flowing-line" />
-        <circle cx="725" cy="210" r="4" fill="#10B981" />
-
-        {/* Line to 4. Telif Etkisi (approx 965, 210) */}
-        <path d="M 750 120 C 860 150, 920 160, 960 205" fill="none" stroke="url(#grad-c4)" strokeWidth="2" strokeLinecap="round" className="flowing-line" />
-        <circle cx="960" cy="205" r="4" fill="#F59E0B" />
-
-        {/* Line to 5. Kanıt (approx 1220, 200) */}
-        <path d="M 800 115 C 1000 115, 1140 145, 1205 200" fill="none" stroke="url(#grad-c5)" strokeWidth="2" strokeLinecap="round" className="flowing-line" />
-        <circle cx="1205" cy="200" r="4" fill="#6B7280" />
-
-        {/* Secondary Connectors to ZEKİ Karar Card at bottom */}
-        <path d="M 330 380 C 420 440, 490 450, 530 470" fill="none" stroke="rgba(255, 107, 74, 0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
-        <path d="M 580 405 C 600 435, 620 450, 640 470" fill="none" stroke="rgba(124, 92, 255, 0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
-        <path d="M 940 380 C 900 430, 850 455, 820 470" fill="none" stroke="rgba(245, 158, 11, 0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+      <Connectors />
       
-        {/* Ghost connector to previous cluster */}
-        <path d="M 1320 280 C 1370 300, 1400 320, 1425 330" fill="none" stroke="rgba(107, 114, 128, 0.2)" strokeWidth="1.5" strokeDasharray="4 4" />
-      </svg>
 
       {/* ================= CENTER CONSTELLATION CONTAINER ================= */}
-      <div className="relative flex w-full flex-col items-center gap-5">
+      <div className="relative h-full w-full">
       
         {/* USER'S QUESTION BUBBLE (Center Top Anchor) */}
-        <div ref={qRef} className="relative z-30 animate-float-slow">
+        <Node id="q" z={30} resizable={false} className="group/node">
+        <div className="animate-float-slow">
           <div className="glass-panel px-6 py-3.5 rounded-full shadow-canvas-card border border-white flex items-center gap-3.5 ring-4 ring-white/40">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-500 text-white font-bold text-sm flex items-center justify-center shadow-md">
               {d.q.initials}
@@ -288,8 +314,10 @@ export default function StitchCanvas({
         {/* ================= 5 CONSTELLATION ANSWER CARDS ================= */}
 
         {/* CARD 1: Stok (Rotated -3°) */}
-        <div className="flex w-full flex-wrap items-start justify-center gap-4 xl:gap-6">
-        <div ref={cardRef(0)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(-3)}deg)` }}>
+        </Node>
+
+        <Node id="c1" tilt={-3} className="group/node">
+        <div className="glass-card rounded-[24px] p-4 shadow-canvas-card">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-coral/10 text-coral flex items-center justify-center text-xs font-bold">{d.c1.icon}</span>
@@ -323,8 +351,11 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </Node>
+
         {/* CARD 2: Talep Tahmini (Rotated +2°) */}
-        <div ref={cardRef(1)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(2)}deg)` }}>
+        <Node id="c2" tilt={2} className="group/node">
+        <div className="glass-card rounded-[24px] p-4 shadow-canvas-card">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-violet/10 text-violet flex items-center justify-center text-xs font-bold">📈</span>
@@ -373,8 +404,11 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </Node>
+
         {/* CARD 3: Kanal Dağılımı (Rotated -1.5°) */}
-        <div ref={cardRef(2)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(-1.5)}deg)` }}>
+        <Node id="c3" tilt={-1.5} className="group/node">
+        <div className="glass-card rounded-[24px] p-4 shadow-canvas-card">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-emerald-50 text-mintSuccess flex items-center justify-center text-xs font-bold">🍩</span>
@@ -439,8 +473,11 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </Node>
+
         {/* CARD 4: Telif Etkisi (Rotated +1°) */}
-        <div ref={cardRef(3)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(1)}deg)` }}>
+        <Node id="c4" tilt={1} className="group/node">
+        <div className="glass-card rounded-[24px] p-4 shadow-canvas-card">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-amber-50 text-amberWarn flex items-center justify-center text-xs font-bold">✍️</span>
@@ -476,8 +513,11 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </Node>
+
         {/* CARD 5: Kanıt / Veri Dayanağı (Rotated +2.5°) */}
-        <div ref={cardRef(4)} className="glass-card z-20 w-[232px] shrink-0 grow-0 rounded-[24px] p-4 shadow-canvas-card sm:w-[248px] xl:w-[268px]" style={{ transform: `rotate(${tilt(2.5)}deg)` }}>
+        <Node id="c5" tilt={2.5} className="group/node">
+        <div className="glass-card rounded-[24px] p-4 shadow-canvas-card">
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">🔍</span>
@@ -528,10 +568,11 @@ export default function StitchCanvas({
           </div>
         </div>
 
-        </div>
+        </Node>
 
         {/* ================= MAIN "ZEKİ AI KARARI" CARD ================= */}
-        <div ref={mainRef} className="glass-card relative z-20 w-full max-w-[980px] rounded-[28px] border-2 border-white/90 p-6 shadow-canvas-card">
+        <Node id="main" minW={520} maxW={1200} className="group/node">
+        <div className="glass-card relative rounded-[28px] border-2 border-white/90 p-6 shadow-canvas-card">
         
           {/* Header badge */}
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100/90">
@@ -598,9 +639,12 @@ export default function StitchCanvas({
           </div>
         </div>
 
+        </Node>
+
         {/* ================= STICKER-LIKE BOOK COVER (Kayıp Atlas) ================= */}
         {/* Positioned pinned near the decision card with tape effect, tilted 6° */}
-        <div className="group absolute -right-2 top-4 z-30 hidden xl:block" style={{ transform: 'rotate(6deg)' }}>
+        <Node id="sticker" tilt={6} z={30} resizable={false} className="group hidden xl:block">
+        <div>
           {/* Washi Tape Pin */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 washi-tape rounded-sm z-40"></div>
         
@@ -633,8 +677,7 @@ export default function StitchCanvas({
             {d.sticker.badge}
           </div>
         </div>
-
-        
+        </Node>
 
       </div>
 

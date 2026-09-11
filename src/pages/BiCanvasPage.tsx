@@ -104,5 +104,5 @@ export default function BiCanvasPage() {
     };
   }, [d, answer, asking, askErr]);
 
-  return <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} />;
+  return <StitchCanvas d={view} onAsk={ask} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />;
 }
