@@ -64,7 +64,7 @@ def run(sql: str, tok: str) -> list:
 
 def main() -> int:
     tok = token()
-    out = {"year": YEAR, "prevYear": PREV, "generatedAt": dt.datetime.now().isoformat(timespec="seconds")}
+    out = {"year": YEAR, "prevYear": PREV, "generatedAt": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
     errors = {}
     t0 = time.time()
     for name, make in QUERIES.items():

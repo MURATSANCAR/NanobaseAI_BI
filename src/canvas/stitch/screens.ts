@@ -575,6 +575,13 @@ const trPct = (v: number | null, d = 1) => (v == null ? '—' : `%${v.toFixed(d)
  * CFO ekranı: canlı rakamlar. Metinler kısa tutulur; kart başına tek
  * cümle, gerisi sayı. Veri gelmiyorsa kart sayı uydurmaz, durumu yazar.
  */
+/** Özet saati İstanbul saatiyle. Konteyner UTC'de yazar; metni kesip göstermek saati 3 saat kaydırır. */
+function summaryTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso.slice(11, 16);
+  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
+}
+
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
   const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Motor yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
   const yok = (v: string) => (durum ? '—' : v);
@@ -598,7 +605,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     ...base('Genel bakış', source, 'ZEKİ’ye sor… örn. bu ay kanal bazında net ciro', {
       initials: 'TY',
       role: `Timaş Yayınları · ${c.year}`,
-      at: durum || (c.generatedAt ? `${c.generatedAt.slice(11, 16)} özeti` : `${sonTR} itibarıyla`),
+      at: durum || (c.generatedAt ? `${summaryTime(c.generatedAt)} özeti` : `${sonTR} itibarıyla`),
       text: '“Bu yıl nasıl gidiyoruz?”',
     }),
     c1: {
