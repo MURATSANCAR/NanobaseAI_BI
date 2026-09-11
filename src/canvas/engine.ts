@@ -78,3 +78,41 @@ export type AskAnswer = {
 export function ask(question: string): Promise<AskAnswer> {
   return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
 }
+
+export type ConceptRow = {
+  concept: {
+    term: string;
+    semantic_type: string;
+    status: string;
+    confidence?: number;
+    domain?: string;
+    synonyms?: string[];
+  };
+};
+
+export type ReviewItem = {
+  id: string;
+  term: string;
+  type: string;
+  confidence?: number;
+  mapping?: { entity?: string; column?: string; table_pattern?: string };
+};
+
+async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
+  const res = await fetch(`${ENGINE_BASE}${path}`, { credentials: 'include', signal: AbortSignal.timeout(timeoutMs) });
+  if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+  if (!res.ok) throw new Error(`Motor ${res.status}`);
+  return (await res.json()) as T;
+}
+
+/** Veri sözlüğü: sertifikalı kavramlar. */
+export function concepts(status = 'CERTIFIED', limit = 200) {
+  return get<{ items: ConceptRow[] }>(`/api/v1/semantic/concepts?status=${status}&limit=${limit}`);
+}
+
+/** Onay kuyruğu: insana sorulmayı bekleyen terimler. */
+export function review(limit = 50) {
+  return get<{ waiting: number; used: number; total: number; items: ReviewItem[] }>(
+    `/api/v1/semantic/review?limit=${limit}`,
+  );
+}

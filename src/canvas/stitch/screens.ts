@@ -1,6 +1,7 @@
 import type { AlertSummary, ScheduleSummary } from '../data';
 import { conditionLabel, dateTime, money, num, recurrenceLabel, relative } from '../format';
 import type { CfoData } from '../cfo';
+import type { ConceptRow, ReviewItem } from '../engine';
 import type { StitchArc, StitchCanvasData, StitchRailItem } from './data';
 
 /** Halka dilimleri: çevre 87.96 (2πr, r=14). Paylar değerlerden hesaplanır. */
@@ -43,12 +44,14 @@ const rail = (active: string): StitchRailItem[] => [
   { to: '/', label: 'Genel bakış', badge: active === '/' ? 'Aktif' : undefined },
   { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
   { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
-  { to: '/urunler', label: 'Ürünler', badge: active === '/urunler' ? 'Aktif' : undefined },
+  { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
+  { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined },
+  { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined },
 ];
 
 const DOCK = [
   { to: '/', label: 'Genel bakış' },
-  { to: '/urunler', label: 'Ürünler' },
+  { to: '/panolar', label: 'Panolar' },
   { to: '/planli-raporlar', label: 'Planlı raporlar', dot: true },
   { to: '/uyarilar', label: 'Uyarılar' },
 ];
@@ -687,120 +690,229 @@ function prefixLabel(year: number): string {
   return year >= 2026 ? 'LG_411' : 'LG_211';
 }
 
-/* -------------------------------- Ürünler -------------------------------- */
+/* ----------------------- Veri Sözlüğü ve Onaylar ------------------------ */
 
-/**
- * Ürün ekranı: hangi başlık satıyor, hangisi geri dönüyor. Analitik motoru
- * kapalı olduğu için boş duran "Panolar" ekranının yerini aldı; buradaki her
- * rakam Logo'dan canlı gelir.
- */
-export function productsData(c: CfoData, source: string): StitchCanvasData {
-  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Motor yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+
+type Loadable<T> = { data: T | null; loading: boolean; authRequired: boolean };
+
+/** Veri Sözlüğü: motorun sertifikalı kavramları. Eski sistemdeki Katalog
+ *  Gezgini'nin yerini tutar; kaynağı semantic bridge. */
+export function glossaryData(q: Loadable<{ items: ConceptRow[] }>, source: string): StitchCanvasData {
+  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Motor yanıt vermedi' : '';
+  const items = (q.data?.items ?? []).map((r) => r.concept);
+  const byType = (t: string) => items.filter((c) => c.semantic_type === t).length;
+  const metrics = items.filter((c) => c.semantic_type === 'METRIC');
+  const top = metrics.slice(0, 4);
   const yok = (v: string) => (durum ? '—' : v);
-  const top = c.items[0];
-  const ret = c.returnItems[0];
-  const topFive = c.items.slice(0, 5);
-  const retTotal = c.returnItems.reduce((a, r) => a + Math.abs(r.iade_tutar ?? 0), 0);
-  const son = c.totals?.son_fatura?.slice(0, 10);
-  const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';
 
   return {
-    ...base('Ürünler', source, 'ZEKİ’ye sor… örn. en çok iade edilen 10 kitap', {
+    ...base('Veri Sözlüğü', source, 'ZEKİ’ye sor… örn. net ciro nasıl hesaplanıyor?', {
       initials: 'TY',
-      role: `Timaş Yayınları · ${c.year}`,
-      at: durum || `${sonTR} itibarıyla`,
-      text: '“Hangi kitap satıyor, hangisi geri dönüyor?”',
-    }, 1),
+      role: 'Timaş Yayınları · Veri Sözlüğü',
+      at: durum || 'Şimdi',
+      text: '“Hangi terim neye karşılık geliyor?”',
+    }, 0),
     c1: {
-      icon: '📚',
-      title: 'Satılan adet',
-      badge: String(c.year),
-      big: yok(money(c.units?.satilan_adet ?? 0)),
-      bigSuffix: 'adet',
-      subLabel: 'Farklı başlık:',
-      subValue: yok(money(c.units?.baslik_sayisi ?? 0)),
-      pct: (c.observedMonths / 12) * 100,
-      footL: `${c.observedMonths || 0} / 12 ay`,
-      footR: `Veri: ${sonTR}`,
-      rowLabel: 'Okunan satır:',
-      rowValue: yok(money(c.units?.satir ?? 0)),
+      icon: '📖',
+      title: 'Sertifikalı kavram',
+      badge: durum ? 'Bağlantı' : 'Onaylı',
+      big: yok(num(items.length)),
+      bigSuffix: 'terim',
+      subLabel: 'Metrik:',
+      subValue: yok(num(byType('METRIC'))),
+      pct: items.length ? (byType('METRIC') / items.length) * 100 : 0,
+      footL: `Kolon: ${yok(num(byType('COLUMN')))}`,
+      footR: `İlişki: ${yok(num(byType('RELATIONSHIP')))}`,
+      rowLabel: 'Değer eşlemesi:',
+      rowValue: yok(num(byType('DIMENSION_VALUE'))),
     },
     c2: {
-      title: 'En çok satan',
-      badge: `${num(topFive.length)} başlık`,
-      label: top?.urun ?? yok('Başlık yok'),
-      big: yok(money(top?.adet ?? 0)),
-      unit: 'adet',
-      delta: top ? `${money(top.net_ciro)} ₺` : '—',
-      tick1: c.items[1] ? `${c.items[1].urun.slice(0, 14)} ${money(c.items[1].adet)}` : '—',
-      tick2: c.items[2] ? `${c.items[2].urun.slice(0, 14)} ${money(c.items[2].adet)}` : '—',
-      tick3: c.items[3] ? `${c.items[3].urun.slice(0, 14)} ${money(c.items[3].adet)}` : '—',
-      foot: 'Adede göre ilk sekiz başlık',
-      ...spark(topFive.map((i) => i.adet)),
+      title: 'Metrikler',
+      badge: `${num(metrics.length)} metrik`,
+      label: top[0]?.term ?? yok('Metrik yok'),
+      big: yok(num(metrics.length)),
+      unit: 'tanım',
+      delta: top[0]?.confidence != null ? `%${Math.round(top[0].confidence * 100)} güven` : '—',
+      tick1: top[1]?.term ?? '—',
+      tick2: top[2]?.term ?? '—',
+      tick3: top[3]?.term ?? '—',
+      foot: 'İş tarafının onayladığı hesap tanımları',
+      ...spark(metrics.slice(0, 6).map((m) => (m.confidence ?? 0) * 100)),
     },
     c3: {
-      title: 'İlk beşin payı',
-      badge: `${c.year} · adet`,
-      center: yok(money(topFive.reduce((a, i) => a + i.adet, 0))),
-      arcs: arcs(topFive.slice(0, 4).map((i) => i.adet)),
+      title: 'Tür dağılımı',
+      badge: `${num(items.length)} kavram`,
+      center: yok(num(items.length)),
+      arcs: arcs([byType('DIMENSION_VALUE'), byType('COLUMN'), byType('METRIC'), byType('RELATIONSHIP')]),
       rows: [
-        { label: (topFive[0]?.urun ?? '1.').slice(0, 13) + ':', value: yok(money(topFive[0]?.adet ?? 0)) },
-        { label: (topFive[1]?.urun ?? '2.').slice(0, 13) + ':', value: yok(money(topFive[1]?.adet ?? 0)) },
-        { label: (topFive[2]?.urun ?? '3.').slice(0, 13) + ':', value: yok(money(topFive[2]?.adet ?? 0)) },
-        { label: (topFive[3]?.urun ?? '4.').slice(0, 13) + ':', value: yok(money(topFive[3]?.adet ?? 0)) },
+        { label: 'Değer:', value: yok(num(byType('DIMENSION_VALUE'))) },
+        { label: 'Kolon:', value: yok(num(byType('COLUMN'))) },
+        { label: 'Metrik:', value: yok(num(byType('METRIC'))) },
+        { label: 'İlişki:', value: yok(num(byType('RELATIONSHIP'))) },
       ],
-      footLabel: 'Toplam satılan:',
-      footValue: yok(money(c.units?.satilan_adet ?? 0)),
+      footLabel: 'Varsayılan filtre:',
+      footValue: yok(num(byType('DEFAULT_FILTER'))),
     },
     c4: {
-      title: 'En çok iade edilen',
-      badge: ret ? 'İncele' : 'Temiz',
-      initials: (ret?.urun ?? '??').slice(0, 2).toUpperCase(),
-      name: ret?.urun ?? yok('İade yok'),
-      sub: ret?.kod ?? '',
-      valueLabel: 'İade tutarı:',
-      value: ret ? `${money(Math.abs(ret.iade_tutar))} ₺` : yok('0'),
-      note: ret ? `${money(Math.abs(ret.iade_adet))} adet geri döndü` : '',
-      footLabel: 'İlk altı iadenin toplamı:',
-      footValue: yok(`${money(retTotal)} ₺`),
+      title: 'Örnek tanım',
+      badge: 'Sertifikalı',
+      initials: 'NC',
+      name: metrics[0]?.term ?? yok('Tanım yok'),
+      sub: metrics[0]?.domain ?? '',
+      valueLabel: 'Güven:',
+      value: metrics[0]?.confidence != null ? `%${Math.round(metrics[0].confidence * 100)}` : '—',
+      note: 'Bu tanım sorularda doğrudan kullanılır',
+      footLabel: 'Eş anlamlı:',
+      footValue: yok(num(metrics[0]?.synonyms?.length ?? 0)),
     },
     c5: {
       title: 'Kanıt & Kaynak',
       badge: durum ? 'Bağlantı' : 'Canlı',
-      summary: durum || `${money(c.units?.satir ?? 0)} satır okundu · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
+      summary: durum || `${num(items.length)} kavram · semantic katalog`,
       rows: [
-        { name: `${c.year >= 2026 ? 'LG_411' : 'LG_211'}_01_STLINE`, tag: 'Satır' },
-        { name: `${c.year >= 2026 ? 'LG_411' : 'LG_211'}_ITEMS`, tag: 'Ürün' },
-        { name: 'TRCODE 2,3', tag: 'İade' },
+        { name: 'semantic/concepts', tag: 'Sözlük' },
+        { name: 'status=CERTIFIED', tag: 'Filtre' },
+        { name: 'semantic/review', tag: 'Kuyruk' },
       ],
       latency: durum ? '—' : 'semantic bridge',
     },
     main: {
       badge: 'ZEKİ AI ÖZETİ',
-      subject: `Ürünler · ${c.year}`,
-      model: durum || `${sonTR} itibarıyla`,
+      subject: 'Veri Sözlüğü',
+      model: durum || 'Sertifikalı katalog',
       text: durum
         ? `“${durum}.”`
-        : `“${money(c.units?.satilan_adet ?? 0)} adet satıldı, ${money(c.units?.baslik_sayisi ?? 0)} farklı başlıkta.${
-            top ? ` En çok satan ${top.urun}: ${money(top.adet)} adet.` : ''
-          }${ret ? ` En çok iade ${ret.urun}.` : ''}”`,
-      m1: { label: 'En çok satan:', value: top ? money(top.adet) : '—' },
-      m2: { label: 'Başlık:', value: yok(money(c.units?.baslik_sayisi ?? 0)) },
-      m3: { label: 'İade oranı:', value: c.returnPct == null ? '—' : `%${c.returnPct.toFixed(1).replace('.', ',')}` },
-      primary: 'Verine sor',
-      primaryTo: '/',
-      secondary: 'Uyarılar',
-      secondaryTo: '/uyarilar',
-      note: `${c.items.length} başlık listelendi`,
+        : `“${num(items.length)} kavram sertifikalı: ${num(byType('METRIC'))} metrik, ${num(byType('COLUMN'))} kolon, ${num(byType('RELATIONSHIP'))} ilişki.”`,
+      m1: { label: 'Metrik:', value: yok(num(byType('METRIC'))) },
+      m2: { label: 'Kolon:', value: yok(num(byType('COLUMN'))) },
+      m3: { label: 'İlişki:', value: yok(num(byType('RELATIONSHIP'))) },
+      primary: 'Onay kuyruğu',
+      primaryTo: '/onaylar',
+      secondary: 'Verine sor',
+      secondaryTo: '/',
+      note: 'Sertifikalı tanımlar sorularda kullanılır',
     },
     sticker: {
-      kicker: 'En çok satan',
-      meta: top ? `${money(top.adet)} adet` : '—',
-      title: top?.urun ?? yok('VERİ YOK'),
-      sub: top?.kod ?? '',
-      footL: 'net ciro',
-      footR: top ? `${money(top.net_ciro)} ₺` : '—',
-      badge: 'İlk sıra ★',
+      kicker: 'Sözlük',
+      meta: `${num(items.length)} terim`,
+      title: metrics[0]?.term?.toLocaleUpperCase('tr') ?? 'SÖZLÜK',
+      sub: 'sertifikalı',
+      footL: 'metrik',
+      footR: num(byType('METRIC')),
+      badge: 'Onaylı ★',
+    },
+    ghost: { title: '', badge: '', text: '', foot: '' },
+  };
+}
+
+/** Onaylar: insana sorulmayı bekleyen terimler. Eski sistemdeki Terim
+ *  İnceleme ekranının karşılığı. */
+export function approvalsData(
+  q: Loadable<{ waiting: number; used: number; total: number; items: ReviewItem[] }>,
+  source: string,
+): StitchCanvasData {
+  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Motor yanıt vermedi' : '';
+  const d0 = q.data;
+  const items = d0?.items ?? [];
+  const yok = (v: string) => (durum ? '—' : v);
+  const byType = (t: string) => items.filter((i) => i.type === t).length;
+  const first = items[0];
+
+  return {
+    ...base('Onaylar', source, 'ZEKİ’ye sor… örn. bekleyen terimleri özetle', {
+      initials: 'TY',
+      role: 'Timaş Yayınları · Onaylar',
+      at: durum || 'Şimdi',
+      text: '“Hangi terim onay bekliyor?”',
+    }, 0),
+    c1: {
+      icon: '✅',
+      title: 'Bekleyen',
+      badge: (d0?.waiting ?? 0) > 0 ? 'İnceleme' : 'Temiz',
+      big: yok(num(d0?.waiting ?? 0)),
+      bigSuffix: 'terim',
+      subLabel: 'Toplam aday:',
+      subValue: yok(num(d0?.total ?? 0)),
+      pct: d0?.total ? ((d0.waiting ?? 0) / d0.total) * 100 : 0,
+      footL: `Kullanılan: ${yok(num(d0?.used ?? 0))}`,
+      footR: `Toplam: ${yok(num(d0?.total ?? 0))}`,
+      rowLabel: 'Listelenen:',
+      rowValue: yok(num(items.length)),
+    },
+    c2: {
+      title: 'Kuyruktakiler',
+      badge: `${num(items.length)} kayıt`,
+      label: first?.term ?? yok('Kuyruk boş'),
+      big: yok(num(items.length)),
+      unit: 'terim',
+      delta: first?.confidence != null ? `%${Math.round(first.confidence * 100)} güven` : '—',
+      tick1: items[1]?.term ?? '—',
+      tick2: items[2]?.term ?? '—',
+      tick3: items[3]?.term ?? '—',
+      foot: 'Sırayla insana sorulacak adaylar',
+      ...spark(items.slice(0, 6).map((i) => (i.confidence ?? 0) * 100)),
+    },
+    c3: {
+      title: 'Tür dağılımı',
+      badge: `${num(items.length)} kayıt`,
+      center: yok(num(items.length)),
+      arcs: arcs([byType('COLUMN'), byType('METRIC'), byType('DIMENSION_VALUE'), byType('RELATIONSHIP')]),
+      rows: [
+        { label: 'Kolon:', value: yok(num(byType('COLUMN'))) },
+        { label: 'Metrik:', value: yok(num(byType('METRIC'))) },
+        { label: 'Değer:', value: yok(num(byType('DIMENSION_VALUE'))) },
+        { label: 'İlişki:', value: yok(num(byType('RELATIONSHIP'))) },
+      ],
+      footLabel: 'Sertifikaya giden:',
+      footValue: yok(num(d0?.used ?? 0)),
+    },
+    c4: {
+      title: 'Sıradaki terim',
+      badge: 'Onay bekliyor',
+      initials: (first?.term ?? '??').slice(0, 2).toLocaleUpperCase('tr'),
+      name: first?.term ?? yok('Kuyruk boş'),
+      sub: first?.mapping?.entity ?? '',
+      valueLabel: 'Eşleşme:',
+      value: first?.mapping?.column ?? '—',
+      note: first?.mapping?.table_pattern ?? '',
+      footLabel: 'Güven:',
+      footValue: first?.confidence != null ? `%${Math.round(first.confidence * 100)}` : '—',
+    },
+    c5: {
+      title: 'Kanıt & Kaynak',
+      badge: durum ? 'Bağlantı' : 'Canlı',
+      summary: durum || `${num(d0?.waiting ?? 0)} bekleyen · ${num(d0?.total ?? 0)} aday`,
+      rows: [
+        { name: 'semantic/review', tag: 'Kuyruk' },
+        { name: 'semantic/certify', tag: 'Onay' },
+        { name: 'human_certify', tag: 'Kalıcı' },
+      ],
+      latency: durum ? '—' : 'semantic bridge',
+    },
+    main: {
+      badge: 'ZEKİ AI ÖZETİ',
+      subject: 'Onay kuyruğu',
+      model: durum || `${num(d0?.total ?? 0)} aday`,
+      text: durum
+        ? `“${durum}.”`
+        : `“${num(d0?.waiting ?? 0)} terim onay bekliyor. Onaylanan tanım sonraki sorularda doğrudan kullanılır.”`,
+      m1: { label: 'Bekleyen:', value: yok(num(d0?.waiting ?? 0)) },
+      m2: { label: 'Kullanılan:', value: yok(num(d0?.used ?? 0)) },
+      m3: { label: 'Toplam:', value: yok(num(d0?.total ?? 0)) },
+      primary: 'Veri Sözlüğü',
+      primaryTo: '/veri-sozlugu',
+      secondary: 'Verine sor',
+      secondaryTo: '/',
+      note: 'Onay kalıcıdır; gece taraması düşüremez',
+    },
+    sticker: {
+      kicker: 'Onay bekliyor',
+      meta: num(d0?.waiting ?? 0),
+      title: first?.term?.toLocaleUpperCase('tr') ?? 'KUYRUK BOŞ',
+      sub: first?.mapping?.entity ?? '',
+      footL: 'aday',
+      footR: num(d0?.total ?? 0),
+      badge: 'İncele ★',
     },
     ghost: { title: '', badge: '', text: '', foot: '' },
   };

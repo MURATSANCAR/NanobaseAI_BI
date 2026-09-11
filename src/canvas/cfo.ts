@@ -114,8 +114,11 @@ export function useCfoData(): CfoData {
 
   const [months, prev, totals, units, channels, customers, items, returnItems] = q;
   const authRequired = q.some((r) => r.error instanceof EngineAuthError);
-  const failed = !authRequired && q.some((r) => r.isError);
-  const ready = ENGINE_ENABLED && q.every((r) => r.isSuccess);
+  // Tek bir sorgu patlarsa ekranın tamamı düşmesin: gelen veriyle çiz, gelmeyeni
+  // boş bırak. Önceden `every(isSuccess)` bekleniyordu ve bir hata her kartı
+  // "Yükleniyor"da donduruyordu.
+  const ready = ENGINE_ENABLED && !authRequired && q.some((r) => r.isSuccess) && !q.some((r) => r.isLoading);
+  const failed = !authRequired && ENGINE_ENABLED && q.every((r) => r.isError);
 
   if (!ready) return { ...EMPTY, ready: false, authRequired, failed };
 

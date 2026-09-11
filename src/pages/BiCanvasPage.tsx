@@ -2,14 +2,22 @@ import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
-import { alertsData, cfoData, productsData, schedulesData } from '@/canvas/stitch/screens';
+import { alertsData, approvalsData, boardsData, cfoData, glossaryData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
-import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
+import {
+  ENGINE_ENABLED,
+  EngineAuthError,
+  ask as askEngine,
+  concepts as fetchConcepts,
+  review as fetchReview,
+  type AskAnswer,
+} from '@/canvas/engine';
+import { useQuery } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
-const SCREENS = ['urunler', 'planli-raporlar', 'uyarilar'] as const;
+const SCREENS = ['panolar', 'planli-raporlar', 'uyarilar', 'veri-sozlugu', 'onaylar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
@@ -21,8 +29,24 @@ export default function BiCanvasPage() {
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
 
-  const { on, schedules, alerts } = useCanvasQueries();
+  const { on, schedules, alerts, analyticsStatus, dashboards } = useCanvasQueries();
   const cfo = useCfoData();
+
+  // Sözlük ve onay kuyruğu motordan gelir; eski sistemdeki iki menünün karşılığı.
+  const glossary = useQuery({
+    queryKey: ['semantic-concepts'],
+    queryFn: () => fetchConcepts(),
+    enabled: ENGINE_ENABLED,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const approvals = useQuery({
+    queryKey: ['semantic-review'],
+    queryFn: () => fetchReview(),
+    enabled: ENGINE_ENABLED,
+    staleTime: 60_000,
+    retry: false,
+  });
 
   const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? []), [alerts.data]);
@@ -49,7 +73,23 @@ export default function BiCanvasPage() {
     }
     if (screen === 'planli-raporlar') return { ...schedulesData(sched, schedules.isLoading, source), zoom: z };
     if (screen === 'uyarilar') return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
-    return { ...productsData(cfo, source), zoom: z };
+    if (screen === 'veri-sozlugu')
+      return {
+        ...glossaryData(
+          { data: glossary.data ?? null, loading: glossary.isLoading, authRequired: glossary.error instanceof EngineAuthError },
+          source,
+        ),
+        zoom: z,
+      };
+    if (screen === 'onaylar')
+      return {
+        ...approvalsData(
+          { data: approvals.data ?? null, loading: approvals.isLoading, authRequired: approvals.error instanceof EngineAuthError },
+          source,
+        ),
+        zoom: z,
+      };
+    return { ...boardsData(analyticsStatus.data, dashboards.data?.dashboards ?? [], dashboards.isLoading, source), zoom: z };
   }, [
     screen,
     cfo,
@@ -57,6 +97,15 @@ export default function BiCanvasPage() {
     alert,
     source,
     zoom,
+    glossary.data,
+    glossary.isLoading,
+    glossary.error,
+    approvals.data,
+    approvals.isLoading,
+    approvals.error,
+    analyticsStatus.data,
+    dashboards.data,
+    dashboards.isLoading,
     schedules.isLoading,
     alerts.isLoading,
   ]);
