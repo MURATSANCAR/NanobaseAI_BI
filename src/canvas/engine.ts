@@ -10,6 +10,14 @@ const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
 export const ENGINE_ENABLED = ENGINE_BASE.length > 0;
 
+/** Motor 401 dedikten sonra tekrar tekrar denemek konsolu kirletiyor ve
+ *  sunucuyu boşuna yoruyor. Giriş yapılana kadar yoklama durur. */
+let authBlocked = false;
+export const isAuthBlocked = (): boolean => authBlocked;
+export const clearAuthBlock = (): void => {
+  authBlocked = false;
+};
+
 export class EngineAuthError extends Error {
   constructor() {
     super('Motor oturumu gerekli');
@@ -32,7 +40,10 @@ async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
   if (!res.ok) throw new Error(`Motor ${res.status}`);
   return (await res.json()) as T;
 }
@@ -57,7 +68,10 @@ export async function engineInfo(): Promise<EngineInfo> {
     credentials: 'include',
     signal: AbortSignal.timeout(15_000),
   });
-  if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
   if (!res.ok) throw new Error(`Motor ${res.status}`);
   return (await res.json()) as EngineInfo;
 }
@@ -141,7 +155,10 @@ export type ReviewItem = {
 
 async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
   const res = await fetch(`${ENGINE_BASE}${path}`, { credentials: 'include', signal: AbortSignal.timeout(timeoutMs) });
-  if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
   if (!res.ok) throw new Error(`Motor ${res.status}`);
   return (await res.json()) as T;
 }

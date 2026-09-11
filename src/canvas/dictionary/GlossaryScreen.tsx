@@ -44,7 +44,7 @@ const TYPE_TONE: Record<string, string> = {
 
 function Pill({ type }: { type: string }) {
   return (
-    <span className={['rounded px-1.5 py-0.5 text-[9.5px] font-bold', TYPE_TONE[type] ?? 'bg-slate-100 text-slate-600'].join(' ')}>
+    <span className={['rounded px-1.5 py-0.5 text-[10.5px] font-bold', TYPE_TONE[type] ?? 'bg-slate-100 text-slate-600'].join(' ')}>
       {TYPE_LABEL[type] ?? type}
     </span>
   );
@@ -104,7 +104,7 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="text-xl font-extrabold tracking-tight text-canvas-ink">{c.term}</h2>
           <Pill type={c.semantic_type} />
-          <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[9.5px] font-bold text-emerald-700">{c.status}</span>
+          <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10.5px] font-bold text-emerald-700">{c.status}</span>
         </div>
         <div className="mt-1.5">
           <Confidence v={c.confidence} />
@@ -236,8 +236,8 @@ function TableDetail({ t }: { t: TableRow }) {
                     <td className="px-2 py-1 font-mono font-semibold">{c.name}</td>
                     <td className="px-2 py-1 text-canvas-muted">{c.type}</td>
                     <td className="px-2 py-1 text-right">
-                      {c.isPrimaryKey && <span className="rounded bg-canvas-violet/10 px-1.5 text-[9.5px] font-bold text-canvas-violet">PK</span>}
-                      {c.sensitive && <span className="ml-1 rounded bg-amber-50 px-1.5 text-[9.5px] font-bold text-amber-700">hassas</span>}
+                      {c.isPrimaryKey && <span className="rounded bg-canvas-violet/10 px-1.5 text-[10.5px] font-bold text-canvas-violet">PK</span>}
+                      {c.sensitive && <span className="ml-1 rounded bg-amber-50 px-1.5 text-[10.5px] font-bold text-amber-700">hassas</span>}
                     </td>
                   </tr>
                 ))}

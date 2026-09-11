@@ -1,6 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
-import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, runSql } from './engine';
+import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, isAuthBlocked, runSql } from './engine';
 
 /**
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
@@ -167,7 +167,7 @@ export function useCfoData(): CfoData {
     queryFn: fetchSnapshot,
     enabled: ENGINE_ENABLED,
     staleTime: 60_000,
-    refetchInterval: 3 * 60_000,
+    refetchInterval: () => (isAuthBlocked() ? false : 3 * 60_000),
     retry: false,
   });
   const snapFailed = snap.isError && !(snap.error instanceof EngineAuthError);

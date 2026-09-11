@@ -71,9 +71,9 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
                     <>
                       <span className="min-w-0 flex-1 truncate">{m.title}</span>
                       {to ? (
-                        <span className="shrink-0 rounded bg-violet/10 px-1.5 text-[9px] font-bold text-violet">açık</span>
+                        <span className="shrink-0 rounded bg-violet/10 px-1.5 text-[10.5px] font-bold text-violet">açık</span>
                       ) : (
-                        <span className="shrink-0 text-[9px] font-semibold text-muted/70">yakında</span>
+                        <span className="shrink-0 text-[10.5px] font-semibold text-muted/70">yakında</span>
                       )}
                     </>
                   );

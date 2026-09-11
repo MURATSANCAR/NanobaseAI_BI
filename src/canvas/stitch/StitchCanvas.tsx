@@ -253,7 +253,7 @@ function CanvasBody({
                 {/* Highlight dot */}
                 {d.c2.linePath ? <circle cx={d.c2.dot[0]} cy={d.c2.dot[1]} r="3.5" fill="#7C5CFF" stroke="#FFFFFF" strokeWidth="2" /> : <text x="105" y="30" textAnchor="middle" fontSize="11" fill="#94a3b8">Veri yok</text>}
               </svg>
-              <div className="flex justify-between text-[9px] text-muted font-semibold mt-1">
+              <div className="flex justify-between text-[10.5px] text-muted font-semibold mt-1">
                 <span>{d.c2.tick1}</span>
                 <span>{d.c2.tick2}</span>
                 <span className="text-violet font-bold">{d.c2.tick3}</span>
@@ -386,7 +386,7 @@ function CanvasBody({
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c5.title}</span>
             </div>
             {/* Tiny Sample Data Chip Inside Kanıt Card as requested */}
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-muted border border-slate-200">{d.c5.badge}</span>
+            <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-muted border border-slate-200">{d.c5.badge}</span>
           </div>
 
           <div className="mt-3 space-y-2">
@@ -513,8 +513,8 @@ function CanvasBody({
           {/* Book Cover Container */}
           <div className="w-[125px] h-[175px] rounded-xl bg-gradient-to-br from-indigo-900 via-sky-700 to-teal-400 p-3 flex flex-col justify-between shadow-canvas-card border-2 border-white/80 transition-transform group-hover:scale-105 duration-200">
             <div className="flex items-center justify-between">
-              <span className="text-[8px] font-black uppercase tracking-widest text-white/70">{d.sticker.kicker}</span>
-              <span className="text-[8px] font-mono text-white/60">{d.sticker.meta}</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/70">{d.sticker.kicker}</span>
+              <span className="text-[10px] font-mono text-white/60">{d.sticker.meta}</span>
             </div>
 
             {/* Abstract Typographic Cover Art */}
@@ -525,17 +525,17 @@ function CanvasBody({
               <h2 className="text-xs font-black text-white leading-tight tracking-wide drop-shadow-sm">
                 {d.sticker.title}
               </h2>
-              <div className="text-[8px] text-sky-100 font-medium mt-0.5">{d.sticker.sub}</div>
+              <div className="text-[10px] text-sky-100 font-medium mt-0.5">{d.sticker.sub}</div>
             </div>
 
-            <div className="flex items-center justify-between text-[7px] text-white/80 border-t border-white/20 pt-1">
+            <div className="flex items-center justify-between text-[9.5px] text-white/80 border-t border-white/20 pt-1">
               <span>{d.sticker.footL}</span>
               <span className="font-bold">{d.sticker.footR}</span>
             </div>
           </div>
 
           {/* Small Sticker Badge */}
-          <div className="absolute -bottom-2 -right-2 bg-amberWarn text-ink text-[9px] font-black px-2 py-0.5 rounded-full shadow-md border border-white rotate-3">
+          <div className="absolute -bottom-2 -right-2 bg-amberWarn text-ink text-[10.5px] font-black px-2 py-0.5 rounded-full shadow-md border border-white rotate-3">
             {d.sticker.badge}
           </div>
         </div>

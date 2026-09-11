@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ENGINE_BASE } from '../engine';
+import { ENGINE_BASE, clearAuthBlock } from '../engine';
 
 /**
  * Oturum kapısı. Motor 401 döndüğünde çıkar: veri gelmemesinin sebebi
@@ -48,6 +48,7 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
       });
       if (res.ok) {
         setPass('');
+        clearAuthBlock();
         onDone();
         return;
       }
