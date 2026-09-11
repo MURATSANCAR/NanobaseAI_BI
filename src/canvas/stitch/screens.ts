@@ -40,7 +40,7 @@ function spark(values: number[]): { areaPath: string; linePath: string; dot: [nu
  *  Etiketler src/i18n/tr.json'daki adlarla birebir aynı. */
 /** Ray yalnız var olan kanvas ekranlarını gösterir. Ölü bağlantı bırakmıyoruz:
  *  yeni ekran eklendikçe buraya bir satır girer. */
-const rail = (active: string): StitchRailItem[] => [
+export const railFor = (active: string): StitchRailItem[] => [
   { to: '/', label: 'Genel bakış', badge: active === '/' ? 'Aktif' : undefined },
   { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
   { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
@@ -64,7 +64,7 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   presence: 'canlı veri',
   zoom: '%100',
   askPlaceholder: ask,
-  rail: rail(DOCK[activeDock]?.to ?? '/'),
+  rail: railFor(DOCK[activeDock]?.to ?? '/'),
   dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
   dock: DOCK.map((c) => c.label) as [string, string, string, string],
   q,

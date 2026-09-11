@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { Box, Layers, Loader2, Plus, RotateCw, Send, Trash2, X } from 'lucide-react';
+import { Box, Loader2, Plus, RotateCw, Send, Trash2, X } from 'lucide-react';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, ask as askEngine, runSql } from '../engine';
 import Chart, { CHART_LABEL, allowedCharts, suggestChart, type Col, type Row } from './Chart';
 import { loadBoard, newId, nextSlot, saveBoard, type BoardCard, type ChartKind } from './store';
+import Shell from '../stitch/Shell';
+import { railFor } from '../stitch/screens';
 
 /** Giriş yapan kişi; pano ona ait. */
 function useUser(): string {
@@ -182,32 +184,17 @@ export default function BoardScreen() {
   const height = useMemo(() => Math.max(720, ...cards.map((c) => c.y + c.h + 40)), [cards]);
 
   return (
-    <div className="bg-mesh-canvas relative h-[100dvh] w-full overflow-hidden font-canvas text-canvas-ink">
-      <div className="dot-grid pointer-events-none absolute inset-0 z-0" />
-
-      {/* Üst şerit */}
-      <header className="absolute left-7 right-7 top-5 z-40 flex items-center justify-between gap-3">
-        <div className="glass-panel flex items-center gap-3 rounded-full px-4 py-2 shadow-glass-float">
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-tr from-canvas-coral to-canvas-violet text-xs font-black text-white">
-            <Layers className="h-3.5 w-3.5" />
-          </div>
-          <div className="text-xs font-semibold tracking-tight">
-            <span className="font-bold">Panom</span>
-            <span className="mx-1.5 text-canvas-muted/60">›</span>
-            <span className="text-canvas-muted">{user ? user : 'oturum yok'}</span>
-          </div>
-          <span className="border-l border-slate-200/80 pl-2.5 text-[10px] font-medium text-canvas-muted/70">
-            {cards.length} kart
-          </span>
-        </div>
-        <a
-          href="/"
-          className="glass-panel rounded-full px-4 py-2 text-xs font-bold shadow-glass-float transition hover:text-canvas-violet"
-        >
-          Genel bakışa dön
-        </a>
-      </header>
-
+    <Shell
+      head={{
+        tenant: 'Timaş Yayınları',
+        section: 'Yapay Zeka Raporları',
+        crumb: 'Panom',
+        source: user || 'oturum yok',
+        presence: `${cards.length} kart`,
+        zoom: '%100',
+      }}
+      rail={railFor('/panolar')}
+    >
       {/* Kartlar */}
       <main className="absolute inset-x-0 bottom-[118px] top-[84px] overflow-auto px-6">
         <div className="relative mx-auto w-full max-w-[1760px]" style={{ height }}>
@@ -356,6 +343,6 @@ export default function BoardScreen() {
           </form>
         </div>
       </div>
-    </div>
+    </Shell>
   );
 }

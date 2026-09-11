@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ENGINE_BASE } from '../engine';
 
 /**
@@ -11,6 +11,27 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
   const [pass, setPass] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Sunucu bir demo kullanıcısı tanımlamışsa alanları o doldurur.
+  // Parola uygulamada gömülü değildir; sunucudan gelir ve süresi doludur.
+  useEffect(() => {
+    let alive = true;
+    fetch(`${ENGINE_BASE}/auth/prefill`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v: { username?: string; password?: string } | null) => {
+        if (!alive || !v?.username) return;
+        setUser(v.username);
+        if (v.password) setPass(v.password);
+        setPrefilled(true);
+      })
+      .catch(() => {
+        /* tanımlı değilse alanlar boş kalır */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +90,12 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
           autoComplete="current-password"
           className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[13px] font-semibold text-ink outline-none focus:border-violet"
         />
+
+        {prefilled && (
+          <div className="mt-3 rounded-xl bg-canvas-violet/10 px-3 py-2 text-[11.5px] font-semibold text-canvas-violet">
+            Demo kullanıcısı dolduruldu. Giriş yap deyip devam edebilirsiniz.
+          </div>
+        )}
 
         {err && <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{err}</div>}
 
