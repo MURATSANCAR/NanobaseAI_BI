@@ -9,7 +9,6 @@ import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } fro
 import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import AlertsPanel, { parseRule, type RuleDraft } from '@/canvas/alerts/AlertsPanel';
-import '@/canvas/canvas.css';
 
 /** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
 const SCREENS = ['planli-raporlar', 'uyarilar'] as const;

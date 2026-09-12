@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LocaleProvider } from '@/context/LocaleContext';
 import App from './App';
 import './index.css';
+import '@/canvas/canvas.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
