@@ -30,3 +30,11 @@ Bu bir çalışma/kabul kuralıdır; zamanlanmış otomasyon talebi değildir. Y
 Kullanıcının 2026-09-09 düzeltmesi bağlayıcıdır: tek şirket vardır; farklı veritabanları şirketin yıllar içinde alınan yedekleridir. `411`, `211` gibi teknik kodlardan ayrı firma/şirket üretmeyin, kullanıcıya bu kodlarla şirket seçtirmeyin. Fiziksel nesne adları korunabilir; teknik kaynak kimliğini iş anlamındaki şirket kimliğiyle karıştırmayın.
 
 Veritabanı–yedek tarihi–işlem dönemi eşlemesi ve örtüşen kayıtlarda esas alınacak kaynak doğrulanmadan yedekleri bağımsız şirketler gibi toplamayın. Sırf SQL sonuçları aynı çıktı diye yanlış kaynak varsayımına dayanan bir referansı iş doğruluğu kanıtı saymayın. Önceki ayrı-firma varsayımı ve bu varsayıma dayanan kabul yorumları geçersizdir.
+
+## Tek branch kuralı: yalnız main
+
+Kullanıcının 2026-09-13 kararı bağlayıcıdır: bu depoda tek trunk `main`'dir. Diğer bütün dallar (`perf/full-overhaul-2026-08` dahil) `main`'e merge edilip silindi. Bundan sonra:
+
+- Yeni iş doğrudan `main` üzerinde yapılır veya `main`den açılan kısa ömürlü bir dal `main`e merge edilir edilmez silinir. Kalıcı ikinci bir uzun ömürlü dal (ör. `perf/*`, `dev`) açılmaz.
+- Bir oturum/worktree farklı bir dal üzerinde çalışıyor bulursa, işi bitince `main`e merge edip o dalı siler; branch'i "ana hat" gibi kullanmaya devam etmez.
+- Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
