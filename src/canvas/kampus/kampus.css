@@ -1,0 +1,83 @@
+/* Kampüs sayfası (Stitch: projects/13426839861607265553/screens/a6864de4…).
+   Tasarımın Tailwind CDN yapılandırmasındaki gölge, yazı ve zemin jetonları. */
+
+.kp-root {
+  --kp-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  background-color: #faf7f2;
+  background-image: radial-gradient(#dfd9cc 1.1px, transparent 1.1px);
+  background-size: 26px 26px;
+  font-family: 'Inter', 'DM Sans', system-ui, sans-serif;
+}
+
+.kp-display {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.kp-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.kp-card {
+  box-shadow: 0 4px 20px -2px rgba(92, 75, 52, 0.06), 0 2px 8px -2px rgba(92, 75, 52, 0.04);
+}
+
+.kp-glow {
+  box-shadow: 0 8px 24px -4px rgba(234, 88, 12, 0.22);
+}
+
+/* Basma geri bildirimi: dokunulan her düğme hafifçe içeri çöker. */
+.kp-press {
+  transition: transform 160ms var(--kp-ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.kp-press:active {
+  transform: scale(0.97);
+}
+
+/* Modül kutucukları: fareyle üstüne gelince 2px kalkar. Dokunmatikte kapalı. */
+.kp-lift {
+  transition: transform 200ms var(--kp-ease-out), box-shadow 200ms var(--kp-ease-out), border-color 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .kp-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -4px rgba(85, 68, 48, 0.1);
+  }
+  .kp-cover:hover img {
+    transform: scale(1.05);
+  }
+}
+.kp-lift:active {
+  transform: scale(0.98);
+}
+.kp-cover img {
+  transition: transform 200ms var(--kp-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kp-press,
+  .kp-lift,
+  .kp-cover img {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+  .kp-press:active,
+  .kp-lift:active,
+  .kp-lift:hover,
+  .kp-cover:hover img {
+    transform: none;
+  }
+  .kp-root .animate-pulse {
+    animation: none;
+  }
+}
+
+.kp-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.kp-scroll::-webkit-scrollbar-track {
+  background: #f4eee2;
+}
+.kp-scroll::-webkit-scrollbar-thumb {
+  background: #d4caa8;
+  border-radius: 9999px;
+}

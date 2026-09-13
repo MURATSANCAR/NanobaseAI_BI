@@ -10,8 +10,8 @@ import groups from '../modules.json';
 type Group = { title: string; modules: Array<{ id: string; title: string; sections: number }> };
 
 /** Kanvasta karşılığı olan modüller. Yeni ekran geldikçe buraya satır eklenir. */
-const LIVE: Record<string, string> = {
-  home: '/',
+export const LIVE: Record<string, string> = {
+  home: '/genel-bakis',
   catalog: '/veri-sozlugu',
   'catalog-explorer': '/veri-sozlugu',
   review: '/onaylar',

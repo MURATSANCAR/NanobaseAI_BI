@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-14
+
+- Girişten sonraki ilk ekran **Kampüs** oldu: Stitch ekranı "Timaş Intranet · Kampüs & ZEKİ Akıllı Rehber Tuvali" (`projects/13426839861607265553/screens/a6864de4…`) JSX'e çevrildi → `src/canvas/kampus/KampusPage.tsx`, görseller `src/assets/kampus/`. Tasarıma tek ekleme "Modüller" kartı: kanvas ekranlarına geçiş + `modules.json`'daki 67 modülün listesi (açık/yakında).
+- Rota değişti: `/` = Kampüs, BI genel bakış (CFO kanvası) `/genel-bakis`'e taşındı. Ray, dock ve modül menüsündeki "Genel bakış" bağlantıları güncellendi; raya "Kampüs" dönüş bağlantısı eklendi.
+- Kampüs'teki ZEKİ soru kutusu `/genel-bakis?soru=…` adresine gider; BiCanvasPage soruyu bir kez motora gönderip adresten siler.
+- Sınır: rehber, odalar, kutlamalar, ajanda, bülten, yemekhane içerikleri tasarımdaki sabit metinler; henüz bir veri kaynağına bağlı değil. Tarayıcıda doğrulama sunucuda yapılmadı.
+
 ## 2026-09-13
 
 - Tüm dallar `main`e merge edildi (`perf/full-overhaul-2026-08`, `claude/interesting-dhawan-1fa99d`, `claude/timesfm-repo-review-a60864`, `claude/vpn-crm-database-connection-91863b`, `claude/whatlaunched-dashboard-submit-1b30a9`, `claude/zeki-timas-planning-b75b7f`, `claude/project-memory-dev-log-5c3fa0`) ve kaynak dallar silindi (worktree'de checkout'lu olanlar hariç — onlar ilgili oturumlar kapanınca silinecek). Karar: bundan sonra tek trunk `main`, kalıcı ikinci dal açılmayacak. Kural: [AGENTS.md](../AGENTS.md#tek-branch-kuralı-yalnız-main). Sınır: remote'a push/silme, bu ortamda GitHub kimlik doğrulaması (gh CLI) olmadığı için henüz yapılamadı — yalnız local main güncel.

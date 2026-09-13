@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
@@ -82,6 +82,18 @@ export default function BiCanvasPage() {
       .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Motor yanıt vermedi'))
       .finally(() => setAsking(false));
   };
+
+  // Kampüs sayfasındaki ZEKİ kutusu soruyu adresle getirir (?soru=…). Bir kez sorulur, sonra adresten silinir;
+  // yenileme aynı soruyu motora ikinci kez göndermesin.
+  const incoming = params.get('soru');
+  useEffect(() => {
+    if (!incoming) return;
+    markSplashSeen();
+    setSplash(false);
+    setParams({}, { replace: true });
+    ask(incoming);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming]);
 
   // Uyarılar ekranında soru çubuğu kural yazar: cümle taslağa çevrilir, kişi panelde düzeltip kaydeder.
   const onAsk = (q: string) => {

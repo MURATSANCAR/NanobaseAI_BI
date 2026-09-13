@@ -4,6 +4,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import RequireTimasSession from '@/canvas/TimasSession';
 import { t } from '@/i18n';
 
+const KampusPage = lazy(() => import('@/canvas/kampus/KampusPage'));
 const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
 const BoardScreen = lazy(() => import('@/canvas/board/BoardScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
@@ -37,7 +38,9 @@ export default function App() {
           <Route element={<RequireTimasSession />}>
             {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
-            <Route index element={<BiCanvasPage />} />
+            {/* Girişten sonra ilk ekran Kampüs; modüllere oradan geçilir. */}
+            <Route index element={<KampusPage />} />
+            <Route path="genel-bakis" element={<BiCanvasPage />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />

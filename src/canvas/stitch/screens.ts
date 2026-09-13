@@ -41,16 +41,18 @@ function spark(values: number[]): { areaPath: string; linePath: string; dot: [nu
 /** Ray yalnız var olan kanvas ekranlarını gösterir. Ölü bağlantı bırakmıyoruz:
  *  yeni ekran eklendikçe buraya bir satır girer. */
 export const railFor = (active: string): StitchRailItem[] => [
-  { to: '/', label: 'Genel bakış', badge: active === '/' ? 'Aktif' : undefined },
+  { to: '/genel-bakis', label: 'Genel bakış', badge: active === '/genel-bakis' ? 'Aktif' : undefined },
   { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
   { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
   { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
   { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined },
   { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined },
+  // Girişten sonraki ana sayfaya dönüş.
+  { to: '/', label: 'Kampüs' },
 ];
 
 const DOCK = [
-  { to: '/', label: 'Genel bakış' },
+  { to: '/genel-bakis', label: 'Genel bakış' },
   { to: '/panolar', label: 'Panolar' },
   { to: '/planli-raporlar', label: 'Planlı raporlar', dot: true },
   { to: '/uyarilar', label: 'Uyarılar' },

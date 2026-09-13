@@ -52,6 +52,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 | `backend/nanobase_awel` | LLM operatörleri, planlama/onarım/açıklama iş akışları |
 | `backend/query_gateway` | Müşteri SQL'inin tek çalışma noktası |
 | `backend/semantic_layer` | Semantic Catalog + Evidence Engine + History Miner + Profiler + Resolver/Compiler |
+| `src/canvas/kampus` | Girişten sonraki ilk ekran (`/`): Kampüs intraneti + ZEKİ + modüllere geçiş; BI genel bakış `/genel-bakis` |
 | `backend/semantic_bridge` | Timaş kokpiti köprüsü (:8795) |
 | `tools/schema-indexer` | Şema tarama ve gömme |
 | `deploy/compose` | Müşteri kurulum paketi (Docker) |
