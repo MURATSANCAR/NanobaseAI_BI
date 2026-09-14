@@ -146,7 +146,7 @@ export default function Chart({
 
   if (kind === 'table') {
     return (
-      <div className="h-full overflow-auto">
+      <div data-nodrag className="h-full overflow-auto">
         <table className="w-full border-collapse text-[11.5px]">
           <thead className="sticky top-0 bg-white/95">
             <tr>

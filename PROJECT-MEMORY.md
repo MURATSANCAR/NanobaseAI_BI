@@ -56,6 +56,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 | Dizin | İçerik |
 |---|---|
 | `src/` | React + Vite arayüz (tek frontend, kanvas: `src/canvas`) |
+| `src/canvas/board/` | Panolar: kişiye özel kart panosu (sürükle/boyutlandır, SQL paneli, son sorgu saati); düzen ve son sonuç tarayıcıda `timas-pano-v1:<kullanıcı>` |
 | `backend/nanobase_api` | API, chat gateway, semantic katalog, senaryo motoru |
 | `backend/nanobase_awel` | LLM operatörleri, planlama/onarım/açıklama iş akışları |
 | `backend/query_gateway` | Müşteri SQL'inin tek çalışma noktası |

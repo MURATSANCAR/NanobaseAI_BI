@@ -26,6 +26,16 @@ export function dateTime(iso: string | undefined | null): string {
   return tm ? `${day} ${tm.slice(0, 5)}` : day;
 }
 
+/** Epoch ms → yerel saatle "14.09.2026 13:42". Sıfır/boşsa "—". */
+const stampFmt = new Intl.DateTimeFormat('tr-TR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+export const stamp = (ms: number | undefined | null): string => (ms && ms > 0 ? stampFmt.format(ms) : '—');
+
 /** "3 saat sonra" / "2 gün önce" gibi göreli ifade. */
 export function relative(iso: string | undefined | null, now = Date.now()): string {
   if (!iso) return '—';

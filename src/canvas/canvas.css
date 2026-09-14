@@ -246,3 +246,140 @@
     font-size: 16px !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Panolar: sürüklenebilir kartlar, SQL paneli, "Panoya ekle" çağrısı   */
+/* ------------------------------------------------------------------ */
+
+/* Kart sürüklenirken kalkar; hover'da kalkmaz (tutma hissiyle çakışır).
+   Gölge boyanmaz, hazır duran ::after katmanının opaklığı açılır (GPU). */
+.glass-card.pano-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.16s cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 0.16s ease;
+}
+.glass-card.pano-card:hover {
+  transform: none;
+  box-shadow: 0 20px 60px -15px rgba(20, 30, 60, 0.12), 0 4px 16px -2px rgba(20, 30, 60, 0.05);
+}
+.glass-card.pano-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 36px 90px -18px rgba(124, 92, 255, 0.35), 0 8px 24px -4px rgba(20, 30, 60, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pano-frame[data-drag='move'] .pano-card {
+  transform: scale(1.015);
+  border-color: rgba(124, 92, 255, 0.45);
+}
+.pano-frame[data-drag='move'] .pano-card::after {
+  opacity: 1;
+}
+.pano-frame[data-drag='size'] .pano-card {
+  border-color: rgba(124, 92, 255, 0.45);
+}
+.pano-frame[data-drag] {
+  cursor: grabbing;
+}
+.pano-frame[data-drag] * {
+  user-select: none;
+}
+/* Tutamaç: parmakla sürüklerken sayfa kaymasın. */
+.pano-handle {
+  touch-action: none;
+}
+
+/* Bastığını hisset: her basılabilir öğe. */
+.pano-press {
+  transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pano-press:active {
+  transform: scale(0.97);
+}
+
+/* Sorgu sonucu önizlemesi girişte alttan yükselir (soru başına bir kez görülür). */
+@keyframes panoRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.pano-rise {
+  animation: panoRise 0.24s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* "Panoya ekle" çağrısı: üç kez nabız atan halka, sonra durur. */
+.pano-cta {
+  position: relative;
+  isolation: isolate;
+}
+.pano-cta::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid rgba(124, 92, 255, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: panoPulse 1.6s cubic-bezier(0.23, 1, 0.32, 1) 0.4s 3;
+}
+@keyframes panoPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+/* SQL paneli açılırken belirir; kapanış anlıktır. */
+.pano-sql {
+  animation: panoSqlIn 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes panoSqlIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pano-frame[data-drag='move'] .pano-card {
+    transform: none;
+  }
+  .pano-press:active {
+    transform: none;
+  }
+  .pano-rise,
+  .pano-sql {
+    animation: panoFade 0.2s ease both;
+  }
+  .pano-cta::after {
+    animation: none;
+  }
+}
+@keyframes panoFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

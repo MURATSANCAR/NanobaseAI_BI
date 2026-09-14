@@ -29,8 +29,19 @@ export type BoardCard = {
   y: number;
   w: number;
   h: number;
+  /** Üst üste binen kartlarda en son tutulan üstte kalır. */
+  z?: number;
+  /** Kartın altındaki SQL paneli açık mı; kişi kapatana kadar öyle kalır. */
+  sqlOpen?: boolean;
   createdAt: string;
 };
+
+/** Sürükleme ızgarası (px). Kartlar bu adımlarla hizalanır, düzen dağınık durmaz. */
+export const GRID = 8;
+export const snap = (v: number) => Math.round(v / GRID) * GRID;
+
+/** Bir sonraki "en üstte" değeri. */
+export const topZ = (cards: BoardCard[]) => Math.max(20, ...cards.map((c) => c.z ?? 20)) + 1;
 
 const KEY = (user: string) => `timas-pano-v1:${user || 'anonim'}`;
 
