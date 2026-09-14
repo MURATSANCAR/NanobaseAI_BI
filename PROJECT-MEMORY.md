@@ -43,6 +43,10 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 
 Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`, `llm-topology-a40`, `a40-shutdown-cpu-embedder`, `timas-logo-network-access`.
 
+**TİMAŞ erişimi:** Logo SQL (192.168.0.155) yalnız nanobase sunucusundaki WatchGuard OpenVPN tüneli (`tun0`) + socat `:14330` ile erişilir; Windows tarafına RDP (`timas\muratsancar`) de açık. VPN kullanıcısı `muratsancar` MFA (push/OTP) istiyor. Kullanıcı adı/şifreler repo'da **tutulmaz** — yerel proje belleğinde: `timas-access-credentials`.
+
+**Bilinen arıza (2026-09-12'den beri):** VPN `AUTH_FAILED` ile kopuk → portal açılır, veri gelmez (köprü logunda FreeTDS `08001`). Kontrol: `systemctl is-active openvpn-client@timas`, `ip -br addr show tun0`.
+
 ## Dizin haritası
 
 | Dizin | İçerik |
