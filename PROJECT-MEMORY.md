@@ -49,6 +49,8 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 
 **VPN nasıl açılır (2026-09-14'ten beri):** `timas` servis hesabı `AUTH_FAILED` veriyor; tünel `muratsancar` hesabıyla telefon onayıyla açılır. Sunucu `CRV1` meydan okumasını alır, `CRV1::<state>::p` ile bağlanır, kullanıcı WatchGuard bildirimini onaylar. Birim: `timas-vpn-mfa` (`systemd-run`). Şifreleme şartı: `--data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-256-CBC --data-ciphers-fallback AES-256-CBC`. Oturum kalıcı değil: kopma veya yeniden başlatmada push adımı tekrarlanır. Kopukken belirti: portal açılır, veri gelmez (köprü logunda FreeTDS `08001`). Kontrol: `ip -br addr show tun0`, `systemctl is-active timas-vpn-mfa`. Adım adım tarif: yerel bellek `timas-logo-network-access`.
 
+**VPN hesabı kısıtı (2026-09-14 13:30'dan beri):** Tünel açılıyor ama WatchGuard bu hesaba yalnız `192.168.0.55:3389` (RDP) izni veriyor. Test sunucusundan `192.168.0.155:1433` (SQL: `LOGO_DB` + `Timas_MSCRM`), `.155:3389` ve `.55:22` kapalı. Aynı gün 10:44'te `.155:1433` açıktı; kural sonradan değişti. Sonuç: test sunucusundan Logo/CRM sorgusu ve `ssh timas-vm` çalışmaz. Gereken: TİMAŞ BT'den VPN hesabına `192.168.0.155 TCP 1433` ve `192.168.0.55 TCP 22` izni.
+
 ## Dizin haritası
 
 | Dizin | İçerik |
