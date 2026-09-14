@@ -119,7 +119,7 @@ export default function Shell({
             <span className="truncate">{head.crumb}</span>
           </span>
         </div>
-        <span className="hidden lg:inline text-[10px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>
+        <span className="hidden lg:inline text-[11px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>
       </div>
 
       {/* Top-Right Actions & Collaboration Pill */}
@@ -139,7 +139,7 @@ export default function Shell({
             type="button"
             onClick={onReset}
             title="Kart düzenini tasarımdaki hâline döndür"
-            className="glass-panel px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-full shadow-glass-float text-[11px] sm:text-xs font-bold text-muted hover:text-ink transition whitespace-nowrap"
+            className="glass-panel min-h-10 px-3 py-1.5 sm:min-h-0 sm:px-3.5 sm:py-2 rounded-full active:scale-[0.97] shadow-glass-float text-[11px] sm:text-xs font-bold text-muted hover:text-ink transition whitespace-nowrap"
           >
             <span className="sm:hidden">Sıfırla</span>
             <span className="hidden sm:inline">Düzeni sıfırla</span>
@@ -147,23 +147,23 @@ export default function Shell({
         )}
 
         {/* Share Button */}
-        <button type="button" onClick={share} className="glass-panel px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group whitespace-nowrap">
+        <button type="button" onClick={share} aria-label="Paylaş" className="glass-panel min-h-10 min-w-10 justify-center px-2.5 py-1.5 sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2 rounded-full active:scale-[0.97] shadow-glass-float flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group whitespace-nowrap">
           <svg className="w-3.5 h-3.5 shrink-0 text-muted group-hover:text-violet transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
           <span className="hidden sm:inline">{copied === 'ok' ? 'Bağlantı kopyalandı' : copied === 'fail' ? 'Kopyalanamadı' : 'Paylaş'}</span>
         </button>
 
         {/* Canvas Zoom Indicator & Controls */}
         <div className="hidden sm:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2 text-xs font-semibold text-ink">
-          <button type="button" aria-label="Uzaklaştır" onClick={() => onZoom?.(-0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
+          <button type="button" aria-label="Uzaklaştır" onClick={() => onZoom?.(-0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
           <span className="text-xs font-bold w-9 text-center text-ink">{head.zoom}</span>
-          <button type="button" aria-label="Yakınlaştır" onClick={() => onZoom?.(0.1)} className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
+          <button type="button" aria-label="Yakınlaştır" onClick={() => onZoom?.(0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
         </div>
       </div>
     </header>
 
     {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
       {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. */}
-      <aside className="absolute left-1.5 top-20 bottom-20 sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-3 sm:py-4 px-1.5 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
+      <aside className="absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
         {rail.map((item, i) => (
           <div key={item.to} className="relative group flex items-center shrink-0">
             <Link
@@ -171,8 +171,8 @@ export default function Shell({
               aria-label={item.label}
               className={
                 item.badge === 'Aktif'
-                  ? 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105 [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
-                  : 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
+                  ? 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105 [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
+                  : 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
               }
             >
               {RAIL_ICONS[i % RAIL_ICONS.length]}
@@ -191,8 +191,8 @@ export default function Shell({
             aria-label="Modüller"
             className={
               modulesOpen
-                ? 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
-                : 'w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
+                ? 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
+                : 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
             }
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

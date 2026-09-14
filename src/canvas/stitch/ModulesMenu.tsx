@@ -48,7 +48,7 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-2 py-0.5 text-[11px] font-bold text-muted transition hover:bg-white/80 hover:text-ink"
+              className="rounded-lg px-3 py-2 sm:px-2 sm:py-0.5 text-[13px] sm:text-[11px] font-bold text-muted transition hover:bg-white/80 hover:text-ink"
             >
               Kapat
             </button>
@@ -59,7 +59,7 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
             placeholder="Modül ara…"
             className="mt-2.5 w-full rounded-xl border border-slate-200/80 bg-white/90 px-3 py-1.5 text-[12px] font-semibold text-ink outline-none placeholder:text-muted/70"
           />
-          <div className="mt-1.5 text-[10px] font-semibold text-muted">
+          <div className="mt-1.5 text-[11px] font-semibold text-muted">
             {shown === total ? `${total} modül · ${data.length} grup` : `${shown} / ${total} modül`}
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
         <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
           {filtered.map((g) => (
             <div key={g.title}>
-              <div className="px-1 pb-1 text-[10px] font-bold uppercase tracking-[.12em] text-muted/80">{g.title}</div>
+              <div className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[.12em] text-muted/80">{g.title}</div>
               <div className="space-y-0.5">
                 {g.modules.map((m) => {
                   const to = LIVE[m.id];
@@ -75,9 +75,9 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
                     <>
                       <span className="min-w-0 flex-1 truncate">{m.title}</span>
                       {to ? (
-                        <span className="shrink-0 rounded bg-violet/10 px-1.5 text-[10.5px] font-bold text-violet">açık</span>
+                        <span className="shrink-0 rounded bg-violet/10 px-1.5 text-[11px] font-bold text-violet">açık</span>
                       ) : (
-                        <span className="shrink-0 text-[10.5px] font-semibold text-muted/70">yakında</span>
+                        <span className="shrink-0 text-[11px] font-semibold text-muted/70">yakında</span>
                       )}
                     </>
                   );

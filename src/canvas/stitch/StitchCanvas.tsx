@@ -205,7 +205,7 @@ function CanvasBody({
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold text-muted uppercase tracking-wider">{d.q.role}</span>
-                <span className="text-[10px] text-muted/60">{d.q.at}</span>
+                <span className="hidden sm:inline text-[11px] text-muted/60">{d.q.at}</span>
               </div>
               <h1 className="text-base font-extrabold text-ink tracking-tight flex items-center gap-2">
                 {d.q.text}
@@ -227,7 +227,7 @@ function CanvasBody({
               <span className="w-6 h-6 rounded-lg bg-coral/10 text-coral flex items-center justify-center text-xs font-bold">{d.c1.icon}</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c1.title}</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">{d.c1.badge}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">{d.c1.badge}</span>
           </div>
 
           <div className="mt-3">
@@ -242,7 +242,7 @@ function CanvasBody({
               <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200/60 flex">
                 <div className="h-full rounded-full bg-gradient-to-r from-red-500 via-coral to-amberWarn" style={{ width: `${d.c1.pct}%` }}></div>
               </div>
-              <div className="flex justify-between text-[10px] text-muted font-medium pt-0.5">
+              <div className="flex justify-between text-[11px] text-muted font-medium pt-0.5">
                 <span>{d.c1.footL}</span>
                 <span>{d.c1.footR}</span>
               </div>
@@ -265,7 +265,7 @@ function CanvasBody({
               <span className="w-6 h-6 rounded-lg bg-violet/10 text-violet flex items-center justify-center text-xs font-bold">📈</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c2.title}</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet/10 text-violet border border-violet/20">{d.c2.badge}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet/10 text-violet border border-violet/20">{d.c2.badge}</span>
           </div>
 
           <div className="mt-3">
@@ -295,14 +295,14 @@ function CanvasBody({
                 {/* Highlight dot */}
                 {d.c2.linePath ? <circle cx={d.c2.dot[0]} cy={d.c2.dot[1]} r="3.5" fill="#7C5CFF" stroke="#FFFFFF" strokeWidth="2" /> : <text x="105" y="30" textAnchor="middle" fontSize="11" fill="#94a3b8">Veri yok</text>}
               </svg>
-              <div className="flex justify-between text-[10.5px] text-muted font-semibold mt-1">
+              <div className="flex justify-between text-[11px] text-muted font-semibold mt-1">
                 <span>{d.c2.tick1}</span>
                 <span>{d.c2.tick2}</span>
                 <span className="text-violet font-bold">{d.c2.tick3}</span>
               </div>
             </div>
 
-            <div className="mt-2.5 pt-2 border-t border-slate-100 text-[10px] text-muted">
+            <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-muted">
               {d.c2.foot}
             </div>
           </div>
@@ -318,7 +318,7 @@ function CanvasBody({
               <span className="w-6 h-6 rounded-lg bg-emerald-50 text-mintSuccess flex items-center justify-center text-xs font-bold">🍩</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c3.title}</span>
             </div>
-            <span className="text-[10px] font-bold text-muted">{d.c3.badge}</span>
+            <span className="text-[11px] font-bold text-muted">{d.c3.badge}</span>
           </div>
 
           <div className="mt-3 flex items-center gap-3">
@@ -337,7 +337,7 @@ function CanvasBody({
                 {/* Diğer 9% -> 7.9 */}
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#F59E0B" strokeWidth="4.5" strokeDasharray={d.c3.arcs[3].dash} strokeDashoffset={d.c3.arcs[3].offset} />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-black text-ink">
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-[11px] font-black text-ink">
                 {d.c3.center}
               </div>
             </div>
@@ -371,7 +371,7 @@ function CanvasBody({
             </div>
           </div>
 
-          <div className="mt-2.5 pt-2 border-t border-slate-100 text-[10px] text-muted flex justify-between">
+          <div className="mt-2.5 pt-2 border-t border-slate-100 text-[11px] text-muted flex justify-between">
             <span>{d.c3.footLabel}</span>
             <span className="font-semibold text-ink">{d.c3.footValue}</span>
           </div>
@@ -387,7 +387,7 @@ function CanvasBody({
               <span className="w-6 h-6 rounded-lg bg-amber-50 text-amberWarn flex items-center justify-center text-xs font-bold">✍️</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c4.title}</span>
             </div>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">{d.c4.badge}</span>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">{d.c4.badge}</span>
           </div>
 
           <div className="mt-3">
@@ -397,20 +397,20 @@ function CanvasBody({
               </div>
               <div>
                 <div className="text-xs font-bold text-ink">{d.c4.name}</div>
-                <div className="text-[10px] text-muted">{d.c4.sub}</div>
+                <div className="text-[11px] text-muted">{d.c4.sub}</div>
               </div>
             </div>
 
             <div className="mt-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
               <div className="text-[11px] text-muted font-medium">{d.c4.valueLabel}</div>
               <div className="text-xl font-black text-ink tracking-tight">{d.c4.value}</div>
-              <div className="text-[10px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
+              <div className="text-[11px] text-amber-700 font-semibold mt-1 flex items-center gap-1">
                 <svg className="w-3 h-3 text-amberWarn" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
                 {d.c4.note}
               </div>
             </div>
 
-            <div className="mt-2 text-[10px] text-muted flex justify-between">
+            <div className="mt-2 text-[11px] text-muted flex justify-between">
               <span>{d.c4.footLabel}</span>
               <span className="font-bold text-mintSuccess">{d.c4.footValue}</span>
             </div>
@@ -428,11 +428,11 @@ function CanvasBody({
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c5.title}</span>
             </div>
             {/* Tiny Sample Data Chip Inside Kanıt Card as requested */}
-            <span className="text-[10.5px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-muted border border-slate-200">{d.c5.badge}</span>
+            <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-muted border border-slate-200">{d.c5.badge}</span>
           </div>
 
           <div className="mt-3 space-y-2">
-            <div className={showSql ? 'text-[10px] font-mono text-ink break-all max-h-24 overflow-auto' : 'text-xs font-bold text-ink'}>
+            <div className={showSql ? 'text-[11px] font-mono text-ink break-all max-h-24 overflow-auto' : 'text-xs font-bold text-ink'}>
             {d.c5.summary}
           </div>
 
@@ -440,34 +440,34 @@ function CanvasBody({
               <div className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-1.5 text-ink/80">
                   <span className="text-xs">📊</span>
-                  <span className="font-semibold font-mono text-[10px]">{d.c5.rows[0].name}</span>
+                  <span className="font-semibold font-mono text-[11px]">{d.c5.rows[0].name}</span>
                 </div>
-                <span className="text-[10px] text-mintSuccess font-bold">{d.c5.rows[0].tag}</span>
+                <span className="text-[11px] text-mintSuccess font-bold">{d.c5.rows[0].tag}</span>
               </div>
 
               <div className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-1.5 text-ink/80">
                   <span className="text-xs">📑</span>
-                  <span className="font-semibold font-mono text-[10px]">{d.c5.rows[1].name}</span>
+                  <span className="font-semibold font-mono text-[11px]">{d.c5.rows[1].name}</span>
                 </div>
-                <span className="text-[10px] text-violet font-bold">{d.c5.rows[1].tag}</span>
+                <span className="text-[11px] text-violet font-bold">{d.c5.rows[1].tag}</span>
               </div>
 
               <div className="flex items-center justify-between text-[11px] p-1.5 bg-white rounded-lg border border-slate-100 shadow-sm">
                 <div className="flex items-center gap-1.5 text-ink/80">
                   <span className="text-xs">🌐</span>
-                  <span className="font-semibold font-mono text-[10px]">{d.c5.rows[2].name}</span>
+                  <span className="font-semibold font-mono text-[11px]">{d.c5.rows[2].name}</span>
                 </div>
-                <span className="text-[10px] text-coral font-bold">{d.c5.rows[2].tag}</span>
+                <span className="text-[11px] text-coral font-bold">{d.c5.rows[2].tag}</span>
               </div>
             </div>
 
             <div className="pt-2 flex items-center justify-between">
-              <button type="button" onClick={() => setShowSql((v) => !v)} className="text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
+              <button type="button" onClick={() => setShowSql((v) => !v)} className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
                 <span>{showSql ? 'Gizle' : "SQL'i göster"}</span>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
               </button>
-              <span className="text-[10px] text-muted">{d.c5.latency}</span>
+              <span className="text-[11px] text-muted">{d.c5.latency}</span>
             </div>
           </div>
         </div>
@@ -555,8 +555,8 @@ function CanvasBody({
           {/* Book Cover Container */}
           <div className="w-[125px] h-[175px] rounded-xl bg-gradient-to-br from-indigo-900 via-sky-700 to-teal-400 p-3 flex flex-col justify-between shadow-canvas-card border-2 border-white/80 transition-transform group-hover:scale-105 duration-200">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-white/70">{d.sticker.kicker}</span>
-              <span className="text-[10px] font-mono text-white/60">{d.sticker.meta}</span>
+              <span className="text-[11px] font-black uppercase tracking-widest text-white/70">{d.sticker.kicker}</span>
+              <span className="text-[11px] font-mono text-white/60">{d.sticker.meta}</span>
             </div>
 
             {/* Abstract Typographic Cover Art */}
@@ -567,17 +567,17 @@ function CanvasBody({
               <h2 className="text-xs font-black text-white leading-tight tracking-wide drop-shadow-sm">
                 {d.sticker.title}
               </h2>
-              <div className="text-[10px] text-sky-100 font-medium mt-0.5">{d.sticker.sub}</div>
+              <div className="text-[11px] text-sky-100 font-medium mt-0.5">{d.sticker.sub}</div>
             </div>
 
-            <div className="flex items-center justify-between text-[9.5px] text-white/80 border-t border-white/20 pt-1">
+            <div className="flex items-center justify-between text-[11px] text-white/80 border-t border-white/20 pt-1">
               <span>{d.sticker.footL}</span>
               <span className="font-bold">{d.sticker.footR}</span>
             </div>
           </div>
 
           {/* Small Sticker Badge */}
-          <div className="absolute -bottom-2 -right-2 bg-amberWarn text-ink text-[10.5px] font-black px-2 py-0.5 rounded-full shadow-md border border-white rotate-3">
+          <div className="absolute -bottom-2 -right-2 bg-amberWarn text-ink text-[11px] font-black px-2 py-0.5 rounded-full shadow-md border border-white rotate-3">
             {d.sticker.badge}
           </div>
         </div>
@@ -593,15 +593,15 @@ function CanvasBody({
         <div className="glass-dock p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl shadow-dock-shadow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
 
           {/* 4 Quick Module Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pl-1 shrink-0 sm:border-r border-slate-200/80 sm:pr-3 pb-1 sm:pb-0">
+          <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pl-1 shrink-0 sm:border-r border-slate-200/80 sm:pr-3 pb-1 sm:pb-0">
             {d.dockLinks.map((c, i) => (
               <Link
                 key={c.to}
                 to={c.to}
                 className={
                   c.active
-                    ? 'shrink-0 px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20'
-                    : 'shrink-0 px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-xs font-bold transition flex items-center gap-1'
+                    ? 'shrink-0 min-h-10 sm:min-h-0 px-3 py-1.5 rounded-xl bg-violet/15 text-violet text-[13px] sm:text-xs font-extrabold flex items-center gap-1.5 transition hover:bg-violet/20 active:scale-[0.97]'
+                    : 'shrink-0 min-h-10 sm:min-h-0 px-3 sm:px-2.5 py-1.5 rounded-xl hover:bg-white/80 text-muted hover:text-ink text-[13px] sm:text-xs font-bold transition flex items-center gap-1 active:scale-[0.97]'
                 }
               >
                 {c.active && <span className="w-2 h-2 rounded-full bg-violet"></span>}
@@ -620,7 +620,7 @@ function CanvasBody({
 
             {/* Mic & Circular Gradient Send Button */}
             <div className="flex items-center gap-2 shrink-0">
-              <button onClick={onAsk} className="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral to-violet text-white shadow-md hover:shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95" title="Gönder">
+              <button onClick={onAsk} aria-label="Gönder" className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-coral to-violet text-white shadow-md hover:shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95" title="Gönder">
                 <svg className="w-4 h-4 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
               </button>
             </div>

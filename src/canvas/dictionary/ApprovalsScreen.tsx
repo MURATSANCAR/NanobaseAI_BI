@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, PencilLine, Search, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
@@ -57,6 +57,13 @@ export default function ApprovalsScreen() {
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<string>('');
+  /** Telefonda detay listenin altında; seçince oraya kaydır. */
+  const detailRef = useRef<HTMLDivElement | null>(null);
+  const showDetail = () => {
+    if (window.innerWidth >= 768) return;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
+  };
   const [note, setNote] = useState('');
   const [column, setColumn] = useState('');
   const [done, setDone] = useState<string | null>(null);
@@ -117,13 +124,13 @@ export default function ApprovalsScreen() {
       }}
       rail={railFor('/onaylar')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
-        <div className="mx-auto flex h-full w-full max-w-[1760px] flex-col gap-3 md:flex-row md:gap-4">
+      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {/* Kuyruk */}
           <div className="glass-panel flex max-h-[38vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[360px]">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-extrabold">Onay kuyruğu</span>
-              <span className="text-[10.5px] font-bold text-canvas-muted">{filtered.length} kayıt</span>
+              <span className="text-[11px] font-bold text-canvas-muted">{filtered.length} kayıt</span>
             </div>
             <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
               <Search className="h-3.5 w-3.5 text-canvas-muted" />
@@ -131,7 +138,7 @@ export default function ApprovalsScreen() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Terim ara…"
-                className="w-full bg-transparent text-[12.5px] font-semibold outline-none placeholder:text-canvas-muted/70"
+                className="w-full bg-transparent font-semibold outline-none placeholder:text-canvas-muted/70 text-base sm:text-[12.5px]"
               />
             </div>
             <div className="mt-2 flex-1 space-y-1 overflow-auto pr-1">
@@ -152,14 +159,15 @@ export default function ApprovalsScreen() {
                     setSel(i.id);
                     setNote('');
                     setColumn('');
+                    showDetail();
                   }}
                   className={[
-                    'flex w-full flex-col rounded-xl px-2.5 py-2 text-left transition',
+                    'flex min-h-11 w-full flex-col justify-center rounded-xl px-2.5 py-2 text-left transition sm:min-h-0',
                     cur?.id === i.id ? 'bg-white shadow-sm' : 'hover:bg-white/70',
                   ].join(' ')}
                 >
                   <span className="truncate text-[12.5px] font-semibold">{i.label || i.term}</span>
-                  <span className="flex items-center gap-2 text-[10.5px] text-canvas-muted">
+                  <span className="flex items-center gap-2 text-[11px] text-canvas-muted">
                     <span>{TYPE_LABEL[i.type] ?? i.type}</span>
                     {i.mapping?.entity && <span className="font-mono">{i.mapping.entity}</span>}
                     {i.confidence != null && <span>%{Math.round(i.confidence * 100)}</span>}
@@ -170,7 +178,7 @@ export default function ApprovalsScreen() {
           </div>
 
           {/* Karar */}
-          <div className="glass-card min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6">
+          <div ref={detailRef} className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:min-h-0 md:flex-1 md:shrink md:overflow-auto">
             {!cur ? (
               <div className="flex h-full items-center justify-center text-[13px] text-canvas-muted">
                 {authRequired ? 'Oturum gerekli.' : 'Kuyruk boş.'}
@@ -178,7 +186,7 @@ export default function ApprovalsScreen() {
             ) : (
               <div className="space-y-5">
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[.16em] text-canvas-muted">Karar bekleyen terim</div>
+                  <div className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">Karar bekleyen terim</div>
                   <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.label || cur.term}</h2>
                   {cur.label && cur.label !== cur.term && (
                     <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">motordaki kaydı: {cur.term}</div>
@@ -213,15 +221,15 @@ export default function ApprovalsScreen() {
 
                 <div className="grid grid-cols-3 gap-3 text-[12px]">
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Tür</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Tür</div>
                     <div className="font-semibold">{TYPE_LABEL[cur.type] ?? cur.type}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Tablo</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Tablo</div>
                     <div className="font-mono font-semibold">{cur.mapping?.entity ?? '—'}</div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Motorun güveni</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Motorun güveni</div>
                     <div className="font-mono font-semibold tabular-nums">
                       {cur.confidence != null ? `%${Math.round(cur.confidence * 100)}` : '—'}
                     </div>
@@ -230,7 +238,7 @@ export default function ApprovalsScreen() {
 
                 {cur.evidence && Object.keys(cur.evidence).length > 0 && (
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Neden önerildi</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Neden önerildi</div>
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {Object.entries(cur.evidence).map(([k, v]) => (
                         <span key={k} className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11px] font-semibold">
@@ -248,7 +256,7 @@ export default function ApprovalsScreen() {
 
                 {(cur.observed?.length ?? 0) > 0 && (
                   <div>
-                    <div className="text-[10px] font-bold uppercase tracking-wide text-canvas-muted">Kolonda görülen değerler</div>
+                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kolonda görülen değerler</div>
                     <div className="mt-1 overflow-x-auto rounded-xl border border-slate-100">
                       <table className="w-full text-[11.5px]">
                         <tbody>
@@ -259,7 +267,7 @@ export default function ApprovalsScreen() {
                                 <td className="px-2.5 py-1 font-mono">{o.value}</td>
                                 <td className="px-2.5 py-1">{o.label ?? '—'}</td>
                                 <td className="px-2.5 py-1 text-right font-mono tabular-nums">{nf.format(o.rows)} satır</td>
-                                <td className="w-16 px-2.5 py-1 text-right text-[10.5px] text-canvas-violet">{chosen ? 'seçilen' : ''}</td>
+                                <td className="w-16 px-2.5 py-1 text-right text-[11px] text-canvas-violet">{chosen ? 'seçilen' : ''}</td>
                               </tr>
                             );
                           })}
@@ -279,7 +287,7 @@ export default function ApprovalsScreen() {
                     onChange={(e) => setNote(e.target.value)}
                     rows={3}
                     placeholder="Örn. bu kelime iskonto oranını değil tutarını anlatır"
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[12.5px] outline-none focus:border-canvas-violet"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[12.5px]"
                   />
                 </div>
 
@@ -292,7 +300,7 @@ export default function ApprovalsScreen() {
                     value={column}
                     onChange={(e) => setColumn(e.target.value)}
                     placeholder={cur.mapping?.column ?? 'örn. LINENET'}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 font-mono text-[12.5px] outline-none focus:border-canvas-violet"
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 font-mono text-base outline-none sm:text-[12.5px] focus:border-canvas-violet"
                   />
                 </div>
 
@@ -318,7 +326,7 @@ export default function ApprovalsScreen() {
                     disabled={act.isPending || correctNeedsNote}
                     title={correctNeedsNote ? 'Düzeltme için açıklama yazın' : undefined}
                     onClick={() => act.mutate('CORRECT')}
-                    className="flex items-center gap-1.5 rounded-xl bg-canvas-violet px-4 py-2.5 text-[12.5px] font-extrabold text-white shadow-md disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-xl bg-canvas-violet min-h-11 px-4 py-2.5 text-[12.5px] font-extrabold text-white shadow-md disabled:opacity-40"
                   >
                     <PencilLine className="h-4 w-4" />
                     Düzelt
@@ -327,7 +335,7 @@ export default function ApprovalsScreen() {
                     type="button"
                     disabled={act.isPending}
                     onClick={() => act.mutate('REJECT')}
-                    className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-4 py-2.5 text-[12.5px] font-extrabold text-canvas-ink transition hover:bg-red-50 hover:text-red-700 disabled:opacity-60"
+                    className="flex items-center gap-1.5 rounded-xl bg-slate-100 min-h-11 px-4 py-2.5 text-[12.5px] font-extrabold text-canvas-ink transition hover:bg-red-50 hover:text-red-700 disabled:opacity-60"
                   >
                     <X className="h-4 w-4" />
                     Reddet

@@ -221,7 +221,7 @@ export default function KampusPage() {
                   <span className="kp-display truncate text-sm font-bold tracking-wide text-stone-900 transition-colors group-hover:text-orange-700 sm:text-base">
                     TİMAŞ YAYIN GRUBU
                   </span>
-                  <span className="kp-mono hidden rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-orange-900 sm:inline">
+                  <span className="kp-mono hidden rounded-full border border-orange-300 bg-orange-100 px-2 py-0.5 text-[11px] font-semibold uppercase text-orange-900 sm:inline">
                     Kampüs &amp; ZEKİ
                   </span>
                 </div>
@@ -236,7 +236,7 @@ export default function KampusPage() {
                 { href: '#praise-hub', icon: <HeartHandshake className="h-3.5 w-3.5 text-rose-500" />, label: 'Alkış Duvarı' },
                 { href: '#coffee-lottery', icon: <Coffee className="h-3.5 w-3.5 text-amber-600" />, label: 'Kahve & Çekiliş' },
               ].map((n) => (
-                <a key={n.href} href={n.href} className="kp-press flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-stone-700 hover:bg-stone-200/70">
+                <a key={n.href} href={n.href} className="kp-press min-h-11 sm:min-h-0 flex items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-stone-700 hover:bg-stone-200/70">
                   {n.icon} {n.label}
                 </a>
               ))}
@@ -254,9 +254,9 @@ export default function KampusPage() {
                 className="w-full rounded-xl border border-stone-300 bg-white/90 py-2 pl-10 pr-24 text-xs font-medium text-stone-900 shadow-inner placeholder:text-stone-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-400/50"
               />
               <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1">
-                <kbd className="kp-mono rounded border border-stone-300 bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-600">⌘K</kbd>
+                <kbd className="kp-mono whitespace-nowrap rounded border border-stone-300 bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-600">⌘K</kbd>
                 <span className="text-[11px] text-stone-300">|</span>
-                <span className="kp-mono text-[10px] font-semibold text-orange-700">CANLI</span>
+                <span className="kp-mono text-[11px] font-semibold text-orange-700">CANLI</span>
               </div>
             </div>
           </div>
@@ -264,14 +264,14 @@ export default function KampusPage() {
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <a
               href="#podcast-hub"
-              className="kp-press hidden items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-950 hover:bg-orange-100/80 sm:flex"
+              className="kp-press min-h-11 sm:min-h-0 hidden items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs text-orange-950 hover:bg-orange-100/80 sm:flex"
             >
               <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" />
               <span className="flex items-center gap-1 font-medium">
                 <Headphones className="h-3.5 w-3.5 text-orange-600" /> Sesli Bülten Bölüm #42
               </span>
             </a>
-            <button type="button" title="Bildirimler" className="kp-press relative rounded-xl border border-stone-300 bg-white p-2 text-stone-600 hover:border-stone-400 hover:text-stone-950">
+            <button type="button" title="Bildirimler" className="kp-press relative flex h-11 w-11 items-center justify-center rounded-xl border border-stone-300 bg-white text-stone-600 sm:h-auto sm:w-auto sm:p-2 hover:border-stone-400 hover:text-stone-950">
               <Bell className="h-4 w-4" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-orange-600 ring-2 ring-white" />
             </button>
@@ -282,7 +282,7 @@ export default function KampusPage() {
               </div>
               <div className="hidden flex-col text-left xl:flex">
                 <span className="text-xs font-semibold leading-tight text-stone-900">{fullName}</span>
-                <span className="kp-mono text-[10px] text-stone-500">Kat 4 • Edebiyat Dizisi</span>
+                <span className="kp-mono text-[11px] text-stone-500">Kat 4 • Edebiyat Dizisi</span>
               </div>
             </div>
           </div>
@@ -298,7 +298,7 @@ export default function KampusPage() {
               <span className="kp-mono flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-stone-500">
                 <Activity className="h-3.5 w-3.5 text-amber-500" /> Şirket Nabzı
               </span>
-              <span className="kp-mono rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">180 Aktif</span>
+              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">180 Aktif</span>
             </div>
             <div className="rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-orange-50/60 p-3">
               <div className="flex items-center justify-between">
@@ -309,9 +309,9 @@ export default function KampusPage() {
                 <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600" style={{ width: '89%' }} />
               </div>
               <p className="mt-2 text-[11px] italic leading-tight text-stone-600">"Yayın kurulu haftası telaşı yerini taze matbaa kokusuna bıraktı!"</p>
-              <div className="mt-2.5 flex items-center justify-between border-t border-amber-200/60 pt-2 text-[11px]">
+              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1 border-t border-amber-200/60 pt-2 text-[11px]">
                 <span className="text-stone-500">{mood ? `Modun kaydedildi ${mood}` : 'Senin modun nasıl?'}</span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5 sm:gap-1.5">
                   {[
                     ['🔥', 'Alev Aldık'],
                     ['☕', 'Kahve Lazım'],
@@ -324,7 +324,7 @@ export default function KampusPage() {
                       title={t}
                       aria-pressed={mood === e}
                       onClick={() => setMood(e)}
-                      className={`kp-press rounded-md px-0.5 text-sm ${mood === e ? 'bg-orange-100 ring-1 ring-orange-300' : ''}`}
+                      className={`kp-press flex h-11 w-11 items-center justify-center rounded-md text-lg sm:h-auto sm:w-auto sm:px-0.5 sm:text-sm ${mood === e ? 'bg-orange-100 ring-1 ring-orange-300' : ''}`}
                     >
                       {e}
                     </button>
@@ -349,13 +349,13 @@ export default function KampusPage() {
                   key={t.title}
                   type="button"
                   onClick={() => askZeki(t.q)}
-                  className={`kp-press group flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-left ${t.hover}`}
+                  className={`kp-press min-h-11 sm:min-h-0 group flex w-full items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-left ${t.hover}`}
                 >
                   <div className="flex items-center gap-2.5">
                     <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-bold ${t.box}`}>{t.icon}</div>
                     <div>
                       <p className="font-semibold text-stone-900">{t.title}</p>
-                      <p className="text-[10px] text-stone-500">{t.note}</p>
+                      <p className="text-[11px] text-stone-500">{t.note}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-3.5 w-3.5 text-stone-400 group-hover:text-orange-600" />
@@ -370,7 +370,7 @@ export default function KampusPage() {
                 <DoorClosed className="h-4 w-4 text-emerald-600" />
                 <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-stone-900">Kampüs Odaları &amp; Stüdyo</h3>
               </div>
-              <span className="kp-mono rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">CANLI</span>
+              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">CANLI</span>
             </div>
             <div className="space-y-2.5 text-xs">
               {[
@@ -384,20 +384,20 @@ export default function KampusPage() {
                       <span className={`h-2 w-2 shrink-0 rounded-full ${r.free && !booked[r.name] ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                       <span className="font-semibold text-stone-900">{r.name}</span>
                     </div>
-                    <p className="mt-0.5 text-[10px] text-stone-500">{booked[r.name] ? `${firstName} adına ayrıldı` : r.note}</p>
+                    <p className="mt-0.5 text-[11px] text-stone-500">{booked[r.name] ? `${firstName} adına ayrıldı` : r.note}</p>
                   </div>
                   {r.free ? (
                     <button
                       type="button"
                       onClick={() => setBooked((b) => ({ ...b, [r.name]: !b[r.name] }))}
-                      className={`kp-press shrink-0 rounded-lg border px-2 py-1 text-[11px] font-medium ${
+                      className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg border whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${
                         booked[r.name] ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-stone-300 bg-white hover:border-emerald-500 hover:text-emerald-700'
                       }`}
                     >
                       {booked[r.name] ? 'Ayrıldı ✓' : 'Ayırt'}
                     </button>
                   ) : (
-                    <span className="kp-mono shrink-0 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">16:00'da boş</span>
+                    <span className="kp-mono shrink-0 rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700">16:00'da boş</span>
                   )}
                 </div>
               ))}
@@ -414,14 +414,14 @@ export default function KampusPage() {
             </p>
             <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-white/80 p-2.5 text-xs">
               <div>
-                <span className="kp-mono text-[10px] font-semibold uppercase text-amber-800">Katılanlar</span>
+                <span className="kp-mono text-[11px] font-semibold uppercase text-amber-800">Katılanlar</span>
                 <p className="font-bold text-stone-900">{lottery ? 65 : 64} Çalışanımız</p>
               </div>
               <button
                 type="button"
                 onClick={() => setLottery(true)}
                 disabled={lottery}
-                className={`kp-press flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white shadow-sm ${
+                className={`kp-press min-h-11 sm:min-h-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white shadow-sm ${
                   lottery ? 'bg-emerald-600' : 'bg-amber-600 hover:bg-amber-700'
                 }`}
               >
@@ -486,7 +486,7 @@ export default function KampusPage() {
                     />
                     <button
                       type="submit"
-                      className="kp-press kp-glow flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-medium text-white hover:from-orange-700 hover:to-amber-700"
+                      className="kp-press min-h-11 sm:min-h-0 kp-glow flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-medium text-white hover:from-orange-700 hover:to-amber-700"
                     >
                       <span>Sor</span>
                       <ArrowRight className="h-3.5 w-3.5" />
@@ -499,7 +499,7 @@ export default function KampusPage() {
                       key={p.label}
                       type="button"
                       onClick={() => askZeki(p.q)}
-                      className="kp-press flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-stone-700 hover:bg-stone-100 hover:text-stone-900"
+                      className="kp-press min-h-11 sm:min-h-0 flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-stone-700 hover:bg-stone-100 hover:text-stone-900"
                     >
                       {p.label}
                     </button>
@@ -523,7 +523,7 @@ export default function KampusPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-stone-900">Modüller</h2>
-                    <span className="kp-mono rounded border border-stone-200 bg-stone-100 px-2 text-[10px] font-semibold text-stone-600">
+                    <span className="kp-mono whitespace-nowrap rounded border border-stone-200 bg-stone-100 px-2 text-[11px] font-semibold text-stone-600">
                       {MODULE_TILES.length} açık · {moduleTotal} toplam
                     </span>
                   </div>
@@ -534,7 +534,7 @@ export default function KampusPage() {
                 type="button"
                 aria-expanded={allModules}
                 onClick={() => setAllModules((v) => !v)}
-                className="kp-press flex w-fit items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-orange-300 hover:text-orange-700"
+                className="kp-press min-h-11 sm:min-h-0 flex w-fit items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-orange-300 hover:text-orange-700"
               >
                 Tüm modüller
                 <ChevronDown className={`h-3.5 w-3.5 ${allModules ? 'rotate-180' : ''}`} />
@@ -566,7 +566,7 @@ export default function KampusPage() {
               <div className="kp-scroll mt-4 max-h-[420px] space-y-3 overflow-y-auto border-t border-stone-200 pr-1 pt-4">
                 {moduleGroups.map((g) => (
                   <div key={g.title}>
-                    <div className="kp-mono pb-1 text-[10px] font-bold uppercase tracking-wider text-stone-500">{g.title}</div>
+                    <div className="kp-mono pb-1 text-[11px] font-bold uppercase tracking-wider text-stone-500">{g.title}</div>
                     <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                       {g.modules.map((m) => {
                         const to = LIVE[m.id];
@@ -574,15 +574,15 @@ export default function KampusPage() {
                           <Link
                             key={m.id}
                             to={to}
-                            className="kp-press flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-stone-900 hover:border-orange-300"
+                            className="kp-press min-h-11 sm:min-h-0 flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-2 py-1.5 text-[12px] font-semibold text-stone-900 hover:border-orange-300"
                           >
                             <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                            <span className="shrink-0 rounded bg-orange-100 px-1.5 text-[10.5px] font-bold text-orange-700">açık</span>
+                            <span className="shrink-0 rounded bg-orange-100 px-1.5 text-[11px] font-bold text-orange-700">açık</span>
                           </Link>
                         ) : (
                           <div key={m.id} title={m.title} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-stone-500">
                             <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                            <span className="shrink-0 text-[10.5px] text-stone-400">yakında</span>
+                            <span className="shrink-0 text-[11px] text-stone-400">yakında</span>
                           </div>
                         );
                       })}
@@ -604,7 +604,7 @@ export default function KampusPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-stone-900">Timaş Rehber · Anında Arama &amp; Kat Planı</h2>
-                    <span className="kp-mono rounded border border-stone-200 bg-stone-100 px-2 text-[10px] font-semibold text-stone-600">180 Kişi</span>
+                    <span className="kp-mono whitespace-nowrap rounded border border-stone-200 bg-stone-100 px-2 text-[11px] font-semibold text-stone-600">180 Kişi</span>
                   </div>
                   <p className="text-xs text-stone-500">Masa, kat, dahili telefon, cep ve departman hızlı arama motoru</p>
                 </div>
@@ -616,7 +616,7 @@ export default function KampusPage() {
                     type="button"
                     aria-pressed={floor === f.id}
                     onClick={() => setFloor(f.id)}
-                    className={`kp-press shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 font-medium ${
+                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 font-medium ${
                       floor === f.id ? 'bg-orange-600 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
                     }`}
                   >
@@ -632,14 +632,14 @@ export default function KampusPage() {
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
                 placeholder="İsim, unvan, dahili (örn: 1045) veya masa no yazarak süzün..."
-                className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2 pl-10 pr-10 text-xs text-stone-900 placeholder:text-stone-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                className="w-full rounded-xl border border-stone-200 bg-stone-50 py-2.5 pl-10 pr-11 text-xs text-stone-900 sm:py-2 placeholder:text-stone-400 focus:border-orange-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
               />
               {term && (
                 <button
                   type="button"
                   aria-label="Aramayı temizle"
                   onClick={() => setTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 hover:text-stone-700"
+                  className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-sm text-stone-400 hover:text-stone-700"
                 >
                   ✕
                 </button>
@@ -662,12 +662,12 @@ export default function KampusPage() {
                       <h4 className="text-xs font-bold text-stone-900">{s.name}</h4>
                       <p className="text-[11px] text-stone-500">{s.role}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="kp-mono rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-semibold text-orange-800">Dahili: {s.ext}</span>
-                        <span className="rounded border border-stone-200 bg-stone-100 px-1.5 py-0.5 text-[10px] text-stone-600">{s.desk}</span>
+                        <span className="kp-mono whitespace-nowrap rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[11px] font-semibold text-orange-800">Dahili: {s.ext}</span>
+                        <span className="rounded border border-stone-200 bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-600">{s.desk}</span>
                       </div>
                     </div>
                   </div>
-                  <a href={`tel:${s.ext}`} title="Hemen Ara" className="kp-press shrink-0 rounded-lg bg-stone-100 p-1.5 text-stone-600 hover:bg-orange-600 hover:text-white">
+                  <a href={`tel:${s.ext}`} title="Hemen Ara" className="kp-press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-600 sm:h-auto sm:w-auto sm:p-1.5 hover:bg-orange-600 hover:text-white">
                     <PhoneCall className="h-3.5 w-3.5" />
                   </a>
                 </div>
@@ -701,7 +701,7 @@ export default function KampusPage() {
                 type="button"
                 aria-expanded={praiseOpen}
                 onClick={() => setPraiseOpen((v) => !v)}
-                className="kp-press flex w-fit items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
+                className="kp-press min-h-11 sm:min-h-0 flex w-fit items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100"
               >
                 <Plus className="h-3.5 w-3.5" /> Alkış Gönder
               </button>
@@ -721,7 +721,7 @@ export default function KampusPage() {
                   placeholder="Mikro tebrik notunuz"
                   className="rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs focus:border-orange-500 focus:outline-none"
                 />
-                <button type="submit" className="kp-press rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700">
+                <button type="submit" className="kp-press min-h-11 sm:min-h-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700">
                   Gönder
                 </button>
               </form>
@@ -747,11 +747,11 @@ export default function KampusPage() {
                       type="button"
                       aria-pressed={!!liked[i]}
                       onClick={() => setLiked((l) => ({ ...l, [i]: !l[i] }))}
-                      className={`kp-press flex items-center gap-1 ${liked[i] ? 'text-rose-600' : 'text-stone-500 hover:text-rose-600'}`}
+                      className={`kp-press min-h-11 sm:min-h-0 flex items-center gap-1 ${liked[i] ? 'text-rose-600' : 'text-stone-500 hover:text-rose-600'}`}
                     >
                       <span>{p.emoji}</span> <span className="kp-mono font-bold">{p.likes + (liked[i] ? 1 : 0)}</span>
                     </button>
-                    <span className={`kp-mono rounded px-1.5 py-0.5 text-[10px] ${p.tagTone}`}>{p.tag}</span>
+                    <span className={`kp-mono rounded px-1.5 py-0.5 text-[11px] ${p.tagTone}`}>{p.tag}</span>
                   </div>
                 </div>
               ))}
@@ -768,7 +768,7 @@ export default function KampusPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="kp-mono rounded border border-orange-400/30 bg-orange-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-300">
+                    <span className="kp-mono whitespace-nowrap rounded border border-orange-400/30 bg-orange-500/20 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-orange-300">
                       Haftanın Sesli Bülteni
                     </span>
                     <span className="kp-mono text-[11px] text-stone-400">14 Dk • Bölüm #42</span>
@@ -782,12 +782,12 @@ export default function KampusPage() {
                   type="button"
                   aria-label={playing ? 'Duraklat' : 'Oynat'}
                   onClick={() => setPlaying((v) => !v)}
-                  className="kp-press flex h-10 w-10 items-center justify-center rounded-full bg-white text-stone-950 shadow-md hover:bg-orange-500 hover:text-white"
+                  className="kp-press flex h-11 w-11 items-center justify-center rounded-full bg-white sm:h-10 sm:w-10 text-stone-950 shadow-md hover:bg-orange-500 hover:text-white"
                 >
                   {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
                 </button>
                 <div className="hidden text-right sm:block">
-                  <span className={`kp-mono block text-[10px] ${playing ? 'text-orange-400' : 'text-stone-400'}`}>
+                  <span className={`kp-mono block text-[11px] ${playing ? 'text-orange-400' : 'text-stone-400'}`}>
                     {playing ? '02:15 / 14:12 (Çalıyor)' : '00:00 / 14:12'}
                   </span>
                   <span className="text-[11px] text-orange-400">Bölüm Notları (.md)</span>
@@ -824,7 +824,7 @@ export default function KampusPage() {
                 <Cake className="h-4 w-4 text-amber-600" />
                 <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-stone-900">Bugün Doğanlar (2)</h3>
               </div>
-              <span className="kp-mono rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] text-amber-800">17 Nisan</span>
+              <span className="kp-mono whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800">17 Nisan</span>
             </div>
             <div className="space-y-2.5">
               {[
@@ -836,14 +836,14 @@ export default function KampusPage() {
                     <img src={p.img} alt={p.name} className={`h-8 w-8 shrink-0 rounded-lg object-cover ring-2 ${p.ring}`} />
                     <div className="min-w-0">
                       <h4 className="text-xs font-bold text-stone-900">{p.name}</h4>
-                      <p className="text-[10px] text-stone-500">{p.note}</p>
+                      <p className="text-[11px] text-stone-500">{p.note}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     disabled={greeted[p.name]}
                     onClick={() => setGreeted((g) => ({ ...g, [p.name]: true }))}
-                    className={`kp-press shrink-0 rounded-lg px-2 py-1 text-[11px] font-medium ${greeted[p.name] ? 'bg-emerald-100 text-emerald-800' : p.btn}`}
+                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${greeted[p.name] ? 'bg-emerald-100 text-emerald-800' : p.btn}`}
                   >
                     {greeted[p.name] ? 'Kutlandı ✓' : 'Kutla'}
                   </button>
@@ -863,13 +863,13 @@ export default function KampusPage() {
             <div className="relative space-y-3.5 border-l-2 border-stone-200 pl-3.5 text-xs">
               <div className="relative">
                 <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-sky-600 ring-2 ring-white" />
-                <span className="kp-mono text-[10px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
+                <span className="kp-mono text-[11px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
                 <h4 className="mt-0.5 font-bold text-stone-900">Dünya Kitap ve Telif Hakları Günü</h4>
                 <p className="text-[11px] text-stone-500">Genel merkez fuayesinde mini sergi &amp; söyleşi</p>
               </div>
               <div className="relative">
                 <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-orange-500 ring-2 ring-white" />
-                <span className="kp-mono text-[10px] font-semibold uppercase text-orange-700">26 Nisan Cuma • 15:30</span>
+                <span className="kp-mono text-[11px] font-semibold uppercase text-orange-700">26 Nisan Cuma • 15:30</span>
                 <h4 className="mt-0.5 font-bold text-stone-900">Aylık Yayın Kurulu Değerlendirmesi</h4>
                 <p className="text-[11px] text-stone-500">Büyük Divan Salonu &amp; Zoom Hibrit</p>
               </div>
@@ -878,7 +878,7 @@ export default function KampusPage() {
                   <span className="flex items-center gap-1">
                     <Flag className="h-3.5 w-3.5 text-rose-500" /> TÜYAP Fuarı 2024
                   </span>
-                  <span className="kp-mono rounded bg-rose-100 px-1.5 py-0.5 text-[10px] text-rose-700">18 Gün</span>
+                  <span className="kp-mono whitespace-nowrap rounded bg-rose-100 px-1.5 py-0.5 text-[11px] text-rose-700">18 Gün</span>
                 </div>
                 <p className="mt-1 text-[11px] text-stone-600">Stand planı, görev listesi ve yazar imza saatleri ZEKİ AI üzerinden görüntülenebilir.</p>
               </div>
@@ -891,7 +891,7 @@ export default function KampusPage() {
                 <BookOpen className="h-4 w-4 text-orange-600" />
                 <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-stone-900">Matbaadan Yeni Çıkanlar</h3>
               </div>
-              <span className="kp-mono shrink-0 text-[10px] font-semibold text-stone-500">6 Yeni Baskı</span>
+              <span className="kp-mono shrink-0 text-[11px] font-semibold text-stone-500">6 Yeni Baskı</span>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
               {[
@@ -901,10 +901,10 @@ export default function KampusPage() {
                 <div key={b.title} className={`kp-cover min-w-0 rounded-xl border border-stone-200 bg-stone-50 p-2 transition-colors ${b.hover}`}>
                   <div className="relative mb-1.5 aspect-[2/3] w-full overflow-hidden rounded-lg bg-stone-200">
                     <img src={b.img} alt={b.title} className="h-full w-full object-cover" />
-                    <span className={`kp-mono absolute left-1 top-1 rounded px-1 text-[9px] font-bold text-white ${b.badgeTone}`}>{b.badge}</span>
+                    <span className={`kp-mono absolute left-1 top-1 rounded px-1 text-[11px] font-bold text-white ${b.badgeTone}`}>{b.badge}</span>
                   </div>
                   <h5 className="truncate text-[11px] font-bold text-stone-900">{b.title}</h5>
-                  <p className="truncate text-[10px] text-stone-500">{b.author}</p>
+                  <p className="truncate text-[11px] text-stone-500">{b.author}</p>
                 </div>
               ))}
             </div>
@@ -915,7 +915,7 @@ export default function KampusPage() {
               <span className="text-base">🍲</span>
               <div className="min-w-0">
                 <span className="block font-bold text-stone-900">Yemekhane Bugün (12:00-14:00)</span>
-                <span className="text-[10px] text-stone-500">Yayla Çorbası • Fırın Tavuk Rosto • Bulgur</span>
+                <span className="text-[11px] text-stone-500">Yayla Çorbası • Fırın Tavuk Rosto • Bulgur</span>
               </div>
             </div>
             <span className="shrink-0 text-[11px] font-semibold text-orange-700">Detay</span>

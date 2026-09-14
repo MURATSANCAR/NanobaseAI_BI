@@ -274,7 +274,7 @@ export default function BoardScreen() {
                       <select
                         value={c.chart}
                         onChange={(e) => patch(c.id, { chart: e.target.value as ChartKind })}
-                        className="rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 text-[10.5px] font-bold text-canvas-muted outline-none"
+                        className="rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-bold text-canvas-muted outline-none"
                       >
                         {options.map((o) => (
                           <option key={o} value={o}>
@@ -287,7 +287,7 @@ export default function BoardScreen() {
                           type="button"
                           onClick={() => patch(c.id, { depth: !c.depth })}
                           className={[
-                            'rounded-lg px-1.5 py-0.5 text-[10.5px] font-bold transition',
+                            'rounded-lg px-1.5 py-0.5 text-[11px] font-bold transition',
                             c.depth ? 'bg-canvas-violet/15 text-canvas-violet' : 'text-canvas-muted hover:bg-slate-100',
                           ].join(' ')}
                         >
@@ -302,9 +302,9 @@ export default function BoardScreen() {
                       >
                         <RotateCw className={['h-3 w-3', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
                       </button>
-                      {r?.isError && <span className="text-[10px] font-bold text-red-600">veri gelmedi</span>}
+                      {r?.isError && <span className="text-[11px] font-bold text-red-600">veri gelmedi</span>}
                       {r?.data?.truncated && (
-                        <span className="text-[10px] font-bold text-amber-600" title="Sonuç motorun satır sınırında kesildi">
+                        <span className="text-[11px] font-bold text-amber-600" title="Sonuç motorun satır sınırında kesildi">
                           ilk {rows.length.toLocaleString('tr-TR')} satır
                         </span>
                       )}
@@ -385,7 +385,7 @@ export default function BoardScreen() {
             <button
               type="submit"
               disabled={asking || !prompt.trim()}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-canvas-coral to-canvas-violet text-white shadow-md transition disabled:opacity-60"
+              aria-label="Gönder" className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-canvas-coral to-canvas-violet text-white shadow-md transition disabled:opacity-60"
             >
               {asking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>

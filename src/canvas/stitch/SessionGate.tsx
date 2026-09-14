@@ -78,7 +78,7 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
           value={user}
           onChange={(e) => setUser(e.target.value)}
           autoComplete="username"
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[13px] font-semibold text-ink outline-none focus:border-violet"
+          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 min-h-11 px-3 py-2 text-base sm:text-[13px] font-semibold text-ink outline-none focus:border-violet"
         />
 
         <label className="mt-3 block text-[11px] font-bold text-muted" htmlFor="parola">
@@ -90,7 +90,7 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
           value={pass}
           onChange={(e) => setPass(e.target.value)}
           autoComplete="current-password"
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[13px] font-semibold text-ink outline-none focus:border-violet"
+          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 min-h-11 px-3 py-2 text-base sm:text-[13px] font-semibold text-ink outline-none focus:border-violet"
         />
 
         {prefilled && (
@@ -104,7 +104,7 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
         <button
           type="submit"
           disabled={busy || !user || !pass}
-          className="mt-4 w-full rounded-xl bg-gradient-to-r from-coral to-violet px-4 py-2.5 text-[13px] font-extrabold text-white shadow-md transition disabled:opacity-60"
+          className="mt-4 min-h-11 w-full rounded-xl bg-gradient-to-r from-coral to-violet px-4 py-2.5 text-[15px] sm:text-[13px] font-extrabold text-white shadow-md transition-transform active:scale-[0.97] disabled:opacity-60"
         >
           {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
         </button>

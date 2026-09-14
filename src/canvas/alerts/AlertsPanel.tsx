@@ -163,7 +163,7 @@ export default function AlertsPanel({
               </button>
             ))}
           </div>
-          <button type="button" onClick={onClose} title="Kapat" className="rounded-lg p-1.5 text-canvas-muted hover:bg-slate-100">
+          <button type="button" onClick={onClose} title="Kapat" aria-label="Kapat" className="rounded-lg p-2.5 sm:p-1.5 text-canvas-muted hover:bg-slate-100">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -290,7 +290,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
               </strong>
             </>
           )}
-          {probe.sql && <div className="mt-1 truncate font-mono text-[10.5px] text-canvas-muted" title={probe.sql}>{probe.sql}</div>}
+          {probe.sql && <div className="mt-1 truncate font-mono text-[11px] text-canvas-muted" title={probe.sql}>{probe.sql}</div>}
         </div>
       )}
 
@@ -411,14 +411,14 @@ function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }
   const del = useMutation({ mutationFn: () => alertsApi.remove(rule.id), onSuccess: onChanged });
   const st = rule.status === 'paused' ? { label: 'Duraklatıldı', cls: 'bg-slate-100 text-slate-600' } : STATE[rule.state];
   const err = toggle.error ?? check.error ?? del.error;
-  const btn = 'rounded-lg p-1.5 text-canvas-muted transition hover:bg-slate-100 hover:text-canvas-ink disabled:opacity-40';
+  const btn = 'rounded-lg p-2.5 sm:p-1.5 text-canvas-muted transition hover:bg-slate-100 hover:text-canvas-ink disabled:opacity-40';
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-3 py-2.5">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span className="truncate text-[13px] font-extrabold">{rule.title}</span>
-          <span className={`rounded-md px-1.5 py-0.5 text-[10.5px] font-bold ${st.cls}`}>{st.label}</span>
+          <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${st.cls}`}>{st.label}</span>
         </div>
         {rule.question && rule.question !== rule.title && (
           <div className="truncate text-[11.5px] text-canvas-muted">{rule.question}</div>
