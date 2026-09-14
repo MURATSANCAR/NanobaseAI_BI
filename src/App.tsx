@@ -7,6 +7,7 @@ import { t } from '@/i18n';
 const KampusPage = lazy(() => import('@/canvas/kampus/KampusPage'));
 const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
 const BoardScreen = lazy(() => import('@/canvas/board/BoardScreen'));
+const ReportsScreen = lazy(() => import('@/canvas/reports/ReportsScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 
@@ -44,7 +45,7 @@ export default function App() {
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />
-            <Route path="planli-raporlar" element={<BiCanvasPage />} />
+            <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
           </Route>
 

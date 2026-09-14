@@ -322,3 +322,77 @@ export const boardApi = {
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
   run: (id: string) => send<BoardCardResult>('POST', `/api/v1/board/cards/${encodeURIComponent(id)}/run`, {}),
 };
+
+/* ------------------------------------------------------------------ planlı raporlar */
+
+export type ReportRecurrence = 'daily' | 'weekly' | 'monthly' | 'once';
+export type ReportFormat = 'xlsx' | 'csv';
+export type ReportStatus = 'active' | 'paused' | 'done';
+export type ReportLastStatus = 'sent' | 'no_smtp' | 'no_recipient' | 'failed' | null;
+
+export type ReportDto = {
+  id: string;
+  title: string;
+  prompt: string;
+  question: string;
+  sql: string;
+  fmt: ReportFormat;
+  recurrence: ReportRecurrence;
+  at: string;
+  weekday: number | null;
+  monthday: number | null;
+  onceAt: string | null;
+  recipients: string[];
+  status: ReportStatus;
+  createdAt: string | null;
+  updatedAt: string | null;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastStatus: ReportLastStatus;
+  lastError: string | null;
+  lastRows: number | null;
+  hasFile: boolean;
+  /** "Her gün 08:00" gibi okunur plan. */
+  when: string;
+};
+
+export type ReportDraft = {
+  question: string;
+  title: string;
+  recurrence: ReportRecurrence;
+  at: string;
+  weekday: number | null;
+  monthday: number | null;
+  recipients: string[];
+  fmt: ReportFormat;
+  sql: string;
+  columns: Array<{ name: string; type: string }>;
+  records: Array<Record<string, unknown>>;
+  rowCount?: number | null;
+  summary?: string;
+};
+
+export type ReportInput = {
+  title: string;
+  prompt?: string;
+  question: string;
+  sql?: string;
+  fmt: ReportFormat;
+  recurrence: ReportRecurrence;
+  at: string;
+  weekday?: number | null;
+  monthday?: number | null;
+  onceAt?: string | null;
+  recipients: string[];
+  status?: ReportStatus;
+};
+
+export const reportsApi = {
+  list: () => send<{ user: string; reports: ReportDto[]; email: AlertEmail }>('GET', '/api/v1/reports', undefined, 30_000),
+  parse: (text: string) => send<ReportDraft>('POST', '/api/v1/reports/parse', { text }),
+  create: (b: ReportInput) => send<ReportDto>('POST', '/api/v1/reports', b, 30_000),
+  update: (id: string, b: Partial<ReportInput>) => send<ReportDto>('PATCH', `/api/v1/reports/${encodeURIComponent(id)}`, b, 30_000),
+  remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/reports/${encodeURIComponent(id)}`, undefined, 30_000),
+  run: (id: string) => send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run`, {}, 600_000),
+  fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/reports/${encodeURIComponent(id)}/file`,
+};

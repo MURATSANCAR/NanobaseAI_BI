@@ -31,7 +31,6 @@ locations = '''
         proxy_set_header Content-Length "";
         proxy_set_header X-Original-Method $timas_original_method;
         proxy_set_header Cookie $http_cookie;
-        proxy_set_header Authorization $http_authorization;
         proxy_set_header Origin $http_origin;
     }
     location ^~ /timas/auth/ {
@@ -41,26 +40,12 @@ locations = '''
         proxy_pass http://127.0.0.1:8796/;
         proxy_set_header Origin $http_origin;
         proxy_set_header Cookie $http_cookie;
-        proxy_set_header X-Test-Invite $http_x_test_invite;
         proxy_hide_header X-Powered-By;
     }
 '''
 s = s.replace('    location = /timas {', locations + '\n    location = /timas {', 1)
 s = 'limit_req_zone $binary_remote_addr zone=timas_login:10m rate=20r/m;\n' + s
-s += '''
-# The password verifier is reachable only on loopback, never from the internet.
-server {
-    listen 127.0.0.1:8797;
-    server_name localhost;
-    access_log off;
-    location = /verify {
-        auth_basic "Portal verifier";
-        auth_basic_user_file /etc/nginx/htpasswd-timas;
-        alias /etc/nginx/timas-auth-ok.txt;
-    }
-    location / { return 404; }
-}
-'''
+# Passwords are checked by Active Directory inside the adapter; nginx holds no password file.
 site.write_text(s)
 try:
     subprocess.run(['nginx', '-t'], check=True)

@@ -1,32 +1,39 @@
-"""Loopback-only session adapter; nginx remains the password verifier.
+"""Loopback-only session adapter; Timaş Active Directory is the only password verifier.
 
-No API keys or passwords are placed in browser storage. Test invitation secrets
-are runtime configuration, expire, and never appear in request URLs or logs.
+No API keys or passwords are placed in browser storage. There is no local or demo account:
+every session belongs to an enabled directory user who proved their own password.
 """
-import base64
 import hashlib
-import hmac
 import json
 import os
+import re
 import secrets
 import sqlite3
+import sys
 import time
-import urllib.request
-import urllib.error
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ORIGIN = os.environ.get('PORTAL_ORIGIN', 'https://portal.nanobase.ai')
 DB = os.environ.get('SESSION_DB', '/var/lib/timas-login/sessions.sqlite')
-INVITE = os.environ.get('INVITE_FILE', '/etc/nanobase/timas-test-invite.json')
-VERIFY = os.environ.get('PASSWORD_VERIFY_URL', 'http://127.0.0.1:8797/verify')
+# host, port, netbios, dns_domain, base_dn, bind_user, bind_password. Root-owned, never committed.
+AD_FILE = os.environ.get('AD_CONFIG_FILE', '/etc/nanobase/timas-ad.json')
 COOKIE = '__Secure-timas_session'
 TTL = 8 * 3600
+# sAMAccountName characters only: nothing here can widen the LDAP filter.
+ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+ACTIVE_PERSON = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={})(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
+
+
+class DirectoryUnavailable(Exception):
+    """The directory could not be asked; the password was not judged."""
 
 
 def connection():
     db = sqlite3.connect(DB, timeout=5)
     db.execute('CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, username TEXT, expires REAL)')
+    if 'display' not in {row[1] for row in db.execute('PRAGMA table_info(sessions)')}:
+        db.execute('ALTER TABLE sessions ADD COLUMN display TEXT')
     return db
 
 
@@ -34,19 +41,93 @@ def digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def verify(header):
-    if not header.startswith('Basic ') or len(header) > 2048:
+def ad_config():
+    try:
+        with open(AD_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def account_name(username, config):
+    """`TIMAS\\ali`, `ali@timas.local` and `ali` name the same account; another domain names none."""
+    name = username.strip()
+    if '\\' in name:
+        domain, name = name.split('\\', 1)
+        if domain.lower() != config['netbios'].lower():
+            return None
+    elif '@' in name:
+        name, domain = name.rsplit('@', 1)
+        if domain.lower() != config['dns_domain'].lower():
+            return None
+    return name if ACCOUNT.match(name) else None
+
+
+def ensure_md4():
+    # NTLM needs MD4; OpenSSL 3 dropped it, pycryptodome still has it.
+    try:
+        hashlib.new('md4', b'')
+    except ValueError:
+        from Crypto.Hash import MD4
+        builtin = hashlib.new
+
+        class Md4:
+            def __init__(self, data=b''):
+                self.h = MD4.new(data)
+
+            def update(self, data):
+                self.h.update(data)
+
+            def digest(self):
+                return self.h.digest()
+
+        hashlib.new = lambda name, data=b'', **kw: Md4(data) if name.lower() == 'md4' else builtin(name, data, **kw)
+
+
+def ad_verify(username, password):
+    """Returns (account, display name) for an enabled directory user whose password is right.
+
+    NTLM, not simple bind: the domain controller has no certificate, and a simple bind would
+    carry the password in clear text across the VPN.
+    """
+    config = ad_config()
+    if not config:
+        raise DirectoryUnavailable('no directory configuration')
+    if not password:
+        return None
+    account = account_name(username, config)
+    if not account:
         return None
     try:
-        decoded = base64.b64decode(header[6:], validate=True).decode('utf8')
-        username, password = decoded.split(':', 1)
-        if not username or not password:
-            return None
-        req = urllib.request.Request(VERIFY, headers={'Authorization': header})
-        with urllib.request.urlopen(req, timeout=3) as response:
-            return username if response.status == 200 else None
-    except (ValueError, UnicodeError, urllib.error.URLError):
-        return None
+        from ldap3 import NONE, NTLM, SUBTREE, Connection, Server
+        from ldap3.core.exceptions import LDAPException
+        ensure_md4()
+    except ImportError as exc:
+        raise DirectoryUnavailable(f'ldap3 missing: {exc}')
+    server = Server(config['host'], port=int(config.get('port', 389)), get_info=NONE, connect_timeout=5)
+    domain = config['netbios']
+    try:
+        lookup = Connection(server, user=f"{domain}\\{config['bind_user']}", password=config['bind_password'],
+                            authentication=NTLM, receive_timeout=10)
+        if not lookup.bind():
+            raise DirectoryUnavailable('service account bind refused')
+        try:
+            lookup.search(config['base_dn'], ACTIVE_PERSON.format(account), SUBTREE,
+                          attributes=['sAMAccountName', 'displayName'], size_limit=2)
+            if len(lookup.entries) != 1:
+                return None
+            entry = lookup.entries[0]
+            account = str(entry.sAMAccountName.value)
+            display = str(entry.displayName.value or account)
+        finally:
+            lookup.unbind()
+        user = Connection(server, user=f'{domain}\\{account}', password=password, authentication=NTLM, receive_timeout=10)
+        try:
+            return (account, display) if user.bind() else None
+        finally:
+            user.unbind()
+    except LDAPException as exc:
+        raise DirectoryUnavailable(type(exc).__name__)
 
 
 def session(cookie):
@@ -56,13 +137,12 @@ def session(cookie):
     except (KeyError, ValueError):
         return None
     with connection() as db:
-        row = db.execute('SELECT username FROM sessions WHERE token=? AND expires>?', (digest(token), time.time())).fetchone()
-    return row[0] if row else None
+        return db.execute('SELECT username, display FROM sessions WHERE token=? AND expires>?', (digest(token), time.time())).fetchone()
 
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
-        pass  # nginx supplies access logs; never log credentials or invitation headers
+        pass  # nginx supplies access logs; never log credentials
 
     def reply(self, status, data=None, cookie=None):
         raw = json.dumps(data or {}, ensure_ascii=False).encode()
@@ -77,33 +157,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/check':
-            # Explicit Basic clients remain compatible. Browser sessions also
-            # require the same origin on mutations, including nginx subrequests.
-            user = verify(self.headers.get('Authorization', ''))
-            if not user:
-                if self.headers.get('X-Original-Method', 'GET') not in ('GET', 'HEAD', 'OPTIONS') and self.headers.get('Origin') != ORIGIN:
-                    return self.reply(403)
-                user = session(self.headers.get('Cookie', ''))
-            return self.reply(200 if user else 401)
+            # Browser sessions require the same origin on mutations, including nginx subrequests.
+            if self.headers.get('X-Original-Method', 'GET') not in ('GET', 'HEAD', 'OPTIONS') and self.headers.get('Origin') != ORIGIN:
+                return self.reply(403)
+            return self.reply(200 if session(self.headers.get('Cookie', '')) else 401)
         if self.path == '/session':
-            user = session(self.headers.get('Cookie', ''))
-            return self.reply(200 if user else 401, {'username': user})
-        if self.path == '/prefill':
-            try:
-                with open(INVITE) as f:
-                    config = json.load(f)
-                # Explicit runtime opt-in for the public test environment only.
-                if config.get('public_demo') is True and time.time() < config['expires']:
-                    return self.reply(200, {k: config[k] for k in ('username', 'password', 'expires')})
-                supplied = self.headers.get('X-Test-Invite', '')
-                if not supplied:
-                    remembered = SimpleCookie(self.headers.get('Cookie', '')).get('__Secure-timas_invite')
-                    supplied = remembered.value if remembered else ''
-                if supplied and hmac.compare_digest(supplied, config['token']) and time.time() < config['expires']:
-                    return self.reply(200, {k: config[k] for k in ('username', 'password', 'expires')}, cookie=f"__Secure-timas_invite={supplied}; Path=/timas/auth/; Secure; HttpOnly; SameSite=Strict; Max-Age={max(0, int(config['expires'] - time.time()))}")
-            except (OSError, ValueError, KeyError):
-                pass
-            return self.reply(403, {'error': 'Test daveti geçersiz veya süresi dolmuş.'})
+            row = session(self.headers.get('Cookie', ''))
+            if not row:
+                return self.reply(401, {'username': None})
+            return self.reply(200, {'username': row[0], 'displayName': row[1] or row[0]})
         self.reply(404)
 
     def do_POST(self):
@@ -125,19 +187,23 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400)
             data = json.loads(self.rfile.read(size))
             username, password = data['username'], data['password']
-            if not isinstance(username, str) or not isinstance(password, str) or ':' in username:
+            if not isinstance(username, str) or not isinstance(password, str):
                 return self.reply(400)
-            header = 'Basic ' + base64.b64encode(f'{username}:{password}'.encode()).decode()
         except (ValueError, KeyError, TypeError):
             return self.reply(400)
-        user = verify(header)
-        if not user:
+        try:
+            found = ad_verify(username, password)
+        except DirectoryUnavailable as exc:
+            print(f'timas-login: directory unavailable ({exc})', file=sys.stderr, flush=True)
+            return self.reply(503, {'error': 'Şirket dizinine (Active Directory) şu an ulaşılamıyor. Birazdan tekrar deneyin.'})
+        if not found:
             return self.reply(401, {'error': 'Kullanıcı adı veya şifre doğru değil.'})
+        user, display = found
         token = secrets.token_urlsafe(32)
         with connection() as db:
             db.execute('DELETE FROM sessions WHERE expires<=?', (time.time(),))
-            db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (digest(token), user, time.time() + TTL))
-        self.reply(200, {'username': user}, f'{COOKIE}={token}; Path=/timas/; Secure; HttpOnly; SameSite=Strict; Max-Age={TTL}')
+            db.execute('INSERT INTO sessions (token, username, expires, display) VALUES (?, ?, ?, ?)', (digest(token), user, time.time() + TTL, display))
+        self.reply(200, {'username': user, 'displayName': display}, f'{COOKIE}={token}; Path=/timas/; Secure; HttpOnly; SameSite=Strict; Max-Age={TTL}')
 
 
 if __name__ == '__main__':

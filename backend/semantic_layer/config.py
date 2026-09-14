@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +31,9 @@ class SemanticSettings:
     llm_key: str = ""
     llm_model: str = "nanobaseai-bi-llm"
     llm_timeout: float = 240.0
+    # Extra JSON merged into every chat request, e.g. {"chat_template_kwargs": {"thinking": false}} for
+    # a hosted reasoning model (NVIDIA deepseek-v4-flash: 39s with thinking off, >120s with it on).
+    llm_extra: dict = field(default_factory=dict)
     min_support: int = 3                          # hard gate: validated_query_support >= 3
     certify_threshold: float = 0.6
     strict_miss: bool = False                     # refuse SQL when a value term is unresolved
@@ -68,6 +72,7 @@ class SemanticSettings:
             llm_key=_env("OPENAI_API_KEY", ""),
             llm_model=_env("LLM_MODEL_NAME", "nanobaseai-bi-llm"),
             llm_timeout=float(_env("LLM_TIMEOUT_SEC", "240")),
+            llm_extra=json.loads(_env("LLM_EXTRA_BODY_JSON") or "{}"),
             min_support=int(_env("SEMANTIC_MIN_SUPPORT", "3")),
             certify_threshold=float(_env("SEMANTIC_CERTIFY_THRESHOLD", "0.6")),
             strict_miss=_bool("SEMANTIC_STRICT_MISS", False),

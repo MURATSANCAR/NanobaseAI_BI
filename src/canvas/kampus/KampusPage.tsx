@@ -138,7 +138,7 @@ function Card({ id, className = '', children }: { id?: string; className?: strin
 export default function KampusPage() {
   const navigate = useNavigate();
   const session = useTimasSession();
-  const fullName = session.data?.username || 'Deniz Kaya';
+  const fullName = session.data?.displayName || session.data?.username || 'Deniz Kaya';
   const firstName = fullName.split(/[\s._@]/)[0] || fullName;
 
   // ZEKİ kutusu: soru BI kanvasına gider, cevabı motor verir.

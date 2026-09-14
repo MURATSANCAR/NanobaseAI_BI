@@ -15,7 +15,8 @@ export function useTimasSession() {
       const res = await fetch(`${ENGINE_BASE}/auth/session`, { credentials: 'include' });
       if (res.status === 401 || res.status === 403) throw new EngineAuthError();
       if (!res.ok) throw new Error(`Oturum servisi ${res.status}`);
-      return (await res.json()) as { username: string };
+      // username: hesap adı (pano anahtarı); displayName: AD'deki ad soyad.
+      return (await res.json()) as { username: string; displayName?: string };
     },
     enabled: ENGINE_ENABLED,
     retry: false,

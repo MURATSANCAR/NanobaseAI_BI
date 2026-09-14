@@ -5,7 +5,8 @@ After=network.target
 [Service]
 User=www-data
 Group=www-data
-ExecStart=/usr/bin/python3 /opt/timas-login/server.py
+# venv carries ldap3 + pycryptodome (requirements.txt) for Active Directory sign-in
+ExecStart=/opt/timas-login/venv/bin/python /opt/timas-login/server.py
 Restart=on-failure
 StateDirectory=timas-login
 UMask=0077

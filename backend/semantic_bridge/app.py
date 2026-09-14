@@ -239,7 +239,7 @@ class Runtime:
                 # A reasoning model asked to name tables spends most of its time explaining the
                 # choice to itself. It is not wanted here and the person asking pays for it.
                 client = LlmClient(base, model, s.llm_key, timeout,
-                                   extra={"chat_template_kwargs": {"enable_thinking": False}})
+                                   extra={"chat_template_kwargs": {"enable_thinking": False}} | s.llm_extra)
                 existing.selector = TableSelector(client)
                 log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
             except Exception as e:  # noqa: BLE001
@@ -1102,7 +1102,8 @@ def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optiona
     if connector is None and settings.connection_file and Path(settings.connection_file).exists():
         connector = connector_from_file(settings.connection_file)
     if llm is None and settings.llm_base and os.environ.get("SEMANTIC_LLM", "1") not in ("0", "false"):
-        llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout)
+        llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
+                        extra=settings.llm_extra)
     return Runtime(settings, store=store, connector=connector, llm=llm)
 
 

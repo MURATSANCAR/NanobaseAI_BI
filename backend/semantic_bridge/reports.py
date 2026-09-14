@@ -175,6 +175,7 @@ def parse_prompt(text: str) -> dict[str, Any]:
         q = q.replace(email, " ")
     for rx in _DROP_RE:
         q = rx.sub(" ", q)
+    q = re.sub(r"\bher\b", " ", q, flags=re.IGNORECASE)  # "her ayın 1'inde" kalıntısı
     q = re.sub(r"\s*[,;:]\s*", " ", q)
     q = re.sub(r"\s+", " ", q).strip(" .,-–—'’\"")
     if len(q) < 3:
