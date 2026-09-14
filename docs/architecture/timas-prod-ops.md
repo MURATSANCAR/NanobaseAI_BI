@@ -4,11 +4,9 @@
 
 | Konu | Durum |
 |---|---|
-| Kimlik doğrulama | nginx HTTP Basic, kullanıcı `timas`; parola dosyası **`/data/nanobaseai/bi/secrets/timas-portal.password`** (sunucuda, 600). `/timas/` ve `/timas/api/` kimliksiz **401** |
-| Hız sınırı (IP başına) | `/timas/api/v1/ask` ve `/ask_agent`: 6 istek/dk, patlama 3 → sonrası **429** · `/timas/api/`: 120/dk, patlama 30 |
-| Betik | `scripts/server/deploy-timas-auth.sh` (idempotent; parola yoksa üretir, `openssl passwd -apr1`) |
-
-Parolayı değiştirmek: dosyayı düzenle, betiği tekrar koş.
+| Kimlik doğrulama | 2026-09-14'ten beri **Timaş Active Directory** (kişinin kendi Windows hesabı). `timas-login` (:8796) oturum çerezi verir, nginx `auth_request` ile denetler; `/timas/api/` oturumsuz **401**. Demo hesabı, davet bağlantısı ve HTTP Basic yok. Ayrıntı: [portal-login README](../../scripts/server/portal-login/README.md) |
+| Hız sınırı (IP başına) | `/timas/api/v1/ask` ve `/ask_agent`: 6 istek/dk, patlama 3 → sonrası **429** · `/timas/api/`: 120/dk, patlama 30 · `/timas/auth/`: 20/dk, patlama 10 |
+| AD ayarı | `/etc/nanobase/timas-ad.json` (root:www-data, 0640; repo'ya girmez). DC `192.168.0.20:389` sunucunun VPN'i (`tun0`) üzerinden; VPN kapalıysa giriş 503 |
 
 ## Eşzamanlılık ve performans
 

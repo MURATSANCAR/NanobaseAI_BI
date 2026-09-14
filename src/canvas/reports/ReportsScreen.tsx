@@ -67,7 +67,7 @@ const fromDraft = (d: ReportDraft): Plan => ({
   at: d.at,
   weekday: d.weekday ?? 0,
   monthday: d.monthday ?? 1,
-  onceAt: tomorrowAt(d.at),
+  onceAt: toLocalInput(d.onceAt ?? null) || tomorrowAt(d.at),
   recipients: d.recipients.join(', '),
   fmt: d.fmt,
 });

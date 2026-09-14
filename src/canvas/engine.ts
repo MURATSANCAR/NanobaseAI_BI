@@ -363,6 +363,8 @@ export type ReportDraft = {
   at: string;
   weekday: number | null;
   monthday: number | null;
+  /** Tek seferlikte ayrıştırıcının bulduğu an ("bugün/yarın"), İstanbul saatli ISO. */
+  onceAt?: string | null;
   recipients: string[];
   fmt: ReportFormat;
   sql: string;

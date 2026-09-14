@@ -121,6 +121,7 @@ _DROP = [
     r"\b\d{1,2}['’](de|da|te|ta)\b",
     r"\bayın\s+\d{1,2}['’]?(i|ı|u|ü|si|sı|ünde|inde|ında|unda)?\b",
     r"\bsabah(ları|leyin)?\b|\bakşam(ları)?\b|\böğlen\b",
+    r"\b(yarın|bugün)\b",
     r"\b(bana|bize)\b",
     r"\b(e-?posta|mail|e-?mail)\s*(olarak|ile|yoluyla)?\s*(at|gönder|yolla|ilet)\b",
     r"\b(mail|e-?posta|e-?mail)(e|a|ye|ya|ime|ıma)?\b",
@@ -143,7 +144,8 @@ def parse_prompt(text: str) -> dict[str, Any]:
     fmt = "csv" if re.search(r"\bcsv\b", low) and not re.search(r"\bexcel|xlsx\b", low) else "xlsx"
 
     at = None
-    m = re.search(r"\b(\d{1,2})[:.](\d{2})\b", low)
+    # "09:00da" gibi kesme işaretsiz eklerde \b tutmaz; saatten sonra yalnız rakam gelmesin.
+    m = re.search(r"\b(\d{1,2})[:.](\d{2})(?!\d)", low)
     if m:
         at = (int(m.group(1)), int(m.group(2)))
     else:
@@ -170,9 +172,19 @@ def parse_prompt(text: str) -> dict[str, Any]:
     elif re.search(r"\b(bir\s+kez|tek\s+sefer|yarın|bugün)\b", low):
         recurrence = "once"
 
+    once_at = None
+    if recurrence == "once":
+        # "bugün" saati geçtiyse de yarına kayar; tarih verilmediyse ilk uygun an.
+        local = _now().astimezone(_LOCAL)
+        cand = local.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if re.search(r"\byarın\b", low) or cand <= local:
+            cand += timedelta(days=1)
+        once_at = cand.isoformat()
+
     q = raw
     for email in _EMAIL.findall(raw):
-        q = q.replace(email, " ")
+        # Adresten sonra ayrı yazılmış yönelme eki ("x@y.com a gönder") da düşer.
+        q = re.sub(re.escape(email) + r"(\s+(e|a|ye|ya)\b)?", " ", q)
     for rx in _DROP_RE:
         q = rx.sub(" ", q)
     q = re.sub(r"\bher\b", " ", q, flags=re.IGNORECASE)  # "her ayın 1'inde" kalıntısı
@@ -180,7 +192,7 @@ def parse_prompt(text: str) -> dict[str, Any]:
     q = re.sub(r"\s+", " ", q).strip(" .,-–—'’\"")
     if len(q) < 3:
         q = raw
-    title = q[:1].upper() + q[1:]
+    title = ("İ" if q[:1] == "i" else q[:1].upper()) + q[1:]
     return {
         "question": q,
         "title": title[:120],
@@ -188,6 +200,7 @@ def parse_prompt(text: str) -> dict[str, Any]:
         "at": at_time,
         "weekday": weekday,
         "monthday": monthday,
+        "onceAt": once_at,
         "recipients": recipients,
         "fmt": fmt,
     }
