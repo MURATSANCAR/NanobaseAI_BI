@@ -11,7 +11,7 @@ import { CanvasRenderer } from 'echarts/renderers';
 import { Grid3DComponent } from 'echarts-gl/components';
 import { Bar3DChart, SurfaceChart } from 'echarts-gl/charts';
 import type { ChartKind } from './store';
-import { SERIES, labelCol, numericCols, prettyLabel, shortNum, type Col, type Row } from './Chart';
+import { LABEL_MAX, SERIES, clip, labelCol, numericCols, prettyLabel, shortNum, type Col, type Row } from './Chart';
 
 // Yalnız kullanılan parçalar paketlenir; tam ECharts + GL 1,7 MB'tı.
 echarts.use([TooltipComponent, CanvasRenderer, Grid3DComponent, Bar3DChart, SurfaceChart]);
@@ -87,7 +87,7 @@ function barOption(labels: string[], seriesNames: string[], rows: Row[], horizon
   rows.forEach((r, xi) => seriesNames.forEach((n, yi) => data.push([xi, yi, isNum(r[n]) ? (r[n] as number) : 0])));
   const cat = {
     type: 'category',
-    axisLabel: { fontSize: 11, color: '#475569', margin: 8 },
+    axisLabel: { fontSize: 11, color: '#475569', margin: 8, formatter: (v: string) => clip(v, 12) },
     axisLine: { lineStyle: { color: '#cbd5e1', width: 1 } },
     axisTick: { show: false },
     splitLine: { show: false },
@@ -139,6 +139,13 @@ function barOption(labels: string[], seriesNames: string[], rows: Row[], horizon
         itemStyle: {
           color: (p: { value: [number, number, number] }) => SERIES[(single ? p.value[0] : p.value[1]) % SERIES.length],
         },
+        // Değer her sütunun tepesinde; çok sütunda yalnız üstüne gelince (üst üste binen sayı okunmaz).
+        label: {
+          show: data.length <= LABEL_MAX,
+          distance: 3,
+          textStyle: { fontSize: 10, fontWeight: 'bold', color: '#334155', backgroundColor: 'rgba(255,255,255,.75)', padding: [1, 4], borderRadius: 4 },
+          formatter: (p: { value: [number, number, number] }) => shortNum(p.value[2]),
+        },
         emphasis: { itemStyle: { color: '#1B1F2A' }, label: { show: true, fontSize: 11, formatter: (p: { value: [number, number, number] }) => nf.format(p.value[2]) } },
       },
     ],
@@ -173,16 +180,25 @@ export default function Chart3D({ kind, cols, rows }: { kind: ChartKind; cols: C
     };
   }, [option]);
 
-  const legend = kind === 'pie' || kind === 'donut' ? labels : nums.length > 1 ? nums : [];
+  // Pasta dilimlerinin değeri 3B yüzeye yazılamaz; lejant her dilimin değerini ve payını taşır.
+  const isPie = kind === 'pie' || kind === 'donut';
+  const vals = isPie ? rows.map((r) => (isNum(r[nums[0]]) ? (r[nums[0]] as number) : 0)) : [];
+  const total = vals.reduce((a, b) => a + b, 0) || 1;
+  const legend = isPie ? labels : nums.length > 1 ? nums : [];
   return (
     <div className="flex h-full flex-col">
       <div ref={host} data-nodrag className="min-h-0 flex-1" style={{ touchAction: 'none' }} />
       {legend.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 pt-1 text-[11px] font-semibold text-canvas-muted">
+        <div className="flex max-h-[40%] flex-wrap justify-center gap-x-3 gap-y-0.5 overflow-auto pt-1 text-[11px] font-semibold text-canvas-muted">
           {legend.map((l, i) => (
-            <span key={l} className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-sm" style={{ background: SERIES[i % SERIES.length] }} />
-              {l}
+            <span key={l} className="flex items-center gap-1 whitespace-nowrap" title={l}>
+              <span className="inline-block h-2 w-2 shrink-0 rounded-sm" style={{ background: SERIES[i % SERIES.length] }} />
+              {clip(l, 16)}
+              {isPie && (
+                <span className="font-mono text-[10px] font-bold tabular-nums text-canvas-ink">
+                  {shortNum(vals[i])} · %{Math.round((vals[i] / total) * 100)}
+                </span>
+              )}
             </span>
           ))}
         </div>

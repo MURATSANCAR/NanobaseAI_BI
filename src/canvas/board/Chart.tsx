@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -60,6 +61,53 @@ export function prettyLabel(v: unknown): string {
   const [, y, mo, d] = m;
   const ay = AY[Number(mo) - 1] ?? mo;
   return d === '01' ? `${ay} ${y}` : `${Number(d)} ${ay} ${y}`;
+}
+
+/** Uzun kategori adı eksene sığmaz; kısaltılır, tam adı ipucunda kalır. */
+export const clip = (s: string, n = 14): string => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+
+/** Değer etiketi ancak okunabilecek kadar az nokta varsa çizilir; üst üste binen sayı bilgi değildir. */
+export const LABEL_MAX = 24;
+
+const VALUE_LABEL = { fontSize: 10, fontWeight: 700, fill: '#334155' } as const;
+
+const RAD = Math.PI / 180;
+/** Pasta dilimi etiketi: dışarıda, çizgiyle; %4'ten küçük dilimler yalnız ipucunda. */
+function pieLabel(props: { cx: number; cy: number; midAngle: number; outerRadius: number; percent: number; value: number }) {
+  const { cx, cy, midAngle, outerRadius, percent, value } = props;
+  if (!Number.isFinite(percent) || percent < 0.04) return null;
+  const r = outerRadius + 14;
+  const x = cx + r * Math.cos(-midAngle * RAD);
+  const y = cy + r * Math.sin(-midAngle * RAD);
+  return (
+    <text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" {...VALUE_LABEL}>
+      {shortNum(value)} · %{Math.round(percent * 100)}
+    </text>
+  );
+}
+
+/** Ağaç haritası hücresi: kutu sığdırıyorsa ad ve değer, sığdırmıyorsa yalnız renk. */
+function TreeCell(props: { x?: number; y?: number; width?: number; height?: number; name?: string; value?: number; index?: number }) {
+  const { x = 0, y = 0, width = 0, height = 0, name = '', value, index = 0 } = props;
+  const fits = width > 56 && height > 30;
+  const chars = Math.max(3, Math.floor(width / 6.5));
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} rx={6} fill={SERIES[index % SERIES.length]} stroke="#fff" strokeWidth={2} />
+      {fits && (
+        <>
+          <text x={x + 6} y={y + 14} fontSize={10} fontWeight={700} fill="#fff">
+            {clip(String(name), chars)}
+          </text>
+          {isNum(value) && (
+            <text x={x + 6} y={y + 27} fontSize={10} fontWeight={600} fill="rgba(255,255,255,.85)">
+              {shortNum(value)}
+            </text>
+          )}
+        </>
+      )}
+    </g>
+  );
 }
 
 export function labelCol(cols: Col[], rows: Row[]): string {
@@ -215,6 +263,17 @@ export default function Chart({
   const data = rows.map((r) => ({ ...r, __label: prettyLabel(r[label]) }));
   const axis = { tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false, axisLine: false } as const;
   const depthFilter = depth ? 'drop-shadow(0 8px 10px rgba(20,30,60,.22))' : undefined;
+  const showValues = rows.length * Math.max(1, nums.length) <= LABEL_MAX;
+  // Çok kategori: eksen yazıları eğik ve kısa; az kategori: düz ve biraz daha uzun.
+  const crowded = rows.length > 8;
+  // 24'ten çok kategoride her etiket sığmaz: Recharts baş/son korunarak seyreltir; tam ad ipucunda.
+  const xTick = {
+    ...axis,
+    interval: (rows.length > LABEL_MAX ? 'preserveStartEnd' : 0) as 0 | 'preserveStartEnd',
+    tickFormatter: (v: unknown) => clip(String(v), crowded ? 10 : 14),
+  };
+  // Recharts etiketi çubuk genişliğine sarar; "131,3 Mn" iki satıra bölünmesin diye boşluk kırılmaz.
+  const fmt = (v: unknown) => (isNum(v) ? shortNum(v) : String(v ?? '')).replace(/ /g, '\u00A0');
 
   if (kind === 'pie' || kind === 'donut') {
     const key = nums[0];
@@ -223,15 +282,18 @@ export default function Chart({
         <div className="h-full" style={{ transform: depth ? 'rotateX(38deg)' : undefined, filter: depthFilter }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie animationDuration={500}
+              <Pie
+                animationDuration={500}
                 data={data}
                 dataKey={key}
                 nameKey="__label"
-                innerRadius={kind === 'donut' ? '52%' : 0}
-                outerRadius="82%"
+                innerRadius={kind === 'donut' ? '48%' : 0}
+                outerRadius="68%"
                 paddingAngle={1}
                 stroke="#fff"
                 strokeWidth={2}
+                label={pieLabel}
+                labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
               >
                 {data.map((_, i) => (
                   <Cell key={i} fill={SERIES[i % SERIES.length]} />
@@ -250,7 +312,7 @@ export default function Chart({
     const key = nums[0];
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <Treemap data={data} dataKey={key} nameKey="__label" stroke="#fff" fill={SERIES[0]}>
+        <Treemap data={data} dataKey={key} nameKey="__label" stroke="#fff" fill={SERIES[0]} content={<TreeCell />}>
           <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
         </Treemap>
       </ResponsiveContainer>
@@ -275,7 +337,7 @@ export default function Chart({
     const Wrapper = kind === 'line' ? LineChart : AreaChart;
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <Wrapper data={data} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+        <Wrapper data={data} margin={{ top: showValues ? 18 : 8, right: 16, bottom: crowded ? 8 : 4, left: 0 }}>
           <defs>
             {nums.map((n, i) => (
               <linearGradient key={n} id={`g-${i}`} x1="0" y1="0" x2="0" y2="1">
@@ -285,12 +347,21 @@ export default function Chart({
             ))}
           </defs>
           <CartesianGrid stroke="rgba(30,41,59,.08)" vertical={false} />
-          <XAxis dataKey="__label" {...axis} />
+          <XAxis
+            dataKey="__label"
+            {...xTick}
+            angle={crowded ? -32 : 0}
+            textAnchor={crowded ? 'end' : 'middle'}
+            height={crowded ? 54 : 30}
+            padding={showValues ? { left: 22, right: 22 } : undefined}
+          />
           <YAxis {...axis} tickFormatter={shortNum} width={52} />
           <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
           {nums.map((n, i) =>
             kind === 'line' ? (
-              <Line key={n} animationDuration={500} type="monotone" dataKey={n} stroke={SERIES[i % SERIES.length]} strokeWidth={2.5} dot={false} />
+              <Line key={n} animationDuration={500} type="monotone" dataKey={n} stroke={SERIES[i % SERIES.length]} strokeWidth={2.5} dot={showValues}>
+                {showValues && <LabelList dataKey={n} position="top" offset={8} formatter={fmt} style={VALUE_LABEL} />}
+              </Line>
             ) : (
               <Area
                 key={n}
@@ -300,7 +371,10 @@ export default function Chart({
                 stroke={SERIES[i % SERIES.length]}
                 strokeWidth={2.5}
                 fill={`url(#g-${i})`}
-              />
+                dot={showValues ? { r: 3, strokeWidth: 2, fill: '#fff' } : false}
+              >
+                {showValues && <LabelList dataKey={n} position="top" offset={8} formatter={fmt} style={VALUE_LABEL} />}
+              </Area>
             ),
           )}
           {nums.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
@@ -317,22 +391,28 @@ export default function Chart({
         style={{ transform: depth ? 'rotateX(16deg) rotateY(-8deg)' : undefined, filter: depthFilter }}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} layout={horizontal ? 'vertical' : 'horizontal'} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+          <BarChart
+            data={data}
+            layout={horizontal ? 'vertical' : 'horizontal'}
+            margin={{ top: showValues && !horizontal ? 18 : 8, right: showValues && horizontal ? 52 : 12, bottom: 4, left: 0 }}
+          >
             <CartesianGrid stroke="rgba(30,41,59,.08)" vertical={horizontal} horizontal={!horizontal} />
             {horizontal ? (
               <>
                 <XAxis type="number" {...axis} tickFormatter={shortNum} />
-                <YAxis type="category" dataKey="__label" {...axis} width={110} />
+                <YAxis type="category" dataKey="__label" {...xTick} tickFormatter={(v: unknown) => clip(String(v), 18)} width={118} />
               </>
             ) : (
               <>
-                <XAxis dataKey="__label" {...axis} />
+                <XAxis dataKey="__label" {...xTick} angle={crowded ? -32 : 0} textAnchor={crowded ? 'end' : 'middle'} height={crowded ? 54 : 30} />
                 <YAxis {...axis} tickFormatter={shortNum} width={52} />
               </>
             )}
             <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(124,92,255,.06)' }} formatter={(v: number) => nf.format(v)} />
             {nums.map((n, i) => (
-              <Bar key={n} animationDuration={500} dataKey={n} fill={SERIES[i % SERIES.length]} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]} />
+              <Bar key={n} animationDuration={500} dataKey={n} fill={SERIES[i % SERIES.length]} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}>
+                {showValues && <LabelList dataKey={n} position={horizontal ? 'right' : 'top'} offset={5} formatter={fmt} style={VALUE_LABEL} />}
+              </Bar>
             ))}
             {nums.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           </BarChart>
