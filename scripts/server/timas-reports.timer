@@ -1,0 +1,10 @@
+[Unit]
+Description=Planlı rapor kontrolü, 5 dakikada bir
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Unit=timas-reports.service
+
+[Install]
+WantedBy=timers.target

@@ -2100,6 +2100,113 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r, engine, tenant, ds = _board()
         return board_mod.run_due(engine, tenant, ds, _board_runner(r))
 
+    # ------------------------------------------------------------------ planlı raporlar
+    # Plan bir sorudur; dosya sunucuda üretilir, SMTP varsa gönderilir, yoksa ekrandan indirilir.
+    from fastapi.responses import FileResponse
+    from semantic_bridge import reports as reports_mod
+
+    def _reports() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        reports_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _report_asker(r: Runtime):
+        # Soru her çalışmada yeniden çözülür ("bu ay" o günü anlatsın); veri ayrıca tam çekilir.
+        return lambda q: r.ask(q, thread_id=None, sample_size=1, execute=False)
+
+    def _report_fetcher(r: Runtime):
+        def fetch(sql: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            return list(out.get("columns") or []), rows
+        return fetch
+
+    def _report_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID_REPORT", "message": str(e)})
+
+    @app.get("/api/v1/reports")
+    def reports_list(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        return {"user": user, "reports": reports_mod.list_reports(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+
+    @app.post("/api/v1/reports/parse")
+    def reports_parse(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Cümleyi plana çevirir ve veri sorusunu motora sorup önizleme döndürür; kaydetmez."""
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        draft = reports_mod.parse_prompt(str(body.get("text") or ""))
+        try:
+            a = r.ask(draft["question"], thread_id=None, sample_size=20, execute=True)
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        draft.update(sql=a.get("sql") or "", columns=a.get("columns") or [], records=a.get("records") or [],
+                     rowCount=a.get("rowCount"), summary=a.get("summary") or a.get("explanation") or "")
+        return draft
+
+    @app.post("/api/v1/reports")
+    def reports_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        try:
+            return reports_mod.create_report(engine, tenant, ds, user, body)
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+
+    @app.patch("/api/v1/reports/{rid}")
+    def reports_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        try:
+            out = reports_mod.update_report(engine, tenant, ds, user, rid, body)
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        return out
+
+    @app.delete("/api/v1/reports/{rid}")
+    def reports_delete(rid: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        if not reports_mod.delete_report(engine, tenant, ds, user, rid):
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        return {"ok": True}
+
+    @app.post("/api/v1/reports/{rid}/run")
+    def reports_run(rid: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _reports()
+        if reports_mod.get_report(engine, tenant, ds, user, rid) is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        return reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
+                                      link=os.environ.get("REPORT_LINK", os.environ.get("ALERT_LINK", "")))
+
+    @app.get("/api/v1/reports/{rid}/file")
+    def reports_file(rid: str, request: Request):
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        found = reports_mod.file_of(engine, tenant, ds, user, rid)
+        if not found:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Henüz üretilmiş dosya yok."})
+        path, ctype = found
+        return FileResponse(str(path), media_type=ctype, filename=path.name)
+
+    @app.post("/api/v1/reports/run-due")
+    def reports_run_due(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _reports()
+        return reports_mod.run_due(engine, tenant, ds, _report_asker(r), _report_fetcher(r),
+                                   link=os.environ.get("REPORT_LINK", os.environ.get("ALERT_LINK", "")))
+
     return app
 
 
