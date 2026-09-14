@@ -1,17 +1,30 @@
 import { useEffect, useState } from 'react';
+import { ArrowRight, Database, Eye, EyeOff, Loader2, Lock, ShieldCheck, Sparkles } from 'lucide-react';
 import { ENGINE_BASE, clearAuthBlock } from '../engine';
+import zekiGif from '@/assets/zeki-ai.gif';
 
 /**
- * Oturum kapısı. Motor 401 döndüğünde çıkar: veri gelmemesinin sebebi
- * yanlış sorgu değil, düşmüş oturumdur. Giriş `/timas/auth/login` ucuna
- * Basic başlıkla gider; çerezi sunucu yazar (HttpOnly), uygulama saklamaz.
+ * Oturum kapısı = giriş ekranı. Motor 401 döndüğünde çıkar: veri gelmemesinin
+ * sebebi yanlış sorgu değil, düşmüş oturumdur. Giriş `/timas/auth/login` ucuna
+ * gider; çerezi sunucu yazar (HttpOnly), uygulama saklamaz.
+ *
+ * Tasarım kanvas diliyle aynı: mesh gradyan + nokta ızgara zemin, yüzen ışık
+ * lekeleri, cam panel, mercan→mor vurgu, solda ZEKİ kahramanı.
  */
 export default function SessionGate({ onDone }: { onDone: () => void }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
+  const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [prefilled, setPrefilled] = useState(false);
+  // Girişte kart ve kahraman yumuşakça belirsin diye bir kare sonra işaretlenir.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   // Sunucu bir demo kullanıcısı tanımlamışsa alanları o doldurur.
   // Parola uygulamada gömülü değildir; sunucudan gelir ve süresi doludur.
@@ -61,54 +74,132 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
     }
   };
 
+  const inMod = mounted ? 'lg-in' : '';
+
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-900/20 px-4 py-6 backdrop-blur-[2px]">
-      <form onSubmit={submit} className="glass-panel w-full max-w-[360px] rounded-3xl p-5 shadow-canvas-card sm:p-6">
-        <div className="text-[11px] font-bold uppercase tracking-[.18em] text-muted">Timaş Yayınları</div>
-        <h2 className="mt-1 text-lg font-extrabold tracking-tight text-ink">Oturum kapandı</h2>
-        <p className="mt-1.5 text-[12px] leading-snug text-muted">
-          Devam etmek için giriş yapın.
-        </p>
+    <div className="bg-mesh-canvas cv-scroll fixed inset-0 z-[90] overflow-y-auto">
+      {/* Nokta ızgara + yüzen ışık lekeleri (dekor, hareketi azaltınca durur) */}
+      <div className="dot-grid pointer-events-none absolute inset-0" />
+      <div className="lg-orb lg-drift -left-24 top-[-10%] h-72 w-72 bg-coral/25" />
+      <div className="lg-orb lg-drift-2 right-[-8%] top-[8%] h-80 w-80 bg-violet/25" />
+      <div className="lg-orb lg-drift-3 bottom-[-12%] left-1/3 h-72 w-72 bg-mintSuccess/20" />
 
-        <label className="mt-4 block text-[11px] font-bold text-muted" htmlFor="kullanici">
-          Kullanıcı adı
-        </label>
-        <input
-          id="kullanici"
-          value={user}
-          onChange={(e) => setUser(e.target.value)}
-          autoComplete="username"
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 min-h-11 px-3 py-2 text-base sm:text-[13px] font-semibold text-ink outline-none focus:border-violet"
-        />
-
-        <label className="mt-3 block text-[11px] font-bold text-muted" htmlFor="parola">
-          Parola
-        </label>
-        <input
-          id="parola"
-          type="password"
-          value={pass}
-          onChange={(e) => setPass(e.target.value)}
-          autoComplete="current-password"
-          className="mt-1 w-full rounded-xl border border-slate-200 bg-white/90 min-h-11 px-3 py-2 text-base sm:text-[13px] font-semibold text-ink outline-none focus:border-violet"
-        />
-
-        {prefilled && (
-          <div className="mt-3 rounded-xl bg-canvas-violet/10 px-3 py-2 text-[11.5px] font-semibold text-canvas-violet">
-            Demo kullanıcısı dolduruldu. Giriş yap deyip devam edebilirsiniz.
+      <div className="relative flex min-h-full items-center justify-center px-4 py-8 sm:px-6">
+        <div className="grid w-full max-w-[900px] items-center gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
+          {/* ── Kahraman ── */}
+          <div className={`lg-rise ${inMod} flex flex-col items-center text-center lg:items-start lg:text-left`}>
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[.18em] text-canvas-violet shadow-glass-float backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5" /> Timaş Yayınları · Kurumsal Zekâ
+            </div>
+            {/* ZEKİ görseli kendi çerçevesinde; markası (ZEKİ AI) görselin içinde. */}
+            <div className="relative mt-4 w-full max-w-[380px] overflow-hidden rounded-3xl border border-white/80 bg-white/70 shadow-canvas-card">
+              <img src={zekiGif} alt="ZEKİ AI — Timaş Kurumsal Asistanı" className="h-auto w-full object-cover" />
+            </div>
+            <p className="mt-4 max-w-sm text-[13.5px] font-semibold leading-relaxed text-muted">
+              Verinizle konuşan yayın zekâsı. Sorunuzu yazın; ZEKİ, Logo ve CRM verisinden yanıtı, ürettiği SQL'i ve kanıtı birlikte getirsin.
+            </p>
+            <div className="mt-4 hidden flex-col gap-2 lg:flex">
+              {[
+                { icon: <Database className="h-4 w-4" />, t: 'Canlı Logo & CRM verisi' },
+                { icon: <ShieldCheck className="h-4 w-4" />, t: 'Üretilen SQL ve kanıt her yanıtta' },
+                { icon: <Lock className="h-4 w-4" />, t: 'KVKK uyumlu, salt-okunur erişim' },
+              ].map((f) => (
+                <div key={f.t} className="flex items-center gap-2.5 text-[13px] font-semibold text-ink/80">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-tr from-coral/15 to-violet/15 text-canvas-violet">
+                    {f.icon}
+                  </span>
+                  {f.t}
+                </div>
+              ))}
+            </div>
           </div>
-        )}
 
-        {err && <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{err}</div>}
+          {/* ── Giriş kartı ── */}
+          <form
+            onSubmit={submit}
+            className={`glass-panel lg-rise lg-delay ${inMod} w-full rounded-3xl p-5 shadow-canvas-card sm:p-7`}
+          >
+            <div className={`lg-stagger ${inMod}`}>
+              <div>
+                <h2 className="text-xl font-extrabold tracking-tight text-ink">Tekrar hoş geldiniz</h2>
+                <p className="mt-1 text-[12.5px] leading-snug text-muted">Devam etmek için giriş yapın.</p>
+              </div>
 
-        <button
-          type="submit"
-          disabled={busy || !user || !pass}
-          className="mt-4 min-h-11 w-full rounded-xl bg-gradient-to-r from-coral to-violet px-4 py-2.5 text-[15px] sm:text-[13px] font-extrabold text-white shadow-md transition-transform active:scale-[0.97] disabled:opacity-60"
-        >
-          {busy ? 'Giriş yapılıyor…' : 'Giriş yap'}
-        </button>
-      </form>
+              <div className="mt-5">
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-muted" htmlFor="kullanici">
+                  Kullanıcı adı
+                </label>
+                <input
+                  id="kullanici"
+                  value={user}
+                  onChange={(e) => setUser(e.target.value)}
+                  autoComplete="username"
+                  placeholder="kullanici.adi"
+                  className="min-h-11 w-full rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2.5 text-base font-semibold text-ink outline-none transition focus:border-violet focus:ring-2 focus:ring-violet/25 sm:text-[13.5px]"
+                />
+              </div>
+
+              <div className="mt-3.5">
+                <label className="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-muted" htmlFor="parola">
+                  Parola
+                </label>
+                <div className="relative">
+                  <input
+                    id="parola"
+                    type={show ? 'text' : 'password'}
+                    value={pass}
+                    onChange={(e) => setPass(e.target.value)}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className="min-h-11 w-full rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2.5 pr-11 text-base font-semibold text-ink outline-none transition focus:border-violet focus:ring-2 focus:ring-violet/25 sm:text-[13.5px]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShow((v) => !v)}
+                    aria-label={show ? 'Parolayı gizle' : 'Parolayı göster'}
+                    className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted transition hover:bg-white hover:text-ink"
+                  >
+                    {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {prefilled && (
+                <div className="mt-3.5 flex items-start gap-2 rounded-xl bg-canvas-violet/10 px-3 py-2 text-[11.5px] font-semibold text-canvas-violet">
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>Demo kullanıcısı dolduruldu. “Giriş yap” deyip devam edebilirsiniz.</span>
+                </div>
+              )}
+
+              {err && (
+                <div className="mt-3.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">
+                  {err}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={busy || !user || !pass}
+                className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-coral to-violet px-4 py-3 text-[15px] font-extrabold text-white shadow-[0_12px_30px_-8px_rgba(255,107,74,0.5)] transition-transform duration-150 ease-out hover:brightness-[1.03] active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 sm:text-[14px]"
+              >
+                {busy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Giriş yapılıyor…
+                  </>
+                ) : (
+                  <>
+                    Giriş yap <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <p className="mt-4 text-center text-[11px] font-medium text-muted/80">
+                Timaş Yayın Grubu · Kurumsal Zekâ · Yalnız yetkili kullanıcılar
+              </p>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }

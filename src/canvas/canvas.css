@@ -84,11 +84,86 @@
   border-radius: 9999px;
 }
 
+/* Giriş ekranı (SessionGate): kahraman ve kart yumuşakça belirir. Güçlü
+   ease-out; girişte bir kez görülür, o yüzden standart süre uygundur. */
+.lg-rise {
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+  transition: opacity 0.42s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.42s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform, opacity;
+}
+.lg-rise.lg-in {
+  opacity: 1;
+  transform: none;
+}
+.lg-rise.lg-delay {
+  transition-delay: 0.08s;
+}
+
+/* Kart içindeki alanlar sırayla iner (30–80 ms aralık). */
+.lg-stagger > * {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.lg-stagger.lg-in > * {
+  opacity: 1;
+  transform: none;
+}
+.lg-stagger.lg-in > *:nth-child(1) { transition-delay: 0.1s; }
+.lg-stagger.lg-in > *:nth-child(2) { transition-delay: 0.15s; }
+.lg-stagger.lg-in > *:nth-child(3) { transition-delay: 0.2s; }
+.lg-stagger.lg-in > *:nth-child(4) { transition-delay: 0.25s; }
+.lg-stagger.lg-in > *:nth-child(5) { transition-delay: 0.3s; }
+.lg-stagger.lg-in > *:nth-child(6) { transition-delay: 0.35s; }
+.lg-stagger.lg-in > *:nth-child(7) { transition-delay: 0.4s; }
+
+/* Arka plandaki yumuşak ışık lekeleri; her biri farklı fazda yüzer. */
+.lg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(52px);
+  pointer-events: none;
+}
+@keyframes lgDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -22px, 0) scale(1.06);
+  }
+}
+.lg-drift {
+  animation: lgDrift 11s ease-in-out infinite;
+}
+.lg-drift-2 {
+  animation: lgDrift 14s ease-in-out infinite;
+  animation-delay: -4s;
+}
+.lg-drift-3 {
+  animation: lgDrift 17s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
 /* Hareketi azalt tercihini dinle: yüzen kartlar ve akan çizgiler dursun. */
 @media (prefers-reduced-motion: reduce) {
   .cv-flow,
-  .cv-float {
+  .cv-float,
+  .lg-drift,
+  .lg-drift-2,
+  .lg-drift-3 {
     animation: none;
+  }
+  .lg-rise {
+    transform: none;
+    transition: opacity 0.3s ease;
+  }
+  .lg-stagger > * {
+    transform: none;
+    transition: opacity 0.3s ease;
   }
 }
 
