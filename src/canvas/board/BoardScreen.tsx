@@ -26,18 +26,35 @@ function useUser(): string {
 const INTERACTIVE = 'a, button, input, select, textarea';
 
 /** Taşınabilir ve boyutlandırılabilir pano kartı. */
+/** Dar ekran (<768 px). Panoda kartlar orada alt alta dizilir. */
+function useNarrow(): boolean {
+  const query = '(max-width: 767px)';
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setNarrow(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return narrow;
+}
+
 function CardFrame({
   card,
   onChange,
   onRemove,
   children,
   head,
+  stacked = false,
 }: {
   card: BoardCard;
   onChange: (patch: Partial<BoardCard>) => void;
   onRemove: () => void;
   children: React.ReactNode;
   head: React.ReactNode;
+  /** Telefonda kart konumsuz, tam genişlikte; sürükleme parmakla kaydırmayı kilitlemesin. */
+  stacked?: boolean;
 }) {
   const [live, setLive] = useState<Partial<BoardCard> | null>(null);
   const mode = useRef<'move' | 'size' | null>(null);
@@ -69,21 +86,21 @@ function CardFrame({
 
   return (
     <div
-      className="group/card absolute cursor-grab active:cursor-grabbing"
-      style={{ left: b.x, top: b.y, width: b.w, height: b.h, zIndex: mode.current ? 50 : 20 }}
-      onPointerDown={(e) => down(e, 'move')}
-      onPointerMove={move}
-      onPointerUp={up}
-      onPointerCancel={up}
+      className={stacked ? 'group/card relative w-full' : 'group/card absolute cursor-grab active:cursor-grabbing'}
+      style={stacked ? { height: Math.min(b.h, 340) } : { left: b.x, top: b.y, width: b.w, height: b.h, zIndex: mode.current ? 50 : 20 }}
+      onPointerDown={stacked ? undefined : (e) => down(e, 'move')}
+      onPointerMove={stacked ? undefined : move}
+      onPointerUp={stacked ? undefined : up}
+      onPointerCancel={stacked ? undefined : up}
     >
-      <div className="glass-card flex h-full flex-col rounded-[22px] p-4 shadow-canvas-card">
+      <div className="glass-card flex h-full flex-col rounded-[22px] p-3 shadow-canvas-card sm:p-4">
         <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
           <div className="min-w-0 flex-1">{head}</div>
           <button
             type="button"
             onClick={onRemove}
             title="Karttan çıkar"
-            className="shrink-0 rounded-lg p-1 text-canvas-muted opacity-0 transition hover:bg-red-50 hover:text-red-600 group-hover/card:opacity-100"
+            className="shrink-0 rounded-lg p-1 text-canvas-muted transition hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -202,6 +219,8 @@ export default function BoardScreen() {
 
   const height = useMemo(() => Math.max(720, ...cards.map((c) => c.y + c.h + 40)), [cards]);
 
+  const narrow = useNarrow();
+
   return (
     <Shell
       head={{
@@ -216,7 +235,10 @@ export default function BoardScreen() {
     >
       {/* Kartlar */}
       <main className="absolute bottom-[152px] left-14 right-2 top-16 sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[84px] overflow-auto">
-        <div className="relative mx-auto w-full max-w-[1760px]" style={{ height }}>
+        <div
+          className={narrow ? 'mx-auto flex w-full flex-col gap-3 pb-3' : 'relative mx-auto w-full max-w-[1760px]'}
+          style={narrow ? undefined : { height }}
+        >
           {!cards.length && !pending && (
             <div className="flex h-[420px] flex-col items-center justify-center text-center">
               <div className="glass-card rounded-3xl px-8 py-7 shadow-canvas-card">
@@ -239,6 +261,7 @@ export default function BoardScreen() {
             return (
               <CardFrame
                 key={c.id}
+                stacked={narrow}
                 card={c}
                 onChange={(p) => patch(c.id, p)}
                 onRemove={() => remove(c.id)}

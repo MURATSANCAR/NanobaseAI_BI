@@ -33,7 +33,13 @@ type Ctx = {
   /** En son dokunulan kart üstte durur; taşınınca altta kaybolmasın. */
   front: string | null;
   bringFront: (id: string) => void;
+  /** Dar ekran (<768 px): kartlar mutlak konumdan çıkar, alt alta dizilir. */
+  stacked: boolean;
 };
+
+/** Telefonda kartların sırası: soru, karar kartı, sonra beş cevap kartı. */
+const STACK_ORDER: Record<string, number> = { q: 0, main: 1, c1: 2, c2: 3, c3: 4, c4: 5, c5: 6 };
+export const STACK_BELOW = 768;
 
 const LayoutCtx = createContext<Ctx | null>(null);
 
@@ -157,9 +163,10 @@ export function LayoutProvider({
     setTick((t) => t + 1);
   }, [screen]);
 
+  const stacked = stageW > 0 && stageW < STACK_BELOW;
   const value = useMemo<Ctx>(
-    () => ({ boxes, defaults: spreadDefaults, set, reset, dirty: Boolean(saved), stageW, tick, front, bringFront: setFront }),
-    [boxes, spreadDefaults, set, reset, saved, stageW, tick, front],
+    () => ({ boxes, defaults: spreadDefaults, set, reset, dirty: Boolean(saved), stageW, tick, front, bringFront: setFront, stacked }),
+    [boxes, spreadDefaults, set, reset, saved, stageW, tick, front, stacked],
   );
 
   return <LayoutCtx.Provider value={value}>{children}</LayoutCtx.Provider>;
@@ -204,13 +211,21 @@ export default function Node({
   className?: string;
   children: ReactNode;
 }) {
-  const { boxes, set, stageW, front, bringFront } = useLayout();
+  const { boxes, set, stageW, front, bringFront, stacked } = useLayout();
   const box = boxes[id];
   const [drag, setDrag] = useState<{ dx: number; dy: number; x: number; y: number; moved: boolean; scale: number } | null>(null);
   const [live, setLive] = useState<Box | null>(null);
   const resizing = useRef<{ startX: number; startW: number; scale: number } | null>(null);
 
   if (!box) return null;
+  // Telefonda sürükleme yok: `touch-none` parmakla kaydırmayı da kilitliyordu.
+  if (stacked) {
+    return (
+      <div data-node={id} className={['relative w-full', className].join(' ')} style={{ order: STACK_ORDER[id] ?? 50 }}>
+        {children}
+      </div>
+    );
+  }
   const b = live ?? box;
 
   const onPointerDown = (e: React.PointerEvent) => {

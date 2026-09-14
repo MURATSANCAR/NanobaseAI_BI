@@ -140,8 +140,8 @@ export default function AlertsPanel({
   draft: RuleDraft | null;
 }) {
   return (
-    <div className="absolute bottom-28 left-[92px] right-6 z-50 flex justify-center">
-      <div className="max-h-[calc(100dvh-230px)] w-full max-w-[1040px] overflow-auto rounded-3xl border border-white bg-white p-5 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5">
+    <div className="absolute bottom-[148px] left-2 right-2 z-50 flex justify-center sm:bottom-28 sm:left-[92px] sm:right-6">
+      <div className="max-h-[calc(100dvh-230px)] w-full max-w-[1040px] overflow-auto rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
             {(

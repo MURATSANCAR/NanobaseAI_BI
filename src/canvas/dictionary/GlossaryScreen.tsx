@@ -182,7 +182,7 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
           <div className="mt-1.5 space-y-1">
             {breakdown.map(([k, v]) => (
               <div key={k} className="flex items-center gap-2">
-                <span className="w-[140px] shrink-0 text-[11px] text-canvas-muted">{LABEL[k] ?? k}</span>
+                <span className="w-24 shrink-0 truncate text-[11px] text-canvas-muted sm:w-[140px]">{LABEL[k] ?? k}</span>
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full bg-canvas-violet/70" style={{ width: `${Math.round(v * 100)}%` }} />
                 </div>

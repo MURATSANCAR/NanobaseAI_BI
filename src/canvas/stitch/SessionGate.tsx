@@ -62,8 +62,8 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/20 backdrop-blur-[2px]">
-      <form onSubmit={submit} className="glass-panel w-[360px] rounded-3xl p-6 shadow-canvas-card">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-900/20 px-4 py-6 backdrop-blur-[2px]">
+      <form onSubmit={submit} className="glass-panel w-full max-w-[360px] rounded-3xl p-5 shadow-canvas-card sm:p-6">
         <div className="text-[11px] font-bold uppercase tracking-[.18em] text-muted">Timaş Yayınları</div>
         <h2 className="mt-1 text-lg font-extrabold tracking-tight text-ink">Oturum kapandı</h2>
         <p className="mt-1.5 text-[12px] leading-snug text-muted">

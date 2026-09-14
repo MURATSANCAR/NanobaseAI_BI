@@ -121,7 +121,7 @@ function CanvasBody({
   screen?: string;
   stageRef: React.MutableRefObject<HTMLDivElement | null>;
 }) {
-  const { reset, dirty } = useLayout();
+  const { reset, dirty, stacked } = useLayout();
 
   /**
    * Dikey sığdırma. Tasarım 1000 piksel yüksekliğe çizildi; alçak
@@ -181,19 +181,24 @@ function CanvasBody({
       onReset={dirty ? reset : undefined}
     >
     <main ref={alanRef} className="absolute inset-x-0 top-16 bottom-[136px] sm:top-[84px] sm:bottom-[92px] overflow-auto">
-        <div ref={stageRef} className="relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]" style={{ zoom: (zoom ?? 1) * sig }}>
-    
+        {/* Telefonda sahne ölçeklenmez ve kartlar alt alta akar; ray solda yüzdüğü için içerik ondan içeride başlar. */}
+        <div
+          ref={stageRef}
+          className={stacked ? 'relative mx-auto w-full pb-6 pl-14 pr-3 pt-1' : 'relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]'}
+          style={stacked ? undefined : { zoom: (zoom ?? 1) * sig }}
+        >
+
       {/* SVG CURVED CONNECTOR LINES (Mind-map Constellation) */}
-      <Connectors />
-      
+      {!stacked && <Connectors />}
+
 
       {/* ================= CENTER CONSTELLATION CONTAINER ================= */}
-      <div className="relative h-full w-full">
+      <div className={stacked ? 'flex w-full flex-col gap-4' : 'relative h-full w-full'}>
       
         {/* USER'S QUESTION BUBBLE (Center Top Anchor) */}
         <Node id="q" z={30} resizable={false} className="group/node">
         <div className="animate-float-slow">
-          <div className="glass-panel px-6 py-3.5 rounded-full shadow-canvas-card border border-white flex items-center gap-3.5 ring-4 ring-white/40">
+          <div className="glass-panel px-4 py-3 sm:px-6 sm:py-3.5 rounded-3xl sm:rounded-full shadow-canvas-card border border-white flex items-center gap-3 sm:gap-3.5 ring-4 ring-white/40">
             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-400 via-orange-400 to-rose-500 text-white font-bold text-sm flex items-center justify-center shadow-md">
               {d.q.initials}
             </div>
@@ -471,10 +476,10 @@ function CanvasBody({
 
         {/* ================= MAIN "ZEKİ AI KARARI" CARD ================= */}
         <Node id="main" minW={520} maxW={1200} className="group/node">
-        <div className="glass-card relative rounded-[28px] border-2 border-white/90 p-6 shadow-canvas-card">
-        
+        <div className="glass-card relative rounded-[28px] border-2 border-white/90 p-4 sm:p-6 shadow-canvas-card">
+
           {/* Header badge */}
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100/90">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100/90">
             <div className="flex items-center gap-2.5">
               <span className="px-3 py-1 rounded-full bg-gradient-to-r from-coral to-violet text-white text-[11px] font-extrabold tracking-wide uppercase shadow-sm">
                 {d.main.badge}
@@ -487,13 +492,13 @@ function CanvasBody({
             </div>
           </div>
 
-          <div className="flex items-start gap-6">
-          
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
+
             {/* REQUIRED 160x140 area for brand-motion-slot */}
             <div id="brand-motion-slot" className="w-[160px] h-[140px] shrink-0 rounded-2xl bg-gradient-to-br from-violet/10 via-coral/10 to-amberWarn/15 border border-white flex flex-col items-center justify-center relative overflow-hidden shadow-inner group"><img src={zekiGif} alt="ZEKİ AI — Timaş Yayınları" width="960" height="600" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }} /></div>
 
             {/* Decision Content & Recommended Actions */}
-            <div className="flex-1 flex flex-col justify-between min-h-[140px]">
+            <div className="w-full min-w-0 flex-1 flex flex-col justify-between sm:min-h-[140px]">
               <div>
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
@@ -516,7 +521,7 @@ function CanvasBody({
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
                 {/* Primary Gradient Action */}
                 <Link to={d.main.primaryTo} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
