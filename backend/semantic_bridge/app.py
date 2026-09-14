@@ -2045,6 +2045,61 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
         return {"events": ev}
 
+    # ------------------------------------------------------------------ pano
+    # Kartlar ve son sonuçları burada durur; kimlik giriş servisinden çerezle çözülür.
+    from semantic_bridge import board as board_mod
+
+    def _board() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        board_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _board_user(request: Request) -> str:
+        try:
+            return board_mod.user_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+
+    def _board_runner(r: Runtime):
+        return lambda sql: r.run_sql(sql, r.settings.max_rows)
+
+    @app.get("/api/v1/board")
+    def board_get(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _board()
+        return {"user": user, "cards": board_mod.list_cards(engine, tenant, ds, user)}
+
+    @app.put("/api/v1/board")
+    def board_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _board()
+        try:
+            cards = board_mod.save_cards(engine, tenant, ds, user, list(body.get("cards") or []))
+        except board_mod.BoardError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_BOARD", "message": str(e)}) from e
+        return {"user": user, "cards": cards}
+
+    @app.post("/api/v1/board/cards/{card_id}/run")
+    def board_run(card_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _board()
+        try:
+            out = board_mod.run_card(engine, tenant, ds, user, card_id, _board_runner(r))
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
+        return out
+
+    @app.post("/api/v1/board/run-due")
+    def board_run_due(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _board()
+        return board_mod.run_due(engine, tenant, ds, _board_runner(r))
+
     return app
 
 

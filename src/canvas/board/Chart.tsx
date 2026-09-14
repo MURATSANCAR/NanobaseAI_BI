@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Suspense, lazy, useMemo } from 'react';
 import {
   Area,
   AreaChart,
@@ -20,6 +20,13 @@ import {
   YAxis,
 } from 'recharts';
 import type { ChartKind } from './store';
+
+/** WebGL 3B grafikler (ECharts-GL) ayrı parçadır; yalnız 3B açıkken iner. */
+const Chart3D = lazy(() => import('./Chart3D'));
+const THREE_D: ChartKind[] = ['column', 'bar', 'pie', 'donut'];
+
+/** Kolon adını okunur yapar: gecen_yila_net_ciro → gecen yila net ciro */
+const humanize = (s: string) => s.replace(/^d(?=\d{4})/, '').replace(/_/g, ' ');
 
 /** Kanvas paleti. Seriler bu sırayla renklenir. */
 export const SERIES = ['#7C5CFF', '#FF6B4A', '#10B981', '#F59E0B', '#38BDF8', '#EC4899', '#84CC16', '#A855F7'];
@@ -131,15 +138,47 @@ export default function Chart({
     return <div className="flex h-full items-center justify-center text-[12px] text-canvas-muted">Sonuç boş</div>;
   }
 
+  if (depth && THREE_D.includes(kind)) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex h-full items-center justify-center text-[11px] font-semibold text-canvas-muted">3B yükleniyor…</div>
+        }
+      >
+        <Chart3D kind={kind} cols={cols} rows={rows} />
+      </Suspense>
+    );
+  }
+
   if (kind === 'kpi') {
     const key = nums[0] ?? cols[0]?.name;
     const v = rows[0]?.[key];
+    // İkinci sayı kolonu bir karşılaştırmadır ("geçen yıla göre"): fark rozeti çıkar.
+    const prevKey = rows.length === 1 ? nums[1] : undefined;
+    const prev = prevKey ? rows[0]?.[prevKey] : undefined;
+    const delta = isNum(v) && isNum(prev) && prev !== 0 ? ((v - prev) / Math.abs(prev)) * 100 : null;
     return (
       <div className="flex h-full flex-col items-center justify-center">
         <div className="font-mono text-4xl font-black tabular-nums tracking-tight text-canvas-ink">
           {isNum(v) ? shortNum(v) : String(v ?? '—')}
         </div>
-        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-canvas-muted">{String(key).replace(/_/g, ' ')}</div>
+        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-canvas-muted">{humanize(String(key))}</div>
+        {delta != null && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span
+              className={[
+                'rounded-full px-2 py-0.5 font-mono text-[12px] font-extrabold tabular-nums',
+                delta >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
+              ].join(' ')}
+              title={`Önceki: ${nf.format(prev as number)}`}
+            >
+              {delta >= 0 ? '▲' : '▼'} %{nf.format(Math.abs(delta))}
+            </span>
+            <span className="text-[11px] font-semibold text-canvas-muted">
+              {humanize(String(prevKey))}: {shortNum(prev as number)}
+            </span>
+          </div>
+        )}
       </div>
     );
   }

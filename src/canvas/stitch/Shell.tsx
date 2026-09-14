@@ -98,12 +98,12 @@ export default function Shell({
   useLocation();
 
   return (
-    <div className="bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative">
+    <div className="bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white">
     {/* Interactive Dot Grid Overlay */}
-    <div className="absolute inset-0 dot-grid pointer-events-none z-0"></div>
+    <div className="absolute inset-0 dot-grid pointer-events-none z-0 print:hidden"></div>
 
     {/* ================= TOP FLOATING NAVIGATION ================= */}
-    <header className="absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
+    <header className="print:hidden absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
       {/* Top-Left Glass Breadcrumb Pill */}
       <div className="glass-panel min-w-0 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-2 sm:gap-3 pointer-events-auto transition-transform hover:scale-[1.01]">
         <div className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-[11px] sm:text-xs shadow-sm">
@@ -163,7 +163,7 @@ export default function Shell({
 
     {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
       {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. */}
-      <aside className="absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
+      <aside className="print:hidden absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
         {rail.map((item, i) => (
           <div key={item.to} className="relative group flex items-center shrink-0">
             <Link

@@ -383,3 +383,43 @@
     opacity: 1;
   }
 }
+
+/* Panolar → PDF: tarayıcının "PDF olarak kaydet"i. Kanvas serbest düzendir; kâğıtta
+   kartlar sırayla, her biri tam genişlikte ve bölünmeden basılır. */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  .pano-noprint {
+    display: none !important;
+  }
+  .pano-print-main {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .pano-print-main > div {
+    height: auto !important;
+    display: block !important;
+  }
+  .pano-frame {
+    position: static !important;
+    display: block;
+    width: 100% !important;
+    height: 380px !important;
+    transform: none !important;
+    margin: 0 0 14px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .pano-frame .pano-card {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #fff !important;
+  }
+  .pano-print-head {
+    display: block !important;
+  }
+}

@@ -1,9 +1,9 @@
 /**
- * Kişiye özel pano deposu. Kartlar kullanıcı adına göre saklanır; giriş yapan
- * kişi kendi panosunu görür. Kayıt tarayıcıda tutulur, sunucuya taşınacaksa
- * değişecek tek yer bu dosyadır.
+ * Kişiye özel pano deposu. Doğrusu sunucuda (`boardApi`, köprü `board.py`);
+ * buradaki tarayıcı kaydı yalnız açılışta anında çizmek ve eski panoları
+ * sunucuya bir kez taşımak için tutulur.
  */
-import type { SqlResult } from '../engine';
+import type { BoardCardDto, BoardRefresh, SqlResult } from '../engine';
 
 export type ChartKind =
   | 'column'
@@ -19,8 +19,12 @@ export type ChartKind =
 
 export type BoardCard = {
   id: string;
-  /** Kartı doğuran soru; başlık olarak da kullanılır. */
+  /** Kart başlığı; ilk değeri soru, sonra kişi değiştirebilir. */
   title: string;
+  /** Kartı doğuran soru; karşılaştırma isteğinde yeniden sorulur. */
+  question?: string;
+  /** Kişinin iş notu, başlığın altında. */
+  note?: string;
   sql: string;
   chart: ChartKind;
   /** Derinlikli görünüm (sütun, çubuk ve pasta için). */
@@ -33,8 +37,33 @@ export type BoardCard = {
   z?: number;
   /** Kartın altındaki SQL paneli açık mı; kişi kapatana kadar öyle kalır. */
   sqlOpen?: boolean;
+  /** Sunucudaki zamanlayıcı: elle, saatlik, her gün refreshAt'ta. */
+  refresh?: BoardRefresh;
+  refreshAt?: string | null;
   createdAt: string;
 };
+
+/** Sunucu kaydını istemci kartına çevirir (sonuç ayrı önbelleğe gider). */
+export function fromDto(d: BoardCardDto): BoardCard {
+  return {
+    id: d.id,
+    title: d.title,
+    question: d.question || undefined,
+    note: d.note || undefined,
+    sql: d.sql,
+    chart: (d.chart as ChartKind) || 'table',
+    depth: Boolean(d.depth),
+    x: d.x,
+    y: d.y,
+    w: d.w,
+    h: d.h,
+    z: d.z,
+    sqlOpen: Boolean(d.sqlOpen),
+    refresh: d.refresh || 'manual',
+    refreshAt: d.refreshAt,
+    createdAt: d.createdAt || new Date().toISOString(),
+  };
+}
 
 /** Sürükleme ızgarası (px). Kartlar bu adımlarla hizalanır, düzen dağınık durmaz. */
 export const GRID = 8;

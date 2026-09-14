@@ -1,10 +1,40 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Box, Check, ChevronDown, Clock, Code2, Copy, GripVertical, Loader2, Plus, RotateCw, Send, Trash2, X } from 'lucide-react';
-import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, ask as askEngine, runSql, type SqlResult } from '../engine';
-import { stamp } from '../format';
-import Chart, { CHART_LABEL, allowedCharts, suggestChart, type Col, type Row } from './Chart';
 import {
+  Box,
+  Check,
+  ChevronDown,
+  Clock,
+  Code2,
+  Copy,
+  Download,
+  FileText,
+  GripVertical,
+  Loader2,
+  Pencil,
+  Plus,
+  RefreshCw,
+  RotateCw,
+  Send,
+  Timer,
+  Trash2,
+  X,
+} from 'lucide-react';
+import {
+  ENGINE_BASE,
+  ENGINE_ENABLED,
+  EngineAuthError,
+  ask as askEngine,
+  boardApi,
+  type BoardCardResult,
+  type BoardRefresh,
+  type SqlResult,
+} from '../engine';
+import { stamp } from '../format';
+import Chart, { CHART_LABEL, allowedCharts, numericCols, suggestChart, type Col, type Row } from './Chart';
+import { download, fileName, toCsv } from './export';
+import {
+  fromDto,
   loadBoard,
   newId,
   nextSlot,
@@ -41,6 +71,14 @@ const INTERACTIVE = 'a, button, input, select, textarea, [data-nodrag]';
 
 /** SQL paneli açıkken kart bu kadar uzar; grafik küçülmez, panel altına eklenir. */
 const SQL_EXTRA = 160;
+
+const REFRESH_LABEL: Record<BoardRefresh, string> = { manual: 'Elle', hourly: 'Saatte bir', daily: 'Her gün' };
+
+/** KPI kartı için karşılaştırma ekleri; soru bu ekle yeniden sorulur. */
+const COMPARE = [
+  { key: 'yil', label: 'geçen yıla göre' },
+  { key: 'ay', label: 'geçen aya göre' },
+] as const;
 
 /** Dar ekran (<768 px). Panoda kartlar orada alt alta dizilir. */
 function useNarrow(): boolean {
@@ -93,6 +131,81 @@ function SqlPanel({ sql, className = '' }: { sql: string; className?: string }) 
       <pre className="min-h-0 flex-1 overflow-auto rounded-xl bg-slate-950 p-3 font-mono text-[11px] leading-relaxed text-slate-100 selection:bg-canvas-violet/40">
         {sql.trim()}
       </pre>
+    </div>
+  );
+}
+
+/** Başlık ve not: kaleme basınca yerinde düzenlenir, Enter/Kaydet yazar. */
+function EditableHead({ card, onChange }: { card: BoardCard; onChange: (p: Partial<BoardCard>) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(card.title);
+  const [note, setNote] = useState(card.note ?? '');
+  useEffect(() => {
+    if (!editing) {
+      setTitle(card.title);
+      setNote(card.note ?? '');
+    }
+  }, [card.title, card.note, editing]);
+  const commit = () => {
+    const t = title.trim() || card.title;
+    const n = note.trim();
+    if (t !== card.title || n !== (card.note ?? '')) onChange({ title: t, note: n || undefined });
+    setEditing(false);
+  };
+  if (editing) {
+    return (
+      <div data-nodrag className="flex flex-col gap-1">
+        <input
+          autoFocus
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit();
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          placeholder="Kart başlığı"
+          className="w-full rounded-lg border border-canvas-violet/40 bg-white px-2 py-1 text-[12.5px] font-extrabold outline-none ring-2 ring-canvas-violet/15"
+        />
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          rows={2}
+          placeholder="İş notu (isteğe bağlı): ne anlatıyor, kim bakmalı…"
+          className="w-full resize-none rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11.5px] font-medium outline-none focus:border-canvas-violet/40"
+        />
+        <div className="flex gap-1">
+          <button type="button" onClick={commit} className="pano-press h-7 rounded-lg bg-canvas-violet px-2.5 text-[11px] font-bold text-white">
+            Kaydet
+          </button>
+          <button type="button" onClick={() => setEditing(false)} className="pano-press h-7 rounded-lg px-2 text-[11px] font-bold text-canvas-muted hover:bg-slate-100">
+            Vazgeç
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex min-w-0 items-start gap-1">
+      <div className="min-w-0 flex-1">
+        <div
+          className="truncate text-[12.5px] font-extrabold"
+          title={card.question && card.question !== card.title ? `Soru: ${card.question}` : card.title}
+        >
+          {card.title}
+        </div>
+        {card.note && <div className="line-clamp-2 text-[11px] font-medium leading-snug text-canvas-muted">{card.note}</div>}
+      </div>
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        title="Başlığı ve notu düzenle"
+        className="pano-press pano-noprint flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
+      >
+        <Pencil className="h-3 w-3" />
+      </button>
     </div>
   );
 }
@@ -166,11 +279,8 @@ function CardFrame({
     <div
       className={stacked ? 'pano-frame group/card relative w-full' : 'pano-frame group/card absolute'}
       data-drag={mode ?? undefined}
-      style={
-        stacked
-          ? { height: Math.min(live?.h ?? card.h, 380) + (card.sqlOpen ? SQL_EXTRA : 0) }
-          : { left: card.x, top: card.y, width: w, height: h, transform: shift, zIndex: mode ? 999 : (card.z ?? 20) }
-      }
+      // Telefonda kart içeriği kadar uzar; grafik alanı sabit (aşağıda), başlık/not/kontroller onu ezmez.
+      style={stacked ? undefined : { left: card.x, top: card.y, width: w, height: h, transform: shift, zIndex: mode ? 999 : (card.z ?? 20) }}
       onPointerDown={stacked ? undefined : (e) => down(e, 'move')}
       onPointerMove={stacked ? undefined : move}
       onPointerUp={stacked ? undefined : up}
@@ -180,7 +290,7 @@ function CardFrame({
         <div className={['flex items-start gap-2 border-b border-slate-100 pb-2', stacked ? '' : 'pano-handle cursor-grab'].join(' ')}>
           {!stacked && (
             <span
-              className="mt-0.5 shrink-0 rounded-md p-0.5 text-slate-300 transition-colors group-hover/card:text-slate-400"
+              className="pano-noprint mt-0.5 shrink-0 rounded-md p-0.5 text-slate-300 transition-colors group-hover/card:text-slate-400"
               title="Sürükleyip taşı"
               aria-hidden
             >
@@ -192,7 +302,7 @@ function CardFrame({
             type="button"
             onClick={onRemove}
             title="Karttan çıkar"
-            className="pano-press flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
+            className="pano-press pano-noprint flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -207,7 +317,7 @@ function CardFrame({
           onPointerUp={up}
           onPointerCancel={up}
           title="Boyutlandır"
-          className="absolute -bottom-1 -right-1 h-5 w-5 cursor-nwse-resize rounded-full border-2 border-white bg-slate-300/90 opacity-0 shadow transition-opacity hover:bg-canvas-violet group-hover/card:opacity-100"
+          className="pano-noprint absolute -bottom-1 -right-1 h-5 w-5 cursor-nwse-resize rounded-full border-2 border-white bg-slate-300/90 opacity-0 shadow transition-opacity hover:bg-canvas-violet group-hover/card:opacity-100"
         />
       )}
     </div>
@@ -219,9 +329,10 @@ type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: Ch
 /**
  * Kişiye özel pano. Soru sorulur, gelen sonuç grafiğe çevrilir, "Panoya ekle"
  * denince kart olarak sabitlenir. Kartlar taşınır, boyutlandırılır, tipi
- * değiştirilir; konumları kullanıcı adına kaydedilir.
+ * değiştirilir; düzen ve son sonuçlar sunucuda kişinin adına durur.
  *
- * Kart verisi donmuş değildir: saklanan şey SQL'dir, açılışta yeniden koşar.
+ * Kart verisi donmuş değildir: saklanan şey SQL'dir; sunucu elle, 5 dk bayatlıkta
+ * ya da zamanlayıcıyla yeniden koşar. Açılışta sorgu yok, son sonuç anında çizilir.
  */
 export default function BoardScreen() {
   const user = useUser();
@@ -231,36 +342,81 @@ export default function BoardScreen() {
   const [pendingSql, setPendingSql] = useState(false);
   const [asking, setAsking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
+  const [comparing, setComparing] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  // Açılış: önce tarayıcıdaki kopya (anında), sonra sunucudaki doğrusu.
+  const serverResults = useRef<Record<string, BoardCardResult>>({});
+  const board = useQuery({
+    queryKey: ['pano-board', user],
+    queryFn: () => boardApi.load(),
+    enabled: ENGINE_ENABLED && Boolean(user),
+    retry: false,
+    staleTime: Infinity,
+  });
 
   useEffect(() => {
+    if (!user) return;
     setCards(loadBoard(user));
   }, [user]);
 
+  const migrated = useRef(false);
+  useEffect(() => {
+    if (!board.data || !user) return;
+    const local = loadBoard(user);
+    if (!board.data.cards.length && local.length && !migrated.current) {
+      // Eski tarayıcı panosu bir kez sunucuya taşınır.
+      migrated.current = true;
+      void boardApi.save(local).then((res) => {
+        setCards(res.cards.map(fromDto));
+      });
+      return;
+    }
+    const next = board.data.cards.map(fromDto);
+    for (const d of board.data.cards) if (d.result) serverResults.current[d.id] = d.result;
+    setCards(next);
+    // Sunucu boşsa tarayıcıdaki kopya silinmez; tek yön doğrusu sunucudan gelendir.
+    if (next.length) saveBoard(user, next);
+  }, [board.data, user]);
+
+  const saveTimer = useRef<number | null>(null);
+  const pushToServer = useCallback((next: BoardCard[]) => {
+    setSaveState('saving');
+    return boardApi
+      .save(next)
+      .then(() => setSaveState('idle'))
+      .catch(() => setSaveState('failed'));
+  }, []);
+
+  /** Yerel + sunucu; sunucu yazımı 500 ms toplanır (sürüklerken her piksel gitmesin). */
   const persist = useCallback(
     (next: BoardCard[]) => {
       setCards(next);
       saveBoard(user, next);
+      if (!ENGINE_ENABLED || !user) return;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(() => void pushToServer(next), 500);
     },
-    [user],
+    [user, pushToServer],
   );
 
-  const qc = useQueryClient();
-  // Kayıtlı olan SQL'dir. Kart önce son sonucuyla anında çizilir; sonuç
-  // beş dakikadan eskiyse sorgu arka planda koşar ve kart kendini tazeler.
+  // Kart önce son sonucuyla anında çizilir; beş dakikadan eskiyse sunucu
+  // SQL'i yeniden koşar (sonuç orada da güncellenir) ve kart kendini tazeler.
   const cached = useMemo(() => loadResults(user), [user]);
   const results = useQueries({
     queries: cards.map((c) => {
-      const hit = cached[c.id];
+      const hit = serverResults.current[c.id] ?? cached[c.id];
       return {
         queryKey: ['pano', c.id, c.sql],
         queryFn: async () => {
-          const r = await runSql<Row>(c.sql);
-          saveResult(user, c.id, { ...(r as CardResult), at: Date.now() });
-          return r;
+          const r = await boardApi.run(c.id);
+          saveResult(user, c.id, r as CardResult);
+          return r as SqlResult<Row>;
         },
         initialData: hit ? (hit as unknown as SqlResult<Row>) : undefined,
         initialDataUpdatedAt: hit?.at,
-        enabled: ENGINE_ENABLED && Boolean(c.sql),
+        enabled: ENGINE_ENABLED && Boolean(c.sql) && Boolean(board.data),
         staleTime: 5 * 60_000,
         retry: false,
       };
@@ -290,28 +446,34 @@ export default function BoardScreen() {
     }
   };
 
-  const addPending = () => {
+  const addPending = async () => {
     if (!pending) return;
     const slot = nextSlot(cards);
     const card: BoardCard = {
       id: newId(),
       title: pending.title,
+      question: pending.title,
       sql: pending.sql,
       chart: pending.chart,
       depth: false,
       z: topZ(cards),
+      refresh: 'manual',
       createdAt: new Date().toISOString(),
       ...slot,
     };
-    persist([...cards, card]);
+    const next = [...cards, card];
+    setCards(next);
+    saveBoard(user, next);
     // Önizleme ilk 50 satırdır; kart onunla hemen çizilir ama bayat sayılır ve tam sonuç hemen istenir.
     const seed = { columns: pending.cols, records: pending.rows } as SqlResult<Row>;
     qc.setQueryData(['pano', card.id, card.sql], seed, { updatedAt: pending.at });
     saveResult(user, card.id, { ...(seed as unknown as CardResult), at: pending.at });
-    void qc.invalidateQueries({ queryKey: ['pano', card.id, card.sql] });
     setPending(null);
     setPendingSql(false);
     setPrompt('');
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    await pushToServer(next); // sunucu kartı bilmeden koşturamaz
+    void qc.invalidateQueries({ queryKey: ['pano', card.id, card.sql] });
   };
 
   const patch = (id: string, p: Partial<BoardCard>) => persist(cards.map((c) => (c.id === id ? { ...c, ...p } : c)));
@@ -323,10 +485,51 @@ export default function BoardScreen() {
   };
   const remove = (id: string) => {
     dropResult(user, id);
+    delete serverResults.current[id];
     persist(cards.filter((c) => c.id !== id));
   };
 
-  const height = useMemo(() => Math.max(720, ...cards.map((c) => c.y + c.h + 40)), [cards]);
+  /** KPI kartını karşılaştırmalı hâle çevirir: soru "geçen yıla göre" ekiyle yeniden sorulur. */
+  const compare = async (card: BoardCard, suffix: string) => {
+    if (!ENGINE_ENABLED) return;
+    setComparing(card.id);
+    setErr(null);
+    try {
+      const q = `${card.question || card.title} ${suffix}`;
+      const a = await askEngine(q);
+      const cols = (a.columns ?? []) as Col[];
+      const rows = (a.records ?? []) as Row[];
+      const sql = a.sql;
+      if (!sql || rows.length !== 1 || numericCols(cols, rows).length < 2) {
+        setErr(a.summary || 'Motor bu karşılaştırmayı tek satırda iki sayı olarak veremedi.');
+        return;
+      }
+      const next = cards.map((c) => (c.id === card.id ? { ...c, sql, question: q, chart: 'kpi' as ChartKind } : c));
+      setCards(next);
+      saveBoard(user, next);
+      const seed = { columns: cols, records: rows } as SqlResult<Row>;
+      qc.setQueryData(['pano', card.id, sql], seed, { updatedAt: Date.now() });
+      saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      await pushToServer(next);
+      void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
+    } catch (e) {
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Motor yanıt vermedi.');
+    } finally {
+      setComparing(null);
+    }
+  };
+
+  const refreshAll = () => {
+    for (const r of results) void r.refetch();
+  };
+  const anyFetching = results.some((r) => r.isFetching);
+  const lastRun = results.reduce((m, r) => Math.max(m, r.dataUpdatedAt || 0), 0);
+
+  const height = useMemo(
+    () => Math.max(720, ...cards.map((c) => c.y + c.h + (c.sqlOpen ? SQL_EXTRA : 0) + 40)),
+    [cards],
+  );
 
   const narrow = useNarrow();
   const pendingAllowed = pending ? allowedCharts(pending.cols, pending.rows) : [];
@@ -343,8 +546,55 @@ export default function BoardScreen() {
       }}
       rail={railFor('/panolar')}
     >
+      {/* Araç şeridi: tümünü yenile, PDF, kayıt durumu */}
+      {cards.length > 0 && (
+        <div className="pano-noprint absolute left-14 right-2 top-14 z-30 flex justify-end sm:left-[92px] sm:right-6 sm:top-[76px]">
+          <div className="glass-panel flex items-center gap-1 rounded-full px-1.5 py-1 shadow-glass-float">
+            <button
+              type="button"
+              onClick={refreshAll}
+              disabled={anyFetching}
+              title="Bütün kartları şimdi yeniden sorgula"
+              className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white disabled:opacity-60"
+            >
+              <RefreshCw className={['h-3.5 w-3.5', anyFetching ? 'animate-spin' : ''].join(' ')} />
+              <span className="hidden sm:inline">Tümünü yenile</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              title="Panoyu PDF olarak kaydet (yazdırma penceresi)"
+              className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              PDF
+            </button>
+            <span className="hidden items-center gap-1 border-l border-slate-200/80 pl-2 pr-1 text-[11px] font-semibold text-canvas-muted sm:flex">
+              {saveState === 'saving' ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" /> Kaydediliyor
+                </>
+              ) : saveState === 'failed' ? (
+                <span className="text-red-600">Kaydedilemedi</span>
+              ) : board.isError ? (
+                <span className="text-amber-600">Sunucuya ulaşılamadı</span>
+              ) : (
+                <>
+                  <Clock className="h-3 w-3" /> Son sorgu {stamp(lastRun)}
+                </>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Yazdırma başlığı: yalnız kâğıtta */}
+      <div className="pano-print-head mb-3 hidden text-[12px] text-canvas-muted">
+        <span className="text-base font-extrabold text-canvas-ink">Panom · {user}</span> · {stamp(Date.now())} · {cards.length} kart
+      </div>
+
       {/* Kartlar */}
-      <main className="absolute bottom-[152px] left-14 right-2 top-16 sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[84px] overflow-auto">
+      <main className="pano-print-main absolute bottom-[152px] left-14 right-2 top-[104px] sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[124px] overflow-auto">
         <div
           className={narrow ? 'mx-auto flex w-full flex-col gap-3 pb-3' : 'relative mx-auto w-full max-w-[1760px]'}
           style={narrow ? undefined : { height }}
@@ -356,7 +606,8 @@ export default function BoardScreen() {
                 <h2 className="mt-3 text-base font-extrabold">Panonuz boş</h2>
                 <p className="mt-1.5 max-w-[340px] text-[12.5px] leading-snug text-canvas-muted">
                   Aşağıya bir soru yazın. Gelen sonucu beğenirseniz “Panoya ekle” deyin, kart burada sabit kalsın.
-                  Kartları başlığından tutup sürükleyebilir, köşesinden büyütebilirsiniz.
+                  Kartları başlığından tutup sürükleyebilir, köşesinden büyütebilirsiniz. Pano hesabınıza bağlıdır; başka
+                  bilgisayarda da aynı görünür.
                 </p>
               </div>
             </div>
@@ -370,6 +621,9 @@ export default function BoardScreen() {
             const allowed = allowedCharts(cols, rows);
             const options = allowed.includes(c.chart) ? allowed : [c.chart, ...allowed];
             const sqlOpen = Boolean(c.sqlOpen);
+            const numCount = numericCols(cols, rows).length;
+            const isKpi = c.chart === 'kpi' || (rows.length === 1 && numCount >= 1);
+            const compared = rows.length === 1 && numCount >= 2;
             return (
               <CardFrame
                 key={c.id}
@@ -380,14 +634,12 @@ export default function BoardScreen() {
                 onRemove={() => remove(c.id)}
                 head={
                   <>
-                    <div className="truncate text-[12.5px] font-extrabold" title={c.title}>
-                      {c.title}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <EditableHead card={c} onChange={(p) => patch(c.id, p)} />
+                    <div className="pano-noprint mt-1 flex flex-wrap items-center gap-1.5">
                       <select
                         value={c.chart}
                         onChange={(e) => patch(c.id, { chart: e.target.value as ChartKind })}
-                        className="rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 text-[11px] font-bold text-canvas-muted outline-none"
+                        className="h-7 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted outline-none"
                       >
                         {options.map((o) => (
                           <option key={o} value={o}>
@@ -399,23 +651,77 @@ export default function BoardScreen() {
                         <button
                           type="button"
                           onClick={() => patch(c.id, { depth: !c.depth })}
+                          title="Gerçek 3B görünüm (WebGL); fareyle döndürülür"
                           className={[
-                            'pano-press rounded-lg px-1.5 py-0.5 text-[11px] font-bold transition-colors',
+                            'pano-press h-7 rounded-lg px-1.5 text-[11px] font-bold transition-colors',
                             c.depth ? 'bg-canvas-violet/15 text-canvas-violet' : 'text-canvas-muted hover:bg-slate-100',
                           ].join(' ')}
                         >
                           3B
                         </button>
                       )}
+                      {isKpi && !compared && (
+                        <select
+                          value=""
+                          disabled={comparing === c.id}
+                          onChange={(e) => {
+                            const opt = COMPARE.find((k) => k.key === e.target.value);
+                            if (opt) void compare(c, opt.label);
+                          }}
+                          title="Değeri önceki dönemle karşılaştır"
+                          className="h-7 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted outline-none disabled:opacity-60"
+                        >
+                          <option value="">{comparing === c.id ? 'Soruluyor…' : 'Karşılaştır…'}</option>
+                          {COMPARE.map((k) => (
+                            <option key={k.key} value={k.key}>
+                              {k.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <label
+                        className="flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted"
+                        title="Sunucu kartı kendiliğinden ne zaman tazelesin"
+                      >
+                        <Timer className="h-3 w-3" />
+                        <select
+                          value={c.refresh ?? 'manual'}
+                          onChange={(e) =>
+                            patch(c.id, {
+                              refresh: e.target.value as BoardRefresh,
+                              refreshAt: e.target.value === 'daily' ? c.refreshAt || '08:00' : null,
+                            })
+                          }
+                          className="bg-transparent outline-none"
+                        >
+                          {(Object.keys(REFRESH_LABEL) as BoardRefresh[]).map((k) => (
+                            <option key={k} value={k}>
+                              {REFRESH_LABEL[k]}
+                            </option>
+                          ))}
+                        </select>
+                        {c.refresh === 'daily' && (
+                          <input
+                            type="time"
+                            value={c.refreshAt || '08:00'}
+                            onChange={(e) => patch(c.id, { refreshAt: e.target.value || '08:00' })}
+                            className="w-[92px] bg-transparent font-mono text-[11px] outline-none"
+                          />
+                        )}
+                      </label>
                       <button
                         type="button"
                         onClick={() => void r?.refetch()}
                         title="Şimdi yeniden sorgula"
-                        className="pano-press rounded-lg p-1 text-canvas-muted transition-colors hover:bg-slate-100"
+                        className="pano-press flex h-7 w-7 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-slate-100"
                       >
                         <RotateCw className={['h-3 w-3', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
                       </button>
-                      {r?.isError && <span className="text-[11px] font-bold text-red-600">veri gelmedi</span>}
+                      {r?.isError && (
+                        <span className="text-[11px] font-bold text-red-600" title={r.error instanceof Error ? r.error.message : ''}>
+                          veri gelmedi
+                        </span>
+                      )}
                       {r?.data?.truncated && (
                         <span className="text-[11px] font-bold text-amber-600" title="Sonuç motorun satır sınırında kesildi">
                           ilk {rows.length.toLocaleString('tr-TR')} satır
@@ -440,23 +746,37 @@ export default function BoardScreen() {
                         <span className="hidden sm:inline">· {rows.length.toLocaleString('tr-TR')} satır</span>
                       )}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => patch(c.id, { sqlOpen: !sqlOpen })}
-                      aria-expanded={sqlOpen}
-                      className={[
-                        'pano-press flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold transition-colors',
-                        sqlOpen ? 'bg-slate-900 text-white' : 'text-canvas-muted hover:bg-slate-100 hover:text-canvas-ink',
-                      ].join(' ')}
-                    >
-                      <Code2 className="h-3.5 w-3.5" />
-                      SQL
-                      <ChevronDown className={['h-3 w-3 transition-transform duration-200', sqlOpen ? 'rotate-180' : ''].join(' ')} />
-                    </button>
+                    <span className="pano-noprint flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        disabled={!rows.length}
+                        onClick={() => download(fileName(c.title, 'csv'), toCsv(cols, rows))}
+                        title="Bu kartın verisini CSV (Excel) olarak indir"
+                        className="pano-press flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink disabled:opacity-50"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        CSV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => patch(c.id, { sqlOpen: !sqlOpen })}
+                        aria-expanded={sqlOpen}
+                        className={[
+                          'pano-press flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold transition-colors',
+                          sqlOpen ? 'bg-slate-900 text-white' : 'text-canvas-muted hover:bg-slate-100 hover:text-canvas-ink',
+                        ].join(' ')}
+                      >
+                        <Code2 className="h-3.5 w-3.5" />
+                        SQL
+                        <ChevronDown
+                          className={['h-3 w-3 transition-transform duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]', sqlOpen ? 'rotate-180' : ''].join(' ')}
+                        />
+                      </button>
+                    </span>
                   </>
                 }
               >
-                <div className="min-h-0 flex-1">
+                <div className={narrow ? 'h-[220px] shrink-0' : 'min-h-0 flex-1'}>
                   {r?.isLoading ? (
                     <div className="flex h-full items-center justify-center text-canvas-muted">
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -473,7 +793,7 @@ export default function BoardScreen() {
       </main>
 
       {/* Önizleme + soru çubuğu */}
-      <div className="absolute bottom-3 left-14 right-2 sm:bottom-6 sm:left-[92px] sm:right-6 z-40 flex justify-center">
+      <div className="pano-noprint absolute bottom-3 left-14 right-2 sm:bottom-6 sm:left-[92px] sm:right-6 z-40 flex justify-center">
         <div className="w-full max-w-[980px]">
           {pending && (
             <div
@@ -530,8 +850,10 @@ export default function BoardScreen() {
                   className="pano-press mt-2 flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink"
                 >
                   <Code2 className="h-3.5 w-3.5" />
-                  {pendingSql ? 'SQL\'i gizle' : 'Çalışan SQL\'i göster'}
-                  <ChevronDown className={['h-3 w-3 transition-transform duration-200', pendingSql ? 'rotate-180' : ''].join(' ')} />
+                  {pendingSql ? "SQL'i gizle" : "Çalışan SQL'i göster"}
+                  <ChevronDown
+                    className={['h-3 w-3 transition-transform duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]', pendingSql ? 'rotate-180' : ''].join(' ')}
+                  />
                 </button>
                 {pendingSql && <SqlPanel sql={pending.sql} className="mt-1 h-[160px]" />}
               </div>
@@ -540,7 +862,7 @@ export default function BoardScreen() {
               <div className="flex items-center gap-2 border-t border-slate-100 bg-gradient-to-r from-canvas-coral/10 via-white to-canvas-violet/10 p-3 sm:p-4">
                 <button
                   type="button"
-                  onClick={addPending}
+                  onClick={() => void addPending()}
                   className="pano-cta pano-press flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-canvas-coral to-canvas-violet px-5 text-[14px] font-extrabold text-white shadow-lg shadow-canvas-violet/30 sm:h-14 sm:text-[15px]"
                 >
                   <Plus className="h-5 w-5" />
@@ -559,8 +881,11 @@ export default function BoardScreen() {
           )}
 
           {err && (
-            <div className="glass-card mb-3 rounded-2xl px-4 py-2.5 text-[12px] font-semibold text-red-700 shadow-canvas-card">
-              {err}
+            <div className="glass-card mb-3 flex items-start justify-between gap-2 rounded-2xl px-4 py-2.5 text-[12px] font-semibold text-red-700 shadow-canvas-card">
+              <span>{err}</span>
+              <button type="button" onClick={() => setErr(null)} aria-label="Kapat" className="pano-press shrink-0 rounded-lg p-1 hover:bg-red-50">
+                <X className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
 

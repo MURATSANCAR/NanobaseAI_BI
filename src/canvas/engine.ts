@@ -286,3 +286,39 @@ export const alertsApi = {
       {},
     ),
 };
+
+/* ------------------------------------------------------------------ pano */
+
+export type BoardRefresh = 'manual' | 'hourly' | 'daily';
+
+export type BoardCardResult = SqlResult<Record<string, unknown>> & { at: number };
+
+/** Sunucudaki kart: kişiye özel, son sonucuyla birlikte gelir. */
+export type BoardCardDto = {
+  id: string;
+  title: string;
+  note: string;
+  question: string;
+  sql: string;
+  chart: string;
+  depth: boolean;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  z: number;
+  sqlOpen: boolean;
+  refresh: BoardRefresh;
+  refreshAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  lastAutoAt: string | null;
+  lastError: string | null;
+  result: BoardCardResult | null;
+};
+
+export const boardApi = {
+  load: () => send<{ user: string; cards: BoardCardDto[] }>('GET', '/api/v1/board', undefined, 30_000),
+  save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
+  run: (id: string) => send<BoardCardResult>('POST', `/api/v1/board/cards/${encodeURIComponent(id)}/run`, {}),
+};
