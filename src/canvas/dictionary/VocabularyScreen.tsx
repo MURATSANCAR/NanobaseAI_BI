@@ -15,6 +15,7 @@ import {
   type VocabGroup,
   type VocabItem,
 } from '../engine';
+import { SourceBadge, SourceTabs, matchesSource, useSourceFilter } from './source';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) =>
@@ -38,6 +39,7 @@ export default function VocabularyScreen() {
   const [own, setOwn] = useState('');
   const [sentence, setSentence] = useState('');
   const [flash, setFlash] = useState<string | null>(null);
+  const [source, setSource] = useSourceFilter();
   const detailRef = useRef<HTMLDivElement | null>(null);
   const showDetail = () => {
     if (window.innerWidth >= 768) return;
@@ -59,14 +61,17 @@ export default function VocabularyScreen() {
       return (decided.data?.groups ?? [])
         .map((g) => ({ ...g, items: g.items.filter((i) => i.status === 'APPROVED' || i.status === 'REJECTED') }))
         .filter((g) => g.items.length);
-    return (gaps.data?.items ?? []).map((g) => ({ entity: g.entity, column: g.column, items: [] as VocabItem[], tablePattern: g.tablePattern }));
+    return (gaps.data?.items ?? []).map((g) => ({ entity: g.entity, column: g.column, source: g.source, items: [] as VocabItem[], tablePattern: g.tablePattern }));
   }, [tab, proposed.data, decided.data, gaps.data]);
 
   const filtered = useMemo(() => {
     const n = norm(q.trim());
-    if (!n) return groups;
-    return groups.filter((g) => norm(`${fieldName(g)} ${g.items.map((i) => i.term).join(' ')}`).includes(n));
-  }, [groups, q]);
+    return groups.filter((g) => matchesSource(source, g.source) && (!n || norm(`${fieldName(g)} ${g.items.map((i) => i.term).join(' ')}`).includes(n)));
+  }, [groups, q, source]);
+  const sourceCounts = useMemo(
+    () => ({ all: groups.length, logo: groups.filter((g) => g.source === 'logo').length, crm: groups.filter((g) => g.source === 'crm').length }),
+    [groups],
+  );
   const cur = filtered.find((g) => fieldName(g) === sel) ?? filtered[0];
   const loading = tab === 'oneri' ? proposed.isLoading : tab === 'karar' ? decided.isLoading : gaps.isLoading;
   const err = tab === 'oneri' ? proposed.error : tab === 'karar' ? decided.error : gaps.error;
@@ -151,6 +156,7 @@ export default function VocabularyScreen() {
                 className="w-full bg-transparent font-semibold outline-none placeholder:text-canvas-muted/70 text-base sm:text-[12.5px]"
               />
             </div>
+            <SourceTabs value={source} onChange={(v) => { setSource(v); setSel(''); }} counts={sourceCounts} className="mt-2" />
             <div className="mt-2 text-[11px] font-semibold text-canvas-muted">{nf.format(filtered.length)} alan</div>
             <div className="mt-1.5 flex-1 space-y-1 overflow-auto pr-1">
               {loading && (
@@ -180,6 +186,7 @@ export default function VocabularyScreen() {
                     cur && fieldName(cur) === fieldName(g) ? 'bg-white shadow-sm' : 'hover:bg-white/70',
                   ].join(' ')}
                 >
+                  {source === 'all' && <SourceBadge source={g.source} />}
                   <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] font-bold">{fieldName(g)}</span>
                   {tab !== 'bosluk' && (
                     <span className="shrink-0 rounded-lg bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-canvas-muted">{g.items.length}</span>
@@ -197,8 +204,11 @@ export default function VocabularyScreen() {
               <div className="space-y-5">
                 <div className="flex flex-wrap items-end justify-between gap-2">
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">
-                      {tab === 'bosluk' ? 'Açıklaması olmayan alan' : 'Alanın günlük adları'}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">
+                        {tab === 'bosluk' ? 'Açıklaması olmayan alan' : 'Alanın günlük adları'}
+                      </span>
+                      <SourceBadge source={cur.source} />
                     </div>
                     <h2 className="mt-1 font-mono text-xl font-extrabold tracking-tight sm:text-2xl">{fieldName(cur)}</h2>
                   </div>

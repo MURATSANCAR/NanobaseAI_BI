@@ -11,6 +11,7 @@ import {
   type Decision,
   type ReviewItem,
 } from '../engine';
+import { SourceBadge, SourceTabs, matchesSource, useSourceFilter } from './source';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g');
@@ -67,6 +68,7 @@ export default function ApprovalsScreen() {
   const [note, setNote] = useState('');
   const [column, setColumn] = useState('');
   const [done, setDone] = useState<string | null>(null);
+  const [source, setSource] = useSourceFilter();
 
   const queue = useQuery({
     queryKey: ['onay-kuyrugu'],
@@ -79,9 +81,14 @@ export default function ApprovalsScreen() {
   const items = useMemo(() => queue.data?.items ?? [], [queue.data]);
   const filtered = useMemo(() => {
     const n = norm(q.trim());
-    if (!n) return items;
-    return items.filter((i) => norm(`${i.label ?? ''} ${i.term} ${i.mapping?.entity ?? ''} ${i.mapping?.column ?? ''}`).includes(n));
-  }, [items, q]);
+    return items.filter(
+      (i) => matchesSource(source, i.source) && (!n || norm(`${i.label ?? ''} ${i.term} ${i.mapping?.entity ?? ''} ${i.mapping?.column ?? ''}`).includes(n)),
+    );
+  }, [items, q, source]);
+  const sourceCounts = useMemo(
+    () => ({ all: items.length, logo: items.filter((i) => i.source === 'logo').length, crm: items.filter((i) => i.source === 'crm').length }),
+    [items],
+  );
   const cur: ReviewItem | undefined = filtered.find((i) => i.id === sel) ?? filtered[0];
 
   const act = useMutation({
@@ -141,6 +148,7 @@ export default function ApprovalsScreen() {
                 className="w-full bg-transparent font-semibold outline-none placeholder:text-canvas-muted/70 text-base sm:text-[12.5px]"
               />
             </div>
+            <SourceTabs value={source} onChange={(v) => { setSource(v); setSel(''); }} counts={sourceCounts} className="mt-2" />
             <div className="mt-2 flex-1 space-y-1 overflow-auto pr-1">
               {queue.isLoading && (
                 <div className="flex h-24 items-center justify-center text-canvas-muted">
@@ -168,6 +176,7 @@ export default function ApprovalsScreen() {
                 >
                   <span className="truncate text-[12.5px] font-semibold">{i.label || i.term}</span>
                   <span className="flex items-center gap-2 text-[11px] text-canvas-muted">
+                    {source === 'all' && <SourceBadge source={i.source} />}
                     <span>{TYPE_LABEL[i.type] ?? i.type}</span>
                     {i.mapping?.entity && <span className="font-mono">{i.mapping.entity}</span>}
                     {i.confidence != null && <span>%{Math.round(i.confidence * 100)}</span>}
@@ -186,7 +195,10 @@ export default function ApprovalsScreen() {
             ) : (
               <div className="space-y-5">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">Karar bekleyen terim</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">Karar bekleyen terim</span>
+                    <SourceBadge source={cur.source} />
+                  </div>
                   <h2 className="mt-1 text-2xl font-extrabold tracking-tight">{cur.label || cur.term}</h2>
                   {cur.label && cur.label !== cur.term && (
                     <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">motordaki kaydı: {cur.term}</div>
@@ -226,7 +238,10 @@ export default function ApprovalsScreen() {
                   </div>
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Tablo</div>
-                    <div className="font-mono font-semibold">{cur.mapping?.entity ?? '—'}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 font-mono font-semibold">
+                      <SourceBadge source={cur.source} />
+                      <span className="break-all">{cur.mapping?.entity ?? '—'}</span>
+                    </div>
                   </div>
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Motorun güveni</div>

@@ -15,6 +15,7 @@ import {
   type GapDetail,
   type GapItem,
 } from '../engine';
+import { SourceBadge, SourceTabs, matchesSource, sourcesOf, useSourceFilter } from './source';
 
 /**
  * Veri Sözlüğü. Üç soruya cevap verir, her biri bir bölüm:
@@ -113,7 +114,12 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
   return (
     <div className="space-y-5">
       <div>
-        <div className={eyebrow}>{TYPE_HELP[c.semantic_type] ?? 'Terim'}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={eyebrow}>{TYPE_HELP[c.semantic_type] ?? 'Terim'}</span>
+          {sourcesOf(maps).map((src) => (
+            <SourceBadge key={src} source={src} />
+          ))}
+        </div>
         <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-canvas-ink">{c.term}</h2>
         {(c.synonyms?.length ?? 0) > 0 && (
           <p className="mt-1 text-[13px] text-canvas-muted">
@@ -130,7 +136,8 @@ function ConceptDetail({ row }: { row: ConceptRow }) {
           {maps.map((m: ConceptMapping) => (
             <div key={m.id ?? `${m.entity}.${m.column}.${m.formula}`} className="rounded-xl bg-slate-900 p-3.5 text-slate-100">
               <div className="font-mono text-[12.5px] leading-relaxed">{m.formula ?? `${m.entity ?? ''}.${m.column ?? ''}`}</div>
-              <div className="mt-1.5 text-[11px] text-slate-400">
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] text-slate-400">
+                <SourceBadge source={m.source} className="mr-1" />
                 Tablo <span className="font-mono text-slate-300">{m.entity ?? m.table_pattern ?? '—'}</span>
                 {m.column && (
                   <>
@@ -399,7 +406,10 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
   return (
     <div className="space-y-5">
       <div className="space-y-2">
-        <div className={eyebrow}>Tablo</div>
+        <div className="flex items-center gap-2">
+          <span className={eyebrow}>{d.source === 'crm' ? 'CRM tablosu' : d.source === 'logo' ? 'Logo tablosu' : 'Tablo'}</span>
+          <SourceBadge source={d.source} />
+        </div>
         <h2 className="break-all font-mono text-xl font-extrabold tracking-tight text-canvas-ink">{d.example}</h2>
         <TableDescription d={d} canWrite={canWrite} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-canvas-muted">
@@ -501,6 +511,7 @@ export default function GlossaryScreen() {
   const [type, setType] = useState('');
   const [showEmpty, setShowEmpty] = useState(false);
   const [onlySuggested, setOnlySuggested] = useState(false);
+  const [source, setSource] = useSourceFilter();
   const detailRef = useRef<HTMLDivElement | null>(null);
 
   const conceptsQ = useQuery({
@@ -540,11 +551,12 @@ export default function GlossaryScreen() {
     () =>
       terms.filter((r) => {
         if (type && r.concept.semantic_type !== type) return false;
+        if (source !== 'all' && !sourcesOf(r.mappings ?? []).includes(source)) return false;
         if (!n) return true;
         const m = r.mappings?.[0];
         return norm([r.concept.term, ...(r.concept.synonyms ?? []), m?.formula ?? '', m?.entity ?? '', m?.column ?? ''].join(' ')).includes(n);
       }),
-    [terms, type, n],
+    [terms, type, n, source],
   );
 
   const items = gapsQ.data?.items ?? [];
@@ -552,6 +564,7 @@ export default function GlossaryScreen() {
   const shownTables = useMemo(
     () =>
       items.filter((t) => {
+        if (!matchesSource(source, t.source)) return false;
         if (tab === 'tablolar' && !showEmpty && t.rows === 0) return false;
         if (tab === 'eksikler') {
           if (t.rows === 0 && !showEmpty) return false;
@@ -560,8 +573,23 @@ export default function GlossaryScreen() {
         }
         return !n || norm(`${t.example} ${t.tablePattern} ${t.description ?? ''}`).includes(n);
       }),
-    [items, tab, showEmpty, onlySuggested, n],
+    [items, tab, showEmpty, onlySuggested, n, source],
   );
+
+  /** Seçim düğmelerindeki sayılar, ötekiler (tür, boş tablo, arama) uygulanmış hâliyle. */
+  const sourceCounts = useMemo(() => {
+    if (tab === 'terimler') {
+      const base = terms.filter((r) => !type || r.concept.semantic_type === type);
+      const has = (src: 'logo' | 'crm') => base.filter((r) => sourcesOf(r.mappings ?? []).includes(src)).length;
+      return { all: base.length, logo: has('logo'), crm: has('crm') };
+    }
+    const base = items.filter((t) => {
+      if (t.rows === 0 && !showEmpty) return false;
+      if (tab === 'eksikler' && (!(t.missing || t.tableMissing) || (onlySuggested && !t.suggestions))) return false;
+      return true;
+    });
+    return { all: base.length, logo: base.filter((t) => t.source === 'logo').length, crm: base.filter((t) => t.source === 'crm').length };
+  }, [tab, terms, type, items, showEmpty, onlySuggested]);
 
   const selectedTerm = shownTerms.find((r) => r.concept.id === sel) ?? shownTerms[0];
   const selectedTable: GapItem | undefined = shownTables.find((t) => t.tablePattern === sel) ?? shownTables[0];
@@ -588,7 +616,7 @@ export default function GlossaryScreen() {
       id: 'tablolar',
       icon: Database,
       title: 'Tablolar',
-      help: 'Logo’daki tablolar ne tutuyor, alanları ne demek',
+      help: 'Logo ve CRM tabloları ne tutuyor, alanları ne demek',
       stat: summary ? `${nf.format(items.filter((t) => t.rows > 0).length)} dolu tablo` : '…',
     },
     {
@@ -662,6 +690,8 @@ export default function GlossaryScreen() {
                 />
               </label>
 
+              <SourceTabs value={source} onChange={(v) => { setSource(v); setSel(''); }} counts={sourceCounts} className="mt-2" />
+
               {tab === 'terimler' && types.length > 1 && (
                 <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {['', ...types].map((t) => (
@@ -719,6 +749,7 @@ export default function GlossaryScreen() {
                       ].join(' ')}
                     >
                       <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{r.concept.term}</span>
+                      {source === 'all' && sourcesOf(r.mappings ?? []).map((src) => <SourceBadge key={src} source={src} />)}
                       <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-canvas-muted">
                         {TYPE_LABEL[r.concept.semantic_type] ?? r.concept.semantic_type}
                       </span>
@@ -740,7 +771,10 @@ export default function GlossaryScreen() {
                         {t.description ?? 'Açıklama yok'}
                       </span>
                       <span className="flex items-center justify-between gap-2">
-                        <span className="min-w-0 truncate font-mono text-[11px] text-canvas-muted">{t.example}</span>
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          {source === 'all' && <SourceBadge source={t.source} />}
+                          <span className="min-w-0 truncate font-mono text-[11px] text-canvas-muted">{t.example}</span>
+                        </span>
                         <span className="shrink-0 font-mono text-[11px] tabular-nums text-canvas-muted">{compact.format(t.rows)} satır</span>
                       </span>
                       {tab === 'eksikler' && (
