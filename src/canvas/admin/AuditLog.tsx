@@ -12,6 +12,8 @@ const KINDS = [
   ['setting', 'Ayar'],
   ['term', 'Sözlük terimi'],
   ['annotation', 'Kolon açıklaması'],
+  ['room', 'Toplantı odası'],
+  ['booking', 'Oda rezervasyonu'],
 ] as const;
 const ACTIONS = [
   ['', 'Her işlem'],

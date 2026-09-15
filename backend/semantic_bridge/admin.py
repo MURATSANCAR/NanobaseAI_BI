@@ -72,6 +72,13 @@ SPEC: list[dict[str, Any]] = [
      "help": "Eşik aşılmaya devam ederse kaç saat sonra yeniden bildirilir"},
     {"key": "REPORT_KEEP_FILES", "group": "delivery", "label": "Rapor başına saklanan dosya", "type": "int", "default": "10",
      "help": "Eski dosyalar bu sayıdan sonra silinir"},
+    # Toplantı odaları
+    {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
+     "help": "Oda takviminin ilk saati, SS:DD"},
+    {"key": "ROOM_DAY_END", "group": "rooms", "label": "Takvim bitişi", "type": "time", "default": "20:00",
+     "help": "Oda takviminin son saati, SS:DD (24:00 gece yarısı)"},
+    {"key": "ROOM_SLOT_MINUTES", "group": "rooms", "label": "Saat adımı (dakika)", "type": "int", "default": "30",
+     "help": "Takvimdeki en küçük aralık: 15, 30 ya da 60"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "timasai,muratsancar", "help": "AD hesap adları, virgülle. Bu ekranı yalnız bunlar açar"},
@@ -80,11 +87,13 @@ _BY_KEY = {s["key"]: s for s in SPEC}
 GROUPS = [
     {"id": "email", "label": "E-posta (SMTP)", "help": "Uyarı ve planlı rapor e-postaları bu hesapla gider."},
     {"id": "delivery", "label": "Bildirim ve raporlar", "help": "Gönderim davranışı."},
+    {"id": "rooms", "label": "Toplantı odaları", "help": "Rezervasyon takviminin saatleri."},
     {"id": "access", "label": "Yetki", "help": "Yönetim ekranına kimlerin gireceği."},
 ]
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
-              "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum"}
+              "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
+              "room": "Toplantı odası", "booking": "Oda rezervasyonu"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -167,6 +176,12 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
         if n < 0:
             raise AdminError(f"«{spec['label']}» eksi olamaz.")
         return str(n)
+    if t == "time":
+        import re as _re
+        m = _re.match(r"^([01]\d|2[0-4]):([0-5]\d)$", v)
+        if not m or (m.group(1) == "24" and m.group(2) != "00"):
+            raise AdminError(f"«{spec['label']}» SS:DD biçiminde olmalı, örn. 08:30.")
+        return v
     if t == "email" and v and ("@" not in v or " " in v):
         raise AdminError(f"«{spec['label']}» geçerli bir e-posta adresi değil.")
     if t == "users":

@@ -469,7 +469,7 @@ export const reportsApi = {
 
 /* ------------------------------------------------------------------ yönetim */
 
-export type AdminSettingType = 'text' | 'int' | 'bool' | 'secret' | 'email' | 'users';
+export type AdminSettingType = 'text' | 'int' | 'bool' | 'secret' | 'email' | 'users' | 'time';
 
 export type AdminSetting = {
   key: string;
@@ -592,4 +592,70 @@ export const prefsApi = {
   put: <T,>(key: string, value: T) =>
     send<{ user: string; key: string; value: T; updatedAt: string }>('PUT', `/api/v1/me/prefs/${encodeURIComponent(key)}`, { value }, 15_000),
   remove: (key: string) => send<{ ok: boolean }>('DELETE', `/api/v1/me/prefs/${encodeURIComponent(key)}`, undefined, 15_000),
+};
+
+/* ------------------------------------------------------------------ toplantı odaları */
+
+export type Room = { id: string; name: string; location: string; capacity: number | null; active: boolean };
+export type RoomBooking = {
+  id: string;
+  roomId: string;
+  roomName?: string;
+  start: string;
+  end: string;
+  /** İstanbul günü, YYYY-AA-GG. */
+  date: string;
+  startLocal: string;
+  endLocal: string;
+  username: string;
+  displayName: string;
+  title: string;
+  mine: boolean;
+  canCancel: boolean;
+};
+export type RoomGrid = { start: string; end: string; slotMinutes: number; startMin: number; endMin: number };
+export type RoomsMe = { username: string; displayName: string; admin: boolean };
+export type RoomsDay = { date: string; today: string; grid: RoomGrid; rooms: Room[]; bookings: RoomBooking[]; me: RoomsMe };
+export type RoomNow = Room & { current: RoomBooking | null; next: RoomBooking | null };
+export type RoomsNow = { now: string; today: string; rooms: RoomNow[]; me: RoomsMe };
+
+/** Oda servisinin düz Türkçe hatası. 409'da saati kimin aldığı `booking` içinde gelir. */
+export class RoomsError extends Error {
+  constructor(message: string, readonly status: number, readonly booking?: RoomBooking) {
+    super(message);
+    this.name = 'RoomsError';
+  }
+}
+
+/** `send` 403'ü oturum düşmesi sayar; burada 403 "bu işi yapamazsın" demektir, oturum yerinde kalır. */
+async function roomsSend<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${ENGINE_BASE}${path}`, {
+    method,
+    credentials: 'include',
+    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (res.status === 401) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: { message?: string; booking?: RoomBooking } | string } | null;
+    const d = j?.detail;
+    const msg = typeof d === 'string' ? d : d?.message;
+    throw new RoomsError(msg || `Oda servisi ${res.status}`, res.status, typeof d === 'object' ? d?.booking : undefined);
+  }
+  return (await res.json()) as T;
+}
+
+export const roomsApi = {
+  day: (date: string) => roomsSend<RoomsDay>('GET', `/api/v1/rooms?date=${encodeURIComponent(date)}`),
+  now: () => roomsSend<RoomsNow>('GET', '/api/v1/rooms/now'),
+  book: (roomId: string, b: { date: string; start: string; end: string; title: string }) =>
+    roomsSend<RoomBooking>('POST', `/api/v1/rooms/${encodeURIComponent(roomId)}/bookings`, b),
+  cancel: (id: string) => roomsSend<{ ok: boolean; booking: RoomBooking }>('DELETE', `/api/v1/rooms/bookings/${encodeURIComponent(id)}`),
+  addRoom: (b: { name: string; location: string; capacity: number | null }) => roomsSend<Room>('POST', '/api/v1/admin/rooms', b),
+  removeRoom: (id: string) =>
+    roomsSend<Room & { cancelledBookings: number }>('DELETE', `/api/v1/admin/rooms/${encodeURIComponent(id)}`),
 };

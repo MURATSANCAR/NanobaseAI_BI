@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Contact,
-  DoorClosed,
   Download,
   FileCheck,
   Flag,
@@ -40,6 +39,7 @@ import {
 import groups from '../modules.json';
 import { LIVE } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
+import RoomsCard from '../rooms/RoomsCard';
 import zekiImg from '@/assets/kampus/zeki.jpg';
 import denizImg from '@/assets/kampus/deniz.jpg';
 import ahmetImg from '@/assets/kampus/ahmet.jpg';
@@ -185,7 +185,6 @@ export default function KampusPage() {
   const moduleTotal = moduleGroups.reduce((a, g) => a + g.modules.length, 0);
 
   const [mood, setMood] = useState<string | null>(null);
-  const [booked, setBooked] = useState<Record<string, boolean>>({});
   const [greeted, setGreeted] = useState<Record<string, boolean>>({});
   const [lottery, setLottery] = useState(false);
   const [praise, setPraise] = useState(PRAISE);
@@ -353,45 +352,7 @@ export default function KampusPage() {
             </div>
           </Card>
 
-          <Card id="studios-hub" className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <DoorClosed className="h-4 w-4 text-emerald-600" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Kampüs Odaları &amp; Stüdyo</h3>
-              </div>
-              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">CANLI</span>
-            </div>
-            <div className="space-y-2.5 text-xs">
-              {[
-                { name: 'Podcast Stüdyosu (Kat -1)', note: "Şu an BOŞ • 15:00'e kadar rezerve edilebilir", free: true },
-                { name: 'Büyük Divan Salonu', note: 'DOLU: Çocuk Kitapları Yayın Kurulu', free: false },
-                { name: 'Kütüphane Çalışma Odası 2', note: 'Şu an BOŞ • Sessiz Odak Alanı', free: true },
-              ].map((r) => (
-                <div key={r.name} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-2.5">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`h-2 w-2 shrink-0 rounded-full ${r.free && !booked[r.name] ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                      <span className="font-semibold text-ink">{r.name}</span>
-                    </div>
-                    <p className="mt-0.5 text-[11px] text-muted">{booked[r.name] ? `${firstName} adına ayrıldı` : r.note}</p>
-                  </div>
-                  {r.free ? (
-                    <button
-                      type="button"
-                      onClick={() => setBooked((b) => ({ ...b, [r.name]: !b[r.name] }))}
-                      className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg border whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${
-                        booked[r.name] ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white hover:border-emerald-500 hover:text-emerald-700'
-                      }`}
-                    >
-                      {booked[r.name] ? 'Ayrıldı ✓' : 'Ayırt'}
-                    </button>
-                  ) : (
-                    <span className="kp-mono shrink-0 rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-semibold text-rose-700">16:00'da boş</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
+          <RoomsCard />
 
           <section id="coffee-lottery" className="kp-card relative overflow-hidden rounded-2xl border border-amber-300/80 bg-gradient-to-br from-white/95 to-amber-50/70 p-4">
             <div className="mb-2 flex items-center gap-2 text-amber-900">

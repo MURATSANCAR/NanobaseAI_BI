@@ -2485,6 +2485,88 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except prefs_mod.PrefError as e:
             raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
 
+    # ------------------------------------------------------------------ toplantı odaları
+    # Ortak kaynak: rezervasyonu herkes görür, kimin yaptığı oturumdan gelir. Odaları yönetici tanımlar.
+    from semantic_bridge import rooms as rooms_mod
+
+    def _rooms(request: Request) -> tuple[Any, str, str, str, bool]:
+        _require_caller(request)
+        try:
+            user, display = board_mod.session_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+        r = rt()
+        rooms_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, user, display, admin_mod.is_admin(user)
+
+    def _room_error(e: "rooms_mod.RoomError") -> HTTPException:
+        detail: dict[str, Any] = {"code": type(e).__name__.upper(), "message": str(e)}
+        if isinstance(e, rooms_mod.Conflict):
+            detail["booking"] = e.booking
+        return HTTPException(status_code=e.status, detail=detail)
+
+    @app.get("/api/v1/rooms")
+    def rooms_day(request: Request, date: str = "") -> dict[str, Any]:
+        engine, tenant, user, display, is_admin = _rooms(request)
+        day = date or rooms_mod.today()
+        try:
+            view = rooms_mod.day_view(engine, tenant, day, user, is_admin)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        return {**view, "me": {"username": user, "displayName": display, "admin": is_admin}}
+
+    @app.get("/api/v1/rooms/now")
+    def rooms_now(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, is_admin = _rooms(request)
+        return {**rooms_mod.now_view(engine, tenant, user), "me": {"username": user, "displayName": display, "admin": is_admin}}
+
+    @app.post("/api/v1/rooms/{room_id}/bookings", status_code=201)
+    def rooms_book(room_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display, _ = _rooms(request)
+        try:
+            b = rooms_mod.book(engine, tenant, room_id, user, display, body)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "create", "booking", b["id"],
+                        f"{b['roomName']} · {b['date']} {b['startLocal']}–{b['endLocal']}", {"title": b["title"]})
+        return b
+
+    @app.delete("/api/v1/rooms/bookings/{booking_id}")
+    def rooms_cancel(booking_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        try:
+            b = rooms_mod.cancel(engine, tenant, booking_id, user, is_admin)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "delete", "booking", b["id"],
+                        f"{b['date']} {b['startLocal']}–{b['endLocal']} · {b['displayName']}", {"roomId": b["roomId"]})
+        return {"ok": True, "booking": b}
+
+    @app.post("/api/v1/admin/rooms", status_code=201)
+    def rooms_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        if not is_admin:
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Oda eklemek yönetici yetkisi ister."})
+        try:
+            room = rooms_mod.add_room(engine, tenant, user, body)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "create", "room", room["id"], room["name"], room)
+        return room
+
+    @app.delete("/api/v1/admin/rooms/{room_id}")
+    def rooms_remove(room_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        if not is_admin:
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Oda kaldırmak yönetici yetkisi ister."})
+        try:
+            room = rooms_mod.remove_room(engine, tenant, user, room_id)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "delete", "room", room["id"], room["name"], {"cancelledBookings": room["cancelledBookings"]})
+        return room
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

@@ -118,7 +118,20 @@ def user_of(cookie_header: str, *, fetch: Optional[Callable[[str], Optional[str]
     return user[:120]
 
 
-def _fetch_user(cookie: str) -> Optional[str]:
+def session_of(cookie_header: str, *, fetch: Optional[Callable[[str], Optional[dict]]] = None) -> tuple[str, str]:
+    """Oturumdaki hesap adı ve AD'deki ad soyad. Başkalarına kimin yaptığını göstermesi gereken yerler içindir."""
+    cookie = (cookie_header or "").strip()
+    if not cookie:
+        raise NoUser()
+    data = (fetch or _fetch_session)(cookie) or {}
+    user = str(data.get("username") or "").strip()
+    if not user:
+        raise NoUser()
+    display = str(data.get("displayName") or "").strip() or user
+    return user[:120], display[:200]
+
+
+def _fetch_session(cookie: str) -> Optional[dict]:
     req = urllib.request.Request(f"{LOGIN_URL}/session", headers={"Cookie": cookie})
     try:
         with urllib.request.urlopen(req, timeout=5) as res:  # noqa: S310 - loopback servis
@@ -126,7 +139,12 @@ def _fetch_user(cookie: str) -> Optional[str]:
     except Exception as e:  # noqa: BLE001
         log.warning("board: giriş servisi yanıt vermedi: %s", e)
         return None
-    u = data.get("username") if isinstance(data, dict) else None
+    return data if isinstance(data, dict) else None
+
+
+def _fetch_user(cookie: str) -> Optional[str]:
+    data = _fetch_session(cookie) or {}
+    u = data.get("username")
     return str(u) if u else None
 
 

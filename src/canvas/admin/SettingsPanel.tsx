@@ -43,11 +43,12 @@ function Field({ s, value, onChange, onReset, resetting }: {
           <input
             id={id}
             type={s.type === 'secret' ? 'password' : s.type === 'int' ? 'number' : 'text'}
+            pattern={s.type === 'time' ? '([01][0-9]|2[0-4]):[0-5][0-9]' : undefined}
             inputMode={s.type === 'int' ? 'numeric' : undefined}
             min={s.type === 'int' ? 0 : undefined}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={s.type === 'secret' ? (s.hasValue ? '•••••••• (kayıtlı; değiştirmek için yazın)' : 'Girilmedi') : ''}
+            placeholder={s.type === 'secret' ? (s.hasValue ? '•••••••• (kayıtlı; değiştirmek için yazın)' : 'Girilmedi') : s.type === 'time' ? '08:00' : ''}
             autoComplete={s.type === 'secret' ? 'new-password' : 'off'}
             autoCapitalize="none"
             spellCheck={false}
