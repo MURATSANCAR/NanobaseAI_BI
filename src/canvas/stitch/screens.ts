@@ -49,7 +49,7 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined },
   { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined },
   // Girişten sonraki ana sayfaya dönüş.
-  { to: '/', label: 'Kampüs' },
+  { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
 ];
 
 const DOCK = [
