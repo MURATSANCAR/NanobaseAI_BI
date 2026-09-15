@@ -78,3 +78,40 @@ def test_certification_survives_the_full_run_once_the_table_is_back(store):
     eng = EvidenceEngine(store, min_support=3, threshold=0.6)
     eng.run(TENANT, DS, [_profile()], scoped=False)
     assert store.get_concept(c.id).status != ConceptStatus.REJECTED
+
+
+def _renamed_profile() -> SchemaProfile:
+    """Aynı tablo, sonraki bir taramada önekli varlık adıyla kaydedilmiş hâli."""
+    p = _profile()
+    p.entity = "LG_INVOICE"
+    return p
+
+
+def test_a_table_saved_under_a_new_entity_name_is_not_missing(store):
+    """Varlık adı tarama kapsamına bağlı; tablo kalıbı aynıysa tablo yerindedir, uyarı yazılmaz."""
+    c = _certified(store)
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    report = eng.detect_drift(TENANT, DS, {"LG_INVOICE": _renamed_profile()}, scoped=False)
+    assert not [r for r in report if r.get("drift") == "table_missing"]
+    assert store.get_concept(c.id).status == ConceptStatus.CERTIFIED
+    assert not store.get_concept(c.id).explain.get("schema_drift")
+
+
+def test_a_stale_note_without_counter_evidence_is_withdrawn(store):
+    """Karşı kanıt başka yoldan silinmiş olsa da ekrandaki "tablo yok" notu geri çekilir; kalıbın dbo öneki fark etmez."""
+    m = Mapping("", "INVOICE", "DBO_LG_{n0}_{n1}_INVOICE", column="NETTOTAL")
+    c, _ = store.upsert_concept(TENANT, DS, "net ciro", "METRIC", mapping=m, status=ConceptStatus.CERTIFIED)
+    store.update_concept(c.id, explain={"schema_drift": "table DBO_LG_{n0}_{n1}_INVOICE missing"})
+    eng = EvidenceEngine(store, min_support=3, threshold=0.6)
+    report = eng.detect_drift(TENANT, DS, {"LG_INVOICE": _renamed_profile()}, scoped=False)
+    assert {"concept": "net ciro", "drift": "resolved"} in report
+    assert not store.get_concept(c.id).explain.get("schema_drift")
+
+
+def test_a_note_for_a_table_really_gone_stays(store):
+    c = _certified(store)
+    store.update_concept(c.id, explain={"schema_drift": "table LG_{n0}_{n1}_INVOICE missing"})
+    other = _profile()
+    other.entity, other.table_pattern = "LG_STLINE", "LG_{n0}_{n1}_STLINE"
+    EvidenceEngine(store, min_support=3, threshold=0.6).detect_drift(TENANT, DS, {"LG_STLINE": other}, scoped=True)
+    assert store.get_concept(c.id).explain.get("schema_drift")
