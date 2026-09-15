@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
@@ -36,8 +36,6 @@ const RAIL_ICONS = [
   ),
 ];
 
-const RAIL_KEY = 'timas.rail.open';
-
 export type ShellHead = {
   tenant: string;
   section: string;
@@ -66,20 +64,21 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
-  // Ray açık/kapalı; tercih tarayıcıda kalır. Açıkken menü adları ikonun yanında kendi alanında yazar.
-  const [railOpen, setRailOpen] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(RAIL_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  // Ray açık/kapalı. Açıkken menü adları ikonun yanında yazar; bir menüye gidince, Esc'e basınca ya da dışarı tıklanınca kapanır.
+  const [railOpen, setRailOpen] = useState(false);
+  const railRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    try {
-      localStorage.setItem(RAIL_KEY, railOpen ? '1' : '0');
-    } catch {
-      /* özel pencere */
-    }
+    if (!railOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setRailOpen(false);
+    const onDown = (e: PointerEvent) => {
+      if (railRef.current && !railRef.current.contains(e.target as Node)) setRailOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('pointerdown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerdown', onDown);
+    };
   }, [railOpen]);
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   // Pano izni reddedilirse (odak yok, güvenli bağlam değil) eski yönteme düşer; o da olmazsa bunu söyler.
@@ -181,6 +180,7 @@ export default function Shell({
     {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
       {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. Üstteki ok rayı açar: adlar ikonun yanında yazar. */}
       <aside
+        ref={railRef}
         data-open={railOpen ? '1' : '0'}
         className={
           'rail print:hidden absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-stretch justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto overflow-x-hidden ' +
@@ -211,6 +211,7 @@ export default function Shell({
             <div key={item.to} className="relative group flex items-center shrink-0">
               <Link
                 to={item.to}
+                onClick={() => setRailOpen(false)}
                 aria-label={item.label}
                 aria-current={active ? 'page' : undefined}
                 className={
@@ -239,7 +240,10 @@ export default function Shell({
         <div className="relative group flex items-center mt-auto shrink-0">
           <button
             type="button"
-            onClick={() => setModulesOpen((v) => !v)}
+            onClick={() => {
+              setModulesOpen((v) => !v);
+              setRailOpen(false);
+            }}
             aria-label="Modüller"
             className={
               'rail-item flex items-center min-w-0 overflow-hidden h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl transition ' +
