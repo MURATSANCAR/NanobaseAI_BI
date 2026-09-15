@@ -201,17 +201,24 @@ def _clean(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
     return out
 
 
-def list_rules(engine: sa.engine.Engine, tenant: str, ds: str) -> list[dict[str, Any]]:
+def _scope(tenant: str, ds: str, owner: Optional[str]) -> list[Any]:
+    """Kurallar kişiye aittir (`created_by` = AD hesabı). owner None: herkes (zamanlayıcı, yönetici)."""
+    conds = [RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds]
+    if owner is not None:
+        conds.append(sa.func.lower(RULES.c.created_by) == owner.lower())
+    return conds
+
+
+def list_rules(engine: sa.engine.Engine, tenant: str, ds: str, owner: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(RULES).where(RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds)
+        rows = c.execute(sa.select(RULES).where(*_scope(tenant, ds, owner))
                          .order_by(RULES.c.created_at.desc())).mappings().all()
     return [to_dict(r) for r in rows]
 
 
-def get_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str) -> Optional[dict[str, Any]]:
+def get_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, owner: Optional[str] = None) -> Optional[dict[str, Any]]:
     with engine.connect() as c:
-        row = c.execute(sa.select(RULES).where(RULES.c.id == rule_id, RULES.c.tenant_id == tenant,
-                                               RULES.c.datasource_id == ds)).mappings().first()
+        row = c.execute(sa.select(RULES).where(RULES.c.id == rule_id, *_scope(tenant, ds, owner))).mappings().first()
     return to_dict(row) if row else None
 
 
@@ -228,31 +235,31 @@ def create_rule(engine: sa.engine.Engine, tenant: str, ds: str, body: dict[str, 
     return get_rule(engine, tenant, ds, rid)  # type: ignore[return-value]
 
 
-def update_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, body: dict[str, Any]) -> Optional[dict[str, Any]]:
+def update_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, body: dict[str, Any],
+                owner: Optional[str] = None) -> Optional[dict[str, Any]]:
     vals = _clean(body, partial=True)
     if not vals:
-        return get_rule(engine, tenant, ds, rule_id)
+        return get_rule(engine, tenant, ds, rule_id, owner)
     vals["updated_at"] = _now()
     # Eşik ya da koşul değiştiyse eski "tetiklendi" hâli yeni kuralı anlatmaz; bir sonraki kontrol karar verir.
     if {"threshold", "condition", "question", "sql"} & vals.keys():
         vals.update(state="unknown", last_notify=None)
     with engine.begin() as c:
-        n = c.execute(RULES.update().where(RULES.c.id == rule_id, RULES.c.tenant_id == tenant,
-                                           RULES.c.datasource_id == ds).values(**vals)).rowcount
-    return get_rule(engine, tenant, ds, rule_id) if n else None
+        n = c.execute(RULES.update().where(RULES.c.id == rule_id, *_scope(tenant, ds, owner)).values(**vals)).rowcount
+    return get_rule(engine, tenant, ds, rule_id, owner) if n else None
 
 
-def delete_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str) -> bool:
+def delete_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, owner: Optional[str] = None) -> bool:
     with engine.begin() as c:
-        n = c.execute(RULES.delete().where(RULES.c.id == rule_id, RULES.c.tenant_id == tenant,
-                                           RULES.c.datasource_id == ds)).rowcount
+        n = c.execute(RULES.delete().where(RULES.c.id == rule_id, *_scope(tenant, ds, owner))).rowcount
         if n:
             c.execute(EVENTS.delete().where(EVENTS.c.rule_id == rule_id))
     return bool(n)
 
 
-def events(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, limit: int = 50) -> Optional[list[dict[str, Any]]]:
-    if get_rule(engine, tenant, ds, rule_id) is None:
+def events(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, limit: int = 50,
+           owner: Optional[str] = None) -> Optional[list[dict[str, Any]]]:
+    if get_rule(engine, tenant, ds, rule_id, owner) is None:
         return None
     with engine.connect() as c:
         rows = c.execute(sa.select(EVENTS).where(EVENTS.c.rule_id == rule_id)
@@ -306,16 +313,17 @@ Notifier = Callable[[dict[str, Any], float], str]
 
 def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifier: Notifier, *,
           only: Optional[str] = None, now: Optional[datetime] = None,
-          remind: Optional[timedelta] = None) -> dict[str, Any]:
-    """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir. Aynı anda tek kontrol koşar."""
+          remind: Optional[timedelta] = None, owner: Optional[str] = None) -> dict[str, Any]:
+    """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir. Aynı anda tek kontrol koşar.
+    owner verilirse yalnız o kişinin kuralları; zamanlayıcı owner'sız çağırır."""
     with _check_lock:
-        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind)
+        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind, owner=owner)
 
 
-def _check(engine, tenant, ds, runner, notifier, *, only, now, remind) -> dict[str, Any]:
+def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=None) -> dict[str, Any]:
     now = now or _now()
     remind = remind if remind is not None else timedelta(hours=float(_conf("ALERT_REMIND_HOURS", "24") or 24))
-    q = sa.select(RULES).where(RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds)
+    q = sa.select(RULES).where(*_scope(tenant, ds, owner))
     q = q.where(RULES.c.id == only) if only else q.where(RULES.c.status == "active")
     with engine.connect() as c:
         raws = c.execute(q).mappings().all()

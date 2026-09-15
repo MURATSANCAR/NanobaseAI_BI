@@ -8,10 +8,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useTimasSession } from '../TimasSession';
+import { prefsApi } from '../engine';
 
 /**
- * Kanvas düzeni. Kart konumları ve genişlikleri kullanıcıya ait: sürükle,
- * kenardan çek, bırak. Kayıt tarayıcıda (localStorage), ekran başına ayrı.
+ * Kanvas düzeni. Kart konumları ve genişlikleri kişiye ait: sürükle,
+ * kenardan çek, bırak. Kayıt sunucuda, AD hesabına ve ekrana bağlı
+ * (`/api/v1/me/prefs/layout:<ekran>`); başka bilgisayarda aynı düzen gelir.
+ * Tarayıcı yalnız önbellek tutar ki açılışta kartlar yerinden zıplamasın.
  *
  * Varsayılanlar tasarımdaki koordinatlardır; 1440 genişliğe göre çizildikleri
  * için geniş ekranda oranlanarak açılırlar, yoksa sağda boşluk kalır.
@@ -19,7 +23,11 @@ import {
 export type Box = { x: number; y: number; w: number };
 export type BoxMap = Record<string, Box>;
 
-const KEY = (screen: string) => `timas-kanvas-duzen-v1:${screen}`;
+/** Eski, kişiye bağlı olmayan tarayıcı kaydı. İlk açılışta bir kez sunucuya taşınır. */
+const LEGACY_KEY = (screen: string) => `timas-kanvas-duzen-v1:${screen}`;
+const CACHE_KEY = (user: string, screen: string) => `timas-kanvas-duzen-v2:${user.toLowerCase()}:${screen}`;
+const PREF_KEY = (screen: string) => `layout:${screen}`;
+const SAVE_DELAY_MS = 500;
 
 type Ctx = {
   boxes: BoxMap;
@@ -49,12 +57,21 @@ export function useLayout(): Ctx {
   return c;
 }
 
-function load(screen: string): BoxMap | null {
+function readLocal(key: string): BoxMap | null {
   try {
-    const raw = window.localStorage.getItem(KEY(screen));
+    const raw = window.localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as BoxMap) : null;
   } catch {
     return null;
+  }
+}
+
+function writeLocal(key: string, v: BoxMap | null) {
+  try {
+    if (v) window.localStorage.setItem(key, JSON.stringify(v));
+    else window.localStorage.removeItem(key);
+  } catch {
+    /* saklama kapalıysa önbellek yok; sunucu kaydı yine geçerli */
   }
 }
 
@@ -126,42 +143,85 @@ export function LayoutProvider({
   stageW: number;
   children: ReactNode;
 }) {
-  const [saved, setSaved] = useState<BoxMap | null>(() => load(screen));
+  const session = useTimasSession();
+  const user = session.data?.username ?? '';
+  const [saved, setSaved] = useState<BoxMap | null>(() => (user ? readLocal(CACHE_KEY(user, screen)) : null));
   const [tick, setTick] = useState(0);
   const [front, setFront] = useState<string | null>(null);
+  const timer = useRef<number | null>(null);
+  /** Kişi sürüklemeye başladıysa geç gelen sunucu cevabı onun düzenini ezmesin. */
+  const touched = useRef(false);
 
+  // Sunucudaki düzen doğrudur; önbellek yalnız ilk kareyi doldurur.
   useEffect(() => {
-    setSaved(load(screen));
-  }, [screen]);
+    if (!user) return;
+    touched.current = false;
+    setSaved(readLocal(CACHE_KEY(user, screen)));
+    let alive = true;
+    prefsApi
+      .get<BoxMap>(PREF_KEY(screen))
+      .then(async (r) => {
+        if (!alive || touched.current) return;
+        let value = r.value;
+        const legacy = readLocal(LEGACY_KEY(screen));
+        if (!value && legacy) {
+          // Tarayıcıda kalmış eski düzen bu kişinin hesabına bir kez taşınır.
+          value = (await prefsApi.put(PREF_KEY(screen), legacy)).value;
+        }
+        writeLocal(LEGACY_KEY(screen), null);
+        if (!alive || touched.current) return;
+        writeLocal(CACHE_KEY(user, screen), value);
+        setSaved(value);
+        setTick((t) => t + 1);
+      })
+      .catch(() => {
+        /* sunucuya ulaşılamazsa önbellekteki düzenle devam edilir */
+      });
+    return () => {
+      alive = false;
+    };
+  }, [user, screen]);
+
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearTimeout(timer.current);
+    },
+    [],
+  );
 
   const spreadDefaults = useMemo(() => spread(defaults, stageW), [defaults, stageW]);
   const boxes = useMemo(() => ({ ...spreadDefaults, ...(saved ?? {}) }), [spreadDefaults, saved]);
 
   const set = useCallback(
     (id: string, box: Box) => {
+      touched.current = true;
       setSaved((prev) => {
         const next = { ...(prev ?? {}), [id]: box };
-        try {
-          window.localStorage.setItem(KEY(screen), JSON.stringify(next));
-        } catch {
-          /* saklama kapalıysa düzen yalnız bu oturumda yaşar */
+        if (user) {
+          writeLocal(CACHE_KEY(user, screen), next);
+          // Art arda sürüklemeler tek kayda iner.
+          if (timer.current) window.clearTimeout(timer.current);
+          timer.current = window.setTimeout(() => {
+            void prefsApi.put(PREF_KEY(screen), next).catch(() => undefined);
+          }, SAVE_DELAY_MS);
         }
         return next;
       });
       setTick((t) => t + 1);
     },
-    [screen],
+    [screen, user],
   );
 
   const reset = useCallback(() => {
-    try {
-      window.localStorage.removeItem(KEY(screen));
-    } catch {
-      /* yoksay */
+    touched.current = true;
+    if (timer.current) window.clearTimeout(timer.current);
+    if (user) {
+      writeLocal(CACHE_KEY(user, screen), null);
+      void prefsApi.remove(PREF_KEY(screen)).catch(() => undefined);
     }
     setSaved(null);
     setTick((t) => t + 1);
-  }, [screen]);
+  }, [screen, user]);
 
   const stacked = stageW > 0 && stageW < STACK_BELOW;
   const value = useMemo<Ctx>(

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pause, Play, Search, Trash2 } from 'lucide-react';
-import { adminApi, alertsApi, type AlertRule } from '../engine';
+import { adminApi, type AlertRule } from '../engine';
 import { Loading, Note, Pill, Section, TableWrap, errText, field, fmtDate, nf, td, th } from './ui';
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
@@ -158,14 +158,14 @@ export function AlertsAdmin() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['admin', 'alerts'], queryFn: adminApi.alerts, retry: false });
   const refresh = () => void qc.invalidateQueries({ queryKey: ['admin'] });
-  const status = useMutation({ mutationFn: ({ id, s }: { id: string; s: 'active' | 'paused' }) => alertsApi.update(id, { status: s }), onSuccess: refresh });
-  const del = useMutation({ mutationFn: (id: string) => alertsApi.remove(id), onSuccess: refresh });
+  const status = useMutation({ mutationFn: ({ id, s }: { id: string; s: 'active' | 'paused' }) => adminApi.updateAlert(id, { status: s }), onSuccess: refresh });
+  const del = useMutation({ mutationFn: (id: string) => adminApi.deleteAlert(id), onSuccess: refresh });
   const items = q.data?.items ?? [];
   const { filtered, box } = useFilter(items, (r) => `${r.title} ${r.created_by ?? ''} ${r.question} ${r.recipients.join(' ')}`);
   const err = errText(status.error, 'Değiştirilemedi.') ?? errText(del.error, 'Silinemedi.');
 
   return (
-    <Section title="Uyarılar" help="Eşik kuralları. Kontrol 15 dakikada bir sunucuda yapılır." action={box}>
+    <Section title="Uyarılar" help="Herkesin eşik kuralları; her kişi ekranında yalnız kendininkini görür. Kontrol 15 dakikada bir sunucuda yapılır." action={box}>
       {err && <Note tone="err">{err}</Note>}
       {q.isLoading ? (
         <Loading />

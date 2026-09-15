@@ -274,7 +274,7 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
 }
 
 export const alertsApi = {
-  list: () => send<{ alerts: AlertRule[]; email: AlertEmail }>('GET', '/api/v1/alerts'),
+  list: () => send<{ user: string; alerts: AlertRule[]; email: AlertEmail }>('GET', '/api/v1/alerts'),
   create: (b: AlertInput) => send<AlertRule>('POST', '/api/v1/alerts', b),
   update: (id: string, b: Partial<AlertInput> & { status?: 'active' | 'paused' }) =>
     send<AlertRule>('PATCH', `/api/v1/alerts/${encodeURIComponent(id)}`, b),
@@ -506,8 +506,22 @@ export const adminApi = {
     send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),
   deleteReport: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/reports/${encodeURIComponent(id)}`, undefined, 30_000),
   alerts: () => send<{ items: AlertRule[] }>('GET', '/api/v1/admin/alerts', undefined, 30_000),
+  updateAlert: (id: string, b: Partial<AlertInput> & { status?: 'active' | 'paused' }) =>
+    send<AlertRule>('PATCH', `/api/v1/admin/alerts/${encodeURIComponent(id)}`, b, 30_000),
+  deleteAlert: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/alerts/${encodeURIComponent(id)}`, undefined, 30_000),
   cards: () => send<{ items: AdminCard[] }>('GET', '/api/v1/admin/cards', undefined, 30_000),
   deleteCard: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/cards/${encodeURIComponent(id)}`, undefined, 30_000),
   users: () => send<{ items: AdminUser[] }>('GET', '/api/v1/admin/users', undefined, 30_000),
   audit: (q: AuditQuery) => send<{ items: AuditItem[]; next: number | null }>('GET', `/api/v1/admin/audit${qs(q)}`, undefined, 30_000),
+};
+
+/* ------------------------------------------------------------------ kişi tercihleri */
+
+/** Kişinin kendi ekran alanları (AD hesabına bağlı, sunucuda). */
+export const prefsApi = {
+  get: <T,>(key: string) =>
+    send<{ user: string; key: string; value: T | null; updatedAt: string | null }>('GET', `/api/v1/me/prefs/${encodeURIComponent(key)}`, undefined, 15_000),
+  put: <T,>(key: string, value: T) =>
+    send<{ user: string; key: string; value: T; updatedAt: string }>('PUT', `/api/v1/me/prefs/${encodeURIComponent(key)}`, { value }, 15_000),
+  remove: (key: string) => send<{ ok: boolean }>('DELETE', `/api/v1/me/prefs/${encodeURIComponent(key)}`, undefined, 15_000),
 };

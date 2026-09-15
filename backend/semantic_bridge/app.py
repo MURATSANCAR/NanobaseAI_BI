@@ -2013,21 +2013,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _alert_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": str(e)})
 
+    def _alert_owner(request: Request) -> str:
+        # Uyarı kişiye aittir; oturum yoksa (giriş servisi çerezi çözemedi) 401.
+        return _board_user(request)
+
     @app.get("/api/v1/alerts")
     def alerts_list(request: Request) -> dict[str, Any]:
         _require_caller(request)
+        user = _alert_owner(request)
         _, engine, tenant, ds = _alerts()
-        return {"alerts": alerts_mod.list_rules(engine, tenant, ds), "email": alerts_mod.email_status()}
+        return {"user": user, "alerts": alerts_mod.list_rules(engine, tenant, ds, user), "email": alerts_mod.email_status()}
 
     @app.post("/api/v1/alerts")
     def alerts_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         _require_caller(request)
+        user = _alert_owner(request)
         r, engine, tenant, ds = _alerts()
         try:
-            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=_actor(request))
+            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=user)
         except alerts_mod.AlertError as e:
             raise _alert_fail(e) from None
-        admin_mod.audit(engine, _actor(request), "create", "alert", rule["id"], rule["title"],
+        admin_mod.audit(engine, user, "create", "alert", rule["id"], rule["title"],
                         {"question": rule["question"], "condition": rule["condition"], "threshold": rule["threshold"],
                          "recipients": rule["recipients"]})
         # Kurulur kurulmaz ölçülür ama istek beklemez: yavaş bir cevap tarayıcıyı zaman aşımına düşürüp
@@ -2038,44 +2044,62 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         threading.Thread(target=_alert_check, args=(r, engine, tenant, ds, rule["id"]), daemon=True).start()
         return rule
 
-    @app.patch("/api/v1/alerts/{rule_id}")
-    def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
-        _require_caller(request)
+    def _alert_patch(request: Request, rule_id: str, body: dict[str, Any], owner: Optional[str], actor: str) -> dict[str, Any]:
         _, engine, tenant, ds = _alerts()
-        before = alerts_mod.get_rule(engine, tenant, ds, rule_id) or {}
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id, owner)
+        if before is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
         try:
-            rule = alerts_mod.update_rule(engine, tenant, ds, rule_id, body)
+            rule = alerts_mod.update_rule(engine, tenant, ds, rule_id, body, owner)
         except alerts_mod.AlertError as e:
             raise _alert_fail(e) from None
         if rule is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
         diff = admin_mod.changes(before, rule, ["title", "question", "condition", "threshold", "recipients", "status"])
         if diff:
-            admin_mod.audit(engine, _actor(request), "update", "alert", rule_id, rule["title"], diff)
+            admin_mod.audit(engine, actor, "update", "alert", rule_id, rule["title"], diff)
         return rule
+
+    def _alert_remove(rule_id: str, owner: Optional[str], actor: str) -> dict[str, Any]:
+        _, engine, tenant, ds = _alerts()
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id, owner)
+        if before is None or not alerts_mod.delete_rule(engine, tenant, ds, rule_id, owner):
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        admin_mod.audit(engine, actor, "delete", "alert", rule_id, before.get("title"),
+                        {"question": before.get("question"), "owner": before.get("created_by")})
+        return {"ok": True}
+
+    @app.patch("/api/v1/alerts/{rule_id}")
+    def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        return _alert_patch(request, rule_id, body, user, user)
 
     @app.delete("/api/v1/alerts/{rule_id}")
     def alerts_delete(rule_id: str, request: Request) -> dict[str, Any]:
         _require_caller(request)
-        _, engine, tenant, ds = _alerts()
-        before = alerts_mod.get_rule(engine, tenant, ds, rule_id)
-        if not alerts_mod.delete_rule(engine, tenant, ds, rule_id):
-            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
-        admin_mod.audit(engine, _actor(request), "delete", "alert", rule_id, (before or {}).get("title"),
-                        {"question": (before or {}).get("question")})
-        return {"ok": True}
+        user = _alert_owner(request)
+        return _alert_remove(rule_id, user, user)
 
     @app.post("/api/v1/alerts/check")
     def alerts_check(request: Request, id: Optional[str] = None) -> dict[str, Any]:
+        """Ekrandan: yalnız kişinin kuralları. Zamanlayıcıdan (çerez yok, yalnız çağıran jetonu): hepsi."""
         _require_caller(request)
+        owner: Optional[str] = None
+        if request.headers.get("cookie"):
+            owner = _alert_owner(request)
         r, engine, tenant, ds = _alerts()
-        return _alert_check(r, engine, tenant, ds, only=id)
+        if id and owner is not None and alerts_mod.get_rule(engine, tenant, ds, id, owner) is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner)
 
     @app.get("/api/v1/alerts/{rule_id}/events")
     def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
         _require_caller(request)
+        user = _alert_owner(request)
         _, engine, tenant, ds = _alerts()
-        ev = alerts_mod.events(engine, tenant, ds, rule_id, limit)
+        ev = alerts_mod.events(engine, tenant, ds, rule_id, limit, owner=user)
         if ev is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
         return {"events": ev}
@@ -2272,6 +2296,41 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return reports_mod.run_due(engine, tenant, ds, _report_asker(r), _report_fetcher(r),
                                    link=admin_mod.conf("ALERT_LINK"))
 
+    # ------------------------------------------------------------------ kişi tercihleri
+    # Kişinin ekran düzeni gibi kendi alanları: AD hesabına bağlı, sunucuda. Tarayıcı yalnız önbellek tutar.
+    from semantic_bridge import prefs as prefs_mod
+
+    def _prefs(request: Request) -> tuple[Any, str, str, str]:
+        _require_caller(request)
+        user = _board_user(request)
+        r = rt()
+        prefs_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, r.settings.datasource_id, user
+
+    @app.get("/api/v1/me/prefs/{key}")
+    def prefs_get(key: str, request: Request) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"user": user, "key": key, **prefs_mod.get(engine, tenant, ds, user, key)}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
+    @app.put("/api/v1/me/prefs/{key}")
+    def prefs_put(key: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"user": user, "key": key, **prefs_mod.put(engine, tenant, ds, user, key, body.get("value"))}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
+    @app.delete("/api/v1/me/prefs/{key}")
+    def prefs_delete(key: str, request: Request) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"ok": prefs_mod.delete(engine, tenant, ds, user, key)}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 
@@ -2383,6 +2442,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _, engine, tenant, ds, _ = _admin(request)
         alerts_mod.ensure(engine)
         return {"items": alerts_mod.list_rules(engine, tenant, ds)}
+
+    @app.patch("/api/v1/admin/alerts/{rule_id}")
+    def admin_alert_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, _, _, _, user = _admin(request)
+        return _alert_patch(request, rule_id, body, None, user)
+
+    @app.delete("/api/v1/admin/alerts/{rule_id}")
+    def admin_alert_delete(rule_id: str, request: Request) -> dict[str, Any]:
+        _, _, _, _, user = _admin(request)
+        return _alert_remove(rule_id, None, user)
 
     @app.get("/api/v1/admin/cards")
     def admin_cards(request: Request) -> dict[str, Any]:
