@@ -45,6 +45,20 @@ class LlmClient:
                 log.warning("LLM transport error (attempt %d/3): %s", attempt + 1, e)
         else:
             raise RuntimeError(f"LLM unreachable after 3 attempts: {last}") from last
+        # A hosted endpoint answers 429/529 when its queue is full. That is load, not an answer: NVIDIA's API
+        # returned 529 on the first golden-set call of 2026-09-14. Wait and ask again
+        # for as long as this client's timeout allows.
+        deadline = time.monotonic() + self.timeout
+        wait_s = 5.0
+        while r.status_code in (429, 500, 502, 503, 504, 529) and time.monotonic() + wait_s < deadline:
+            log.warning("LLM HTTP %d, retrying in %.0fs", r.status_code, wait_s)
+            time.sleep(wait_s)
+            wait_s = min(60.0, wait_s * 2)
+            try:
+                with httpx.Client(timeout=self.timeout) as c:
+                    r = c.post(f"{self.base}/chat/completions", json=payload, headers=headers)
+            except httpx.TransportError as e:
+                log.warning("LLM transport error while retrying: %s", e)
         if r.status_code >= 400:
             raise RuntimeError(f"LLM HTTP {r.status_code}: {r.text[:300]}")
         return str(r.json()["choices"][0]["message"]["content"] or "")
