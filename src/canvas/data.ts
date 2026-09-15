@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { BiSchedule } from '@/api/types';
-import { ENGINE_ENABLED, alertsApi, type AlertEmail, type AlertRule } from './engine';
+import { ENGINE_ENABLED, alertsApi, isAuthBlocked, type AlertEmail, type AlertRule } from './engine';
 
 /** Kanvasın tüm sorguları buradan geçer; anahtarlar mevcut sayfalarla aynı
  *  ki bir yerde yapılan değişiklik ötekini de tazelesin. */
@@ -14,7 +14,8 @@ export function useCanvasQueries() {
     queryKey: ['zeki-uyarilar'],
     queryFn: alertsApi.list,
     enabled: ENGINE_ENABLED,
-    refetchInterval: 60_000,
+    // 401 sonrası giriş yapılana kadar yoklama durur; yoksa dakikada bir 401 düşer.
+    refetchInterval: () => (isAuthBlocked() ? false : 60_000),
     retry: false,
   });
 
