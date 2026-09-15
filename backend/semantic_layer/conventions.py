@@ -35,6 +35,10 @@ class Conventions:
     sentinels: dict[tuple[str, str], set[str]] = field(default_factory=dict)
     key_columns: dict[str, list[str]] = field(default_factory=dict)
     ref_columns: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
+    # How a measured link must be compared in SQL, keyed by the join tuple: a cast for an integer
+    # stored as text, a collation where the two sides live in databases that collate differently,
+    # and whether the target's period tables hold disjoint keys (so all of them are joined at once).
+    join_hints: dict[tuple[str, str, str, str], dict] = field(default_factory=dict)
     row_counts: dict[str, int] = field(default_factory=dict)
     patterns: dict[str, str] = field(default_factory=dict)
     time_hint: dict[str, str] = field(default_factory=dict)             # evidence-preferred time column
@@ -79,6 +83,11 @@ class Conventions:
             c.time_columns[p.entity] = times
             c.numeric_columns[p.entity] = numerics
             c.ref_columns[p.entity] = {r["column"].upper(): (r["ref_entity"], r["ref_column"]) for r in p.relationships}
+            for r in p.relationships:
+                if r.get("join_cast") or r.get("join_collate") or r.get("period_semantics"):
+                    c.join_hints[(p.entity, r["column"].upper(), r["ref_entity"], r["ref_column"])] = {
+                        "join_cast": r.get("join_cast"), "join_collate": bool(r.get("join_collate")),
+                        "period_semantics": r.get("period_semantics")}
         return c
 
     # ------------------------------------------------------------------ queries
