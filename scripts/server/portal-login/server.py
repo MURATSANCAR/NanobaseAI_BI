@@ -18,7 +18,11 @@ ORIGIN = os.environ.get('PORTAL_ORIGIN', 'https://portal.nanobase.ai')
 DB = os.environ.get('SESSION_DB', '/var/lib/timas-login/sessions.sqlite')
 # host, port, netbios, dns_domain, base_dn, bind_user, bind_password. Root-owned, never committed.
 AD_FILE = os.environ.get('AD_CONFIG_FILE', '/etc/nanobase/timas-ad.json')
-COOKIE = '__Secure-timas_session'
+# Sunucuda HTTPS: Secure çerez. Müşteri iç ağında HTTP (COOKIE_SECURE=0): tarayıcı Secure çerezi HTTP'de saklamaz,
+# bu yüzden bayrak ve __Secure- öneki birlikte düşer. HttpOnly + SameSite=Strict + Origin denetimi kalır.
+SECURE = os.environ.get('COOKIE_SECURE', '1') != '0'
+COOKIE = '__Secure-timas_session' if SECURE else 'timas_session'
+FLAGS = ('Secure; ' if SECURE else '') + 'HttpOnly; SameSite=Strict'
 TTL = 8 * 3600
 # sAMAccountName characters only: nothing here can widen the LDAP filter.
 ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
@@ -178,7 +182,7 @@ class Handler(BaseHTTPRequestHandler):
                     db.execute('DELETE FROM sessions WHERE token=?', (digest(token),))
             except (KeyError, ValueError):
                 pass
-            return self.reply(200, cookie=f'{COOKIE}=; Path=/timas/; Secure; HttpOnly; SameSite=Strict; Max-Age=0')
+            return self.reply(200, cookie=f'{COOKIE}=; Path=/timas/; {FLAGS}; Max-Age=0')
         if self.path != '/login':
             return self.reply(404)
         try:
@@ -203,7 +207,7 @@ class Handler(BaseHTTPRequestHandler):
         with connection() as db:
             db.execute('DELETE FROM sessions WHERE expires<=?', (time.time(),))
             db.execute('INSERT INTO sessions (token, username, expires, display) VALUES (?, ?, ?, ?)', (digest(token), user, time.time() + TTL, display))
-        self.reply(200, {'username': user, 'displayName': display}, f'{COOKIE}={token}; Path=/timas/; Secure; HttpOnly; SameSite=Strict; Max-Age={TTL}')
+        self.reply(200, {'username': user, 'displayName': display}, f'{COOKIE}={token}; Path=/timas/; {FLAGS}; Max-Age={TTL}')
 
 
 if __name__ == '__main__':

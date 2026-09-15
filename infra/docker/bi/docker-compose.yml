@@ -55,6 +55,8 @@ services:
     environment:
       # Tarayıcının gördüğü adres; değişiklik yapan isteklerde Origin bununla birebir eşleşmeli.
       PORTAL_ORIGIN: ${PORTAL_ORIGIN}
+      # Müşteri iç ağında HTTP'den açılır (HTTPS yok): çerez Secure olmadan verilir.
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
     volumes:
       - ./secrets/ad:/app/ad:ro
       - bi_login:/data

@@ -7,7 +7,7 @@
 #   2) ai kullanıcısı docker grubunda olmalı:  sudo usermod -aG docker ai   (sonra yeniden giriş)
 #   3) VM'de /home/ai/bi-docker/infra/docker/bi/.env (PORTAL_ORIGIN dahil), secrets/logo-mssql-connection.json
 #      ve secrets/ad/timas-ad.json hazır olmalı (bu betik onlara dokunmaz).
-#   4) Dış kapı HTTPS: npm-custom-http.conf başındaki adımlar (kendinden imzalı sertifika + NPM özel ayarı).
+#   4) Dış kapı: npm-custom-http.conf (NPM özel ayarı, HTTP).
 #
 # Kullanım (bizim sunucuda, repo kopyasının kökünde):  bash scripts/server/deploy-customer-vm.sh
 set -euo pipefail
@@ -34,11 +34,11 @@ rsync -rc -e "$SSH" --exclude .env --exclude 'secrets/' --exclude docker-compose
 
 echo "== derle ve kaldır"
 $SSH "$VM" "cd $DST/infra/docker/bi && grep -q '^SEMANTIC_ADMIN_TOKEN=.' .env || echo 'UYARI: .env içinde SEMANTIC_ADMIN_TOKEN boş; onay kararları 403 döner'
-  grep -q '^PORTAL_ORIGIN=https://' .env || { echo 'HATA: .env içinde PORTAL_ORIGIN=https://... yok; giriş 403 döner'; exit 1; }
+  grep -q '^PORTAL_ORIGIN=http' .env || { echo 'HATA: .env içinde PORTAL_ORIGIN yok; giriş 403 döner'; exit 1; }
   test -s secrets/ad/timas-ad.json || { echo 'HATA: secrets/ad/timas-ad.json yok; giriş 503 döner'; exit 1; }
   docker compose build bridge web login && docker compose up -d && sleep 60 && docker compose ps --format '{{.Service}} {{.State}} {{.Status}}'
   docker compose exec -T web nginx -t
   # Oturumsuz: sayfa 200, veri yolları 401, giriş servisi oturum sorusuna 401.
   for p in / /timas/ /timas/auth/session /timas/api/v1/engine /timas/api/v1/alerts /timas/metrics/cfo.json; do echo \"\$p -> \$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8088\$p)\"; done
   docker compose logs --tail 4 jobs"
-echo "== bitti. Dış kapı: https://192.168.0.55/timas/ (NPM özel ayarı, npm-custom-http.conf)."
+echo "== bitti. Dış kapı: http://192.168.0.55/timas/ (NPM özel ayarı, npm-custom-http.conf)."
