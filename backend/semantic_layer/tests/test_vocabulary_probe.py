@@ -54,15 +54,20 @@ def test_a_term_proposed_for_two_fields_waits_for_a_person(catalog, profiles):
     assert row["status"] == "PROPOSED" and row["reason"].startswith(P.PREFIX) and "farklı alana" in row["reason"]
 
 
-def test_a_generator_ambiguity_is_never_decided_by_a_machine(catalog, profiles):
+def test_a_generator_ambiguity_note_is_not_a_veto_but_a_measured_failure_keeps_it(catalog, profiles):
     describe_city(profiles)
     rows = propose(catalog, profiles, "vilayet")
     with catalog.engine.begin() as conn:
         conn.execute(S.sl_vocabulary.update().where(S.sl_vocabulary.c.id == rows["vilayet"]["id"]).values(reason="idari bölge de olabilir"))
     eng = EvidenceEngine(catalog, min_support=3)
-    out = P.auto_decide(catalog, SETTINGS, profiles, eng, resolver_factory=real(profiles), today=TODAY)
+    # measured to fail: the generator's note is kept, not overwritten by the probe's reason
+    miss = lambda store: _Fake(store, plain=[], augmented=[("INVOICE", "CHANNEL")])
+    out = P.auto_decide(catalog, SETTINGS, profiles, eng, resolver_factory=miss, today=TODAY)
     row = next(r for r in V.existing(catalog, SETTINGS, "CLCARD", "CITY") if r["term"] == "vilayet")
     assert out["approved"] == 0 and row["status"] == "PROPOSED" and row["reason"] == "idari bölge de olabilir"
+    # measured to work: approved despite the note
+    out = P.auto_decide(catalog, SETTINGS, profiles, eng, resolver_factory=real(profiles), today=TODAY)
+    assert out["approved"] == 1, out
 
 
 class _Fake:

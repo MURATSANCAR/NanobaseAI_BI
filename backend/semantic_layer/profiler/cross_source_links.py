@@ -72,6 +72,7 @@ class LinkThresholds:
     confirmed_coverage: float = 0.9      # full distinct coverage inside the target's window (step 5)
     min_matched: int = 50                # matched distinct values needed to accept at all
     int_lift: float = 0.1                # containment must beat the key's density by this much
+    first_pass_values: int = 40          # values per column in the first, domain-finding containment pass
 
 
 # ------------------------------------------------------------------------------------------ helpers
@@ -420,12 +421,46 @@ class _SqlProbe:
 
     def contained(self, table, column, values, family):
         found: set[str] = set()
-        for i in range(0, len(values), 500):
-            chunk = values[i:i + 500]
+        for i in range(0, len(values), self.scan_chunk):
+            chunk = values[i:i + self.scan_chunk]
             rows = self.run(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} "
                             f"WHERE {self.q(column)} IN ({self._in_list(chunk, family)}){self.hint}")
             found.update(fold(r["v"]) for r in rows if r.get("v") is not None)
         return found
+
+    def contained_many(self, table, columns: dict[str, tuple[list[str], str]], seek: set[str]) -> dict[str, set[str]]:
+        """Seek columns one by one; every other column of the table in one scan per chunk."""
+        out: dict[str, set[str]] = {}
+        scan = {c: v for c, v in columns.items() if c not in seek}
+        for c in [c for c in columns if c in seek]:
+            values, family = columns[c]
+            out[c] = self.contained(table, c, values, family)
+        if len(scan) <= 1:
+            for c, (values, family) in scan.items():
+                out[c] = self.contained(table, c, values, family)
+            return out
+        wanted = {c: {fold(v) for v in values} for c, (values, _) in scan.items()}
+        flat = [(c, v, f) for c, (values, f) in scan.items() for v in values]
+        for i in range(0, len(flat), self.scan_chunk):
+            chunk = flat[i:i + self.scan_chunk]
+            groups: dict[str, list[str]] = {}
+            fam = {}
+            for c, v, f in chunk:
+                groups.setdefault(c, []).append(v)
+                fam[c] = f
+            apply = ", ".join(f"({_lit(c)}, {self.as_text(self.q(c))})" for c in groups)
+            where = " OR ".join(f"{self.q(c)} IN ({self._in_list(v, fam[c])})" for c, v in groups.items())
+            rows = self.run(f"SELECT DISTINCT x.c, x.v FROM {self.table(table)} "
+                            f"CROSS APPLY (VALUES {apply}) AS x(c, v) WHERE ({where}){self.hint}")
+            for row in rows:
+                c, v = row.get("c"), row.get("v")
+                if c in wanted and v is not None and fold(v) in wanted[c]:
+                    out.setdefault(c, set()).add(fold(v))
+        for c in scan:
+            out.setdefault(c, set())
+        return out
+
+    scan_chunk = 1000
 
     def rows_by(self, table, column, values, family, columns):
         cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in dict.fromkeys([column] + columns))
@@ -516,6 +551,9 @@ class SqliteLinkProbe(_SqlProbe):
         row = self.run(f"SELECT COUNT({self.q(column)}) AS n, COUNT(DISTINCT {self.q(column)}) AS d FROM {self.table(table)}", 1)[0]
         return int(row["n"] or 0), int(row["d"] or 0)
 
+    def contained_many(self, table, columns, seek):
+        return {c: self.contained(table, c, values, family) for c, (values, family) in columns.items()}
+
     def contained(self, table, column, values, family):
         vals = self._in_list(values, family).replace("N'", "'")
         rows = self.run(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} WHERE {self.q(column)} IN ({vals})")
@@ -580,6 +618,7 @@ class DiscoveryReport:
     not_identifier: dict[str, int] = field(default_factory=dict)
     blocked: dict[str, int] = field(default_factory=dict)
     pairs: list[PairResult] = field(default_factory=list)
+    cost: dict[str, Any] = field(default_factory=dict)
     queries: int = 0
     query_seconds: float = 0.0
     thresholds: dict[str, Any] = field(default_factory=dict)
@@ -725,51 +764,87 @@ class CrossSourceLinkDiscovery:
         return self.ranges[key]
 
     # -- step 3: containment
+    def _lookup(self, requests: dict[tuple[str, str, str], set[str]]) -> dict[tuple[str, str, str], dict[str, set[str]]]:
+        """Which of the requested values each target column holds, per physical table.
+
+        Grouped by physical table: every undeclared (scanned) column of one table is looked up in a
+        single pass, and declared keys are looked up by seek. The work is proportional to the tables
+        read, not to the pairs being tested.
+        """
+        per_table: dict[str, tuple[SchemaProfile, dict[tuple[str, str], set[str]]]] = {}
+        for (shape, column, family), values in requests.items():
+            for t in self.shapes[shape].tables:
+                per_table.setdefault(f"{t.schema_name}.{t.table_name}", (t, {}))[1].setdefault((column, family), set()).update(values)
+        out: dict[tuple[str, str, str], dict[str, set[str]]] = {k: {} for k in requests}
+        shape_of = {f"{t.schema_name}.{t.table_name}": sh.key for sh in self.shapes.values() for t in sh.tables}
+        for i, (name, (table, cols)) in enumerate(sorted(per_table.items())):
+            shape = self.shapes[shape_of[name]]
+            try:
+                hits = self.probe.contained_many(table, {c: (sorted(v), f) for (c, f), v in cols.items()},
+                                                 seek={c for c, _ in cols if is_declared_key(shape, c)})
+            except Exception as e:  # noqa: BLE001
+                log.warning("containment failed on %s: %s", name, str(e)[:200])
+                hits = {}
+            for (column, family) in cols:
+                out[(shape.key, column, family)][table.table_name] = hits.get(column, set())
+            if (i + 1) % 100 == 0:
+                self.progress(f"containment: {i + 1}/{len(per_table)} tables read")
+        return out
+
     def contain(self, pairs: list[tuple[ColumnSample, ColumnSample]]) -> list[PairResult]:
-        """One lookup per target table, with every referencing column's values batched into it."""
+        """Two passes. A small spread of each column's values first, to find the targets whose domain
+        meets it at all; then the full sample, only against those. Every pair keeps its pass-1 figures
+        when it stops there."""
         by_key: dict[tuple[str, str, str], list[ColumnSample]] = {}
         for r, k in pairs:
             by_key.setdefault((k.shape, k.column, lookup_family(r, k)), []).append(r)
+        first_n = max(self.th.min_distinct, self.th.first_pass_values)
+        first = {key: {v for r in refs for v in _spread(r.profile.values, first_n)} for key, refs in by_key.items()}
+        self.progress(f"containment pass 1: {len(first)} target columns")
+        hits1 = self._lookup(first)
+        survivors: dict[tuple[str, str, str], list[ColumnSample]] = {}
         results: list[PairResult] = []
-        done = 0
-        for (kshape, kcol, family), refs in sorted(by_key.items()):
-            ks = self.shapes[kshape]
-            values = sorted({v for r in refs for v in r.profile.values})
-            hits_per_table: dict[str, set[str]] = {}
-            for t in ks.tables:
-                try:
-                    hits_per_table[t.table_name] = self.probe.contained(t, kcol, values, family)
-                except Exception as e:  # noqa: BLE001
-                    log.debug("contain failed %s.%s: %s", t.table_name, kcol, e)
-                    hits_per_table[t.table_name] = set()
-            lo, hi = self.ranges.get((kshape, kcol.upper()), (None, None))
-            rows = sum(t.row_count or 0 for t in ks.tables) / max(1, len(ks.tables))
-            density = (rows / (hi - lo + 1)) if family == INT and lo is not None and hi is not None and hi >= lo else None
+        for key, refs in by_key.items():
             for r in refs:
-                rs = self.shapes[r.shape]
-                vals = [fold(v) for v in r.profile.values]
-                per = {tn: sum(1 for v in vals if v in hit) for tn, hit in hits_per_table.items()}
-                union = set().union(*hits_per_table.values()) if hits_per_table else set()
-                matched = sum(1 for v in vals if v in union)
-                containment = matched / max(1, len(vals))
-                res = PairResult(r.shape, rs.entity, r.column, kshape, ks.entity, kcol, family, "contain",
-                                 sample_size=len(vals), sample_matched=matched, sample_containment=round(containment, 4),
-                                 sample_per_table=per, key_density=round(density, 4) if density is not None else None,
-                                 measured_at=_now())
-                if containment < self.th.sample_containment:
-                    res.reason = f"sample containment {containment:.2f} < {self.th.sample_containment}"
-                elif family == INT and density is not None and density + self.th.int_lift < 1.0 \
-                        and containment < density + self.th.int_lift:
-                    # A key with gaps is hit by chance at its density; a real reference does better.
-                    # Where the key has no gaps this cannot tell anything apart — corroboration will.
-                    res.reason = f"int containment {containment:.2f} not above key density {density:.2f}"
+                res = self._judge(key, r, _spread(r.profile.values, first_n), hits1[key])
+                if res.stage == "contain":
+                    res.reason = "pass 1: " + res.reason
+                    results.append(res)
                 else:
-                    res.stage = "corroborate"
-                results.append(res)
-            done += 1
-            if done % 50 == 0:
-                self.progress(f"containment {done}/{len(by_key)} target columns")
+                    survivors.setdefault(key, []).append(r)
+        self.progress(f"containment pass 2: {sum(len(v) for v in survivors.values())} pairs on {len(survivors)} target columns")
+        hits2 = self._lookup({key: {v for r in refs for v in r.profile.values} for key, refs in survivors.items()})
+        for key, refs in survivors.items():
+            for r in refs:
+                results.append(self._judge(key, r, r.profile.values, hits2[key]))
         return results
+
+    def _judge(self, key: tuple[str, str, str], r: ColumnSample, values: list[str],
+               hits_per_table: dict[str, set[str]]) -> PairResult:
+        kshape, kcol, family = key
+        ks, rs = self.shapes[kshape], self.shapes[r.shape]
+        lo, hi = self.ranges.get((kshape, kcol.upper()), (None, None))
+        rows = sum(t.row_count or 0 for t in ks.tables) / max(1, len(ks.tables))
+        density = (rows / (hi - lo + 1)) if family == INT and lo is not None and hi is not None and hi >= lo else None
+        vals = [fold(v) for v in values]
+        per = {tn: sum(1 for v in vals if v in hit) for tn, hit in hits_per_table.items()}
+        union = set().union(*hits_per_table.values()) if hits_per_table else set()
+        matched = sum(1 for v in vals if v in union)
+        containment = matched / max(1, len(vals))
+        res = PairResult(r.shape, rs.entity, r.column, kshape, ks.entity, kcol, family, "contain",
+                         sample_size=len(vals), sample_matched=matched, sample_containment=round(containment, 4),
+                         sample_per_table=per, key_density=round(density, 4) if density is not None else None,
+                         measured_at=_now())
+        if containment < self.th.sample_containment:
+            res.reason = f"sample containment {containment:.2f} < {self.th.sample_containment}"
+        elif family == INT and density is not None and density + self.th.int_lift < 1.0 \
+                and containment < density + self.th.int_lift:
+            # A key with gaps is hit by chance at its density; a real reference does better.
+            # Where the key has no gaps this cannot tell anything apart — corroboration will.
+            res.reason = f"int containment {containment:.2f} not above key density {density:.2f}"
+        else:
+            res.stage = "corroborate"
+        return res
 
     # -- step 4: corroboration
     def corroborate(self, results: list[PairResult]) -> None:
@@ -868,11 +943,11 @@ class CrossSourceLinkDiscovery:
             rs, ks = self.shapes[r.ref_shape], self.shapes[r.key_shape]
             rep = rs.representative()
             since = None
-            if ks.is_periodic():
-                start = min(str(t.time_window[0])[:10] for t in ks.tables if t.time_window)
-                tcol = self.time_column(rep)
-                if tcol:
-                    since = (tcol, start)
+            starts = [str(t.time_window[0])[:10] for t in ks.tables if t.time_window]
+            tcol = self.time_column(rep) if starts else None
+            if tcol:
+                # Rows older than anything the target holds cannot match and say nothing against the link.
+                since = (tcol, min(starts))
             try:
                 full = self.probe.coverage(rep, r.ref_column, r.family, ks.tables, r.key_column, None)
                 windowed = self.probe.coverage(rep, r.ref_column, r.family, ks.tables, r.key_column, since) if since else None
@@ -889,7 +964,10 @@ class CrossSourceLinkDiscovery:
             cov = basis["matched"] / max(1, basis["distinct"])
             multi = full["multi_period"] / max(1, full["matched"])
             if len(ks.tables) > 1:
-                r.period_semantics = ("periodic" if ks.is_periodic() and multi < 0.01 else
+                # Each matched value in exactly one copy: the copies hold disjoint keys and may all be
+                # joined at once. The same values in several copies: either copies of the same rows
+                # (windows overlap — read one) or one counter restarting per period (ambiguous).
+                r.period_semantics = ("periodic" if multi < 0.01 else
                                       "periodic-ambiguous" if ks.is_periodic() else "replicated")
             r.measured_at = _now()
             if basis["matched"] < self.th.min_matched:
@@ -901,15 +979,68 @@ class CrossSourceLinkDiscovery:
             else:
                 r.stage, r.reason = "accepted", f"coverage {cov:.3f}"
 
-    def run(self) -> DiscoveryReport:
+    # -- persistence of the expensive half, so a re-run with other thresholds reads nothing twice
+    def save_samples(self, path: str) -> None:
+        import json
+        data = {"samples": [{"shape": s.shape, "column": s.column, "declared": s.declared, "profile": asdict(s.profile)}
+                            for s in self.samples.values()],
+                "ranges": [[k[0], k[1], v[0], v[1]] for k, v in self.ranges.items()]}
+        with open(path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False)
+
+    def load_samples(self, path: str, report: DiscoveryReport) -> bool:
+        import json
+        import os
+        if not os.path.exists(path):
+            return False
+        with open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        for row in data.get("samples", []):
+            if row["shape"] not in self.shapes:
+                continue
+            vp = ValueProfile(**row["profile"])
+            self.samples[(row["shape"], row["column"].upper())] = ColumnSample(row["shape"], row["column"], row["declared"], vp)
+            if vp.family:
+                report.column_families[vp.family] = report.column_families.get(vp.family, 0) + 1
+        for shape, column, lo, hi in data.get("ranges", []):
+            self.ranges[(shape, column)] = (lo, hi)
+        report.sampled_tables = len({s.shape for s in self.samples.values()})
+        return True
+
+    def cost_of(self, pairs: list[tuple[ColumnSample, ColumnSample]]) -> dict[str, Any]:
+        """What step 3 will read: seeks on declared keys, scans on everything else."""
+        keys = {}
+        for r, k in pairs:
+            keys.setdefault((k.shape, k.column), set()).update(r.profile.values)
+        seeks = scans = scan_rows = 0
+        for (shape, column), values in keys.items():
+            ks = self.shapes[shape]
+            chunks = max(1, -(-len(values) // 1000))
+            if is_declared_key(ks, column):
+                seeks += chunks * len(ks.tables)
+            else:
+                scans += chunks * len(ks.tables)
+                scan_rows += chunks * sum(t.row_count or 0 for t in ks.tables)
+        return {"target_columns": len(keys), "seek_queries": seeks, "scan_queries": scans, "scan_rows": scan_rows}
+
+    def run(self, *, samples_cache: Optional[str] = None, stop_after: Optional[str] = None) -> DiscoveryReport:
         report = DiscoveryReport(started_at=_now(), thresholds=asdict(self.th))
         report.catalog = asdict(catalog_candidates(self.profiles))
         self.progress(f"catalog: {report.catalog['pairs']} type-compatible pairs")
-        self.sample_all(report)
+        if not (samples_cache and self.load_samples(samples_cache, report)):
+            self.sample_all(report)
         pairs = self.blocked_pairs(report)
-        self.progress(f"after value shapes/ranges: {len(pairs)} pairs")
+        if samples_cache:
+            self.save_samples(samples_cache)
+        report.cost = self.cost_of(pairs)
+        self.progress(f"after value shapes/ranges: {len(pairs)} pairs, step 3 cost {report.cost}")
+        if stop_after == "block":
+            report.finished_at = _now()
+            return report
         results = self.contain(pairs)
+        self.progress(f"containment done: {sum(1 for r in results if r.stage != 'contain')} of {len(results)} pass")
         self.corroborate(results)
+        self.progress(f"corroboration done: {sum(1 for r in results if r.stage == 'confirm')} to confirm")
         self.confirm(results)
         report.pairs = results
         report.queries = getattr(self.probe, "queries", 0)

@@ -8,8 +8,8 @@ A proposed term is added to the resolver *in memory only* and then questioned:
 2. **It takes nothing away.** Every question already asked on this deployment that contains the term
    is resolved before and after. Everything the question resolved to before must still be there
    after; the term may only add meaning to words that had none.
-3. **It means one thing.** A term proposed or approved for more than one field, or one the generator
-   itself marked as possibly meaning something else, is never decided by a machine.
+3. **It means one thing.** A term proposed or approved for more than one field, or already the name
+   of a certified concept somewhere else, is never decided by a machine.
 
 A term that passes is approved through `vocabulary.decide`, the same path a person's yes takes, with
 the measurement as the note. Everything else stays PROPOSED for a person, with the reason written on
@@ -115,8 +115,9 @@ def probe(store, settings, profiles, row: dict[str, Any], *, resolver_factory, q
     entity, column, norm = row["entity"], row["column_name"], row["normalized"]
     if row["source"] != V.GENERATED or row["status"] != V.PROPOSED:
         return {"ok": False, "reason": "yalnız bekleyen üretilmiş öneriler ölçülür", "evidence": {}}
-    if row.get("reason") and not str(row["reason"]).startswith(PREFIX):
-        return {"ok": False, "reason": f"üretici belirsiz dedi: {row['reason']}", "evidence": {}}
+    # A generator's "this could also mean …" note stays on the row for whoever reads it; it is not a
+    # veto. The collisions it worries about are measured below: another field, a certified concept
+    # elsewhere, or a question already asked whose meaning would change.
     if fields_per_term.get(norm, 0) > 1:
         return {"ok": False, "reason": f"aynı terim {fields_per_term[norm]} farklı alana önerildi; seçimi bir kişi yapar", "evidence": {}}
     why = V.refute(row["term"], entity, column, index=store.certified_index(settings.tenant_id, settings.datasource_id), profiles=profiles)

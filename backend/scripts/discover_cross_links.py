@@ -46,6 +46,8 @@ def main() -> int:
     ap.add_argument("--datasource", default=os.environ.get("SEMANTIC_DATASOURCE_ID", "logo"))
     ap.add_argument("--connection", default=os.environ.get("SEMANTIC_CONNECTION_FILE"))
     ap.add_argument("--timeout", type=int, default=900, help="per-query timeout for the confirmation scans")
+    ap.add_argument("--samples-cache", default=None, help="reuse/save value profiles (JSON)")
+    ap.add_argument("--stop-after", choices=["block"], default=None)
     ap.add_argument("--oracle", action="append", default=[], help="ENTITY.COLUMN=ENTITY.COLUMN")
     for f in fields(LinkThresholds):
         ap.add_argument(f"--{f.name.replace('_', '-')}", type=type(f.default), default=f.default)
@@ -59,7 +61,8 @@ def main() -> int:
     th = LinkThresholds(**{f.name: getattr(args, f.name) for f in fields(LinkThresholds)})
     connector = connector_from_file(args.connection)
     probe = probe_for(connector, timeout=args.timeout)
-    report = CrossSourceLinkDiscovery(profiles, probe, thresholds=th).run()
+    report = CrossSourceLinkDiscovery(profiles, probe, thresholds=th).run(samples_cache=args.samples_cache,
+                                                                         stop_after=args.stop_after)
 
     (out / "report.json").write_text(json.dumps(report.as_dict(), ensure_ascii=False, indent=1, default=str))
     plan = apply_plan(report, profiles)
@@ -69,7 +72,7 @@ def main() -> int:
     summary = {
         "catalog_pairs": report.catalog.get("pairs"), "sampled_tables": report.sampled_tables,
         "column_families": report.column_families, "blocked": report.blocked,
-        "probed_pairs": len(report.pairs),
+        "step3_cost": report.cost, "probed_pairs": len(report.pairs),
         "stopped_at": {s: sum(1 for p in report.pairs if p.stage == s) for s in {p.stage for p in report.pairs}},
         "accepted": accepted, "plan_rows": len(plan), "queries": report.queries, "query_seconds": report.query_seconds,
     }
