@@ -2717,6 +2717,40 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "delete", "room", room["id"], room["name"], {"cancelledBookings": room["cancelledBookings"]})
         return room
 
+    # ------------------------------------------------------------------ kampüs kutlamaları
+    # "Kutla" kutlanan kişinin ekranına bildirim düşer. Kutlayan ve alan oturumdan gelir.
+    from semantic_bridge import greetings as greetings_mod
+
+    def _greetings(request: Request) -> tuple[Any, str, str, str]:
+        _require_caller(request)
+        try:
+            user, display = board_mod.session_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+        r = rt()
+        greetings_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, user, display
+
+    @app.get("/api/v1/greetings")
+    def greetings_state(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        return {"sent": greetings_mod.sent_today(engine, tenant, user),
+                "inbox": greetings_mod.inbox(engine, tenant, user, display)}
+
+    @app.post("/api/v1/greetings", status_code=201)
+    def greetings_send(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        try:
+            return greetings_mod.send(engine, tenant, user, display, body)
+        except greetings_mod.GreetingError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "INVALID_GREETING", "message": str(e)}) from e
+
+    @app.post("/api/v1/greetings/seen")
+    def greetings_seen(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        ids = body.get("ids") if isinstance(body.get("ids"), list) else []
+        return {"marked": greetings_mod.mark_seen(engine, tenant, user, display, ids)}
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

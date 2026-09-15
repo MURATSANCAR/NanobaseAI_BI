@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import SessionGate from './stitch/SessionGate';
+import GreetingsInbox from './kampus/GreetingsInbox';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError } from './engine';
 
 /**
@@ -34,5 +35,10 @@ export default function RequireTimasSession() {
   if (q.error instanceof EngineAuthError) {
     return <SessionGate onDone={() => void qc.invalidateQueries()} />;
   }
-  return <Outlet />;
+  return (
+    <>
+      <GreetingsInbox />
+      <Outlet />
+    </>
+  );
 }

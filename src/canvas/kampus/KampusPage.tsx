@@ -39,6 +39,9 @@ import {
 import groups from '../modules.json';
 import { LIVE } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { ENGINE_ENABLED, greetingsApi } from '../engine';
 import RoomsCard from '../rooms/RoomsCard';
 import zekiImg from '@/assets/kampus/zeki.jpg';
 import denizImg from '@/assets/kampus/deniz.jpg';
@@ -185,7 +188,29 @@ export default function KampusPage() {
   const moduleTotal = moduleGroups.reduce((a, g) => a + g.modules.length, 0);
 
   const [mood, setMood] = useState<string | null>(null);
+  // Kutla: kutlanan kişinin ekranına bildirim düşer (GreetingsInbox). Bugün kutladıklarım sunucudan gelir.
+  const qc = useQueryClient();
+  const greetings = useQuery({ queryKey: ['greetings'], queryFn: greetingsApi.state, enabled: ENGINE_ENABLED, retry: false });
   const [greeted, setGreeted] = useState<Record<string, boolean>>({});
+  const [greetingTo, setGreetingTo] = useState<string | null>(null);
+  const isGreeted = (name: string) => greeted[name] || (greetings.data?.sent ?? []).includes(name);
+  const greet = async (name: string, occasion: string) => {
+    if (!ENGINE_ENABLED) {
+      setGreeted((g) => ({ ...g, [name]: true }));
+      return;
+    }
+    setGreetingTo(name);
+    try {
+      await greetingsApi.send(name, occasion);
+      setGreeted((g) => ({ ...g, [name]: true }));
+      toast.success(`${name} kutlandı`, { description: 'Bildirim ekranına gönderildi.' });
+      void qc.invalidateQueries({ queryKey: ['greetings'] });
+    } catch (e) {
+      toast.error('Kutlama gönderilemedi', { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setGreetingTo(null);
+    }
+  };
   const [lottery, setLottery] = useState(false);
   const [praise, setPraise] = useState(PRAISE);
   const [liked, setLiked] = useState<Record<number, boolean>>({});
@@ -778,8 +803,8 @@ export default function KampusPage() {
             </div>
             <div className="space-y-2.5">
               {[
-                { name: 'Ahmet Yıldız', note: 'Grafik • Doğum Günü 🎈', img: ahmetImg, ring: 'ring-amber-300', btn: 'bg-amber-100 text-amber-900 hover:bg-amber-200' },
-                { name: 'Büşra Aksoy', note: 'Yayın Koor. • 5. Yıl 🏆', img: busraImg, ring: 'ring-sky-300', btn: 'bg-sky-100 text-sky-900 hover:bg-sky-200' },
+                { name: 'Ahmet Yıldız', occasion: 'Doğum Günü', note: 'Grafik • Doğum Günü 🎈', img: ahmetImg, ring: 'ring-amber-300', btn: 'bg-amber-100 text-amber-900 hover:bg-amber-200' },
+                { name: 'Büşra Aksoy', occasion: '5. Yıl', note: 'Yayın Koor. • 5. Yıl 🏆', img: busraImg, ring: 'ring-sky-300', btn: 'bg-sky-100 text-sky-900 hover:bg-sky-200' },
               ].map((p) => (
                 <div key={p.name} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-2.5">
                   <div className="flex min-w-0 items-center gap-2.5">
@@ -791,11 +816,12 @@ export default function KampusPage() {
                   </div>
                   <button
                     type="button"
-                    disabled={greeted[p.name]}
-                    onClick={() => setGreeted((g) => ({ ...g, [p.name]: true }))}
-                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${greeted[p.name] ? 'bg-emerald-100 text-emerald-800' : p.btn}`}
+                    disabled={isGreeted(p.name) || greetingTo === p.name}
+                    aria-busy={greetingTo === p.name}
+                    onClick={() => greet(p.name, p.occasion)}
+                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${isGreeted(p.name) ? 'bg-emerald-100 text-emerald-800' : p.btn}`}
                   >
-                    {greeted[p.name] ? 'Kutlandı ✓' : 'Kutla'}
+                    {isGreeted(p.name) ? 'Kutlandı ✓' : greetingTo === p.name ? 'Gönderiliyor…' : 'Kutla'}
                   </button>
                 </div>
               ))}

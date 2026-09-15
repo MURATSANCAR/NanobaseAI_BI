@@ -713,6 +713,15 @@ async function roomsSend<T>(method: string, path: string, body?: unknown): Promi
   return (await res.json()) as T;
 }
 
+export type Greeting = { id: string; from: string; to: string; occasion: string | null; at: string };
+
+/** Kampüs kutlamaları: `sent` bugün kutladıklarım, `inbox` bana gelen ve henüz görmediklerim. */
+export const greetingsApi = {
+  state: () => roomsSend<{ sent: string[]; inbox: Greeting[] }>('GET', '/api/v1/greetings'),
+  send: (to: string, occasion?: string) => roomsSend<Greeting & { created: boolean }>('POST', '/api/v1/greetings', { to, occasion }),
+  seen: (ids: string[]) => roomsSend<{ marked: number }>('POST', '/api/v1/greetings/seen', { ids }),
+};
+
 export const roomsApi = {
   day: (date: string) => roomsSend<RoomsDay>('GET', `/api/v1/rooms?date=${encodeURIComponent(date)}`),
   now: () => roomsSend<RoomsNow>('GET', '/api/v1/rooms/now'),
