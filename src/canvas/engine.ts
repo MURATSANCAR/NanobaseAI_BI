@@ -371,6 +371,9 @@ export type ReportRecurrence = 'daily' | 'weekly' | 'monthly' | 'once';
 export type ReportFormat = 'xlsx' | 'csv';
 export type ReportStatus = 'active' | 'paused' | 'done';
 export type ReportLastStatus = 'sent' | 'no_smtp' | 'no_recipient' | 'failed' | null;
+export type ColumnFormat = 'auto' | 'text' | 'number' | 'money' | 'percent' | 'date';
+/** Kişinin ekranda kurduğu kolon düzeni; `key` motorun verdiği kaynak kolon adıdır. Sıra dizinin sırasıdır. */
+export type ReportColumn = { key: string; label: string; hidden: boolean; format: ColumnFormat };
 
 export type ReportDto = {
   id: string;
@@ -394,6 +397,7 @@ export type ReportDto = {
   lastError: string | null;
   lastRows: number | null;
   hasFile: boolean;
+  columns: ReportColumn[];
   /** "Her gün 08:00" gibi okunur plan. */
   when: string;
 };
@@ -414,6 +418,23 @@ export type ReportDraft = {
   records: Array<Record<string, unknown>>;
   rowCount?: number | null;
   summary?: string;
+  layout: ReportColumn[];
+};
+
+/** Önizlemede düzeltme sonucu. `requery` ise veri yeniden çekildi ve sql/columns/records geldi. */
+export type ReportRefinement = {
+  question: string;
+  requery: boolean;
+  via: 'rules' | 'model';
+  changes: string[];
+  layout: ReportColumn[];
+  added: string[];
+  dropped: string[];
+  sql?: string;
+  columns?: Array<{ name: string; type: string }>;
+  records?: Array<Record<string, unknown>>;
+  rowCount?: number | null;
+  summary?: string;
 };
 
 export type ReportInput = {
@@ -429,11 +450,16 @@ export type ReportInput = {
   onceAt?: string | null;
   recipients: string[];
   status?: ReportStatus;
+  columns?: ReportColumn[];
 };
 
 export const reportsApi = {
   list: () => send<{ user: string; reports: ReportDto[]; email: AlertEmail }>('GET', '/api/v1/reports', undefined, 30_000),
-  parse: (text: string) => send<ReportDraft>('POST', '/api/v1/reports/parse', { text }),
+  parse: (text: string) => send<ReportDraft>('POST', '/api/v1/reports/parse', { text }, 600_000),
+  refine: (b: { question: string; instruction: string; columns: ReportColumn[] }) =>
+    send<ReportRefinement>('POST', '/api/v1/reports/refine', b, 600_000),
+  preview: (b: { question: string; columns: ReportColumn[] }) =>
+    send<Omit<ReportRefinement, 'requery' | 'via' | 'changes'>>('POST', '/api/v1/reports/preview', b, 600_000),
   create: (b: ReportInput) => send<ReportDto>('POST', '/api/v1/reports', b, 30_000),
   update: (id: string, b: Partial<ReportInput>) => send<ReportDto>('PATCH', `/api/v1/reports/${encodeURIComponent(id)}`, b, 30_000),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/reports/${encodeURIComponent(id)}`, undefined, 30_000),

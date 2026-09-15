@@ -58,9 +58,13 @@ REPORTS = sa.Table(
     sa.Column("last_error", sa.Text),
     sa.Column("last_file", sa.Text),
     sa.Column("last_rows", sa.Integer),
+    # Kişinin ekranda kurduğu kolon düzeni: [{key, label, hidden, format}]. Sıra listenin sırasıdır.
+    sa.Column("columns_json", sa.Text),
 )
 
 FORMATS = {"xlsx", "csv"}
+COLUMN_FORMATS = {"auto", "text", "number", "money", "percent", "date"}
+PREVIEW_ROWS = 50
 RECURRENCES = {"daily", "weekly", "monthly", "once"}
 STATUSES = {"active", "paused", "done"}
 WEEKDAYS = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -85,6 +89,11 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         _md.create_all(engine, checkfirst=True)
+        # create_all var olan tabloya kolon eklemez; kolon düzeni sonradan geldi.
+        have = {c["name"] for c in sa.inspect(engine).get_columns("semantic_reports")}
+        if "columns_json" not in have:
+            with engine.begin() as c:
+                c.execute(sa.text("ALTER TABLE semantic_reports ADD COLUMN columns_json TEXT"))
         _ready.add(id(engine))
 
 
@@ -312,7 +321,283 @@ def _clean(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
         if s not in STATUSES:
             raise ReportError("Durum etkin, duraklatılmış ya da bitti olmalı.")
         out["status"] = s
+    if "columns" in body:
+        cols = clean_columns(body.get("columns"))
+        out["columns_json"] = json.dumps(cols, ensure_ascii=False) if cols else None
     return out
+
+
+# ------------------------------------------------------------------ kolon düzeni
+# Kişi yalnız kolonu değiştirir: ad, sıra, gizleme, biçim. Hücre değeri değişmez; dosyadaki rakam
+# kaynaktaki rakamdır. Düzen kolonun kaynak adına (`key`) bağlıdır, çünkü soru her çalışmada yeniden
+# sorulur ve kolon sırası ya da kümesi değişebilir.
+
+_NUMERIC_TYPES = ("float", "int", "integer", "decimal", "number", "numeric", "double", "money", "bigint", "real", "smallint")
+_DATE_TYPES = ("date", "datetime", "timestamp", "time")
+
+
+def default_format(col_type: Any) -> str:
+    t = str(col_type or "").lower()
+    if any(x in t for x in _DATE_TYPES):
+        return "date"
+    if any(x in t for x in _NUMERIC_TYPES):
+        return "number"
+    return "auto"
+
+
+def clean_columns(raw: Any) -> list[dict[str, Any]]:
+    """İstemciden gelen kolon düzenini doğrular. Boş liste: düzen yok, sonuç olduğu gibi yazılır."""
+    if raw in (None, ""):
+        return []
+    if not isinstance(raw, list):
+        raise ReportError("Kolon düzeni liste olmalı.")
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    labels: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ReportError("Kolon düzenindeki her öğe bir kolon olmalı.")
+        key = str(item.get("key") or "").strip()
+        if not key:
+            raise ReportError("Kolonun kaynak adı eksik.")
+        if key in seen:
+            continue
+        seen.add(key)
+        label = " ".join(str(item.get("label") or "").split())[:120] or key
+        hidden = bool(item.get("hidden"))
+        fmt = str(item.get("format") or "auto").lower()
+        if fmt not in COLUMN_FORMATS:
+            raise ReportError(f"«{label}» kolonu için biçim anlaşılamadı.")
+        if not hidden:
+            low = label.casefold()
+            if low in labels:
+                raise ReportError(f"İki kolon aynı adı taşıyamaz: «{label}».")
+            labels.add(low)
+        out.append({"key": key, "label": label, "hidden": hidden, "format": fmt})
+    if out and all(c["hidden"] for c in out):
+        raise ReportError("En az bir kolon görünür kalmalı.")
+    return out
+
+
+def merge_columns(spec: list[dict[str, Any]], source: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str], list[str]]:
+    """Kaydedilmiş düzeni sonucun gerçek kolonlarına oturtur.
+
+    Düzende olup sonuçta olmayan kolon düşer (adı `dropped`); sonuçta olup düzende olmayan kolon görünür
+    olarak sona eklenir (adı `added`). İkisi de sessiz geçmez; çağıran kayda ve ekrana yazar.
+    """
+    types = {str(c.get("name")): c.get("type") for c in source}
+    names = list(types)
+    kept = [dict(c) for c in spec if c["key"] in types]
+    dropped = [c["label"] for c in spec if c["key"] not in types]
+    have = {c["key"] for c in kept}
+    added = [n for n in names if n not in have]
+    used = {c["label"].casefold() for c in kept if not c["hidden"]}
+    for n in added:
+        label = n
+        i = 2
+        while label.casefold() in used:
+            label = f"{n} ({i})"
+            i += 1
+        used.add(label.casefold())
+        kept.append({"key": n, "label": label, "hidden": False, "format": default_format(types[n])})
+    return kept, added if spec else [], dropped
+
+
+def apply_columns(spec: list[dict[str, Any]], columns: list[dict[str, Any]], rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+    """Düzeni uygular: gizli kolon çıkar, sıra ve ad düzenden gelir. Değerler olduğu gibi taşınır."""
+    if not spec:
+        return columns, rows, []
+    merged, _added, dropped = merge_columns(spec, columns)
+    types = {str(c.get("name")): c.get("type") for c in columns}
+    shown = [c for c in merged if not c["hidden"]]
+    out_cols = [{"name": c["label"], "type": types.get(c["key"]), "format": c["format"]} for c in shown]
+    out_rows = [{c["label"]: r.get(c["key"]) for c in shown} for r in rows]
+    return out_cols, out_rows, dropped
+
+
+# ------------------------------------------------------------------ düzeltme cümlesi
+# "tutar kolonunu gizle", "yayinevi adını Yayınevi yap" gibi düz kolon komutları modele gitmeden
+# çözülür; kalan her istek (filtre, dönem, yeni ölçü) modelle soruya ve kolon düzenine çevrilir.
+
+_FOLD = str.maketrans("çğıöşüâîûÇĞİÖŞÜ", "cgiosuaiuCGIOSU")
+
+
+def _fold(s: str) -> str:
+    return " ".join(str(s or "").translate(_FOLD).lower().replace("_", " ").split())
+
+
+def _find_column(spec: list[dict[str, Any]], text: str) -> Optional[dict[str, Any]]:
+    t = _fold(re.sub(r"['’]?(n?[iıuü]n|y?[iıuü]|n?[ea]|s[iıuü])?\s*$", "", text.strip(" \"'«»“”")))
+    t_raw = _fold(text.strip(" \"'«»“”"))
+    for c in spec:
+        for cand in (_fold(c["label"]), _fold(c["key"])):
+            if cand in (t, t_raw):
+                return c
+    hits = [c for c in spec if t and (t in _fold(c["label"]) or t in _fold(c["key"]))]
+    return hits[0] if len(hits) == 1 else None
+
+
+_COL_WORD = r"(?:\s+(?:kolon|sütun|sutun)(?:u|unu|unun|ları|larını)?)?"
+_FORMAT_WORDS = {"para": "money", "tl": "money", "₺": "money", "yüzde": "percent", "yuzde": "percent",
+                 "%": "percent", "tarih": "date", "sayı": "number", "sayi": "number", "metin": "text", "yazı": "text"}
+
+
+def column_commands(spec: list[dict[str, Any]], instruction: str) -> Optional[tuple[list[dict[str, Any]], list[str]]]:
+    """Cümlenin tamamı kolon komutlarından oluşuyorsa yeni düzen ve değişiklik listesi; değilse None."""
+    cols = [dict(c) for c in spec]
+    changes: list[str] = []
+    parts = [p.strip() for p in re.split(r"[.;\n]|,\s*|\s+ve\s+|\s+sonra\s+", instruction or "") if p.strip()]
+    if not parts:
+        return None
+    for part in parts:
+        # Biçim önce denenir: "X para olarak göster" gösterme komutu değildir.
+        m = re.fullmatch(r"(.+?)" + _COL_WORD + r"\s+(para|tl|₺|yüzde|yuzde|%|tarih|sayı|sayi|metin|yazı)(?:\s+(?:biçiminde|biciminde|olarak))?\s+(?:göster|goster|olsun|yap|biçiminde|biciminde|olarak)", part, re.I)
+        if m:
+            c = _find_column(cols, m.group(1))
+            if not c:
+                return None
+            c["format"] = _FORMAT_WORDS[m.group(2).lower()]
+            changes.append(f"«{c['label']}» biçimi değişti")
+            continue
+        m = re.fullmatch(r"(.+?)" + _COL_WORD + r"\s+(?:gizle|kaldır|kaldir|sil|çıkar|cikar|at)(?:sın|sin|ın|in)?", part, re.I)
+        if m:
+            c = _find_column(cols, m.group(1))
+            if not c:
+                return None
+            c["hidden"] = True
+            changes.append(f"«{c['label']}» gizlendi")
+            continue
+        m = re.fullmatch(r"(.+?)" + _COL_WORD + r"\s+(?:göster|goster|geri\s+getir|ekle)(?:sin|in)?", part, re.I)
+        if m:
+            c = _find_column(cols, m.group(1))
+            if not c:
+                return None
+            c["hidden"] = False
+            changes.append(f"«{c['label']}» gösteriliyor")
+            continue
+        m = (re.fullmatch(r"(.+?)" + _COL_WORD + r"(?:\s+adını|\s+adi|\s+adı|\s+başlığını|\s+basligini)\s+[\"'«“]?(.+?)[\"'»”]?\s+(?:yap|olsun|olarak\s+değiştir|olarak\s+degistir)", part, re.I)
+             or re.fullmatch(r"(.+?)" + _COL_WORD + r"\s*(?:->|→|=>)\s*[\"'«“]?(.+?)[\"'»”]?", part, re.I))
+        if m:
+            c = _find_column(cols, m.group(1))
+            new = " ".join(m.group(2).split())[:120]
+            if not c or not new:
+                return None
+            changes.append(f"«{c['label']}» → «{new}»")
+            c["label"] = new
+            continue
+        m = re.fullmatch(r"(.+?)" + _COL_WORD + r"\s+(?:en\s+)?(başa|basa|sona|en\s+başa|en\s+sona)\s+(?:al|taşı|tasi|koy)", part, re.I)
+        if m:
+            c = _find_column(cols, m.group(1))
+            if not c:
+                return None
+            cols.remove(c)
+            first = _fold(m.group(2)).endswith("basa")
+            cols.insert(0 if first else len(cols), c)
+            changes.append(f"«{c['label']}» {'başa' if first else 'sona'} alındı")
+            continue
+        return None
+    return clean_columns(cols), changes
+
+
+_REFINE_PROMPT = """Bir raporun önizlemesi kullanıcıya gösterildi. Kullanıcı bir değişiklik istiyor.
+Görevin: isteği (1) veri sorusunda bir değişikliğe ve/veya (2) kolon düzeninde bir değişikliğe çevirmek.
+
+Kurallar:
+- Hücre değerlerini asla değiştirme, uydurma satır ya da sabit değer ekleme. Veri yalnız soru değişerek değişir.
+- Filtre, dönem, yeni ölçü, yeni kırılım, sıralama, ilk N gibi istekler soruyu değiştirir: "question" alanına
+  mevcut soruyu isteği de içerecek biçimde yeniden yazılmış TAM ve TEK bir Türkçe soru olarak yaz.
+- Dönem değişiyorsa eski dönemi tamamen çıkar ve yeni dönemi TEK ifadeyle yaz ("Ağustos 2026", "2026 ilk çeyrek").
+  "2026 yılı ağustos ayında" gibi iki dönem ifadesi yan yana yazma; motor bunu iki dönemin karşılaştırması sanar.
+- Kolonların anlamı aynı kalıyorsa ölçü ve kırılım sözcüklerini mevcut sorudaki gibi koru ki kolonlar aynı adla gelsin.
+- Yalnız kolon adı, sırası, gizleme ya da biçim isteniyorsa "question" null olsun.
+- "columns": mevcut kolon anahtarlarını (key) kullanarak istenen son düzenin TAMAMI; sıra dizinin sırasıdır.
+  Yeni anahtar uydurma. format şunlardan biri: auto, text, number, money, percent, date.
+- "changes": kullanıcıya gösterilecek kısa Türkçe değişiklik maddeleri.
+Yalnız JSON döndür: {"question": string|null, "columns": [{"key","label","hidden","format"}], "changes": [string]}
+
+Mevcut soru: %(question)s
+Mevcut kolonlar (JSON): %(columns)s
+Kullanıcının isteği: %(instruction)s
+"""
+
+
+def _json_object(text: str) -> dict[str, Any]:
+    s = str(text or "").strip()
+    s = re.sub(r"^```(?:json)?\s*|\s*```$", "", s)
+    start, end = s.find("{"), s.rfind("}")
+    if start < 0 or end <= start:
+        raise ReportError("Model isteği anlaşılır bir değişikliğe çeviremedi; daha açık yazıp yeniden deneyin.")
+    try:
+        obj = json.loads(s[start:end + 1])
+    except ValueError:
+        raise ReportError("Model isteği anlaşılır bir değişikliğe çeviremedi; daha açık yazıp yeniden deneyin.") from None
+    if not isinstance(obj, dict):
+        raise ReportError("Model isteği anlaşılır bir değişikliğe çeviremedi; daha açık yazıp yeniden deneyin.")
+    return obj
+
+
+_MONTHS = "ocak|şubat|subat|mart|nisan|mayıs|mayis|haziran|temmuz|ağustos|agustos|eylül|eylul|ekim|kasım|kasim|aralık|aralik"
+_YEAR_THEN_MONTH = re.compile(rf"\b(\d{{4}})\s+yıl(?:ı|ında|inda|ının)?\s+({_MONTHS})\s+ay(?:ı|ında|inda|ını|ının)?\b", re.I)
+_MONTH_OF_YEAR = re.compile(rf"\b(\d{{4}})\s+({_MONTHS})\s+ay(?:ı|ında|inda|ını|ının)?\b", re.I)
+
+
+def tidy_period(question: str) -> str:
+    """"2026 yılı ağustos ayında" → "Ağustos 2026": tek dönem tek ifadeyle yazılır.
+
+    Motor yan yana iki dönem ifadesini iki dönemin karşılaştırması sayar (yıl + ay → iki kolon grubu).
+    Model bunu talimata rağmen zaman zaman yazdığı için model çıktısı burada ayrıca düzeltilir.
+    """
+    def month_year(m: re.Match[str]) -> str:
+        month = m.group(2)
+        return f"{month[:1].upper()}{month[1:].lower()} {m.group(1)}"
+
+    q = _YEAR_THEN_MONTH.sub(month_year, question)
+    q = _MONTH_OF_YEAR.sub(month_year, q)
+    return " ".join(q.split())
+
+
+def refine_plan(llm: Any, question: str, spec: list[dict[str, Any]], instruction: str) -> dict[str, Any]:
+    """Düzeltme cümlesini yeni soruya ve kolon düzenine çevirir. Veriyi çekmez.
+
+    Dönüş: {question, requery, columns, changes, via}. `via` "rules" ise model hiç çağrılmadı.
+    """
+    instruction = " ".join(str(instruction or "").split())
+    if not instruction:
+        raise ReportError("Ne değişsin, bir cümleyle yazın.")
+    spec = clean_columns(spec)
+    direct = column_commands(spec, instruction) if spec else None
+    if direct is not None:
+        cols, changes = direct
+        return {"question": question, "requery": False, "columns": cols, "changes": changes, "via": "rules"}
+    if llm is None:
+        raise ReportError("Bu değişiklik için model gerekiyor ama model bağlı değil. Kolonları tablodan düzenleyebilirsiniz.")
+    prompt = _REFINE_PROMPT % {
+        "question": question,
+        "columns": json.dumps(spec, ensure_ascii=False),
+        "instruction": instruction,
+    }
+    obj = _json_object(llm.chat([{"role": "user", "content": prompt}], max_tokens=1200))
+    new_q = obj.get("question")
+    new_q = tidy_period(" ".join(str(new_q).split())) if isinstance(new_q, str) else ""
+    requery = bool(new_q) and _fold(new_q) != _fold(question)
+    known = {c["key"]: c for c in spec}
+    raw_cols = obj.get("columns") if isinstance(obj.get("columns"), list) else []
+    cols = []
+    for c in raw_cols:
+        if isinstance(c, dict) and str(c.get("key") or "") in known:
+            base = known[str(c["key"])]
+            fmt = str(c.get("format") or base["format"]).lower()
+            cols.append({"key": base["key"], "label": str(c.get("label") or base["label"]),
+                         "hidden": bool(c.get("hidden", base["hidden"])),
+                         "format": fmt if fmt in COLUMN_FORMATS else base["format"]})
+    listed = {c["key"] for c in cols}
+    # Modelin unuttuğu kolon kaybolmaz; eski hâliyle sonda kalır.
+    cols += [dict(c) for c in spec if c["key"] not in listed]
+    changes = [str(x)[:200] for x in (obj.get("changes") or []) if str(x).strip()] if isinstance(obj.get("changes"), list) else []
+    if not requery and cols == spec:
+        raise ReportError("İstek ne soruyu ne kolonları değiştirdi. Neyin değişmesini istediğinizi biraz daha açık yazın.")
+    return {"question": new_q if requery else question, "requery": requery, "columns": clean_columns(cols),
+            "changes": changes, "via": "model"}
 
 
 def to_dict(row: Any) -> dict[str, Any]:
@@ -338,6 +623,7 @@ def to_dict(row: Any) -> dict[str, Any]:
         "lastError": row["last_error"],
         "lastRows": row["last_rows"],
         "hasFile": bool(row["last_file"] and Path(row["last_file"]).exists()),
+        "columns": json.loads(row["columns_json"]) if row["columns_json"] else [],
     }
     d["when"] = when_label(d)
     return d
@@ -442,6 +728,25 @@ def _safe_name(title: str) -> str:
     return (t or "rapor")[:60]
 
 
+def excel_number_format(col: dict[str, Any]) -> Optional[str]:
+    """Kolon biçiminden Excel sayı biçimi. Değer değişmez; yalnız görünüşü değişir."""
+    fmt = str(col.get("format") or "auto")
+    if fmt == "auto":
+        fmt = default_format(col.get("type"))
+    if fmt == "money":
+        return '#,##0.00 "₺"'
+    if fmt == "percent":
+        # Motor yüzdeyi 42,7 gibi yüz üzerinden verir; Excel'in % biçimi yüzle çarpacağı için sabit işaret.
+        return '#,##0.0 "%"'
+    if fmt == "number":
+        return "#,##0" if str(col.get("type") or "").lower() in ("int", "integer", "bigint", "smallint") else "#,##0.00"
+    if fmt == "date":
+        return "dd.mm.yyyy"
+    if fmt == "text":
+        return "@"
+    return None
+
+
 def build_file(rid: str, title: str, fmt: str, columns: list[dict[str, Any]], rows: list[dict[str, Any]], now: datetime) -> Path:
     d = REPORT_DIR / rid
     d.mkdir(parents=True, exist_ok=True)
@@ -469,21 +774,28 @@ def build_file(rid: str, title: str, fmt: str, columns: list[dict[str, Any]], ro
             cell.fill = PatternFill("solid", fgColor="7C5CFF")
             cell.alignment = Alignment(vertical="center")
         widths = [min(48, max(8, len(n) + 2)) for n in names]
+        dated = {c["name"] for c in columns if c.get("format") == "date"}
         for r in rows:
             vals = []
             for i, n in enumerate(names):
                 v = r.get(n)
                 if isinstance(v, (dict, list)):
                     v = json.dumps(v, ensure_ascii=False)
+                elif n in dated and isinstance(v, str):
+                    # Tarih metin olarak gelirse Excel onu tarih saymaz; aynı an, gerçek tarih hücresi.
+                    try:
+                        v = datetime.fromisoformat(v.replace("Z", "+00:00")).replace(tzinfo=None)
+                    except ValueError:
+                        pass
                 vals.append(v)
                 widths[i] = min(48, max(widths[i], len(str(v if v is not None else "")) + 2))
             ws.append(vals)
-        numeric = {c["name"] for c in columns if str(c.get("type", "")).lower() in ("float", "int", "integer", "decimal", "number", "numeric", "double", "money", "bigint")}
-        for i, n in enumerate(names, start=1):
+        for i, col in enumerate(columns, start=1):
             ws.column_dimensions[get_column_letter(i)].width = widths[i - 1]
-            if n in numeric:
+            number_format = excel_number_format(col)
+            if number_format:
                 for cell in ws.iter_rows(min_row=2, min_col=i, max_col=i):
-                    cell[0].number_format = "#,##0.00"
+                    cell[0].number_format = number_format
         ws.freeze_panes = "A2"
         if names:
             ws.auto_filter.ref = f"A1:{get_column_letter(len(names))}{max(1, len(rows) + 1)}"
@@ -567,9 +879,12 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
         if not sql:
             raise ReportError(str(answer.get("summary") or answer.get("explanation") or "Motor bu soruya SQL üretmedi."))
         columns, rows = fetcher(sql)
+        columns, rows, dropped = apply_columns(rep["columns"], columns, rows)
         path = build_file(rid, rep["title"], rep["fmt"], columns, rows, now)
         status = send_file(rep, path, len(rows), now, link)
-        upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=None)
+        # Düzendeki bir kolon artık sonuçta yoksa dosya yine üretilir ama bu kayda yazılır.
+        note = f"Not: şu kolonlar bu çalışmada sonuçta yoktu: {', '.join(dropped)}" if dropped else None
+        upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=note)
     except Exception as e:  # noqa: BLE001
         msg = str(e) if isinstance(e, ReportError) else f"Rapor üretilemedi: {str(e)[:400]}"
         upd.update(last_status="failed", last_error=msg[:1000])

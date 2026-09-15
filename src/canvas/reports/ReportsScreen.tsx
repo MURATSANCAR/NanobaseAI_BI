@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Download, Loader2, Mail, Pause, PencilLine, Play, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Download, Loader2, Mail, Pause, PencilLine, Play, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
   EngineAuthError,
   reportsApi,
+  type ReportColumn,
   type ReportDraft,
   type ReportDto,
   type ReportFormat,
@@ -14,6 +15,7 @@ import {
   type ReportLastStatus,
   type ReportRecurrence,
 } from '../engine';
+import ExcelDraft, { duplicateLabels } from './ExcelDraft';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -221,62 +223,6 @@ function PlanForm({ plan, onChange }: { plan: Plan; onChange: (p: Plan) => void 
   );
 }
 
-function Preview({ draft }: { draft: ReportDraft }) {
-  const cols = draft.columns.map((c) => c.name);
-  const rows = draft.records.slice(0, 20);
-  return (
-    <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <div className={label}>Önizleme</div>
-        <div className="text-[11px] text-canvas-muted">
-          {draft.rowCount != null ? `${nf.format(draft.rowCount)} satır · ` : ''}ilk {rows.length} satır; dosyaya tamamı yazılır
-        </div>
-      </div>
-      {draft.summary && <p className="mt-1 text-[12.5px] leading-snug text-canvas-ink">{draft.summary}</p>}
-      {cols.length > 0 ? (
-        <div className="mt-1.5 max-h-72 overflow-auto rounded-xl border border-slate-100">
-          <table className="w-full text-[11.5px]">
-            <thead className="sticky top-0 bg-slate-50">
-              <tr>
-                {cols.map((c) => (
-                  <th key={c} className="whitespace-nowrap px-2.5 py-1.5 text-left font-bold">
-                    {c}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className="odd:bg-slate-50/60">
-                  {cols.map((c) => {
-                    const v = r[c];
-                    const num = typeof v === 'number';
-                    return (
-                      <td key={c} className={`whitespace-nowrap px-2.5 py-1 ${num ? 'text-right font-mono tabular-nums' : ''}`}>
-                        {num ? nf.format(v) : String(v ?? '—')}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="mt-1.5 rounded-xl bg-slate-50 px-3 py-2 text-[12px] text-canvas-muted">
-          Soru satır döndürmedi. Veri sorusunu değiştirip yeniden deneyin.
-        </div>
-      )}
-      {draft.sql && (
-        <details className="mt-2">
-          <summary className="cursor-pointer text-[11px] font-bold text-canvas-muted">Üretilen SQL</summary>
-          <pre className="mt-1 max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">{draft.sql}</pre>
-        </details>
-      )}
-    </div>
-  );
-}
-
 function Stat({ k, v }: { k: string; v: string }) {
   return (
     <div>
@@ -293,6 +239,11 @@ export default function ReportsScreen() {
   const [text, setText] = useState('');
   const [draft, setDraft] = useState<ReportDraft | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const [layout, setLayout] = useState<ReportColumn[]>([]);
+  /** Onaylanınca ilk dosya beklemeden üretilsin; plan zamanı ayrıca işler. */
+  const [runNow, setRunNow] = useState(true);
+  /** Her yeni cümle yeni bir taslaktır; önizlemenin değişiklik geçmişi onunla sıfırlanır. */
+  const [draftId, setDraftId] = useState(0);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -321,7 +272,7 @@ export default function ReportsScreen() {
     setSel(id);
     setEditing(false);
     setConfirmDelete(false);
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 1024) {
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }));
     }
@@ -330,26 +281,48 @@ export default function ReportsScreen() {
     open('');
     setDraft(null);
     setPlan(null);
+    setLayout([]);
     setText('');
   };
 
   const parse = useMutation({
     mutationFn: (t: string) => reportsApi.parse(t),
     onSuccess: (d) => {
+      setDraftId((n) => n + 1);
       setDraft(d);
+      setLayout(d.layout);
       setPlan(fromDraft(d));
     },
   });
 
+  const repreview = useMutation({
+    mutationFn: ({ question, columns }: { question: string; columns: ReportColumn[] }) => reportsApi.preview({ question, columns }),
+    onSuccess: (res) => {
+      if (!draft) return;
+      setDraft({ ...draft, question: res.question, sql: res.sql ?? '', columns: res.columns ?? [], records: res.records ?? [], rowCount: res.rowCount, summary: res.summary ?? '', layout: res.layout });
+      setLayout(res.layout);
+    },
+  });
+
+  const onDraftChange = (d: ReportDraft, l: ReportColumn[]) => {
+    // Cümleyle soru değiştiyse formdaki soru da o olur; elle yazılan soruya dokunulmaz.
+    if (draft && d.question !== draft.question) setPlan((p) => (p ? { ...p, question: d.question } : p));
+    setDraft(d);
+    setLayout(l);
+  };
+
   const create = useMutation({
-    mutationFn: (p: Plan) => reportsApi.create({ ...toInput(p), prompt: text.trim() || undefined, sql: draft?.sql || undefined }),
+    mutationFn: (p: Plan) =>
+      reportsApi.create({ ...toInput(p), prompt: text.trim() || undefined, sql: draft?.sql || undefined, columns: layout }),
     onSuccess: async (r) => {
       await refresh();
       setDraft(null);
       setPlan(null);
+      setLayout([]);
       setText('');
       open(r.id);
-      flash('Rapor planlandı');
+      if (runNow) run.mutate(r.id);
+      else flash('Onaylandı ve planlandı');
     },
   });
 
@@ -382,12 +355,16 @@ export default function ReportsScreen() {
 
   const errText =
     errMsg(parse.error, 'Cümle çözülemedi.') ??
+    errMsg(repreview.error, 'Önizleme yenilenemedi.') ??
     errMsg(create.error, 'Rapor kaydedilemedi.') ??
     errMsg(update.error, 'Değişiklik kaydedilemedi.') ??
     errMsg(run.error, 'Rapor çalıştırılamadı.') ??
     errMsg(remove.error, 'Rapor silinemedi.');
 
   const planValid = !!plan && plan.question.trim().length > 0 && (plan.recurrence !== 'once' || !!plan.onceAt);
+  const squash = (q: string) => q.trim().replace(/\s+/g, ' ');
+  const stale = !!draft && !!plan && squash(plan.question) !== squash(draft.question);
+  const layoutValid = layout.length === 0 || (layout.some((c) => !c.hidden) && duplicateLabels(layout).size === 0);
   const active = reports.filter((r) => r.status === 'active').length;
   const submitParse = () => {
     if (text.trim() && !parse.isPending) parse.mutate(text.trim());
@@ -405,10 +382,10 @@ export default function ReportsScreen() {
       }}
       rail={railFor('/planli-raporlar')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
-        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
+      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] lg:overflow-visible">
+        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 lg:h-full lg:flex-row lg:gap-4 lg:pb-0">
           {/* Planlar */}
-          <div className="glass-panel flex max-h-[38vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[360px]">
+          <div className="glass-panel flex max-h-[38vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 lg:max-h-none lg:w-[360px]">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-extrabold">Planlı raporlar</span>
               <span className="text-[11px] font-bold text-canvas-muted">{reports.length} plan</span>
@@ -452,9 +429,9 @@ export default function ReportsScreen() {
           {/* Ayrıntı */}
           <div
             ref={detailRef}
-            className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:min-h-0 md:flex-1 md:shrink md:overflow-auto"
+            className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto"
           >
-            <div className="mx-auto max-w-3xl space-y-5">
+            <div className={`mx-auto space-y-5 ${draft && !cur ? 'max-w-5xl' : 'max-w-3xl'}`}>
               {email && !email.configured && (
                 <div className="flex gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] leading-snug text-amber-800">
                   <Mail className="mt-0.5 h-4 w-4 shrink-0" />
@@ -499,29 +476,58 @@ export default function ReportsScreen() {
 
                   {draft && plan && (
                     <div className="space-y-5 border-t border-slate-100 pt-5">
-                      <PlanForm plan={plan} onChange={setPlan} />
-                      <Preview draft={draft} />
-                      <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-                        <button
-                          type="button"
-                          disabled={!planValid || create.isPending}
-                          onClick={() => plan && create.mutate(plan)}
-                          className={`${btn} bg-gradient-to-r from-canvas-mint to-emerald-600 text-white shadow-md`}
-                        >
-                          {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />}
-                          Planla
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDraft(null);
-                            setPlan(null);
-                          }}
-                          className={`${btn} bg-slate-100 text-canvas-ink hover:bg-slate-200`}
-                        >
-                          <X className="h-4 w-4" />
-                          Vazgeç
-                        </button>
+                      {stale ? (
+                        <div className="flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900">
+                          <span className="flex-1">Veri sorusunu değiştirdiniz; aşağıdaki önizleme eski soruya ait. Onaylamadan önce yenileyin.</span>
+                          <button
+                            type="button"
+                            disabled={repreview.isPending}
+                            onClick={() => repreview.mutate({ question: plan.question, columns: layout })}
+                            className={`${btn} bg-amber-600 text-white shadow-sm`}
+                          >
+                            {repreview.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                            Önizlemeyi yenile
+                          </button>
+                        </div>
+                      ) : null}
+                      <ExcelDraft key={draftId} draft={draft} layout={layout} onChange={onDraftChange} />
+                      <div className="border-t border-slate-100 pt-5">
+                        <div className="mb-3 text-[11px] font-extrabold uppercase tracking-[.12em] text-canvas-muted">Plan ve teslim</div>
+                        <PlanForm plan={plan} onChange={setPlan} />
+                      </div>
+                      <div className="flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-[12.5px] font-semibold text-canvas-ink sm:min-h-0">
+                          <input
+                            type="checkbox"
+                            checked={runNow}
+                            onChange={(e) => setRunNow(e.target.checked)}
+                            className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                          />
+                          Onaylayınca ilk Excel'i hemen üret
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraft(null);
+                              setPlan(null);
+                              setLayout([]);
+                            }}
+                            className={`${btn} bg-white text-canvas-ink ring-1 ring-slate-200 hover:bg-slate-50`}
+                          >
+                            <X className="h-4 w-4" />
+                            Vazgeç
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!planValid || !layoutValid || stale || create.isPending}
+                            onClick={() => plan && create.mutate(plan)}
+                            className={`${btn} bg-gradient-to-r from-canvas-mint to-emerald-600 text-white shadow-md`}
+                          >
+                            {create.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Excel'i onayla ve planla
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -598,6 +604,26 @@ export default function ReportsScreen() {
                       <div className="mt-1 text-[12px] text-canvas-muted">Alıcı yok; dosya yalnız buradan indirilir.</div>
                     )}
                   </div>
+
+                  {cur.columns.length > 0 && (
+                    <div>
+                      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Excel kolonları</div>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {cur.columns
+                          .filter((c) => !c.hidden)
+                          .map((c) => (
+                            <span key={c.key} className="rounded-lg bg-violet-50 px-2 py-0.5 text-[11.5px] font-semibold text-canvas-violet" title={c.key}>
+                              {c.label}
+                            </span>
+                          ))}
+                        {cur.columns.some((c) => c.hidden) && (
+                          <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-[11.5px] font-semibold text-canvas-muted">
+                            {cur.columns.filter((c) => c.hidden).length} gizli
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {cur.sql && (
                     <details>

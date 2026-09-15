@@ -2298,7 +2298,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return list(out.get("columns") or []), rows
         return fetch
 
-    _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status"]
+    _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status", "columns"]
 
     def _report_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_REPORT", "message": str(e)})
@@ -2317,13 +2317,64 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _board_user(request)
         r, _, _, _ = _reports()
         draft = reports_mod.parse_prompt(str(body.get("text") or ""))
+        draft.update(_report_preview(r, draft["question"], []))
+        return draft
+
+    def _report_preview(r: Runtime, question: str, spec: list[dict[str, Any]]) -> dict[str, Any]:
+        """Soruyu motora sorar; ilk PREVIEW_ROWS satırı ve kolon düzenini döndürür. Dosyaya tamamı yazılır."""
         try:
-            a = r.ask(draft["question"], thread_id=None, sample_size=20, execute=True)
+            a = r.ask(question, thread_id=None, sample_size=reports_mod.PREVIEW_ROWS, execute=True)
         except Exception as e:  # noqa: BLE001
             raise _sql_failure(e) from e
-        draft.update(sql=a.get("sql") or "", columns=a.get("columns") or [], records=a.get("records") or [],
-                     rowCount=a.get("rowCount"), summary=a.get("summary") or a.get("explanation") or "")
-        return draft
+        source = list(a.get("columns") or [])
+        layout, added, dropped = reports_mod.merge_columns(spec, source)
+        return {"question": question, "sql": a.get("sql") or "", "columns": source,
+                "records": list(a.get("records") or [])[: reports_mod.PREVIEW_ROWS],
+                "rowCount": a.get("rowCount"), "summary": a.get("summary") or a.get("explanation") or "",
+                "layout": layout, "added": added, "dropped": dropped}
+
+    @app.post("/api/v1/reports/preview")
+    def reports_preview(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Elle değiştirilen soru için önizlemeyi yeniler; kişinin kolon düzeni kaynak adı aynı kalan kolonlarda korunur."""
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        question = " ".join(str(body.get("question") or "").split())
+        if not question:
+            raise _report_fail(reports_mod.ReportError("Raporun neyi listeleyeceği yazılmalı."))
+        try:
+            spec = reports_mod.clean_columns(body.get("columns") or [])
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        return _report_preview(r, question, spec)
+
+    @app.post("/api/v1/reports/refine")
+    def reports_refine(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Önizlemede düzeltme: cümle kolon düzenini ya da veri sorusunu değiştirir; kaydetmez.
+
+        Yalnız kolon değiştiyse veri yeniden çekilmez. Soru değiştiyse motora yeniden sorulur ve kişinin
+        kurduğu adlar/gizlemeler kaynak adı aynı kalan kolonlarda korunur.
+        """
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        question = " ".join(str(body.get("question") or "").split())
+        if not question:
+            raise _report_fail(reports_mod.ReportError("Önce bir veri sorusu gerekiyor."))
+        try:
+            plan = reports_mod.refine_plan(r.llm, question, body.get("columns") or [], str(body.get("instruction") or ""))
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        except Exception as e:  # noqa: BLE001
+            log.warning("reports refine: model hatası: %s", e)
+            raise HTTPException(status_code=503, detail={"code": "MODEL_UNAVAILABLE", "retryable": True,
+                                "message": "Model şu an yanıt vermedi. Kolonları tablodan düzenleyebilir ya da birazdan yeniden deneyebilirsiniz."}) from e
+        out: dict[str, Any] = {"changes": plan["changes"], "via": plan["via"], "requery": plan["requery"]}
+        if plan["requery"]:
+            out.update(_report_preview(r, plan["question"], plan["columns"]))
+        else:
+            out.update(question=question, layout=plan["columns"], added=[], dropped=[])
+        return out
 
     @app.post("/api/v1/reports")
     def reports_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -2335,7 +2386,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except reports_mod.ReportError as e:
             raise _report_fail(e) from e
         admin_mod.audit(engine, user, "create", "report", rep["id"], rep["title"],
-                        {"question": rep["question"], "when": rep["when"], "recipients": rep["recipients"], "fmt": rep["fmt"]})
+                        {"question": rep["question"], "when": rep["when"], "recipients": rep["recipients"], "fmt": rep["fmt"],
+                         "columns": rep["columns"]})
         return rep
 
     @app.patch("/api/v1/reports/{rid}")

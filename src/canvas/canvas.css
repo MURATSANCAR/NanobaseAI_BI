@@ -423,3 +423,38 @@
     display: block !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Excel önizlemesi (Planlı raporlar)                                  */
+/* Değişen kolon: düzeltme başına bir kez görülür, durum göstergesi.   */
+/* Renk/gölge geçişi; hareket yok, azaltılmış harekette de kalır.       */
+/* ------------------------------------------------------------------ */
+.xd-head {
+  background-color: #7c5cff;
+  box-shadow: inset 0 -3px 0 transparent;
+  transition:
+    background-color 600ms ease,
+    box-shadow 600ms ease;
+}
+.xd-head[data-flash] {
+  background-color: #5b3df0;
+  box-shadow: inset 0 -3px 0 #fbbf24;
+  transition-duration: 120ms;
+}
+.xd-col {
+  transition:
+    background-color 600ms ease,
+    box-shadow 600ms ease;
+}
+.xd-col[data-flash] {
+  background-color: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.35);
+  transition-duration: 120ms;
+}
+/* Veri yeniden gelirken eski satırlar solar; yenisi gelince geri döner. */
+.xd-body {
+  transition: opacity 150ms ease;
+}
+.xd-sheet[aria-busy='true'] .xd-body {
+  opacity: 0.45;
+}
