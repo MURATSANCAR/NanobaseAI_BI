@@ -51,8 +51,10 @@ kullanıcıların o alanı sorularında anmak için kullanabileceği BÜTÜN gü
 Kurallar:
 - Yalnız verilen açıklama, tip, değer etiketleri ve mevcut adlardan çıkar; kod adından tahmin yürütme.
   Açıklama anlamı vermiyorsa boş liste döndür.
-- Bol üret: eş anlamlılar (il, vilayet, şehir, kent), halk ağzı, kısaltmalar, iş jargonu, İngilizcesi
-  iş yerinde kullanılıyorsa o da. Aynı anlamın her yaygın yazımı ayrı bir terimdir.
+- Bol üret: eş anlamlılar (il, vilayet, şehir, kent), halk ağzı, kısaltmalar, iş jargonu. Aynı anlamın
+  her yaygın yazımı ayrı bir terimdir.
+- Terimler ve örnekler YALNIZ Türkçe. İngilizce kelime ya da İngilizce terim ("document type",
+  "transaction", "customer") yazma; açıklama İngilizce olsa bile Türkçe karşılığını yaz.
 - Çekim ekleri ve çoğul ekleme ("iller", "ilinde" yazma) — sistem kökten eşler.
 - Her terim 1–4 kelime; kolonun kendi teknik adını tekrar etme.
 - Bir tablo adı için: iş nesnesinin adları (cari, müşteri, satış noktası, bayi).
@@ -164,6 +166,33 @@ def _parse(raw: str) -> list[dict[str, Any]]:
     return out
 
 
+#: Türkçede karşılığı olan, iş sözlüğüne İngilizce girmemesi gereken kelimeler. "net", "fatura", "stok" gibi
+#: Türkçede de aynen kullanılanlar bilerek yok. Kelime bazında, küçük harfle bakılır.
+_ENGLISH_WORDS = frozenset("""
+account accounts address amount approval approved balance bank batch brand branch business buyer category
+city client code company cost count country credit currency customer customers date day debit delivery
+department description discount document documents due employee entry expense group id invoice invoices
+item items line lines list month name number order orders owner payment period phone price product
+products purchase quantity rate reason receipt record reference region return returns revenue sale sales
+seller shipment shipping state status store supplier tax title total transaction transactions
+type unit user value vendor warehouse week year
+""".split())
+
+
+def _english(term: str) -> bool:
+    """Terim İngilizce mi: kelimelerinden biri Türkçede karşılığı olan bir İngilizce kelimeyse evet.
+
+    Kısaltmalar (KDV, SKU) ve Türkçe harf taşıyan kelimeler dokunulmaz; amaç "document type" gibi
+    öneriyi düşürmek, iş yerinde yerleşmiş kısaltmayı değil."""
+    for word in term.split():
+        if word.isupper() and len(word) <= 5:
+            continue
+        low = word.lower().strip(".,;:'’\"()")
+        if low in _ENGLISH_WORDS:
+            return True
+    return False
+
+
 def _protected(row: dict[str, Any]) -> bool:
     """Rule 1. A row a person wrote or decided is never generation's to change."""
     return row["source"] == HUMAN or row["status"] in (APPROVED, REJECTED)
@@ -175,7 +204,8 @@ def refute(term: str, entity: str, column: Optional[str], *, index: dict, profil
     - it is already the name of a certified concept that points somewhere else;
     - it is a physical column name (a business vocabulary is the words people use instead);
     - it is a value label of a column on the same entity ("iptal" is a state, not a field);
-    - it is too short to mean anything on its own.
+    - it is too short to mean anything on its own;
+    - it is English: the vocabulary is the Turkish words people use.
     """
     norm = normalize_term(term)
     if len(fold(term).replace(" ", "")) < 2:
@@ -190,6 +220,8 @@ def refute(term: str, entity: str, column: Optional[str], *, index: dict, profil
     names = {c.name.upper() for p in profiles if p.entity == entity for c in p.columns}
     if term.upper().replace(" ", "_") in names:
         return "teknik kolon adı"
+    if _english(term):
+        return "İngilizce terim; sözlük Türkçe"
     for p in profiles:
         if p.entity != entity:
             continue
@@ -267,6 +299,7 @@ def maintain(store, settings, llm, profiles, *, max_targets: int = 50, only: Opt
     wanted = {(e, (c or "").upper() or None) for e, c in only} if only else None
     index = store.certified_index(settings.tenant_id, settings.datasource_id)
     summary = {"targets": 0, "calls": 0, "proposed": 0, "dropped": 0, "refuted": 0, "skipped": 0, "failed": 0, "errors": []}
+    summary["englishDropped"] = drop_english(store, settings)
     for t in targets(store, settings, profiles):
         if wanted and (t["entity"], t["column"]) not in wanted:
             continue
@@ -289,6 +322,21 @@ def maintain(store, settings, llm, profiles, *, max_targets: int = 50, only: Opt
         for k in ("proposed", "dropped", "refuted", "skipped"):
             summary[k] += counts.get(k, 0)
     return summary
+
+
+def drop_english(store, settings) -> int:
+    """Bekleyen üretilmiş önerilerden İngilizce olanları düşürür. İnsanın yazdığı ya da karar verdiği satır
+    değişmez. Talimat Türkçeye çevrilmeden önce üretilmiş öneriler için; her bakımda ucuzdur (model yok)."""
+    ensure_table(store.engine)
+    t = S.sl_vocabulary
+    stmt = sa.select(t.c.id, t.c.term).where(t.c.tenant_id == settings.tenant_id, t.c.datasource_id == settings.datasource_id,
+                                           t.c.source == GENERATED, t.c.status == PROPOSED)
+    now = _now()
+    with store.engine.begin() as conn:
+        ids = [r.id for r in conn.execute(stmt) if _english(r.term)]
+        for i in ids:
+            conn.execute(t.update().where(t.c.id == i).values(status=DROPPED, reason="İngilizce terim; sözlük Türkçe", updated_at=now))
+    return len(ids)
 
 
 # --------------------------------------------------------------------------- decisions

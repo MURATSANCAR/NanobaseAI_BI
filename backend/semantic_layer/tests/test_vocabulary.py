@@ -95,3 +95,25 @@ def test_gaps_list_the_fields_nobody_described(catalog, profiles):
     assert any(g["column"] == "CITY" for g in items)
     describe_city(profiles)
     assert not any(g["column"] == "CITY" for g in V.gaps(catalog, SETTINGS, profiles, entities=["CLCARD"]))
+
+
+def test_english_terms_are_refuted_and_pending_english_rows_are_dropped(catalog, profiles):
+    """Sözlük Türkçe: model İngilizce terim önerse de düşer; önceden bekleyen İngilizce öneriler bakımda düşer,
+    insanın kararı olduğu gibi kalır. Kısaltmalar (KDV) İngilizce sayılmaz."""
+    describe_city(profiles)
+    llm = FakeLlm(replies=[reply("il", "city name", "KDV bölgesi")])
+    V.generate_one(catalog, SETTINGS, llm, profiles, target(catalog, profiles))
+    rows = {r["term"]: r for r in V.existing(catalog, SETTINGS, "CLCARD", "CITY")}
+    assert rows["il"]["status"] == "PROPOSED" and rows["KDV bölgesi"]["status"] == "PROPOSED"
+    assert rows["city name"]["status"] == "DROPPED" and "İngilizce" in rows["city name"]["reason"]
+
+    # Talimat değişmeden önce üretilmiş bekleyen İngilizce öneri ve ona insanın verdiği bir onay
+    from semantic_layer.store import schema as S
+    with catalog.engine.begin() as conn:
+        conn.execute(S.sl_vocabulary.update().where(S.sl_vocabulary.c.id == rows["il"]["id"]).values(term="document type"))
+    eng = EvidenceEngine(catalog, min_support=3)
+    V.add_human(catalog, SETTINGS, profiles, eng, "CLCARD", "CITY", "city", "ayşe")
+    assert V.drop_english(catalog, SETTINGS) == 1
+    after = {r["term"]: r for r in V.existing(catalog, SETTINGS, "CLCARD", "CITY")}
+    assert after["document type"]["status"] == "DROPPED"
+    assert after["city"]["source"] == "human" and after["city"]["status"] == "APPROVED"
