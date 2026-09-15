@@ -818,28 +818,167 @@ def build_file(rid: str, title: str, fmt: str, columns: list[dict[str, Any]], ro
 # ------------------------------------------------------------------ e-posta
 
 
-def send_file(rep: dict[str, Any], path: Path, rows: int, now: datetime, link: str = "") -> str:
+MAIL_SAMPLE_ROWS = 5
+
+
+def _tr_number(v: float, decimals: int) -> str:
+    return f"{v:,.{decimals}f}".replace(",", "\0").replace(".", ",").replace("\0", ".")
+
+
+def mail_value(col: dict[str, Any], v: Any) -> str:
+    """Hücre değerini Excel'deki biçimle aynı anlamda, Türkçe yazımla metne çevirir."""
+    if v is None or v == "":
+        return "—"
+    fmt = col.get("format") or default_format(col.get("type"))
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        if fmt == "money":
+            return f"{_tr_number(float(v), 2)} ₺"
+        if fmt == "percent":
+            return f"%{_tr_number(float(v), 1)}"
+        if fmt == "number":
+            return _tr_number(float(v), 0 if isinstance(v, int) else 2)
+    if fmt == "date" and isinstance(v, str):
+        try:
+            return datetime.fromisoformat(v.replace("Z", "+00:00")).strftime("%d.%m.%Y")
+        except ValueError:
+            return v
+    if isinstance(v, datetime):
+        return v.strftime("%d.%m.%Y")
+    return str(v)
+
+
+def compact_money(v: float) -> str:
+    for size, unit in ((1e9, "Mr"), (1e6, "Mn"), (1e3, "B")):
+        if abs(v) >= size:
+            return f"{_tr_number(v / size, 1)} {unit} ₺"
+    return f"{_tr_number(v, 2)} ₺"
+
+
+def mail_summary(columns: list[dict[str, Any]], rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Mailin üst kartları: satır sayısı ve varsa ilk para kolonunun tüm satırlar üzerinden toplamı."""
+    out: dict[str, Any] = {"rows": len(rows), "total": None, "totalLabel": None}
+    money = next((c for c in columns if (c.get("format") or default_format(c.get("type"))) == "money"), None)
+    if money:
+        vals = [r.get(money["name"]) for r in rows]
+        nums = [float(x) for x in vals if isinstance(x, (int, float)) and not isinstance(x, bool)]
+        if nums:
+            out["total"] = sum(nums)
+            out["totalLabel"] = money["name"]
+    return out
+
+
+def _esc(s: Any) -> str:
+    import html
+
+    return html.escape(str(s), quote=True)
+
+
+def compose_mail(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]], rows: list[dict[str, Any]],
+                 now: datetime, link: str = "") -> EmailMessage:
+    """Özetli HTML mail + düz metin yedeği; Excel ek olarak eklenir (ek, çağıran tarafta)."""
+    local = now.astimezone(_LOCAL)
+    summary = mail_summary(columns, rows)
+    n_rows = _tr_number(len(rows), 0)
+    produced = local.strftime("%d.%m.%Y %H:%M")
+    sample = rows[:MAIL_SAMPLE_ROWS]
+    numeric = {c["name"] for c in columns if (c.get("format") or default_format(c.get("type"))) in ("money", "number", "percent")}
+
+    msg = EmailMessage()
+    msg["Subject"] = f"ZEKİ Rapor · {rep['title']} · {local.strftime('%d.%m.%Y')}"
+
+    # ---- düz metin (HTML açmayan istemciler için)
+    text = ["Merhaba,", "", f"«{rep['title']}» raporunuz hazır, {path.suffix.lstrip('.').upper()} dosyası ekte.", ""]
+    if summary["total"] is not None:
+        text.append(f"Toplam {summary['totalLabel']}: {compact_money(summary['total'])}")
+    text.append(f"Satır: {n_rows}")
+    if sample:
+        text += ["", f"İlk {len(sample)} satır:"]
+        for r in sample:
+            text.append("  " + " | ".join(f"{c['name']}: {mail_value(c, r.get(c['name']))}" for c in columns))
+        if len(rows) > len(sample):
+            text.append(f"  … tamamı ekteki dosyada ({n_rows} satır).")
+    text += ["", f"Sorulan: {rep['question']}", f"Üretim: {produced}", f"Plan: {rep['when']}"]
+    if link:
+        text += ["", f"Raporu ekranda aç: {link}"]
+    text += ["", "—", "Bu mail ZEKİ AI tarafından otomatik gönderildi, lütfen yanıtlamayın."]
+    msg.set_content("\n".join(text))
+
+    # ---- HTML (tablo tabanlı, satır içi stil: Outlook/Gmail aynı görünsün)
+    font = "font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
+    muted = "color:#6b6880;"
+    cards = []
+    if summary["total"] is not None:
+        cards.append((f"Toplam · {summary['totalLabel']}", compact_money(summary["total"])))
+    cards.append(("Satır", n_rows))
+    cards.append(("Plan", rep["when"]))
+    card_html = "".join(
+        f'<td valign="top" style="padding:14px 16px;background:#f6f4ff;border-radius:10px;">'
+        f'<div style="{font}font-size:11px;letter-spacing:.04em;text-transform:uppercase;{muted}">{_esc(k)}</div>'
+        f'<div style="{font}font-size:20px;font-weight:600;color:#1d1b2c;margin-top:4px;'
+        f'font-variant-numeric:tabular-nums;">{_esc(v)}</div></td>'
+        + ('<td width="8" style="font-size:0;">&nbsp;</td>' if i < len(cards) - 1 else "")
+        for i, (k, v) in enumerate(cards)
+    )
+    table_html = ""
+    if sample:
+        head = "".join(
+            f'<th align="{"right" if c["name"] in numeric else "left"}" style="{font}font-size:12px;font-weight:600;'
+            f'{muted}padding:8px 10px;border-bottom:1px solid #e4e1f0;white-space:nowrap;">{_esc(c["name"])}</th>'
+            for c in columns)
+        body = "".join(
+            "<tr>" + "".join(
+                f'<td align="{"right" if c["name"] in numeric else "left"}" style="{font}font-size:13px;color:#1d1b2c;'
+                f'padding:8px 10px;border-bottom:1px solid #f0eef6;font-variant-numeric:tabular-nums;">'
+                f'{_esc(mail_value(c, r.get(c["name"])))}</td>' for c in columns) + "</tr>"
+            for r in sample)
+        more = (f'<div style="{font}font-size:12px;{muted}margin-top:8px;">Tamamı ekteki dosyada ({n_rows} satır).</div>'
+                if len(rows) > len(sample) else "")
+        table_html = (
+            f'<div style="{font}font-size:13px;font-weight:600;color:#1d1b2c;margin:24px 0 6px;">İlk {len(sample)} satır</div>'
+            f'<div style="overflow-x:auto;"><table role="presentation" cellpadding="0" cellspacing="0" width="100%" '
+            f'style="border-collapse:collapse;"><tr>{head}</tr>{body}</table></div>{more}')
+    button = (
+        f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px;"><tr>'
+        f'<td style="background:#7C5CFF;border-radius:8px;"><a href="{_esc(link)}" style="{font}display:inline-block;'
+        f'padding:10px 18px;font-size:14px;font-weight:600;color:#ffffff;text-decoration:none;">Raporu ekranda aç</a>'
+        f'</td></tr></table>') if link else ""
+    meta = "".join(
+        f'<tr><td style="{font}font-size:12px;{muted}padding:3px 12px 3px 0;white-space:nowrap;vertical-align:top;">{_esc(k)}</td>'
+        f'<td style="{font}font-size:12px;color:#1d1b2c;padding:3px 0;">{_esc(v)}</td></tr>'
+        for k, v in (("Sorulan", rep["question"]), ("Dosya", path.name), ("Üretim", produced)))
+    html_doc = f"""<!doctype html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>{_esc(rep['title'])}</title></head>
+<body style="margin:0;padding:0;background:#f1f0f5;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f0f5;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden;">
+<tr><td style="background:#1d1b2c;padding:20px 28px;">
+<div style="{font}font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#b7a8ff;">ZEKİ AI · Planlı Rapor</div>
+<div style="{font}font-size:20px;font-weight:600;color:#ffffff;margin-top:4px;">{_esc(rep['title'])}</div>
+</td></tr>
+<tr><td style="padding:24px 28px;">
+<div style="{font}font-size:14px;line-height:1.55;color:#1d1b2c;">Merhaba,<br>Raporunuz hazır, {_esc(path.suffix.lstrip('.').upper())} dosyası ekte.</div>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:20px;"><tr>{card_html}</tr></table>
+{table_html}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid #f0eef6;padding-top:12px;" width="100%">{meta}</table>
+{button}
+</td></tr>
+<tr><td style="padding:14px 28px;background:#faf9fc;{font}font-size:11px;{muted}">Bu mail ZEKİ AI tarafından otomatik gönderildi, lütfen yanıtlamayın.</td></tr>
+</table></td></tr></table></body></html>"""
+    msg.add_alternative(html_doc, subtype="html")
+    return msg
+
+
+def send_file(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]], rows: list[dict[str, Any]],
+              now: datetime, link: str = "") -> str:
     to = rep.get("recipients") or []
     if not to:
         return "no_recipient"
     cfg = alerts_mod.smtp_settings()
     if not cfg:
         return "no_smtp"
-    msg = EmailMessage()
-    msg["Subject"] = f"ZEKİ rapor: {rep['title']}"
+    msg = compose_mail(rep, path, columns, rows, now, link)
     msg["From"] = cfg["sender"]
     msg["To"] = ", ".join(to)
-    lines = [
-        f"«{rep['title']}» raporu ekte.",
-        "",
-        f"Soru: {rep['question']}",
-        f"Satır: {rows:,}".replace(",", "."),
-        f"Üretim: {now.astimezone(_LOCAL).strftime('%d.%m.%Y %H:%M')}",
-        f"Plan: {rep['when']}",
-    ]
-    if link:
-        lines += ["", f"Planlı raporlar: {link}"]
-    msg.set_content("\n".join(lines))
     ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
     maintype, subtype = ctype.split("/", 1)
     msg.add_attachment(path.read_bytes(), maintype=maintype, subtype=subtype, filename=path.name)
@@ -885,7 +1024,7 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
         columns, rows = fetcher(sql)
         columns, rows, dropped = apply_columns(rep["columns"], columns, rows)
         path = build_file(rid, rep["title"], rep["fmt"], columns, rows, now)
-        status = send_file(rep, path, len(rows), now, link)
+        status = send_file(rep, path, columns, rows, now, link)
         # Düzendeki bir kolon artık sonuçta yoksa dosya yine üretilir ama bu kayda yazılır.
         note = f"Not: şu kolonlar bu çalışmada sonuçta yoktu: {', '.join(dropped)}" if dropped else None
         upd.update(sql=sql[:50000], last_file=str(path), last_rows=len(rows), last_status=status, last_error=note)
