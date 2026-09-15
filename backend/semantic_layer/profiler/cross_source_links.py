@@ -695,8 +695,9 @@ class CrossSourceLinkDiscovery:
             lo, hi = self._range(ks, k.column)
             if lo is None or hi is None:
                 return "int: empty key"
-            if r.profile.vmax is not None and r.profile.vmax > hi:
-                return "int: values above the key's range"
+            inside = sum(1 for v in r.profile.values if lo <= int(v) <= hi) / max(1, len(r.profile.values))
+            if inside < self.th.sample_containment:
+                return "int: values outside the key's range"
             return None
         if fam == CODE:
             km = set(k.profile.masks) or {value_mask(v) for v in k.profile.values}
@@ -757,8 +758,10 @@ class CrossSourceLinkDiscovery:
                                  measured_at=_now())
                 if containment < self.th.sample_containment:
                     res.reason = f"sample containment {containment:.2f} < {self.th.sample_containment}"
-                elif family == INT and density is not None and containment < min(1.0, density + self.th.int_lift) \
-                        and containment < 0.99:
+                elif family == INT and density is not None and density + self.th.int_lift < 1.0 \
+                        and containment < density + self.th.int_lift:
+                    # A key with gaps is hit by chance at its density; a real reference does better.
+                    # Where the key has no gaps this cannot tell anything apart — corroboration will.
                     res.reason = f"int containment {containment:.2f} not above key density {density:.2f}"
                 else:
                     res.stage = "corroborate"
