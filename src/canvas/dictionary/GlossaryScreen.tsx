@@ -596,7 +596,7 @@ export default function GlossaryScreen() {
       icon: PenLine,
       title: 'Eksik açıklamalar',
       help: 'Anlamı yazılmamış alanlar; doldurdukça cevaplar iyileşir',
-      stat: summary ? <Coverage done={described} total={summary.columns} /> : '…',
+      stat: summary ? `%${Math.round((described / Math.max(1, summary.columns)) * 100)} açıklamalı` : '…',
     },
   ];
 
@@ -612,48 +612,46 @@ export default function GlossaryScreen() {
       }}
       rail={railFor('/veri-sozlugu')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-hidden">
-        <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:gap-4 md:pb-0">
-          {/* Başlık ve bölüm seçimi: ekranın ne olduğu tek cümlede */}
-          <div className="shrink-0">
-            <h1 className="text-[22px] font-extrabold tracking-tight text-canvas-ink sm:text-2xl">Veri Sözlüğü</h1>
-            <p className="mt-0.5 max-w-3xl text-[13px] text-canvas-muted">
-              ZEKİ sorulara cevap verirken bu sözlüğü kullanır. Bir kelimenin neyi hesapladığını, hangi tablonun ne tuttuğunu ve anlamı henüz yazılmamış alanları burada görürsünüz.
-            </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+        <div className="mx-auto flex min-h-full w-full max-w-[1760px] flex-col gap-3 pb-4 md:gap-3">
+          {/* Başlık ve bölüm seçimi tek satırda: çalışma alanına yer kalsın */}
+          <div className="flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+            <div className="min-w-0">
+              <h1 className="text-[20px] font-extrabold leading-tight tracking-tight text-canvas-ink">Veri Sözlüğü</h1>
+              <p className="text-[12.5px] text-canvas-muted">{TABS.find((t) => t.id === tab)?.help}</p>
+            </div>
+            <div role="tablist" className="glass-panel -mx-1 flex gap-1 overflow-x-auto rounded-2xl p-1 shadow-glass-float [scrollbar-width:none] lg:mx-0 [&::-webkit-scrollbar]:hidden">
               {TABS.map((t) => {
                 const on = tab === t.id;
                 return (
                   <button
                     key={t.id}
                     type="button"
+                    role="tab"
+                    aria-selected={on}
                     onClick={() => {
                       setTab(t.id);
                       setSel('');
                       setQ('');
                     }}
-                    aria-pressed={on}
                     className={[
-                      'glass-panel flex min-h-11 flex-col gap-1 rounded-2xl p-3 text-left shadow-glass-float',
+                      'flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3 text-left sm:min-h-10',
                       press,
-                      on ? 'ring-2 ring-canvas-violet' : 'opacity-90 hover:opacity-100',
+                      on ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:bg-white/60 hover:text-canvas-ink',
                     ].join(' ')}
                   >
-                    <span className="flex items-center gap-2">
-                      <t.icon className={`h-4 w-4 ${on ? 'text-canvas-violet' : 'text-canvas-muted'}`} />
-                      <span className="text-[14px] font-extrabold">{t.title}</span>
-                    </span>
-                    <span className="text-[12px] leading-snug text-canvas-muted">{t.help}</span>
-                    <span className="text-[12px] font-bold text-canvas-ink">{t.stat}</span>
+                    <t.icon className={`h-4 w-4 ${on ? 'text-canvas-violet' : ''}`} />
+                    <span className="text-[13px] font-extrabold">{t.title}</span>
+                    <span className="text-[11.5px] font-semibold text-canvas-muted">{t.stat}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:gap-4">
+          <div className="flex flex-1 flex-col gap-3 md:min-h-[max(560px,calc(100dvh-190px))] md:flex-row md:gap-4">
             {/* Sol: arama ve liste */}
-            <div className="glass-panel flex max-h-[46vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[380px]">
+            <div className="glass-panel flex max-h-[46vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-[calc(100dvh-190px)] md:w-[360px]">
               <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
                 <Search className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
                 <input
@@ -665,7 +663,7 @@ export default function GlossaryScreen() {
               </label>
 
               {tab === 'terimler' && types.length > 1 && (
-                <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
+                <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {['', ...types].map((t) => (
                     <button
                       key={t || 'hepsi'}
@@ -770,7 +768,7 @@ export default function GlossaryScreen() {
             {/* Sağ: detay */}
             <div
               ref={detailRef}
-              className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:min-h-0 md:flex-1 md:shrink md:overflow-auto"
+              className="glass-card min-w-0 shrink-0 scroll-mt-2 rounded-2xl p-4 shadow-canvas-card sm:rounded-3xl sm:p-6 md:max-h-[calc(100dvh-190px)] md:flex-1 md:shrink md:overflow-auto"
             >
               {loading ? (
                 <Spinner />
