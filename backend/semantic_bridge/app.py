@@ -2408,6 +2408,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "test", "setting", "email", "SMTP denemesi", {"to": to, "ok": ok, "message": message})
         return {"ok": ok, "message": message}
 
+    @app.post("/api/v1/admin/directory/test")
+    def admin_directory_test(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        username = str(body.get("username") or "").strip()
+        ok, message = admin_mod.directory_test(username)
+        admin_mod.audit(engine, user, "test", "setting", "directory", "Active Directory denemesi",
+                        {"username": username or None, "ok": ok, "message": message})
+        return {"ok": ok, "message": message}
+
     @app.get("/api/v1/admin/reports")
     def admin_reports(request: Request) -> dict[str, Any]:
         _, engine, tenant, ds, _ = _admin(request)

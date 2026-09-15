@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, RotateCcw, Save, Send } from 'lucide-react';
+import { Loader2, Plug, RotateCcw, Save, Send } from 'lucide-react';
 import { adminApi, type AdminSetting } from '../engine';
 import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate } from './ui';
 
 const SOURCE: Record<AdminSetting['source'], string> = {
   screen: 'Bu ekrandan',
   env: 'Sunucu ayar dosyası',
+  file: 'Giriş servisi dosyası',
   default: 'Varsayılan',
 };
 
@@ -98,6 +99,8 @@ export default function SettingsPanel() {
   });
   const reset = useMutation({ mutationFn: (key: string) => adminApi.resetSetting(key), onSuccess: apply });
   const test = useMutation({ mutationFn: (to: string) => adminApi.testEmail(to) });
+  const [dirUser, setDirUser] = useState('');
+  const dirTest = useMutation({ mutationFn: (u: string) => adminApi.testDirectory(u) });
 
   if (q.isLoading) return <Loading />;
   if (q.error || !q.data) return <Note tone="err">{errText(q.error, 'Ayarlar okunamadı.')}</Note>;
@@ -139,6 +142,23 @@ export default function SettingsPanel() {
               </div>
               {test.data && <div className="mt-2"><Note tone={test.data.ok ? 'ok' : 'err'}>{test.data.message}</Note></div>}
               {test.error && <div className="mt-2"><Note tone="err">{errText(test.error, 'Deneme gönderilemedi.')}</Note></div>}
+            </div>
+          )}
+          {g.id === 'directory' && (
+            <div className="mt-2 rounded-xl bg-slate-50 p-3">
+              <div className="text-[12.5px] font-bold">Bağlantı denemesi</div>
+              <p className="text-[11.5px] text-canvas-muted">
+                Kaydedilmiş ayarla servis hesabı dizine bağlanır. Bir hesap adı yazarsanız onu da arar; boşsa servis hesabını arar. Önce değişiklikleri kaydedin.
+              </p>
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input value={dirUser} onChange={(e) => setDirUser(e.target.value)} placeholder="hesap adı (isteğe bağlı)" autoCapitalize="none" spellCheck={false} className={field} />
+                <button type="button" disabled={dirTest.isPending || dirty.length > 0} onClick={() => dirTest.mutate(dirUser.trim())} className={`${btnGhost} shrink-0`}>
+                  {dirTest.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
+                  Bağlan
+                </button>
+              </div>
+              {dirTest.data && <div className="mt-2"><Note tone={dirTest.data.ok ? 'ok' : 'err'}>{dirTest.data.message}</Note></div>}
+              {dirTest.error && <div className="mt-2"><Note tone="err">{errText(dirTest.error, 'Deneme yapılamadı.')}</Note></div>}
             </div>
           )}
         </Card>

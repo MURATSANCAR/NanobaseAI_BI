@@ -412,8 +412,8 @@ export type AdminSetting = {
   /** Gizli alanlarda her zaman null; yalnız `hasValue` söylenir. */
   value: string | null;
   hasValue: boolean;
-  /** screen: yönetim ekranında kaydedildi · env: servis ortam dosyası · default: varsayılan */
-  source: 'screen' | 'env' | 'default';
+  /** screen: yönetim ekranında kaydedildi · env: servis ortam dosyası · file: giriş servisi dosyası · default: varsayılan */
+  source: 'screen' | 'env' | 'file' | 'default';
   updatedBy: string | null;
   updatedAt: string | null;
 };
@@ -501,6 +501,8 @@ export const adminApi = {
     send<AdminSettings & { changed: string[] }>('PUT', '/api/v1/admin/settings', { values }, 30_000),
   resetSetting: (key: string) => send<AdminSettings>('DELETE', `/api/v1/admin/settings/${encodeURIComponent(key)}`, undefined, 15_000),
   testEmail: (to: string) => send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/email/test', { to }, 60_000),
+  testDirectory: (username: string) =>
+    send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/directory/test', { username }, 30_000),
   reports: () => send<{ items: AdminReport[] }>('GET', '/api/v1/admin/reports', undefined, 30_000),
   updateReport: (id: string, b: Partial<ReportInput>) =>
     send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),

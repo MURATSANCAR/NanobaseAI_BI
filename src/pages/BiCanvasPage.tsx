@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
+import Shell from '@/canvas/stitch/Shell';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
 import { alertsData, cfoData, schedulesData } from '@/canvas/stitch/screens';
@@ -140,7 +141,18 @@ export default function BiCanvasPage() {
 
   return (
     <>
-      <StitchCanvas d={view} onAsk={onAsk} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
+      {screen === 'uyarilar' ? (
+        // Uyarılar ekranı şimdilik boş: yalnız kabuk (üst şerit + ray). İçerik ayrıca tasarlanacak.
+        <Shell
+          head={{ tenant: view.tenant, section: view.section, crumb: view.crumb, source: view.source, presence: view.presence, zoom: view.zoom }}
+          rail={view.rail}
+          onZoom={onZoom}
+        >
+          {null}
+        </Shell>
+      ) : (
+        <StitchCanvas d={view} onAsk={onAsk} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
+      )}
       {screen === 'uyarilar' && panel && (
         <AlertsPanel
           mode={panel}

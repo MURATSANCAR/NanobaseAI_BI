@@ -10,6 +10,7 @@ cevabıdır. Kayıt yazılamazsa asıl işlem durmaz; kayıt bir yan üründür,
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -72,6 +73,22 @@ SPEC: list[dict[str, Any]] = [
      "help": "Eşik aşılmaya devam ederse kaç saat sonra yeniden bildirilir"},
     {"key": "REPORT_KEEP_FILES", "group": "delivery", "label": "Rapor başına saklanan dosya", "type": "int", "default": "10",
      "help": "Eski dosyalar bu sayıdan sonra silinir"},
+    # Active Directory (giriş). Değerler giriş servisinin dosyasında tutulur (`file`), veritabanında değil;
+    # timas-login her girişte dosyayı yeniden okur, kaydedilen değer hemen geçerli olur.
+    {"key": "AD_HOST", "group": "directory", "label": "Etki alanı denetleyicisi", "type": "text", "default": "",
+     "help": "Sunucu adı ya da IP, örn. 192.168.0.20", "file": "host"},
+    {"key": "AD_PORT", "group": "directory", "label": "Port", "type": "int", "default": "389",
+     "help": "389 (LDAP, NTLM ile)", "file": "port"},
+    {"key": "AD_NETBIOS", "group": "directory", "label": "NetBIOS alan adı", "type": "text", "default": "",
+     "help": "Örn. TIMAS; giriş TIMAS\\kullanici biçiminde yapılır", "file": "netbios"},
+    {"key": "AD_DNS_DOMAIN", "group": "directory", "label": "DNS alan adı", "type": "text", "default": "",
+     "help": "Örn. timas.local; kullanici@timas.local biçimi de kabul edilir", "file": "dns_domain"},
+    {"key": "AD_BASE_DN", "group": "directory", "label": "Arama kökü (Base DN)", "type": "text", "default": "",
+     "help": "Örn. DC=timas,DC=local", "file": "base_dn"},
+    {"key": "AD_BIND_USER", "group": "directory", "label": "Servis hesabı", "type": "text", "default": "",
+     "help": "Kullanıcıları arayan hesap, alan adı olmadan", "file": "bind_user"},
+    {"key": "AD_BIND_PASSWORD", "group": "directory", "label": "Servis hesabı parolası", "type": "secret", "default": "",
+     "help": "Kaydedilen parola ekranda bir daha gösterilmez", "file": "bind_password"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "timasai,muratsancar", "help": "AD hesap adları, virgülle. Bu ekranı yalnız bunlar açar"},
@@ -80,8 +97,13 @@ _BY_KEY = {s["key"]: s for s in SPEC}
 GROUPS = [
     {"id": "email", "label": "E-posta (SMTP)", "help": "Uyarı ve planlı rapor e-postaları bu hesapla gider."},
     {"id": "delivery", "label": "Bildirim ve raporlar", "help": "Gönderim davranışı."},
+    {"id": "directory", "label": "Active Directory (giriş)",
+     "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
     {"id": "access", "label": "Yetki", "help": "Yönetim ekranına kimlerin gireceği."},
 ]
+_FILE_KEYS = {s["key"]: s["file"] for s in SPEC if s.get("file")}
+#: Giriş servisiyle aynı dosya (scripts/server/portal-login/server.py → AD_CONFIG_FILE).
+AD_FILE = os.environ.get("AD_CONFIG_FILE", "/etc/nanobase/timas-ad.json")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum"}
@@ -135,8 +157,38 @@ def _stored() -> dict[str, str]:
     return _cache["values"]
 
 
+def _ad_file() -> dict[str, Any]:
+    try:
+        with open(AD_FILE, encoding="utf-8") as f:
+            d = json.load(f)
+        return d if isinstance(d, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _ad_file_write(values: dict[str, Any]) -> None:
+    """Dosyayı yerinde değil yanına yazıp adını değiştirir: giriş servisi yarım dosya okumasın. Sahip ve izin korunur."""
+    tmp = f"{AD_FILE}.tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(values, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    try:
+        st = os.stat(AD_FILE)
+        os.chmod(tmp, st.st_mode & 0o777)
+        os.chown(tmp, st.st_uid, st.st_gid)
+    except OSError:
+        os.chmod(tmp, 0o640)
+    os.replace(tmp, AD_FILE)
+
+
 def conf(key: str, default: str = "") -> str:
-    """Ayarın geçerli değeri: ekran > ortam > varsayılan."""
+    """Ayarın geçerli değeri: ekran > ortam > varsayılan. Dizin ayarları yalnız giriş servisinin dosyasından."""
+    if key in _FILE_KEYS:
+        v = _ad_file().get(_FILE_KEYS[key])
+        if v is None or v == "":
+            spec = _BY_KEY[key]
+            return spec["default"] if default == "" else default
+        return str(v)
     stored = _stored()
     if key in stored:
         return stored[key]
@@ -188,7 +240,7 @@ def settings_view() -> dict[str, Any]:
     items = []
     for s in SPEC:
         k = s["key"]
-        source = "screen" if k in stored else "env" if k in os.environ else "default"
+        source = "file" if k in _FILE_KEYS else "screen" if k in stored else "env" if k in os.environ else "default"
         value = conf(k)
         item = {k2: s[k2] for k2 in ("key", "group", "label", "type", "help")}
         item.update(source=source, updatedBy=rows[k]["updated_by"] if k in rows else None,
@@ -215,8 +267,28 @@ def save_settings(engine: sa.engine.Engine, actor: str, values: dict[str, Any]) 
         clean[k] = _validate(spec, raw)
     if "TIMAS_ADMIN_USERS" in clean and actor.lower() not in clean["TIMAS_ADMIN_USERS"].split(","):
         raise AdminError("Kendinizi yöneticilerden çıkaramazsınız; önce başka bir yönetici bunu yapmalı.")
+    file_part = {k: v for k, v in clean.items() if k in _FILE_KEYS}
+    if file_part:
+        current = _ad_file()
+        merged = dict(current)
+        for k, v in file_part.items():
+            field = _FILE_KEYS[k]
+            old = "" if current.get(field) is None else str(current.get(field))
+            if old == v:
+                continue
+            merged[field] = int(v) if _BY_KEY[k]["type"] == "int" else v
+            secret = _BY_KEY[k]["type"] == "secret"
+            changed.append({"key": k, "label": _BY_KEY[k]["label"],
+                            "from": None if secret else old, "to": None if secret else v})
+        if len(changed):
+            try:
+                _ad_file_write(merged)
+            except OSError as e:
+                raise AdminError(f"Giriş servisi dosyası yazılamadı ({AD_FILE}): {e}") from e
     with engine.begin() as c:
         for k, v in clean.items():
+            if k in _FILE_KEYS:
+                continue
             old = conf(k)
             if old == v and k in _stored():
                 continue
@@ -238,6 +310,8 @@ def reset_setting(engine: sa.engine.Engine, actor: str, key: str) -> dict[str, A
         raise AdminError(f"Bilinmeyen ayar: {key}")
     if key == "TIMAS_ADMIN_USERS":
         raise AdminError("Yönetici listesi sıfırlanamaz; düzenleyerek değiştirin.")
+    if key in _FILE_KEYS:
+        raise AdminError("Dizin ayarının sunucu değeri yoktur; düzenleyerek değiştirin.")
     with engine.begin() as c:
         n = c.execute(SETTINGS.delete().where(SETTINGS.c.key == key)).rowcount
     _cache["at"] = 0.0
@@ -267,6 +341,70 @@ def smtp_test(to: str) -> tuple[bool, str]:
                 s.login(cfg["user"], cfg["password"])
             s.send_message(msg)
         return True, f"{to} adresine gönderildi."
+    except Exception as e:  # noqa: BLE001
+        return False, f"{type(e).__name__}: {e}"[:400]
+
+
+def _ensure_md4() -> None:
+    """NTLM MD4 ister; OpenSSL 3 kaldırdı, pycryptodome'da var. Giriş servisindeki şimle aynı."""
+    try:
+        hashlib.new("md4", b"")
+        return
+    except ValueError:
+        pass
+    from Crypto.Hash import MD4  # type: ignore[import-not-found]
+
+    builtin = hashlib.new
+
+    class _Md4:
+        def __init__(self, data: bytes = b"") -> None:
+            self.h = MD4.new(data)
+
+        def update(self, data: bytes) -> None:
+            self.h.update(data)
+
+        def digest(self) -> bytes:
+            return self.h.digest()
+
+    hashlib.new = lambda name, data=b"", **kw: _Md4(data) if name.lower() == "md4" else builtin(name, data, **kw)  # type: ignore[assignment]
+
+
+def directory_test(username: str = "") -> tuple[bool, str]:
+    """Servis hesabıyla dizine bağlanır; ad verilmişse o kullanıcıyı da arar. Giriş servisiyle aynı yol: NTLM, düz bağlama yok."""
+    cfg = {k: conf(k) for k in _FILE_KEYS}
+    missing = [_BY_KEY[k]["label"] for k in ("AD_HOST", "AD_NETBIOS", "AD_BASE_DN", "AD_BIND_USER", "AD_BIND_PASSWORD") if not cfg[k]]
+    if missing:
+        return False, "Eksik: " + ", ".join(missing) + "."
+    try:
+        from ldap3 import NONE, NTLM, SUBTREE, Connection, Server  # type: ignore[import-not-found]
+        from ldap3.core.exceptions import LDAPException  # type: ignore[import-not-found]
+        _ensure_md4()
+    except ImportError as e:
+        return False, f"Sunucuda ldap3 kurulu değil: {e}"
+    t0 = time.monotonic()
+    try:
+        server = Server(cfg["AD_HOST"], port=int(cfg["AD_PORT"] or 389), get_info=NONE, connect_timeout=5)
+        conn = Connection(server, user=f'{cfg["AD_NETBIOS"]}\\{cfg["AD_BIND_USER"]}', password=cfg["AD_BIND_PASSWORD"],
+                          authentication=NTLM, receive_timeout=10)
+        if not conn.bind():
+            return False, f"Servis hesabı reddedildi: {conn.result.get('description') or conn.result}"
+        try:
+            name = "".join(ch for ch in username.strip().split("\\")[-1].split("@")[0] if ch.isalnum() or ch in "._-") or cfg["AD_BIND_USER"]
+            conn.search(cfg["AD_BASE_DN"], f"(&(objectClass=user)(sAMAccountName={name}))", SUBTREE,
+                        attributes=["sAMAccountName", "displayName", "userAccountControl"], size_limit=2)
+            ms = int((time.monotonic() - t0) * 1000)
+            if len(conn.entries) != 1:
+                return False, f"Bağlantı kuruldu ({ms} ms) ama «{name}» hesabı bulunamadı."
+            e = conn.entries[0]
+            uac = int(e.userAccountControl.value or 0)
+            disabled = bool(uac & 2)
+            return (not disabled,
+                    f"Bağlandı ({ms} ms). {e.displayName.value or name} ({e.sAMAccountName.value})"
+                    + (" — hesap devre dışı." if disabled else " — hesap etkin."))
+        finally:
+            conn.unbind()
+    except LDAPException as e:
+        return False, f"{type(e).__name__}: {e}"[:400]
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"[:400]
 

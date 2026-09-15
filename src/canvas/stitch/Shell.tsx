@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
@@ -36,6 +36,8 @@ const RAIL_ICONS = [
   ),
 ];
 
+const RAIL_KEY = 'timas.rail.open';
+
 export type ShellHead = {
   tenant: string;
   section: string;
@@ -64,6 +66,21 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
+  // Ray açık/kapalı; tercih tarayıcıda kalır. Açıkken menü adları ikonun yanında kendi alanında yazar.
+  const [railOpen, setRailOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(RAIL_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(RAIL_KEY, railOpen ? '1' : '0');
+    } catch {
+      /* özel pencere */
+    }
+  }, [railOpen]);
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   // Pano izni reddedilirse (odak yok, güvenli bağlam değil) eski yönteme düşer; o da olmazsa bunu söyler.
   const share = () => {
@@ -162,26 +179,61 @@ export default function Shell({
     </header>
 
     {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
-      {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. */}
-      <aside className="print:hidden absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-center justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 w-10 sm:w-[54px] glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto">
-        {rail.map((item, i) => (
-          <div key={item.to} className="relative group flex items-center shrink-0">
-            <Link
-              to={item.to}
-              aria-label={item.label}
-              className={
-                item.badge === 'Aktif'
-                  ? 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105 [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
-                  : 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5'
-              }
-            >
-              {RAIL_ICONS[i % RAIL_ICONS.length]}
-            </Link>
-            <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
-              {item.label}
+      {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. Üstteki ok rayı açar: adlar ikonun yanında yazar. */}
+      <aside
+        data-open={railOpen ? '1' : '0'}
+        className={
+          'rail print:hidden absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-stretch justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto overflow-x-hidden ' +
+          (railOpen ? 'w-[200px] sm:w-[216px]' : 'w-10 sm:w-[54px]')
+        }
+      >
+        <button
+          type="button"
+          onClick={() => setRailOpen((v) => !v)}
+          aria-label={railOpen ? 'Menüyü daralt' : 'Menüyü genişlet'}
+          aria-expanded={railOpen}
+          title={railOpen ? 'Daralt' : 'Genişlet'}
+          className="rail-item mx-auto sm:mx-0 w-10 h-8 shrink-0 rounded-lg sm:rounded-xl text-muted hover:text-ink hover:bg-white/80 active:scale-[0.97] transition flex items-center justify-center"
+        >
+          <svg
+            className={'w-4 h-4 transition-transform duration-200 ' + (railOpen ? 'rotate-180' : '')}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {rail.map((item, i) => {
+          const active = item.badge === 'Aktif';
+          return (
+            <div key={item.to} className="relative group flex items-center shrink-0">
+              <Link
+                to={item.to}
+                aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
+                className={
+                  'rail-item flex items-center min-w-0 overflow-hidden h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl transition [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5 ' +
+                  (railOpen ? 'w-full pr-3 ' : 'w-10 mx-auto sm:mx-0 ') +
+                  (active
+                    ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-md'
+                    : 'hover:bg-white/80 text-muted hover:text-ink')
+                }
+              >
+                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{RAIL_ICONS[i % RAIL_ICONS.length]}</span>
+                <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
+                  {item.label}
+                </span>
+              </Link>
+              {!railOpen && (
+                <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+                  {item.label}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Modül menüsü: 18 grup, 67 modül. Ekran açmaz, listeler. */}
         <div className="relative group flex items-center mt-auto shrink-0">
@@ -190,18 +242,27 @@ export default function Shell({
             onClick={() => setModulesOpen((v) => !v)}
             aria-label="Modüller"
             className={
-              modulesOpen
-                ? 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-coral to-violet text-white shadow-md flex items-center justify-center transition-transform hover:scale-105'
-                : 'w-10 h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl hover:bg-white/80 text-muted hover:text-ink transition flex items-center justify-center'
+              'rail-item flex items-center min-w-0 overflow-hidden h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl transition ' +
+              (railOpen ? 'w-full pr-3 ' : 'w-10 mx-auto sm:mx-0 ') +
+              (modulesOpen
+                ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-md'
+                : 'hover:bg-white/80 text-muted hover:text-ink')
             }
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <span className="w-10 h-10 shrink-0 flex items-center justify-center">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </span>
+            <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
+              Modüller
+            </span>
           </button>
-          <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
-            Modüller
-          </div>
+          {!railOpen && (
+            <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
+              Modüller
+            </div>
+          )}
         </div>
       </aside>
 
