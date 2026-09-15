@@ -30,6 +30,8 @@ STOPWORDS: frozenset[str] = frozenset(
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
     sahip ait
+    olan oldugu olup olsun olacak bulunsun bulunan gorunsun yazilsin eklensin ekleyin ekle ekleyelim
+    sutun sutuna sutunda sutunu sutunlar sutunlara kolonda kolona yan yanina yaninda ayni dahil
     """.split()
 )
 

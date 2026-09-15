@@ -233,5 +233,26 @@ sl_vocabulary = sa.Table(
 )
 
 
+sl_coverage = sa.Table(
+    "sl_coverage",
+    metadata,
+    sa.Column("id", sa.String(64), primary_key=True),
+    sa.Column("tenant_id", sa.String(64), nullable=False),
+    sa.Column("datasource_id", sa.String(128), nullable=False),
+    sa.Column("table_name", sa.String(256), nullable=False),
+    sa.Column("entity", sa.String(128), nullable=False),
+    sa.Column("time_column", sa.String(128)),
+    sa.Column("declared_from", sa.String(10), nullable=False),   # ISO date, inclusive
+    sa.Column("declared_to", sa.String(10), nullable=False),     # ISO date, exclusive
+    sa.Column("spill", sa.Integer()),                            # rows outside the declared range; NULL = not measured
+    sa.Column("status", sa.String(16), nullable=False),          # declared | contested | unmeasured
+    sa.Column("verified_by", sa.String(128)),
+    sa.Column("reason", sa.Text()),
+    sa.Column("measured_at", sa.DateTime(timezone=True)),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.UniqueConstraint("tenant_id", "datasource_id", "table_name", name="uq_sl_coverage_table"),
+)
+
+
 def create_all(engine: sa.Engine) -> None:
     metadata.create_all(engine)

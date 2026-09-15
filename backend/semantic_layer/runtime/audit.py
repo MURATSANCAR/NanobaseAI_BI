@@ -349,8 +349,8 @@ def _intervals(conjuncts: list[exp.Expression], window: Optional[tuple[str, str]
         out[k] = (a, b)
     if window and window[0] and window[1]:
         # The source itself only holds this range: a period-partitioned table needs no date filter
-        # to answer for its own period.
-        first, last = window[0][:10], _plus_day(window[1])
+        # to answer for its own period. Declared ranges are half-open already.
+        first, last = window[0][:10], window[1][:10]
         for k in list(out) or []:
             a, b = out[k]
             out[k] = (max(a, first) if a else first, min(b, last) if b else last)
@@ -556,8 +556,22 @@ def _period_outputs(tree, period, scope, binding=None):
         if columns and _admits_period(tree.args.get("where"), columns | related_columns, period):
             inner = projection.this if isinstance(projection, exp.Alias) else projection
             def unwrap(n):
+                # Take the period out of the CASE and leave the rest of the condition in: a model
+                # writes `CASE WHEN TRCODE IN (7,8,9) AND <period> THEN x ELSE 0 END` where the
+                # deterministic compiler nests two CASEs, and both are the certified measure over
+                # the period.
                 if isinstance(n, exp.AggFunc) and isinstance(_aggregate_case(n), exp.Case):
-                    value = _aggregate_case(n).args["ifs"][0].args["true"].copy()
+                    case = _aggregate_case(n)
+                    branch = case.args["ifs"][0]
+                    rest = [part for part in _split_and(branch.this)
+                            if not (isinstance(part, (exp.GTE, exp.GT, exp.LT, exp.LTE)) and isinstance(part.left, exp.Column)
+                                    and (part.left.table.upper(), part.left.name.upper()) in columns)]
+                    value = branch.args["true"].copy()
+                    if rest:
+                        cond = rest[0].copy()
+                        for part in rest[1:]:
+                            cond = exp.And(this=cond, expression=part.copy())
+                        value = exp.Case(ifs=[exp.If(this=cond, true=value)], default=case.args.get("default").copy() if case.args.get("default") is not None else None)
                     n.set("this", exp.Distinct(expressions=[value]) if isinstance(n.this, exp.Distinct) else value)
                 return n
             formula = _formula(inner.copy().transform(unwrap), scope)
@@ -589,8 +603,10 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
     alts = binding.get("alternatives", [])
     own = [o for o in occ if o.entity.upper() == entity]
     if own:
+        pieces: list[tuple[str, str]] = []
         for o in own:
-            if _window_of(o, column) == want:
+            w = _window_of(o, column)
+            if w == want:
                 continue
             here = [x for x in occ if x.select is o.select]
             edges = _join_edges(o.select, _entities_in(o.select, here))
@@ -599,10 +615,26 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
                 edge = tuple(str(x).upper() for x in alt["join"])
                 if edge not in edges:
                     continue
-                if any(x.entity.upper() == alt["entity"].upper() and _window_of(x, alt["column"].upper()) == want for x in here):
+                aw = next((_window_of(x, alt["column"].upper()) for x in here if x.entity.upper() == alt["entity"].upper()), None)
+                if aw == want:
                     ok = True
                     break
-            if not ok:
+                if aw and aw[0] and aw[1]:
+                    w = aw
+            if ok:
+                continue
+            if w and w[0] and w[1] and w[0] >= want[0] and w[1] <= want[1]:
+                pieces.append(w)             # a slice of the period: one year-partition of a span
+                continue
+            return False
+        # Several sources each holding a slice: together they must be exactly the period, with no
+        # gap and no overlap — the union of years the deterministic compiler writes, and the
+        # double-counting shape it once wrote by mistake.
+        if pieces:
+            pieces.sort()
+            if pieces[0][0] != want[0] or pieces[-1][1] != want[1]:
+                return False
+            if any(pieces[i][1] != pieces[i + 1][0] for i in range(len(pieces) - 1)):
                 return False
         return True
     # The bound entity is not read at all: a declared equivalent may carry the period, provided it
@@ -979,6 +1011,7 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
                               for key in (s.mapping.extra or {}).get("conditions", []))))
               for s in measures]
     expected = set()
+    expected_formulas: list[str] = []          # one per measure, scoped the way the catalog scopes it
     for s, predicates in zip(measures, scopes):
         formula = s.mapping.formula
         if "" in predicates:
@@ -988,6 +1021,7 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
                 return False, "ölçü kapsamının bu formüle uygulanması doğrulanamadı"
             formula = _wrap_condition(formula, " AND ".join(f"({p})" for p in predicates))
         expected.add(_formula(parse_sql(formula), _Scope(tree, None)))
+        expected_formulas.append(formula)
     binding = sq.temporal_binding
 
     # (a) one SELECT, the periods as CASE conditions inside additive aggregates
@@ -1000,7 +1034,18 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
                    for alias, col in columns)
     proven = {af for a, (ac, af) in left.items() for b, (bc, bf) in right.items()
               if a != b and af == bf and correct_column(ac & bc)}
-    if proven and (not expected or expected <= proven):
+    # The measure's own CASE may have been pushed into the WHERE of the rows read: the same number.
+    carried = {(o.entity.upper(), p.column.upper(), p.operator.upper(), tuple(sorted(_values(p)))) for o in occ for p in o.preds}
+    def satisfied(found: set[str]) -> bool:
+        if not expected:
+            return bool(found)
+        for formula in expected_formulas:
+            variants = {_formula(parse_sql(formula), _Scope(tree, None)),
+                        _formula(_strip_case(parse_sql(formula), carried), _Scope(tree, None))}
+            if not variants & found:
+                return False
+        return True
+    if proven and satisfied(proven):
         return True, ""
 
     want_cur = (str(current["start"])[:10], str(current["end"])[:10])
@@ -1053,7 +1098,7 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
                     if pin.find(exp.AggFunc):
                         got.setdefault(p, set()).add(_formula(pin, sscope))
         both = got.get(want_cur, set()) & got.get(want_ref, set())
-        if both and (not expected or expected <= both):
+        if both and satisfied(both):
             return True, ""
 
     # (c) GROUP BY a period key over the union of both periods
@@ -1066,7 +1111,7 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
             keyed = any(_grain_of(g) in ("YEAR", "MONTH", "DAY", "WEEK") for g in tree.args["group"].expressions)
             if keyed:
                 found = _found_formulas(tree, occ)
-                if not expected or expected <= found:
+                if satisfied(found):
                     return True, ""
     return False, why
 
@@ -1084,9 +1129,10 @@ def sources_from(profiles, *, declared: Optional[set[str]] = None) -> dict[str, 
     declared = {d.upper() for d in (declared or set())}
     for p in profiles or []:
         w = getattr(p, "time_window", None)
+        dw = getattr(p, "declared_window", None)      # set by semantic_layer.coverage.apply: declared and not refuted
         entry = {"types": {c.name.upper(): (c.data_type or "") for c in getattr(p, "columns", [])},
-                 "window": (str(w[0]), str(w[1])) if w and w[0] and w[1] else None,
-                 "declared": p.table_name.upper() in declared}
+                 "window": (str(dw[0]), str(dw[1])) if dw else ((str(w[0]), str(w[1])) if w and w[0] and w[1] else None),
+                 "declared": bool(dw) or p.table_name.upper() in declared}
         out[p.table_name.upper()] = entry
         if getattr(p, "schema_name", ""):
             out[f"{p.schema_name}_{p.table_name}".upper()] = entry

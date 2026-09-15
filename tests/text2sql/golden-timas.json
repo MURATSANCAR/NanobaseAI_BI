@@ -121,16 +121,14 @@
   {
    "id": "2026-yilinda-aylik-net-satis-tutari-nedi",
    "question": "2026 yılında aylık net satış tutarı nedir?",
-   "expected_sql": "SELECT yil, ay, satis, iade, net_ciro FROM v_monthly_sales ORDER BY yil, ay",
+   "expected_sql": "SELECT DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1) AS ay, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_satis_tutar\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)\nORDER BY DATEFROMPARTS(YEAR(INVOICE.[DATE_]), MONTH(INVOICE.[DATE_]), 1)",
    "expected_tables": [],
    "expected_physical_tables": [],
    "expected_columns": [],
-   "via_view": [
-    "V_MONTHLY_SALES"
-   ],
+   "via_view": [],
    "expect_refusal": null,
-   "kind": "view",
-   "source": "validated-pair"
+   "kind": "base-table",
+   "source": "deterministic-2026-09-15 (Wren görünümü yerine sertifikalı formülle üretildi; iş onayı bekliyor)"
   },
   {
    "id": "agustos-2026-net-satis-tutari-nedir",
@@ -318,16 +316,14 @@
   {
    "id": "kanal-bazinda-net-ciro-nedir",
    "question": "Kanal bazında net ciro nedir?",
-   "expected_sql": "SELECT kanal, net_ciro, cari_sayisi FROM v_channel_net ORDER BY net_ciro DESC",
+   "expected_sql": "SELECT CLCARD.[SPECODE2] AS kanal, SUM(CASE WHEN INVOICE.[TRCODE] IN (7, 8, 9) THEN INVOICE.[NETTOTAL] ELSE -INVOICE.[NETTOTAL] END) AS net_ciro\nFROM [dbo].[LG_411_01_INVOICE] AS INVOICE\nJOIN [dbo].[LG_411_CLCARD] AS CLCARD ON INVOICE.[CLIENTREF] = CLCARD.[LOGICALREF]\nWHERE INVOICE.[CANCELLED] = 0\n  AND INVOICE.[TRCODE] IN (2, 3, 7, 8, 9)\n  AND INVOICE.[DATE_] >= '2026-01-01' AND INVOICE.[DATE_] < '2027-01-01'\nGROUP BY CLCARD.[SPECODE2]\nORDER BY net_ciro DESC",
    "expected_tables": [],
    "expected_physical_tables": [],
    "expected_columns": [],
-   "via_view": [
-    "V_CHANNEL_NET"
-   ],
+   "via_view": [],
    "expect_refusal": null,
-   "kind": "view",
-   "source": "validated-pair"
+   "kind": "base-table",
+   "source": "deterministic-2026-09-15 (Wren görünümü yerine sertifikalı formülle üretildi; iş onayı bekliyor)"
   },
   {
    "id": "m-teri-yo-unla-mas-2026-net-ciroya-sat-e",
@@ -403,16 +399,14 @@
   {
    "id": "yayinevi-bazinda-net-ciro-ve-brut-k-r-ma",
    "question": "Yayınevi bazında net ciro ve brüt kâr marjı nedir?",
-   "expected_sql": "SELECT yayinevi, baslik, net_ciro, satilan_adet, iade_adet, 1 - maliyet / NULLIF(maliyetli_ciro, 0) AS brut_kar_marji FROM v_imprint_perf ORDER BY net_ciro DESC",
+   "expected_sql": "SELECT ITEMS.[SPECODE] AS yayinev, 1 - SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[AMOUNT] * STLINE.[OUTCOST] ELSE 0 END) / NULLIF(SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) AND STLINE.[OUTCOST] <> 0 THEN STLINE.[TOTAL] ELSE 0 END), 0) AS brut_kar_marj, SUM(CASE WHEN STLINE.[TRCODE] IN (7, 8) THEN STLINE.[LINENET] ELSE -STLINE.[LINENET] END) AS net_ciro\nFROM (SELECT '211' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [OUTCOST], [STOCKREF], [TOTAL], [TRCODE] FROM [dbo].[LG_211_01_STLINE] UNION ALL SELECT '411' AS [__nb_firm], [AMOUNT], [CANCELLED], [DATE_], [LINENET], [LINETYPE], [OUTCOST], [STOCKREF], [TOTAL], [TRCODE] FROM [dbo].[LG_411_01_STLINE]) AS STLINE\nJOIN (SELECT '211' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_211_ITEMS] UNION ALL SELECT '411' AS [__nb_firm], [LOGICALREF], [SPECODE] FROM [dbo].[LG_411_ITEMS]) AS ITEMS ON STLINE.[STOCKREF] = ITEMS.[LOGICALREF] AND STLINE.[__nb_firm] = ITEMS.[__nb_firm]\nWHERE STLINE.[CANCELLED] = 0\n  AND STLINE.[CANCELLED] = 0\n  AND STLINE.[LINETYPE] = 0\n  AND STLINE.[TRCODE] IN (2, 3, 7, 8)\n  AND STLINE.[DATE_] >= '2026-01-01' AND STLINE.[DATE_] < '2027-01-01'\nGROUP BY ITEMS.[SPECODE]\nORDER BY brut_kar_marj DESC",
    "expected_tables": [],
    "expected_physical_tables": [],
    "expected_columns": [],
-   "via_view": [
-    "V_IMPRINT_PERF"
-   ],
+   "via_view": [],
    "expect_refusal": null,
-   "kind": "view",
-   "source": "validated-pair"
+   "kind": "base-table",
+   "source": "deterministic-2026-09-15 (Wren görünümü yerine sertifikalı formülle üretildi; iş onayı bekliyor)"
   },
   {
    "id": "gecen-y-la-gore-bu-y-l-ciromuz-nas-l-g",

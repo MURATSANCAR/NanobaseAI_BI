@@ -358,3 +358,14 @@ CLCARD.CITY, BMT → ilişki (`BMT` tablosu), (c) sunum/bağlaç sözcükleri (`
 yok sayılır, niteleyici değildir. Bu üçü olmadan model yolu da doğru cevabı veremez: dönem çözümü derleyicide
 ([[period-union-double-counting]]), sözlük olmadan "vilayet" için kolon uydurulur.
 
+## 10. Adım 6 uygulama notu (2026-09-15, akşam)
+
+Uygulandı: `coverage.py` (beyan yükleme + çürütme + `apply`), `coverage.yml` (8 bağlam), `refresh_coverage.py`,
+`periods._window` beyan öncelikli, kapıda birleşim kuralı (`test_gate_shapes`: 3 vaka), `test_coverage.py`.
+Çürütme yalnız sertifikalı kavramların işaret ettiği entity'lerde ve satır sayısı olan tablolarda koşar (görünümler
+ve raporlar atlanır; ilk koşuda 400+ görünüm 10 dakikadan uzun sürdü ve hepsi "ölçülemedi").
+
+Strict ölçümü (formül/kırılım/sınır): 21 golden'da 14 → 12; yeni retlerin üçü de gerçek anlaşmazlık
+(katalog formülü ≠ iş SQL'i), biri değer-pivotu (kural bunu henüz okumuyor). Strict üretimde kapalı; anlaşmazlık listesi
+iş tarafına gidecek.
+

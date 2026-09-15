@@ -9,7 +9,7 @@ is handled by the same rule.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from typing import Optional
 
 from semantic_layer.models import SchemaProfile
@@ -17,6 +17,16 @@ from semantic_layer.naming import source_rank
 
 
 def _window(p: SchemaProfile) -> Optional[tuple[date, date]]:
+    """The period a table holds: its declaration when the data did not refute it (see
+    `semantic_layer.coverage`), else the measured min/max — a statistic, and the reason the
+    forward-dated-row guard in `tables_for` exists."""
+    declared = getattr(p, "declared_window", None)
+    if declared:
+        try:
+            # declared ranges are half-open; the chooser works with inclusive last days
+            return date.fromisoformat(str(declared[0])[:10]), date.fromisoformat(str(declared[1])[:10]) - timedelta(days=1)
+        except ValueError:
+            pass
     if not p.time_window:
         return None
     try:

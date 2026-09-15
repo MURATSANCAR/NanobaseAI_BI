@@ -155,6 +155,10 @@ class Runtime:
         self.conventions = Conventions.from_profiles(self.profiles)
         if s.project_dir:
             self.conventions.load_equivalences(s.project_dir / "equivalences.yml")
+        # Declared period coverage the nightly measurement did not refute: the period chooser and the
+        # gate read it off the profile; a table without it keeps needing its date filter.
+        from semantic_layer import coverage as coverage_mod
+        coverage_mod.apply(self.profiles, self.store, s)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()

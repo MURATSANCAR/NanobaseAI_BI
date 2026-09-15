@@ -56,9 +56,10 @@ ACCEPT = {
 # What the gate is told about the tables. DATE_ is a DATE column, so `<= '2026-12-31'` reaches the end
 # of the year; the 2026 table's coverage is declared, the 2025 table's is only measured.
 SOURCES = {
-    T: {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2026-12-31"), "declared": True},
-    "LG_411_02_INVOICE": {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2026-12-31"), "declared": True},
-    "LG_211_01_INVOICE": {"types": {"DATE_": "datetime"}, "window": ("2026-01-01", "2026-12-31"), "declared": False},
+    # declared ranges are half-open: [2026-01-01, 2027-01-01)
+    T: {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    "LG_411_02_INVOICE": {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    "LG_211_01_INVOICE": {"types": {"DATE_": "datetime"}, "window": ("2026-01-01", "2027-01-01"), "declared": False},
 }
 ACCEPT_COMPARISON = {
     "cmp_case_pivot": f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) bu_yil, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) gecen_yil FROM {T} WHERE {F}",
@@ -143,3 +144,59 @@ def test_two_measured_entities_are_both_bounded():
 @pytest.mark.parametrize("name", list(REFUSE_COMPARISON_DECLARED))
 def test_declared_coverage_refuses_a_period_the_table_cannot_hold(name):
     assert unmet_obligations(plan(comparison=True), REFUSE_COMPARISON_DECLARED[name], sources=SOURCES)
+
+
+# --- a span over several year-partitions: each table holds a slice, together they must be the period
+T21 = "LG_211_01_INVOICE"
+SOURCES_SPAN = {
+    T: {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    T21: {"types": {"DATE_": "date"}, "window": ("2021-01-01", "2026-01-01"), "declared": True},
+}
+SPAN = "\"DATE_\" >= '2024-01-01' AND \"DATE_\" < '2027-01-01'"
+
+
+def span_plan():
+    sq = plan()
+    sq.temporal = [TemporalSlot("2024-2026", "RANGE", date(2024, 1, 1), date(2027, 1, 1))]
+    return sq
+
+
+def union(a, b):
+    return f"SELECT SUM(NETTOTAL) FROM (SELECT NETTOTAL FROM {a} UNION ALL SELECT NETTOTAL FROM {b}) u"
+
+
+def test_a_span_is_proven_by_its_partitions_together():
+    sql = union(f"{T21} WHERE {F} AND {SPAN}", f"{T} WHERE {F} AND {SPAN}")
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN) == []
+
+
+def test_a_span_with_a_missing_partition_is_refused():
+    sql = f"SELECT SUM(NETTOTAL) FROM {T21} WHERE {F} AND {SPAN}"
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN)
+
+
+def test_a_span_that_reads_one_year_twice_is_refused():
+    # the double-counting shape: the 2026 partition read twice under the same filter
+    sql = union(f"{T} WHERE {F} AND {SPAN}", f"{T} WHERE {F} AND {SPAN}")
+    sq = span_plan()
+    sq.temporal = [TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))]
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN)
+
+
+def test_a_measure_with_its_scope_inside_the_period_case_or_in_the_where():
+    """What a model writes for "this year vs last": one CASE carrying both the measure's own
+    condition and the period, or the condition pushed into WHERE. Both are the certified measure."""
+    from semantic_layer.models import Mapping, ResolvedSlot
+    sq = plan(comparison=True)
+    sq.slots.append(ResolvedSlot("ciro", "METRIC", "CERTIFIED", mapping=Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE",
+                                 formula="SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)")))
+    merged = (f"SELECT SUM(CASE WHEN TRCODE IN (7, 8, 9) AND {P} THEN NETTOTAL ELSE 0 END) a, "
+              f"SUM(CASE WHEN TRCODE IN (7, 8, 9) AND {P_PREV} THEN NETTOTAL ELSE 0 END) b FROM {T} WHERE {F}")
+    pushed = (f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) a, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) b "
+              f"FROM {T} WHERE {F} AND TRCODE IN (7, 8, 9)")
+    wrong = (f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) a, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) b "
+             f"FROM {T} WHERE {F}")
+    assert unmet_obligations(sq, merged, sources=SOURCES_UNDECLARED) == []
+    assert unmet_obligations(sq, pushed, sources=SOURCES_UNDECLARED) == []
+    assert unmet_obligations(sq, wrong, sources=SOURCES_UNDECLARED)
+

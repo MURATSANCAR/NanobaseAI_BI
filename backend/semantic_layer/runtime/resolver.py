@@ -46,6 +46,15 @@ from semantic_layer.runtime.temporal import describe
 from semantic_layer.store.catalog_store import CatalogStore
 
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
+# Copula participles: grammar that attaches one phrase to another ("tüm satış yerlerimizle olan
+# ciromuz"). They restrict nothing and must never reach the clarification step.
+_COPULA = frozenset("olan oldugu olup olsun olacak olmus bulunan bulundugu".split())
+# Verbs of a record's own existence or arrival, spoken before the noun they belong to. "Açılan
+# sipariş" is every order, "kesilen fatura" every invoice, "iade alan müşteri" a customer whose
+# returns the return filter already selects. None of them is a restriction the catalog must define.
+_RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
+    yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
+    kaydedilen kayitli tutulan""".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
@@ -795,6 +804,9 @@ class SemanticResolver:
 
     def _account_modifiers(self, sq, qf, consumed, index):
         for k, tok in enumerate(qf.tokens):
+            if fold(tok) in _COPULA:
+                consumed.add(k)          # "olan", "olduğu": grammar that links words, never a restriction
+                continue
             if (any(tok in tokenize(t.text) for t in qf.temporal)
                     or (stem(tok) in STOPWORDS_S | MODIFIERS_S
                         and not self._modifies_a_noun(qf.tokens, k, consumed))):
@@ -846,6 +858,12 @@ class SemanticResolver:
                 sq.explanation.append(f"'{tok}' → '{metric.explain.get('evidence_key')}' ölçüsü (fiil kökünden, sertifikalı değil)")
             elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
                 record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
+            elif not is_negative(tok) and fold(tok) in _RECORD_VERBS and (left or right or covering or self._modifies_a_noun(qf.tokens, k, consumed)):
+                # "açılan sipariş", "kesilen fatura", "iade alan müşteri": the verb says how the record
+                # came to exist or reached the subject, not which records to keep. Every order was
+                # opened; a customer with returns already has the return filter beside the verb.
+                record.update(decision="GRAMMATICAL", evidence_source="record_verb")
+                sq.explanation.append(f"'{tok}' kaydın oluşumunu anlatan fiil; kayıtları daraltmaz")
             if record["decision"] == "UNKNOWN":
                 if tok not in sq.unhandled:
                     sq.unhandled.append(tok)
