@@ -223,7 +223,7 @@ class Runtime:
                 log.warning("column index unavailable, routing from the catalog alone: %s", e)
 
         # Narrows the retrieved shortlist before it becomes a prompt — the step every schema-linking
-        # result says matters most. Measured on this deployment's golden set with the A40 model:
+        # result says matters most. Measured on this deployment's golden set:
         #
         #     no selector   12.0 tables   precision 0.17   recall 17/17
         #     selector       5.1 tables   precision 0.31   recall 17/17   ~4.2s
