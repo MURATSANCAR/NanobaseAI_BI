@@ -8,6 +8,9 @@ well as on what came back — table recall, the tables that had no business bein
 question this deployment cannot answer was refused rather than answered anyway.
 
     PYTHONPATH=backend python3 tests/text2sql/golden-eval.py --golden tests/text2sql/golden-timas.json
+
+Paralel: `--shard 0/12 --out a.json` … her parça ayrı süreçte koşar; `--merge a.json b.json … --out all.json`
+parçaları golden sırasıyla birleştirip özeti bütün üzerinden yeniden hesaplar (quality-gate.py bunu yapar).
 """
 from __future__ import annotations
 
@@ -30,7 +33,20 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--golden", default="tests/text2sql/golden-timas.json")
     ap.add_argument("--out", default="")
     ap.add_argument("--kind", default="base-table", help="base-table | view | all")
+    ap.add_argument("--shard", default="", help="I/N: yalnız bu parçanın vakaları (paralel koşu)")
+    ap.add_argument("--merge", nargs="*", default=None, help="parça çıktılarını birleştir, ölçüm yapma")
     args = ap.parse_args(argv)
+
+    golden = json.loads(Path(args.golden).read_text(encoding="utf-8"))
+    cases = [x for x in golden["cases"] if args.kind == "all" or x.get("kind") == args.kind]
+    if args.merge is not None:
+        order = {c["id"]: i for i, c in enumerate(cases)}
+        rows = [r for f in args.merge for r in json.loads(Path(f).read_text(encoding="utf-8"))["rows"]]
+        rows.sort(key=lambda r: order.get(r["id"], len(order)))
+        return report(rows, args.out)
+    if args.shard:
+        i, n = (int(x) for x in args.shard.split("/"))
+        cases = cases[i::n]
 
     from semantic_layer.config import SemanticSettings
     from semantic_layer.store.catalog_store import open_store
@@ -49,8 +65,6 @@ def main(argv: list[str]) -> int:
     # and a bare resolver measures a system that does not exist.
     resolver = rt.resolver
 
-    golden = json.loads(Path(args.golden).read_text(encoding="utf-8"))
-    cases = [x for x in golden["cases"] if args.kind == "all" or x.get("kind") == args.kind]
     rows = []
     for case in cases:
         t0 = time.perf_counter()
@@ -84,7 +98,10 @@ def main(argv: list[str]) -> int:
             "tokens": round(len(prompt) / 3), "ms": round(ms),
             "gate": gate,
         })
+    return report(rows, args.out)
 
+
+def report(rows: list[dict], out: str) -> int:
     scored = [r for r in rows if r["recall"] is not None]
     n = len(scored) or 1
     summary = {
@@ -111,9 +128,9 @@ def main(argv: list[str]) -> int:
             r["question"][:44], r["state"],
             "-" if r["recall"] is None else "%.2f" % r["recall"],
             len(r["missing"]), r["tokens"], ",".join(r["extra"][:5])))
-    if args.out:
-        Path(args.out).write_text(json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
-        print("\nyazildi:", args.out)
+    if out:
+        Path(out).write_text(json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
+        print("\nyazildi:", out)
     return 0
 
 
