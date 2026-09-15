@@ -74,7 +74,6 @@ _ready_lock = threading.Lock()
 _due_lock = threading.Lock()
 _LOCAL = timezone(timedelta(hours=float(os.environ.get("ALERT_TZ_OFFSET_HOURS", "3"))))
 REPORT_DIR = Path(os.environ.get("REPORT_DIR", "/data/nanobaseai/bi/var/reports"))
-KEEP_FILES = int(os.environ.get("REPORT_KEEP_FILES", "10"))
 
 
 class ReportError(ValueError):
@@ -397,7 +396,8 @@ def create_report(engine: sa.engine.Engine, tenant: str, ds: str, user: str, bod
 
 def update_report(engine: sa.engine.Engine, tenant: str, ds: str, user: str, rid: str, body: dict[str, Any]) -> Optional[dict[str, Any]]:
     base = _row(engine, rid)
-    if not base or base["username"] != user or base["tenant_id"] != tenant:
+    # user None: yönetici herkesin raporunu değiştirebilir.
+    if not base or (user is not None and base["username"] != user) or base["tenant_id"] != tenant:
         return None
     vals = _clean(body, partial=True)
     if base["status"] == "done" and vals.get("status") == "active" and base["recurrence"] == "once" and "onceAt" not in body:
@@ -491,7 +491,10 @@ def build_file(rid: str, title: str, fmt: str, columns: list[dict[str, Any]], ro
         wb.save(path)
     # Yalnız son N dosya kalır.
     files = sorted(d.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
-    for old in files[KEEP_FILES:]:
+    from semantic_bridge.admin import conf
+
+    keep = max(1, int(conf("REPORT_KEEP_FILES", "10") or 10))
+    for old in files[keep:]:
         old.unlink(missing_ok=True)
     return path
 

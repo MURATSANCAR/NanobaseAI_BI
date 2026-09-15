@@ -98,6 +98,7 @@ const MODULE_TILES = [
   { to: '/planli-raporlar', title: 'Planlı Raporlar', note: 'Zamanlanmış gönderimler', tone: 'bg-sky-100 text-sky-700' },
   { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700' },
   { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700' },
+  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar, tanımlar, değişiklik kaydı', tone: 'bg-slate-200 text-slate-700' },
 ];
 
 type Praise = { from: string; to: string; when: string; text: string; emoji: string; likes: number; tag: string; tagTone: string; fresh?: boolean };

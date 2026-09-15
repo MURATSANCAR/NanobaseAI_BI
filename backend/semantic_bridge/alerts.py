@@ -75,6 +75,12 @@ _check_lock = threading.Lock()
 _LOCAL = timezone(timedelta(hours=float(os.environ.get("ALERT_TZ_OFFSET_HOURS", "3"))))
 
 
+def _conf(key: str, default: str = "") -> str:
+    from semantic_bridge.admin import conf
+
+    return conf(key, default)
+
+
 class AlertError(ValueError):
     """Kullanıcıya olduğu gibi gösterilecek, düz Türkçe bir hata."""
 
@@ -137,7 +143,7 @@ def _recipients(raw: Any) -> list[str]:
             continue
         if not _EMAIL.match(x):
             raise AlertError(f"«{x}» geçerli bir e-posta adresi değil.")
-        allowed = [d.strip().lower() for d in os.environ.get("ALERT_RECIPIENT_DOMAINS", "").split(",") if d.strip()]
+        allowed = [d.strip().lower() for d in _conf("ALERT_RECIPIENT_DOMAINS").split(",") if d.strip()]
         if allowed and x.rsplit("@", 1)[1].lower() not in allowed:
             raise AlertError(f"«{x}» izinli bir alan adında değil ({', '.join(allowed)}).")
         if x.lower() not in {o.lower() for o in out}:
@@ -308,7 +314,7 @@ def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifi
 
 def _check(engine, tenant, ds, runner, notifier, *, only, now, remind) -> dict[str, Any]:
     now = now or _now()
-    remind = remind if remind is not None else timedelta(hours=float(os.environ.get("ALERT_REMIND_HOURS", "24")))
+    remind = remind if remind is not None else timedelta(hours=float(_conf("ALERT_REMIND_HOURS", "24") or 24))
     q = sa.select(RULES).where(RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds)
     q = q.where(RULES.c.id == only) if only else q.where(RULES.c.status == "active")
     with engine.connect() as c:
@@ -364,18 +370,21 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind) -> dict[s
 
 
 def smtp_settings() -> Optional[dict[str, Any]]:
-    host = os.environ.get("ALERT_SMTP_HOST", "").strip()
-    sender = (os.environ.get("ALERT_SMTP_FROM") or os.environ.get("ALERT_SMTP_USER") or "").strip()
+    # Yönetim ekranında kaydedilen değer ortam dosyasını ezer (admin.conf).
+    from semantic_bridge.admin import conf
+
+    host = conf("ALERT_SMTP_HOST").strip()
+    sender = (conf("ALERT_SMTP_FROM") or conf("ALERT_SMTP_USER") or "").strip()
     if not host or not sender:
         return None
     return {
         "host": host,
-        "port": int(os.environ.get("ALERT_SMTP_PORT", "587")),
-        "user": os.environ.get("ALERT_SMTP_USER", "").strip(),
-        "password": os.environ.get("ALERT_SMTP_PASSWORD", ""),
+        "port": int(conf("ALERT_SMTP_PORT", "587") or 587),
+        "user": conf("ALERT_SMTP_USER").strip(),
+        "password": conf("ALERT_SMTP_PASSWORD"),
         "sender": sender,
-        "ssl": os.environ.get("ALERT_SMTP_SSL", "0") == "1",
-        "starttls": os.environ.get("ALERT_SMTP_STARTTLS", "1") != "0",
+        "ssl": conf("ALERT_SMTP_SSL", "0") == "1",
+        "starttls": conf("ALERT_SMTP_STARTTLS", "1") != "0",
     }
 
 

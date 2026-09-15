@@ -398,3 +398,116 @@ export const reportsApi = {
   run: (id: string) => send<ReportDto>('POST', `/api/v1/reports/${encodeURIComponent(id)}/run`, {}, 600_000),
   fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/reports/${encodeURIComponent(id)}/file`,
 };
+
+/* ------------------------------------------------------------------ yönetim */
+
+export type AdminSettingType = 'text' | 'int' | 'bool' | 'secret' | 'email' | 'users';
+
+export type AdminSetting = {
+  key: string;
+  group: string;
+  label: string;
+  type: AdminSettingType;
+  help: string;
+  /** Gizli alanlarda her zaman null; yalnız `hasValue` söylenir. */
+  value: string | null;
+  hasValue: boolean;
+  /** screen: yönetim ekranında kaydedildi · env: servis ortam dosyası · default: varsayılan */
+  source: 'screen' | 'env' | 'default';
+  updatedBy: string | null;
+  updatedAt: string | null;
+};
+
+export type AdminSettings = { groups: Array<{ id: string; label: string; help: string }>; items: AdminSetting[] };
+
+export type AdminUnit = {
+  unit: string;
+  label: string;
+  every?: string;
+  state: string;
+  sub?: string | null;
+  last?: string | null;
+  next?: string | null;
+  result?: string | null;
+};
+
+export type AuditItem = {
+  id: number;
+  at: string;
+  actor: string;
+  action: string;
+  kind: string;
+  kindLabel: string;
+  objectId: string | null;
+  title: string | null;
+  detail: Record<string, unknown> | null;
+};
+
+export type AdminOverview = {
+  counts: {
+    reports: number;
+    reportsActive: number;
+    reportsFailed: number;
+    alerts: number;
+    alertsActive: number;
+    alertsTriggered: number;
+    cards: number;
+    cardsFailed: number;
+    users: number;
+    admins: number;
+  };
+  email: AlertEmail;
+  engine: { model: string; llm: boolean; db: boolean; catalog: Record<string, number>; profiles: number };
+  services: AdminUnit[];
+  timers: AdminUnit[];
+  recent: AuditItem[];
+};
+
+export type AdminReport = ReportDto & { owner: string };
+
+export type AdminCard = {
+  id: string;
+  owner: string;
+  title: string;
+  question: string;
+  chart: string;
+  refresh: string;
+  refreshAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  resultAt: string | null;
+  lastAutoAt: string | null;
+  lastError: string | null;
+};
+
+export type AdminUser = { username: string; cards: number; reports: number; actions: number; lastSeen: string | null; admin: boolean };
+
+export type AuditQuery = { kind?: string; action?: string; actor?: string; q?: string; before?: number };
+
+const qs = (o: Record<string, string | number | undefined>) => {
+  const p = new URLSearchParams();
+  Object.entries(o).forEach(([k, v]) => {
+    if (v !== undefined && v !== '') p.set(k, String(v));
+  });
+  const s = p.toString();
+  return s ? `?${s}` : '';
+};
+
+export const adminApi = {
+  me: () => send<{ user: string; isAdmin: boolean }>('GET', '/api/v1/admin/me', undefined, 15_000),
+  overview: () => send<AdminOverview>('GET', '/api/v1/admin/overview', undefined, 30_000),
+  settings: () => send<AdminSettings>('GET', '/api/v1/admin/settings', undefined, 15_000),
+  saveSettings: (values: Record<string, string>) =>
+    send<AdminSettings & { changed: string[] }>('PUT', '/api/v1/admin/settings', { values }, 30_000),
+  resetSetting: (key: string) => send<AdminSettings>('DELETE', `/api/v1/admin/settings/${encodeURIComponent(key)}`, undefined, 15_000),
+  testEmail: (to: string) => send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/email/test', { to }, 60_000),
+  reports: () => send<{ items: AdminReport[] }>('GET', '/api/v1/admin/reports', undefined, 30_000),
+  updateReport: (id: string, b: Partial<ReportInput>) =>
+    send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),
+  deleteReport: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/reports/${encodeURIComponent(id)}`, undefined, 30_000),
+  alerts: () => send<{ items: AlertRule[] }>('GET', '/api/v1/admin/alerts', undefined, 30_000),
+  cards: () => send<{ items: AdminCard[] }>('GET', '/api/v1/admin/cards', undefined, 30_000),
+  deleteCard: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/cards/${encodeURIComponent(id)}`, undefined, 30_000),
+  users: () => send<{ items: AdminUser[] }>('GET', '/api/v1/admin/users', undefined, 30_000),
+  audit: (q: AuditQuery) => send<{ items: AuditItem[]; next: number | null }>('GET', `/api/v1/admin/audit${qs(q)}`, undefined, 30_000),
+};

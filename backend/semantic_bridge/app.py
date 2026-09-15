@@ -1310,8 +1310,19 @@ def _review_vocabulary(r: "Runtime", said: dict) -> Any:
     return vocab
 
 
+def _actor(request: Any) -> str:
+    """Değişiklik kaydı için kişi: giriş servisinin oturumu, yoksa "portal"."""
+    from semantic_bridge import board as board_mod
+
+    try:
+        return board_mod.user_of(request.headers.get("cookie", ""))
+    except Exception:  # noqa: BLE001
+        return "portal"
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
+    from semantic_bridge import admin as admin_mod
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -1598,8 +1609,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         bundle = r.store.concept_bundle(concept_id)
         if not bundle:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
-        who = str((body or {}).get("by") or request.headers.get("X-User") or "portal")
+        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
         note = str((body or {}).get("note") or "")
+        if decision != "CORRECT" or note.strip():
+            admin_mod.audit(r.store.engine, who, {"APPROVE": "approve", "REJECT": "reject", "CORRECT": "correct"}[decision],
+                            "term", concept_id, bundle["concept"].get("term"),
+                            {k: v for k, v in {"note": note, "column": (body or {}).get("column")}.items() if v})
         eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
         if decision == "APPROVE":
             # Two writes, and both matter. The evidence row is the audit trail — who said so, when,
@@ -1915,7 +1930,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_admin(request)
         if not body.text.strip():
             raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT"})
-        return rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+        out = rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+        admin_mod.audit(rt().store.engine, _actor(request), "create", "annotation", out.get("id"),
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": body.text})
+        return out
 
     @app.put("/api/v1/schema/annotations/{annotation_id}")
     def update_annotation(request: Request, annotation_id: str, body: AnnotationIn) -> dict[str, Any]:
@@ -1932,6 +1950,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r.store.retire_annotation(annotation_id)
         out = r.add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
         out["replaced"] = annotation_id
+        admin_mod.audit(r.store.engine, _actor(request), "update", "annotation", annotation_id,
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": body.text})
         return out
 
     @app.post("/api/v1/schema/suggestions/{suggestion_id}/accept")
@@ -1964,7 +1984,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.delete("/api/v1/schema/annotations/{annotation_id}")
     def retire_annotation(request: Request, annotation_id: str) -> dict[str, Any]:
         _require_admin(request)
-        return {"ok": rt().store.retire_annotation(annotation_id)}
+        ok = rt().store.retire_annotation(annotation_id)
+        if ok:
+            admin_mod.audit(rt().store.engine, _actor(request), "delete", "annotation", annotation_id, None)
+        return {"ok": ok}
 
     # ------------------------------------------------------------------ uyarılar
     # Kural bir sorudur; kontrol burada yapılır, zamanlayıcı yalnız /check'i çağırır.
@@ -1973,6 +1996,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _alerts() -> tuple[Runtime, Any, str, str]:
         r = rt()
         alerts_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
         return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
 
     def _alert_runner(r: Runtime):
@@ -1984,7 +2008,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     def _alert_check(r: Runtime, engine: Any, tenant: str, ds: str, only: Optional[str] = None) -> dict[str, Any]:
         return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
-                                alerts_mod.email_notifier(os.environ.get("ALERT_LINK", "")), only=only)
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=only)
 
     def _alert_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": str(e)})
@@ -2000,9 +2024,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         r, engine, tenant, ds = _alerts()
         try:
-            rule = alerts_mod.create_rule(engine, tenant, ds, body)
+            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=_actor(request))
         except alerts_mod.AlertError as e:
             raise _alert_fail(e) from None
+        admin_mod.audit(engine, _actor(request), "create", "alert", rule["id"], rule["title"],
+                        {"question": rule["question"], "condition": rule["condition"], "threshold": rule["threshold"],
+                         "recipients": rule["recipients"]})
         # Kurulur kurulmaz ölçülür ama istek beklemez: yavaş bir cevap tarayıcıyı zaman aşımına düşürüp
         # kişiye aynı kuralı ikinci kez kaydettirmesin. Ekran listeyi birkaç saniye sonra yeniden okur.
         if os.environ.get("ALERT_MEASURE_ON_CREATE", "background") == "sync":
@@ -2015,20 +2042,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
         _require_caller(request)
         _, engine, tenant, ds = _alerts()
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id) or {}
         try:
             rule = alerts_mod.update_rule(engine, tenant, ds, rule_id, body)
         except alerts_mod.AlertError as e:
             raise _alert_fail(e) from None
         if rule is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        diff = admin_mod.changes(before, rule, ["title", "question", "condition", "threshold", "recipients", "status"])
+        if diff:
+            admin_mod.audit(engine, _actor(request), "update", "alert", rule_id, rule["title"], diff)
         return rule
 
     @app.delete("/api/v1/alerts/{rule_id}")
     def alerts_delete(rule_id: str, request: Request) -> dict[str, Any]:
         _require_caller(request)
         _, engine, tenant, ds = _alerts()
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id)
         if not alerts_mod.delete_rule(engine, tenant, ds, rule_id):
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        admin_mod.audit(engine, _actor(request), "delete", "alert", rule_id, (before or {}).get("title"),
+                        {"question": (before or {}).get("question")})
         return {"ok": True}
 
     @app.post("/api/v1/alerts/check")
@@ -2053,6 +2087,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _board() -> tuple[Runtime, Any, str, str]:
         r = rt()
         board_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
         return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
 
     def _board_user(request: Request) -> str:
@@ -2076,10 +2111,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         user = _board_user(request)
         _, engine, tenant, ds = _board()
+        before = {c["id"]: c for c in board_mod.list_cards(engine, tenant, ds, user)}
         try:
             cards = board_mod.save_cards(engine, tenant, ds, user, list(body.get("cards") or []))
         except board_mod.BoardError as e:
             raise HTTPException(status_code=422, detail={"code": "INVALID_BOARD", "message": str(e)}) from e
+        # Konum/boyut her sürüklemede kaydedilir; kayda yalnız ekleme, silme ve anlamlı değişiklik girer.
+        after = {c["id"]: c for c in cards}
+        for cid, c in after.items():
+            if cid not in before:
+                admin_mod.audit(engine, user, "create", "board", cid, c["title"], {"question": c["question"], "chart": c["chart"]})
+            else:
+                diff = admin_mod.changes(before[cid], c, ["title", "note", "question", "chart", "refresh", "refreshAt"])
+                if diff:
+                    admin_mod.audit(engine, user, "update", "board", cid, c["title"], diff)
+        for cid, c in before.items():
+            if cid not in after:
+                admin_mod.audit(engine, user, "delete", "board", cid, c["title"], {"question": c["question"]})
         return {"user": user, "cards": cards}
 
     @app.post("/api/v1/board/cards/{card_id}/run")
@@ -2109,6 +2157,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _reports() -> tuple[Runtime, Any, str, str]:
         r = rt()
         reports_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
         return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
 
     def _report_asker(r: Runtime):
@@ -2122,6 +2171,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             rows = r.result_files.read(path) if path else list(out.get("records") or [])
             return list(out.get("columns") or []), rows
         return fetch
+
+    _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status"]
 
     def _report_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID_REPORT", "message": str(e)})
@@ -2154,21 +2205,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         user = _board_user(request)
         _, engine, tenant, ds = _reports()
         try:
-            return reports_mod.create_report(engine, tenant, ds, user, body)
+            rep = reports_mod.create_report(engine, tenant, ds, user, body)
         except reports_mod.ReportError as e:
             raise _report_fail(e) from e
+        admin_mod.audit(engine, user, "create", "report", rep["id"], rep["title"],
+                        {"question": rep["question"], "when": rep["when"], "recipients": rep["recipients"], "fmt": rep["fmt"]})
+        return rep
 
     @app.patch("/api/v1/reports/{rid}")
     def reports_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
         _require_caller(request)
         user = _board_user(request)
         _, engine, tenant, ds = _reports()
+        before = reports_mod.get_report(engine, tenant, ds, user, rid) or {}
         try:
             out = reports_mod.update_report(engine, tenant, ds, user, rid, body)
         except reports_mod.ReportError as e:
             raise _report_fail(e) from e
         if out is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        diff = admin_mod.changes(before, out, _REPORT_FIELDS)
+        if diff:
+            admin_mod.audit(engine, user, "update", "report", rid, out["title"], diff)
         return out
 
     @app.delete("/api/v1/reports/{rid}")
@@ -2176,8 +2234,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         user = _board_user(request)
         _, engine, tenant, ds = _reports()
+        before = reports_mod.get_report(engine, tenant, ds, user, rid)
         if not reports_mod.delete_report(engine, tenant, ds, user, rid):
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "report", rid, (before or {}).get("title"),
+                        {"question": (before or {}).get("question"), "when": (before or {}).get("when")})
         return {"ok": True}
 
     @app.post("/api/v1/reports/{rid}/run")
@@ -2187,8 +2248,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r, engine, tenant, ds = _reports()
         if reports_mod.get_report(engine, tenant, ds, user, rid) is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
-        return reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
-                                      link=os.environ.get("REPORT_LINK", os.environ.get("ALERT_LINK", "")))
+        out = reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
+                                     link=admin_mod.conf("ALERT_LINK"))
+        admin_mod.audit(engine, user, "run", "report", rid, out.get("title"),
+                        {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError")})
+        return out
 
     @app.get("/api/v1/reports/{rid}/file")
     def reports_file(rid: str, request: Request):
@@ -2206,7 +2270,145 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         r, engine, tenant, ds = _reports()
         return reports_mod.run_due(engine, tenant, ds, _report_asker(r), _report_fetcher(r),
-                                   link=os.environ.get("REPORT_LINK", os.environ.get("ALERT_LINK", "")))
+                                   link=admin_mod.conf("ALERT_LINK"))
+
+    # ------------------------------------------------------------------ yönetim
+    # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
+
+    def _admin(request: Request) -> tuple[Runtime, Any, str, str, str]:
+        _require_caller(request)
+        user = _board_user(request)
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu ekran yalnız yöneticiler içindir."})
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id, user
+
+    def _admin_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)})
+
+    @app.get("/api/v1/admin/me")
+    def admin_me(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        return {"user": user, "isAdmin": admin_mod.is_admin(user)}
+
+    @app.get("/api/v1/admin/overview")
+    def admin_overview(request: Request) -> dict[str, Any]:
+        r, engine, tenant, ds, _ = _admin(request)
+        reports = admin_mod.all_reports(engine, tenant, ds)
+        alerts_mod.ensure(engine)
+        alerts = alerts_mod.list_rules(engine, tenant, ds)
+        cards = admin_mod.all_cards(engine, tenant, ds)
+        people = admin_mod.users(engine, tenant, ds)
+        return {
+            "counts": {
+                "reports": len(reports), "reportsActive": sum(1 for x in reports if x["status"] == "active"),
+                "reportsFailed": sum(1 for x in reports if x["lastStatus"] == "failed"),
+                "alerts": len(alerts), "alertsActive": sum(1 for x in alerts if x["status"] == "active"),
+                "alertsTriggered": sum(1 for x in alerts if x["state"] == "triggered"),
+                "cards": len(cards), "cardsFailed": sum(1 for x in cards if x["lastError"]),
+                "users": len(people), "admins": len(admin_mod.admins()),
+            },
+            "email": alerts_mod.email_status(),
+            "engine": {"model": r.settings.llm_model, "llm": bool(r.llm), "db": bool(r.connector),
+                       "catalog": r.store.status_counts(tenant, ds), "profiles": len(r.profiles)},
+            **admin_mod.system_status(),
+            "recent": admin_mod.audit_list(engine, limit=8)["items"],
+        }
+
+    @app.get("/api/v1/admin/settings")
+    def admin_settings(request: Request) -> dict[str, Any]:
+        _admin(request)
+        return admin_mod.settings_view()
+
+    @app.put("/api/v1/admin/settings")
+    def admin_settings_save(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        try:
+            return admin_mod.save_settings(engine, user, dict(body.get("values") or {}))
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+
+    @app.delete("/api/v1/admin/settings/{key}")
+    def admin_settings_reset(key: str, request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        try:
+            return admin_mod.reset_setting(engine, user, key)
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+
+    @app.post("/api/v1/admin/email/test")
+    def admin_email_test(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        to = str(body.get("to") or "").strip()
+        if "@" not in to:
+            raise _admin_fail(ValueError("Deneme için geçerli bir e-posta adresi yazın."))
+        ok, message = admin_mod.smtp_test(to)
+        admin_mod.audit(engine, user, "test", "setting", "email", "SMTP denemesi", {"to": to, "ok": ok, "message": message})
+        return {"ok": ok, "message": message}
+
+    @app.get("/api/v1/admin/reports")
+    def admin_reports(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.all_reports(engine, tenant, ds)}
+
+    @app.patch("/api/v1/admin/reports/{rid}")
+    def admin_report_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        before = reports_mod.get_report(engine, tenant, ds, None, rid)
+        if before is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        try:
+            out = reports_mod.update_report(engine, tenant, ds, None, rid, body)  # type: ignore[arg-type]
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        diff = admin_mod.changes(before, out or {}, _REPORT_FIELDS)
+        if diff:
+            admin_mod.audit(engine, user, "update", "report", rid, (out or before)["title"], diff)
+        return out or before
+
+    @app.delete("/api/v1/admin/reports/{rid}")
+    def admin_report_delete(rid: str, request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        before = reports_mod.get_report(engine, tenant, ds, None, rid)
+        if before is None or not reports_mod.delete_report(engine, tenant, ds, None, rid):  # type: ignore[arg-type]
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "report", rid, before["title"], {"question": before["question"], "when": before["when"]})
+        return {"ok": True}
+
+    @app.get("/api/v1/admin/alerts")
+    def admin_alerts(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        alerts_mod.ensure(engine)
+        return {"items": alerts_mod.list_rules(engine, tenant, ds)}
+
+    @app.get("/api/v1/admin/cards")
+    def admin_cards(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.all_cards(engine, tenant, ds)}
+
+    @app.delete("/api/v1/admin/cards/{card_id}")
+    def admin_card_delete(card_id: str, request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        row = admin_mod.delete_card(engine, tenant, ds, card_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "board", card_id, row["title"], {"owner": row["username"]})
+        return {"ok": True}
+
+    @app.get("/api/v1/admin/users")
+    def admin_users(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.users(engine, tenant, ds)}
+
+    @app.get("/api/v1/admin/audit")
+    def admin_audit(request: Request, kind: Optional[str] = None, actor: Optional[str] = None,
+                    action: Optional[str] = None, q: Optional[str] = None, before: Optional[int] = None,
+                    limit: int = 100) -> dict[str, Any]:
+        _, engine, _, _, _ = _admin(request)
+        return admin_mod.audit_list(engine, kind=kind, actor=actor, action=action, q=q, before=before, limit=limit)
 
     return app
 
