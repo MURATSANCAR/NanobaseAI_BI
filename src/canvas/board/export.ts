@@ -24,8 +24,8 @@ export function fileName(title: string, ext: string): string {
   return `${base || 'kart'}-${new Date().toISOString().slice(0, 10)}.${ext}`;
 }
 
-export function download(name: string, text: string, type = 'text/csv;charset=utf-8'): void {
-  const url = URL.createObjectURL(new Blob([text], { type }));
+export function download(name: string, text: string | Blob, type = 'text/csv;charset=utf-8'): void {
+  const url = URL.createObjectURL(typeof text === 'string' ? new Blob([text], { type }) : text);
   const a = document.createElement('a');
   a.href = url;
   a.download = name;

@@ -425,6 +425,25 @@ export const boardApi = {
   load: () => send<{ user: string; cards: BoardCardDto[] }>('GET', '/api/v1/board', undefined, 30_000),
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
   run: (id: string) => send<BoardCardResult>('POST', `/api/v1/board/cards/${encodeURIComponent(id)}/run`, {}),
+  /** Sunucuda üretilen Excel kitabı: özet + kart başına sayfa, tam veri, Excel grafiği. Boş liste = bütün kartlar. */
+  exportXlsx: async (ids: string[] = []): Promise<{ blob: Blob; name: string }> => {
+    const q = ids.length ? `?ids=${encodeURIComponent(ids.join(','))}` : '';
+    const res = await fetch(`${ENGINE_BASE}/api/v1/board/export.xlsx${q}`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(600_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      authBlocked = true;
+      throw new EngineAuthError();
+    }
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
+      const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+      throw new Error(msg || `Excel üretilemedi (${res.status})`);
+    }
+    const m = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '');
+    return { blob: await res.blob(), name: m?.[1] ?? 'pano.xlsx' };
+  },
 };
 
 /* ------------------------------------------------------------------ planlı raporlar */
