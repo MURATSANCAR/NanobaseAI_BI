@@ -8,6 +8,7 @@ import {
   Code2,
   Copy,
   Download,
+  FileSpreadsheet,
   FileText,
   GripVertical,
   Loader2,
@@ -135,6 +136,41 @@ function SqlPanel({ sql, className = '' }: { sql: string; className?: string }) 
   );
 }
 
+/** Kart araç şeridindeki seçici: tarayıcının kaba select kutusu yerine şeritle aynı boyda, oklu. */
+function ToolSelect({
+  value,
+  onChange,
+  title,
+  disabled,
+  icon,
+  children,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  title?: string;
+  disabled?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      title={title}
+      className="relative flex h-7 items-center gap-1 rounded-md border border-slate-200 bg-white pl-2 pr-6 text-[11px] font-semibold text-canvas-ink transition-colors hover:border-slate-300 has-[:disabled]:opacity-60"
+    >
+      {icon}
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="cursor-pointer appearance-none bg-transparent outline-none"
+      >
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-1.5 h-3 w-3 text-canvas-muted" />
+    </label>
+  );
+}
+
 /** Başlık ve not: kaleme basınca yerinde düzenlenir, Enter/Kaydet yazar. */
 function EditableHead({ card, onChange }: { card: BoardCard; onChange: (p: Partial<BoardCard>) => void }) {
   const [editing, setEditing] = useState(false);
@@ -191,7 +227,7 @@ function EditableHead({ card, onChange }: { card: BoardCard; onChange: (p: Parti
     <div className="flex min-w-0 items-start gap-1">
       <div className="min-w-0 flex-1">
         <div
-          className="truncate text-[12.5px] font-extrabold"
+          className="truncate text-[14px] font-bold leading-7 text-canvas-ink"
           title={card.question && card.question !== card.title ? `Soru: ${card.question}` : card.title}
         >
           {card.title}
@@ -217,6 +253,8 @@ function CardFrame({
   onRemove,
   children,
   head,
+  toolbar,
+  actions,
   foot,
   stacked = false,
 }: {
@@ -227,6 +265,10 @@ function CardFrame({
   onRemove: () => void;
   children: React.ReactNode;
   head: React.ReactNode;
+  /** Başlığın altında, kartın tam genişliğinde: grafik tipi, zamanlama, karşılaştırma. */
+  toolbar?: React.ReactNode;
+  /** Başlık satırının sağı: yenile, sil. */
+  actions?: React.ReactNode;
   foot: React.ReactNode;
   /** Telefonda kart konumsuz, tam genişlikte; sürükleme parmakla kaydırmayı kilitlemesin. */
   stacked?: boolean;
@@ -287,28 +329,34 @@ function CardFrame({
       onPointerCancel={stacked ? undefined : up}
     >
       <div className="glass-card pano-card flex h-full flex-col rounded-[22px] p-3 shadow-canvas-card sm:p-4">
-        <div className={['flex items-start gap-2 border-b border-slate-100 pb-2', stacked ? '' : 'pano-handle cursor-grab'].join(' ')}>
-          {!stacked && (
-            <span
-              className="pano-noprint mt-0.5 shrink-0 rounded-md p-0.5 text-slate-300 transition-colors group-hover/card:text-slate-400"
-              title="Sürükleyip taşı"
-              aria-hidden
-            >
-              <GripVertical className="h-4 w-4" />
-            </span>
-          )}
-          <div className="min-w-0 flex-1">{head}</div>
-          <button
-            type="button"
-            onClick={onRemove}
-            title="Karttan çıkar"
-            className="pano-press pano-noprint flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+        <div className={['border-b border-slate-100 pb-2', stacked ? '' : 'pano-handle cursor-grab'].join(' ')}>
+          <div className="flex items-start gap-1.5">
+            {!stacked && (
+              <span
+                className="pano-noprint -ml-1 flex h-7 shrink-0 items-center text-slate-300 transition-colors group-hover/card:text-slate-400"
+                title="Sürükleyip taşı"
+                aria-hidden
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">{head}</div>
+            <div className="pano-noprint flex shrink-0 items-center gap-0.5">
+              {actions}
+              <button
+                type="button"
+                onClick={onRemove}
+                title="Karttan çıkar"
+                className="pano-press flex h-7 w-7 items-center justify-center rounded-md text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+          {toolbar && <div className="pano-noprint mt-1.5 flex flex-wrap items-center gap-1.5">{toolbar}</div>}
         </div>
         <div className="flex min-h-0 flex-1 flex-col pt-2">{children}</div>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-100 pt-2">{foot}</div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-100 pt-1.5">{foot}</div>
       </div>
       {!stacked && (
         <span
@@ -344,6 +392,10 @@ export default function BoardScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [comparing, setComparing] = useState<string | null>(null);
+  /** Excel üretilirken: 'all' ya da kart kimliği. */
+  const [exporting, setExporting] = useState<string | null>(null);
+  /** PDF: kartlar yazdırma için alt alta, animasyonsuz dizilir; pencere kapanınca eski düzen döner. */
+  const [printing, setPrinting] = useState(false);
   const qc = useQueryClient();
 
   // Açılış: önce tarayıcıdaki kopya (anında), sonra sunucudaki doğrusu.
@@ -520,6 +572,43 @@ export default function BoardScreen() {
     }
   };
 
+  /** Excel sunucuda üretilir: SQL tam koşar, her kart bir sayfa, grafik Excel'in kendi grafiği. */
+  const exportExcel = async (ids: string[], key: string) => {
+    if (!ENGINE_ENABLED || exporting) return;
+    setExporting(key);
+    setErr(null);
+    try {
+      if (saveTimer.current) {
+        // Bekleyen düzen kaydı önce gitsin; sunucu kartı bilmeden aktaramaz.
+        window.clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+        await pushToServer(cards);
+      }
+      const { blob, name } = await boardApi.exportXlsx(ids);
+      download(name, blob);
+    } catch (e) {
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : e instanceof Error ? e.message : 'Excel üretilemedi.');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!printing) return;
+    const done = () => setPrinting(false);
+    window.addEventListener('afterprint', done);
+    // Alt alta düzen ve grafikler yeni genişliğe otursun, sonra yazdırma penceresi açılsın.
+    let raf = 0;
+    const t = window.setTimeout(() => {
+      raf = window.requestAnimationFrame(() => window.print());
+    }, 450);
+    return () => {
+      window.clearTimeout(t);
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('afterprint', done);
+    };
+  }, [printing]);
+
   const refreshAll = () => {
     for (const r of results) void r.refetch();
   };
@@ -531,7 +620,8 @@ export default function BoardScreen() {
     [cards],
   );
 
-  const narrow = useNarrow();
+  const narrowScreen = useNarrow();
+  const narrow = narrowScreen || printing;
   const pendingAllowed = pending ? allowedCharts(pending.cols, pending.rows) : [];
 
   return (
@@ -562,11 +652,22 @@ export default function BoardScreen() {
             </button>
             <button
               type="button"
-              onClick={() => window.print()}
-              title="Panoyu PDF olarak kaydet (yazdırma penceresi)"
-              className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white"
+              onClick={() => void exportExcel([], 'all')}
+              disabled={exporting != null}
+              title="Bütün kartlar tek Excel dosyasında: her kart bir sayfa, tam veri ve grafik"
+              className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white disabled:opacity-60"
             >
-              <FileText className="h-3.5 w-3.5" />
+              {exporting === 'all' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-700" />}
+              Excel
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrinting(true)}
+              disabled={printing}
+              title="Panoyu PDF olarak kaydet (yazdırma penceresi)"
+              className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white disabled:opacity-60"
+            >
+              <FileText className="h-3.5 w-3.5 text-red-600" />
               PDF
             </button>
             <span className="hidden items-center gap-1 border-l border-slate-200/80 pl-2 pr-1 text-[11px] font-semibold text-canvas-muted sm:flex">
@@ -594,9 +695,16 @@ export default function BoardScreen() {
       </div>
 
       {/* Kartlar */}
-      <main className="pano-print-main absolute bottom-[152px] left-14 right-2 top-[104px] sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[124px] overflow-auto">
+      <main className="pano-print-main pano-scroll absolute bottom-[152px] left-14 right-2 top-[104px] sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[124px] overflow-auto">
         <div
-          className={narrow ? 'mx-auto flex w-full flex-col gap-3 pb-3' : 'relative mx-auto w-full max-w-[1760px]'}
+          // Yazdırırken genişlik A4'ün yazı alanıdır (~700 px): grafikler kâğıttaki boyuta göre çizilir, sonradan esnemez.
+          className={
+            printing
+              ? 'pano-print-stack mx-auto flex w-[700px] flex-col gap-3 pb-3'
+              : narrow
+                ? 'mx-auto flex w-full flex-col gap-3 pb-3'
+                : 'relative mx-auto w-full max-w-[1760px]'
+          }
           style={narrow ? undefined : { height }}
         >
           {!cards.length && !pending && (
@@ -632,44 +740,49 @@ export default function BoardScreen() {
                 onChange={(p) => patch(c.id, p)}
                 onFront={() => front(c.id)}
                 onRemove={() => remove(c.id)}
-                head={
+                head={<EditableHead card={c} onChange={(p) => patch(c.id, p)} />}
+                actions={
+                  <button
+                    type="button"
+                    onClick={() => void r?.refetch()}
+                    title="Şimdi yeniden sorgula"
+                    className="pano-press flex h-7 w-7 items-center justify-center rounded-md text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink"
+                  >
+                    <RotateCw className={['h-3.5 w-3.5', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
+                  </button>
+                }
+                toolbar={
                   <>
-                    <EditableHead card={c} onChange={(p) => patch(c.id, p)} />
-                    <div className="pano-noprint mt-1 flex flex-wrap items-center gap-1.5">
-                      <select
-                        value={c.chart}
-                        onChange={(e) => patch(c.id, { chart: e.target.value as ChartKind })}
-                        className="h-7 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted outline-none"
-                      >
+                      <ToolSelect value={c.chart} title="Grafik tipi" onChange={(v) => patch(c.id, { chart: v as ChartKind })}>
                         {options.map((o) => (
                           <option key={o} value={o}>
                             {CHART_LABEL[o]}
                           </option>
                         ))}
-                      </select>
+                      </ToolSelect>
                       {['column', 'bar', 'pie', 'donut'].includes(c.chart) && (
                         <button
                           type="button"
                           onClick={() => patch(c.id, { depth: !c.depth })}
                           title="Gerçek 3B görünüm (WebGL); fareyle döndürülür"
+                          aria-pressed={Boolean(c.depth)}
                           className={[
-                            'pano-press h-7 rounded-lg px-1.5 text-[11px] font-bold transition-colors',
-                            c.depth ? 'bg-canvas-violet/15 text-canvas-violet' : 'text-canvas-muted hover:bg-slate-100',
+                            'pano-press h-7 rounded-md border px-2 text-[11px] font-semibold transition-colors',
+                            c.depth ? 'border-canvas-violet/30 bg-canvas-violet/10 text-canvas-violet' : 'border-slate-200 bg-white text-canvas-muted hover:border-slate-300',
                           ].join(' ')}
                         >
                           3B
                         </button>
                       )}
                       {isKpi && !compared && (
-                        <select
+                        <ToolSelect
                           value=""
                           disabled={comparing === c.id}
-                          onChange={(e) => {
-                            const opt = COMPARE.find((k) => k.key === e.target.value);
+                          onChange={(v) => {
+                            const opt = COMPARE.find((k) => k.key === v);
                             if (opt) void compare(c, opt.label);
                           }}
                           title="Değeri önceki dönemle karşılaştır"
-                          className="h-7 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted outline-none disabled:opacity-60"
                         >
                           <option value="">{comparing === c.id ? 'Soruluyor…' : 'Karşılaştır…'}</option>
                           {COMPARE.map((k) => (
@@ -677,46 +790,34 @@ export default function BoardScreen() {
                               {k.label}
                             </option>
                           ))}
-                        </select>
+                        </ToolSelect>
                       )}
-                      <label
-                        className="flex h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold text-canvas-muted"
+                      <ToolSelect
+                        value={c.refresh ?? 'manual'}
                         title="Sunucu kartı kendiliğinden ne zaman tazelesin"
+                        icon={<Timer className="h-3 w-3 text-canvas-muted" />}
+                        onChange={(v) =>
+                          patch(c.id, {
+                            refresh: v as BoardRefresh,
+                            refreshAt: v === 'daily' ? c.refreshAt || '08:00' : null,
+                          })
+                        }
                       >
-                        <Timer className="h-3 w-3" />
-                        <select
-                          value={c.refresh ?? 'manual'}
-                          onChange={(e) =>
-                            patch(c.id, {
-                              refresh: e.target.value as BoardRefresh,
-                              refreshAt: e.target.value === 'daily' ? c.refreshAt || '08:00' : null,
-                            })
-                          }
-                          className="bg-transparent outline-none"
-                        >
-                          {(Object.keys(REFRESH_LABEL) as BoardRefresh[]).map((k) => (
-                            <option key={k} value={k}>
-                              {REFRESH_LABEL[k]}
-                            </option>
-                          ))}
-                        </select>
-                        {c.refresh === 'daily' && (
-                          <input
-                            type="time"
-                            value={c.refreshAt || '08:00'}
-                            onChange={(e) => patch(c.id, { refreshAt: e.target.value || '08:00' })}
-                            className="w-[92px] bg-transparent font-mono text-[11px] outline-none"
-                          />
-                        )}
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => void r?.refetch()}
-                        title="Şimdi yeniden sorgula"
-                        className="pano-press flex h-7 w-7 items-center justify-center rounded-lg text-canvas-muted transition-colors hover:bg-slate-100"
-                      >
-                        <RotateCw className={['h-3 w-3', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
-                      </button>
+                        {(Object.keys(REFRESH_LABEL) as BoardRefresh[]).map((k) => (
+                          <option key={k} value={k}>
+                            {REFRESH_LABEL[k]}
+                          </option>
+                        ))}
+                      </ToolSelect>
+                      {c.refresh === 'daily' && (
+                        <input
+                          type="time"
+                          value={c.refreshAt || '08:00'}
+                          onChange={(e) => patch(c.id, { refreshAt: e.target.value || '08:00' })}
+                          title="Günlük tazeleme saati"
+                          className="h-7 w-[84px] rounded-md border border-slate-200 bg-white px-1.5 text-[11px] font-semibold tabular-nums outline-none hover:border-slate-300"
+                        />
+                      )}
                       {r?.isError && (
                         <span className="text-[11px] font-bold text-red-600" title={r.error instanceof Error ? r.error.message : ''}>
                           veri gelmedi
@@ -727,7 +828,6 @@ export default function BoardScreen() {
                           ilk {rows.length.toLocaleString('tr-TR')} satır
                         </span>
                       )}
-                    </div>
                   </>
                 }
                 foot={
@@ -759,6 +859,16 @@ export default function BoardScreen() {
                       </button>
                       <button
                         type="button"
+                        disabled={exporting != null}
+                        onClick={() => void exportExcel([c.id], c.id)}
+                        title="Bu kartı Excel olarak indir: tam veri, biçimli tablo ve grafik"
+                        className="pano-press flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink disabled:opacity-50"
+                      >
+                        {exporting === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
+                        Excel
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => patch(c.id, { sqlOpen: !sqlOpen })}
                         aria-expanded={sqlOpen}
                         className={[
@@ -776,16 +886,21 @@ export default function BoardScreen() {
                   </>
                 }
               >
-                <div className={narrow ? 'h-[220px] shrink-0' : 'min-h-0 flex-1'}>
+                <div
+                  className={[
+                    'pano-plot',
+                    printing ? (c.chart === 'table' ? 'pano-plot-table' : 'h-[300px] shrink-0') : narrow ? 'h-[240px] shrink-0' : 'min-h-0 flex-1',
+                  ].join(' ')}
+                >
                   {r?.isLoading ? (
                     <div className="flex h-full items-center justify-center text-canvas-muted">
                       <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
                   ) : (
-                    <Chart kind={c.chart} cols={cols} rows={rows} depth={c.depth} />
+                    <Chart kind={c.chart} cols={cols} rows={rows} depth={printing ? false : c.depth} still={printing} />
                   )}
                 </div>
-                {sqlOpen && <SqlPanel sql={c.sql} className="mt-2 h-[152px] shrink-0" />}
+                {sqlOpen && !printing && <SqlPanel sql={c.sql} className="pano-noprint mt-2 h-[152px] shrink-0" />}
               </CardFrame>
             );
           })}

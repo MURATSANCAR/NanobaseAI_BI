@@ -384,12 +384,19 @@
   }
 }
 
-/* Panolar → PDF: tarayıcının "PDF olarak kaydet"i. Kanvas serbest düzendir; kâğıtta
-   kartlar sırayla, her biri tam genişlikte ve bölünmeden basılır. */
+/* Panolar → PDF: tarayıcının "PDF olarak kaydet"i. Düğme önce kartları 700 px genişlikte alt alta
+   ve animasyonsuz dizer (BoardScreen `printing`); burada kâğıtta kaydırma çubuğu ve kesik içerik
+   kalmaması sağlanır: her kap tam boyuna açılır, tablo bütün satırlarıyla basılır. */
 @media print {
   @page {
     size: A4 portrait;
     margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .pano-noprint {
     display: none !important;
@@ -402,22 +409,56 @@
   }
   .pano-print-main > div {
     height: auto !important;
+    width: 100% !important;
     display: block !important;
   }
   .pano-frame {
     position: static !important;
     display: block;
     width: 100% !important;
-    height: 380px !important;
+    height: auto !important;
     transform: none !important;
     margin: 0 0 14px !important;
     break-inside: avoid;
     page-break-inside: avoid;
   }
   .pano-frame .pano-card {
+    height: auto !important;
     box-shadow: none !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #e1dfdd !important;
+    border-radius: 8px !important;
     background: #fff !important;
+    backdrop-filter: none !important;
+  }
+  /* Tablo kartı sayfalar boyunca akabilir; başlık her sayfada tekrar eder. */
+  .pano-frame:has(.pano-plot-table) {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .pano-plot-table,
+  .pano-table {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .pano-table thead {
+    display: table-header-group;
+    position: static !important;
+  }
+  .pano-table tfoot {
+    display: table-row-group;
+    position: static !important;
+  }
+  .pano-table tr {
+    break-inside: avoid;
+  }
+  .pano-print-main *,
+  .pano-print-main *::before,
+  .pano-print-main *::after {
+    scrollbar-width: none !important;
+  }
+  .pano-print-main ::-webkit-scrollbar {
+    display: none !important;
   }
   .pano-print-head {
     display: block !important;

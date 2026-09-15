@@ -2419,6 +2419,39 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
         return out
 
+    @app.get("/api/v1/board/export.xlsx")
+    def board_export(request: Request, ids: str = ""):
+        """Kartlar tek Excel kitabında: özet + kart başına sayfa. SQL burada tam koşar, tavan yok."""
+        from datetime import datetime
+        from fastapi.responses import Response as FileBytes
+        from semantic_bridge import board_excel
+
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _board()
+        cards = board_mod.list_cards(engine, tenant, ds, user)
+        wanted = [i for i in ids.split(",") if i]
+        if wanted:
+            order = {cid: k for k, cid in enumerate(wanted)}
+            cards = sorted((c for c in cards if c["id"] in order), key=lambda c: order[c["id"]])
+        if not cards:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Aktarılacak kart yok."})
+
+        def fetch(sql: str):
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            return list(out.get("columns") or []), rows
+
+        data = board_excel.build(cards, fetch, user=user, now=datetime.now(board_mod._LOCAL).replace(tzinfo=None))
+        name = "pano" if len(cards) > 1 else re.sub(r"[^A-Za-z0-9]+", "-", cards[0]["title"].translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU"))).strip("-").lower()[:60] or "kart"
+        admin_mod.audit(engine, user, "export", "board", ",".join(c["id"] for c in cards)[:200], name, {"cards": len(cards), "format": "xlsx"})
+        return FileBytes(
+            content=data,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{name}-{datetime.now().strftime("%Y-%m-%d")}.xlsx"'},
+        )
+
     @app.post("/api/v1/board/run-due")
     def board_run_due(request: Request) -> dict[str, Any]:
         _require_caller(request)

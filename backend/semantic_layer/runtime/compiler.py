@@ -1543,9 +1543,18 @@ class ExistingCompiler:
         Remove only an unsolicited outer cap. A nested TOP 1 can define the most
         recent transaction and must retain its business meaning.
         """
-        if not sql or q.limit is not None:
+        if not sql:
             return sql
         from semantic_layer.history.sql_facts import parse_sql
+        if q.limit is not None:
+            # "5 tane" was asked; a model that forgot the outer TOP must not return every row.
+            try:
+                tree = parse_sql(sql)
+                if tree.args.get("limit") is not None or not hasattr(tree, "limit"):
+                    return sql
+                return tree.limit(int(q.limit)).sql(dialect=self.dialect)
+            except Exception:
+                return sql
         try:
             tree = parse_sql(sql)
             if tree.args.get("limit") is None and tree.args.get("offset") is None:

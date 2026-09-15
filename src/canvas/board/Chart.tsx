@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -26,17 +26,28 @@ import type { ChartKind } from './store';
 const Chart3D = lazy(() => import('./Chart3D'));
 const THREE_D: ChartKind[] = ['column', 'bar', 'pie', 'donut'];
 
-/** Kolon adını okunur yapar: gecen_yila_net_ciro → gecen yila net ciro */
-const humanize = (s: string) => s.replace(/^d(?=\d{4})/, '').replace(/_/g, ' ');
+/** Kolon adını okunur yapar: gecen_yila_net_ciro → Gecen yila net ciro */
+export const humanize = (s: string) => {
+  const t = s.replace(/^d(?=\d{4})/, '').replace(/_/g, ' ').trim();
+  return t.charAt(0).toLocaleUpperCase('tr-TR') + t.slice(1);
+};
 
-/** Kanvas paleti. Seriler bu sırayla renklenir. */
-export const SERIES = ['#7C5CFF', '#FF6B4A', '#10B981', '#F59E0B', '#38BDF8', '#EC4899', '#84CC16', '#A855F7'];
+/** Power BI'ın varsayılan teması. Seriler bu sırayla renklenir. */
+export const SERIES = ['#118DFF', '#12239E', '#E66C37', '#6B007B', '#E044A7', '#744EC2', '#D9B300', '#D64550'];
+
+const INK = '#252423';
+const MUTED = '#605E5C';
+const GRID = '#E1DFDD';
+/** Kategori adı boş gelen satır: Power BI "(Boş)" yazar, boş hücre bırakmaz. */
+export const BLANK = '(Boş)';
 
 export type Row = Record<string, unknown>;
 export type Col = { name: string; type: string };
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const nf = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nf0 = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 
 /** Kısa eksen etiketi: 1.240.000 → 1,2 Mn */
 export function shortNum(v: number): string {
@@ -55,7 +66,8 @@ const AY = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Ek
 
 /** Eksen etiketi: ISO tarih "Oca 2026" olur (ayın 1'i ise ay, değilse gün ay yıl). */
 export function prettyLabel(v: unknown): string {
-  const s = String(v ?? '');
+  if (v == null || v === '') return BLANK;
+  const s = String(v);
   const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ]00:00(?::00(?:\.0+)?)?Z?)?$/.exec(s);
   if (!m) return s;
   const [, y, mo, d] = m;
@@ -69,46 +81,7 @@ export const clip = (s: string, n = 14): string => (s.length > n ? `${s.slice(0,
 /** Değer etiketi ancak okunabilecek kadar az nokta varsa çizilir; üst üste binen sayı bilgi değildir. */
 export const LABEL_MAX = 24;
 
-const VALUE_LABEL = { fontSize: 10, fontWeight: 700, fill: '#334155' } as const;
-
-const RAD = Math.PI / 180;
-/** Pasta dilimi etiketi: dışarıda, çizgiyle; %4'ten küçük dilimler yalnız ipucunda. */
-function pieLabel(props: { cx: number; cy: number; midAngle: number; outerRadius: number; percent: number; value: number }) {
-  const { cx, cy, midAngle, outerRadius, percent, value } = props;
-  if (!Number.isFinite(percent) || percent < 0.04) return null;
-  const r = outerRadius + 14;
-  const x = cx + r * Math.cos(-midAngle * RAD);
-  const y = cy + r * Math.sin(-midAngle * RAD);
-  return (
-    <text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" {...VALUE_LABEL}>
-      {shortNum(value)} · %{Math.round(percent * 100)}
-    </text>
-  );
-}
-
-/** Ağaç haritası hücresi: kutu sığdırıyorsa ad ve değer, sığdırmıyorsa yalnız renk. */
-function TreeCell(props: { x?: number; y?: number; width?: number; height?: number; name?: string; value?: number; index?: number }) {
-  const { x = 0, y = 0, width = 0, height = 0, name = '', value, index = 0 } = props;
-  const fits = width > 56 && height > 30;
-  const chars = Math.max(3, Math.floor(width / 6.5));
-  return (
-    <g>
-      <rect x={x} y={y} width={width} height={height} rx={6} fill={SERIES[index % SERIES.length]} stroke="#fff" strokeWidth={2} />
-      {fits && (
-        <>
-          <text x={x + 6} y={y + 14} fontSize={10} fontWeight={700} fill="#fff">
-            {clip(String(name), chars)}
-          </text>
-          {isNum(value) && (
-            <text x={x + 6} y={y + 27} fontSize={10} fontWeight={600} fill="rgba(255,255,255,.85)">
-              {shortNum(value)}
-            </text>
-          )}
-        </>
-      )}
-    </g>
-  );
-}
+const VALUE_LABEL = { fontSize: 11, fontWeight: 600, fill: INK } as const;
 
 export function labelCol(cols: Col[], rows: Row[]): string {
   const nums = new Set(numericCols(cols, rows));
@@ -155,32 +128,196 @@ export function allowedCharts(cols: Col[], rows: Row[]): ChartKind[] {
   return [...new Set(out)];
 }
 
-const tooltipStyle = {
-  borderRadius: 12,
-  border: '1px solid rgba(255,255,255,.9)',
-  background: 'rgba(255,255,255,.96)',
-  boxShadow: '0 12px 36px rgba(20,30,60,.14)',
-  fontSize: 12,
-  fontWeight: 600,
+/** Sayı kolonunda küsurat varsa iki hane, yoksa tam sayı: bir kolonda karışık biçim olmaz. */
+function formatterFor(rows: Row[], key: string): (v: number) => string {
+  return rows.some((r) => isNum(r[key]) && !Number.isInteger(r[key])) ? (v) => nf2.format(v) : (v) => nf0.format(v);
+}
+
+type TipPayload = { name?: string; value?: unknown; color?: string; dataKey?: unknown; payload?: Row & { fill?: string } };
+
+/** Power BI ipucu: başlıkta kategori, altında her seri adı ve tam sayı. */
+function PbiTip({ active, payload, label }: { active?: boolean; payload?: TipPayload[]; label?: unknown }) {
+  if (!active || !payload?.length) return null;
+  const head = label ?? payload[0]?.payload?.__label;
+  return (
+    <div className="min-w-[160px] rounded-md border border-[#E1DFDD] bg-white px-3 py-2 text-[12px] shadow-[0_4px_16px_rgba(0,0,0,.12)]">
+      {head != null && head !== '' && <div className="mb-1 font-semibold text-[#252423]">{String(head)}</div>}
+      {payload.map((p, i) => (
+        <div key={i} className="flex items-center justify-between gap-4 py-0.5">
+          <span className="flex min-w-0 items-center gap-1.5 text-[#605E5C]">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color ?? p.payload?.fill }} />
+            <span className="truncate">{humanize(String(p.name ?? p.dataKey ?? ''))}</span>
+          </span>
+          <span className="font-semibold tabular-nums text-[#252423]">
+            {isNum(p.value) ? (Number.isInteger(p.value) ? nf0.format(p.value) : nf2.format(p.value)) : String(p.value ?? '')}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const legendProps = {
+  verticalAlign: 'top' as const,
+  align: 'left' as const,
+  iconType: 'circle' as const,
+  iconSize: 8,
+  wrapperStyle: { fontSize: 11, color: MUTED, paddingBottom: 8 },
+  formatter: (v: string) => <span style={{ color: MUTED }}>{humanize(String(v))}</span>,
 };
 
+const RAD = Math.PI / 180;
+/** Pasta dilimi etiketi: dışarıda, çizgiyle; %4'ten küçük dilimler yalnız ipucunda. */
+function pieLabel(props: { cx: number; cy: number; midAngle: number; outerRadius: number; percent: number; value: number }) {
+  const { cx, cy, midAngle, outerRadius, percent, value } = props;
+  if (!Number.isFinite(percent) || percent < 0.04) return null;
+  const r = outerRadius + 14;
+  const x = cx + r * Math.cos(-midAngle * RAD);
+  const y = cy + r * Math.sin(-midAngle * RAD);
+  return (
+    <text x={x} y={y} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" {...VALUE_LABEL}>
+      {shortNum(value)} ({nf.format(percent * 100)}%)
+    </text>
+  );
+}
+
+/** Ağaç haritası hücresi: kutu sığdırıyorsa ad ve değer, sığdırmıyorsa yalnız renk. */
+function TreeCell(props: { x?: number; y?: number; width?: number; height?: number; name?: string; value?: number; index?: number }) {
+  const { x = 0, y = 0, width = 0, height = 0, name = '', value, index = 0 } = props;
+  const fits = width > 56 && height > 30;
+  const chars = Math.max(3, Math.floor(width / 6.5));
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={height} fill={SERIES[index % SERIES.length]} stroke="#fff" strokeWidth={2} />
+      {fits && (
+        <>
+          <text x={x + 6} y={y + 16} fontSize={11} fontWeight={600} fill="#fff">
+            {clip(String(name), chars)}
+          </text>
+          {isNum(value) && (
+            <text x={x + 6} y={y + 30} fontSize={11} fill="rgba(255,255,255,.9)">
+              {shortNum(value)}
+            </text>
+          )}
+        </>
+      )}
+    </g>
+  );
+}
+
+/** Power BI tablo görseli: okunur başlık, sağa yaslı sayılar, veri çubuğu ve alt toplam. */
+function PbiTable({ cols, rows, nums }: { cols: Col[]; rows: Row[]; nums: string[] }) {
+  const numSet = new Set(nums);
+  const label = cols.find((c) => !numSet.has(c.name))?.name;
+  const stats = useMemo(() => {
+    const out: Record<string, { max: number; sum: number; fmt: (v: number) => string; bars: boolean }> = {};
+    for (const n of nums) {
+      let max = 0;
+      let sum = 0;
+      let neg = false;
+      for (const r of rows) {
+        const v = r[n];
+        if (!isNum(v)) continue;
+        sum += v;
+        if (v < 0) neg = true;
+        max = Math.max(max, Math.abs(v));
+      }
+      // Veri çubuğu yalnız toplanabilir, eksiz sayı kolonunda: "yıl" ya da "kod" gibi kolonlarda anlamsız.
+      out[n] = { max, sum, fmt: formatterFor(rows, n), bars: !neg && rows.length > 1 && !/(^|_)(yil|yıl|ay|kod|id|no)$/i.test(n) };
+    }
+    return out;
+  }, [rows, nums]);
+  const showTotal = rows.length > 1 && nums.length > 0;
+
+  return (
+    <div data-nodrag className="pano-table h-full overflow-auto rounded-md">
+      <table className="w-full border-collapse text-[12px] text-[#252423]">
+        <thead className="sticky top-0 z-[1] bg-white">
+          <tr>
+            {cols.map((c) => (
+              <th
+                key={c.name}
+                scope="col"
+                className={[
+                  'whitespace-nowrap border-b-2 border-[#252423]/80 px-2.5 py-2 font-semibold',
+                  numSet.has(c.name) ? 'w-px text-right' : 'text-left',
+                ].join(' ')}
+              >
+                {humanize(c.name)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-b border-[#EDEBE9] transition-colors duration-100 hover:bg-[#F3F2F1]">
+              {cols.map((c) => {
+                const v = r[c.name];
+                if (numSet.has(c.name)) {
+                  const s = stats[c.name];
+                  const pct = s?.bars && isNum(v) && s.max > 0 ? (v / s.max) * 100 : 0;
+                  return (
+                    <td
+                      key={c.name}
+                      className="whitespace-nowrap px-2.5 py-1.5 text-right tabular-nums"
+                      style={pct ? { backgroundImage: `linear-gradient(to right, rgba(17,141,255,.14) ${pct}%, transparent ${pct}%)` } : undefined}
+                    >
+                      {isNum(v) ? s.fmt(v) : ''}
+                    </td>
+                  );
+                }
+                const blank = v == null || v === '';
+                return (
+                  <td key={c.name} className={['px-2.5 py-1.5', blank && c.name === label ? 'italic text-[#605E5C]' : ''].join(' ')}>
+                    {blank ? (c.name === label ? BLANK : '') : prettyLabel(v)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+        {showTotal && (
+          <tfoot className="sticky bottom-0 bg-white">
+            <tr>
+              {cols.map((c, j) => (
+                <td
+                  key={c.name}
+                  className={[
+                    'whitespace-nowrap border-t-2 border-[#252423]/80 px-2.5 py-2 font-semibold',
+                    numSet.has(c.name) ? 'text-right tabular-nums' : '',
+                  ].join(' ')}
+                >
+                  {numSet.has(c.name) && stats[c.name]?.bars ? stats[c.name].fmt(stats[c.name].sum) : j === 0 ? 'Toplam' : ''}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        )}
+      </table>
+    </div>
+  );
+}
+
 /**
- * Pano kartının grafiği. Derinlik seçeneği sütun, çubuk ve pasta için
- * hafif bir 3B görünüm verir; veriyi değiştirmez, yalnız gölge ve eğim ekler.
+ * Pano kartının grafiği, Power BI görsel diliyle: tema paleti, ince kesik ızgara, eksen başlığı,
+ * değer etiketi, üzerine gelinen kategori dışındakilerin sönmesi. `still` yazdırmada animasyonu kapatır.
  */
 export default function Chart({
   kind,
   cols,
   rows,
   depth,
+  still = false,
 }: {
   kind: ChartKind;
   cols: Col[];
   rows: Row[];
   depth: boolean;
+  still?: boolean;
 }) {
   const nums = useMemo(() => numericCols(cols, rows), [cols, rows]);
   const label = useMemo(() => labelCol(cols, rows), [cols, rows]);
+  const [hover, setHover] = useState<number | null>(null);
 
   if (!rows.length) {
     return <div className="flex h-full items-center justify-center text-[12px] text-canvas-muted">Sonuç boş</div>;
@@ -189,9 +326,7 @@ export default function Chart({
   if (depth && THREE_D.includes(kind)) {
     return (
       <Suspense
-        fallback={
-          <div className="flex h-full items-center justify-center text-[11px] font-semibold text-canvas-muted">3B yükleniyor…</div>
-        }
+        fallback={<div className="flex h-full items-center justify-center text-[11px] font-semibold text-canvas-muted">3B yükleniyor…</div>}
       >
         <Chart3D kind={kind} cols={cols} rows={rows} />
       </Suspense>
@@ -207,22 +342,22 @@ export default function Chart({
     const delta = isNum(v) && isNum(prev) && prev !== 0 ? ((v - prev) / Math.abs(prev)) * 100 : null;
     return (
       <div className="flex h-full flex-col items-center justify-center">
-        <div className="font-mono text-4xl font-black tabular-nums tracking-tight text-canvas-ink">
+        <div className="text-[40px] font-semibold leading-none tabular-nums tracking-tight text-[#252423]" title={isNum(v) ? nf2.format(v) : undefined}>
           {isNum(v) ? shortNum(v) : String(v ?? '—')}
         </div>
-        <div className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-canvas-muted">{humanize(String(key))}</div>
+        <div className="mt-2 text-[12px] text-[#605E5C]">{humanize(String(key))}</div>
         {delta != null && (
-          <div className="mt-2 flex items-center gap-1.5">
+          <div className="mt-2.5 flex items-center gap-1.5">
             <span
               className={[
-                'rounded-full px-2 py-0.5 font-mono text-[12px] font-extrabold tabular-nums',
+                'rounded px-1.5 py-0.5 text-[12px] font-semibold tabular-nums',
                 delta >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700',
               ].join(' ')}
               title={`Önceki: ${nf.format(prev as number)}`}
             >
               {delta >= 0 ? '▲' : '▼'} %{nf.format(Math.abs(delta))}
             </span>
-            <span className="text-[11px] font-semibold text-canvas-muted">
+            <span className="text-[11px] text-[#605E5C]">
               {humanize(String(prevKey))}: {shortNum(prev as number)}
             </span>
           </div>
@@ -231,76 +366,74 @@ export default function Chart({
     );
   }
 
-  if (kind === 'table') {
-    return (
-      <div data-nodrag className="h-full overflow-auto">
-        <table className="w-full border-collapse text-[11.5px]">
-          <thead className="sticky top-0 bg-white/95">
-            <tr>
-              {cols.map((c) => (
-                <th key={c.name} className="border-b border-slate-200 px-2 py-1.5 text-left font-bold text-canvas-muted">
-                  {c.name}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.slice(0, 200).map((r, i) => (
-              <tr key={i} className="odd:bg-slate-50/60">
-                {cols.map((c) => (
-                  <td key={c.name} className={['px-2 py-1', isNum(r[c.name]) ? 'text-right font-mono tabular-nums' : ''].join(' ')}>
-                    {isNum(r[c.name]) ? nf.format(r[c.name] as number) : String(r[c.name] ?? '')}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+  if (kind === 'table') return <PbiTable cols={cols} rows={rows} nums={nums} />;
 
+  const anim = still ? false : undefined;
   const data = rows.map((r) => ({ ...r, __label: prettyLabel(r[label]) }));
-  const axis = { tick: { fontSize: 10, fill: '#94a3b8' }, tickLine: false, axisLine: false } as const;
-  const depthFilter = depth ? 'drop-shadow(0 8px 10px rgba(20,30,60,.22))' : undefined;
-  const showValues = rows.length * Math.max(1, nums.length) <= LABEL_MAX;
-  // Çok kategori: eksen yazıları eğik ve kısa; az kategori: düz ve biraz daha uzun.
+  const series = nums.filter((n) => n !== label);
+  const axis = { tick: { fontSize: 11, fill: MUTED }, tickLine: false, axisLine: false } as const;
+  const axisTitle = (v: string, vertical = false) =>
+    ({
+      value: v,
+      position: vertical ? 'insideLeft' : 'insideBottom',
+      angle: vertical ? -90 : 0,
+      offset: vertical ? 12 : 0,
+      style: { fontSize: 11, fill: MUTED, textAnchor: 'middle' },
+    }) as const;
+  const showValues = rows.length * Math.max(1, series.length) <= LABEL_MAX;
   const crowded = rows.length > 8;
-  // 24'ten çok kategoride her etiket sığmaz: Recharts baş/son korunarak seyreltir; tam ad ipucunda.
   const xTick = {
     ...axis,
     interval: (rows.length > LABEL_MAX ? 'preserveStartEnd' : 0) as 0 | 'preserveStartEnd',
-    tickFormatter: (v: unknown) => clip(String(v), crowded ? 10 : 14),
+    tickFormatter: (v: unknown) => clip(String(v), crowded ? 10 : 16),
   };
   // Recharts etiketi çubuk genişliğine sarar; "131,3 Mn" iki satıra bölünmesin diye boşluk kırılmaz.
-  const fmt = (v: unknown) => (isNum(v) ? shortNum(v) : String(v ?? '')).replace(/ /g, '\u00A0');
+  const fmt = (v: unknown) => (isNum(v) ? shortNum(v) : String(v ?? '')).replace(/ /g, ' ');
+  const dim = (i: number) => (hover == null || hover === i ? 1 : 0.35);
+  const single = series.length === 1;
+  const valueTitle = single ? humanize(series[0]) : '';
+  const labelTitle = humanize(label);
+  const onMove = (s: { activeTooltipIndex?: number } | null) =>
+    setHover(s && typeof s.activeTooltipIndex === 'number' ? s.activeTooltipIndex : null);
 
   if (kind === 'pie' || kind === 'donut') {
-    const key = nums[0];
+    const key = series[0] ?? nums[0];
     return (
       <div className="h-full" style={{ perspective: depth ? 900 : undefined }}>
-        <div className="h-full" style={{ transform: depth ? 'rotateX(38deg)' : undefined, filter: depthFilter }}>
+        <div className="h-full" style={{ transform: depth ? 'rotateX(38deg)' : undefined }}>
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
+                isAnimationActive={anim}
                 animationDuration={500}
                 data={data}
                 dataKey={key}
                 nameKey="__label"
-                innerRadius={kind === 'donut' ? '48%' : 0}
-                outerRadius="68%"
-                paddingAngle={1}
+                innerRadius={kind === 'donut' ? '55%' : 0}
+                outerRadius="72%"
+                cx="42%"
+                paddingAngle={0}
                 stroke="#fff"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 label={pieLabel}
-                labelLine={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                labelLine={{ stroke: GRID, strokeWidth: 1 }}
+                onMouseEnter={(_, i) => setHover(i)}
+                onMouseLeave={() => setHover(null)}
               >
                 {data.map((_, i) => (
-                  <Cell key={i} fill={SERIES[i % SERIES.length]} />
+                  <Cell key={i} fill={SERIES[i % SERIES.length]} fillOpacity={dim(i)} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip content={<PbiTip />} />
+              <Legend
+                layout="vertical"
+                verticalAlign="middle"
+                align="right"
+                iconType="circle"
+                iconSize={8}
+                wrapperStyle={{ fontSize: 11, lineHeight: '18px', maxWidth: '38%' }}
+                formatter={(v: string) => <span style={{ color: MUTED }}>{clip(String(v), 22)}</span>}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -309,11 +442,11 @@ export default function Chart({
   }
 
   if (kind === 'treemap') {
-    const key = nums[0];
+    const key = series[0] ?? nums[0];
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <Treemap data={data} dataKey={key} nameKey="__label" stroke="#fff" fill={SERIES[0]} content={<TreeCell />}>
-          <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
+        <Treemap isAnimationActive={anim} data={data} dataKey={key} nameKey="__label" stroke="#fff" fill={SERIES[0]} content={<TreeCell />}>
+          <Tooltip content={<PbiTip />} />
         </Treemap>
       </ResponsiveContainer>
     );
@@ -322,12 +455,12 @@ export default function Chart({
   if (kind === 'scatter') {
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <ScatterChart margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
-          <CartesianGrid stroke="rgba(30,41,59,.08)" />
-          <XAxis dataKey={nums[0]} type="number" {...axis} tickFormatter={shortNum} />
-          <YAxis dataKey={nums[1]} type="number" {...axis} tickFormatter={shortNum} width={48} />
-          <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
-          <Scatter data={data} fill={SERIES[0]} />
+        <ScatterChart margin={{ top: 8, right: 16, bottom: 18, left: 8 }}>
+          <CartesianGrid stroke={GRID} strokeDasharray="3 3" />
+          <XAxis dataKey={nums[0]} type="number" {...axis} tickFormatter={shortNum} label={axisTitle(humanize(nums[0]))} />
+          <YAxis dataKey={nums[1]} type="number" {...axis} tickFormatter={shortNum} width={60} label={axisTitle(humanize(nums[1]), true)} />
+          <Tooltip content={<PbiTip />} cursor={{ strokeDasharray: '3 3', stroke: GRID }} />
+          <Scatter isAnimationActive={anim} data={data} fill={SERIES[0]} fillOpacity={0.85} />
         </ScatterChart>
       </ResponsiveContainer>
     );
@@ -337,84 +470,131 @@ export default function Chart({
     const Wrapper = kind === 'line' ? LineChart : AreaChart;
     return (
       <ResponsiveContainer width="100%" height="100%">
-        <Wrapper data={data} margin={{ top: showValues ? 18 : 8, right: 16, bottom: crowded ? 8 : 4, left: 0 }}>
+        <Wrapper data={data} margin={{ top: showValues ? 20 : 8, right: 20, bottom: crowded ? 20 : 18, left: 8 }}>
           <defs>
-            {nums.map((n, i) => (
-              <linearGradient key={n} id={`g-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={SERIES[i % SERIES.length]} stopOpacity={0.32} />
-                <stop offset="100%" stopColor={SERIES[i % SERIES.length]} stopOpacity={0} />
+            {series.map((n, i) => (
+              <linearGradient key={n} id={`pbi-g-${i}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={SERIES[i % SERIES.length]} stopOpacity={0.28} />
+                <stop offset="100%" stopColor={SERIES[i % SERIES.length]} stopOpacity={0.02} />
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid stroke="rgba(30,41,59,.08)" vertical={false} />
+          <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="__label"
             {...xTick}
-            angle={crowded ? -32 : 0}
+            angle={crowded ? -35 : 0}
             textAnchor={crowded ? 'end' : 'middle'}
-            height={crowded ? 54 : 30}
-            padding={showValues ? { left: 22, right: 22 } : undefined}
+            height={crowded ? 62 : 36}
+            padding={{ left: 12, right: 12 }}
+            label={axisTitle(labelTitle)}
           />
-          <YAxis {...axis} tickFormatter={shortNum} width={52} />
-          <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => nf.format(v)} />
-          {nums.map((n, i) =>
+          <YAxis {...axis} tickFormatter={shortNum} width={64} label={valueTitle ? axisTitle(valueTitle, true) : undefined} />
+          <Tooltip content={<PbiTip />} cursor={{ stroke: MUTED, strokeDasharray: '3 3' }} />
+          {!single && <Legend {...legendProps} />}
+          {series.map((n, i) =>
             kind === 'line' ? (
-              <Line key={n} animationDuration={500} type="monotone" dataKey={n} stroke={SERIES[i % SERIES.length]} strokeWidth={2.5} dot={showValues}>
-                {showValues && <LabelList dataKey={n} position="top" offset={8} formatter={fmt} style={VALUE_LABEL} />}
+              <Line
+                key={n}
+                isAnimationActive={anim}
+                animationDuration={500}
+                type="linear"
+                dataKey={n}
+                stroke={SERIES[i % SERIES.length]}
+                strokeWidth={2.5}
+                dot={showValues ? { r: 3.5, strokeWidth: 0, fill: SERIES[i % SERIES.length] } : false}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
+              >
+                {showValues && <LabelList dataKey={n} position="top" offset={10} formatter={fmt} style={VALUE_LABEL} />}
               </Line>
             ) : (
               <Area
                 key={n}
+                isAnimationActive={anim}
                 animationDuration={500}
-                type="monotone"
+                type="linear"
                 dataKey={n}
                 stroke={SERIES[i % SERIES.length]}
                 strokeWidth={2.5}
-                fill={`url(#g-${i})`}
-                dot={showValues ? { r: 3, strokeWidth: 2, fill: '#fff' } : false}
+                fill={`url(#pbi-g-${i})`}
+                dot={showValues ? { r: 3.5, strokeWidth: 0, fill: SERIES[i % SERIES.length] } : false}
+                activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }}
               >
-                {showValues && <LabelList dataKey={n} position="top" offset={8} formatter={fmt} style={VALUE_LABEL} />}
+                {showValues && <LabelList dataKey={n} position="top" offset={10} formatter={fmt} style={VALUE_LABEL} />}
               </Area>
             ),
           )}
-          {nums.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
         </Wrapper>
       </ResponsiveContainer>
     );
   }
 
   const horizontal = kind === 'bar';
+  // Yatay çubukta kategori ekseni en uzun ada göre genişler; sabit genişlik adı gereksiz keser.
+  const catWidth = Math.min(180, Math.max(64, Math.max(...data.map((d) => Math.min(24, String(d.__label).length))) * 6.6 + 12));
   return (
     <div className="h-full" style={{ perspective: depth ? 1100 : undefined }}>
-      <div
-        className="h-full"
-        style={{ transform: depth ? 'rotateX(16deg) rotateY(-8deg)' : undefined, filter: depthFilter }}
-      >
+      <div className="h-full" style={{ transform: depth ? 'rotateX(16deg) rotateY(-8deg)' : undefined }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
             layout={horizontal ? 'vertical' : 'horizontal'}
-            margin={{ top: showValues && !horizontal ? 18 : 8, right: showValues && horizontal ? 52 : 12, bottom: 4, left: 0 }}
+            barCategoryGap="22%"
+            barGap={2}
+            onMouseMove={onMove}
+            onMouseLeave={() => setHover(null)}
+            margin={{
+              top: showValues && !horizontal ? 20 : 8,
+              right: showValues && horizontal ? 56 : 16,
+              bottom: horizontal ? 18 : crowded ? 20 : 18,
+              left: 8,
+            }}
           >
-            <CartesianGrid stroke="rgba(30,41,59,.08)" vertical={horizontal} horizontal={!horizontal} />
+            <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} />
             {horizontal ? (
               <>
-                <XAxis type="number" {...axis} tickFormatter={shortNum} />
-                <YAxis type="category" dataKey="__label" {...xTick} tickFormatter={(v: unknown) => clip(String(v), 18)} width={118} />
+                <XAxis type="number" {...axis} tickFormatter={shortNum} label={valueTitle ? axisTitle(valueTitle) : undefined} />
+                <YAxis
+                  type="category"
+                  dataKey="__label"
+                  {...xTick}
+                  tick={{ fontSize: 11, fill: INK }}
+                  tickFormatter={(v: unknown) => clip(String(v), 24)}
+                  width={catWidth}
+                />
               </>
             ) : (
               <>
-                <XAxis dataKey="__label" {...xTick} angle={crowded ? -32 : 0} textAnchor={crowded ? 'end' : 'middle'} height={crowded ? 54 : 30} />
-                <YAxis {...axis} tickFormatter={shortNum} width={52} />
+                <XAxis
+                  dataKey="__label"
+                  {...xTick}
+                  tick={{ fontSize: 11, fill: INK }}
+                  angle={crowded ? -35 : 0}
+                  textAnchor={crowded ? 'end' : 'middle'}
+                  height={crowded ? 62 : 36}
+                  label={axisTitle(labelTitle)}
+                />
+                <YAxis {...axis} tickFormatter={shortNum} width={64} label={valueTitle ? axisTitle(valueTitle, true) : undefined} />
               </>
             )}
-            <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(124,92,255,.06)' }} formatter={(v: number) => nf.format(v)} />
-            {nums.map((n, i) => (
-              <Bar key={n} animationDuration={500} dataKey={n} fill={SERIES[i % SERIES.length]} radius={horizontal ? [0, 6, 6, 0] : [6, 6, 0, 0]}>
-                {showValues && <LabelList dataKey={n} position={horizontal ? 'right' : 'top'} offset={5} formatter={fmt} style={VALUE_LABEL} />}
+            <Tooltip content={<PbiTip />} cursor={{ fill: 'rgba(0,0,0,.04)' }} />
+            {!single && <Legend {...legendProps} />}
+            {series.map((n, i) => (
+              <Bar
+                key={n}
+                isAnimationActive={anim}
+                animationDuration={500}
+                dataKey={n}
+                fill={SERIES[i % SERIES.length]}
+                maxBarSize={56}
+                radius={horizontal ? [0, 2, 2, 0] : [2, 2, 0, 0]}
+              >
+                {data.map((_, k) => (
+                  <Cell key={k} fillOpacity={dim(k)} style={{ transition: 'fill-opacity 120ms ease' }} />
+                ))}
+                {showValues && <LabelList dataKey={n} position={horizontal ? 'right' : 'top'} offset={6} formatter={fmt} style={VALUE_LABEL} />}
               </Bar>
             ))}
-            {nums.length > 1 && <Legend wrapperStyle={{ fontSize: 11 }} />}
           </BarChart>
         </ResponsiveContainer>
       </div>

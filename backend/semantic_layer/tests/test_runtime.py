@@ -245,6 +245,14 @@ def test_written_number_after_a_ranking_cue_is_a_top_n(catalog, profiles):
     assert r.resolve("Zararına sattığımız bir şey var mı?", today=date(2026, 7, 20)).limit is None
 
 
+def test_trailing_count_with_tane_is_a_top_n():
+    """Panoda "… kanalları göster 5 tane" 7 satır getirdi: sayı fiilden sonra geldi, sınır sanılmadı."""
+    from semantic_layer.history.question_facts import extract_question_facts
+    assert extract_question_facts("bana en çok satıl yapılan kanalları göster 5 tane").limit == 5
+    assert extract_question_facts("en çok satan kitapları listele beş adet").limit == 5
+    assert extract_question_facts("3 tane fatura kesildi mi?").limit is None
+
+
 def test_header_measure_is_not_multiplied_by_a_line_level_breakdown(catalog, profiles):
     """A header total joined to its line table repeats once per line. The number that comes back looks
     plausible and is wrong, so the deterministic path refuses instead of inflating it."""
