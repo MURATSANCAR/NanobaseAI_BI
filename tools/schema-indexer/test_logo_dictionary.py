@@ -67,6 +67,17 @@ def test_hand_written_turkish_still_wins_where_it_exists():
     assert "TRCODE" in desc and "CANCELLED" in desc, desc
 
 
+def test_hand_written_codes_agree_with_the_vendor_dictionary():
+    """The hand-written lines once had ORFICHE TRCODE 1 as a purchase order and INVOICE 3/6 swapped;
+    TİMAŞ's 48.687 orders are all TRCODE 1 with customer caris. LDDS is the authority."""
+    orders = m._table_desc("LG_411_01_ORFICHE")
+    assert "1=alınan sipariş" in orders and "2=verilen sipariş" in orders, orders
+    assert "4=sevkedilebilir" in orders and "onaylı" not in orders, orders
+    invoices = m._table_desc("LG_411_01_INVOICE")
+    assert "3=toptan satış iade" in invoices and "6=alım iade" in invoices, invoices
+    assert "13=üretimden giriş" in m._table_desc("LG_411_01_STFICHE")
+
+
 def test_the_join_graph_crosses_firm_and_period_correctly():
     """A period table's CLIENTREF points at the firm's cari card, not a period one — getting this
     wrong produces SQL that references a table that does not exist."""
