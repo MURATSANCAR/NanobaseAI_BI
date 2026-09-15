@@ -213,14 +213,14 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
     try {
       const a = await askEngine(q);
       if (!a.records) {
-        setProbeErr(a.summary || a.explanation || 'Motor bu soruya bir değer döndürmedi.');
+        setProbeErr(a.summary || a.explanation || 'Zeki AI bu soruya bir değer döndürmedi.');
         return;
       }
       const v = singleValue(a.records as Array<Record<string, unknown>>);
       if (typeof v === 'string') setProbeErr(v);
       else setProbe({ ...v, sql: a.sql });
     } catch (e) {
-      setProbeErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Motor yanıt vermedi.');
+      setProbeErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Zeki AI yanıt vermedi.');
     } finally {
       setProbing(false);
     }

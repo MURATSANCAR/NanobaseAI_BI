@@ -164,7 +164,9 @@ function CanvasBody({
   const [showSql, setShowSql] = useState(false);
   const onAsk = () => {
     const q = ask.trim();
-    if (q) onSubmitAsk?.(q);
+    if (!q) return;
+    onSubmitAsk?.(q);
+    setAsk('');
   };
   return (
     <Shell
@@ -495,7 +497,19 @@ function CanvasBody({
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
 
             {/* REQUIRED 160x140 area for brand-motion-slot */}
-            <div id="brand-motion-slot" className="w-[160px] h-[140px] shrink-0 rounded-2xl bg-gradient-to-br from-violet/10 via-coral/10 to-amberWarn/15 border border-white flex flex-col items-center justify-center relative overflow-hidden shadow-inner group"><img src={zekiGif} alt="ZEKİ AI — Timaş Yayınları" width="960" height="600" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }} /></div>
+            <div id="brand-motion-slot" className="w-[160px] h-[140px] shrink-0 rounded-2xl bg-gradient-to-br from-violet/10 via-coral/10 to-amberWarn/15 border border-white flex flex-col items-center justify-center relative overflow-hidden shadow-inner group">
+              <img src={zekiGif} alt="ZEKİ AI — Timaş Yayınları" width="960" height="600" style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain', borderRadius: 'inherit' }} />
+              {d.main.loading && (
+                <div className="zeki-thinking absolute inset-0 flex flex-col items-center justify-center gap-2.5 rounded-2xl">
+                  <div className="zeki-dots flex items-end gap-1.5">
+                    <span className="zeki-dot" />
+                    <span className="zeki-dot" />
+                    <span className="zeki-dot" />
+                  </div>
+                  <span className="text-[11px] font-extrabold tracking-tight text-violet">{d.main.model}</span>
+                </div>
+              )}
+            </div>
 
             {/* Decision Content & Recommended Actions */}
             <div className="w-full min-w-0 flex-1 flex flex-col justify-between sm:min-h-[140px]">
@@ -615,7 +629,20 @@ function CanvasBody({
             {/* Wide Rounded AI Input */}
             <div className="flex-1 min-w-0 flex items-center bg-white/90 hover:bg-white rounded-2xl px-4 py-2 border border-slate-200/80 shadow-inner transition">
               <svg className="w-4 h-4 text-violet mr-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              <input type="text" placeholder={d.askPlaceholder} value={ask} onChange={(e) => setAsk(e.target.value)} className="w-full bg-transparent text-xs font-semibold text-ink placeholder:text-muted/70 focus:outline-none" />
+              <input
+                type="text"
+                placeholder={d.askPlaceholder}
+                value={ask}
+                onChange={(e) => setAsk(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    onAsk();
+                  }
+                }}
+                enterKeyHint="send"
+                className="w-full bg-transparent text-xs font-semibold text-ink placeholder:text-muted/70 focus:outline-none"
+              />
             </div>
 
             {/* Mic & Circular Gradient Send Button */}

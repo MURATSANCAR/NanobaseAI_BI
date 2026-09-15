@@ -82,6 +82,8 @@ export type StitchCanvasData = {
     subject: string;
     model: string;
     text: string;
+    /** Yanıt beklenirken açık; kanvas "Zeki düşünüyor…" göstergesini gösterir. */
+    loading?: boolean;
     m1: StitchRow;
     m2: StitchRow;
     m3: StitchRow;

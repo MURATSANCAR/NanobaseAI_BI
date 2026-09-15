@@ -419,7 +419,7 @@ export function boardsData(status: EngineStatus | undefined, boards: Board[], lo
         : !on
           ? '“Analitik motoru kapalı. Açıldığında her veri kaynağı için bir pano kurulur ve grafikler buraya düşer.”'
           : boards.length === 0
-            ? '“Motor açık ama kayıtlı pano yok. Sohbetten bir sonucu panoya iliştirerek ilkini kurabilirsiniz.”'
+            ? '“Zeki AI açık ama kayıtlı pano yok. Sohbetten bir sonucu panoya iliştirerek ilkini kurabilirsiniz.”'
             : `“${num(boards.length)} pano, toplam ${num(charts)} grafik.${empty.length ? ` ${num(empty.length)} pano boş.` : ''}”`,
       m1: { label: 'Pano:', value: num(boards.length) },
       m2: { label: 'Grafik:', value: num(charts) },
@@ -510,13 +510,13 @@ export function overviewData(
     },
     c4: {
       title: 'Panolar',
-      badge: on ? 'Motor bağlı' : 'Motor kapalı',
+      badge: on ? 'Zeki AI bağlı' : 'Zeki AI kapalı',
       initials: 'PN',
       name: `${num(boardCount)} pano`,
       sub: status?.health?.message ?? (on ? 'analytics sağlıklı' : 'analytics kapalı'),
       valueLabel: 'Motorun saydığı:',
       value: num(status?.health?.dashboard_count ?? null),
-      note: on ? 'Panolar analytics motorundan gelir' : 'Motor açılınca panolar listelenir',
+      note: on ? 'Panolar analytics motorundan gelir' : 'Zeki AI açılınca panolar listelenir',
       footLabel: 'Veri kaynağı:',
       footValue: source,
     },
@@ -587,7 +587,7 @@ function summaryTime(iso: string): string {
 }
 
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
-  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Motor yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Zeki AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
   const yok = (v: string) => (durum ? '—' : v);
   const son = c.totals?.son_fatura?.slice(0, 10);
   const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';
@@ -720,7 +720,7 @@ type Loadable<T> = { data: T | null; loading: boolean; authRequired: boolean };
 /** Veri Sözlüğü: motorun sertifikalı kavramları. Eski sistemdeki Katalog
  *  Gezgini'nin yerini tutar. */
 export function glossaryData(q: Loadable<{ items: ConceptRow[] }>, source: string): StitchCanvasData {
-  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Motor yanıt vermedi' : '';
+  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Zeki AI yanıt vermedi' : '';
   const items = (q.data?.items ?? []).map((r) => r.concept);
   const byType = (t: string) => items.filter((c) => c.semantic_type === t).length;
   const metrics = items.filter((c) => c.semantic_type === 'METRIC');
@@ -833,7 +833,7 @@ export function approvalsData(
   q: Loadable<{ waiting: number; used: number; total: number; items: ReviewItem[] }>,
   source: string,
 ): StitchCanvasData {
-  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Motor yanıt vermedi' : '';
+  const durum = q.authRequired ? 'Oturum gerekli' : q.loading ? 'Yükleniyor' : !q.data ? 'Zeki AI yanıt vermedi' : '';
   const d0 = q.data;
   const items = d0?.items ?? [];
   const yok = (v: string) => (durum ? '—' : v);

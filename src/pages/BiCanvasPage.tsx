@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
 import Shell from '@/canvas/stitch/Shell';
@@ -73,16 +73,50 @@ export default function BiCanvasPage() {
   const [answer, setAnswer] = useState<AskAnswer | null>(null);
   const [asking, setAsking] = useState(false);
   const [askErr, setAskErr] = useState<string | null>(null);
-  const ask = (q: string) => {
-    if (!ENGINE_ENABLED) return;
+  // Ardışık sorular kuyruğa girer ve tek tek işlenir; yeni soru önceki cevabı ezmez.
+  const queueRef = useRef<string[]>([]);
+  const runningRef = useRef(false);
+  const [queued, setQueued] = useState(0);
+  const [current, setCurrent] = useState<string | null>(null);
+  const runNext = () => {
+    const q = queueRef.current.shift();
+    setQueued(queueRef.current.length);
+    if (q === undefined) {
+      runningRef.current = false;
+      setAsking(false);
+      setCurrent(null);
+      return;
+    }
+    runningRef.current = true;
     setAsking(true);
+    setCurrent(q);
     setAskErr(null);
     setAnswer(null);
     askEngine(q)
       .then((a) => setAnswer({ ...a, summary: a.summary ?? a.explanation }))
-      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Motor yanıt vermedi'))
-      .finally(() => setAsking(false));
+      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Zeki AI yanıt vermedi'))
+      .finally(() => runNext());
   };
+  const ask = (q: string) => {
+    if (!ENGINE_ENABLED) return;
+    queueRef.current.push(q);
+    setQueued(queueRef.current.length);
+    if (!runningRef.current) runNext();
+  };
+
+  // Yanıt beklenirken sırayla ilerleyen tema uyumlu ifadeler.
+  const PHASES = ['Zeki düşünüyor', 'Veriyi buldu', 'Hesaplıyor', 'Özetliyor'];
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (!current) {
+      setPhase(0);
+      return;
+    }
+    setPhase(0);
+    const id = window.setInterval(() => setPhase((p) => Math.min(p + 1, PHASES.length - 1)), 1000);
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
 
   // Kampüs sayfasındaki ZEKİ kutusu soruyu adresle getirir (?soru=…). Bir kez sorulur, sonra adresten silinir;
   // yenileme aynı soruyu motora ikinci kez göndermesin.
@@ -114,15 +148,17 @@ export default function BiCanvasPage() {
       main: {
         ...d.main,
         subject: 'Verine sor',
-        model: asking ? 'Motor çalışıyor…' : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
+        loading: asking,
+        model: asking ? `${PHASES[phase]}…` : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
         text: asking
-          ? '“Soru motora gönderildi…”'
+          ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ?? 'Motor özet üretmedi.'}”`,
+            : `“${answer?.summary ?? 'Zeki AI özet üretmedi.'}”`,
         m1: { label: 'Satır:', value: String(rows) },
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },
+        note: queued > 0 ? `${queued} soru sırada` : d.main.note,
       },
       c5: {
         ...d.c5,
@@ -132,7 +168,7 @@ export default function BiCanvasPage() {
         latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
       },
     };
-  }, [d, answer, asking, askErr]);
+  }, [d, answer, asking, askErr, phase, queued]);
 
   if (splash) return <Splash onDone={closeSplash} />;
 

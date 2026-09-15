@@ -20,7 +20,7 @@ export const clearAuthBlock = (): void => {
 
 export class EngineAuthError extends Error {
   constructor() {
-    super('Motor oturumu gerekli');
+    super('Zeki AI oturumu gerekli');
     this.name = 'EngineAuthError';
   }
 }
@@ -44,7 +44,7 @@ async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Motor ${res.status}`);
+  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
   return (await res.json()) as T;
 }
 
@@ -73,7 +73,7 @@ export async function engineInfo(): Promise<EngineInfo> {
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Motor ${res.status}`);
+  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
   return (await res.json()) as EngineInfo;
 }
 
@@ -178,7 +178,7 @@ async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Motor ${res.status}`);
+  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
   return (await res.json()) as T;
 }
 
@@ -372,7 +372,7 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-    throw new Error(msg || `Motor ${res.status}`);
+    throw new Error(msg || `Zeki AI ${res.status}`);
   }
   return (await res.json()) as T;
 }
