@@ -20,7 +20,7 @@ class LlmClient:
         self.timeout = timeout
         # Server-side options this deployment wants on every call from this client — llama.cpp takes
         # chat_template_kwargs here, which is how a reasoning model is asked not to reason. Measured
-        # on the A40: a call that returns a table name goes from 1.5s to 0.6s when the thinking block
+        # earlier: a call that returns a table name goes from 1.5s to 0.6s when the thinking block
         # is turned off, and returns the same name.
         self.extra = dict(extra or {})
 

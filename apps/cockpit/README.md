@@ -36,7 +36,7 @@ Ayrıntılı kurulum/doğrulama/geri dönüş: `docs/architecture/semantic-bridg
 
 ## Sunucu notları
 
-- Gömme servisi A40 GPU'da (`nanobaseai-bi-embed.service`), LLM köprüsü `OPENAI_API_BASE` ile ayarlanır;
+- LLM köprüsü NVIDIA hosted modele `OPENAI_API_BASE` ile bağlanır (`deepseek-ai/deepseek-v4-flash-0731`);
   Semantic Layer LLM'i yalnız katalog MISS ve karmaşık sorularda çağırır.
 - Gece 02:00: `nanobase-semantic-worker.timer` profil → madencilik → sertifikasyon → sürüm; sonrasında
   köprüye `/api/v1/semantic/reload`.

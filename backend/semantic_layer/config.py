@@ -26,9 +26,9 @@ class SemanticSettings:
     datasource_id: str = "default"
     project_dir: Optional[Path] = None            # knowledge pack: knowledge/**.md docs + validated pairs (+ optional models/*.yml for offline profiling)
     connection_file: str = ""                     # JSON: {datasource, host, port, database, user, password, driver…}
-    llm_base: str = "http://172.17.0.1:8020/v1"
+    llm_base: str = "https://integrate.api.nvidia.com/v1"
     llm_key: str = ""
-    llm_model: str = "nanobaseai-bi-llm"
+    llm_model: str = "deepseek-ai/deepseek-v4-flash-0731"
     llm_timeout: float = 240.0
     min_support: int = 3                          # hard gate: validated_query_support >= 3
     certify_threshold: float = 0.6
@@ -64,9 +64,9 @@ class SemanticSettings:
             datasource_id=_env("SEMANTIC_DATASOURCE_ID", "logo"),
             project_dir=Path(project).resolve() if project else None,
             connection_file=_env("SEMANTIC_CONNECTION_FILE"),
-            llm_base=_env("OPENAI_API_BASE", "http://172.17.0.1:8020/v1").rstrip("/"),
+            llm_base=_env("OPENAI_API_BASE", "https://integrate.api.nvidia.com/v1").rstrip("/"),
             llm_key=_env("OPENAI_API_KEY", ""),
-            llm_model=_env("LLM_MODEL_NAME", "nanobaseai-bi-llm"),
+            llm_model=_env("LLM_MODEL_NAME", "deepseek-ai/deepseek-v4-flash-0731"),
             llm_timeout=float(_env("LLM_TIMEOUT_SEC", "240")),
             min_support=int(_env("SEMANTIC_MIN_SUPPORT", "3")),
             certify_threshold=float(_env("SEMANTIC_CERTIFY_THRESHOLD", "0.6")),

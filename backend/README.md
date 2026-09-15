@@ -16,7 +16,7 @@ FE (:5174/bi or portal/bi) → bridge :8787 → DB-GPT :5670 → LLM :8010/:8015
 | Local (server) | `http://127.0.0.1:8010/v1` |
 | Remote proxy | `http://38.247.162.28:8015/v1` |
 | Key | `nanobase-local` |
-| Model | `nanobaseai-bi-llm` |
+| Model | `deepseek-ai/deepseek-v4-flash-0731` (NVIDIA hosted) |
 
 ## Setup
 

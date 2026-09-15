@@ -16,7 +16,7 @@ Parolayı değiştirmek: dosyayı düzenle, betiği tekrar koş.
 |---|---|---|
 | Köprü (`nanobase-semantic-bridge`, :8795) | uvicorn **2 işçi**, işçi başına ayrı katalog + pyodbc bağlantısı | Dashboard paralel sorguları tek köprüden |
 | Önbellek | Köprü içinde, TTL **300 s**, 15 s'de bir arka planda tazelenir (`/health` → `cache`) | Aynı SQL 5 dk boyunca Logo'ya gitmez (`cached: true`) |
-| LLM (A40 `nanobaseai-bi-llm`) | `PARALLEL=2`, `CTX_SIZE=32768` → slot başına 16.384 (istem 2,6-4,1k) | İki soru aynı anda; VRAM 39,5 GB (değişmedi) |
+| LLM (NVIDIA hosted `deepseek-ai/deepseek-v4-flash-0731`) | OpenAI uyumlu, `thinking:false`; `OPENAI_API_BASE=https://integrate.api.nvidia.com/v1` | Yerel GPU yok; model dışarıdan sorulur, yanıt ~2-5 sn |
 | BI API | `MODEL_MAX_CONCURRENCY=2` (LLM slot sayısıyla aynı olmalı) | |
 | SQL zaman aşımı | Profilde `statement_timeout: "120"` (string!) | Ağır sorgu 120 s'de kesilir |
 | Strict mode | `SEMANTIC_STRICT_MISS` — katalogda CERTIFIED karşılığı olmayan soru cevaplanmaz | |
