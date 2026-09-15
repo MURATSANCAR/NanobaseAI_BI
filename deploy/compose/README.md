@@ -20,8 +20,7 @@ sistem yalnız salt-okunur bağlanır ve SQL'i yalnız Query Gateway üzerinden 
 ```bash
 cd deploy/compose
 cp .env.example .env          # gerekirse portu ve LLM adresini düzenleyin
-./install.sh                  # LLM harici sunucuda
-# ./install.sh --with-gpu-llm # LLM bu makinede (GPU)
+./install.sh                  # LLM: NVIDIA hosted (.env'de adres+anahtar)
 # ./install.sh --with-analytics --with-demo   # isteğe bağlı profiller
 ```
 
@@ -84,12 +83,9 @@ Oracle / SAP kaynakları için `secrets/oracle-ro.datasources.json` ve
 `LLM_N_CPU_MOE` katman için CPU RAM'de. `LLM_PARALLEL` değeri API'nin eşzamanlılık
 sınırı ile birebir aynıdır.
 
-| Durum | Ayar |
-|---|---|
-| Harici sunucu | `.env` → `LLM_API_BASE=http://<gpu-sunucu>:8011/v1`, `LLM_API_KEY=<anahtar>` |
-| Yerel GPU | `./install.sh --with-gpu-llm`; VRAM'e göre `LLM_N_CPU_MOE` düşürülerek hız artırılır |
-
-Harici sunucuda servis tanımı örneği: `deploy/llm-server/` (systemd, aynı bayraklar).
+LLM şimdilik NVIDIA hosted `deepseek-ai/deepseek-v4-flash-0731` (OpenAI uyumlu). `.env` →
+`LLM_API_BASE=https://integrate.api.nvidia.com/v1`, `LLM_API_KEY=<NVIDIA anahtarı>`.
+Müşteri kendi LLM ucunu isterse yalnız bu iki değer değişir.
 
 ## Tahmin (forecast) servisi
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # NanobaseAI BI — tek komutla müşteri kurulumu
 #
-#   ./install.sh                  LLM harici sunucuda (LLM_API_BASE / LLM_API_KEY .env'de)
-#   ./install.sh --with-gpu-llm   LLM'i bu makinede çalıştır (NVIDIA GPU + nvidia-container-toolkit)
+#   ./install.sh                  LLM: NVIDIA hosted (LLM_API_BASE / LLM_API_KEY .env'de)
 #   ./install.sh --with-analytics analitik paneli de kur
 #   ./install.sh --with-demo      örnek raporlama DB'sini de kur (yalnız demo)
 #
@@ -13,13 +12,12 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 log()  { printf '\033[1;34m[nanobaseai-bi]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[nanobaseai-bi] HATA:\033[0m %s\n' "$*" >&2; exit 1; }
 
-WITH_GPU_LLM=0; WITH_ANALYTICS=0; WITH_DEMO=0
+WITH_ANALYTICS=0; WITH_DEMO=0
 for a in "$@"; do
   case "$a" in
-    --with-gpu-llm) WITH_GPU_LLM=1 ;;
     --with-analytics) WITH_ANALYTICS=1 ;;
     --with-demo) WITH_DEMO=1 ;;
-    -h|--help) sed -n 2,10p "$0"; exit 0 ;;
+    -h|--help) sed -n 2,9p "$0"; exit 0 ;;
     *) die "bilinmeyen seçenek: $a" ;;
   esac
 done
@@ -60,7 +58,7 @@ fi
 set -a; . ./.env; set +a
 
 DATA_DIR="${DATA_DIR:-./data}"; SECRETS_DIR="${SECRETS_DIR:-./secrets}"; MODELS_DIR="${MODELS_DIR:-./models}"
-mkdir -p "$DATA_DIR" "$SECRETS_DIR" "$MODELS_DIR/embedding" "$MODELS_DIR/llm"
+mkdir -p "$DATA_DIR" "$SECRETS_DIR" "$MODELS_DIR/embedding"
 chmod 700 "$SECRETS_DIR"
 [[ -s "$SECRETS_DIR/bi-meta-db.password" ]] || { printf '%s' "$META_DB_PASSWORD" > "$SECRETS_DIR/bi-meta-db.password"; chmod 600 "$SECRETS_DIR/bi-meta-db.password"; }
 # demo DB şifreleri (compose secrets dosyaları var olmak zorunda)
@@ -88,16 +86,8 @@ if [[ ! -s "$MODELS_DIR/embedding/${EMBED_MODEL_FILE}" ]]; then
   log "gömme modeli indiriliyor: ${EMBED_HF_REPO}/${EMBED_MODEL_FILE}"
   hf_download "$EMBED_HF_REPO" "$MODELS_DIR/embedding" "$EMBED_MODEL_FILE"
 fi
-if [[ $WITH_GPU_LLM == 1 ]]; then
-  if [[ ! -s "$MODELS_DIR/llm/${LLM_MODEL_FILE}" ]]; then
-    log "LLM ağırlıkları indiriliyor (~94 GB): ${LLM_HF_REPO} ${LLM_HF_INCLUDE}"
-    hf_download "$LLM_HF_REPO" "$MODELS_DIR/llm" "$LLM_HF_INCLUDE" "$LLM_DRAFT_HF_FILE"
-  fi
-fi
-
 # --- 3. imajlar ve servisler -----------------------------------------------
 PROFILES=()
-[[ $WITH_GPU_LLM == 1 ]] && PROFILES+=(--profile gpu-llm)
 [[ $WITH_ANALYTICS == 1 ]] && PROFILES+=(--profile analytics)
 [[ $WITH_DEMO == 1 ]] && PROFILES+=(--profile demo)
 compose() { docker compose "${PROFILES[@]}" "$@"; }
@@ -107,7 +97,6 @@ compose build
 log "altyapı başlatılıyor (meta-db, redis, qdrant, embedding, gateway, forecast)"
 compose up -d meta-db redis qdrant embedding gateway forecast
 [[ $WITH_DEMO == 1 ]] && compose up -d demo-db
-[[ $WITH_GPU_LLM == 1 ]] && { log "LLM başlatılıyor (ilk yükleme birkaç dakika sürer)"; compose up -d llm; }
 
 log "meta veritabanı şeması uygulanıyor (alembic)"
 compose run --rm --no-deps -w /app/backend/nanobase_api api alembic -c alembic.ini upgrade head
