@@ -684,8 +684,14 @@ class SemanticResolver:
         entity = next(iter(metric_entities)) if len(metric_entities) == 1 else None
         from semantic_layer.runtime import periods
 
-        if sq.temporal and entity:
-            sq.temporal_binding = self.conventions.temporal_binding(entity)
+        if sq.temporal and metric_entities:
+            # One binding per measured entity: a question over two facts is bounded on both, or the
+            # period check silently covers neither.
+            bindings = [b for e in sorted(metric_entities) if (b := self.conventions.temporal_binding(e))]
+            if bindings:
+                sq.temporal_binding = bindings[0]
+                if len(bindings) > 1:
+                    sq.temporal_binding["also"] = bindings[1:]
         if sq.comparison and sq.temporal_binding:
             sq.comparison.update(entity=entity, dateColumn=sq.temporal_binding["column"])
         covered = periods.spans(self.tables_of.get(entity or "", []))
@@ -768,7 +774,9 @@ class SemanticResolver:
                 if concept.semantic_type != SemanticType.DEFAULT_FILTER:
                     continue
                 for mapping in mappings:
-                    key = (concept.id, mapping.entity, mapping.column)
+                    # Two concepts spelling the same restriction are one obligation; the gate must not be
+                    # asked to prove it twice and a repair must not be told to write it twice.
+                    key = (mapping.entity, mapping.column, (mapping.operator or "IN").upper(), tuple(sorted(str(v) for v in mapping.values)))
                     if mapping.entity in metric_entities and key not in seen_defaults:
                         seen_defaults.add(key)
                         sq.slots.append(ResolvedSlot(term=concept.term, semantic_type=SemanticType.DEFAULT_FILTER,

@@ -1621,15 +1621,38 @@ class CompilerRouter:
             self.shadow_results.append({"compiler": out.compiler, "sql": out.sql, "ms": out.llm_ms, "same_as_primary": out.sql.strip() == chosen.sql.strip(), "explain": out.explain})
             del self.shadow_results[:-50]
 
+    def gate_sources(self) -> dict:
+        from semantic_layer.runtime.audit import sources_from
+        profiles = getattr(self.deterministic, "profiles", None) or getattr(self.existing, "profiles", None) or []
+        return sources_from(profiles)
+
     def compile(self, q: SemanticQuery, catalog: CatalogStore, thread=None, *, recall=None) -> CompiledQuery:
-        """All compiler routes share the same semantic obligation gate."""
-        from semantic_layer.runtime.audit import unmet_obligations, audit_sql
+        """All compiler routes share the same semantic obligation gate.
+
+        A model answer the gate refuses gets one repair with the gate's own hints — the same courtesy
+        the critic and the database already extend — and the repaired statement faces the gate again.
+        The deterministic compiler gets no repair: a refusal of its SQL is this system's bug, and a
+        model rewrite would hide it."""
+        from semantic_layer.runtime.audit import gate_report, audit_sql
         out = self._compile(q, catalog, thread, recall=recall)
-        if out.sql:
-            problems = unmet_obligations(q, out.sql) + audit_sql(q, out.sql)
-            if problems:
-                return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
-                                     explain=problems, certified=False)
+        if not out.sql:
+            return out
+        sources = self.gate_sources()
+        unmet = gate_report(q, out.sql, sources=sources)
+        problems = [u.text for u in unmet] + audit_sql(q, out.sql)
+        if problems and unmet and out.compiler == "existing_llm" and self.existing is not None:
+            hints = "; ".join(u.hint or u.text for u in unmet)
+            fixed = self.existing.repair(q, out.sql, "Sorgu şu koşulları kanıtlamıyor — " + hints, thread, recall=recall)
+            if fixed:
+                again = [u.text for u in gate_report(q, fixed, sources=sources)] + audit_sql(q, fixed)
+                if not again:
+                    out.sql = fixed
+                    out.explain = list(out.explain) + ["kapı onarımı: " + hints]
+                    return out
+                problems = again
+        if problems:
+            return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
+                                 explain=problems, certified=False)
         return out
 
     def _compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:

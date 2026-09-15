@@ -33,6 +33,8 @@ BASELINE = HERE / "quality-baseline-golden.json"
 #: an answer built from the wrong table is not a worse answer, it is a wrong one.
 CHECKS = [
     ("table_recall", "doğru tabloya ulaşma", 0.0, "yüksek"),
+    ("gate_recall", "kapıdan geçen doğru SQL", 0.0, "yüksek"),
+    ("gate_false_accepts", "kapının kabul ettiği yanlış SQL", 0, "düşük"),
     ("fully_recalled", "hiç tablo kaçırmayan soru", 0, "yüksek"),
     ("refused", "cevaplanamayacağını söyleyen", 0, "düşük"),
 ]
@@ -61,7 +63,22 @@ def measure(out: Path) -> dict:
     if r.returncode != 0:
         print(r.stdout[-3000:], r.stderr[-3000:], sep="\n")
         raise SystemExit("ölçüm çalışmadı")
-    return json.loads(out.read_text(encoding="utf-8"))
+    result = json.loads(out.read_text(encoding="utf-8"))
+    result["summary"]["gate_false_accepts"] = false_accepts()
+    return result
+
+
+def false_accepts() -> int:
+    """Wrong statements the gate lets through, from the shape matrix and the mutation set. One is
+    already too many: a number from the wrong rows is worse than no number."""
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--no-header",
+                        "semantic_layer/tests/test_gate_shapes.py", "-k", "refused"],
+                       cwd=HERE.parent.parent / "backend", capture_output=True, text=True)
+    failed = sum(1 for line in r.stdout.splitlines() if line.startswith("FAILED"))
+    if r.returncode not in (0, 1):
+        print(r.stdout[-2000:], r.stderr[-2000:], sep="\n")
+        raise SystemExit("şekil matrisi çalışmadı")
+    return failed
 
 
 def main(argv: list[str]) -> int:
@@ -99,6 +116,12 @@ def main(argv: list[str]) -> int:
             failed.append("soru geriledi: " + str(row["id"]))
     for key, label, tolerance, better in CHECKS + [(k, l, None, b) for k, l, b in WATCH]:
         b, n = base.get(key), s.get(key)
+        if b is None and n is None:
+            continue                     # neither run measured it (old baseline replayed): nothing to compare
+        if b is None and n is not None and not isinstance(n, bool) and isinstance(n, (int, float)) and math.isfinite(n):
+            # A measure the baseline predates: reported, recorded on the next --record, not a failure.
+            print("%-30s %10s %10s   (yeni ölçüt)" % (label, "-", n))
+            continue
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in (b, n)):
             if tolerance is not None:
                 failed.append(label + " ölçülmedi")

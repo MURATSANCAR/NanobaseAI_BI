@@ -214,6 +214,48 @@ export function review(limit = 50) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Eş anlamlılar — alan açıklamasından üretilir, insan onayıyla sözlüğe girer */
+/* ------------------------------------------------------------------ */
+
+export type VocabItem = {
+  id: string;
+  entity: string;
+  column: string | null;
+  term: string;
+  role: 'COLUMN' | 'ENTITY' | 'METRIC';
+  examples: string[];
+  source: 'generated' | 'human';
+  status: 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'DROPPED';
+  reason?: string | null;
+  conceptId?: string | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  createdAt?: string | null;
+};
+export type VocabGroup = { entity: string; column: string | null; items: VocabItem[] };
+export type VocabCounts = Record<VocabItem['status'], number>;
+
+export function vocabulary(status: 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'DROPPED' | 'ALL' = 'PROPOSED') {
+  return get<{ groups: VocabGroup[]; counts: VocabCounts }>(`/api/v1/semantic/vocabulary?status=${status}&limit=5000`, 60_000);
+}
+export function vocabularyGaps() {
+  return get<{ items: Array<{ entity: string; tablePattern: string; column: string; type: string }> }>('/api/v1/semantic/vocabulary/gaps', 60_000);
+}
+export function vocabularyDecide(id: string, decision: 'APPROVE' | 'REJECT', note?: string) {
+  return post<{ id: string; status: string; conceptId?: string | null }>(`/api/v1/semantic/vocabulary/${encodeURIComponent(id)}/decide`, { decision, note }, 60_000);
+}
+export function vocabularyAdd(entity: string, column: string | null, term: string) {
+  return post<{ id: string; status: string; conceptId?: string | null }>('/api/v1/semantic/vocabulary', { entity, column, term }, 60_000);
+}
+export function vocabularyGenerate(entity: string, column?: string | null) {
+  return post<{ started: boolean }>('/api/v1/semantic/vocabulary/generate', { entity, column }, 60_000);
+}
+/** Bir alan için kullanıcının cümlesi; motor ondan hem kavram adayı hem eş anlamlı üretir. */
+export function annotate(tablePattern: string, column: string | null, text: string) {
+  return post<{ annotation: { id: string } }>('/api/v1/schema/annotations', { tablePattern, column, text }, 60_000);
+}
+
+/* ------------------------------------------------------------------ */
 /* Uyarılar — kural bir sorudur, kontrolü sunucu yapar                  */
 /* ------------------------------------------------------------------ */
 

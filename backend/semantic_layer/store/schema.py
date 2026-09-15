@@ -207,5 +207,31 @@ sl_llm_queue = sa.Table(
 )
 
 
+sl_vocabulary = sa.Table(
+    "sl_vocabulary",
+    metadata,
+    sa.Column("id", sa.String(64), primary_key=True),
+    sa.Column("tenant_id", sa.String(64), nullable=False),
+    sa.Column("datasource_id", sa.String(128), nullable=False),
+    sa.Column("entity", sa.String(128), nullable=False),
+    sa.Column("column_name", sa.String(128)),                 # NULL: a name for the table itself
+    sa.Column("term", sa.String(128), nullable=False),
+    sa.Column("normalized", sa.String(128), nullable=False),
+    sa.Column("role", sa.String(16), nullable=False),          # COLUMN | ENTITY | METRIC
+    sa.Column("examples_json", sa.JSON(), nullable=False, default=list),
+    sa.Column("source", sa.String(16), nullable=False),        # generated | human
+    sa.Column("status", sa.String(16), nullable=False),        # PROPOSED | APPROVED | REJECTED | DROPPED
+    sa.Column("reason", sa.Text()),
+    sa.Column("origin_hash", sa.String(64)),                   # the description this was generated from
+    sa.Column("concept_id", sa.String(64)),
+    sa.Column("decided_by", sa.String(128)),
+    sa.Column("decided_at", sa.DateTime(timezone=True)),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Index("ix_sl_vocabulary_target", "tenant_id", "datasource_id", "entity", "column_name"),
+    sa.UniqueConstraint("tenant_id", "datasource_id", "entity", "column_name", "normalized", name="uq_sl_vocabulary_term"),
+)
+
+
 def create_all(engine: sa.Engine) -> None:
     metadata.create_all(engine)

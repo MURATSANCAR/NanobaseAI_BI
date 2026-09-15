@@ -729,7 +729,7 @@ class Runtime:
         # What the question asked for and the statement does not deliver. Checked for every query,
         # certified or not: a comparison is built by the deterministic compiler too, and a single
         # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
-        unmet = unmet_obligations(sq, sql)
+        unmet = unmet_obligations(sq, sql, sources=self.router.gate_sources())
         if unmet:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
             log.warning("obligation unmet q=%r %s", question[:80], unmet)
@@ -810,7 +810,7 @@ class Runtime:
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
         # Repairs can remove filters or period predicates. Validate the exact final
         # statement, including previews; never trust the pre-repair verdict.
-        final_problems = unmet_obligations(sq, sql) + audit_sql(sq, sql, conventions=self.conventions)
+        final_problems = unmet_obligations(sq, sql, sources=self.router.gate_sources()) + audit_sql(sq, sql, conventions=self.conventions)
         semantic["query"] = sq.to_dict()
         if final_problems:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
@@ -1001,7 +1001,34 @@ class Runtime:
         gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         ingested = gen.ingest_annotation(table_pattern, column, text, f"annotation:{ann.id}")
         self._inventory_cache.clear()      # what someone just wrote has to show on the very next read
+        # The sentence they just wrote is the best description this field will ever have: the
+        # everyday names come from it right away, not at the next timer tick.
+        entity = next((p.entity for p in self.profiles if p.table_pattern == table_pattern), None)
+        if entity:
+            self.generate_vocabulary(entity, column)
         return {"annotation": {"id": ann.id, "tablePattern": table_pattern, "column": column, "text": ann.text, "author": author}, "candidates": ingested}
+
+    def generate_vocabulary(self, entity: str, column: Optional[str] = None) -> bool:
+        """Everyday names for one field, in the background; the request that asked for it returns
+        at once. False when there is no model to ask."""
+        if self.llm is None:
+            return False
+        from semantic_layer import vocabulary
+
+        def run():
+            try:
+                only = [(entity, column)] if column is not None else [(entity, c.name) for p in self.profiles if p.entity == entity for c in p.columns] + [(entity, None)]
+                out = vocabulary.maintain(self.store, self.settings, self.llm, self.profiles, max_targets=len(only) or 1, only=only)
+                log.info("vocabulary generated for %s.%s: %s", entity, column or "*", out)
+            except Exception as e:  # noqa: BLE001
+                log.warning("vocabulary generation failed for %s.%s: %s", entity, column, e)
+        # SQLite keeps one connection for the whole process; a second thread on it interleaves
+        # its commits with the request's. Only Postgres gets the background thread.
+        if self.store.engine.dialect.name == "sqlite":
+            run()
+        else:
+            threading.Thread(target=run, name=f"vocab:{entity}.{column or '*'}", daemon=True).start()
+        return True
 
     def certify(self, note: str = "") -> dict[str, Any]:
         s = self.settings
@@ -1674,6 +1701,77 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # out of real use: a query that ran, a person's note, a binding someone wrote. ?source=all shows
     # the rest for anyone who wants to mine it.
     _USED = ("EXECUTION", "VALIDATED_SQL", "HUMAN_ANNOTATION", "ALIAS_BINDING", "EXPLICIT_BINDING")
+
+    @app.get("/api/v1/semantic/vocabulary")
+    def vocabulary_list(status: str = "PROPOSED", entity: str | None = None, limit: int = 5000) -> dict[str, Any]:
+        """Everyday names waiting for a person: grouped by field, with the phrasings each would
+        unlock and, for a dropped one, why the system did not dare propose it."""
+        from semantic_layer import vocabulary
+        r = rt()
+        items = vocabulary.listing(r.store, r.settings, status=status.upper(), entity=entity, limit=limit)
+        groups: dict[tuple, dict[str, Any]] = {}
+        for it in items:
+            key = (it["entity"], it["column"])
+            g = groups.setdefault(key, {"entity": it["entity"], "column": it["column"], "items": []})
+            g["items"].append(it)
+        return {"groups": list(groups.values()), "counts": vocabulary.counts(r.store, r.settings)}
+
+    @app.get("/api/v1/semantic/vocabulary/gaps")
+    def vocabulary_gaps(entity: str | None = None) -> dict[str, Any]:
+        """Fields nothing can be generated for — no comment, no annotation — so a person can write
+        the one sentence that unblocks them."""
+        from semantic_layer import vocabulary
+        r = rt()
+        entities = [entity] if entity else None
+        if entities is None:
+            # by default the entities the certified catalog already reaches: those are the fields a
+            # question can land on today, and a gap there costs an answer
+            entities = sorted({m.entity for c in r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
+                               for m in r.store.list_mappings(c.id)})
+        return {"items": vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)}
+
+    @app.post("/api/v1/semantic/vocabulary/{row_id}/decide")
+    def vocabulary_decide(row_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        from semantic_layer import vocabulary
+        _require_admin(request)
+        r = rt()
+        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
+        decision = str((body or {}).get("decision") or "").strip().upper()
+        try:
+            eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
+            out = vocabulary.decide(r.store, r.settings, r.profiles, eng, row_id, decision, who, str((body or {}).get("note") or ""))
+        except KeyError:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail={"code": "BAD_DECISION", "message": str(e)})
+        admin_mod.audit(r.store.engine, who, "approve" if decision == "APPROVE" else "reject", "synonym", row_id, None, body)
+        return out
+
+    @app.post("/api/v1/semantic/vocabulary")
+    def vocabulary_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """A person's own word for a field. Theirs from the first moment: approved, attached, and
+        never touched by generation afterwards."""
+        from semantic_layer import vocabulary
+        _require_admin(request)
+        r = rt()
+        who = str(body.get("by") or request.headers.get("X-User") or _actor(request))
+        entity, term = str(body.get("entity") or ""), str(body.get("term") or "")
+        if not entity or not term.strip():
+            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity ve term gerekli"})
+        eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
+        out = vocabulary.add_human(r.store, r.settings, r.profiles, eng, entity, body.get("column"), term, who, body.get("examples"))
+        admin_mod.audit(r.store.engine, who, "create", "synonym", out["id"], term, {"entity": entity, "column": body.get("column")})
+        return out
+
+    @app.post("/api/v1/semantic/vocabulary/generate")
+    def vocabulary_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Ask now for one field (or a whole table) instead of waiting for the timer."""
+        _require_admin(request)
+        entity = str(body.get("entity") or "")
+        if not entity:
+            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity gerekli"})
+        started = rt().generate_vocabulary(entity, body.get("column"))
+        return {"started": started}
 
     @app.get("/api/v1/semantic/review")
     def review_queue(limit: int = 100, source: str = "used") -> dict[str, Any]:

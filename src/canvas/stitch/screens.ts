@@ -47,6 +47,7 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
   { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined },
   { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined },
+  { to: '/es-anlamlilar', label: 'Eş anlamlılar', badge: active === '/es-anlamlilar' ? 'Aktif' : undefined },
   { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined },
   // Girişten sonraki ana sayfaya dönüş.
   { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },

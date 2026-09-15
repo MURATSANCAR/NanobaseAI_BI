@@ -11,6 +11,7 @@ const ReportsScreen = lazy(() => import('@/canvas/reports/ReportsScreen'));
 const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
+const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
 
 function RouteFallback() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />
+            <Route path="es-anlamlilar" element={<VocabularyScreen />} />
             <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="yonetim" element={<AdminScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />

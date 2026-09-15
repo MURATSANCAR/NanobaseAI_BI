@@ -12,6 +12,11 @@ for n in range(1000):
  source=f"FROM LG_411_CLCARD {c} JOIN LG_411_01_INVOICE {i} ON {c}.LOGICALREF={i}.CLIENTREF"
  city=f"{c}.CITY='{value}'";dates=f"{i}.DATE_ >= '2026-01-01' AND {i}.DATE_ < '2027-01-01'"
  base=f"SELECT {c}.CODE {source} WHERE {city} AND {dates}"
+ # the same answer and the same attacks in every shape the gate must read through
+ shaped={"cte":lambda s:f"WITH x{n} AS ({s}) SELECT * FROM x{n}",
+         "derived":lambda s:f"SELECT * FROM ({s}) d{n}",
+         "union":lambda s:f"SELECT * FROM ({s} UNION ALL {s}) u{n}",
+         "nested":lambda s:f"WITH a{n} AS ({s}), b{n} AS (SELECT * FROM a{n}) SELECT * FROM b{n}"}
  cases={"valid":base,"missing_city":f"SELECT {c}.CODE {source} WHERE {dates}",
  "or_widening":base+f" OR {c}.ACTIVE=1","wrong_city":base.replace(value,"other"),
  "unused_cte":f"WITH unused{n} AS ({base}) SELECT * FROM LG_411_CLCARD",
@@ -19,10 +24,16 @@ for n in range(1000):
  "missing_period":f"SELECT {c}.CODE {source} WHERE {city}",
  "wrong_period":base.replace("2026-01-01","2025-01-01"),
  "wrong_date_column":base.replace(f"{i}.DATE_",f"{i}.LOGICALREF")}
+ for shape,wrap in shaped.items():
+  cases[f"valid_{shape}"]=wrap(base)
+  cases[f"missing_city_{shape}"]=wrap(cases["missing_city"])
+  cases[f"wrong_period_{shape}"]=wrap(cases["wrong_period"])
+ cases["valid_join_on"]=f"SELECT {c}.CODE FROM LG_411_CLCARD {c} JOIN LG_411_01_INVOICE {i} ON {c}.LOGICALREF={i}.CLIENTREF AND {city} WHERE {dates}"
+ cases["left_join_on_is_not_a_filter"]=f"SELECT {c}.CODE FROM LG_411_01_INVOICE {i} LEFT JOIN LG_411_CLCARD {c} ON {c}.LOGICALREF={i}.CLIENTREF AND {city} WHERE {dates}"
  for kind,sql in cases.items():
   unique.add(sql)
   try:
-   issues=unmet_obligations(q,sql);passed=not issues if kind=="valid" else bool(issues)
+   issues=unmet_obligations(q,sql);passed=not issues if kind.startswith("valid") else bool(issues)
   except Exception as e:passed=False;issues=[str(e)]
   counts[kind+ ("_pass" if passed else "_FAIL")]+=1
   if not passed and len(failures)<100:failures.append({"kind":kind,"sql":sql,"issues":issues})
