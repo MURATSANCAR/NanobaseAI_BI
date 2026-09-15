@@ -125,7 +125,7 @@ _DROP = [
     r"\bher\s+(pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)(\s+(sabahı|günü))?\b",
     r"\b(pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)(\s+(sabahı|günü))?\b",
     r"\bsaat\s+\d{1,2}([:.]\d{2})?['’]?(de|da|te|ta)?\b",
-    r"\b\d{1,2}[:.]\d{2}['’]?(de|da|te|ta)?\b",
+    r"\b\d{1,2}[:.]\d{2}(['’]|\s)?(de|da|te|ta)?\b",
     r"\b\d{1,2}['’](de|da|te|ta)\b",
     r"\bayın\s+\d{1,2}['’]?(i|ı|u|ü|si|sı|ünde|inde|ında|unda)?\b",
     r"\bsabah(ları|leyin)?\b|\bakşam(ları)?\b|\böğlen\b",
@@ -138,7 +138,8 @@ _DROP = [
     r"\b(bir|birer)\s+(excel|xlsx|csv|rapor|dosya|liste|tablo)\b",
     r"\b(excel|xlsx|csv)(['’]?(i|ı|e|a|de|da|ye|ya|ini|ıni|inde))?(\s+(olarak|dosyası|formatında|halinde|tablosu|raporu))?\b",
     r"\b(rapor|raporu|raporunu|raporunu|dosya|dosyası|dosyasını|liste|listesi|listesini|tablo|tablosu)\b",
-    r"\b(olsun|olacak|olmalı|içinde|içeren|içersin|şeklinde|halinde|olarak|lütfen|rica ederim|ve|ile)\b",
+    # "ve"/"ile" düşmez: "net ciro ve fatura sayısı" iki ölçüdür; plan sözünden kalan uçtaki bağlaç aşağıda temizlenir.
+    r"\b(olsun|olacak|olmalı|içinde|içeren|içersin|şeklinde|halinde|olarak|lütfen|rica ederim)\b",
     r"\b(adres(ine|lerine)?|kişi(ye|lere)?|ekibine|ekibe)\b",
 ]
 _DROP_RE = [re.compile(p, re.IGNORECASE) for p in _DROP]
@@ -198,6 +199,9 @@ def parse_prompt(text: str) -> dict[str, Any]:
     q = re.sub(r"\bher\b", " ", q, flags=re.IGNORECASE)  # "her ayın 1'inde" kalıntısı
     q = re.sub(r"\s*[,;:]\s*", " ", q)
     q = re.sub(r"\s+", " ", q).strip(" .,-–—'’\"")
+    # Düşen plan sözlerinin arasında kalan bağlaçlar: "ve ve" tekleşir, baştaki/sondaki bağlaç gider.
+    q = re.sub(r"\b(ve|ile)(\s+(ve|ile))+\b", r"\1", q, flags=re.IGNORECASE)
+    q = re.sub(r"^(?:(?:ve|ile)\s+)+|(?:\s+(?:ve|ile))+$", "", q, flags=re.IGNORECASE).strip()
     if len(q) < 3:
         q = raw
     title = ("İ" if q[:1] == "i" else q[:1].upper()) + q[1:]

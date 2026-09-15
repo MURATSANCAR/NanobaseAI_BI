@@ -33,8 +33,9 @@ QUESTION_TEXT = "her pazartesi 08:30'da 2026 yılında müşteri bazında net ci
 SECRETS = Path("/data/nanobaseai/bi/secrets/logo-mssql-connection.json")
 LOGS = Path("/data/nanobaseai/bi/logs")
 
-# Referans: net ciro'nun sertifikalı tanımı (satış faturası 7/8/9 artı, iade 2/3 eksi, iptal hariç), 2026.
-# Uygulamanın SQL'inden bağımsız yazıldı: önce fatura başına işaretli tutar, sonra cari adına göre toplam.
+# Referans: net ciro'nun sertifikalı tanımı (satış faturası 7/8/9 artı, iade 2/3 eksi, iptal hariç) ve fatura
+# sayısı (aynı kapsamdaki fatura adedi; kokpit KPI 73.660), 2026. Uygulamanın SQL'inden bağımsız yazıldı:
+# önce fatura başına işaretli tutar, sonra cari adına göre toplam.
 REFERENCE_SQL = """
 WITH f AS (
     SELECT i.CLIENTREF,
@@ -44,7 +45,7 @@ WITH f AS (
     FROM dbo.LG_411_01_INVOICE AS i
     WHERE i.CANCELLED = 0
       AND i.DATE_ >= '20260101' AND i.DATE_ < '20270101'
-      AND i.TRCODE IN (1, 2, 3, 4, 7, 8, 9)
+      AND i.TRCODE IN (2, 3, 7, 8, 9)
 )
 SELECT c.DEFINITION_ AS name, SUM(f.signed_net) AS net, COUNT(*) AS invoices
 FROM f LEFT JOIN dbo.LG_411_CLCARD AS c ON c.LOGICALREF = f.CLIENTREF
@@ -259,6 +260,7 @@ def main() -> int:
         data = list(ws.iter_rows(min_row=2, values_only=True))
         run.check("6 Excel", "veri satırı sayısı = toplam (50 değil)", len(data) == total, rows=len(data), total=total)
         i_net, i_name = header.index("Net Ciro"), header.index("Müşteri")
+        cnt_label = next(c["label"] for c in layout if c["key"] == k_cnt)
         fmt = ws.cell(row=2, column=i_net + 1).number_format
         run.check("6 Excel", "Net Ciro hücreleri para biçiminde", "₺" in fmt, numberFormat=fmt)
         run.check("6 Excel", "Net Ciro hücreleri sayı (metin değil)", all(isinstance(r[i_net], (int, float)) or r[i_net] is None for r in data))
@@ -276,6 +278,11 @@ def main() -> int:
             if want is None or not close(r[i_net], want["net"]):
                 mism.append({"name": r[i_name], "excel": r[i_net], "reference": None if want is None else want["net"]})
         run.check("7 referans", "her müşterinin net cirosu referansla aynı (±0,01 ₺)", not mism, mismatches=len(mism), sample=mism[:5])
+        # Fatura sayısı Excel'de gizli; önizlemenin ilk 50 satırındaki değer referansla karşılaştırılır.
+        cnt_mism = [{"name": r[k_name], "preview": r[k_cnt], "reference": (ref.get(_name(r[k_name])) or {}).get("invoices")}
+                    for r in preview if (ref.get(_name(r[k_name])) or {}).get("invoices") != r[k_cnt]]
+        run.check("7 referans", f"ilk 50 müşterinin fatura sayısı (satış + iade faturası) referansla aynı ({cnt_label})", not cnt_mism,
+                  mismatches=len(cnt_mism), sample=cnt_mism[:5])
         excel_sum = sum(float(r[i_net] or 0) for r in data)
         ref_sum = sum(float(v["net"] or 0) for v in ref.values())
         run.check("7 referans", "Excel toplam net ciro = referans toplam", close(excel_sum, ref_sum, 0.05), excel=round(excel_sum, 2), reference=round(ref_sum, 2))
