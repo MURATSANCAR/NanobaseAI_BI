@@ -36,12 +36,12 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 | API (`nanobase_api`) | 8790 |
 | Query Gateway | 8792 |
 | Semantic Bridge (Timaş) | 8795 |
-| LLM (OpenAI uyumlu) | 8010 yerel / harici GPU sunucusu (A40) |
+| LLM (OpenAI uyumlu) | NVIDIA hosted `integrate.api.nvidia.com/v1`, `deepseek-ai/deepseek-v4-flash-0731`, düşünme kapalı (köprü drop-in `semantic-bridge-nvidia.env`); eski GPU sunucusu yok |
 | Gömme servisi | 8083 (embedder, CPU) |
 | Meta DB (Postgres) | 5434 |
 | BI uygulama VM (müşteri) | http://192.168.0.55/timas/ |
 
-Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`, `llm-topology-a40`, `a40-shutdown-cpu-embedder`, `timas-logo-network-access`.
+Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`, `llm-nvidia-hosted`, `timas-logo-network-access`.
 
 **Çalışma yeri kuralı (2026-09-14):** Mac'te hiçbir işlem, sorgu ya da çalıştırma yapılmaz. Tüm iş bizim test sunucusu (`nanobase-direct`) ile müşteri sunucusu arasında yürür: sunucu → VPN `tun0` → TİMAŞ ağı (SQL 192.168.0.155: `LOGO_DB` + `Timas_MSCRM`; BI VM 192.168.0.55). Mac yalnız sunucuya komut ileten uç ve dosya/git yeridir; müşteriye Mac'ten erişim yoktur.
 
