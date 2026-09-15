@@ -29,11 +29,35 @@ services:
       SEMANTIC_STORE_DSN: postgresql+psycopg2://bi_meta:${PG_PASSWORD}@db:5432/bi_meta
       SEMANTIC_CONNECTION_FILE: /app/secrets/logo-mssql-connection.json
       SEMANTIC_KNOWLEDGE_DIR: /app/configs/semantic/knowledge/logo
+      # Kişiye bağlı ekranlar (pano, uyarı, rapor, yönetim) kullanıcıyı giriş servisinden çerezle çözer.
+      TIMAS_LOGIN_URL: http://login:8796
+      # Yönetim ekranı AD ayarını giriş servisiyle aynı dosyaya yazar.
+      AD_CONFIG_FILE: /app/ad/timas-ad.json
+      REPORT_DIR: /data/reports
     volumes:
       - ./secrets/logo-mssql-connection.json:/app/secrets/logo-mssql-connection.json:ro
+      - ./secrets/ad:/app/ad
+      - bi_reports:/data/reports
     depends_on:
       db:
         condition: service_healthy
+      login:
+        condition: service_started
+    networks: [bi_net]
+    restart: unless-stopped
+
+  # Giriş: yalnız Timaş Active Directory (demo/yerel hesap yok). Dışa port açılmaz; web konteyneri çağırır.
+  login:
+    build:
+      context: ../../..
+      dockerfile: infra/docker/bi/login.Dockerfile
+    image: nanobase-bi-login:latest
+    environment:
+      # Tarayıcının gördüğü adres; değişiklik yapan isteklerde Origin bununla birebir eşleşmeli.
+      PORTAL_ORIGIN: ${PORTAL_ORIGIN}
+    volumes:
+      - ./secrets/ad:/app/ad:ro
+      - bi_login:/data
     networks: [bi_net]
     restart: unless-stopped
 
@@ -49,11 +73,11 @@ services:
       - bi_metrics:/usr/share/nginx/metrics:ro
     ports:
       - "8088:80"          # geçici doğrudan erişim + doğrulama; NPM devreye girince kaldırılabilir
-    depends_on: [bridge]
+    depends_on: [bridge, login]
     networks: [bi_net]
     restart: unless-stopped
 
-  # Arka plan işleri: ana ekran özeti (3 dk) ve uyarı kontrolü (15 dk). Mantık köprüde; bu yalnız çağırır.
+  # Arka plan işleri: ana ekran özeti (3 dk), uyarı (15 dk), pano (15 dk), planlı rapor (5 dk). Mantık köprüde; bu yalnız çağırır.
   jobs:
     image: nanobase-bi-bridge:latest
     command: ["python", "/app/jobs/jobs.py"]
@@ -76,3 +100,7 @@ volumes:
     name: bi_pgdata
   bi_metrics:
     name: bi_metrics
+  bi_login:
+    name: bi_login
+  bi_reports:
+    name: bi_reports

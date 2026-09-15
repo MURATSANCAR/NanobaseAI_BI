@@ -208,4 +208,5 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     os.umask(0o077)
-    ThreadingHTTPServer(('127.0.0.1', 8796), Handler).serve_forever()
+    # Sunucuda loopback; müşteri Docker yığınında konteyner ağına açılır (LOGIN_HOST=0.0.0.0, dışa port verilmez).
+    ThreadingHTTPServer((os.environ.get('LOGIN_HOST', '127.0.0.1'), 8796), Handler).serve_forever()
