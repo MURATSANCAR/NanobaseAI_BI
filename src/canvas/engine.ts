@@ -94,8 +94,12 @@ export function ask(question: string): Promise<AskAnswer> {
   return post<AskAnswer>('/api/v1/ask', { question, language: 'TR', execute: true, sampleSize: 50 }, 180_000);
 }
 
+/** Tablonun ait olduğu iş sistemi: Logo ERP ya da CRM. Motor şemadan belirler. */
+export type DataSource = 'logo' | 'crm';
+
 export type ConceptMapping = {
   id?: string;
+  source?: DataSource | null;
   entity?: string;
   table_pattern?: string;
   column?: string | null;
@@ -153,6 +157,7 @@ export type ReviewItem = {
   label?: string;
   type: string;
   confidence?: number;
+  source?: DataSource | null;
   mapping?: {
     entity?: string;
     column?: string | null;
@@ -195,6 +200,7 @@ export function inventory() {
 export type GapItem = {
   tablePattern: string;
   example: string;
+  source?: DataSource;
   copies: number;
   description: string | null;
   tableMissing: boolean;
@@ -225,6 +231,7 @@ export type GapColumn = {
 export type GapDetail = {
   tablePattern: string;
   example: string;
+  source?: DataSource;
   tables: Array<{ name: string; rows: number }>;
   description: string | null;
   tableAnnotationId: string | null;
@@ -241,6 +248,7 @@ export type GapSummary = {
   columns: number;
   missingColumns: number;
   suggestions: number;
+  bySource?: Record<DataSource, number>;
 };
 
 /** Veri sözlüğü: tablo kalıpları (yıl/firma kopyaları tek satır), eksik açıklamalar ve yazma uçları. */
@@ -294,14 +302,14 @@ export type VocabItem = {
   decidedAt?: string | null;
   createdAt?: string | null;
 };
-export type VocabGroup = { entity: string; column: string | null; items: VocabItem[] };
+export type VocabGroup = { entity: string; column: string | null; source?: DataSource | null; items: VocabItem[] };
 export type VocabCounts = Record<VocabItem['status'], number>;
 
 export function vocabulary(status: 'PROPOSED' | 'APPROVED' | 'REJECTED' | 'DROPPED' | 'ALL' = 'PROPOSED') {
   return get<{ groups: VocabGroup[]; counts: VocabCounts }>(`/api/v1/semantic/vocabulary?status=${status}&limit=5000`, 60_000);
 }
 export function vocabularyGaps() {
-  return get<{ items: Array<{ entity: string; tablePattern: string; column: string; type: string }> }>('/api/v1/semantic/vocabulary/gaps', 60_000);
+  return get<{ items: Array<{ entity: string; tablePattern: string; column: string; type: string; source?: DataSource | null }> }>('/api/v1/semantic/vocabulary/gaps', 60_000);
 }
 export function vocabularyDecide(id: string, decision: 'APPROVE' | 'REJECT', note?: string) {
   return post<{ id: string; status: string; conceptId?: string | null }>(`/api/v1/semantic/vocabulary/${encodeURIComponent(id)}/decide`, { decision, note }, 60_000);

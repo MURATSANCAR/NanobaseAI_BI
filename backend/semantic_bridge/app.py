@@ -34,6 +34,7 @@ from semantic_layer.candidates.generator import CandidateGenerator
 from semantic_layer.conventions import Conventions
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
+from semantic_layer.data_source import CRM, LOGO, data_source, source_by_entity
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import _pid as pair_id, load_project_pairs, load_query_log
 from semantic_layer.catalog import one_entity_per_pattern
@@ -1061,6 +1062,7 @@ class Runtime:
             undefined_cols += len(missing)
             items.append({
                 "tablePattern": pattern, "example": rep["tableName"], "copies": len(tables),
+                "source": data_source(rep.get("schema")),
                 "description": table_desc, "tableMissing": not table_desc, "rows": rows,
                 "columns": len(cols), "missing": len(missing),
                 "suggestions": sum(1 for c in missing if c.get("suggestion")),
@@ -1071,7 +1073,8 @@ class Runtime:
             "summary": {"patterns": len(items), "patternsWithGaps": len(with_gaps),
                         "tablesWithoutDescription": sum(1 for x in items if x["tableMissing"]),
                         "columns": total_cols, "missingColumns": undefined_cols,
-                        "suggestions": sum(x["suggestions"] for x in items)},
+                        "suggestions": sum(x["suggestions"] for x in items),
+                        "bySource": {src: sum(1 for x in items if x["source"] == src) for src in (LOGO, CRM)}},
             "items": items,
         }
         self._gaps_cache = (inv, out)
@@ -1110,7 +1113,7 @@ class Runtime:
                     "suggestion": c.get("suggestion")}
         table_ann = rep.get("annotations") or []
         return {
-            "tablePattern": table_pattern, "example": rep["tableName"],
+            "tablePattern": table_pattern, "example": rep["tableName"], "source": data_source(rep.get("schema")),
             "tables": [{"name": t["tableName"], "rows": t.get("rowCount") or 0, "context": t.get("context")} for t in tables],
             "description": table_ann[-1]["text"] if table_ann else rep.get("description"),
             "tableAnnotationId": table_ann[-1]["id"] if table_ann else None,
@@ -1735,7 +1738,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r = rt()
         s = r.settings
         rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
-        return {"items": [{"concept": c.to_dict(), "mappings": [m.to_dict() for m in r.store.list_mappings(c.id)]} for c in rows]}
+        src = source_by_entity(r.profiles)
+        return {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in r.store.list_mappings(c.id)]} for c in rows]}
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1835,9 +1839,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r = rt()
         items = vocabulary.listing(r.store, r.settings, status=status.upper(), entity=entity, limit=limit)
         groups: dict[tuple, dict[str, Any]] = {}
+        src = source_by_entity(r.profiles)
         for it in items:
             key = (it["entity"], it["column"])
-            g = groups.setdefault(key, {"entity": it["entity"], "column": it["column"], "items": []})
+            g = groups.setdefault(key, {"entity": it["entity"], "column": it["column"], "source": src.get(it["entity"]), "items": []})
             g["items"].append(it)
         return {"groups": list(groups.values()), "counts": vocabulary.counts(r.store, r.settings)}
 
@@ -1853,7 +1858,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             # question can land on today, and a gap there costs an answer
             entities = sorted({m.entity for c in r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
                                for m in r.store.list_mappings(c.id)})
-        return {"items": vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)}
+        src = source_by_entity(r.profiles)
+        return {"items": [{**g, "source": src.get(g["entity"])} for g in vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)]}
 
     @app.post("/api/v1/semantic/vocabulary/{row_id}/decide")
     def vocabulary_decide(row_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1988,6 +1994,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             meaning = col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None
             out.append({
                 "id": c.id, "term": c.term, "label": vocab.readable(c.term), "type": c.semantic_type, "confidence": c.confidence,
+                "source": data_source(prof.schema_name) if prof else None,
                 "mapping": m.to_dict() if m else None,
                 "evidence": x["evidence"], "evidenceCount": x["evidenceCount"],
                 # what the data itself shows about the column this term claims
