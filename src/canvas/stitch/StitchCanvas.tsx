@@ -82,6 +82,42 @@ function Connectors() {
   );
 }
 
+const CHART_NAMES: Record<string, string> = {
+  column: 'Sütun', bar: 'Çubuk', line: 'Çizgi', area: 'Alan', pie: 'Pasta', donut: 'Halka',
+  scatter: 'Dağılım', treemap: 'Ağaç haritası', kpi: 'Tek değer', table: 'Tablo',
+};
+
+/** Sohbet cevabını panoya kart yapar; eklenince panoya götüren bağlantıya döner. */
+function BoardButton({ b }: { b: NonNullable<StitchCanvasData['main']['board']> }) {
+  const base = 'min-h-11 sm:min-h-0 px-4 py-2.5 rounded-xl text-xs font-extrabold tracking-tight flex items-center gap-1.5 transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97]';
+  if (b.state === 'done') {
+    return (
+      <Link to="/panolar" className={`${base} bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100`} aria-live="polite">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+        Panoda{b.message ? ` · ${CHART_NAMES[b.message] ?? b.message}` : ''} · Aç
+      </Link>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={b.onAdd}
+        disabled={b.state === 'saving'}
+        className={`${base} bg-violet/10 text-violet ring-1 ring-violet/25 hover:bg-violet/15 disabled:opacity-60 disabled:active:scale-100`}
+      >
+        {b.state === 'saving' ? (
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" /><path d="M21 12a9 9 0 00-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z" /></svg>
+        )}
+        {b.state === 'saving' ? 'Ekleniyor…' : b.state === 'error' ? 'Yeniden dene' : 'Panoya ekle'}
+      </button>
+      {b.state === 'error' && b.message && <span role="alert" className="text-[11px] font-bold text-red-600">{b.message}</span>}
+    </span>
+  );
+}
+
 export default function StitchCanvas(props: {
   d: StitchCanvasData;
   onAsk?: (q: string) => void;
@@ -536,6 +572,7 @@ function CanvasBody({
 
               {/* Action Buttons */}
               <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
+                {d.main.board && <BoardButton b={d.main.board} />}
                 {/* Primary Gradient Action */}
                 <Link to={d.main.primaryTo} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>

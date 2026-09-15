@@ -6,7 +6,9 @@ import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
 import { alertsData, cfoData, schedulesData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
-import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, type AskAnswer } from '@/canvas/engine';
+import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, boardApi, type AskAnswer } from '@/canvas/engine';
+import { fromDto, newId, nextSlot, topZ, type BoardCard } from '@/canvas/board/store';
+import type { BoardAction } from '@/canvas/stitch/data';
 import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
 import AlertsPanel, { parseRule, type RuleDraft } from '@/canvas/alerts/AlertsPanel';
@@ -73,6 +75,9 @@ export default function BiCanvasPage() {
   const [answer, setAnswer] = useState<AskAnswer | null>(null);
   const [asking, setAsking] = useState(false);
   const [askErr, setAskErr] = useState<string | null>(null);
+  /** Cevabı doğuran soru; panoya eklenen kartın başlığı ve yeniden sorulacak sorusu olur. */
+  const [answeredQ, setAnsweredQ] = useState('');
+  const [board, setBoard] = useState<{ state: BoardAction['state']; message?: string }>({ state: 'idle' });
   // Ardışık sorular kuyruğa girer ve tek tek işlenir; yeni soru önceki cevabı ezmez.
   const queueRef = useRef<string[]>([]);
   const runningRef = useRef(false);
@@ -92,8 +97,12 @@ export default function BiCanvasPage() {
     setCurrent(q);
     setAskErr(null);
     setAnswer(null);
+    setBoard({ state: 'idle' });
     askEngine(q)
-      .then((a) => setAnswer({ ...a, summary: a.summary ?? a.explanation }))
+      .then((a) => {
+        setAnsweredQ(q);
+        setAnswer({ ...a, summary: a.summary ?? a.explanation });
+      })
       .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Zeki AI yanıt vermedi'))
       .finally(() => runNext());
   };
@@ -140,6 +149,39 @@ export default function BiCanvasPage() {
     ask(q);
   };
 
+  // Sohbet cevabı → pano kartı. Doğrusu sunucudaki pano: önce güncel liste okunur (başka sekmede eklenen
+  // kart ezilmesin), kart boş yere eklenir, sonra sonucu sunucuda hesaplanır ki pano açılınca hazır olsun.
+  const addToBoard = async () => {
+    const a = answer;
+    if (!a?.sql || !a.records?.length || board.state === 'saving') return;
+    setBoard({ state: 'saving' });
+    try {
+      // Grafik önerici recharts'ı getirir; genel bakış açılışını ağırlaştırmasın diye yalnız burada yüklenir.
+      const [{ suggestChart }, current] = await Promise.all([import('@/canvas/board/Chart'), boardApi.load()]);
+      const cards = current.cards.map(fromDto);
+      const cols = (a.columns ?? []) as Array<{ name: string; type: string }>;
+      const chart = suggestChart(cols, a.records as Array<Record<string, unknown>>);
+      const card: BoardCard = {
+        id: newId(),
+        title: answeredQ,
+        question: answeredQ,
+        sql: a.sql,
+        chart,
+        depth: false,
+        z: topZ(cards),
+        refresh: 'manual',
+        createdAt: new Date().toISOString(),
+        ...nextSlot(cards),
+      };
+      await boardApi.save([...cards, card]);
+      // Sunucu kartı bilmeden koşturamaz; kaydetmeden sonra. Koşu düşse de kart panoda, orada yeniden denenir.
+      await boardApi.run(card.id).catch(() => undefined);
+      setBoard({ state: 'done', message: chart });
+    } catch (e) {
+      setBoard({ state: 'error', message: e instanceof EngineAuthError ? 'Oturum gerekli' : 'Panoya eklenemedi' });
+    }
+  };
+
   const view = useMemo(() => {
     if (!answer && !asking && !askErr) return d;
     const rows = answer?.records?.length ?? 0;
@@ -159,6 +201,7 @@ export default function BiCanvasPage() {
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
+        board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: () => void addToBoard() } : undefined,
       },
       c5: {
         ...d.c5,
@@ -168,7 +211,8 @@ export default function BiCanvasPage() {
         latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
       },
     };
-  }, [d, answer, asking, askErr, phase, queued]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d, answer, asking, askErr, phase, queued, board, answeredQ]);
 
   if (splash) return <Splash onDone={closeSplash} />;
 

@@ -6,6 +6,13 @@ export type StitchArc = { dash: string; offset: string };
 /** Sol raydaki on yuva. Etiketler uygulamanın kendi menüsünden gelir. */
 export type StitchRailItem = { to: string; label: string; badge?: string };
 
+export type BoardAction = {
+  state: 'idle' | 'saving' | 'done' | 'error';
+  onAdd: () => void;
+  /** Hata ya da eklenen kartın tipi gibi kısa bilgi. */
+  message?: string;
+};
+
 export type StitchCanvasData = {
   tenant: string;
   section: string;
@@ -92,6 +99,8 @@ export type StitchCanvasData = {
     secondary: string;
     secondaryTo: string;
     note: string;
+    /** Sohbet cevabını kişinin panosuna kart olarak ekler; yalnız satır dönen cevapta var. */
+    board?: BoardAction;
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };
