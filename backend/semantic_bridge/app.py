@@ -999,6 +999,92 @@ class Runtime:
         self._inventory_cache[key] = out
         return out
 
+    def gaps(self) -> dict[str, Any]:
+        """Açıklaması eksik tablo ve kolonlar, tablo kalıbına göre gruplu.
+
+        Logo her yıl ve firma için aynı tabloyu yeniden açar (LG_211_01_STLINE, LG_411_01_STLINE…); açıklama da
+        kalıba yazılır. Tablo tablo listelemek aynı eksiği yirmi kez gösterirdi. Kalıp başına bir satır: toplam
+        satır, kaç kopya, kaç kolon eksik. Kolonlar ayrı uçtan, seçilince gelir.
+        """
+        inv = self.inventory(with_columns=True)
+        cached = getattr(self, "_gaps_cache", None)
+        if cached is not None and cached[0] is inv:
+            return cached[1]
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for t in inv["tables"]:
+            groups.setdefault(t.get("tablePattern") or t["tableName"], []).append(t)
+        items = []
+        total_cols = undefined_cols = 0
+        for pattern, tables in groups.items():
+            tables.sort(key=lambda t: -(t.get("rowCount") or 0))
+            rep = tables[0]
+            cols = self._merged_columns(tables)
+            missing = [c for c in cols if c["status"] == "UNDEFINED"]
+            table_desc = rep.get("description") or ((rep.get("annotations") or [{}])[-1].get("text") if rep.get("annotations") else None)
+            rows = sum(t.get("rowCount") or 0 for t in tables)
+            total_cols += len(cols)
+            undefined_cols += len(missing)
+            items.append({
+                "tablePattern": pattern, "example": rep["tableName"], "copies": len(tables),
+                "description": table_desc, "tableMissing": not table_desc, "rows": rows,
+                "columns": len(cols), "missing": len(missing),
+                "suggestions": sum(1 for c in missing if c.get("suggestion")),
+            })
+        items.sort(key=lambda x: (x["rows"] == 0, -(x["missing"] + (1 if x["tableMissing"] else 0) > 0), -x["rows"], x["example"]))
+        with_gaps = [x for x in items if x["missing"] or x["tableMissing"]]
+        out = {
+            "summary": {"patterns": len(items), "patternsWithGaps": len(with_gaps),
+                        "tablesWithoutDescription": sum(1 for x in items if x["tableMissing"]),
+                        "columns": total_cols, "missingColumns": undefined_cols,
+                        "suggestions": sum(x["suggestions"] for x in items)},
+            "items": items,
+        }
+        self._gaps_cache = (inv, out)
+        return out
+
+    @staticmethod
+    def _merged_columns(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Kalıbın kolonları: bir kopyada tanımlıysa tanımlı sayılır; örnek değerler en dolu kopyadan."""
+        rank = {"CERTIFIED": 3, "CANDIDATE": 2, "DESCRIBED": 1, "UNDEFINED": 0}
+        out: dict[str, dict[str, Any]] = {}
+        for t in tables:
+            for c in t.get("columns") or []:
+                k = c["name"].upper()
+                cur = out.get(k)
+                if cur is None or rank.get(c["status"], 0) > rank.get(cur["status"], 0):
+                    out[k] = c
+                elif not cur.get("topValues") and c.get("topValues"):
+                    out[k] = {**cur, "topValues": c["topValues"]}
+        return list(out.values())
+
+    def gap_detail(self, table_pattern: str) -> Optional[dict[str, Any]]:
+        inv = self.inventory(with_columns=True)
+        tables = [t for t in inv["tables"] if (t.get("tablePattern") or t["tableName"]) == table_pattern]
+        if not tables:
+            return None
+        tables.sort(key=lambda t: -(t.get("rowCount") or 0))
+        rep = tables[0]
+        cols = self._merged_columns(tables)
+        def view(c: dict[str, Any]) -> dict[str, Any]:
+            said = (c.get("annotations") or [])
+            return {"name": c["name"], "type": c.get("type"), "status": c["status"], "isPrimaryKey": c.get("isPrimaryKey"),
+                    "ref": c.get("ref"), "sensitive": c.get("sensitive"), "distinct": c.get("distinct"),
+                    "topValues": c.get("topValues") or [], "unit": c.get("unit"), "derived": c.get("derived") or [],
+                    "description": said[-1]["text"] if said else c.get("description"),
+                    "annotationId": said[-1]["id"] if said else None,
+                    "suggestion": c.get("suggestion")}
+        table_ann = rep.get("annotations") or []
+        return {
+            "tablePattern": table_pattern, "example": rep["tableName"],
+            "tables": [{"name": t["tableName"], "rows": t.get("rowCount") or 0, "context": t.get("context")} for t in tables],
+            "description": table_ann[-1]["text"] if table_ann else rep.get("description"),
+            "tableAnnotationId": table_ann[-1]["id"] if table_ann else None,
+            "rows": sum(t.get("rowCount") or 0 for t in tables),
+            "primaryKey": rep.get("primaryKey"),
+            "missing": [view(c) for c in cols if c["status"] == "UNDEFINED"],
+            "described": [view(c) for c in cols if c["status"] != "UNDEFINED"],
+        }
+
     def add_annotation(self, table_pattern: str, column: Optional[str], text: str, author: str) -> dict[str, Any]:
         s = self.settings
         ann = self.store.add_annotation(Annotation(datasource_id=s.datasource_id, table_pattern=table_pattern, column=(column or None), text=text.strip(), author=author))
@@ -2091,6 +2177,70 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             admin_mod.audit(rt().store.engine, _actor(request), "delete", "annotation", annotation_id, None)
         return {"ok": ok}
 
+    # ------------------------------------------------------------------ eksik açıklamalar (veri sözlüğü)
+    # Okumak herkese açık; yazmak AD oturumlu yöneticiye. Tarayıcı yönetici anahtarı taşımaz, kişi oturumdan bilinir.
+
+    def _describer(request: Request) -> str:
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Açıklama yazmak yöneticilere açık."})
+        return user
+
+    @app.get("/api/v1/schema/gaps")
+    def schema_gaps(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        return rt().gaps()
+
+    @app.get("/api/v1/schema/gaps/detail")
+    def schema_gap_detail(request: Request, tablePattern: str) -> dict[str, Any]:
+        _require_caller(request)
+        out = rt().gap_detail(tablePattern)
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Tablo bulunamadı."})
+        return out
+
+    @app.post("/api/v1/schema/gaps/describe")
+    def schema_gap_describe(request: Request, body: AnnotationIn) -> dict[str, Any]:
+        user = _describer(request)
+        text = body.text.strip()
+        if not text:
+            raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT", "message": "Açıklama boş olamaz."})
+        r = rt()
+        existing = [a for a in r.store.list_annotations(r.settings.datasource_id, body.tablePattern)
+                    if (a.column or "").upper() == (body.column or "").upper()]
+        for a in existing:
+            r.store.retire_annotation(a.id)
+        out = r.add_annotation(body.tablePattern, body.column, text, user)
+        admin_mod.audit(r.store.engine, user, "update" if existing else "create", "annotation", out["annotation"]["id"],
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": text})
+        return out
+
+    @app.post("/api/v1/schema/gaps/suggestions/{suggestion_id}/accept")
+    def schema_gap_accept(request: Request, suggestion_id: str) -> dict[str, Any]:
+        user = _describer(request)
+        r = rt()
+        sug = r.store.close_suggestion(suggestion_id, "ACCEPTED")
+        if sug is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Öneri bulunamadı."})
+        out = r.add_annotation(sug["tablePattern"], sug["column"], sug["text"], user)
+        admin_mod.audit(r.store.engine, user, "create", "annotation", out["annotation"]["id"],
+                        f"{sug['tablePattern']}.{sug['column'] or ''}".rstrip("."), {"text": sug["text"], "suggestion": suggestion_id})
+        return out
+
+    @app.post("/api/v1/schema/gaps/suggestions/{suggestion_id}/dismiss")
+    def schema_gap_dismiss(request: Request, suggestion_id: str) -> dict[str, Any]:
+        user = _describer(request)
+        r = rt()
+        sug = r.store.close_suggestion(suggestion_id, "DISMISSED")
+        if sug is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Öneri bulunamadı."})
+        r._inventory_cache.clear()
+        admin_mod.audit(r.store.engine, user, "delete", "annotation", suggestion_id,
+                        f"{sug['tablePattern']}.{sug['column'] or ''}".rstrip("."), {"dismissed": sug["text"]})
+        return {"ok": True}
+
     # ------------------------------------------------------------------ uyarılar
     # Kural bir sorudur; kontrol burada yapılır, zamanlayıcı yalnız /check'i çağırır.
     from semantic_bridge import alerts as alerts_mod
@@ -2642,6 +2792,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise _admin_fail(ValueError("Deneme için geçerli bir e-posta adresi yazın."))
         ok, message = admin_mod.smtp_test(to)
         admin_mod.audit(engine, user, "test", "setting", "email", "SMTP denemesi", {"to": to, "ok": ok, "message": message})
+        return {"ok": ok, "message": message}
+
+    @app.post("/api/v1/admin/directory/test")
+    def admin_directory_test(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        username = str(body.get("username") or "").strip()
+        ok, message = admin_mod.directory_test(username)
+        admin_mod.audit(engine, user, "test", "setting", "directory", "Active Directory denemesi",
+                        {"username": username or None, "ok": ok, "message": message})
         return {"ok": ok, "message": message}
 
     @app.get("/api/v1/admin/reports")

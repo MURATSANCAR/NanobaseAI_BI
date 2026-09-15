@@ -192,6 +192,68 @@ export function inventory() {
   return get<{ tables: TableRow[]; tableCount?: number; columnCount?: number }>('/api/v1/schema/inventory', 60_000);
 }
 
+export type GapItem = {
+  tablePattern: string;
+  example: string;
+  copies: number;
+  description: string | null;
+  tableMissing: boolean;
+  rows: number;
+  columns: number;
+  missing: number;
+  suggestions: number;
+};
+
+export type GapSuggestion = { id: string; text: string; confidence: number; model?: string };
+
+export type GapColumn = {
+  name: string;
+  type?: string;
+  status: 'UNDEFINED' | 'DESCRIBED' | 'CANDIDATE' | 'CERTIFIED';
+  isPrimaryKey?: boolean;
+  ref?: string | null;
+  sensitive?: boolean;
+  distinct?: number | null;
+  topValues: Array<[string, number]>;
+  unit?: string | null;
+  derived: string[];
+  description: string | null;
+  annotationId: string | null;
+  suggestion: GapSuggestion | null;
+};
+
+export type GapDetail = {
+  tablePattern: string;
+  example: string;
+  tables: Array<{ name: string; rows: number }>;
+  description: string | null;
+  tableAnnotationId: string | null;
+  rows: number;
+  primaryKey?: string[];
+  missing: GapColumn[];
+  described: GapColumn[];
+};
+
+export type GapSummary = {
+  patterns: number;
+  patternsWithGaps: number;
+  tablesWithoutDescription: number;
+  columns: number;
+  missingColumns: number;
+  suggestions: number;
+};
+
+/** Veri sözlüğü: tablo kalıpları (yıl/firma kopyaları tek satır), eksik açıklamalar ve yazma uçları. */
+export const gapsApi = {
+  list: () => get<{ summary: GapSummary; items: GapItem[] }>('/api/v1/schema/gaps', 120_000),
+  detail: (tablePattern: string) =>
+    get<GapDetail>(`/api/v1/schema/gaps/detail?tablePattern=${encodeURIComponent(tablePattern)}`, 60_000),
+  describe: (tablePattern: string, column: string | null, text: string) =>
+    send<unknown>('POST', '/api/v1/schema/gaps/describe', { tablePattern, column, text }, 60_000),
+  accept: (id: string) => send<unknown>('POST', `/api/v1/schema/gaps/suggestions/${encodeURIComponent(id)}/accept`, {}, 60_000),
+  dismiss: (id: string) => send<unknown>('POST', `/api/v1/schema/gaps/suggestions/${encodeURIComponent(id)}/dismiss`, {}, 30_000),
+};
+
 export type Decision = 'APPROVE' | 'REJECT' | 'CORRECT';
 
 /** Bir terim hakkında insanın kararı. CORRECT için açıklama zorunlu. */
@@ -480,8 +542,8 @@ export type AdminSetting = {
   /** Gizli alanlarda her zaman null; yalnız `hasValue` söylenir. */
   value: string | null;
   hasValue: boolean;
-  /** screen: yönetim ekranında kaydedildi · env: servis ortam dosyası · default: varsayılan */
-  source: 'screen' | 'env' | 'default';
+  /** screen: yönetim ekranında kaydedildi · env: servis ortam dosyası · file: giriş servisi dosyası · default: varsayılan */
+  source: 'screen' | 'env' | 'file' | 'default';
   updatedBy: string | null;
   updatedAt: string | null;
 };
@@ -569,6 +631,8 @@ export const adminApi = {
     send<AdminSettings & { changed: string[] }>('PUT', '/api/v1/admin/settings', { values }, 30_000),
   resetSetting: (key: string) => send<AdminSettings>('DELETE', `/api/v1/admin/settings/${encodeURIComponent(key)}`, undefined, 15_000),
   testEmail: (to: string) => send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/email/test', { to }, 60_000),
+  testDirectory: (username: string) =>
+    send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/directory/test', { username }, 30_000),
   reports: () => send<{ items: AdminReport[] }>('GET', '/api/v1/admin/reports', undefined, 30_000),
   updateReport: (id: string, b: Partial<ReportInput>) =>
     send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),
