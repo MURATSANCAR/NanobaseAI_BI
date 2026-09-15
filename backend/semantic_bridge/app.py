@@ -141,9 +141,44 @@ class Runtime:
             log.debug("catalog version check failed: %s", e)
             return
         from semantic_layer.runtime.language_pool import file_stamp
-        if version != self._catalog_version or file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+        if version != self._catalog_version:
             log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
             self.rebuild()
+        elif file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+            self._reload_language_pool_in_background()
+
+    def _reload_language_pool_in_background(self) -> None:
+        """A published pool of ~180k phrases takes the better part of a minute to validate and index.
+        Doing that inside the request that noticed the new file made one person wait for it, so the new
+        pool is built on a thread while the old one keeps answering, then swapped in whole."""
+        if getattr(self, "_pool_loading", False):
+            return
+        self._pool_loading = True
+        from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
+        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
+        stamp = file_stamp(pool_path)
+        profiles, existing = self.profiles, self.existing
+
+        def load() -> None:
+            try:
+                started = time.perf_counter()
+                pool = LanguagePool.load(pool_path, profiles, self.settings.datasource_id,
+                                         existing.annotations if existing is not None else {})
+                if self.profiles is not profiles:
+                    return          # a catalog rebuild ran meanwhile and loaded its own pool
+                self.language_pool = pool
+                if existing is not None:
+                    existing.language_pool = pool
+                self._language_pool_stamp = stamp
+                log.info("language pool reloaded in background: %d candidates, %d stale/invalid rejected, hash %s, %.1fs",
+                         len(pool.entries), pool.rejected, pool.content_hash[:12], time.perf_counter() - started)
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as e:
+                self._language_pool_stamp = stamp   # do not retry a broken file every 30 seconds
+                log.warning("language pool reload failed, keeping the previous pool: %s", e)
+            finally:
+                self._pool_loading = False
+
+        threading.Thread(target=load, name="language-pool-reload", daemon=True).start()
 
     def rebuild(self) -> None:
         s = self.settings
