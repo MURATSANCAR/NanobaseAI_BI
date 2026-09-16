@@ -77,21 +77,26 @@ def ensure_md4():
     # NTLM needs MD4; OpenSSL 3 dropped it, pycryptodome still has it.
     try:
         hashlib.new('md4', b'')
+        return
     except ValueError:
-        from Crypto.Hash import MD4
-        builtin = hashlib.new
+        pass
+    try:
+        from Crypto.Hash import MD4  # pycryptodome
+    except ImportError:
+        from Cryptodome.Hash import MD4  # pycryptodomex / Debian-Ubuntu python3-pycryptodome
+    builtin = hashlib.new
 
-        class Md4:
-            def __init__(self, data=b''):
-                self.h = MD4.new(data)
+    class Md4:
+        def __init__(self, data=b''):
+            self.h = MD4.new(data)
 
-            def update(self, data):
-                self.h.update(data)
+        def update(self, data):
+            self.h.update(data)
 
-            def digest(self):
-                return self.h.digest()
+        def digest(self):
+            return self.h.digest()
 
-        hashlib.new = lambda name, data=b'', **kw: Md4(data) if name.lower() == 'md4' else builtin(name, data, **kw)
+    hashlib.new = lambda name, data=b'', **kw: Md4(data) if name.lower() == 'md4' else builtin(name, data, **kw)
 
 
 def ad_verify(username, password):
