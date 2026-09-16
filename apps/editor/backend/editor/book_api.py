@@ -1,5 +1,6 @@
 """Headless editor workflow; operator-only pilot access, no public endpoints."""
 import json
+import os
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -188,8 +189,9 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         own_work(db,row['work_id'])
         if db.execute("SELECT id FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')").fetchone(): raise HTTPException(429,'ANALYSIS_CAPACITY_FULL')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
-        manifest={'release':RELEASE,'prompt_version':'book-e2e-v1','mode':'validation','human_accepted':False,
-          'model':'Qwen3.8-27B-Q4_K_M','image_max_tokens':256,'context_tokens':8192,'temperature':0,'seed':17}
+        manifest={'release':RELEASE,'pipeline_version':'source-spans-v1','mode':'validation','human_accepted':False,
+          'model':'Qwen3.8-27B-Q4_K_M','image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
+          'context_tokens':8192,'temperature':0,'seed':17,'old_visual_reuse':False}
         db.execute('INSERT INTO editor.generations(id,content_version_id,manifest) VALUES (%s,%s,%s)',(gen,version,Jsonb(manifest)))
         db.execute('INSERT INTO editor.jobs(id,generation_id) VALUES (%s,%s)',(job,gen))
         return {'job_id':job,'generation_id':gen,'content_version_id':str(version)}
@@ -208,8 +210,10 @@ def job(job_id:uuid.UUID):
         row.pop('owner_id')
         row.update({'counts':counts,'processing_status':row['status'],
           'source_coverage':{'expected_pages':expected,'accounted_pages':sizes.get('evidence',0),
-            'visual_read_pages':sizes.get('visuals',0),'all_pages_accounted':sizes.get('evidence',0)==expected,
-            'visual_read_complete':sizes.get('visuals',0)==expected},
+            'visual_read_pages':sizes.get('visuals',0)+sizes.get('visual_observations',0),'all_pages_accounted':sizes.get('evidence',0)==expected,
+            'visual_read_complete':sizes.get('visuals',0)+sizes.get('visual_observations',0)==expected,
+            'ocr_processed_pages':sizes.get('page_readings',0),'checked_pages':sizes.get('page_checks',0),
+            'source_spans':sizes.get('source_spans',0)},
           'editorial_status':'ACCEPTED' if generation['status']=='ACTIVE' else 'PENDING'})
         return row
 
@@ -231,12 +235,15 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
 
 
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis'],offset:int=0,limit:int=50):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks'],offset:int=0,limit:int=50,pdf_page:int|None=None):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)
-        rows=db.execute('SELECT id,record_key,data FROM editor.records WHERE generation_id=%s AND kind=%s ORDER BY record_key LIMIT %s OFFSET %s',(generation,kind,limit,offset)).fetchall()
-        count=db.execute('SELECT count(*) AS n FROM editor.records WHERE generation_id=%s AND kind=%s',(generation,kind)).fetchone()['n']
+        if pdf_page is not None and pdf_page<1: raise HTTPException(400,'INVALID_PAGE')
+        condition=' AND data->>\'pdf_page\'=%s' if pdf_page is not None else ''
+        params=(generation,kind,str(pdf_page)) if pdf_page is not None else (generation,kind)
+        rows=db.execute('SELECT id,record_key,data FROM editor.records WHERE generation_id=%s AND kind=%s'+condition+' ORDER BY record_key LIMIT %s OFFSET %s',params+(limit,offset)).fetchall()
+        count=db.execute('SELECT count(*) AS n FROM editor.records WHERE generation_id=%s AND kind=%s'+condition,params).fetchone()['n']
     return {'generation_id':str(generation),'content_version_id':str(g['content_version_id']),'generation_status':g['status'],
             'items':rows,'total':count,'offset':offset,'limit':limit,'has_more':offset+len(rows)<count}
 

@@ -6,7 +6,7 @@ const base=(process.env.EDITOR_VERIFY_BASE_URL||'http://127.0.0.1:8810').replace
 const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/playwright'));
 (async()=>{
  const token=fs.readFileSync(path.join(root,'secrets/api_token'),'utf8').trim();
- const run=JSON.parse(fs.readFileSync(path.join(root,'evidence/reference-book-run.json'),'utf8'));
+ const run=JSON.parse(fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_RUN_FILE||'evidence/reference-book-run.json'),'utf8'));
  const out=path.join(root,'evidence/review-ui');fs.mkdirSync(out,{recursive:true,mode:0o700});
  const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
  const results=[];
@@ -23,9 +23,18 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
    await page.locator('footer code').waitFor({state:'attached',timeout:30000});
    const generation=(await page.locator('footer code').textContent()).trim();
-   if(generation!==run.job.generation_id)throw new Error('UI selected another generation');
+   if(generation!==(run.job||run).generation_id)throw new Error('UI selected another generation');
    await page.locator('.source-image').waitFor({timeout:30000});
    await page.waitForFunction(()=>document.querySelector('.source-image')?.naturalWidth>0);
+   if(process.env.EDITOR_VERIFY_RUN_FILE){
+    await page.getByRole('heading',{name:'Metin okumaları uyuşuyor',exact:true}).or(page.getByRole('heading',{name:'İnceleme gerekiyor',exact:true})).waitFor({timeout:30000});
+    const spansResponse=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?pdf_page=1&limit=100',{headers:{Authorization:'Bearer '+token}});
+    const spans=await spansResponse.json();if(!spans.items?.length)throw new Error('Real page spans missing');
+    const details=page.locator('.source-notes details').first();await details.locator('summary').click();
+    if(!(await details.textContent()).includes(spans.items[0].data.text))throw new Error('UI span differs from API');
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Expanded source span overflow');
+    await page.screenshot({path:path.join(out,'spans-'+width+'.png'),fullPage:true});
+   }
    await page.locator('#page').selectOption('6');
    await page.waitForFunction(()=>document.querySelector('.source-image')?.alt.includes('6. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0);
    const checks=[];

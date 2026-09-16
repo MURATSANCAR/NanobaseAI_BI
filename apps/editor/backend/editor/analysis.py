@@ -73,6 +73,8 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         return aliases.get(value,value) if isinstance(value,str) else value
     return (resolve(json.loads(content)) if structured else content), {'seconds':round(time.monotonic()-start,3),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
+        'runner_fingerprint':result.get('system_fingerprint'),
+        'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
         'release':RELEASE,'code_manifest':code_manifest(),
         'prompt_version':prompt_version,'max_output_tokens':max_tokens,
         'citation_dictionary':aliases,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}
@@ -449,6 +451,11 @@ class State(TypedDict):
 
 
 def run(job):
+    with connection() as db:
+        manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
+    if manifest.get('pipeline_version')=='source-spans-v1':
+        from editor.source_pipeline import run as run_source_pages
+        return run_source_pages(job)
     with connection() as db:
         fence(db,job)
         db.execute("UPDATE editor.generations SET manifest=manifest || %s WHERE id=%s",(Jsonb({'execution_release':RELEASE,'code_manifest':code_manifest(),'analysis_prompt_version':PROMPT_VERSION}),job['generation_id']))

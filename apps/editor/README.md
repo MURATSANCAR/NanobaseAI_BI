@@ -158,9 +158,15 @@ Müşteri erişiminde kurumun TLS reverse proxy'si ve kimlik yönetimi kurulmal�
 bu operatör API'si doğrudan internete yayımlanmaz. BI portal bağlantısı bu
 altyapı teslimatında değiştirilmez.
 
-## İsteğe bağlı ikinci OCR okuyucusu
+## Konumlu kaynak ve sayfa kontrolü
 
-`compose.ocr.yaml`, Türkçe destekli PaddleOCR servisini yalnız Editörün özel ağına ekler. Model dosyaları imaj içindedir; çalışma sırasında indirilmez. Gerçek sayfa karşılaştırması, otomatik metin bölgesi yeniden okuması ve alıntı uyuşmazlığı kontrolü: [OCR kurulum ve doğrulama](ocr/README.md). Bu araç devam eden analiz nesline kendiliğinden yazmaz; tek sayfa denemesi tam kitap kabulü değildir. Offline paket komutuna `--with-ocr` ekleyerek OCR imajını ve Compose tanımını dahil edin.
+Yeni analizlerin varsayılanı `source-spans-v1` akışıdır. PaddleOCR artık ana `compose.yaml` servisidir; model ağırlıkları imajda, çalışma ağı özeldir. `compose.ocr.yaml` eski komutlar için boş uyumluluk dosyasıdır. Offline paket OCR imajını varsayılan olarak içerir.
+
+Her sayfada yerel PDF kelime kutuları, PaddleOCR bölgesel okuması ve Tesseract karşılaştırması `source_spans` kayıtlarına yazılır. Bozuk PDF karakterleri doğrulayıcı sayılmaz. Uyuşmazlık incelemeye ayrılır. `layout_regions`, balon/kuyruk geometri adaylarını; `visual_observations` kırpılmış çizim gözlemlerini saklar. Serbest görsel betimlemeler iddia kaynağı değildir. Konuşmacı kimliği henüz güvenilir biçimde çözülmediği için UNKNOWN kalır.
+
+İş sırası her sayfa için kaynak → bölgesel gözlem → metne bağlı aday → kontrol, sonra sonraki sayfadır. `page_checks` kayıtları optik işlem tamamlanmasını gösterir; anlamsal kabul değildir. Doğrulanmamış adaylar senteze/olay tablosuna aktarılmaz. Mevcut sürüm sonunda nesil `NEEDS_REVIEW` olur; kitap sentezi, indeks ve soru kabulü kendiliğinden başlamaz. Bunlar tamamlanmış özellik olarak sunulamaz.
+
+Yeni gerçek koşunun takip dosyası `evidence/source-spans-run.json`, salt okunur gözlemci `scripts/follow-source-pages.py`, gerçek API/PG karşılaştırması `scripts/verify-source-pipeline.py`. Kaynak metin dosyalarının üretiminde `editor.source_regions`, yerel PDF kelime kutularını da çıkarır. Teknik OCR ayrıntıları: [OCR servisi](ocr/README.md).
 
 ## Yedekleme, geri yükleme, sürüm paketi
 

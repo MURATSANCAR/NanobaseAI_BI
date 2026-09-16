@@ -16,6 +16,8 @@ def digest(path):
 
 def main():
     source=Path(sys.argv[1]); manifest=json.loads((source/'manifest.json').read_text())
+    from editor.pdf_text_regions import extract
+    extract(source)
     target=source/'ocr-regions-v2'; target.mkdir(exist_ok=True)
     for page in manifest['pages']:
         n=page['pdf_page']; destination=target/f'page-{n:04}.json'

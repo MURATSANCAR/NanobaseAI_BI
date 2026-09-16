@@ -17,7 +17,7 @@ shutil.copytree(root, source, ignore=shutil.ignore_patterns('.env','secrets','ru
 config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))
 images = sorted({service['image'] for service in config['services'].values()})
 with_models = '--with-models' in sys.argv
-with_ocr = '--with-ocr' in sys.argv
+with_ocr = 'ocr' in config['services'] or '--with-ocr' in sys.argv
 if with_ocr:
     ocr_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.ocr.yaml','config','--format','json']))
     config['services']['ocr'] = ocr_config['services']['ocr']

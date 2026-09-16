@@ -20,6 +20,8 @@ type Job = {
     expected_pages: number;
     accounted_pages: number;
     visual_read_pages: number;
+    ocr_processed_pages?: number;
+    checked_pages?: number;
   };
   editorial_status: string;
 };
@@ -30,6 +32,9 @@ const statuses: Record<string, string> = {
   FAILED: "İşlem hatası",
   CANCELLED: "İptal edildi",
   PENDING: "İnceleme bekliyor",
+  NEEDS_REVIEW: "İnceleme gerekiyor",
+  TEXT_AGREED: "Metin okumaları uyuşuyor",
+  NO_TEXT_DETECTED: "Metin saptanmadı; görsel inceleme bekliyor",
   ACCEPTED: "Editör kabulü var",
 };
 const modes: Record<string, string> = {
@@ -57,6 +62,12 @@ const stages: Record<string, string> = {
   literary: "Edebî yorum",
   passages: "Arama indeksi",
   complete: "İşleme tamamlandı",
+  source_spans: "Konumlu metin okuma",
+  layout_regions: "Sayfa yerleşimi",
+  page_readings: "Sayfa OCR kontrolü",
+  visual_observations: "Bölgesel görsel gözlem",
+  page_claims: "Metne bağlı iddia adayları",
+  page_checks: "Sayfa kabul kontrolü",
 };
 const answerStatuses: Record<string, string> = {
   ANSWERED: "Kaynaklı cevap adayı",
@@ -81,6 +92,7 @@ function App() {
   const [data, setData] = useState<Record<string, Row[]>>({}),
     [questions, setQuestions] = useState<any[]>([]),
     [updated, setUpdated] = useState("");
+  const [pageSpans, setPageSpans] = useState<Row[]>([]);
   const [sourceText, setSourceText] = useState("ocr"),
     [busy, setBusy] = useState(false);
   const selected = runs.find((r) => r.id === run),
@@ -173,6 +185,7 @@ function App() {
             "events",
             "literary",
             "validation",
+            "page_readings", "visual_observations", "page_claims", "page_checks",
           ];
           const entries = await Promise.all(
             kinds.map(async (k) => [k, await all(`/generations/${gen}/${k}`)]),
@@ -204,6 +217,16 @@ function App() {
     visuals = data.visuals ?? [],
     source = evidence.find((r) => r.data.pdf_page === page),
     visual = visuals.find((r) => r.data.pdf_page === page);
+  const pageReading = data.page_readings?.find((r) => r.data.pdf_page === page);
+  const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
+  const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
+  useEffect(() => {
+    let active = true; setPageSpans([]);
+    if (gen && signed) all(`/generations/${gen}/source_spans?pdf_page=${page}`)
+      .then((rows) => active && setPageSpans(rows))
+      .catch((e) => active && setError(e.message));
+    return () => { active = false; };
+  }, [gen, page, signed, pageReading?.id]);
   const sourceImage = imageFor === source?.id ? image : "";
   useEffect(() => {
     setImage("");
@@ -383,12 +406,13 @@ function App() {
                 </small>
               </article>
               <article>
-                <span>KAYNAK KAPSAMI</span>
+                <span>KAYNAK DOSYALARI</span>
                 <strong>
                   {job?.source_coverage.accounted_pages ?? 0} /{" "}
                   {job?.source_coverage.expected_pages ?? "—"} sayfa
                 </strong>
                 <small>
+                  {job?.source_coverage.ocr_processed_pages ?? 0} yeni OCR kontrolü · {" "}
                   {job?.source_coverage.visual_read_pages ?? 0} görsel okuma
                   kaydı · doğruluk oranı değildir
                 </small>
@@ -406,7 +430,7 @@ function App() {
                 className={"dot " + (job?.status === "RUNNING" ? "live" : "")}
               />
               <span>
-                {count("scenes")} sahne grubu · {count("events")} olay ·{" "}
+                {count("page_readings")} sayfa OCR kontrolü · {count("page_checks")} sayfa inceleme kaydı · {count("scenes")} sahne grubu · {count("events")} olay ·{" "}
                 {count("entities")} varlık
               </span>
               <small>Son güncelleme {updated || "—"}</small>
@@ -492,14 +516,33 @@ function App() {
                   )}
                 </article>
                 <aside className="source-notes">
+                  {pageReading && <article className="paper">
+                    <p className="eyebrow">SAYFA OKUMA KONTROLÜ</p>
+                    <h2>{statuses[pageReading.data.status] ?? "İnceleme bekliyor"}</h2>
+                    <p>{pageReading.data.agreed_spans} uyumlu bölge · {pageReading.data.review_spans} inceleme gereken bölge</p>
+                    <p className="hint">Okumaların uyuşması, olayın veya konuşmacının doğrulandığı anlamına gelmez.</p>
+                    {pageSpans.map((r) => <details key={r.id}>
+                      <summary>{r.data.status === "TEXT_AGREED" ? "✓" : "⚠"} {r.data.text}</summary>
+                      <p>İkinci okuma: {r.data.secondary_text || "Metin bulunamadı"}</p>
+                      <p>Bölgesel okuma: {r.data.region_text || "Bekliyor"}</p>
+                      <small>{statuses[r.data.status] ?? r.data.status}</small>
+                    </details>)}
+                  </article>}
+                  {pageClaims && <article className="paper">
+                    <h2>Metne bağlı adaylar</h2>
+                    <p className="hint">Henüz doğrulanmış olay değildir. Kaynaksız alıntılar ve kimliği belirsiz varlıklar incelemeye ayrılır.</p>
+                    {pageClaims.data.claims.map((c: any, i: number) => <p key={i}>{c.text}</p>)}
+                    <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Konuşmacı doğrulaması bekliyor</p>
+                  </article>}
                   <article className="paper">
                     <p className="eyebrow">MODELİN GÖRSEL OKUMASI</p>
                     <h2>Gözlem adayı</h2>
                     <span className="badge">Doğrulanmamış model çıktısı</span>
                     <p className="body-copy">
-                      {visual?.data.description ??
+                      {pageObservation ? (pageObservation.data.observations.length ? pageObservation.data.observations.flatMap((o: any) => o.figures.map((f: any) => `${f.appearance}: ${f.visible_action}`)).join("\n") : "İşlenecek büyük görsel bölge saptanmadı.") : visual?.data.description ??
                         "Bu sayfanın model çıktısı henüz kaydedilmedi."}
                     </p>
+                    {pageObservation && <p className="hint">Bölgesel gözlem adayıdır; alıntı veya iddia kaynağı olarak kullanılmaz. Konuşmacı: bilinmiyor.</p>}
                     {visual && (
                       <small>
                         {visual.data.reused_from

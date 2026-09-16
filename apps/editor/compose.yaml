@@ -19,6 +19,7 @@ x-app: &app
   environment: &app-env
     EDITOR_RELEASE: ${EDITOR_RELEASE:-foundation-20260916}
     EDITOR_MODEL_CONCURRENCY: ${EDITOR_MODEL_CONCURRENCY:-1}
+    EDITOR_IMAGE_MAX_TOKENS: ${EDITOR_IMAGE_MAX_TOKENS:-1024}
     HF_HUB_OFFLINE: '1'
     HF_HUB_DISABLE_TELEMETRY: '1'
     DO_NOT_TRACK: '1'
@@ -27,6 +28,30 @@ x-app: &app
     options: {max-size: 10m, max-file: '3'}
 
 services:
+  ocr:
+    image: ${EDITOR_OCR_IMAGE:-nanobase-editor-ocr:3.2.0}
+    build: {context: ./ocr}
+    restart: unless-stopped
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:size=512m,mode=1777']
+    networks: [private]
+    cpus: 4
+    cpu_shares: 128
+    mem_limit: 4g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/health",timeout=5)']
+      interval: 20s
+      timeout: 8s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+
   postgres:
     image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
     restart: unless-stopped
