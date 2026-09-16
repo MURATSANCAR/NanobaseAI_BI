@@ -42,7 +42,7 @@ Yerel mock veya sentetik kitap kullanılmaz. İnsan editör onayı taklit edilme
 
 | Kimlik | Denetim | Kabul durumu |
 |---|---|---|
-| V01 | Görsel doğru kaynak hash/sürüm/sayfaya açılır. | Yeni nesilde 48 API görüntüsünün hash ve no-store kontrolü geçti. Mobil kaynak ekranı kabulü yok. |
+| V01 | Görsel doğru kaynak hash/sürüm/sayfaya açılır. | Yeni nesilde 48 API görüntüsünün hash/no-store kontrolü geçti. Gerçek Chrome’da 320/390/768/1440 px kaynak ve sahne-atıf geçişi doğrulandı; bbox incelemesi eksik. |
 | V02 | Az yazılı sayfalar boş sayılmaz. | B03 ile birlikte değerlendirilecek. |
 | V03 | 28–29 konuşması aynı olaya bağlanır. | B02 ile birlikte değerlendirilecek. |
 | V04 | Hayal/plan görseli gerçekleşmiş olay sayılmaz. | B08 ile birlikte değerlendirilecek. |

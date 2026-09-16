@@ -35,13 +35,36 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(layout.scroll>width||layout.smallButtons)throw new Error('Layout failed '+JSON.stringify({name,layout}));
     checks.push({tab:name,...layout});
    }
+   const response=await context.request.get('http://127.0.0.1:8810/v1/generations/'+generation+'/scenes?limit=100',
+      {headers:{Authorization:'Bearer '+token}});
+   if(!response.ok())throw new Error('Real scene API failed');
+   const scenes=(await response.json()).items;
+   if(scenes.length){
+    await page.getByRole('button',{name:'Sahneler',exact:true}).click();
+    await page.locator('.cards .paper').first().waitFor();
+    const card=page.locator('.cards .paper').first();
+    if(!(await card.textContent()).includes(scenes[0].data.summary))throw new Error('UI scene differs from real API');
+    await card.getByText('Sahneden çıkarılan adaylar',{exact:true}).click();
+    for(const entity of scenes[0].data.entities){
+     if(!(await card.textContent()).includes(entity.description))throw new Error('UI omitted scene entity');
+    }
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Expanded scene overflow '+width);
+    await page.screenshot({path:path.join(out,'scenes-'+width+'.png'),fullPage:true});
+    const link=card.locator('.refs button').first();
+    const expectedPage=(await link.textContent()).match(/\d+/)[0];
+    await link.click();
+    await page.getByRole('heading',{name:'PDF sayfası '+expectedPage,exact:true}).waitFor();
+    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,expectedPage);
+   }
    await page.getByRole('button',{name:'Kaynak & görsel',exact:true}).click();
+   await page.locator('#page').selectOption('6');
+   await page.waitForFunction(()=>document.querySelector('.source-image')?.alt.includes('6. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0);
    await page.screenshot({path:path.join(out,'source-'+width+'.png'),fullPage:true});
    if(errors.length)throw new Error('Browser errors '+errors.join('; '));
    if(await page.evaluate(()=>localStorage.length||sessionStorage.length))throw new Error('Unexpected persisted browser state');
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
    if(await page.getByLabel('Operatör erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
-   results.push({width,generation,checks,logout_clears_credential:true});
+   results.push({width,generation,checks,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
   fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',results,semantic_acceptance:false},null,2));

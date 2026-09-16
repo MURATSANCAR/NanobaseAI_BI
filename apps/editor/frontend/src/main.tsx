@@ -58,6 +58,12 @@ const stages: Record<string, string> = {
   passages: "Arama indeksi",
   complete: "İşleme tamamlandı",
 };
+const answerStatuses: Record<string, string> = {
+  ANSWERED: "Kaynaklı cevap adayı",
+  PARTIAL: "Kısmi cevap",
+  INSUFFICIENT_EVIDENCE: "Yeterli kaynak bulunamadı",
+  NEEDS_CLARIFICATION: "Açıklığa kavuşturulmalı",
+};
 
 function App() {
   const [token, setToken] = useState(""),
@@ -146,6 +152,7 @@ function App() {
     setJob(null);
     setData({});
     setPage(1);
+    setQuestions([]);
     setError("");
     async function refresh() {
       if (inflight) return;
@@ -537,6 +544,28 @@ function App() {
                     <h2>Sahne grubu</h2>
                     <p>{r.data.summary}</p>
                     {refs(r.data.evidence_refs)}
+                    <details>
+                      <summary>Sahneden çıkarılan adaylar</summary>
+                      <p className="hint">
+                        Bunlar bu kaynak grubunun çıktılarıdır; kitap genelinde
+                        birleştirilmiş karakter ve olay kayıtları henüz farklı olabilir.
+                      </p>
+                      {(r.data.entities ?? []).map((item: any, i: number) => (
+                        <div className="claim" key={"entity" + i}>
+                          <b>{item.name}</b>
+                          <p>{entityTypes[item.type] ?? item.type} · {item.description}</p>
+                          {refs(item.evidence_refs)}
+                        </div>
+                      ))}
+                      {(r.data.events ?? []).map((item: any, i: number) => (
+                        <div className="claim" key={"event" + i}>
+                          <span className="badge">{modes[item.narrative_mode] ?? item.narrative_mode}</span>
+                          <p>{item.description}</p>
+                          <small>Fail: {item.actor ?? "Belirsiz"} · Konuşmacı: {item.speaker ?? "Belirtilmemiş"}</small>
+                          {refs(item.evidence_refs)}
+                        </div>
+                      ))}
+                    </details>
                     {r.data.uncertainties?.length > 0 && (
                       <details>
                         <summary>
@@ -664,6 +693,11 @@ function App() {
                       {statuses[q.status] ?? q.status}
                     </span>
                     <h2>{q.question}</h2>
+                    {q.answer && (
+                      <p className="eyebrow">
+                        {answerStatuses[q.answer.status] ?? q.answer.status}
+                      </p>
+                    )}
                     <p>
                       {q.answer?.answer ??
                         (q.error_code
@@ -676,6 +710,16 @@ function App() {
                         {refs(c.evidence_refs)}
                       </div>
                     ))}
+                    {q.answer?.limitations?.length > 0 && (
+                      <div className="claim">
+                        <b>Cevabın sınırları</b>
+                        <ul>
+                          {q.answer.limitations.map((item: string, i: number) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <small>Taslak cevap · insan editör onayı yok</small>
                   </article>
                 ))}

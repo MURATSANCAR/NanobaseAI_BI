@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import time
 import urllib.request
+import urllib.error
+import http.client
 
 root=Path(__file__).resolve().parents[1]; os.chdir(root)
 run=json.loads((root/'evidence/reference-book-run.json').read_text())
@@ -13,10 +15,24 @@ job=run['job']['job_id']; gen=run['job']['generation_id']
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 deadline=time.monotonic()+86400
 scaled=False
+def analysis_state():
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8810/v1/jobs/'+job,headers=headers),timeout=30) as response:
+                state=json.load(response)
+                if attempt: print(json.dumps({'api_recovered_after_retries':attempt}),flush=True)
+                return state
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (502,503,504) or attempt==4: raise
+            print(json.dumps({'api_retry':attempt+1,'http_status':exc.code}),flush=True)
+        except (urllib.error.URLError, ConnectionError, TimeoutError,
+                http.client.RemoteDisconnected, http.client.IncompleteRead):
+            if attempt==4: raise
+            print(json.dumps({'api_retry':attempt+1,'error':'URLError'}),flush=True)
+        time.sleep(min(30,2**(attempt+1)))
 try:
     while time.monotonic()<deadline:
-        with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8810/v1/jobs/'+job,headers=headers),timeout=30) as response:
-            state=json.load(response)
+        state=analysis_state()
         if state['status'] in ('FAILED','CANCELLED'): raise RuntimeError('ANALYSIS_NOT_COMPLETED')
         if state['status']=='COMPLETED': break
         time.sleep(30)

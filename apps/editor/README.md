@@ -175,12 +175,17 @@ ile yeni sırlar hazırlayın. Hedefte önceden konteyner/volume bulunamaz:
 ```sh
 python3 scripts/preflight.py
 python3 scripts/restore.py /yedekler/editor-YYYYMMDD-HHMM editor-restore
+python3 scripts/rebuild-search.py editor-restore
 ```
 
-Betik mevcut kurulumu ezmez; DB/özgün kaynak/render hash'leri ve gerçek API
-cevabı yeniden doğrulanır. Qdrant bu evrede boş ve yeniden üretilebilir altyapıdır;
-P4 indeks hattı kurulduğunda indeks yeniden üretme ve generation/atıf geri
-yükleme kabulü eklenmeden tam ürün restore'ı kabul edilmez. Tek host/tek DB
+Betik mevcut kurulumu ezmez. Yeni yedekler kitap/sürüm/job/analiz/inceleme
+kayıtlarının ve bütün kaynak/türev dosyaların hashlerini içerir; hedef işçileri
+başlamadan karşılaştırılır. Eski manifestlerde bu kontrol yoktur ve sonuçta
+`book_records_and_artifacts_equal=false` görünür. Sonrasında arama betiği
+PostgreSQL pasajlarından Qdrant indeksini kurar; her vektörü ve kaynak bağını
+kontrol eder. Bu adım aktif işi olan kurulumda çalışmaz. Geri dönen gerçek API
+cevapları, atıflar ve kaynak ekranı ayrıca doğrulanmalıdır. Güncel dolu kitap
+yedeğinin tam restore kabulü henüz yapılmadı. Tek host/tek DB
 topolojisi yüksek erişilebilirlik sağlamaz; RPO/RTO henüz taahhüt edilmemiştir.
 
 Paketleme yalnız internet erişimli hazırlık sunucusunda yapılır:

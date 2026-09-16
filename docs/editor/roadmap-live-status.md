@@ -30,7 +30,7 @@ Sürüm denetimi: önceki 48 görselin 10'u `book-e2e-v1`, 38'i `visual-observat
 | 12 Kanıt/cevap | Hybrid arama, reranker, kapsam/atıf kimliği denetimi | 13 gerçek soru; destek, yeterlilik ve kapsama göre bağımsız değerlendirme bekleniyor |
 | 13 Sürümler/düzeltme | Immutable kayıt, inceleme sürümü ve etkinleştirme kapısı | Genel düzeltme-bağımlılık yenileme ve gerçek ikinci baskı B18 eksik |
 | 14 Kuyruk/checkpoint | Lease, fencing, SKIP LOCKED, gerekçeli retry; kayıtlar kesintide korundu | Tam hata/kesinti matrisi ve kullanıcı yükü kabulü açık |
-| 15 Kapasite/maliyet | 32 CPU, 4 model slotu, çağrı süre/token izleri | Tam kitap süresi, tepe kaynak, maliyet ve hizmet hedefi açık |
+| 15 Kapasite/maliyet | 48 CPU, 4 model slotu, çağrı süre/token izleri | Tam kitap süresi, tepe kaynak, maliyet ve hizmet hedefi açık |
 | 16 Kalite/editör | B/V senaryoları ve bağımsız kaynak notları | Üç kitap, ayrılmış set, editör dakika/örnek ve uzlaşma ölçümü yok |
 | 17 B01–B18 | Ayrı senaryo takip tablosu mevcut | Çalışan uygulamanın sonuçlarıyla tek tek kapatılacak; B18 kaynağı yok |
 | 18 P0–P7 | Bağımlılık ve açık paketler bu tabloda görünür | Paketlerin hiçbiri yalnız kod bulunduğu için tamamlanmış sayılmaz |
@@ -48,7 +48,29 @@ dağıtımda yanlış JavaScript MIME türü bulundu; nginx MIME yapılandırmas
 dosya bind mount yenilemesi sonrası aynı tarayıcı koşusu geçti. Ekran salt
 okunurdur; kullanıcı/rol, yükleme ve editör karar akışları tamamlandı sayılmaz.
 
+Sahne kartının kişi/olay adayları gerçek API ile karşılaştırıldı; dört genişlikte
+açılan kartın kaynak bağlantısı doğru PDF sayfasına döndü. Soru cevabının
+kısmi/yetersiz kaynak durumu ve sınırlamaları görünürdür; dolu cevaplarla kabulü
+henüz beklenir. Gateway yeniden oluşturulurken takip betiğinde gerçek
+`ConnectionResetError` görüldü. İşçi çalışmayı sürdürdü; bağlantı kesilmeleri
+için sınırlı retry eklendi ve takip yeniden başlatıldı, önceki hata saklandı.
+
+Yedek betiği artık kitap kayıtlarının ve bütün artifact dosyalarının hashlerini
+alır; restore bunları işçiyi başlatmadan karşılaştırır. Gerçek sunucudan
+340 dosya/207.058.811 bayt ve 8 tablo için referans üretildi. Bu, dolu kitabın
+yeni kuruluma geri dönmesiyle aynı kabul değildir; tam restore hâlâ bekleniyor.
+
 Yeni müdahalesiz koşuda PDF 6 için model 155,116 saniyede çıktı verdi. Açık gözlü çizimi “uyuyan” diye niteledi ve “mavi gözlü” ayrıntısı ekledi. Özgün render ile karşılaştırma bu ifadeleri desteklemiyor. Bu bir görsel doğruluk başarısızlığıdır; kaynak metni veya model kaydı düzeltilmedi, yeni nesle review kararı verilmedi. Hatanın sahne/cevaplara etkisi henüz değerlendirilmedi. Bu tek örnek genel doğruluk yüzdesi değildir.
+
+Yeniden kullanılan 38 görselin 13'ü önceki nesilde kaynak karşılaştırmasında
+reddedilmişti. Canlı DB'de hem açıklama hem render hash'i eşitliği doğrulandı:
+PDF 11, 13, 15, 16, 18, 19, 20, 23, 24, 25, 26, 27, 28. Dolayısıyla eski
+bulgular aynı çıktılar için geçerliliğini koruyor; bu sayfalar yeni koşuda
+düzeltilmiş sayılmaz. Örneğin PDF 28'de “Nihayet” kişi adı yapılmış; özgün
+sayfa ve güncel API çıktısı yeniden karşılaştırıldı. PDF 6 ile birlikte en az
+14 sayfada bilinen görsel hata var. Bu sayı eksiksiz kör değerlendirme veya
+genel doğruluk oranı değildir; yeni nesle karar/düzeltme yazılmadı.
+Kanıt: `evidence/unassisted-reused-visual-findings.json`.
 
 Kaynak bütünlüğü ve izlenebilir işlem kayıtları olumlu. Modelin görsel okuması güvenilir kabul edilecek düzeyde gösterilemedi: yanlış konuşmacı, yazı, nesne ve ayrıntı örnekleri var. 48/48 işleme yalnız kapsama işaret eder. Yeni koşu, bu hataların sonraki analiz ve cevaplara taşınıp taşınmadığını gösterecek. Henüz bir başarı yüzdesi veya üretime hazırlık iddiası yoktur.
 

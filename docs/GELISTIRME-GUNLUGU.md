@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör kaynak adaylarının görünürlüğü ve geri dönüş denetimi
+
+- Sahne içindeki kişi/olay adayları açılabilir; atıflar özgün PDF sayfasına döner. Gerçek sunucu Chrome/API ile 320/390/768/1440 px kontrol edildi. Cevap statüsü ve modelin sınırlamaları görünür; analiz değişiminde eski cevaplar temizlenir. Henüz dolu cevap kabulü verilmedi.
+- Yeni koşuda önceki 13 reddedilmiş görselin açıklama/render eşliği doğrulandı; yeni PDF 6 bulgusuyla en az 14 sayfada bilinen hata var. Bu bağımsız değerlendirme model girdisine veya yeni generation review kayıtlarına yazılmadı. Sahne/cevaba yayılımı bekleniyor.
+- Gateway yenilemesinde takip betiğinin ConnectionResetError ile çıkması gerçek ortamda görüldü; işçi etkilenmedi. HTTP/bağlantı kesilmeleri için sınırlı retry eklendi, eski hata korunarak tek takipçi ve soru kapasite gözlemcisi yeniden başlatıldı. Önceki 502 kesintisi dört denemede toparlandı.
+- Yedek/restore'a 8 kitap tablosu ve tüm artifact hashleri eklendi; karşılaştırma hedef işçiden önce yapılır. Canlı sunucudan 340 dosya/207.058.811 bayt referansı üretildi. Tam dolu-kitap restore ve indeks kabulü bekleniyor. Tam cevap/API/bağımsız DB karşılaştırma betiği 13 sorunun ardından çalıştırılmak üzere hazırdır; çalışmış sayılmaz.
+
 ## 2026-09-16 — Editör sahne çıktı bütçesinin gerçek koşu hatasıyla düzeltilmesi
 
 - Müdahalesiz kitap koşusunda üç dört-sayfalık sahne çağrısı 1800 çıktı token sınırında kesildi; uygulama bunları tamamlanmış saymayıp alt gruplarla yeniden okudu. Tekrarlı okuma ciddi süre maliyeti oluşturdu. Sahne çıktı bütçesi 3600 yapıldı; gerçek tokenizer ile toplam 8192 bağlam sınırı ve gerektiğinde grup bölme korunuyor. İstem ve kitap içeriği değiştirilmedi. Çağrı metadata’sına max_output_tokens eklendi.

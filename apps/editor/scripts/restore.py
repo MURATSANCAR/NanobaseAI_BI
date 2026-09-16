@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from snapshot_reference import book_reference
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
@@ -41,10 +42,19 @@ code = 'import tarfile,sys; t=tarfile.open(fileobj=sys.stdin.buffer,mode="r|"); 
 with (source/'artifacts.tar').open('rb') as stream:
     subprocess.run(['docker','run','--rm','-i','--network','none','--read-only','--cap-drop','ALL',
                     '--tmpfs','/data:mode=1777','-v',volume+':/data/artifacts',image,'python','-c',code],stdin=stream,check=True)
-subprocess.run(compose+['up','-d','--no-build','--pull','never','--wait','--wait-timeout','600'],check=True)
-subprocess.run([sys.executable,'scripts/verify.py'],check=True)
+# Compare the snapshot before starting writers, which can legitimately resume jobs.
+book_verified = False
+if 'book_reference' in manifest:
+    if book_reference(config) != manifest['book_reference']:
+        raise SystemExit('Restored book records or artifact bytes differ from backup')
+    book_verified = True
 query = "SELECT json_build_object('revision',(SELECT version_num FROM editor.alembic_version),'deployments',(SELECT json_agg(release ORDER BY release) FROM editor.deployments),'sources',COALESCE((SELECT json_agg(json_build_object('sha256',sha256,'manifest_md5',md5(manifest::text)) ORDER BY sha256) FROM editor.source_probes),'[]'::json))"
 reference = json.loads(subprocess.check_output(compose+['exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query]))
 if reference != manifest['reference']:
     raise SystemExit('Restored database differs from backup reference')
-print(json.dumps({'restore':'verified','target':project,'reference':reference,'book_citation_validation':'not_implemented_in_foundation'}))
+subprocess.run(compose+['up','-d','--no-build','--pull','never','--wait','--wait-timeout','600'],check=True)
+subprocess.run([sys.executable,'scripts/verify.py'],check=True)
+print(json.dumps({'restore':'verified','target':project,'reference':reference,
+                  'book_records_and_artifacts_equal':book_verified,
+                  'search_rebuild':'REQUIRED: scripts/rebuild-search.py '+project,
+                  'book_api_citation_validation':'REQUIRES_REAL_API_VERIFICATION'}))

@@ -12,6 +12,7 @@ import urllib.request
 import urllib.error
 import fcntl
 import html
+import http.client
 
 root=Path(__file__).resolve().parents[1]
 run=json.loads((root/'evidence/reference-book-run.json').read_text())
@@ -32,7 +33,8 @@ def request(path,body=None,key=None):
             with urllib.request.urlopen(req,timeout=60) as response: return json.load(response)
         except urllib.error.HTTPError as exc:
             if exc.code not in (502,503,504) or attempt==4: raise
-        except urllib.error.URLError:
+        except (urllib.error.URLError, ConnectionError, TimeoutError,
+                http.client.RemoteDisconnected, http.client.IncompleteRead):
             if attempt==4: raise
         time.sleep(min(30,2**(attempt+1)))
 

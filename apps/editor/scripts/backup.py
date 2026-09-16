@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from snapshot_reference import book_reference
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
@@ -34,7 +35,8 @@ try:
     manifest = {'project': project, 'created_at': datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 'release': config['services']['api']['environment']['EDITOR_RELEASE'],
                 'reference': reference, 'files': {},
-                'scope': 'PostgreSQL and artifacts. Qdrant is rebuildable; no qualified book index yet.'}
+                'book_reference': book_reference(config),
+                'scope': 'PostgreSQL and all source/derived artifacts. Rebuild Qdrant on the destination with rebuild-search.py.'}
     for name in ('database.dump', 'artifacts.tar'):
         with (destination/name).open('rb') as stream:
             manifest['files'][name] = hashlib.file_digest(stream, 'sha256').hexdigest()
