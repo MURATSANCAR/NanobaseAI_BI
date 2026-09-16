@@ -15,6 +15,9 @@ import os
 import re
 import threading
 import time
+
+import sqlglot
+from sqlglot import exp
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional, Protocol
 
@@ -1761,7 +1764,43 @@ class ExistingCompiler:
         messages.append({"role": "user", "content": f"Bu plan doğrulamadan geçmedi: {error}\nPlanı düzelt, yalnız ```json``` bloğu döndür."})
         return federated.parse_plan(self.llm.chat(messages))
 
+    def column_hint(self, sql: str, error: str) -> str:
+        """What the server said is missing, and what the tables in the statement actually have.
+
+        The database names a column it cannot find; told only that, the model tends to invent a
+        second name. The catalog knows the real ones: for every table the statement reads, the columns
+        closest to the missing name, and the whole list when it is short."""
+        import difflib
+        missing = re.findall(r"Invalid column name '([^']+)'", error or "")
+        if not missing:
+            return ""
+        from semantic_layer.runtime.guardrails import _norm_key
+        try:
+            tree = sqlglot.parse_one(sql, read=self.dialect)
+        except Exception:  # noqa: BLE001
+            return ""
+        lines = []
+        for table in {t for t in tree.find_all(exp.Table) if t.name}:
+            prof = None
+            for p in self.profiles:
+                if table.name.upper() in {p.entity.upper(), p.table_name.upper(), self.table_label(p).upper(),
+                                          _norm_key(p.schema_name, p.table_name)}:
+                    prof = p
+                    break
+            if prof is None:
+                continue
+            names = [c.name for c in prof.columns]
+            near = sorted({n for m in missing for n in difflib.get_close_matches(m, names, n=5, cutoff=0.5)})
+            shown = names if len(names) <= 60 else near
+            if shown:
+                lines.append(f"- {self.table_label(prof)} kolonları: " + ", ".join(shown))
+        if not lines:
+            return ""
+        return ("\nSunucuda olmayan kolon: " + ", ".join(sorted(set(missing)))
+                + ". Yalnız şu gerçek kolonları kullan:\n" + "\n".join(lines))
+
     def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[str]:
+        error = (error or "") + self.column_hint(sql, error)
         messages = self.build_messages(q, thread or [], recall=recall)
         messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})

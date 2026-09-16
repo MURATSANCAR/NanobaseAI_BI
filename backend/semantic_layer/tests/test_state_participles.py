@@ -273,3 +273,15 @@ def test_a_bare_verb_root_is_not_a_reading(catalog, profiles):
     stay = ColumnProfile(name="new_kalmasuresi", data_type="int", description="Depoda Kalma Süresi")
     sq = resolve(catalog, profiles + [orders(extra=[stay])], "elimizde hiç kalmamış sipariş sayısı")
     assert not any(q["column"] == "NEW_KALMASURESI" for q in sq.qualifier_columns), sq.qualifier_columns
+
+
+def test_a_missing_column_is_answered_with_the_tables_real_columns(profiles):
+    from semantic_layer.runtime.compiler import ExistingCompiler
+
+    c = ExistingCompiler.__new__(ExistingCompiler)
+    c.profiles = profiles + [orders()]
+    c.dialect, c.model_naming, c.period_in_sql, c.context, c.tables_of = "tsql", "mdl", False, {}, {}
+    hint = c.column_hint("SELECT new_kdvli_tutar FROM NEW_SIPARISBASE",
+                         "[42S22] [FreeTDS][SQL Server]Invalid column name 'new_kdvli_tutar'. (207)")
+    assert "new_kdvlitoplamtutar" in hint and "new_kdvli_tutar" in hint, hint
+    assert c.column_hint("SELECT 1", "some other error") == ""
