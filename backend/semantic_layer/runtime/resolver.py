@@ -556,7 +556,15 @@ class SemanticResolver:
                 sq.temporal = [span]
                 sq.explanation.append(
                     f"yıllık kırılım istendi, dönem söylenmedi → verinin tüm yılları ({span.params['from']}–{span.params['to']})")
-        if not sq.temporal and self.default_temporal is not None:
+        # A default period belongs to a question about something that *happens* on a date: a
+        # certified measure (ciro, tahsilat, sevk). A question about master data — which customers,
+        # which price lists, how many products carry a unit — has no date to restrict, and a year added
+        # to it was a restriction nobody asked for that the gate then could not find on any column.
+        # A count the resolver composed from "kaç" is not a certified measure either.
+        dated_measure = any(s_.semantic_type == SemanticType.METRIC and s_.mapping is not None
+                            and (s_.explain or {}).get("source") != "count_cue"
+                            for s_ in hits)
+        if not sq.temporal and self.default_temporal is not None and dated_measure:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
             if fallback is not None:
                 sq.temporal = [fallback]
@@ -866,6 +874,12 @@ class SemanticResolver:
                 sq.explanation.append(f"'{tok}' → '{metric.explain.get('evidence_key')}' ölçüsü (fiil kökünden, sertifikalı değil)")
             elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
                 record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
+            elif not is_negative(tok) and fold(tok) in _RECORD_VERBS and (left or right or covering or self._modifies_a_noun(qf.tokens, k, consumed)):
+                # "açılan sipariş", "kesilen fatura", "iade alan müşteri": the verb says how the record
+                # came to exist or reached the subject, not which records to keep. Every order was
+                # opened; a customer with returns already has the return filter beside the verb.
+                record.update(decision="GRAMMATICAL", evidence_source="record_verb")
+                sq.explanation.append(f"'{tok}' kaydın oluşumunu anlatan fiil; kayıtları daraltmaz")
             elif (named := self._column_for_state(sq, qf, k)) is not None and named.get("mention"):
                 # "planlanan ciro": the participle and the noun after it are together the name of a
                 # column. That is a measure being named, not a condition on the rows.
@@ -891,12 +905,6 @@ class SemanticResolver:
                               resolved_as=f"{state.mapping.entity}.{state.mapping.column} "
                                           f"{state.mapping.operator} {state.mapping.values}")
                 sq.explanation.append(state.explain["why"])
-            elif not is_negative(tok) and fold(tok) in _RECORD_VERBS and (left or right or covering or self._modifies_a_noun(qf.tokens, k, consumed)):
-                # "açılan sipariş", "kesilen fatura", "iade alan müşteri": the verb says how the record
-                # came to exist or reached the subject, not which records to keep. Every order was
-                # opened; a customer with returns already has the return filter beside the verb.
-                record.update(decision="GRAMMATICAL", evidence_source="record_verb")
-                sq.explanation.append(f"'{tok}' kaydın oluşumunu anlatan fiil; kayıtları daraltmaz")
             if record["decision"] == "UNKNOWN":
                 if tok not in sq.unhandled:
                     sq.unhandled.append(tok)
@@ -1108,16 +1116,31 @@ class SemanticResolver:
         # planned figure lives on a CRM table the question names by another word.
         nouns = {stem(t) for i, t in enumerate(tokens) if i != k and len(t) > 2 and stem(t) not in STOPWORDS_S}
         for entity, prof in self.by_entity.items():
-            own = {stem(w) for w in tokenize(prof.description or "")} | {stem(w) for w in tokenize(entity)}
-            if own & nouns:
+            if nouns & self._entity_name_stems(prof):
                 entities.add(entity)
         return entities
+
+    @staticmethod
+    def _entity_name_stems(prof) -> set[str]:
+        """The words a table is *called*, not every word written about it.
+
+        A CRM description is a sentence ("Bir müşteriyi veya potansiyel müşteriyi temsil eden
+        işletme"); matched word by word, half the catalog answered to "müşteri" and a state word found
+        a column on a table the question never read. The name is the description's first phrase when
+        it is a short one — the source's own title for the table — and the entity's own words.
+        """
+        title = (prof.description or "").split(".")[0].strip()
+        words = tokenize(title) if 0 < len(tokenize(title)) <= 3 else []
+        base = re.sub(r"(?i)^(new_|lg_)|base$", "", prof.entity or "")
+        return {stem(w) for w in words} | {stem(w) for w in tokenize(base.replace("_", " "))}
 
     @staticmethod
     def _text_answers(text: str, keys: set[str]) -> bool:
         for part in tokenize(text or ""):
             forms = {fold(part), stem(part), short_root(part)}
-            if any(key == f or (len(key) >= 4 and f.startswith(key)) or (len(f) >= 4 and key.startswith(f))
+            # Same root, or one is the other with a Turkish suffix on it. Four letters was not enough:
+            # "verilen" reached "Veri" columns and "açılan" reached "Açıklama".
+            if any(key == f or (len(key) >= 5 and f.startswith(key)) or (len(f) >= 5 and key.startswith(f))
                    for key in keys for f in forms if f):
                 return True
         return False
@@ -1318,7 +1341,8 @@ class SemanticResolver:
         m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, formula=formula)
         return ResolvedSlot(
             term="kayıt sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED", mapping=m, confidence=0.75,
-            explain={"why": f"soru adet soruyor → {entity} kayıtları {('anahtar ' + key) if key else 'satır'} üzerinden sayıldı"},
+            explain={"why": f"soru adet soruyor → {entity} kayıtları {('anahtar ' + key) if key else 'satır'} üzerinden sayıldı",
+                     "source": "count_cue"},
         )
 
     def _which_breakdown(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int]) -> Optional[ResolvedSlot]:

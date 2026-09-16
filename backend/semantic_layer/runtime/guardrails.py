@@ -58,6 +58,7 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
         if p.schema_name:
             qual = p.schema_name.upper()
             schemas.add(qual)
+            schemas.add(qual.replace(".", "_"))     # the prompt's single-identifier label
             # "Timas_MSCRM.dbo" is one qualifier and also two: a reference may spell either.
             for part in qual.split("."):
                 if part:
@@ -122,12 +123,24 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     # asked in logical terms would then be answered from it. Rank decides: a base table before a
     # view, a view before something whose name says it is a backup, and rows break the tie.
     by_entity: dict[str, SchemaProfile] = {}
+
+    def foreign(x: SchemaProfile) -> int:
+        # A table of another firm or period is not the one the deployment reads. Picked by rows, the
+        # biggest copy of an entity won, and a question in logical terms was answered from firm 021.
+        own = x.context or {}
+        return int(any(k in own and str(own[k]) != str(v) for k, v in (context or {}).items()))
+
     for entity, group in tables_of.items():
-        by_entity[entity] = min(group, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
+        by_entity[entity] = min(group, key=lambda x: (foreign(x), source_rank(x.table_name, is_view=x.row_count is None),
                                                       -(x.row_count or 0), x.table_name))
     for p in profiles:
-        by_table[f"{p.schema_name}_{p.table_name}".upper()] = p
-        by_table[f"{p.schema_name}.{p.table_name}".upper()] = p
+        # Every way a qualified name can reach this point: the prompt's label, a two- or three-part
+        # reference, and a schema that carries a database ("Timas_MSCRM.dbo") read by the parser as
+        # a database plus an underscored name.
+        for name in {p.table_name, _spelling(p, {})}:
+            by_table[_norm_key(p.schema_name, name)] = p
+            by_table[f"{p.schema_name}_{name}".upper()] = p
+            by_table[f"{p.schema_name}.{name}".upper()] = p
 
     def spread(prof: SchemaProfile) -> list[SchemaProfile]:
         """The tables of `prof`'s entity this period needs — one, unless the years span more.
@@ -158,8 +171,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     for node in tree.find_all(exp.Table):
         if not node.name or node.name.upper() in cte_names:
             continue
-        key = ((node.db + "_") if node.db else "") + node.name
-        found = by_table.get(key.upper()) or by_table.get(node.name.upper())
+        found = by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())
         if found is not None:
             seen_tables.setdefault(found.table_pattern, set()).add(found.table_name)
     already_spread = {pattern: len(names) for pattern, names in seen_tables.items()}
@@ -182,10 +194,9 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
             raw = node.name
-            key = ((node.db + "_") if node.db else "") + raw
             if raw.upper() in cte_names:
                 return node
-            prof = by_table.get(key.upper()) or by_table.get(raw.upper())
+            prof = by_table.get(_norm_key(node.catalog, node.db, raw)) or by_table.get(raw.upper())
             if prof is None:
                 lt = logical_table(raw)
                 prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
@@ -205,13 +216,27 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 alias = node.alias or prof.entity
                 return exp.Subquery(this=union, alias=exp.TableAlias(this=exp.to_identifier(alias)))
             new = _physical_table(wanted[0], context)
-            if node.alias:
-                new.set("alias", exp.TableAlias(this=exp.to_identifier(node.alias)))
+            # Without an alias the model qualifies columns by the name it wrote ("INVOICE.CLIENTREF").
+            # Renaming the table and leaving that qualifier behind is a column the server cannot bind,
+            # so the written name stays on as the alias.
+            alias = node.alias or raw
+            if alias.upper() != _spelling(wanted[0], context).upper():
+                new.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
             return new
         return node
 
     out = tree.transform(tx)
     return out.sql(dialect=dialect if dialect != "generic" else None)
+
+
+def _norm_key(*parts: Optional[str]) -> str:
+    """One spelling for a qualified table name, whatever separator put it together.
+
+    "Timas_MSCRM.dbo_NEW_X", "[Timas_MSCRM].[dbo].[NEW_X]" and "Timas_MSCRM_dbo_NEW_X" are the same
+    table; a lookup that only knew one of them sent the other to the server unchanged.
+    """
+    joined = "_".join(str(x) for x in parts if x)
+    return joined.replace(".", "_").upper()
 
 
 def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
@@ -225,6 +250,11 @@ def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
     """
     if "{" not in (prof.table_pattern or ""):
         return prof.table_name or prof.table_pattern
+    # A view or a copy can carry the pattern of a real firm table. If the pattern, filled with the
+    # profile's own context, does not give back the name the profile was read from, the pattern
+    # describes some other table and the stored name is the truth.
+    if prof.table_name and physical_name(prof.table_pattern, prof.context or {}).upper() != prof.table_name.upper():
+        return prof.table_name
     return physical_name(prof.table_pattern, {**prof.context, **context})
 
 

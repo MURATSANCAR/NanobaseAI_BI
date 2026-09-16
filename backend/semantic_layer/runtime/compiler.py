@@ -933,7 +933,10 @@ class ExistingCompiler:
         if self.period_in_sql and len(self.tables_of.get(p.entity) or []) > 1:
             return p.entity
         phys = physical_name(p.table_pattern, {**p.context, **self.context})
-        return f"{p.schema_name}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
+        # One identifier, not a dotted name: a schema that carries a database ("Timas_MSCRM.dbo")
+        # glued on with "_" gave "Timas_MSCRM.dbo_NEW_X", which the parser splits at the wrong dot.
+        schema = (p.schema_name or "").replace(".", "_")
+        return f"{schema}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
 
     def relevant_entities(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> list[str]:
         """Which tables this question can possibly need, most likely first.

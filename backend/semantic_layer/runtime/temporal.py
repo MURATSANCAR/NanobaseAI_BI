@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from semantic_layer.models import TemporalSlot
-from semantic_layer.normalize import fold
+from semantic_layer.normalize import cardinal, fold
 
 MONTHS = {
     "ocak": 1, "subat": 2, "mart": 3, "nisan": 4, "mayis": 5, "haziran": 6,
@@ -183,14 +183,37 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         y = int(y_all[0]) if y_all else today.year
         add(m, TemporalSlot(m.group(0).strip(), "MONTH", _month_start(y, mo), _next_month(y, mo), "MONTH", params={"year": y, "month": mo, "year_assumed": not y_all}))
     # --- relative
-    for m in re.finditer(r"\bson\s+(\d{1,3})\s+gun\w*", text):
-        n = int(m.group(1))
+    # "son üç ay", "son on beş gün": people write the count out as often as they type it.
+    _N = r"(\d{1,3}|[a-z]+(?:\s+[a-z]+)?)"
+
+    def _count(raw: str) -> Optional[int]:
+        raw = raw.strip()
+        if raw.isdigit():
+            return int(raw)
+        words = raw.split()
+        total = 0
+        for w in words:
+            v = cardinal(w)
+            if v is None:
+                return None
+            total += v
+        return total or None
+
+    for m in re.finditer(rf"\bson\s+{_N}\s+gun\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_DAYS", today - timedelta(days=n), today + timedelta(days=1), "DAY", params={"n": n}))
-    for m in re.finditer(r"\bson\s+(\d{1,2})\s+yil\w*", text):
-        n = max(1, min(20, int(m.group(1))))
+    for m in re.finditer(rf"\bson\s+{_N}\s+yil\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        n = max(1, min(20, n))
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_YEARS", date(today.year - n + 1, 1, 1), date(today.year + 1, 1, 1), "YEAR", params={"n": n}))
-    for m in re.finditer(r"\bson\s+(\d{1,2})\s+ay\w*", text):
-        n = int(m.group(1))
+    for m in re.finditer(rf"\bson\s+{_N}\s+ay\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
         y, mo = today.year, today.month
         start_m = mo - n
         while start_m <= 0:

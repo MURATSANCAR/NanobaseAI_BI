@@ -164,3 +164,23 @@ def test_a_number_is_not_a_participle(catalog, profiles):
     sq = resolve(catalog, profiles + [orders_with_dates()], "vadesi doksan günü aşan sipariş sayısı")
     assert not any("doksan" in c for c in sq.clarification), sq.clarification
 
+
+
+def test_every_label_the_prompt_uses_comes_back_as_the_stored_table(profiles):
+    """Round trip: what the model is told a table is called must physicalise to that table.
+
+    A CRM schema carries its database ("Timas_MSCRM.dbo"); glued to the table name with "_", the
+    label split at the wrong dot and fourteen questions reached the server with a name it lacks.
+    """
+    from semantic_layer.runtime.guardrails import allowed_tables, physicalize_sql
+
+    crm = orders()
+    crm.entity, crm.table_name, crm.table_pattern = "NEW_SIPARISBASE", "new_siparisBase", "new_siparisBase"
+    everything = profiles + [crm]
+    label = "Timas_MSCRM_dbo_new_siparisBase"
+    sql = f"SELECT COUNT(*) FROM {label} WHERE {label}.statuscode <> 1"
+    assert allowed_tables(sql, everything, {})[0], allowed_tables(sql, everything, {})
+    out = physicalize_sql(sql, everything, {})
+    assert "[Timas_MSCRM].[dbo].[new_siparisBase]" in out, out
+    # the written name survives as the alias, so the qualified column still binds
+    assert f"AS {label}" in out and f"{label}.statuscode" in out, out
