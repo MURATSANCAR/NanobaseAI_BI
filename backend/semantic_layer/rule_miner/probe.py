@@ -9,6 +9,7 @@ user's saved view) and queues everything else for the approval screen.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -16,7 +17,7 @@ from typing import Any, Callable, Iterable, Optional
 
 from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, Mapping, SemanticType
 from semantic_layer.normalize import normalize_term
-from semantic_layer.rule_miner.common import Candidate, Catalog, is_generic
+from semantic_layer.rule_miner.common import Candidate, Catalog, is_generic, sql_values
 
 log = logging.getLogger(__name__)
 
@@ -44,28 +45,22 @@ def group(cands: Iterable[Candidate]) -> list[Grouped]:
     return list(by.values())
 
 
-def _quoted(vals: list[str]) -> str:
-    out = []
-    for v in vals:
-        try:
-            float(v)
-            out.append(v)
-        except ValueError:
-            out.append("'" + v.replace("'", "''") + "'")
-    return ", ".join(out)
-
-
 def probe_sql(c: Candidate, catalog: Catalog, prof) -> Optional[str]:
     phys = catalog.physical_for(prof)
+
+    def spell(text: str) -> str:
+        # ENTITY.COLUMN references → the column as the source spells it
+        return re.sub(re.escape(c.entity) + r"\.([A-Za-z_][A-Za-z0-9_]*)", lambda m: "[" + Catalog.spelled(prof, m.group(1)) + "]", text)
+
     if c.semantic_type == SemanticType.COLUMN:
-        return f"SELECT TOP 1 [{c.column}] FROM {phys}"
+        return f"SELECT TOP 1 [{Catalog.spelled(prof, c.column)}] FROM {phys}"
     if c.semantic_type == SemanticType.DIMENSION_VALUE:
-        where = [f"[{c.column}] {c.operator} ({_quoted(c.values)})"]
+        where = [f"[{Catalog.spelled(prof, c.column)}] {c.operator} ({sql_values(c.values)})"]
         for cond in c.conditions:
-            where.append(cond.replace(f"{c.entity}.", ""))
+            where.append(spell(cond))
         return f"SELECT COUNT(*) AS n FROM {phys} WHERE " + " AND ".join(where)
     if c.semantic_type == SemanticType.METRIC and c.formula:
-        return f"SELECT {c.formula.replace(c.entity + '.', '')} AS v FROM {phys}"
+        return f"SELECT {spell(c.formula)} AS v FROM {phys}"
     return None
 
 

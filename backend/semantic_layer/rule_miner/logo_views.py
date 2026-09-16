@@ -15,13 +15,13 @@ import sqlglot
 from sqlglot import exp
 
 from semantic_layer.models import SchemaProfile, SemanticType
-from semantic_layer.rule_miner.common import Candidate, Catalog, norm_value, term_from_alias, usable_term
+from semantic_layer.rule_miner.common import Candidate, Catalog, norm_value, sql_values, term_from_alias, usable_term
 
 _HEAD = re.compile(r"(?is)^.*?create\s+view\s+.*?\bas\b")
 _LINE_COMMENT = re.compile(r"--[^\n]*")
 _BLOCK_COMMENT = re.compile(r"/\*.*?\*/", re.S)
 _NUMERIC = re.compile(r"int|decimal|numeric|float|real|money|smallint|bigint|tinyint", re.I)
-_NON_ADDITIVE = re.compile(r"PRICE|RATE|PER\b|PERC|FACT|CURR|REF$|NR$|CODE|STAT|TYPE|LEVEL|LOGICALREF", re.I)
+_NON_ADDITIVE = re.compile(r"PRICE|RATE|PER\b|PERC|FACT|CURR|REF$|NR$|CODE|STAT|TYPE|LEVEL", re.I)
 
 
 def body_of(definition: str) -> str:
@@ -133,7 +133,7 @@ def _label_maps(select: exp.Select, sources, view: str) -> Iterator[Candidate]:
             head, *rest = parts
             if any(p[0].entity != head[0].entity for p in rest):
                 continue
-            conds = [f"{p[0].entity}.{p[1]} IN ({', '.join(p[3])})" for p in rest]
+            conds = [f"{p[0].entity}.{p[1]} IN ({sql_values(p[3])})" for p in rest]
             yield Candidate(term, SemanticType.DIMENSION_VALUE, head[0].entity, head[0].table_pattern, head[1], "IN", head[3],
                             conditions=conds, source=view, kind="label_map", schema=head[0].schema_name or "")
 
@@ -177,7 +177,9 @@ def _aliases(select: exp.Select, sources, view: str) -> Iterator[Candidate]:
             continue                                              # SUM(PRICE) is not a measure anyone asked for
         for c in expr.find_all(exp.Column):
             c.set("table", exp.to_identifier(prof.entity))
-            c.set("this", exp.to_identifier(c.name.upper()))
+            c.set("db", None)
+            c.set("catalog", None)
+            c.set("this", exp.to_identifier(c.name.upper(), quoted=not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", c.name)))
         body = expr.sql(dialect="tsql")
         # An expression the view already aggregates is a measure as written; a row expression is
         # summed to become one.

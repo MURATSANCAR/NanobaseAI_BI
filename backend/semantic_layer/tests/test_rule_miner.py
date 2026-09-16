@@ -59,6 +59,7 @@ def test_a_crm_saved_view_is_a_named_state():
     assert c.term == "yk onayında bekleyen sözleşmeler" and c.entity == "NEW_SOZLESMEBASE"
     assert c.column == "STATUSCODE" or c.column == "STATECODE"
     assert c.conditions == ["NEW_SOZLESMEBASE.NEW_SOZLESMESTATUSU IN (4)"]
+    assert CAT.physical_for(SOZLESME) == "[Timas_MSCRM].[dbo].[new_sozlesme]", "the logical view, not the Base table"
     mine = xml.replace('<condition attribute="new_sozlesmestatusu" operator="eq" value="4"/>',
                        '<condition attribute="ownerid" operator="eq-userid"/>')
     assert crm_queries.candidates("Bana Ait Sözleşmeler", mine, CAT) == [], "a personal list is not a business state"
@@ -71,5 +72,12 @@ def test_the_probe_reads_the_newest_copy_and_the_policy_certifies_only_survivors
     fat = next(x for x in logo_views.candidates("V", VIEW, CAT) if x.term == "faturalar")
     sql = probe.probe_sql(fat, CAT, CLFLINE)
     assert sql == "SELECT COUNT(*) AS n FROM [dbo].[LG_411_01_CLFLINE] WHERE [MODULENR] IN (4)"
+    (yk,) = crm_queries.candidates("YK Onayında", '<fetch><entity name="new_sozlesme"><filter type="and"><condition attribute="statecode" operator="eq" value="0"/><condition attribute="new_sozlesmestatusu" operator="eq" value="4"/></filter></entity></fetch>', CAT)
+    assert probe.probe_sql(yk, CAT, SOZLESME) == "SELECT COUNT(*) AS n FROM [Timas_MSCRM].[dbo].[new_sozlesme] WHERE [statecode] IN (0) AND [new_sozlesmestatusu] IN (4)", "CRM spells its columns in lower case and compares case-sensitively"
     assert probe.decide(probe.group([fat])[0], True, conflict=False) == "CERTIFIED"
     assert probe.decide(probe.group([fat])[0], True, conflict=True) == "CANDIDATE"
+    assert probe.decide(probe.group([fat])[0], True, conflict=False, ambiguous=True) == "CANDIDATE"
+    kanal = next(x for x in logo_views.candidates("V", VIEW, CAT) if x.term == "kanal")
+    assert probe.decide(probe.group([kanal])[0], True, conflict=False) == "CANDIDATE", "one view's column alias waits for a person"
+    tutar = probe.group([logo_views.Candidate("tutar", "COLUMN", "CLFLINE", "LG_{n0}_{n1}_CLFLINE", "AMOUNT", "COLUMN", kind="label_map")])[0]
+    assert probe.decide(tutar, True, conflict=False) == "CANDIDATE", "a generic word is never self-certified"

@@ -52,6 +52,18 @@ def norm_value(v: str) -> str:
     return t
 
 
+def sql_values(vals: Iterable[str]) -> str:
+    """Numbers bare, words quoted: `IN (1, 2)` / `IN ('SYSTEM')`."""
+    out = []
+    for v in vals:
+        try:
+            float(v)
+            out.append(str(v))
+        except (TypeError, ValueError):
+            out.append("'" + str(v).replace("'", "''") + "'")
+    return ", ".join(out)
+
+
 def usable_term(term: str) -> bool:
     if not term or len(term) < 3 or len(term) > 60:
         return False
@@ -117,10 +129,21 @@ class Catalog:
         if "{n0}" in (prof.table_pattern or "") and same:
             best = max(same, key=lambda p: str((p.context or {}).get("n0") or ""))
             return f"[dbo].[{best.table_name}]"
-        if "MSCRM" in (prof.schema_name or "").upper():
-            return f"[Timas_MSCRM].[dbo].[{prof.table_name}]"
-        return f"[dbo].[{prof.table_name}]"
+        schema = prof.schema_name or "dbo"
+        if "." in schema:
+            # Another database, named by the profile's schema ("Db.dbo"). The entity's logical view
+            # joins Base and ExtensionBase: every attribute a saved view filters on is there, where the
+            # Base table alone lacks the custom ones.
+            db, sch = schema.split(".", 1)
+            name = prof.table_name[:-4] if prof.table_name.lower().endswith("base") else prof.table_name
+            return f"[{db}].[{sch}].[{name}]"
+        return f"[{schema}].[{prof.table_name}]"
 
     @staticmethod
     def has_column(prof: SchemaProfile, column: str) -> bool:
         return any(c.name.upper() == column.upper() for c in prof.columns)
+
+    @staticmethod
+    def spelled(prof: SchemaProfile, column: str) -> str:
+        """The column as the source spells it: the CRM database compares identifiers case-sensitively."""
+        return next((c.name for c in prof.columns if c.name.upper() == column.upper()), column)
