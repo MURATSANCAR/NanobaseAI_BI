@@ -17,7 +17,8 @@ def gate(tmp_path, monkeypatch):
     location.write_text(json.dumps(baseline))
     monkeypatch.setattr(module, "BASELINE", location)
     current = copy.deepcopy(baseline)
-    monkeypatch.setattr(module, "measure", lambda _: current)
+    # measure(out, jobs): the gate runs the evaluation itself and decides its own parallelism
+    monkeypatch.setattr(module, "measure", lambda out, jobs=1: current)
     return module, current
 
 def test_unchanged_passes(gate):

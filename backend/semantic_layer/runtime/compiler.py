@@ -96,11 +96,38 @@ class Dialect:
             return sql_select.replace("SELECT ", f"SELECT TOP {int(n)} ", 1)
         return sql_select + f"\nLIMIT {int(n)}"
 
+    def join_on(self, left: str, right: str, hint: Optional[dict] = None) -> str:
+        """`left = right`, compared the way a measured link says the two sides must be.
+
+        An integer stored as text is cast (TRY_CAST: one stray non-numeric value must not fail the
+        whole statement), and a comparison between databases with different collations names one —
+        SQL Server refuses `Turkish_CI_AI = SQL_Latin1_General_CP1254_CI_AS` outright otherwise.
+        """
+        hint = hint or {}
+        cast = hint.get("join_cast")
+        if cast and re.fullmatch(r"[A-Za-z]+(\(\d+(,\s*\d+)?\))?", str(cast)):
+            left = f"TRY_CAST({left} AS {cast})" if self.family == "tsql" else f"CAST({left} AS {cast})"
+        if hint.get("join_collate") and self.family == "tsql":
+            left = f"{left} COLLATE DATABASE_DEFAULT"
+        return f"{left} = {right}"
+
     def null_div(self, a: str, b: str) -> str:
         return f"{a} / NULLIF({b}, 0)"
 
 
 _ADDITIVE = re.compile(r"\b(SUM|AVG)\s*\(", re.I)
+
+
+def _join_note(rel: dict) -> str:
+    """What the model must write for a measured link to compile: the cast, the collation, the periods."""
+    notes = []
+    if rel.get("join_cast"):
+        notes.append(f"TRY_CAST({rel['column']} AS {rel['join_cast']}) ile karşılaştır")
+    if rel.get("join_collate"):
+        notes.append("farklı veritabanı: COLLATE DATABASE_DEFAULT ekle")
+    if rel.get("period_semantics") == "periodic":
+        notes.append("hedefin tüm dönem tabloları birleşik okunur")
+    return f" ({'; '.join(notes)})" if notes else ""
 
 
 def _is_additive(formula: Optional[str]) -> bool:
@@ -575,13 +602,21 @@ class DeterministicCompiler:
             # database refused the query as an invalid column name. Invisible until an entity both
             # spans periods and is joined — the shape a breakdown by a joined dimension produces.
             own = ({col} if ent == joined else set()) | ({ref_col} if ref_ent == joined else set())
+            hint = self.conventions.join_hints.get((ent, col, ref_ent, ref_col)) or {}
+            chosen = joined_per_firm.get(joined)
+            if chosen is None and not by_firm and ref_ent == joined and hint.get("period_semantics") == "periodic":
+                # A reference into a table kept one copy per period, from a table that is not: the
+                # link was measured to hit disjoint keys in each period, so every period is joined.
+                # Picking one copy — what a same-firm dimension gets — silently drops every row whose
+                # target lives in another year.
+                chosen = sorted(self.tables_of.get(joined) or [], key=lambda x: x.table_name)
             j_source, j_tables, j_note = self._source(joined, q, self._needed_columns(joined, plan, q) | own, joined,
                                                       spread=False, anchor=anchor,
-                                                      chosen=joined_per_firm.get(joined), firm_tag=by_firm and joined not in shared_entities)
+                                                      chosen=chosen, firm_tag=by_firm and joined not in shared_entities)
             read_tables += j_tables
             if j_note:
                 explain.append(j_note)
-            on = plan.join_overrides.get((ent,col,ref_ent,ref_col)) or f"{ent}.{d.q(col)} = {ref_ent}.{d.q(ref_col)}"
+            on = plan.join_overrides.get((ent,col,ref_ent,ref_col)) or d.join_on(f"{ent}.{d.q(col)}", f"{ref_ent}.{d.q(ref_col)}", hint)
             if by_firm and ent in shared_entities and ref_ent not in shared_entities:
                 return None  # a shared lookup cannot determine a firm-specific target
             if by_firm and ent not in shared_entities and ref_ent not in shared_entities:
@@ -1149,7 +1184,7 @@ class ExistingCompiler:
         left_out = len({p.entity for p in self.profiles}) - len(shown)
         for p in shown:
             pk = ", ".join(p.primary_key) or "-"
-            rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}' for r in p.relationships[:6])
+            rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}{_join_note(r)}' for r in p.relationships[:6])
             line = f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon'
             if p.description:
                 line += f" — {p.description[:160]}"

@@ -123,10 +123,14 @@ def test_without_a_mail_server_nothing_is_pretended(monkeypatch):
 def test_endpoints_measure_a_real_question_on_create(catalog, logo_connector, settings, monkeypatch):
     from semantic_bridge.app import Runtime, create_app
 
+    from semantic_bridge import board as board_mod
+
     monkeypatch.delenv("ALERT_SMTP_HOST", raising=False)
     monkeypatch.setenv("ALERT_MEASURE_ON_CREATE", "sync")
+    # An alert belongs to a person: the endpoints resolve one from the login service's cookie.
+    monkeypatch.setattr(board_mod, "_fetch_user", lambda cookie: "ayse")
     runtime = Runtime(settings, store=catalog, connector=logo_connector, llm=None)
-    client = TestClient(create_app(runtime))
+    client = TestClient(create_app(runtime), cookies={"__Secure-timas_session": "test"})
     made = client.post("/api/v1/alerts", json={"title": "Net ciro", "question": "2026 yılında net ciro",
                                                 "condition": "gt", "threshold": -1, "recipients": "cfo@example.com"})
     assert made.status_code == 200, made.text

@@ -118,9 +118,17 @@ def values_are_sensitive(values: Iterable[str], *, threshold: float = 0.6,
 def classify(column: str, values: Iterable[str] = (), data_type: str = "") -> Optional[str]:
     """Return the reason a column is personal data, or None."""
     values = list(values)
+    # A declared flag type cannot hold a phone number or an identity number, whatever the column is
+    # called. Values alone are weaker evidence: a sample of two short codes out of a column named for
+    # personal data is a sample, not a proof, and unmasking it is the expensive mistake.
+    if _FLAG_TYPES.match((data_type or "").strip()):
+        return None
+    by_name = name_is_sensitive(column)
+    if by_name:
+        return by_name
     if holds_codes_not_personal_data(data_type, values):
         return None
-    return name_is_sensitive(column) or values_are_sensitive(values)
+    return values_are_sensitive(values)
 
 
 MASK = "•••"
