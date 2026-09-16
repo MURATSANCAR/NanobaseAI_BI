@@ -36,5 +36,33 @@ Veritabanı–yedek tarihi–işlem dönemi eşlemesi ve örtüşen kayıtlarda 
 Kullanıcının 2026-09-13 kararı bağlayıcıdır: bu depoda tek trunk `main`'dir. Diğer bütün dallar (`perf/full-overhaul-2026-08` dahil) `main`'e merge edilip silindi. Bundan sonra:
 
 - Yeni iş doğrudan `main` üzerinde yapılır veya `main`den açılan kısa ömürlü bir dal `main`e merge edilir edilmez silinir. Kalıcı ikinci bir uzun ömürlü dal (ör. `perf/*`, `dev`) açılmaz.
-- Bir oturum/worktree farklı bir dal üzerinde çalışıyor bulursa, işi bitince `main`e merge edip o dalı siler; branch'i "ana hat" gibi kullanmaya devam etmez.
+- Kalıcı bir dalda "birikmiş iş" bırakılmaz: bir dalda duran commit, `main`de olmadığı sürece kimse tarafından kurulmaz, denenmez ve bir sonraki iş onun üstüne gelmez.
+
+### Her geliştirme bitiminde: main'e taşıma (zorunlu adım)
+
+İş bittiğinde — commit atıldıktan ve [CLAUDE.md](CLAUDE.md)'deki belge güncellemesi yapıldıktan sonra — kullanıcı istemese de şu tur koşulur. Uygulama bir `claude/*` dalı ya da worktree açtıysa bile iş orada bırakılmaz.
+
+```bash
+# 1. main'i tazele, üstüne otur (çakışma varsa çözülür; günlük dosyasında iki giriş de korunur)
+git fetch origin && git rebase main
+
+# 2. main'e ileri sarma ile taşı — ana depo başka bir dizinde olduğu için -C ile
+git -C <ana-depo-yolu> merge --ff-only <dal-adı>
+
+# 3. yayınla ve dalı iki yerden birden sil
+git -C <ana-depo-yolu> push origin main
+git push origin --delete <dal-adı>
+git branch -d <dal-adı>
+```
+
+- **Taşınmamış iş var mı**, her turun sonunda buradan bakılır; sayı 0 değilse o dal da aynı turdan geçirilir:
+
+  ```bash
+  for b in $(git for-each-ref --format='%(refname:short)' refs/heads/ refs/remotes/origin/); do
+    echo "$(git rev-list --count main..$b)  $b"
+  done
+  ```
+
+- Push kimliği bulunmayan bir oturumda (`could not read Username for 'https://github.com'`) merge yerelde tamamlanır, kalan iki komut kullanıcıya **açıkça** bırakılır; "merge edildi" denip origin'de bırakmak olmaz.
+- Merge, dağıtımın yerine geçmez: sunucuya kurulan sürüm neyse `main` de o olmalıdır. Sunucuya yama atılıp `main`e girmemiş kod bırakılmaz.
 - Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
