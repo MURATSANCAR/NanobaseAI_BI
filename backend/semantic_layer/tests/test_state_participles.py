@@ -229,3 +229,13 @@ def test_the_models_reading_is_shown_above_the_answer():
 
     sql = "-- yorum: 'edilmemiş' → PAID = 0 olan satırlar\n-- yorum: 'aşmış' → bakiye > limit\nSELECT 1"
     assert interpretations(sql) == ["'edilmemiş' → PAID = 0 olan satırlar", "'aşmış' → bakiye > limit"]
+
+
+def test_a_reading_written_before_or_outside_the_sql_block_is_kept():
+    from semantic_layer.runtime.compiler import extract_sql, interpretations
+
+    inside = "```sql\n-- yorum: 'duran' → portföydeki çekler\nSELECT 1 FROM CSCARD WHERE STATUS = 1\n```"
+    assert extract_sql(inside) and interpretations(extract_sql(inside)) == ["'duran' → portföydeki çekler"]
+    outside = "-- yorum: 'duran' → portföydeki çekler\n```sql\nSELECT 1 FROM CSCARD WHERE STATUS = 1\n```"
+    assert interpretations(extract_sql(outside)) == ["'duran' → portföydeki çekler"]
+    assert extract_sql("```sql\n-- yorum: 'x' → yok\nNO_SQL: şemada yok\n```") is None

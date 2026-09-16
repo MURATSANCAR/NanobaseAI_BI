@@ -816,11 +816,17 @@ def interpretations(sql: str) -> list[str]:
 def extract_sql(text: str) -> Optional[str]:
     m = _SQL_BLOCK.search(text or "")
     sql = (m.group(1) if m else (text or "")).strip().rstrip(";").strip()
-    if not sql or sql.upper().startswith("NO_SQL"):
+    # Leading comment lines are allowed — the model's "-- yorum:" readings go there — and a reading
+    # the model wrote outside the fenced block is carried in, not lost with the prose around it.
+    readings = interpretations(text or "")
+    body = re.sub(r"(?m)^\s*--.*$\n?", "", sql).strip()
+    if not body or body.upper().startswith("NO_SQL"):
         return None
-    if not re.match(r"(?is)^\s*(with|select)\b", sql):
+    if not re.match(r"(?is)^\s*(with|select)\b", body):
         return None
-    return quote_numeric_aliases(sql)
+    missing = [r for r in readings if r not in interpretations(sql)]
+    head = "".join(f"-- yorum: {r}\n" for r in missing)
+    return head + quote_numeric_aliases(sql)
 
 
 #: How much of the operator documentation one prompt may carry. A local model has a fixed context and
@@ -1731,7 +1737,8 @@ class ExistingCompiler:
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
                                  explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
                                  certified=False, model_text=(text or "").strip()[:500])
-        certified = not q.unresolved and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots)
+        certified = (not q.unresolved and not q.model_qualifiers
+                     and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots))
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
 
     def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[str]:
