@@ -920,6 +920,18 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                              f"{entity}.{column} kolonunu WHERE'de kısıtla; hangi değerin ne demek olduğunu "
                              f"kolon açıklamasından oku ({want.get('description')}).", entity, column))
 
+    # A word the catalog cannot place: the model decides what it means, and must say so in a
+    # "-- yorum:" line the person reads above the answer. "alacak" answered as the sum of invoices
+    # issued looked like a receivables ageing until someone read the SQL.
+    if getattr(sq, "unresolved", None):
+        from semantic_layer.normalize import fold as _fold_u, stem as _stem_u
+        said = [_fold_u(r) for r in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or "")]
+        for word in sq.unresolved:
+            w, root = _fold_u(str(word)), _stem_u(str(word))
+            if not any(w in r or (root and root in r) for r in said):
+                out.append(Unmet("unresolved", f"'{word}' teriminin nasıl yorumlandığı yazılmadı",
+                                 f"Sorgunun başına -- yorum: '{word}' → <hangi tablo/kolon, hangi hesap> satırı ekle."))
+
     # Words left to the model. Two things are required of each: the model said how it read the word
     # (a "-- yorum:" line naming it), and the answer restricts something beyond what the question's
     # certified meanings already restrict — otherwise the word was dropped, whatever the comment says.

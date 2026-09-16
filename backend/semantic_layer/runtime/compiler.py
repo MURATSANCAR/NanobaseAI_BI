@@ -863,9 +863,19 @@ def clean_rules(text: str, budget: int = 0) -> str:
     return "\n".join(head)
 
 
+_PLAIN_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _ident(name: str) -> str:
+    """A column or table name as it must be written in SQL: bracketed when it carries a space, a dot
+    or a Turkish letter. Shown bare, "İŞLEM TİPİ" was written bare and the statement did not parse."""
+    return name if _PLAIN_IDENT.match(name or "") else f"[{name}]"
+
+
 _DIALECT_NOTES = {
     "tsql": ('Hedef veritabanı SQL Server (T-SQL). LIMIT yerine TOP kullan; GROUP BY içinde takma ad veya sıra numarası kullanma, ifadeyi tekrar yaz. '
-             'Ay kırılımı DATEFROMPARTS(YEAR(<tarih>), MONTH(<tarih>), 1); gün kırılımı CAST(<tarih> AS DATE).'),
+             'Ay kırılımı DATEFROMPARTS(YEAR(<tarih>), MONTH(<tarih>), 1); gün kırılımı CAST(<tarih> AS DATE). '
+             'Adında boşluk, nokta ya da Türkçe harf (İ, Ş, Ğ, Ü, Ö, Ç) bulunan her kolon ve tabloyu MUTLAKA [köşeli parantez] içinde yaz: [İŞLEM TİPİ]; tırnaksız yazılırsa sorgu çalışmaz.'),
     "postgres": ('Hedef veritabanı PostgreSQL. Ay kırılımı date_trunc(\'month\', <tarih>); gün kırılımı <tarih>::date; satır sınırı LIMIT.'),
     "sqlite": ("Hedef veritabanı SQLite. Ay kırılımı strftime('%Y-%m-01', <tarih>); satır sınırı LIMIT."),
 }
@@ -1204,7 +1214,7 @@ class ExistingCompiler:
                 if d.get("text"):
                     note = str(d["text"]).strip()
                     break
-        cols = ", ".join(c.name for c in p.columns[:12])
+        cols = ", ".join(_ident(c.name) for c in p.columns[:12])
         return f"{note[:160]} [kolonlar: {cols}]" if note else f"[kolonlar: {cols}]"
 
     def narrow(self, q: SemanticQuery, entities: list[str], *, report: Optional[dict] = None) -> list[str]:
@@ -1608,7 +1618,10 @@ class ExistingCompiler:
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
-            "## ÇÖZÜMLENEMEYEN TERİMLER\n" + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
+            # A word the catalog does not define is the model's reading, and the person is owed
+            # that reading: without it "alacak" was quietly answered as the sum of invoices issued.
+            "## ÇÖZÜMLENEMEYEN TERİMLER (her biri için sorgunun EN BAŞINA -- yorum: '<kelime>' → <hangi tablo/kolon, hangi hesap> satırı yaz)\n"
+            + (", ".join(q.unresolved) if q.unresolved else "(yok)"),
             # The person spelled out the report they want, column by column. Without this the model
             # sees only the words and routinely turns a requested column into a filter — the channel
             # asked for as the first column comes back as a WHERE and never appears in the result.
