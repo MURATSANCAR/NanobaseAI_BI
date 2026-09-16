@@ -158,6 +158,10 @@ Müşteri erişiminde kurumun TLS reverse proxy'si ve kimlik yönetimi kurulmal�
 bu operatör API'si doğrudan internete yayımlanmaz. BI portal bağlantısı bu
 altyapı teslimatında değiştirilmez.
 
+## İsteğe bağlı ikinci OCR okuyucusu
+
+`compose.ocr.yaml`, Türkçe destekli PaddleOCR servisini yalnız Editörün özel ağına ekler. Model dosyaları imaj içindedir; çalışma sırasında indirilmez. Gerçek sayfa karşılaştırması, otomatik metin bölgesi yeniden okuması ve alıntı uyuşmazlığı kontrolü: [OCR kurulum ve doğrulama](ocr/README.md). Bu araç devam eden analiz nesline kendiliğinden yazmaz; tek sayfa denemesi tam kitap kabulü değildir. Offline paket komutuna `--with-ocr` ekleyerek OCR imajını ve Compose tanımını dahil edin.
+
 ## Yedekleme, geri yükleme, sürüm paketi
 
 ```sh

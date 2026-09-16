@@ -1,0 +1,25 @@
+# Optional second reader; private API, no source upload to external providers.
+services:
+  ocr:
+    image: ${EDITOR_OCR_IMAGE:-nanobase-editor-ocr:3.2.0}
+    build: {context: ./ocr}
+    restart: unless-stopped
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ['/tmp:size=512m,mode=1777']
+    networks: [private]
+    cpus: 4
+    cpu_shares: 128
+    mem_limit: 4g
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/health",timeout=5)']
+      interval: 20s
+      timeout: 8s
+      retries: 5
+      start_period: 120s
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}

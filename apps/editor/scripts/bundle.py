@@ -17,6 +17,11 @@ shutil.copytree(root, source, ignore=shutil.ignore_patterns('.env','secrets','ru
 config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))
 images = sorted({service['image'] for service in config['services'].values()})
 with_models = '--with-models' in sys.argv
+with_ocr = '--with-ocr' in sys.argv
+if with_ocr:
+    ocr_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.ocr.yaml','config','--format','json']))
+    config['services']['ocr'] = ocr_config['services']['ocr']
+    images = sorted(set(images) | {ocr_config['services']['ocr']['image']})
 if with_models:
     model_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.models.yaml','--profile','models','config','--format','json']))
     config['services'].update(model_config['services'])
@@ -44,12 +49,13 @@ for service, definition in config['services'].items():
     offline_services[service] = {'image':tag,'pull_policy':'never'}
 (source/'compose.offline.yaml').write_text(json.dumps({'services':offline_services},indent=2))
 with (source/'.env.example').open('a') as stream:
-    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + 'compose.offline.yaml\n')
+    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + 'compose.offline.yaml\n')
     if with_models:
         stream.write('COMPOSE_PROFILES=models\n')
 inspection = json.loads(subprocess.check_output(['docker','image','inspect',*sorted(tags)]))
 subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*sorted(tags)],check=True)
 manifest = {'kind':'editor-foundation-offline', 'architecture':'linux/amd64',
+            'ocr_included':with_ocr,
             'release':config['services']['api']['environment']['EDITOR_RELEASE'],
             'images':[{'id':i['Id'],'tags':[tag],'digests':i['RepoDigests']} for tag,i in zip(sorted(tags),inspection)],
             'model_qualification':'candidate weights included; semantic acceptance pending' if with_models else 'pending; LLM/VLM weights not included', 'files':{}}
