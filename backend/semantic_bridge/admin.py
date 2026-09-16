@@ -164,6 +164,10 @@ def store_keys(store: str) -> list[str]:
 
 #: Ayarı kaydedilince neyin yeniden kurulacağı; köprü (app.py) bu listelere bakar.
 LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_SEC")
+#: Modelin ürün içindeki adı. Hangi sağlayıcının hangi modeli olduğu bir kurulum ayrıntısıdır ve
+#: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "Zeki AI" kimliğiyle aynı
+#: kural). Teknik ad, düzeltilecek yerde — «Model» ayarının kendisinde — duruyor.
+LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "NanobaseAI")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
@@ -619,7 +623,7 @@ def llm_test() -> tuple[bool, str]:
         text = " ".join((out or "").split())[:60]
         if not text:
             return False, f"Model bağlandı ({ms} ms) ama boş cevap verdi."
-        return True, f"Cevap geldi ({ms} ms). {model} → «{text}»"
+        return True, f"Cevap geldi ({ms} ms). {LLM_DISPLAY} → «{text}»"
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"[:400]
 

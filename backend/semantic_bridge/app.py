@@ -2908,7 +2908,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "users": len(people), "admins": len(admin_mod.admins()),
             },
             "email": alerts_mod.email_status(),
-            "engine": {"model": r.settings.llm_model, "llm": bool(r.llm), "db": bool(r.connector),
+            "engine": {"model": admin_mod.LLM_DISPLAY, "llm": bool(r.llm), "db": bool(r.connector),
                        "catalog": r.store.status_counts(tenant, ds), "profiles": len(r.profiles)},
             **admin_mod.system_status(),
             "recent": admin_mod.audit_list(engine, limit=8)["items"],
