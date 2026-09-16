@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör PaddleOCR gerçek sayfa pilotu
+
+- Türkçe destekli PP-OCRv5 ayrı, özel ağdaki Docker servisine eklendi; model revision/taban imaj sabit, ağırlıklar imaj içinde, 4 CPU/4 GiB. Offline paket için `--with-ocr` seçeneği eklendi; tam paket restore bu turda koşulmadı.
+- Gerçek PDF 38, yetkili API ve bağımsız PostgreSQL/hash karşılaştırmasıyla işlendi. 1600/2400 px süreleri 30,353/31,610 s; kritik olumsuzluk doğru, eski VLM alıntısı genel uyuşmazlık kapısında bloke. Dört bölgede harf/noktalama uyuşmazlığı var; tam kitap kabulü verilmedi. Kitap içeriği ve beklenen cevap uygulamaya yazılmadı.
+- Gerçek denemede görülen kırpım sonrası kelime sırası bozulması doğrudan satır tanımayla, OCR'ın sağlık yanıtını geciktirmesi ayrı sağlık iş parçacığıyla düzeltildi; son imajla aynı sayfa yeniden koşuldu, yük altında 15/15 sağlık yanıtı alındı. [Kanıt ve kapsam](editor/2026-09-16-ocr-page-pilot.md).
+
 ## 2026-09-16 — Editör kaynak adaylarının görünürlüğü ve geri dönüş denetimi
 
 - Sahne içindeki kişi/olay adayları açılabilir; atıflar özgün PDF sayfasına döner. Gerçek sunucu Chrome/API ile 320/390/768/1440 px kontrol edildi. Cevap statüsü ve modelin sınırlamaları görünür; analiz değişiminde eski cevaplar temizlenir. Henüz dolu cevap kabulü verilmedi.
