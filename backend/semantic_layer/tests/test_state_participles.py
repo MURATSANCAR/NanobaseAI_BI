@@ -183,7 +183,7 @@ def test_every_label_the_prompt_uses_comes_back_as_the_stored_table(profiles):
     out = physicalize_sql(sql, everything, {})
     assert "[Timas_MSCRM].[dbo].[new_siparisBase]" in out, out
     # the written name survives as the alias, so the qualified column still binds
-    assert f"AS {label}" in out and f"{label}.statuscode" in out, out
+    assert (f"AS {label}" in out or f"AS [{label}]" in out) and f"{label}.statuscode" in out, out
 
 
 def test_a_list_gets_no_year_nobody_asked_for(catalog, profiles):
@@ -361,7 +361,7 @@ def test_partitioned_relations_spread_in_lockstep_and_join_within_their_copy():
     out = physicalize_sql(sql, _copies(), {}, period=(date(2025, 1, 1), date(2027, 1, 1)))
     assert "LG_211_01_PAYTRANS" in out and "LG_411_01_PAYTRANS" in out, out
     assert "LG_211_01_INVOICE" in out and "LG_411_01_INVOICE" in out, out
-    assert out.count("__nb_firm") >= 5 and "[i].[__nb_firm] = [p].[__nb_firm]" in out.replace('"', "") or "__nb_firm] = " in out, out
+    assert "i.__nb_firm = p.__nb_firm" in out or "p.__nb_firm = i.__nb_firm" in out, out
 
 
 def test_a_single_year_question_reads_the_reference_table_of_the_same_copy():

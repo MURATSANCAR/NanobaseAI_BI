@@ -210,6 +210,10 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
         return prof
 
+    def wrote_physical(node: exp.Table) -> bool:
+        """The model named an actual table (LG_411_01_INVOICE), not the entity. What it named, it meant."""
+        return (by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())) is not None
+
     def is_dated(node: exp.Table, prof: SchemaProfile) -> bool:
         name_here = (node.alias or node.name or "").upper()
         return not dated_aliases or name_here in dated_aliases or prof.entity.upper() in dated_aliases
@@ -226,11 +230,13 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         prof = resolve_prof(node)
         if prof is None or not is_dated(node, prof) or "{n0}" not in (prof.table_pattern or ""):
             continue
+        if already_spread.get(prof.table_pattern, 0) > 1:
+            continue                     # the model spread the years itself; its copies are its own
         for x in spread(prof):
             firm = str((x.context or {}).get("n0") or "")
             if firm and firm not in firms:
                 firms.append(firm)
-    tagged: set[str] = set()          # aliases of relations that carry the firm tag
+    tagged: dict[str, str] = {}       # upper-cased alias → alias as written, for relations carrying the tag
 
     def in_step(prof: SchemaProfile) -> list[SchemaProfile]:
         """A partitioned relation read from the same copies as the dated one, in the same order."""
@@ -249,7 +255,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             prof = resolve_prof(node)
             if prof is None:
                 return node
-            lockstep = in_step(prof)
+            lockstep = [] if wrote_physical(node) else in_step(prof)
             if lockstep:
                 wanted = lockstep
             else:
@@ -269,7 +275,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 for nxt in parts[1:]:
                     union = exp.union(union, nxt, distinct=False)
                 if lockstep:
-                    tagged.add(alias.upper())
+                    tagged[alias.upper()] = alias
                 return exp.Subquery(this=union, alias=exp.TableAlias(this=exp.to_identifier(alias)))
             new = _physical_table(wanted[0], context)
             # Without an alias the model qualifies columns by the name it wrote ("INVOICE.CLIENTREF").
@@ -293,7 +299,10 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             others = {c.table.upper() for c in on.find_all(exp.Column) if c.table and c.table.upper() in tagged and c.table.upper() != right}
             if right in tagged and others:
                 left = sorted(others)[0]
-                join.set("on", exp.and_(on, exp.EQ(this=exp.column(_FIRM_COL, table=right), expression=exp.column(_FIRM_COL, table=left))))
+                # aliases as the model wrote them: under a Turkish collation `I` is not the upper
+                # case of `i`, so an upper-cased alias would name a relation that is not there
+                join.set("on", exp.and_(on, exp.EQ(this=exp.column(_FIRM_COL, table=tagged[right]),
+                                                    expression=exp.column(_FIRM_COL, table=tagged[left]))))
     # A column the model qualified by a name the rewrite no longer shows — the entity
     # ("NEW_PLANSORUMLULARIBASE.CreatedOn") while the table was written under its label, or the other
     # way round — cannot be bound by the server. When a relation of that entity appears exactly once,
