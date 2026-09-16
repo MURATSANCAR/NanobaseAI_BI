@@ -205,6 +205,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     def resolve_prof(node: exp.Table):
         raw = node.name
         prof = by_table.get(_norm_key(node.catalog, node.db, raw)) or by_table.get(raw.upper())
+        if prof is None:
             lt = logical_table(raw)
             prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
         return prof
