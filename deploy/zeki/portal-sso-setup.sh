@@ -44,6 +44,25 @@ block = """    # ZEKI-CHAT-BASLA
         proxy_cache off;
         proxy_hide_header X-Powered-By;
     }
+    # Meteor forwards prefixed POSTs (/timas/sohbet/api/...) to the static handler (405), so the
+    # API is proxied without the prefix; GET and POST both work there.
+    location ^~ /timas/sohbet/api/ {
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        error_page 401 = @zeki_chat_login;
+        client_max_body_size 0;
+        proxy_pass http://127.0.0.1:4000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+        proxy_request_buffering off;
+        proxy_hide_header X-Powered-By;
+    }
     location @zeki_chat_login {
         return 302 /timas/;
     }
