@@ -17,12 +17,10 @@ map $http_upgrade $zeki_connection_upgrade {
 }
 EOF
 sudo python3 - "$SITE" <<'EOF'
-import sys
+import re, sys
 p = sys.argv[1]; s = open(p).read()
-if "/timas/sohbet/" in s:
-    print("  nginx blogu zaten var")
-else:
-    block = """    # Zeki AI sohbet (ayri Docker, 127.0.0.1:4000). Portal oturumu olmayan istek gecmez.
+# Zeki: buffering MUST be off for SockJS/DDP streaming, or messages arrive truncated and login hangs.
+block = """    # ZEKI-CHAT-BASLA
     location = /timas/sohbet {
         return 302 /timas/sohbet/;
     }
@@ -41,18 +39,24 @@ else:
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_read_timeout 3600s;
         proxy_send_timeout 3600s;
+        proxy_buffering off;
         proxy_request_buffering off;
+        proxy_cache off;
         proxy_hide_header X-Powered-By;
     }
     location @zeki_chat_login {
         return 302 /timas/;
     }
+    # ZEKI-CHAT-BITTI
 
 """
-    anchor = "    location /timas/ {\n        alias /data/nanobaseai/bi/cockpit/dist/;"
-    assert anchor in s, "nginx: /timas/ blogu bulunamadi, elle bakin"
-    open(p, "w").write(s.replace(anchor, block + anchor, 1))
-    print("  nginx blogu eklendi")
+s = re.sub(r"    # ZEKI-CHAT-BASLA.*?    # ZEKI-CHAT-BITTI\n\n", "", s, flags=re.S)
+s = re.sub(r"    # Zeki AI sohbet \(ayri Docker.*?    location @zeki_chat_login \{\n        return 302 /timas/;\n    \}\n\n", "", s, flags=re.S)
+anchor = "    location /timas/ {\n        alias /data/nanobaseai/bi/cockpit/dist/;"
+assert anchor in s, "nginx: /timas/ blogu bulunamadi, elle bakin"
+s = s.replace(anchor, block + anchor, 1)
+open(p, "w").write(s)
+print("  nginx blogu guncellendi (proxy_buffering off)")
 EOF
 sudo nginx -t
 
