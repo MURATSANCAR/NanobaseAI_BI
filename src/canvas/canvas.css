@@ -388,6 +388,8 @@
    ve animasyonsuz dizer (BoardScreen `printing`); burada kâğıtta kaydırma çubuğu ve kesik içerik
    kalmaması sağlanır: her kap tam boyuna açılır, tablo bütün satırlarıyla basılır. */
 @media print {
+  /* Kâğıtta ekran yakınlaştırması geçerli değil; pano 700 px yazı alanına göre çizilir. */
+  .shell-zoom-stage { zoom: 1 !important; }
   @page {
     size: A4 portrait;
     margin: 12mm;
