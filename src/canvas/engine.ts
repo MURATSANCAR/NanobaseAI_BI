@@ -667,6 +667,52 @@ export type AdminUser = { username: string; cards: number; reports: number; acti
 
 export type AuditQuery = { kind?: string; action?: string; actor?: string; q?: string; before?: number };
 
+/* --------------------------------------------------------------- promt izleyici */
+
+/** Promt izleyicide liste satırı (hafif: tam sonuç/çözümleme yok). */
+export type PromptRow = {
+  id: string;
+  question: string;
+  username: string | null;
+  threadId: string | null;
+  sql: string | null;
+  compiler: string | null;
+  answerType: string | null;
+  answerSummary: string | null;
+  executed: boolean;
+  rowCount: number | null;
+  latencyMs: number | null;
+  error: string | null;
+  validated: boolean | null;
+  catalogVersion: number | null;
+  reviewFlag: 'todo' | 'fixed' | 'ignored' | null;
+  reviewNote: string | null;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  createdAt: string | null;
+};
+
+/** Tek promtun her şeyi: SQL, tam sonuç satırları, semantik çözümleme, kapı kararları. */
+export type PromptDetail = PromptRow & {
+  resolved: Record<string, unknown>;
+  result: { columns: Array<{ name: string }>; records: Array<Record<string, unknown>>; totalRows?: number; truncated?: boolean; _truncated_store?: boolean } | null;
+  gate: Record<string, unknown> | null;
+};
+
+export type PromptOverview = {
+  sinceDays: number;
+  total: number;
+  answered: number;
+  failed: number;
+  todo: number;
+  byType: Record<string, number>;
+  byCompiler: Record<string, number>;
+  unresolvedTerms: Array<[string, number]>;
+  topFailing: Array<{ question: string; count: number }>;
+};
+
+export type PromptQuery = { limit?: number; offset?: number; only?: string; q?: string; user?: string; days?: number };
+
 const qs = (o: Record<string, string | number | undefined>) => {
   const p = new URLSearchParams();
   Object.entries(o).forEach(([k, v]) => {
@@ -707,6 +753,14 @@ export const adminApi = {
   deleteCard: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/cards/${encodeURIComponent(id)}`, undefined, 30_000),
   users: () => send<{ items: AdminUser[] }>('GET', '/api/v1/admin/users', undefined, 30_000),
   audit: (q: AuditQuery) => send<{ items: AuditItem[]; next: number | null }>('GET', `/api/v1/admin/audit${qs(q)}`, undefined, 30_000),
+  prompts: (q: PromptQuery) =>
+    send<{ items: PromptRow[]; hasMore: boolean; nextOffset: number | null }>('GET', `/api/v1/admin/prompts${qs(q)}`, undefined, 30_000),
+  promptsOverview: (days = 30) => send<PromptOverview>('GET', `/api/v1/admin/prompts/overview${qs({ days })}`, undefined, 30_000),
+  prompt: (id: string) => send<PromptDetail>('GET', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, undefined, 30_000),
+  markPrompt: (id: string, b: { flag?: string; note?: string }) =>
+    send<PromptDetail>('PATCH', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, b, 30_000),
+  /** CSV indirme adresi (aynı köken, oturum çerezi taşınır). */
+  promptsExportUrl: (q: PromptQuery) => `${ENGINE_BASE}/api/v1/admin/prompts/export.csv${qs(q)}`,
 };
 
 /* ------------------------------------------------------------------ kişi tercihleri */
