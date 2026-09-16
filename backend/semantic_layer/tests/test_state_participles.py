@@ -186,18 +186,19 @@ def test_every_label_the_prompt_uses_comes_back_as_the_stored_table(profiles):
     assert f"AS {label}" in out and f"{label}.statuscode" in out, out
 
 
-def test_a_count_of_records_gets_no_year_nobody_asked_for(catalog, profiles):
-    """"Toplam kaç sipariş kaydı var" asks about all of them; a default year made the gate hunt for
-    a date restriction the question never wanted, on a table whose date column was a guess."""
+def test_a_list_gets_no_year_nobody_asked_for(catalog, profiles):
+    """A question about master data has no date to restrict. A default year added to it became a
+    restriction the gate then hunted for on a column nobody chose, and the answer was refused."""
     import datetime as dt
     from semantic_layer.models import TemporalSlot
 
     year = TemporalSlot(text="varsayılan", primitive="YEAR", start=dt.date(2026, 1, 1), end=dt.date(2027, 1, 1),
                         grain="YEAR", params={"year": 2026, "default": True})
-    r = SemanticResolver(catalog, TENANT, DS, profiles + [orders()], default_temporal=year)
-    sq = r.resolve("toplam kaç iptal edilen sipariş kaydı var", today=TODAY)
-    assert not sq.temporal, [t.to_dict() for t in sq.temporal]
-    assert any("tüm kayıtlar" in e for e in sq.explanation), sq.explanation
+    r = SemanticResolver(catalog, TENANT, DS, profiles, default_temporal=year)
+    listing = r.resolve("kanal bazında cari listesi", today=TODAY)
+    assert not listing.temporal and any("tüm kayıtlar" in e for e in listing.explanation), listing.explanation
+    measure = r.resolve("net ciro", today=TODAY)
+    assert measure.temporal and measure.temporal[0].params.get("default"), "a measure still gets the default year"
 
 
 def test_written_counts_are_periods():
