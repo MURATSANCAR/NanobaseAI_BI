@@ -12,8 +12,9 @@ import httpx
 from psycopg.types.json import Jsonb
 from editor.book_store import ROOT, sha, identifier, get_records, source_for, fence
 from editor.config import connection, code_manifest
+from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v1'
+VERSION = 'source-spans-v2'
 
 
 def norm(value):
@@ -28,12 +29,25 @@ def negation(value):
     return re.findall(r'\b\w*(?:mıyor|miyor|muyor|müyor|madı|medi)\w*\b|\b(?:değil|yok|hayır)\b', value.lower())
 
 
-def quote_check(quote, rows):
-    supported = [r for r in rows if norm(quote) and norm(quote) in norm(r['data']['text'])]
-    if supported:
-        return 'MATCH' if all(r['data']['status']=='TEXT_AGREED' for r in supported) else 'SOURCE_NEEDS_REVIEW'
+def quote_tokens(value):
+    value = re.sub(r'-\s*\n\s*', '', value)
+    value = unicodedata.normalize('NFKC',value).replace('İ','i').replace('I','ı').lower()
+    return re.findall(r'[^\W_]+',value)
+
+
+def quote_check(quote, rows, all_rows=None):
+    if not isinstance(quote,str) or not quote_tokens(quote) or not rows:
+        return 'QUOTE_MISMATCH'
+    ids=[str(r['id']) for r in rows]
+    if len(set(ids))!=len(ids): return 'DUPLICATE_SPAN_REFERENCE'
+    if all_rows is not None:
+        positions={str(r['id']):i for i,r in enumerate(reading_order(all_rows))}
+        order=[positions.get(r,-1) for r in ids]
+        if -1 in order or order!=list(range(order[0],order[0]+len(order))):
+            return 'NONCONTIGUOUS_SOURCE_SPANS'
     joined='\n'.join(r['data']['text'] for r in rows)
-    if norm(quote) and norm(quote) in norm(joined):
+    needle=quote_tokens(quote); haystack=quote_tokens(joined)
+    if any(haystack[i:i+len(needle)]==needle for i in range(len(haystack)-len(needle)+1)):
         return 'MATCH' if rows and all(r['data']['status']=='TEXT_AGREED' for r in rows) else 'SOURCE_NEEDS_REVIEW'
     if rows and bool(negation(quote)) != bool(negation(joined)):
         return 'POSSIBLE_NEGATION_FLIP'
@@ -45,15 +59,48 @@ def save(job, kind, key, data):
     return commit(job, kind, key, data)
 
 
-def optical(job, evidence, document, root):
+def reused_reading(parent,evidence):
+    """Reuse immutable machine measurements, never claims or review decisions."""
+    if not parent: return None
+    key=evidence['record_key']; page=evidence['data']['pdf_page']
+    readings={r['record_key']:r for r in get_records(parent,'page_readings')}
+    layouts={r['record_key']:r for r in get_records(parent,'layout_regions')}
+    prior={r['record_key']:r for r in get_records(parent,'evidence')}
+    if key not in readings or key not in layouts or key not in prior: return None
+    previous=prior[key]['data']; current=evidence['data']
+    if any(previous[k]!=current[k] for k in ('source_sha256','render_sha256','ocr_render_sha256','ocr_artifact_sha256')):
+        raise RuntimeError('REUSED_SOURCE_HASH_MISMATCH')
+    spans=[r for r in get_records(parent,'source_spans') if r['data']['pdf_page']==page]
+    reading=readings[key]['data']
+    if len(spans)!=reading['span_count']: raise RuntimeError('REUSED_SOURCE_INCOMPLETE')
+    lines=[]
+    for row in spans:
+        d=row['data'];x,y,w,h=d['bbox']
+        if d['render_sha256']!=current['ocr_render_sha256']:raise RuntimeError('REUSED_RENDER_MISMATCH')
+        lines.append({'text':d['raw_text'],'score':d['score'],'region_text':d['region_text'],
+            'region_score':d['region_score'],'polygon':[[x,y],[x+w,y],[x+w,y+h],[x,y+h]],
+            'bbox':d['bbox'],
+            'reused_source_span_id':str(row['id'])})
+    return {'width':1,'height':1,'image_sha256':current['ocr_render_sha256'],'lines':lines,
+        'engine':spans[0]['data']['engine'] if spans else 'paddleocr',
+        'models':reading['model_manifest'],'seconds':reading['seconds'],
+        'regional_truncated':reading['regional_truncated'],
+        'balloon_candidates':layouts[key]['data'].get('balloon_candidates',[]),
+        'balloons_truncated':layouts[key]['data'].get('balloons_truncated',False),
+        'reused_from_generation':str(parent),'reused_reading_id':str(readings[key]['id'])}
+
+
+def optical(job, evidence, document, root, parent=None):
     gen=job['generation_id']; page=evidence['data']['pdf_page']; key=evidence['record_key']
     d=evidence['data']; image_path=root/'ocr-regions-v2'/f'page-{page:04}.png'
     raw=image_path.read_bytes()
     if sha(raw)!=d['ocr_render_sha256']: raise RuntimeError('OCR_RENDER_HASH_MISMATCH')
-    with httpx.Client(timeout=600,trust_env=False) as client:
-        response=client.post('http://ocr:8080/ocr',json={
-            'image_base64':base64.b64encode(raw).decode(),'regional_pass':True})
-        response.raise_for_status(); result=response.json()
+    result=reused_reading(parent,evidence)
+    if result is None:
+        with httpx.Client(timeout=600,trust_env=False) as client:
+            response=client.post('http://ocr:8080/ocr',json={
+                'image_base64':base64.b64encode(raw).decode(),'regional_pass':True})
+            response.raise_for_status(); result=response.json()
     if result['image_sha256']!=sha(raw): raise RuntimeError('OCR_RESPONSE_SOURCE_MISMATCH')
     width,height=result['width'],result['height']; spans=[]
     pdf_path=root/'pdf-text-regions-v1'/f'page-{page:04}.json'
@@ -62,21 +109,10 @@ def optical(job, evidence, document, root):
     if pdf['source_sha256']!=d['source_sha256'] or pdf['pdf_page']!=page:raise RuntimeError('PDF_SOURCE_SCOPE_MISMATCH')
     for i,line in enumerate(result['lines']):
         xs=[p[0] for p in line['polygon']]; ys=[p[1] for p in line['polygon']]
-        bbox=[min(xs)/width,min(ys)/height,(max(xs)-min(xs))/width,(max(ys)-min(ys))/height]
+        bbox=line.get('bbox') or [min(xs)/width,min(ys)/height,(max(xs)-min(xs))/width,(max(ys)-min(ys))/height]
         # Match readers by position; never promote a similar word elsewhere on the page.
-        neighbors=[]
-        for block in d['blocks']:
-            x,y,w,h=block['bbox']; mid=y+h/2
-            if bbox[1]-.008<=mid<=bbox[1]+bbox[3]+.008 and x < bbox[0]+bbox[2] and x+w > bbox[0]:
-                neighbors.append(block)
-        secondary=' '.join(b['text'] for b in sorted(neighbors,key=lambda b:b['bbox'][0]))
-        pdf_neighbors=[]
-        for block in pdf['lines']:
-            x,y,w,h=block['bbox'];mid=y+h/2
-            if bbox[1]-.008<=mid<=bbox[1]+bbox[3]+.008 and x<bbox[0]+bbox[2] and x+w>bbox[0]:
-                pdf_neighbors.append(block)
-        pdf_text=' '.join(b['text'] for b in sorted(pdf_neighbors,key=lambda b:b['bbox'][0]))
-        pdf_usable=bool(pdf_neighbors) and not any(b['corrupt_private_unicode'] for b in pdf_neighbors)
+        secondary,neighbors,_=reader_text(bbox,d['blocks'])
+        pdf_text,pdf_neighbors,pdf_usable=reader_text(bbox,pdf['lines'])
         primary_agrees=bool(norm(line['text'])) and norm(line['text'])==norm(line.get('region_text',''))
         second_agrees=bool(norm(secondary)) and norm(secondary)==norm(line['text'])
         pdf_agrees=pdf_usable and bool(norm(pdf_text)) and norm(pdf_text)==norm(line['text'])
@@ -93,10 +129,13 @@ def optical(job, evidence, document, root):
             'coordinate_system':'normalized_top_left','text':line['text'],'raw_text':line['text'],
             'region_text':line.get('region_text'), 'secondary_text':secondary,
             'pdf_text':pdf_text,'pdf_usable':pdf_usable,'pdf_matches':pdf_agrees,
-            'pdf_word_regions':pdf_neighbors,'pdf_artifact_sha256':sha(pdf_path.read_bytes()),
+            'pdf_word_regions':pdf_neighbors,'secondary_word_regions':neighbors,
+            'alignment_method':'word_geometry_v2','pdf_artifact_sha256':sha(pdf_path.read_bytes()),
             'score':line['score'],'region_score':line.get('region_score'),
             'status':status,'issues':issues,'engine':result['engine'],'model_manifest':result['models'],
             'render_sha256':result['image_sha256'],'pipeline_version':VERSION,
+            'reused_source_span_id':line.get('reused_source_span_id'),
+            'reused_from_generation':result.get('reused_from_generation'),
             'role':'PAGE_LABEL_CANDIDATE' if bbox[1]>.85 and line['text'].strip().isdigit() else 'TEXT',
             'review_status':'PENDING'}
         save(job,'source_spans',key+f'-{i:04}',value)
@@ -124,16 +163,30 @@ def optical(job, evidence, document, root):
         'agreed_spans':sum(r['data']['status']=='TEXT_AGREED' for r in spans),
         'review_spans':sum(r['data']['status']!='TEXT_AGREED' for r in spans),
         'regional_truncated':result['regional_truncated'],'seconds':result['seconds'],
+        'measurement_reused':bool(result.get('reused_from_generation')),
+        'reused_from_generation':result.get('reused_from_generation'),
+        'reused_reading_id':result.get('reused_reading_id'),
         'render_sha256':result['image_sha256'],'model_manifest':result['models'],
         'status':('NO_TEXT_DETECTED' if not spans else 'NEEDS_REVIEW' if result['regional_truncated'] or any(r['data']['status']!='TEXT_AGREED' for r in spans) else 'TEXT_AGREED'),
         'review_status':'PENDING','pipeline_version':VERSION})
 
 
-def observe(job,evidence,layout,spans,root):
+def observe(job,evidence,layout,spans,root,parent=None):
     from editor.analysis import model
     gen=job['generation_id']; page=evidence['data']['pdf_page']; key=evidence['record_key']
     illustrations=[r for r in layout['data']['regions'] if r['type']=='PICTURE' and r['bbox'][2]*r['bbox'][3]>.06]
     observations=[]
+    if parent:
+        prior=next((r for r in get_records(parent,'visual_observations') if r['record_key']==key),None)
+        old_evidence=next((r for r in get_records(parent,'evidence') if r['record_key']==key),None)
+        if prior and old_evidence and old_evidence['data']['render_sha256']==evidence['data']['render_sha256']:
+            value={**prior['data'],'evidence_refs':[str(evidence['id'])],
+                'source_span_ids':[str(s['id']) for s in spans],
+                'reused_visual_observation_id':str(prior['id']),
+                'reused_from_generation':str(parent),'pipeline_version':VERSION}
+            # Keep original metrics and provenance; do not claim a new model call.
+            save(job,'visual_observations',key,value)
+            return
     # Every selected region has its own crop; any omitted region is explicit.
     for i,region in enumerate(illustrations[:3]):
         raw=(root/f'page-{page:04}.png').read_bytes()
@@ -153,7 +206,7 @@ def observe(job,evidence,layout,spans,root):
         figures=[]
         for f in answer.get('figures',[])[:4]:
             box=f.get('bbox',[])
-            if len(box)!=4 or any(not isinstance(v,(int,float)) for v in box) or min(box)<0 or box[0]+box[2]>1.01 or box[1]+box[3]>1.01:
+            if not valid_box(box):
                 continue
             figures.append({k:f.get(k) for k in ('local_id','appearance','visible_action','bbox')})
         observations.append({'region_bbox':region['bbox'],'crop_sha256':crop['crop_sha256'],
@@ -172,11 +225,14 @@ def interpret(job,evidence,spans):
     page=evidence['data']['pdf_page']; key=evidence['record_key']
     usable=[s for s in spans if s['data']['status']=='TEXT_AGREED' and s['data']['role']=='TEXT']
     excluded=[str(s['id']) for s in spans if s not in usable]
-    context=[{'span_id':str(s['id']),'text':s['data']['text'],'bbox':s['data']['bbox']} for s in usable]
-    if not context:
+    usable_ids={str(s['id']) for s in usable}
+    context=[{'span_id':str(s['id']),'text':s['data']['text'] if str(s['id']) in usable_ids else '[UNVERIFIED_REGION]',
+              'usable':str(s['id']) in usable_ids,'bbox':s['data']['bbox']} for s in reading_order(spans)]
+    if not usable:
         result={'page_role':'UNKNOWN','claims':[],'uncertainties':['NO_AGREED_TEXT_SPANS']}; metrics={}
     else:
         prompt=('Yalnız verilen OCR metin bölgelerinden aday çıkar. Görsel betimleme girdisi yoktur. '
+            'UNVERIFIED_REGION okunması uyuşmayan yeri gösterir; üzerinden atlayıp cümle kurma. '
             'Eksik bölgeler var; eksik cümleyi tamamlama. Bağlamı eksikse iddia üretme. '
             'JSON {"page_role":"NARRATIVE|ACTIVITY|FRONT_MATTER|APPENDIX|MIXED|UNKNOWN",'
             '"claims":[{"kind":"EVENT|ENTITY|STATEMENT","text":"...","quote":"kaynakta aynen geçen dayanak",'
@@ -193,7 +249,7 @@ def interpret(job,evidence,spans):
     allowed={str(s['id']):s for s in usable}; accepted=[]; blocked=[]
     for c in result.get('claims',[]):
         refs=c.get('span_refs',[]); chosen=[allowed[r] for r in refs if r in allowed]
-        reason=quote_check(c.get('quote',''),chosen) if refs and len(chosen)==len(refs) else 'INVALID_SPAN_REFERENCE'
+        reason=quote_check(c.get('quote',''),chosen,spans) if refs and len(chosen)==len(refs) else 'INVALID_SPAN_REFERENCE'
         if reason=='MATCH' and bool(negation(c.get('quote',''))) != bool(negation(c.get('text',''))):
             reason='CLAIM_POLARITY_REQUIRES_REVIEW'
         if c.get('kind')=='EVENT' and result.get('page_role') in ('ACTIVITY','FRONT_MATTER','APPENDIX','UNKNOWN'):
@@ -227,6 +283,9 @@ def run(job):
             (Jsonb({'pipeline_version':VERSION,'code_manifest':code_manifest(),
                    'old_visual_reuse':False,'processing_order':'one_page_source_visual_claim_gate_then_next',
                    'source_of_quotes':'source_spans_only'}),gen))
+    parent=previous.get('reuse_measurements_from')
+    if parent and source_for(parent)['content_version_id']!=source['content_version_id']:
+        raise RuntimeError('REUSED_CONTENT_VERSION_MISMATCH')
     ingest(job)
     document=json.loads((root/'docling.json').read_text())
     evidence=get_records(gen,'evidence'); done={r['record_key'] for r in get_records(gen,'page_readings')}
@@ -234,11 +293,11 @@ def run(job):
     checked={r['record_key'] for r in get_records(gen,'page_checks')}
     for row in evidence:
         with connection() as db: fence(db,job)
-        if row['record_key'] not in done: optical(job,row,document,root)
+        if row['record_key'] not in done: optical(job,row,document,root,parent)
         layouts={r['record_key']:r for r in get_records(gen,'layout_regions')}
         all_spans=get_records(gen,'source_spans')
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
-        if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root)
+        if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,parent)
         if row['record_key'] not in checked: interpret(job,row,spans)
     with connection() as db:
         fence(db,job)

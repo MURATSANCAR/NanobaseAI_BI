@@ -43,6 +43,7 @@ Kullanıcının 2026-09-16 kararı bağlayıcıdır: Editör modülü bu ana pro
 
 ## Editör kaynak güvenliği — 2026-09-16
 
+- Kullanıcının açık talebi: kalite hataları genel uygulama kodu/iş akışı üzerinden düzeltilir. Codex kitap metnini, modelin cevabını, kişi/konuşmacı etiketini veya kabul kararını elle düzelterek koşuyu başarılı gösteremez. Beklenen kitap cevapları prompt, özel kural veya veri kaydına yazılmaz. Değişiklik sonrası gerçek kaynak sistem tarafından yeniden işlenir; önceki nesil kanıt olarak korunur.
 - Yeni okumalar sayfa sayfa, yeni analiz neslinde ilerler; önceki hatalı koşunun kayıtları silinmez veya yeni koşuya doğrulanmış veri olarak taşınmaz.
 - Alıntı metni konumlu `source_spans` üzerinden gelir; ham metin, bbox, okuyucu/model sürümü ve uyuşmazlık durumu korunur. PDF metin katmanı bozuksa tek kaynak veya doğrulayıcı sayılamaz.
 - `visual_observations` görsel gözlem adaylarıdır. Doğrulanmamış serbest `visuals.description` sahne/iddia/cevap girdisi olarak kullanılamaz.

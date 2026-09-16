@@ -453,7 +453,7 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version')=='source-spans-v1':
+    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2'):
         from editor.source_pipeline import run as run_source_pages
         return run_source_pages(job)
     with connection() as db:

@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör: veriyi değiştirmeden sistem kalite düzeltmesi
+
+- Kullanıcının kod üzerinden düzeltme ve gözetimsiz koşu denetimi talebi kaydedildi; kitap metni/model cevabı/review kararı elle değiştirilemez.
+- Gerçek API/PG karşılaştırmasında kelime kutusunun bütün PDF/Tesseract satırıyla kıyaslandığı bulundu. Kelime geometrisiyle eşleştirme hazırlandı; s.16 anlaşan bölge 1/56 → 46/56. Ham metin değiştirilmedi; bu anlamsal kabul değildir.
+- Alıntıda kelime sınırı, yinelenen referans, sıra/kesinti kontrolü ve okunamayan bölge işaretleri eklendi. Yeni imajla 18 sayfanın ham ölçümleri salt okunur tekrar işlendi; 46 adayda 31 alıntı eşleşmesi, 4 kesintili kaynak, 11 uyuşmazlık.
+- Takibe tarihli Markdown ve her 10 sayfa/terminal durumda API-PG denetimi eklendi. [Ayrıntılı kayıt ve açık işler](editor/2026-09-16-system-quality-followup.md). Yeni sürümün canlı dağıtım/kabulü ayrıca kaydedilecek.
+
 ## 2026-09-16 — Sağ üst yakınlaştırma düğmesi kanvas dışındaki ekranlarda çalışmıyordu
 
 - Kullanıcılar arayüzde sağ üstteki -/+ zoom'un çalışmadığını bildirdi. Neden: `Shell` dokuz ekranın sekizinde (Panolar, Planlı raporlar, Yönetim, Veri Sözlüğü, Onaylar, Eş anlamlılar, Kampüs, yetkisiz kartı) `zoom: '%100'` sabitiyle çiziliyor ve `onZoom` verilmiyordu; yalnız Genel bakış kanvası bağlıydı.
