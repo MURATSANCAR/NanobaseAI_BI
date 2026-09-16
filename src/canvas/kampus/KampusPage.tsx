@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronRight,
   Contact,
-  Download,
   FileCheck,
   Flag,
   Gift,
@@ -41,10 +40,11 @@ import { LIVE } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ENGINE_ENABLED, greetingsApi } from '../engine';
+import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
+import PersonAvatar from './PersonAvatar';
+import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import zekiImg from '@/assets/kampus/zeki.jpg';
-import denizImg from '@/assets/kampus/deniz.jpg';
 import ahmetImg from '@/assets/kampus/ahmet.jpg';
 import busraImg from '@/assets/kampus/busra.jpg';
 import book1Img from '@/assets/kampus/book1.jpg';
@@ -55,37 +55,15 @@ import './kampus.css';
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
  * Stitch ekranı projects/13426839861607265553/screens/a6864de4bb2047878357e34f67bda769
  * birebir JSX'e çevrildi. Tasarıma eklenen tek bölüm "Modüller": kanvas ekranlarına
- * buradan geçilir. Rehber, oda, kutlama gibi içerikler henüz bir kaynağa bağlı değil;
- * tasarımdaki metinlerdir.
+ * buradan geçilir. Rehber CRM'deki gerçek, etkin kullanıcılardan gelir (dizinle kesiştirilir); kutlama ve alkış
+ * içerikleri henüz bir kaynağa bağlı değil, tasarımdaki metinlerdir.
  */
 
-type Staff = {
-  name: string;
-  role: string;
-  ext: string;
-  desk: string;
-  floor: '1' | '2' | '3' | '4';
-  img?: string;
-  initials?: string;
-  tone?: string;
-};
+/** Rehberde kat süzgeci: kat bilgisi CRM/dizin ya da kişinin profilinden gelir; düğmeler veriden türetilir. */
+const ALL_FLOORS = 'ALL';
 
-const STAFF: Staff[] = [
-  { name: 'Deniz Kaya', role: 'Yayın Editörü • Edebiyat Dizisi', ext: '1042', desk: '4. Kat E-12', floor: '4', img: denizImg },
-  { name: 'Ahmet Yıldız', role: 'Sanat Yönetmeni • Kapak Masası', ext: '1134', desk: '3. Kat G-04', floor: '3', img: ahmetImg },
-  { name: 'Büşra Aksoy', role: 'Yayın Koordinatörü', ext: '1055', desk: '4. Kat K-01', floor: '4', img: busraImg },
-  { name: 'Mustafa Demir', role: 'İnsan Kaynakları Müdürü', ext: '1045', desk: '2. Kat İK-02', floor: '2', initials: 'MD', tone: 'bg-amber-100 text-amber-800 ring-amber-300' },
-  { name: 'Canan Öz', role: 'BT & Altyapı Uzmanı', ext: '1122', desk: '2. Kat BT-01', floor: '2', initials: 'CÖ', tone: 'bg-sky-100 text-sky-800 ring-sky-300' },
-  { name: 'Kemal Sancak', role: 'Matbaa & Depo Şefi', ext: '1080', desk: '1. Kat Depo Giriş', floor: '1', initials: 'KS', tone: 'bg-emerald-100 text-emerald-800 ring-emerald-300' },
-];
-
-const FLOORS: Array<{ id: 'ALL' | Staff['floor']; label: string }> = [
-  { id: 'ALL', label: 'Tümü' },
-  { id: '4', label: '4. Kat' },
-  { id: '3', label: '3. Kat' },
-  { id: '2', label: '2. Kat' },
-  { id: '1', label: '1. Kat / Depo' },
-];
+/** "4. Kat E-12" gibi serbest metinden sıralanabilir kat etiketi. */
+const floorKey = (f: string) => f.trim();
 
 const PROMPTS = [
   { label: '📍 3. Kat Masaları', q: 'Kat 3 editör masası dahili hatlarını listele' },
@@ -143,7 +121,7 @@ function Card({ id, className = '', children }: { id?: string; className?: strin
 export default function KampusPage() {
   const navigate = useNavigate();
   const session = useTimasSession();
-  const fullName = session.data?.displayName || session.data?.username || 'Deniz Kaya';
+  const fullName = session.data?.displayName || session.data?.username || '';
   const firstName = fullName.split(/[\s._@]/)[0] || fullName;
 
   // ZEKİ kutusu: soru BI kanvasına gider, cevabı motor verir.
@@ -154,18 +132,28 @@ export default function KampusPage() {
     navigate(`/genel-bakis?soru=${encodeURIComponent(text)}`);
   };
 
-  // Rehber: kat süzgeci + anında arama.
-  const [floor, setFloor] = useState<(typeof FLOORS)[number]['id']>('ALL');
+  // Rehber: CRM'deki gerçek, etkin kullanıcılar. Kat süzgeci + anında arama.
+  const people = useQuery({ queryKey: ['people'], queryFn: peopleApi.list, enabled: ENGINE_ENABLED, retry: false, staleTime: 5 * 60_000 });
+  const everyone = people.data?.items ?? [];
+  const floors = useMemo(
+    () => [...new Set(everyone.map((p) => floorKey(p.floor)).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'tr', { numeric: true })),
+    [everyone],
+  );
+  const units = useMemo(() => new Set(everyone.map((p) => p.unit).filter(Boolean)).size, [everyone]);
+  const [floor, setFloor] = useState<string>(ALL_FLOORS);
   const [term, setTerm] = useState('');
   const directoryRef = useRef<HTMLDivElement>(null);
+  const haystack = (p: Person) => [p.name, p.title, p.unit, p.extension, p.floor, p.desk ?? '', p.mobile, p.phone, p.email, p.username];
   const staff = useMemo(() => {
     const t = trNorm(term.trim());
-    return STAFF.filter(
-      (s) =>
-        (floor === 'ALL' || s.floor === floor) &&
-        (!t || [s.name, s.role, s.ext, s.desk, `${s.floor}. kat`].some((v) => trNorm(v).includes(t))),
+    return everyone.filter(
+      (p) => (floor === ALL_FLOORS || floorKey(p.floor) === floor) && (!t || haystack(p).some((v) => trNorm(v).includes(t))),
     );
-  }, [floor, term]);
+  }, [everyone, floor, term]);
+
+  // Sağ üstteki kişi: tıklanınca profil penceresi.
+  const [profileOpen, setProfileOpen] = useState(false);
+  const me = useMyProfile(ENGINE_ENABLED);
 
   const [omni, setOmni] = useState('');
   const onOmni = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -173,9 +161,9 @@ export default function KampusPage() {
     const v = omni.trim();
     if (!v) return;
     // Rakam ya da kişi/kat adıysa rehberde süzülür; değilse soru ZEKİ'ye gider.
-    const hits = STAFF.some((s) => [s.name, s.role, s.ext, s.desk].some((x) => trNorm(x).includes(trNorm(v))));
+    const hits = everyone.some((p) => haystack(p).some((x) => trNorm(x).includes(trNorm(v))));
     if (hits || /^\d+$/.test(v)) {
-      setFloor('ALL');
+      setFloor(ALL_FLOORS);
       setTerm(v);
       directoryRef.current?.scrollIntoView({ block: 'start' });
     } else {
@@ -291,16 +279,28 @@ export default function KampusPage() {
             <Bell className="h-4 w-4" />
             <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />
           </button>
-          <div className="hidden shrink-0 items-center gap-2 border-l border-slate-200/70 pl-3 sm:flex">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-coral to-violet text-[11px] font-black uppercase text-white shadow-sm">
-              {firstName.slice(0, 2)}
-            </div>
-            <div className="hidden flex-col text-left xl:flex">
-              <span className="text-xs font-bold leading-tight text-ink">{fullName}</span>
-              <span className="text-[11px] text-muted">Timaş Yayınları</span>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={profileOpen}
+            title="Profilim"
+            className="kp-press flex min-h-11 shrink-0 items-center gap-2 rounded-xl border-l border-slate-200/70 pl-2 pr-1 hover:bg-white sm:min-h-9 sm:pl-3 sm:pr-2"
+          >
+            <PersonAvatar
+              username={session.data?.username ?? ''}
+              name={me.data?.displayName || fullName}
+              photoVersion={me.data?.photoVersion ?? null}
+              className="h-8 w-8 rounded-full text-[11px]"
+            />
+            <span className="hidden flex-col text-left xl:flex">
+              <span className="text-xs font-bold leading-tight text-ink">{me.data?.displayName || fullName}</span>
+              <span className="text-[11px] text-muted">{me.data?.crm?.title || me.data?.crm?.unit || 'Profilim'}</span>
+            </span>
+          </button>
         </div>
+
+      <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ÜÇ SÜTUNLU GÖVDE */}
       <div className="mx-auto grid w-full max-w-[1720px] grid-cols-1 gap-4 py-4 sm:gap-5 lg:grid-cols-12">
@@ -311,7 +311,7 @@ export default function KampusPage() {
               <span className="kp-mono flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
                 <Activity className="h-3.5 w-3.5 text-amber-500" /> Şirket Nabzı
               </span>
-              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">180 Aktif</span>
+              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{people.data ? `${people.data.total} Aktif` : '…'}</span>
             </div>
             <div className="rounded-xl border border-violet/15 bg-gradient-to-br from-coral/5 to-violet/5 p-3">
               <div className="flex items-center justify-between">
@@ -579,25 +579,26 @@ export default function KampusPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-ink">Timaş Rehber · Anında Arama &amp; Kat Planı</h2>
-                    <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">180 Kişi</span>
+                    <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">{people.data ? `${people.data.total} Kişi` : '…'}</span>
                   </div>
-                  <p className="text-xs text-muted">Masa, kat, dahili telefon, cep ve departman hızlı arama motoru</p>
+                  <p className="text-xs text-muted">CRM’deki etkin kullanıcılar · kat, dahili, cep ve birim araması</p>
                 </div>
               </div>
               <div className="kp-scroll flex items-center gap-1 overflow-x-auto pb-1 text-xs sm:pb-0">
-                {FLOORS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    aria-pressed={floor === f.id}
-                    onClick={() => setFloor(f.id)}
-                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 font-medium ${
-                      floor === f.id ? 'bg-violet text-white' : 'bg-slate-100 text-ink/80 hover:bg-slate-200'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+                {floors.length > 0 &&
+                  [{ id: ALL_FLOORS, label: 'Tümü' }, ...floors.map((f) => ({ id: f, label: f }))].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      aria-pressed={floor === f.id}
+                      onClick={() => setFloor(f.id)}
+                      className={`kp-press min-h-11 sm:min-h-0 shrink-0 whitespace-nowrap rounded-lg px-2.5 py-1 font-medium ${
+                        floor === f.id ? 'bg-violet text-white' : 'bg-slate-100 text-ink/80 hover:bg-slate-200'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
               </div>
             </div>
 
@@ -606,7 +607,7 @@ export default function KampusPage() {
               <input
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
-                placeholder="İsim, unvan, dahili (örn: 1045) veya masa no yazarak süzün..."
+                placeholder="İsim, unvan, birim, dahili ya da e-posta yazarak süzün…"
                 className="w-full rounded-xl border border-slate-200/70 bg-slate-50/80 py-2.5 pl-10 pr-11 text-xs text-ink sm:py-2 placeholder:text-muted/70 focus:border-violet focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet/25"
               />
               {term && (
@@ -622,41 +623,70 @@ export default function KampusPage() {
             </div>
 
             <div className="kp-scroll grid max-h-[380px] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2">
-              {staff.map((s) => (
-                <div
-                  key={s.ext}
-                  className="flex items-start justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 transition-colors hover:border-violet/30 hover:bg-white"
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    {s.img ? (
-                      <img src={s.img} alt={s.name} className="mt-0.5 h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-slate-200" />
-                    ) : (
-                      <div className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold ring-1 ${s.tone}`}>{s.initials}</div>
-                    )}
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-ink">{s.name}</h4>
-                      <p className="text-[11px] text-muted">{s.role}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="kp-mono whitespace-nowrap rounded border border-violet/20 bg-violet/5 px-1.5 py-0.5 text-[11px] font-semibold text-violet">Dahili: {s.ext}</span>
-                        <span className="rounded border border-slate-200/70 bg-slate-100 px-1.5 py-0.5 text-[11px] text-muted">{s.desk}</span>
+              {people.isLoading && <div className="col-span-full py-6 text-center text-xs text-muted">Rehber CRM’den okunuyor…</div>}
+              {people.error && (
+                <div className="col-span-full py-6 text-center text-xs text-rose-700">
+                  {people.error instanceof EngineAuthError ? 'Oturum gerekli.' : people.error instanceof Error ? people.error.message : 'Rehber okunamadı.'}
+                </div>
+              )}
+              {staff.map((p) => {
+                const call = p.extension || p.phone || p.mobile;
+                return (
+                  <div
+                    key={p.id || p.username}
+                    className="flex items-start justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 transition-colors hover:border-violet/30 hover:bg-white"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <PersonAvatar username={p.username} name={p.name} photoVersion={p.photoVersion} className="mt-0.5 h-9 w-9 rounded-xl text-xs" />
+                      <div className="min-w-0">
+                        <h4 className="truncate text-xs font-bold text-ink">{p.name}</h4>
+                        <p className="truncate text-[11px] text-muted">{[p.title, p.unit].filter(Boolean).join(' • ') || p.email || p.username}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          {p.extension && (
+                            <span className="kp-mono whitespace-nowrap rounded border border-violet/20 bg-violet/5 px-1.5 py-0.5 text-[11px] font-semibold text-violet">Dahili: {p.extension}</span>
+                          )}
+                          {(p.floor || p.desk) && (
+                            <span className="rounded border border-slate-200/70 bg-slate-100 px-1.5 py-0.5 text-[11px] text-muted">{[p.floor, p.desk].filter(Boolean).join(' ')}</span>
+                          )}
+                          {p.mobile && <span className="kp-mono whitespace-nowrap text-[11px] text-muted">{p.mobile}</span>}
+                        </div>
                       </div>
                     </div>
+                    {call ? (
+                      <a href={`tel:${call.replace(/\s+/g, '')}`} title={`Ara: ${call}`} aria-label={`${p.name} ara`} className="kp-press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-muted sm:h-auto sm:w-auto sm:p-1.5 hover:bg-violet hover:text-white">
+                        <PhoneCall className="h-3.5 w-3.5" />
+                      </a>
+                    ) : p.email ? (
+                      <a href={`mailto:${p.email}`} title={p.email} aria-label={`${p.name} e-posta`} className="kp-press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-muted sm:h-auto sm:w-auto sm:p-1.5 hover:bg-violet hover:text-white">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </a>
+                    ) : null}
                   </div>
-                  <a href={`tel:${s.ext}`} title="Hemen Ara" className="kp-press flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-muted sm:h-auto sm:w-auto sm:p-1.5 hover:bg-violet hover:text-white">
-                    <PhoneCall className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              ))}
-              {!staff.length && <div className="col-span-full py-6 text-center text-xs text-muted">Eşleşen kişi yok.</div>}
+                );
+              })}
+              {people.data && !staff.length && <div className="col-span-full py-6 text-center text-xs text-muted">Eşleşen kişi yok.</div>}
             </div>
 
             <div className="mt-3 flex flex-col justify-between gap-2 border-t border-slate-200/70 pt-3 text-xs text-muted sm:flex-row sm:items-center">
               <span>
-                Toplam <strong>6</strong> departman • <strong>180</strong> kayıtlı çalışan
+                {people.data ? (
+                  <>
+                    {units > 0 && (
+                      <>
+                        <strong>{units}</strong> birim •{' '}
+                      </>
+                    )}
+                    <strong>{people.data.total}</strong> etkin kullanıcı
+                    {people.data.truncated && ' (liste kesildi)'}
+                    {!people.data.adChecked && ' · dizin denetlenemedi'}
+                  </>
+                ) : (
+                  'Kaynak: CRM'
+                )}
               </span>
-              <span className="flex items-center gap-1 font-medium text-violet">
-                İnteraktif Kat Planı PDF İndir <Download className="h-3.5 w-3.5" />
-              </span>
+              <button type="button" onClick={() => setProfileOpen(true)} className="kp-press flex items-center gap-1 font-medium text-violet">
+                Dahili ve katını ekle <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
           </Card>
 

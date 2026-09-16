@@ -1,0 +1,71 @@
+/* Profil penceresi: sağ üstteki kişi düğmesinden açılır, o köşeden büyür. Yalnız açılış/kapanış hareket eder. */
+
+.pf-dialog {
+  --pf-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  position: fixed;
+  inset: 72px 16px auto auto;
+  margin: 0;
+  max-height: calc(100dvh - 88px);
+  overflow: hidden;
+  transform-origin: top right; /* düğmenin olduğu köşe */
+  transition:
+    opacity 200ms var(--pf-ease-out),
+    transform 200ms var(--pf-ease-out);
+}
+
+/* Telefonda tam genişlik: sağdan 16px, soldan 16px. */
+@media (max-width: 639px) {
+  .pf-dialog {
+    inset: 64px 16px auto 16px;
+    width: auto;
+  }
+}
+
+.pf-dialog[open] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@starting-style {
+  .pf-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* Kapanış açılıştan hızlı. */
+.pf-dialog[data-closing] {
+  opacity: 0;
+  transform: scale(0.96);
+  transition-duration: 150ms;
+}
+
+.pf-dialog::backdrop {
+  background: rgba(20, 30, 60, 0.18);
+  opacity: 1;
+  transition: opacity 200ms var(--pf-ease-out);
+}
+
+@starting-style {
+  .pf-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+.pf-dialog[data-closing]::backdrop {
+  opacity: 0;
+  transition-duration: 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-dialog,
+  .pf-dialog[data-closing] {
+    transform: none;
+    transition: opacity 150ms ease;
+  }
+  @starting-style {
+    .pf-dialog[open] {
+      transform: none;
+    }
+  }
+}

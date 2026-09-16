@@ -21,11 +21,12 @@ import time
 import uuid
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
@@ -2825,6 +2826,101 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, display = _greetings(request)
         ids = body.get("ids") if isinstance(body.get("ids"), list) else []
         return {"marked": greetings_mod.mark_seen(engine, tenant, user, display, ids)}
+
+    # ------------------------------------------------------------------ kişi rehberi ve profil
+    # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
+    from semantic_bridge import people as people_mod
+
+    people_dir = people_mod.Directory()
+
+    def _people(request: Request) -> tuple[Any, str, str, str]:
+        engine, tenant, user, display = _greetings(request)
+        people_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display
+
+    def _crm_people(fresh: bool = False) -> tuple[list[dict[str, Any]], float, bool]:
+        r = rt()
+        truncated = False
+
+        def run(sql: str) -> dict[str, Any]:
+            nonlocal truncated
+            out = r.run_sql(sql, r.settings.max_rows)
+            truncated = bool(out.get("truncated"))
+            return out
+
+        try:
+            rows, at = people_dir.rows(
+                admin_mod.conf("CRM_SCHEMA"), run, fresh=fresh,
+                ad=lambda: people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")}))
+        except people_mod.ProfileError as e:
+            raise HTTPException(status_code=503, detail={"code": "CRM_NOT_CONFIGURED", "message": str(e)}) from e
+        except Exception as e:  # noqa: BLE001
+            log.warning("people: CRM okunamadı: %s", e)
+            raise HTTPException(status_code=503, detail={"code": "CRM_UNAVAILABLE",
+                                                         "message": "CRM'e şu an ulaşılamıyor; rehber okunamadı."}) from e
+        return rows, at, truncated
+
+    def _profile_error(e: "people_mod.ProfileError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "INVALID_PROFILE", "message": str(e)})
+
+    @app.get("/api/v1/people")
+    def people_list(request: Request, fresh: bool = False) -> dict[str, Any]:
+        engine, tenant, _, _ = _people(request)
+        rows, at, truncated = _crm_people(fresh)
+        items = people_mod.people(engine, tenant, rows)
+        return {"items": items, "total": len(items), "truncated": truncated, "source": "crm",
+                "adChecked": people_dir.ad_checked,
+                "at": datetime.fromtimestamp(at, timezone.utc).isoformat()}
+
+    @app.get("/api/v1/me/profile")
+    def profile_get(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        try:
+            rows, _, _ = _crm_people()
+        except HTTPException:
+            rows = []          # CRM kapalıyken kişi kendi alanlarını yine görür ve düzenler
+        return people_mod.me(engine, tenant, user, display, rows)
+
+    @app.put("/api/v1/me/profile")
+    def profile_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        before = people_mod.me(engine, tenant, user, display, [])["fields"]
+        try:
+            fields = people_mod.save_fields(engine, tenant, user, body)
+        except people_mod.ProfileError as e:
+            raise _profile_error(e) from e
+        admin_mod.audit(engine, user, "update", "profile", user, display,
+                        {k: {"önce": before.get(k, ""), "sonra": v} for k, v in fields.items() if before.get(k, "") != v})
+        return profile_get(request)
+
+    @app.put("/api/v1/me/profile/photo")
+    def profile_photo_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        try:
+            version = people_mod.save_photo(engine, tenant, user, str(body.get("dataUrl") or ""))
+        except people_mod.ProfileError as e:
+            raise _profile_error(e) from e
+        admin_mod.audit(engine, user, "update", "profile", user, f"{display} · fotoğraf", {"photoVersion": version})
+        return {"photoVersion": version}
+
+    @app.delete("/api/v1/me/profile/photo")
+    def profile_photo_delete(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        people_mod.delete_photo(engine, tenant, user)
+        admin_mod.audit(engine, user, "delete", "profile", user, f"{display} · fotoğraf", {})
+        return {"ok": True}
+
+    @app.get("/api/v1/people/{username}/photo")
+    def people_photo(username: str, request: Request) -> Response:
+        engine, tenant, _, _ = _people(request)
+        found = people_mod.photo(engine, tenant, username)
+        if not found:
+            raise HTTPException(status_code=404, detail={"code": "NO_PHOTO", "message": "Fotoğraf yok."})
+        blob, mime = found
+        # Adres sürüm numarasını (?v=) taşır; sürüm değişince yeni adres, bu yüzden uzun önbellek güvenli.
+        return Response(content=blob, media_type=mime,
+                        headers={"Cache-Control": "private, max-age=31536000, immutable"})
 
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.

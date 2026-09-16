@@ -774,6 +774,47 @@ export const greetingsApi = {
   seen: (ids: string[]) => roomsSend<{ marked: number }>('POST', '/api/v1/greetings/seen', { ids }),
 };
 
+/* ------------------------------------------------------------------ kişi rehberi ve profil */
+
+/** CRM'deki gerçek, etkin kullanıcı. Boş alan "". dahili/kat CRM'de yoksa kişinin profilinden gelir. */
+export type Person = {
+  id: string;
+  username: string;
+  name: string;
+  title: string;
+  unit: string;
+  email: string;
+  mobile: string;
+  phone: string;
+  extension: string;
+  floor: string;
+  desk?: string;
+  about?: string;
+  photoVersion: number | null;
+};
+export type PeopleList = { items: Person[]; total: number; truncated: boolean; source: 'crm'; adChecked: boolean; at: string };
+export type ProfileFields = { extension: string; floor: string; desk: string; mobile: string; about: string };
+export type MyProfile = {
+  username: string;
+  displayName: string;
+  inCrm: boolean;
+  crm: Person | null;
+  fields: ProfileFields;
+  photoVersion: number | null;
+  updatedAt: string | null;
+};
+
+export const photoUrl = (username: string, version: number | null) =>
+  version ? `${ENGINE_BASE}/api/v1/people/${encodeURIComponent(username)}/photo?v=${version}` : null;
+
+export const peopleApi = {
+  list: () => roomsSend<PeopleList>('GET', '/api/v1/people'),
+  me: () => roomsSend<MyProfile>('GET', '/api/v1/me/profile'),
+  save: (fields: ProfileFields) => roomsSend<MyProfile>('PUT', '/api/v1/me/profile', { fields }),
+  savePhoto: (dataUrl: string) => roomsSend<{ photoVersion: number }>('PUT', '/api/v1/me/profile/photo', { dataUrl }),
+  deletePhoto: () => roomsSend<{ ok: boolean }>('DELETE', '/api/v1/me/profile/photo'),
+};
+
 export const roomsApi = {
   day: (date: string) => roomsSend<RoomsDay>('GET', `/api/v1/rooms?date=${encodeURIComponent(date)}`),
   now: () => roomsSend<RoomsNow>('GET', '/api/v1/rooms/now'),
