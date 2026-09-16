@@ -4,6 +4,7 @@ import { Camera, Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { peopleApi, type MyProfile, type ProfileFields } from '../engine';
 import PersonAvatar from './PersonAvatar';
+import PhotoCropper, { decode, type Decoded } from './PhotoCropper';
 import './profile.css';
 
 /**
@@ -15,9 +16,6 @@ import './profile.css';
  */
 
 const CLOSE_MS = 150;
-/** Fotoğraf yüklenmeden önce tarayıcıda bu kenara küçültülür (rehberde 36px, burada 80px görünür). */
-const PHOTO_EDGE = 512;
-
 const EMPTY: ProfileFields = { extension: '', floor: '', desk: '', mobile: '', about: '' };
 
 const FIELDS: Array<{ key: keyof ProfileFields; label: string; placeholder: string; crm?: 'extension' | 'floor' | 'mobile'; inputMode?: 'tel' }> = [
@@ -33,19 +31,6 @@ export function useMyProfile(enabled: boolean) {
   return useQuery({ queryKey: PROFILE_KEY, queryFn: peopleApi.me, enabled, retry: false, staleTime: 60_000 });
 }
 
-async function shrink(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file).catch(() => {
-    throw new Error('Bu dosya açılamadı; JPEG, PNG ya da WebP seçin.');
-  });
-  const scale = Math.min(1, PHOTO_EDGE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return canvas.toDataURL('image/jpeg', 0.86);
-}
-
 export default function ProfileDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -55,6 +40,17 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
   const profile = useMyProfile(open);
   const [form, setForm] = useState<ProfileFields>(EMPTY);
   const [preview, setPreview] = useState<string | null>(null);
+  // Seçilen fotoğraf kırpılırken form yerine kırpıcı görünür.
+  const [cropping, setCropping] = useState<Decoded | null>(null);
+  const endCrop = useCallback(() => {
+    setCropping((c) => {
+      if (c) {
+        c.bitmap.close();
+        URL.revokeObjectURL(c.url);
+      }
+      return null;
+    });
+  }, []);
 
   useEffect(() => {
     if (open && profile.data) setForm({ ...EMPTY, ...profile.data.fields });
@@ -80,9 +76,10 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
       closingRef.current = false;
       setClosing(false);
       setPreview(null);
+      endCrop();
       onClose();
     }, CLOSE_MS);
-  }, [onClose]);
+  }, [onClose, endCrop]);
 
   const refresh = (data?: MyProfile) => {
     if (data) qc.setQueryData(PROFILE_KEY, data);
@@ -101,12 +98,10 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
   });
 
   const upload = useMutation({
-    mutationFn: async (file: File) => {
-      const dataUrl = await shrink(file);
-      setPreview(dataUrl);
-      return peopleApi.savePhoto(dataUrl);
-    },
+    mutationFn: (dataUrl: string) => peopleApi.savePhoto(dataUrl),
+    onMutate: (dataUrl) => setPreview(dataUrl),
     onSuccess: () => {
+      endCrop();
       refresh();
       toast.success('Fotoğraf güncellendi');
     },
@@ -173,7 +168,12 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
               save.mutate();
             }}
           >
-            <div className="kp-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
+            {cropping && (
+              <div className="kp-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                <PhotoCropper image={cropping} busy={upload.isPending} onCancel={endCrop} onApply={(url) => upload.mutate(url)} />
+              </div>
+            )}
+            <div className={`kp-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4 ${cropping ? 'hidden' : ''}`}>
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <PersonAvatar username={p.username} name={p.displayName} photoVersion={p.photoVersion} src={preview} className="h-20 w-20 rounded-2xl text-xl" />
@@ -195,7 +195,10 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         e.target.value = '';
-                        if (f) upload.mutate(f);
+                        if (f)
+                          decode(f).then(setCropping, (err: unknown) =>
+                            toast.error('Fotoğraf açılamadı', { description: err instanceof Error ? err.message : undefined }),
+                          );
                       }}
                     />
                     <button
@@ -267,7 +270,7 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
               </label>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200/70 px-5 py-3">
+            <div className={`flex items-center justify-end gap-2 border-t border-slate-200/70 px-5 py-3 ${cropping ? 'hidden' : ''}`}>
               <button type="button" onClick={close} className="kp-press min-h-11 rounded-xl px-3 text-xs font-medium text-muted hover:bg-slate-100 sm:min-h-9">
                 Vazgeç
               </button>
