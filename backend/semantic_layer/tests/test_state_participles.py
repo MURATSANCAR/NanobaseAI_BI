@@ -113,7 +113,7 @@ def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, p
     This is what a grown vocabulary does: once each CRM table had approved everyday names, the
     selector was shown 282 tables, kept 282, and charged the person ninety seconds for it.
     """
-    from semantic_layer.runtime.compiler import SqlCompiler
+    from semantic_layer.runtime.compiler import ExistingCompiler
 
     class _Selector:
         def __init__(self):
@@ -124,7 +124,7 @@ def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, p
             raise AssertionError("bir şey elenemiyorken seçiciye sorulmamalı")
 
     sq = resolve(catalog, profiles + [orders()], "iptal edilen sipariş sayısı")
-    compiler = SqlCompiler.__new__(SqlCompiler)
+    compiler = ExistingCompiler.__new__(ExistingCompiler)
     compiler.selector, compiler.selector_mode = _Selector(), "on"
     compiler.by_entity = {p.entity: p for p in profiles}
     compiler.catalog_entities = {"CLCARD", "INVOICE", "STLINE"}
