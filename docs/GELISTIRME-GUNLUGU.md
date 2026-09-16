@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör sahne çıktı bütçesinin gerçek koşu hatasıyla düzeltilmesi
+
+- Müdahalesiz kitap koşusunda üç dört-sayfalık sahne çağrısı 1800 çıktı token sınırında kesildi; uygulama bunları tamamlanmış saymayıp alt gruplarla yeniden okudu. Tekrarlı okuma ciddi süre maliyeti oluşturdu. Sahne çıktı bütçesi 3600 yapıldı; gerçek tokenizer ile toplam 8192 bağlam sınırı ve gerektiğinde grup bölme korunuyor. İstem ve kitap içeriği değiştirilmedi. Çağrı metadata’sına max_output_tokens eklendi.
+- Tamamlanan 48 kaynak, 48 görsel ve ilk sahne korundu; API/işçi aynı yeni imajla yeniden açıldı, lease üzerinden aynı işin ikinci denemesi başladı. Sahne başarısı henüz verilmedi. API/işçi imajı sha256:238b1b94b695b21566659f54f77196d1417d7024f84f1f185f5229439bad8ef2; backend a02c5a988346369b5bf9a2787a1e47039d14e516b31107405b607b6c68f29265.
+- Kaynak/işlem/editör durumları ayrı gösterilen ekranda analiz seçeneğinin durum etiketi canlı sorguyla güncellenir. Yeni dağıtımda 9 servisin kaynak/ağ sınırları, API dış TCP engeli ve düşük yetkili DB rolü doğrulandı; sağlık kontrolleri iş doğruluğu veya SLO kabulü değildir.
+
 ## 2026-09-16 — Editör gerçek kaynak inceleme ekranı
 
 - Bağımsız React/TypeScript ekranı gerçek operatör API’sine bağlandı: kitap/analiz seçimi, üç ayrı durum, özgün kaynak görüntüsü, OCR/PDF ve değiştirilmemiş model adayları, mevcut sahne/varlık/olay/yorum/soru kayıtları. Salt okunur; kabul koşusuna düzeltme/karar girmez. Anahtar yalnız oturum belleğinde tutulur.
