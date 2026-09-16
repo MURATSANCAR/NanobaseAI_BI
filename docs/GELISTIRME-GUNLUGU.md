@@ -26,6 +26,22 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Vite 6.4.3 kilitlendi; sunucu derlemesi ve npm denetimi geçti (0 bildirilen açık). Embedding/reranker CPU/thread sınırları ayrı yapılandırılır, bu koşuda dörder. Yeni indeks geri kurma betiği hazırlanmıştır; dolu gerçek analiz restore kabulü henüz yapılmadı. Eski offline paket yeni web imajını içermez.
 - Müdahalesiz kitap koşusu devam ediyor; ilk künye grubu hikâye olayı üretmedi. PDF 6’daki uyuyan/mavi gözlü betimlemesi özgün görselle desteklenmiyor; model kaydına dokunmadan kalite raporuna başarısızlık olarak kaydedildi. Uçtan uca/üretim kabulü verilmedi.
 
+## 2026-09-16 — 100 soruluk tur, soru 1–4: tek tek doğrulama ve kök neden düzeltmeleri
+
+- Akış kullanıcı kuralıyla değişti: bir sorunun sorunu çözülmeden sonrakine geçilmiyor; her soru canlı köprüde koşuluyor, cevap bağımsız SQL ile doğrulanıyor, karar `tektek.jsonl`'a yazılıyor. Soru 1 (toptan iskonto: %46,1 / %45,4) ve soru 2 (planlanan vade 30,29 / 40,16 gün) DOĞRU.
+- Zaman aşımı: `SEMANTIC_QUERY_TIMEOUT_SEC` 45 → 1800 (kullanıcı: karmaşık iş uzun sürebilir, sınır yok); HYT00 artık "kaynağa ulaşılamıyor" değil `QUERY_TIMEOUT`.
+- Soru 3 (alacak yaşlandırma): veri ölçüldü — 2026 kopyasında ödeme planı satırlarının hiçbiri kapatılmamış (70.521/0), 2021–25'te açık plan satırları (647 M) cari bakiyeyle (117,5 M) tutmuyor; fatura bazlı yaşlandırma bu veride yapılamaz. Uyarı bilgi paketine yazıldı (`knowledge/caveats/logo-timas.md`). Kod: modelin `NO_SQL` gerekçesi bilgi paketindeki bir uyarıya dayanıyorsa kullanıcıya operatörün kendi cümlesi gösterilir (`compiler.caveat_for`, `no_sql_reason`); önceden genel "katalogda tanımlı değil" mesajı basılıyor, asıl neden kayboluyordu. Sonuç: dürüst red, DOĞRU.
+- Soru 4 (tahsilat vadesi, müşteri grubuna göre) — beş kök neden:
+  1. VPN tüneli düşmüştü (.155 ve .28 SQL kapalı); kullanıcı onayıyla MFA push ile açıldı. "Veri kaynağına ulaşılamıyor" bu kez gerçekti.
+  2. Eleştirmen `COUNT(*)`'ı her anahtarlı join'de "şişirilmiş" diye bloke ediyordu (Logo'da PK yok). Yeni kural: anahtar tarafın sütunları sorguda hiç kullanılmıyorsa ya da takma ad anahtar tarafın adını (açıklama, sözlük — `store.entity_terms`) taşıyorsa bloke; aksi halde ince tarafın satır sayımı → uyarı.
+  3. `AVG(DATEDIFF(day, tarih1, tarih2))` içindeki tarih kolonları "sayısal değil" diye bloke ediliyordu → fonksiyon argümanı toplanan kolon değildir (`_under_function`).
+  4. Yıl-kopyası etiketi (`__nb_firm`) alt sorgu/CTE'den geçmiyordu: `SELECT DISTINCT LOGICALREF … FROM INVOICE` kolon listesi etiketi düşürüyor, dış JOIN'e kopya eşitliği eklenemiyor → 2026 faturaları 2021–25 ödeme planıyla LOGICALREF çakışmasıyla eşleşti (ortalama vade −750 gün). `guardrails._carry_tag_through_derived` etiketi projeksiyona (ve GROUP BY'a) taşır, türetilmiş tabloyu etiketli kümeye katar; gruplamasız toplam etiketlenmez.
+  5. `AVG/MIN/MAX` anahtar tarafta tekrar → çarpılmaz, ağırlıklanır → uyarı; `SUM` bloke kalır.
+- Boş sonuç açıklaması: sorgu 0 satır dönerse ve modelin `-- yorum` okumaları bilgi paketindeki bir uyarıyla örtüşüyorsa özete "Muhtemel neden (bilgi paketi): …" eklenir (`compiler.empty_result_note`). Soru 4'te gerçekleşen tahsilat 2026 için 0 satır (kapatan ödeme kaydı yok) ve nedeni yazıyor.
+- Testler: 744 geçti (yeni: `test_no_sql_caveat.py`, eleştirmen COUNT(*)/AVG/DATEDIFF, kilitli adımın alt sorgu/CTE'den geçişi). Canlıya yalnız değişen dosyalar, md5 karşılaştırmasıyla kuruldu.
+
+---
+
 ## 2026-09-16 — Editör kabulünün müdahalesiz sistem koşusu olarak ayrılması
 
 - Kullanıcı, kitabın Codex tarafından analiz edilmesini/düzeltilmesini değil, roadmap'in mevcut yerel altyapıyla eksiksiz sınanmasını istediğini netleştirdi. Kaynak düzeltmesi API kayıt sayısı canlıda 0 doğrulandı; hazırlanan açıklamalar uygulanmadı.

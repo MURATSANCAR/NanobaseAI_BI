@@ -10,7 +10,7 @@ import urllib.request
 root=Path(__file__).resolve().parents[1]; os.chdir(root)
 run=json.loads((root/'evidence/reference-book-run.json').read_text())
 gen=run['job']['generation_id']; token=(root/'secrets/api_token').read_text().strip()
-base='http://127.0.0.1:8810'
+base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810').rstrip('/')
 
 
 def get(path):
@@ -85,7 +85,7 @@ if protocol=='unassisted_pipeline_no_source_corrections_no_review_decisions':
     unassisted={'review_decisions':review_count,'source_corrections':0,
                 'traced_scene_visual_inputs':len(inputs),
                 'reused_model_visuals':sum(bool(row['data'].get('reused_from')) for row in records['visuals'])}
-result={'environment':'remote nanobase-direct / real editor PostgreSQL and HTTP API','generation_id':gen,
+result={'environment':'remote nanobase-direct / real editor PostgreSQL and HTTP API','api':base,'generation_id':gen,
         'job_status':job['status'],'counts_and_full_values':checks,'resolved_citations':refs,**artifact,
         'evaluation_protocol':protocol,'unassisted_checks':unassisted,
         'semantic_acceptance':'NOT_ESTABLISHED_BY_STRUCTURAL_CHECK','human_accepted':False}

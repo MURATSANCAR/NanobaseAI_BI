@@ -416,3 +416,16 @@ def test_a_date_inside_datediff_is_an_argument_not_a_summed_column():
            "FROM dbo.LG_411_01_PAYTRANS p JOIN dbo.LG_411_01_INVOICE i ON i.LOGICALREF = p.FICHEREF")
     assert not [f for f in review(sql, [pay, inv]) if f.kind == "NON_NUMERIC"]
     assert [f.kind for f in review("SELECT SUM(i.FICHENO) FROM dbo.LG_411_01_INVOICE i", [inv])] == ["NON_NUMERIC"]
+
+
+def test_an_average_over_the_keyed_side_is_weighted_not_inflated_so_it_warns():
+    """AVG(DATEDIFF(invoice date, closing date)) per plan line repeats each invoice's date once per
+    line — the mean per line is what was asked. SUM of the same column would still be inflated."""
+    pay = _t("PAYTRANS", "LG_411_01_PAYTRANS", [("LOGICALREF", "int"), ("FICHEREF", "int"), ("CROSSREF", "int"), ("DATE_", "datetime")],
+             rels=[{"column": "FICHEREF", "ref_entity": "INVOICE", "ref_column": "LOGICALREF"}])
+    inv = _t("INVOICE", "LG_411_01_INVOICE", [("LOGICALREF", "int"), ("DATE_", "datetime"), ("NETTOTAL", "float")])
+    base = "FROM dbo.LG_411_01_PAYTRANS p JOIN dbo.LG_411_01_INVOICE i ON i.LOGICALREF = p.FICHEREF JOIN dbo.LG_411_01_PAYTRANS o ON o.LOGICALREF = p.CROSSREF"
+    avg = review(f"SELECT AVG(CAST(DATEDIFF(day, i.DATE_, o.DATE_) AS float)) AS gun {base}", [pay, inv])
+    assert [f.severity for f in avg if f.kind == "FANOUT"] == ["warn"], avg
+    total = review(f"SELECT SUM(i.NETTOTAL) AS tutar {base}", [pay, inv])
+    assert [f.severity for f in total if f.kind == "FANOUT"] == ["block"], total

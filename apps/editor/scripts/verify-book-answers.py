@@ -11,9 +11,10 @@ run=json.loads((root/'evidence/reference-book-run.json').read_text())
 gen=run['job']['generation_id']; output=root/'runtime/book-analysis'/gen
 jobs=json.loads((output/'question-jobs.json').read_text())
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
+base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810').rstrip('/')
 
 def get(path):
-    with urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8810'+path,headers=headers),timeout=30) as response:
+    with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as response:
         return json.load(response)
 
 def sql(query):
@@ -48,7 +49,7 @@ for key,job in jobs.items():
             citations+=len(claim['evidence_refs'])
     checks.append({'scenario':key,'job_id':job['job_id'],'status':expected['status'],
                    'full_api_equals_independent_db':True,'resolved_citations':citations})
-result={'environment':'real remote Editor API and independent PostgreSQL','generation_id':gen,
+result={'environment':'real remote Editor API and independent PostgreSQL','api':base,'generation_id':gen,
         'checks':checks,'semantic_acceptance':'REQUIRES_INDEPENDENT_SOURCE_COMPARISON',
         'human_accepted':False}
 (root/'evidence/book-answers-integrity.json').write_text(json.dumps(result,indent=2))

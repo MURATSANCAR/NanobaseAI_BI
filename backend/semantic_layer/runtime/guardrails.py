@@ -103,10 +103,10 @@ def validate_sql(sql: str) -> tuple[bool, str]:
 def _carry_tag_through_derived(out: exp.Expression, tagged: dict[str, str]) -> None:
     """A derived table over a tagged relation carries the tag out with it.
 
-    `SELECT DISTINCT LOGICALREF, DATE_, CLIENTREF FROM INVOICE` lists its columns, so the copy tag
-    the union added to INVOICE stops at the subquery's edge; the join outside it then met 2026
-    invoices with the 2021–2025 payment plan on a LOGICALREF that merely coincided, and the answer
-    was a payment term of minus 750 days. The tag is added to the projection (and the GROUP BY)
+    A subquery that lists its columns (`SELECT DISTINCT id, tarih, cari FROM fatura`) does not carry
+    the copy tag the union added to the relation it reads; the join outside it then met this year's
+    documents with the earlier copy's payment plan on an identifier that merely coincided, and the
+    answer was a payment term of minus 750 days. The tag is added to the projection (and the GROUP BY)
     of every subquery and CTE that reads a tagged relation, and the derived table — under the
     alias it is later read by — joins the tagged set, so the JOIN pass below binds it too. A
     derived table that aggregates without grouping is one row over all copies and stays untagged.
@@ -120,7 +120,7 @@ def _carry_tag_through_derived(out: exp.Expression, tagged: dict[str, str]) -> N
             if not alias or alias.upper() in tagged or not isinstance(sel, exp.Select):
                 continue
             sources: list[str] = []
-            from_ = sel.args.get("from")
+            from_ = sel.args.get("from_") or sel.args.get("from")    # sqlglot 30 names the arg `from_`
             for src in ([from_.this] if from_ is not None else []) + [j.this for j in sel.args.get("joins") or []]:
                 name = src.alias or (src.name if isinstance(src, exp.Table) else "")
                 if name and name.upper() in tagged:

@@ -26,3 +26,13 @@ def test_a_reason_the_pack_never_documented_shows_nothing():
     assert caveat_for("müşteri segmenti tanımı katalogda yok", RULES) == ""
     assert caveat_for("", RULES) == ""
     assert caveat_for("borç kapama verisi yok", "") == ""
+
+
+def test_an_empty_result_is_explained_by_the_caveat_its_readings_point_at():
+    from semantic_layer.runtime.compiler import empty_result_note
+    sql = ("-- yorum: 'tahsilat' → kapatan ödeme kaydı (CROSSREF) ile fatura tarihi arasındaki gün farkı, gerçekleşen tahsilat süresi\n"
+           "SELECT AVG(1) FROM PAYTRANS")
+    note = empty_result_note(sql, RULES)
+    assert note.startswith(" Muhtemel neden (bilgi paketi): Gerçekleşen tahsilat süresi 2026 için ölçülemez"), note
+    assert empty_result_note("SELECT 1 FROM X", RULES) == ""
+    assert empty_result_note("-- yorum: 'kanal' → CLCARD.SPECODE2\nSELECT 1", RULES) == ""

@@ -345,6 +345,13 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                             f"toplanmış bir tutar ve join onu daha ince taneli tarafın her satırında bir daha sayıyor. "
                             f"Toplamı tek bir taneciklikte al: ya kendi seviyesinde topla, ya da ince tarafta tutulan "
                             f"satır tutarını kullan."))
+                    elif isinstance(agg, (exp.Avg, exp.Min, exp.Max)):
+                        # An average is not multiplied by repetition, it is weighted by it: the mean
+                        # payment term over plan lines repeats each invoice's date once per line, and
+                        # that per-line mean is the figure asked for. Said, not refused.
+                        findings.append(Finding("FANOUT", "warn",
+                            f"{agg.sql(dialect=dialect)}: {who} satırları join'de tekrarlanıyor; ortalama ince "
+                            f"tarafın satır sayısıyla ağırlıklı. {who} başına ortalama isteniyorsa önce o seviyede topla."))
                     else:
                         findings.append(Finding("FANOUT", "block",
                             f"{agg.sql(dialect=dialect)} şişirilmiş: {who} tablosunun satırları join yüzünden "

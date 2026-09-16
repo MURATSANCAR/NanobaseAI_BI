@@ -2,6 +2,7 @@
 const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
+const base=(process.env.EDITOR_VERIFY_BASE_URL||'http://127.0.0.1:8810').replace(/\/$/,'');
 const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/playwright'));
 (async()=>{
  const token=fs.readFileSync(path.join(root,'secrets/api_token'),'utf8').trim();
@@ -13,7 +14,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
   for(const width of [320,390,768,1440]){
    const context=await browser.newContext({viewport:{width,height:1000}});
    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
-   await page.goto('http://127.0.0.1:8810/editor/');
+   await page.goto(base+'/editor/');
    await page.getByLabel('Operatör erişim anahtarı').waitFor();
    const loginOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
    if(loginOverflow)throw new Error('Login horizontal overflow '+width);
@@ -35,7 +36,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(layout.scroll>width||layout.smallButtons)throw new Error('Layout failed '+JSON.stringify({name,layout}));
     checks.push({tab:name,...layout});
    }
-   const response=await context.request.get('http://127.0.0.1:8810/v1/generations/'+generation+'/scenes?limit=100',
+   const response=await context.request.get(base+'/v1/generations/'+generation+'/scenes?limit=100',
       {headers:{Authorization:'Bearer '+token}});
    if(!response.ok())throw new Error('Real scene API failed');
    const scenes=(await response.json()).items;
@@ -67,7 +68,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    results.push({width,generation,checks,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
-  fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',results,semantic_acceptance:false},null,2));
+  fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',api:base,results,semantic_acceptance:false},null,2));
   console.log(JSON.stringify({viewports:results.map(r=>r.width),tabs:6,source_page:6,horizontal_overflow:false,semantic_acceptance:false}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e.message);process.exitCode=1;});

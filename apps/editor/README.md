@@ -188,6 +188,14 @@ cevapları, atıflar ve kaynak ekranı ayrıca doğrulanmalıdır. Güncel dolu 
 yedeğinin tam restore kabulü henüz yapılmadı. Tek host/tek DB
 topolojisi yüksek erişilebilirlik sağlamaz; RPO/RTO henüz taahhüt edilmemiştir.
 
+Referans kitap kabul betiklerinde `EDITOR_VERIFY_BASE_URL` ile hedef kurulumun
+loopback adresi seçilir. Örneğin `EDITOR_VERIFY_BASE_URL=http://127.0.0.1:8811`
+ile `verify-book-results.py`, `verify-book-answers.py`, `verify-source-views.py`
+ve `verify-review-ui.cjs` geri yükleme kurulumunu denetler. Bu betikler hedefin
+kendi operatör anahtarını, Compose DB'sini ve kopyalanmış kabul koşusu
+kimliklerini kullanır; varsayılan adres 8810'dur. Kaynak kurulum üzerinde
+alınmış bir sonuç hedef restore kabulü olarak sunulmaz.
+
 Paketleme yalnız internet erişimli hazırlık sunucusunda yapılır:
 
 ```sh

@@ -232,12 +232,21 @@ def _walk(scope: Scope, carried: list[exp.Expression], root_alias: str, sources:
     where = sel.args.get("where")
     if where is not None:
         local.extend(_split_and(where.this))
+    unpreserved: dict[str, list[exp.Expression]] = {}
     for join in sel.args.get("joins") or []:
         on = join.args.get("on")
         # Only an inner join's ON drops rows. On the unpreserved side of an outer join it only
         # decides what the row is paired with, and the row stays in the answer.
         if on is not None and not (join.side or "").strip() and (join.kind or "").upper() != "CROSS":
             local.extend(_split_and(on))
+        elif on is not None and (join.side or "").strip().upper() == "LEFT":
+            # …but the joined table's *own* rows are read only where the ON admits them:
+            # `LEFT JOIN STLINE sl ON sl.INVOICEREF = i.LOGICALREF AND sl.CANCELLED = 0` reads no
+            # cancelled line. That is the one place a restriction on the right side can be written
+            # without dropping the left side's rows, so it counts for that table alone.
+            joined = (join.this.alias_or_name if isinstance(join.this, (exp.Table, exp.Subquery)) else "") or ""
+            if joined:
+                unpreserved[joined.upper()] = [c for c in _split_and(on) if _belongs(c, joined, False)]
     outputs = _output_map(sel)
     carried_here = []
     for c in carried:
@@ -250,7 +259,7 @@ def _walk(scope: Scope, carried: list[exp.Expression], root_alias: str, sources:
     selected = scope.selected_sources
     single = len(selected) == 1
     for alias, (node, source) in selected.items():
-        mine = [c for c in conj if _belongs(c, alias, single)]
+        mine = [c for c in conj if _belongs(c, alias, single)] + [_unwrap_isnull(c) for c in unpreserved.get(alias.upper(), [])]
         if isinstance(source, exp.Table):
             name = (source.db + "." if source.db else "") + source.name
             entity = logical_table(name).entity

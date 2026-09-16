@@ -874,6 +874,17 @@ def caveat_for(reason: str, rules_text: str) -> str:
     return out[:600]
 
 
+def empty_result_note(sql: str, rules_text: str) -> str:
+    """Why a query that ran may have returned nothing, when the knowledge pack says so.
+
+    The model's readings name what the query looked for ("kapatan ödeme CROSSREF ile bağlı"); a caveat
+    that documents that very thing as absent ("kapatan ödeme kaydı yok") is the reason the result is
+    empty, and the person asking is told it in the operator's words. Nothing matched: no note."""
+    readings = " ".join(interpretations(sql or ""))
+    why = caveat_for(readings, rules_text) if readings else ""
+    return f" Muhtemel neden (bilgi paketi): {why}" if why else ""
+
+
 #: How much of the operator documentation one prompt may carry. A local model has a fixed context and
 #: a knowledge pack has no size at all: a generated vendor dictionary or a long runbook dropped into
 #: the pack silently pushes the schema, the catalog and the examples out of the window, and the only

@@ -2,6 +2,7 @@
 """Compare every real source image served by the API with its immutable hash."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import urllib.request
 import urllib.error
@@ -10,7 +11,7 @@ root=Path(__file__).resolve().parents[1]
 run=json.loads((root/'evidence/reference-book-run.json').read_text())
 gen=run['job']['generation_id']
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
-base='http://127.0.0.1:8810'
+base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810').rstrip('/')
 
 def get(path):
     return urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30)
@@ -27,7 +28,7 @@ for row in records['items']:
     actual=hashlib.sha256(raw).hexdigest()
     assert actual==row['data']['render_sha256'], 'API image does not match this source page'
     checks.append({'pdf_page':row['data']['pdf_page'],'evidence_id':row['id'],'sha256':actual,'bytes':len(raw)})
-report={'generation_id':gen,'environment':'real remote Editor API',
+report={'generation_id':gen,'environment':'real remote Editor API','api':base,
         'verified_source_images':checks,'semantic_or_mobile_acceptance':False}
 (root/'evidence'/('source-views-'+gen+'.json')).write_text(json.dumps(report,indent=2))
 print(json.dumps({'generation_id':gen,'matched_images':len(checks),'no_store':True,

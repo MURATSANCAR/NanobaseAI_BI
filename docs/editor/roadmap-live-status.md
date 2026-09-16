@@ -79,3 +79,18 @@ Gerçek ikinci baskı, diğer iki kitap ve yayınevi editör zamanı dış girdi
 ## Ölçülen çalışma darboğazı
 
 İlk künye grubu çağrısı 758,808 saniye sürdü; bu çağrı duvar süresidir, CPU saati veya tüm kitabın toplam süresi değildir. Üç dört-sayfalık sahne çağrısı 1800 çıktı token sınırına ulaştı; kesilmiş çıktı kabul edilmeyerek otomatik bölündü. Tekrar maliyetini azaltmak için sahne bütçesi 3600’e çıkarıldı; 8192 toplam bağlam kontrolü korunuyor. Aynı iş ikinci denemede, eski tamamlanan kayıtları koruyarak devam ediyor. Bu hata ve yeniden deneme toplam kullanıcı süresinden çıkarılmaz.
+
+Yeni bütçeyle PDF 9–12 grubu 1916 çıktı token / 1298,808 saniyede,
+PDF 13–16 grubu 1421,361 saniyede tamamlandı. İlk anlatı grubunda görsel
+adayın yanlış sayfa etiketi kaynak tutarsızlığı olasılığına dönüştürülmüş;
+model hatasının sonraki analize taşınması gözlendi. PDF 16 etkinliği ise
+ACTIVITY olarak ayrılmış ve hikâye olaylarına eklenmemiş. Bunlar ara sahne
+bulgularıdır; destek kontrolü ve bütün-kitap kabulü henüz bitmedi.
+
+15:58:38–16:58:46 UTC arasındaki 112 örnekte LLM ortalama 46,354 mantıksal
+CPU, örneklenmiş tepe 22,49 GiB RAM kullandı. Bu zaman aralığı toplam kitap
+süresi değildir. 8076/8078 sağlık uçlarında 110'ar örnekte hata görülmedi;
+8795 için 110 örneğin 12'sinde URLError vardı. Systemd günlükleri bu
+aralıklarda BI köprüsünün durdurulup yeniden başlatıldığını gösteriyor.
+Nedensellik veya ortak yük SLO kabulü çıkarılamaz. Ölçüm özeti
+`scripts/summarize-book-resources.py <job_id>` ile gerçek JSONL'den üretilir.
