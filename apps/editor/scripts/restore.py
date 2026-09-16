@@ -41,10 +41,10 @@ code = 'import tarfile,sys; t=tarfile.open(fileobj=sys.stdin.buffer,mode="r|"); 
 with (source/'artifacts.tar').open('rb') as stream:
     subprocess.run(['docker','run','--rm','-i','--network','none','--read-only','--cap-drop','ALL',
                     '--tmpfs','/data:mode=1777','-v',volume+':/data/artifacts',image,'python','-c',code],stdin=stream,check=True)
-subprocess.run(compose+['up','-d','--no-build','--pull','never','--wait','--wait-timeout','180'],check=True)
+subprocess.run(compose+['up','-d','--no-build','--pull','never','--wait','--wait-timeout','600'],check=True)
 subprocess.run([sys.executable,'scripts/verify.py'],check=True)
 query = "SELECT json_build_object('revision',(SELECT version_num FROM editor.alembic_version),'deployments',(SELECT json_agg(release ORDER BY release) FROM editor.deployments),'sources',COALESCE((SELECT json_agg(json_build_object('sha256',sha256,'manifest_md5',md5(manifest::text)) ORDER BY sha256) FROM editor.source_probes),'[]'::json))"
 reference = json.loads(subprocess.check_output(compose+['exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query]))
 if reference != manifest['reference']:
     raise SystemExit('Restored database differs from backup reference')
-print(json.dumps({'restore':'verified','target':project,'reference':reference,'book_citation_validation':'pending_reference_book'}))
+print(json.dumps({'restore':'verified','target':project,'reference':reference,'book_citation_validation':'not_implemented_in_foundation'}))

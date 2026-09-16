@@ -53,7 +53,9 @@ hash/revision kaydı `deploy/models.json` ve sürüm manifestindedir. BGE dosyal
 sunucudaki mevcut ağırlıkların tekrar kullanımıdır; Qwen embedding/reranker
 adaylarına karşı anlamsal kalite eşdeğerliği gösterilmiş değildir.
 
-Model dosyalarını içeren paket kurulduktan sonra `.env` dosyasına ekleyin:
+Model içeren offline paketin `.env.example` dosyası gerekli Compose dosyalarını
+ve profili zaten seçer; `compose.offline.yaml` seçimini kaldırmayın. Kaynak
+depodan geliştirme sunucusu kurulumunda `.env` dosyasına ekleyin:
 
 ```dotenv
 COMPOSE_FILE=compose.yaml:compose.models.yaml
@@ -73,13 +75,7 @@ Bu komut bütün PDF sayfalarının metin katmanını ve görünür render'ını
 isteğe bağlı Docling+Türkçe OCR çıkarımı yapar. Kaynak dosyayı değiştirmez.
 
 ```sh
-timeout 1250 docker compose --profile tools run --rm --no-deps \
-  -e EDITOR_PARSE_TIMEOUT=1200 \
-  -v /mutlak/yol/kitap.pdf:/input/book.pdf:ro \
-  document /input/book.pdf --output /data/artifacts --docling
-docker compose exec -T api python -m editor.record_probe \
-  /data/artifacts/KAYNAK_SHA256/manifest.json
-python3 scripts/verify.py
+python3 scripts/probe-source.py /mutlak/yol/kitap.pdf --timeout 1200
 ```
 
 Dosya/boyut tavanları `.env` içindedir; 50 MiB/100 sayfa geçici altyapı sınırıdır,
@@ -143,6 +139,10 @@ Paket imajları, yazılımı, OCR verisini, Docling modellerini ve seçilirse LL
 ağırlıklarını içerir. Kaynak kitaplar, müşteri verisi ve sırlar pakete girmez.
 Dağıtımın değişmez kimlikleri `release-manifest.json` içindeki imaj ID'leri ve
 SHA-256 değerleridir. Runtime kodu bind mount edilmez.
+Paketin ürettiği `compose.offline.yaml` bütün servisleri içerik kimliğinden
+türetilmiş yerel imaj etiketlerine bağlar. Böylece `docker load` sonrasında
+registry digest bilgisinin korunmasına veya müşterinin registry erişimine
+bağımlı kalınmaz; import imaj ID'lerini ayrıca karşılaştırır.
 
 ## Teknik dayanaklar
 

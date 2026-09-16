@@ -14,28 +14,44 @@ destination = Path(sys.argv[1]).resolve()
 destination.mkdir(parents=True, exist_ok=False)
 source = destination/'editor'
 shutil.copytree(root, source, ignore=shutil.ignore_patterns('.env','secrets','runtime','dist','evidence','__pycache__'))
-config = json.loads(subprocess.check_output(['docker','compose','--profile','tools','config','--format','json']))
+config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))
 images = sorted({service['image'] for service in config['services'].values()})
 with_models = '--with-models' in sys.argv
 if with_models:
     model_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.models.yaml','--profile','models','config','--format','json']))
+    config['services'].update(model_config['services'])
     images = sorted(set(images) | {service['image'] for service in model_config['services'].values()})
     model_manifest = json.loads((root/'deploy/models.json').read_text())
     model_destination = source/'runtime/models'
     model_destination.mkdir(parents=True)
-    for item in model_manifest['files']:
+    for item in model_manifest['files'] + model_manifest['reused_files']:
         path = root/'runtime/models'/item['name']
         with path.open('rb') as stream:
             if hashlib.file_digest(stream,'sha256').hexdigest() != item['sha256']:
                 raise SystemExit('Model not verified: '+item['name'])
         shutil.copyfile(path,model_destination/item['name'])
-    for name in ('bge-m3-Q8_0.gguf','bge-reranker-v2-m3-Q8_0.gguf'):
-        shutil.copyfile(root/'runtime/models'/name,model_destination/name)
 inspection = json.loads(subprocess.check_output(['docker','image','inspect',*images]))
-subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*images],check=True)
+# docker load need not preserve registry digests. Use content-derived local tags,
+# verify image IDs after import, and override every service to those offline tags.
+by_reference = dict(zip(images,inspection))
+offline_services = {}
+tags = set()
+for service, definition in config['services'].items():
+    identity = by_reference[definition['image']]['Id']
+    tag = 'nanobase-editor-release/image:' + identity.split(':')[1][:24]
+    subprocess.run(['docker','image','tag',identity,tag],check=True)
+    tags.add(tag)
+    offline_services[service] = {'image':tag,'pull_policy':'never'}
+(source/'compose.offline.yaml').write_text(json.dumps({'services':offline_services},indent=2))
+with (source/'.env.example').open('a') as stream:
+    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + 'compose.offline.yaml\n')
+    if with_models:
+        stream.write('COMPOSE_PROFILES=models\n')
+inspection = json.loads(subprocess.check_output(['docker','image','inspect',*sorted(tags)]))
+subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*sorted(tags)],check=True)
 manifest = {'kind':'editor-foundation-offline', 'architecture':'linux/amd64',
             'release':config['services']['api']['environment']['EDITOR_RELEASE'],
-            'images':[{'id':i['Id'],'tags':i['RepoTags'],'digests':i['RepoDigests']} for i in inspection],
+            'images':[{'id':i['Id'],'tags':[tag],'digests':i['RepoDigests']} for tag,i in zip(sorted(tags),inspection)],
             'model_qualification':'candidate weights included; semantic acceptance pending' if with_models else 'pending; LLM/VLM weights not included', 'files':{}}
 for path in sorted(destination.rglob('*')):
     if path.is_file():

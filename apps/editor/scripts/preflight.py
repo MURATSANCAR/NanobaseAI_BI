@@ -14,6 +14,12 @@ root = Path(__file__).resolve().parents[1]
 os.chdir(root)
 settings = dict(line.split('=', 1) for line in (root / '.env').read_text().splitlines() if line and not line.startswith('#'))
 errors = []
+for name in ('db_admin','db_owner','db_app','api_token'):
+    path = root/'secrets'/name
+    if not path.is_file() or len(path.read_text().strip()) < 32:
+        errors.append('Missing or too short installation secret: '+name)
+if (root/'secrets').stat().st_mode & 0o077:
+    errors.append('Secrets directory must be restricted to its owner (chmod 700 secrets).')
 if platform.system() != 'Linux' or platform.machine() != 'x86_64':
     errors.append('This release is qualified for Linux x86_64 only.')
 subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], check=True)

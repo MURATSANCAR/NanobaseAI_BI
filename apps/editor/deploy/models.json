@@ -3,6 +3,20 @@
   "repository": "ggml-org/Qwen3.8-27B-GGUF",
   "revision": "0669b98607d47046c7c2b3f801011d54a08cfccf",
   "license": "Apache-2.0; retain upstream model cards and license in release inventory",
+  "reused_files": [
+    {
+      "name": "bge-m3-Q8_0.gguf",
+      "bytes": 634553760,
+      "sha256": "950f4a8e5e19477a6d3c26d2f162233c20002c601f75e4b002e3239997821167",
+      "source": "Existing local asset; base model BAAI/bge-m3; original GGUF conversion revision not established"
+    },
+    {
+      "name": "bge-reranker-v2-m3-Q8_0.gguf",
+      "bytes": 635676416,
+      "sha256": "a43c7c9b11a4c1517e5bf95151960e1621d1b72f7a493364b01e386cf1aaa1d3",
+      "source": "Existing local asset; base model BAAI/bge-reranker-v2-m3; original GGUF conversion revision not established"
+    }
+  ],
   "files": [
     {
       "name": "Qwen3.8-27B-Q4_K_M.gguf",

@@ -24,7 +24,7 @@ if active_parsers:
 subprocess.run(compose + ['stop', 'api', 'worker'], check=True)
 try:
     with (destination / 'database.dump').open('wb') as stream:
-        subprocess.run(compose + ['exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'editor', '-Fc', '--no-owner', '--no-acl'], stdout=stream, check=True)
+        subprocess.run(compose + ['exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'editor', '-Fc', '--schema=editor', '--schema=checkpoints', '--no-owner', '--no-acl'], stdout=stream, check=True)
     # Tar is streamed from a read-only volume; no book content is logged.
     code = 'import tarfile,sys; t=tarfile.open(fileobj=sys.stdout.buffer,mode="w|"); t.add("/data",arcname="artifacts"); t.close()'
     with (destination / 'artifacts.tar').open('wb') as stream:

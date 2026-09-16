@@ -39,8 +39,10 @@ m=json.loads((p/'manifest.json').read_text())
 with (p/'original.pdf').open('rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()==m['sha256']
 for page in m['pages']:
  with (p/('page-%04d.png'%page['pdf_page'])).open('rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()==page['render_sha256']
+if 'docling_sha256' in m:
+ with (p/'docling.json').open('rb') as f: assert hashlib.file_digest(f,'sha256').hexdigest()==m['docling_sha256']
 print('Original source and every render hash verified')'''
-    subprocess.run(['docker','compose','exec','-T','api','python','-c',code,source['sha256']],check=True)
+    subprocess.run(['docker','compose','exec','-T','api','python','-c',code,source['sha256']],check=True,stdout=subprocess.PIPE,text=True)
 try:
     urllib.request.urlopen(base+'/v1/system', timeout=10)
     raise AssertionError('Unauthenticated request allowed')
@@ -48,4 +50,5 @@ except urllib.error.HTTPError as exc:
     assert exc.code == 401
 print(json.dumps({'environment':'remote Linux Docker installation', 'api':base,
                   'database':'isolated editor PostgreSQL / editor schema',
-                  'state':state, 'independent_reference':reference, 'unauthorized_status':401}, indent=2))
+                  'state':state, 'independent_reference':reference, 'unauthorized_status':401,
+                  'artifact_hash_verified_sources':len(reference['source_probes'])}, indent=2))

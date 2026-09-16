@@ -41,7 +41,9 @@ def main():
     target.mkdir(parents=True, exist_ok=False)
     shutil.copyfile(args.source, target / 'original.pdf')
     manifest = {'sha256': digest, 'bytes': size, 'pdf_pages': pages,
-                'semantic_status': 'NOT_ANALYZED', 'pages': [], 'tools': {}}
+                'semantic_status': 'NOT_ANALYZED', 'pages': [], 'tools': {},
+                'render': {'max_side_pixels': 1600, 'rotation': 'poppler_default'},
+                'source_accounting_complete': False}
     for tool in ['pdfinfo', 'pdftoppm', 'tesseract']:
         cmd = [tool, '--version' if tool == 'tesseract' else '-v']
         proc = subprocess.run(cmd, capture_output=True, timeout=10)
@@ -59,19 +61,27 @@ def main():
             manifest['pages'].append({'pdf_page': page, 'printed_label': None,
                 'text_chars': len(text.strip()), 'render_sha256': hashlib.file_digest(image.open('rb'), 'sha256').hexdigest(),
                 'status': 'NEEDS_REVIEW', 'reason': 'OCR_AND_VISUAL_VERIFICATION_PENDING'})
+            if page % 10 == 0 or page == pages:
+                print(json.dumps({'rendered_pages':page,'total_pages':pages}),flush=True)
         if args.docling:
             from docling.datamodel.base_models import InputFormat
             from docling.datamodel.pipeline_options import PdfPipelineOptions, TesseractCliOcrOptions
             from docling.document_converter import DocumentConverter, PdfFormatOption
             options = PdfPipelineOptions(artifacts_path=os.environ['DOCLING_ARTIFACTS_PATH'])
             options.enable_remote_services = False
-            options.ocr_options = TesseractCliOcrOptions(lang=['tur', 'eng'])
+            options.ocr_options = TesseractCliOcrOptions(lang=['tur', 'eng'], force_full_page_ocr=True)
+            manifest['ocr_policy'] = {'engine':'tesseract','languages':['tur','eng'],'full_page':True}
             options.document_timeout = max(1, timeout - (time.monotonic() - started))
             converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)})
             result = converter.convert(args.source, max_num_pages=int(os.environ.get('EDITOR_MAX_PAGES', '100')))
             result.document.save_as_json(target / 'docling.json')
             manifest['docling_status'] = str(result.status)
             manifest['tools']['docling'] = importlib.metadata.version('docling')
+            with (target/'docling.json').open('rb') as stream:
+                manifest['docling_sha256'] = hashlib.file_digest(stream,'sha256').hexdigest()
+            from docling.datamodel.base_models import ConversionStatus
+            if result.status != ConversionStatus.SUCCESS:
+                raise RuntimeError('DOCLING_SOURCE_INCOMPLETE')
         manifest['source_accounting_complete'] = len(manifest['pages']) == pages
     finally:
         manifest['elapsed_seconds'] = round(time.monotonic() - started, 3)

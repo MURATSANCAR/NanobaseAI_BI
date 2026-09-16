@@ -6,7 +6,10 @@ from psycopg.rows import dict_row
 
 
 def secret(name: str) -> str:
-    return Path('/run/secrets/' + name).read_text().strip()
+    value = Path('/run/secrets/' + name).read_text().strip()
+    if len(value) < 32:
+        raise RuntimeError('Installation secret is missing or too short: ' + name)
+    return value
 
 
 def connection(owner=False):
