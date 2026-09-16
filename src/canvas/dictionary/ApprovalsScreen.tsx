@@ -12,6 +12,7 @@ import {
   type ReviewItem,
 } from '../engine';
 import { SourceBadge, SourceTabs, matchesSource, useSourceFilter } from './source';
+import AdminGuard from '../AdminGuard';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g');
@@ -55,6 +56,14 @@ function technical(it: ReviewItem): string {
 }
 
 export default function ApprovalsScreen() {
+  return (
+    <AdminGuard rail="/onaylar" crumb="Onaylar">
+      <ApprovalsScreenInner />
+    </AdminGuard>
+  );
+}
+
+function ApprovalsScreenInner() {
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [sel, setSel] = useState<string>('');

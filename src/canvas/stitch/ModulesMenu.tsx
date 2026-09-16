@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import groups from '../modules.json';
+import { useIsAdmin } from '../useAdmin';
 
 /**
  * Modül menüsü. Timaş'ın 18 grup / 67 modüllük iş ağacı; eski kokpitten
@@ -18,12 +19,24 @@ export const LIVE: Record<string, string> = {
   board: '/panolar',
 };
 
+/** Yalnız yöneticilere açık ekranlar; bu ekranlara götüren modüller yetkisiz kişide hiç listelenmez. */
+const ADMIN_ROUTES = new Set(['/veri-sozlugu', '/onaylar', '/yonetim']);
+
 const norm = (s: string) =>
   s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g').replace(/[üÜ]/g, 'u').replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c');
 
 export default function ModulesMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [q, setQ] = useState('');
-  const data = groups as Group[];
+  const isAdmin = useIsAdmin();
+  const raw = groups as Group[];
+
+  // Yönetime özel ekranlara götüren modülleri yetkisiz kişide en baştan çıkar.
+  const data = useMemo(() => {
+    if (isAdmin) return raw;
+    return raw
+      .map((g) => ({ ...g, modules: g.modules.filter((m) => !ADMIN_ROUTES.has(LIVE[m.id])) }))
+      .filter((g) => g.modules.length > 0);
+  }, [raw, isAdmin]);
 
   const filtered = useMemo(() => {
     const needle = norm(q.trim());

@@ -48,6 +48,16 @@ AUDIT = sa.Table(
     sa.Column("detail", sa.Text),
 )
 
+#: Yönetici AD grubunun üyelerinin kalıcı anlık görüntüsü. Yetki kontrolü (is_admin) bunu okur;
+#: canlı AD her istekte okunmaz. 15 dk'lık timer `refresh_admin_group` ile tazelenir.
+GROUP_CACHE = sa.Table(
+    "semantic_admin_group", _md,
+    sa.Column("group_name", sa.String(200), primary_key=True),
+    sa.Column("members", sa.Text, nullable=False),   # JSON: küçük harf sAMAccountName listesi
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("error", sa.Text),                      # son tazeleme hatası (varsa); üyeler korunur
+)
+
 #: Ekrandan yönetilen ayarlar. `env` servis dosyasındaki adıdır; ekran değeri yoksa oradan okunur.
 SPEC: list[dict[str, Any]] = [
     # E-posta
@@ -132,7 +142,13 @@ SPEC: list[dict[str, Any]] = [
      "help": "Bir soru için modelin cevabı beklenecek en uzun süre"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
-     "default": "timasai,muratsancar", "help": "AD hesap adları, virgülle. Bu ekranı yalnız bunlar açar"},
+     "default": "zekiai,timasai,muratsancar",
+     "help": "AD hesap adları, virgülle. Bu ekranı bunlar açar. zekiai her zaman yönetici AD grubunda; "
+             "burada da tutulur ki AD bir an okunamasa bile yetkisi düşmesin"},
+    {"key": "TIMAS_ADMIN_GROUP", "group": "access", "label": "Yönetici AD grubu", "type": "text",
+     "default": "Administrators",
+     "help": "Bu Active Directory grubunun üyeleri de yönetici sayılır (iç içe gruplar dahil). "
+             "Boş bırakılırsa yalnız yukarıdaki liste geçerli olur"},
 ]
 _BY_KEY = {s["key"]: s for s in SPEC}
 GROUPS = [
@@ -149,7 +165,8 @@ GROUPS = [
              "süre içinde giriş yapmamış hesaplar girmez."},
     {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
-    {"id": "access", "label": "Yetki", "help": "Yönetim ekranına kimlerin gireceği."},
+    {"id": "access", "label": "Yetki",
+     "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]
 #: Dosyada tutulan ayarlar: anahtar → (dosya, dosyadaki alan adı). Veritabanı yerine dosya, çünkü
 #: bu değerleri okuyan başka bir süreç var (giriş servisi, bağlantıyı kuran sürücü).
@@ -300,8 +317,142 @@ def admins() -> list[str]:
     return [u.strip().lower() for u in conf("TIMAS_ADMIN_USERS").split(",") if u.strip()]
 
 
+#: DB'deki grup anlık görüntüsünü her is_admin çağrısında sorgulamamak için kısa bellek önbelleği.
+#: Bu AD'yi DEĞİL, yalnız DB kaydını önbelleğe alır; canlı AD okuması 15 dk'lık timer'da yapılır.
+_grp_mem: dict[str, Any] = {"at": 0.0, "group": "", "members": frozenset()}
+_GRP_MEM_TTL = 30.0
+
+
+def admin_group_members() -> frozenset[str]:
+    """Yönetici AD grubunun (iç içe dahil) üyeleri — DB'deki en son anlık görüntüden okunur.
+    Canlı AD burada OKUNMAZ; görüntüyü `refresh_admin_group` (15 dk'lık timer) tazeler. Grup adı
+    boşsa ya da görüntü yoksa boş küme döner; o zaman yalnız `TIMAS_ADMIN_USERS` listesi geçerlidir.
+    """
+    group = conf("TIMAS_ADMIN_GROUP").strip().lower()
+    now = time.time()
+    if _grp_mem["group"] == group and now - _grp_mem["at"] < _GRP_MEM_TTL:
+        return _grp_mem["members"]  # type: ignore[return-value]
+    members = _load_group_snapshot(group)
+    _grp_mem.update(at=now, group=group, members=members)
+    return members
+
+
+def _load_group_snapshot(group_lower: str) -> frozenset[str]:
+    if not group_lower or _engine is None:
+        return frozenset()
+    try:
+        with _engine.connect() as c:
+            row = c.execute(sa.select(GROUP_CACHE.c.members)
+                            .where(sa.func.lower(GROUP_CACHE.c.group_name) == group_lower)).first()
+        if not row:
+            return frozenset()
+        data = json.loads(row[0]) or []
+        return frozenset(str(x).strip().lower() for x in data if str(x).strip())
+    except Exception as e:  # noqa: BLE001
+        log.warning("admin: grup anlık görüntüsü okunamadı: %s", e)
+        return frozenset()
+
+
+def group_snapshot() -> dict[str, Any]:
+    """Ekranda göstermek için: kayıtlı üyeler, en son tazeleme zamanı ve varsa hata."""
+    group = conf("TIMAS_ADMIN_GROUP").strip()
+    out: dict[str, Any] = {"group": group, "members": [], "updatedAt": None, "error": None, "count": 0}
+    if not group or _engine is None:
+        return out
+    try:
+        with _engine.connect() as c:
+            row = c.execute(sa.select(GROUP_CACHE.c.members, GROUP_CACHE.c.updated_at, GROUP_CACHE.c.error)
+                            .where(sa.func.lower(GROUP_CACHE.c.group_name) == group.lower())).first()
+        if row:
+            members = sorted(str(x).strip().lower() for x in (json.loads(row[0]) or []) if str(x).strip())
+            out.update(members=members, count=len(members), updatedAt=_iso(row[1]), error=row[2])
+    except Exception as e:  # noqa: BLE001
+        out["error"] = f"görüntü okunamadı: {e}"[:400]
+    return out
+
+
+def refresh_admin_group(engine: Optional[sa.engine.Engine] = None) -> dict[str, Any]:
+    """Yönetici AD grubunu canlı okuyup DB'ye yazar. 15 dk'lık timer bunu çağırır (istek yolunda değil).
+    Tazeleme başarısız olursa eldeki üye görüntüsü SİLİNMEZ; yalnız hata kaydedilir ki yetki düşmesin."""
+    eng = engine or _engine
+    group = conf("TIMAS_ADMIN_GROUP").strip()
+    if eng is None:
+        return {"ok": False, "error": "veritabanı bağlı değil"}
+    ensure(eng)
+    if not group:
+        return {"ok": True, "group": "", "count": 0, "note": "grup tanımlı değil"}
+    cfg = {k: conf(k) for k in store_keys("ad")}
+    missing = [k for k in ("AD_HOST", "AD_NETBIOS", "AD_BASE_DN", "AD_BIND_USER", "AD_BIND_PASSWORD") if not cfg.get(k)]
+    if missing:
+        return {"ok": False, "group": group, "error": "AD ayarı eksik: " + ", ".join(missing)}
+    now = _now()
+    try:
+        members = sorted(_read_group_members(cfg, group))
+    except Exception as e:  # noqa: BLE001
+        log.warning("admin: yönetici grubu tazelenemedi, eski görüntü korunuyor: %s", e)
+        try:
+            with eng.begin() as c:
+                c.execute(GROUP_CACHE.update().where(GROUP_CACHE.c.group_name == group)
+                          .values(updated_at=now, error=f"{type(e).__name__}: {e}"[:400]))
+        except Exception:  # noqa: BLE001
+            pass
+        return {"ok": False, "group": group, "error": f"{type(e).__name__}: {e}"[:400]}
+    body = json.dumps(members, ensure_ascii=False)
+    with eng.begin() as c:
+        c.execute(GROUP_CACHE.delete().where(GROUP_CACHE.c.group_name == group))
+        c.execute(GROUP_CACHE.insert().values(group_name=group, members=body, updated_at=now, error=None))
+    _grp_mem.update(at=0.0)   # bellek önbelleğini geçersiz kıl: sonraki okuma yeni görüntüyü alsın
+    log.info("admin: yönetici grubu tazelendi (%s): %d üye", group, len(members))
+    return {"ok": True, "group": group, "count": len(members), "at": _iso(now), "members": members}
+
+
+def _read_group_members(cfg: dict[str, str], group: str) -> frozenset[str]:
+    from ldap3 import NONE, NTLM, SUBTREE, Connection, Server  # type: ignore[import-not-found]
+
+    _ensure_md4()
+    server = Server(cfg["AD_HOST"], port=int(cfg.get("AD_PORT") or 389), get_info=NONE, connect_timeout=5)
+    conn = Connection(server, user=f'{cfg["AD_NETBIOS"]}\\{cfg["AD_BIND_USER"]}', password=cfg["AD_BIND_PASSWORD"],
+                      authentication=NTLM, receive_timeout=15)
+    if not conn.bind():
+        raise RuntimeError(f"servis hesabı reddedildi: {conn.result.get('description')}")
+    try:
+        if group.lower().startswith(("cn=", "ou=")) and "dc=" in group.lower():
+            group_dn = group                       # tam DN girilmişse doğrudan kullan
+        else:
+            esc = _ldap_escape(group)
+            conn.search(cfg["AD_BASE_DN"], f"(&(objectClass=group)(|(sAMAccountName={esc})(cn={esc})))",
+                        SUBTREE, attributes=["distinguishedName"], size_limit=2)
+            if not conn.entries:
+                raise RuntimeError(f"«{group}» grubu bulunamadı")
+            group_dn = conn.entries[0].entry_dn
+        # 1.2.840.113556.1.4.1941 = LDAP_MATCHING_RULE_IN_CHAIN: iç içe grupların üyeleri de gelir.
+        # userAccountControl bit 2 (ACCOUNTDISABLE) olanlar dışlanır.
+        flt = (f"(&(objectCategory=person)(objectClass=user)"
+               f"(memberOf:1.2.840.113556.1.4.1941:={_ldap_escape(group_dn)})"
+               f"(!(userAccountControl:1.2.840.113556.1.4.803:=2)))")
+        found = conn.extend.standard.paged_search(cfg["AD_BASE_DN"], flt, SUBTREE,
+                                                  attributes=["sAMAccountName"], paged_size=500, generator=True)
+        out = {
+            str(((e.get("attributes") or {}).get("sAMAccountName") or "")).strip().lower()
+            for e in found if e.get("type") == "searchResEntry"
+        }
+        return frozenset(a for a in out if a)
+    finally:
+        conn.unbind()
+
+
+def _ldap_escape(v: str) -> str:
+    """RFC 4515 filtre kaçışı: girilen grup adı filtreyi bozmasın."""
+    return v.replace("\\", "\\5c").replace("*", "\\2a").replace("(", "\\28").replace(")", "\\29").replace("\x00", "\\00")
+
+
 def is_admin(user: Optional[str]) -> bool:
-    return bool(user) and user.strip().lower() in admins()  # type: ignore[union-attr]
+    if not user:
+        return False
+    u = user.strip().lower()
+    if u in admins():
+        return True
+    return u in admin_group_members()
 
 
 def _validate(spec: dict[str, Any], raw: Any) -> str:
@@ -369,7 +520,8 @@ def save_settings(engine: sa.engine.Engine, actor: str, values: dict[str, Any]) 
         if spec["type"] == "secret" and (raw is None or str(raw) == ""):
             continue
         clean[k] = _validate(spec, raw)
-    if "TIMAS_ADMIN_USERS" in clean and actor.lower() not in clean["TIMAS_ADMIN_USERS"].split(","):
+    if ("TIMAS_ADMIN_USERS" in clean and actor.lower() not in clean["TIMAS_ADMIN_USERS"].split(",")
+            and actor.lower() not in admin_group_members()):
         raise AdminError("Kendinizi yöneticilerden çıkaramazsınız; önce başka bir yönetici bunu yapmalı.")
     for store in ("ad", "db"):
         file_part = {k: v for k, v in clean.items() if _FILE_KEYS.get(k, ("", ""))[0] == store}

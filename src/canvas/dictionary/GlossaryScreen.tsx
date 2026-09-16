@@ -16,6 +16,7 @@ import {
   type GapItem,
 } from '../engine';
 import { SourceBadge, SourceTabs, matchesSource, sourcesOf, useSourceFilter } from './source';
+import AdminGuard from '../AdminGuard';
 
 /**
  * Veri Sözlüğü. Üç soruya cevap verir, her biri bir bölüm:
@@ -505,6 +506,14 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
 /* ------------------------------------------------------------------ ekran */
 
 export default function GlossaryScreen() {
+  return (
+    <AdminGuard rail="/veri-sozlugu" crumb="Veri Sözlüğü">
+      <GlossaryScreenInner />
+    </AdminGuard>
+  );
+}
+
+function GlossaryScreenInner() {
   const [tab, setTab] = useState<Tab>('terimler');
   const [q, setQ] = useState('');
   const [sel, setSel] = useState('');

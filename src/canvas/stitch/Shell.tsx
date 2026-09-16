@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
+import { useIsAdmin } from '../useAdmin';
 
 const RAIL_ICONS = [
   (
@@ -64,6 +65,8 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
+  // Yönetim, Veri Sözlüğü ve Onaylar yalnız yöneticilerde çıkar; yükleme/hata durumunda gizli kalır.
+  const isAdmin = useIsAdmin();
   // Ray açık/kapalı. Açıkken menü adları ikonun yanında yazar; bir menüye gidince, Esc'e basınca ya da dışarı tıklanınca kapanır.
   const [railOpen, setRailOpen] = useState(false);
   const railRef = useRef<HTMLElement | null>(null);
@@ -206,6 +209,8 @@ export default function Shell({
         </button>
 
         {rail.map((item, i) => {
+          // adminOnly öğeler yetkisiz kişide render edilmez; i sabit kalsın diye diziyi filtrelemiyoruz (ikon eşlemesi konuma bağlı).
+          if (item.adminOnly && !isAdmin) return null;
           const active = item.badge === 'Aktif';
           return (
             <div key={item.to} className="relative group flex items-center shrink-0">

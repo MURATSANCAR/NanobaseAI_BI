@@ -45,10 +45,10 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
   { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
   { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
-  { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined },
-  { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined },
+  { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined, adminOnly: true },
+  { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined, adminOnly: true },
   { to: '/es-anlamlilar', label: 'Eş anlamlılar', badge: active === '/es-anlamlilar' ? 'Aktif' : undefined },
-  { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined },
+  { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined, adminOnly: true },
   // Girişten sonraki ana sayfaya dönüş.
   { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
 ];

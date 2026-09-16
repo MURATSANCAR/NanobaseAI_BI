@@ -1773,7 +1773,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True, "profiles": len(r.profiles)}
 
     @app.get("/api/v1/semantic/concepts")
-    def concepts(status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
+    def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
+        _admin_gate(request)
         r = rt()
         s = r.settings
         rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
@@ -1795,6 +1796,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         stops being proposed rather than coming back every night.
         """
         _require_admin(request)
+        _admin_gate(request)
         r = rt()
         s = r.settings
         decision = str((body or {}).get("decision") or "").strip().upper()
@@ -1944,13 +1946,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"started": started}
 
     @app.get("/api/v1/semantic/review")
-    def review_queue(limit: int = 100, source: str = "used") -> dict[str, Any]:
+    def review_queue(request: Request, limit: int = 100, source: str = "used") -> dict[str, Any]:
         """What is waiting for a person to decide, the most supported first.
 
         Each row carries what the term would mean, where it points, and what stands behind it — the
         queries it was seen in, the documents that describe it, what the data shows. Without those a
         reviewer is being asked to approve a word, which nobody can do responsibly.
         """
+        _admin_gate(request)
         r = rt()
         s = r.settings
         rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
@@ -2271,12 +2274,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/schema/gaps")
     def schema_gaps(request: Request) -> dict[str, Any]:
-        _require_caller(request)
+        _admin_gate(request)
         return rt().gaps()
 
     @app.get("/api/v1/schema/gaps/detail")
     def schema_gap_detail(request: Request, tablePattern: str) -> dict[str, Any]:
-        _require_caller(request)
+        _admin_gate(request)
         out = rt().gap_detail(tablePattern)
         if out is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Tablo bulunamadı."})
@@ -2452,6 +2455,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return board_mod.user_of(request.headers.get("cookie", ""))
         except board_mod.NoUser:
             raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+
+    def _admin_gate(request: Request) -> str:
+        """Yönetim, Veri Sözlüğü ve Onaylar ekranları yalnız yöneticilere açık: portal oturumundaki
+        AD hesabı yönetici listesinde ya da yönetici AD grubunda olmalı. Diğer roller 403 alır."""
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403,
+                                detail={"code": "FORBIDDEN", "message": "Bu ekran yalnız yöneticiler içindir."})
+        return user
 
     def _board_runner(r: Runtime):
         return lambda sql: r.run_sql(sql, r.settings.max_rows)
@@ -3030,6 +3044,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         user = _board_user(request)
         admin_mod.ensure(rt().store.engine)
         return {"user": user, "isAdmin": admin_mod.is_admin(user)}
+
+    @app.get("/api/v1/admin/group")
+    def admin_group(request: Request) -> dict[str, Any]:
+        """Yönetici AD grubunun kayıtlı anlık görüntüsü: üyeler ve son tazeleme zamanı (canlı okumaz)."""
+        _admin(request)
+        return admin_mod.group_snapshot()
+
+    @app.post("/api/v1/admin/group/refresh")
+    def admin_group_refresh(request: Request) -> dict[str, Any]:
+        """Yönetici AD grubunu canlı okuyup DB anlık görüntüsünü tazeler.
+        15 dk'lık `timas-admin-group.timer` çağırır (caller token ile); yönetici ekrandan da tetikler."""
+        _require_caller(request)
+        return admin_mod.refresh_admin_group(rt().store.engine)
 
     @app.get("/api/v1/admin/overview")
     def admin_overview(request: Request) -> dict[str, Any]:

@@ -4,7 +4,7 @@ export type StitchRow = { label: string; value: string };
 export type StitchSourceRow = { name: string; tag: string };
 export type StitchArc = { dash: string; offset: string };
 /** Sol raydaki on yuva. Etiketler uygulamanın kendi menüsünden gelir. */
-export type StitchRailItem = { to: string; label: string; badge?: string };
+export type StitchRailItem = { to: string; label: string; badge?: string; adminOnly?: boolean };
 
 export type BoardAction = {
   state: 'idle' | 'saving' | 'done' | 'error';

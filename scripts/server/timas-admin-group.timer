@@ -1,0 +1,10 @@
+[Unit]
+Description=Yönetici AD grubu tazeleme, 15 dakikada bir
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=timas-admin-group.service
+
+[Install]
+WantedBy=timers.target

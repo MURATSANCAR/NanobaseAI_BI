@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Activity, Bell, CalendarClock, History, LayoutGrid, Settings2, ShieldAlert, Users } from 'lucide-react';
+import { Activity, Bell, CalendarClock, History, LayoutGrid, Settings2, Users } from 'lucide-react';
 import Shell from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
+import NoAccess from '../NoAccess';
 import Overview from './Overview';
 import SettingsPanel from './SettingsPanel';
 import { AlertsAdmin, CardsAdmin, ReportsAdmin } from './Definitions';
@@ -47,13 +48,7 @@ export default function AdminScreen() {
   ) : me.error ? (
     <Note tone="err">{me.error instanceof EngineAuthError ? 'Oturum gerekli.' : 'Yetki bilgisi okunamadı.'}</Note>
   ) : !me.data?.isAdmin ? (
-    <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <ShieldAlert className="h-8 w-8 text-canvas-muted" />
-      <div className="text-lg font-extrabold">Bu ekran yöneticiler içindir</div>
-      <p className="max-w-sm text-[12.5px] text-canvas-muted">
-        {me.data?.user} hesabı yönetici değil. Bir yönetici sizi Yönetim → Kişiler bölümünden ekleyebilir.
-      </p>
-    </div>
+    <NoAccess user={me.data?.user} />
   ) : tab === 'settings' ? (
     <SettingsPanel />
   ) : tab === 'reports' ? (

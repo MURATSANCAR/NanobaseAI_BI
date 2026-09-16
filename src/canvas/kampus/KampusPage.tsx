@@ -38,6 +38,7 @@ import {
 import groups from '../modules.json';
 import { LIVE } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
+import { useIsAdmin } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
@@ -78,9 +79,9 @@ const MODULE_TILES = [
   { to: '/panolar', title: 'Panolar', note: 'Kişisel pano ve grafikler', tone: 'bg-amber-100 text-amber-800' },
   { to: '/uyarilar', title: 'Uyarılar', note: 'Kural ve bildirimler', tone: 'bg-rose-100 text-rose-700' },
   { to: '/planli-raporlar', title: 'Planlı Raporlar', note: 'Zamanlanmış gönderimler', tone: 'bg-sky-100 text-sky-700' },
-  { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700' },
-  { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700' },
-  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar, tanımlar, değişiklik kaydı', tone: 'bg-slate-200 text-slate-700' },
+  { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700', adminOnly: true },
+  { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700', adminOnly: true },
+  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar, tanımlar, değişiklik kaydı', tone: 'bg-slate-200 text-slate-700', adminOnly: true },
 ];
 
 type Praise = { from: string; to: string; when: string; text: string; emoji: string; likes: number; tag: string; tagTone: string; fresh?: boolean };
@@ -174,6 +175,9 @@ export default function KampusPage() {
   const [allModules, setAllModules] = useState(false);
   const moduleGroups = groups as Array<{ title: string; modules: Array<{ id: string; title: string }> }>;
   const moduleTotal = moduleGroups.reduce((a, g) => a + g.modules.length, 0);
+  // Yönetim, Veri Sözlüğü ve Onaylar kutucukları yalnız yöneticide çıkar.
+  const isAdmin = useIsAdmin();
+  const moduleTiles = MODULE_TILES.filter((m) => !m.adminOnly || isAdmin);
 
   const [mood, setMood] = useState<string | null>(null);
   // Kutla: kutlanan kişinin ekranına bildirim düşer (GreetingsInbox). Bugün kutladıklarım sunucudan gelir.
@@ -499,7 +503,7 @@ export default function KampusPage() {
                   <div className="flex items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-ink">Modüller</h2>
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">
-                      {MODULE_TILES.length} açık · {moduleTotal} toplam
+                      {moduleTiles.length} açık · {moduleTotal} toplam
                     </span>
                   </div>
                   <p className="text-xs text-muted">ZEKİ AI iş ekranlarına buradan geçin</p>
@@ -517,7 +521,7 @@ export default function KampusPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {MODULE_TILES.map((m) => (
+              {moduleTiles.map((m) => (
                 <Link
                   key={m.to}
                   to={m.to}
