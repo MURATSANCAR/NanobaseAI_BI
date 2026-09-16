@@ -1003,10 +1003,24 @@ class ExistingCompiler:
         # somebody wrote down what they mean and it was reviewed — not another retrieval signal to be
         # ranked against BM25. Ordered behind the index they would be the first thing any cut drops,
         # which is the recall this system has and the index does not.
-        for entity in sorted(self.catalog_entities):
-            add(entity)
+        # Which source the question is about. Two databases now answer questions — the ERP and the
+        # CRM — and the certified catalog names tables in both. Listed alphabetically and in full, a
+        # Logo question was shown two hundred CRM tables and a CRM question was answered from Logo.
+        # The source is read from the question's own evidence: what the resolver placed counts most,
+        # then what the searches found, ranked. Where the evidence points at both, both stay.
+        sources = self._question_sources(resolved, evidence)
+
+        def in_scope(entity: str) -> bool:
+            return not sources or self.source_of(entity) in sources
+
+        certified = [e for e in evidence if e in self.catalog_entities]
+        certified += [e for e in sorted(self.catalog_entities) if e not in certified]
+        for entity in certified:
+            if in_scope(entity):
+                add(entity)
         for entity in evidence:
-            add(entity)
+            if in_scope(entity):
+                add(entity)
 
         # One join hop out from what the question reached. Written when this deployment's join graph
         # was empty, this added nothing and cost nothing; the scan filled the graph in — twenty-three
@@ -1027,7 +1041,8 @@ class ExistingCompiler:
                 if other not in ordered and self.conventions.join_path(entity, other):
                     reached[other] = reached.get(other, 0) + 1
         for other, _ in sorted(reached.items(), key=lambda kv: (-kv[1], kv[0]))[:self.join_hops or None]:
-            add(other)
+            if in_scope(other):
+                add(other)
         if self.join_hops and len(reached) > self.join_hops:
             log.debug("join hop: %d tables reachable, %d kept (most-referenced first)",
                       len(reached), self.join_hops)
@@ -1049,6 +1064,37 @@ class ExistingCompiler:
             keep = max(self.max_prompt_tables, len(resolved))    # never drop a table the question named
             ordered = ordered[:keep]
         return ordered
+
+    def source_of(self, entity: str) -> str:
+        """The database a table lives in, as the catalog spells its schema ("Timas_MSCRM.dbo" →
+        TIMAS_MSCRM). A schema without a database part belongs to the connection's own database."""
+        p = self.by_entity.get(entity)
+        schema = (p.schema_name or "") if p is not None else ""
+        return schema.split(".")[0].upper() if "." in schema else ""
+
+    def _question_sources(self, resolved: list[str], evidence: list[str]) -> set[str]:
+        """Which sources this question's evidence points at; empty when there is nothing to go on.
+
+        What the resolver placed decides when it exists: those are the question's own words matched
+        to certified meanings, and if they reach two sources the question is about both. Otherwise the
+        searches vote, the better-ranked hits weighing more, and one source is chosen only when it is
+        clearly ahead — a close vote keeps both, because dropping the right tables is the costlier
+        mistake.
+        """
+        placed = {self.source_of(e) for e in resolved if e in self.by_entity}
+        if placed:
+            return placed
+        votes: dict[str, float] = {}
+        top = evidence[:12]
+        for rank, entity in enumerate(top):
+            src = self.source_of(entity)
+            votes[src] = votes.get(src, 0.0) + (len(top) - rank) / len(top)
+        if not votes:
+            return set()
+        ranked = sorted(votes.items(), key=lambda kv: -kv[1])
+        if len(ranked) == 1 or ranked[0][1] >= 1.5 * ranked[1][1]:
+            return {ranked[0][0]}
+        return {src for src, _ in ranked[:2]}
 
     def _one_per_entity(self, entities: Optional[Any], q: Optional[SemanticQuery] = None) -> list[SchemaProfile]:
         """One profile per entity. The model reasons about the entity; the columns are the same in
