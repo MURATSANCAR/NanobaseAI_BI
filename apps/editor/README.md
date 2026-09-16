@@ -65,7 +65,9 @@ COMPOSE_PROFILES=models
 Model servisleri internete ve host portlarına açılmaz. İç adresler
 `http://llm:8080`, `http://embedding:8080`, `http://reranker:8080` biçimindedir.
 Qwen için 4 CPU/32 GiB, embedding ve reranker için ayrı ayrı 1 CPU/2 GiB üst
-sınır vardır. Bu sınırlar ölçülmüş hizmet seviyesi veya performans garantisi
+sınır vardır. Başlangıç CPU denemesinde görsel başına `EDITOR_IMAGE_MAX_TOKENS=256`
+uygulanır; tam çözünürlükteki özgün kaynak korunur. Küçük yazı/balon okuma kalitesi
+bu bütçeyle kabul edilmiş değildir. Bu sınırlar ölçülmüş hizmet seviyesi veya performans garantisi
 değildir. Pilot kitapları ve ortak host yükü kabul edilmeden analize otomatik
 iş kabulü açılmaz. GPU yolu bu sürümde kurulmamıştır.
 

@@ -1,0 +1,83 @@
+{
+  "host": "NanobaseAI",
+  "load": [
+    93.2607421875,
+    86.08203125,
+    85.0703125
+  ],
+  "probe": "health_only_not_service_level_acceptance",
+  "services": [
+    {
+      "port": 8076,
+      "path": "/health",
+      "samples": [
+        {
+          "status": 200,
+          "seconds": 0.0644
+        },
+        {
+          "status": 200,
+          "seconds": 0.0008
+        },
+        {
+          "status": 200,
+          "seconds": 0.0005
+        }
+      ]
+    },
+    {
+      "port": 8078,
+      "path": "/health",
+      "samples": [
+        {
+          "status": 200,
+          "seconds": 0.001
+        },
+        {
+          "status": 200,
+          "seconds": 0.0011
+        },
+        {
+          "status": 200,
+          "seconds": 0.0009
+        }
+      ]
+    },
+    {
+      "port": 8795,
+      "path": "/health",
+      "samples": [
+        {
+          "status": 200,
+          "seconds": 0.0095
+        },
+        {
+          "status": 200,
+          "seconds": 0.0098
+        },
+        {
+          "status": 200,
+          "seconds": 0.0097
+        }
+      ]
+    },
+    {
+      "port": 8810,
+      "path": "/health/ready",
+      "samples": [
+        {
+          "status": 200,
+          "seconds": 0.1383
+        },
+        {
+          "status": 200,
+          "seconds": 0.2919
+        },
+        {
+          "status": 200,
+          "seconds": 0.4907
+        }
+      ]
+    }
+  ]
+}

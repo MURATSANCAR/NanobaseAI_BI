@@ -1,0 +1,11 @@
+{
+  "bundle_path": "/data/nanobaseai/editor/dist/editor-customer-20260916",
+  "release": "foundation-20260916",
+  "model_qualification": "candidate weights included; semantic acceptance pending",
+  "manifest_sha256": "60b0fdd5ded119ca17efc62bb0d2d7d00a56bfd2a1e4c578f767ddbd12053cd0",
+  "file_count": 46,
+  "total_file_bytes": 22875535072,
+  "includes_customer_secrets": false,
+  "includes_source_books": false,
+  "hashes_and_image_import_verified": true
+}

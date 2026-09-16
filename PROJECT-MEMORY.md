@@ -6,11 +6,13 @@ Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır
 
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz, FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi. İlk/ana müşteri: TİMAŞ Logo (mağaza/satış verisi).
 
-## Editör modülü — kabul edilen mimari karar (2026-09-16)
+## Editör modülü — bağımsız altyapı (2026-09-16)
 
-Editör aynı depoda `apps/editor/` altında, BI'dan bağımsız bir uygulama olarak geliştirilecek. Kendi frontend/backend yapısı, bağımlılıkları, yapılandırması, Dockerfile ve Compose servisleri olacak; BI çalışmadan kullanılabilecek ve ayrı yayınlanabilecek. Kalıcı veri gerekiyorsa kendi veri alanı ve migration'larını yönetecek. BI ekranlarına sonraki aşamada tanımlı API sözleşmeleriyle bağlanacak; BI iç koduna veya tablolarına doğrudan bağımlı olmayacak. Arayüzler mobil öncelikli olacak.
+Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. İlk altyapı test sunucusunda `/data/nanobaseai/editor` altında kuruldu: ayrı PostgreSQL/Alembic, LangGraph PostgreSQL checkpointer, FastAPI operatör API, heartbeat işçisi, Qdrant, Prometheus ve nginx geçidi. Host erişimi yalnız `127.0.0.1:8810` ve metrikler `127.0.0.1:9096`; BI iç koduna/tablosuna/ağına bağımlılık yok. Belge aracı Docling + Poppler + Tesseract `tur/eng`, ağsız konteynerde çalışır. İsteğe bağlı CPU model profili Qwen3.8-27B Q4_K_M + Q8 görsel projektör ve mevcut BGE embedding/reranker ağırlıklarını ayrı servislerde kullanır; anlamsal uygunluk henüz kabul edilmiş değildir.
 
-Kalıcı `editor` branch'i açılmayacak: tek trunk `main`; gerektiğinde kısa ömürlü `codex/editor-...` dalları kullanılıp tamamlanınca `main`e alınacak ve silinecek. **Durum: karar kaydedildi; bu kayıt uygulamanın veya Docker servislerinin kurulduğu anlamına gelmez.** Bağlayıcı kurallar: [AGENTS.md](AGENTS.md#editör-modülü-aynı-depo-bağımsız-uygulama).
+Gerçek referans kitap (SHA-256 `94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50`) 48/48 sayfa olarak işlendi; tam sayfa Türkçe/İngilizce OCR + Docling teknik işlemi 378,22 sn'de tamamlandı. API manifesti gerçek Editör PostgreSQL kaydı ve özgün PDF/render hash'leriyle karşılaştırıldı. Offline temel paket içeri alındı; yedek farklı proje/port/ağ/sırlarla açılıp aynı kaynak doğrulandı, deneme ortamı sonra kapatıldı. Bu, edebî doğruluk veya üretim kabulü değildir: `pilot_ready=false`; kitap iş kuyruğu/outbox/generation, kullanıcı-kitap yetkisi, analiz/atıflı cevap ve mobil React editör ekranları sonraki işlerdir. BI ekran entegrasyonu tanımlı API'lerle yapılacak.
+
+Kalıcı `editor` branch'i açılmaz; tek trunk `main`. Kurulum, ağ çakışması ön kontrolü, offline imaj/model paketi ve yedek/restore adımları: [apps/editor/README.md](apps/editor/README.md). Kanıt ve sınırlar: [altyapı raporu](docs/editor/2026-09-16-infrastructure.md). Bağlayıcı kurallar: [AGENTS.md](AGENTS.md#editör-modülü-aynı-depo-bağımsız-uygulama).
 
 ## Mimari (üstten alta)
 

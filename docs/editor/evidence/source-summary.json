@@ -1,0 +1,18 @@
+{
+  "source_sha256": "94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50",
+  "source_bytes": 19806912,
+  "elapsed_seconds": 378.22,
+  "rendered_pages": 48,
+  "docling_pages": 48,
+  "docling_status": "ConversionStatus.SUCCESS",
+  "ocr_policy": {
+    "engine": "tesseract",
+    "languages": [
+      "tur",
+      "eng"
+    ],
+    "full_page": true
+  },
+  "source_accounting_complete": true,
+  "semantic_status": "NOT_ANALYZED"
+}
