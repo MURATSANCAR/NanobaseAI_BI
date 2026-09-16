@@ -200,3 +200,29 @@ def test_a_measure_with_its_scope_inside_the_period_case_or_in_the_where():
     assert unmet_obligations(sq, pushed, sources=SOURCES_UNDECLARED) == []
     assert unmet_obligations(sq, wrong, sources=SOURCES_UNDECLARED)
 
+
+
+def _lines_plan():
+    return SemanticQuery(question="x", tenant_id="t", datasource_id="d",
+                         slots=[ResolvedSlot("stline default cancelled", "DEFAULT_FILTER", "CERTIFIED",
+                                             mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="CANCELLED", operator="=", values=["0"]))],
+                         temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
+                         temporal_binding={"entity": "INVOICE", "column": "DATE_"})
+
+
+def test_a_left_joins_on_restricts_the_joined_tables_own_rows():
+    """2026-09-16, soru 5: `LEFT JOIN STLINE sl ON … AND sl.CANCELLED = 0` was refused as unproven —
+    the ON of an outer join was read as never dropping rows. It drops none of the invoices; it is the
+    only place the cancelled *lines* can be kept out without dropping invoices that have no lines."""
+    base = (f'SELECT i."CLIENTREF", SUM(sl."AMOUNT" * sl."OUTCOST") AS maliyet FROM {T} i '
+            'LEFT JOIN LG_411_01_STLINE sl ON sl."INVOICEREF" = i."LOGICALREF"{on} '
+            f'WHERE i.{P} GROUP BY i."CLIENTREF"')
+    assert unmet_obligations(_lines_plan(), base.format(on=' AND sl."CANCELLED" = 0')) == []
+    assert unmet_obligations(_lines_plan(), base.format(on="")), "without the filter the lines are unrestricted"
+    # A restriction on the preserved side written in the ON keeps proving nothing: those rows stay.
+    inv = SemanticQuery(question="x", tenant_id="t", datasource_id="d",
+                        slots=[ResolvedSlot("iptal edilmemiş", "DEFAULT_FILTER", "CERTIFIED",
+                                            mapping=Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE", column="CANCELLED", operator="=", values=["0"]))],
+                        temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
+                        temporal_binding={"entity": "INVOICE", "column": "DATE_"})
+    assert unmet_obligations(inv, base.format(on=' AND i."CANCELLED" = 0')), "an ON condition on the left side drops nothing"

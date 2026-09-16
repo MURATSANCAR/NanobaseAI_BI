@@ -138,7 +138,7 @@ def _asks_for_a_trend(question: str) -> bool:
     folded = fold(question)
     return bool(_TREND_PHRASES.search(folded)) or any(_is_trend_cue(t) for t in tokenize(question))
 # Ranking cues that make a following number a top-N rather than a value.
-_RANK_CUE = frozenset("en ilk top bastaki basta".split())
+_RANK_CUE = frozenset("en ilk top bastaki basta cok fazla yuksek dusuk buyuk".split())
 _WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
 # "payı yüzde kaç" asks for a share: a plain total is a different answer, not a rounder one.
 _SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzdelik)\b")
@@ -525,13 +525,19 @@ class SemanticResolver:
             sq.group_by.append(which)
             sq.slots = hits
 
-        # 4f) "en yüksek beş kanal" — a written-out number after a ranking cue is a top-N.
+        # 4f) "en yüksek beş kanal" — a written-out number after a ranking cue is a top-N. The cue may
+        #     sit a few words back ("en çok kâr bıraktığımız on müşteri"): the whole clause before the
+        #     number is looked at. A number naming a span ("son üç ay", "doksan gün") is not a count.
         if qf.limit is None:
             for k, tok in enumerate(qf.tokens):
                 n = cardinal(tok)
                 if n is None or n < 2 or n > 1000 or re.fullmatch(r"(19|20)\d\d", tok):
                     continue
-                if {fold(x) for x in qf.tokens[max(0, k - 3) : k]} & _RANK_CUE:
+                nxt = qf.tokens[k + 1] if k + 1 < len(qf.tokens) else ""
+                if nxt and (stem(nxt) in _TIME_WORDS or short_root(nxt) in _TIME_WORDS or cardinal(nxt) is not None):
+                    continue
+                before = qf.tokens[max(0, k - 7) : k]
+                if {fold(x) for x in before} & _RANK_CUE:
                     qf.limit = n
                     consumed.add(k)
                     sq.explanation.append(f"'{tok}' sıralama sayısı olarak okundu → ilk {n}")
@@ -800,6 +806,7 @@ class SemanticResolver:
             sq.explanation.append("katalogda karşılığı olmayan terimler: " + ", ".join(sq.unresolved))
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
+        self._keep_to_one_source(sq, qf)
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -1145,6 +1152,54 @@ class SemanticResolver:
             if nouns & self._entity_name_stems(prof):
                 entities.add(entity)
         return entities
+
+    def _keep_to_one_source(self, sq: SemanticQuery, qf) -> None:
+        """The measure decides which database a question reads; a single word certified on the other
+        one does not pull that database in.
+
+        "kâr" is certified on a CRM scenario column and "müşteri" on a CRM account table; "en çok kâr
+        bıraktığımız on müşteri, maliyet düştükten sonra" computes a cost — an ERP measure over sales
+        lines. Kept as slots, those words made the gate look for the period on tables the answer never
+        reads, and the question was refused. Where every measure sits in one source, a one-word column
+        slot from the other source is handed to the model to read within the measure's source, under
+        a `-- yorum` line the person sees. A multi-word certified phrase is deliberate and stays; so
+        does everything when the measures themselves span both databases, or there is no measure."""
+        metrics = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.METRIC]
+        homes = {self._source_of(m.mapping.entity) for m in metrics}
+        if len(homes) != 1:
+            return
+        home = next(iter(homes))
+        others = [s for s in list(sq.slots) + list(sq.group_by)
+                  if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
+                  and self._source_of(s.mapping.entity) != home]
+        homes_entities = {m.mapping.entity for m in metrics}
+        for lone in {id(s): s for s in others}.values():
+            span = getattr(lone, "span", None)
+            if not span or span[1] - span[0] != 1:
+                continue                                  # a certified phrase of several words is meant
+            if lone in sq.group_by:
+                continue                                  # "kanal bazında": the grouping is the question's structure
+            if self._linked_across(lone.mapping.entity, homes_entities):
+                continue                                  # the catalog measured a bridge: the question may span both
+            if lone in sq.slots:
+                sq.slots.remove(lone)
+            if lone in sq.group_by:
+                sq.group_by.remove(lone)
+            word = fold(qf.tokens[span[0]]) if span[0] < len(qf.tokens) else fold(lone.term)
+            if word and word not in sq.unresolved:
+                sq.unresolved.append(word)
+            where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
+            sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
+                                  f"ölçü {home or 'ana veri tabanı'} verisinde → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+
+    def _linked_across(self, entity: str, others: set[str]) -> bool:
+        """Has the catalog measured a cross-source relationship between `entity` and any of `others`?"""
+        for a, bs in ((entity, others), *((o, {entity}) for o in others)):
+            prof = self.by_entity.get(a)
+            for rel in (prof.relationships if prof is not None else []) or []:
+                if rel.get("cross_source") and str(rel.get("ref_entity") or "").upper() in {b.upper() for b in bs}:
+                    return True
+        return False
 
     def _source_of(self, entity: str) -> str:
         prof = self.by_entity.get(entity)

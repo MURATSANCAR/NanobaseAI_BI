@@ -46,7 +46,7 @@ from semantic_layer.models import Mapping as SLMapping, SemanticType
 from semantic_layer.naming import label_context
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
-from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
+from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, empty_result_note, fast_summary, is_empty_result
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
@@ -722,6 +722,8 @@ class Runtime:
                 note = " " + note
         if result.get('truncated'):
             note += " Sonuç sınırda kesildi; toplam satır sayısı bilinmiyor."
+        if not (result.get("records") or []) and not int(result.get("totalRows") or 0):
+            note += empty_result_note(sql, self.rules_text)
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
@@ -863,7 +865,7 @@ class Runtime:
         unmet = unmet_obligations(sq, sql, sources=self.router.gate_sources())
         if unmet:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
-            log.warning("obligation unmet q=%r %s", question[:80], unmet)
+            log.warning("obligation unmet q=%r %s sql=%s", question[:80], unmet, " ".join(sql.split())[:1500])
             semantic["unmetObligations"] = unmet
             qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
                        answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(unmet)})
@@ -951,6 +953,8 @@ class Runtime:
         semantic["query"] = sq.to_dict()
         if final_problems:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
+            # The refused statement is the evidence a refusal is judged by.
+            log.warning("obligation unmet after repair q=%r %s sql=%s", question[:80], final_problems, " ".join(sql.split())[:1500])
             semantic["unmetObligations"] = final_problems
             qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
                        resolved=sq.to_dict(), executed=False, error=reason,
