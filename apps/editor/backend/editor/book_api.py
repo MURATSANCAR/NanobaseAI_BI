@@ -195,7 +195,7 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
 
 
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','evidence','literary','passages'],offset:int=0,limit:int=50):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','evidence','literary','passages','validation'],offset:int=0,limit:int=50):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)

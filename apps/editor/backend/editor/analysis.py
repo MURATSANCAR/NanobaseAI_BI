@@ -12,7 +12,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg.conninfo import make_conninfo
 from psycopg.types.json import Jsonb
 
-from editor.config import connection, secret, RELEASE
+from editor.config import connection, secret, RELEASE, code_manifest
 from editor.book_store import ROOT, sha, identifier, get_records, save_record, fence, source_for
 
 PROMPT_VERSION = 'book-e2e-v1'
@@ -45,6 +45,7 @@ def model(messages, max_tokens=1000, structured=True):
     content = choice['message']['content']
     return (json.loads(content) if structured else content), {'seconds':round(time.monotonic()-start,3),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
+        'release':RELEASE,'code_manifest':code_manifest(),
         'prompt_version':PROMPT_VERSION,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}
 
 
@@ -146,6 +147,8 @@ def scenes(job):
                 if not entry.get('evidence_refs') or not set(entry['evidence_refs'])<=allowed:
                     raise RuntimeError('INVALID_EVIDENCE_REFERENCE')
                 entry['verification_status']='SOURCE_LINKED'
+                if kind=='events' and entry.get('narrative_mode') not in ('ACTUAL','REPORTED','PLANNED','HYPOTHETICAL','DREAM','METAPHOR','JOKE'):
+                    raise RuntimeError('INVALID_NARRATIVE_MODE')
         result.update({'pdf_pages':[r['data']['pdf_page'] for r in batch],
                        'evidence_refs':sorted(allowed),'metrics':metrics,'review_status':'PENDING',
                        'scene_boundary_status':'PAGE_GROUP_CANDIDATE'})
@@ -181,8 +184,12 @@ def synthesis(job):
     for idx,entry in enumerate(result.get('characters',[])):
         commit(job,'entities',f'{idx:04}',{**entry,'verification_status':'SOURCE_LINKED'})
     for group in groups:
+        checks={r['record_key']:r['data']['checks'] for r in get_records(gen,'validation')}
+        statuses={c['event_index']:c['status'] for c in checks.get(group['record_key'],[])}
         for idx,event in enumerate(group['data']['events']):
-            commit(job,'events',group['record_key']+f'-{idx:04}',event)
+            verified={**event,'verification_status':{'SUPPORTED':'SOURCE_SUPPORTED','DISPUTED':'DISPUTED'}.get(statuses.get(idx),'SOURCE_LINKED'),
+                      'validation_ref':identifier(gen,'validation',group['record_key']), 'review_status':'PENDING'}
+            commit(job,'events',group['record_key']+f'-{idx:04}',verified)
     return {'stage':'index'}
 
 
@@ -224,6 +231,9 @@ class State(TypedDict):
 
 
 def run(job):
+    with connection() as db:
+        fence(db,job)
+        db.execute("UPDATE editor.generations SET manifest=manifest || %s WHERE id=%s",(Jsonb({'execution_release':RELEASE,'code_manifest':code_manifest()}),job['generation_id']))
     dsn=make_conninfo(host='postgres',dbname='editor',user='editor_app',password=secret('db_app'),options='-c search_path=checkpoints')
     graph=StateGraph(State)
     stages=[('source',ingest),('visuals',visuals),('scenes',scenes),('support',verify_support),('synthesis',synthesis),('index',index)]

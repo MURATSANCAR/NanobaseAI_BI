@@ -1,4 +1,5 @@
 import os
+import hashlib
 from pathlib import Path
 
 import psycopg
@@ -20,3 +21,8 @@ def connection(owner=False):
 
 
 RELEASE = os.environ.get('EDITOR_RELEASE', 'unknown')
+
+
+def code_manifest():
+    root=Path(__file__).resolve().parent
+    return {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.glob('*.py'))}

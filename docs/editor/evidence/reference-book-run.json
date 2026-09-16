@@ -1,0 +1,19 @@
+{
+  "work": {
+    "id": "a97c504b-9fa9-4a0a-a8c3-1ac2782ac1db",
+    "title": "Ekrana Sığmayan Macera"
+  },
+  "edition": {
+    "id": "eada876b-4ea6-4673-bee9-7dc8444985ae"
+  },
+  "source": {
+    "id": "3970f5b9-769a-4fe9-8032-379834fa6831",
+    "sha256": "94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50",
+    "pages": 48
+  },
+  "job": {
+    "job_id": "55b2a54a-50df-425f-9ffa-a0875b4ef5a4",
+    "generation_id": "d84c2009-5974-4725-884f-99da0aebd8bd",
+    "content_version_id": "3970f5b9-769a-4fe9-8032-379834fa6831"
+  }
+}

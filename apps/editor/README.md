@@ -12,12 +12,37 @@ checkpointer, bağımsız Qdrant, gözetilen işçi süreci, Prometheus, ağsız
 Docling/Poppler/Tesseract Türkçe araçları, kaynak inceleme komutu, offline kurulum
 paketi ve yedek/ayrı ortama geri yükleme betikleri.
 
-**Kitap analiz ürünü tamamlanmış değildir.** İşçi şu aşamada kalp atışı kaydeder;
-analiz kuyruğunu tüketmez. Eser/yükleme API'leri, kullanıcı-kitap yetkisi,
-karakter/olay çıkarımı, arama generation/outbox hattı, atıflı soru cevap ve React
-editör ekranları P1–P5 işleridir. Altyapı API'sindeki kaynak denemesi kayıtları
-operatör içindir; kabul edilmiş kitap veya yayımlanmış analiz nesli değildir.
-`pilot_ready` bu nedenle `false` kalır.
+**Kitap analiz ürünü henüz pilot kabulünde değildir.** Operatör API'sine eser,
+baskı, gerçek dosya yükleme, hash ile kaynak sürümü, analiz ve soru işleri,
+sayfalanan kaynak/karakter/olay/görsel/inceleme uçları eklendi. İşçi PostgreSQL
+kuyruğunu lease/fencing ile tüketir; LangGraph checkpoint ve değişmez adım
+kayıtlarıyla devam eder. Yerel görsel okuma → kaynaklı sahne adayları → destek
+kontrolü → sınırlı kitap sentezi → Qdrant/dense + yerel BM25/reranker hattı
+gerçek referans kitapta çalıştırılmaktadır. **Kodun bulunması, tüm aşamaların
+tamamlanıp anlamsal kabulden geçtiği anlamına gelmez.**
+
+Bu koşu tek kurulum operatörü içindir; çok kullanıcılı kitap/rol yetkisi, düzeltme
+bağımlılıklarının yeniden hesaplanması ve React ekranları tamamlanmadı.
+Yükleme tamamlama, mevcut ağsız parser ile doğrulanmış hash'i kabul eder;
+yeni, henüz ayrıştırılmamış PDF `SOURCE_PARSE_REQUIRED` döndürür.
+Kaynakların modelle okunması insan editör kabulü değildir. İncelenmeyen nesil
+etkinleştirilmez; `editor_preview` cevapları açıkça taslaktır, `pilot_ready=false`.
+İlk offline müşteri paketi bu yeni analiz kodundan önceki altyapı sürümüdür.
+
+## Ön yüz olmadan gerçek kitap koşusu
+
+Sunucuda `python3 scripts/process-reference.py` eser/baskı ve mevcut gerçek
+kaynağa bağlı analiz işini aynı idempotency anahtarlarıyla oluşturur. Ardından
+`python3 scripts/verify-book-api.py` özgün 19,8 MB PDF'yi yükleme API'sinden
+geçirir, aynı içerik sürümünü doğrular ve tam API kayıtlarını bağımsız PostgreSQL
+sorgusuyla karşılaştırır. Yerelde ürün testi çalıştırılmaz.
+
+`python3 scripts/follow-reference.py` tek seferlik uzun koşuyu izler; analiz
+tamamlanınca 13 kaynaklı kabul sorusunu kuyruğa alır. Sonuçlar
+`runtime/book-analysis/<generation_id>/` altında saklanır. Bunlar Git veya
+müşteri yazılım paketine alınmaz. `completion.json` oluşmadan işleme tamamlandı
+denmez; `run-error.json` başarısız aşamayı gösterir. Bu dosyalar editör onayı veya
+bağımsız semantik kabul yerine geçmez.
 
 ## Sunucuya ilk kurulum
 

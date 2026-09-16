@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör gerçek kitap için ön yüzsüz analiz koşusu
+
+- Kullanıcı, ön yüz varmış gibi gerçek kitabın analiz belgesindeki akıştan geçirilmesini istedi. Eser/baskı/yükleme/kaynak sürümü, kalıcı işler, immutable generation kayıtları, outbox, inceleme ve kaynak/görsel API'leri eklendi. Ağsız parserın doğruladığı gerçek PDF yeniden HTTP üzerinden yüklendi; hash ve içerik sürümü eşleşti.
+- İşçi PostgreSQL SKIP LOCKED, lease, fencing ve LangGraph checkpoint ile görsel/sahne/destek/sentez/indeks adımlarını yürütür. Sorular generation'a sabitlenir, yerel dense + BM25 + reranker kaynaklarını kullanır; editör önizlemesi son cevap/onay sayılmaz. Modelin kaynak referansları sunucuda denetlenir.
+- Gerçek sunucuda 48 kaydın tam API sonucu bağımsız PostgreSQL sorgusuyla eşleşti; aynı yükleme idempotency, yarım yükleme reddi, anonim kaynak/görsel 401 ve tamamlanmamış nesli etkinleştirme 409 doğrulandı. Yerel/sentetik test çalıştırılmadı. İşçi güncellemesi sonrası ilk tamamlanan sayfa korundu, aynı iş lease üzerinden devam etti.
+- Uzun analiz koşusu başlatıldı: generation `d84c2009-5974-4725-884f-99da0aebd8bd`; ilk görsel sayfa 311,825 sn. Tüm aşamalar ve 13 kabul sorusu bitmeden uçtan uca tamamlandı iddiası yok. Tek operatör erişimi, henüz ayrıştırılmamış PDF için açık hata, insan editör kabulü ve gerçek ikinci baskı B18 eksikliği belgelenmiştir. Offline müşteri paketi önceki altyapı sürümüdür.
+
 ## 2026-09-16 — Editör bağımsız altyapı ve taşınabilir kurulum
 
 - Kullanıcının analiz belgesi v1.1 okundu; sunucu canlı envanteri çıkarıldı. `apps/editor/` ve `/data/nanobaseai/editor` altında BI'dan bağımsız Docker altyapısı kuruldu: PostgreSQL/Alembic, LangGraph checkpointer, FastAPI, heartbeat işçisi, Qdrant, Prometheus, nginx; ayrıca ağsız Docling/Poppler/Tesseract Türkçe aracı. Ayrı kaynak sınırları, ağ/volume'lar ve kurulum sırları kullanıldı.
