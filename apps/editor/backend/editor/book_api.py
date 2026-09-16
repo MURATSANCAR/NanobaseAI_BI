@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from psycopg.types.json import Jsonb
 from editor.config import connection, RELEASE
-from editor.book_store import ROOT, sha, source_for
+from editor.book_store import ROOT, sha, source_for, save_record
 
 router=APIRouter(prefix='/v1')
 ACTOR='installation-operator'
@@ -208,7 +208,7 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
 
 
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis'],offset:int=0,limit:int=50):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis'],offset:int=0,limit:int=50):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)
@@ -252,6 +252,40 @@ class Review(BaseModel):
     expected_version:int=Field(ge=0)
     decision:Literal['ACCEPT','REJECT','NEEDS_REVIEW']
     reason:str=Field(min_length=1,max_length=2000)
+
+
+class VisualCorrection(BaseModel):
+    target_id:uuid.UUID
+    expected_version:int=Field(ge=0)
+    description:str=Field(min_length=10,max_length=2000)
+    reason:str=Field(min_length=10,max_length=2000)
+    provenance:Literal['operator_source_observation','codex_assisted_source_observation']
+
+
+@router.post('/visual-corrections',status_code=201)
+def visual_correction(body:VisualCorrection,idempotency_key:str=Header()):
+    def action(db):
+        row=db.execute("SELECT * FROM editor.records WHERE id=%s AND kind='visuals'",(body.target_id,)).fetchone()
+        if not row: raise HTTPException(404,'Kayıt bulunamadı')
+        g=scope(db,row['generation_id'])
+        jobs=db.execute('SELECT status FROM editor.jobs WHERE generation_id=%s FOR UPDATE',(row['generation_id'],)).fetchall()
+        if any(j['status'] in ('QUEUED','RUNNING') for j in jobs):
+            raise HTTPException(409,'PAUSE_ANALYSIS_BEFORE_SOURCE_CORRECTION')
+        db.execute('SELECT id FROM editor.records WHERE id=%s FOR UPDATE',(body.target_id,))
+        if g['status']!='BUILDING' or db.execute("SELECT id FROM editor.records WHERE generation_id=%s AND kind='scenes' LIMIT 1",(row['generation_id'],)).fetchone():
+            raise HTTPException(409,'CORRECTION_REQUIRES_NEW_GENERATION')
+        version=db.execute('SELECT COALESCE(max(version),0) AS v FROM editor.reviews WHERE target_id=%s',(body.target_id,)).fetchone()['v']
+        if version!=body.expected_version: raise HTTPException(409,'REVIEW_VERSION_CONFLICT')
+        corrected={k:row['data'][k] for k in ('pdf_page','render_sha256','evidence_refs','bbox')}
+        corrected.update({'description':body.description,'target_id':str(body.target_id),
+            'review_version':version+1,'provenance':body.provenance,'reason':body.reason,
+            'verification_status':'OPERATOR_SOURCE_OBSERVATION','review_status':'PENDING',
+            'human_accepted':False})
+        rid=save_record(db,row['generation_id'],'visual_corrections',row['record_key']+f':{version+1:04}',corrected)
+        db.execute('INSERT INTO editor.reviews(id,generation_id,target_id,actor_id,decision,reason,version) VALUES (%s,%s,%s,%s,%s,%s,%s)',
+          (str(uuid.uuid4()),row['generation_id'],body.target_id,ACTOR,'REJECT',body.reason,version+1))
+        return {'id':rid,'target_id':str(body.target_id),'version':version+1,'human_accepted':False}
+    return mutate('/visual-corrections',body,idempotency_key,action)
 
 
 @router.post('/reviews',status_code=201)

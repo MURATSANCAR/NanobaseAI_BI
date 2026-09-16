@@ -72,7 +72,7 @@ questions={
 try:
     final=wait_job(run['job']['job_id'])
     data={}
-    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages','claims','relationships','event_merges','book_synthesis'):
+    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages','claims','relationships','event_merges','book_synthesis','visual_corrections'):
         items=[]; offset=0
         while True:
             page=request(f'/v1/generations/{gen}/{kind}?offset={offset}&limit=100')
@@ -132,6 +132,11 @@ try:
         if row['decision'] in ('REJECT','NEEDS_REVIEW'):
             location='PDF '+str(row['data']['pdf_page']) if 'pdf_page' in row['data'] else row['record_key']
             lines.append('- '+location+' / '+row['kind']+': '+row['decision']+'. Özgün model kaydı korunuyor; kabul edilmiş bulgu değildir.')
+    if data['visual_corrections']:
+        lines.extend(['','## Kaynak okuma düzeltmeleri','',
+            'Bunlar yerel model çıktısı değildir. Özgün sayfalardan operatör/Codex destekli gözlemler olarak girilmiş, insan onayı verilmemiş düzeltmelerdir.',''])
+        for row in data['visual_corrections']:
+            d=row['data']; lines.append('- PDF '+str(d['pdf_page'])+': '+clean(d['description'])+' ('+d['provenance']+')')
     lines.extend(['## Atıflı soru cevap denemeleri',''])
     for key,row in answers.items():
         a=row['answer']; lines.extend(['### '+key+' — '+questions[key],'',clean(a.get('answer','')),'',

@@ -177,6 +177,8 @@ def visuals(job):
 
 def scenes(job):
     gen=job['generation_id']; evidence=get_records(gen,'evidence'); visuals_by={r['record_key']:r for r in get_records(gen,'visuals')}
+    for corrected in get_records(gen,'visual_corrections'):
+        visuals_by[corrected['record_key'].split(':')[0]]=corrected
     with connection() as db:
         decisions={str(r['target_id']):r['decision'] for r in db.execute('SELECT DISTINCT ON(target_id) target_id,decision FROM editor.reviews WHERE generation_id=%s ORDER BY target_id,version DESC',(gen,)).fetchall()}
     completed={r['record_key'] for r in get_records(gen,'scenes')}
@@ -195,9 +197,11 @@ def scenes(job):
             context=[]
             for r in batch:
                 visual=visuals_by[r['record_key']]
-                review=decisions.get(str(visual['id']),'PENDING')
+                review=decisions.get(str(visual['id']),'OPERATOR_CORRECTION_PENDING' if visual['data'].get('provenance') else 'PENDING')
                 d=r['data']; context.append({'evidence_id':str(r['id']),'pdf_page':d['pdf_page'],
                   'ocr':d['ocr_text'],'text_layer':d['text_layer'],
+                  'visual_record_id':str(visual['id']),
+                  'visual_provenance':visual['data'].get('provenance','local_model_candidate'),
                   'visual_review_status':review,
                   'visual_candidate':visual['data']['description'] if review!='REJECT' else
                     'Önceki görsel betimleme kaynak incelemesinde reddedildi; bu betimlemeyi kullanma. Görsel kaynak inceleme bekliyor.'})
@@ -212,7 +216,8 @@ def scenes(job):
               '"page_roles":[{"evidence_ref":"id","role":"NARRATIVE|ILLUSTRATION|ACTIVITY|FRONT_MATTER|APPENDIX"}],'
               '"uncertainties":["..."]}. events yalnız hikâye olaylarını içerir; yazar biyografisi, okura yönerge ve kitapçık bilgisi olay değildir. '
               'Her atıf verilen kimliklerden olsun. Her sayfaya bir page_roles kaydı yaz. '
-              'Tüm sayfaları dikkate al; summary en fazla 60 kelime olsun, ayrıntıları olaylara kaydet.\n'+json.dumps(context,ensure_ascii=False))
+              'Tüm sayfaları dikkate al; summary en fazla 60 kelime olsun, ayrıntıları olaylara kaydet.\n'+
+              json.dumps([{k:v for k,v in c.items() if k!='visual_record_id'} for c in context],ensure_ascii=False))
             try:
                 result,metrics=model([{'role':'user','content':prompt}],max_tokens=1800)
             except RuntimeError as exc:
@@ -237,6 +242,7 @@ def scenes(job):
                         raise RuntimeError('INVALID_POLARITY')
             result.update({'pdf_pages':[r['data']['pdf_page'] for r in batch],
                            'evidence_refs':sorted(allowed),'metrics':metrics,'review_status':'PENDING',
+                           'input_visuals':[{k:c[k] for k in ('evidence_id','visual_record_id','visual_provenance','visual_review_status')} for c in context],
                            'scene_boundary_status':'PAGE_GROUP_CANDIDATE'})
             commit(job,'scenes',key,result)
             completed.add(key)

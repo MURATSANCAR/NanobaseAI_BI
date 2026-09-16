@@ -23,7 +23,7 @@ def sql(query):
 
 records={}; checks=[]
 for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages',
-             'claims','relationships','event_merges','book_synthesis'):
+             'claims','relationships','event_merges','book_synthesis','visual_corrections'):
     data=[]; offset=0
     while True:
         page=get(f'/v1/generations/{gen}/{kind}?offset={offset}&limit=100'); data.extend(page['items'])
