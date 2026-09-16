@@ -1,0 +1,7 @@
+.git
+.env
+secrets
+runtime
+dist
+evidence
+__pycache__

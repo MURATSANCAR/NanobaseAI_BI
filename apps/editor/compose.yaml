@@ -1,0 +1,160 @@
+name: ${COMPOSE_PROJECT_NAME:-nanobase-editor}
+
+x-app: &app
+  image: ${EDITOR_IMAGE:-nanobase-editor:foundation-20260916}
+  build:
+    context: .
+    target: runtime
+  restart: unless-stopped
+  read_only: true
+  user: '10001:10001'
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs: [/tmp:size=64m,mode=1777]
+  networks: [private]
+  pids_limit: 128
+  cpus: 0.5
+  mem_limit: 512m
+  environment: &app-env
+    EDITOR_RELEASE: ${EDITOR_RELEASE:-foundation-20260916}
+    HF_HUB_OFFLINE: '1'
+    HF_HUB_DISABLE_TELEMETRY: '1'
+    DO_NOT_TRACK: '1'
+  logging: &logs
+    driver: json-file
+    options: {max-size: 10m, max-file: '3'}
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: editor
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets: [db_admin, db_owner, db_app]
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./deploy/postgres-init.sh:/docker-entrypoint-initdb.d/10-editor.sh:ro
+    networks: [private]
+    cpus: 1
+    mem_limit: 1g
+    pids_limit: 128
+    shm_size: 128m
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d editor']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    logging: *logs
+
+  storage-init:
+    <<: *app
+    restart: 'no'
+    user: '0:0'
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
+    command: [python, -c, 'import os; os.chown("/data/artifacts",10001,10001); os.chmod("/data/artifacts",0o700)']
+    volumes: [artifacts:/data/artifacts]
+
+  migrate:
+    <<: *app
+    restart: 'no'
+    command: [python, -m, editor.migrate]
+    secrets: [db_owner]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  qdrant:
+    image: qdrant/qdrant:v1.15.0@sha256:709bd2656bb929b745a956260f61a6395d09f8eed72c5bf2131985ae70f95974
+    restart: unless-stopped
+    environment:
+      QDRANT__TELEMETRY_DISABLED: 'true'
+      QDRANT__SERVICE__ENABLE_STATIC_CONTENT: 'false'
+    networks: [private]
+    volumes: [search:/qdrant/storage]
+    cpus: 1
+    mem_limit: 1g
+    pids_limit: 128
+    logging: *logs
+
+  api:
+    <<: *app
+    secrets: [db_app, api_token]
+    volumes: [artifacts:/data/artifacts:ro]
+    ports: ['${EDITOR_BIND:-127.0.0.1}:${EDITOR_PORT:-8810}:8810']
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      storage-init: {condition: service_completed_successfully}
+      qdrant: {condition: service_started}
+    healthcheck:
+      test: [CMD, python, -c, 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8810/health/ready",timeout=10)']
+      interval: 15s
+      timeout: 12s
+      retries: 6
+      start_period: 30s
+
+  worker:
+    <<: *app
+    command: [python, -m, editor.worker]
+    secrets: [db_app]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "from editor.config import connection; c=connection(); r=c.execute(\"SELECT now()-seen_at < interval '40 seconds' AS ok FROM editor.worker_heartbeats WHERE worker_id='foundation'\").fetchone(); assert r and r['ok']"]
+      interval: 20s
+      timeout: 8s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:v2.55.0@sha256:378f4e03703557d1c6419e6caccf922f96e6d88a530f7431d66a4c4f4b1000fe
+    restart: unless-stopped
+    command: [--config.file=/etc/prometheus/prometheus.yml, --storage.tsdb.path=/prometheus, --storage.tsdb.retention.time=15d]
+    networks: [private]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - metrics:/prometheus
+    secrets: [api_token]
+    ports: ['127.0.0.1:${EDITOR_METRICS_PORT:-9096}:9090']
+    cpus: 0.5
+    mem_limit: 512m
+    pids_limit: 128
+    logging: *logs
+
+  document:
+    image: ${EDITOR_DOCUMENT_IMAGE:-nanobase-editor-document:foundation-20260916}
+    build:
+      context: .
+      target: document
+    profiles: [tools]
+    network_mode: none
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp:size=1g,mode=1777]
+    cpus: 2
+    mem_limit: 6g
+    pids_limit: 128
+    environment:
+      EDITOR_MAX_SOURCE_BYTES: ${EDITOR_MAX_SOURCE_BYTES:-52428800}
+      EDITOR_MAX_PAGES: ${EDITOR_MAX_PAGES:-100}
+      EDITOR_PARSE_TIMEOUT: ${EDITOR_PARSE_TIMEOUT:-300}
+      HF_HUB_OFFLINE: '1'
+    volumes: [artifacts:/data/artifacts]
+    logging: *logs
+
+networks:
+  private:
+    internal: true
+
+volumes:
+  database:
+  artifacts:
+  search:
+  metrics:
+
+secrets:
+  db_admin: {file: ./secrets/db_admin}
+  db_owner: {file: ./secrets/db_owner}
+  db_app: {file: ./secrets/db_app}
+  api_token: {file: ./secrets/api_token}

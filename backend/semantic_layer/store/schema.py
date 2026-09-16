@@ -127,8 +127,23 @@ sl_query_log = sa.Table(
     sa.Column("result_fingerprint", sa.String(64)),
     sa.Column("latency_ms", sa.Integer()),
     sa.Column("error", sa.Text()),
+    # --- Promt izleyici (2026-09-16): her promtu insan gözüyle inceleyip nereyi düzelteceğimizi
+    # görmek için. Var olan alanlar (soru/sql/resolved/executed/error) zaten kaydın çekirdeği;
+    # bunlar üstüne "kim sordu", "ne cevap döndü", "tam sonuç" ve "inceleme notu" ekler.
+    sa.Column("username", sa.String(120)),          # soruyu soran AD hesabı (yoksa NULL)
+    sa.Column("thread_id", sa.String(64)),          # aynı konuşmanın soruları
+    sa.Column("answer_type", sa.String(48)),        # TEXT_TO_SQL | CLARIFICATION | INCOMPLETE_ANSWER | ...
+    sa.Column("answer_summary", sa.Text()),         # kullanıcıya dönen cümle/özet ya da red gerekçesi
+    sa.Column("result_json", sa.JSON()),            # tam sonuç: {columns, records, totalRows, truncated}
+    sa.Column("gate_json", sa.JSON()),              # kapı kararları: karşılanmayan koşul, katalog çelişkisi, eleştiri
+    sa.Column("review_flag", sa.String(24)),        # NULL | 'todo' (düzeltilecek) | 'fixed' | 'ignored'
+    sa.Column("review_note", sa.Text()),            # inceleyenin notu
+    sa.Column("reviewed_by", sa.String(120)),
+    sa.Column("reviewed_at", sa.DateTime(timezone=True)),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
     sa.Index("ix_sl_query_log_validated", "tenant_id", "datasource_id", "validated"),
+    sa.Index("ix_sl_query_log_recent", "tenant_id", "datasource_id", "created_at"),
+    sa.Index("ix_sl_query_log_review", "tenant_id", "datasource_id", "review_flag"),
 )
 
 # What the system read out of the schema on its own: a proposed meaning for a column nobody has named.
