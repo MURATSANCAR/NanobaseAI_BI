@@ -1,7 +1,7 @@
 """Veritabanları arası bağ keşfi: iki ayrı veritabanı, ortak hiçbir ad yok — yalnız değerler.
 
-Kurgu kasten müşteriye benzemez: ana veritabanında yıl kopyalı bir ERP şekli, ATTACH edilmiş ikinci
-veritabanında bir CRM şekli. Keşif ne tablo ne kolon adı bilir; bulduğu her şey ölçülen örtüşmedendir.
+Kurgu kasten müşteriye benzemez: bir veritabanında yıl kopyalı bir ERP şekli, ikinci bir veritabanında
+(ayrı bağlantı ya da aynı bağlantıya ATTACH edilmiş) bir CRM şekli. Keşif ne tablo ne kolon adı bilir; bulduğu her şey ölçülen örtüşmedendir.
 """
 
 from __future__ import annotations
@@ -25,36 +25,61 @@ def _prof(schema, table, pattern, entity, cols, pk, rows, window=None, context=N
                          columns=cols, primary_key=pk, row_count=rows, time_window=window, context=context or {})
 
 
-@pytest.fixture
-def world():
+class _Spy(SQLiteConnector):
+    """Kaydeden bağlantı: hangi veritabanına hangi cümle gitti, kaç parametreyle."""
+
+    def __init__(self, conn):
+        super().__init__(conn=conn)
+        self.seen: list[tuple[str, int]] = []
+
+    def execute(self, sql, limit):
+        self.seen.append((sql, 0))
+        return super().execute(sql, limit)
+
+    def _rows(self, sql, params=()):
+        self.seen.append((sql, len(params)))
+        return super()._rows(sql, params)
+
+
+@pytest.fixture(params=["two", "attached"])
+def world(request):
+    """two: ERP ve CRM iki ayrı veritabanı (iki bağlantı). attached: tek bağlantı, CRM ATTACH edilmiş."""
     rnd = random.Random(7)
-    c = sqlite3.connect(":memory:", check_same_thread=False)
-    c.execute("ATTACH DATABASE ':memory:' AS crm")
-    c.executescript(
+    erp = sqlite3.connect(":memory:", check_same_thread=False)
+    if request.param == "two":
+        crm, pre = sqlite3.connect(":memory:", check_same_thread=False), ""
+    else:
+        erp.execute("ATTACH DATABASE ':memory:' AS crm")
+        crm, pre = erp, "crm."
+    erp.executescript(
         """
         CREATE TABLE LG_211_CLCARD (LOGICALREF INTEGER PRIMARY KEY, CODE TEXT, DEFINITION_ TEXT, CITY TEXT);
         CREATE TABLE LG_411_CLCARD (LOGICALREF INTEGER PRIMARY KEY, CODE TEXT, DEFINITION_ TEXT, CITY TEXT);
         CREATE TABLE LG_211_01_INVOICE (LOGICALREF INTEGER PRIMARY KEY, FICHENO TEXT, DATE_ TEXT, CLIENTREF INTEGER);
         CREATE TABLE LG_411_01_INVOICE (LOGICALREF INTEGER PRIMARY KEY, FICHENO TEXT, DATE_ TEXT, CLIENTREF INTEGER);
         CREATE TABLE LG_411_01_STLINE (LOGICALREF INTEGER PRIMARY KEY, SPECODE TEXT, DATE_ TEXT);
-        CREATE TABLE crm.AccountBase (AccountId TEXT PRIMARY KEY, new_logicalref TEXT, Name TEXT, Country TEXT);
-        CREATE TABLE crm.ShipmentBase (ShipmentId TEXT PRIMARY KEY, invoice_no TEXT, createdon TEXT, noise_ref TEXT, Title TEXT);
+        """
+    )
+    crm.executescript(
+        f"""
+        CREATE TABLE {pre}AccountBase (AccountId TEXT PRIMARY KEY, new_logicalref TEXT, Name TEXT, Country TEXT);
+        CREATE TABLE {pre}ShipmentBase (ShipmentId TEXT PRIMARY KEY, invoice_no TEXT, createdon TEXT, noise_ref TEXT, Title TEXT);
         """
     )
     cards = [(i, f"120.{i:05d}", f"Müşteri Adı {i}", "İstanbul") for i in range(1, 401)]
-    c.executemany("INSERT INTO LG_211_CLCARD VALUES (?,?,?,?)", cards)
-    c.executemany("INSERT INTO LG_411_CLCARD VALUES (?,?,?,?)", cards)
+    erp.executemany("INSERT INTO LG_211_CLCARD VALUES (?,?,?,?)", cards)
+    erp.executemany("INSERT INTO LG_411_CLCARD VALUES (?,?,?,?)", cards)
     old = [(i, f"GIB2023{i:09d}", f"202{1 + i % 5}-03-01", 1 + i % 400) for i in range(1, 701)]
     new = [(i, f"GIB2026{i:09d}", "2026-02-01", 1 + i % 400) for i in range(1, 301)]
-    c.executemany("INSERT INTO LG_211_01_INVOICE VALUES (?,?,?,?)", old)
-    c.executemany("INSERT INTO LG_411_01_INVOICE VALUES (?,?,?,?)", new)
-    c.executemany("INSERT INTO LG_411_01_STLINE VALUES (?,?,?)", [(i, f"S{i % 7}", "2026-01-01") for i in range(1, 6001)])
+    erp.executemany("INSERT INTO LG_211_01_INVOICE VALUES (?,?,?,?)", old)
+    erp.executemany("INSERT INTO LG_411_01_INVOICE VALUES (?,?,?,?)", new)
+    erp.executemany("INSERT INTO LG_411_01_STLINE VALUES (?,?,?)", [(i, f"S{i % 7}", "2026-01-01") for i in range(1, 6001)])
     accounts = []
     for i in range(1, 331):
         ref = str(rnd.randint(1, 400)) if i <= 320 else str(900000 + i)       # 10 of them point nowhere
         name = f"MÜŞTERİ ADI {ref}" if i <= 320 else f"Kayıp {i}"
         accounts.append((f"{i:08X}-0000-0000-0000-000000000000", ref, name, "Türkiye"))
-    c.executemany("INSERT INTO crm.AccountBase VALUES (?,?,?,?)", accounts)
+    crm.executemany(f"INSERT INTO {pre}AccountBase VALUES (?,?,?,?)", accounts)
     ships = []
     for i in range(1, 901):
         if i <= 250:                                                            # older than the ERP keeps
@@ -64,8 +89,9 @@ def world():
         else:
             inv, created = f"GIB2024{i:09d}", "2024-01-01"                      # does not exist: real misses
         ships.append((f"s{i}", inv, created, str(rnd.randint(1, 6000)), f"Sevkiyat {rnd.randint(1, 50)}"))
-    c.executemany("INSERT INTO crm.ShipmentBase VALUES (?,?,?,?,?)", ships)
-    c.commit()
+    crm.executemany(f"INSERT INTO {pre}ShipmentBase VALUES (?,?,?,?,?)", ships)
+    erp.commit()
+    crm.commit()
 
     erp_card = lambda t: _prof("main", t, "LG_{n0}_CLCARD", "LG_CLCARD",  # noqa: E731
                                [_col("LOGICALREF", "int", True), _col("CODE", "varchar(17)"), _col("DEFINITION_", "varchar(200)"), _col("CITY", "varchar(20)")],
@@ -87,12 +113,16 @@ def world():
                _col("noise_ref", "nvarchar(100)"), _col("Title", "nvarchar(100)")],
               ["ShipmentId"], 900, ("2019-05-01", "2026-03-01")),
     ]
-    return SQLiteConnector(conn=c), profiles
+    if request.param == "two":
+        erp_c, crm_c = _Spy(erp), _Spy(crm)
+        probe = X.RoutedProbe({"": X.probe_for(erp_c), "CRM": X.probe_for(crm_c, database="crm")})
+        return probe, profiles, (erp_c, crm_c)
+    one = _Spy(erp)
+    return X.RoutedProbe({"": X.probe_for(one)}), profiles, (one, None)
 
 
 def _discover(world, **th):
-    connector, profiles = world
-    probe = X.probe_for(connector)
+    probe, profiles, _ = world
     times = {"SHIPMENTBASE": "createdon"}
     d = X.CrossSourceLinkDiscovery(profiles, probe, thresholds=X.LinkThresholds(**th),
                                    time_column=lambda p: times.get(p.entity), progress=lambda m: None)
@@ -116,7 +146,7 @@ def test_a_source_is_the_database_in_front_of_the_schema():
 
 
 def test_catalog_step_counts_every_type_compatible_pair_without_touching_the_database(world):
-    _, profiles = world
+    _, profiles, _ = world
     cat = X.catalog_candidates(profiles)
     assert cat.shapes_by_source == {"": 3, "CRM": 2}
     assert cat.pairs > 0 and set(cat.pairs_by_direction) == {"CRM->default", "default->CRM"}
@@ -152,7 +182,7 @@ def test_coverage_is_judged_inside_the_target_window_and_periods_are_told_apart(
 
 
 def test_the_apply_plan_carries_evidence_and_how_to_compare_the_two_sides(world):
-    _, profiles = world
+    _, profiles, _ = world
     _, report = _discover(world)
     plan = X.apply_plan(report, profiles)
     by_col = {row["relationship"]["column"]: row for row in plan}
@@ -171,3 +201,58 @@ def test_stricter_coverage_rejects_with_the_measured_reason(world):
     _, report = _discover(world, confirmed_coverage=0.999)
     card = next(p for p in report.pairs if p.ref_entity == "ACCOUNTBASE" and p.key_entity == "LG_CLCARD")
     assert card.stage == "confirm" and card.reason.startswith("coverage ")
+
+
+def test_keys_meet_in_python_whatever_each_side_stores():
+    assert X.norm_key(" 14330 ", X.INT) == X.norm_key(14330, X.INT) == X.norm_key("14330.0", X.INT) == "14330"
+    assert X.norm_key("ABC", X.INT) is None and X.norm_key(None, X.CODE) is None and X.norm_key(" ", X.CODE) is None
+    assert X.norm_key("Kitapçı Işık", X.CODE) == X.norm_key("KİTAPCI ISIK", X.CODE)     # Turkish_CI_AI eşitliği
+    assert X.norm_key("{0a1b2c3d-0000-0000-0000-000000000000}", X.GUID) == X.norm_key("0A1B2C3D-0000-0000-0000-000000000000", X.GUID)
+    assert X._SqlProbe.params(["12", " 12", "x", "013"], X.INT) == [12, 13]                # int anahtara metin gitmez
+
+
+def test_no_statement_touches_both_databases(world):
+    probe, _, (erp_c, crm_c) = world
+    if crm_c is None:
+        pytest.skip("tek bağlantı kurgusu")
+    _, report = _discover(world)
+    assert len(report.accepted()) == 2
+    assert erp_c.seen and crm_c.seen
+    assert not any(n in sql for sql, _ in erp_c.seen for n in ("AccountBase", "ShipmentBase"))
+    assert not any("LG_" in sql for sql, _ in crm_c.seen)
+    assert report.queries == len(erp_c.seen) + len(crm_c.seen)
+
+
+def test_long_value_lists_are_split_never_cut(world, monkeypatch):
+    """Parametre sınırı küçükken de sonuç aynı: her cümle sınırın altında, hiçbir değer düşmüyor."""
+    probe, profiles, spies = world
+    _, before = _discover(world)
+    for s in spies:
+        if s is not None:
+            s.seen.clear()
+    monkeypatch.setattr(X, "PARAM_CHUNK", 7)
+    _, after = _discover(world)
+    key = lambda r: {(p.ref_entity, p.ref_column, p.key_entity, p.key_column): p.coverage["all"] for p in r.accepted()}  # noqa: E731
+    assert key(before) == key(after)
+    assert max(n for s in spies if s is not None for _, n in s.seen) <= 7
+
+
+def test_a_non_key_target_is_read_once_and_compared_in_python(world, monkeypatch):
+    """Anahtar olmayan hedefte (FICHENO) birden çok parça gerekiyorsa değerler bir kez okunur; büyük/küçük
+    harf ve aksan farkı Python'da eşitlenir (CRM'in CI_AI harmanı gibi)."""
+    probe, profiles, _ = world
+    by = {p.table_name: p for p in profiles}
+    monkeypatch.setattr(X, "PARAM_CHUNK", 5)
+    targets = [by["LG_211_01_INVOICE"], by["LG_411_01_INVOICE"]]
+    ship = by["ShipmentBase"]
+    measure = lambda: X.measure_coverage(probe, ship, "invoice_no", X.CODE, targets, "FICHENO",  # noqa: E731
+                                         key_declared=False, since=("createdon", "2021-01-02"))
+    base, _ = measure()
+    crm = probe.of(ship)
+    crm.c._rows(f"INSERT INTO {crm.table(ship)} VALUES ('lower', ' gib2026000000001', '2026-05-01', '1', 'x')")
+    full, win = measure()
+    assert full["ref_distinct_raw"] == base["ref_distinct_raw"] + 1              # veritabanı için ayrı bir değer
+    assert full["distinct"] == base["distinct"] and full["matched"] == base["matched"]   # karşılaştırmada aynı
+    assert full["distinct"] > win["distinct"] and win["matched"] / win["distinct"] >= 0.9
+    assert full["ref_rows"] == 901 and win["ref_rows"] == 651
+    assert full["multi_period"] == 0 and all(full["per_table"].values())

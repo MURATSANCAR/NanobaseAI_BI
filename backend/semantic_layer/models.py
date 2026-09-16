@@ -395,6 +395,9 @@ class SemanticQuery:
     # the answer, the answer is never certified, and the gate refuses SQL that restricts nothing the
     # word could account for. Never silently dropped.
     model_qualifiers: list[dict[str, Any]] = field(default_factory=list)
+    # Which databases the question's evidence points at (schema database prefix; "" is the connection's
+    # own). Set by the compiler when it chooses tables; two entries mean the answer needs a plan.
+    sources: list[str] = field(default_factory=list)
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can
@@ -536,3 +539,7 @@ class CompiledQuery:
     # first-class result — for a question whose data this deployment does not hold, it is the *correct*
     # result, and measuring it as a failure is how a system gets pushed into answering anyway.
     refusal: Optional[str] = None
+    # A question that needs both databases is answered by a plan (runtime/federated.py): one statement
+    # per server and an in-memory combination of their rows. `sql` then carries the plan's text for
+    # the person to read; it is never executed as a statement.
+    plan: Optional[Any] = None

@@ -1,8 +1,14 @@
 """Join relationships between two databases that share nothing but values.
 
-The ERP and the CRM sit on the same server, but neither declares a foreign key into the other and
+The ERP and the CRM may sit on different servers; neither declares a foreign key into the other and
 neither names its columns after the other's. What ties a CRM account to an ERP customer card is that
-one column of the first holds the key values of the second. That is the only thing looked at here:
+one column of the first holds the key values of the second. That is the only thing looked at here.
+
+No statement ever touches both databases. A read of one table goes to the connection that holds it
+(:class:`RoutedProbe`, by the database qualifier of the profile's schema); a question about both sides
+reads the values on one connection and looks them up on the other as bound parameters, split into as
+many statements as the parameter limit needs. Values are compared in Python (:func:`norm_key`), so an
+nvarchar holding digits meets an int key, and an accent-insensitive collation's equality is kept.
 
     1. catalog   — which column pairs could hold the same values at all (types, key-ness, value
                    inventories the scan already collected). No SQL. Counted, never truncated.
@@ -365,7 +371,8 @@ def norm_key(value: Any, family: str) -> Optional[str]:
     return fold(s)
 
 
-def _chunks(values: list[Any], size: int = PARAM_CHUNK) -> Iterable[list[Any]]:
+def _chunks(values: list[Any], size: Optional[int] = None) -> Iterable[list[Any]]:
+    size = size or PARAM_CHUNK
     for i in range(0, len(values), size):
         yield values[i:i + size]
 
@@ -708,6 +715,7 @@ def measure_coverage(probe: LinkProbe, ref: SchemaProfile, column: str, family: 
     instead of one scan per parameter chunk)."""
     raw = probe.ref_values(ref, column, since)
     inside: dict[str, bool] = {}
+    stored: dict[str, list[str]] = {}         # comparison form → every way the source stores it
     rows_all = rows_win = 0
     for v, n, w in raw:
         rows_all += n
@@ -715,11 +723,14 @@ def measure_coverage(probe: LinkProbe, ref: SchemaProfile, column: str, family: 
         k = norm_key(v, family)
         if k is not None:
             inside[k] = inside.get(k, False) or w > 0
-    values = sorted(inside)
+            stored.setdefault(k, []).append(str(v).strip())
+    # The stored spellings are what is sent: the target's collation decides what it finds, the
+    # folded form decides what counts as the same value afterwards.
+    sent = sorted({s for spellings in stored.values() for s in spellings})
     hits: dict[str, set[str]] = {}
     for t in targets:
-        if key_declared or len(values) <= PARAM_CHUNK:
-            hits[t.table_name] = probe.contained(t, key, values, family)
+        if key_declared or len(sent) <= PARAM_CHUNK:
+            hits[t.table_name] = probe.contained(t, key, sent, family) & inside.keys()
         else:
             have = {k for k in (norm_key(v, family) for v in probe.distinct_values(t, key)) if k is not None}
             hits[t.table_name] = have & inside.keys()
@@ -730,7 +741,7 @@ def measure_coverage(probe: LinkProbe, ref: SchemaProfile, column: str, family: 
         return {"distinct": len(vals), "matched": len(counts), "multi_period": sum(1 for n in counts.values() if n > 1),
                 "per_table": per, "ref_rows": ref_rows, "ref_distinct_raw": len(raw)}
 
-    full = summary(set(values), rows_all)
+    full = summary(set(inside), rows_all)
     windowed = summary({k for k, w in inside.items() if w}, rows_win) if since else None
     return full, windowed
 
@@ -810,7 +821,7 @@ def lookup_family(ref: ColumnSample, key: ColumnSample) -> str:
 
 
 class CrossSourceLinkDiscovery:
-    def __init__(self, profiles: list[SchemaProfile], probe: LinkProbe, *, thresholds: Optional[LinkThresholds] = None,
+    def __init__(self, profiles: list[SchemaProfile], probe: Any, *, thresholds: Optional[LinkThresholds] = None,
                  time_column: Optional[Callable[[SchemaProfile], Optional[str]]] = None,
                  progress: Optional[Callable[[str], None]] = None):
         self.profiles = profiles
@@ -993,7 +1004,7 @@ class CrossSourceLinkDiscovery:
         lo, hi = self.ranges.get((kshape, kcol.upper()), (None, None))
         rows = sum(t.row_count or 0 for t in ks.tables) / max(1, len(ks.tables))
         density = (rows / (hi - lo + 1)) if family == INT and lo is not None and hi is not None and hi >= lo else None
-        vals = [fold(v) for v in values]
+        vals = [k for k in (norm_key(v, family) for v in values) if k is not None]
         per = {tn: sum(1 for v in vals if v in hit) for tn, hit in hits_per_table.items()}
         union = set().union(*hits_per_table.values()) if hits_per_table else set()
         matched = sum(1 for v in vals if v in union)
@@ -1072,12 +1083,13 @@ class CrossSourceLinkDiscovery:
             return None
         by_key: dict[str, dict[str, Any]] = {}
         for row in key_rows:
-            by_key.setdefault(fold(row.get(r.key_column)), row)
+            by_key.setdefault(norm_key(row.get(r.key_column), r.family), row)
         agree: Counter = Counter()
         compared: Counter = Counter()
         agreed_values: dict[tuple[str, str], set[str]] = {}
         for row in ref_rows:
-            other = by_key.get(fold(row.get(r.ref_column)))
+            k = norm_key(row.get(r.ref_column), r.family)
+            other = by_key.get(k) if k is not None else None
             if not other:
                 continue
             for a in rcols:
@@ -1117,8 +1129,8 @@ class CrossSourceLinkDiscovery:
                 # Rows older than anything the target holds cannot match and say nothing against the link.
                 since = (tcol, min(starts))
             try:
-                full = self.probe.coverage(rep, r.ref_column, r.family, ks.tables, r.key_column, None)
-                windowed = self.probe.coverage(rep, r.ref_column, r.family, ks.tables, r.key_column, since) if since else None
+                full, windowed = measure_coverage(self.probe, rep, r.ref_column, r.family, ks.tables, r.key_column,
+                                                  key_declared=is_declared_key(ks, r.key_column), since=since)
                 if is_declared_key(ks, r.key_column):
                     uniq = {"declared": True}
                 else:
@@ -1196,7 +1208,7 @@ class CrossSourceLinkDiscovery:
         report.catalog = asdict(catalog_candidates(self.profiles))
         self.progress(f"catalog: {report.catalog['pairs']} type-compatible pairs")
         if not (samples_cache and self.load_samples(samples_cache, report)):
-            probe_timeout = getattr(self.probe, "c", None) and getattr(self.probe.c, "query_timeout", None)
+            probe_timeout = self.probe.timeout
             self.probe.set_timeout(self.th.sample_timeout)
             self.sample_all(report, cache=samples_cache)
             self.probe.set_timeout(probe_timeout)

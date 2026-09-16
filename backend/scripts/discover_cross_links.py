@@ -1,4 +1,4 @@
-"""Discover join relationships between databases on one connection — dry run only.
+"""Discover join relationships between databases — dry run only.
 
 Reads the catalog's profiles, measures value overlap on the customer's database with sampled,
 single-core queries, and writes two files: the full discovery report (every pair, the stage it
@@ -6,7 +6,11 @@ stopped at and why) and the apply plan (exactly which relationship would be writ
 row). Nothing is written to the catalog.
 
     python -m scripts.discover_cross_links --out /var/tmp/crmlinks \
+        --connection logo.json --connection crm.json \
         [--oracle ACCOUNTBASE.new_logicalref=LG_CLCARD.LOGICALREF ...]
+
+The first connection answers for profiles with an unqualified schema; every connection answers for
+profiles whose schema is qualified with the database its file opens. No statement spans two of them.
 
 `--oracle` pairs are only used to print precision / recall at the end; discovery never sees them.
 """
@@ -25,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from semantic_layer.profiler.connectors import connector_from_file  # noqa: E402
 from semantic_layer.profiler.cross_source_links import (  # noqa: E402
-    CrossSourceLinkDiscovery, LinkThresholds, apply_plan, probe_for,
+    CrossSourceLinkDiscovery, LinkThresholds, RoutedProbe, apply_plan, database_of,
 )
 from semantic_layer.store.catalog_store import open_store  # noqa: E402
 
@@ -44,7 +48,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
     ap.add_argument("--datasource", default=os.environ.get("SEMANTIC_DATASOURCE_ID", "logo"))
-    ap.add_argument("--connection", default=os.environ.get("SEMANTIC_CONNECTION_FILE"))
+    ap.add_argument("--connection", action="append", default=[],
+                    help="connection file; repeat for each database (default: SEMANTIC_CONNECTION_FILE, "
+                         "then SEMANTIC_CRM_CONNECTION_FILE when it exists)")
     ap.add_argument("--timeout", type=int, default=900, help="per-query timeout for the confirmation scans")
     ap.add_argument("--samples-cache", default=None, help="reuse/save value profiles (JSON)")
     ap.add_argument("--stop-after", choices=["block"], default=None)
@@ -59,8 +65,10 @@ def main() -> int:
     store = open_store(os.environ["SEMANTIC_STORE_DSN"], create=False)   # read-only use: no DDL
     profiles = store.list_profiles(args.datasource)
     th = LinkThresholds(**{f.name: getattr(args, f.name) for f in fields(LinkThresholds)})
-    connector = connector_from_file(args.connection)
-    probe = probe_for(connector, timeout=args.timeout)
+    files = args.connection or [f for f in (os.environ.get("SEMANTIC_CONNECTION_FILE"),
+                                            os.environ.get("SEMANTIC_CRM_CONNECTION_FILE")) if f and os.path.exists(f)]
+    probe = RoutedProbe.from_connectors([connector_from_file(f) for f in files], timeout=args.timeout)
+    logging.info("connections: %s", {k or "(default)": database_of(v.c) for k, v in probe.probes.items()})
     report = CrossSourceLinkDiscovery(profiles, probe, thresholds=th).run(samples_cache=args.samples_cache,
                                                                          stop_after=args.stop_after)
 
@@ -70,6 +78,7 @@ def main() -> int:
 
     accepted = [(f"{p.ref_entity}.{p.ref_column}", f"{p.key_entity}.{p.key_column}") for p in report.accepted()]
     summary = {
+        "connections": {k or "(default)": database_of(v.c) for k, v in probe.probes.items()},
         "catalog_pairs": report.catalog.get("pairs"), "sampled_tables": report.sampled_tables,
         "column_families": report.column_families, "blocked": report.blocked,
         "step3_cost": report.cost, "probed_pairs": len(report.pairs),

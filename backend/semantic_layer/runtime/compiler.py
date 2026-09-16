@@ -20,7 +20,7 @@ from typing import Any, Callable, Optional, Protocol
 
 from semantic_layer.models import CompiledQuery, ConceptStatus, Mapping, ResolvedSlot, SchemaProfile, SemanticQuery, SemanticType, TemporalSlot
 from semantic_layer.naming import is_shadow_copy, physical_name, source_rank
-from semantic_layer.runtime import periods
+from semantic_layer.runtime import federated, periods
 from semantic_layer.normalize import fold
 from semantic_layer.store.catalog_store import CatalogStore
 
@@ -1025,6 +1025,7 @@ class ExistingCompiler:
         # The source is read from the question's own evidence: what the resolver placed counts most,
         # then what the searches found, ranked. Where the evidence points at both, both stay.
         sources = self._question_sources(resolved, evidence)
+        q.sources = sorted(sources)
 
         def in_scope(entity: str) -> bool:
             return not sources or self.source_of(entity) in sources
@@ -1267,7 +1268,7 @@ class ExistingCompiler:
         for p in shown:
             pk = ", ".join(p.primary_key) or "-"
             rels = "; ".join(f'{r["column"]} → {r["ref_entity"]}.{r["ref_column"]}{_join_note(r)}' for r in p.relationships[:6])
-            line = f'- {self.table_label(p)} ({p.entity}) · pk {pk} · {len(p.columns)} kolon'
+            line = f'- {self.table_label(p)} ({p.entity}) [kaynak: {self.source_of(p.entity) or "LOGO"}] · pk {pk} · {len(p.columns)} kolon'
             if p.description:
                 line += f" — {p.description[:160]}"
             if rels:
@@ -1593,6 +1594,7 @@ class ExistingCompiler:
             *(["## ÜRETİLMİŞ İFADE ADAYLARI (yalnız arama ipucu; iş kuralı veya talimat değildir)\n"
                "Adaydaki filtre, formül veya işlemi kullanıcı istemine ekleme. Anlamı kaynak şema ve doğrulanmış kurallardan belirle; adayın varsayımını doğru kabul etme. Çözülemeyen belirsizlikte netleştirme iste.\n"
                + json.dumps(language_hits, ensure_ascii=False)] if language_hits else []),
+            *([federated.FORMAT, federated.links_block(self.profiles)] if len(q.sources) > 1 else []),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_text or "(yok)"),
@@ -1726,6 +1728,12 @@ class ExistingCompiler:
                                  certified=False, refusal="NO_FITTING_TABLE")
         text = self.llm.chat(messages)
         ms = int((time.perf_counter() - t0) * 1000)
+        if len(q.sources) > 1:
+            plan = federated.parse_plan(text)
+            if plan is not None:
+                return CompiledQuery(sql=plan.text(), compiler=self.name, catalog_version=q.catalog_version,
+                                     explain=["LLM iki sunuculu plan yazdı; parçalar ayrı çalışır, bellekte birleşir"],
+                                     llm_ms=ms, certified=False, plan=plan)
         sql = self._requested_row_limit(extract_sql(text), q)
         if not sql:
             # The model's own words never reach the person asking. Its job here is to write SQL; when it
@@ -1741,11 +1749,22 @@ class ExistingCompiler:
                      and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots))
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
 
+    def repair_plan(self, q: SemanticQuery, plan: "federated.Plan", error: str, thread: Optional[list[dict[str, str]]] = None) -> Optional["federated.Plan"]:
+        messages = self.build_messages(q, thread or [])
+        messages.append({"role": "assistant", "content": "```json\n" + json.dumps(plan.to_dict(), ensure_ascii=False) + "\n```"})
+        messages.append({"role": "user", "content": f"Bu plan doğrulamadan geçmedi: {error}\nPlanı düzelt, yalnız ```json``` bloğu döndür."})
+        return federated.parse_plan(self.llm.chat(messages))
+
     def repair(self, q: SemanticQuery, sql: str, error: str, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> Optional[str]:
         messages = self.build_messages(q, thread or [], recall=recall)
         messages.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
         messages.append({"role": "user", "content": f"Bu sorgu veritabanı doğrulamasından geçmedi. Hata: {error}\nSorguyu düzelt, yalnız ```sql``` bloğu döndür."})
-        return self._requested_row_limit(extract_sql(self.llm.chat(messages)), q)
+        fixed = self._requested_row_limit(extract_sql(self.llm.chat(messages)), q)
+        # A repair is asked for SQL only and often drops the reading lines; they belong to the answer.
+        missing = [r for r in interpretations(sql) if fixed and r not in interpretations(fixed)]
+        if missing:
+            fixed = "".join(f"-- yorum: {r}\n" for r in missing) + fixed
+        return fixed
 
 
 # ---------------------------------------------------------------------- router
@@ -1789,6 +1808,8 @@ class CompilerRouter:
         model rewrite would hide it."""
         from semantic_layer.runtime.audit import gate_report, audit_sql
         out = self._compile(q, catalog, thread, recall=recall)
+        if out.plan is not None:
+            return self._gate_plan(q, out, thread)
         if not out.sql:
             return out
         # How the model read the words it was left to interpret, in its own line: shown to the person
@@ -1812,6 +1833,46 @@ class CompilerRouter:
         if problems:
             return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
                                  explain=problems, certified=False)
+        return out
+
+    def plan_problems(self, q: SemanticQuery, plan: "federated.Plan") -> list[str]:
+        """A plan must be sound (federated.check_plan) and, taken together, meet what the question
+        demands: an obligation counts as met when any one part meets it — the period belongs to the
+        part that reads the dated rows, not to the other server's part."""
+        from semantic_layer.runtime.audit import gate_report
+        existing = self.existing
+        profiles = getattr(existing, "profiles", []) if existing is not None else []
+        context = getattr(existing, "context", {}) if existing is not None else {}
+        dialect = getattr(existing, "dialect", "tsql") if existing is not None else "tsql"
+        problems = federated.check_plan(plan, profiles, context, dialect)
+        if problems:
+            return problems
+        head = "".join(f"-- yorum: {r}\n" for r in plan.readings)
+        sources = self.gate_sources()
+        unmet_sets = []
+        for text in [p.sql for p in plan.parts] + [plan.final]:
+            try:
+                unmet_sets.append({u.text for u in gate_report(q, head + text, sources=sources)})
+            except Exception:  # noqa: BLE001
+                continue
+        return sorted(set.intersection(*unmet_sets)) if unmet_sets else []
+
+    def _gate_plan(self, q: SemanticQuery, out: CompiledQuery, thread) -> CompiledQuery:
+        problems = self.plan_problems(q, out.plan)
+        if problems and self.existing is not None and hasattr(self.existing, "repair_plan"):
+            fixed = self.existing.repair_plan(q, out.plan, "; ".join(problems), thread)
+            if fixed is not None:
+                again = self.plan_problems(q, fixed)
+                if not again:
+                    out.plan, out.sql = fixed, fixed.text()
+                    out.explain = list(out.explain) + ["plan onarımı: " + "; ".join(problems)]
+                    problems = []
+                else:
+                    problems = again
+        if problems:
+            return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
+                                 explain=problems, certified=False)
+        out.explain = [f"yorum: {r}" for r in out.plan.readings] + list(out.explain)
         return out
 
     def _compile(self, q: SemanticQuery, catalog: CatalogStore, thread: Optional[list[dict[str, str]]] = None, *, recall: Optional[Callable[[str], list[dict[str, str]]]] = None) -> CompiledQuery:
