@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Database, Eye, EyeOff, Loader2, Lock, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_BASE, clearAuthBlock } from '../engine';
 import zekiGif from '@/assets/zeki-ai.gif';
 
@@ -70,32 +70,19 @@ export default function SessionGate({ onDone }: { onDone: () => void }) {
       <div className="lg-orb lg-drift-3 bottom-[-12%] left-1/3 h-72 w-72 bg-mintSuccess/20" />
 
       <div className="relative flex min-h-full items-center justify-center px-4 py-8 sm:px-6">
-        <div className="grid w-full max-w-[900px] items-center gap-6 lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-          {/* ── Kahraman ── */}
-          <div className={`lg-rise ${inMod} flex flex-col items-center text-center lg:items-start lg:text-left`}>
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[.18em] text-canvas-violet shadow-glass-float backdrop-blur">
+        <div className="grid w-full max-w-[940px] items-center gap-6 lg:grid-cols-[1.15fr_1fr] lg:items-stretch lg:gap-10">
+          {/* ── Kahraman: alanı komple kaplayan ZEKİ görseli ── */}
+          <div className={`lg-rise ${inMod} flex w-full flex-col items-center lg:items-stretch`}>
+            <div className="inline-flex items-center gap-1.5 self-center rounded-full border border-white/70 bg-white/70 px-3 py-1 text-[11px] font-bold uppercase tracking-[.18em] text-canvas-violet shadow-glass-float backdrop-blur lg:self-start">
               <Sparkles className="h-3.5 w-3.5" /> Timaş Yayınları · Kurumsal Zekâ
             </div>
-            {/* ZEKİ görseli kendi çerçevesinde; markası (ZEKİ AI) görselin içinde. */}
-            <div className="relative mt-4 w-full max-w-[380px] overflow-hidden rounded-3xl border border-white/80 bg-white/70 shadow-canvas-card">
-              <img src={zekiGif} alt="ZEKİ AI — Timaş Kurumsal Asistanı" className="h-auto w-full object-cover" />
-            </div>
-            <p className="mt-4 max-w-sm text-[13.5px] font-semibold leading-relaxed text-muted">
-              Verinizle konuşan yayın zekâsı. Sorunuzu yazın; ZEKİ, Logo ve CRM verisinden yanıtı, ürettiği SQL'i ve kanıtı birlikte getirsin.
-            </p>
-            <div className="mt-4 hidden flex-col gap-2 lg:flex">
-              {[
-                { icon: <Database className="h-4 w-4" />, t: 'Canlı Logo & CRM verisi' },
-                { icon: <ShieldCheck className="h-4 w-4" />, t: 'Üretilen SQL ve kanıt her yanıtta' },
-                { icon: <Lock className="h-4 w-4" />, t: 'KVKK uyumlu, salt-okunur erişim' },
-              ].map((f) => (
-                <div key={f.t} className="flex items-center gap-2.5 text-[13px] font-semibold text-ink/80">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-tr from-coral/15 to-violet/15 text-canvas-violet">
-                    {f.icon}
-                  </span>
-                  {f.t}
-                </div>
-              ))}
+            {/* Görsel kendi çerçevesini doldurur; marka (ZEKİ AI) görselin içinde. */}
+            <div className="relative mt-4 w-full flex-1 overflow-hidden rounded-3xl border border-white/80 bg-[#f6f0ea] shadow-canvas-card">
+              <img
+                src={zekiGif}
+                alt="ZEKİ AI — Timaş Kurumsal Asistanı"
+                className="block h-full w-full object-contain"
+              />
             </div>
           </div>
 
