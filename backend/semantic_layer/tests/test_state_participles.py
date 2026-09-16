@@ -285,3 +285,12 @@ def test_a_missing_column_is_answered_with_the_tables_real_columns(profiles):
                          "[42S22] [FreeTDS][SQL Server]Invalid column name 'new_kdvli_tutar'. (207)")
     assert "new_kdvlitoplamtutar" in hint and "new_kdvli_tutar" in hint, hint
     assert c.column_hint("SELECT 1", "some other error") == ""
+
+
+def test_a_query_timeout_is_not_a_lost_connection():
+    from semantic_layer.runtime.guardrails import is_connection_error, is_query_timeout
+
+    timeout = "('HYT00', '[HYT00] [FreeTDS][SQL Server]Timeout expired (0) (SQLExecDirectW)')"
+    down = "('08S01', '[08S01] [FreeTDS][SQL Server]Communication link failure (0)')"
+    assert is_query_timeout(timeout) and not is_connection_error(timeout)
+    assert is_connection_error(down) and not is_query_timeout(down)

@@ -345,7 +345,16 @@ def referenced_tables(sql: str, dialect: Optional[str] = "tsql") -> list[str]:
 
 # SQLSTATE class 08 is the standard "connection exception" class, and HYT00 is a connection timeout.
 # Every ODBC/JDBC driver reports them the same way, so this is a protocol fact, not a driver quirk.
-_CONNECTION_STATES = ("08S01", "08001", "08003", "08004", "08006", "08007", "HYT00", "HY000")
+# HYT00 is the *query* timeout: the server was reached and worked until the driver gave up. Listed
+# here it turned a slow question into "veri kaynağına ulaşılamıyor" — a correct query, a reachable
+# database, and a message that sent people to check the network. It is a timeout, reported as one.
+_CONNECTION_STATES = ("08S01", "08001", "08003", "08004", "08006", "08007", "HY000")
+_TIMEOUT_STATES = ("HYT00", "HYT01")
+
+
+def is_query_timeout(error: object) -> bool:
+    text = str(error or "")
+    return any(f"'{state}'" in text or f"[{state}]" in text for state in _TIMEOUT_STATES) or "timeout expired" in text.lower()
 _CONNECTION_WORDS = (
     "communication link failure", "server is not found", "login timeout", "connection is closed",
     "connection refused", "broken pipe", "connection reset", "unable to connect", "not accessible",
