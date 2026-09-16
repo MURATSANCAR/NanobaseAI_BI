@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör gerçek kaynak inceleme ekranı
+
+- Bağımsız React/TypeScript ekranı gerçek operatör API’sine bağlandı: kitap/analiz seçimi, üç ayrı durum, özgün kaynak görüntüsü, OCR/PDF ve değiştirilmemiş model adayları, mevcut sahne/varlık/olay/yorum/soru kayıtları. Salt okunur; kabul koşusuna düzeltme/karar girmez. Anahtar yalnız oturum belleğinde tutulur.
+- Sunucu Chrome’da 320/390/768/1440 px ve altı sekme doğrulandı; yatay taşma yok, kontroller en az 44px, kaynak geçişi ve çıkış çalışıyor. İlk dağıtımda yanlış JavaScript MIME türü ve atomik kopyalama sonrası eski bind-mount inode’u saptandı; MIME yapılandırması/gateway yeniden oluşturması sonrası aynı koşu geçti. Kitap/analiz listesi tam API sonucu bağımsız PostgreSQL ile eşleşti; 48 kaynak görüntüsünün API hashleri kaynakla eşleşti.
+- Vite 6.4.3 kilitlendi; sunucu derlemesi ve npm denetimi geçti (0 bildirilen açık). Embedding/reranker CPU/thread sınırları ayrı yapılandırılır, bu koşuda dörder. Yeni indeks geri kurma betiği hazırlanmıştır; dolu gerçek analiz restore kabulü henüz yapılmadı. Eski offline paket yeni web imajını içermez.
+- Müdahalesiz kitap koşusu devam ediyor; ilk künye grubu hikâye olayı üretmedi. PDF 6’daki uyuyan/mavi gözlü betimlemesi özgün görselle desteklenmiyor; model kaydına dokunmadan kalite raporuna başarısızlık olarak kaydedildi. Uçtan uca/üretim kabulü verilmedi.
+
 ## 2026-09-16 — Editör kabulünün müdahalesiz sistem koşusu olarak ayrılması
 
 - Kullanıcı, kitabın Codex tarafından analiz edilmesini/düzeltilmesini değil, roadmap'in mevcut yerel altyapıyla eksiksiz sınanmasını istediğini netleştirdi. Kaynak düzeltmesi API kayıt sayısı canlıda 0 doğrulandı; hazırlanan açıklamalar uygulanmadı.
