@@ -1124,10 +1124,21 @@ class SemanticResolver:
         # slots alone are not enough: "planlanan ciro" maps "ciro" to the ERP's invoices while the
         # planned figure lives on a CRM table the question names by another word.
         nouns = {stem(t) for i, t in enumerate(tokens) if i != k and len(t) > 2 and stem(t) not in STOPWORDS_S}
+        # A question already placed in one database stays there: "iptal edilmemiş satış faturaları"
+        # reached a CRM sales-support table through the word "satış", and the invoice question was
+        # refused for a condition on a table it never read.
+        placed = {self._source_of(e) for e in entities}
         for entity, prof in self.by_entity.items():
+            if placed and self._source_of(entity) not in placed:
+                continue
             if nouns & self._entity_name_stems(prof):
                 entities.add(entity)
         return entities
+
+    def _source_of(self, entity: str) -> str:
+        prof = self.by_entity.get(entity)
+        schema = (prof.schema_name or "") if prof is not None else ""
+        return schema.split(".")[0].upper() if "." in schema else ""
 
     _NAME_CACHE: dict[tuple[str, str], frozenset[str]] = {}
 
@@ -1223,9 +1234,11 @@ class SemanticResolver:
                     if col.sensitive or not col.description:
                         continue
                     matched = [i for i, forms in neighbours.items() if hits(col.description, forms)]
-                    score = len(matched) + (1 if own and hits(col.description, own) else 0)
-                    if score == 0:
+                    if not matched:
+                        # The verb alone says little: "kalmamış" met "Depoda Kalma Süresi". The state
+                        # is named by the noun beside it, so without one there is no reading here.
                         continue
+                    score = len(matched) + (1 if own and hits(col.description, own) else 0)
                     key = (entity, col.name.upper())
                     if key not in scored or score > scored[key][0]:
                         scored[key] = (score, (k + 1) in matched, col.description, col.data_type or "")
@@ -1468,6 +1481,13 @@ class SemanticResolver:
         öncesinde "iki dönem gerçekten plana ve SQL'e taşındı mı" diye sorulabilsin.
         """
         if len(sq.temporal) == 2:
+            folded = fold(question)
+            if not (_COMPARE_TO.search(folded) or _COMPARE_CUE.search(folded)
+                    or re.search(r"\b(fark|degis|artt|azald|dust|yukseld|buyud|kucul)\w*", folded)):
+                # "Geçen yıl alıp bu yıl hiç sipariş vermemiş": two periods, each a condition on a
+                # different part of the question — not a request to set two figures side by side.
+                sq.explanation.append("iki dönem var ama karşılaştırma istenmiyor → her dönem kendi koşuluna ait")
+                return
             current, reference = sorted(sq.temporal, key=lambda t: t.start or date.min, reverse=True)
             sq.comparison = {"kind": "PERIOD", "current": current.to_dict(),
                              "reference": reference.to_dict(), "satisfied": False}
@@ -1709,6 +1729,12 @@ class SemanticResolver:
                         best[key] = hit
             if not best:
                 continue
+            # A backup or test copy ("AAAA_KASA_TEST") carries the same column names as the table it
+            # was copied from and scores like it. Offered as the reading of a word, it sent the model to
+            # a table nobody uses, and the model gave up. Copies stay only when nothing else answers.
+            real = {k: v for k, v in best.items() if not is_shadow_copy(k[0])}
+            if real:
+                best = real
             by_column: dict[str, list[dict]] = {}
             for hit in best.values():
                 by_column.setdefault(hit["column"], []).append(hit)

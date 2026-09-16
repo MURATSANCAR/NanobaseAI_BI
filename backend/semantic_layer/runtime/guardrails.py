@@ -226,6 +226,33 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         return node
 
     out = tree.transform(tx)
+    # A column the model qualified by a name the rewrite no longer shows — the entity
+    # ("NEW_PLANSORUMLULARIBASE.CreatedOn") while the table was written under its label, or the other
+    # way round — cannot be bound by the server. When a relation of that entity appears exactly once,
+    # the qualifier is pointed at the name it now carries.
+    names_in_query: dict[str, list[str]] = {}
+    for node in out.find_all(exp.Table, exp.Subquery):
+        alias = node.alias_or_name if isinstance(node, exp.Table) else node.alias
+        if not alias:
+            continue
+        prof = None
+        if isinstance(node, exp.Table):
+            prof = by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())
+        else:
+            prof = by_entity.get(alias.upper()) or by_table.get(alias.upper())
+        if prof is None:
+            continue
+        for spelled in {prof.entity, prof.table_name, _spelling(prof, context),
+                        f"{(prof.schema_name or '').replace('.', '_')}_{prof.table_name}"}:
+            names_in_query.setdefault(spelled.upper(), []).append(alias)
+    visible = {a.upper() for aliases in names_in_query.values() for a in aliases}
+    for col in out.find_all(exp.Column):
+        qual = (col.table or "").upper()
+        if not qual or qual in visible:
+            continue
+        aliases = set(names_in_query.get(qual, []))
+        if len(aliases) == 1:
+            col.set("table", exp.to_identifier(next(iter(aliases))))
     return out.sql(dialect=dialect if dialect != "generic" else None)
 
 

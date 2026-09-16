@@ -1831,6 +1831,9 @@ class CompilerRouter:
                     return out
                 problems = again
         if problems:
+            # The refused statement is evidence: without it a refusal cannot be told apart from a
+            # gate that misread a correct query.
+            log.warning("gate refused q=%r problems=%s sql=%s", q.question[:80], problems, " ".join((out.sql or "").split())[:1500])
             return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
                                  explain=problems, certified=False)
         return out

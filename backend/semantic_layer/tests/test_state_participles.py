@@ -239,3 +239,37 @@ def test_a_reading_written_before_or_outside_the_sql_block_is_kept():
     outside = "-- yorum: 'duran' → portföydeki çekler\n```sql\nSELECT 1 FROM CSCARD WHERE STATUS = 1\n```"
     assert interpretations(extract_sql(outside)) == ["'duran' → portföydeki çekler"]
     assert extract_sql("```sql\n-- yorum: 'x' → yok\nNO_SQL: şemada yok\n```") is None
+
+
+def test_a_qualifier_on_the_entity_name_binds_after_the_table_is_renamed(profiles):
+    """The model wrote the table under its label and qualified a column by the entity. After
+    physicalisation neither name was left, and SQL Server could not bind the column."""
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
+    crm = orders()
+    crm.entity, crm.table_name, crm.table_pattern = "NEW_SIPARISBASE", "new_siparisBase", "new_siparisBase"
+    sql = "SELECT SUM(NEW_SIPARISBASE.statuscode) FROM Timas_MSCRM_dbo_new_siparisBase"
+    out = physicalize_sql(sql, profiles + [crm], {})
+    assert "NEW_SIPARISBASE.statuscode" not in out.replace('"', "").replace("[", "").replace("]", ""), out
+    assert "Timas_MSCRM_dbo_new_siparisBase.statuscode" in out, out
+
+
+def test_two_periods_without_a_comparison_word_are_two_conditions(catalog, profiles):
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    absence = r.resolve("2025 yılında alıp 2026 yılında hiç almamış cariler", today=TODAY)
+    assert absence.comparison is None, absence.comparison
+    compared = r.resolve("2026 net ciro 2025 yılına göre", today=TODAY)
+    assert compared.comparison is not None
+
+
+def test_a_state_word_does_not_cross_into_the_other_database(catalog, profiles):
+    """A question placed in the ERP never takes a condition from a CRM table."""
+    crm = orders()
+    sq = resolve(catalog, profiles + [crm], "iptal edilen net ciro")
+    assert not any(s.mapping and s.mapping.entity == "NEW_SIPARISBASE" for s in state_slots(sq)), sq.to_dict()
+
+
+def test_a_bare_verb_root_is_not_a_reading(catalog, profiles):
+    stay = ColumnProfile(name="new_kalmasuresi", data_type="int", description="Depoda Kalma Süresi")
+    sq = resolve(catalog, profiles + [orders(extra=[stay])], "elimizde hiç kalmamış sipariş sayısı")
+    assert not any(q["column"] == "NEW_KALMASURESI" for q in sq.qualifier_columns), sq.qualifier_columns
