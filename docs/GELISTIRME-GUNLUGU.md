@@ -6,6 +6,15 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör bağımsız altyapı ve taşınabilir kurulum
+
+- Kullanıcının analiz belgesi v1.1 okundu; sunucu canlı envanteri çıkarıldı. `apps/editor/` ve `/data/nanobaseai/editor` altında BI'dan bağımsız Docker altyapısı kuruldu: PostgreSQL/Alembic, LangGraph checkpointer, FastAPI, heartbeat işçisi, Qdrant, Prometheus, nginx; ayrıca ağsız Docling/Poppler/Tesseract Türkçe aracı. Ayrı kaynak sınırları, ağ/volume'lar ve kurulum sırları kullanıldı.
+- Müşteri taşınabilirliği için sürüm/hash sabitleme, VPN/host/Docker ağ çakışması ön kontrolü, offline imaj paketi, yerel içerik etiketleriyle `--pull never` kurulumu, DB+artifact yedeği ve yeni ortama restore betikleri eklendi. İlk otomatik Docker ağı VPN ile örtüşünce yalnız Editör ağı kaldırılıp yapılandırılabilir `10.203.48.0/24` ve `10.203.49.0/24` ağları kullanıldı.
+- Gerçek `Ekrana Sığmayan Macera` PDF'si (19.806.912 bayt, SHA-256 `94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50`) sunucuda 48/48 sayfa render + tam sayfa Türkçe/İngilizce OCR/Docling olarak 378,22 sn'de işlendi. Gerçek API'nin tam manifesti bağımsız Editör PostgreSQL sorgusuyla, kaynak/render dosyaları hash'lerle doğrulandı; yetkisiz kaynak isteği 401. Yeni proje/port/ağ/sırlarla offline temel paketten restore aynı kaynağı doğruladı; deneme ortamı kapatıldı, yedek korundu. Yerel test veya sentetik veri kullanılmadı.
+- Yerel CPU model profili: ana aday Qwen3.8-27B Q4_K_M + Q8 projektör indirildi ve hash doğrulandı; mevcut BGE embedding/reranker ağırlıkları bağımsız servislere alındı. Varsayılan tam sayfa VLM bütçesinin CPU ön işleme hızı düşük bulundu; ilk deneme durduruldu ve görsel bütçesi açıkça 256 token olarak yapılandırıldı. Bu ayar edebî/görsel okuma kalitesi kabulü değildir.
+- Kapsam sınırı: çalışan altyapı, tamamlanmış kitap analiz ürünü değildir. `pilot_ready=false`; iş kuyruğu/fencing, outbox/generation, kullanıcı-kitap yetkisi, karakter/olay ve atıflı cevap hattı, React editör ekranları ve kapsamlı ortak yük/üç kitap/editör kabulü henüz tamamlanmadı. Ayrıntılı kanıtlar: [Editör altyapı raporu](editor/2026-09-16-infrastructure.md).
+- Son teknik model denemesi gerçek 28–29. sayfalarla tamamlandı: embedding 1024 boyut/4,999 sn; reranker 2 aday/9,346 sn; 256 görsel token sınırında Qwen görsel cevap 191,843 sn, 55 çıktı token ve `finish_reason=stop`. Anlamsal kalite incelenmedi; CPU gecikmesi etkileşimli kapasite kabulü değildir. Nihai offline müşteri paketi `/data/nanobaseai/editor/dist/editor-customer-20260916` (22.875.535.072 bayt); tüm dosya hash'leri ve imaj ID'leri import sırasında doğrulandı. Son paket betikleriyle ayrı `editor-restore-final` ortamında gerçek kitap/DB/artefact geri yüklemesi yeniden doğrulandı; ortam kapatıldı.
+
 ## 2026-09-16 — Editör modülü mimari ve branch kararı
 
 - Kullanıcının onayıyla Editörün aynı depoda `apps/editor/` altında, kendi Docker/Compose, frontend/backend, bağımlılık ve yapılandırmasıyla BI'dan bağımsız geliştirilmesi kural olarak kaydedildi. Kalıcı veri gerekiyorsa kendi veri alanı ve migration'ları olacak; BI ekranlarına tanımlı API sözleşmeleri üzerinden bağlanacak.
