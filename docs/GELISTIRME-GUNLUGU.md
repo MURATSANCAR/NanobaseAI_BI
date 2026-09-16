@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Sağ üst yakınlaştırma düğmesi kanvas dışındaki ekranlarda çalışmıyordu
+
+- Kullanıcılar arayüzde sağ üstteki -/+ zoom'un çalışmadığını bildirdi. Neden: `Shell` dokuz ekranın sekizinde (Panolar, Planlı raporlar, Yönetim, Veri Sözlüğü, Onaylar, Eş anlamlılar, Kampüs, yetkisiz kartı) `zoom: '%100'` sabitiyle çiziliyor ve `onZoom` verilmiyordu; yalnız Genel bakış kanvası bağlıydı.
+- Düzeltme: kabuk `onZoom` gelmezse yakınlaştırmayı kendisi tutar ve `useShellZoom`/`ZoomStage` ile ekrana verir; her ekranın `main` içeriği `ZoomStage` ile sarıldı (CSS `zoom`, dış kap sabit → üst şerit/ray hizası bozulmaz, taşan kısım main'in kaydırmasında). Pano kart sürükleme/boyutlandırma farkı ölçeğe bölünür; `@media print` içinde zoom 1. `ZOOM_MIN/MAX` tek yerde (Shell).
+- Doğrulama: portal (nanobase-direct) kaynağı bu 11 dosyada main ile aynıydı → yalnız değişen dosyalar kopyalandı, sunucuda derlendi (`tsc -b` geçti), `cockpit/dist` güncellendi. Tarayıcıda timasai kısa oturumuyla `/planli-raporlar` %130 ve `/panolar` %80 ölçüldü (`getComputedStyle().zoom`), yatay taşma yok; oturum silindi.
+- **Müşteri VM'i (192.168.0.55) güncellenmedi:** iş sırasında OpenVPN tüneli düştü (`tun0` yok, "No route to host"). Yeniden bağlanmak telefon MFA onayı ister; tünel açılınca `/home/ai/bi-docker/src` içine yalnız bu 11 dosya kopyalanıp `docker compose build web && up -d web` koşulacak (önce VM'deki dosyaların md5'i main'in önceki hâliyle karşılaştırılır). `/tmp/bi-docker` main'den geri; toptan deploy betiği bu iş için kullanılmamalı.
+
 ## 2026-09-16 — Editör sayfa bazlı konumlu kaynak akışı
 
 - Kullanıcının talebiyle eski kitap işi iptal edildi, 48 kaynak/48 görsel/12 sahne korundu; eski otomatik soru ve takip süreçleri durduruldu. İlk yeni canary de yerel PDF konumları eklenince korunarak kapatıldı. Yeni nesil `7a19f9eb-7e3e-40d0-822b-ac5e557960b4` sıralı sayfa akışına başladı.
