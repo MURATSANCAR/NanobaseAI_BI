@@ -674,12 +674,21 @@ class CatalogStore:
         }
         with self._lock, self.engine.begin() as conn:
             row = conn.execute(
-                sa.select(S.sl_schema_profile.c.id).where(
+                sa.select(S.sl_schema_profile.c.id, S.sl_schema_profile.c.relationships_json).where(
                     S.sl_schema_profile.c.datasource_id == p.datasource_id,
                     S.sl_schema_profile.c.table_name == p.table_name,
                 )
             ).first()
             if row:
+                # A table scan sees one database and rewrites the relationships it can see. The links to
+                # the other database were measured by a different job and carry their own evidence; a
+                # nightly rescan of a CRM table must not erase them.
+                kept = [r for r in (_json(row[1]) or []) if isinstance(r, dict) and r.get("cross_source")]
+                mine = {(str(r.get("column", "")).upper(), str(r.get("ref_entity", "")).upper(), str(r.get("ref_column", "")).upper())
+                        for r in values["relationships_json"] if isinstance(r, dict)}
+                values["relationships_json"] = values["relationships_json"] + [
+                    r for r in kept
+                    if (str(r.get("column", "")).upper(), str(r.get("ref_entity", "")).upper(), str(r.get("ref_column", "")).upper()) not in mine]
                 conn.execute(S.sl_schema_profile.update().where(S.sl_schema_profile.c.id == row[0]).values(**values))
             else:
                 conn.execute(S.sl_schema_profile.insert().values(id=new_id("prof"), **values))

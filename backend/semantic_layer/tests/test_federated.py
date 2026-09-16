@@ -153,3 +153,17 @@ def test_the_bridge_runs_each_part_on_its_own_server_and_answers():
     assert len(seen["crm"]) == 1 and "sevkiyat" in seen["crm"][0].lower()
     assert len(seen["logo"]) == 1 and "INVOICE" in seen["logo"][0]
     assert logged and logged[-1]["executed"] is True
+
+
+def test_a_rescan_keeps_the_links_to_the_other_database(tmp_path):
+    from semantic_layer.store.catalog_store import open_store
+
+    store = open_store(f"sqlite:///{tmp_path}/c.db")
+    prof = shipments()
+    store.upsert_profile(prof)
+    rescanned = shipments()
+    rescanned.relationships = [{"column": "OWNERID", "ref_entity": "SYSTEMUSERBASE", "ref_column": "SYSTEMUSERID"}]
+    store.upsert_profile(rescanned)
+    back = next(p for p in store.list_profiles("d") if p.table_name == "new_sevkiyatBase")
+    kinds = {(r["ref_entity"], bool(r.get("cross_source"))) for r in back.relationships}
+    assert ("INVOICE", True) in kinds and ("SYSTEMUSERBASE", False) in kinds, back.relationships
