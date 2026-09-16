@@ -130,3 +130,37 @@ def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, p
     compiler.catalog_entities = {"CLCARD", "INVOICE", "STLINE"}
     kept = compiler.narrow(sq, ["CLCARD", "INVOICE", "STLINE"])
     assert kept == ["CLCARD", "INVOICE", "STLINE"] and compiler.selector.calls == 0
+
+
+def orders_with_dates():
+    due = ColumnProfile(name="new_termintarihi", data_type="datetime", description="Termin Tarihi")
+    created = ColumnProfile(name="createdon", data_type="datetime", description="Oluşturulma Tarihi")
+    receipt = ColumnProfile(name="new_makbuzno", data_type="nvarchar(100)", description="Makbuz Numarası")
+    planned = ColumnProfile(name="new_planlanantutar", data_type="money", description="Planlanan Ciro")
+    return orders(extra=[due, created, receipt, planned])
+
+
+def test_the_words_beside_a_participle_pick_the_column(catalog, profiles):
+    sq = resolve(catalog, profiles + [orders_with_dates()], "termin tarihi geçen sipariş sayısı")
+    assert sq.qualifier_columns, sq.to_dict()
+    assert sq.qualifier_columns[0]["column"] == "NEW_TERMINTARIHI", sq.qualifier_columns
+    assert not sq.clarification, sq.clarification
+
+
+def test_an_empty_field_is_asked_for_on_the_field_it_names(catalog, profiles):
+    sq = resolve(catalog, profiles + [orders_with_dates()], "makbuz numarası girilmemiş sipariş sayısı")
+    assert sq.qualifier_columns and sq.qualifier_columns[0]["column"] == "NEW_MAKBUZNO", sq.to_dict()
+    assert sq.qualifier_columns[0]["negative"] is True
+
+
+def test_a_participle_that_names_a_measure_is_not_a_condition(catalog, profiles):
+    sq = resolve(catalog, profiles + [orders_with_dates()], "sipariş bazında planlanan ciro")
+    assert not sq.qualifier_columns, "a named amount demands no restriction"
+    assert any(c.get("column") == "NEW_PLANLANANTUTAR" for c in sq.candidates), sq.candidates
+    assert not sq.clarification, sq.clarification
+
+
+def test_a_number_is_not_a_participle(catalog, profiles):
+    sq = resolve(catalog, profiles + [orders_with_dates()], "vadesi doksan günü aşan sipariş sayısı")
+    assert not any("doksan" in c for c in sq.clarification), sq.clarification
+

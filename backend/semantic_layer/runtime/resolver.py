@@ -818,6 +818,9 @@ class SemanticResolver:
                 continue
             if not self._modifier_candidate(qf.tokens, k, consumed):
                 continue
+            if cardinal(tok) is not None:
+                consumed.add(k)          # "doksan gün": a number, whatever its ending looks like
+                continue
             covering = [s for s in sq.slots if s.span[0] <= k < s.span[1]]
             if k in consumed and not covering:
                 continue  # a previously explained report/time/trend cue
@@ -863,7 +866,15 @@ class SemanticResolver:
                 sq.explanation.append(f"'{tok}' → '{metric.explain.get('evidence_key')}' ölçüsü (fiil kökünden, sertifikalı değil)")
             elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
                 record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
-            elif (named := self._column_for_state(sq, qf, k)) is not None:
+            elif (named := self._column_for_state(sq, qf, k)) is not None and named.get("mention"):
+                # "planlanan ciro": the participle and the noun after it are together the name of a
+                # column. That is a measure being named, not a condition on the rows.
+                sq.candidates.append({"term": f"{tok} {qf.tokens[k + 1]}", "column": named["column"],
+                                      "entities": [named["entity"]], "source": "column_description"})
+                record.update(decision="SEMANTIC", evidence_source="column_description_name",
+                              resolved_as=f"{named['entity']}.{named['column']}")
+                sq.explanation.append(named["why"])
+            elif named is not None:
                 # The source names this state on a column but never writes out what its values mean
                 # ("CANCELLED — İptal Edilmiş"). Which number is which is the source's business, so
                 # the word is carried to the model as that column, and the gate refuses an answer that
@@ -1091,11 +1102,11 @@ class SemanticResolver:
     def _state_entities(self, sq: SemanticQuery, tokens: list[str], k: int) -> set[str]:
         entities = {s.mapping.entity for s in sq.slots if s.mapping}
         entities |= {s.mapping.entity for s in sq.group_by if s.mapping}
-        if entities:
-            return entities
-        # Nothing is mapped yet, but the question still names its subject: an entity whose own name —
-        # the source's word for the table — is one of the words next to the participle.
-        nouns = {stem(t) for i, t in enumerate(tokens) if abs(i - k) <= 3 and i != k and len(t) > 2}
+        # The question also names its subject in words the vocabulary may not have mapped yet: an
+        # entity whose own name — the source's word for the table — appears in the question. Mapped
+        # slots alone are not enough: "planlanan ciro" maps "ciro" to the ERP's invoices while the
+        # planned figure lives on a CRM table the question names by another word.
+        nouns = {stem(t) for i, t in enumerate(tokens) if i != k and len(t) > 2 and stem(t) not in STOPWORDS_S}
         for entity, prof in self.by_entity.items():
             own = {stem(w) for w in tokenize(prof.description or "")} | {stem(w) for w in tokenize(entity)}
             if own & nouns:
@@ -1112,38 +1123,75 @@ class SemanticResolver:
         return False
 
     def _column_for_state(self, sq: SemanticQuery, qf: Any, k: int) -> Optional[dict[str, Any]]:
-        """"iptal edilmemiş" → the column the source describes as "İptal Edilmiş", or nothing.
+        """"termin tarihi geçen" → the column the source describes as "Termin Tarihi", or nothing.
 
-        A source that ships no dictionary for its codes still says what the column is for, in its own
-        words ("CANCELLED — İptal Edilmiş (Cancelled)"). That is enough to know *where* the question is
-        answered and not enough to know *which value* answers it, so this returns the column and stops.
-        The model writes the predicate from the same description, and the gate refuses any answer that
-        does not restrict this column — so the word can neither be invented nor dropped.
+        A source that ships no dictionary for its codes still says what each column is for, in its own
+        words. That is enough to know *where* the question is answered and not enough to know *which
+        value* answers it, so this returns the column and stops: the model writes the predicate from
+        the same description, and the gate refuses any answer that does not restrict this column.
 
-        A word two columns describe is ambiguity: nothing comes back and the person is asked.
+        The meaning of a participle usually sits in the words around it — "makbuz numarası
+        girilmemiş", "termin tarihi geçen", "planlanan ciro" — so the neighbours are scored together:
+        a column whose description contains more of them wins, and a tie between two columns is
+        ambiguity, which returns nothing so the person is asked.
+
+        When the word *after* the participle is part of the match and the column holds an amount
+        ("planlanan ciro"), the phrase is that column's name — a measure being named, not a condition
+        — and the result says so (`mention`), so no restriction is demanded of the answer.
         """
         tokens = qf.tokens
-        keys = self._state_keys(tokens, k)
-        if not keys:
+        tok = tokens[k]
+        # The participle's own root ("girilmemiş" → "giril" is an auxiliary and gives nothing;
+        # "planlanan" → "planla" does) — scored beside its neighbours, never alone against many.
+        own = {f for f in (verb_root(tok), stem(tok), short_root(tok))
+               if f and len(f) >= 3 and not any(f.startswith(r) for r in _AUXILIARY_ROOTS)}
+        neighbours: dict[int, set[str]] = {}
+        for i in (k - 2, k - 1, k + 1):
+            if 0 <= i < len(tokens) and i != k:
+                w = tokens[i]
+                if len(w) <= 2 or cardinal(w) is not None or stem(w) in STOPWORDS_S or is_participle(w):
+                    continue
+                forms = {f for f in (stem(w), short_root(w), fold(w)) if f and len(f) >= 3}
+                if forms:
+                    neighbours[i] = forms
+        if not neighbours and not own:
             return None
-        found: dict[tuple[str, str], str] = {}
+
+        def hits(text: str, forms: set[str]) -> bool:
+            return self._text_answers(text, forms)
+
+        scored: dict[tuple[str, str], tuple[int, bool, str, str]] = {}
         for entity in self._state_entities(sq, tokens, k):
             for prof in self.tables_of.get(entity, []):
                 for col in prof.columns:
                     if col.sensitive or not col.description:
                         continue
-                    if self._text_answers(col.description, keys):
-                        found[(entity, col.name.upper())] = col.description
-        if len(found) != 1:
+                    matched = [i for i, forms in neighbours.items() if hits(col.description, forms)]
+                    score = len(matched) + (1 if own and hits(col.description, own) else 0)
+                    if score == 0:
+                        continue
+                    key = (entity, col.name.upper())
+                    if key not in scored or score > scored[key][0]:
+                        scored[key] = (score, (k + 1) in matched, col.description, col.data_type or "")
+        if not scored:
             return None
-        (entity, column), description = next(iter(found.items()))
+        best = max(v[0] for v in scored.values())
+        top = [(key, v) for key, v in scored.items() if v[0] == best]
+        if len(top) != 1:
+            return None                      # two columns answer equally well: the person decides
+        if best < 2 and len(scored) > 1:
+            return None                      # one shared word is not enough to pick among several
+        (entity, column), (score, after, description, data_type) = top[0]
         prof = self.by_entity.get(entity)
         if prof is None:
             return None
-        return {"token": tokens[k], "entity": entity, "column": column, "tablePattern": prof.table_pattern,
-                "description": description, "negative": is_negative(tokens[k]),
-                "why": (f"'{tokens[k]}' niteleyicisi {entity}.{column} kolonunda karşılanıyor "
-                        f"(kaynağın açıklaması: {description}); hangi değerin ne demek olduğu sorguda belirlenecek")}
+        amount = bool(re.search(r"money|decimal|numeric|float|real", data_type, re.I))
+        mention = after and amount
+        return {"token": tok, "entity": entity, "column": column, "tablePattern": prof.table_pattern,
+                "description": description, "negative": is_negative(tok), "mention": mention, "score": score,
+                "why": (f"'{tok}' {'ölçünün adı' if mention else 'niteleyicisi'}: {entity}.{column} "
+                        f"(kaynağın açıklaması: {description})"
+                        + ("" if mention else "; hangi değerin ne demek olduğu sorguda belirlenecek"))}
 
     def _metric_from_verb(self, tok: str, k: int, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[ResolvedSlot]:
         """"satan" → the measure the catalog keys on the same root ("satış"), or nothing.
