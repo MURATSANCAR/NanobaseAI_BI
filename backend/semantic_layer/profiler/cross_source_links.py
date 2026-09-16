@@ -1203,7 +1203,41 @@ class CrossSourceLinkDiscovery:
                 scan_rows += chunks * sum(t.row_count or 0 for t in ks.tables)
         return {"target_columns": len(keys), "seek_queries": seeks, "scan_queries": scans, "scan_rows": scan_rows}
 
-    def run(self, *, samples_cache: Optional[str] = None, stop_after: Optional[str] = None) -> DiscoveryReport:
+    def batches(self, pairs: list[tuple[ColumnSample, ColumnSample]],
+                priority: Optional[set[str]]) -> list[tuple[str, list[tuple[ColumnSample, ColumnSample]]]]:
+        """Order, not a filter: pairs whose two shapes are both in `priority` (table patterns) are
+        measured first, every other pair right after. Without a priority there is one batch."""
+        if not priority:
+            return [("all", pairs)]
+        pats = {x.upper() for x in priority}
+        first = [(r, k) for r, k in pairs
+                 if self.shapes[r.shape].pattern.upper() in pats and self.shapes[k.shape].pattern.upper() in pats]
+        chosen = {(id(r), id(k)) for r, k in first}
+        rest = [(r, k) for r, k in pairs if (id(r), id(k)) not in chosen]
+        return [(name, batch) for name, batch in (("priority", first), ("rest", rest)) if batch]
+
+    def settle_competition(self, results: list[PairResult]) -> None:
+        """One referencing column accepted against targets measured in different batches: the same
+        rule as inside a batch — only the best-corroborated target stays."""
+        groups: dict[tuple[str, str], list[PairResult]] = {}
+        for r in results:
+            if r.stage == "accepted":
+                groups.setdefault((r.ref_shape, r.ref_column), []).append(r)
+        for group in groups.values():
+            if len({g.key_shape for g in group}) < 2:
+                continue
+            for g in group:
+                if g.corroboration is None:
+                    g.corroboration = self._corroboration(g)
+            group.sort(key=lambda x: (-(x.corroboration or {}).get("rate", 0), -(x.sample_containment or 0)))
+            best = group[0]
+            for other in group[1:]:
+                if (other.corroboration or {}).get("rate", 0) < (best.corroboration or {}).get("rate", 0):
+                    other.stage, other.reason = "corroborate", f"weaker than {best.key_entity}.{best.key_column}"
+
+    def run(self, *, samples_cache: Optional[str] = None, stop_after: Optional[str] = None,
+            priority: Optional[set[str]] = None,
+            on_batch: Optional[Callable[[str, "DiscoveryReport"], None]] = None) -> DiscoveryReport:
         report = DiscoveryReport(started_at=_now(), thresholds=asdict(self.th))
         report.catalog = asdict(catalog_candidates(self.profiles))
         self.progress(f"catalog: {report.catalog['pairs']} type-compatible pairs")
@@ -1220,14 +1254,21 @@ class CrossSourceLinkDiscovery:
         if stop_after == "block":
             report.finished_at = _now()
             return report
-        results = self.contain(pairs)
-        self.progress(f"containment done: {sum(1 for r in results if r.stage != 'contain')} of {len(results)} pass")
-        self.corroborate(results)
-        self.progress(f"corroboration done: {sum(1 for r in results if r.stage == 'confirm')} to confirm")
-        self.confirm(results)
-        report.pairs = results
-        report.queries = getattr(self.probe, "queries", 0)
-        report.query_seconds = round(getattr(self.probe, "seconds", 0.0), 1)
+        results: list[PairResult] = []
+        for name, batch in self.batches(pairs, priority):
+            self.progress(f"batch {name}: {len(batch)} pairs")
+            got = self.contain(batch)
+            self.progress(f"containment done: {sum(1 for r in got if r.stage != 'contain')} of {len(got)} pass")
+            self.corroborate(got)
+            self.progress(f"corroboration done: {sum(1 for r in got if r.stage == 'confirm')} to confirm")
+            self.confirm(got)
+            results += got
+            self.settle_competition(results)
+            report.pairs = list(results)
+            report.queries = getattr(self.probe, "queries", 0)
+            report.query_seconds = round(getattr(self.probe, "seconds", 0.0), 1)
+            if on_batch:
+                on_batch(name, report)
         report.finished_at = _now()
         return report
 

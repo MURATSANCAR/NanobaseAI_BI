@@ -256,3 +256,18 @@ def test_a_non_key_target_is_read_once_and_compared_in_python(world, monkeypatch
     assert full["distinct"] > win["distinct"] and win["matched"] / win["distinct"] >= 0.9
     assert full["ref_rows"] == 901 and win["ref_rows"] == 651
     assert full["multi_period"] == 0 and all(full["per_table"].values())
+
+
+def test_priority_orders_the_work_and_drops_nothing(world):
+    """Öncelik bir sıralamadır: önce iki ucu da öncelikli şekillerdeki çiftler, sonra kalanlar; sonuç aynı."""
+    probe, profiles, _ = world
+    _, plain = _discover(world)
+    seen = []
+    times = {"SHIPMENTBASE": "createdon"}
+    d = X.CrossSourceLinkDiscovery(profiles, probe, time_column=lambda p: times.get(p.entity), progress=lambda m: None)
+    report = d.run(priority={"ACCOUNTBASE", "LG_{n0}_CLCARD"},
+                   on_batch=lambda name, r: seen.append((name, {(p.ref_entity, p.key_entity) for p in r.accepted()})))
+    assert seen[0] == ("priority", {("ACCOUNTBASE", "LG_CLCARD")})
+    assert seen[-1][0] == "rest"
+    key = lambda r: sorted((p.ref_entity, p.ref_column, p.key_entity, p.key_column, p.stage) for p in r.pairs)  # noqa: E731
+    assert key(report) == key(plain)
