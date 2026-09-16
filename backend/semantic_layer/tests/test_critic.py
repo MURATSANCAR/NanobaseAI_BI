@@ -8,8 +8,8 @@ from semantic_layer.runtime.critic import review
 from semantic_layer.tests.test_runtime import catalog  # noqa: F401  — the certified fixture lives there
 
 
-def _t(entity, name, cols, pk="LOGICALREF", rels=()):
-    return SchemaProfile(datasource_id="d", table_name=name, table_pattern=name, entity=entity, schema_name="dbo",
+def _t(entity, name, cols, pk="LOGICALREF", rels=(), description=""):
+    return SchemaProfile(datasource_id="d", table_name=name, table_pattern=name, entity=entity, schema_name="dbo", description=description,
                          columns=[ColumnProfile(name=n, data_type=dt, is_primary_key=(n == pk)) for n, dt in cols],
                          primary_key=[pk], relationships=list(rels))
 
@@ -385,3 +385,34 @@ def test_a_table_with_no_rows_at_all_is_said_out_loud():
     p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True)], row_count=0)
     f = review("SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i", [p])
     assert any(x.kind == "EMPTY_TABLE" and x.severity == "warn" for x in f)
+
+
+def test_count_star_over_a_keyed_join_counts_the_fine_side_unless_named_after_the_keyed_one():
+    """'Kapanan kalem' per customer group: CLCARD is joined on its own key, so the rows counted are
+    the payment lines — one each — and the critic only warns. A count named after the keyed side
+    ("ürün sayısı", or "müşteri sayısı" through the catalog vocabulary) is the inflated one and blocks."""
+    lines = _t("STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("TOTAL", "decimal(18,2)")],
+               rels=[{"column": "STOCKREF", "ref_entity": "ITEMS", "ref_column": "LOGICALREF"}])
+    items = _t("ITEMS", "LG_411_ITEMS", [("LOGICALREF", "int"), ("CODE", "nvarchar(25)")], description="Malzeme (ürün) kartı")
+    base = "FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF GROUP BY i.CODE"
+    for alias in ("kapanan_kalem", "adet", "satir_sayisi"):
+        f = review(f"SELECT i.CODE, COUNT(*) AS {alias} {base}", [lines, items])
+        assert [x.severity for x in f if x.kind == "FANOUT"] == ["warn"], (alias, f)
+    # ITEMS joined and read nowhere: the join exists only to be counted → that is a count of items.
+    f = review("SELECT COUNT(*) AS adet FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF", [lines, items])
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+    f = review(f"SELECT i.CODE, COUNT(*) AS urun_sayisi {base}", [lines, items])
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+    # Logo calls the table "Malzeme kartı"; the business says "kitap". The vocabulary carries that.
+    f = review(f"SELECT i.CODE, COUNT(*) AS kitap_sayisi {base}", [lines, items], names={"ITEMS": {"kitap", "eser"}})
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+
+
+def test_a_date_inside_datediff_is_an_argument_not_a_summed_column():
+    pay = _t("PAYTRANS", "LG_411_01_PAYTRANS", [("LOGICALREF", "int"), ("FICHEREF", "int"), ("DATE_", "datetime")],
+             rels=[{"column": "FICHEREF", "ref_entity": "INVOICE", "ref_column": "LOGICALREF"}])
+    inv = _t("INVOICE", "LG_411_01_INVOICE", [("LOGICALREF", "int"), ("DATE_", "datetime"), ("FICHENO", "varchar(16)")])
+    sql = ("SELECT AVG(CAST(DATEDIFF(day, i.DATE_, p.DATE_) AS float)) AS gun "
+           "FROM dbo.LG_411_01_PAYTRANS p JOIN dbo.LG_411_01_INVOICE i ON i.LOGICALREF = p.FICHEREF")
+    assert not [f for f in review(sql, [pay, inv]) if f.kind == "NON_NUMERIC"]
+    assert [f.kind for f in review("SELECT SUM(i.FICHENO) FROM dbo.LG_411_01_INVOICE i", [inv])] == ["NON_NUMERIC"]

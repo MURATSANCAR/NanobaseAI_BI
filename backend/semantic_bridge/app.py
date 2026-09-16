@@ -894,7 +894,8 @@ class Runtime:
                     # join that repeats rows under a SUM returns a total larger than the truth by a
                     # factor nobody sees, and the database is perfectly happy with it. Reviewed after
                     # dry_run so the reviewer works on a query already known to parse and resolve.
-                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql")
+                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql",
+                                          names=self.store.entity_terms(self.settings.tenant_id, self.settings.datasource_id))
                     critic_notes = [f.to_dict() for f in found]
                     blocking = [f for f in found if f.severity == "block"]
                     if not blocking:

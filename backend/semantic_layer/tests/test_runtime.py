@@ -27,6 +27,8 @@ def _certify(store, term, stype, mapping, pairs=("a", "b", "c"), synonyms=None):
 @pytest.fixture
 def catalog(store, profiles):
     for p in profiles:
+        if p.entity == "CLCARD" and not p.description:
+            p.description = "Cari hesap kartı (müşteri / tedarikçi)"   # what the scan of the live Logo carries
         store.upsert_profile(p)
     inv = next(p for p in profiles if p.entity == "INVOICE")
     stl = next(p for p in profiles if p.entity == "STLINE")
