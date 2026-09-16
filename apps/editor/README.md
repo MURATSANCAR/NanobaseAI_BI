@@ -31,6 +31,12 @@ etkinleştirilmez; `editor_preview` cevapları açıkça taslaktır, `pilot_read
 
 ## Ön yüz olmadan gerçek kitap koşusu
 
+Önce ağsız `document` konteynerinde `python -m editor.source_regions
+/data/artifacts/<sha256>` çalıştırılır (Compose `--entrypoint python` kullanır).
+Bu geçiş `ocr-regions-v2` altında 2400px sayfa render'ı, ham Tesseract TSV ve
+kelime/bbox JSON kayıtları oluşturur; özgün PDF ve ilk Docling çıktısı korunur.
+Sayfalar arası Docling paragrafı bir sayfanın özgün alıntısı gibi kullanılamaz.
+
 Sunucuda `python3 scripts/process-reference.py` eser/baskı ve mevcut gerçek
 kaynağa bağlı analiz işini aynı idempotency anahtarlarıyla oluşturur. Ardından
 `python3 scripts/verify-book-api.py` özgün 19,8 MB PDF'yi yükleme API'sinden

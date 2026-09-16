@@ -26,7 +26,10 @@ def build_index(job):
             client.put(f'http://qdrant:6333/collections/{COLLECTION}',json={'vectors':{'size':1024,'distance':'Cosine'}}).raise_for_status()
         else: r.raise_for_status()
         for evidence in get_records(gen,'evidence'):
-            key=evidence['record_key']; d=evidence['data']; text=d['ocr_text'] or d['text_layer']
+            key=evidence['record_key']; d=evidence['data']
+            # A colored activity panel can have good embedded text but poor OCR.
+            # Preserve both candidates, including the source labels, for retrieval.
+            text='OCR adayı:\n'+d['ocr_text']+'\nPDF metin katmanı adayı:\n'+d['text_layer']
             if not text.strip(): text='Görsel sayfa '+str(d['pdf_page'])
             with connection() as db:
                 fence(db,job)

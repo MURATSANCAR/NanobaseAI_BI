@@ -43,6 +43,7 @@ def main():
                 if active:
                     db.execute("UPDATE editor.jobs SET lease_until=now()+interval '90 seconds' WHERE id=%s AND owner_id=%s AND status='RUNNING'",(active['id'],owner))
                 else:
+                    db.execute("UPDATE editor.jobs SET status='CANCELLED',finished_at=now() WHERE status='RUNNING' AND cancellation_requested AND lease_until<now()")
                     job=db.execute("""SELECT * FROM editor.jobs WHERE
                       (status='QUEUED' OR (status='RUNNING' AND lease_until<now()))
                       AND attempt_no<3 AND NOT cancellation_requested ORDER BY created_at

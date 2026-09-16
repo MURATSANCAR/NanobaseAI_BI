@@ -19,7 +19,7 @@ work=post('/v1/works',{'title':'Ekrana Sığmayan Macera'},'work')
 edition=post('/v1/editions',{'work_id':work['id'],'label':'Kullanıcının sağladığı iç baskı PDF'},'edition')
 source=post('/v1/editions/'+edition['id']+'/verified-sources',
   {'sha256':'94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50'},'source')
-job=post('/v1/content-versions/'+source['id']+'/analyses',{'purpose':'validation'},'analysis')
+job=post('/v1/content-versions/'+source['id']+'/analyses',{'purpose':'validation'},'analysis-page-local-tsv-v3')
 result={'work':work,'edition':edition,'source':source,'job':job}
 (root/'evidence/reference-book-run.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
 print(json.dumps(result,ensure_ascii=False,indent=2))
