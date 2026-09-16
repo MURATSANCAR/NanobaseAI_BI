@@ -343,31 +343,70 @@ def catalog_candidates(profiles: list[SchemaProfile]) -> CatalogCandidates:
 
 # ------------------------------------------------------------------------------------------ probing
 
-class LinkProbe(Protocol):
-    """The SQL this discovery needs. One implementation per dialect; tests use SQLite."""
+# SQL Server takes at most 2.100 parameters in one statement. Lists longer than this are split into as
+# many statements as they need — never cut.
+PARAM_CHUNK = 2000
 
+
+def norm_key(value: Any, family: str) -> Optional[str]:
+    """The form two sides are compared in, whatever each database stores: an integer kept as
+    nvarchar on one side and as int on the other meets as the same digits; text meets trimmed, case-
+    and accent-folded (a CI_AI collation compares that way); a guid meets without braces, upper-case."""
+    if value is None:
+        return None
+    s = str(value).strip()
+    if not s or s.upper() == "NULL":
+        return None
+    if family == INT:
+        m = re.fullmatch(r"(-?\d{1,18})(?:\.0+)?", s)
+        return str(int(m.group(1))) if m else None
+    if family == GUID:
+        return s.strip("{}").upper()
+    return fold(s)
+
+
+def _chunks(values: list[Any], size: int = PARAM_CHUNK) -> Iterable[list[Any]]:
+    for i in range(0, len(values), size):
+        yield values[i:i + size]
+
+
+class LinkProbe(Protocol):
+    """The SQL this discovery needs, per table. A probe answers only for the tables of its own
+    connection; :class:`RoutedProbe` sends each table to the connection that holds it. Nothing here
+    joins two tables: what crosses from one database to the other travels as parameters."""
+
+    def of(self, table: SchemaProfile) -> "LinkProbe": ...
     def sample(self, table: SchemaProfile, columns: list[str], rows: int) -> list[dict[str, Any]]: ...
     def key_range(self, table: SchemaProfile, column: str) -> tuple[Optional[int], Optional[int]]: ...
+    def key_uniqueness(self, table: SchemaProfile, column: str) -> tuple[int, int]: ...
     def contained(self, table: SchemaProfile, column: str, values: list[str], family: str) -> set[str]: ...
+    def contained_many(self, table: SchemaProfile, columns: dict[str, tuple[list[str], str]],
+                       seek: set[str]) -> dict[str, set[str]]: ...
     def rows_by(self, table: SchemaProfile, column: str, values: list[str], family: str,
                 columns: list[str]) -> list[dict[str, Any]]: ...
-    def coverage(self, ref: SchemaProfile, column: str, family: str, targets: list[SchemaProfile],
-                 key: str, since: Optional[tuple[str, str]]) -> dict[str, Any]: ...
-    def key_uniqueness(self, table: SchemaProfile, column: str) -> tuple[int, int]: ...
-
-
-def _lit(value: str) -> str:
-    return "N'" + value.replace("'", "''") + "'"
+    def ref_values(self, table: SchemaProfile, column: str,
+                   since: Optional[tuple[str, str]]) -> list[tuple[Any, int, int]]: ...
+    def distinct_values(self, table: SchemaProfile, column: str) -> list[Any]: ...
 
 
 class _SqlProbe:
     family_sql = "tsql"
+    hint = " OPTION (MAXDOP 1)"
+    count_fn = "COUNT_BIG"
 
-    def __init__(self, connector: Any, *, timeout: Optional[int] = None):
+    def __init__(self, connector: Any, *, timeout: Optional[int] = None, database: Optional[str] = None):
         self.c = connector
+        self.database = database          # the database this connection is already in, when known
         self.queries = 0
         self.seconds = 0.0
         self.set_timeout(timeout)
+
+    def of(self, table: SchemaProfile) -> "_SqlProbe":
+        return self
+
+    @property
+    def timeout(self) -> Optional[int]:
+        return getattr(self.c, "query_timeout", None)
 
     def set_timeout(self, seconds: Optional[int]) -> None:
         """Per-query budget. A sampled read of a view can execute the whole view; that is worth a
@@ -390,7 +429,18 @@ class _SqlProbe:
         parts = [x for x in (p.schema_name or "").split(".") if x]
         return ".".join(self.q(x) for x in parts + [p.table_name])
 
-    hint = " OPTION (MAXDOP 1)"
+    def as_text(self, expr: str) -> str:
+        return f"CAST({expr} AS nvarchar(450))"
+
+    def mark(self, table: SchemaProfile, column: str, family: str) -> str:
+        """One parameter slot. Parameters arrive as unicode; against a non-unicode column that would
+        turn a seek into a scan, so the value is converted once, on the parameter side."""
+        if family != INT:
+            col = next((c for c in table.columns if c.name.upper() == column.upper()), None)
+            base = (col.data_type if col else "").lower().split("(")[0].strip()
+            if base in ("varchar", "char"):
+                return "CAST(? AS varchar(450))"
+        return "?"
 
     def run(self, sql: str, limit: int = 1_000_000) -> list[dict[str, Any]]:
         t = time.monotonic()
@@ -401,9 +451,29 @@ class _SqlProbe:
             self.seconds += time.monotonic() - t
         return rows
 
-    def as_text(self, expr: str) -> str:
-        return f"CAST({expr} AS nvarchar(450))"
+    def run_params(self, sql: str, params: list[Any]) -> list[dict[str, Any]]:
+        """Every row, parameters bound by the driver (``?`` for both pyodbc and sqlite3)."""
+        t = time.monotonic()
+        try:
+            cols, rows = self.c._rows(sql, tuple(params))
+        finally:
+            self.queries += 1
+            self.seconds += time.monotonic() - t
+        return [dict(zip(cols, r)) for r in rows]
 
+    @staticmethod
+    def params(values: Iterable[Any], family: str) -> list[Any]:
+        """Values bound as the family's type; a value the family cannot hold is dropped, not cast by
+        the database (an nvarchar 'ABC' against an int key is a conversion error, not a miss)."""
+        out = []
+        for v in values:
+            k = norm_key(v, family)
+            if k is None:
+                continue
+            out.append(int(k) if family == INT else str(v).strip())
+        return list(dict.fromkeys(out))
+
+    # -- single-table reads
     def sample(self, table, columns, rows):
         cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in columns)
         n = table.row_count or 0
@@ -425,18 +495,35 @@ class _SqlProbe:
         mn, mx = rows[0].get("mn"), rows[0].get("mx")
         return (int(mn) if mn is not None else None), (int(mx) if mx is not None else None)
 
-    def _in_list(self, values: list[str], family: str) -> str:
-        if family == INT:
-            return ", ".join(str(int(v)) for v in values)
-        return ", ".join(_lit(v) for v in values)
+    def key_uniqueness(self, table, column):
+        row = self.run(f"SELECT {self.count_fn}({self.q(column)}) AS n, COUNT(DISTINCT {self.q(column)}) AS d "
+                       f"FROM {self.table(table)}{self.hint}", 1)[0]
+        return int(row["n"] or 0), int(row["d"] or 0)
 
+    def ref_values(self, table, column, since):
+        """Every distinct stored value of a referencing column with its row count — and, when a
+        window is given, how many of those rows fall inside it. One grouped read; the comparison
+        form is made in Python, so the database's own collation never decides a match."""
+        v = self.as_text(self.q(column))
+        inside = f"SUM(CASE WHEN {self.q(since[0])} >= ? THEN 1 ELSE 0 END)" if since else f"{self.count_fn}(*)"
+        rows = self.run_params(f"SELECT {v} AS v, {self.count_fn}(*) AS n, {inside} AS w FROM {self.table(table)} "
+                               f"WHERE {self.q(column)} IS NOT NULL GROUP BY {v}{self.hint}",
+                               [since[1]] if since else [])
+        return [(r["v"], int(r["n"] or 0), int(r["w"] or 0)) for r in rows]
+
+    def distinct_values(self, table, column):
+        rows = self.run_params(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} "
+                               f"WHERE {self.q(column)} IS NOT NULL{self.hint}", [])
+        return [r["v"] for r in rows]
+
+    # -- values from elsewhere, looked up here
     def contained(self, table, column, values, family):
         found: set[str] = set()
-        for i in range(0, len(values), self.scan_chunk):
-            chunk = values[i:i + self.scan_chunk]
-            rows = self.run(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} "
-                            f"WHERE {self.q(column)} IN ({self._in_list(chunk, family)}){self.hint}")
-            found.update(fold(r["v"]) for r in rows if r.get("v") is not None)
+        m = self.mark(table, column, family)
+        for chunk in _chunks(self.params(values, family)):
+            rows = self.run_params(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} "
+                                   f"WHERE {self.q(column)} IN ({', '.join([m] * len(chunk))}){self.hint}", chunk)
+            found.update(k for k in (norm_key(r.get("v"), family) for r in rows) if k is not None)
         return found
 
     def contained_many(self, table, columns: dict[str, tuple[list[str], str]], seek: set[str]) -> dict[str, set[str]]:
@@ -450,66 +537,43 @@ class _SqlProbe:
             for c, (values, family) in scan.items():
                 out[c] = self.contained(table, c, values, family)
             return out
-        wanted = {c: {fold(v) for v in values} for c, (values, _) in scan.items()}
-        flat = [(c, v, f) for c, (values, f) in scan.items() for v in values]
-        for i in range(0, len(flat), self.scan_chunk):
-            chunk = flat[i:i + self.scan_chunk]
-            groups: dict[str, list[str]] = {}
+        wanted = {c: {k for k in (norm_key(v, f) for v in values) if k is not None} for c, (values, f) in scan.items()}
+        flat = [(c, p, f) for c, (values, f) in scan.items() for p in self.params(values, f)]
+        for chunk in _chunks(flat):
+            groups: dict[str, list[Any]] = {}
             fam = {}
-            for c, v, f in chunk:
-                groups.setdefault(c, []).append(v)
+            for c, p, f in chunk:
+                groups.setdefault(c, []).append(p)
                 fam[c] = f
             apply = ", ".join(f"({_lit(c)}, {self.as_text(self.q(c))})" for c in groups)
-            where = " OR ".join(f"{self.q(c)} IN ({self._in_list(v, fam[c])})" for c, v in groups.items())
-            rows = self.run(f"SELECT DISTINCT x.c, x.v FROM {self.table(table)} "
-                            f"CROSS APPLY (VALUES {apply}) AS x(c, v) WHERE ({where}){self.hint}")
+            where = " OR ".join(f"{self.q(c)} IN ({', '.join([self.mark(table, c, fam[c])] * len(v))})"
+                                for c, v in groups.items())
+            rows = self.run_params(f"SELECT DISTINCT x.c, x.v FROM {self.table(table)} "
+                                   f"CROSS APPLY (VALUES {apply}) AS x(c, v) WHERE ({where}){self.hint}",
+                                   [p for v in groups.values() for p in v])
             for row in rows:
-                c, v = row.get("c"), row.get("v")
-                if c in wanted and v is not None and fold(v) in wanted[c]:
-                    out.setdefault(c, set()).add(fold(v))
+                c = row.get("c")
+                if c not in wanted:
+                    continue
+                k = norm_key(row.get("v"), fam.get(c, CODE))
+                if k is not None and k in wanted[c]:
+                    out.setdefault(c, set()).add(k)
         for c in scan:
             out.setdefault(c, set())
         return out
 
-    scan_chunk = 1000
-
     def rows_by(self, table, column, values, family, columns):
         cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in dict.fromkeys([column] + columns))
+        m = self.mark(table, column, family)
         out: list[dict[str, Any]] = []
-        for i in range(0, len(values), 500):
-            chunk = values[i:i + 500]
-            out += self.run(f"SELECT {cols} FROM {self.table(table)} WHERE {self.q(column)} IN ({self._in_list(chunk, family)}){self.hint}")
+        for chunk in _chunks(self.params(values, family)):
+            out += self.run_params(f"SELECT {cols} FROM {self.table(table)} "
+                                   f"WHERE {self.q(column)} IN ({', '.join([m] * len(chunk))}){self.hint}", chunk)
         return out
 
-    def _ref_value(self, column: str, family: str) -> str:
-        if family == INT:
-            return f"TRY_CAST({self.q(column)} AS bigint)"
-        # Two databases, two collations: comparing across them is an error unless one side names one.
-        return f"{self.as_text(self.q(column))} COLLATE DATABASE_DEFAULT"
 
-    def coverage(self, ref, column, family, targets, key, since):
-        where = f"{self.q(column)} IS NOT NULL"
-        if since:
-            where += f" AND {self.q(since[0])} >= '{since[1]}'"
-        flags = []
-        for i, t in enumerate(targets):
-            flags.append(f"CASE WHEN EXISTS (SELECT 1 FROM {self.table(t)} k WHERE k.{self.q(key)} = s.v) THEN 1 ELSE 0 END AS h{i}")
-        hs = [f"h{i}" for i in range(len(targets))]
-        total = " + ".join(hs)
-        sql = (f"WITH s AS (SELECT DISTINCT {self._ref_value(column, family)} AS v FROM {self.table(ref)} WHERE {where}), "
-               f"f AS (SELECT {', '.join(flags)} FROM s WHERE s.v IS NOT NULL) "
-               f"SELECT COUNT(*) AS total, " + ", ".join(f"SUM({h}) AS {h}" for h in hs)
-               + f", SUM(CASE WHEN {total} > 0 THEN 1 ELSE 0 END) AS matched"
-               + f", SUM(CASE WHEN {total} > 1 THEN 1 ELSE 0 END) AS multi FROM f{self.hint}")
-        row = self.run(sql, 1)[0]
-        rows = self.run(f"SELECT COUNT_BIG(*) AS n, COUNT(DISTINCT {self.q(column)}) AS d FROM {self.table(ref)} WHERE {where}{self.hint}", 1)[0]
-        return {"distinct": int(row["total"] or 0), "matched": int(row["matched"] or 0), "multi_period": int(row["multi"] or 0),
-                "per_table": {t.table_name: int(row[f"h{i}"] or 0) for i, t in enumerate(targets)},
-                "ref_rows": int(rows["n"] or 0), "ref_distinct_raw": int(rows["d"] or 0)}
-
-    def key_uniqueness(self, table, column):
-        row = self.run(f"SELECT COUNT_BIG({self.q(column)}) AS n, COUNT(DISTINCT {self.q(column)}) AS d FROM {self.table(table)}{self.hint}", 1)[0]
-        return int(row["n"] or 0), int(row["d"] or 0)
+def _lit(value: str) -> str:
+    return "N'" + value.replace("'", "''") + "'"
 
 
 class TsqlLinkProbe(_SqlProbe):
@@ -517,9 +581,11 @@ class TsqlLinkProbe(_SqlProbe):
 
 
 class SqliteLinkProbe(_SqlProbe):
-    """SQLite with the second database ATTACHed: ``schema_name`` is the attached name."""
+    """SQLite. A profile's database qualifier is an ATTACHed name — or, when it names the database
+    this connection *is*, nothing (SQLite cannot refer to its own file by another name)."""
 
     hint = ""
+    count_fn = "COUNT"
 
     def q(self, ident: str) -> str:
         return f'"{ident}"'
@@ -527,58 +593,146 @@ class SqliteLinkProbe(_SqlProbe):
     def as_text(self, expr: str) -> str:
         return f"CAST({expr} AS TEXT)"
 
+    def mark(self, table, column, family):
+        return "?"
+
+    def table(self, p):
+        parts = [x for x in (p.schema_name or "").split(".") if x][:1]
+        if parts and self.database and parts[0].upper() == self.database.upper():
+            parts = []
+        return ".".join(self.q(x) for x in parts + [p.table_name])
+
     def sample(self, table, columns, rows):
         cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in columns)
         return self.run(f"SELECT {cols} FROM {self.table(table)} ORDER BY random() LIMIT {int(rows)}", rows)
 
-    def table(self, p):
-        parts = [x for x in (p.schema_name or "").split(".") if x][:1]
-        return ".".join(self.q(x) for x in parts + [p.table_name])
-
-    def _ref_value(self, column, family):
-        return f"CAST({self.q(column)} AS INTEGER)" if family == INT else f"{self.as_text(self.q(column))} COLLATE NOCASE"
-
-    def coverage(self, ref, column, family, targets, key, since):
-        where = f"{self.q(column)} IS NOT NULL"
-        if since:
-            where += f" AND {self.q(since[0])} >= '{since[1]}'"
-        hs = []
-        flags = []
-        for i, t in enumerate(targets):
-            flags.append(f"CASE WHEN EXISTS (SELECT 1 FROM {self.table(t)} k WHERE k.{self.q(key)} = s.v) THEN 1 ELSE 0 END AS h{i}")
-            hs.append(f"h{i}")
-        total = " + ".join(hs)
-        sql = (f"WITH s AS (SELECT DISTINCT {self._ref_value(column, family)} AS v FROM {self.table(ref)} WHERE {where}), "
-               f"f AS (SELECT {', '.join(flags)} FROM s WHERE s.v IS NOT NULL) "
-               f"SELECT COUNT(*) AS total, " + ", ".join(f"SUM({h}) AS {h}" for h in hs)
-               + f", SUM(CASE WHEN {total} > 0 THEN 1 ELSE 0 END) AS matched, SUM(CASE WHEN {total} > 1 THEN 1 ELSE 0 END) AS multi FROM f")
-        row = self.run(sql, 1)[0]
-        rows = self.run(f"SELECT COUNT(*) AS n, COUNT(DISTINCT {self.q(column)}) AS d FROM {self.table(ref)} WHERE {where}", 1)[0]
-        return {"distinct": int(row["total"] or 0), "matched": int(row["matched"] or 0), "multi_period": int(row["multi"] or 0),
-                "per_table": {t.table_name: int(row[f"h{i}"] or 0) for i, t in enumerate(targets)},
-                "ref_rows": int(rows["n"] or 0), "ref_distinct_raw": int(rows["d"] or 0)}
-
-    def key_uniqueness(self, table, column):
-        row = self.run(f"SELECT COUNT({self.q(column)}) AS n, COUNT(DISTINCT {self.q(column)}) AS d FROM {self.table(table)}", 1)[0]
-        return int(row["n"] or 0), int(row["d"] or 0)
-
     def contained_many(self, table, columns, seek):
         return {c: self.contained(table, c, values, family) for c, (values, family) in columns.items()}
 
+
+def probe_for(connector: Any, *, timeout: Optional[int] = None, database: Optional[str] = None) -> _SqlProbe:
+    dialect = getattr(connector, "dialect", "tsql")
+    cls = SqliteLinkProbe if dialect == "sqlite" else TsqlLinkProbe
+    return cls(connector, timeout=timeout, database=database)
+
+
+def database_of(connector: Any) -> Optional[str]:
+    """The database a connection opens, from its own configuration."""
+    cfg = getattr(connector, "cfg", None) or {}
+    return str(cfg.get("database")) if cfg.get("database") else None
+
+
+class RoutedProbe:
+    """Several connections, one probe. A table goes to the connection of its source
+    (:func:`source_of` — the database qualifier of its schema, or ``""`` for the default one)."""
+
+    def __init__(self, probes: dict[str, _SqlProbe]):
+        self.probes = {k.upper(): v for k, v in probes.items()}
+        if not self.probes:
+            raise ValueError("at least one connection is needed")
+
+    @classmethod
+    def from_connectors(cls, connectors: list[Any], *, timeout: Optional[int] = None) -> "RoutedProbe":
+        """The first connection answers for unqualified schemas; each connection also answers for
+        schemas qualified with the database it opens. Which database is which comes from the
+        connection files, not from a list kept here."""
+        probes: dict[str, _SqlProbe] = {}
+        for i, c in enumerate(connectors):
+            db = database_of(c)
+            p = probe_for(c, timeout=timeout, database=db)
+            if i == 0:
+                probes[""] = p
+            if db:
+                probes.setdefault(db.upper(), p)
+        return cls(probes)
+
+    def _unique(self) -> list[_SqlProbe]:
+        return list({id(p): p for p in self.probes.values()}.values())
+
+    def of(self, table: SchemaProfile) -> _SqlProbe:
+        src = source_of(table.schema_name)
+        p = self.probes.get(src)
+        if p is None and len(self._unique()) == 1:
+            p = self._unique()[0]              # one connection that sees every database (ATTACH, same server)
+        if p is None:
+            raise LookupError(f"no connection holds {src or 'the default database'} ({table.schema_name}.{table.table_name})")
+        return p
+
+    @property
+    def queries(self) -> int:
+        return sum(p.queries for p in self._unique())
+
+    @property
+    def seconds(self) -> float:
+        return sum(p.seconds for p in self._unique())
+
+    @property
+    def timeout(self) -> Optional[int]:
+        return next((p.timeout for p in self._unique() if p.timeout), None)
+
+    def set_timeout(self, seconds: Optional[int]) -> None:
+        for p in self._unique():
+            p.set_timeout(seconds)
+
+    def sample(self, table, columns, rows):
+        return self.of(table).sample(table, columns, rows)
+
+    def key_range(self, table, column):
+        return self.of(table).key_range(table, column)
+
+    def key_uniqueness(self, table, column):
+        return self.of(table).key_uniqueness(table, column)
+
     def contained(self, table, column, values, family):
-        vals = self._in_list(values, family).replace("N'", "'")
-        rows = self.run(f"SELECT DISTINCT {self.as_text(self.q(column))} AS v FROM {self.table(table)} WHERE {self.q(column)} IN ({vals})")
-        return {fold(r["v"]) for r in rows if r.get("v") is not None}
+        return self.of(table).contained(table, column, values, family)
+
+    def contained_many(self, table, columns, seek):
+        return self.of(table).contained_many(table, columns, seek)
 
     def rows_by(self, table, column, values, family, columns):
-        cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in dict.fromkeys([column] + columns))
-        vals = self._in_list(values, family).replace("N'", "'")
-        return self.run(f"SELECT {cols} FROM {self.table(table)} WHERE {self.q(column)} IN ({vals})")
+        return self.of(table).rows_by(table, column, values, family, columns)
+
+    def ref_values(self, table, column, since):
+        return self.of(table).ref_values(table, column, since)
+
+    def distinct_values(self, table, column):
+        return self.of(table).distinct_values(table, column)
 
 
-def probe_for(connector: Any, *, timeout: Optional[int] = None) -> _SqlProbe:
-    dialect = getattr(connector, "dialect", "tsql")
-    return SqliteLinkProbe(connector, timeout=timeout) if dialect == "sqlite" else TsqlLinkProbe(connector, timeout=timeout)
+def measure_coverage(probe: LinkProbe, ref: SchemaProfile, column: str, family: str, targets: list[SchemaProfile],
+                     key: str, *, key_declared: bool, since: Optional[tuple[str, str]]) -> tuple[dict[str, Any], Optional[dict[str, Any]]]:
+    """Full distinct coverage of a referencing column over every copy of the target, overall and
+    inside the target's window. The referencing values are read once on their own connection; each
+    target copy is asked on its connection which of them it holds — by seek on a declared key or when
+    one statement carries them all, otherwise by reading that copy's distinct values once (one scan
+    instead of one scan per parameter chunk)."""
+    raw = probe.ref_values(ref, column, since)
+    inside: dict[str, bool] = {}
+    rows_all = rows_win = 0
+    for v, n, w in raw:
+        rows_all += n
+        rows_win += w
+        k = norm_key(v, family)
+        if k is not None:
+            inside[k] = inside.get(k, False) or w > 0
+    values = sorted(inside)
+    hits: dict[str, set[str]] = {}
+    for t in targets:
+        if key_declared or len(values) <= PARAM_CHUNK:
+            hits[t.table_name] = probe.contained(t, key, values, family)
+        else:
+            have = {k for k in (norm_key(v, family) for v in probe.distinct_values(t, key)) if k is not None}
+            hits[t.table_name] = have & inside.keys()
+
+    def summary(vals: set[str], ref_rows: int) -> dict[str, Any]:
+        per = {tn: len(h & vals) for tn, h in hits.items()}
+        counts = Counter(v for h in hits.values() for v in (h & vals))
+        return {"distinct": len(vals), "matched": len(counts), "multi_period": sum(1 for n in counts.values() if n > 1),
+                "per_table": per, "ref_rows": ref_rows, "ref_distinct_raw": len(raw)}
+
+    full = summary(set(values), rows_all)
+    windowed = summary({k for k, w in inside.items() if w}, rows_win) if since else None
+    return full, windowed
 
 
 # ------------------------------------------------------------------------------------------ discovery
