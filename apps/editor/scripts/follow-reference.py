@@ -37,7 +37,7 @@ def request(path,body=None,key=None):
         time.sleep(min(30,2**(attempt+1)))
 
 
-def wait_job(job):
+def wait_job(job,allow_failed=False):
     start=time.monotonic(); previous=None
     while time.monotonic()-start<86400:
         state=request('/v1/jobs/'+job)
@@ -46,7 +46,9 @@ def wait_job(job):
             print(json.dumps({'job_id':job,**public},ensure_ascii=False),flush=True); previous=public
         (output/'progress.json').write_text(json.dumps(state,ensure_ascii=False,indent=2))
         if state['status']=='COMPLETED': return state
-        if state['status'] in ('FAILED','CANCELLED'): raise RuntimeError('JOB_'+state['status']+':'+str(state['error_code']))
+        if state['status'] in ('FAILED','CANCELLED'):
+            if allow_failed: return state
+            raise RuntimeError('JOB_'+state['status']+':'+str(state['error_code']))
         time.sleep(30)
     raise TimeoutError('REAL_BOOK_RUN_EXCEEDED_24_HOURS')
 
@@ -70,7 +72,7 @@ questions={
 try:
     final=wait_job(run['job']['job_id'])
     data={}
-    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages','claims','relationships','event_merges'):
+    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages','claims','relationships','event_merges','book_synthesis'):
         items=[]; offset=0
         while True:
             page=request(f'/v1/generations/{gen}/{kind}?offset={offset}&limit=100')
@@ -83,24 +85,37 @@ try:
     for key,question in questions.items():
         jobs[key]=request('/v1/questions',{'generation_id':gen,'question':question,'mode':'editor_preview'},gen+'-'+key)
     (output/'question-jobs.json').write_text(json.dumps(jobs,indent=2))
-    answers={}
+    answers={}; failed_questions=[]
     for index,(key,job) in enumerate(jobs.items(),1):
-        wait_job(job['job_id']); answers[key]=request('/v1/answers/'+job['job_id'])
+        state=wait_job(job['job_id'],allow_failed=True)
+        if state['status']=='COMPLETED': answers[key]=request('/v1/answers/'+job['job_id'])
+        else:
+            failed_questions.append(key)
+            answers[key]={'answer':{'status':'ERROR','answer':'Cevap üretilemedi: '+str(state['error_code']),
+                                    'claims':[]},'job':state}
         (output/'answers.json').write_text(json.dumps(answers,ensure_ascii=False,indent=2))
-        if index%10==0: print(json.dumps({'questions_completed':index,'semantic_reference_review':'PENDING'}),flush=True)
+        if index%10==0: print(json.dumps({'questions_attempted':index,'answers_generated':index-len(failed_questions),
+                                         'failed_questions':failed_questions,'semantic_reference_review':'PENDING'}),flush=True)
+    reviews=[]; offset=0
+    while True:
+        batch=request(f'/v1/reviews?generation_id={gen}&offset={offset}&limit=100')['items']
+        reviews.extend(batch)
+        if len(batch)<100: break
+        offset+=len(batch)
+    (output/'reviews.json').write_text(json.dumps(reviews,ensure_ascii=False,indent=2))
     pages={row['id']:row['data']['pdf_page'] for row in data['evidence']}
     def refs(values): return 'PDF '+', '.join(map(str,sorted({pages[value] for value in values})))
     def clean(value): return html.escape(str(value)).replace('|','\\|').replace('\n',' ')
     modes={'ACTUAL':'Gerçekleşmiş','REPORTED':'Aktarılan','PLANNED':'Plan','HYPOTHETICAL':'Varsayım/hayal',
            'DREAM':'Rüya','METAPHOR':'Benzetme','JOKE':'Şaka'}
     lines=['# Ekrana Sığmayan Macera — kaynaklı analiz taslağı','',
-      'İşleme tamamlandı. Yayınevi editör kabulü ve bağımsız anlamsal değerlendirme bekleniyor.','',
+      'Analiz ve soru denemelerinin sonuçları. Yayınevi editör kabulü ve bağımsız anlamsal değerlendirme bekleniyor.','',
       '## Kitabın özeti','']
     literary=data['literary'][0]['data']
-    lines.extend([clean(literary.get('book_summary','')),'','## Karakterler','',
-                  '| Karakter | Kaynaklı açıklama | Kaynak |','|---|---|---|'])
+    lines.extend([clean(literary.get('book_summary','')),'','## Karakterler ve diğer varlıklar','',
+                  '| Ad | Tür | Kaynaklı açıklama | Kaynak |','|---|---|---|---|'])
     for row in data['entities']:
-        d=row['data']; lines.append('| '+clean(d['name'])+' | '+clean(d.get('description',''))+' | '+refs(d['evidence_refs'])+' |')
+        d=row['data']; lines.append('| '+clean(d['name'])+' | '+clean(d.get('type','CHARACTER'))+' | '+clean(d.get('description',''))+' | '+refs(d['evidence_refs'])+' |')
     lines.extend(['','## Olaylar ve gerçekleşme durumu','','| Olay | Tür | Kaynak |','|---|---|---|'])
     for row in data['events']:
         d=row['data']; lines.append('| '+clean(d['description'])+' | '+modes.get(d['narrative_mode'],d['narrative_mode'])+' | '+refs(d['evidence_refs'])+' |')
@@ -113,6 +128,10 @@ try:
         lines.extend([clean(item['interpretation']),'','Alternatif okuma: '+clean(item['alternative']),'',refs(item['evidence_refs']),''])
     lines.extend(['## Açık sorular ve inceleme',''])
     for item in literary.get('open_questions',[]): lines.append('- '+clean(item))
+    for row in reviews:
+        if row['decision'] in ('REJECT','NEEDS_REVIEW'):
+            location='PDF '+str(row['data']['pdf_page']) if 'pdf_page' in row['data'] else row['record_key']
+            lines.append('- '+location+' / '+row['kind']+': '+row['decision']+'. Özgün model kaydı korunuyor; kabul edilmiş bulgu değildir.')
     lines.extend(['## Atıflı soru cevap denemeleri',''])
     for key,row in answers.items():
         a=row['answer']; lines.extend(['### '+key+' — '+questions[key],'',clean(a.get('answer','')),'',
@@ -125,8 +144,9 @@ try:
       '- B01/B02/B03/B15 ve V01–V08, kaydedilmiş özgün sayfalarla bağımsız inceleme gerektirir.',
       '- İşin teknik olarak tamamlanması, anlamsal doğruluk veya üretime kabul değildir.'])
     (output/'analysis-report.md').write_text('\n'.join(lines))
-    (output/'completion.json').write_text(json.dumps({'processing_complete':True,'human_accepted':False,'generation_id':gen,'questions':len(answers)},indent=2))
-    print(json.dumps({'processing_complete':True,'output':str(output),'human_accepted':False}),flush=True)
+    (output/'completion.json').write_text(json.dumps({'processing_complete':not failed_questions,'human_accepted':False,
+        'generation_id':gen,'questions':len(answers),'failed_questions':failed_questions},indent=2))
+    print(json.dumps({'processing_complete':not failed_questions,'output':str(output),'human_accepted':False}),flush=True)
 except Exception as exc:
     (output/'run-error.json').write_text(json.dumps({'error_type':type(exc).__name__,'message':str(exc)},indent=2))
     raise

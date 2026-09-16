@@ -21,6 +21,18 @@ kontrolü → sınırlı kitap sentezi → Qdrant/dense + yerel BM25/reranker ha
 gerçek referans kitapta çalıştırılmaktadır. **Kodun bulunması, tüm aşamaların
 tamamlanıp anlamsal kabulden geçtiği anlamına gelmez.**
 
+Bağımsız sayfa/sahne/destek grupları `EDITOR_MODEL_CONCURRENCY` ile 1–4
+eşzamanlı çağrıya sınırlandırılır. Varsayılan müşteri profili tek çağrıdır.
+Sunucuda ölçülen boş kapasite ve kullanıcının CPU artırma izniyle mevcut kitap
+koşusu 32 CPU/32 thread, 4 model slotu ve toplam 32768 bağlam token'ı kullanır
+(slot başına 8192). Model PID sınırı 512'dir: 128 sınırında 32 thread'li gerçek
+başlatma `libgomp: Thread creation failed` hatası verdi. Her grubun sonucu aynı
+lease/fencing altında değişmez kayda alınır; tamamlanan kayıtlar yeniden
+işlenmez. Ortak host sağlık gözlemi, tam hizmet seviyesi kabulü değildir.
+
+Kitaba özel anlamsal ölçütler ve açık kontroller:
+[referans kitap kabul kayıtları](../../docs/editor/reference-book-acceptance.md).
+
 Bu koşu tek kurulum operatörü içindir; çok kullanıcılı kitap/rol yetkisi, düzeltme
 bağımlılıklarının yeniden hesaplanması ve React ekranları tamamlanmadı.
 Yükleme tamamlama, mevcut ağsız parser ile doğrulanmış hash'i kabul eder;

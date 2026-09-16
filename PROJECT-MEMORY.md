@@ -14,6 +14,8 @@ Gerçek referans kitap (SHA-256 `94747e819a760fef5e3cef39bb3284c543e217923e2560a
 
 Son koşu ayrıntısı: `evidence/reference-follow-final.log` güncel takip günlüğüdür. İşçi güncellemeleriyle dolan lease denemeleri sessizce sıfırlanmaz; gerekçeli operatör retry ek deneme açar ve geçmişi korur. İlk 10 görselden 6. sayfadaki göz rengi ve 10. sayfadaki hediye iddiası kaynakla uyuşmadığı için API üzerinden REJECT kaydedildi; sahne çıkarımı bu betimlemeleri kullanmaz. Kaynak karşılaştırması insan editör onayı değildir. Olay modu/fail/konuşmacı, sınırdaki görsel-metin olay birleştirmesi, ayrı destek kontrolü ve sınırlı edebî sentez uygulanır; bunların gerçek koşu kabulü ayrıca beklenir.
 
+Güncel kapasite: kullanıcının daha fazla CPU izni ve canlı boş kapasite ölçümüyle 32 CPU/32 thread, 4 model slotu, toplam 32768 bağlam (slot başına 8192); bağımsız kaynak grupları en fazla dört paralel çağrı. PID 128 sınırındaki gerçek libgomp başlatma hatası yalnız LLM için 512 sınırıyla giderildi. Ortak sağlık uçları 200; tam SLO kabulü değildir. İlk 13 görselin 9'unda yanlış metin/ayrıntı gözlendi ve REJECT kaydedildi; kaynakları korundu. Bu model kalite bulgusu gizlenmez. Katkıcılar ve yer/nesne adayları, karakter sentezinden ayrı kanonik varlık olarak korunur. [B01–B18/V01–V08 takip tablosu](docs/editor/reference-book-acceptance.md) test başarısı iddiası içermez.
+
 Kalıcı `editor` branch'i açılmaz; tek trunk `main`. Kurulum, ağ çakışması ön kontrolü, offline imaj/model paketi ve yedek/restore adımları: [apps/editor/README.md](apps/editor/README.md). Kanıt ve sınırlar: [altyapı raporu](docs/editor/2026-09-16-infrastructure.md). Bağlayıcı kurallar: [AGENTS.md](AGENTS.md#editör-modülü-aynı-depo-bağımsız-uygulama).
 
 ## Mimari (üstten alta)

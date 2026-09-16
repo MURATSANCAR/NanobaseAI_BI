@@ -18,6 +18,7 @@ x-app: &app
   mem_limit: 512m
   environment: &app-env
     EDITOR_RELEASE: ${EDITOR_RELEASE:-foundation-20260916}
+    EDITOR_MODEL_CONCURRENCY: ${EDITOR_MODEL_CONCURRENCY:-1}
     HF_HUB_OFFLINE: '1'
     HF_HUB_DISABLE_TELEMETRY: '1'
     DO_NOT_TRACK: '1'

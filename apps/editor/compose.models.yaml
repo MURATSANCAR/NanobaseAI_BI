@@ -31,8 +31,9 @@ services:
   llm:
     <<: *model
     cpus: ${EDITOR_LLM_CPUS:-4}
+    pids_limit: 512
     mem_limit: 32g
-    command: [--model, /models/Qwen3.8-27B-Q4_K_M.gguf, --mmproj, /models/mmproj-Qwen3.8-27B-Q8_0.gguf, --alias, editor-qwen38, --host, 0.0.0.0, --port, '8080', --ctx-size, '8192', --threads, '${EDITOR_LLM_THREADS:-4}', --threads-batch, '${EDITOR_LLM_THREADS:-4}', --parallel, '1', --batch-size, '256', --ubatch-size, '128', --image-max-tokens, '${EDITOR_IMAGE_MAX_TOKENS:-256}', --jinja, --reasoning, 'off', --metrics, --no-webui]
+    command: [--model, /models/Qwen3.8-27B-Q4_K_M.gguf, --mmproj, /models/mmproj-Qwen3.8-27B-Q8_0.gguf, --alias, editor-qwen38, --host, 0.0.0.0, --port, '8080', --ctx-size, '${EDITOR_LLM_CONTEXT:-8192}', --threads, '${EDITOR_LLM_THREADS:-4}', --threads-batch, '${EDITOR_LLM_THREADS:-4}', --parallel, '${EDITOR_LLM_SLOTS:-1}', --batch-size, '256', --ubatch-size, '128', --image-max-tokens, '${EDITOR_IMAGE_MAX_TOKENS:-256}', --jinja, --reasoning, 'off', --metrics, --no-webui]
   embedding:
     <<: *model
     cpus: 1
