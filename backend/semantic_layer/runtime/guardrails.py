@@ -151,11 +151,18 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         with nothing about it looking wrong. Naming one table is the case this is for — the model
         picked a year and the question needs more than that one.
         """
-        if period is None or already_spread.get(prof.table_pattern, 0) > 1:
+        if already_spread.get(prof.table_pattern, 0) > 1:
             return [prof]
         same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
         if len(same) < 2:
             return [prof]
+        if period is None:
+            # No period from the question — but the statement itself may date its rows. Read the
+            # years those literals ask for; failing that, the most recent table. The representative
+            # (the biggest copy) is never the answer: a 2026 query was silently run against 2021–2025.
+            start, end = _literal_period(tree)
+            picked = periods.tables_for(same, start, end)
+            return picked or [prof]
         picked = periods.tables_for(same, period[0], period[1])
         return picked or [prof]
     try:
@@ -264,6 +271,28 @@ def _norm_key(*parts: Optional[str]) -> str:
     """
     joined = "_".join(str(x) for x in parts if x)
     return joined.replace(".", "_").upper()
+
+
+def _literal_period(tree) -> tuple:
+    """[start, end) as the statement's own date literals bound it: the smallest lower bound and the
+    largest upper bound written against a column. None, None when it writes none."""
+    from datetime import date as _date
+    lows, highs = [], []
+    for node in tree.find_all(exp.GTE, exp.GT, exp.LT, exp.LTE):
+        lit = node.right if isinstance(node.right, exp.Literal) else None
+        if lit is None or not lit.is_string or not isinstance(node.left, exp.Column):
+            continue
+        text = lit.this[:10]
+        try:
+            d = _date.fromisoformat(text)
+        except ValueError:
+            continue
+        (lows if isinstance(node, (exp.GTE, exp.GT)) else highs).append(d)
+    if not lows and not highs:
+        return None, None
+    start = min(lows) if lows else None
+    end = max(highs) if highs else None
+    return start, end
 
 
 def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
