@@ -8,6 +8,8 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ## 2026-09-16 — Editör v2 dağıtımı ve kurulum denetimi hazırlığı
 
+- V2 ilk iki sayfasında gerçek API/PG kaynak eşliği geçti; ilk sayfada altı kayıt türü kontrol edildi. Soru/yayın kapıları 401/409 ile doğru kapalı kaldı; DB'de yeni soru işi veya review yok. S.38 sınırlı gerçek OCR kontrolünde 24 bölgenin 20'si eşleşti, olumsuzluk korundu (33,016 sn); bu ana koşunun s.38 kabulü değildir.
+- Kurulum denetçisinin üst klasör izin hatası yalnız ayrı 0700 denetim kökü oluşturularak giderildi; kaynak kitap ve kurulum izinleri korunur. Yeni süreç paket üretimini başlattı; henüz geri yükleme sonucu yok.
 - `6f14bb9` kodu yeni API/worker imajıyla dağıtıldı; 26 backend dosyasının hash eşliği ve 10 servis izolasyonu geçti. V1 API iptali tamamlandı; 18 ham OCR/görsel, 17 aday/kontrol sayfası korundu. Yeni nesil `a9471749-7447-4826-b003-f25e53943763` gerçek API üzerinden başladı. Kullanıcı kitabının verileri elle değiştirilmedi.
 - Gerçek Chrome/API ile 320/390/768/1440 px kontrolü yeni API üzerinde geçti. Konuşmacı/anlamsal kabul, sentez/indeks/soru-cevap açık; işlem bitişi kabul değildir.
 - Paketleme `node_modules`, `.git` ve özel `.env*` dosyalarını dışlar; `.env.example` gerçek release kimliğini taşır. Tek seferlik kurulum denetçisi paket export/importu, koşu tamamlanınca tutarlı yedek ve ayrı ağ/port/secret/volume ile restore kontrolünü yürütmek üzere hazırlandı. Henüz çalışmamış adımlar başarı sayılmaz. Canlı proje belleğindeki çelişen eski koşu özetleri tarihsel raporlara yönlendirildi.
