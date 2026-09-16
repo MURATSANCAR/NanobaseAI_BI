@@ -1123,8 +1123,18 @@ class SemanticResolver:
                 entities.add(entity)
         return entities
 
+    _NAME_CACHE: dict[tuple[str, str], frozenset[str]] = {}
+
+    @classmethod
+    def _entity_name_stems(cls, prof) -> frozenset[str]:
+        key = (prof.entity or "", prof.description or "")
+        found = cls._NAME_CACHE.get(key)
+        if found is None:
+            found = cls._NAME_CACHE[key] = frozenset(cls._entity_name_stems_uncached(prof))
+        return found
+
     @staticmethod
-    def _entity_name_stems(prof) -> set[str]:
+    def _entity_name_stems_uncached(prof) -> set[str]:
         """The words a table is *called*, not every word written about it.
 
         A CRM description is a sentence ("Bir müşteriyi veya potansiyel müşteriyi temsil eden
@@ -1137,10 +1147,24 @@ class SemanticResolver:
         base = re.sub(r"(?i)^(new_|lg_)|base$", "", prof.entity or "")
         return {stem(w) for w in words} | {stem(w) for w in tokenize(base.replace("_", " "))}
 
-    @staticmethod
-    def _text_answers(text: str, keys: set[str]) -> bool:
-        for part in tokenize(text or ""):
-            forms = {fold(part), stem(part), short_root(part)}
+    _FORMS_CACHE: dict[str, tuple[frozenset[str], ...]] = {}
+
+    @classmethod
+    def _text_forms(cls, text: str) -> tuple[frozenset[str], ...]:
+        """Each word of a description, as the forms a key may meet it in. Descriptions do not change
+        between questions, and stemming every word of every column on every question was most of
+        the time a question took (14 of 19 seconds, measured on the production catalog)."""
+        found = cls._FORMS_CACHE.get(text)
+        if found is None:
+            found = tuple(frozenset(f for f in (fold(part), stem(part), short_root(part)) if f)
+                          for part in tokenize(text or ""))
+            if len(cls._FORMS_CACHE) < 200_000:
+                cls._FORMS_CACHE[text] = found
+        return found
+
+    @classmethod
+    def _text_answers(cls, text: str, keys: set[str]) -> bool:
+        for forms in cls._text_forms(text):
             # Same root, or one is the other with a Turkish suffix on it. Four letters was not enough:
             # "verilen" reached "Veri" columns and "açılan" reached "Açıklama".
             if any(key == f or (len(key) >= 5 and f.startswith(key)) or (len(f) >= 5 and key.startswith(f))

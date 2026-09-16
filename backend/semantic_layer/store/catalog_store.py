@@ -457,7 +457,24 @@ class CatalogStore:
 
     # ------------------------------------------------------------------ versions
     def publish_runtime_snapshot(self, tenant_id, datasource_id, index):
-        """Persist the exact certified index supplied to a resolver, not just its count."""
+        """Persist the exact certified index supplied to a resolver, not just its count.
+
+        The index is built once per catalog version and handed to every question as the same object.
+        Hashing and comparing all of it on every question cost two seconds a question once the
+        catalog held three thousand certified concepts; the same object has the same answer, so it
+        is kept with the index it was computed for (a reference, so the identity cannot be reused).
+        """
+        cache = getattr(self, "_snapshot_cache", None)
+        if cache is None:
+            cache = self._snapshot_cache = {}
+        held = cache.get((tenant_id, datasource_id))
+        if held is not None and held[0] is index:
+            return held[1], held[2]
+        version, digest = self._publish_runtime_snapshot(tenant_id, datasource_id, index)
+        cache[(tenant_id, datasource_id)] = (index, version, digest)
+        return version, digest
+
+    def _publish_runtime_snapshot(self, tenant_id, datasource_id, index):
         from dataclasses import asdict
         import hashlib
         concepts = {}
