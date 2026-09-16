@@ -47,6 +47,10 @@ def strip_comments(sql: str) -> str:
     return "".join(out)
 
 
+#: the copy a row came from, carried through a union so joined rows only meet their own copy
+_FIRM_COL = "__nb_firm"
+
+
 def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: Optional[str] = "tsql") -> tuple[bool, str]:
     """Every table the statement reads must be one the catalog profiled. Without this the endpoint is a
     read-anything console over whatever the database login can reach."""
@@ -198,29 +202,73 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             if c.table:
                 dated_aliases.add(c.table.upper())
 
+    def resolve_prof(node: exp.Table):
+        raw = node.name
+        prof = by_table.get(_norm_key(node.catalog, node.db, raw)) or by_table.get(raw.upper())
+            lt = logical_table(raw)
+            prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
+        return prof
+
+    def is_dated(node: exp.Table, prof: SchemaProfile) -> bool:
+        name_here = (node.alias or node.name or "").upper()
+        return not dated_aliases or name_here in dated_aliases or prof.entity.upper() in dated_aliases
+
+    # Which copies of the schema this statement reads. In this source every year is a separate
+    # copy (firm 211 = 2021–2025, firm 411 = 2026) and an identifier is unique only inside one, so
+    # the copies the dated relation spreads over decide the copies of *every* partitioned relation
+    # beside it: the invoices of 2026 joined to the payment plan of 2021–2025 matched nothing, and
+    # matched the wrong rows where a LOGICALREF happened to coincide.
+    firms: list[str] = []
+    for node in tree.find_all(exp.Table):
+        if not node.name or node.name.upper() in cte_names:
+            continue
+        prof = resolve_prof(node)
+        if prof is None or not is_dated(node, prof) or "{n0}" not in (prof.table_pattern or ""):
+            continue
+        for x in spread(prof):
+            firm = str((x.context or {}).get("n0") or "")
+            if firm and firm not in firms:
+                firms.append(firm)
+    tagged: set[str] = set()          # aliases of relations that carry the firm tag
+
+    def in_step(prof: SchemaProfile) -> list[SchemaProfile]:
+        """A partitioned relation read from the same copies as the dated one, in the same order."""
+        if not firms or "{n0}" not in (prof.table_pattern or ""):
+            return []
+        same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
+        picked = [next((x for x in same if str((x.context or {}).get("n0") or "") == firm), None) for firm in firms]
+        picked = [x for x in picked if x is not None]
+        return picked
+
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
             raw = node.name
             if raw.upper() in cte_names:
                 return node
-            prof = by_table.get(_norm_key(node.catalog, node.db, raw)) or by_table.get(raw.upper())
-            if prof is None:
-                lt = logical_table(raw)
-                prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
+            prof = resolve_prof(node)
             if prof is None:
                 return node
-            # Where the query says which relation carries the period, only that one is spread.
-            name_here = (node.alias or node.name or "").upper()
-            wanted = spread(prof) if (not dated_aliases or name_here in dated_aliases
-                                      or prof.entity.upper() in dated_aliases) else [prof]
+            lockstep = in_step(prof)
+            if lockstep:
+                wanted = lockstep
+            else:
+                # Where the query says which relation carries the period, only that one is spread.
+                wanted = spread(prof) if is_dated(node, prof) else [prof]
             if len(wanted) > 1:
-                # One entity, several years: read them as one relation so everything the model wrote
-                # around it — the joins, the filters, the aggregate — is untouched.
-                parts = [exp.select(exp.Star()).from_(_physical_table(x, context)) for x in wanted]
+                # One entity, several copies: read them as one relation so everything the model wrote
+                # around it — the joins, the filters, the aggregate — is untouched. Each row carries the
+                # copy it came from, so a join below only ever meets rows of its own copy.
+                alias = node.alias or prof.entity
+                parts = []
+                for x in wanted:
+                    firm = str((x.context or {}).get("n0") or "")
+                    cols = [exp.alias_(exp.Literal.string(firm), _FIRM_COL), exp.Star()] if lockstep else [exp.Star()]
+                    parts.append(exp.select(*cols).from_(_physical_table(x, context)))
                 union: exp.Expression = parts[0]
                 for nxt in parts[1:]:
                     union = exp.union(union, nxt, distinct=False)
-                alias = node.alias or prof.entity
+                if lockstep:
+                    tagged.add(alias.upper())
                 return exp.Subquery(this=union, alias=exp.TableAlias(this=exp.to_identifier(alias)))
             new = _physical_table(wanted[0], context)
             # Without an alias the model qualifies columns by the name it wrote ("INVOICE.CLIENTREF").
@@ -233,6 +281,18 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         return node
 
     out = tree.transform(tx)
+    if len(tagged) > 1:
+        # Two tagged relations meeting in a JOIN meet only within one copy.
+        for join in out.find_all(exp.Join):
+            on = join.args.get("on")
+            if on is None:
+                continue
+            right = join.this.alias if isinstance(join.this, (exp.Subquery, exp.Table)) else None
+            right = (right or "").upper()
+            others = {c.table.upper() for c in on.find_all(exp.Column) if c.table and c.table.upper() in tagged and c.table.upper() != right}
+            if right in tagged and others:
+                left = sorted(others)[0]
+                join.set("on", exp.and_(on, exp.EQ(this=exp.column(_FIRM_COL, table=right), expression=exp.column(_FIRM_COL, table=left))))
     # A column the model qualified by a name the rewrite no longer shows — the entity
     # ("NEW_PLANSORUMLULARIBASE.CreatedOn") while the table was written under its label, or the other
     # way round — cannot be bound by the server. When a relation of that entity appears exactly once,
@@ -260,6 +320,20 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         aliases = set(names_in_query.get(qual, []))
         if len(aliases) == 1:
             col.set("table", exp.to_identifier(next(iter(aliases))))
+    # A CTE or table alias the model chose is a word, and a word can be a keyword: `WITH plan AS` is
+    # a syntax error on SQL Server. Aliases are quoted; columns and real names stay as written.
+    for cte in out.find_all(exp.CTE):
+        if cte.alias:
+            cte.args["alias"].set("this", exp.to_identifier(cte.alias, quoted=True))
+    cte_upper = {c.alias.upper() for c in out.find_all(exp.CTE) if c.alias}
+    for node in out.find_all(exp.Table):
+        if node.name and node.name.upper() in cte_upper:
+            node.set("this", exp.to_identifier(node.name, quoted=True))
+        if node.alias:
+            node.args["alias"].set("this", exp.to_identifier(node.alias, quoted=True))
+    for sub in out.find_all(exp.Subquery):
+        if sub.alias:
+            sub.args["alias"].set("this", exp.to_identifier(sub.alias, quoted=True))
     return out.sql(dialect=dialect if dialect != "generic" else None)
 
 
