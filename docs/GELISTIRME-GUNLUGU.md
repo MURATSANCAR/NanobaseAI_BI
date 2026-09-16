@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör kabulünün müdahalesiz sistem koşusu olarak ayrılması
+
+- Kullanıcı, kitabın Codex tarafından analiz edilmesini/düzeltilmesini değil, roadmap'in mevcut yerel altyapıyla eksiksiz sınanmasını istediğini netleştirdi. Kaynak düzeltmesi API kayıt sayısı canlıda 0 doğrulandı; hazırlanan açıklamalar uygulanmadı.
+- Eski nesildeki ret kararlarının sahne girdisini filtrelemesi nedeniyle önceki koşu müdahalesiz kabul sayılmadı. Eski iş API üzerinden iptal edilip korundu; aynı kaynak ve özgün model çıktılarıyla, ret/düzeltme kararı olmayan `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` nesli başlatıldı. Yeniden kullanılan görseller yeni üretim olarak sayılmaz.
+- CPU kullanım izni kapsamında yalnız Editör LLM 48 CPU/48 thread ve dört slotla yeniden açıldı. 22 plan bölümünün mevcut kanıtları ve açıkları `docs/editor/roadmap-live-status.md` içinde görünür kılındı. Gerçek API/DB bütünlük betiği, müdahalesiz nesilde sıfır review/correction ve sahne girdilerinin model kökenini denetleyecek şekilde genişletildi. Uçtan uca/semantik kabul henüz verilmedi.
+
 ## 2026-09-16 — Editör gerçek kitap için ön yüzsüz analiz koşusu
 
 - Kullanıcı daha fazla CPU kullanımına izin verdi. Canlı boş kapasite ölçümü sonrası 32 CPU/32 thread + 4 model slotu (8192 token/slot) devreye alındı. Bağımsız görsel/sahne/destek grupları en fazla dört eşzamanlı çağrıyla, aynı işin lease/fencing korumasında işlenir. Gerçek başlatmada PID 128 sınırının libgomp hatasına neden olduğu görüldü; LLM sınırı 512 oldu ve servis sağlıklı başladı. İlk paralel kaynak kayıtları gerçek API/DB'de oluştu. Ortak sağlık uçları 200; tam SLO kabulü yok. Kaynak incelemesinde ilk 13 görselin 9'u yanlış metin/ayrıntı nedeniyle reddedildi. B01–B18 ve V01–V08 için geçilmiş test gibi sunulmayan takip tablosu eklendi. Soru takipçisi bir başarısız soruda diğer soru sonuçlarını kaybetmez; hata ve inceleme kararlarını raporda korur.

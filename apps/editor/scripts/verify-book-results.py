@@ -71,8 +71,23 @@ for row in rows:
 print(json.dumps({'artifact_verified_pages':len(rows)}))'''
 artifact=json.loads(subprocess.check_output(['docker','compose','exec','-T','api','python','-c',code,gen],text=True))
 job=get('/v1/jobs/'+run['job']['job_id'])
+protocol=run.get('evaluation_protocol')
+unassisted=None
+if protocol=='unassisted_pipeline_no_source_corrections_no_review_decisions':
+    review_count=sql("SELECT count(*) FROM editor.reviews WHERE generation_id='"+gen+"'")
+    assert review_count==0, 'Independent baseline contains operator review decisions'
+    assert not records['visual_corrections'], 'Independent baseline contains source corrections'
+    for row in records['visuals']:
+        assert not row['data'].get('provenance'), 'Operator visual observation in baseline'
+    inputs=[item for row in records['scenes'] for item in row['data'].get('input_visuals',[])]
+    assert all(item['visual_provenance']=='local_model_candidate' and item['visual_review_status']=='PENDING'
+               for item in inputs), 'Scene input was altered by an operator decision'
+    unassisted={'review_decisions':review_count,'source_corrections':0,
+                'traced_scene_visual_inputs':len(inputs),
+                'reused_model_visuals':sum(bool(row['data'].get('reused_from')) for row in records['visuals'])}
 result={'environment':'remote nanobase-direct / real editor PostgreSQL and HTTP API','generation_id':gen,
         'job_status':job['status'],'counts_and_full_values':checks,'resolved_citations':refs,**artifact,
+        'evaluation_protocol':protocol,'unassisted_checks':unassisted,
         'semantic_acceptance':'NOT_ESTABLISHED_BY_STRUCTURAL_CHECK','human_accepted':False}
 (root/'evidence/book-results-integrity.json').write_text(json.dumps(result,indent=2))
 print(json.dumps(result,indent=2))
