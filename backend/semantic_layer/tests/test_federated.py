@@ -109,3 +109,47 @@ def test_the_plan_runs_in_memory_and_answers_an_absence():
 def test_the_prompt_lists_only_measured_links():
     assert "NEW_SEVKIYATBASE.NEW_FATURANUMARASI=INVOICE.FICHENO" in F.links_block(PROFILES)
     assert "(yok)" in F.links_block([invoices()])
+
+
+def test_the_bridge_runs_each_part_on_its_own_server_and_answers():
+    """End to end through the bridge: parts go to the connection their tables live on."""
+    import threading
+    from types import SimpleNamespace
+    from semantic_bridge.app import Runtime
+    from semantic_bridge.result_files import ResultFiles
+    from semantic_layer.models import CompiledQuery, SemanticQuery
+
+    seen = {"crm": [], "logo": []}
+
+    class Conn:
+        def __init__(self, side, rows):
+            self.side, self.rows = side, rows
+
+        def batches(self, sql):
+            seen[self.side].append(sql)
+            yield [{"name": "fatura_no"}], []
+            yield [{"name": "fatura_no"}], self.rows
+
+    rt = Runtime.__new__(Runtime)
+    rt.settings = SimpleNamespace(tenant_id="t", datasource_id="d", max_rows=1000)
+    rt.connector = Conn("logo", [{"fatura_no": "A1"}])
+    rt.crm_connector = Conn("crm", [{"fatura_no": "A1"}, {"fatura_no": "A2"}])
+    rt._engine_lock = threading.RLock()
+    rt._physical = lambda sql, period, **kw: sql
+    rt.result_files = ResultFiles()
+    rt.attach_widget = lambda result, question: None
+    rt.remember_result = lambda *a, **k: None
+    rt.summarize = lambda *a, **k: "1 sevkiyatın faturası yok"
+    rt.thread_plans = {}
+    logged = []
+    rt.store = SimpleNamespace(log_query=lambda *a, **k: logged.append(k) or "q1")
+
+    plan = F.parse_plan(block(PLAN))
+    sq = SemanticQuery(question="faturası kesilmemiş sevkiyat sayısı", tenant_id="t", datasource_id="d")
+    compiled = CompiledQuery(sql=plan.text(), compiler="existing_llm", plan=plan)
+    out = rt._answer_plan(sq.question, sq, compiled, {}, [], "th", {}, 0.0, 50, {}, lambda stage: None, True)
+    assert out["type"] == "TEXT_TO_SQL" and out["federated"], out
+    assert out["records"] == [{"adet": 1}]
+    assert len(seen["crm"]) == 1 and "sevkiyat" in seen["crm"][0].lower()
+    assert len(seen["logo"]) == 1 and "INVOICE" in seen["logo"][0]
+    assert logged and logged[-1]["executed"] is True

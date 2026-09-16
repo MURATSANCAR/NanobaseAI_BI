@@ -772,6 +772,9 @@ class Runtime:
             thread.extend([{"role": "user", "content": question}, {"role": "assistant", "content": reason}])
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
                     "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+        if compiled.plan is not None:
+            return self._answer_plan(question, sq, compiled, semantic, thread, thread_id, timings, t0,
+                                     sample_size, scope_args, report, execute)
         if not compiled.sql:
             reason = "; ".join(compiled.explain)[:500]
             if sq.out_of_scope:
@@ -949,6 +952,93 @@ class Runtime:
             "semantic": semantic,
             "queryId": qid,
         }
+
+    def _plan_rows(self, part, period, scope_args):
+        """One part of a two-server plan, read whole from the server its tables live on."""
+        from semantic_layer.runtime.federated import source_of_schema  # noqa: F401 (same rule as the plan)
+        connector = self.crm_connector if (part.source and self.crm_connector is not None) else self.connector
+        if connector is None:
+            raise RuntimeError("no database connector")
+        phys = self._physical(part.sql, period, **scope_args)
+        if self._conn_for(phys) is not connector:
+            raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
+        with self._engine_lock:
+            if hasattr(connector, "batches"):
+                yield from connector.batches(phys)
+            else:
+                cols, rows, truncated = connector.execute(phys, self.result_files.max_rows)
+                if truncated:
+                    raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
+                yield cols, rows
+
+    def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
+                     sample_size, scope_args, report, execute):
+        """A question that needs both databases: each part on its own server, combined in memory."""
+        from semantic_layer.runtime import federated
+        plan = compiled.plan
+        text = compiled.sql
+        semantic["plan"] = plan.to_dict()
+        if not execute or self.connector is None:
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                       compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                       resolved=sq.to_dict(), executed=False)
+            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": text, "threadId": thread_id,
+                    "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
+        t = time.perf_counter()
+        period = self._asked_period(sq)
+        try:
+            report("querying")
+            columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args))
+            out = self.result_files.write(iter([(columns, rows)]), self.settings.max_rows)
+        except Exception as e:  # noqa: BLE001
+            err = str(e)[:800]
+            down = is_connection_error(e)
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                       compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                       resolved=sq.to_dict(), executed=False,
+                                       error=(f"data source unreachable: {err}" if down else err))
+            return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID",
+                    "sql": text,
+                    "explanation": ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                                    if down else f"İki sunuculu plan çalıştırılamadı: {err}"),
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+        timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
+        out.update(physicalSql=text, cached=False)
+        result = self._served(out, time.time())
+        report("presenting")
+        from semantic_bridge.presentation import presentation_spec
+        try:
+            result["presentation"] = presentation_spec(plan.final, result, sq, compiled.compiler)
+        except Exception:  # noqa: BLE001
+            result["presentation"] = None
+        result["dataCoverage"] = list(sq.data_coverage)
+        result["comparison"] = sq.comparison
+        self.attach_widget(result, question)
+        self.remember_result(result, question=question, sql=text)
+        shown = list(result["records"])[: max(1, int(sample_size or 50))]
+        t = time.perf_counter()
+        summary = self.summarize(question, text, result, sq)
+        timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
+        fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
+        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                   compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                   resolved=sq.to_dict(), executed=True, row_count=result["totalRows"],
+                                   latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
+        self.thread_plans[thread_id] = sq
+        thread.append({"role": "user", "content": question})
+        thread.append({"role": "assistant", "content": f"```json\n{json.dumps(plan.to_dict(), ensure_ascii=False)}\n```"})
+        del thread[:-12]
+        log.info("ask ok compiler=%s plan parts=%d rows=%d timings=%s q=%r", compiled.compiler, len(plan.parts),
+                 result["totalRows"], timings, question[:80])
+        return {"id": result["id"], "type": "TEXT_TO_SQL", "sql": text, "physicalSql": text, "summary": summary,
+                "resultId": result["id"], "presentation": result.get("presentation"),
+                "comparison": result.get("comparison"), "dataCoverage": result.get("dataCoverage", []),
+                "columns": result["columns"], "records": shown, "shownRows": len(shown),
+                "truncated": False, "cached": False, "ageSec": result.get("ageSec"),
+                "computedAt": result.get("computedAt"), "widget": result.get("widget"),
+                "threadId": thread_id, "rowCount": result["totalRows"], "totalRows": result["totalRows"],
+                "latency_ms": int((time.perf_counter() - t0) * 1000), "repairs": 0, "timings": timings,
+                "semantic": semantic, "queryId": qid, "federated": True}
 
     # ------------------------------------------------------------------ portal layer
     def inventory(self, *, search: str = "", entity: str = "", scope: str = "", limit: int = 0, offset: int = 0, with_columns: bool = True) -> dict[str, Any]:
