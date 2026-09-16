@@ -817,6 +817,14 @@ class Runtime:
             semantic["queue"] = queued
         if compiled.compiler == "incomplete":
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(compiled.explain)
+            if sq.unresolved:
+                # The gate's objection is the symptom; a word the catalog cannot place is the cause.
+                # Lead with what the person can act on: which word, and where the data may sit.
+                hints = [c for c in (sq.candidates or []) if c.get("term") in sq.unresolved]
+                where = "; ".join(f"'{c['term']}' → " + ", ".join(f"{e}.{c['column']}" for e in (c.get("entities") or [])[:2]) for c in hints[:3])
+                reason = (f"'{', '.join(sq.unresolved[:3])}' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. "
+                          + (f"Şemada karşılığı olabilecek kolonlar: {where}. " if where else "")
+                          + "Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: " + "; ".join(compiled.explain))
             qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
                        resolved=sq.to_dict(), executed=False, error=reason,
                        answer_type="INCOMPLETE_ANSWER", answer_summary=reason,
