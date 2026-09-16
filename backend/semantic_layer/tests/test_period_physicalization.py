@@ -163,4 +163,7 @@ def test_only_the_relation_the_period_constrains_is_spread():
         "WHERE s.\"DATE_\" >= '2025-01-01' AND s.\"DATE_\" < '2027-01-01'",
         [Y2021, Y2026, items_old, items_new], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
     assert "LG_211_01_STLINE" in sql and "LG_411_01_STLINE" in sql, sql   # dönemi taşıyan taraf yayılır
-    assert sql.upper().count("LG_211_ITEMS") + sql.upper().count("LG_411_ITEMS") == 1, sql
+    # 2026-09-16: referans tablosu artık kilitli adımda yayılır — her yıl kendi firma kopyasının kartını
+    # okur (LOGICALREF yalnız kopya içinde tekil) ve birleştirme firma etiketiyle sınırlanır; çoğaltma yok.
+    assert sql.upper().count("LG_211_ITEMS") == 1 and sql.upper().count("LG_411_ITEMS") == 1, sql
+    assert "__nb_firm = " in sql, sql
