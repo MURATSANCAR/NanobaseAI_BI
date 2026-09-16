@@ -13,6 +13,8 @@ a refusal, because a reviewer who cannot read the page has nothing to say about 
 """
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -78,6 +80,65 @@ def _keys_of(prof: SchemaProfile) -> frozenset[str]:
     ks = {k.upper() for k in prof.primary_key}
     ks |= {c.name.upper() for c in prof.columns if c.is_primary_key}
     return frozenset(ks)
+
+
+_ALIAS_WORD = re.compile(r"[a-zçğıöşü]+", re.IGNORECASE)
+
+
+def _names_side(agg: exp.Expression, sides: list["_Rel"], names: Optional[dict[str, set[str]]] = None) -> bool:
+    """COUNT(*) AS musteri_sayisi: takma ad bu tarafın adını (entity, tablo adı, açıklaması, sözlükteki
+    adları) taşıyor mu? Takma ad yoksa bilinmez → False."""
+    parent = agg.parent
+    alias = parent.alias if isinstance(parent, exp.Alias) else ""
+    if not alias:
+        return False
+    words = {_fold(w) for w in _ALIAS_WORD.findall(alias) if len(w) >= 4}
+    words -= {"sayisi", "sayi", "adet", "adedi", "toplam", "count"}
+    for rel in sides:
+        text = " ".join(filter(None, [rel.entity, rel.grain,
+                                      rel.profile.table_name if rel.profile else "",
+                                      rel.profile.description if rel.profile else ""]))
+        vocab = {_fold(w) for w in _ALIAS_WORD.findall(text) if len(w) >= 4}
+        for term in (names or {}).get((rel.entity or "").upper(), ()):
+            vocab |= {_fold(w) for w in _ALIAS_WORD.findall(term) if len(w) >= 4}
+        if any(a == v or a[:5] == v[:5] for a in words for v in vocab):
+            return True
+    return False
+
+
+def _fold(w: str) -> str:
+    return w.lower().translate(str.maketrans("çğıöşüâîû", "cgiosuaiu"))
+
+
+def _under_function(col: exp.Column, top: exp.Expression) -> bool:
+    """AVG(DATEDIFF(day, fatura.DATE_, odeme.DATE_)): the dates are arguments of a function whose
+    result is the number averaged — not columns being summed. Arithmetic (+ − × ÷) and parentheses
+    still count as summing the column itself."""
+    p = col.parent
+    while p is not None and p is not top:
+        if isinstance(p, (exp.Func, exp.Cast)) and not isinstance(p, exp.AggFunc):
+            return True
+        p = p.parent
+    return False
+
+
+def _used_outside_joins(select: exp.Select) -> set[str]:
+    """Aliases whose columns this SELECT reads anywhere but a JOIN … ON: selected, filtered,
+    grouped, ordered. A table joined and never read is there to be counted."""
+    used: set[str] = set()
+    for col in select.find_all(exp.Column):
+        if not _in_scope(col, select):
+            continue
+        p = col.parent
+        in_on = False
+        while p is not None and p is not select:
+            if isinstance(p, exp.Join):
+                in_on = True
+                break
+            p = p.parent
+        if not in_on and col.table:
+            used.add(col.table.upper())
+    return used
 
 
 def _in_scope(node: exp.Expression, select: exp.Select) -> bool:
@@ -163,8 +224,10 @@ def _is_numeric(prof: SchemaProfile, column: str) -> Optional[bool]:
     return any(col.data_type.lower().startswith(t) for t in _NUMERIC)
 
 
-def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> list[Finding]:
-    """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read."""
+def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
+           names: Optional[dict[str, set[str]]] = None) -> list[Finding]:
+    """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read.
+    `names`: entity → the words the business calls it by (catalog vocabulary), for reading aliases."""
     try:
         tree = sqlglot.parse_one(sql, read=dialect)
     except Exception:  # noqa: BLE001
@@ -255,6 +318,20 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 if hit:
                     aliases = ({(c.table or "").upper() for c in cols if c is not None} & repeated) or repeated
                     who = ", ".join(sorted(rels[a].entity for a in aliases if a in rels))
+                    idle = {a for a in aliases if a not in _used_outside_joins(select)}
+                    if not cols and not idle and not _names_side(agg, [rels[a] for a in aliases if a in rels], names):
+                        # COUNT(*) over a join made on the other side's key counts the rows of the
+                        # fine-grained side — one per match, nothing repeated — and that is the figure
+                        # asked for ("kapanan kalem" per customer group, grouped by a CLCARD column).
+                        # It is inflated only when the count is meant to be *of* the keyed entity, and
+                        # two things say so: the alias names it ("musteri_sayisi" over CLCARD), or the
+                        # keyed table is joined and then used nowhere — a join that contributes no
+                        # column exists only to be counted. Both still block. Logo declares no keys, so
+                        # blocking every lookup join here sent correct queries back for repair.
+                        findings.append(Finding("FANOUT", "warn",
+                            f"{agg.sql(dialect=dialect)} ince tarafın satırlarını sayıyor; {who} sayısı isteniyorsa "
+                            f"COUNT(DISTINCT {who}.<anahtar>) kullan."))
+                        continue
                     # Summing a column a CTE already aggregated is the same fault one level up, and
                     # worth naming as such: the figure was correct at its own grain and is being
                     # re-added once per row of the finer table it was joined to.
@@ -283,7 +360,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 # over a non-numeric column — and a period comparison is written exactly this way.
                 tested = {id(col) for pred in (inner.find_all(exp.Predicate) if isinstance(inner, exp.Expression) else [])
                           for col in pred.find_all(exp.Column)}
-                for c in [x for x in cols if id(x) not in tested]:
+                for c in [x for x in cols if id(x) not in tested and not _under_function(x, inner)]:
                     prof = tables.get((c.table or "").upper()) if c.table else (next(iter(tables.values())) if len(tables) == 1 else None)
                     if prof is None:
                         continue

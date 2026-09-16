@@ -833,6 +833,47 @@ def extract_sql(text: str) -> Optional[str]:
     return head + quote_numeric_aliases(sql)
 
 
+def no_sql_reason(text: str) -> str:
+    """The reason after NO_SQL, wherever the model put it (bare, in a fence, after readings)."""
+    m = re.search(r"NO_SQL\s*:?\s*(.+)", text or "")
+    return (m.group(1).strip().strip("`").strip() if m else "")
+
+
+_WORD = re.compile(r"[a-zçğıöşü]+", re.IGNORECASE)
+_FOLD = str.maketrans("çğıöşüâîû", "cgiosuaiu")
+
+
+def caveat_for(reason: str, rules_text: str) -> str:
+    """The knowledge-pack bullet the model's NO_SQL reason rests on, or "" when none does.
+
+    Matched by shared content words (folded, 4+ letters, stems of 5). A caveat is operator-written
+    text, so it may be shown to the person asking; the model's sentence may not. The bullet's first
+    sentence is what is shown, headed by its bold title when it has one."""
+    if not reason or not rules_text:
+        return ""
+    words = {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(reason) if len(w) >= 4}
+    words -= {"icin", "veri", "yok", "degil", "olan", "bunlar", "ile"}
+    if len(words) < 2:
+        return ""
+    best, best_hit = "", 0
+    for line in rules_text.splitlines():
+        body = line.strip().lstrip("-• ").strip()
+        if len(body) < 40:
+            continue
+        vocab = {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(body) if len(w) >= 4}
+        hit = len(words & vocab)
+        if hit > best_hit and hit >= max(3, len(words) // 2):
+            best, best_hit = body, hit
+    if not best:
+        return ""
+    title = re.match(r"\*\*(.+?)\*\*\s*(.*)", best, re.S)
+    head, rest = (title.group(1), title.group(2)) if title else ("", best)
+    sentences = re.split(r"(?<=[.!?])\s+(?=[A-ZÇĞİÖŞÜ0-9])", rest.strip(), maxsplit=2)
+    first = " ".join(sentences[:2]).strip()
+    out = (head.rstrip(".") + ": " + first) if head and first else (head or first)
+    return out[:600]
+
+
 #: How much of the operator documentation one prompt may carry. A local model has a fixed context and
 #: a knowledge pack has no size at all: a generated vendor dictionary or a long runbook dropped into
 #: the pack silently pushes the schema, the catalog and the examples out of the window, and the only
@@ -1770,10 +1811,14 @@ class ExistingCompiler:
             # sentence the model chose to produce. That is what keeps this a data tool: there is no
             # channel through which it can answer about itself, about the world, or about anything but
             # this database. Its text is kept for diagnosis only.
-            log.info("model produced no sql q=%r said=%r", q.question[:80], (text or "").strip()[:200])
+            log.info("model produced no sql q=%r said=%r", q.question[:80], (text or "").strip()[:1200])
+            # A NO_SQL whose reason rests on a documented caveat ("borç kapama verisi yok") is shown
+            # in the operator's own words — the caveat sentence from the knowledge pack — never the
+            # model's. Without a matching caveat the resolver's account stands, as before.
+            why = caveat_for(no_sql_reason(text), self.rules_text)
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
-                                 explain=[self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
-                                 certified=False, model_text=(text or "").strip()[:500])
+                                 explain=[why or self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
+                                 certified=False, model_text=(text or "").strip()[:1200])
         certified = (not q.unresolved and not q.model_qualifiers
                      and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots))
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)

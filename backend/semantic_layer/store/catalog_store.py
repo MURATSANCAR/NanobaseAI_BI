@@ -1092,6 +1092,31 @@ class CatalogStore:
             return {}
         return out
 
+    def entity_terms(self, tenant_id: str, datasource_id: str) -> dict[str, set[str]]:
+        """entity → the certified words the business calls it by ("müşteri" → CLCARD).
+
+        Logo's table descriptions are Logo's ("Cari hesap kartları"); what people say is in the
+        vocabulary. The critic needs the latter to tell a count *of* customers from a count *per*
+        customer, so it is handed this rather than reading descriptions alone."""
+        out: dict[str, set[str]] = {}
+        try:
+            for term, pairs in self.certified_index(tenant_id, datasource_id).items():
+                for _, maps in pairs:
+                    for m in maps:
+                        if m.entity and not m.column and not m.formula:
+                            out.setdefault(m.entity.upper(), set()).add(term)
+            # The everyday names the table itself goes by ("potansiyel müşteri" → ACCOUNTBASE):
+            # approved, table-level vocabulary rows.
+            t = S.sl_vocabulary
+            for r in self._rows(sa.select(t.c.entity, t.c.term).where(
+                    t.c.tenant_id == tenant_id, t.c.datasource_id == datasource_id,
+                    t.c.status == "APPROVED", t.c.role == "ENTITY")):
+                if r["entity"] and r["term"]:
+                    out.setdefault(str(r["entity"]).upper(), set()).add(str(r["term"]))
+        except Exception:  # noqa: BLE001 — a catalog that cannot be read must not stop the runtime
+            return out
+        return out
+
     def certified_index(self, tenant_id: str, datasource_id: str) -> dict[str, list[tuple[Concept, list[Mapping]]]]:
         """normalized term (and synonyms) → [(concept, mappings)] for CERTIFIED concepts only.
         Cached per catalog version; the resolver never sees CANDIDATE rows."""
