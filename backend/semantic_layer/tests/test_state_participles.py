@@ -311,3 +311,15 @@ def test_a_question_word_that_is_a_column_name_elsewhere_is_not_swallowed(catalo
                           columns=[ColumnProfile(name="TAHSILAT", data_type="int")])
     sq = resolve(catalog, profiles + [stray], "ortalama tahsilat vademiz kaç gün")
     assert "tahsilat" in sq.unresolved, sq.to_dict()
+
+
+def test_an_unresolved_word_needs_a_reading_line_too():
+    from semantic_layer.models import SemanticQuery
+    from semantic_layer.runtime.audit import unmet_obligations
+
+    sq = SemanticQuery(question="alacaklarımızı yaşlandır", tenant_id=TENANT, datasource_id=DS)
+    sq.unresolved = ["alacaklarimizi"]
+    silent = unmet_obligations(sq, "SELECT SUM(NETTOTAL) FROM INVOICE")
+    assert any("alacaklarimizi" in u and "yorumland" in u for u in silent), silent
+    said = unmet_obligations(sq, "-- yorum: 'alacak' → kesilen satış faturalarının tutarı\nSELECT SUM(NETTOTAL) FROM INVOICE")
+    assert not any("yorumland" in u for u in said), said
