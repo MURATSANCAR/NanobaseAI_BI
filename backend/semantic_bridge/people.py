@@ -1,11 +1,15 @@
 """Kişi rehberi ve profil.
 
-Rehberin kaynağı CRM'deki kullanıcı tablosudur (`SystemUserBase`); elle yazılmış kişi yoktur. Yalnız gerçek,
-etkin kullanıcılar gelir: devre dışı olanlar, etkileşimsiz/uygulama hesapları ve AD hesabı olmayanlar elenir.
+Rehberin kaynağı CRM'deki kullanıcı tablosudur (`SystemUserBase`); elle yazılmış kişi yoktur.
 
-CRM'de "etkin" hesapların bir kısmı kişi değildir (pazaryeri, kasa, ortak posta hesapları). Dizin (AD) ayarı
-varsa CRM listesi AD'deki etkin kişi hesaplarıyla kesiştirilir ve AD'deki unvan/birim/telefon/ofis alanları
-boş CRM alanlarını doldurur. AD'ye ulaşılamazsa liste yalnız CRM'den gelir ve yanıt bunu söyler.
+CRM'de "etkin" görünen hesapların bir kısmı artık çalışmıyor (AD'de devre dışı) ya da kişi değil (pazaryeri,
+kasa, ortak hesaplar — AD'de etkin ama etki alanına hiç giriş yapmamış ya da yıllardır yapmamış). Bu yüzden dizin
+(AD) ayarı varsa CRM listesi AD ile kesiştirilir: CRM satırı AD nesnesine `ActiveDirectoryGuid` = `objectGUID`
+ile bağlanır (hesap adı değişse de tutar), bulunamazsa hesap adıyla. Kalan kişi AD'de etkin olmalı ve son
+`max_idle_days` gün içinde giriş yapmış olmalı (0 = süre bakılmaz). Kişinin rehberdeki hesap adı AD'deki
+`sAMAccountName`'dir; portal oturumu da onu kullanır. AD'deki unvan/bölüm/telefon/ofis alanları boş CRM
+alanlarını doldurur; bölüm boşsa kişinin bulunduğu OU birim sayılır. AD'ye ulaşılamazsa liste yalnız CRM'den
+gelir ve yanıt bunu söyler.
 
 Kişi kendi profilinde eksik alanları (dahili, kat, masa, fotoğraf…) doldurabilir; bunlar sunucuda
 `semantic_people_profiles` tablosunda AD hesabına bağlı durur. Öncelik: CRM > AD > kişinin yazdığı.
@@ -21,7 +25,8 @@ import logging
 import re
 import threading
 import time
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 
 import sqlalchemy as sa
@@ -117,15 +122,17 @@ def _table(schema: str) -> str:
             raise ProfileError(f"CRM şeması «{schema}» geçerli bir ad değil.")
     if not sch:
         raise ProfileError("CRM şeması girilmemiş; rehber okunamıyor.")
-    return (f"[{db}]." if db else "") + f"[{sch}].[SystemUserBase]"
+    # Köşeli parantezsiz: köprü CRM sorgusunu `Timas_MSCRM.dbo.` önekinden tanıyıp CRM bağlantısına yollar.
+    return (f"{db}." if db else "") + f"{sch}.SystemUserBase"
 
 
 def directory_sql(schema: str) -> str:
     cols = sorted({c for cs in CRM_FIELDS.values() for c in cs})
-    # Gerçek, etkin kişi: devre dışı değil, etkileşimli erişim (AccessMode 0 = okuma-yazma, 1 = yönetim),
+    # CRM tarafında etkin: devre dışı değil, etkileşimli erişim (AccessMode 0 = okuma-yazma, 1 = yönetim),
     # AD hesabı var. Uygulama/eşitleme/destek hesapları (AccessMode 3, 4, 5…) rehbere girmez.
     return (
-        "SELECT SystemUserId, FullName, DomainName, " + ", ".join(cols)
+        "SELECT SystemUserId, FullName, DomainName, CAST(ActiveDirectoryGuid AS nvarchar(40)) AS AdGuid, "
+        + ", ".join(cols)
         + f" FROM {_table(schema)}"
         + " WHERE IsDisabled = 0 AND AccessMode IN (0, 1)"
         + " AND DomainName IS NOT NULL AND DomainName <> ''"
@@ -142,6 +149,7 @@ def _crm_person(row: dict[str, Any]) -> dict[str, Any]:
         "id": _clean(row.get("SystemUserId")),
         "username": account(_clean(row.get("DomainName"))),
         "name": _clean(row.get("FullName")),
+        "guid": _clean(row.get("AdGuid")).strip("{}").lower(),
     }
     for field, cols in CRM_FIELDS.items():
         out[field] = next((_clean(row.get(c)) for c in cols if _clean(row.get(c))), "")
@@ -165,8 +173,44 @@ def _first(v: Any) -> str:
     return _clean(v)
 
 
-def ad_people(cfg: dict[str, str]) -> Optional[dict[str, dict[str, str]]]:
-    """AD'deki etkin kişi hesapları: hesap adı → rehber alanları. Ayar eksikse None."""
+def _guid(v: Any) -> str:
+    v = _one(v)
+    if isinstance(v, (bytes, bytearray)) and len(v) == 16:
+        return str(uuid.UUID(bytes_le=bytes(v)))
+    return _clean(v).strip("{}").lower()
+
+
+def _one(v: Any) -> Any:
+    if isinstance(v, (list, tuple)):
+        return next((x for x in v if x not in (None, "", b"")), None)
+    return v
+
+
+def _logon(v: Any) -> Optional[datetime]:
+    """lastLogonTimestamp: ldap3 datetime ya da 1601'den beri 100 ns (FILETIME). 0/boş = hiç giriş yok."""
+    v = _one(v)
+    if isinstance(v, datetime):
+        return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return None
+    if n <= 0:
+        return None
+    return datetime(1601, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=n // 10)
+
+
+def _ou(dn: Any) -> str:
+    """`CN=Ali,OU=Cocuk Editorya,DC=timas,DC=local` → `Cocuk Editorya` (kişiye en yakın OU)."""
+    for part in re.split(r"(?<!\\),", _clean(_one(dn))):
+        k, _, v = part.partition("=")
+        if k.strip().upper() == "OU" and v.strip():
+            return v.strip().replace("_", " ")
+    return ""
+
+
+def ad_people(cfg: dict[str, str]) -> Optional[dict[str, dict[str, Any]]]:
+    """AD'deki etkin kişi hesapları. Anahtar hem `guid:<objectGUID>` hem hesap adıdır. Ayar eksikse None."""
     need = ("AD_HOST", "AD_NETBIOS", "AD_BASE_DN", "AD_BIND_USER", "AD_BIND_PASSWORD")
     if not all(cfg.get(k) for k in need):
         return None
@@ -175,7 +219,8 @@ def ad_people(cfg: dict[str, str]) -> Optional[dict[str, dict[str, str]]]:
     from semantic_bridge.admin import _ensure_md4
 
     _ensure_md4()
-    attrs = sorted({"sAMAccountName"} | {a for v in AD_FIELDS.values() for a in v})
+    attrs = sorted({"sAMAccountName", "objectGUID", "distinguishedName", "lastLogonTimestamp"}
+                   | {a for v in AD_FIELDS.values() for a in v})
     server = Server(cfg["AD_HOST"], port=int(cfg.get("AD_PORT") or 389), get_info=NONE, connect_timeout=5)
     conn = Connection(server, user=f'{cfg["AD_NETBIOS"]}\\{cfg["AD_BIND_USER"]}', password=cfg["AD_BIND_PASSWORD"],
                       authentication=NTLM, receive_timeout=30)
@@ -184,17 +229,27 @@ def ad_people(cfg: dict[str, str]) -> Optional[dict[str, dict[str, str]]]:
     try:
         found = conn.extend.standard.paged_search(cfg["AD_BASE_DN"], AD_ENABLED_PERSONS, SUBTREE,
                                                   attributes=attrs, paged_size=500, generator=True)
-        out: dict[str, dict[str, str]] = {}
-        for e in found:
-            if e.get("type") != "searchResEntry":
-                continue
-            a = e.get("attributes") or {}
-            acc = _first(a.get("sAMAccountName")).lower()
-            if acc:
-                out[acc] = {f: next((_first(a.get(x)) for x in xs if _first(a.get(x))), "") for f, xs in AD_FIELDS.items()}
-        return out
+        return index_ad(e.get("attributes") or {} for e in found if e.get("type") == "searchResEntry")
     finally:
         conn.unbind()
+
+
+def index_ad(entries: Any) -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for a in entries:
+        acc = _first(a.get("sAMAccountName")).lower()
+        if not acc:
+            continue
+        rec: dict[str, Any] = {f: next((_first(a.get(x)) for x in xs if _first(a.get(x))), "") for f, xs in AD_FIELDS.items()}
+        if not rec["unit"]:
+            rec["unit"] = _ou(a.get("distinguishedName"))
+        rec["account"] = acc
+        rec["lastLogon"] = _logon(a.get("lastLogonTimestamp"))
+        out[acc] = rec
+        g = _guid(a.get("objectGUID"))
+        if g:
+            out["guid:" + g] = rec
+    return out
 
 
 class Directory:
@@ -209,33 +264,45 @@ class Directory:
         self.ad_checked = False
 
     def rows(self, schema: str, run: Callable[[str], dict[str, Any]], *, fresh: bool = False,
-             ad: Optional[Callable[[], Optional[dict[str, dict[str, str]]]]] = None) -> tuple[list[dict[str, Any]], float]:
-        sql = directory_sql(schema)
+             ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]] = None,
+             max_idle_days: int = 0) -> tuple[list[dict[str, Any]], float]:
+        sql = directory_sql(schema) + f"\n-- idle:{max_idle_days}"
         with self._lock:
             if not fresh and self._key == sql and time.time() - self._at < self.ttl:
                 return self._rows, self._at
-        res = run(sql)
+        res = run(directory_sql(schema))
         rows = [_crm_person(r) for r in res.get("records") or []]
         rows = [r for r in rows if r["username"] and r["name"]]
-        directory: Optional[dict[str, dict[str, str]]] = None
+        directory: Optional[dict[str, dict[str, Any]]] = None
         if ad is not None:
             try:
                 directory = ad()
             except Exception as e:  # noqa: BLE001
                 log.warning("people: AD okunamadı, rehber yalnız CRM'den: %s", e)
         if directory is not None:
-            rows = [_with_ad(r, directory[r["username"]]) for r in rows if r["username"] in directory]
+            since = datetime.now(timezone.utc) - timedelta(days=max_idle_days) if max_idle_days > 0 else None
+            kept = []
+            for r in rows:
+                rec = directory.get("guid:" + r["guid"]) if r["guid"] else None
+                rec = rec or directory.get(r["username"])
+                if rec is None:
+                    continue                      # AD'de yok ya da devre dışı: artık çalışmıyor
+                if since is not None and (rec["lastLogon"] is None or rec["lastLogon"] < since):
+                    continue                      # hiç/uzun süredir giriş yok: ortak ya da kullanılmayan hesap
+                kept.append(_with_ad(r, rec))
+            rows = kept
         with self._lock:
             self._rows, self._at, self._key = rows, time.time(), sql
             self.ad_checked = directory is not None
         return rows, self._at
 
 
-def _with_ad(person: dict[str, Any], ad: dict[str, str]) -> dict[str, Any]:
+def _with_ad(person: dict[str, Any], ad: dict[str, Any]) -> dict[str, Any]:
     out = dict(person)
-    for k, v in ad.items():
-        if not out.get(k) and v:
-            out[k] = v
+    out["username"] = ad["account"]           # portal oturumu AD hesap adını taşır
+    for k in AD_FIELDS:
+        if not out.get(k) and ad.get(k):
+            out[k] = ad[k]
     return out
 
 

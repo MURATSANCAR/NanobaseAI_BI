@@ -116,6 +116,10 @@ SPEC: list[dict[str, Any]] = [
     # veritabanı adını taşır (Timas_MSCRM.dbo). Katalog da bu adla tutar.
     {"key": "CRM_SCHEMA", "group": "crm", "label": "CRM şeması", "type": "text", "default": "Timas_MSCRM.dbo",
      "help": "veritabanı.şema biçiminde, örn. Timas_MSCRM.dbo. Boşsa CRM okunmaz"},
+    # Kişi rehberi
+    {"key": "PEOPLE_MAX_IDLE_DAYS", "group": "people", "label": "Son giriş süresi (gün)", "type": "int", "default": "365",
+     "help": "Rehbere yalnız bu kadar gün içinde etki alanına giriş yapmış kişiler girer; ortak ve kullanılmayan "
+             "hesaplar böyle ayrılır. 0: süreye bakılmaz"},
     # Yapay zekâ modeli
     {"key": "OPENAI_API_BASE", "group": "llm", "label": "Model adresi", "type": "text",
      "default": "https://integrate.api.nvidia.com/v1",
@@ -140,6 +144,9 @@ GROUPS = [
     {"id": "database", "label": "Logo veritabanı (SQL Server)",
      "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
     {"id": "crm", "label": "CRM (Dynamics)", "help": "Aynı sunucudaki CRM veritabanı; Logo bağlantısıyla okunur."},
+    {"id": "people", "label": "Kişi rehberi",
+     "help": "Rehber CRM'deki etkin kullanıcılardan gelir, Active Directory ile kesiştirilir: AD'de devre dışı olanlar ve "
+             "süre içinde giriş yapmamış hesaplar girmez."},
     {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
     {"id": "access", "label": "Yetki", "help": "Yönetim ekranına kimlerin gireceği."},

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import base64
+import uuid
+from datetime import datetime, timezone
 
 import pytest
 
@@ -47,7 +49,7 @@ def test_directory_reads_only_real_active_users_and_caches():
     d.rows("Timas_MSCRM.dbo", run)
     assert len(calls) == 1
     sql = calls[0]
-    assert "[Timas_MSCRM].[dbo].[SystemUserBase]" in sql
+    assert " FROM Timas_MSCRM.dbo.SystemUserBase " in sql and "ActiveDirectoryGuid" in sql
     assert "IsDisabled = 0" in sql and "AccessMode IN (0, 1)" in sql and "DomainName IS NOT NULL" in sql
     assert [(r["username"], r["title"], r["unit"]) for r in rows] == [
         ("ahmety", "Sanat Yönetmeni", "Tasarım"), ("busraa", "", "")]
@@ -109,18 +111,53 @@ def test_photo_roundtrip_and_rejects_non_images(engine):
     assert P.me(engine, T, "ahmety", "Ahmet", [])["fields"]["extension"] == "1134"
 
 
-def test_ad_keeps_only_enabled_people_and_fills_empty_fields():
-    rows = ROWS + [{"SystemUserId": "c3", "FullName": "Amazon Amazon", "DomainName": "TIMAS\\amazon"}]
+RECENT = int((datetime.now(timezone.utc) - datetime(1601, 1, 1, tzinfo=timezone.utc)).total_seconds() * 10**7)
+OLD = RECENT - 400 * 86400 * 10**7
+G_AHMET = uuid.UUID("681de71b-f659-4a32-a61b-b4721270d41c")
+
+
+def _ad_entries():
+    # ldap3 ham biçimi: değerler liste, GUID küçük uçlu bayt.
+    return [
+        {"sAMAccountName": ["ahmet.yildiz"], "objectGUID": [G_AHMET.bytes_le], "lastLogonTimestamp": [str(RECENT)],
+         "distinguishedName": ["CN=Ahmet,OU=Cocuk_Editorya,DC=timas,DC=local"], "title": ["AD unvanı"],
+         "ipPhone": ["1134"], "physicalDeliveryOfficeName": ["3. Kat"]},
+        {"sAMAccountName": ["busraa"], "objectGUID": [], "lastLogonTimestamp": [str(RECENT)],
+         "distinguishedName": ["CN=Büşra,OU=Satis,DC=timas,DC=local"], "department": ["Yayın"]},
+        {"sAMAccountName": ["amazon"], "lastLogonTimestamp": [], "distinguishedName": ["CN=Amazon,OU=Satis,DC=timas,DC=local"]},
+        {"sAMAccountName": ["kasa01"], "lastLogonTimestamp": [str(OLD)], "distinguishedName": ["CN=kasa,OU=depo,DC=timas,DC=local"]},
+    ]
+
+
+def test_ad_match_by_guid_then_account_and_drop_idle_accounts():
+    rows = [dict(ROWS[0], AdGuid="{" + str(G_AHMET).upper() + "}"),   # hesap adı AD'de değişmiş, GUID tutar
+            dict(ROWS[1], AdGuid=None),
+            {"SystemUserId": "c3", "FullName": "Amazon Amazon", "DomainName": "TIMAS\\amazon"},
+            {"SystemUserId": "d4", "FullName": "kasa 01", "DomainName": "TIMAS\\kasa01"},
+            {"SystemUserId": "e5", "FullName": "Ayrılan Kişi", "DomainName": "TIMAS\\ayrilan"}]
+    idx = P.index_ad(_ad_entries())
     d, run, _ = _dir(rows)
-    ad = {"ahmety": {"title": "AD unvanı", "unit": "", "email": "", "mobile": "", "phone": "",
-                     "extension": "1134", "floor": "3. Kat"},
-          "busraa": {k: "" for k in P.AD_FIELDS}}
-    out, _ = d.rows("Timas_MSCRM.dbo", run, ad=lambda: ad)
+    out, _ = d.rows("Timas_MSCRM.dbo", run, ad=lambda: idx, max_idle_days=365)
     assert d.ad_checked
     by = {r["username"]: r for r in out}
-    assert set(by) == {"ahmety", "busraa"}             # AD'de kişi olarak yok: rehbere girmez
-    assert by["ahmety"]["title"] == "Sanat Yönetmeni"  # CRM dolu: AD ezmez
-    assert (by["ahmety"]["extension"], by["ahmety"]["floor"]) == ("1134", "3. Kat")
+    assert set(by) == {"ahmet.yildiz", "busraa"}         # hiç giriş yok, 400 gün önce, AD'de yok: girmez
+    assert by["ahmet.yildiz"]["title"] == "Sanat Yönetmeni"  # CRM dolu: AD ezmez
+    assert (by["ahmet.yildiz"]["extension"], by["ahmet.yildiz"]["floor"]) == ("1134", "3. Kat")
+    assert by["busraa"]["unit"] == "Yayın"
+    assert P.index_ad(_ad_entries())["amazon"]["unit"] == "Satis"
+
+    # Süreye bakılmazsa ortak hesaplar da gelir (AD'de etkin oldukları için).
+    d2, run2, _ = _dir(rows)
+    out, _ = d2.rows("Timas_MSCRM.dbo", run2, ad=lambda: idx, max_idle_days=0)
+    assert {r["username"] for r in out} == {"ahmet.yildiz", "busraa", "amazon", "kasa01"}
+    assert {r["username"]: r for r in out}["ahmet.yildiz"]["unit"] == "Tasarım"
+
+
+def test_ou_and_logon_parsing():
+    assert P._ou("CN=A\\, B,OU=Cocuk_Editorya,OU=Timas,DC=timas,DC=local") == "Cocuk Editorya"
+    assert P._ou("CN=yok,CN=Users,DC=timas,DC=local") == ""
+    assert P._logon(["0"]) is None and P._logon([]) is None
+    assert P._logon([str(RECENT)]).year == datetime.now(timezone.utc).year
 
 
 def test_ad_failure_falls_back_to_crm_only():

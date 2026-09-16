@@ -2852,7 +2852,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             rows, at = people_dir.rows(
                 admin_mod.conf("CRM_SCHEMA"), run, fresh=fresh,
-                ad=lambda: people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")}))
+                ad=lambda: people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")}),
+                max_idle_days=_int_conf("PEOPLE_MAX_IDLE_DAYS", 365))
         except people_mod.ProfileError as e:
             raise HTTPException(status_code=503, detail={"code": "CRM_NOT_CONFIGURED", "message": str(e)}) from e
         except Exception as e:  # noqa: BLE001
@@ -2860,6 +2861,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(status_code=503, detail={"code": "CRM_UNAVAILABLE",
                                                          "message": "CRM'e şu an ulaşılamıyor; rehber okunamadı."}) from e
         return rows, at, truncated
+
+    def _int_conf(key: str, default: int) -> int:
+        try:
+            return max(0, int(admin_mod.conf(key) or default))
+        except ValueError:
+            return default
 
     def _profile_error(e: "people_mod.ProfileError") -> HTTPException:
         return HTTPException(status_code=e.status, detail={"code": "INVALID_PROFILE", "message": str(e)})
