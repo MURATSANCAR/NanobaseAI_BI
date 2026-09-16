@@ -36,11 +36,11 @@ services:
     command: [--model, /models/Qwen3.8-27B-Q4_K_M.gguf, --mmproj, /models/mmproj-Qwen3.8-27B-Q8_0.gguf, --alias, editor-qwen38, --host, 0.0.0.0, --port, '8080', --ctx-size, '${EDITOR_LLM_CONTEXT:-8192}', --threads, '${EDITOR_LLM_THREADS:-4}', --threads-batch, '${EDITOR_LLM_THREADS:-4}', --parallel, '${EDITOR_LLM_SLOTS:-1}', --batch-size, '256', --ubatch-size, '128', --image-max-tokens, '${EDITOR_IMAGE_MAX_TOKENS:-256}', --jinja, --reasoning, 'off', --metrics, --no-webui]
   embedding:
     <<: *model
-    cpus: 1
+    cpus: ${EDITOR_EMBEDDING_CPUS:-1}
     mem_limit: 2g
-    command: [--model, /models/bge-m3-Q8_0.gguf, --alias, editor-embedding, --host, 0.0.0.0, --port, '8080', --embedding, --pooling, cls, --ctx-size, '2048', --threads, '1', --threads-batch, '1', --parallel, '1', --batch-size, '2048', --ubatch-size, '2048', --no-webui]
+    command: [--model, /models/bge-m3-Q8_0.gguf, --alias, editor-embedding, --host, 0.0.0.0, --port, '8080', --embedding, --pooling, cls, --ctx-size, '2048', --threads, '${EDITOR_EMBEDDING_THREADS:-1}', --threads-batch, '${EDITOR_EMBEDDING_THREADS:-1}', --parallel, '1', --batch-size, '2048', --ubatch-size, '2048', --no-webui]
   reranker:
     <<: *model
-    cpus: 1
+    cpus: ${EDITOR_RERANKER_CPUS:-1}
     mem_limit: 2g
-    command: [--model, /models/bge-reranker-v2-m3-Q8_0.gguf, --alias, editor-reranker, --host, 0.0.0.0, --port, '8080', --reranking, --ctx-size, '2048', --threads, '1', --threads-batch, '1', --parallel, '1', --batch-size, '2048', --ubatch-size, '2048', --no-webui]
+    command: [--model, /models/bge-reranker-v2-m3-Q8_0.gguf, --alias, editor-reranker, --host, 0.0.0.0, --port, '8080', --reranking, --ctx-size, '2048', --threads, '${EDITOR_RERANKER_THREADS:-1}', --threads-batch, '${EDITOR_RERANKER_THREADS:-1}', --parallel, '1', --batch-size, '2048', --ubatch-size, '2048', --no-webui]

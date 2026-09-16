@@ -34,7 +34,8 @@ upload=call('POST','/v1/editions/'+edition+'/uploads',upload_body,'upload',expec
 same=call('POST','/v1/editions/'+edition+'/uploads',upload_body,'upload',expected=201)
 assert upload==same; checks.append('upload_idempotency')
 if not (root/'evidence/real-upload-completed.json').exists():
-    call('POST','/v1/uploads/'+upload['id']+'/complete',{'confirm':True},'complete',expected=409)
+    rejected=call('POST','/v1/uploads/'+upload['id']+'/complete',{'confirm':True},'complete',expected=409)
+    assert rejected.get('detail')=='INCOMPLETE_UPLOAD', rejected
     checks.append('incomplete_upload_rejected')
 call('PUT',upload['upload_url'],original)
 complete=call('POST','/v1/uploads/'+upload['id']+'/complete',{'confirm':True},'complete',expected=201)
@@ -51,8 +52,10 @@ first=records['items'][0]
 call('GET','/v1/evidence/'+first['id'],authenticated=False,expected=401)
 call('GET','/v1/visuals/'+first['id'],authenticated=False,expected=401)
 checks.append('real_evidence_and_visual_unauthenticated_401')
-call('POST','/v1/generations/'+gen+'/activate',{'purpose':'validation'},'activate',expected=409)
-checks.append('incomplete_generation_activation_rejected')
+rejected=call('POST','/v1/generations/'+gen+'/activate',{'purpose':'validation'},'activate-'+gen,expected=409)
+detail=rejected.get('detail')
+assert detail=='GENERATION_NOT_VALIDATED' or isinstance(detail,dict) and detail.get('code')=='EDITOR_REVIEW_REQUIRED', rejected
+checks.append('unvalidated_or_unreviewed_generation_activation_rejected')
 state=call('GET','/v1/jobs/'+job)
 report={'environment':'nanobase-direct remote Linux Docker','api':base,'database':'editor PostgreSQL',
         'source_sha256':complete['sha256'],'generation_id':gen,'checks':checks,'job_status':state['status'],

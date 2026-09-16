@@ -24,7 +24,7 @@ tamamlanıp anlamsal kabulden geçtiği anlamına gelmez.**
 Bağımsız sayfa/sahne/destek grupları `EDITOR_MODEL_CONCURRENCY` ile 1–4
 eşzamanlı çağrıya sınırlandırılır. Varsayılan müşteri profili tek çağrıdır.
 Sunucuda ölçülen boş kapasite ve kullanıcının CPU artırma izniyle mevcut kitap
-koşusu 32 CPU/32 thread, 4 model slotu ve toplam 32768 bağlam token'ı kullanır
+koşusu 48 CPU/48 thread, 4 model slotu ve toplam 32768 bağlam token'ı kullanır
 (slot başına 8192). Model PID sınırı 512'dir: 128 sınırında 32 thread'li gerçek
 başlatma `libgomp: Thread creation failed` hatası verdi. Her grubun sonucu aynı
 lease/fencing altında değişmez kayda alınır; tamamlanan kayıtlar yeniden
@@ -33,13 +33,26 @@ işlenmez. Ortak host sağlık gözlemi, tam hizmet seviyesi kabulü değildir.
 Kitaba özel anlamsal ölçütler ve açık kontroller:
 [referans kitap kabul kayıtları](../../docs/editor/reference-book-acceptance.md).
 
-Bu koşu tek kurulum operatörü içindir; çok kullanıcılı kitap/rol yetkisi, düzeltme
-bağımlılıklarının yeniden hesaplanması ve React ekranları tamamlanmadı.
+Bu koşu tek kurulum operatörü içindir; çok kullanıcılı kitap/rol yetkisi ve düzeltme
+bağımlılıklarının yeniden hesaplanması tamamlanmadı. `/editor/` altında gerçek
+API'ye bağlı salt okunur React inceleme ekranı vardır; kaynak, ham model adayları
+ve mevcut analiz/soru kayıtlarını gösterir. Mobil kontrol ve derleme ayrıntıları
+[frontend/README.md](frontend/README.md) içindedir. Editör karar/düzeltme arayüzü
+ve PDF.js bölge incelemesi bu ekranın tamamlanmış özellikleri değildir.
 Yükleme tamamlama, mevcut ağsız parser ile doğrulanmış hash'i kabul eder;
 yeni, henüz ayrıştırılmamış PDF `SOURCE_PARSE_REQUIRED` döndürür.
 Kaynakların modelle okunması insan editör kabulü değildir. İncelenmeyen nesil
 etkinleştirilmez; `editor_preview` cevapları açıkça taslaktır, `pilot_ready=false`.
 İlk offline müşteri paketi bu yeni analiz kodundan önceki altyapı sürümüdür.
+
+Güncel kabul nesli `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` yalnız yerel model
+çıktılarıyla çalışır. Codex kaynak açıklamaları veya önceki manuel ret kararları
+model girdisine verilmez; karşılaştırmalar ayrı raporda tutulur. İz:
+`evidence/reference-follow-unassisted.log`. Embedding ve reranker CPU/thread
+sınırları ayrı ortam değişkenleriyle ayarlanır; müşteri varsayılanı 1, mevcut
+ölçüm sunucusunda her biri 4'tür. Soru koşusunda dört geçici işçi kullanılıp
+13 soru terminal duruma gelince bir işçiye dönülür; bu tam öncelikli kuyruk
+veya çok kullanıcılı kapasite kabulü değildir.
 
 ## Ön yüz olmadan gerçek kitap koşusu
 

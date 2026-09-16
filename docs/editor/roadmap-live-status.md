@@ -12,15 +12,17 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 
 Yeni müdahalesiz nesil: `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b`; iş: `99b42a5b-7eaf-40b2-b2e3-980046965b0f`. Sunucu takibi: `evidence/reference-follow-unassisted.log`. 48 CPU/48 thread, dört model slotu. Sonuç ve kabul bekleniyor.
 
+Sürüm denetimi: önceki 48 görselin 10'u `book-e2e-v1`, 38'i `visual-observation-v2` istemiyle üretilmiş. Yeni koşu ilk 10'u güncel istemle yeniden üretir; yalnız sürümü eşleşen 38 çıktı yeniden kullanılabilir. 48 görselin tamamı yeniden kullanıldı denmez.
+
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
 | 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Diğer iki kitap ve ayrılmış kabul kitabı yok |
 | 2 Doğrulama evresi | Sunucu envanteri, kaynak hashleri, gerçek API/DB | Tam uçtan uca süre, görev başarısı, editör emeği ve kalan efor ölçümü açık |
-| 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel LLM/embedding/reranker | Model görev uygunluğu kabul edilmedi; React/PDF.js ekranları yok |
+| 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; PDF.js/bbox incelemesi eksik |
 | 4 Uçtan uca | Kaynak ve 48 görsel mevcut; devam edilebilir iş | Sahne → sentez → indeks → cevap tam koşu sonucu bekleniyor |
 | 5 Dosya kabulü | Gerçek 19.806.912 bayt PDF, aynı hash, yarım yükleme reddi, idempotency | Tüm hata profilleri ve otomatik yeni PDF ayrıştırma akışı eksik |
 | 6 OCR/görsel | 48/48 muhasebe, 2400px OCR, metin katmanı ve ham adaylar korunuyor | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
-| 7 Görsel bağlam | Kaynak/görsel API ve sayfa renderları | Sahne eşleme kabulü, görsel varlık ayrıntıları ve kaynak ekranı eksik |
+| 7 Görsel bağlam | Kaynak/görsel API, 48 hash eşleşmesi ve gerçek sayfa/model adayını gösteren mobil ekran | Sahne eşleme kabulü, bölge/geçici kimlik ve görsel bağı düzenleme eksik |
 | 8 Veri modeli | Sürümlü kaynak/generation/record/job/review/outbox | Planın ayrıntılı varlık sözleşmesine karşı tam eşleme kabulü açık |
 | 9 İddia/zaman/bakış | Olay modu, fail, nesne, konuşmacı, bakış ve göreli zaman alanları | Alanların gerçek kitapta anlamsal doğruluğu bekleniyor |
 | 10 Analiz | Karakter/olay ve sınırlı edebî sentez kodu | Gerçek çıktı, alternatif yorum ve editör rubriği kabulü açık |
@@ -33,11 +35,20 @@ Yeni müdahalesiz nesil: `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b`; iş: `99b42a5b-
 | 17 B01–B18 | Ayrı senaryo takip tablosu mevcut | Çalışan uygulamanın sonuçlarıyla tek tek kapatılacak; B18 kaynağı yok |
 | 18 P0–P7 | Bağımlılık ve açık paketler bu tabloda görünür | Paketlerin hiçbiri yalnız kod bulunduğu için tamamlanmış sayılmaz |
 | 19 API | Eser/baskı/yükleme/analiz/job/kaynak/görsel/inceleme/soru uçları | Bütün API sözleşmesi, request/run metadata ve genel correction kabulü açık |
-| 20 İşletim/yetki | Ayrı ağ, yerel modeller, sırlar, temel offline paket/restore | Kullanıcı-kitap-rol yetkisi, güncel sürüm offline uçtan uca/restore, saklama/silme politikası kabulü eksik |
+| 20 İşletim/yetki | Ayrı ağ, yerel modeller, sırlar, temel offline paket/restore; yeni analiz paketi hash/imaj import kontrolü | Kullanıcı-kitap-rol yetkisi, yeni web sürümü dahil offline uçtan uca/restore, saklama/silme politikası kabulü eksik |
 | 21 Pilot/üretim | `pilot_ready=false`, insan onayı verilmedi | Üretim kararı verilemez; kritik kaynak hataları ve açık teknik koşullar var |
 | 22 Kaynaklar | Analiz belgesinin teknik referansları | Referans belgeleri gerçek ürün kabulünün yerine geçmez |
 
 ## Kalite değerlendirmesi
+
+Gerçek React ekranı 320/390/768/1440 px sunucu Chrome tarayıcısıyla kontrol edildi:
+altı sekmede yatay taşma yok, kontroller en az 44px, kaynak sayfası geçişi ve
+çıkış doğrulandı. Kitap/analiz listesi bağımsız PostgreSQL ile eşleşti. İlk
+dağıtımda yanlış JavaScript MIME türü bulundu; nginx MIME yapılandırması ve
+dosya bind mount yenilemesi sonrası aynı tarayıcı koşusu geçti. Ekran salt
+okunurdur; kullanıcı/rol, yükleme ve editör karar akışları tamamlandı sayılmaz.
+
+Yeni müdahalesiz koşuda PDF 6 için model 155,116 saniyede çıktı verdi. Açık gözlü çizimi “uyuyan” diye niteledi ve “mavi gözlü” ayrıntısı ekledi. Özgün render ile karşılaştırma bu ifadeleri desteklemiyor. Bu bir görsel doğruluk başarısızlığıdır; kaynak metni veya model kaydı düzeltilmedi, yeni nesle review kararı verilmedi. Hatanın sahne/cevaplara etkisi henüz değerlendirilmedi. Bu tek örnek genel doğruluk yüzdesi değildir.
 
 Kaynak bütünlüğü ve izlenebilir işlem kayıtları olumlu. Modelin görsel okuması güvenilir kabul edilecek düzeyde gösterilemedi: yanlış konuşmacı, yazı, nesne ve ayrıntı örnekleri var. 48/48 işleme yalnız kapsama işaret eder. Yeni koşu, bu hataların sonraki analiz ve cevaplara taşınıp taşınmadığını gösterecek. Henüz bir başarı yüzdesi veya üretime hazırlık iddiası yoktur.
 

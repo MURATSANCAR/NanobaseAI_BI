@@ -128,6 +128,29 @@ def create_work(body:Work,idempotency_key:str=Header()):
     return mutate('/works',body,idempotency_key,create)
 
 
+@router.get('/works')
+def list_works(offset:int=0,limit:int=50):
+    if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
+    with connection() as db:
+        rows=db.execute('SELECT id,title FROM editor.works WHERE owner_id=%s ORDER BY title,id LIMIT %s OFFSET %s',
+                        (ACTOR,limit,offset)).fetchall()
+        total=db.execute('SELECT count(*) AS n FROM editor.works WHERE owner_id=%s',(ACTOR,)).fetchone()['n']
+    return {'items':rows,'total':total,'has_more':offset+len(rows)<total}
+
+
+@router.get('/works/{work}/analyses')
+def list_analyses(work:uuid.UUID,offset:int=0,limit:int=50):
+    if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
+    with connection() as db:
+        own_work(db,work)
+        rows=db.execute('''SELECT j.id,j.generation_id,j.status,j.created_at,e.label AS edition_label
+          FROM editor.jobs j JOIN editor.generations g ON g.id=j.generation_id
+          JOIN editor.content_versions cv ON cv.id=g.content_version_id JOIN editor.editions e ON e.id=cv.edition_id
+          WHERE e.work_id=%s AND j.task='analysis' ORDER BY j.created_at DESC,j.id DESC LIMIT %s OFFSET %s''',
+          (work,limit+1,offset)).fetchall()
+    return {'items':rows[:limit],'has_more':len(rows)>limit}
+
+
 @router.post('/editions',status_code=201)
 def create_edition(body:Edition,idempotency_key:str=Header()):
     def create(db):
@@ -343,6 +366,19 @@ def answer(job_id:uuid.UUID):
         scope(db,job['generation_id'])
         row=db.execute("SELECT data FROM editor.records WHERE generation_id=%s AND kind='answers' AND record_key=%s",(job['generation_id'],str(job_id))).fetchone()
         return {'job_id':str(job_id),'job_status':job['status'],'generation_id':str(job['generation_id']),'answer':row['data'] if row else None}
+
+
+@router.get('/question-jobs')
+def question_jobs(generation_id:uuid.UUID,offset:int=0,limit:int=50):
+    if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
+    with connection() as db:
+        scope(db,generation_id)
+        rows=db.execute('''SELECT j.id,j.status,j.payload->>'question' AS question,j.error_code,r.data AS answer
+          FROM editor.jobs j LEFT JOIN editor.records r ON r.generation_id=j.generation_id
+          AND r.kind='answers' AND r.record_key=j.id::text
+          WHERE j.generation_id=%s AND j.task='question' ORDER BY j.created_at,j.id LIMIT %s OFFSET %s''',
+          (generation_id,limit+1,offset)).fetchall()
+    return {'items':rows[:limit],'has_more':len(rows)>limit}
 
 
 class RetryRequest(AnalysisRequest):
