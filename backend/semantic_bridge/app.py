@@ -1427,14 +1427,37 @@ def _fragment(m: dict[str, Any], d: Dialect) -> str | None:
 
 
 def _require_admin(request: Any) -> None:
-    """Reading and asking sit behind the site's own authentication; changing the catalog needs a token.
-    Without this, anything that can reach the cockpit's API path could recertify the semantics."""
+    """Reading and asking sit behind the site's own authentication; changing the catalog needs proof.
+
+    Two callers, two proofs. A server or CLI job (nightly scan, deploy, certify) presents the shared
+    `x-semantic-admin` token. A person in the browser presents nothing extra — the browser carries no
+    admin key — so they are known from the login service's AD session cookie, and pass when that
+    account is one of the configured admins. Either proof is enough; without a token configured, the
+    loopback binding is the only control and both pass. Before this, the approve/reject/add buttons on
+    the Eş anlamlılar screen (all session-only) failed with 403 wherever the token was set."""
     token = os.environ.get("SEMANTIC_ADMIN_TOKEN", "")
     if not token:
         return                      # not configured: the loopback binding is the only control
     supplied = request.headers.get("x-semantic-admin", "") or request.query_params.get("admin_token", "")
-    if not secrets_compare(supplied, token):
-        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
+    if secrets_compare(supplied, token):
+        return                      # server/CLI: shared token
+    if _session_is_admin(request):
+        return                      # browser: AD-logged-in admin, identity from the session cookie
+    raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
+
+
+def _session_is_admin(request: Any) -> bool:
+    """True when the request carries a login-service session whose account is a configured admin.
+    Any failure (no cookie, login service down, not an admin) is a plain False — never an exception,
+    so a token caller is unaffected and a missing session falls through to the 403 above."""
+    from semantic_bridge import admin as admin_mod
+    from semantic_bridge import board as board_mod
+
+    try:
+        user = board_mod.user_of(request.headers.get("cookie", ""))
+    except Exception:  # noqa: BLE001
+        return False
+    return admin_mod.is_admin(user)
 
 
 def _require_caller(request: Any) -> None:
