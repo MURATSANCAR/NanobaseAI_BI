@@ -620,6 +620,22 @@ export type AdminOverview = {
   recent: AuditItem[];
 };
 
+/** Bağlantı denemesinin sonucu: ne denendi, ne zaman, ne kadar sürdü. */
+export type AdminCheck = {
+  id: string;
+  group: string | null;
+  label: string;
+  ok: boolean;
+  message: string;
+  ms: number;
+  at: string;
+};
+
+export type AdminSystem = {
+  items: Array<{ label: string; value: string }>;
+  checks: Array<{ id: string; group: string | null; label: string }>;
+};
+
 export type AdminReport = ReportDto & { owner: string };
 
 export type AdminCard = {
@@ -655,11 +671,20 @@ export const adminApi = {
   overview: () => send<AdminOverview>('GET', '/api/v1/admin/overview', undefined, 30_000),
   settings: () => send<AdminSettings>('GET', '/api/v1/admin/settings', undefined, 15_000),
   saveSettings: (values: Record<string, string>) =>
-    send<AdminSettings & { changed: string[] }>('PUT', '/api/v1/admin/settings', { values }, 30_000),
+    send<AdminSettings & { changed: string[]; applied: string[]; applyError: string | null }>(
+      'PUT',
+      '/api/v1/admin/settings',
+      { values },
+      60_000,
+    ),
   resetSetting: (key: string) => send<AdminSettings>('DELETE', `/api/v1/admin/settings/${encodeURIComponent(key)}`, undefined, 15_000),
   testEmail: (to: string) => send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/email/test', { to }, 60_000),
   testDirectory: (username: string) =>
     send<{ ok: boolean; message: string }>('POST', '/api/v1/admin/directory/test', { username }, 30_000),
+  /** Tek bağlantı denemesi: database · crm · llm · directory · email · store. */
+  test: (id: string) => send<AdminCheck>('POST', `/api/v1/admin/tests/${encodeURIComponent(id)}`, undefined, 120_000),
+  testAll: () => send<{ items: AdminCheck[]; ok: boolean; at: string }>('POST', '/api/v1/admin/tests', undefined, 180_000),
+  system: () => send<AdminSystem>('GET', '/api/v1/admin/system', undefined, 15_000),
   reports: () => send<{ items: AdminReport[] }>('GET', '/api/v1/admin/reports', undefined, 30_000),
   updateReport: (id: string, b: Partial<ReportInput>) =>
     send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),
