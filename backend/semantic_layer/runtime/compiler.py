@@ -737,6 +737,7 @@ Kurallar:
 - Yalnız SELECT üret; DML/DDL yok. Kullanıcı açıkça bir sayı ile sınır istemediyse dış sorguya TOP/LIMIT ekleme. Önizleme ve sayfalama uygulama tarafından yapılır; raporu SQL içinde 50 satıra kesme.
 - Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
+- Çıkarabiliyorsan ```sql bloğunun İLK satırları her terim için şu biçimde olmalı: -- yorum: '<terim>' → <hangi tablo/kolon, hangi hesap>. Bu satır yoksa cevap reddedilir. YORUMU SANA BIRAKILAN NİTELEYİCİLER için de aynı satır zorunludur.
 - SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - Bu blok "(yok)" ise dönem kapsam içindedir. Hangi dönemin veride bulunduğuna bu sistem karar verir
@@ -1692,7 +1693,13 @@ class ExistingCompiler:
                                "; kayıt olmayan referans değeri 0'dır; bu ilişkiyi doğrudan başka alanla değiştirme.")
         msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n\n".join(ctx)}]
         msgs.extend(thread[-6:])
-        msgs.append({"role": "user", "content": q.question})
+        tail = q.question
+        owed = list(q.unresolved) + [m["token"] for m in q.model_qualifiers]
+        if owed:
+            # Repeated at the end on purpose: the format rule at the top of a long prompt was skipped
+            # by the model four times out of five; the same sentence next to the question is kept.
+            tail += "\n\n(Cevabın ```sql bloğu şu satır(lar)la BAŞLAMALI: " + " ".join(f"-- yorum: '{w}' → <hesap>" for w in owed) + ")"
+        msgs.append({"role": "user", "content": tail})
         return msgs
 
     def _requested_row_limit(self, sql: Optional[str], q: SemanticQuery) -> Optional[str]:
