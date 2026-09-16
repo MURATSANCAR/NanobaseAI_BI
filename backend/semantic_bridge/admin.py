@@ -112,8 +112,8 @@ SPEC: list[dict[str, Any]] = [
      "help": "Sunucuda kayıtlı sürücü adı (odbcinst -q -d)", "file": "driver", "store": "db"},
     {"key": "DB_TDS_VERSION", "group": "database", "label": "TDS sürümü", "type": "text", "default": "7.4",
      "help": "FreeTDS için; SQL Server 2012+ ile 7.4", "file": "tds_version", "store": "db"},
-    # CRM: ayrı bir bağlantı değil — aynı sunucuda başka bir veritabanı, tabloları şemalarında
-    # veritabanı adını taşır (Timas_MSCRM.dbo). Katalog da bu adla tutar.
+    # CRM: artık ayrı bir sunucu (.28 prod). Tabloları şemalarında veritabanı adını taşır
+    # (Timas_MSCRM.dbo); katalog bu adla tutar, köprü _conn_for ile .28 connectorune yönlendirir.
     {"key": "CRM_SCHEMA", "group": "crm", "label": "CRM şeması", "type": "text", "default": "Timas_MSCRM.dbo",
      "help": "veritabanı.şema biçiminde, örn. Timas_MSCRM.dbo. Boşsa CRM okunmaz"},
     # Kişi rehberi
@@ -143,7 +143,7 @@ GROUPS = [
      "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
     {"id": "database", "label": "Logo veritabanı (SQL Server)",
      "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
-    {"id": "crm", "label": "CRM (Dynamics)", "help": "Aynı sunucudaki CRM veritabanı; Logo bağlantısıyla okunur."},
+    {"id": "crm", "label": "CRM (Dynamics)", "help": "CRM prod sunucusu 192.168.0.28 (CRMDATBASE); kendi bağlantısıyla okunur."},
     {"id": "people", "label": "Kişi rehberi",
      "help": "Rehber CRM'deki etkin kullanıcılardan gelir, Active Directory ile kesiştirilir: AD'de devre dışı olanlar ve "
              "süre içinde giriş yapmamış hesaplar girmez."},
@@ -577,13 +577,14 @@ def database_test() -> tuple[bool, str]:
 
 
 def crm_test() -> tuple[bool, str]:
-    """CRM ayrı bir bağlantı değil: aynı sunucuda başka bir veritabanı. Bu yüzden deneme,
-    Logo bağlantısının o veritabanını okuyup okuyamadığına bakar."""
+    """CRM artık ayrı bir sunucuda (.28 prod, CRMDATBASE). Deneme, CRM bağlantısının
+    (crm-mssql-connection.json) Timas_MSCRM veritabanını okuyup okuyamadığına bakar."""
     schema = conf("CRM_SCHEMA").strip()
     if not schema:
         return False, "CRM şeması girilmemiş."
-    if missing := _db_missing():
-        return False, "Önce Logo veritabanı ayarları eksiksiz olmalı: " + ", ".join(missing) + "."
+    _crm_file = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+    if not os.path.exists(_crm_file):
+        return False, "CRM bağlantı dosyası bulunamadı: " + _crm_file
     db, _, sch = schema.rpartition(".")
     if not db:
         db, sch = "", schema
@@ -593,9 +594,8 @@ def crm_test() -> tuple[bool, str]:
     t0 = time.monotonic()
     conn = None
     try:
-        conn, ds = _test_connector()
-        if ds not in ("mssql", "sqlserver"):
-            return False, "CRM denemesi yalnız SQL Server bağlantısında yapılır."
+        from semantic_layer.profiler.connectors import connector_from_file
+        conn = connector_from_file(_crm_file)
         qual = f"[{db}]." if db else ""
         _, rows, _ = conn.execute(
             f"SELECT COUNT(*) AS tablolar FROM {qual}INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{sch}'", 1)
@@ -871,7 +871,7 @@ SERVICES = [
     {"unit": "nanobase-semantic-bridge.service", "label": "Sorgu motoru (köprü)"},
     {"unit": "timas-login.service", "label": "Giriş servisi (Active Directory)"},
     {"unit": "timas-vpn-mfa.service", "label": "TİMAŞ VPN"},
-    {"unit": "timas-mssql-14330.service", "label": "Logo/CRM veritabanı tüneli"},
+    {"unit": "timas-mssql-14330.service", "label": "Logo veritabanı tüneli"},
 ]
 
 

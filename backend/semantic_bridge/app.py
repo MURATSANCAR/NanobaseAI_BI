@@ -66,6 +66,13 @@ class Runtime:
         self.settings = settings
         self.store = store or open_store(settings.store_dsn)
         self.connector = connector
+        self.crm_connector = None
+        _crm_file = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+        if _crm_file and Path(_crm_file).exists():
+            try:
+                self.crm_connector = connector_from_file(_crm_file)
+            except Exception as _e:  # noqa: BLE001
+                log.warning("CRM connector kurulamadi: %s", str(_e)[:200])
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
         self.queue = queue or LlmQueue.from_env(self.store.engine)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
@@ -381,11 +388,19 @@ class Runtime:
         end = max((t.end for t in getattr(q, "temporal", []) if t.end), default=None)
         return (start, end) if start and end else None
 
+    def _conn_for(self, sql: str):
+        if self.crm_connector is None or "timas_mscrm" not in (sql or "").lower():
+            return self.connector
+        residual = re.sub(r"\[?timas_mscrm\]?\.\[?dbo\]?\.", " ", sql, flags=re.I)
+        if re.search(r"(?<![\w.])\[?dbo\]?\.", residual, re.I) or re.search(r"(?<![\w.])\[?LG_\w", residual):
+            raise ValueError("Logo ve CRM artik ayri sunucularda; tek soruda birlestirilemez.")
+        return self.crm_connector
+
     def dry_run(self, sql: str) -> None:
         if self.connector is None:
             raise RuntimeError("no database connector")
         with self._engine_lock:
-            self.connector.dry_run(sql)
+            self._conn_for(sql).dry_run(sql)
 
     def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None) -> dict[str, Any]:
         sql = strip_comments(sql or "")
@@ -433,7 +448,7 @@ class Runtime:
         try:
             with self._engine_lock:
                 t0 = time.monotonic()
-                cols, rows, truncated = self.connector.execute(phys, limit)
+                cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
                 duration = time.monotonic() - t0
         finally:
             if interactive:
@@ -468,7 +483,7 @@ class Runtime:
                     reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
                     while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
                         self._discard_result(next(iter(self._results)))
-                out = self.result_files.write(self.connector.batches(phys), self.settings.max_rows)
+                out = self.result_files.write(self._conn_for(phys).batches(phys), self.settings.max_rows)
                 out.update(physicalSql=phys, cached=False)
                 computed_at = time.time()
                 self._complete_cache[key] = (computed_at, out)
