@@ -74,7 +74,8 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
     return (resolve(json.loads(content)) if structured else content), {'seconds':round(time.monotonic()-start,3),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
         'release':RELEASE,'code_manifest':code_manifest(),
-        'prompt_version':prompt_version,'citation_dictionary':aliases,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}
+        'prompt_version':prompt_version,'max_output_tokens':max_tokens,
+        'citation_dictionary':aliases,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}
 
 
 def commit(job, kind, key, data, index=False):
@@ -219,7 +220,7 @@ def scenes(job):
               'Tüm sayfaları dikkate al; summary en fazla 60 kelime olsun, ayrıntıları olaylara kaydet.\n'+
               json.dumps([{k:v for k,v in c.items() if k!='visual_record_id'} for c in context],ensure_ascii=False))
             try:
-                result,metrics=model([{'role':'user','content':prompt}],max_tokens=1800)
+                result,metrics=model([{'role':'user','content':prompt}],max_tokens=3600)
             except RuntimeError as exc:
                 if str(exc) in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED') and len(batch)>1:
                     half=len(batch)//2; batches[0:0]=[batch[:half],batch[half:]]; continue

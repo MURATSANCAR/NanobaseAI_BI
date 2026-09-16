@@ -154,6 +154,7 @@ function App() {
         const j = await api("/jobs/" + run);
         if (!active) return;
         setJob(j);
+        setRuns((previous) => previous.map((r) => r.id === run ? { ...r, status: j.status } : r));
         setUpdated(new Date().toLocaleTimeString("tr-TR"));
         const signature = JSON.stringify(j.counts);
         if (signature !== lastCounts) {
