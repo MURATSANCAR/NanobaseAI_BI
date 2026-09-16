@@ -105,3 +105,28 @@ def test_a_word_two_columns_describe_is_still_asked_about(catalog, profiles):
     prof.columns.append(twin)
     sq = resolve(catalog, profiles + [prof], "iptal edilmemiş fatura sayısı")
     assert not sq.qualifier_columns and sq.clarification
+
+
+def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, profiles):
+    """A certified catalog that names every table pins every table; the call then decides nothing.
+
+    This is what a grown vocabulary does: once each CRM table had approved everyday names, the
+    selector was shown 282 tables, kept 282, and charged the person ninety seconds for it.
+    """
+    from semantic_layer.runtime.compiler import SqlCompiler
+
+    class _Selector:
+        def __init__(self):
+            self.calls = 0
+
+        def select(self, *a, **kw):
+            self.calls += 1
+            raise AssertionError("bir şey elenemiyorken seçiciye sorulmamalı")
+
+    sq = resolve(catalog, profiles + [orders()], "iptal edilen sipariş sayısı")
+    compiler = SqlCompiler.__new__(SqlCompiler)
+    compiler.selector, compiler.selector_mode = _Selector(), "on"
+    compiler.by_entity = {p.entity: p for p in profiles}
+    compiler.catalog_entities = {"CLCARD", "INVOICE", "STLINE"}
+    kept = compiler.narrow(sq, ["CLCARD", "INVOICE", "STLINE"])
+    assert kept == ["CLCARD", "INVOICE", "STLINE"] and compiler.selector.calls == 0

@@ -1164,7 +1164,13 @@ class ExistingCompiler:
         if self.selector is None or len(entities) <= 1:
             return entities
         pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
-        pinned += [e for e in entities if e in self.catalog_entities and e not in pinned]
+        # The certified catalog is pinned only where it is the *only* thing that knows which table
+        # holds the measure — that is, where the resolver placed nothing. It was measured when the
+        # catalog named a few dozen tables; a catalog that names hundreds (every CRM table, once its
+        # everyday names were approved) would pin the whole shortlist and leave nothing to choose
+        # between, which is not a safeguard but a 90-second call that decides nothing.
+        if not pinned:
+            pinned += [e for e in entities if e in self.catalog_entities]
         # A table that carries the only column matching a word the vocabulary does not define. The
         # selector drops it — it is judging relevance from table names against a question whose word
         # is not in any of them — and the model is then shown a schema with no column for that word
@@ -1172,6 +1178,12 @@ class ExistingCompiler:
         # column that does not exist, because the table that has one had just been removed.
         pinned += [e for c in (q.candidates or []) for e in (c.get("entities") or [])[:2]
                    if e in entities and e not in pinned]
+        if len(set(pinned)) >= len(set(entities)):
+            # Nothing here is droppable: the call cannot change the answer, and it costs the person
+            # asking a minute of waiting.
+            log.info("table selector [%s] SKIPPED: %d/%d pinned q=%r",
+                     self.selector_mode, len(set(pinned)), len(set(entities)), q.question[:60])
+            return entities
         sel = self.selector.select(q.question, entities, self.entity_note, pinned=pinned)
         if report is not None:
             report["decision"] = sel.decision
