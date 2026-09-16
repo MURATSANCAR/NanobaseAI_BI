@@ -124,7 +124,7 @@ def test_guardrails_and_physicalize(profiles):
 def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_connector, settings):
     from semantic_bridge.app import Runtime, create_app
 
-    llm = FakeLlm(by_keyword={"ölgesel": "```sql\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.DATE_ >= '2026-01-01' AND i.DATE_ < '2027-01-01' GROUP BY c.\"CITY\"\n```"})
+    llm = FakeLlm(by_keyword={"ölgesel": "```sql\n-- yorum: 'bolgesel' → CLCARD.CITY bazında kırılım\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.DATE_ >= '2026-01-01' AND i.DATE_ < '2027-01-01' GROUP BY c.\"CITY\"\n```"})
     rt = Runtime(settings, store=catalog, connector=logo_connector, llm=llm)
     client = TestClient(create_app(rt))
     assert client.get("/health").json()["status"] == "ok"
