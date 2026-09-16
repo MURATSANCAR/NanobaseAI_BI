@@ -323,3 +323,17 @@ def test_an_unresolved_word_needs_a_reading_line_too():
     assert any("alacaklarimizi" in u and "yorumland" in u for u in silent), silent
     said = unmet_obligations(sq, "-- yorum: 'alacak' → kesilen satış faturalarının tutarı\nSELECT SUM(NETTOTAL) FROM INVOICE")
     assert not any("yorumland" in u for u in said), said
+
+
+def test_an_undated_call_reads_the_years_the_statement_names(profiles):
+    """run_sql passes no period. The statement dates its own rows; those years are read — not the
+    biggest copy, which silently answered a 2026 question from 2021–2025."""
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
+    years = [SchemaProfile(datasource_id=DS, table_name=f"LG_{n}_01_INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+                           entity="INVOICE", schema_name="dbo", description="Fatura", row_count=rows,
+                           context={"n0": n, "n1": "01"}, time_window=(w0, w1),
+                           columns=[ColumnProfile(name="DATE_", data_type="datetime"), ColumnProfile(name="NETTOTAL", data_type="float")])
+             for n, rows, w0, w1 in (("211", 500_000, "2021-01-01", "2025-12-31"), ("411", 80_000, "2026-01-01", "2026-08-17"))]
+    out = physicalize_sql("SELECT SUM(NETTOTAL) FROM INVOICE WHERE DATE_ >= '2026-01-01' AND DATE_ < '2027-01-01'", years, {})
+    assert "LG_411_01_INVOICE" in out and "LG_211_01_INVOICE" not in out, out
