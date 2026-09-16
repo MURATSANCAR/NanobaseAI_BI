@@ -1116,7 +1116,7 @@ class SemanticResolver:
                     keys.add(form)
         return keys
 
-    def _state_entities(self, sq: SemanticQuery, tokens: list[str], k: int) -> set[str]:
+    def _state_entities(self, sq: SemanticQuery, tokens: list[str], k: int, *, any_source: bool = False) -> set[str]:
         entities = {s.mapping.entity for s in sq.slots if s.mapping}
         entities |= {s.mapping.entity for s in sq.group_by if s.mapping}
         # The question also names its subject in words the vocabulary may not have mapped yet: an
@@ -1129,7 +1129,7 @@ class SemanticResolver:
         # refused for a condition on a table it never read.
         placed = {self._source_of(e) for e in entities}
         for entity, prof in self.by_entity.items():
-            if placed and self._source_of(entity) not in placed:
+            if placed and not any_source and self._source_of(entity) not in placed:
                 continue
             if nouns & self._entity_name_stems(prof):
                 entities.add(entity)
@@ -1227,8 +1227,9 @@ class SemanticResolver:
         def hits(text: str, forms: set[str]) -> bool:
             return self._text_answers(text, forms)
 
+        placed = {self._source_of(s_.mapping.entity) for s_ in list(sq.slots) + list(sq.group_by) if s_.mapping}
         scored: dict[tuple[str, str], tuple[int, bool, str, str]] = {}
-        for entity in self._state_entities(sq, tokens, k):
+        for entity in self._state_entities(sq, tokens, k, any_source=True):
             for prof in self.tables_of.get(entity, []):
                 for col in prof.columns:
                     if col.sensitive or not col.description:
@@ -1256,6 +1257,10 @@ class SemanticResolver:
             return None
         amount = bool(re.search(r"money|decimal|numeric|float|real", data_type, re.I))
         mention = after and amount
+        if not mention and placed and self._source_of(entity) not in placed:
+            # A measure may be named from the other database — the question then needs both. A
+            # condition may not: it would restrict a table the answer does not read.
+            return None
         return {"token": tok, "entity": entity, "column": column, "tablePattern": prof.table_pattern,
                 "description": description, "negative": is_negative(tok), "mention": mention, "score": score,
                 "why": (f"'{tok}' {'ölçünün adı' if mention else 'niteleyicisi'}: {entity}.{column} "
@@ -1482,11 +1487,11 @@ class SemanticResolver:
         """
         if len(sq.temporal) == 2:
             folded = fold(question)
-            if not (_COMPARE_TO.search(folded) or _COMPARE_CUE.search(folded)
-                    or re.search(r"\b(fark|degis|artt|azald|dust|yukseld|buyud|kucul)\w*", folded)):
-                # "Geçen yıl alıp bu yıl hiç sipariş vermemiş": two periods, each a condition on a
-                # different part of the question — not a request to set two figures side by side.
-                sq.explanation.append("iki dönem var ama karşılaştırma istenmiyor → her dönem kendi koşuluna ait")
+            asked_to_compare = _COMPARE_TO.search(folded) or _COMPARE_CUE.search(folded)
+            if not asked_to_compare and any(is_negative(t) for t in qf.tokens):
+                # "Geçen yıl alıp bu yıl hiç sipariş vermemiş": two periods, each the condition of a
+                # different part of an absence question — not two figures to set side by side.
+                sq.explanation.append("iki dönem var ama soru bir yokluk soruyor → her dönem kendi koşuluna ait")
                 return
             current, reference = sorted(sq.temporal, key=lambda t: t.start or date.min, reverse=True)
             sq.comparison = {"kind": "PERIOD", "current": current.to_dict(),
