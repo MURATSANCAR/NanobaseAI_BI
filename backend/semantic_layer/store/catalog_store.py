@@ -556,8 +556,12 @@ class CatalogStore:
         last_seen: dict[tuple[str, str], Any] = {}
         for r in self._rows(stmt):
             resolved = _json(r["resolved_json"]) or {}
-            for kind, key in (("undefined", "unresolved"), ("qualifier", "unhandled")):
-                for term in resolved.get(key) or []:
+            # A word the model was left to interpret is still a word nobody defined: it stays on the
+            # work queue beside the ones that were refused, so defining it remains somebody's job.
+            left_to_model = [m.get("token") for m in (resolved.get("modelQualifiers") or []) if isinstance(m, dict)]
+            for kind, terms in (("undefined", resolved.get("unresolved") or []),
+                                ("qualifier", list(resolved.get("unhandled") or []) + left_to_model)):
+                for term in terms:
                     k = (kind, str(term))
                     counts[k] = counts.get(k, 0) + 1
                     if len(examples.setdefault(k, [])) < 3:

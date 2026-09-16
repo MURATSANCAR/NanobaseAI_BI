@@ -388,6 +388,13 @@ class SemanticQuery:
     # column is known — but which value means what is the source's business, so the query is written
     # by the model and the gate holds it to restricting exactly this column.
     qualifier_columns: list[dict[str, Any]] = field(default_factory=list)
+    # A qualifier nothing in the catalog explains ("tahsil edilmemiş", "limitini aşmış"). Asking the
+    # person about every one of them turned away almost half of the questions people really write
+    # (2026-09-16, 500-question test), so — by the owner's decision — the word goes to the model as an
+    # explicit obligation: the model says in one line how it read the word, that line is shown above
+    # the answer, the answer is never certified, and the gate refuses SQL that restricts nothing the
+    # word could account for. Never silently dropped.
+    model_qualifiers: list[dict[str, Any]] = field(default_factory=list)
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can
@@ -475,6 +482,7 @@ class SemanticQuery:
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
             "qualifierColumns": [dict(q) for q in self.qualifier_columns],
+            "modelQualifiers": [dict(q) for q in self.model_qualifiers],
             "modifiers": list(self.modifiers),
             "clarification": list(self.clarification),
             "modifierTelemetry": self.modifier_telemetry,

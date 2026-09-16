@@ -20,6 +20,8 @@ all come from the catalog and the profiles; the rules are the same for every sou
 
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any, Optional
@@ -913,6 +915,33 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisi {entity}.{column} üzerinde kısıtlanmadı",
                              f"{entity}.{column} kolonunu WHERE'de kısıtla; hangi değerin ne demek olduğunu "
                              f"kolon açıklamasından oku ({want.get('description')}).", entity, column))
+
+    # Words left to the model. Two things are required of each: the model said how it read the word
+    # (a "-- yorum:" line naming it), and the answer restricts something beyond what the question's
+    # certified meanings already restrict — otherwise the word was dropped, whatever the comment says.
+    if getattr(sq, "model_qualifiers", None):
+        from semantic_layer.normalize import fold as _fold, stem as _stem
+        readings = [_fold(r) for r in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or "")]
+        known = {str(s.mapping.column).upper() for s in _filter_slots(sq) if s.mapping and s.mapping.column}
+        known |= {str(b.get("column", "")).upper() for b in _bindings(sq)}
+        restricting: set[str] = set()
+        for node in tree.walk():
+            node = node[0] if isinstance(node, tuple) else node
+            if isinstance(node, (exp.Where, exp.Having, exp.Join)):
+                for col in node.find_all(exp.Column):
+                    restricting.add(col.name.upper())
+            elif isinstance(node, exp.Exists):
+                restricting.add("__EXISTS__")
+        extra = restricting - known
+        for want in sq.model_qualifiers:
+            token = _fold(str(want.get("token", "")))
+            root = _stem(token)
+            if not any(token in r or (root and root in r) for r in readings):
+                out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisinin nasıl yorumlandığı yazılmadı",
+                                 f"Sorgunun başına -- yorum: '{want.get('token')}' → <koşul> satırı ekle ve o koşulu uygula."))
+            elif not extra:
+                out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisi sorguda hiçbir koşula dönüşmedi",
+                                 f"'{want.get('token')}' için yazdığın yorumu WHERE, HAVING, NOT EXISTS ya da JOIN ile uygula."))
 
     for slot in _filter_slots(sq):
         m = slot.mapping

@@ -20,20 +20,48 @@ def resolver(store):
     return SemanticResolver(store, "t", "d", [])
 
 
+def _left_to_model(q, token):
+    """The word was not certified by anything: it is handed to the model, not treated as grammar."""
+    return token in [m["token"] for m in q.model_qualifiers] and not any(
+        m["token"] == token and m["decision"] in ("GRAMMATICAL", "SEMANTIC") for m in q.modifiers)
+
+
 @pytest.mark.parametrize("verb", ["veren", "verdiğimiz", "yaptığımız", "edilen", "aldığımız", "bekleyen"])
 @pytest.mark.parametrize("frame", ["iskonto {} müşteriler", "{} siparişler", "sipariş {} tedarikçiler", "müşteriye {} siparişler"])
 def test_no_morphology_or_position_can_certify_a_modifier(resolver, verb, frame):
+    """An unexplained modifier is never certified and never dropped.
+
+    Until 2026-09-16 it was put back to the person before any compiler ran. Measured on 500 real
+    questions that turned away almost half of them, and the owner decided the word goes to the model
+    instead — as an explicit obligation the gate checks, on an answer that is never certified.
+    """
     q = resolver.resolve(frame.format(verb))
     token = tokenize(verb)[0]
-    assert token in q.unhandled
-    assert token not in q.ignored
-    assert q.clarification and not q.fully_resolved
+    assert token in [m["token"] for m in q.model_qualifiers]
+    assert token not in q.ignored and token not in q.unhandled
+    assert not any(token in c for c in q.clarification)
     assert q.modifier_telemetry["silent_modifier_drop_rate"] == 0
-    class NeverCompile:
+    decisions = {m["token"]: m["decision"] for m in q.modifiers}
+    assert decisions.get(token) == "MODEL"
+
+    calls = []
+
+    class Deterministic:
         def compile(self, *args, **kwargs):
-            pytest.fail("unknown modifier must ask before any compiler or LLM runs")
-    answer = CompilerRouter(NeverCompile(), NeverCompile(), primary="existing").compile(q, resolver.store)
-    assert answer.compiler == "clarification" and answer.sql == "" and answer.refusal is None
+            return None
+
+    class Model:
+        name = "existing_llm"
+
+        def compile(self, q, catalog, thread=None, recall=None):
+            calls.append(q.question)
+            from semantic_layer.runtime.compiler import CompiledQuery
+            return CompiledQuery(sql="", compiler="existing_llm", catalog_version=q.catalog_version,
+                                 explain=["model yazmadı"], certified=False)
+
+    answer = CompilerRouter(Deterministic(), Model(), primary="existing").compile(q, resolver.store)
+    assert calls, "the model is asked, not the person"
+    assert answer.certified is False
 
 
 def test_full_certified_phrase_resolves_filter_and_records_it(resolver):
@@ -60,7 +88,7 @@ def test_independent_human_approvals_are_auditable_equivalence_evidence(resolver
     assert q.modifiers[0]["pair_ids"] == ["control", "original"]
     assert "veren" not in q.ignored
     assert q.modifier_telemetry["modifier_historical_confirmed"] == 1
-    assert resolver.resolve("sipariş veren tedarikçiler").clarification
+    assert _left_to_model(resolver.resolve("sipariş veren tedarikçiler"), "veren")
 
 
 @pytest.mark.parametrize("history", [pairs(False), pairs()[:1], pairs(datasource="other"),
@@ -68,7 +96,7 @@ def test_independent_human_approvals_are_auditable_equivalence_evidence(resolver
     pairs() + [ValidatedPair("conflict", "iskonto veren müşteriler", "SELECT 1", human_verified=True)]])
 def test_history_does_not_infer_equivalence_from_execution_or_missing_predicates(resolver, history):
     resolver.modifier_history = ModifierHistory(history, "d")
-    assert resolver.resolve("iskonto veren müşteriler").clarification
+    assert _left_to_model(resolver.resolve("iskonto veren müşteriler"), "veren")
 
 
 def test_catalog_nouns_with_ambiguous_suffix_are_not_modifiers(resolver):
@@ -94,7 +122,8 @@ def test_bridge_returns_question_and_logs_modifier_without_calling_llm(resolver)
     runtime.router = CompilerRouter(None, None)
     runtime.llm = None
     out = runtime.ask("iskonto veren müşteriler", thread_id=None, sample_size=5)
-    assert out["type"] == "CLARIFICATION" and out["needs_clarification"]
+    # No model configured: the word cannot be interpreted, and the answer says so instead of widening.
+    assert out["type"] != "TEXT_TO_SQL" and not out.get("sql")
     assert out["queryId"]
-    assert out["semantic"]["query"]["modifierTelemetry"]["modifier_unknown"] == 1
-    assert len(runtime.threads[out["threadId"]]) == 2
+    assert out["type"] == "NON_SQL_QUERY"
+    assert [m["token"] for m in out["semantic"]["query"]["modelQualifiers"]] == ["veren"]

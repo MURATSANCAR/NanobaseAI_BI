@@ -190,18 +190,21 @@ def test_negation_never_bridges_to_the_measure_it_negates(catalog, profiles):
     assert c.compile(known, catalog) is None
     # a negated verb the catalog has never seen stays a qualifier nothing covers
     unknown = r.resolve("Hiç kiralamayan müşterilerimiz var mı?", today=date(2026, 7, 20))
-    assert "kiralamayan" in unknown.unhandled and not unknown.fully_resolved
+    left = [m for m in unknown.model_qualifiers if m["token"] == "kiralamayan"]
+    assert left and left[0]["negative"], "left to the model as a negation, never read as a measure"
+    assert c.compile(unknown, catalog) is None
 
 
 def test_qualifier_without_meaning_blocks_instead_of_widening(catalog, profiles):
     """"bekleyen siparişler" narrows the subject; dropping the qualifier would answer a wider question."""
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("Bekleyen toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
-    assert "bekleyen" in sq.unhandled and not sq.fully_resolved
+    assert "bekleyen" in [m["token"] for m in sq.model_qualifiers], "never dropped: the model must apply it"
     c = DeterministicCompiler(profiles, {}, "tsql")
     assert c.compile(sq, catalog) is None and "bekleyen" in c.plan(sq)[1]
     # the same word as a predicate carries no restriction, so it is only grammar
-    assert "artiyor" not in r.resolve("İadeler artıyor mu?", today=date(2026, 7, 20)).unhandled
+    later = r.resolve("İadeler artıyor mu?", today=date(2026, 7, 20))
+    assert "artiyor" not in later.unhandled and "artiyor" not in [m["token"] for m in later.model_qualifiers]
 
 
 def test_filter_contradicting_the_measure_scope_is_refused(catalog, profiles):

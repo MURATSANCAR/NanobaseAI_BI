@@ -275,6 +275,8 @@ class DeterministicCompiler:
             return None, "clarification required: " + "; ".join(q.clarification)
         if q.unhandled:
             return None, "qualifiers with no certified meaning: " + ", ".join(q.unhandled)
+        if q.model_qualifiers:
+            return None, "qualifiers left to the model: " + ", ".join(m["token"] for m in q.model_qualifiers)
         if q.qualifier_columns:
             # The column is known, the value it must take is not. Writing one here would be inventing
             # the source's encoding; the model reads the description and the gate checks the result.
@@ -801,6 +803,14 @@ _NUMERIC_ALIAS = re.compile(r"(?i)\bAS\s+(?![\[\"'`])(\d[A-Za-z0-9_]*)")
 
 def quote_numeric_aliases(sql: str) -> str:
     return _NUMERIC_ALIAS.sub(lambda m: f"AS [{m.group(1)}]", sql or "")
+
+
+_INTERPRETATION = re.compile(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$")
+
+
+def interpretations(sql: str) -> list[str]:
+    """The model's "-- yorum: 'kelime' → koşul" lines, in order."""
+    return [m.group(1) for m in _INTERPRETATION.finditer(sql or "")]
 
 
 def extract_sql(text: str) -> Optional[str]:
@@ -1604,6 +1614,15 @@ class ExistingCompiler:
             # The column is named here so the model does not invent a column; which value means what
             # it reads from the description. Leaving the word out is not an option: the answer is
             # rejected unless this column is restricted.
+            # Words nothing in the catalog explains. The model decides what each one means and says
+            # so in a comment line the person reads above the answer; the gate refuses SQL that
+            # restricts nothing such a word could account for.
+            "## YORUMU SANA BIRAKILAN NİTELEYİCİLER\n" + (
+                "Her biri için: (1) sorgunun EN BAŞINA tek satır yaz: -- yorum: '<kelime>' → <hangi tablo/kolonda hangi koşul>; "
+                "(2) bu koşulu sorguda gerçekten uygula (WHERE, HAVING, NOT EXISTS ya da JOIN ile). "
+                "Kelimeyi atlama; şemada karşılığı yoksa NO_SQL yaz ve nedenini söyle.\n"
+                + "\n".join(f"- '{m['token']}' (bağlam: \"{m['phrase']}\")" + (" — olumsuz: bulunmayanları/gerçekleşmeyenleri seç" if m.get("negative") else "")
+                             for m in q.model_qualifiers) if q.model_qualifiers else "(yok)"),
             "## KOLONUYLA VERİLEN NİTELEYİCİLER (bu kolonu MUTLAKA kısıtla)\n" + (
                 "\n".join(f"'{c['token']}' → {c['entity']}.{c['column']} — kaynağın açıklaması: {c['description']}"
                           + ("  (olumsuz: koşulu tersine çevir)" if c.get("negative") else "")
@@ -1651,9 +1670,19 @@ class ExistingCompiler:
 
         Remove only an unsolicited outer cap. A nested TOP 1 can define the most
         recent transaction and must retain its business meaning.
+
+        The model's "-- yorum:" lines are carried across any rewrite: the parser does not keep line
+        comments where the gate and the person look for them.
         """
         if not sql:
             return sql
+        readings = interpretations(sql)
+        out = self._requested_row_limit_inner(sql, q)
+        if readings and out and not interpretations(out):
+            out = "\n".join(f"-- yorum: {r}" for r in readings) + "\n" + out
+        return out
+
+    def _requested_row_limit_inner(self, sql: str, q: SemanticQuery) -> Optional[str]:
         from semantic_layer.history.sql_facts import parse_sql
         if q.limit is not None:
             # "5 tane" was asked; a model that forgot the outer TOP must not return every row.
@@ -1755,6 +1784,11 @@ class CompilerRouter:
         out = self._compile(q, catalog, thread, recall=recall)
         if not out.sql:
             return out
+        # How the model read the words it was left to interpret, in its own line: shown to the person
+        # above the answer, so a reading they disagree with is visible rather than buried in SQL.
+        readings = interpretations(out.sql)
+        if readings:
+            out.explain = [f"yorum: {r}" for r in readings] + [e for e in out.explain if not str(e).startswith("yorum: ")]
         sources = self.gate_sources()
         unmet = gate_report(q, out.sql, sources=sources)
         problems = [u.text for u in unmet] + audit_sql(q, out.sql)

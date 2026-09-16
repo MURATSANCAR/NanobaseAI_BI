@@ -909,9 +909,15 @@ class SemanticResolver:
                                           f"{state.mapping.operator} {state.mapping.values}")
                 sq.explanation.append(state.explain["why"])
             if record["decision"] == "UNKNOWN":
-                if tok not in sq.unhandled:
-                    sq.unhandled.append(tok)
-                sq.clarification.append(f"‘{tok}’ ile hangi koşulu kastediyorsunuz? Bu ifadenin hangi kayıtları seçmesi gerektiğini belirtir misiniz?")
+                # Nothing in the catalog explains the word. It is handed to the model as an obligation
+                # rather than put back to the person (see SemanticQuery.model_qualifiers): the model
+                # must say how it read it and restrict the answer by it, and the gate checks both.
+                lo, hi = max(0, k - 2), min(len(qf.tokens), k + 2)
+                sq.model_qualifiers.append({"token": tok, "position": k, "negative": is_negative(tok),
+                                            "phrase": " ".join(qf.tokens[lo:hi])})
+                record.update(decision="MODEL", evidence_source="model_obligation")
+                sq.explanation.append(f"'{tok}' katalogda tanımlı değil → sorguyu yazan model yorumlayacak; "
+                                      "yorumu cevabın üstünde gösterilir ve cevap sertifikasız sayılır")
             consumed.add(k)
             sq.modifiers.append(record)
             sq.explanation.append(f"'{tok}' niteleyici: {record['decision']} (kanıt: {record['evidence_source']})")

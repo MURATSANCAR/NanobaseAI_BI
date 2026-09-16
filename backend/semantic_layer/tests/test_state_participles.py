@@ -68,7 +68,7 @@ def test_a_word_with_no_label_behind_it_is_still_asked_about(catalog, profiles):
     profiles = profiles + [orders()]
     sq = resolve(catalog, profiles, "zımbalanan sipariş sayısı")
     assert not state_slots(sq)
-    assert sq.clarification, "nothing in the catalog explains the word, so the person is asked"
+    assert "zimbalanan" in [m["token"] for m in sq.model_qualifiers], "nothing explains it: the model must"
 
 
 def described_invoice():
@@ -104,7 +104,7 @@ def test_a_word_two_columns_describe_is_still_asked_about(catalog, profiles):
     prof = described_invoice()
     prof.columns.append(twin)
     sq = resolve(catalog, profiles + [prof], "iptal edilmemiş fatura sayısı")
-    assert not sq.qualifier_columns and sq.clarification
+    assert not sq.qualifier_columns and "edilmemis" in [m["token"] for m in sq.model_qualifiers]
 
 
 def test_a_shortlist_where_nothing_can_be_dropped_costs_no_model_call(catalog, profiles):
@@ -206,3 +206,26 @@ def test_written_counts_are_periods():
 
     found, _ = parse_temporal("son üç ayda en çok satan kitaplar", today=TODAY)
     assert found and found[0].primitive == "LAST_N_MONTHS" and found[0].params["n"] == 3, found
+
+
+def test_a_word_left_to_the_model_must_be_read_and_applied():
+    """The gate holds a model-interpreted word to two things: a reading line, and a restriction."""
+    from semantic_layer.models import SemanticQuery
+    from semantic_layer.runtime.audit import unmet_obligations
+
+    sq = SemanticQuery(question="tahsil edilmemiş alacaklar", tenant_id=TENANT, datasource_id=DS)
+    sq.model_qualifiers = [{"token": "edilmemis", "position": 1, "negative": True, "phrase": "tahsil edilmemis alacaklar"}]
+    silent = unmet_obligations(sq, "SELECT SUM(AMOUNT) FROM PAYTRANS")
+    assert any("yorumlandığı yazılmadı" in u for u in silent), silent
+    said_only = unmet_obligations(sq, "-- yorum: 'edilmemiş' → kapanmamış ödeme satırları\nSELECT SUM(AMOUNT) FROM PAYTRANS")
+    assert any("hiçbir koşula dönüşmedi" in u for u in said_only), said_only
+    applied = unmet_obligations(sq, "-- yorum: 'edilmemiş' → kapanmamış ödeme satırları\n"
+                                    "SELECT SUM(AMOUNT) FROM PAYTRANS WHERE PAID = 0")
+    assert not any("niteleyici" in u for u in applied), applied
+
+
+def test_the_models_reading_is_shown_above_the_answer():
+    from semantic_layer.runtime.compiler import interpretations
+
+    sql = "-- yorum: 'edilmemiş' → PAID = 0 olan satırlar\n-- yorum: 'aşmış' → bakiye > limit\nSELECT 1"
+    assert interpretations(sql) == ["'edilmemiş' → PAID = 0 olan satırlar", "'aşmış' → bakiye > limit"]
