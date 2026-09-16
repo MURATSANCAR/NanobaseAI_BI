@@ -4,6 +4,7 @@ import { Camera, Loader2, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { peopleApi, type MyProfile, type ProfileFields } from '../engine';
 import PersonAvatar from './PersonAvatar';
+import DbTimingBadge from '../DbTiming';
 import PhotoCropper, { decode, type Decoded } from './PhotoCropper';
 import './profile.css';
 
@@ -233,6 +234,7 @@ export default function ProfileDialog({ open, onClose }: { open: boolean; onClos
                 <dt className="text-muted">Birim</dt>
                 <dd className="truncate font-medium">{crm?.unit || '—'}</dd>
               </dl>
+              {p.db && <DbTimingBadge timing={p.db} className="mt-1.5" />}
               <p className="mt-1.5 text-[11px] text-muted">
                 {p.inCrm ? 'Bu bilgiler CRM ve dizinden gelir; değişiklik için BT’ye başvurun.' : 'Hesabınız CRM kullanıcı listesinde bulunamadı.'}
               </p>

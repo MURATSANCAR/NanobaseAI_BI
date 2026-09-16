@@ -45,6 +45,7 @@ import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person }
 import PersonAvatar from './PersonAvatar';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
+import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
 import ahmetImg from '@/assets/kampus/ahmet.jpg';
 import busraImg from '@/assets/kampus/busra.jpg';
@@ -683,6 +684,7 @@ export default function KampusPage() {
                     <strong>{people.data.total}</strong> etkin kullanıcı
                     {people.data.truncated && ' (liste kesildi)'}
                     {!people.data.adChecked && ' · dizin denetlenemedi'}
+                    {people.data.db && <DbTimingBadge timing={people.data.db} className="mt-0.5 flex" />}
                   </>
                 ) : (
                   'Kaynak: CRM'

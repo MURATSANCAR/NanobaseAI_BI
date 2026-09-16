@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pause, Play, RotateCw, Trash2, X } from 'lucide-react';
+import DbTimingBadge from '../DbTiming';
 import {
   alertsApi,
   ask as askEngine,
@@ -433,6 +434,7 @@ function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }
           <span>{rule.recipients.length ? rule.recipients.join(', ') : 'alıcı yok'}</span>
           {rule.last_notify && rule.last_notify !== 'no_recipient' && <span>{NOTIFY[rule.last_notify] ?? rule.last_notify}</span>}
         </div>
+        {rule.last_db && rule.state !== 'error' && <DbTimingBadge timing={rule.last_db} className="mt-0.5" />}
         {rule.state === 'error' && rule.last_error && (
           <div className="mt-1 text-[11.5px] font-semibold text-amber-800">{rule.last_error}</div>
         )}

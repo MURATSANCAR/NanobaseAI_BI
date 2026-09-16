@@ -1,5 +1,7 @@
 /** Stitch kanvasının metin yuvaları. Tasarım sabit; bu tip yalnız hangi
  *  metnin nereye gireceğini söyler. Yeni ekran = yeni bir bu nesne. */
+import type { DbTiming } from '../DbTiming';
+
 export type StitchRow = { label: string; value: string };
 export type StitchSourceRow = { name: string; tag: string };
 export type StitchArc = { dash: string; offset: string };
@@ -85,6 +87,8 @@ export type StitchCanvasData = {
     sql?: string;
     rows: [StitchSourceRow, StitchSourceRow, StitchSourceRow];
     latency: string;
+    /** Karttaki verinin veritabanından gelme süresi; varsa `latency` yerine gösterilir. */
+    timing?: DbTiming | null;
   };
   main: {
     badge: string;
@@ -103,6 +107,8 @@ export type StitchCanvasData = {
     note: string;
     /** Sohbet cevabını kişinin panosuna kart olarak ekler; yalnız satır dönen cevapta var. */
     board?: BoardAction;
+    /** Özetin dayandığı verinin veritabanından gelme süresi. */
+    timing?: DbTiming | null;
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };

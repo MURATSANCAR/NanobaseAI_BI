@@ -16,6 +16,7 @@ import {
   type ReportRecurrence,
 } from '../engine';
 import ExcelDraft, { duplicateLabels } from './ExcelDraft';
+import DbTimingBadge from '../DbTiming';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -299,7 +300,7 @@ export default function ReportsScreen() {
     mutationFn: ({ question, columns }: { question: string; columns: ReportColumn[] }) => reportsApi.preview({ question, columns }),
     onSuccess: (res) => {
       if (!draft) return;
-      setDraft({ ...draft, question: res.question, sql: res.sql ?? '', columns: res.columns ?? [], records: res.records ?? [], rowCount: res.rowCount, summary: res.summary ?? '', layout: res.layout });
+      setDraft({ ...draft, question: res.question, sql: res.sql ?? '', columns: res.columns ?? [], records: res.records ?? [], rowCount: res.rowCount, summary: res.summary ?? '', layout: res.layout, dbMs: res.dbMs, cached: res.cached, computedAt: res.computedAt, dbParts: res.dbParts });
       setLayout(res.layout);
     },
   });
@@ -587,6 +588,7 @@ export default function ReportsScreen() {
                       {LAST[cur.lastStatus].label}
                       {cur.lastRows != null && cur.lastStatus !== 'failed' ? ` · ${nf.format(cur.lastRows)} satır` : ''}
                       {cur.lastError && <div className="mt-0.5 font-normal">{cur.lastError}</div>}
+                      {cur.lastDb && cur.lastStatus !== 'failed' && <DbTimingBadge timing={cur.lastDb} className="mt-0.5 block" />}
                     </div>
                   )}
 

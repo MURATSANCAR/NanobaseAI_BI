@@ -202,6 +202,7 @@ export default function BiCanvasPage() {
         m3: { label: 'Tip:', value: answer?.type ?? '—' },
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
         board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: () => void addToBoard() } : undefined,
+        timing: !asking && answer?.records ? answer : null,
       },
       c5: {
         ...d.c5,
@@ -210,6 +211,7 @@ export default function BiCanvasPage() {
         summary: answer?.sql ?? (asking ? 'Bekleniyor…' : (askErr ?? '')),
         sql: answer?.sql,
         latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
+        timing: !asking && answer?.records ? answer : null,
       },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

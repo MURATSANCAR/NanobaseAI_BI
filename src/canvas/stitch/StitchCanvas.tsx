@@ -4,6 +4,7 @@ import Shell from './Shell';
 import Node, { LayoutProvider, useLayout, type BoxMap } from './layout';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
+import DbTimingBadge from '../DbTiming';
 
 /**
  * Stitch ekranının (projects/13426839861607265553/screens/c35e1503…) birebir
@@ -528,7 +529,11 @@ function CanvasBody({
                   </button>
                 )}
               </div>
-              <span className="text-[11px] text-muted">{d.c5.latency}</span>
+              {d.c5.timing ? (
+                <DbTimingBadge timing={d.c5.timing} className="justify-end text-right" />
+              ) : (
+                <span className="text-[11px] text-muted">{d.c5.latency}</span>
+              )}
             </div>
           </div>
         </div>
@@ -591,6 +596,7 @@ function CanvasBody({
                     <strong className="text-ink">{d.main.m3.label}</strong> {d.main.m3.value}
                   </span>
                 </div>
+                {d.main.timing && <DbTimingBadge timing={d.main.timing} className="mt-1.5" />}
               </div>
 
               {/* Action Buttons */}

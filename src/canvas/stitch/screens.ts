@@ -676,10 +676,12 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
         { name: 'Cari', tag: yok(num(c.customers.length)) },
       ],
       latency: durum ? '—' : `${c.year} dönemi`,
+      timing: durum ? null : c.db,
     },
     main: {
       badge: 'ZEKİ AI ÖZETİ',
       subject: `Net ciro · ${c.year}`,
+      timing: durum ? null : c.db,
       model: durum || `${sonTR} itibarıyla`,
       text: durum
         ? `“${durum}.”`

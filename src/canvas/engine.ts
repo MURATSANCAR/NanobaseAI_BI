@@ -6,6 +6,8 @@
  * ister (auth_request). Oturum yoksa 401 döner; kartlar bunu "oturum gerekli"
  * diye gösterir, sahte sayı üretmez.
  */
+import type { DbTiming } from './DbTiming';
+
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
 export const ENGINE_ENABLED = ENGINE_BASE.length > 0;
@@ -25,7 +27,7 @@ export class EngineAuthError extends Error {
   }
 }
 
-export type SqlResult<T> = {
+export type SqlResult<T> = DbTiming & {
   columns: Array<{ name: string; type: string }>;
   records: T[];
   totalRows?: number;
@@ -77,7 +79,7 @@ export async function engineInfo(): Promise<EngineInfo> {
   return (await res.json()) as EngineInfo;
 }
 
-export type AskAnswer = {
+export type AskAnswer = DbTiming & {
   id?: string;
   type?: string;
   sql?: string;
@@ -173,6 +175,8 @@ export type ReviewItem = {
   columnMeaning?: string | null;
   /** Kolonda gerçekten görülen değerler ve satır sayıları. */
   observed?: Array<{ value: string; rows: number; label?: string }>;
+  /** Gözlenen değerlerin okunduğu şema taraması. */
+  scannedAt?: string | null;
   evidence?: Record<string, number>;
   counterEvidence?: number;
 };
@@ -236,6 +240,8 @@ export type GapDetail = {
   description: string | null;
   tableAnnotationId: string | null;
   rows: number;
+  /** Satır sayısı ve örnek değerler şema taramasında okundu (canlı sorgu değil). */
+  scannedAt?: string | null;
   primaryKey?: string[];
   missing: GapColumn[];
   described: GapColumn[];
@@ -351,6 +357,8 @@ export type AlertRule = {
   last_error: string | null;
   last_notified_at: string | null;
   last_notify: 'sent' | 'failed' | 'no_smtp' | 'no_recipient' | null;
+  /** Son ölçümde değerin veritabanından gelme süresi. */
+  last_db?: DbTiming | null;
 };
 
 export type AlertEmail = { configured: boolean; sender: string | null };
@@ -485,13 +493,15 @@ export type ReportDto = {
   lastStatus: ReportLastStatus;
   lastError: string | null;
   lastRows: number | null;
+  /** Son çalışmada verinin veritabanından gelme süresi; hiç çalışmadıysa null. */
+  lastDb: DbTiming | null;
   hasFile: boolean;
   columns: ReportColumn[];
   /** "Her gün 08:00" gibi okunur plan. */
   when: string;
 };
 
-export type ReportDraft = {
+export type ReportDraft = DbTiming & {
   question: string;
   title: string;
   recurrence: ReportRecurrence;
@@ -511,7 +521,7 @@ export type ReportDraft = {
 };
 
 /** Önizlemede düzeltme sonucu. `requery` ise veri yeniden çekildi ve sql/columns/records geldi. */
-export type ReportRefinement = {
+export type ReportRefinement = DbTiming & {
   question: string;
   requery: boolean;
   via: 'rules' | 'model';
@@ -792,7 +802,7 @@ export type Person = {
   about?: string;
   photoVersion: number | null;
 };
-export type PeopleList = { items: Person[]; total: number; truncated: boolean; source: 'crm'; adChecked: boolean; at: string };
+export type PeopleList = { items: Person[]; total: number; truncated: boolean; source: 'crm'; adChecked: boolean; at: string; db?: DbTiming | null };
 export type ProfileFields = { extension: string; floor: string; desk: string; mobile: string; about: string };
 export type MyProfile = {
   username: string;
@@ -802,6 +812,8 @@ export type MyProfile = {
   fields: ProfileFields;
   photoVersion: number | null;
   updatedAt: string | null;
+  /** CRM kaydının veritabanından gelme süresi; CRM okunamadıysa null. */
+  db?: DbTiming | null;
 };
 
 export const photoUrl = (username: string, version: number | null) =>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, ChevronDown, Database, Loader2, PenLine, Search, Sparkles, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
+import { ScanBadge } from '../DbTiming';
 import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
@@ -437,6 +438,7 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
           </div>
         )}
         <Coverage done={d.described.length} total={total} className="max-w-xs pt-1" />
+        <ScanBadge scannedAt={d.scannedAt} />
       </div>
 
       {d.missing.length > 0 && (

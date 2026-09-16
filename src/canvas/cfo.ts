@@ -1,6 +1,7 @@
 import { useQueries } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, isAuthBlocked, runSql } from './engine';
+import type { DbTiming } from './DbTiming';
 
 /**
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
@@ -75,6 +76,8 @@ export type CfoData = {
   returnPct: number | null;
   /** Özet ne zaman üretildi (arka plan dosyası). */
   generatedAt?: string;
+  /** Rakamların veritabanından gelme süresi (sorguların toplamı). */
+  db?: DbTiming | null;
 };
 
 const EMPTY: Omit<CfoData, 'ready' | 'authRequired' | 'failed'> = {
@@ -104,6 +107,7 @@ type RawSets = {
   items: ItemRow[];
   returnItems: ReturnItemRow[];
   generatedAt?: string;
+  db?: DbTiming | null;
 };
 
 /** Ham sonuç kümelerinden ekranın beklediği özet. Hem arka plandaki dosya
@@ -126,6 +130,7 @@ function shape(r: RawSets): CfoData {
     items: r.items,
     returnItems: r.returnItems,
     generatedAt: r.generatedAt,
+    db: r.db ?? null,
     observedMonths,
     netYtd,
     netPrevSame,
@@ -143,7 +148,7 @@ async function fetchSnapshot(): Promise<RawSets> {
   });
   if (res.status === 401 || res.status === 403) throw new EngineAuthError();
   if (!res.ok) throw new Error(`Özet ${res.status}`);
-  const j = (await res.json()) as Partial<RawSets> & { generatedAt?: string };
+  const j = (await res.json()) as Partial<RawSets> & { generatedAt?: string; db?: DbTiming | null };
   return {
     months: j.months ?? [],
     prevMonths: j.prevMonths ?? [],
@@ -154,6 +159,8 @@ async function fetchSnapshot(): Promise<RawSets> {
     items: j.items ?? [],
     returnItems: j.returnItems ?? [],
     generatedAt: j.generatedAt,
+    // Eski üretici süre yazmıyordu: o durumda "ölçülmedi" denir, sayı uydurulmaz.
+    db: j.db ?? { dbMs: null, computedAt: j.generatedAt ?? null },
   };
 }
 
@@ -202,7 +209,17 @@ export function useCfoData(): CfoData {
   if (!ready) return { ...EMPTY, ready: false, authRequired: false, failed: q.every((r) => r.isError) };
 
   const rec = <T,>(r: (typeof q)[number]) => ((r.data?.records ?? []) as unknown as T[]);
+  const done = q.filter((r) => r.data);
+  const measured = done.map((r) => r.data?.dbMs).filter((v): v is number => typeof v === 'number');
+  const stamps = done.map((r) => Number(r.data?.computedAt)).filter((v) => Number.isFinite(v) && v > 0);
+  const db: DbTiming = {
+    dbMs: measured.length === done.length && done.length ? measured.reduce((a, v) => a + v, 0) : null,
+    cached: done.some((r) => r.data?.cached),
+    computedAt: stamps.length ? Math.min(...stamps) : null,
+    queries: done.length,
+  };
   return shape({
+    db,
     months: rec<MonthRow>(months),
     prevMonths: rec<MonthRow>(prev),
     totals: rec<TotalsRow>(totals)[0] ?? null,

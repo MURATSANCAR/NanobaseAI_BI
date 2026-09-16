@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pause, Play, Search, Trash2 } from 'lucide-react';
 import { adminApi, type AlertRule } from '../engine';
+import DbTimingBadge from '../DbTiming';
 import { Loading, Note, Pill, Section, TableWrap, errText, field, fmtDate, nf, td, th } from './ui';
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
@@ -122,6 +123,7 @@ export function ReportsAdmin() {
                       {r.lastRows != null && r.lastStatus !== 'failed' ? ` · ${nf.format(r.lastRows)} satır` : ''}
                     </Pill>
                   )}
+                  {r.lastDb && r.lastStatus !== 'failed' && <DbTimingBadge timing={r.lastDb} className="mt-0.5" />}
                 </td>
                 <td className={`${td} text-right`}>
                   <span className="inline-flex gap-1">
@@ -199,6 +201,7 @@ export function AlertsAdmin() {
                 <td className={td}>
                   <div className="font-mono tabular-nums">{r.last_value != null ? nf.format(r.last_value) : '—'}</div>
                   <div className="text-[11px] text-canvas-muted">{fmtDate(r.last_checked_at)}</div>
+                  {r.last_db && r.state !== 'error' && <DbTimingBadge timing={r.last_db} className="mt-0.5" />}
                 </td>
                 <td className={td}>
                   <span className="flex flex-wrap gap-1">

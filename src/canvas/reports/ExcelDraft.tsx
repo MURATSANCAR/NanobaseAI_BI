@@ -14,6 +14,7 @@ import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifi
 import { CSS } from '@dnd-kit/utilities';
 import { ArrowUp, Eye, EyeOff, FileSpreadsheet, GripVertical, Info, Loader2, RotateCcw, Sparkles, Zap } from 'lucide-react';
 import { EngineAuthError, reportsApi, type ColumnFormat, type ReportColumn, type ReportDraft } from '../engine';
+import DbTimingBadge from '../DbTiming';
 
 /** Önizlemede gösterilen satır sayısı; köprüdeki PREVIEW_ROWS ile aynı. Dosyaya tamamı yazılır. */
 export const PREVIEW_ROWS = 50;
@@ -242,6 +243,10 @@ export default function ExcelDraft({
             rowCount: res.rowCount,
             summary: res.summary ?? '',
             layout: res.layout,
+            dbMs: res.dbMs,
+            cached: res.cached,
+            computedAt: res.computedAt,
+            dbParts: res.dbParts,
           }
         : { ...draft, layout: res.layout };
       const before = new Map(layout.map((c) => [c.key, c]));
@@ -300,6 +305,7 @@ export default function ExcelDraft({
             <div className="text-[11.5px] tabular-nums text-canvas-muted">
               {nf.format(total)} satır · {visible.length} kolon{hiddenCount ? ` · ${hiddenCount} gizli` : ''}
             </div>
+            <DbTimingBadge timing={draft} />
           </div>
         </div>
         <div className="flex items-center gap-1.5">

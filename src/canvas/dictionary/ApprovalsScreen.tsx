@@ -2,6 +2,7 @@ import { useMemo, useState, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, PencilLine, Search, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
+import { ScanBadge } from '../DbTiming';
 import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
@@ -298,6 +299,7 @@ function ApprovalsScreenInner() {
                         </tbody>
                       </table>
                     </div>
+                    <ScanBadge scannedAt={cur.scannedAt} className="mt-1" />
                   </div>
                 )}
 

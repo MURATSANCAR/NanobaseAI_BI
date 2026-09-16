@@ -32,6 +32,7 @@ import {
   type SqlResult,
 } from '../engine';
 import { stamp } from '../format';
+import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import Chart, { CHART_LABEL, allowedCharts, numericCols, suggestChart, type Col, type Row } from './Chart';
 import { download, fileName, toCsv } from './export';
 import {
@@ -372,7 +373,9 @@ function CardFrame({
   );
 }
 
-type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: ChartKind; at: number };
+type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: ChartKind; at: number; timing: DbTiming };
+
+const timingOf = (a: DbTiming): DbTiming => ({ dbMs: a.dbMs, cached: a.cached, computedAt: a.computedAt, dbParts: a.dbParts });
 
 /**
  * Kişiye özel pano. Soru sorulur, gelen sonuç grafiğe çevrilir, "Panoya ekle"
@@ -489,7 +492,7 @@ export default function BoardScreen() {
       if (!a.sql || !rows.length) {
         setErr(a.summary || a.explanation || 'Zeki AI bu soruya tablo döndürmedi.');
       } else {
-        setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now() });
+        setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now(), timing: timingOf(a) });
       }
     } catch (e) {
       setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Zeki AI yanıt vermedi.');
@@ -517,7 +520,7 @@ export default function BoardScreen() {
     setCards(next);
     saveBoard(user, next);
     // Önizleme ilk 50 satırdır; kart onunla hemen çizilir ama bayat sayılır ve tam sonuç hemen istenir.
-    const seed = { columns: pending.cols, records: pending.rows } as SqlResult<Row>;
+    const seed = { columns: pending.cols, records: pending.rows, ...pending.timing } as SqlResult<Row>;
     qc.setQueryData(['pano', card.id, card.sql], seed, { updatedAt: pending.at });
     saveResult(user, card.id, { ...(seed as unknown as CardResult), at: pending.at });
     setPending(null);
@@ -559,7 +562,7 @@ export default function BoardScreen() {
       const next = cards.map((c) => (c.id === card.id ? { ...c, sql, question: q, chart: 'kpi' as ChartKind } : c));
       setCards(next);
       saveBoard(user, next);
-      const seed = { columns: cols, records: rows } as SqlResult<Row>;
+      const seed = { columns: cols, records: rows, ...timingOf(a) } as SqlResult<Row>;
       qc.setQueryData(['pano', card.id, sql], seed, { updatedAt: Date.now() });
       saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -900,6 +903,7 @@ export default function BoardScreen() {
                     <Chart kind={c.chart} cols={cols} rows={rows} depth={printing ? false : c.depth} still={printing} />
                   )}
                 </div>
+                {r?.data && !r.isFetching && <DbTimingBadge timing={r.data} className="mt-1 shrink-0" />}
                 {sqlOpen && !printing && <SqlPanel sql={c.sql} className="pano-noprint mt-2 h-[152px] shrink-0" />}
               </CardFrame>
             );
@@ -925,6 +929,7 @@ export default function BoardScreen() {
                     <div className="text-[11px] text-canvas-muted">
                       {pending.rows.length} satır · {pending.cols.length} kolon · önizleme · {stamp(pending.at)}
                     </div>
+                    <DbTimingBadge timing={pending.timing} />
                   </div>
                   <button
                     type="button"
