@@ -174,7 +174,7 @@ LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_
 #: Modelin ürün içindeki adı. Hangi sağlayıcının hangi modeli olduğu bir kurulum ayrıntısıdır ve
 #: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "Zeki AI" kimliğiyle aynı
 #: kural). Teknik ad, düzeltilecek yerde — «Model» ayarının kendisinde — duruyor.
-LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "NanobaseAI")
+LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
