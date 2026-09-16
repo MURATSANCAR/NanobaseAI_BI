@@ -31,6 +31,16 @@ Kullanıcının 2026-09-09 düzeltmesi bağlayıcıdır: tek şirket vardır; fa
 
 Veritabanı–yedek tarihi–işlem dönemi eşlemesi ve örtüşen kayıtlarda esas alınacak kaynak doğrulanmadan yedekleri bağımsız şirketler gibi toplamayın. Sırf SQL sonuçları aynı çıktı diye yanlış kaynak varsayımına dayanan bir referansı iş doğruluğu kanıtı saymayın. Önceki ayrı-firma varsayımı ve bu varsayıma dayanan kabul yorumları geçersizdir.
 
+## Editör modülü: aynı depo, bağımsız uygulama
+
+Kullanıcının 2026-09-16 kararı bağlayıcıdır: Editör modülü bu ana proje deposunda, BI'dan izole bir uygulama olarak geliştirilecek; sonrasında BI ekranlarına tanımlı API sözleşmeleri üzerinden bağlanacaktır.
+
+- Hedef kök `apps/editor/` dizinidir; frontend, backend, Dockerfile, `compose.yaml`, `.env.example` ve README bu modül altında tutulur. Bu bir mimari karardır; uygulamanın henüz oluşturulduğu anlamına gelmez.
+- Editör kendi bağımlılıklarına, yapılandırmasına ve Docker servislerine sahip olur; BI çalışmadan da başlatılıp kullanılabilmeli, bağımsız derlenip yayınlanabilmelidir.
+- Kalıcı veri gerekiyorsa Editörün kendi veri alanı ve migration'ları olur. BI'ın iç koduna veya veritabanı tablolarına doğrudan bağımlılık kurulmaz; entegrasyon tanımlı API'ler üzerinden yapılır.
+- Editörün bütün arayüzleri mobil öncelikli olur; yukarıdaki mobil doğrulama ve ilgili gerçek DB kabul kuralları bu modül için de geçerlidir.
+- Kalıcı `editor` dalı veya ikinci trunk açılmaz. Küçük işler `main` üzerinde, kapsamlı işler `main`den açılan kısa ömürlü `codex/editor-...` dallarında yürütülür; tamamlanan iş `main`e alınır ve dal silinir. Bağımsız dağıtım, uzun ömürlü ayrı branch gerektirmez.
+
 ## Tek branch kuralı: yalnız main
 
 Kullanıcının 2026-09-13 kararı bağlayıcıdır: bu depoda tek trunk `main`'dir. Diğer bütün dallar (`perf/full-overhaul-2026-08` dahil) `main`'e merge edilip silindi. Bundan sonra:

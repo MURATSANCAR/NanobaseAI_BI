@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör modülü mimari ve branch kararı
+
+- Kullanıcının onayıyla Editörün aynı depoda `apps/editor/` altında, kendi Docker/Compose, frontend/backend, bağımlılık ve yapılandırmasıyla BI'dan bağımsız geliştirilmesi kural olarak kaydedildi. Kalıcı veri gerekiyorsa kendi veri alanı ve migration'ları olacak; BI ekranlarına tanımlı API sözleşmeleri üzerinden bağlanacak.
+- Kalıcı `editor` branch'i açılmayacak; tek trunk `main` ve gerektiğinde kısa ömürlü `codex/editor-...` dalları kullanılacak. Mobil öncelik ve ilgili gerçek DB kabul kuralları geçerli.
+- `AGENTS.md` ve `PROJECT-MEMORY.md` güncellendi. Yalnız dokümantasyon değişti; uygulama/Docker kurulmadı, ürün testi veya DB sorgusu çalıştırılmadı.
+
 ## 2026-09-16
 
 - **Zeki AI sohbet — DURAKLATILDI, kaldığımız yer (öğleden sonra).** Kullanıcı "durdur, kaldığımız yeri kaydet" dedi. Sohbet `https://portal.nanobase.ai/timas/sohbet/` altında açılıyor, çökme yok, şifre formu yok; ama **otomatik SSO girişi hâlâ tamamlanmıyor** (kullanıcı spinner'da kalıyor).

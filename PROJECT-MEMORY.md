@@ -6,6 +6,12 @@ Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır
 
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz, FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi. İlk/ana müşteri: TİMAŞ Logo (mağaza/satış verisi).
 
+## Editör modülü — kabul edilen mimari karar (2026-09-16)
+
+Editör aynı depoda `apps/editor/` altında, BI'dan bağımsız bir uygulama olarak geliştirilecek. Kendi frontend/backend yapısı, bağımlılıkları, yapılandırması, Dockerfile ve Compose servisleri olacak; BI çalışmadan kullanılabilecek ve ayrı yayınlanabilecek. Kalıcı veri gerekiyorsa kendi veri alanı ve migration'larını yönetecek. BI ekranlarına sonraki aşamada tanımlı API sözleşmeleriyle bağlanacak; BI iç koduna veya tablolarına doğrudan bağımlı olmayacak. Arayüzler mobil öncelikli olacak.
+
+Kalıcı `editor` branch'i açılmayacak: tek trunk `main`; gerektiğinde kısa ömürlü `codex/editor-...` dalları kullanılıp tamamlanınca `main`e alınacak ve silinecek. **Durum: karar kaydedildi; bu kayıt uygulamanın veya Docker servislerinin kurulduğu anlamına gelmez.** Bağlayıcı kurallar: [AGENTS.md](AGENTS.md#editör-modülü-aynı-depo-bağımsız-uygulama).
+
 ## Mimari (üstten alta)
 
 ```
