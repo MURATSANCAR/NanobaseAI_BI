@@ -1444,8 +1444,10 @@ class SemanticResolver:
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
         entity = None
         for k, tok in enumerate(qf.tokens):
-            if not is_domain_candidate(tok):
-                continue
+            # A word a certified phrase already covers is that phrase's word, not a table of its own:
+            # "YK onayında bekleyen sözleşmeler kaç tane" counts contracts, whatever "YK" alone recalls.
+            if k in consumed or not is_domain_candidate(tok) or _COUNT_CUE.fullmatch(fold(tok)):
+                continue                       # "tane" asks how many; it names nothing
             entity = self._entity_of_word(tok, index)
             if entity:
                 break
