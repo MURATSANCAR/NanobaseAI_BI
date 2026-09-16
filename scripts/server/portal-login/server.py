@@ -191,7 +191,7 @@ def chat_login_token(account, display):
     found = chat_call(config, 'GET', 'users.info', {'username': account})
     user = found.get('user') if found.get('success') else None
     if not user:
-        created = chat_call(config, 'POST', 'users.create', {
+        created = chat_call(config, 'POST', 'users.create', body={
             'username': account,
             'name': display,
             'email': f"{account}@{config.get('email_domain', 'timas.local')}",
@@ -207,8 +207,8 @@ def chat_login_token(account, display):
     elif not user.get('active', True):
         return None
     elif user.get('name') != display:
-        chat_call(config, 'POST', 'users.update', {'userId': user['_id'], 'data': {'name': display}})
-    issued = chat_call(config, 'POST', 'users.createToken', {'userId': user['_id'], 'secret': config['sso_secret']})
+        chat_call(config, 'POST', 'users.update', body={'userId': user['_id'], 'data': {'name': display}})
+    issued = chat_call(config, 'POST', 'users.createToken', body={'userId': user['_id'], 'secret': config['sso_secret']})
     token = (issued.get('data') or {}).get('authToken')
     if not token:
         raise ChatUnavailable(f"token refused: {issued.get('errorType') or issued.get('error')}")
