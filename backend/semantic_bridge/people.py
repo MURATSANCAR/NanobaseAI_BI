@@ -262,6 +262,16 @@ class Directory:
         self._key = ""
         self._rows: list[dict[str, Any]] = []
         self.ad_checked = False
+        #: Son CRM okumasının veritabanı süresi (dbMs/cached/computedAt); ölçülmediyse dbMs None.
+        self._db: dict[str, Any] = {"dbMs": None, "cached": False, "computedAt": None}
+
+    def timing(self, *, from_memory: bool) -> dict[str, Any]:
+        """Rehberin veritabanı süresi. Liste bellekten verildiyse cevap önbellektir."""
+        with self._lock:
+            db = dict(self._db)
+        if from_memory:
+            db["cached"] = True
+        return db
 
     def rows(self, schema: str, run: Callable[[str], dict[str, Any]], *, fresh: bool = False,
              ad: Optional[Callable[[], Optional[dict[str, dict[str, Any]]]]] = None,
@@ -294,6 +304,8 @@ class Directory:
         with self._lock:
             self._rows, self._at, self._key = rows, time.time(), sql
             self.ad_checked = directory is not None
+            self._db = {"dbMs": res.get("dbMs"), "cached": bool(res.get("cached")),
+                        "computedAt": res.get("computedAt")}
         return rows, self._at
 
 

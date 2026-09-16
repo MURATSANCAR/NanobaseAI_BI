@@ -275,6 +275,10 @@ def _store_result(engine: sa.engine.Engine, card_id: str, result: dict[str, Any]
         "records": result.get("records") or [],
         "totalRows": result.get("totalRows"),
         "truncated": bool(result.get("truncated")),
+        # Veritabanı süresi: kartın rakamı kaç sürede geldi; önbellekten geldiyse ne zaman hesaplandı.
+        "dbMs": result.get("dbMs"),
+        "cached": bool(result.get("cached")),
+        "computedAt": result.get("computedAt"),
     }
     raw = json.dumps(slim, ensure_ascii=False, default=str)
     if len(raw) > MAX_RESULT_CHARS:

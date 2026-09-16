@@ -59,7 +59,7 @@ def run(sql: str, tok: str) -> list:
         headers={"Content-Type": "application/json", "X-Semantic-Caller": tok},
     )
     with urllib.request.urlopen(req, timeout=180) as res:
-        return json.load(res).get("records", [])
+        return json.load(res)
 
 
 def main() -> int:
@@ -67,13 +67,28 @@ def main() -> int:
     out = {"year": YEAR, "prevYear": PREV, "generatedAt": dt.datetime.now().astimezone().isoformat(timespec="seconds")}
     errors = {}
     t0 = time.time()
+    parts = []
     for name, make in QUERIES.items():
         try:
-            out[name] = run(make(YEAR), tok)
+            got = run(make(YEAR), tok)
+            out[name] = got.get("records", [])
+            # Köprünün ölçtüğü veritabanı süresi; önbellekten geldiyse ilk yürütmenin süresi ve zamanı.
+            parts.append({"name": name, "ms": got.get("dbMs"), "cached": bool(got.get("cached")),
+                          "computedAt": got.get("computedAt")})
         except (urllib.error.URLError, OSError, ValueError) as exc:
             # Bir sorgu patlarsa öncekiler korunur; ekran eksik kartı boş gösterir.
             errors[name] = str(exc)[:200]
     out["elapsedMs"] = int((time.time() - t0) * 1000)
+    measured = [p["ms"] for p in parts if isinstance(p["ms"], (int, float))]
+    stamps = [p["computedAt"] for p in parts if p["computedAt"]]
+    out["db"] = {
+        # Süresi ölçülmemiş parça varsa toplam uydurulmaz.
+        "dbMs": sum(measured) if parts and len(measured) == len(parts) else None,
+        "cached": any(p["cached"] for p in parts),
+        "computedAt": min(stamps) if stamps else None,
+        "queries": len(parts),
+        "dbParts": parts,
+    }
     if errors:
         out["errors"] = errors
     OUT.parent.mkdir(parents=True, exist_ok=True)

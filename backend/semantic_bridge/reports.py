@@ -60,6 +60,8 @@ REPORTS = sa.Table(
     sa.Column("last_rows", sa.Integer),
     # Kişinin ekranda kurduğu kolon düzeni: [{key, label, hidden, format}]. Sıra listenin sırasıdır.
     sa.Column("columns_json", sa.Text),
+    # Son çalışmada verinin veritabanından gelme süresi: {"dbMs", "cached", "computedAt"}.
+    sa.Column("last_db_json", sa.Text),
 )
 
 FORMATS = {"xlsx", "csv"}
@@ -91,9 +93,10 @@ def ensure(engine: sa.engine.Engine) -> None:
         _md.create_all(engine, checkfirst=True)
         # create_all var olan tabloya kolon eklemez; kolon düzeni sonradan geldi.
         have = {c["name"] for c in sa.inspect(engine).get_columns("semantic_reports")}
-        if "columns_json" not in have:
-            with engine.begin() as c:
-                c.execute(sa.text("ALTER TABLE semantic_reports ADD COLUMN columns_json TEXT"))
+        for col in ("columns_json", "last_db_json"):
+            if col not in have:
+                with engine.begin() as c:
+                    c.execute(sa.text(f"ALTER TABLE semantic_reports ADD COLUMN {col} TEXT"))
         _ready.add(id(engine))
 
 
@@ -628,9 +631,19 @@ def to_dict(row: Any) -> dict[str, Any]:
         "lastRows": row["last_rows"],
         "hasFile": bool(row["last_file"] and Path(row["last_file"]).exists()),
         "columns": json.loads(row["columns_json"]) if row["columns_json"] else [],
+        "lastDb": _json_or_none(row["last_db_json"]),
     }
     d["when"] = when_label(d)
     return d
+
+
+def _json_or_none(raw: Any) -> Any:
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
 
 
 def _scope(tenant: str, ds: str, user: Optional[str]):
@@ -1004,7 +1017,8 @@ def send_file(rep: dict[str, Any], path: Path, columns: list[dict[str, Any]], ro
 # ------------------------------------------------------------------ çalıştırma
 
 Asker = Callable[[str], dict[str, Any]]
-Fetcher = Callable[[str], tuple[list[dict[str, Any]], list[dict[str, Any]]]]
+#: (kolonlar, satırlar) ya da (kolonlar, satırlar, veritabanı süresi {"dbMs", "cached", "computedAt"}).
+Fetcher = Callable[[str], tuple]
 
 
 def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetcher, *, manual: bool,
@@ -1021,7 +1035,10 @@ def run_report(engine: sa.engine.Engine, rid: str, asker: Asker, fetcher: Fetche
         sql = str(answer.get("sql") or rep["sql"] or "").strip()
         if not sql:
             raise ReportError(str(answer.get("summary") or answer.get("explanation") or "Motor bu soruya SQL üretmedi."))
-        columns, rows = fetcher(sql)
+        got = fetcher(sql)
+        columns, rows = got[0], got[1]
+        db = got[2] if len(got) > 2 else None
+        upd["last_db_json"] = json.dumps(db) if db else None
         columns, rows, dropped = apply_columns(rep["columns"], columns, rows)
         path = build_file(rid, rep["title"], rep["fmt"], columns, rows, now)
         status = send_file(rep, path, columns, rows, now, link)

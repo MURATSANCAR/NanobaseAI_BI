@@ -59,6 +59,38 @@ log = logging.getLogger("semantic_bridge")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
+def _timed(batches, box: list):
+    """Veritabanı süresi (dbMs) için: yalnız kaynaktan satır beklenen an sayılır.
+
+    Parti parti okunan sonuçta araya dosyaya yazma girer; o süre veritabanının değildir.
+    box[0] saniye cinsinden birikir. Arayüz bunu "Veritabanında … sürede geldi" diye gösterir.
+    """
+    it = iter(batches)
+    while True:
+        t0 = time.monotonic()
+        try:
+            item = next(it)
+        except StopIteration:
+            box[0] += time.monotonic() - t0
+            return
+        box[0] += time.monotonic() - t0
+        yield item
+
+
+def db_timing(result: Optional[dict]) -> dict:
+    """Bir sonucun veritabanı süresi bilgisi, her uçta aynı biçimde.
+
+    dbMs: satırları üreten yürütmenin veritabanında geçen süresi (ms). Önbellekten gelen
+    sonuçta o ilk yürütmenin süresidir; `cached` true olur, `computedAt` (epoch sn) ne zaman
+    hesaplandığını söyler. Süre ölçülmediyse dbMs None'dır — uydurulmaz.
+    """
+    r = result or {}
+    out = {"dbMs": r.get("dbMs"), "cached": bool(r.get("cached")), "computedAt": r.get("computedAt")}
+    if r.get("dbParts"):
+        out["dbParts"] = r["dbParts"]
+    return out
+
+
 class Runtime:
     """Process-wide state: store, profiles, resolver, compilers, DB connector, recall index."""
 
@@ -454,7 +486,8 @@ class Runtime:
             if interactive:
                 with self._wait_lock:
                     self._waiting -= 1
-        return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
+        return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
+                "dbMs": int(round(duration * 1000))}, duration
 
     def run_complete(self, sql: str, period=None, *, scope=None) -> dict[str, Any]:
         ok, why = validate_sql(sql)
@@ -483,8 +516,9 @@ class Runtime:
                     reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
                     while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
                         self._discard_result(next(iter(self._results)))
-                out = self.result_files.write(self._conn_for(phys).batches(phys), self.settings.max_rows)
-                out.update(physicalSql=phys, cached=False)
+                db = [0.0]
+                out = self.result_files.write(_timed(self._conn_for(phys).batches(phys), db), self.settings.max_rows)
+                out.update(physicalSql=phys, cached=False, dbMs=int(round(db[0] * 1000)))
                 computed_at = time.time()
                 self._complete_cache[key] = (computed_at, out)
                 self._complete_cache.move_to_end(key)
@@ -941,6 +975,7 @@ class Runtime:
             "cached": result.get("cached"),
             "ageSec": result.get("ageSec"),
             "computedAt": result.get("computedAt"),
+            "dbMs": result.get("dbMs"),
             "widget": result.get("widget"),
             "threadId": thread_id,
             "rowCount": result["totalRows"],
@@ -953,8 +988,10 @@ class Runtime:
             "queryId": qid,
         }
 
-    def _plan_rows(self, part, period, scope_args):
-        """One part of a two-server plan, read whole from the server its tables live on."""
+    def _plan_rows(self, part, period, scope_args, timing=None):
+        """One part of a two-server plan, read whole from the server its tables live on.
+
+        `timing` verilirse parçanın veritabanında geçen süresi {name, source, ms} olarak eklenir."""
         from semantic_layer.runtime.federated import source_of_schema  # noqa: F401 (same rule as the plan)
         connector = self.crm_connector if (part.source and self.crm_connector is not None) else self.connector
         if connector is None:
@@ -962,14 +999,22 @@ class Runtime:
         phys = self._physical(part.sql, period, **scope_args)
         if self._conn_for(phys) is not connector:
             raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
-        with self._engine_lock:
-            if hasattr(connector, "batches"):
-                yield from connector.batches(phys)
-            else:
-                cols, rows, truncated = connector.execute(phys, self.result_files.max_rows)
-                if truncated:
-                    raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
-                yield cols, rows
+        box = [0.0]
+        try:
+            with self._engine_lock:
+                if hasattr(connector, "batches"):
+                    yield from _timed(connector.batches(phys), box)
+                else:
+                    t0 = time.monotonic()
+                    cols, rows, truncated = connector.execute(phys, self.result_files.max_rows)
+                    box[0] += time.monotonic() - t0
+                    if truncated:
+                        raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
+                    yield cols, rows
+        finally:
+            if timing is not None:
+                timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
+                               "ms": int(round(box[0] * 1000))})
 
     def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
                      sample_size, scope_args, report, execute):
@@ -988,7 +1033,8 @@ class Runtime:
         period = self._asked_period(sq)
         try:
             report("querying")
-            columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args))
+            parts_ms: list = []
+            columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args, parts_ms))
             out = self.result_files.write(iter([(columns, rows)]), self.settings.max_rows)
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
@@ -1003,7 +1049,7 @@ class Runtime:
                                     if down else f"İki sunuculu plan çalıştırılamadı: {err}"),
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
-        out.update(physicalSql=text, cached=False)
+        out.update(physicalSql=text, cached=False, dbMs=sum(p["ms"] for p in parts_ms), dbParts=parts_ms)
         result = self._served(out, time.time())
         report("presenting")
         from semantic_bridge.presentation import presentation_spec
@@ -1036,6 +1082,7 @@ class Runtime:
                 "columns": result["columns"], "records": shown, "shownRows": len(shown),
                 "truncated": False, "cached": False, "ageSec": result.get("ageSec"),
                 "computedAt": result.get("computedAt"), "widget": result.get("widget"),
+                "dbMs": result.get("dbMs"), "dbParts": result.get("dbParts"),
                 "threadId": thread_id, "rowCount": result["totalRows"], "totalRows": result["totalRows"],
                 "latency_ms": int((time.perf_counter() - t0) * 1000), "repairs": 0, "timings": timings,
                 "semantic": semantic, "queryId": qid, "federated": True}
@@ -1224,6 +1271,8 @@ class Runtime:
             "description": table_ann[-1]["text"] if table_ann else rep.get("description"),
             "tableAnnotationId": table_ann[-1]["id"] if table_ann else None,
             "rows": sum(t.get("rowCount") or 0 for t in tables),
+            # Satır sayısı ve örnek değerler canlı sorgu değil, şema taramasında okundu; süresi ölçülmedi.
+            "scannedAt": max((t.get("scannedAt") or "" for t in tables), default="") or None,
             "primaryKey": rep.get("primaryKey"),
             "missing": [view(c) for c in cols if c["status"] == "UNDEFINED"],
             "described": [view(c) for c in cols if c["status"] != "UNDEFINED"],
@@ -2133,6 +2182,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "observed": [{"value": v, "rows": n, "label": _decode(meaning, v)}
                              for v, n in (col.top_values or [])[:6]] if col else [],
                 "columnMeaning": meaning,
+                "scannedAt": prof.scanned_at.isoformat() if prof is not None and getattr(prof, "scanned_at", None) else None,
                 "plain": _plain(c.term, c.semantic_type, m.to_dict() if m else None, meaning,
                                 said.get((m.entity, None)) if m else None,
                                 readable=_formula_reader(prof, said)),
@@ -2659,11 +2709,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return lambda q: r.ask(q, thread_id=None, sample_size=1, execute=False)
 
     def _report_fetcher(r: Runtime):
-        def fetch(sql: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        def fetch(sql: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
             out = r.run_complete(sql)
             path = out.get("_result_file")
             rows = r.result_files.read(path) if path else list(out.get("records") or [])
-            return list(out.get("columns") or []), rows
+            return list(out.get("columns") or []), rows, db_timing(out)
         return fetch
 
     _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status", "columns"]
@@ -2699,7 +2749,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"question": question, "sql": a.get("sql") or "", "columns": source,
                 "records": list(a.get("records") or [])[: reports_mod.PREVIEW_ROWS],
                 "rowCount": a.get("rowCount"), "summary": a.get("summary") or a.get("explanation") or "",
-                "layout": layout, "added": added, "dropped": dropped}
+                "layout": layout, "added": added, "dropped": dropped, **db_timing(a)}
 
     @app.post("/api/v1/reports/preview")
     def reports_preview(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3016,20 +3066,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/people")
     def people_list(request: Request, fresh: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = _people(request)
+        asked = time.time()
         rows, at, truncated = _crm_people(fresh)
         items = people_mod.people(engine, tenant, rows)
         return {"items": items, "total": len(items), "truncated": truncated, "source": "crm",
-                "adChecked": people_dir.ad_checked,
+                "adChecked": people_dir.ad_checked, "db": people_dir.timing(from_memory=at < asked),
                 "at": datetime.fromtimestamp(at, timezone.utc).isoformat()}
 
     @app.get("/api/v1/me/profile")
     def profile_get(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = _people(request)
+        asked = time.time()
+        db = None
         try:
-            rows, _, _ = _crm_people()
+            rows, at, _ = _crm_people()
+            db = people_dir.timing(from_memory=at < asked)
         except HTTPException:
             rows = []          # CRM kapalıyken kişi kendi alanlarını yine görür ve düzenler
-        return people_mod.me(engine, tenant, user, display, rows)
+        out = people_mod.me(engine, tenant, user, display, rows)
+        out["db"] = db
+        return out
 
     @app.put("/api/v1/me/profile")
     def profile_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:

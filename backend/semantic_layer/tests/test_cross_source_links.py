@@ -271,3 +271,41 @@ def test_priority_orders_the_work_and_drops_nothing(world):
     assert seen[-1][0] == "rest"
     key = lambda r: sorted((p.ref_entity, p.ref_column, p.key_entity, p.key_column, p.stage) for p in r.pairs)  # noqa: E731
     assert key(report) == key(plain)
+
+
+def test_many_values_against_a_scanned_column_read_the_table_once(world, monkeypatch):
+    """Taranan hedefte birden çok parça gerekiyorsa tablo bir kez akışla okunur; sonuç aynı kalır."""
+    probe, profiles, spies = world
+    _, before = _discover(world)
+    monkeypatch.setattr(X, "PARAM_CHUNK", 7)
+    streamed = []
+    real = X._SqlProbe.scan_values
+    monkeypatch.setattr(X._SqlProbe, "scan_values", lambda self, t, c, w: streamed.append(t.table_name) or real(self, t, c, w))
+    _, after = _discover(world)
+    key = lambda r: sorted((p.ref_entity, p.ref_column, p.key_entity, p.key_column, p.stage) for p in r.pairs)  # noqa: E731
+    assert key(before) == key(after) and streamed
+
+
+def test_an_unreadable_target_is_reported_and_retried_not_counted_as_a_miss(world, monkeypatch):
+    probe, profiles, _ = world
+    real = X.SqliteLinkProbe.contained_many
+    failed = []
+
+    def flaky(self, table, columns, seek):
+        if table.table_name.endswith("_CLCARD") and self.read_budget:    # yalnız bütçeli turda
+            failed.append(table.table_name)
+            raise TimeoutError("too slow")
+        return real(self, table, columns, seek)
+
+    monkeypatch.setattr(X.SqliteLinkProbe, "contained_many", flaky)
+    seen = []
+    times = {"SHIPMENTBASE": "createdon"}
+    d = X.CrossSourceLinkDiscovery(profiles, probe, time_column=lambda p: times.get(p.entity), progress=lambda m: None)
+    reasons = []
+    report = d.run(on_batch=lambda name, r: (seen.append((name, [dict(x) for x in r.lookup_failures])),
+                                             reasons.append({(p.ref_entity, p.key_entity): p.reason for p in r.pairs})))
+    assert reasons[0][("ACCOUNTBASE", "LG_CLCARD")].startswith("unreadable: LG_211_CLCARD, LG_411_CLCARD")
+    assert failed and seen[0][1] == [{"table": f"main.LG_{n}_CLCARD", "error": "too slow"} for n in (211, 411)]
+    assert [n for n, _ in seen] == ["all", "retry"] and seen[-1][1] == []
+    assert ("ACCOUNTBASE", "LG_CLCARD") in {(p.ref_entity, p.key_entity) for p in report.accepted()}
+    assert not any(p.reason.startswith("unreadable") for p in report.pairs)

@@ -52,6 +52,8 @@ RULES = sa.Table(
     sa.Column("last_error", sa.Text),
     sa.Column("last_notified_at", sa.DateTime(timezone=True)),
     sa.Column("last_notify", sa.String(16)),
+    # Son ölçümde değerin veritabanından gelme süresi: {"dbMs", "cached", "computedAt"}.
+    sa.Column("last_db_json", sa.Text),
 )
 
 EVENTS = sa.Table(
@@ -91,6 +93,11 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         _md.create_all(engine, checkfirst=True)
+        # create_all var olan tabloya kolon eklemez; ölçüm süresi sonradan geldi.
+        have = {c["name"] for c in sa.inspect(engine).get_columns(RULES.name)}
+        if "last_db_json" not in have:
+            with engine.begin() as c:
+                c.execute(sa.text(f"ALTER TABLE {RULES.name} ADD COLUMN last_db_json TEXT"))
         _ready.add(id(engine))
 
 
@@ -131,7 +138,21 @@ def to_dict(row: Any) -> dict[str, Any]:
         "last_error": row["last_error"],
         "last_notified_at": _iso(row["last_notified_at"]),
         "last_notify": row["last_notify"],
+        "last_db": _db_of(row),
     }
+
+
+def _db_of(row: Any) -> Optional[dict[str, Any]]:
+    try:
+        raw = row["last_db_json"]
+    except (KeyError, IndexError):
+        return None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
 
 
 def _recipients(raw: Any) -> list[str]:
@@ -340,6 +361,9 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=Non
         was = rule["state"] == "triggered" or (rule["state"] == "error" and rule["last_notify"] is not None)
         try:
             answer = runner(rule)
+            if "dbMs" in answer or "cached" in answer:
+                upd["last_db_json"] = json.dumps({"dbMs": answer.get("dbMs"), "cached": bool(answer.get("cached")),
+                                                  "computedAt": answer.get("computedAt")})
             value = value_of(answer, rule["column"])
             trig = breached(value, rule["condition"], float(rule["threshold"]))
             upd.update(last_value=value, state="triggered" if trig else "ok", last_error=None)

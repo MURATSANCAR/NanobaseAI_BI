@@ -80,6 +80,8 @@ class LinkThresholds:
     int_lift: float = 0.1                # containment must beat the key's density by this much
     first_pass_values: int = 40          # values per column in the first, domain-finding containment pass
     sample_timeout: int = 60             # seconds a single sampled read may take before it is skipped
+    lookup_timeout: int = 300            # seconds one containment read may take; slower tables are
+                                         # reported unreadable and retried at the end without this budget
 
 
 # ------------------------------------------------------------------------------------------ helpers
@@ -404,12 +406,16 @@ class _SqlProbe:
     def __init__(self, connector: Any, *, timeout: Optional[int] = None, database: Optional[str] = None):
         self.c = connector
         self.database = database          # the database this connection is already in, when known
+        self.read_budget: Optional[float] = None   # wall-clock seconds a streamed scan may take
         self.queries = 0
         self.seconds = 0.0
         self.set_timeout(timeout)
 
     def of(self, table: SchemaProfile) -> "_SqlProbe":
         return self
+
+    def set_read_budget(self, seconds: Optional[float]) -> None:
+        self.read_budget = seconds
 
     @property
     def timeout(self) -> Optional[int]:
@@ -533,13 +539,42 @@ class _SqlProbe:
             found.update(k for k in (norm_key(r.get("v"), family) for r in rows) if k is not None)
         return found
 
+    def scan_values(self, table: SchemaProfile, columns: dict[str, str],
+                    wanted: dict[str, set[str]]) -> dict[str, set[str]]:
+        """One pass over the table, the columns' values compared in Python as they stream in. Used when
+        the values to look for need more than one statement: each statement would scan the table
+        again. A pass slower than `read_budget` is abandoned with an error, never taken as a miss."""
+        cols = ", ".join(f"{self.as_text(self.q(c))} AS {self.q(c)}" for c in columns)
+        out: dict[str, set[str]] = {c: set() for c in columns}
+        t0 = time.monotonic()
+        gen = self.c.batches(f"SELECT {cols} FROM {self.table(table)}{self.hint}", 20000)
+        try:
+            for _, rows in gen:
+                for row in rows:
+                    for c, f in columns.items():
+                        k = norm_key(row.get(c), f)
+                        if k is not None and k in wanted[c]:
+                            out[c].add(k)
+                if self.read_budget and time.monotonic() - t0 > self.read_budget:
+                    raise TimeoutError(f"scan of {table.table_name} exceeded {self.read_budget:.0f}s")
+        finally:
+            gen.close()
+            self.queries += 1
+            self.seconds += time.monotonic() - t0
+        return out
+
     def contained_many(self, table, columns: dict[str, tuple[list[str], str]], seek: set[str]) -> dict[str, set[str]]:
-        """Seek columns one by one; every other column of the table in one scan per chunk."""
+        """Seek columns one by one; every other column of the table in one statement — or, when the
+        values need more than one statement, in one streamed pass."""
         out: dict[str, set[str]] = {}
         scan = {c: v for c, v in columns.items() if c not in seek}
         for c in [c for c in columns if c in seek]:
             values, family = columns[c]
             out[c] = self.contained(table, c, values, family)
+        if sum(len(self.params(v, f)) for v, f in scan.values()) > PARAM_CHUNK and hasattr(self.c, "batches"):
+            wanted = {c: {k for k in (norm_key(v, f) for v in values) if k is not None} for c, (values, f) in scan.items()}
+            out.update(self.scan_values(table, {c: f for c, (_, f) in scan.items()}, wanted))
+            return out
         if len(scan) <= 1:
             for c, (values, family) in scan.items():
                 out[c] = self.contained(table, c, values, family)
@@ -614,6 +649,9 @@ class SqliteLinkProbe(_SqlProbe):
         return self.run(f"SELECT {cols} FROM {self.table(table)} ORDER BY random() LIMIT {int(rows)}", rows)
 
     def contained_many(self, table, columns, seek):
+        scan = {c: v for c, v in columns.items() if c not in seek}
+        if sum(len(self.params(v, f)) for v, f in scan.values()) > PARAM_CHUNK:
+            return super().contained_many(table, columns, seek)
         return {c: self.contained(table, c, values, family) for c, (values, family) in columns.items()}
 
 
@@ -680,6 +718,13 @@ class RoutedProbe:
     def set_timeout(self, seconds: Optional[int]) -> None:
         for p in self._unique():
             p.set_timeout(seconds)
+
+    def set_read_budget(self, seconds: Optional[float]) -> None:
+        for p in self._unique():
+            p.read_budget = seconds
+
+    def scan_values(self, table, columns, wanted):
+        return self.of(table).scan_values(table, columns, wanted)
 
     def sample(self, table, columns, rows):
         return self.of(table).sample(table, columns, rows)
@@ -790,6 +835,7 @@ class DiscoveryReport:
     catalog: dict[str, Any] = field(default_factory=dict)
     sampled_tables: int = 0
     sample_failures: list[dict[str, str]] = field(default_factory=list)
+    lookup_failures: list[dict[str, str]] = field(default_factory=list)   # containment reads not completed
     column_families: dict[str, int] = field(default_factory=dict)
     not_identifier: dict[str, int] = field(default_factory=dict)
     blocked: dict[str, int] = field(default_factory=dict)
@@ -837,6 +883,7 @@ class CrossSourceLinkDiscovery:
         self.samples: dict[tuple[str, str], ColumnSample] = {}
         self.ranges: dict[tuple[str, str], tuple[Optional[int], Optional[int]]] = {}
         self._ref_rows: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        self.unreadable: dict[str, str] = {}      # "schema.table" → why its containment read failed
 
     # -- step 2: value profiles
     def sample_all(self, report: DiscoveryReport, *, cache: Optional[str] = None) -> None:
@@ -955,14 +1002,24 @@ class CrossSourceLinkDiscovery:
                 per_table.setdefault(f"{t.schema_name}.{t.table_name}", (t, {}))[1].setdefault((column, family), set()).update(values)
         out: dict[tuple[str, str, str], dict[str, set[str]]] = {k: {} for k in requests}
         shape_of = {f"{t.schema_name}.{t.table_name}": sh.key for sh in self.shapes.values() for t in sh.tables}
-        for i, (name, (table, cols)) in enumerate(sorted(per_table.items())):
+
+        def cost(item: tuple[str, tuple[SchemaProfile, dict]]) -> tuple[int, int, str]:
+            name, (table, cols) = item
+            shape = self.shapes[shape_of[name]]
+            scans = any(not is_declared_key(shape, c) for c, _ in cols)
+            return (1 if scans else 0, table.row_count or 0, name)
+
+        # Cheapest first — seeks, then small scans — so what can be known soon is known soon.
+        for i, (name, (table, cols)) in enumerate(sorted(per_table.items(), key=cost)):
             shape = self.shapes[shape_of[name]]
             try:
                 hits = self.probe.contained_many(table, {c: (sorted(v), f) for (c, f), v in cols.items()},
                                                  seek={c for c, _ in cols if is_declared_key(shape, c)})
             except Exception as e:  # noqa: BLE001
-                log.warning("containment failed on %s: %s", name, str(e)[:200])
-                hits = {}
+                log.warning("containment read failed on %s: %s", name, str(e)[:200])
+                self.unreadable[name] = str(e)[:300]
+                continue                          # absent, not empty: the pair says "unreadable"
+            self.unreadable.pop(name, None)
             for (column, family) in cols:
                 out[(shape.key, column, family)][table.table_name] = hits.get(column, set())
             if (i + 1) % 100 == 0:
@@ -986,7 +1043,8 @@ class CrossSourceLinkDiscovery:
             for r in refs:
                 res = self._judge(key, r, _spread(r.profile.values, first_n), hits1[key])
                 if res.stage == "contain":
-                    res.reason = "pass 1: " + res.reason
+                    if not res.reason.startswith("unreadable"):
+                        res.reason = "pass 1: " + res.reason
                     results.append(res)
                 else:
                     survivors.setdefault(key, []).append(r)
@@ -1013,7 +1071,10 @@ class CrossSourceLinkDiscovery:
                          sample_size=len(vals), sample_matched=matched, sample_containment=round(containment, 4),
                          sample_per_table=per, key_density=round(density, 4) if density is not None else None,
                          measured_at=_now())
-        if containment < self.th.sample_containment:
+        missing = [t.table_name for t in ks.tables if t.table_name not in hits_per_table]
+        if missing and containment < self.th.sample_containment:
+            res.reason = f"unreadable: {', '.join(missing)} (containment {containment:.2f} on the rest)"
+        elif containment < self.th.sample_containment:
             res.reason = f"sample containment {containment:.2f} < {self.th.sample_containment}"
         elif family == INT and density is not None and density + self.th.int_lift < 1.0 \
                 and containment < density + self.th.int_lift:
@@ -1255,20 +1316,42 @@ class CrossSourceLinkDiscovery:
             report.finished_at = _now()
             return report
         results: list[PairResult] = []
-        for name, batch in self.batches(pairs, priority):
+        by_id = {(r.shape, r.column, k.shape, k.column): (r, k) for r, k in pairs}
+        long_timeout = self.probe.timeout
+        batches = self.batches(pairs, priority)
+        retry_done = False
+        while batches:
+            name, batch = batches.pop(0)
             self.progress(f"batch {name}: {len(batch)} pairs")
-            got = self.contain(batch)
+            budget = None if name == "retry" else self.th.lookup_timeout
+            self.probe.set_timeout(budget or long_timeout)
+            self.probe.set_read_budget(budget)
+            try:
+                got = self.contain(batch)
+            finally:
+                self.probe.set_timeout(long_timeout)
+                self.probe.set_read_budget(None)
             self.progress(f"containment done: {sum(1 for r in got if r.stage != 'contain')} of {len(got)} pass")
             self.corroborate(got)
             self.progress(f"corroboration done: {sum(1 for r in got if r.stage == 'confirm')} to confirm")
             self.confirm(got)
+            if name == "retry":
+                again = {(g.ref_shape, g.ref_column, g.key_shape, g.key_column) for g in got}
+                results = [x for x in results if (x.ref_shape, x.ref_column, x.key_shape, x.key_column) not in again]
             results += got
             self.settle_competition(results)
+            report.lookup_failures = [{"table": t, "error": e} for t, e in sorted(self.unreadable.items())]
             report.pairs = list(results)
             report.queries = getattr(self.probe, "queries", 0)
             report.query_seconds = round(getattr(self.probe, "seconds", 0.0), 1)
             if on_batch:
                 on_batch(name, report)
+            if not batches and not retry_done:
+                retry_done = True
+                todo = [by_id[k] for k in {(x.ref_shape, x.ref_column, x.key_shape, x.key_column)
+                                           for x in results if x.reason.startswith("unreadable")} if k in by_id]
+                if todo:
+                    batches.append(("retry", todo))
         report.finished_at = _now()
         return report
 
