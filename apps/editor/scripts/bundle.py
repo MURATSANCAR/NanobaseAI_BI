@@ -11,9 +11,15 @@ import sys
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
 destination = Path(sys.argv[1]).resolve()
+if destination == root or root in destination.parents:
+    raise SystemExit('Release destination must be outside the application directory.')
 destination.mkdir(parents=True, exist_ok=False)
 source = destination/'editor'
-shutil.copytree(root, source, ignore=shutil.ignore_patterns('.env','secrets','runtime','dist','evidence','__pycache__'))
+def excluded(directory, names):
+    fixed={'.git','secrets','runtime','dist','evidence','__pycache__','node_modules','.venv','venv'}
+    return {name for name in names if name in fixed or
+            (name.startswith('.env') and name!='.env.example')}
+shutil.copytree(root, source, ignore=excluded)
 config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))
 images = sorted({service['image'] for service in config['services'].values()})
 with_models = '--with-models' in sys.argv
@@ -48,6 +54,10 @@ for service, definition in config['services'].items():
     tags.add(tag)
     offline_services[service] = {'image':tag,'pull_policy':'never'}
 (source/'compose.offline.yaml').write_text(json.dumps({'services':offline_services},indent=2))
+example=source/'.env.example'
+lines=[line for line in example.read_text().splitlines() if not line.startswith('EDITOR_RELEASE=')]
+lines.append('EDITOR_RELEASE='+config['services']['api']['environment']['EDITOR_RELEASE'])
+example.write_text('\n'.join(lines)+'\n')
 with (source/'.env.example').open('a') as stream:
     stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + 'compose.offline.yaml\n')
     if with_models:

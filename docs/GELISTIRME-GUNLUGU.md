@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör v2 dağıtımı ve kurulum denetimi hazırlığı
+
+- `6f14bb9` kodu yeni API/worker imajıyla dağıtıldı; 26 backend dosyasının hash eşliği ve 10 servis izolasyonu geçti. V1 API iptali tamamlandı; 18 ham OCR/görsel, 17 aday/kontrol sayfası korundu. Yeni nesil `a9471749-7447-4826-b003-f25e53943763` gerçek API üzerinden başladı. Kullanıcı kitabının verileri elle değiştirilmedi.
+- Gerçek Chrome/API ile 320/390/768/1440 px kontrolü yeni API üzerinde geçti. Konuşmacı/anlamsal kabul, sentez/indeks/soru-cevap açık; işlem bitişi kabul değildir.
+- Paketleme `node_modules`, `.git` ve özel `.env*` dosyalarını dışlar; `.env.example` gerçek release kimliğini taşır. Tek seferlik kurulum denetçisi paket export/importu, koşu tamamlanınca tutarlı yedek ve ayrı ağ/port/secret/volume ile restore kontrolünü yürütmek üzere hazırlandı. Henüz çalışmamış adımlar başarı sayılmaz. Canlı proje belleğindeki çelişen eski koşu özetleri tarihsel raporlara yönlendirildi.
+- GitHub push bu oturumda HTTPS kullanıcı kimliği bulunmadığı için başarısız; yerel main commit'i origin'e gönderilmiş sayılmaz.
+
 ## 2026-09-16 — Editör: veriyi değiştirmeden sistem kalite düzeltmesi
 
 - Kullanıcının kod üzerinden düzeltme ve gözetimsiz koşu denetimi talebi kaydedildi; kitap metni/model cevabı/review kararı elle değiştirilemez.

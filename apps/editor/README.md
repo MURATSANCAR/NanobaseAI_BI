@@ -160,13 +160,23 @@ altyapı teslimatında değiştirilmez.
 
 ## Konumlu kaynak ve sayfa kontrolü
 
-Yeni analizlerin varsayılanı `source-spans-v1` akışıdır. PaddleOCR artık ana `compose.yaml` servisidir; model ağırlıkları imajda, çalışma ağı özeldir. `compose.ocr.yaml` eski komutlar için boş uyumluluk dosyasıdır. Offline paket OCR imajını varsayılan olarak içerir.
+Yeni analizlerin varsayılanı `source-spans-v2` akışıdır. PaddleOCR artık ana `compose.yaml` servisidir; model ağırlıkları imajda, çalışma ağı özeldir. `compose.ocr.yaml` eski komutlar için boş uyumluluk dosyasıdır. Offline paket OCR imajını varsayılan olarak içerir.
 
 Her sayfada yerel PDF kelime kutuları, PaddleOCR bölgesel okuması ve Tesseract karşılaştırması `source_spans` kayıtlarına yazılır. Bozuk PDF karakterleri doğrulayıcı sayılmaz. Uyuşmazlık incelemeye ayrılır. `layout_regions`, balon/kuyruk geometri adaylarını; `visual_observations` kırpılmış çizim gözlemlerini saklar. Serbest görsel betimlemeler iddia kaynağı değildir. Konuşmacı kimliği henüz güvenilir biçimde çözülmediği için UNKNOWN kalır.
 
 İş sırası her sayfa için kaynak → bölgesel gözlem → metne bağlı aday → kontrol, sonra sonraki sayfadır. `page_checks` kayıtları optik işlem tamamlanmasını gösterir; anlamsal kabul değildir. Doğrulanmamış adaylar senteze/olay tablosuna aktarılmaz. Mevcut sürüm sonunda nesil `NEEDS_REVIEW` olur; kitap sentezi, indeks ve soru kabulü kendiliğinden başlamaz. Bunlar tamamlanmış özellik olarak sunulamaz.
 
 Yeni gerçek koşunun takip dosyası `evidence/source-spans-run.json`, salt okunur gözlemci `scripts/follow-source-pages.py`, gerçek API/PG karşılaştırması `scripts/verify-source-pipeline.py`. Kaynak metin dosyalarının üretiminde `editor.source_regions`, yerel PDF kelime kutularını da çıkarır. Teknik OCR ayrıntıları: [OCR servisi](ocr/README.md).
+
+V2, bütün satır yerine konumlu kelimeleri eşleştirir; alıntıda kelime sınırını,
+referans sırasını ve aradaki okunamayan bölgeleri denetler. `reuse_measurements_from`
+aynı kaynak sürümünün ham ölçümlerini köken kimlikleriyle tekrar kullanabilir;
+iddia ve kabul kararları taşınmaz. Kitap metni elle düzeltilmez.
+
+Gözlemci `evidence/source-pages-status.md` yazar; her 10 sayfada ve terminal durumda
+API/PG denetimi yapar. `scripts/qualify-completed-installation.py` tek seferlik
+gerçek koşu sonrası paket/yedek/restore denetimini ayrı kurulumda yürütür;
+başarısız analizi tekrar başlatmaz, anlamsal kabul veya yayın yapmaz.
 
 ## Yedekleme, geri yükleme, sürüm paketi
 

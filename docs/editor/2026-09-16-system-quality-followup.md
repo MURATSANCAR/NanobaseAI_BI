@@ -75,6 +75,24 @@ korunur. Kaynak durumları ve aday iddialar yeni nesilde uygulama tarafından he
 Repo incelemesi kurulmuş/ürüne uygulanmış özellik sayılmaz. Yeni genel VLM,
 ikinci büyük model veya yeni vektör veritabanı eklenmedi.
 
+## Canlı dağıtım
+
+- Commit: `6f14bb9` (yerel main). GitHub push, oturumda HTTPS kullanıcı kimliği
+  bulunmadığı için başarısız; origin güncelmiş gibi raporlanmaz.
+- API/worker imajı: `sha256:67226135f7620aa2cdd1639543700ff3dfcc42beab8248d38c490caf514e71b2`.
+- Backend ağaç hash: `58004e5a5043d27508c12aa370ef81d92d97d08778abf2c7cc1b9b5a934fe2ef`;
+  dağıtılan 26 dosya repo ile eşleşti. 10 servis için izolasyon kontrolü geçti.
+- V1 API iptali `CANCELLED` oldu; 18 OCR/görsel ve 17 aday/kontrol sayfası korundu.
+- V2 nesli `a9471749-7447-4826-b003-f25e53943763`, iş
+  `0d53b03d-67e5-44c4-b523-bf9a2aa56ac2`; 20:04 UTC'de kuyruğa alındı.
+- Yeni API ile gerçek Chrome 320/390/768/1440 px kontrolü geçti. Bu ilk sayfa
+  görünümü ve mobil akış kabulüdür; bütün kitabın anlamsal kabulü değildir.
+- Belge aracı da güncel backend ile ayrı imajda derlendi. Paketleme kodu
+  `node_modules`, `.git` ve `.env.example` dışındaki `.env*` dosyalarını dışlar;
+  dağıtım kimliği `.env.example` içine gerçek release olarak yazılır.
+- Koşu sonrası ayrı kurulumda gerçek yedek/restore ve offline paket sınaması için
+  tek seferlik betik hazırlandı. Henüz gerçekleşmeyen adımlar başarı sayılmaz.
+
 ## Açık kabul işleri
 
 Konuşmacının figür/kuyruk/isimle bağlanması, iddianın anlamsal desteği, sahneler

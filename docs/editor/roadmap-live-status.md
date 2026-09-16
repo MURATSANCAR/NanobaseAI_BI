@@ -4,6 +4,13 @@
 
 ## Kabul yöntemi
 
+**Güncel durum:** Aşağıdaki eski koşu paragrafları tarihsel kanıttır. Canlı nesil
+`a9471749-7447-4826-b003-f25e53943763`, iş `0d53b03d-67e5-44c4-b523-bf9a2aa56ac2`.
+`source-spans-v2` kelime eşleştirmesi ve kesintisiz alıntı kontrolünü içerir.
+V1 iptal edilip korundu. Yeni akışın sonu NEEDS_REVIEW; konuşmacı/semantik kabul
+ve buna bağlı sentez/indeks/soru-cevap açık. CPU 48, model slotu **1**.
+[Güncel sistem düzeltmeleri ve kanıtlar](2026-09-16-system-quality-followup.md).
+
 Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafından yazılan kitap içeriği, görsel açıklaması veya beklenen cevap model girdisine verilmez. Kaynakla bağımsız karşılaştırma çıktılar üretildikten sonra yapılır. Bir hatada genel kod/model/konfigürasyon düzeltilebilir; değişen sürüm yeniden doğrulanır. API/DB eşleşmesi anlamsal doğruluk anlamına gelmez.
 
 Önceki `18c22ea1-35e8-4e49-b762-82b3320ed49c` neslinde 48 görsel model çıktısı oluştu. Codex kaynak karşılaştırmasından gelen ret kararları sonraki sahne girdisini filtrelediği için bu nesil müdahalesiz kabul sayılamaz. İçerik düzeltmesi API kayıt sayısı 0 olarak canlı doğrulandı. İnceleme kararları eski nesilde korunur; yeni nesil aynı özgün model çıktılarını, kendi kaynak kimlikleriyle ve inceleme kararı olmadan yeniden kullanır. Bu yeniden kullanım görsellerin tekrar üretilmesi olarak sayılmaz.
