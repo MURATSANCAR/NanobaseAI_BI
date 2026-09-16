@@ -52,6 +52,11 @@ _COPULA = frozenset("olan oldugu olup olsun olacak olmus bulunan bulundugu".spli
 # Verbs of a record's own existence or arrival, spoken before the noun they belong to. "Açılan
 # sipariş" is every order, "kesilen fatura" every invoice, "iade alan müşteri" a customer whose
 # returns the return filter already selects. None of them is a restriction the catalog must define.
+#: Turkish forms most state verbs with an auxiliary ("iptal *edildi*", "sevk *edilen*"). The auxiliary
+#: carries the tense and the polarity; the state itself is the noun beside it. As a search key it would
+#: match every label the source ever wrote in the passive, so it is never one.
+_AUXILIARY_ROOTS = ("edil", "edile", "edilm", "ediliyor", "olun", "olus", "yapil", "gerceklestiril")
+
 _RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
     yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
     kaydedilen kayitli tutulan""".split())
@@ -858,6 +863,14 @@ class SemanticResolver:
                 sq.explanation.append(f"'{tok}' → '{metric.explain.get('evidence_key')}' ölçüsü (fiil kökünden, sertifikalı değil)")
             elif not is_negative(tok) and (proof := self.modifier_history.lookup(qf.tokens, k)):
                 record.update(decision="GRAMMATICAL", evidence_source="history", pair_ids=proof)
+            elif (state := self._state_from_verb(sq, qf, k)) is not None:
+                # "iptal edilmemiş fatura", "onaylanan sipariş", "bekleyen ürün": the state the word
+                # names is a value the source itself labels on one of this entity's coded columns.
+                sq.slots.append(state)
+                record.update(decision="SEMANTIC", evidence_source="value_label",
+                              resolved_as=f"{state.mapping.entity}.{state.mapping.column} "
+                                          f"{state.mapping.operator} {state.mapping.values}")
+                sq.explanation.append(state.explain["why"])
             elif not is_negative(tok) and fold(tok) in _RECORD_VERBS and (left or right or covering or self._modifies_a_noun(qf.tokens, k, consumed)):
                 # "açılan sipariş", "kesilen fatura", "iade alan müşteri": the verb says how the record
                 # came to exist or reached the subject, not which records to keep. Every order was
@@ -996,6 +1009,88 @@ class SemanticResolver:
                 consumed.add(k)
                 return slot
         return None
+
+    def _state_from_verb(self, sq: SemanticQuery, qf: Any, k: int) -> Optional[ResolvedSlot]:
+        """"iptal edilmemiş" → the coded value the source labels "İptal Edildi", or nothing.
+
+        A participle usually names a *state* a record is in, and a state this deployment records is a
+        value with a label: the source writes "İptal Edildi", "Onaylandı", "Beklemede" next to the code
+        it stores. So the word is matched against those labels — never against a column name, never
+        against a word this system invented — on the entities the question is already about.
+
+        The word that carries the meaning is not always the participle: in "iptal edilmemiş" the verb
+        is a light one ("edilmemiş") and the noun before it says what happened. Polarity always comes
+        from the verb, so "edilmemiş" turns the match into an exclusion.
+
+        Nothing is guessed. Two different columns answering to the same word is ambiguity, and this
+        returns nothing so the question is asked rather than decided.
+        """
+        tokens = qf.tokens
+        tok = tokens[k]
+        negative = is_negative(tok)
+        # "iptal edilmemiş", "sevk edilen": the verb is an auxiliary and the noun before it says what
+        # happened. The auxiliary itself is never a key — "edil" would match any label containing
+        # "edildi" — so it contributes polarity and nothing else.
+        words = [tok] + ([tokens[k - 1]] if k > 0 else [])
+        keys: set[str] = set()
+        for w in words:
+            for form in (verb_root(w), stem(w), short_root(w)):
+                if form and len(form) >= 3 and not any(form.startswith(root) for root in _AUXILIARY_ROOTS):
+                    keys.add(form)
+        if not keys:
+            return None
+
+        entities = {s.mapping.entity for s in sq.slots if s.mapping}
+        entities |= {s.mapping.entity for s in sq.group_by if s.mapping}
+        if not entities:
+            # Nothing is mapped yet, but the question still names its subject: an entity whose own
+            # name — the source's word for the table — is one of the words next to the participle.
+            nouns = {stem(t) for i, t in enumerate(tokens) if abs(i - k) <= 3 and i != k and len(t) > 2}
+            for entity, prof in self.by_entity.items():
+                own = {stem(w) for w in tokenize(prof.description or "")} | {stem(w) for w in tokenize(entity)}
+                if own & nouns:
+                    entities.add(entity)
+        if not entities:
+            return None
+
+        def label_matches(label: str) -> bool:
+            for part in tokenize(label):
+                forms = {fold(part), stem(part), short_root(part)}
+                if any(key == f or (len(key) >= 4 and f.startswith(key)) or (len(f) >= 4 and key.startswith(f))
+                       for key in keys for f in forms if f):
+                    return True
+            return False
+
+        found: dict[tuple[str, str], list[str]] = {}
+        for entity in entities:
+            for prof in self.tables_of.get(entity, []):
+                for col in prof.columns:
+                    labels = col.value_labels or {}
+                    if not labels or col.sensitive:
+                        continue
+                    hits = [str(code) for code, label in labels.items() if label and label_matches(str(label))]
+                    if hits:
+                        found.setdefault((entity, col.name.upper()), []).extend(hits)
+        if len(found) != 1:
+            return None                      # nothing to say, or two readings: the question gets asked
+        (entity, column), codes = next(iter(found.items()))
+        prof = self.by_entity.get(entity)
+        if prof is None:
+            return None
+        codes = sorted(set(codes))
+        labels = (prof.column(column).value_labels if prof.column(column) else {}) or {}
+        named = ", ".join(f"{c}={labels.get(c, c)}" for c in codes)
+        mapping = Mapping("", entity, prof.table_pattern, column=column,
+                          operator="NOT IN" if negative else "IN", values=codes)
+        slot = ResolvedSlot(term=tok, semantic_type=SemanticType.DIMENSION_VALUE, status="INFERRED",
+                            mapping=mapping, confidence=0.6, span=(k, k + 1))
+        slot.explain = {
+            "source": "value_label",
+            "why": (f"'{tok}' {'dışında tutuldu' if negative else 'durumu'}: kaynağın kendi etiketi "
+                    f"{entity}.{column} → {named}"),
+            "matchedCodes": codes, "labels": {c: labels.get(c) for c in codes}, "negative": negative,
+        }
+        return slot
 
     def _metric_from_verb(self, tok: str, k: int, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[ResolvedSlot]:
         """"satan" → the measure the catalog keys on the same root ("satış"), or nothing.
