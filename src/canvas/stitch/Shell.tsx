@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
@@ -43,8 +43,28 @@ export type ShellHead = {
   crumb: string;
   source: string;
   presence: string;
-  zoom: string;
+  /** Verilmezse kabuk kendi yakınlaştırmasını gösterir. */
+  zoom?: string;
 };
+
+export const ZOOM_MIN = 0.5;
+export const ZOOM_MAX = 2;
+const ZoomContext = createContext(1);
+/** Kabuğun yakınlaştırma çarpanı (0.5–2). Kabuk içindeki her ekran okuyabilir. */
+export const useShellZoom = () => useContext(ZoomContext);
+
+/**
+ * Ekran içeriğinin yakınlaştırılan katı. `main` sabit kalır (üst şerit ve rayla hizası bozulmaz),
+ * içi CSS `zoom` ile büyür/küçülür; taşan kısım main'in kendi kaydırmasında kalır.
+ */
+export function ZoomStage({ className = '', style, children }: { className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
+  const zoom = useShellZoom();
+  return (
+    <div className={`shell-zoom-stage ${className}`} style={{ ...style, zoom }}>
+      {children}
+    </div>
+  );
+}
 
 /**
  * Ortak kabuk: nokta ızgara, üst şerit, sol ray ve modül menüsü. Kanvas
@@ -65,6 +85,11 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
+  // Yakınlaştırma: kanvas kendi durumunu verir (onZoom); öteki ekranlarda kabuk kendisi tutar.
+  // Önceden bu ekranlarda düğme sabit "%100" gösteriyor ve tıklamaya bağlı değildi.
+  const [ownZoom, setOwnZoom] = useState(1);
+  const zoomHandler = onZoom ?? ((delta: number) => setOwnZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number((z + delta).toFixed(2))))));
+  const zoomLabel = head.zoom ?? `%${Math.round(ownZoom * 100)}`;
   // Yönetim, Veri Sözlüğü ve Onaylar yalnız yöneticilerde çıkar; yükleme/hata durumunda gizli kalır.
   const isAdmin = useIsAdmin();
   // Ray açık/kapalı. Açıkken menü adları ikonun yanında yazar; bir menüye gidince, Esc'e basınca ya da dışarı tıklanınca kapanır.
@@ -117,6 +142,7 @@ export default function Shell({
   useLocation();
 
   return (
+    <ZoomContext.Provider value={onZoom ? 1 : ownZoom}>
     <div className="bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white">
     {/* Interactive Dot Grid Overlay */}
     <div className="absolute inset-0 dot-grid pointer-events-none z-0 print:hidden"></div>
@@ -173,9 +199,9 @@ export default function Shell({
 
         {/* Canvas Zoom Indicator & Controls */}
         <div className="hidden sm:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2 text-xs font-semibold text-ink">
-          <button type="button" aria-label="Uzaklaştır" onClick={() => onZoom?.(-0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
-          <span className="text-xs font-bold w-9 text-center text-ink">{head.zoom}</span>
-          <button type="button" aria-label="Yakınlaştır" onClick={() => onZoom?.(0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
+          <button type="button" aria-label="Uzaklaştır" onClick={() => zoomHandler(-0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">-</button>
+          <span className="text-xs font-bold w-9 text-center text-ink">{zoomLabel}</span>
+          <button type="button" aria-label="Yakınlaştır" onClick={() => zoomHandler(0.1)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-slate-100 text-muted font-bold">+</button>
         </div>
       </div>
     </header>
@@ -280,5 +306,6 @@ export default function Shell({
       {/* ================= INFINITE CANVAS STAGE ================= */}
       {children}
     </div>
+    </ZoomContext.Provider>
   );
 }

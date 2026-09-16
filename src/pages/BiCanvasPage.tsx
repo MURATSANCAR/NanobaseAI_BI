@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
+import { ZOOM_MAX, ZOOM_MIN } from '../canvas/stitch/Shell';
 import Shell from '@/canvas/stitch/Shell';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
@@ -18,8 +19,6 @@ const SCREENS = ['planli-raporlar', 'uyarilar'] as const;
 type ScreenId = (typeof SCREENS)[number];
 const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
 
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 2;
 
 export default function BiCanvasPage() {
   // Ekran yolun son parçasından okunur: /timas/uyarilar → 'uyarilar'.

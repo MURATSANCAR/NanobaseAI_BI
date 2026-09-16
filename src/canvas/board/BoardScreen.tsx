@@ -50,7 +50,7 @@ import {
   dropResult,
   type CardResult,
 } from './store';
-import Shell from '../stitch/Shell';
+import Shell, { ZoomStage, useShellZoom } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 
 /** Giriş yapan kişi; pano ona ait. */
@@ -288,10 +288,12 @@ function CardFrame({
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     if (m === 'move') onFront();
   };
+  // İmleç ekran pikseliyle, kart sahne pikseliyle ölçülür; kabuk yakınlaştırılmışsa fark bölünür.
+  const zoom = useShellZoom();
   const move = (e: React.PointerEvent) => {
     if (!mode) return;
-    const dx = e.clientX - start.current.x;
-    const dy = e.clientY - start.current.y;
+    const dx = (e.clientX - start.current.x) / zoom;
+    const dy = (e.clientY - start.current.y) / zoom;
     if (mode === 'move') {
       // Izgaraya oturarak taşınır; bırakınca sıçramaz.
       const nx = Math.max(0, snap(start.current.cx + dx));
@@ -635,7 +637,6 @@ export default function BoardScreen() {
         crumb: 'Panom',
         source: user || 'oturum yok',
         presence: `${cards.length} kart`,
-        zoom: '%100',
       }}
       rail={railFor('/panolar')}
     >
@@ -699,6 +700,7 @@ export default function BoardScreen() {
 
       {/* Kartlar */}
       <main className="pano-print-main pano-scroll absolute bottom-[152px] left-14 right-2 top-[104px] sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[124px] overflow-auto">
+      <ZoomStage className="h-full">
         <div
           // Yazdırırken genişlik A4'ün yazı alanıdır (~700 px): grafikler kâğıttaki boyuta göre çizilir, sonradan esnemez.
           className={
@@ -909,6 +911,7 @@ export default function BoardScreen() {
             );
           })}
         </div>
+      </ZoomStage>
       </main>
 
       {/* Önizleme + soru çubuğu */}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, ChevronDown, Database, Loader2, PenLine, Search, Sparkles, X } from 'lucide-react';
-import Shell from '../stitch/Shell';
+import Shell, { ZoomStage } from '../stitch/Shell';
 import { ScanBadge } from '../DbTiming';
 import { railFor } from '../stitch/screens';
 import {
@@ -647,11 +647,11 @@ function GlossaryScreenInner() {
         crumb: 'Veri Sözlüğü',
         source: TABS.find((t) => t.id === tab)?.title ?? '',
         presence: 'canlı',
-        zoom: '%100',
       }}
       rail={railFor('/veri-sozlugu')}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+      <ZoomStage className="h-full">
         <div className="mx-auto flex min-h-full w-full max-w-[1760px] flex-col gap-3 pb-4 md:gap-3">
           {/* Başlık ve bölüm seçimi tek satırda: çalışma alanına yer kalsın */}
           <div className="flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
@@ -827,6 +827,7 @@ function GlossaryScreenInner() {
             </div>
           </div>
         </div>
+      </ZoomStage>
       </main>
     </Shell>
   );

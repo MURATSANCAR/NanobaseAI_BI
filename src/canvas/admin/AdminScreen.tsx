@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, Bell, CalendarClock, History, LayoutGrid, MessageSquareText, Settings2, Users } from 'lucide-react';
-import Shell from '../stitch/Shell';
+import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
 import NoAccess from '../NoAccess';
@@ -77,11 +77,11 @@ export default function AdminScreen() {
         crumb: 'Yönetim',
         source: me.data?.user ? `${me.data.user}${me.data.isAdmin ? ' · yönetici' : ''}` : '',
         presence: overview.data ? (overview.data.email.configured ? 'E-posta hazır' : 'E-posta ayarı yok') : '',
-        zoom: '%100',
       }}
       rail={railFor('/yonetim')}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+      <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {me.data?.isAdmin && (
             <nav
@@ -120,6 +120,7 @@ export default function AdminScreen() {
             <div className="mx-auto max-w-6xl">{body}</div>
           </div>
         </div>
+      </ZoomStage>
       </main>
     </Shell>
   );

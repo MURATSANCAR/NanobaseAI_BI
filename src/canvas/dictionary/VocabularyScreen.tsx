@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, MessageSquarePlus, Plus, Search, Sparkles, X } from 'lucide-react';
-import Shell from '../stitch/Shell';
+import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
@@ -120,11 +120,11 @@ export default function VocabularyScreen() {
         crumb: 'Eş anlamlılar',
         source: `${nf.format(counts?.PROPOSED ?? 0)} öneri bekliyor`,
         presence: `${nf.format(counts?.APPROVED ?? 0)} onaylı`,
-        zoom: '%100',
       }}
       rail={railFor('/es-anlamlilar')}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+      <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {/* Sol: alanlar */}
           <div className="glass-panel flex max-h-[42vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[380px]">
@@ -333,6 +333,7 @@ export default function VocabularyScreen() {
             )}
           </div>
         </div>
+      </ZoomStage>
       </main>
     </Shell>
   );
