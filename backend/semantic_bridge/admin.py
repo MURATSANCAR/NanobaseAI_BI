@@ -432,10 +432,15 @@ def _read_group_members(cfg: dict[str, str], group: str) -> frozenset[str]:
                f"(!(userAccountControl:1.2.840.113556.1.4.803:=2)))")
         found = conn.extend.standard.paged_search(cfg["AD_BASE_DN"], flt, SUBTREE,
                                                   attributes=["sAMAccountName"], paged_size=500, generator=True)
-        out = {
-            str(((e.get("attributes") or {}).get("sAMAccountName") or "")).strip().lower()
-            for e in found if e.get("type") == "searchResEntry"
-        }
+        out = set()
+        for e in found:
+            if e.get("type") != "searchResEntry":
+                continue
+            # Ham öznitelik değeri liste gelir (['ahmetbozkurt']); ilk elemanı al.
+            v = (e.get("attributes") or {}).get("sAMAccountName")
+            if isinstance(v, (list, tuple)):
+                v = v[0] if v else ""
+            out.add(str(v or "").strip().lower())
         return frozenset(a for a in out if a)
     finally:
         conn.unbind()
