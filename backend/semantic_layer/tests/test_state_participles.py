@@ -69,3 +69,39 @@ def test_a_word_with_no_label_behind_it_is_still_asked_about(catalog, profiles):
     sq = resolve(catalog, profiles, "zımbalanan sipariş sayısı")
     assert not state_slots(sq)
     assert sq.clarification, "nothing in the catalog explains the word, so the person is asked"
+
+
+def described_invoice():
+    """A source that says what a column is for and never says what its values mean — Logo's own shape."""
+    cancelled = ColumnProfile(name="CANCELLED", data_type="smallint",
+                              description="İptal Edilmiş (Cancelled)")
+    total = ColumnProfile(name="NETTOTAL", data_type="money", description="Net Toplam")
+    return SchemaProfile(datasource_id=DS, table_name="LG_411_01_INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+                         entity="LG_INVOICE", schema_name="dbo", description="Fatura",
+                         columns=[cancelled, total], row_count=81_760)
+
+
+def test_a_described_column_carries_the_word_instead_of_asking(catalog, profiles):
+    sq = resolve(catalog, profiles + [described_invoice()], "iptal edilmemiş fatura sayısı")
+    assert sq.qualifier_columns, sq.to_dict()
+    want = sq.qualifier_columns[0]
+    assert (want["entity"], want["column"], want["negative"]) == ("LG_INVOICE", "CANCELLED", True)
+    assert not any("iptal" in c.lower() or "edilmemis" in c.lower() for c in sq.clarification), sq.clarification
+
+
+def test_the_gate_refuses_an_answer_that_ignores_that_column(catalog, profiles):
+    from semantic_layer.runtime.audit import unmet_obligations
+
+    sq = resolve(catalog, profiles + [described_invoice()], "iptal edilmemiş fatura sayısı")
+    ignored = unmet_obligations(sq, "SELECT COUNT(*) AS adet FROM dbo.LG_411_01_INVOICE")
+    assert any("CANCELLED" in u for u in ignored), ignored
+    honoured = unmet_obligations(sq, "SELECT COUNT(*) AS adet FROM dbo.LG_411_01_INVOICE WHERE CANCELLED = 0")
+    assert not any("CANCELLED" in u for u in honoured), honoured
+
+
+def test_a_word_two_columns_describe_is_still_asked_about(catalog, profiles):
+    twin = ColumnProfile(name="CANCELDATE", data_type="datetime", description="İptal Edilme Tarihi")
+    prof = described_invoice()
+    prof.columns.append(twin)
+    sq = resolve(catalog, profiles + [prof], "iptal edilmemiş fatura sayısı")
+    assert not sq.qualifier_columns and sq.clarification

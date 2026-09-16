@@ -383,6 +383,11 @@ class SemanticQuery:
     # "satmayan ürünler"). Dropping it would answer a wider question than the one that was asked,
     # so it blocks the deterministic path and is handed to the model spelled out.
     unhandled: list[str] = field(default_factory=list)
+    # A qualifier whose meaning the source states on one column but does not spell out as a value
+    # ("iptal edilmemiş" → INVOICE.CANCELLED, "İptal Edilmiş"). The word is not unresolved — the
+    # column is known — but which value means what is the source's business, so the query is written
+    # by the model and the gate holds it to restricting exactly this column.
+    qualifier_columns: list[dict[str, Any]] = field(default_factory=list)
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can
@@ -469,6 +474,7 @@ class SemanticQuery:
             "ignored": list(self.ignored),
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
+            "qualifierColumns": [dict(q) for q in self.qualifier_columns],
             "modifiers": list(self.modifiers),
             "clarification": list(self.clarification),
             "modifierTelemetry": self.modifier_telemetry,

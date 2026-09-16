@@ -275,6 +275,11 @@ class DeterministicCompiler:
             return None, "clarification required: " + "; ".join(q.clarification)
         if q.unhandled:
             return None, "qualifiers with no certified meaning: " + ", ".join(q.unhandled)
+        if q.qualifier_columns:
+            # The column is known, the value it must take is not. Writing one here would be inventing
+            # the source's encoding; the model reads the description and the gate checks the result.
+            return None, "qualifiers answered by a column whose values the source does not spell out: " + ", ".join(
+                f"{c['token']}→{c['entity']}.{c['column']}" for c in q.qualifier_columns)
         if q.shape:
             return None, f"question asks for a {q.shape.lower()} this compiler cannot express"
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
@@ -1534,6 +1539,14 @@ class ExistingCompiler:
                           for c in q.candidates) if q.candidates else "(yok)"),
             "## KAPSAM DIŞI DÖNEM\n" + ("; ".join(q.explanation and [e for e in q.explanation if "kapsamı dışında" in e]) if q.out_of_scope else "(yok)"),
             "## KARŞILANAMAYAN NİTELEYİCİLER\n" + (", ".join(q.unhandled) if q.unhandled else "(yok)"),
+            # A word whose meaning the source states on one column but never spells out as a value.
+            # The column is named here so the model does not invent a column; which value means what
+            # it reads from the description. Leaving the word out is not an option: the answer is
+            # rejected unless this column is restricted.
+            "## KOLONUYLA VERİLEN NİTELEYİCİLER (bu kolonu MUTLAKA kısıtla)\n" + (
+                "\n".join(f"'{c['token']}' → {c['entity']}.{c['column']} — kaynağın açıklaması: {c['description']}"
+                          + ("  (olumsuz: koşulu tersine çevir)" if c.get("negative") else "")
+                          for c in q.qualifier_columns) if q.qualifier_columns else "(yok)"),
             # The period was checked and found to be inside what this deployment covers, but past the
             # last row loaded. Without being told, the model has no idea where the data ends and guesses
             # — it refused an ordinary question about the current month. With the fact and the

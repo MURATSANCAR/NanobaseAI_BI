@@ -895,6 +895,25 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                                      binding["entity"], binding["column"]))
 
     scope = _AnswerScope(tree)
+    # A qualifier the source explains on a column ("iptal edilmemiş" → CANCELLED — "İptal Edilmiş").
+    # Which value means what was deliberately left to the query; that this column restricts the
+    # answer is not optional, or the word was silently dropped.
+    for want in getattr(sq, "qualifier_columns", None) or []:
+        column, entity = str(want.get("column", "")).upper(), str(want.get("entity", "")).upper()
+        restricting = [tree.args.get("where")] + list(tree.args.get("joins") or []) if isinstance(tree, exp.Select) else []
+        def same_entity(name: str) -> bool:
+            # A physical table reads back as INVOICE where the catalog calls the shape LG_INVOICE:
+            # the prefix is the source's, not the question's, so it may not decide this.
+            a, b = name.upper().removeprefix("LG_"), entity.removeprefix("LG_")
+            return name.upper() == "UNKNOWN" or a == b
+
+        used = any(col.name.upper() == column and same_entity(scope.entity_for(col))
+                   for node in restricting if node is not None for col in node.find_all(exp.Column))
+        if not used:
+            out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisi {entity}.{column} üzerinde kısıtlanmadı",
+                             f"{entity}.{column} kolonunu WHERE'de kısıtla; hangi değerin ne demek olduğunu "
+                             f"kolon açıklamasından oku ({want.get('description')}).", entity, column))
+
     for slot in _filter_slots(sq):
         m = slot.mapping
         if not m or not m.column or slot.status not in ("CERTIFIED", "INFERRED"):
