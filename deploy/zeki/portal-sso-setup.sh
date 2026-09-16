@@ -71,12 +71,12 @@ else
     ADMIN_LOGIN="${ZEKI_ADMIN_USERNAME:-zekiadmin}"
     RESP=$(curl -s http://127.0.0.1:${ZEKI_PORT:-4000}/api/v1/login \
         -d "user=${ADMIN_LOGIN}" --data-urlencode "password=${ZEKI_ADMIN_PASS}")
-    UID=$(echo "$RESP" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["userId"])')
+    CHAT_UID=$(echo "$RESP" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["userId"])')
     TOK=$(echo "$RESP" | python3 -c 'import sys,json;print(json.load(sys.stdin)["data"]["authToken"])')
-    [ -n "$UID" ] && [ -n "$TOK" ] || { echo "  chat admin girisi basarisiz: $RESP"; exit 1; }
+    [ -n "$CHAT_UID" ] && [ -n "$TOK" ] || { echo "  chat admin girisi basarisiz: $RESP"; exit 1; }
     umask 077
     printf '{\n  "url": "http://127.0.0.1:%s",\n  "user_id": "%s",\n  "token": "%s",\n  "sso_secret": "%s",\n  "email_domain": "%s"\n}\n' \
-        "${ZEKI_PORT:-4000}" "$UID" "$TOK" "$ZEKI_SSO_SECRET" "${ZEKI_EMAIL_DOMAIN:-timas.local}" | sudo tee "$CHATJSON" >/dev/null
+        "${ZEKI_PORT:-4000}" "$CHAT_UID" "$TOK" "$ZEKI_SSO_SECRET" "${ZEKI_EMAIL_DOMAIN:-timas.local}" | sudo tee "$CHATJSON" >/dev/null
     sudo chown root:www-data "$CHATJSON"
     sudo chmod 0640 "$CHATJSON"
     echo "  $CHATJSON yazildi (root:www-data 0640)"
