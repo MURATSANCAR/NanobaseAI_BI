@@ -23,7 +23,10 @@ Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nan
 **Kanıt/belgeler:** [Sistem düzeltmeleri ve açık işler](docs/editor/2026-09-16-system-quality-followup.md), [v1 kaynak akışının tarihçesi](docs/editor/2026-09-16-source-spans.md), [22 bölümlük kapsam](docs/editor/roadmap-live-status.md), [kurulum/restore](apps/editor/README.md). İlk OCR pilotu, eski caption yanlışları, iptal edilen koşular ve önceki mobil/altyapı kabulleri geliştirme günlüğünde ve bağlantılı raporlarda korunur; güncel sürüm kabulü olarak sunulmaz.
 
 
+**Kurulum denetimi:** V2 offline paket export/importu geçti: 8 imaj, 94 dosya, OCR ve dört GGUF; kaynak kitaplar/sırlar pakette yok. Paket `/data/nanobaseai/editor-qualifications/a9471749/offline`. Tek seferlik denetçi bu kitabın işlenmesini bekleyip ayrı kurulumda yedek/restore ve gerçek API/PG/tarayıcı kontrolü yapacak; restore henüz geçti sayılmaz. Takip `evidence/installation-qualification-status.md`. Sunucu betikleri bilgisayar kapalıyken de sürer; yeni kod düzeltmesi veya anlamsal editör kararı üretmez.
+
 ## Mimari (üstten alta)
+
 
 ```
 React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Katalog + Evidence Engine + Resolver/Compiler)

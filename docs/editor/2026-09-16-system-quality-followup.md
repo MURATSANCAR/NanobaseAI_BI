@@ -112,6 +112,17 @@ ikinci büyük model veya yeni vektör veritabanı eklenmedi.
   sahipliğinde 0700 oluşturuldu; kaynak kurulumun izinleri/verileri değiştirilmedi.
   Yeniden başlatılan denetçi release eşliğini geçti ve paket üretimine başladı.
   Süreç `evidence/installation-qualification-status.md` ve `.log` dosyalarına yazar.
+- Offline paket **üretildi ve import kontrolünden geçti** (20:19:50 UTC): 8 imaj,
+  94 dosya, OCR imajı ve dört GGUF ağırlığı. Dosya hashleri ve yüklenen imaj ID'leri
+  doğrulandı. Paket: `/data/nanobaseai/editor-qualifications/a9471749/offline`.
+  Kitap/secret/evidence/node_modules pakete alınmadı. Bu sonuç müşteri restore
+  veya kitap analizi kabulü değildir.
+- Denetçi şu anda belirli v2 işinin tamamlanmasını bekliyor. Ardından aktif başka
+  iş olmadığını kontrol ederek yedek alacak; ayrı `editor-qualification-a9471749`
+  projesinde 18810/19096 portları, 10.203.50/51 ağları, yeni sırlar ve ayrı volume'larla
+  geri yükleyecek. Hedef API/PG ve dört genişlikli tarayıcı kontrolleri tamamlanınca
+  yalnız hedef servisler durdurulacak; kanıt ve volume'lar korunacak. Bir hata veya
+  kaynak sürümü değişiminde başarısızlığı kaydedip durur; doğru kitap cevabı üretmez.
 
 ## Açık kabul işleri
 
