@@ -40,6 +40,7 @@ def infrastructure():
         with connection() as db:
             details['schema_revision'] = db.execute('SELECT version_num FROM editor.alembic_version').fetchone()['version_num']
             details['deployments'] = db.execute('SELECT release FROM editor.deployments ORDER BY release').fetchall()
+            details['source_probes'] = db.execute("SELECT sha256, (manifest->>'bytes')::bigint AS bytes, (manifest->>'pdf_pages')::integer AS pages FROM editor.source_probes ORDER BY sha256").fetchall()
             row = db.execute("SELECT extract(epoch from (now()-seen_at)) AS age, mode FROM editor.worker_heartbeats WHERE worker_id='foundation'").fetchone()
             checks['postgres'] = True
             checks['worker'] = bool(row and row['age'] < 40)
@@ -75,6 +76,15 @@ def ready():
 @app.get('/v1/system', dependencies=[Depends(authorize)])
 def system():
     return infrastructure()
+
+
+@app.get('/v1/source-probes/{sha256}', dependencies=[Depends(authorize)])
+def source_probe(sha256: str):
+    with connection() as db:
+        row = db.execute('SELECT manifest FROM editor.source_probes WHERE sha256=%s', (sha256,)).fetchone()
+    if not row:
+        raise HTTPException(404, 'Kayıt bulunamadı')
+    return row['manifest']
 
 
 @app.get('/metrics', dependencies=[Depends(authorize)])

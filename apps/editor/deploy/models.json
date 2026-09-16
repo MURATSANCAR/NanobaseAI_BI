@@ -1,0 +1,18 @@
+{
+  "qualification": "candidate_not_pilot_accepted",
+  "repository": "ggml-org/Qwen3.8-27B-GGUF",
+  "revision": "0669b98607d47046c7c2b3f801011d54a08cfccf",
+  "license": "Apache-2.0; retain upstream model cards and license in release inventory",
+  "files": [
+    {
+      "name": "Qwen3.8-27B-Q4_K_M.gguf",
+      "bytes": 18973870432,
+      "sha256": "31629f53165ab6a7dad8c9847dcfd1fdf55829dac1e6e748f4a68581b0033d34"
+    },
+    {
+      "name": "mmproj-Qwen3.8-27B-Q8_0.gguf",
+      "bytes": 629247008,
+      "sha256": "2e968a6af97ce35d8971890b257b9b7edabf20ad91450501fa53162a19ee33eb"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import time
 
@@ -38,6 +39,7 @@ def main():
         raise SystemExit('NO_PAGES' if not pages else 'SOURCE_LIMIT_EXCEEDED')
     target = args.output / digest
     target.mkdir(parents=True, exist_ok=False)
+    shutil.copyfile(args.source, target / 'original.pdf')
     manifest = {'sha256': digest, 'bytes': size, 'pdf_pages': pages,
                 'semantic_status': 'NOT_ANALYZED', 'pages': [], 'tools': {}}
     for tool in ['pdfinfo', 'pdftoppm', 'tesseract']:

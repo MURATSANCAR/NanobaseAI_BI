@@ -15,6 +15,10 @@ def main():
     with PostgresSaver.from_conn_string(dsn) as saver:
         saver.setup()
     with connection(owner=True) as db:
+        db.execute('GRANT USAGE ON SCHEMA editor TO editor_app')
+        db.execute('GRANT SELECT ON editor.deployments, editor.alembic_version TO editor_app')
+        db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON editor.worker_heartbeats TO editor_app')
+        db.execute('GRANT SELECT, INSERT ON editor.source_probes TO editor_app')
         db.execute('GRANT USAGE ON SCHEMA checkpoints TO editor_app')
         db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA checkpoints TO editor_app')
         db.execute('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA checkpoints TO editor_app')

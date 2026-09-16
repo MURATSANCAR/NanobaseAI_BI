@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Host-side preflight. Run on the target Linux server, not a developer laptop."""
 import json
+import ipaddress
 import os
 from pathlib import Path
 import platform
@@ -17,6 +18,28 @@ if platform.system() != 'Linux' or platform.machine() != 'x86_64':
     errors.append('This release is qualified for Linux x86_64 only.')
 subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], check=True)
 subprocess.run(['docker', 'compose', 'config', '--quiet'], check=True)
+config = json.loads(subprocess.check_output(['docker','compose','config','--format','json']))
+networks = subprocess.check_output(['docker','network','ls','-q'],text=True).split()
+owned_bridges = set()
+occupied = []
+if networks:
+    for network in json.loads(subprocess.check_output(['docker','network','inspect',*networks])):
+        if (network.get('Labels') or {}).get('com.docker.compose.project') == config['name']:
+            owned_bridges.add('br-'+network['Id'][:12])
+        else:
+            for item in network.get('IPAM',{}).get('Config') or []:
+                if ':' not in item.get('Subnet','') and item.get('Subnet'):
+                    occupied.append(ipaddress.ip_network(item['Subnet']))
+for route in json.loads(subprocess.check_output(['ip','-j','-4','route','show'])):
+    if route.get('dst','default') != 'default' and route.get('dev') not in owned_bridges:
+        occupied.append(ipaddress.ip_network(route['dst'],strict=False))
+planned = [ipaddress.ip_network(config['networks'][name]['ipam']['config'][0]['subnet']) for name in ('private','ingress')]
+if planned[0].overlaps(planned[1]):
+    errors.append('Editor private and ingress networks overlap.')
+for network in planned:
+    for other in occupied:
+        if network.overlaps(other):
+            errors.append(f'Editor subnet {network} conflicts with host/VPN/Docker route {other}; choose another EDITOR_*_SUBNET.')
 usage = shutil.disk_usage(root)
 if usage.free < 20 * 1024**3:
     errors.append('At least 20 GiB free disk required for foundation images and initial artifacts; model space is additional.')
