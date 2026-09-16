@@ -158,9 +158,10 @@ def _client(catalog, logo_connector, settings, replies):
 #: "How many customers bought something" written as a count over the invoice join. Every customer is
 #: counted once per invoice they have, so the answer is the number of invoices wearing the name of
 #: the number of customers. The database returns it without complaint.
-_INFLATED = ('```sql\nSELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+_READING = "-- yorum: 'bolgesel' → müşteri kartındaki şehir bazında kırılım\n"
+_INFLATED = ('```sql\n' + _READING + 'SELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
              'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
-_CORRECT = ('```sql\nSELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+_CORRECT = ('```sql\n' + _READING + 'SELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
             'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
 
 
