@@ -2841,6 +2841,48 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _admin_fail(e: Exception) -> HTTPException:
         return HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)})
 
+    def _apply_settings(r: Runtime, changed: list[str]) -> dict[str, Any]:
+        """Kaydedilen bağlantı ayarını çalışan servise uygular: yönetici ayarı değiştirip
+        birinin servisi yeniden başlatmasını beklemesin. Yeni bağlantı denenmeden takılmaz —
+        kurulamazsa eski bağlantı yerinde kalır ve neden kurulamadığı geri döner."""
+        keys = set(changed)
+        s, applied, error = r.settings, [], None
+        if keys & set(admin_mod.LLM_KEYS):
+            s.llm_base = admin_mod.conf("OPENAI_API_BASE").rstrip("/")
+            s.llm_model = admin_mod.conf("LLM_MODEL_NAME")
+            s.llm_key = admin_mod.conf("OPENAI_API_KEY")
+            try:
+                s.llm_timeout = float(admin_mod.conf("LLM_TIMEOUT_SEC") or 240)
+            except ValueError:
+                pass
+            client = LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout, extra=s.llm_extra)
+            r.llm = QueuedLlm(client, r.queue, tenant_id=s.tenant_id, datasource_id=s.datasource_id)
+            applied.append("model")
+        if keys & set(admin_mod.store_keys("db")):
+            path = s.connection_file or admin_mod.DB_FILE
+            old = r.connector
+            try:
+                fresh = connector_from_file(path)
+                fresh.execute("SELECT 1", 1)                       # kurulmadan takas edilmez
+                r.connector = fresh
+                s.dialect = getattr(fresh, "dialect", "") or s.dialect
+                applied.append("veritabanı")
+                if old is not None:
+                    threading.Thread(target=lambda: _close_quietly(old), name="old-connector-close", daemon=True).start()
+            except Exception as e:  # noqa: BLE001
+                error = f"Yeni veritabanı ayarı kaydedildi ama bağlantı kurulamadı, eski bağlantı sürüyor: {type(e).__name__}: {e}"[:400]
+                log.warning("admin: yeni bağlantı kurulamadı: %s", e)
+        if applied:
+            r.rebuild()
+            log.info("admin: ayar uygulandı (%s)", ", ".join(applied))
+        return {"applied": applied, "applyError": error}
+
+    def _close_quietly(c: Any) -> None:
+        try:
+            c.close()
+        except Exception as e:  # noqa: BLE001
+            log.debug("eski bağlantı kapatılamadı: %s", e)
+
     @app.get("/api/v1/admin/me")
     def admin_me(request: Request) -> dict[str, Any]:
         _require_caller(request)
@@ -2879,11 +2921,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.put("/api/v1/admin/settings")
     def admin_settings_save(request: Request, body: dict[str, Any]) -> dict[str, Any]:
-        _, engine, _, _, user = _admin(request)
+        r, engine, _, _, user = _admin(request)
         try:
-            return admin_mod.save_settings(engine, user, dict(body.get("values") or {}))
+            out = admin_mod.save_settings(engine, user, dict(body.get("values") or {}))
         except admin_mod.AdminError as e:
             raise _admin_fail(e) from e
+        return {**out, **_apply_settings(r, out["changed"])}
 
     @app.delete("/api/v1/admin/settings/{key}")
     def admin_settings_reset(key: str, request: Request) -> dict[str, Any]:
@@ -2911,6 +2954,36 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "test", "setting", "directory", "Active Directory denemesi",
                         {"username": username or None, "ok": ok, "message": message})
         return {"ok": ok, "message": message}
+
+    # Bağlantı denemeleri: hepsi kaydedilmiş ayarla gerçek bağlantıyı kurar, sonucu değişiklik
+    # kaydına yazar. Ayrı uçlar, çünkü her biri kendi süresini alır ve ekranda ayrı beklenir.
+    _CHECK_TITLE = {"database": "Logo veritabanı denemesi", "crm": "CRM denemesi", "llm": "Model denemesi",
+                    "directory": "Active Directory denemesi", "email": "E-posta ayarı denemesi",
+                    "store": "Meta veritabanı denemesi"}
+
+    @app.post("/api/v1/admin/tests/{check_id}")
+    def admin_test_run(check_id: str, request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        try:
+            out = admin_mod.run_check(check_id)
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+        admin_mod.audit(engine, user, "test", "setting", check_id, _CHECK_TITLE.get(check_id, f"{check_id} denemesi"),
+                        {"ok": out["ok"], "message": out["message"]})
+        return out
+
+    @app.post("/api/v1/admin/tests")
+    def admin_tests_all(request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        out = admin_mod.run_checks()
+        admin_mod.audit(engine, user, "test", "setting", "all", "Tüm bağlantı denemeleri",
+                        {i["id"]: ("başarılı" if i["ok"] else i["message"]) for i in out["items"]})
+        return out
+
+    @app.get("/api/v1/admin/system")
+    def admin_system(request: Request) -> dict[str, Any]:
+        _admin(request)
+        return {**admin_mod.system_info(), "checks": [{"id": c["id"], "group": c["group"], "label": c["label"]} for c in admin_mod.CHECKS]}
 
     @app.get("/api/v1/admin/reports")
     def admin_reports(request: Request) -> dict[str, Any]:

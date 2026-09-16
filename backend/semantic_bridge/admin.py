@@ -96,6 +96,36 @@ SPEC: list[dict[str, Any]] = [
      "help": "Kullanıcıları arayan hesap, alan adı olmadan", "file": "bind_user"},
     {"key": "AD_BIND_PASSWORD", "group": "directory", "label": "Servis hesabı parolası", "type": "secret", "default": "",
      "help": "Kaydedilen parola ekranda bir daha gösterilmez", "file": "bind_password"},
+    # Logo veritabanı. Değerler köprünün bağlantı dosyasında (`SEMANTIC_CONNECTION_FILE`) tutulur;
+    # kaydedilince bağlantı yeniden kurulur, servis yeniden başlatılmaz.
+    {"key": "DB_HOST", "group": "database", "label": "Sunucu", "type": "text", "default": "",
+     "help": "SQL Server adresi. Tünelle bağlanılıyorsa 127.0.0.1", "file": "host", "store": "db"},
+    {"key": "DB_PORT", "group": "database", "label": "Port", "type": "int", "default": "1433",
+     "help": "Doğrudan 1433; bu kurulumda socat tüneli 14330", "file": "port", "store": "db"},
+    {"key": "DB_NAME", "group": "database", "label": "Veritabanı", "type": "text", "default": "",
+     "help": "Logo veritabanı, örn. LOGO_DB", "file": "database", "store": "db"},
+    {"key": "DB_USER", "group": "database", "label": "Kullanıcı", "type": "text", "default": "",
+     "help": "Salt okunur hesap. Etki alanı hesabı ise ALAN\\kullanici", "file": "user", "store": "db"},
+    {"key": "DB_PASSWORD", "group": "database", "label": "Parola", "type": "secret", "default": "",
+     "help": "Kaydedilen parola ekranda bir daha gösterilmez", "file": "password", "store": "db"},
+    {"key": "DB_DRIVER", "group": "database", "label": "ODBC sürücüsü", "type": "text", "default": "FreeTDS",
+     "help": "Sunucuda kayıtlı sürücü adı (odbcinst -q -d)", "file": "driver", "store": "db"},
+    {"key": "DB_TDS_VERSION", "group": "database", "label": "TDS sürümü", "type": "text", "default": "7.4",
+     "help": "FreeTDS için; SQL Server 2012+ ile 7.4", "file": "tds_version", "store": "db"},
+    # CRM: ayrı bir bağlantı değil — aynı sunucuda başka bir veritabanı, tabloları şemalarında
+    # veritabanı adını taşır (Timas_MSCRM.dbo). Katalog da bu adla tutar.
+    {"key": "CRM_SCHEMA", "group": "crm", "label": "CRM şeması", "type": "text", "default": "Timas_MSCRM.dbo",
+     "help": "veritabanı.şema biçiminde, örn. Timas_MSCRM.dbo. Boşsa CRM okunmaz"},
+    # Yapay zekâ modeli
+    {"key": "OPENAI_API_BASE", "group": "llm", "label": "Model adresi", "type": "text",
+     "default": "https://integrate.api.nvidia.com/v1",
+     "help": "OpenAI uyumlu uç, sonunda /v1"},
+    {"key": "LLM_MODEL_NAME", "group": "llm", "label": "Model", "type": "text",
+     "default": "deepseek-ai/deepseek-v4-flash-0731", "help": "Sağlayıcının model adı"},
+    {"key": "OPENAI_API_KEY", "group": "llm", "label": "API anahtarı", "type": "secret", "default": "",
+     "help": "Kaydedilen anahtar ekranda bir daha gösterilmez"},
+    {"key": "LLM_TIMEOUT_SEC", "group": "llm", "label": "Zaman aşımı (sn)", "type": "int", "default": "240",
+     "help": "Bir soru için modelin cevabı beklenecek en uzun süre"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "timasai,muratsancar", "help": "AD hesap adları, virgülle. Bu ekranı yalnız bunlar açar"},
@@ -107,11 +137,33 @@ GROUPS = [
     {"id": "rooms", "label": "Toplantı odaları", "help": "Rezervasyon takviminin saatleri."},
     {"id": "directory", "label": "Active Directory (giriş)",
      "help": "Portal girişi bu dizinle doğrulanır. Kaydedilen değer giriş servisinin dosyasına yazılır ve hemen geçerli olur."},
+    {"id": "database", "label": "Logo veritabanı (SQL Server)",
+     "help": "Soruların cevabı bu bağlantıdan okunur. Kaydedilen değer bağlantı dosyasına yazılır ve bağlantı yeniden kurulur."},
+    {"id": "crm", "label": "CRM (Dynamics)", "help": "Aynı sunucudaki CRM veritabanı; Logo bağlantısıyla okunur."},
+    {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
+     "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
     {"id": "access", "label": "Yetki", "help": "Yönetim ekranına kimlerin gireceği."},
 ]
-_FILE_KEYS = {s["key"]: s["file"] for s in SPEC if s.get("file")}
+#: Dosyada tutulan ayarlar: anahtar → (dosya, dosyadaki alan adı). Veritabanı yerine dosya, çünkü
+#: bu değerleri okuyan başka bir süreç var (giriş servisi, bağlantıyı kuran sürücü).
+_FILE_KEYS = {s["key"]: (s.get("store", "ad"), s["file"]) for s in SPEC if s.get("file")}
 #: Giriş servisiyle aynı dosya (scripts/server/portal-login/server.py → AD_CONFIG_FILE).
 AD_FILE = os.environ.get("AD_CONFIG_FILE", "/etc/nanobase/timas-ad.json")
+#: Köprünün veritabanı bağlantı dosyası (SemanticSettings.connection_file ile aynı).
+DB_FILE = os.environ.get("SEMANTIC_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/logo-mssql-connection.json")
+
+
+def _store_path(store: str) -> str:
+    return AD_FILE if store == "ad" else DB_FILE
+
+
+def store_keys(store: str) -> list[str]:
+    """O dosyada tutulan ayar anahtarları."""
+    return [k for k, (s, _) in _FILE_KEYS.items() if s == store]
+
+
+#: Ayarı kaydedilince neyin yeniden kurulacağı; köprü (app.py) bu listelere bakar.
+LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_SEC")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
@@ -166,34 +218,60 @@ def _stored() -> dict[str, str]:
     return _cache["values"]
 
 
-def _ad_file() -> dict[str, Any]:
+def _file(store: str) -> dict[str, Any]:
     try:
-        with open(AD_FILE, encoding="utf-8") as f:
+        with open(_store_path(store), encoding="utf-8") as f:
             d = json.load(f)
         return d if isinstance(d, dict) else {}
     except (OSError, ValueError):
         return {}
 
 
-def _ad_file_write(values: dict[str, Any]) -> None:
-    """Dosyayı yerinde değil yanına yazıp adını değiştirir: giriş servisi yarım dosya okumasın. Sahip ve izin korunur."""
-    tmp = f"{AD_FILE}.tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(values, f, ensure_ascii=False, indent=2)
-        f.write("\n")
+def _file_write(store: str, values: dict[str, Any]) -> None:
+    """Dosyayı yanına yazıp adını değiştirir: okuyan yarım dosya görmesin.
+
+    Sahibi ve izni korunmak zorunda: giriş ayarı root'a ait ve giriş servisinin grubuna okunur.
+    Yeni dosyayı aynı sahiple yazamıyorsak (chown yalnız root'un işi) ad değiştirmek, dosyayı
+    okuyan servisin erişimini elinden alır — giriş çalışmaz olur. O durumda dosyanın kendisine,
+    aynı düğüme yazılır: sahip, grup ve izin olduğu gibi kalır.
+    """
+    path = _store_path(store)
+    body = json.dumps(values, ensure_ascii=False, indent=2) + "\n"
+    tmp = f"{path}.tmp"
+    st = None
     try:
-        st = os.stat(AD_FILE)
-        os.chmod(tmp, st.st_mode & 0o777)
-        os.chown(tmp, st.st_uid, st.st_gid)
+        st = os.stat(path)
     except OSError:
-        os.chmod(tmp, 0o640)
-    os.replace(tmp, AD_FILE)
+        pass
+    if st is not None and (st.st_uid != os.geteuid() or st.st_gid not in os.getgroups()):
+        with open(path, "r+", encoding="utf-8") as f:
+            f.write(body)
+            f.truncate()
+            f.flush()
+            os.fsync(f.fileno())
+        return
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(body)
+    if st is not None:
+        os.chmod(tmp, st.st_mode & 0o777)
+        try:
+            os.chown(tmp, st.st_uid, st.st_gid)
+        except OSError:
+            pass
+    else:
+        os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
+
+def _ad_file() -> dict[str, Any]:
+    return _file("ad")
 
 
 def conf(key: str, default: str = "") -> str:
-    """Ayarın geçerli değeri: ekran > ortam > varsayılan. Dizin ayarları yalnız giriş servisinin dosyasından."""
+    """Ayarın geçerli değeri: ekran > ortam > varsayılan. Dosyada tutulanlar yalnız kendi dosyasından."""
     if key in _FILE_KEYS:
-        v = _ad_file().get(_FILE_KEYS[key])
+        store, field = _FILE_KEYS[key]
+        v = _file(store).get(field)
         if v is None or v == "":
             spec = _BY_KEY[key]
             return spec["default"] if default == "" else default
@@ -282,24 +360,31 @@ def save_settings(engine: sa.engine.Engine, actor: str, values: dict[str, Any]) 
         clean[k] = _validate(spec, raw)
     if "TIMAS_ADMIN_USERS" in clean and actor.lower() not in clean["TIMAS_ADMIN_USERS"].split(","):
         raise AdminError("Kendinizi yöneticilerden çıkaramazsınız; önce başka bir yönetici bunu yapmalı.")
-    file_part = {k: v for k, v in clean.items() if k in _FILE_KEYS}
-    if file_part:
-        current = _ad_file()
+    for store in ("ad", "db"):
+        file_part = {k: v for k, v in clean.items() if _FILE_KEYS.get(k, ("", ""))[0] == store}
+        if not file_part:
+            continue
+        current = _file(store)
         merged = dict(current)
+        touched = False
         for k, v in file_part.items():
-            field = _FILE_KEYS[k]
+            field = _FILE_KEYS[k][1]
             old = "" if current.get(field) is None else str(current.get(field))
             if old == v:
                 continue
-            merged[field] = int(v) if _BY_KEY[k]["type"] == "int" else v
+            # Dosyadaki yazımı koru: port bir kurulumda sayı, ötekinde metin yazılmış.
+            merged[field] = v if isinstance(current.get(field), str) or _BY_KEY[k]["type"] != "int" else int(v)
+            touched = True
             secret = _BY_KEY[k]["type"] == "secret"
             changed.append({"key": k, "label": _BY_KEY[k]["label"],
                             "from": None if secret else old, "to": None if secret else v})
-        if len(changed):
+        if touched:
+            if store == "db" and not merged.get("datasource"):
+                merged["datasource"] = "mssql"
             try:
-                _ad_file_write(merged)
+                _file_write(store, merged)
             except OSError as e:
-                raise AdminError(f"Giriş servisi dosyası yazılamadı ({AD_FILE}): {e}") from e
+                raise AdminError(f"Ayar dosyası yazılamadı ({_store_path(store)}): {e}") from e
     with engine.begin() as c:
         for k, v in clean.items():
             if k in _FILE_KEYS:
@@ -326,7 +411,7 @@ def reset_setting(engine: sa.engine.Engine, actor: str, key: str) -> dict[str, A
     if key == "TIMAS_ADMIN_USERS":
         raise AdminError("Yönetici listesi sıfırlanamaz; düzenleyerek değiştirin.")
     if key in _FILE_KEYS:
-        raise AdminError("Dizin ayarının sunucu değeri yoktur; düzenleyerek değiştirin.")
+        raise AdminError("Bu ayar kendi dosyasında tutulur; sunucu değeri yoktur, düzenleyerek değiştirin.")
     with engine.begin() as c:
         n = c.execute(SETTINGS.delete().where(SETTINGS.c.key == key)).rowcount
     _cache["at"] = 0.0
@@ -386,7 +471,7 @@ def _ensure_md4() -> None:
 
 def directory_test(username: str = "") -> tuple[bool, str]:
     """Servis hesabıyla dizine bağlanır; ad verilmişse o kullanıcıyı da arar. Giriş servisiyle aynı yol: NTLM, düz bağlama yok."""
-    cfg = {k: conf(k) for k in _FILE_KEYS}
+    cfg = {k: conf(k) for k in store_keys("ad")}
     missing = [_BY_KEY[k]["label"] for k in ("AD_HOST", "AD_NETBIOS", "AD_BASE_DN", "AD_BIND_USER", "AD_BIND_PASSWORD") if not cfg[k]]
     if missing:
         return False, "Eksik: " + ", ".join(missing) + "."
@@ -422,6 +507,198 @@ def directory_test(username: str = "") -> tuple[bool, str]:
         return False, f"{type(e).__name__}: {e}"[:400]
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"[:400]
+
+
+# ------------------------------------------------------------------ bağlantı denemeleri
+# Her deneme kaydedilmiş ayarla, gerçek bağlantıyı kurarak yapılır: "ayar dolu mu" diye bakmak
+# bağlantının çalıştığını söylemez. Hata metni olduğu gibi döner, çünkü düzeltecek kişi onu okur.
+
+
+def _thousands(n: int) -> str:
+    return f"{n:,}".replace(",", ".")
+
+
+def _test_connector(extra: Optional[dict[str, Any]] = None):
+    """Bağlantı dosyasındaki tanımla yeni bir bağlantı. Canlı bağlantıya dokunulmaz: deneme
+    yanlış ayarla asılı kalırsa kullanıcının sorusu bundan etkilenmesin."""
+    from semantic_layer.profiler.connectors import connector_from_config
+
+    cfg = dict(_file("db"))
+    cfg.update(extra or {})
+    cfg.setdefault("datasource", "mssql")
+    cfg.setdefault("login_timeout", int(os.environ.get("ADMIN_TEST_LOGIN_TIMEOUT", "10")))
+    return connector_from_config(cfg), str(cfg.get("datasource", "")).lower()
+
+
+def _db_missing() -> list[str]:
+    return [_BY_KEY[k]["label"] for k in ("DB_HOST", "DB_NAME", "DB_USER", "DB_PASSWORD") if not conf(k)]
+
+
+def database_test() -> tuple[bool, str]:
+    """Logo veritabanına bağlanır ve hangi veritabanına, hangi hesapla bağlandığını söyler."""
+    if missing := _db_missing():
+        return False, "Eksik: " + ", ".join(missing) + "."
+    t0 = time.monotonic()
+    conn = None
+    try:
+        conn, ds = _test_connector()
+        if ds in ("mssql", "sqlserver"):
+            sql = ("SELECT DB_NAME() AS db, SUSER_SNAME() AS hesap, "
+                   "(SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES) AS tablolar, "
+                   "CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(40)) AS surum")
+        else:
+            sql = "SELECT 1 AS db"
+        _, rows, _ = conn.execute(sql, 1)
+        ms = int((time.monotonic() - t0) * 1000)
+        r = rows[0] if rows else {}
+        if "hesap" not in r:
+            return True, f"Bağlandı ({ms} ms)."
+        return True, (f"Bağlandı ({ms} ms). {r.get('db')} · {r.get('hesap')} · "
+                      f"{_thousands(int(r.get('tablolar') or 0))} tablo · sürüm {r.get('surum')}")
+    except Exception as e:  # noqa: BLE001
+        return False, f"{type(e).__name__}: {e}"[:400]
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def crm_test() -> tuple[bool, str]:
+    """CRM ayrı bir bağlantı değil: aynı sunucuda başka bir veritabanı. Bu yüzden deneme,
+    Logo bağlantısının o veritabanını okuyup okuyamadığına bakar."""
+    schema = conf("CRM_SCHEMA").strip()
+    if not schema:
+        return False, "CRM şeması girilmemiş."
+    if missing := _db_missing():
+        return False, "Önce Logo veritabanı ayarları eksiksiz olmalı: " + ", ".join(missing) + "."
+    db, _, sch = schema.rpartition(".")
+    if not db:
+        db, sch = "", schema
+    for part in (db, sch):
+        if part and not all(ch.isalnum() or ch in "_-$" for ch in part):
+            return False, f"«{schema}» geçerli bir ad değil; veritabanı.şema bekleniyor."
+    t0 = time.monotonic()
+    conn = None
+    try:
+        conn, ds = _test_connector()
+        if ds not in ("mssql", "sqlserver"):
+            return False, "CRM denemesi yalnız SQL Server bağlantısında yapılır."
+        qual = f"[{db}]." if db else ""
+        _, rows, _ = conn.execute(
+            f"SELECT COUNT(*) AS tablolar FROM {qual}INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{sch}'", 1)
+        n = int((rows[0].get("tablolar") if rows else 0) or 0)
+        ms = int((time.monotonic() - t0) * 1000)
+        if not n:
+            return False, f"Bağlandı ({ms} ms) ama «{schema}» altında tablo görünmüyor; ad ya da okuma izni yanlış olabilir."
+        return True, f"Bağlandı ({ms} ms). {schema} · {_thousands(n)} tablo okunabiliyor."
+    except Exception as e:  # noqa: BLE001
+        return False, f"{type(e).__name__}: {e}"[:400]
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def llm_test() -> tuple[bool, str]:
+    """Modele tek kelimelik bir soru sorar. Cevabın içeriği değil, geldiği önemli."""
+    base, model, key = conf("OPENAI_API_BASE"), conf("LLM_MODEL_NAME"), conf("OPENAI_API_KEY")
+    if not base or not model:
+        return False, "Model adresi ya da model adı girilmemiş."
+    timeout = float(os.environ.get("ADMIN_LLM_TEST_TIMEOUT", "60"))
+    t0 = time.monotonic()
+    try:
+        from semantic_layer.candidates.llm_client import LlmClient
+
+        client = LlmClient(base, model, key, timeout, extra={"chat_template_kwargs": {"enable_thinking": False}})
+        out = client.chat([{"role": "user", "content": "Yalnızca TAMAM yaz."}], max_tokens=8)
+        ms = int((time.monotonic() - t0) * 1000)
+        text = " ".join((out or "").split())[:60]
+        if not text:
+            return False, f"Model bağlandı ({ms} ms) ama boş cevap verdi."
+        return True, f"Cevap geldi ({ms} ms). {model} → «{text}»"
+    except Exception as e:  # noqa: BLE001
+        return False, f"{type(e).__name__}: {e}"[:400]
+
+
+def store_test() -> tuple[bool, str]:
+    """Ayarların, kayıtların, panoların ve raporların tutulduğu meta veritabanı."""
+    if _engine is None:
+        return False, "Meta veritabanı bağlantısı kurulmamış."
+    t0 = time.monotonic()
+    try:
+        with _engine.connect() as c:
+            n = c.execute(sa.select(sa.func.count()).select_from(SETTINGS)).scalar() or 0
+            audits = c.execute(sa.select(sa.func.count()).select_from(AUDIT)).scalar() or 0
+        ms = int((time.monotonic() - t0) * 1000)
+        return True, f"Bağlandı ({ms} ms). {n} kayıtlı ayar, {_thousands(int(audits))} değişiklik kaydı."
+    except Exception as e:  # noqa: BLE001
+        return False, f"{type(e).__name__}: {e}"[:400]
+
+
+def email_config_test() -> tuple[bool, str]:
+    """E-posta için bağlantı kurmadan bakılabilecek tek şey ayarın tamlığı; gerçek deneme
+    bir adrese posta gönderir ve onu kullanıcı ister (`smtp_test`)."""
+    from semantic_bridge import alerts as alerts_mod
+
+    cfg = alerts_mod.smtp_settings()
+    if not cfg:
+        return False, "SMTP sunucusu ya da gönderen adresi girilmemiş."
+    return True, f"Ayarlı: {cfg['host']}:{cfg['port']} · gönderen {cfg['sender']}. Gerçek deneme için bir adrese gönderin."
+
+
+#: Tek tuşla çalışan denemeler. E-posta burada yalnız ayar bütünlüğüne bakar: bir denemenin
+#: kimseye posta göndermemesi gerekir.
+CHECKS: list[dict[str, Any]] = [
+    {"id": "database", "group": "database", "label": "Logo veritabanı", "run": database_test},
+    {"id": "crm", "group": "crm", "label": "CRM veritabanı", "run": crm_test},
+    {"id": "llm", "group": "llm", "label": "Yapay zekâ modeli", "run": llm_test},
+    {"id": "directory", "group": "directory", "label": "Active Directory", "run": lambda: directory_test("")},
+    {"id": "email", "group": "email", "label": "E-posta ayarı", "run": email_config_test},
+    {"id": "store", "group": None, "label": "Meta veritabanı", "run": store_test},
+]
+_CHECK_BY_ID = {c["id"]: c for c in CHECKS}
+
+
+def run_check(check_id: str) -> dict[str, Any]:
+    c = _CHECK_BY_ID.get(check_id)
+    if not c:
+        raise AdminError(f"Bilinmeyen deneme: {check_id}")
+    t0 = time.monotonic()
+    try:
+        ok, message = c["run"]()
+    except Exception as e:  # noqa: BLE001
+        ok, message = False, f"{type(e).__name__}: {e}"[:400]
+    return {"id": c["id"], "group": c["group"], "label": c["label"], "ok": ok, "message": message,
+            "ms": int((time.monotonic() - t0) * 1000), "at": _iso(_now())}
+
+
+def run_checks() -> dict[str, Any]:
+    """Hepsi sırayla: tek bağlantı üstünde koşan denemeler birbirini beklesin."""
+    items = [run_check(c["id"]) for c in CHECKS]
+    return {"items": items, "ok": all(i["ok"] for i in items), "at": _iso(_now())}
+
+
+def system_info() -> dict[str, Any]:
+    """Ekrandan değiştirilmeyen, servisin açılışta okuduğu tanımlar. Görünür olmaları gerekir:
+    bir ayarın neden beklendiği gibi davranmadığı çoğu zaman burada yazar."""
+    def mask(dsn: str) -> str:
+        import re as _re
+        return _re.sub(r"//([^:/@]+):[^@]*@", r"//\1:***@", dsn or "")
+
+    return {"items": [
+        {"label": "Bağlantı dosyası", "value": DB_FILE},
+        {"label": "Giriş servisi dosyası", "value": AD_FILE},
+        {"label": "Meta veritabanı", "value": mask(os.environ.get("SEMANTIC_STORE_DSN") or os.environ.get("NANOBASE_META_DSN", ""))},
+        {"label": "Katalog kapsamı (şema)", "value": os.environ.get("SEMANTIC_SCHEMA", "dbo")},
+        {"label": "Katalog kapsamı (tablo deseni)", "value": os.environ.get("SEMANTIC_TABLE_LIKE", "") or "tümü"},
+        {"label": "Bilgi klasörü", "value": os.environ.get("SEMANTIC_KNOWLEDGE_DIR", "")},
+        {"label": "Rapor klasörü", "value": os.environ.get("REPORT_DIR", "")},
+        {"label": "Servis ortam dosyası", "value": "/etc/nanobase/semantic-bridge.env"},
+    ]}
 
 
 # ------------------------------------------------------------------ değişiklik kaydı

@@ -769,7 +769,12 @@ class ModelFileConnector:
 
 
 def connector_from_file(path: str) -> Connector:
-    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return connector_from_config(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+def connector_from_config(data: dict[str, Any]) -> Connector:
+    """Aynı bağlantı tanımı, dosyadan değil elden. Yönetim ekranının bağlantı denemesi bunu kullanır:
+    kaydedilecek değerler henüz dosyada değilken de denenebilsin."""
     if "properties" in data and "datasource" in data:
         ds, cfg = str(data["datasource"]), dict(data["properties"])
     else:
