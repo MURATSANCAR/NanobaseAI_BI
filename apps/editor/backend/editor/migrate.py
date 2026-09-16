@@ -19,6 +19,11 @@ def main():
         db.execute('GRANT SELECT ON editor.deployments, editor.alembic_version TO editor_app')
         db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON editor.worker_heartbeats TO editor_app')
         db.execute('GRANT SELECT, INSERT ON editor.source_probes TO editor_app')
+        # pg_restore deliberately omits ACLs; reapply book grants even when the
+        # restored Alembic revision is already current and no migration runs.
+        db.execute('''GRANT SELECT, INSERT, UPDATE ON editor.works, editor.editions,
+            editor.content_versions, editor.generations, editor.jobs, editor.records,
+            editor.outbox, editor.reviews, editor.idempotency, editor.uploads TO editor_app''')
         db.execute('GRANT USAGE ON SCHEMA checkpoints TO editor_app')
         db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA checkpoints TO editor_app')
         db.execute('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA checkpoints TO editor_app')

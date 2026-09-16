@@ -44,9 +44,10 @@ def main():
                     db.execute("UPDATE editor.jobs SET lease_until=now()+interval '90 seconds' WHERE id=%s AND owner_id=%s AND status='RUNNING'",(active['id'],owner))
                 else:
                     db.execute("UPDATE editor.jobs SET status='CANCELLED',finished_at=now() WHERE status='RUNNING' AND cancellation_requested AND lease_until<now()")
+                    db.execute("UPDATE editor.jobs SET status='FAILED',error_code='LEASE_ATTEMPTS_EXHAUSTED',finished_at=now() WHERE status='RUNNING' AND lease_until<now() AND attempt_no>=max_attempts")
                     job=db.execute("""SELECT * FROM editor.jobs WHERE
                       (status='QUEUED' OR (status='RUNNING' AND lease_until<now()))
-                      AND attempt_no<3 AND NOT cancellation_requested ORDER BY created_at
+                      AND attempt_no<max_attempts AND NOT cancellation_requested ORDER BY created_at
                       FOR UPDATE SKIP LOCKED LIMIT 1""").fetchone()
                     if job:
                         job=db.execute("""UPDATE editor.jobs SET status='RUNNING',owner_id=%s,

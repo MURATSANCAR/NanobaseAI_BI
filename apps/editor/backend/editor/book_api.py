@@ -96,7 +96,7 @@ class Source(BaseModel):
 
 def mutate(path,body,key,fn):
     if not key or len(key)>200: raise HTTPException(400,'Idempotency-Key gerekli')
-    fingerprint=sha((path+body.model_dump_json()).encode())
+    fingerprint=sha((path+body.model_dump_json(exclude_none=True)).encode())
     with connection() as db:
         db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',(ACTOR+key,))
         old=db.execute('SELECT * FROM editor.idempotency WHERE actor_id=%s AND key=%s',(ACTOR,key)).fetchone()
@@ -178,9 +178,22 @@ def job(job_id:uuid.UUID):
     with connection() as db:
         row=db.execute('SELECT * FROM editor.jobs WHERE id=%s',(job_id,)).fetchone()
         if not row: raise HTTPException(404,'Kayıt bulunamadı')
-        scope(db,row['generation_id'])
+        generation=scope(db,row['generation_id'])
         counts=db.execute('SELECT kind,count(*) FROM editor.records WHERE generation_id=%s GROUP BY kind',(row['generation_id'],)).fetchall()
-        row.pop('owner_id'); row.update({'counts':counts}); return row
+        sizes={c['kind']:c['count'] for c in counts}
+        source=source_for(row['generation_id']); expected=source['manifest']['pdf_pages']
+        row.pop('owner_id')
+        row.update({'counts':counts,'processing_status':row['status'],
+          'source_coverage':{'expected_pages':expected,'accounted_pages':sizes.get('evidence',0),
+            'visual_read_pages':sizes.get('visuals',0),'all_pages_accounted':sizes.get('evidence',0)==expected,
+            'visual_read_complete':sizes.get('visuals',0)==expected},
+          'editorial_status':'ACCEPTED' if generation['status']=='ACTIVE' else 'PENDING'})
+        return row
+
+
+@router.get('/generations/{generation}')
+def generation_detail(generation:uuid.UUID):
+    with connection() as db: return scope(db,generation)
 
 
 @router.post('/jobs/{job_id}/cancel')
@@ -195,7 +208,7 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
 
 
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','evidence','literary','passages','validation'],offset:int=0,limit:int=50):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis'],offset:int=0,limit:int=50):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)
@@ -298,13 +311,22 @@ def answer(job_id:uuid.UUID):
         return {'job_id':str(job_id),'job_status':job['status'],'generation_id':str(job['generation_id']),'answer':row['data'] if row else None}
 
 
+class RetryRequest(AnalysisRequest):
+    reason:str|None=Field(default=None,min_length=10,max_length=2000)
+
+
 @router.post('/jobs/{job_id}/retry',status_code=202)
-def retry(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
+def retry(job_id:uuid.UUID,body:RetryRequest,idempotency_key:str=Header()):
     def action(db):
         row=db.execute('SELECT * FROM editor.jobs WHERE id=%s FOR UPDATE',(job_id,)).fetchone()
         if not row: raise HTTPException(404,'Kayıt bulunamadı')
         scope(db,row['generation_id'])
-        if row['status']!='FAILED' or row['attempt_no']>=3: raise HTTPException(409,'JOB_NOT_RETRYABLE')
-        db.execute("UPDATE editor.jobs SET status='QUEUED',error_code=NULL,finished_at=NULL WHERE id=%s",(job_id,))
+        if row['status']!='FAILED': raise HTTPException(409,'JOB_NOT_RETRYABLE')
+        if row['attempt_no']>=row['max_attempts'] and not body.reason:
+            raise HTTPException(409,'OPERATOR_RECOVERY_REASON_REQUIRED')
+        history=row['payload'].get('operator_retries',[])
+        history.append({'after_attempt':row['attempt_no'],'previous_error':row['error_code'],
+                        'reason':body.reason,'actor':ACTOR})
+        db.execute("UPDATE editor.jobs SET status='QUEUED',error_code=NULL,finished_at=NULL,max_attempts=GREATEST(max_attempts,attempt_no+1),payload=payload || %s WHERE id=%s",(Jsonb({'operator_retries':history}),job_id))
         return {'job_id':str(job_id),'status':'QUEUED'}
     return mutate('/jobs/'+str(job_id)+'/retry',body,idempotency_key,action)

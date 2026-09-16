@@ -10,12 +10,16 @@ from pathlib import Path
 import time
 import urllib.request
 import urllib.error
+import fcntl
+import html
 
 root=Path(__file__).resolve().parents[1]
 run=json.loads((root/'evidence/reference-book-run.json').read_text())
 token=(root/'secrets/api_token').read_text().strip()
 base='http://127.0.0.1:8810'; gen=run['job']['generation_id']
 output=root/'runtime/book-analysis'/gen; output.mkdir(parents=True,exist_ok=True); output.chmod(0o700)
+lock=(output/'follower.lock').open('a')
+fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
 
 
 def request(path,body=None,key=None):
@@ -23,7 +27,14 @@ def request(path,body=None,key=None):
     if body is not None: headers['Content-Type']='application/json'
     if key: headers['Idempotency-Key']='book-acceptance-v1-'+key
     req=urllib.request.Request(base+path,data=json.dumps(body).encode() if body is not None else None,headers=headers)
-    with urllib.request.urlopen(req,timeout=60) as response: return json.load(response)
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(req,timeout=60) as response: return json.load(response)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (502,503,504) or attempt==4: raise
+        except urllib.error.URLError:
+            if attempt==4: raise
+        time.sleep(min(30,2**(attempt+1)))
 
 
 def wait_job(job):
@@ -59,7 +70,7 @@ questions={
 try:
     final=wait_job(run['job']['job_id'])
     data={}
-    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages'):
+    for kind in ('evidence','visuals','scenes','entities','events','literary','validation','passages','claims','relationships','event_merges'):
         items=[]; offset=0
         while True:
             page=request(f'/v1/generations/{gen}/{kind}?offset={offset}&limit=100')
@@ -77,15 +88,36 @@ try:
         wait_job(job['job_id']); answers[key]=request('/v1/answers/'+job['job_id'])
         (output/'answers.json').write_text(json.dumps(answers,ensure_ascii=False,indent=2))
         if index%10==0: print(json.dumps({'questions_completed':index,'semantic_reference_review':'PENDING'}),flush=True)
+    pages={row['id']:row['data']['pdf_page'] for row in data['evidence']}
+    def refs(values): return 'PDF '+', '.join(map(str,sorted({pages[value] for value in values})))
+    def clean(value): return html.escape(str(value)).replace('|','\\|').replace('\n',' ')
+    modes={'ACTUAL':'Gerçekleşmiş','REPORTED':'Aktarılan','PLANNED':'Plan','HYPOTHETICAL':'Varsayım/hayal',
+           'DREAM':'Rüya','METAPHOR':'Benzetme','JOKE':'Şaka'}
     lines=['# Ekrana Sığmayan Macera — kaynaklı analiz taslağı','',
-      'Analiz nesli: '+gen,'','İşleme tamamlandı. Yayınevi editör kabulü ve bağımsız anlamsal değerlendirme bekleniyor.','',
-      '## Kitap ve sınırlı edebî analiz','']
-    for row in data['literary']: lines.extend(['```json',json.dumps(row['data'],ensure_ascii=False,indent=2),'```',''])
+      'İşleme tamamlandı. Yayınevi editör kabulü ve bağımsız anlamsal değerlendirme bekleniyor.','',
+      '## Kitabın özeti','']
+    literary=data['literary'][0]['data']
+    lines.extend([clean(literary.get('book_summary','')),'','## Karakterler','',
+                  '| Karakter | Kaynaklı açıklama | Kaynak |','|---|---|---|'])
+    for row in data['entities']:
+        d=row['data']; lines.append('| '+clean(d['name'])+' | '+clean(d.get('description',''))+' | '+refs(d['evidence_refs'])+' |')
+    lines.extend(['','## Olaylar ve gerçekleşme durumu','','| Olay | Tür | Kaynak |','|---|---|---|'])
+    for row in data['events']:
+        d=row['data']; lines.append('| '+clean(d['description'])+' | '+modes.get(d['narrative_mode'],d['narrative_mode'])+' | '+refs(d['evidence_refs'])+' |')
+    lines.extend(['','## Karakter değişimi örnekleri',''])
+    for item in literary.get('character_change',[]):
+        lines.extend(['### '+clean(item['character']),'',clean(item['initial'])+' → '+clean(item['later']),'',
+          'Tetikleyici: '+clean(item['trigger']),'','Alternatif okuma: '+clean(item['alternative']),'',refs(item['evidence_refs']), ''])
+    lines.extend(['## Tema yorumları',''])
+    for item in literary.get('themes',[]):
+        lines.extend([clean(item['interpretation']),'','Alternatif okuma: '+clean(item['alternative']),'',refs(item['evidence_refs']),''])
+    lines.extend(['## Açık sorular ve inceleme',''])
+    for item in literary.get('open_questions',[]): lines.append('- '+clean(item))
     lines.extend(['## Atıflı soru cevap denemeleri',''])
     for key,row in answers.items():
-        a=row['answer']; lines.extend(['### '+key+' — '+questions[key],'',a.get('answer',''),'',
+        a=row['answer']; lines.extend(['### '+key+' — '+questions[key],'',clean(a.get('answer','')),'',
           'Durum: '+a.get('status','UNKNOWN')+'; taslak, insan onayı yok.',''])
-        for claim in a.get('claims',[]): lines.append('- '+claim['text']+' — '+', '.join(claim['evidence_refs']))
+        for claim in a.get('claims',[]): lines.append('- '+clean(claim['text'])+' — '+refs(claim['evidence_refs']))
         lines.append('')
     lines.extend(['## Kabul sınırları','',
       '- B18: Değişmiş gerçek ikinci baskı sağlanmadı; doğrulanamadı.',
