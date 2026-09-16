@@ -161,3 +161,31 @@ def test_background_work_yields_to_anyone_waiting(store):
         t.join(timeout=10)
     assert order[0] == "bg-1"
     assert order.index("insan") < order.index("bg-2"), order
+
+
+def test_tickets_left_by_a_killed_process_do_not_hold_the_line(tmp_path):
+    """A deployment restart leaves WAITING rows nobody is polling. They must not outrank live work.
+
+    Measured in production on 2026-09-16: twenty such rows, eight free slots, and every live question
+    waiting seventeen minutes behind the dead ones.
+    """
+    import sqlalchemy as sa
+    from datetime import timedelta
+    from semantic_layer.runtime.llm_queue import LlmQueue, _now
+    from semantic_layer.store import schema as S
+
+    engine = sa.create_engine(f"sqlite:///{tmp_path}/q.db")
+    S.sl_llm_queue.create(engine, checkfirst=True)
+    dead = _now() - timedelta(minutes=17)
+    with engine.begin() as conn:
+        for i in range(3):
+            conn.execute(S.sl_llm_queue.insert().values(
+                id=f"dead{i}", tenant_id="t", datasource_id="d", purpose="nl2sql", question="",
+                status="WAITING", enqueued_at=dead, heartbeat_at=dead, worker="olu:1"))
+    q = LlmQueue(engine, slots=1, lease_seconds=900)
+    with q.lease(purpose="nl2sql", tenant_id="t", datasource_id="d") as ticket:
+        assert ticket is not None
+    with engine.connect() as conn:
+        left = dict(conn.execute(sa.select(S.sl_llm_queue.c.status, sa.func.count())
+                                 .group_by(S.sl_llm_queue.c.status)).fetchall())
+    assert left.get("WAITING", 0) == 0 and left.get("ABANDONED", 0) == 3, left

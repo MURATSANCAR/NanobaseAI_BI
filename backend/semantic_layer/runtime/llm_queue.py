@@ -63,6 +63,10 @@ class LlmQueue:
     """Time-ordered admission control for the model. Backed by the catalog database; degrades to a
     process-local lock when no database is available (tests, offline tooling)."""
 
+    #: How long a waiting ticket may go without a heartbeat before it is presumed dead. A live waiter
+    #: writes one at most every `poll_seconds` (capped at 5s), so this is six missed writes.
+    WAITING_HEARTBEAT_GRACE_SEC = 30
+
     def __init__(
         self,
         engine: Optional[sa.Engine] = None,
@@ -163,7 +167,13 @@ class LlmQueue:
         """A ticket whose worker stopped reporting is abandoned, so one crash cannot stop the line.
         The caller's own ticket is never reclaimed — it is being held by a thread that is right here."""
         running_cutoff = _now() - timedelta(seconds=max(1, self.lease_seconds))
-        waiting_cutoff = _now() - timedelta(seconds=max(60, self.lease_seconds))
+        # A waiting ticket is held by a thread that writes a heartbeat on every poll, at most five
+        # seconds apart. Judging it by the *lease* — the time a model call may take — leaves the
+        # tickets of a process that was killed sitting at the head of the line for a quarter of an
+        # hour, and every live question queues behind the dead ones. Measured on 2026-09-16 after a
+        # deployment restart: twenty dead waiters, zero running, live questions stalled seventeen
+        # minutes with eight free slots.
+        waiting_cutoff = _now() - timedelta(seconds=self.WAITING_HEARTBEAT_GRACE_SEC)
         stale = sa.or_(
             sa.and_(S.sl_llm_queue.c.status == "RUNNING", sa.or_(S.sl_llm_queue.c.heartbeat_at.is_(None), S.sl_llm_queue.c.heartbeat_at < running_cutoff)),
             sa.and_(S.sl_llm_queue.c.status == "WAITING", sa.or_(S.sl_llm_queue.c.heartbeat_at.is_(None), S.sl_llm_queue.c.heartbeat_at < waiting_cutoff)),
