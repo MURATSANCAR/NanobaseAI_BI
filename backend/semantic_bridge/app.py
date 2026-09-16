@@ -52,7 +52,7 @@ from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompile
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
 from semantic_layer.runtime.audit import audit_sql, unmet_obligations
 from semantic_layer.runtime import critic
-from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
+from semantic_layer.runtime.guardrails import is_query_timeout, allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
@@ -961,14 +961,22 @@ class Runtime:
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)
+            slow = is_query_timeout(e)
+            limit = getattr(self.connector, "query_timeout", "?")
             if down:
                 log.error("data source unreachable during execution q=%r err=%s", question[:80], err[:300])
+            elif slow:
+                log.warning("query timeout (%ss) q=%r", limit, question[:80])
             _exec_msg = ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
-                         if down else f"Sorgu çalıştırılamadı: {err}")
-            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=(f"data source unreachable: {err}" if down else err),
-                       answer_type="DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", answer_summary=_exec_msg)
+                         if down else
+                         (f"Sorgu veritabanında {limit} saniyede bitmedi; soru doğru, veri büyük. Dönemi ya da kapsamı daraltın ya da yeniden deneyin."
+                          if slow else f"Sorgu çalıştırılamadı: {err}"))
+            _type = "DATA_SOURCE_UNAVAILABLE" if down else ("QUERY_TIMEOUT" if slow else "SQL_INVALID")
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
+                       error=(f"data source unreachable: {err}" if down else (f"query timeout: {err}" if slow else err)),
+                       answer_type=_type, answer_summary=_exec_msg)
             return {"id": uuid.uuid4().hex,
-                    "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", "sql": sql,
+                    "type": _type, "sql": sql,
                     "explanation": _exec_msg,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
