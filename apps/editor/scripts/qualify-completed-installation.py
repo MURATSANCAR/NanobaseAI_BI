@@ -20,8 +20,8 @@ fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 run=json.loads((root/'evidence/source-spans-run.json').read_text())
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 base='http://127.0.0.1:8810'
-work=root.parent/('editor-qualification-'+run['generation_id'][:8])
-work.mkdir(mode=0o700,exist_ok=False)
+work=Path(os.environ.get('EDITOR_QUALIFICATION_ROOT',str(root.parent/'editor-qualifications')))/run['generation_id'][:8]
+work.mkdir(mode=0o700,parents=True,exist_ok=False)
 status=root/'evidence/installation-qualification-status.md'
 report={'generation_id':run['generation_id'],'job_id':run['job_id'],
         'environment':'connected Linux host / real PDF / PostgreSQL',

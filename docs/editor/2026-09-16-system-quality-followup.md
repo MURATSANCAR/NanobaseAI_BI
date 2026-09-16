@@ -93,6 +93,26 @@ ikinci büyük model veya yeni vektör veritabanı eklenmedi.
 - Koşu sonrası ayrı kurulumda gerçek yedek/restore ve offline paket sınaması için
   tek seferlik betik hazırlandı. Henüz gerçekleşmeyen adımlar başarı sayılmaz.
 
+## V2 üzerinde ek gerçek kontroller
+
+- İlk sayfanın altı kayıt türü, ikinci sayfanın kaynak/yerleşim/okuma kayıtları
+  gerçek API ve bağımsız PostgreSQL arasında eşleşti. S.1 anlaşan 1/9, s.2 23/33;
+  kalanlar incelemede. Elle review ve kaynak düzeltmesi sıfır.
+- Gerçek API'de yetkisiz okuma 401; doğrulanmamış nesle preview/published soru
+  ve activate girişimleri 409 verdi. Bağımsız DB önce/sonra karşılaştırmasında
+  soru işi veya editör kararı oluşmadı. Kanıt: `evidence/publication-gates.json`.
+- S.38 ayrı ve sınırlı gerçek OCR servis kontrolü: API kaynağı PG ile eşleşti,
+  2400px render hash'i doğrulandı. Yeni kelime eşleştirmesinde 24 bölgenin 20'si
+  anlaşmalı; olumsuzluk içeren bölge korundu. OCR 33,016 saniye. Bu ayrı kontrol
+  ana akışın s.38'e ulaştığı veya konuşmacı/semantiğin doğrulandığı anlamına gelmez.
+  Beklenen cevap sağlanmadı, uygulama kaydı yazılmadı. Kanıt:
+  `evidence/source-alignment-page-0038-a9471749-7447-4826-b003-f25e53943763.json`.
+- Kurulum denetçisi ilk başlangıçta üst klasör yazma izni nedeniyle çıkmıştı.
+  Yalnız ayrı denetim kökü `/data/nanobaseai/editor-qualifications` operatör
+  sahipliğinde 0700 oluşturuldu; kaynak kurulumun izinleri/verileri değiştirilmedi.
+  Yeniden başlatılan denetçi release eşliğini geçti ve paket üretimine başladı.
+  Süreç `evidence/installation-qualification-status.md` ve `.log` dosyalarına yazar.
+
 ## Açık kabul işleri
 
 Konuşmacının figür/kuyruk/isimle bağlanması, iddianın anlamsal desteği, sahneler
