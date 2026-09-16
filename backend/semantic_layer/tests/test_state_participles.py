@@ -337,3 +337,46 @@ def test_an_undated_call_reads_the_years_the_statement_names(profiles):
              for n, rows, w0, w1 in (("211", 500_000, "2021-01-01", "2025-12-31"), ("411", 80_000, "2026-01-01", "2026-08-17"))]
     out = physicalize_sql("SELECT SUM(NETTOTAL) FROM INVOICE WHERE DATE_ >= '2026-01-01' AND DATE_ < '2027-01-01'", years, {})
     assert "LG_411_01_INVOICE" in out and "LG_211_01_INVOICE" not in out, out
+
+
+def _copies():
+    def prof(entity, pattern, firm, rows, window, cols):
+        return SchemaProfile(datasource_id=DS, table_name=pattern.replace("{n0}", firm).replace("{n1}", "01"), table_pattern=pattern,
+                             entity=entity, schema_name="dbo", description=entity, row_count=rows, context={"n0": firm, "n1": "01"},
+                             time_window=window, columns=[ColumnProfile(name=c) for c in cols])
+    out = []
+    for firm, window in (("211", ("2021-01-01", "2025-12-31")), ("411", ("2026-01-01", "2026-08-17"))):
+        out.append(prof("INVOICE", "LG_{n0}_{n1}_INVOICE", firm, 100, window, ["LOGICALREF", "DATE_", "NETTOTAL", "CLIENTREF"]))
+        out.append(prof("PAYTRANS", "LG_{n0}_{n1}_PAYTRANS", firm, 100, window, ["LOGICALREF", "DATE_", "FICHEREF", "MODULENR"]))
+        out.append(prof("CLCARD", "LG_{n0}_CLCARD", firm, 50, None, ["LOGICALREF", "DEFINITION_"]))
+    return out
+
+
+def test_partitioned_relations_spread_in_lockstep_and_join_within_their_copy():
+    from datetime import date
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
+    sql = ('SELECT AVG(DATEDIFF(day, i."DATE_", p."DATE_")) AS gun FROM PAYTRANS p JOIN INVOICE i ON i."LOGICALREF" = p."FICHEREF" '
+           'WHERE i."DATE_" >= \'2025-01-01\' AND i."DATE_" < \'2027-01-01\'')
+    out = physicalize_sql(sql, _copies(), {}, period=(date(2025, 1, 1), date(2027, 1, 1)))
+    assert "LG_211_01_PAYTRANS" in out and "LG_411_01_PAYTRANS" in out, out
+    assert "LG_211_01_INVOICE" in out and "LG_411_01_INVOICE" in out, out
+    assert out.count("__nb_firm") >= 5 and "[i].[__nb_firm] = [p].[__nb_firm]" in out.replace('"', "") or "__nb_firm] = " in out, out
+
+
+def test_a_single_year_question_reads_the_reference_table_of_the_same_copy():
+    from datetime import date
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
+    sql = ('SELECT c."DEFINITION_", SUM(i."NETTOTAL") FROM INVOICE i JOIN CLCARD c ON c."LOGICALREF" = i."CLIENTREF" '
+           'WHERE i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\' GROUP BY c."DEFINITION_"')
+    out = physicalize_sql(sql, _copies(), {}, period=(date(2026, 1, 1), date(2027, 1, 1)))
+    assert "LG_411_CLCARD" in out and "LG_211_CLCARD" not in out, out
+    assert "__nb_firm" not in out, "one copy needs no tag"
+
+
+def test_a_keyword_alias_is_quoted():
+    from semantic_layer.runtime.guardrails import physicalize_sql
+
+    out = physicalize_sql("WITH plan AS (SELECT 1 AS x FROM INVOICE) SELECT AVG(x) FROM plan", _copies(), {})
+    assert "[plan]" in out, out
