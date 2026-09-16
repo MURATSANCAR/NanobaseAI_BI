@@ -198,6 +198,12 @@ function CanvasBody({
 
   const [ask, setAsk] = useState('');
   const [showSql, setShowSql] = useState(false);
+  const [sqlCopied, setSqlCopied] = useState(false);
+  useLayoutEffect(() => {
+    if (!sqlCopied) return;
+    const t = window.setTimeout(() => setSqlCopied(false), 2000);
+    return () => window.clearTimeout(t);
+  }, [sqlCopied]);
   const onAsk = () => {
     const q = ask.trim();
     if (!q) return;
@@ -500,11 +506,28 @@ function CanvasBody({
               </div>
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
-              <button type="button" onClick={() => setShowSql((v) => !v)} className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
-                <span>{showSql ? 'Gizle' : "SQL'i göster"}</span>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              </button>
+            <div className="pt-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => setShowSql((v) => !v)} className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
+                  <span>{showSql ? 'Gizle' : "SQL'i göster"}</span>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                </button>
+                {d.c5.sql && (
+                  <button
+                    type="button"
+                    onClick={() => { void navigator.clipboard?.writeText(d.c5.sql ?? '').then(() => setSqlCopied(true)); }}
+                    title="SQL'i kopyala"
+                    className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-muted hover:text-ink flex items-center gap-1"
+                  >
+                    {sqlCopied ? (
+                      <svg className="w-3 h-3 text-mintSuccess" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                    ) : (
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2M8 7h6a2 2 0 012 2v6" /></svg>
+                    )}
+                    <span>{sqlCopied ? 'Kopyalandı' : 'Kopyala'}</span>
+                  </button>
+                )}
+              </div>
               <span className="text-[11px] text-muted">{d.c5.latency}</span>
             </div>
           </div>

@@ -81,6 +81,8 @@ export type StitchCanvasData = {
     title: string;
     badge: string;
     summary: string;
+    /** Kopyalanacak tam SQL. Yalnız cevap görünümünde dolar; kırpılmaz. */
+    sql?: string;
     rows: [StitchSourceRow, StitchSourceRow, StitchSourceRow];
     latency: string;
   };

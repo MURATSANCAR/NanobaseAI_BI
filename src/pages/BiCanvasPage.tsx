@@ -207,7 +207,8 @@ export default function BiCanvasPage() {
         ...d.c5,
         title: 'Üretilen SQL',
         badge: askErr ? 'Hata' : asking ? 'Çalışıyor' : 'Canlı',
-        summary: (answer?.sql ?? (asking ? 'Bekleniyor…' : (askErr ?? ''))).slice(0, 400),
+        summary: answer?.sql ?? (asking ? 'Bekleniyor…' : (askErr ?? '')),
+        sql: answer?.sql,
         latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
       },
     };
