@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 from typing import Iterator, Optional
 
 from semantic_layer.models import SemanticType
-from semantic_layer.rule_miner.common import Candidate, Catalog, clean_view_name, norm_value, usable_term
+from semantic_layer.rule_miner.common import Candidate, Catalog, clean_view_name, norm_value, sql_values, usable_term
 
 _SIMPLE_OPS = {"eq": "IN", "in": "IN", "ne": "NOT IN", "not-in": "NOT IN"}
 _STATE_FIRST = ("statuscode", "statecode")
@@ -64,7 +64,7 @@ def candidates(name: str, fetch_xml: str, catalog: Catalog, *, source_kind: str 
         return []
     conds.sort(key=lambda c: (c[0].lower() not in _STATE_FIRST, c[0]))
     head, *rest = conds
-    extra = [f"{prof.entity}.{a.upper()} {op} ({', '.join(vals)})" for a, op, vals in rest]
+    extra = [f"{prof.entity}.{a.upper()} {op} ({sql_values(vals)})" for a, op, vals in rest]
     return [Candidate(term, SemanticType.DIMENSION_VALUE, prof.entity, prof.table_pattern, head[0].upper(), head[1], head[2],
                       conditions=extra, source=f"{source_kind}:{name}", kind=source_kind, schema=prof.schema_name or "")]
 
