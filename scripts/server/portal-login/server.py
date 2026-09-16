@@ -11,6 +11,9 @@ import secrets
 import sqlite3
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -24,6 +27,9 @@ SECURE = os.environ.get('COOKIE_SECURE', '1') != '0'
 COOKIE = '__Secure-timas_session' if SECURE else 'timas_session'
 FLAGS = ('Secure; ' if SECURE else '') + 'HttpOnly; SameSite=Strict'
 TTL = 8 * 3600
+# Zeki AI chat: internal URL of the chat container, service account token and token secret. Root-owned, never committed.
+# {"url": "http://127.0.0.1:4000", "user_id": "...", "token": "...", "sso_secret": "...", "email_domain": "timas.local"}
+CHAT_FILE = os.environ.get('CHAT_CONFIG_FILE', '/etc/nanobase/zeki-chat.json')
 # sAMAccountName characters only: nothing here can widen the LDAP filter.
 ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
 ACTIVE_PERSON = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={})(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
@@ -134,6 +140,76 @@ def ad_verify(username, password):
         raise DirectoryUnavailable(type(exc).__name__)
 
 
+class ChatUnavailable(Exception):
+    """The chat server could not be asked or refused the service account."""
+
+
+def chat_config():
+    try:
+        with open(CHAT_FILE) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def chat_call(config, method, path, query=None, body=None):
+    url = config['url'].rstrip('/') + '/api/v1/' + path
+    if query:
+        url += '?' + urllib.parse.urlencode(query)
+    data = json.dumps(body).encode() if body is not None else None
+    request = urllib.request.Request(url, data=data, method=method, headers={
+        'X-User-Id': config['user_id'],
+        'X-Auth-Token': config['token'],
+        'Content-Type': 'application/json',
+    })
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            return json.loads(response.read() or b'{}')
+    except urllib.error.HTTPError as exc:
+        try:
+            return json.loads(exc.read() or b'{}')
+        except ValueError:
+            raise ChatUnavailable(f'HTTP {exc.code}')
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        raise ChatUnavailable(type(exc).__name__)
+
+
+def chat_login_token(account, display):
+    """Makes sure the portal user exists in the chat under the same account name, then returns a login token.
+
+    The chat never sees a password: accounts are created with a random one that nobody knows, and the
+    only way in is this token, which the portal issues to a browser that already holds a portal session.
+    """
+    config = chat_config()
+    if not config:
+        raise ChatUnavailable('no chat configuration')
+    found = chat_call(config, 'GET', 'users.info', {'username': account})
+    user = found.get('user') if found.get('success') else None
+    if not user:
+        created = chat_call(config, 'POST', 'users.create', {
+            'username': account,
+            'name': display,
+            'email': f"{account}@{config.get('email_domain', 'timas.local')}",
+            'password': secrets.token_urlsafe(32),
+            'verified': True,
+            'requirePasswordChange': False,
+            'sendWelcomeEmail': False,
+            'joinDefaultChannels': True,
+        })
+        user = created.get('user') if created.get('success') else None
+        if not user:
+            raise ChatUnavailable(f"user create refused: {created.get('errorType') or created.get('error')}")
+    elif not user.get('active', True):
+        return None
+    elif user.get('name') != display:
+        chat_call(config, 'POST', 'users.update', {'userId': user['_id'], 'data': {'name': display}})
+    issued = chat_call(config, 'POST', 'users.createToken', {'userId': user['_id'], 'secret': config['sso_secret']})
+    token = (issued.get('data') or {}).get('authToken')
+    if not token:
+        raise ChatUnavailable(f"token refused: {issued.get('errorType') or issued.get('error')}")
+    return token
+
+
 def session(cookie):
     try:
         cookies = SimpleCookie(cookie)
@@ -170,6 +246,19 @@ class Handler(BaseHTTPRequestHandler):
             if not row:
                 return self.reply(401, {'username': None})
             return self.reply(200, {'username': row[0], 'displayName': row[1] or row[0]})
+        if self.path == '/chat-sso':
+            # Called by the chat page (same origin, credentials included) to sign the portal user in.
+            row = session(self.headers.get('Cookie', ''))
+            if not row:
+                return self.reply(401)
+            try:
+                token = chat_login_token(row[0], row[1] or row[0])
+            except ChatUnavailable as exc:
+                print(f'timas-login: chat unavailable ({exc})', file=sys.stderr, flush=True)
+                return self.reply(503, {'error': 'Sohbet şu an kullanılamıyor.'})
+            if not token:
+                return self.reply(403)
+            return self.reply(200, {'loginToken': token})
         self.reply(404)
 
     def do_POST(self):
