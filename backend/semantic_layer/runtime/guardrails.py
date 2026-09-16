@@ -100,6 +100,53 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _carry_tag_through_derived(out: exp.Expression, tagged: dict[str, str]) -> None:
+    """A derived table over a tagged relation carries the tag out with it.
+
+    `SELECT DISTINCT LOGICALREF, DATE_, CLIENTREF FROM INVOICE` lists its columns, so the copy tag
+    the union added to INVOICE stops at the subquery's edge; the join outside it then met 2026
+    invoices with the 2021–2025 payment plan on a LOGICALREF that merely coincided, and the answer
+    was a payment term of minus 750 days. The tag is added to the projection (and the GROUP BY)
+    of every subquery and CTE that reads a tagged relation, and the derived table — under the
+    alias it is later read by — joins the tagged set, so the JOIN pass below binds it too. A
+    derived table that aggregates without grouping is one row over all copies and stays untagged.
+    """
+    changed = True
+    while changed:
+        changed = False
+        for node in list(out.find_all(exp.Subquery)) + list(out.find_all(exp.CTE)):
+            alias = node.alias
+            sel = node.this
+            if not alias or alias.upper() in tagged or not isinstance(sel, exp.Select):
+                continue
+            sources: list[str] = []
+            from_ = sel.args.get("from")
+            for src in ([from_.this] if from_ is not None else []) + [j.this for j in sel.args.get("joins") or []]:
+                name = src.alias or (src.name if isinstance(src, exp.Table) else "")
+                if name and name.upper() in tagged:
+                    sources.append(tagged[name.upper()])
+            if not sources:
+                continue
+            grouped = sel.args.get("group") is not None
+            if not grouped and any(e.find(exp.AggFunc) is not None for e in sel.expressions):
+                continue
+            if any(isinstance(e, exp.Star) or (isinstance(e, exp.Column) and isinstance(e.this, exp.Star)) for e in sel.expressions):
+                pass                                   # `*` already carries the tag column
+            elif any((e.alias_or_name or "").lower() == _FIRM_COL for e in sel.expressions):
+                pass
+            else:
+                sel.select(exp.alias_(exp.column(_FIRM_COL, table=sources[0]), _FIRM_COL), copy=False)
+                if grouped:
+                    sel.group_by(exp.column(_FIRM_COL, table=sources[0]), copy=False)
+            tagged[alias.upper()] = alias
+            changed = True
+    # A CTE is read under the alias the model gave the reference (`FROM kapanan k`): the reference's
+    # alias joins the tagged set so a JOIN on `k` finds its tag.
+    for node in out.find_all(exp.Table):
+        if node.name and node.name.upper() in tagged and node.alias and node.alias.upper() not in tagged:
+            tagged[node.alias.upper()] = node.alias
+
+
 def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
                     *, period: Optional[tuple] = None) -> str:
     """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
@@ -288,6 +335,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         return node
 
     out = tree.transform(tx)
+    _carry_tag_through_derived(out, tagged)
     if len(tagged) > 1:
         # Two tagged relations meeting in a JOIN meet only within one copy.
         for join in out.find_all(exp.Join):

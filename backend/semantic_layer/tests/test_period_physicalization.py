@@ -167,3 +167,52 @@ def test_only_the_relation_the_period_constrains_is_spread():
     # okur (LOGICALREF yalnız kopya içinde tekil) ve birleştirme firma etiketiyle sınırlanır; çoğaltma yok.
     assert sql.upper().count("LG_211_ITEMS") == 1 and sql.upper().count("LG_411_ITEMS") == 1, sql
     assert "__nb_firm = " in sql, sql
+
+
+def _q4_tables():
+    pay_old = _p("LG_211_01_PAYTRANS", "LG_{n0}_{n1}_PAYTRANS", ("2021-01-01", "2025-12-31"), entity="PAYTRANS", ctx={"n0": "211", "n1": "01"})
+    pay_new = _p("LG_411_01_PAYTRANS", "LG_{n0}_{n1}_PAYTRANS", ("2026-01-01", "2026-08-17"), entity="PAYTRANS", ctx={"n0": "411", "n1": "01"})
+    inv_old = _p("LG_211_01_INVOICE", "LG_{n0}_{n1}_INVOICE", ("2021-01-01", "2025-12-31"), entity="INVOICE", ctx={"n0": "211", "n1": "01"})
+    inv_new = _p("LG_411_01_INVOICE", "LG_{n0}_{n1}_INVOICE", ("2026-01-01", "2026-08-17"), entity="INVOICE", ctx={"n0": "411", "n1": "01"})
+    cl_old = _p("LG_211_CLCARD", "LG_{n0}_CLCARD", ("2010-01-01", "2026-01-19"), entity="CLCARD", ctx={"n0": "211"})
+    cl_new = _p("LG_411_CLCARD", "LG_{n0}_CLCARD", ("2010-01-01", "2026-08-17"), entity="CLCARD", ctx={"n0": "411"})
+    return [pay_old, pay_new, inv_old, inv_new, cl_old, cl_new]
+
+
+def test_the_copy_tag_passes_through_a_subquery_that_lists_its_columns():
+    """2026-09-16, soru 4: model faturaları `SELECT DISTINCT LOGICALREF, DATE_, CLIENTREF FROM INVOICE`
+    alt sorgusuna aldı; etiket alt sorgunun kenarında kaldı ve 2026 faturaları 2021-25 ödeme planına
+    LOGICALREF çakışmasıyla eşleşti (ortalama vade −750 gün). Etiket alt sorgudan taşınır, JOIN bağlanır."""
+    sql = physicalize_sql(
+        'SELECT c."SPECODE2", AVG(DATEDIFF(day, i."DATE_", p."DATE_")) FROM PAYTRANS p '
+        'JOIN (SELECT DISTINCT "LOGICALREF", "DATE_", "CLIENTREF" FROM INVOICE WHERE "DATE_" >= \'2025-01-01\' AND "DATE_" < \'2027-01-01\') i '
+        'ON i."LOGICALREF" = p."FICHEREF" JOIN CLCARD c ON c."LOGICALREF" = i."CLIENTREF" '
+        'WHERE p."MODULENR" = 4 GROUP BY c."SPECODE2"',
+        _q4_tables(), {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    low = sql.lower()
+    assert "lg_211_01_paytrans" in low and "lg_411_01_paytrans" in low, sql
+    assert low.count("__nb_firm as __nb_firm") == 1, sql          # the subquery now projects the tag
+    assert low.count("__nb_firm = ") == 2, sql                     # i↔p and c↔i both bound to one copy
+
+
+def test_the_copy_tag_passes_through_a_cte_read_under_another_alias():
+    sql = physicalize_sql(
+        'WITH kapanan AS (SELECT p."FICHEREF", i."CLIENTREF", i."DATE_" AS fatura_tarihi, p."DATE_" AS odeme_tarihi '
+        'FROM PAYTRANS p JOIN INVOICE i ON i."LOGICALREF" = p."FICHEREF" WHERE i."DATE_" >= \'2025-01-01\' AND i."DATE_" < \'2027-01-01\') '
+        'SELECT c."SPECODE2", AVG(DATEDIFF(day, k.fatura_tarihi, k.odeme_tarihi)) FROM kapanan k '
+        'JOIN CLCARD c ON c."LOGICALREF" = k."CLIENTREF" GROUP BY c."SPECODE2"',
+        _q4_tables(), {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    low = sql.lower()
+    assert low.count("__nb_firm as __nb_firm") == 1, sql          # the CTE carries the tag out
+    assert low.count("__nb_firm = ") == 2, sql                     # p↔i inside, k↔c outside
+
+
+def test_a_grouped_subquery_carries_the_tag_in_its_group_by_and_a_total_does_not():
+    grouped = physicalize_sql(
+        'SELECT t."CLIENTREF", t.n FROM (SELECT "CLIENTREF", COUNT(*) AS n FROM INVOICE WHERE "DATE_" >= \'2025-01-01\' AND "DATE_" < \'2027-01-01\' GROUP BY "CLIENTREF") t '
+        'JOIN CLCARD c ON c."LOGICALREF" = t."CLIENTREF"', _q4_tables(), {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert grouped.lower().count("__nb_firm = ") == 1 and "group by" in grouped.lower(), grouped
+    total = physicalize_sql(
+        'SELECT t.n, c."SPECODE2" FROM (SELECT COUNT(*) AS n FROM INVOICE WHERE "DATE_" >= \'2025-01-01\' AND "DATE_" < \'2027-01-01\') t '
+        'JOIN CLCARD c ON 1 = 1', _q4_tables(), {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert "__nb_firm = " not in total, total
