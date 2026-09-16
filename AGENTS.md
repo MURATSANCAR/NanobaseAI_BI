@@ -41,6 +41,14 @@ Kullanıcının 2026-09-16 kararı bağlayıcıdır: Editör modülü bu ana pro
 - Editörün bütün arayüzleri mobil öncelikli olur; yukarıdaki mobil doğrulama ve ilgili gerçek DB kabul kuralları bu modül için de geçerlidir.
 - Kalıcı `editor` dalı veya ikinci trunk açılmaz. Küçük işler `main` üzerinde, kapsamlı işler `main`den açılan kısa ömürlü `codex/editor-...` dallarında yürütülür; tamamlanan iş `main`e alınır ve dal silinir. Bağımsız dağıtım, uzun ömürlü ayrı branch gerektirmez.
 
+## Editör kaynak güvenliği — 2026-09-16
+
+- Yeni okumalar sayfa sayfa, yeni analiz neslinde ilerler; önceki hatalı koşunun kayıtları silinmez veya yeni koşuya doğrulanmış veri olarak taşınmaz.
+- Alıntı metni konumlu `source_spans` üzerinden gelir; ham metin, bbox, okuyucu/model sürümü ve uyuşmazlık durumu korunur. PDF metin katmanı bozuksa tek kaynak veya doğrulayıcı sayılamaz.
+- `visual_observations` görsel gözlem adaylarıdır. Doğrulanmamış serbest `visuals.description` sahne/iddia/cevap girdisi olarak kullanılamaz.
+- Kaynak sayfasının bulunması anlamsal doğruluk değildir. Alıntı, olumsuzluk, kişi/sayı ve konuşmacı kontrolleri geçmeyen iddia incelemeye ayrılır; ona bağlı kabul/sentez durur, diğer sayfaların kaynak okuması sürebilir.
+- Konuşmacı için yeterli kaynak yoksa UNKNOWN kalır. Okunan/kaydedilen sayfa sayısı ile doğrulanmış sayfa/iddia sayısı ayrı gösterilir. Optik anlaşma editör onayı değildir.
+
 ## Tek branch kuralı: yalnız main
 
 Kullanıcının 2026-09-13 kararı bağlayıcıdır: bu depoda tek trunk `main`'dir. Diğer bütün dallar (`perf/full-overhaul-2026-08` dahil) `main`'e merge edilip silindi. Bundan sonra:

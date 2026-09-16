@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-16 — Editör sayfa bazlı konumlu kaynak akışı
+
+- Kullanıcının talebiyle eski kitap işi iptal edildi, 48 kaynak/48 görsel/12 sahne korundu; eski otomatik soru ve takip süreçleri durduruldu. İlk yeni canary de yerel PDF konumları eklenince korunarak kapatıldı. Yeni nesil `7a19f9eb-7e3e-40d0-822b-ac5e557960b4` sıralı sayfa akışına başladı.
+- PaddleOCR ana Compose servisine alındı. Yerel PDF kelime kutuları ağsız belge aracıyla 48 sayfa için çıkarıldı. OCR/PDF/bölgesel okuma ve konumlar source_spans'a, yerleşim/balon adayları ve görsel gözlemler ayrı kayıtlara yazılır. Eski serbest görsel açıklama iddia girdisi değildir. Uyuşmazlık ve kimlik belirsizliği incelemeye ayrılır; hiçbir optik eşleşme otomatik semantik kabul olmaz.
+- Yeni okuma kartları dört gerçek tarayıcı genişliğinde/API ile kontrol edildi. Son neslin ilk iki sayfasının kayıtları bağımsız PG ile eşleşti. Ana akış sürüyor; beş hedef sayfa senaryosu, konuşmacı/semantik kabul, sentez/indeks ve yeni tam paket restore kabulü henüz tamamlanmadı. [Ayrıntılı durum](editor/2026-09-16-source-spans.md).
+
 ## 2026-09-16 — Editör PaddleOCR gerçek sayfa pilotu
 
 - Türkçe destekli PP-OCRv5 ayrı, özel ağdaki Docker servisine eklendi; model revision/taban imaj sabit, ağırlıklar imaj içinde, 4 CPU/4 GiB. Offline paket için `--with-ocr` seçeneği eklendi; tam paket restore bu turda koşulmadı.
