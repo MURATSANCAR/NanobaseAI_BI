@@ -24,3 +24,9 @@ def test_a_written_ten_a_few_words_after_the_ranking_cue_is_the_row_limit(catalo
 def test_a_number_naming_a_span_is_not_a_row_limit(catalog, profiles):
     assert resolve(catalog, profiles, "Alacaklarımızı otuz, altmış, doksan gün diye yaşlandırıp gösterebilir misin?").limit is None
     assert resolve(catalog, profiles, "En çok satan kanallarda son üç ay net ciro").limit is None
+
+
+def test_a_counting_word_is_never_read_as_a_column(catalog, profiles):
+    sq = resolve(catalog, profiles, "Toptan satış kaç tane?")
+    assert not [s for s in sq.slots if s.term in ("tane", "adet")], sq.slots
+    assert "tane" not in [c.get("term") for c in (sq.candidates or [])]
