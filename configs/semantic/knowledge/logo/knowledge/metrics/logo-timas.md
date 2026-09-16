@@ -23,3 +23,9 @@ Görünüm v_channel_net; cari kartı SPECODE2 üzerinden.
 
 ## yayinevi_performans
 Görünüm v_imprint_perf: net_ciro (satır bazlı), satilan_adet, iade_adet, maliyetli_ciro, maliyet.
+
+## ortalama_tahsilat_suresi_gerceklesen
+AVG(DATEDIFF(gün, fatura tarihi, kapatan ödemenin tarihi)); kaynak PAYTRANS (MODULENR 4, SIGN 0, CANCELLED 0) ödeme planı satırı, kapatan ödeme CROSSREF ile bağlı ikinci PAYTRANS satırı, fatura INVOICE (TRCODE 7,8,9; CANCELLED 0). Yalnız kapanmış kalemler. Eş anlamlı: ortalama tahsilat vadesi (gerçekleşen), tahsilat süresi, alacak devir günü, DSO. İş teyidi bekliyor (2026-09-16).
+
+## planlanan_odeme_vadesi
+AVG(DATEDIFF(gün, fatura tarihi, PAYTRANS.DATE_)); PAYTRANS MODULENR 4, SIGN 0, CANCELLED 0; INVOICE TRCODE 7,8,9. Eş anlamlı: ödeme vadesi, vade günü, anlaşılan vade. İş teyidi bekliyor (2026-09-16).
