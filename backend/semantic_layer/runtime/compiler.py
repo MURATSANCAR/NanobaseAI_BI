@@ -534,6 +534,14 @@ class DeterministicCompiler:
             if p not in where:
                 where.append(p)
                 explain.append(f"filtre: '{s.term}' → {p}")
+            # A named state can be more than one column: "YK onayında bekleyen" is statecode 0 *and*
+            # a status of 4. The mapping carries the rest as conditions; without them the first
+            # column alone answered — every active contract, not the ones waiting for the board.
+            for key in ((s.mapping.extra or {}).get("conditions") or []):
+                extra = _pred_key_sql(s.mapping.entity, key, d)
+                if extra and extra not in where:
+                    where.append(extra)
+                    explain.append(f"filtre koşulu: '{s.term}' → {extra}")
         for grp in pivots:
             ent, col = grp[0].mapping.entity, grp[0].mapping.column
             vals = sorted({v for f in grp for v in f.mapping.values}, key=lambda v: (0, float(v)) if v.replace('.', '').lstrip('-').isdigit() else (1, v))

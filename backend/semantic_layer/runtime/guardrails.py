@@ -356,6 +356,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     # way round — cannot be bound by the server. When a relation of that entity appears exactly once,
     # the qualifier is pointed at the name it now carries.
     names_in_query: dict[str, list[str]] = {}
+    prof_of_alias: dict[str, SchemaProfile] = {}
     for node in out.find_all(exp.Table, exp.Subquery):
         alias = node.alias_or_name if isinstance(node, exp.Table) else node.alias
         if not alias:
@@ -367,6 +368,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             prof = by_entity.get(alias.upper()) or by_table.get(alias.upper())
         if prof is None:
             continue
+        prof_of_alias[alias.upper()] = prof
         for spelled in {prof.entity, prof.table_name, _spelling(prof, context),
                         f"{(prof.schema_name or '').replace('.', '_')}_{prof.table_name}"}:
             names_in_query.setdefault(spelled.upper(), []).append(alias)
@@ -378,6 +380,16 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         aliases = set(names_in_query.get(qual, []))
         if len(aliases) == 1:
             col.set("table", exp.to_identifier(next(iter(aliases))))
+    # The column as the source spells it. The catalog and the compiler write names in upper case;
+    # a server that compares identifiers case-sensitively (the CRM database) knows `statecode`, not
+    # `STATECODE`. Where the qualifier names a profiled relation, the profile's spelling is used.
+    for col in out.find_all(exp.Column):
+        prof = prof_of_alias.get((col.table or "").upper())
+        if prof is None or not col.name:
+            continue
+        real = next((c.name for c in prof.columns if c.name.upper() == col.name.upper()), None)
+        if real and real != col.name:
+            col.set("this", exp.to_identifier(real, quoted=col.this.quoted if isinstance(col.this, exp.Identifier) else False))
     # A CTE or table alias the model chose is a word, and a word can be a keyword: `WITH plan AS` is
     # a syntax error on SQL Server. Aliases are quoted; columns and real names stay as written.
     for cte in out.find_all(exp.CTE):

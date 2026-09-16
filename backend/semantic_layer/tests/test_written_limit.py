@@ -30,3 +30,9 @@ def test_a_counting_word_is_never_read_as_a_column(catalog, profiles):
     sq = resolve(catalog, profiles, "Toptan satış kaç tane?")
     assert not [s for s in sq.slots if s.term in ("tane", "adet")], sq.slots
     assert "tane" not in [c.get("term") for c in (sq.candidates or [])]
+
+
+def test_a_count_over_a_certified_phrase_counts_that_phrases_entity(catalog, profiles):
+    sq = resolve(catalog, profiles, "Toptan kaç tane?")
+    counted = [s for s in sq.slots if (s.explain or {}).get("source") == "count_cue"]
+    assert counted and counted[0].mapping.entity == "INVOICE", [(s.term, s.mapping.entity if s.mapping else None) for s in sq.slots]
