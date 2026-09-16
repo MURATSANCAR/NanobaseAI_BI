@@ -12,10 +12,17 @@ x-model: &model
   tmpfs: ['/tmp:size=64m,mode=1777']
   volumes: ['./runtime/models:/models:ro']
   pids_limit: 128
+  cpu_shares: 128
   environment:
     HF_HUB_OFFLINE: '1'
     OMP_NUM_THREADS: '1'
     OPENBLAS_NUM_THREADS: '1'
+  healthcheck:
+    test: [CMD, curl, --fail, --silent, --max-time, '5', 'http://127.0.0.1:8080/health']
+    interval: 20s
+    timeout: 8s
+    retries: 12
+    start_period: 120s
   logging:
     driver: json-file
     options: {max-size: 10m, max-file: '3'}

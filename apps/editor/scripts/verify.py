@@ -21,6 +21,10 @@ assert state['details']['schema_revision'] == reference['revision']
 assert [row['release'] for row in state['details']['deployments']] == reference['deployments']
 assert reference['app_superuser'] is False
 assert state['details']['source_probes'] == reference['source_probes']
+if 'models' in settings.get('COMPOSE_PROFILES','').split(','):
+    with urllib.request.urlopen(urllib.request.Request(base+'/v1/model-services',headers={'Authorization':'Bearer '+token}),timeout=20) as response:
+        models = json.load(response)
+    assert all(item['ready'] for item in models['services'].values()), models
 for source in reference['source_probes']:
     with urllib.request.urlopen(urllib.request.Request(base+'/v1/source-probes/'+source['sha256'], headers={'Authorization':'Bearer '+token}),timeout=20) as response:
         manifest = json.load(response)

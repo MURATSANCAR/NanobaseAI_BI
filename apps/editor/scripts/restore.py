@@ -23,6 +23,7 @@ if subprocess.check_output(compose+['ps','-aq'],text=True).strip():
 existing = subprocess.check_output(['docker','volume','ls','-q','--filter','label=com.docker.compose.project='+project],text=True).strip()
 if existing:
     raise SystemExit('Target volumes already exist; choose a fresh project name.')
+subprocess.run([sys.executable,'scripts/preflight.py'],check=True)
 for name, expected in manifest['files'].items():
     if name not in ('database.dump','artifacts.tar'):
         raise SystemExit('Unexpected backup member')
@@ -42,7 +43,7 @@ with (source/'artifacts.tar').open('rb') as stream:
                     '--tmpfs','/data:mode=1777','-v',volume+':/data/artifacts',image,'python','-c',code],stdin=stream,check=True)
 subprocess.run(compose+['up','-d','--no-build','--pull','never','--wait','--wait-timeout','180'],check=True)
 subprocess.run([sys.executable,'scripts/verify.py'],check=True)
-query = "SELECT json_build_object('revision',(SELECT version_num FROM editor.alembic_version),'deployments',(SELECT json_agg(release ORDER BY release) FROM editor.deployments))"
+query = "SELECT json_build_object('revision',(SELECT version_num FROM editor.alembic_version),'deployments',(SELECT json_agg(release ORDER BY release) FROM editor.deployments),'sources',COALESCE((SELECT json_agg(json_build_object('sha256',sha256,'manifest_md5',md5(manifest::text)) ORDER BY sha256) FROM editor.source_probes),'[]'::json))"
 reference = json.loads(subprocess.check_output(compose+['exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query]))
 if reference != manifest['reference']:
     raise SystemExit('Restored database differs from backup reference')

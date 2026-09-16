@@ -90,3 +90,16 @@ def source_probe(sha256: str):
 @app.get('/metrics', dependencies=[Depends(authorize)])
 def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
+
+@app.get('/v1/model-services', dependencies=[Depends(authorize)])
+def model_services():
+    services = {}
+    with httpx.Client(timeout=3, trust_env=False) as client:
+        for name in ('llm', 'embedding', 'reranker'):
+            try:
+                response = client.get(f'http://{name}:8080/health')
+                services[name] = {'ready': response.status_code == 200}
+            except Exception:
+                services[name] = {'ready': False}
+    return {'services': services, 'semantic_qualification': 'PENDING', 'pilot_ready': False}

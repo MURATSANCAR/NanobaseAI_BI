@@ -46,6 +46,12 @@ if usage.free < 20 * 1024**3:
 mem = dict(line.split(':', 1) for line in Path('/proc/meminfo').read_text().splitlines())
 if int(mem['MemAvailable'].split()[0]) < 8 * 1024**2:
     errors.append('At least 8 GiB available RAM required for the bounded document tooling.')
+if 'models' in settings.get('COMPOSE_PROFILES','').split(','):
+    if int(mem['MemAvailable'].split()[0]) < 48 * 1024**2:
+        errors.append('The CPU model profile needs 48 GiB available RAM including document and service headroom.')
+    for name in ('Qwen3.8-27B-Q4_K_M.gguf','mmproj-Qwen3.8-27B-Q8_0.gguf','bge-m3-Q8_0.gguf','bge-reranker-v2-m3-Q8_0.gguf'):
+        if not (root/'runtime/models'/name).is_file():
+            errors.append('Missing offline model: '+name)
 running = subprocess.check_output(['docker', 'compose', 'ps', '-q'], text=True).strip()
 if not running:
     for port in (int(settings['EDITOR_PORT']), int(settings['EDITOR_METRICS_PORT'])):
