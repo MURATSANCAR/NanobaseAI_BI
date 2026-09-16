@@ -294,3 +294,20 @@ def test_a_query_timeout_is_not_a_lost_connection():
     down = "('08S01', '[08S01] [FreeTDS][SQL Server]Communication link failure (0)')"
     assert is_query_timeout(timeout) and not is_connection_error(timeout)
     assert is_connection_error(down) and not is_query_timeout(down)
+
+
+def test_is_not_null_on_the_period_column_admits_the_period():
+    from semantic_layer.runtime import audit
+    tree = audit.parse_sql('SELECT AVG(CASE WHEN I."DATE_" >= \'2025-01-01\' AND I."DATE_" < \'2026-01-01\' THEN 1 END) AS a '
+                           'FROM INVOICE I WHERE I."DATE_" IS NOT NULL AND I."DATE_" >= \'2025-01-01\' AND I."DATE_" < \'2027-01-01\'')
+    period = {"start": "2025-01-01", "end": "2026-01-01"}
+    assert audit._admits_period(tree.args.get("where"), {("I", "DATE_")}, period)
+
+
+def test_a_question_word_that_is_a_column_name_elsewhere_is_not_swallowed(catalog, profiles):
+    """"tahsilat" happens to be a column on an unrelated table; the question still gets to say it."""
+    stray = SchemaProfile(datasource_id=DS, table_name="ESP_KULLANICIGRUP", table_pattern="ESP_KULLANICIGRUP",
+                          entity="ESP_KULLANICIGRUP", schema_name="dbo", description="Kullanıcı grubu",
+                          columns=[ColumnProfile(name="TAHSILAT", data_type="int")])
+    sq = resolve(catalog, profiles + [stray], "ortalama tahsilat vademiz kaç gün")
+    assert "tahsilat" in sq.unresolved, sq.to_dict()

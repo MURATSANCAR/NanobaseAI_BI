@@ -507,6 +507,10 @@ def _admits_period(node, columns, period):
     relevant = [c for c in node.find_all(exp.Column) if (c.table.upper(), c.name.upper()) in columns]
     if not relevant:
         return True
+    # `DATE_ IS NOT NULL` on the period column discards nothing a period could hold: a row with no
+    # date is in neither year. Read as a restriction it refused a correct comparison.
+    if isinstance(node, exp.Not) and isinstance(node.this, exp.Is) and isinstance(node.this.expression, exp.Null):
+        return True
     if isinstance(node, (exp.GTE, exp.LT)) and isinstance(node.left, exp.Column):
         value = _literal(node.right)
         if value and len(value) == 10:

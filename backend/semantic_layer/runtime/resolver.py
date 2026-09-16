@@ -637,8 +637,19 @@ class SemanticResolver:
                 continue
             if st in _TIME_WORDS or any(tok in tokenize(t.text) for t in qf.temporal):
                 continue
-            if tok.upper() in self.column_names or _GROUP_MARKERS.fullmatch(st) or _GROUP_MARKERS.fullmatch(tok):
+            if _GROUP_MARKERS.fullmatch(st) or _GROUP_MARKERS.fullmatch(tok):
                 continue
+            if tok.upper() in self.column_names:
+                # A word that is literally a column name is already answered — but only on a table
+                # this question reads. Matched against every column in the catalog, "tahsilat" was
+                # swallowed by an unrelated table's column and never reached the person or the data.
+                placed = {s_.mapping.entity for s_ in hits if s_.mapping}
+                on_placed = any(tok.upper() in {c.name.upper() for c in self.by_entity[e].columns}
+                                for e in placed if e in self.by_entity)
+                if on_placed or not placed:
+                    if not placed and tok not in sq.unresolved:
+                        sq.unresolved.append(tok)      # nothing placed: still a word to account for
+                    continue
             if st in _TIME_WORDS or short_root(tok) in _TIME_WORDS:
                 continue
             if not is_domain_candidate(tok):
