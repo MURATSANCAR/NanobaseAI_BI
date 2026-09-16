@@ -10,7 +10,9 @@ status, certify), /api/v1/schema/* (inventory + annotations for the portal layer
 from __future__ import annotations
 
 import asyncio
+import csv
 import hashlib
+import io
 import json
 from collections import OrderedDict
 import logging
@@ -697,12 +699,26 @@ class Runtime:
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
-    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None) -> dict[str, Any]:
+    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         report = progress or (lambda stage: None)
         report("understanding")
         t0 = time.perf_counter()
         timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
+
+        def _log(*, sql, compiler, catalog_version, executed, resolved=None, answer_type=None,
+                 answer_summary=None, error=None, row_count=None, latency_ms=None,
+                 result_fingerprint=None, result_json=None, gate=None) -> str:
+            """Promt izleyici kaydı: her dal buradan geçer, böylece kim sordu / ne cevap döndü / kapı
+            ne dedi tek yerde ve eksiksiz yazılır (bkz. sl_query_log, /api/v1/admin/prompts)."""
+            return self.store.log_query(
+                self.settings.tenant_id, self.settings.datasource_id, question,
+                sql=sql, compiler=compiler, catalog_version=catalog_version,
+                resolved=(resolved if resolved is not None else {}), executed=executed,
+                row_count=row_count, latency_ms=latency_ms, error=error,
+                result_fingerprint=result_fingerprint, username=username, thread_id=thread_id,
+                answer_type=answer_type, answer_summary=answer_summary,
+                result_json=result_json, gate_json=gate)
         thread = self.threads.setdefault(thread_id, [])
         # a long-lived process must not accumulate every conversation it ever served
         if len(self.threads) > 200:
@@ -711,15 +727,19 @@ class Runtime:
                 self.thread_plans.pop(stale, None)
         from semantic_bridge.chat_scope import BI_INTRO, is_intro
         if is_intro(question):
+            qid = _log(sql=None, compiler="intro", catalog_version=None, executed=False,
+                       answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings}
+                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
         self.ensure_fresh()
         t = time.perf_counter()
         from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
         effective_question, context_error = compose_followup(question, self.thread_plans.get(thread_id))
         if context_error:
+            qid = _log(sql=None, compiler="clarification", catalog_version=None, executed=False,
+                       answer_type="CLARIFICATION", answer_summary=context_error)
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
-                    "threadId": thread_id, "timings": timings}
+                    "threadId": thread_id, "timings": timings, "queryId": qid}
         sq = self.resolver.resolve(effective_question)
         sq.language_candidates = self.language_pool.search(effective_question)
         sq.language_pool_hash = self.language_pool.content_hash
@@ -731,8 +751,10 @@ class Runtime:
         # questions need the conversational classifier; unknown terms remain eligible.
         if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
                 question, self.llm, has_context=bool(self.thread_plans.get(thread_id))):
+            qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
+                       resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings}
+                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
         if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
             bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
                                 self.existing.columns, self.conventions)
@@ -741,8 +763,10 @@ class Runtime:
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
         if any(c["status"] == "OUTSIDE_OBSERVED" for c in sq.data_coverage):
             reason = " ".join(e for e in sq.explanation if "gözlenen veri kapsamı dışında" in e)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler="coverage", catalog_version=sq.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=None, compiler="coverage", catalog_version=sq.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="DATA_UNAVAILABLE", answer_summary=reason,
+                       gate={"dataCoverage": list(sq.data_coverage)})
             return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": {"query": sq.to_dict()}, "queryId": qid}
         t = time.perf_counter()
@@ -759,16 +783,18 @@ class Runtime:
             semantic["queue"] = queued
         if compiled.compiler == "incomplete":
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(compiled.explain)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason,
+                       gate={"explain": list(compiled.explain)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if compiled.compiler == "clarification":
             reason = " ".join(compiled.explain)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False)
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False,
+                       answer_type="CLARIFICATION", answer_summary=reason,
+                       gate={"explain": list(compiled.explain)})
             thread.extend([{"role": "user", "content": question}, {"role": "assistant", "content": reason}])
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
                     "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
@@ -776,12 +802,16 @@ class Runtime:
             reason = "; ".join(compiled.explain)[:500]
             if sq.out_of_scope:
                 reason = next((e for e in sq.explanation if "kapsamı dışında" in e), reason)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="NON_SQL_QUERY", answer_summary=reason, gate={"explain": list(compiled.explain)})
             return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         sql = strip_trailing_semicolon(compiled.sql)
         ok, why = validate_sql(sql)
         if not ok:
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Guardrail: {why}", "threadId": thread_id, "timings": timings, "semantic": semantic}
+            reason = f"Guardrail: {why}"
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="SQL_INVALID", answer_summary=reason, gate={"guardrail": why})
+            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         # What the question asked for and the statement does not deliver. Checked for every query,
         # certified or not: a comparison is built by the deterministic compiler too, and a single
         # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
@@ -790,7 +820,8 @@ class Runtime:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
             log.warning("obligation unmet q=%r %s", question[:80], unmet)
             semantic["unmetObligations"] = unmet
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(unmet)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "sql": sql, "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
 
@@ -802,7 +833,8 @@ class Runtime:
                 semantic["catalogAudit"] = contradictions
                 reason = "Üretilen SQL sertifikalı katalogla çelişiyor: " + "; ".join(contradictions)
                 log.warning("catalog audit refused q=%r %s", question[:80], contradictions)
-                qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+                qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                           answer_type="SQL_INVALID", answer_summary=reason, gate={"catalogAudit": list(contradictions)})
                 return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         repairs = 0
         error: Optional[str] = None
@@ -842,9 +874,11 @@ class Runtime:
                         # The database went away. No rewrite of this SQL can help, and telling the user
                         # their question was invalid would send them looking in the wrong place.
                         log.error("data source unreachable q=%r err=%s", question[:80], error[:300])
-                        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}")
+                        _ds_msg = "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}",
+                                   answer_type="DATA_SOURCE_UNAVAILABLE", answer_summary=_ds_msg)
                         return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE", "sql": sql,
-                                "explanation": "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak.",
+                                "explanation": _ds_msg,
                                 "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
                     log.warning("dry_run failed (attempt %d) q=%r err=%s", attempt + 1, question[:80], error[:300])
                     if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
@@ -857,12 +891,13 @@ class Runtime:
         if critic_notes:
             semantic["critic"] = critic_notes
         if error:
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error)
             # A query the reviewer stopped is a different thing from one the database rejected, and
             # the person is owed the difference: the first has an explanation they can act on, the
             # second is a fault. Both refuse — neither returns a number nobody can trust.
             blocked = any(n.get("severity") == "block" for n in critic_notes)
             explanation = error if blocked else f"Üretilen SQL doğrulanamadı: {error}"
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error,
+                       answer_type="SQL_INVALID", answer_summary=explanation, gate={"critic": critic_notes} if critic_notes else None)
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
         # Repairs can remove filters or period predicates. Validate the exact final
         # statement, including previews; never trust the pre-repair verdict.
@@ -871,13 +906,14 @@ class Runtime:
         if final_problems:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
             semantic["unmetObligations"] = final_problems
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(final_problems)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
+                       answer_type="TEXT_TO_SQL", answer_summary="(sorgu üretildi, çalıştırılmadı)")
             return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq), **scope_args), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
         t = time.perf_counter()
         try:
@@ -890,11 +926,13 @@ class Runtime:
             down = is_connection_error(e)
             if down:
                 log.error("data source unreachable during execution q=%r err=%s", question[:80], err[:300])
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=(f"data source unreachable: {err}" if down else err))
+            _exec_msg = ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                         if down else f"Sorgu çalıştırılamadı: {err}")
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=(f"data source unreachable: {err}" if down else err),
+                       answer_type="DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", answer_summary=_exec_msg)
             return {"id": uuid.uuid4().hex,
                     "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", "sql": sql,
-                    "explanation": ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
-                                    if down else f"Sorgu çalıştırılamadı: {err}"),
+                    "explanation": _exec_msg,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
         report("presenting")
@@ -909,7 +947,16 @@ class Runtime:
         summary = self.summarize(question, sql, result, sq)
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
         fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
-        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
+        # Kullanıcı kararı: tam sonuç (tüm satırlar) kaydın içinde durur, böylece incelerken neyin
+        # döndüğünü birebir görürüz. Motorun satır tavanı zaten kesiyor; devasa kaçaklar _cap_result'la
+        # düşürülür. Kapı kararları (eleştiri) da promtla birlikte saklanır.
+        stored_result = {"columns": result["columns"], "records": list(result["records"]),
+                         "totalRows": result["totalRows"], "truncated": result.get("truncated")}
+        gate = {k: semantic[k] for k in ("critic", "unmetObligations", "catalogAudit") if k in semantic} or None
+        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
+                   executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000),
+                   result_fingerprint=fp, answer_type="TEXT_TO_SQL", answer_summary=summary,
+                   result_json=stored_result, gate=gate)
         self.thread_plans[thread_id] = sq
         thread.append({"role": "user", "content": question})
         thread.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
@@ -1514,6 +1561,16 @@ def _actor(request: Any) -> str:
         return "portal"
 
 
+def _ask_user(request: Any) -> Optional[str]:
+    """Promt izleyici için soruyu soran AD hesabı; oturum yoksa (sunucu/jeton çağrısı) None."""
+    from semantic_bridge import board as board_mod
+
+    try:
+        return board_mod.user_of(request.headers.get("cookie", "")) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
     from semantic_bridge import admin as admin_mod
@@ -1643,7 +1700,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not q:
             raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
         try:
-            return rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True))
+            return rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request))
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
@@ -1662,11 +1719,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             loop = asyncio.get_running_loop()
             def progress(stage):
                 loop.call_soon_threadsafe(queue.put_nowait, {"event": "stage", "stage": stage})
+            asker = _ask_user(request)
             async def work():
                 try:
                     answer = await run_in_threadpool(rt().ask, q, thread_id=body.threadId,
                         sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
-                        execute=bool(body.execute if body.execute is not None else True), progress=progress)
+                        execute=bool(body.execute if body.execute is not None else True), progress=progress,
+                        username=asker)
                     await queue.put({"event": "result", "result": answer})
                 except Exception:
                     log.exception("stream ask failed")
@@ -3196,6 +3255,72 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                     limit: int = 100) -> dict[str, Any]:
         _, engine, _, _, _ = _admin(request)
         return admin_mod.audit_list(engine, kind=kind, actor=actor, action=action, q=q, before=before, limit=limit)
+
+    # ------------------------------------------------------------------ promt izleyici
+    # Her promt (soru + üretilen SQL + sonuç + kapı kararları) sl_query_log'a yazılır (bkz.
+    # Runtime.ask._log). Bu uçlar yalnız yöneticiye, incelemek ve nereyi düzelteceğimizi görmek için.
+
+    @app.get("/api/v1/admin/prompts")
+    def admin_prompts(request: Request, limit: int = 60, offset: int = 0, only: Optional[str] = None,
+                      q: Optional[str] = None, user: Optional[str] = None, days: Optional[int] = None) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        return rt().store.list_query_log(tenant, ds, limit=limit, offset=offset, only=only,
+                                         search=q, username=user, since_days=days)
+
+    @app.get("/api/v1/admin/prompts/overview")
+    def admin_prompts_overview(request: Request, days: int = 30) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        return rt().store.query_log_overview(tenant, ds, since_days=max(1, min(int(days), 365)))
+
+    @app.get("/api/v1/admin/prompts/export.csv")
+    def admin_prompts_export(request: Request, only: Optional[str] = None, q: Optional[str] = None,
+                             user: Optional[str] = None, days: Optional[int] = None) -> Response:
+        _, _, tenant, ds, actor = _admin(request)
+        # Çevrimdışı incelemek için ("biz alıp inceleyeceğiz"): süzgece uyan promtlar tek CSV.
+        # Sonuç satırları değil, kaydın çekirdeği — soru, SQL, cevap, süre, hata, inceleme notu.
+        cols = ["createdAt", "username", "answerType", "compiler", "executed", "rowCount",
+                "latencyMs", "reviewFlag", "reviewNote", "question", "sql", "answerSummary", "error", "id"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        offset = 0
+        while True:
+            page = rt().store.list_query_log(tenant, ds, limit=200, offset=offset, only=only,
+                                             search=q, username=user, since_days=days)
+            for it in page["items"]:
+                w.writerow([it.get(c) if it.get(c) is not None else "" for c in cols])
+            if not page.get("hasMore"):
+                break
+            offset = page["nextOffset"]
+        admin_mod.audit(rt().store.engine, actor, "run", "setting", "prompts-export", "Promt dışa aktarma",
+                        {"only": only or "all", "q": q or "", "user": user or "", "days": days or "all"})
+        return Response(content=buf.getvalue().encode("utf-8-sig"), media_type="text/csv",
+                        headers={"Content-Disposition": 'attachment; filename="promtlar.csv"'})
+
+    @app.get("/api/v1/admin/prompts/{qid}")
+    def admin_prompt_detail(qid: str, request: Request) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        row = rt().store.get_query_log(tenant, ds, qid)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Promt bulunamadı."})
+        return row
+
+    @app.patch("/api/v1/admin/prompts/{qid}")
+    def admin_prompt_mark(qid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        flag = body.get("flag")
+        if flag is not None:
+            flag = str(flag).strip().lower()
+            if flag not in ("", "todo", "fixed", "ignored"):
+                raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Geçersiz işaret."})
+        note = body.get("note")
+        row = rt().store.mark_query_log(tenant, ds, qid, flag=flag,
+                                        note=(str(note) if note is not None else None), reviewed_by=user)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Promt bulunamadı."})
+        admin_mod.audit(engine, user, "update", "prompt", qid, (row.get("question") or "")[:80],
+                        {"flag": row.get("reviewFlag") or "", "note": (row.get("reviewNote") or "")[:120]})
+        return row
 
     return app
 
