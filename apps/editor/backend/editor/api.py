@@ -103,3 +103,7 @@ def model_services():
             except Exception:
                 services[name] = {'ready': False}
     return {'services': services, 'semantic_qualification': 'PENDING', 'pilot_ready': False}
+
+
+from editor.book_api import router as book_router
+app.include_router(book_router, dependencies=[Depends(authorize)])

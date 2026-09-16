@@ -81,7 +81,7 @@ services:
   api:
     <<: *app
     secrets: [db_app, api_token]
-    volumes: [artifacts:/data/artifacts:ro]
+    volumes: [artifacts:/data/artifacts]
     depends_on:
       migrate: {condition: service_completed_successfully}
       storage-init: {condition: service_completed_successfully}
@@ -97,6 +97,7 @@ services:
     <<: *app
     command: [python, -m, editor.worker]
     secrets: [db_app]
+    volumes: [artifacts:/data/artifacts:ro]
     depends_on:
       migrate: {condition: service_completed_successfully}
     healthcheck:
