@@ -561,14 +561,17 @@ class SemanticResolver:
         # which price lists, how many products carry a unit — has no date to restrict, and a year added
         # to it was a restriction nobody asked for that the gate then could not find on any column.
         # A count the resolver composed from "kaç" is not a certified measure either.
-        dated_measure = any(s_.semantic_type == SemanticType.METRIC and s_.mapping is not None
-                            and (s_.explain or {}).get("source") != "count_cue"
-                            for s_ in hits)
-        if not sq.temporal and self.default_temporal is not None and dated_measure:
+        placed = [s_ for s_ in hits if s_.mapping is not None]
+        undated = bool(placed) and not any(s_.semantic_type == SemanticType.METRIC
+                                           and (s_.explain or {}).get("source") != "count_cue"
+                                           for s_ in placed)
+        if not sq.temporal and self.default_temporal is not None and not undated:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
             if fallback is not None:
                 sq.temporal = [fallback]
                 sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
+        elif not sq.temporal and undated:
+            sq.explanation.append("dönem belirtilmedi ve soru tarihli bir ölçü sormuyor → tüm kayıtlar üzerinden")
         self._read_comparison(sq, qf, question, today or date.today())
         if sq.comparison:
             metric_entity = next((s.mapping.entity for s in sq.metrics if s.mapping), None)

@@ -184,3 +184,24 @@ def test_every_label_the_prompt_uses_comes_back_as_the_stored_table(profiles):
     assert "[Timas_MSCRM].[dbo].[new_siparisBase]" in out, out
     # the written name survives as the alias, so the qualified column still binds
     assert f"AS {label}" in out and f"{label}.statuscode" in out, out
+
+
+def test_a_count_of_records_gets_no_year_nobody_asked_for(catalog, profiles):
+    """"Toplam kaç sipariş kaydı var" asks about all of them; a default year made the gate hunt for
+    a date restriction the question never wanted, on a table whose date column was a guess."""
+    import datetime as dt
+    from semantic_layer.models import TemporalSlot
+
+    year = TemporalSlot(text="varsayılan", primitive="YEAR", start=dt.date(2026, 1, 1), end=dt.date(2027, 1, 1),
+                        grain="YEAR", params={"year": 2026, "default": True})
+    r = SemanticResolver(catalog, TENANT, DS, profiles + [orders()], default_temporal=year)
+    sq = r.resolve("toplam kaç iptal edilen sipariş kaydı var", today=TODAY)
+    assert not sq.temporal, [t.to_dict() for t in sq.temporal]
+    assert any("tüm kayıtlar" in e for e in sq.explanation), sq.explanation
+
+
+def test_written_counts_are_periods():
+    from semantic_layer.runtime.temporal import parse_temporal
+
+    found, _ = parse_temporal("son üç ayda en çok satan kitaplar", today=TODAY)
+    assert found and found[0].primitive == "LAST_N_MONTHS" and found[0].params["n"] == 3, found
