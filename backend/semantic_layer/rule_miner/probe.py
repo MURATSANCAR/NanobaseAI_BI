@@ -17,7 +17,7 @@ from typing import Any, Callable, Iterable, Optional
 
 from semantic_layer.models import ConceptStatus, Evidence, EvidenceType, Mapping, SemanticType
 from semantic_layer.normalize import normalize_term
-from semantic_layer.rule_miner.common import Candidate, Catalog, is_generic, sql_values
+from semantic_layer.rule_miner.common import Candidate, Catalog, is_generic, spoken_variants, sql_values
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +80,11 @@ def refute(g: Grouped, catalog: Catalog, connector, *, timeout_note: dict[str, A
     ms = int((time.perf_counter() - t) * 1000)
     if g.cand.semantic_type == SemanticType.DIMENSION_VALUE:
         n = rows[0]["n"] if rows else 0
+        if not n and g.kinds & {"saved_query", "user_query"}:
+            # A saved view is a definition the business keeps whether or not anything is in that
+            # state today ("YK onayında bekleyen sözleşmeler" is empty between approvals). The filter
+            # ran, so its columns and values are real; the count is noted, not held against it.
+            return True, "şu an 0 kayıt", ms
         return (n or 0) > 0, ("" if n else "bu değeri taşıyan satır yok"), ms
     if g.cand.semantic_type == SemanticType.METRIC:
         v = rows[0]["v"] if rows else None
@@ -96,6 +101,11 @@ def decide(g: Grouped, passed: bool, *, conflict: bool, ambiguous: bool = False)
         return ConceptStatus.CANDIDATE
     if g.kinds <= {"column_alias"} and len(g.sources) < 2:
         return ConceptStatus.CANDIDATE
+    if len(g.cand.term.split()) == 1 and len(g.sources) < 3:
+        # One word, one or two views: "üretimler", "bekleyenler", "credit". Stemmed, such a word meets
+        # every question that says it ("üretim emirleri") and drags in a filter nobody asked for. A
+        # label several views agree on ("tamamlandı" ×12) is a word the business really uses that way.
+        return ConceptStatus.CANDIDATE
     if g.kinds & SELF_CERTIFYING_KINDS:
         return ConceptStatus.CERTIFIED
     return ConceptStatus.CANDIDATE
@@ -107,7 +117,12 @@ def write(store, engine, settings, g: Grouped, status: str, reason: str, ms: int
                       operator=c.operator, values=list(c.values), formula=c.formula,
                       extra={"conditions": list(c.conditions)} if c.conditions else {})
     concept, created = store.upsert_concept(settings.tenant_id, settings.datasource_id, c.term, c.semantic_type,
-                                            mapping=mapping, status=ConceptStatus.CANDIDATE)
+                                            mapping=mapping, status=ConceptStatus.CANDIDATE,
+                                            synonyms=spoken_variants(c.term) or None)
+    if not created and spoken_variants(c.term):
+        for syn in spoken_variants(c.term):
+            if syn not in (concept.synonyms or []):
+                store.add_synonym(concept.id, syn)
     ev_type = EvidenceType.ALIAS_BINDING if c.kind in ("column_alias", "expression_alias") else EvidenceType.DOC
     store.add_evidence(Evidence(concept.id, ev_type, f"rule-miner:{c.kind}", support_count=len(g.sources),
                                 payload={"sources": g.sources[:20], "kind": c.kind, "probe_ms": ms}))

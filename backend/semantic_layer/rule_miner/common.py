@@ -34,7 +34,7 @@ def clean_view_name(name: str) -> str:
 #: Words that name a kind of thing, not a thing: certified to one column they would claim every
 #: question that says them. They are mined, but only a person may certify them.
 GENERIC_TERMS = frozenset("""tutar toplam miktar adet tarih kod kodu ad adi adı durum no aciklama açıklama fiyat oran
-sayi sayı deger değer birim tip tür tur isim unvan ünvan referans satir satır fiş fis belge tarihi kodu""".split())
+sayi sayı deger değer birim tip tür tur isim unvan ünvan referans satir satır fiş fis belge tarihi kodu tane adedi""".split())
 
 
 def is_generic(term: str) -> bool:
@@ -64,9 +64,15 @@ def sql_values(vals: Iterable[str]) -> str:
     return ", ".join(out)
 
 
+_CALENDAR = re.compile(r"\b(ocak|şubat|subat|mart|nisan|mayıs|mayis|haziran|temmuz|ağustos|agustos|eylül|eylul|ekim|kasım|kasim|aralık|aralik|"
+                       r"pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar|q[1-4]|çeyrek|ceyrek|hafta|yıl|yil)\b")
+
+
 def usable_term(term: str) -> bool:
     if not term or len(term) < 3 or len(term) > 60:
         return False
+    if re.match(r"^\d", term) or _CALENDAR.search(term):
+        return False                                    # '03 mart', '2. çeyrek': a calendar label, not a business word
     if not re.search(r"[a-zçğıöşü]{3}", term):
         return False
     if re.fullmatch(r"[a-zçğıöşü]{1,2}( [a-zçğıöşü]{1,4})?", term):
@@ -147,3 +153,21 @@ class Catalog:
     def spelled(prof: SchemaProfile, column: str) -> str:
         """The column as the source spells it: the CRM database compares identifiers case-sensitively."""
         return next((c.name for c in prof.columns if c.name.upper() == column.upper()), column)
+
+
+_LIGHT = [(" ediyor", (" eden", " edilen", " edilmiş", " etmiş")), (" edildi", (" edilen", " edilmiş")), (" edilmiş", (" edilen", " edildi")),
+          (" oldu", (" olan", " olmuş")), (" olmuş", (" olan", " oldu")), (" yapıldı", (" yapılan", " yapılmış")), (" bekliyor", (" bekleyen",)),
+          (" verildi", (" verilen",)), (" alındı", (" alınan",)), (" gönderildi", (" gönderilen",)), (" kapandı", (" kapanan", " kapalı"))]
+
+
+def spoken_variants(term: str) -> list[str]:
+    """'devam ediyor' (a status label) is asked as 'devam eden siparişler': the participle forms a
+    person uses in a question, derived from the label's light verb. No dictionary: only the verb
+    endings change."""
+    out: list[str] = []
+    t = (term or "").strip()
+    for tail, forms in _LIGHT:
+        if t.endswith(tail):
+            stem_ = t[: -len(tail)]
+            out += [stem_ + f for f in forms]
+    return out

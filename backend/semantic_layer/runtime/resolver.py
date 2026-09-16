@@ -1397,8 +1397,8 @@ class SemanticResolver:
         """Second-chance lookup for a single word: derivational base first, then a unique certified
         term that contains it. Never certifies anything — the slot is marked INFERRED and damped."""
         st = stem(tok)
-        if {fold(tok), st} & (STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S):
-            return None         # a generic word ("sayı", "toplam") must not select one specific concept
+        if {fold(tok), st} & (STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S) or _COUNT_CUE.fullmatch(fold(tok)):
+            return None         # a generic word ("sayı", "toplam", "tane") must not select one specific concept
         for key in derived_forms(tok):
             senses = index.get(key)
             slot = self._slot_from_senses(key, tok, senses, (k, k + 1)) if senses else None
@@ -1768,6 +1768,10 @@ class SemanticResolver:
         # by a breakdown nobody asked for.
         skip = STOPWORDS_S | MODIFIERS_S | METRIC_VOCAB_S | _ENTITY_WORDS | _TIME_WORDS
         def _worth(w: str) -> bool:
+            # "kaç tane": a counting word asks how many, it does not name a column. Read as one, it met
+            # NEW_ADET on a gift-product table and the count was taken there instead of on the subject.
+            if _COUNT_CUE.fullmatch(fold(w)):
+                return False
             return len(w) >= 4 and not {stem(w), short_root(w), fold(w)} & skip
         looked = [w for w in sq.unresolved if _worth(w)] + [w for w in sq.ignored if _worth(w)]
         # A word that *is* a column name. Step 6 passes over it — it is plainly not a missing business
