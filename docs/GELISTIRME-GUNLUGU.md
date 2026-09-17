@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Kampüs: podcast + ajanda + kitap seçme kartları geri geldi
+
+Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü Kampüs ekranına (`src/canvas/kampus/KampusPage.tsx`) geri getirildi: **Sesli Bülten (podcast)** ve **Önemli Günler & Ajanda** sol sütunda, **Yeni Kitaplar (kitap seçme)** sağ sütunda odalar kartının altında. Sol sütundaki "Şirket Nabzı" kartı (ve içindeki "Günün modun" mod seçici) kaldırıldı; ilgili ölü kod (`mood/setMood/moodQ/prefsApi/Activity`) temizlendi. Podcast oynat/duraklat ve kitap seçme UI olarak çalışır; gerçek ses kaynağı ve kitap kataloğu **sonra** bağlanacak. Bu, "çalışmayan düğme bırakılmaz" kuralının bu üç kart için kullanıcı onayıyla geçici olarak esnetilmesidir. Canlı doğrulama sunucu build'inde yapılır.
+
 ## 2026-09-18 — Qwen/OCR paralel akışının gerçek kabulü
 
 Qwen ana model ve ihtiyaç halinde GPU OCR bağlandı. Eski sürüme sessiz yönlendirme, paralel kırpım429 ve yeni OCR'ın inceleme API'sinde görünmemesi kodda giderildi. R6 ilk11 sayfa API/PG/kanıt denetimi ve320/390/768/1440px OCR görünümü geçti; figür kimliği/semantik açık. R9 gereksiz simge OCR'ını azaltır, tek-glif kaynaklarını ve NEEDS_REVIEW kayıtlarını korur. [Ayrıntı ve başarısız koşular](editor/2026-09-18-qwen-ocr-parallel.md).
