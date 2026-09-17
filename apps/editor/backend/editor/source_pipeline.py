@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v7'
+VERSION = 'source-spans-v8'
 
 
 def norm(value):
@@ -27,6 +27,16 @@ def negation(value):
     # A rejection aid, never sufficient to accept a sentence. Exact quote matching
     # below also catches forms this deliberately incomplete Turkish check misses.
     return re.findall(r'\b\w*(?:mıyor|miyor|muyor|müyor|madı|medi)\w*\b|\b(?:değil|yok|hayır)\b', value.lower())
+
+
+def narrative_gate(page_role, source_gate):
+    # A prompt or an inherited model candidate cannot exempt a claim from the
+    # page-role rule. Metadata statements are not narrative facts either.
+    if page_role in ('ACTIVITY', 'FRONT_MATTER', 'APPENDIX', 'UNKNOWN'):
+        return 'NON_NARRATIVE_CLAIM_BLOCKED'
+    if page_role not in ('NARRATIVE', 'MIXED'):
+        return 'INVALID_PAGE_ROLE'
+    return source_gate
 
 
 def quote_tokens(value):
@@ -257,8 +267,9 @@ def optical(job, evidence, document, root, parent=None):
 def observe(job,evidence,layout,spans,root,parent=None):
     from editor.analysis import model
     from editor.source_review import speaker_candidates
+    from editor.visual_coverage import selected_regions, coverage
     gen=job['generation_id']; page=evidence['data']['pdf_page']; key=evidence['record_key']
-    illustrations=[r for r in layout['data']['regions'] if r['type']=='PICTURE' and r['bbox'][2]*r['bbox'][3]>.06]
+    illustrations=selected_regions(layout['data'])
     observations=[]
     if parent:
         prior=next((r for r in get_records(parent,'visual_observations') if r['record_key']==key),None)
@@ -269,11 +280,18 @@ def observe(job,evidence,layout,spans,root,parent=None):
                 'reused_visual_observation_id':str(prior['id']),
                 'reused_from_generation':str(parent),'pipeline_version':VERSION}
             value['speaker_links']=speaker_candidates(layout['data'],value)
+            value['coverage']=coverage(layout['data'],value['observations'])
+            value['omitted_regions']=value['coverage']['unobserved_picture_regions']
             # Keep original metrics and provenance; do not claim a new model call.
-            save(job,'visual_observations',key,value)
-            return
+            if all(any(o.get('region_bbox')==r['bbox'] for o in value['observations']) for r in illustrations):
+                save(job,'visual_observations',key,value)
+                return
+            observations=[{**o,'reused_visual_observation_id':str(prior['id']),
+                           'reused_from_generation':str(parent)} for o in prior['data']['observations']]
     # Every selected region has its own crop; any omitted region is explicit.
-    for i,region in enumerate(illustrations[:3]):
+    for i,region in enumerate(illustrations):
+        if any(o.get('region_bbox')==region['bbox'] for o in observations):
+            continue
         raw=(root/f'page-{page:04}.png').read_bytes()
         with httpx.Client(timeout=60,trust_env=False) as client:
             response=client.post('http://ocr:8080/crop',json={'image_base64':base64.b64encode(raw).decode(),'bbox':region['bbox']})
@@ -295,10 +313,14 @@ def observe(job,evidence,layout,spans,root,parent=None):
                 continue
             figures.append({k:f.get(k) for k in ('local_id','appearance','visible_action','bbox')})
         observations.append({'region_bbox':region['bbox'],'crop_sha256':crop['crop_sha256'],
-            'figures':figures,'uncertainties':answer.get('uncertainties',[]),'metrics':metrics})
+            'figures':figures,'uncertainties':answer.get('uncertainties',[]),'metrics':metrics,
+            'figure_coverage':'NOT_VERIFIED',
+            'figure_output_limit':4,'figure_limit_reached':len(answer.get('figures',[]))>=4,
+            'discarded_figure_candidates':len(answer.get('figures',[]))-len(figures)})
     # No inferred speaker may become a named character without independent grounding.
     save(job,'visual_observations',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
-        'observations':observations,'omitted_regions':max(0,len(illustrations)-3),
+        'observations':observations,'coverage':coverage(layout['data'],observations),
+        'omitted_regions':coverage(layout['data'],observations)['unobserved_picture_regions'],
         'speaker_links':speaker_candidates(layout['data'],{'observations':observations}),
         'speaker':'UNKNOWN','speaker_status':'TAIL_AND_CHARACTER_GROUNDING_NOT_VERIFIED',
         'verification_status':'CANDIDATE','eligible_as_claim_source':False,
@@ -392,9 +414,8 @@ def interpret(job,evidence,spans,parent=None):
         reason=quote_check(c.get('quote',''),chosen,spans) if refs and len(chosen)==len(refs) else 'INVALID_SPAN_REFERENCE'
         if reason=='MATCH' and bool(negation(c.get('quote',''))) != bool(negation(c.get('text',''))):
             reason='CLAIM_POLARITY_REQUIRES_REVIEW'
-        if c.get('kind')=='EVENT' and result.get('page_role') in ('ACTIVITY','FRONT_MATTER','APPENDIX','UNKNOWN'):
-            reason='NON_NARRATIVE_EVENT_BLOCKED'
         if c.get('kind')=='ENTITY': reason='ENTITY_IDENTITY_REQUIRES_REVIEW'
+        reason=narrative_gate(result.get('page_role','UNKNOWN'),reason)
         # Supported transcription is not entailment. Keep all semantic candidates out
         # of accepted facts until semantic and speaker checks exist for that claim.
         speaker = speaker_for_claim(c, attribution['attributions']) if reason=='MATCH' else None

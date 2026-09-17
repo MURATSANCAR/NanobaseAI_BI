@@ -33,3 +33,7 @@ Gerçek model servisi kapalıyken başlayan 29. sayfa isteği üç CONNECT_ERROR
 Kimlik zinciri denetimi (`evidence/identity-anchor-source-audit-20260917T140757Z.json`) 13. sayfada doğrulanmış kendini tanıtma biçimli metin bulunduğunu, ancak kayıtlı balon/figür olmadığını gösterdi. Devamındaki iki kaynak satırı inceleme gerektiriyor. 29. sayfanın balon-kuyruk-figür ilişkisi tekil olsa da doğrulanmış isim çapası yok. Bu iki eksik kanıt birleştirilerek isim atanmaz; genel görsel kapsam kök nedeni ayrıca düzeltilmektedir.
 
 Gerçek API parametre kabulü `evidence/priority-pages-api.json`: gerçek PDF sınırının dışı ve aynı sayfanın tekrarı 422 INVALID_PRIORITY_PAGES döndürdü. Her isteğin bağımsız PostgreSQL öncesi/sonrası jobs=15, generations=15; yanlış istek yeni iş üretmedi. Bölgesel kaynak denetiminin 14:13:57 UTC dokuz sayfalık sınırında API/PG eşliği geçti: 100 anlaşma/53 inceleme, en yakın sayfa ataları doğru, beş yeni yükselme ve sıfır gerileme (R2'de zaten yükselen üç bölge ayrı). 13 ve 29'un değişen kaynaklarında taze model çağrısı doğrulandı. Tam nesil kabulü hâlâ açık.
+
+## V8'e korunarak geçiş
+
+V7 dokuz tamamlanmış sayfa kontrolü ve on kaynak/görsel kaydıyla API üzerinden iptal edildi. Terminal durum CANCELLED; son dokuz sayfanın yapısal API/PG denetimi geçti (`source-audit-ab85c397-25f9-4cd9-8291-fc6ffed8e61b-0009.log`). Yeni V8 nesli `7e7db466-3576-4c23-85b2-73483ab4508e` bu nesli ata olarak kullanır. Künye/etkinlik iddiası ve görsel kapsam düzeltmeleri bu yeni nesilde uygulanır. V7 tam kitap veya anlamsal kabulü verilmez.

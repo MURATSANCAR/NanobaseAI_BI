@@ -474,7 +474,7 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7'):
+    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8'):
         from editor.source_pipeline import run as run_source_pages
         return run_source_pages(job)
     with connection() as db:

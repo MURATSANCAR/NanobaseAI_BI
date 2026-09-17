@@ -90,6 +90,16 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     const spans=await spansResponse.json();if(!spans.items?.length)throw new Error('Real page spans missing');
     const details=page.locator('.source-notes details').first();await details.locator('summary').click();
     if(!(await details.textContent()).includes(spans.items[0].data.text))throw new Error('UI span differs from API');
+    if(process.env.EDITOR_VERIFY_VISUAL_COVERAGE==='1'){
+     const response=await context.request.get(base+'/v1/generations/'+generation+'/visual_observations?pdf_page='+sourcePage+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+     if(!response.ok())throw new Error('Actual visual coverage API failed');
+     const observation=(await response.json()).items[0];
+     if(!observation)throw new Error('No real visual observation for coverage UI acceptance');
+     const coverage=observation.data.coverage;
+     const expected=coverage?`${coverage.declared_picture_regions} görsel bölge saptandı; ${coverage.unobserved_picture_regions} bölgenin gözlemi eksik.`:'Bu koşuda görsel bölge kapsamı ölçülmedi.';
+     const notice=page.getByTestId('visual-coverage');await notice.waitFor();
+     if(await notice.textContent()!==expected+' Sayfanın tüm görsellerinin incelendiği henüz doğrulanmadı.')throw new Error('Visual coverage UI differs from actual API');
+    }
     await details.getByRole('button',{name:'Kaynakta göster',exact:true}).click();
     const overlay=await page.locator('.source-highlight').evaluate(element=>{
       const box=element.getBoundingClientRect(),parent=element.parentElement.getBoundingClientRect();

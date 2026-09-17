@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — V8 anlatı kapısı ve açık görsel kapsam
+
+- Künye/etkinlik/UNKNOWN sayfalardaki EVENT dışı iddiaların MATCH kapısından geçmesi kodda düzeltildi. Gerçek 48 sayfanın 15 adayı artık engellenir; 124 anlatı/karma adayın kapı sonucu korunur.
+- Küçük görsellerin sessiz atlanması düzeltildi: 52 dışlanan bölge açık kapsam kaydı olur; 19 eski büyük bölge ve model bütçesi korunur. Arayüz kapsamın ölçülmediği eski nesilleri de açık gösterir.
+- V7 dokuz sayfalık kontrolü korunarak API ile iptal edildi; ayrı ortama V8 kuruldu ve 7e7db466 nesli başlatıldı. Backend 39 dosya/hash ve web kaynak/çıktı eşliği geçti; gerçek 2/13/29 sayfa API/PG/ata kaynak/anlatı/kapsam ve dört genişlikte mobil kabulü geçti. Tam kitap koşusu sürüyor.
+- Türkçe-only OCR profili gerçek 26 bölge/104 kısa çağrıda yeni eşleşme getirmedi ve bir eşleşmeyi bozdu; varsayılan dil profili değiştirilmedi. [OCR kanıtı](editor/2026-09-17-ocr-residual-audit.md).
+
 ## 2026-09-17 — İki ek gerçek kitap ve V7 soğuk başlangıç kanıtı
 
 - 64 ve 32 sayfalık iki ek özgün PDF gerçek API/parser/PostgreSQL ve bağımsız Poppler/hash kontrollerinden geçti. Kaynak hazırlama kabulüdür; anlamsal analiz kabulü değildir.

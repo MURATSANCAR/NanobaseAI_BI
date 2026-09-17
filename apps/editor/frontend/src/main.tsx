@@ -608,10 +608,16 @@ function App() {
                     <h2>Gözlem adayı</h2>
                     <span className="badge">Doğrulanmamış model çıktısı</span>
                     <p className="body-copy">
-                      {pageObservation ? (pageObservation.data.observations.length ? pageObservation.data.observations.flatMap((o: any) => o.figures.map((f: any) => `${f.appearance}: ${f.visible_action}`)).join("\n") : "İşlenecek büyük görsel bölge saptanmadı.") : visual?.data.description ??
+                      {pageObservation ? (pageObservation.data.observations.flatMap((o: any) => o.figures.map((f: any) => `${f.appearance}: ${f.visible_action}`)).join("\n") || "Bu sayfada figür gözlemi kaydedilmedi.") : visual?.data.description ??
                         "Bu sayfanın model çıktısı henüz kaydedilmedi."}
                     </p>
                     {pageObservation && <p className="hint">Bölgesel gözlem adayıdır; alıntı veya iddia kaynağı olarak kullanılmaz. Konuşmacı: bilinmiyor.</p>}
+                    {pageObservation && <p className="hint" data-testid="visual-coverage">
+                      {pageObservation.data.coverage
+                        ? `${pageObservation.data.coverage.declared_picture_regions} görsel bölge saptandı; ${pageObservation.data.coverage.unobserved_picture_regions} bölgenin gözlemi eksik.`
+                        : "Bu koşuda görsel bölge kapsamı ölçülmedi."}
+                      {" "}Sayfanın tüm görsellerinin incelendiği henüz doğrulanmadı.
+                    </p>}
                     {visual && (
                       <small>
                         {visual.data.reused_from

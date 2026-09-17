@@ -84,7 +84,7 @@ def reference(data):
 
 generation_row = sql(f"SELECT json_build_object('content_version_id',content_version_id,'manifest',manifest) FROM editor.generations WHERE id='{gen}'")
 manifest = generation_row['manifest']
-assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7')
+assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7','source-spans-v8')
 root_parent = str(uuid.UUID(manifest['reuse_measurements_from']))
 
 
@@ -125,7 +125,7 @@ for page, frozen in sorted(boundary.items()):
     assert reading_rows == [frozen], 'COMPLETED_READING_CHANGED'
     expected_parent,lineage = nearest_parent(page,frozen['record_key'])
     parent = frozen['data'].get('reused_from_generation')
-    if manifest['pipeline_version']=='source-spans-v7':
+    if manifest['pipeline_version'] in ('source-spans-v7','source-spans-v8'):
         assert parent==expected_parent, 'NOT_NEAREST_COMPLETE_PAGE_PARENT'
     else:
         assert parent==root_parent, 'V6_DIRECT_PARENT_MISMATCH'
