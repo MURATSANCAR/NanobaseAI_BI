@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -10,6 +11,16 @@ import sys
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
+external_models = '--external-models' in sys.argv
+if external_models and ('--with-models' in sys.argv or '--with-ocr-vl' in sys.argv):
+    raise SystemExit('--external-models cannot be combined with CPU --with-models or local --with-ocr-vl.')
+active = json.loads(subprocess.check_output(['docker','compose','config','--format','json']))
+active_env = active['services']['api'].get('environment', {})
+if (active_env.get('EDITOR_MODEL_BACKEND') == 'vllm' or active_env.get('EDITOR_OCR_VL_BASE_URL')) and not external_models:
+    raise SystemExit('External GPU deployment requires --external-models; CPU bundle would omit its dependencies.')
+if external_models and not all(active_env.get(key) for key in
+        ('EDITOR_MODEL_NAME','EDITOR_OCR_VL_MODEL','EDITOR_OCR_VL_REVISION')):
+    raise SystemExit('External model names and OCR revision must be configured before packaging.')
 destination = Path(sys.argv[1]).resolve()
 if destination == root or root in destination.parents:
     raise SystemExit('Release destination must be outside the application directory.')
@@ -31,14 +42,16 @@ if with_ocr:
     ocr_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.ocr.yaml','config','--format','json']))
     config['services']['ocr'] = ocr_config['services']['ocr']
     images = sorted(set(images) | {ocr_config['services']['ocr']['image']})
-if with_models:
+if with_models or external_models:
     model_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.models.yaml','--profile','models','config','--format','json']))
+    if external_models:
+        model_config['services'] = {name: model_config['services'][name] for name in ('embedding','reranker')}
     config['services'].update(model_config['services'])
     images = sorted(set(images) | {service['image'] for service in model_config['services'].values()})
     model_manifest = json.loads((root/'deploy/models.json').read_text())
     model_destination = source/'runtime/models'
     model_destination.mkdir(parents=True)
-    for item in model_manifest['files'] + model_manifest['reused_files']:
+    for item in ([] if external_models else model_manifest['files']) + model_manifest['reused_files']:
         path = root/'runtime/models'/item['name']
         with path.open('rb') as stream:
             if hashlib.file_digest(stream,'sha256').hexdigest() != item['sha256']:
@@ -84,18 +97,28 @@ lines=[line for line in example.read_text().splitlines() if not line.startswith(
 lines.append('EDITOR_RELEASE='+config['services']['api']['environment']['EDITOR_RELEASE'])
 example.write_text('\n'.join(lines)+'\n')
 with (source/'.env.example').open('a') as stream:
-    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + ('compose.ocr-vl.yaml:' if with_ocr_vl else '') + ('compose.reread.yaml:' if with_reread else '') + 'compose.offline.yaml\n')
-    if with_models:
+    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models or external_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + ('compose.ocr-vl.yaml:' if with_ocr_vl else '') + ('compose.reread.yaml:' if with_reread else '') + ('compose.gpu.yaml:compose.external-models.yaml:' if external_models else '') + 'compose.offline.yaml\n')
+    if with_models or external_models:
         stream.write('COMPOSE_PROFILES=models\n')
+    if external_models:
+        stream.write('EDITOR_MODEL_BASE_URL=\nEDITOR_OCR_VL_BASE_URL=\n')
+        for key in ('EDITOR_MODEL_NAME','EDITOR_OCR_VL_MODEL','EDITOR_OCR_VL_REVISION'):
+            value=str(active_env[key])
+            if not re.fullmatch(r'[A-Za-z0-9._/-]+', value):
+                raise SystemExit('Invalid external model identity')
+            stream.write(key+'='+value+'\n')
+        stream.write('EDITOR_MODEL_CONTEXT='+str(int(active_env.get('EDITOR_MODEL_CONTEXT',32768)))+'\n')
 inspection = json.loads(subprocess.check_output(['docker','image','inspect',*sorted(tags)]))
 subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*sorted(tags)],check=True)
 manifest = {'kind':'editor-foundation-offline', 'architecture':'linux/amd64',
+            'deployment_mode':'external_models' if external_models else 'cpu_or_foundation',
+            'external_dependencies':json.loads((source/'deploy/external-models.json').read_text()) if external_models else None,
             'ocr_included':with_ocr,
             'ocr_vl_included':with_ocr_vl,
             'reread_included':with_reread,
             'release':config['services']['api']['environment']['EDITOR_RELEASE'],
             'images':[{'id':i['Id'],'tags':[tag],'digests':i['RepoDigests']} for tag,i in zip(sorted(tags),inspection)],
-            'model_qualification':'candidate weights included; semantic acceptance pending' if with_models else 'pending; LLM/VLM weights not included', 'files':{}}
+            'model_qualification':'External Qwen/OCR services and weights NOT included; local embedding/reranker included; endpoint acceptance pending' if external_models else ('candidate weights included; semantic acceptance pending' if with_models else 'pending; LLM/VLM weights not included'), 'files':{}}
 for path in sorted(destination.rglob('*')):
     if path.is_file():
         with path.open('rb') as stream:

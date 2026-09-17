@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> **18 Eylül V12 güncel:** kaynak sonrası figür kimliği ve anlam denetimi ayrı paralel kollara bağlandı. Yeni iş `791de2a0-a440-419c-8db4-2095405eed23`, nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`. R9 22 sayfa teknik kontrolünden sonra kayıtları korunarak iptal edildi. Gerçek s7/s38 bileşen kontrolü ve gerçek figür kırpım karşılaştırması çalıştı; tam yeni nesil, kimlik ve anlamsal kabul hâlâ açık. [V12 ayrıntıları](2026-09-18-source-analysis-v12.md). Aşağıdaki eski sürüm sayıları tarihsel kanıttır.
+
 > 18 Eylül — Qwen ana model + isteğe bağlı PaddleOCR-VL-1.6 akışı canlıya alındı. R6 ilk11 sayfanın API/PG ve ham kaynak kanıtı denetimi geçti;29. sayfada11 OCR bölgesi ve Qwen çağrısının örtüşmesi öncekiR5 koşusunda ölçüldü. Mobil OCR görünümü dört genişlikte geçti. Gereksiz simge çağrılarını azaltanR9, gerçek67 önceki çağrıda23 çağrıyı inceleme statüsünü değiştirmeden eleyebiliyor; destekli tek-glif okuması korunuyor. **P1/P2 henüz kapanmadı**: figür–karakter kimliği ve anlamsal kabul açık. [Sürüm, hatalar ve kanıt](2026-09-18-qwen-ocr-parallel.md).
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı

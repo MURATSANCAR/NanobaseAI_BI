@@ -12,12 +12,13 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
   if(!response.ok||identity.role!=='READER')throw new Error('Expected an actual read-only credential');
  }
  const run=JSON.parse(fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_RUN_FILE||'evidence/reference-book-run.json'),'utf8'));
+ const verifySemantic=process.env.EDITOR_VERIFY_SEMANTIC==='1';
  const verifyCharacters=process.env.EDITOR_VERIFY_CHARACTER_EVIDENCE==='1';
  const verifyRegional=process.env.EDITOR_VERIFY_REGIONAL_SOURCE==='1';
  const verifyVlSelection=process.env.EDITOR_VERIFY_OCR_VL_SELECTION==='1';
  const targetGeneration=(run.job||run).generation_id;
  let regionalSpan=null,vlSpan=null,targetWork=null,targetJob=null;
- if(verifyRegional||verifyVlSelection){
+ if(verifyRegional||verifyVlSelection||verifySemantic){
   const read=async endpoint=>{const response=await fetch(base+'/v1'+endpoint,{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw new Error('Real regional API failed '+response.status);return response.json();};
   targetWork=(await read('/generations/'+targetGeneration)).work_id;
   for(let offset=0;;){
@@ -69,7 +70,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(width===390)await page.screenshot({path:path.join(out,'login-390.png'),fullPage:true});
    await page.getByLabel('Erişim anahtarı').fill(token);
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
-   if(verifyRegional||verifyVlSelection){
+   if(verifyRegional||verifyVlSelection||verifySemantic){
     await page.locator('.selectors select').nth(0).selectOption(targetWork);
     await page.locator('.selectors select').nth(1).selectOption(targetJob);
     await page.waitForFunction(expected=>document.querySelector('footer code')?.textContent.trim()===expected,targetGeneration);
@@ -158,6 +159,49 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('OCR selection overflow '+width);
     await page.screenshot({path:path.join(out,'ocr-selection-'+width+'.png'),fullPage:true});
     vlSelectionCheck={span_id:vlSpan.id,pdf_page:number,raw_and_selected_text_exact:true,model_provenance:true,acceptance_limit:true,bbox_equal:true};
+   }
+   let semanticCheck=null;
+   if(verifySemantic){
+    const readKind=async kind=>{
+     const rows=[];
+     for(let offset=0;;){
+      const response=await context.request.get(base+'/v1/generations/'+generation+'/'+kind+'?offset='+offset+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+      if(!response.ok())throw new Error('Semantic real API failed '+kind);
+      const batch=await response.json();rows.push(...batch.items);
+      if(!batch.has_more)break;if(!batch.items.length)throw new Error('Empty semantic pagination');offset+=batch.items.length;
+     }
+     return rows;
+    };
+    const identities=await readKind('figure_identity'),reviews=await readKind('semantic_reviews'),syntheses=await readKind('semantic_synthesis');
+    const identity=identities.find(row=>row.data.links?.length),review=reviews.find(row=>row.data.candidate_count>0),synthesis=syntheses.find(row=>row.data.statements?.length);
+    if(!identity||!review||!synthesis)throw new Error('Actual populated identity/review/synthesis records required; empty records do not qualify');
+    for(const [record,testid] of [[identity,'figure-identity'],[review,'semantic-review']]){
+     await page.getByRole('button',{name:'Kaynak & görsel',exact:true}).click();
+     await page.locator('#page').selectOption(String(record.data.pdf_page));
+     const panel=page.getByTestId(testid);await panel.waitFor();
+     if(testid==='figure-identity'){
+      const labels=await panel.locator('.claim b').allTextContents();
+      const expected=record.data.links.map(link=>link.visual_identity_verified?link.speaker:'Konuşmacı kimliği bilinmiyor');
+      if(JSON.stringify(labels)!==JSON.stringify(expected))throw new Error('Identity UI differs from real API');
+     }else if(!(await panel.textContent()).includes(record.data.candidate_count+' adayın '+record.data.machine_supported_count+' tanesinde kaynak desteği bulundu.'))throw new Error('Semantic review count differs from API');
+     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Semantic source panel overflow '+width);
+     await page.screenshot({path:path.join(out,testid+'-'+width+'.png'),fullPage:true});
+    }
+    await page.getByRole('button',{name:'Kitap yorumu',exact:true}).click();
+    const panel=page.getByTestId('semantic-synthesis');await panel.waitFor();
+    if(!(await panel.textContent()).includes('Kitabın tamamı henüz kabul edilmedi.'))throw new Error('Full book acceptance limitation missing');
+    const statements=panel.getByTestId('semantic-statement');
+    if(await statements.count()!==synthesis.data.statements.length)throw new Error('Semantic synthesis count differs from API');
+    for(let index=0;index<synthesis.data.statements.length;index++){
+     if(await statements.nth(index).locator('p').textContent()!==synthesis.data.statements[index].text)throw new Error('Semantic statement differs from API');
+     if(!await statements.nth(index).locator('.refs button').count())throw new Error('Semantic statement lacks source navigation');
+    }
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Semantic synthesis overflow '+width);
+    await page.screenshot({path:path.join(out,'semantic-synthesis-'+width+'.png'),fullPage:true});
+    const link=statements.first().locator('.refs button').first();
+    const expectedPage=(await link.textContent()).match(/\d+/)[0];await link.click();
+    await page.getByRole('heading',{name:'PDF sayfası '+expectedPage,exact:true}).waitFor();
+    semanticCheck={identity_page:identity.data.pdf_page,review_page:review.data.pdf_page,statements:synthesis.data.statements.length,literal_api_equal:true,source_navigation:true,full_book_acceptance:false};
    }
    let regionalCheck=null;
    if(verifyRegional){
@@ -268,7 +312,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(await page.evaluate(()=>localStorage.length||sessionStorage.length))throw new Error('Unexpected persisted browser state');
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
    if(await page.getByLabel('Erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
-   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,ocr_vl_selection:vlSelectionCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
+   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,ocr_vl_selection:vlSelectionCheck,semantic:semanticCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
   fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',api:base,results,semantic_acceptance:false},null,2));

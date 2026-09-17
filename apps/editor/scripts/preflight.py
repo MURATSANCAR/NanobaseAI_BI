@@ -9,6 +9,7 @@ import shutil
 import socket
 import subprocess
 import sys
+from urllib.parse import urlsplit
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
@@ -25,6 +26,27 @@ if platform.system() != 'Linux' or platform.machine() != 'x86_64':
 subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], check=True)
 subprocess.run(['docker', 'compose', 'config', '--quiet'], check=True)
 config = json.loads(subprocess.check_output(['docker','compose','config','--format','json']))
+app_env = config['services']['api'].get('environment', {})
+if app_env.get('EDITOR_MODEL_BACKEND') == 'vllm':
+    for name in ('EDITOR_MODEL_BASE_URL', 'EDITOR_OCR_VL_BASE_URL'):
+        value = app_env.get(name, '')
+        endpoint = urlsplit(value)
+        if (endpoint.scheme not in ('http', 'https') or not endpoint.hostname
+                or endpoint.username or endpoint.password or endpoint.query or endpoint.fragment
+                or endpoint.path.rstrip('/')):
+            errors.append(name+' must be an HTTP(S) runner root without credentials, path, query or fragment.')
+        if endpoint.hostname in ('localhost', '127.0.0.1', '::1'):
+            errors.append(name+' cannot use container loopback; configure an address reachable from Editor containers.')
+    for name in ('EDITOR_MODEL_NAME','EDITOR_OCR_VL_MODEL','EDITOR_OCR_VL_REVISION'):
+        if not app_env.get(name):
+            errors.append('Missing external model identity: '+name)
+    if config['services']['worker'].get('environment', {}) != app_env:
+        # Compare only inference contract keys; unrelated worker settings may differ.
+        worker_env = config['services']['worker'].get('environment', {})
+        for name in ('EDITOR_MODEL_BACKEND','EDITOR_MODEL_BASE_URL','EDITOR_MODEL_NAME',
+                     'EDITOR_OCR_VL_BASE_URL','EDITOR_OCR_VL_MODEL','EDITOR_OCR_VL_REVISION'):
+            if worker_env.get(name) != app_env.get(name):
+                errors.append('API/worker external model configuration differs: '+name)
 if (root/'backend/editor/reread_queue.py').is_file():
     for service in ('reread-storage-init','reread-worker'):
         if service not in config['services']:
@@ -60,12 +82,36 @@ if usage.free < 20 * 1024**3:
 mem = dict(line.split(':', 1) for line in Path('/proc/meminfo').read_text().splitlines())
 if int(mem['MemAvailable'].split()[0]) < 8 * 1024**2:
     errors.append('At least 8 GiB available RAM required for the bounded document tooling.')
-if 'models' in settings.get('COMPOSE_PROFILES','').split(','):
+# Inspect resolved active services: GPU mode retains embedding/reranker under
+# the models profile but deliberately excludes the CPU llm service.
+if 'llm' in config['services']:
     if int(mem['MemAvailable'].split()[0]) < 48 * 1024**2:
-        errors.append('The CPU model profile needs 48 GiB available RAM including document and service headroom.')
-    for name in ('Qwen3.8-27B-Q4_K_M.gguf','mmproj-Qwen3.8-27B-Q8_0.gguf','bge-m3-Q8_0.gguf','bge-reranker-v2-m3-Q8_0.gguf'):
-        if not (root/'runtime/models'/name).is_file():
-            errors.append('Missing offline model: '+name)
+        errors.append('The CPU model service needs 48 GiB available RAM including document and service headroom.')
+for service_name in ('llm', 'embedding', 'reranker'):
+    service = config['services'].get(service_name)
+    if not service:
+        continue
+    command = service.get('command', [])
+    if not isinstance(command, list):
+        errors.append('Model command must be an argument list: '+service_name)
+        continue
+    for index, argument in enumerate(command):
+        if argument not in ('--model', '--mmproj'):
+            continue
+        if index + 1 >= len(command):
+            errors.append('Missing model path argument: '+service_name+' '+argument)
+            continue
+        model_path = Path(command[index + 1])
+        mounts = [mount for mount in service.get('volumes', [])
+                  if mount.get('type') == 'bind'
+                  and model_path.is_relative_to(mount.get('target', '/__unmounted__'))]
+        if not mounts:
+            errors.append('Offline model is not supplied by a host bind mount: '+service_name+' '+str(model_path))
+            continue
+        mount = max(mounts, key=lambda item: len(item['target']))
+        host_path = Path(mount['source']) / model_path.relative_to(mount['target'])
+        if not host_path.is_file():
+            errors.append('Missing offline model for '+service_name+': '+str(host_path))
 running = subprocess.check_output(['docker', 'compose', 'ps', '-q'], text=True).strip()
 if not running:
     for port in (int(settings['EDITOR_PORT']), int(settings['EDITOR_METRICS_PORT'])):

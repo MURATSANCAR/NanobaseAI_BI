@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — paralel figür kimliği ve kaynaklı anlam denetimi
+
+- Kullanıcının paralel yürütme isteğiyle kimlik çözümü, anlamsal kontrol ve kaynak arayüzü ayrı ele alındı. Değişmez kaynaklar korunur; kitap cevabı/verisi elle yazılmaz.
+- PaddleOCR-VL seçilmiş metninin okuyucu kökeni görünür oldu; gerçek API/Chrome 320/390/768/1440 px kontrolü geçti. Backend 43 dosya/hash eşliğiyle V12-r1 yayımlandı; R9 22 teknik sayfa kontrolü/0 hata ile korunup yeni nesle geçildi.
+- Gerçek s7/s38 ayrı model denetimi kaynak kapılarını korudu. S38 iki taslak kabul, iki kaynak dışı genişleme reddi; bu tam kitap kabulü değildir. Gerçek figür çifti farklı bulundu, isim atanmadı.
+- Müşteri harici GPU endpoint sözleşmesi ve uygulama offline paket modu eklendi; mevcut sunucu preflight hatasız. Harici GPU imaj/ağırlıkları bu uygulama paketine dahil değildir; yeni offline import/restore kabulü açık.
+- [Ayrıntılı sürüm/kanıt kaydı](editor/2026-09-18-source-analysis-v12.md), [müşteri kurulum kapsamı](editor/2026-09-18-deployment-gaps.md).
+
 ## 2026-09-18 — Kampüs: podcast + ajanda + kitap seçme kartları geri geldi
 
 Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü Kampüs ekranına (`src/canvas/kampus/KampusPage.tsx`) geri getirildi: **Sesli Bülten (podcast)** ve **Önemli Günler & Ajanda** sol sütunda, **Yeni Kitaplar (kitap seçme)** sağ sütunda odalar kartının altında. Sol sütundaki "Şirket Nabzı" kartı (ve içindeki "Günün modun" mod seçici) kaldırıldı; ilgili ölü kod (`mood/setMood/moodQ/prefsApi/Activity`) temizlendi. Podcast oynat/duraklat ve kitap seçme UI olarak çalışır; gerçek ses kaynağı ve kitap kataloğu **sonra** bağlanacak. Bu, "çalışmayan düğme bırakılmaz" kuralının bu üç kart için kullanıcı onayıyla geçici olarak esnetilmesidir. Canlı doğrulama sunucu build'inde yapılır.

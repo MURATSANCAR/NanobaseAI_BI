@@ -15,6 +15,13 @@ for name, expected in manifest['files'].items():
     with path.open('rb') as stream:
         if hashlib.file_digest(stream,'sha256').hexdigest() != expected:
             raise SystemExit('Bundle checksum mismatch: '+name)
+if manifest.get('deployment_mode') == 'external_models':
+    contract_path = root/'editor/deploy/external-models.json'
+    if ('editor/deploy/external-models.json' not in manifest['files']
+            or json.loads(contract_path.read_text()) != manifest.get('external_dependencies')):
+        raise SystemExit('External dependency contract missing or differs from package manifest')
+    print('Application-only offline bundle: customer-managed Qwen/OCR services and GPU weights are NOT included. '
+          'Configure endpoint variables before installation; GPU/inference acceptance remains pending.')
 subprocess.run(['docker','load','-i',str(root/'images.tar')],check=True)
 for image in manifest['images']:
     for tag in image['tags'] or []:

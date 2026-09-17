@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v11'
+VERSION = 'source-spans-v12'
 
 
 def same_model(metrics):
@@ -571,8 +571,18 @@ def run(job):
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
         if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,page_parent)
         if row['record_key'] not in checked: interpret(job,row,spans,page_parent)
+    from editor.figure_identity import run as resolve_figures
+    from editor.semantic_acceptance import run as review_semantics
+    # Both consume immutable page sources. Neither promotes the other's model
+    # opinion into identity evidence or whole-book editorial approval.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        identity_future=pool.submit(resolve_figures,job,root)
+        semantic_future=pool.submit(review_semantics,job)
+        identity_future.result()
+        semantic_future.result()
     with connection() as db:
         fence(db,job)
         db.execute("UPDATE editor.jobs SET status='COMPLETED',finished_at=now(),progress=%s WHERE id=%s",
-            (Jsonb({'stage':'page_checks','status':'NEEDS_REVIEW','completed_pages':len(evidence)}),job['id']))
+            (Jsonb({'stage':'source_analysis','status':'NEEDS_REVIEW','completed_pages':len(evidence),
+                    'identity_and_semantic_pass_finished':True,'semantic_acceptance':False}),job['id']))
         db.execute("UPDATE editor.generations SET status='NEEDS_REVIEW' WHERE id=%s",(gen,))

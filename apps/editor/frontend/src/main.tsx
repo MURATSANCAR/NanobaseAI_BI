@@ -194,7 +194,7 @@ function App() {
             "events",
             "literary",
             "validation",
-            "page_readings", "visual_observations", "page_claims", "page_checks", "character_evidence",
+            "page_readings", "visual_observations", "page_claims", "page_checks", "character_evidence", "figure_identity", "semantic_reviews", "semantic_synthesis",
           ];
           const entries = await Promise.all(
             kinds.map(async (k) => [k, await all(`/generations/${gen}/${k}`)]),
@@ -230,6 +230,9 @@ function App() {
   const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
   const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
   const pageCharacters = data.character_evidence?.find((r) => r.data.pdf_page === page);
+  const pageIdentity = data.figure_identity?.find((r) => r.data.pdf_page === page);
+  const pageSemantic = data.semantic_reviews?.find((r) => r.data.pdf_page === page);
+  const pageCandidates = [...(pageClaims?.data.claims ?? []), ...(pageClaims?.data.blocked_claims ?? [])];
   const namedMentions = Array.from((data.character_evidence ?? []).reduce((map, row) => {
     for (const mention of row.data.named_mentions ?? []) {
       const item = map.get(mention.label_key) ?? { label: mention.label, pages: [] as number[] };
@@ -603,6 +606,32 @@ function App() {
                     </div>)}
                     <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Görsel figürlerin kimlik eşleştirmesi bekliyor</p>
                   </article>}
+                  {pageIdentity && <article className="paper" data-testid="figure-identity">
+                    <h2>Figür ve konuşmacı eşleştirmesi</h2>
+                    <p className="hint">Bu sayfadaki kaynak bağı incelenir; sayfalar arasında aynı karakter olduğu veya kitabın tamamı doğrulanmış değildir.</p>
+                    {(pageIdentity.data.links ?? []).map((link: any, i: number) => <div className="claim" key={i}>
+                      <b>{link.visual_identity_verified ? link.speaker : "Konuşmacı kimliği bilinmiyor"}</b>
+                      <p>{link.visual_identity_verified ? "Bu sayfadaki söz ve balon yönü kimliği destekliyor; genel karakter kimliği onayı değildir." : "Figür adayı bir karakter adıyla yeterli kaynak üzerinden eşleştirilemedi."}</p>
+                    </div>)}
+                    {!pageIdentity.data.links?.length && <p>Bu sayfada bağlanabilecek konuşmacı kaydı bulunmadı.</p>}
+                    {pageIdentity.data.unprocessed_pairs > 0 && <p>{pageIdentity.data.unprocessed_pairs} figür karşılaştırması henüz yapılmadı.</p>}
+                    {source && refs([source.id])}
+                  </article>}
+                  {pageSemantic && <article className="paper" data-testid="semantic-review">
+                    <h2>Sayfanın anlam denetimi</h2>
+                    <p>{pageSemantic.data.candidate_count} adayın {pageSemantic.data.machine_supported_count} tanesinde kaynak desteği bulundu.</p>
+                    <p className="hint">Otomatik denetim sonucudur; editör onayı veya kitabın tamamının anlamsal kabulü değildir.</p>
+                    {(pageSemantic.data.claims ?? []).map((verdict: any, i: number) => {
+                      const candidate = pageCandidates[verdict.candidate_ordinal];
+                      return <div className="claim" key={verdict.claim_id || i}>
+                        <span className="badge">{verdict.status === "MACHINE_SUPPORTED_CANDIDATE" ? "Kaynakla desteklenen aday" : "İnceleme gerekiyor"}</span>
+                        {candidate && <p>{candidate.text}</p>}
+                        {verdict.identity_gate === "IDENTITY_REVIEW_REQUIRED" && <p>İlgili kişinin kimliği henüz doğrulanmadı.</p>}
+                        {candidate && refs(candidate.evidence_refs)}
+                      </div>;
+                    })}
+                    {source && refs([source.id])}
+                  </article>}
                   {pageCharacters && pageCharacters.data.attributions.length > 0 && <article className="paper" data-testid="text-attributions">
                     <h2>Metindeki konuşmacılar</h2>
                     <p className="hint">Metinde açıkça kime atfedildiği belirtilen sözler. Resimdeki figürün kimliği ayrıca doğrulanır.</p>
@@ -775,6 +804,19 @@ function App() {
             )}
             {tab === "literary" && (
               <section className="cards">
+                {(data.semantic_synthesis ?? []).map((r) => <article className="paper wide" key={r.id} data-testid="semantic-synthesis">
+                  <p className="eyebrow">KAYNAKLI ANALİZ TASLAĞI</p>
+                  <h2>Kısmi kitap yorumu</h2>
+                  <p className="hint">Kitabın tamamı henüz kabul edilmedi. Aşağıdaki ifadeler kaynakla denetlenen adaylardan üretildi; editör onayı değildir.</p>
+                  {(r.data.statements ?? []).map((statement: any, i: number) => <div className="claim" key={i} data-testid="semantic-statement">
+                    <span className="badge">{({SCENE: "Sahne taslağı", RELATIONSHIP: "İlişki taslağı", THEME: "Tema taslağı", SUMMARY: "Özet taslağı"} as Record<string, string>)[statement.kind] || "Yorum taslağı"}</span>
+                    <p>{statement.text}</p>
+                    {refs(statement.evidence_refs)}
+                  </div>)}
+                  {!r.data.statements?.length && <p>Kaynak denetiminden geçerek gösterilebilen yorum henüz yok.</p>}
+                  {r.data.blocked_statements?.length > 0 && <p>{r.data.blocked_statements.length} yorum yeterli destek bulunmadığı için taslağa alınmadı.</p>}
+                  {r.data.missing_review_pages?.length > 0 && <p>{r.data.missing_review_pages.length} sayfanın anlam denetimi eksik.</p>}
+                </article>)}
                 {(data.literary ?? []).map((r) => (
                   <React.Fragment key={r.id}>
                     <article className="paper wide">
@@ -814,7 +856,7 @@ function App() {
                     ))}
                   </React.Fragment>
                 ))}
-                {!data.literary?.length && (
+                {!data.literary?.length && !data.semantic_synthesis?.length && (
                   <Empty
                     title="Kitap yorumu henüz oluşmadı"
                     text="Karakter değişimi ve tema yorumları kaynakları ve alternatif okumalarıyla gösterilecek."
