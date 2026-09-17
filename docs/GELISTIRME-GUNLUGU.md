@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — V5 metin atıfları ve kesilen yükleme kabulü
+
+- Gerçek restore ortamında 48 sayfalık yeni nesil tamamlandı; kaynaklı metin atıfları UI/API eşliği ve bbox bağlantıları dört genişlikte geçti. Backend 36 dosya ve web kaynak/çıktı hashleri aynı.
+- Nullable kayıt derleme hatası kodda düzeltildi; denetçi seçicileri ve tamamlanma sırasındaki snapshot hatası düzeltildi. Gerçek akışlar yeniden kontrol ediliyor; eski hata logları korundu.
+- Ana yayına geçiş, tam atıf kontrolü ve kesilen yükleme matrisi devam ediyor; görsel kimlik/anlamsal kabul açık. [Kanıt ve ayrıntılar](editor/2026-09-17-text-attribution.md).
+
 ## 2026-09-17 — Editörün farklı kitaplara genellenebilirlik incelemesi
 
 - Kullanıcının başka kitaplar da yükleneceği talebi AGENTS.md kuralına işlendi; kitap/sayfa/karaktere özel üretim çözümü yasak, gerçek regresyon girdileri ayrı.

@@ -1,6 +1,6 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü izleniyor. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
+> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 

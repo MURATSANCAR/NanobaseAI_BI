@@ -41,3 +41,7 @@ Gerçek API üzerinden yeni nesil `33b5bb70-ddd5-4591-a09d-536b656791dc`, iş `9
 ## Çalışma sırası
 
 Kullanıcının talebi: bulgu → genel kod düzeltmesi → gerçek sistemde yeniden doğrulama → kanıt kaydı tamamlanmadan sonraki adıma geçilmez. Başarısız deney çözüm sayılmaz; beklenen kitap cevabı sisteme verilmez. Dış kaynak/insan kararı gerektiren kabul açık olarak kaydedilir.
+
+## R2 offline kabulün kapanışı
+
+Gerçek qualification kaydı 17 Eylül 11:02:51 UTC PASS: offline bundle/import, gerçek yedek, ayrı restore, geri yüklenen API/PG/OCR ve dört genişlikte mobil kabul geçti. Kanıt `/data/nanobaseai/editor-qualifications/source-boundaries-v4-r2-20260917/99881d8f/qualification.json`. Bu sonuç yalnız v4-r2 hashlerine aittir; sonraki v5 için otomatik paket kabulü değildir.

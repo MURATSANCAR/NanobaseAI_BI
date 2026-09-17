@@ -587,7 +587,7 @@ function App() {
                     </div>)}
                     <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Görsel figürlerin kimlik eşleştirmesi bekliyor</p>
                   </article>}
-                  {pageCharacters?.data.attributions.length > 0 && <article className="paper" data-testid="text-attributions">
+                  {pageCharacters && pageCharacters.data.attributions.length > 0 && <article className="paper" data-testid="text-attributions">
                     <h2>Metindeki konuşmacılar</h2>
                     <p className="hint">Metinde açıkça kime atfedildiği belirtilen sözler. Resimdeki figürün kimliği ayrıca doğrulanır.</p>
                     {pageCharacters.data.attributions.map((a: any, i: number) => <div className="claim" key={i}>

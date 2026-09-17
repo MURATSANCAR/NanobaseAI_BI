@@ -8,7 +8,7 @@ import urllib.request
 from datetime import datetime, timezone
 
 root=Path(__file__).resolve().parents[1];os.chdir(root)
-run=json.loads((root/'evidence/source-spans-run.json').read_text());gen=run['generation_id']
+run=json.loads((root/os.environ.get('EDITOR_VERIFY_RUN_FILE','evidence/source-spans-run.json')).read_text());gen=run['generation_id']
 base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810')
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 def get(path):
@@ -23,6 +23,7 @@ def rows(kind,page=None):
 def sql(query):
     return json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query],text=True))
 
+snapshot_job=get('/v1/jobs/'+run['job_id'])
 readings=rows('page_readings');checks=[]
 # Freeze the completed-page boundary: the worker may append the next page during
 # this read-only audit. Completed page records are immutable.
@@ -30,7 +31,9 @@ completed={r['data']['pdf_page'] for r in rows('page_checks')}
 for reading in readings:
     page=reading['data']['pdf_page']
     kinds=('source_spans','layout_regions','page_readings')
-    if page in completed:kinds+=('visual_observations','page_claims','page_checks')
+    if page in completed:
+        kinds+=('visual_observations','page_claims','page_checks')
+        if reading['data'].get('pipeline_version')=='source-spans-v5':kinds+=('character_evidence',)
     for kind in kinds:
         api=rows(kind,page)
         db=sql("SELECT COALESCE(json_agg(json_build_object('id',id,'record_key',record_key,'data',data) ORDER BY record_key),'[]'::json) FROM editor.records WHERE generation_id='"+gen+"' AND kind='"+kind+"' AND data->>'pdf_page'='"+str(page)+"'")
@@ -55,11 +58,11 @@ for row in rows('page_claims'):
 reviews=sql("SELECT count(*) FROM editor.reviews WHERE generation_id='"+gen+"'")
 assert reviews==0 and not rows('visual_corrections')
 job=get('/v1/jobs/'+run['job_id'])
-if job['status']=='COMPLETED':
+if snapshot_job['status']=='COMPLETED':
     expected=set(range(1,job['source_coverage']['expected_pages']+1))
     assert set(r['data']['pdf_page'] for r in readings)==expected,'INCOMPLETE_SOURCE_PAGES'
     assert completed==expected,'INCOMPLETE_PAGE_CHECKS'
-report={'generation_id':gen,'job_status':job['status'],'api':base,'checks':checks,
+report={'generation_id':gen,'job_status':job['status'],'snapshot_job_status':snapshot_job['status'],'api':base,'checks':checks,
     'checked_at':datetime.now(timezone.utc).isoformat(),
     'old_visual_descriptions':0,'manual_reviews':0,'source_corrections':0,
     'semantic_acceptance':False,'counts':job['counts']}

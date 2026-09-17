@@ -6,7 +6,7 @@ const { chromium } = require(path.join(root, 'runtime/browser-check/node_modules
 const base = process.env.EDITOR_VERIFY_BASE_URL?.replace(/\/$/, '');
 const source = process.env.EDITOR_VERIFY_PDF;
 if (!base || !source) throw new Error('Explicit real API and original PDF are required');
-const command = args => execFileSync('rtk', ['proxy', ...args], { cwd: root, encoding: 'utf8' }).trim();
+const command = args => execFileSync(args[0], args.slice(1), { cwd: root, encoding: 'utf8' }).trim();
 const config = JSON.parse(command(['docker', 'compose', 'config', '--format', 'json']));
 if (!config.name.includes('qualification')) throw new Error('Use an isolated qualification installation');
 const token = fs.readFileSync(path.join(root, 'secrets/api_token'), 'utf8').trim();
@@ -25,8 +25,8 @@ const save = () => fs.writeFileSync(path.join(out, 'verification.json'), JSON.st
 function check(condition, message) { if (!condition) throw new Error(message); }
 async function login(page) {
   await page.getByLabel('Erişim anahtarı').fill(token);
-  await page.getByRole('button', { name: 'Çalışma alanını aç', exact: true }).click();
-  await page.locator('.upload-book summary').click();
+  await page.getByRole('button', { name: /^Çalışma alanını aç/ }).click();
+  await page.locator('summary').filter({ hasText: /^Yeni kitap yükle$/ }).click();
 }
 async function viewport(page, name) {
   check(!await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), 'Page overflow: ' + name);
