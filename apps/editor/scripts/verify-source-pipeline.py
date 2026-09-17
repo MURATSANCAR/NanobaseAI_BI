@@ -39,7 +39,7 @@ for reading in readings:
     kinds=('source_spans','layout_regions','page_readings')
     if page in completed:
         kinds+=('visual_observations','page_claims','page_checks')
-        if reading['data'].get('pipeline_version') in ('source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8'):kinds+=('character_evidence',)
+        if reading['data'].get('pipeline_version') in ('source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9'):kinds+=('character_evidence',)
     for kind in kinds:
         api=rows(kind,page)
         query="SELECT COALESCE(json_agg(json_build_object('id',id,'record_key',record_key,'data',data) ORDER BY record_key),'[]'::json) FROM editor.records WHERE generation_id='"+gen+"' AND kind='"+kind+"'"

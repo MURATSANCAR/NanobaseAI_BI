@@ -1,8 +1,12 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
-> Güncel v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](2026-09-17-text-attribution.md).
+> Ayrı API18810 doğrulaması: V8 `7e7db466` koşusu devam ediyor. Künye/etkinlik iddiası engeli ve görsel kapsam kaydı kodda düzeltildi; gerçek 2/13/29 sayfa API/PG ve dört genişlikte arayüz kabulü geçti. Ana yayın V5 olarak kalır. [Anlatı kapısı](2026-09-17-narrative-gate.md), [görsel kapsam](2026-09-17-visual-coverage.md).
 
-> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. Konuşmacı ve anlamsal kabul açık. [Güncel kod/kanıt/iş sırası](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları tarihçedir.
+> İki ek gerçek kitabın 64/32 sayfalık kaynak hazırlaması doğrulandı; analizleri henüz başlatılmadı. [Çok kitaplı kabul](2026-09-17-multibook-ingestion.md).
+
+> Ana yayın v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](2026-09-17-text-attribution.md).
+
+> Önceki yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. Konuşmacı ve anlamsal kabul açık. [Güncel kod/kanıt/iş sırası](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları tarihçedir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 

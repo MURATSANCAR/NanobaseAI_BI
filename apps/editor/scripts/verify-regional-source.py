@@ -63,7 +63,8 @@ def text_hash(text):
     return hashlib.sha256(text.encode('utf-8', errors='surrogatepass')).hexdigest()
 
 
-def reference(data):
+def reference(data, method):
+    assert method in ('independent-region-selection-v1','independent-region-selection-v2'), 'UNKNOWN_SELECTION_METHOD'
     region = data.get('region_text') or ''; candidate = tokens(region)
     secondary = tokens(data['secondary_text']); native = tokens(data['pdf_text'])
     support = []
@@ -79,12 +80,29 @@ def reference(data):
         state = ('AGREES' if a == candidate and all(clean(r['text']) for r in readers) else 'DISAGREES') if a and a == b else 'UNSTABLE'
     score = data.get('region_score')
     valid_score = isinstance(score,(int,float)) and not isinstance(score,bool) and math.isfinite(score) and .9 <= score <= 1
-    return bool(candidate and clean(region) and valid_score and support and not conflict and state != 'DISAGREES'), support, state
+    crop=None;superseded=False
+    if method=='independent-region-selection-v2':
+        def digest_ok(value):
+            return isinstance(value,str) and len(value)==64 and all(c in '0123456789abcdef' for c in value)
+        if (reread and isinstance(data.get('bbox'),list) and reread.get('bbox')==data['bbox']
+                and digest_ok(reread.get('crop_sha256'))
+                and all(digest_ok(r.get('tsv_sha256')) for r in reread['readings'])):
+            crop={'bbox':reread['bbox'],'crop_sha256':reread['crop_sha256'],
+                  'source_span_id':reread.get('source_span_id'),
+                  'readings':[{'psm':r['psm'],'tsv_sha256':r['tsv_sha256'],'text_sha256':text_hash(r['text'])}
+                              for r in reread['readings']]}
+        secondary_conflict=bool(secondary) and 'TESSERACT' not in support
+        superseded=bool(secondary_conflict and clean(data['secondary_text']) and 'NATIVE_PDF' in support
+                        and valid_score and candidate and clean(region) and state=='AGREES' and crop)
+        if superseded:
+            support.insert(0,'TESSERACT_CROP')
+            conflict=False  # PDF agrees; the only conflict was full-page Tesseract.
+    return bool(candidate and clean(region) and valid_score and support and not conflict and state != 'DISAGREES'), support, state, crop, superseded
 
 
 generation_row = sql(f"SELECT json_build_object('content_version_id',content_version_id,'manifest',manifest) FROM editor.generations WHERE id='{gen}'")
 manifest = generation_row['manifest']
-assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7','source-spans-v8')
+assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9')
 root_parent = str(uuid.UUID(manifest['reuse_measurements_from']))
 
 
@@ -125,7 +143,7 @@ for page, frozen in sorted(boundary.items()):
     assert reading_rows == [frozen], 'COMPLETED_READING_CHANGED'
     expected_parent,lineage = nearest_parent(page,frozen['record_key'])
     parent = frozen['data'].get('reused_from_generation')
-    if manifest['pipeline_version'] in ('source-spans-v7','source-spans-v8'):
+    if manifest['pipeline_version'] in ('source-spans-v7','source-spans-v8','source-spans-v9'):
         assert parent==expected_parent, 'NOT_NEAREST_COMPLETE_PAGE_PARENT'
     else:
         assert parent==root_parent, 'V6_DIRECT_PARENT_MISMATCH'
@@ -153,8 +171,8 @@ for page, frozen in sorted(boundary.items()):
             assert d['reused_source_span_id'] == old['id'] and d['reused_from_generation'] == parent
         else:
             assert d.get('reused_source_span_id') is None and d.get('reused_from_generation') is None
-        supported, readers, reread_state = reference(d)
         selection = d['regional_selection']
+        supported, readers, reread_state, crop, superseded = reference(d,selection['method'])
         assert (selection['status']=='SUPPORTED_REGIONAL_CANDIDATE') == supported
         assert selection['selected_text'] == (d['region_text'] if supported else None)
         assert selection['raw_full_page_text'] == d['raw_text']
@@ -167,6 +185,11 @@ for page, frozen in sorted(boundary.items()):
         assert selection['provenance']['pdf_usable'] == d['pdf_usable']
         expected_hashes = [{'psm':r['psm'],'text_sha256':text_hash(r['text'])} for r in (d.get('reread_measurement') or {}).get('readings',[])]
         assert selection['provenance']['reread_text_hashes'] == expected_hashes
+        if selection['method']=='independent-region-selection-v2':
+            assert selection['raw_secondary_text']==d['secondary_text']
+            assert selection['provenance']['crop_measurement']==crop
+            assert selection['superseded_readers']==(['FULL_PAGE_TESSERACT_SUPERSEDED'] if superseded else [])
+            assert selection['provenance']['supersession']==('FULL_PAGE_TESSERACT_SUPERSEDED' if superseded else None)
         if d['selected_reader'] == 'REGIONAL_OCR':
             assert supported and d['text'] == d['region_text'] and d['status'] == 'TEXT_AGREED'
             assert d['issues'] == ['FULL_PAGE_READING_SUPERSEDED']

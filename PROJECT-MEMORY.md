@@ -26,6 +26,10 @@ Ana yayın `text-attribution-v5-20260917`; nesil `14a79646` 48/48 COMPLETED/NEED
 
 Ayrı API18810 ortamı `narrative-coverage-v8-20260917`, nesil `7e7db466-3576-4c23-85b2-73483ab4508e`, iş `72f75bb3-a807-4e0b-8ca3-35f7ad0d0cbe`. Anlatı dışı bütün iddialar kodda engellenir; gerçek önceki 48 sayfada 15 yanlış MATCH adayını engelleyip 124 anlatı/karma adayı değiştirmedi. Görsel kapsam küçük alan nedeniyle dışlanan 52 bölgeyi açık gösterir; eski 19 büyük kırpım korunur, yeni model çağrısı eklenmez. Backend/web hash eşliği, gerçek 2/13/29 sayfalarında API/PG/ata ham kaynak ve anlatı/kapsam kontrolleri, dört genişlikte mobil kapsam ekranı geçti. Tam nesil koşusu sürüyor. Ana yayın v5 kalır. [Anlatı kapısı](docs/editor/2026-09-17-narrative-gate.md), [görsel kapsam](docs/editor/2026-09-17-visual-coverage.md).
 
+### Hazır V9 ve otomatik sonraki koşu
+
+Tam sayfa ikinci okuyucunun yanlış vetosu için, stabil kaynaklı kırpım + temiz PDF + bölgesel OCR desteğine dayalı genel seçim adayı gerçek 1.149 kayıtta 14 ek kazanım/0 gerileme gösterdi (874/275 yalnız aday). Sabit V9 imajı hazır; sunucudaki `continue-source-release.py` V8 tamamlanınca ayrı ortamda sürüm/hash kontrolüyle V9 koşusunu başlatıp son denetimleri yürütmek üzere WAITING_FOR_CURRENT_JOB durumunda. V8 kesilmez, ana V5 değiştirilmez; nihai kabul henüz yok. [Akış ve kanıt](docs/editor/2026-09-17-crop-source-continuation.md).
+
 ### V7 — kaynağı koruyarak devam
 
 V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; nesil ab85c397 dokuz sayfanın kontrollerinden sonra API ile iptal edildi; sonuçlar korunarak V8 nesline geçildi. Gerçek soğuk model başlangıcında üç bağlantı hatası ve iki 503 sınırlı tekrarlarla toparlandı; 29. sayfa taze çağrısı tamamlandı. Dört genişlikte kaynak UI geçti; V7 tam koşu kabulü verilmedi; kalan iş V8 üzerinde devam ediyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).

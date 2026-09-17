@@ -127,3 +127,63 @@ Ancak **bu gerçek kitapta bu etki gözlenmedi**:
 Genel betik: `apps/editor/scripts/audit-pdf-corruption-scope.py`; SHA256 `9fd86ed4be6f45c5e5a509b61c6ab29f49eb0c284a04898031e1395132232e60`. Kanıt: `/data/nanobaseai/editor/evidence/pdf-corruption-scope-14a79646-79c6-4cdb-8714-00adf5698770.json`.
 
 **Karar:** satır bayrağı yayılımı bu kitabın kalan OCR sorununu açıklamaz. Gerçek tetikleyici bulunmadan üretim davranışı değiştirilmedi; güven kapısı veya Unicode kapsamı gevşetilmedi. Başka bir gerçek belgede satır içinde bozuk ve temiz kelimelerin birlikte bulunduğu doğrulanırsa kelime düzeyi provenance tasarımı ayrıca değerlendirilebilir. Kaynak/review yazımı ve model çağrısı yine **0**.
+
+## Tam sayfa Tesseract vetosu ile mevcut stabil kırpımın çelişmesi
+
+Ek hipotezde gerçek aday bulundu: **328 review bölgesinin 16'sında** mevcut değişmez PSM 7 ve PSM 13 okumaları, kullanılabilir temiz PDF ve bölgesel Paddle aynı kelime dizisini destekliyor; tam sayfa Tesseract metni farklı kalıyor. Bölgesel skor ≥0,90 koşulu eklendiğinde **14 aday** kalıyor: **10 TEXT, 4 PAGE_LABEL_CANDIDATE**. İki düşük skorlu bölge dışarıda bırakıldı. Stabil tekrarın bölgesel okumayla çeliştiği hiçbir bölge aday değildir.
+
+Burada “aynı” mevcut kelime-token kıyasıdır: Unicode NFKC, Türkçe büyük/küçük harf eşlemesi, kelime sınırları korunarak karşılaştırma. Diakritikler silinmedi, ayrı kelimeler birleştirilmedi. **14'ün yalnız 3'ünde tüm ham stringler de birebir aynı**; diğerlerinde noktalama/büyük harf gibi farklar bulunur. Bu ayrım yeni kabul iddiasına dönüşmemelidir.
+
+| Kayıt anahtarı | Rol | Tam sayfa Tesseract ort. güven | Kırpım PSM 7 | Kırpım PSM 13 |
+|---|---|---:|---:|---:|
+| 0004-0001 | TEXT | 92,76 | 95,22 | 91,71 |
+| 0008-0000 | TEXT | 92,55 | 96,53 | 78,22 |
+| 0010-0024 | PAGE_LABEL_CANDIDATE | 51,09 | 74,83 | 77,50 |
+| 0017-0004 | TEXT | 29,80 | 92,11 | 85,00 |
+| 0017-0006 | TEXT | 93,08 | 85,56 | 79,45 |
+| 0019-0015 | TEXT | 93,28 | 94,78 | 94,39 |
+| 0019-0022 | PAGE_LABEL_CANDIDATE | 55,49 | 70,44 | 79,49 |
+| 0022-0034 | TEXT | 41,54 | 83,76 | 74,50 |
+| 0022-0055 | TEXT | 13,65 | 96,02 | 65,83 |
+| 0026-0027 | PAGE_LABEL_CANDIDATE | 28,95 | 71,86 | 71,86 |
+| 0028-0021 | PAGE_LABEL_CANDIDATE | 1,91 | 96,68 | 86,92 |
+| 0036-0004 | TEXT | 92,91 | 95,40 | 86,88 |
+| 0041-0016 | TEXT | 84,55 | 94,27 | 84,96 |
+| 0041-0017 | TEXT | 95,61 | 95,73 | 89,59 |
+
+14 adayın 9'unda iki kırpımın ortalama güveni de tam sayfadan yüksek; 5'inde bu koşul sağlanmıyor. Güven skoru tek başına karar değildir. Bu sonuç tam sayfa bağlamı/segmantasyon ile kırpım okumalarının farklılığını gösterir; **hatalı geometrik hizalamanın tek kök neden olduğunu kanıtlamaz**.
+
+Her 14 aday için salt okunur provenance kontrolü yapıldı: kayıtlı eski reread JSON dosyası SHA256 eşit, dosyadaki ölçüm mevcut kayıttaki ölçümle tam eşit, bbox aynı, orijinal render hashleri aynı; renderdan aynı ölçek/padding ile yeniden üretilen kırpım SHA256 değeri eski ölçümle eşit. Yeni OCR çalıştırılmadı. Tarihsel TSV hashleri ölçüm JSON'unda korunuyor; bu denetim tarihsel ham TSV dosyalarını yeniden üretmedi veya mevcut olmayan TSV baytlarını doğruladığını iddia etmedi.
+
+- Genel betik: `apps/editor/scripts/audit-crop-supersession.py`.
+- Betik SHA256: `55d7d0bb7b63c62795b49e97fd3549e12fc96301c51d0886ac78b4434f8b5b30`.
+- Kanıt: `/data/nanobaseai/editor/evidence/crop-supersession-audit-14a79646-79c6-4cdb-8714-00adf5698770.json`.
+- Tam API/PG kaynak JSON'u ve önce/sonra kaynak hashleri eşit. Üretim verisi/inceleme yazımı ve yeni model/OCR çağrısı **0**.
+
+**Sonuç:** tam sayfa bağımsız okuyucusunun bölgesel ölçümle nasıl sürümlü olarak aşılacağı için somut bir genel tasarım adayı vardır. Bu rapor hiçbir tam sayfa vetosunu kaldırmadı ve 14 bölgeyi kabul etmedi. Aynı Tesseract motorunun iki PSM sonucu iki bağımsız motor sayılmaz; temiz PDF, bölgesel OCR, ham provenance ve mevcut çelişkilerin korunması gereklidir. Bir sonraki kod çalışmasında eski tam sayfa okuması silinmeden seçilen bölgesel okuyucu ve gerekçesi ayrıca kaydedilmeli; kararsız/çelişkili tekrarlar dışarıda kalmalıdır.
+
+## Aday kod: açık tam sayfa Tesseract supersession — dağıtılmadı
+
+Yetkili devamda `optical_selection.py` için **`independent-region-selection-v2`** aday kodu hazırlandı. `source_pipeline.py` değiştirilmedi; üretim modülü yerine sunucuda `/tmp/editor-optical-selection-crop-v2.py` dosyası salt aday olarak gerçek API konteynerinde çalıştırıldı.
+
+Tam sayfa Tesseract çelişkisi yalnız şu birleşik şartlarla aday seçimde aşılabilir: temiz bölgesel metin/skor ≥0,90; temiz kullanılabilir PDF ile kelime dizisi eşitliği; aynı bbox'a bağlı, crop ve iki ham TSV SHA256 değeri bulunan mevcut PSM 7/13 ölçümlerinin bölgesel okumayla stabil eşitliği. Ham ikinci okuyucu metni bozuk Unicode içeriyorsa aşma yasaktır. Stabil tekrar çelişkisi, kullanılabilir PDF çelişkisi ve bozuk bölgesel Unicode vetoları korunur. Artefaktların gerçek hash/geometri doğrulaması çağıran kaynak akışının sorumluluğunda kalır; adayın 14 gerçek bölgesi ayrıca yukarıdaki bağımsız artefakt kontrolünden geçti.
+
+Önceki dönüş alanları korunur; yeni alanlar `raw_secondary_text`, `superseded_readers` ve provenance içinde `crop_measurement`/`supersession`dır. Gerekçe **`FULL_PAGE_TESSERACT_SUPERSEDED`**, destekler **`TESSERACT_CROP` + `NATIVE_PDF`** olarak görünür. İki PSM iki bağımsız motor sayılmaz. Ham tam sayfa metni/hash'i silinmez; `eligible_for_synthesis` ve `visual_identity_verified` false kalır.
+
+Gerçek **1.149 API/PG kaydı** üzerinde ayrı yazılmış politika hesabı aday kodla eşleşti. Aynı kayıtlarda önceki sıkı politika da ayrıca hesaplanarak kazanımların kaybolmadığı doğrulandı:
+
+| Ölçüm | Sonuç |
+|---|---:|
+| Ana V5 mevcut anlaşma/inceleme | 821 / 328 |
+| Aday optik anlaşma/inceleme | 874 / 275 |
+| Önceki politika iyileşmeleri korundu | 39 / 39 |
+| Yeni açık Tesseract supersession adayları | 14 |
+| Mevcut 821 anlaşmadan gerileme | 0 |
+
+**874/275 üretimdeki yeni sayı değildir.** Aday dağıtılmadı, yeni analiz nesli başlatılmadı, kaynak/inceleme verisi değişmedi. Üretim kabulü için bu kodu kullanan gerçek yeni kaynak nesli ve bağlı iddia kapıları ayrıca doğrulanmalıdır. Yeni 14 adayın hiçbiri 13, 29 veya 38. sayfada değildir; bu kritik sayfalarda doğrudan yeni kazanım iddiası yoktur.
+
+- Aday kod SHA256: `e01b04b591a65d76ebf6e4d2e822feadfcc2b4d4f753b70e3beff7383518ec7b`.
+- Son doğrulama: **2026-09-17 14:27:35 UTC**.
+- Kanıt: `/data/nanobaseai/editor/evidence/optical-selection-candidate-20260917T142735237488Z.json`.
+- Özet günlük: `/data/nanobaseai/editor/evidence/optical-selection-crop-v2-check.log`.
+- Genel gerçek-kayıt doğrulayıcı: `apps/editor/scripts/verify-optical-selection-candidate.py`.

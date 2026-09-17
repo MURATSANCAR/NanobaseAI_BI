@@ -52,7 +52,7 @@ def clean(text):
     return all(unicodedata.category(c) not in ('Co', 'Cs') and c != '\ufffd' for c in text)
 
 
-def independent_reference(data):
+def independent_reference(data, allow_crop_supersession=True):
     region = data.get('region_text') or ''
     crop = words(region)
     secondary = words(data['secondary_text']); native = words(data['pdf_text'])
@@ -65,13 +65,24 @@ def independent_reference(data):
                  or data['pdf_usable'] and 'NATIVE_PDF' not in agreements)
     reread = data.get('reread_measurement')
     stable_conflict = False
+    stable_region = False
+    crop_scoped = False
     if reread:
         raw = reread['readings']
         assert len(raw) == 2 and [r['psm'] for r in raw] == [7, 13]
         first, second = [words(r['text']) for r in raw]
         stable_conflict = bool(first) and first == second and (first != crop or not all(clean(r['text']) for r in raw))
+        stable_region = bool(first) and first == second == crop and all(clean(r['text']) for r in raw)
+        crop_scoped = (reread.get('bbox') == data.get('bbox') and isinstance(data.get('bbox'), list)
+                       and re.fullmatch('[0-9a-f]{64}', reread.get('crop_sha256') or '') is not None
+                       and all(re.fullmatch('[0-9a-f]{64}', r.get('tsv_sha256') or '') is not None for r in raw))
     score = data.get('region_score')
     valid_score = isinstance(score, (int, float)) and not isinstance(score, bool) and math.isfinite(score) and .9 <= score <= 1
+    superseded = (bool(secondary) and 'TESSERACT' not in agreements and clean(data['secondary_text'])
+                  and 'NATIVE_PDF' in agreements and stable_region and crop_scoped and valid_score and clean(region))
+    if superseded and allow_crop_supersession:
+        conflicts = False
+        agreements.insert(0, 'TESSERACT_CROP')
     return bool(crop and clean(region) and valid_score and agreements and not conflicts and not stable_conflict), agreements
 
 
@@ -109,9 +120,14 @@ for row, candidate in zip(api, executed['results']):
     assert row['id'] == candidate['id']
     data = row['data']; selection = candidate['selection']
     reference, readers = independent_reference(data)
+    previous_reference, _ = independent_reference(data, allow_crop_supersession=False)
     supported = selection['status'] == 'SUPPORTED_REGIONAL_CANDIDATE'
     assert supported == reference, 'INDEPENDENT_SELECTION_MISMATCH:'+row['id']
+    assert not previous_reference or supported, 'PREVIOUS_POLICY_SUPPORT_LOST:'+row['id']
     assert selection['supporting_readers'] == readers
+    superseded = 'TESSERACT_CROP' in readers
+    assert selection['superseded_readers'] == (['FULL_PAGE_TESSERACT_SUPERSEDED'] if superseded else [])
+    assert selection['raw_secondary_text'] == data['secondary_text']
     assert selection['raw_full_page_text'] == data['text'] == data['raw_text']
     assert selection['selected_text'] == (data['region_text'] if reference else None)
     assert selection['eligible_for_synthesis'] is False and selection['visual_identity_verified'] is False
@@ -119,8 +135,12 @@ for row, candidate in zip(api, executed['results']):
                        ('secondary_text_sha256', data['secondary_text']), ('pdf_text_sha256', data['pdf_text'])]:
         assert selection['provenance'][field] == hashlib.sha256(raw.encode('utf-8', errors='surrogatepass')).hexdigest()
     old_agreed = data['status'] == 'TEXT_AGREED'
+    if previous_reference and not old_agreed:
+        counts['previous_policy_review_improvements_preserved'] += 1
     counts['old_agreed' if old_agreed else 'old_review'] += 1
     counts['candidate_agreed' if supported else 'candidate_review'] += 1
+    if superseded:
+        counts['full_page_tesseract_superseded'] += 1
     item = {'id': row['id'], 'record_key': row['record_key'], 'pdf_page': data['pdf_page'],
             'literal_region_differs': data['text'] != data.get('region_text'),
             'word_tokens_differ': words(data['text']) != words(data.get('region_text') or '')}

@@ -1,8 +1,12 @@
 # Editör modülü — bağımsız kurulum
 
-> Güncel v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](../../docs/editor/2026-09-17-text-attribution.md).
+> Ayrı API18810 doğrulaması: V8 `7e7db466` koşusu devam ediyor. Künye/etkinlik iddiası engeli ve görsel kapsam kaydı kodda düzeltildi; gerçek 2/13/29 sayfa API/PG ve dört genişlikte arayüz kabulü geçti. Ana yayın V5 olarak kalır. [Anlatı kapısı](../../docs/editor/2026-09-17-narrative-gate.md), [görsel kapsam](../../docs/editor/2026-09-17-visual-coverage.md).
 
-Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırlarını silen optik karşılaştırma düzeltildi. Gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı; yeni nesil 48/48 tamamlandı, gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün paket kabulü ayrıca izleniyor. [Kod, kabul kanıtı ve açık işler](../../docs/editor/2026-09-17-word-boundary-gate.md).
+> İki ek gerçek kitabın 64/32 sayfalık kaynak hazırlaması doğrulandı; analizleri henüz başlatılmadı. [Çok kitaplı kabul](../../docs/editor/2026-09-17-multibook-ingestion.md).
+
+> Ana yayın v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](../../docs/editor/2026-09-17-text-attribution.md).
+
+Önceki yayın `source-boundaries-v4-r2-20260917`: kelime sınırlarını silen optik karşılaştırma düzeltildi. Gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı; yeni nesil 48/48 tamamlandı, gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün paket kabulü ayrıca izleniyor. [Kod, kabul kanıtı ve açık işler](../../docs/editor/2026-09-17-word-boundary-gate.md).
 
 Bu modül ana BI deposunda geliştirilir; kendi Docker projesi, PostgreSQL kayıtları,
 Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, tablolarını,

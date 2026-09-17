@@ -8,7 +8,7 @@ import math
 import re
 import unicodedata
 
-VERSION = 'independent-region-selection-v1'
+VERSION = 'independent-region-selection-v2'
 
 
 def word_tokens(text):
@@ -65,6 +65,7 @@ def select_regional_candidate(line, secondary, pdf_text, pdf_usable, reread=None
         blockers.append('USABLE_PDF_CONFLICT')
     reread_state = 'NOT_AVAILABLE'
     reread_hashes = []
+    crop_provenance = None
     if reread is not None:
         readings = reread.get('readings')
         if (not isinstance(readings, list) or len(readings) != 2
@@ -81,6 +82,21 @@ def select_regional_candidate(line, secondary, pdf_text, pdf_usable, reread=None
                 blockers.append('STABLE_REREAD_CONFLICT')
         else:
             reread_state = 'UNSTABLE'
+        # The caller verifies these immutable measurements against their source
+        # artifacts. Require a scoped crop and retained raw-TSV hashes here too.
+        digest_ok = lambda value: isinstance(value, str) and re.fullmatch(r'[0-9a-f]{64}', value) is not None
+        if (reread.get('bbox') == line.get('bbox') and isinstance(line.get('bbox'), list)
+                and digest_ok(reread.get('crop_sha256'))
+                and all(digest_ok(reading.get('tsv_sha256')) for reading in readings)):
+            crop_provenance = {'bbox': reread['bbox'], 'crop_sha256': reread['crop_sha256'],
+                'source_span_id': reread.get('source_span_id'),
+                'readings': [{'psm': reading['psm'], 'tsv_sha256': reading['tsv_sha256'],
+                              'text_sha256': _hash(reading['text'])} for reading in readings]}
+    superseded = (secondary_conflict and not _corrupt(secondary) and native_agrees
+                  and score_ok and bool(candidate_tokens) and not _corrupt(region)
+                  and reread_state == 'AGREES' and crop_provenance is not None)
+    if superseded:
+        blockers.remove('SECONDARY_READER_CONFLICT')
     supported = not blockers
     return {
         'method': VERSION,
@@ -88,10 +104,12 @@ def select_regional_candidate(line, secondary, pdf_text, pdf_usable, reread=None
         'selected_text': region if supported else None,
         'selected_reader': 'REGIONAL_OCR' if supported else None,
         'raw_full_page_text': full_page,
+        'raw_secondary_text': secondary,
+        'superseded_readers': ['FULL_PAGE_TESSERACT_SUPERSEDED'] if superseded else [],
         'full_page_tokens_differ': candidate_tokens != full_tokens,
         'blockers': blockers,
         'supporting_readers': ([name for name, agrees in
-            (('TESSERACT', secondary_agrees), ('NATIVE_PDF', native_agrees)) if agrees]),
+            (('TESSERACT', secondary_agrees), ('TESSERACT_CROP', superseded), ('NATIVE_PDF', native_agrees)) if agrees]),
         'reread_state': reread_state,
         'provenance': {
             'full_page_text_sha256': _hash(full_page),
@@ -101,6 +119,8 @@ def select_regional_candidate(line, secondary, pdf_text, pdf_usable, reread=None
             'region_score': score,
             'pdf_usable': pdf_usable,
             'reread_text_hashes': reread_hashes,
+            'crop_measurement': crop_provenance,
+            'supersession': 'FULL_PAGE_TESSERACT_SUPERSEDED' if superseded else None,
             'comparison': 'NFKC_TR_CASE_WORD_TOKENS_NO_JOINING',
         },
         'eligible_for_synthesis': False,
