@@ -8,7 +8,7 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 ## PaddleOCR-VL-1.6 hazırlık durumu (2026-09-18)
 
-GPU kurulumu mevcut; canlı gateway8010 sağlık isteği503, model açılışında GPU bellek yetersizliği görüldü. Editör entegrasyonu ve gerçek kitap kabulü DOĞRULANAMADI. Diğer oturumun GPU ayarları değiştirilmedi. [Kontrol kaydı](docs/editor/2026-09-18-paddleocr-vl-readiness.md).
+GPU OCR başlangıcında bellek hatası yeniden üretildi; kullanıcı başlatma talebiyle yalnız OCR rezervasyonu %5 → %4 düzeltildi. Gateway8010 healthy=true ve model listesi200; Qwen korunuyor, boşta kapanma600 saniye. Gerçek OCR/yeniden uyanma ve Editör API/PG kabulü henüz DOĞRULANAMADI. [Kontrol kaydı](docs/editor/2026-09-18-paddleocr-vl-readiness.md).
 
 ## Editör modülü — bağımsız altyapı (2026-09-17)
 

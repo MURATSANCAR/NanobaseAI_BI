@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — GPU OCR açılış hatası düzeltildi
+
+Yeniden başlatma aynı bellek hatasıyla503 verdi. OCR rezervasyonu %5 → %4 indirildi; gerçek GPU gateway healthy ve model listesi200 doğrulandı. Qwen kesilmedi; boşta kapanma600 saniye korundu. Komut override'ı depoya eklendi. Gerçek OCR ve tam yaşam döngüsü kabulü ayrı açık işlerdir. [Kayıt](editor/2026-09-18-paddleocr-vl-readiness.md).
+
 ## 2026-09-18 — PaddleOCR-VL kurulum sonrası canlı kontrol
 
 Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karşı 4.0 GiB boş bellek hatası doğrulandı. GPU servis ayarları ve kitap verileri değiştirilmedi; entegrasyon kabulü verilmedi. [Kanıt ve sonraki adım](editor/2026-09-18-paddleocr-vl-readiness.md).
