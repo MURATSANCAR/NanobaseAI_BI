@@ -32,7 +32,7 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 | Paket | Durum | Kalan kabul |
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
-| P1 Kaynak hattı | Yükleme, 48 sayfa ve kaynak paneli çalışıyor; 7 yanlış kelime eşliği düzeltildi | 328 kaynak bölgesi; görsel kaynak doğruluğu |
+| P1 Kaynak hattı | Üç gerçek kitabın 48/64/32 sayfalık kaynak hazırlaması doğrulandı; ilk kitap kaynak paneli ve kelime sınırı kapısı çalışıyor | 328 kaynak bölgesi; görsel kaynak doğruluğu |
 | P2 Karakter/olay | 10 kaynaklı metin atfı ve mobil kaynak bağlantısı doğrulandı; claim-speaker 0 | Konuşmacı/kimlik, olay modu ve sahne eşliği |
 | P3 Edebî örnekler | Kabul bekliyor | P2, diğer kitapların gerçek kabulü ve editör rubriği |
 | P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
@@ -42,11 +42,11 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 
 ## Planın tüm bölümleri
 
-V5 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 821 anlaşma/328 inceleme, 10 açık metin atfı. İş COMPLETED; nesil NEEDS_REVIEW. Gerçek ana API/PG, kaynak/atıf ve mobil kontrolü geçti. V6 bölgesel kaynak seçimi ayrı ortamda R2 kabulündedir; ana sürüm sayılarıyla karıştırılmaz. [V5 kabul](2026-09-17-text-attribution.md), [V6 devam eden kabul](2026-09-17-regional-source-selection.md).
+V5 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 821 anlaşma/328 inceleme, 10 açık metin atfı. İş COMPLETED; nesil NEEDS_REVIEW. Gerçek ana API/PG, kaynak/atıf ve mobil kontrolü geçti. V6 R2 sonuçları korunarak V7 ab85c397 koşusuna geçildi; ayrı API18810 kabulü sürüyor, ana sürüm sayılarıyla karıştırılmaz. [V5 kabul](2026-09-17-text-attribution.md), [V6 devam eden kabul](2026-09-17-regional-source-selection.md).
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
-| 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Aynı kitap klasöründe beş ek gerçek PDF bulundu; iki kitapta kaynak hazırlama kabulü başlatılıyor; ayrılmış anlamsal kabul seti henüz belirlenmedi |
+| 1 Kapsam | Üç gerçek kitapta kaynak hazırlama: 48/64/32 sayfa | Aynı kitap klasöründe beş ek gerçek PDF bulundu; 64 ve 32 sayfalık iki ek kitabın gerçek API/PG/Poppler kaynak hazırlama kabulü geçti; ayrılmış anlamsal kabul seti henüz belirlenmedi |
 | 2 Doğrulama evresi | Sunucu envanteri, kaynak hashleri, gerçek API/DB | Tam uçtan uca süre, görev başarısı, editör emeği ve kalan efor ölçümü açık |
 | 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; bbox/OCR inceleme ekranı doğrulandı; PDF.js özel görüntüleyici ve anlamsal kabul kapsamı ayrıca açık |
 | 4 Uçtan uca | 48 kaynak/okuma/görsel aday/kontrol kaydı; v2 iş COMPLETED | NEEDS_REVIEW; doğrulanmış sahne → sentez → indeks → cevap kabulü açık |
@@ -106,7 +106,7 @@ Kanıt: `evidence/unassisted-reused-visual-findings.json`.
 
 Kaynak bütünlüğü ve izlenebilir işlem kayıtları olumlu. Modelin görsel okuması güvenilir kabul edilecek düzeyde gösterilemedi: yanlış konuşmacı, yazı, nesne ve ayrıntı örnekleri var. 48/48 işleme yalnız kapsama işaret eder. Yeni koşu, bu hataların sonraki analiz ve cevaplara taşınıp taşınmadığını gösterecek. Henüz bir başarı yüzdesi veya üretime hazırlık iddiası yoktur.
 
-Gerçek ikinci baskı ve yayınevi editör zamanı dış girdidir. Aynı klasörde ek gerçek kitap dosyaları bulundu; iki kitabın kaynak hazırlaması ayrıca deneniyor, anlamsal kabul yerine sayılmaz. Tahminle veya yapay örnekle tamamlanmış gösterilmez. Ön yüzsüz API koşusu mobil arayüz kabulü değildir. Önceki temel kurulumun restore kanıtı güncel analiz sürümüne otomatik taşınmaz.
+Gerçek ikinci baskı ve yayınevi editör zamanı dış girdidir. Aynı klasörde ek gerçek kitap dosyaları bulundu; iki kitabın kaynak hazırlaması gerçek API/PG ile geçti, anlamsal kabul yerine sayılmaz. Tahminle veya yapay örnekle tamamlanmış gösterilmez. Ön yüzsüz API koşusu mobil arayüz kabulü değildir. Önceki temel kurulumun restore kanıtı güncel analiz sürümüne otomatik taşınmaz.
 
 ## 16 Eylül eski koşuda ölçülen çalışma darboğazı
 

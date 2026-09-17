@@ -5,6 +5,7 @@ Run on the deployed server only. This verifies ingestion, never semantic quality
 Checkpoints permit resuming long parser runs without duplicate uploads.
 """
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -12,6 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 import time
+import urllib.error
 import urllib.request
 import uuid
 
@@ -36,6 +38,7 @@ assert report['api'] == a.base and report['bytes'] == len(data)
 token = (root / 'secrets/api_token').read_text().strip()
 
 def save():
+    report['updated_at'] = datetime.now(timezone.utc).isoformat()
     record.write_text(json.dumps(report, ensure_ascii=False, indent=2))
     record.with_suffix('.md').write_text(
         '# Gerçek kitap kaynak hazırlama\n\n' +
@@ -49,9 +52,17 @@ def api(method, path, body=None, key=None):
     if isinstance(body, dict):
         body = json.dumps(body).encode()
         headers['Content-Type'] = 'application/json'
-    with urllib.request.urlopen(urllib.request.Request(
-            a.base.rstrip('/') + path, data=body, headers=headers, method=method), timeout=180) as r:
-        return r.status, json.load(r)
+    for attempt in range(7):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    a.base.rstrip('/') + path, data=body, headers=headers, method=method), timeout=180) as r:
+                return r.status, json.load(r)
+        except (urllib.error.URLError, TimeoutError) as exc:
+            safe_retry = method == 'GET' or (method == 'POST' and key is not None)
+            transient = not isinstance(exc, urllib.error.HTTPError) or exc.code in (502, 503, 504)
+            if not safe_retry or not transient or attempt == 6:
+                raise
+            time.sleep(min(2 ** attempt, 15))
 
 def sql(query):
     return subprocess.check_output(['docker', 'compose', 'exec', '-T', 'postgres',
@@ -120,12 +131,20 @@ print(json.dumps({'render_and_region_pages':len(m['pages']),'docling_hash_equal'
 """
     artifacts = json.loads(subprocess.check_output(['docker', 'compose', 'exec', '-T',
         'parser', 'python', '-c', artifact_check], input=json.dumps(manifest), text=True))
+    parser_logs = json.loads(subprocess.check_output(['docker', 'compose', 'exec', '-T',
+        'parser', 'python', '-c',
+        "import json,sys;from pathlib import Path;print(json.dumps([{'path':str(p),'osd_warning_count':p.read_text(errors='replace').count('OSD failed')} for p in (Path('/data/artifacts/parse-attempts')/sys.argv[1]).glob('*/parser.log')]))",
+        uid], text=True))
     cv = str(uuid.UUID(db['version']))
     assert sql("SELECT count(*) FROM editor.generations WHERE content_version_id='" + cv + "'") == '0'
     report.update(status='PASS', content_version_id=cv, pdf_pages=pages,
         http_pg_manifest_equal=True, original_bytes_equal=True,
         independent_pdfinfo_pages_equal=True, generation_count=0,
-        source_accounting_complete=True, artifact_checks=artifacts)
+        source_accounting_complete=True, artifact_checks=artifacts, parser_logs=parser_logs,
+        source_tools=manifest.get('tools', {}),
+        verifier_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        parser_image=subprocess.check_output(['docker', 'compose', 'images',
+            '-q', 'parser'], text=True).strip())
     save(); print(json.dumps(report, ensure_ascii=False, indent=2), flush=True)
 except Exception as exc:
     report['status'] = 'FAILED'; report['error'] = str(exc); save()

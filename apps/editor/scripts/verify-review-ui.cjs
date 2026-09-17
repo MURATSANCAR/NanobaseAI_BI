@@ -71,8 +71,22 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    await page.locator('.source-image').waitFor({timeout:30000});
    await page.waitForFunction(()=>document.querySelector('.source-image')?.naturalWidth>0);
    if(process.env.EDITOR_VERIFY_RUN_FILE){
+    let availableSpan=null;
+    for(let offset=0;;){
+     const response=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?offset='+offset+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+     if(!response.ok())throw new Error('Actual source spans API failed');
+     const batch=await response.json();
+     availableSpan=batch.items[0]??null;
+     if(availableSpan||!batch.has_more)break;
+     if(!batch.items.length)throw new Error('Empty source pagination');
+     offset+=batch.items.length;
+    }
+    if(!availableSpan)throw new Error('No actual text span available: positive text/source UI scenario cannot be verified');
+    const sourcePage=availableSpan.data.pdf_page;
+    await page.locator('#page').selectOption(String(sourcePage));
+    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,sourcePage);
     await page.getByRole('heading',{name:'Metin okumaları uyuşuyor',exact:true}).or(page.getByRole('heading',{name:'İnceleme gerekiyor',exact:true})).waitFor({timeout:30000});
-    const spansResponse=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?pdf_page=1&limit=100',{headers:{Authorization:'Bearer '+token}});
+    const spansResponse=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?pdf_page='+sourcePage+'&limit=100',{headers:{Authorization:'Bearer '+token}});
     const spans=await spansResponse.json();if(!spans.items?.length)throw new Error('Real page spans missing');
     const details=page.locator('.source-notes details').first();await details.locator('summary').click();
     if(!(await details.textContent()).includes(spans.items[0].data.text))throw new Error('UI span differs from API');

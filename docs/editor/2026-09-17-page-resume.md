@@ -21,3 +21,15 @@ V6 R2'nin beşinci sayfa kontrolü tamamlandıktan sonra API iptali istendi; wor
 ## Kabul sınırı
 
 V7 henüz uçtan uca kabul edilmedi. Beklenen kontrol: yeni kayıtların doğru atadan ham kaynak eşliği, kaynağı değişen sayfada taze model çağrısı, öncelik sırası ve 48 sayfanın eksiksiz kapsanması, kaynak/atıf mobil ekranı ve model kapalıyken başlayan gerçek isteğin sınırlı tekrarlarla toparlanması. Kitap metni, konuşmacı veya inceleme kararı elle düzeltilmez.
+
+## Canlı V7 doğrulaması — 17 Eylül
+
+Ayrı API18810 ortamında nesil `ab85c397-25f9-4cd9-8291-fc6ffed8e61b`, iş `0941d6e2-b7f5-4465-ab81-7f5c760dbab7`, sürüm `page-resume-v7-20260917` çalışıyor. Öncelik girdisi `[29,13]`; üretim kodunda kitap/sayfa sabiti yok. 14:11 UTC gözleminde sekiz sayfanın kontrolleri tamamlandı, dokuzuncu sayfanın görsel aşaması kaydedildi. Bu anlık gözlem tam koşu kabulü değildir.
+
+Gerçek model servisi kapalıyken başlayan 29. sayfa isteği üç CONNECT_ERROR ve iki HTTP503 sonrasında sınırlı tekrarlarla tamamlandı. Gecikmeler 1/2/4/8/16 saniye; gerçek çağrı 145,529 saniye, 966 girdi/171 çıktı token, finish_reason=stop. Kanıt `evidence/page-resume-cold-start.json` ve neslin page_claims metriğidir. Önceki R2 boş retry listesi bu dalın kanıtı olarak kullanılmaz.
+
+29. sayfada bir bölgesel metin bağımsız okuyucularla yükseldi; 3 anlaşma/11 inceleme var. Taze model sonucu UNKNOWN ve sıfır claim üretti: kimlik veya kitap analizi başarıyla çözüldü anlamına gelmez. Kaynak arayüzü 320/390/768/1440 genişliklerinde geçti: `evidence/page-resume-ui-verification.json`.
+
+Kimlik zinciri denetimi (`evidence/identity-anchor-source-audit-20260917T140757Z.json`) 13. sayfada doğrulanmış kendini tanıtma biçimli metin bulunduğunu, ancak kayıtlı balon/figür olmadığını gösterdi. Devamındaki iki kaynak satırı inceleme gerektiriyor. 29. sayfanın balon-kuyruk-figür ilişkisi tekil olsa da doğrulanmış isim çapası yok. Bu iki eksik kanıt birleştirilerek isim atanmaz; genel görsel kapsam kök nedeni ayrıca düzeltilmektedir.
+
+Gerçek API parametre kabulü `evidence/priority-pages-api.json`: gerçek PDF sınırının dışı ve aynı sayfanın tekrarı 422 INVALID_PRIORITY_PAGES döndürdü. Her isteğin bağımsız PostgreSQL öncesi/sonrası jobs=15, generations=15; yanlış istek yeni iş üretmedi. Bölgesel kaynak denetiminin 14:13:57 UTC dokuz sayfalık sınırında API/PG eşliği geçti: 100 anlaşma/53 inceleme, en yakın sayfa ataları doğru, beş yeni yükselme ve sıfır gerileme (R2'de zaten yükselen üç bölge ayrı). 13 ve 29'un değişen kaynaklarında taze model çağrısı doğrulandı. Tam nesil kabulü hâlâ açık.
