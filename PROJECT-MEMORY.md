@@ -1,15 +1,5 @@
 # NanobaseAI BI — Proje Belleği
 
-## 2026-09-17 — Editör kelime sınırı kapısı
-
-Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
-
-## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
-
-**Önceki yayın kabulü:** `book-access-v4-20260917` kendi offline paketinden 14 tablo/artifact eşliğiyle yeni restore, gerçek API/PG/OCR ve dört genişlikte mobil kabulü 10:00:32 UTC'de geçti; restore ACL hatası kapatıldı. Font eşleme yalnız deneydir: 1.160 bozuk harf gösteriminin 1.156'sına aday karşılık bulundu, fakat optik kapıda iyileşme 0. Bu yayının kaynak sayısı 828/321 idi; 29. sayfa figür–karakter kimliği hâlâ açık. [Ayrıntılar](docs/editor/2026-09-17-restore-acl-and-source-triage.md).
-
-
-
 Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır (eski bilgi silinir/düzeltilir). Kronolojik geçmiş için [docs/GELISTIRME-GUNLUGU.md](docs/GELISTIRME-GUNLUGU.md)'ye bak.
 
 ## Proje ne
@@ -19,6 +9,14 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 ## Editör modülü — bağımsız altyapı (2026-09-17)
 
 Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus, gateway ve ağsız parser olmak üzere 11 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
+
+### Güncel yayın — kelime sınırı kapısı (2026-09-17)
+
+Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
+
+### Kitap kapsamlı yetki sürümü (2026-09-17)
+
+**Önceki yayın kabulü:** `book-access-v4-20260917` kendi offline paketinden 14 tablo/artifact eşliğiyle yeni restore, gerçek API/PG/OCR ve dört genişlikte mobil kabulü 10:00:32 UTC'de geçti; restore ACL hatası kapatıldı. Font eşleme yalnız deneydir: 1.160 bozuk harf gösteriminin 1.156'sına aday karşılık bulundu, fakat optik kapıda iyileşme 0. Bu yayının kaynak sayısı 828/321 idi; 29. sayfa figür–karakter kimliği hâlâ açık. [Ayrıntılar](docs/editor/2026-09-17-restore-acl-and-source-triage.md).
 
 **Önceki yayın — otomatik yükleme:** `upload-queue-v2-20260917`. Yeni PDF arayüzden yüklenir, ağsız parser kuyruğunda hazırlanır; 202/job_id, kalıcı durum, iptal, iki iş sınırı ve tekrar kontrolü vardır. Boş ayrı kurulumda özgün kitabın 48 sayfası, gerçek API/PG/Poppler ve dört ekran genişliğiyle doğrulandı. Kuyruk doluluğu, dosya mühürleme, iptal ve servis yeniden başlatmada devam geçti. Ana kurulumda özgün PDF tekrar kuyruğa alındı, mevcut sürüm kullanıldı; analiz kayıtları değişmedi. Bu yayının kendi offline paket/restore, geri yüklenen API/PG/OCR ve mobil kontrolleri 08:15:30 UTC’de geçti. [Kod ve gerçek kabul](docs/editor/2026-09-17-upload-pipeline.md).
 
@@ -73,7 +71,8 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 - Frontend: React + Vite + TypeScript (`src/`), Tailwind.
 - Backend: Python/FastAPI (`backend/nanobase_api`, `backend/nanobase_awel`, `backend/query_gateway`, `backend/semantic_layer`, `backend/semantic_bridge`).
 - Şema tarama/gömme: `tools/schema-indexer`.
-- Kurulum: Docker Compose (`deploy/compose`, müşteri paketi), `deploy/llm-server` (GPU sunucusu LLM tanımı).
+- Kurulum: Docker Compose (`deploy/compose`, müşteri paketi); müşteri VM'ine yayın `scripts/server/deploy-customer-vm.sh`. LLM dışarıda (NVIDIA hosted); depoda LLM sunucu tanımı yok.
+- Editör: ayrı yığın `apps/editor/` (kendi Compose, PostgreSQL, Qdrant, OCR, yerel LLM).
 - Meta DB: Postgres (:5434).
 
 ## Sunucu / port yapısı
@@ -99,13 +98,13 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 
 **İki sunuculu (birleşik) sorular — plan (2026-09-16):** `semantic_layer/runtime/federated.py`. Soru iki kaynağa işaret ediyorsa (derleyici `_question_sources`, şemanın veritabanı öneki; `q.sources`) ve `SEMANTIC_FEDERATED=1` ise model tek SQL yerine JSON plan yazar: kaynak başına parça SQL'leri + `links` + bellekte (SQLite) çalışan `final`. `check_plan`: her parça yalnız kendi kaynağının katalog tablolarını okur, `final` yalnız parçaları okur, her bağ `final`'de eşitlik olarak geçer ve katalogda ölçülmüş `cross_source` ilişkisidir. Kapı yükümlülükleri parçalar üzerinde (herhangi biri karşılarsa tamam). Köprü `_answer_plan`: parça kendi bağlantısında tamamen okunur, `execute` birleştirir, cevap normal biçimde + `federated: true`. Bağlar `profiler/cross_source_links.py` + `scripts/discover_cross_links.py` (iki bağlantı) ile ölçülür, `scripts/apply_cross_links.py` ile kataloğa yazılır; gece taraması `cross_source` bağları silmez.
 
-**Soru hattı kararları (2026-09-16):** Katalogun açıklamadığı niteleyici (ör. "tahsil edilmemiş") geri sorulmaz: `model_qualifiers` olarak modele verilir, model `-- yorum: '<kelime>' → <koşul>` satırı yazar (cevabın üstünde görünür), kapı yorum satırını ve ek bir kısıtı arar, cevap sertifikasızdır. Kaynağın kolon açıklamasında anlattığı durum `qualifier_columns` (kapı o kolonun kısıtlanmasını ister); kod etiketi olan durum doğrudan filtre. İstem tabloları sorunun kaynağından seçilir. Liste/ana veri sorularına varsayılan yıl eklenmez. Test: 500 soruluk set (`nanobase-direct:~/testset/all500.jsonl`, en zor 100: `set100.jsonl`), koşturucu `run_testset.py` (`timas-testset` systemd birimi), sonuç ekranı artifact `JMmco7kazxBbYLwaHvnxAV`.
+**Soru hattı kararları (2026-09-16):** Katalogun açıklamadığı niteleyici (ör. "tahsil edilmemiş") geri sorulmaz: `model_qualifiers` olarak modele verilir, model `-- yorum: '<kelime>' → <koşul>` satırı yazar (cevabın üstünde görünür), kapı yorum satırını ve ek bir kısıtı arar, cevap sertifikasızdır. Kaynağın kolon açıklamasında anlattığı durum `qualifier_columns` (kapı o kolonun kısıtlanmasını ister); kod etiketi olan durum doğrudan filtre. İstem tabloları sorunun kaynağından seçilir. Liste/ana veri sorularına varsayılan yıl eklenmez. Test: 500 soruluk set (`nanobase-direct:~/testset/all500.jsonl`, en zor 100: `set100.jsonl`), koşturucu `run_testset.py` (`timas-testset` systemd birimi), sonuç ekranı artifact `JMmco7kazxBbYLwaHvnxAV`. **Durum 2026-09-17:** en zor 100 soru tek tek doğrulanıyor (kök neden → genel düzeltme, örnek başına elle SQL yok); 1–18 doğru, 19'dan devam; birim testleri 801. **Yerel model ölçüldü, benimsenmedi:** sunucuda GPU yok; Qwen3.6-35B-A3B ve Arctic-Text2SQL-R1-7B gerçek istem boyunda ~375 sn ve hatalı SQL; derleme NVIDIA'da kalır, hız kazancı soruları deterministik yola çekmekten gelir.
 
 **TİMAŞ erişimi:** Logo SQL (192.168.0.155) yalnız nanobase sunucusundaki WatchGuard OpenVPN tüneli (`tun0`) + socat `:14330` ile erişilir; Windows tarafına RDP (`timas\muratsancar`) de açık. VPN kullanıcısı `muratsancar` MFA (push/OTP) istiyor. Kullanıcı adı/şifreler repo'da **tutulmaz** — yerel proje belleğinde: `timas-access-credentials`.
 
 **VPN nasıl açılır (2026-09-14'ten beri):** `timas` servis hesabı `AUTH_FAILED` veriyor; tünel `muratsancar` hesabıyla telefon onayıyla açılır. Sunucu `CRV1` meydan okumasını alır, `CRV1::<state>::p` ile bağlanır, kullanıcı WatchGuard bildirimini onaylar. Birim: `timas-vpn-mfa` (`systemd-run`). Şifreleme şartı: `--data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-256-CBC --data-ciphers-fallback AES-256-CBC`. Oturum kalıcı değil: kopma veya yeniden başlatmada push adımı tekrarlanır. Kopukken belirti: portal açılır, veri gelmez (köprü logunda FreeTDS `08001`). Kontrol: `ip -br addr show tun0`, `systemctl is-active timas-vpn-mfa`. Adım adım tarif: yerel bellek `timas-logo-network-access`.
 
-**VPN hesabı kısıtı (2026-09-14 13:30'dan beri):** Tünel açılıyor ama WatchGuard bu hesaba yalnız `192.168.0.55:3389` (RDP) izni veriyor. Test sunucusundan `192.168.0.155:1433` (SQL: `LOGO_DB` + `Timas_MSCRM`), `.155:3389` ve `.55:22` kapalı. Aynı gün 10:44'te `.155:1433` açıktı; kural sonradan değişti. Sonuç: test sunucusundan Logo/CRM sorgusu ve `ssh timas-vm` çalışmaz. Gereken: TİMAŞ BT'den VPN hesabına `192.168.0.155 TCP 1433` ve `192.168.0.55 TCP 22` izni.
+**VPN erişim kapsamı (2026-09-17 itibarıyla):** tünel açıkken test sunucusundan Logo SQL `192.168.0.155:1433` (socat `:14330`), CRM prod SQL `192.168.0.28:1433` ve BI VM `192.168.0.55` (`ssh timas-vm`, yayın) erişilir; 16–17 Eylül'de üçü de gerçek sorgu/yayınla doğrulandı. 14 Eylül 13:30'da WatchGuard hesabı geçici olarak yalnız `.55:3389`'a indirmişti — aynı belirti görülürse (tünel var, SQL yok) neden VPN kuralıdır, TİMAŞ BT'den `.155/.28 TCP 1433` ve `.55 TCP 22` izni istenir. Teşhis ping ile değil TCP ile yapılır.
 
 ## Dizin haritası
 
@@ -131,7 +130,13 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 | `backend/semantic_bridge` | Timaş kokpiti köprüsü (:8795) |
 | `tools/schema-indexer` | Şema tarama ve gömme |
 | `deploy/compose` | Müşteri kurulum paketi (Docker) |
-| `deploy/llm-server` | GPU sunucusu için LLM servis tanımı |
+| `deploy/nginx`, `deploy/docker`, `deploy/helm`, `deploy/k8s` | nginx site tanımları (portal/bi), frontend Dockerfile, Helm/K8s taslakları |
+| `scripts/server/deploy-customer-vm.sh` | Müşteri VM'ine (192.168.0.55, `/home/ai/bi-docker`) paket yayını; `systemd-run` ile koşulur, `docker-compose.override.yml/.env/secrets` dışlanır. Küçük değişiklikte yalnız değişen dosya kopyalanır (md5 karşılaştır) |
+| `apps/editor/` | Editör modülü (BI'dan bağımsız; bkz. yukarıdaki Editör bölümü, kurulum/restore `apps/editor/README.md`) |
+| `docs/editor/` | Editör kanıt, kabul ve devir belgeleri; giriş noktası `2026-09-17-status-and-handoff.md` |
+| `docs/TIMAS-IS-TANIMLARI.md` | 16 TİMAŞ iş tanımının kararı ve nerede uygulandığı (katalog / bilgi paketi); iş teyidi bekliyor |
+| `configs/semantic/knowledge/logo/knowledge/` | Bilgi paketi: `rules/logo-erp.md` (Kural 9–11: üretim, sevkiyat, tanım), `glossary/logo-timas.md`, metrikler |
+| `docs/analiz` | CRM ayrıntı, Kampüs kişisel ekran ve oda rezervasyon analizleri (2026-09-15) |
 | `docs/architecture` | Kilitli mimari, tasarım ve plan belgeleri |
 | `docs/audits` | Denetim/inceleme kayıtları |
 | `docs/product` | Ürün belgeleri |
