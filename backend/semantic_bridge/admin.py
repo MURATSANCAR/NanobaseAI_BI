@@ -132,10 +132,10 @@ SPEC: list[dict[str, Any]] = [
              "hesaplar böyle ayrılır. 0: süreye bakılmaz"},
     # Yapay zekâ modeli
     {"key": "OPENAI_API_BASE", "group": "llm", "label": "Model adresi", "type": "text",
-     "default": "https://integrate.api.nvidia.com/v1",
+     "default": "http://127.0.0.1:18881/v1",
      "help": "OpenAI uyumlu uç, sonunda /v1"},
     {"key": "LLM_MODEL_NAME", "group": "llm", "label": "Model", "type": "text",
-     "default": "deepseek-ai/deepseek-v4-flash-0731", "help": "Sağlayıcının model adı"},
+     "default": "qwen3.8-flash-next", "help": "Sağlayıcının model adı"},
     {"key": "OPENAI_API_KEY", "group": "llm", "label": "API anahtarı", "type": "secret", "default": "",
      "help": "Kaydedilen anahtar ekranda bir daha gösterilmez"},
     {"key": "LLM_TIMEOUT_SEC", "group": "llm", "label": "Zaman aşımı (sn)", "type": "int", "default": "240",
