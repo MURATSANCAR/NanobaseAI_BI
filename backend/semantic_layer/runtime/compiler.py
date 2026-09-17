@@ -2092,6 +2092,12 @@ class CompilerRouter:
         # deployment never loaded fell through to the model, which duly wrote SQL that returns zero
         # rows. A zero meaning "not loaded" and a zero meaning "sold nothing" look identical on screen.
         # The refusal is the answer here; no compiler improves on it.
+        # A vague period ("bu ara") is refused as AMBIGUOUS — but the resolver has the question to ask
+        # back, and that is what the person should read; without it the refusal had no sentence of its
+        # own and came out as "I only answer questions about this data source".
+        if q.clarification and q.refusal_reason in (None, "AMBIGUOUS") and not q.conflicts:
+            return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
+                                 explain=q.clarification, certified=False)
         if reason := q.refusal_reason:
             return CompiledQuery(sql="", compiler="refused", catalog_version=q.catalog_version,
                                  explain=[refusal_for(q)], certified=False, refusal=reason)

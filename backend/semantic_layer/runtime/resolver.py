@@ -637,12 +637,15 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
-        # "bu ara": a period the person did not bound. Whoever writes the statement chooses a range and
-        # must say which — the phrase joins the words whose reading has to be written above the answer.
+        # "bu ara", "son günlerde": a period the person did not bound. Left to whoever writes the
+        # statement, a range was picked silently and the figure looked like an answer to the question;
+        # the range is the person's to give, so it is asked for — once, with examples.
         for t in sq.temporal:
-            if t.ambiguous and t.text and t.text not in sq.unresolved:
-                sq.unresolved.append(t.text)
-                sq.explanation.append(f"'{t.text}' belirsiz bir dönem: alınan tarih aralığı cevabın üstünde yazılacak")
+            if t.ambiguous and t.text:
+                ask = f"‘{t.text}’ için hangi dönemi kastediyorsunuz? (ör. son 30 gün, bu ay, bu çeyrek, bu yıl)"
+                if ask not in sq.clarification:
+                    sq.clarification.append(ask)
+                    sq.explanation.append(f"'{t.text}' belirsiz bir dönem: tarih aralığı soruldu")
         if not sq.temporal and sq.grain == "YEAR" and _YEARLY_BREAKDOWN.search(fold(question)):
             span = self._all_years(sq, today or date.today())
             if span is not None:
