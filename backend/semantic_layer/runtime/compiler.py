@@ -907,18 +907,30 @@ def caveat_for(reason: str, rules_text: str) -> str:
     words -= {"icin", "veri", "yok", "degil", "olan", "bunlar", "ile"}
     if len(words) < 2:
         return ""
-    best, best_hit = "", 0
+    lines = []
     for line in rules_text.splitlines():
         body = line.strip().lstrip("-• ").strip()
         if len(body) < 40 or _FORMULA.search(body):
             continue                                   # a definition is how to compute; a caveat is prose
-        vocab = {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(body) if len(w) >= 4}
-        hit = len(words & vocab)
+        lines.append((body, {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(body) if len(w) >= 4}))
+    # A word every caveat uses ("veride", "ölçüm", "2026", "yapılamaz") says nothing about *which* one
+    # is meant: counted equally, the longest caveat won and a question about minimum stock levels was
+    # answered with the receivables-ageing caveat. Each shared word weighs by how few lines carry it.
+    df: dict[str, int] = {}
+    for _, vocab in lines:
+        for w in vocab:
+            df[w] = df.get(w, 0) + 1
+    best, best_hit = "", 0.0
+    for body, vocab in lines:
+        shared = words & vocab
+        if len(shared) < max(3, len(words) // 2):
+            continue
+        hit = sum(1.0 / df[w] for w in shared)
         # A caveat says what cannot be had; a metric definition says how to compute it. For a refusal
         # or an empty result the caveat is the answer, so a line that speaks of absence wins ties.
         if _ABSENCE.search(body):
-            hit += 2
-        if hit > best_hit and hit >= max(3, len(words) // 2):
+            hit += 0.5
+        if hit > best_hit:
             best, best_hit = body, hit
     if not best:
         return ""
