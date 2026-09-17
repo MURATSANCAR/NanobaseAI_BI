@@ -18,6 +18,10 @@ Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nan
 
 Ana yayın `text-attribution-v5-20260917`; nesil `14a79646` 48/48 COMPLETED/NEEDS_REVIEW, kaynak 821/328. 10 açık metin atfı, model iddialarına bağlanan konuşmacı 0. Gerçek ana API/PG tam sayfa ve dört genişlikte atıf/bbox kabulü geçti; aynı sürümün bağımsız gerçek restore ortamında sekiz kesilen yükleme senaryosu geçti. Görsel kimlik ve anlamsal kabul açık. [Kod ve kanıt](docs/editor/2026-09-17-text-attribution.md).
 
+### Devam eden v7 — kaynağı koruyarak devam
+
+V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; v7 tam koşu kabulü sürüyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).
+
 ### Devam eden v6 — bölgesel kaynak seçimi
 
 Bölgesel OCR seçim kodu gerçek 1.149 kayıtta 39 iyileşme adayı/0 gerileme gösterdi. Ayrı restore API18810 ortamının ilk v6 koşusunda iki kaynak yükseldi, model açılışındaki HTTP hatası işi durdurdu. Sınırlı geçici hata tekrarı ve durum kodu kaydı eklendi; 48 CPU ile R2 gerçek koşusu sürüyor. Ana yayın v5 olarak kalır; v6 tam kabul henüz yok. [Kök neden ve kanıt](docs/editor/2026-09-17-regional-source-selection.md).
