@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Kaynak inceleme API ve balon–figür aday bağlantısı
+
+- Genel `source_review.py` eklendi: uyuşmazlık nedenleri, eksik/kullanılamayan okuyucular ve kırpım koordinatından sayfa koordinatına figür dönüşümü. Kuyruk tek figüre değse de karakter kimliği kanıtı olmadan konuşmacı atanmaz.
+- Yetkili `GET /v1/generations/{generation}/source-review` dağıtıldı. Sunucudaki gerçek API/PG ile 48 sayfa, filtre, kaynak parmak izi ve koordinat kontrolü geçti; 27 backend dosyası eşleşti. İlk açılış 502 kontrolü başarısız kaydedilip API hazır olduğunda tekrarlandı.
+- Veri veya review elle değiştirilmedi; 371 bölge incelemede, iki balon adayında kimlik/çoklu eşleşme açığı sürüyor. Yeni OCR okuması veya anlamsal kabul yapılmadı. Önceki v2 restore kabulü bu yeni imaja aktarılmaz.
+- [Sürüm, kanıtlar ve açık işler](editor/2026-09-17-source-review.md).
+
 ## 2026-09-17 — Editör tam kaynak koşusu ve restore sonucu belgelendi
 
 - Gerçek sunucu API’si ve son kanıt dosyaları yeniden okundu: v2 iş COMPLETED, nesil NEEDS_REVIEW. 48/48 sayfa, 1.149 span; 778 okuyucu anlaşması ve 371 inceleme bölgesi. 48 sayfanın altı kayıt türü API/PG eşliğinde geçti; manuel review ve kaynak düzeltmesi 0.

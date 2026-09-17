@@ -1,5 +1,7 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
+17 Eylül sonraki yayın: [Kaynak inceleme API ve balon–figür aday bağlantısı](2026-09-17-source-review.md). Aşağıdaki v2 işleme/restore sonucu korunur; yeni inceleme API’sinin ek kabulü bağlantılı kayıttadır.
+
 17 Eylül 2026 tarihinde gerçek sunucudaki API ve kanıt dosyaları yeniden okundu. Bu belge güncel durum kaydıdır; 16 Eylül tarihli belgeler kendi tarihlerinin uygulama ve deney geçmişini korur.
 
 ## Sonuç: işleme tamamlandı, anlamsal kabul açık

@@ -5,6 +5,10 @@ Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, ta
 Docker ağlarını veya kimlik bilgilerini kullanmaz. BI ekran entegrasyonu sonraki
 aşamada tanımlı API sözleşmeleriyle yapılacaktır.
 
+## Kaynak inceleme API — 17 Eylül ek yayını
+
+`GET /v1/generations/{generation}/source-review?pdf_page=29`, kayıtlı bölge uyuşmazlıklarını ve balon kuyruğunun sayfa koordinatındaki figür adaylarını döndürür. Yeni okuma veya kabul kararı yazmaz. Gerçek API/PG kontrolü 48/48 sayfada geçti; 371 bölge hâlâ incelemededir. [Kod değişikliği, sürüm ve kanıtlar](../../docs/editor/2026-09-17-source-review.md). Önceki v2 offline restore kabulü aşağıdaki kitap işleme sürümüne aittir; bu ek API imajının restore kontrolü henüz yoktur.
+
 ## Güncel teslimat ve doğrulama — 17 Eylül 2026
 
 48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
