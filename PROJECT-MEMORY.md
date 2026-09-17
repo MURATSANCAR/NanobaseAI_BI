@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## Güncel Editör model akışı — 18 Eylül
+
+Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Son dağıtım `parallel-ocr-v11-r9-20260918`; tam kitap ve semantik kabul henüz yok. R6 ilk11 sayfa teknik denetim ve dört mobil/masaüstü genişliğinde OCR görünümü geçti. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-qwen-ocr-parallel.md).
+
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
 Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](apps/editor/speech/README.md).

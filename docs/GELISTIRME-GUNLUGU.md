@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Qwen/OCR paralel akışının gerçek kabulü
+
+Qwen ana model ve ihtiyaç halinde GPU OCR bağlandı. Eski sürüme sessiz yönlendirme, paralel kırpım429 ve yeni OCR'ın inceleme API'sinde görünmemesi kodda giderildi. R6 ilk11 sayfa API/PG/kanıt denetimi ve320/390/768/1440px OCR görünümü geçti; figür kimliği/semantik açık. R9 gereksiz simge OCR'ını azaltır, tek-glif kaynaklarını ve NEEDS_REVIEW kayıtlarını korur. [Ayrıntı ve başarısız koşular](editor/2026-09-18-qwen-ocr-parallel.md).
+
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
 Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](../apps/editor/speech/README.md).
