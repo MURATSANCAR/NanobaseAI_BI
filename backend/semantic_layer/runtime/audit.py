@@ -1287,6 +1287,34 @@ def _opaque_note(occ, entity: str) -> str:
     return f" (anlaşılmayan yapı: {', '.join(names[:3])} türetilmiş bir kolon üzerinden yazılmış)" if names else ""
 
 
+def _feeding_selects(tree: exp.Expression) -> list[exp.Expression]:
+    """The SELECTs the answer is actually made of: the root, its UNION branches, and — transitively — every
+    derived table or CTE a reachable SELECT reads from. A CTE nobody reads proves nothing."""
+    ctes = {c.alias.upper(): c.this for c in tree.find_all(exp.CTE) if c.alias}
+    out: list[exp.Expression] = []
+    todo = [tree]
+    while todo:
+        node = todo.pop()
+        if isinstance(node, (exp.Subquery, exp.Paren)):
+            todo.append(node.this); continue
+        if isinstance(node, exp.Union):
+            todo.extend([node.this, node.expression]); continue
+        if not isinstance(node, exp.Select) or any(node is x for x in out):
+            continue
+        out.append(node)
+        sources = []
+        frm = node.args.get("from_") or node.args.get("from")
+        if frm is not None:
+            sources.append(frm.this)
+        sources.extend(j.this for j in node.args.get("joins") or [])
+        for src in sources:
+            if isinstance(src, exp.Table) and src.name and src.name.upper() in ctes:
+                todo.append(ctes[src.name.upper()])
+            elif isinstance(src, (exp.Subquery, exp.Union, exp.Select)):
+                todo.append(src)
+    return out or [tree]
+
+
 def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
     from semantic_layer.runtime.compiler import _pred_key_sql, _wrap_condition, _can_scope_formula, Dialect
     why = (f"karşılaştırma dönemleri ayrı ölçü sütunlarında doğrulanamadı: "
@@ -1313,15 +1341,22 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
     binding = sq.temporal_binding
 
     # (a) one SELECT, the periods as CASE conditions inside additive aggregates
-    left, right = _period_outputs(tree, current, scope, binding), _period_outputs(tree, reference, scope, binding)
-    def correct_column(columns):
-        if binding:
-            return any(_accepts_bound_column(tree, scope, binding, alias, col) for alias, col in columns)
-        return any((not sq.comparison.get("dateColumn") or col == sq.comparison["dateColumn"].upper())
-                   and (not sq.comparison.get("entity") or scope.entity_for(exp.column(col, table=alias or None)).upper() == sq.comparison["entity"].upper())
-                   for alias, col in columns)
-    proven = {af for a, (ac, af) in left.items() for b, (bc, bf) in right.items()
-              if a != b and af == bf and correct_column(ac & bc)}
+    # The two periods may be told apart in the answer's own SELECT — or one level down, in each CTE or
+    # UNION branch that reads a source ("kasa" and "banka" are two tables: each branch carries both
+    # months as CASE columns and the outer SELECT only subtracts them). Every SELECT is looked at.
+    proven: set = set()
+    selects = _feeding_selects(tree)
+    for sel in selects:
+        sc = scope if sel is tree else _AnswerScope(sel)
+        left, right = _period_outputs(sel, current, sc, binding), _period_outputs(sel, reference, sc, binding)
+        def correct_column(columns, sel=sel, sc=sc):
+            if binding:
+                return any(_accepts_bound_column(sel, sc, binding, alias, col) for alias, col in columns)
+            return any((not sq.comparison.get("dateColumn") or col == sq.comparison["dateColumn"].upper())
+                       and (not sq.comparison.get("entity") or sc.entity_for(exp.column(col, table=alias or None)).upper() == sq.comparison["entity"].upper())
+                       for alias, col in columns)
+        proven |= {af for a, (ac, af) in left.items() for b, (bc, bf) in right.items()
+                   if a != b and af == bf and correct_column(ac & bc)}
     # The measure's own CASE may have been pushed into the WHERE of the rows read: the same number.
     carried = {(o.entity.upper(), p.column.upper(), p.operator.upper(), tuple(sorted(_values(p)))) for o in occ for p in o.preds}
     def satisfied(found: set[str]) -> bool:
@@ -1335,6 +1370,24 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
         return True
     if proven and satisfied(proven):
         return True, ""
+
+    # (a') the periods as *rows*: a feeding SELECT grouped by its date column (a month bucket), reading
+    # exactly the two adjacent periods and nothing else — "kasa" and "banka" each summed per month in a
+    # CTE, the outer SELECT picking the two months apart. Only where no certified measure fixes the
+    # formula to look for; with one, the column shapes above are what is demanded.
+    if not expected:
+        cs, ce = str(current.get("start"))[:10], str(current.get("end"))[:10]
+        rs, re_ = str(reference.get("start"))[:10], str(reference.get("end"))[:10]
+        if re_ == cs or ce == rs:
+            hull = (min(cs, rs), max(ce, re_))
+            for sel in selects:
+                group = sel.args.get("group")
+                if group is None:
+                    continue
+                gcols = {c.name.upper() for e in group.expressions for c in e.find_all(exp.Column)}
+                for o in occ:
+                    if o.select is sel and any(_window_of(o, col) == hull for col in gcols):
+                        return True, ""
 
     want_cur = (str(current["start"])[:10], str(current["end"])[:10])
     want_ref = (str(reference["start"])[:10], str(reference["end"])[:10])
