@@ -48,7 +48,7 @@ from semantic_layer.store.catalog_store import CatalogStore
 # Words the LLM handles from schema context; never reported as "unresolved" (they are entities, not values).
 # Copula participles: grammar that attaches one phrase to another ("tüm satış yerlerimizle olan
 # ciromuz"). They restrict nothing and must never reach the clarification step.
-_COPULA = frozenset("olan oldugu olup olsun olacak olmus bulunan bulundugu".split())
+_COPULA = frozenset("olan oldugu olup olsun olacak olmus bulunan bulundugu duran durmakta gorunen gozuken".split())
 # Verbs of a record's own existence or arrival, spoken before the noun they belong to. "Açılan
 # sipariş" is every order, "kesilen fatura" every invoice, "iade alan müşteri" a customer whose
 # returns the return filter already selects. None of them is a restriction the catalog must define.
@@ -60,7 +60,7 @@ _AUXILIARY_ROOTS = ("edil", "edile", "edilm", "ediliyor", "olun", "olus", "yapil
 _RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
     yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
     kaydedilen kayitli tutulan""".split())
-_ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo".split())
+_ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
 _DOMINANT = 1.5
@@ -176,6 +176,14 @@ def _rooted(key: str) -> str:
 
 #: "Yıllık ciro" bu yılın yıllık tutarını da anlatabilir; yıllara YAYILMAYI yalnız açık kırılım ister.
 _YEARLY_BREAKDOWN = re.compile(r"\b(yillara gore|yil yil|yil bazinda|yillar bazinda|yillara bol\w*|her yil)\b")
+
+
+def _negated_record_verb(tok: str) -> bool:
+    """"kesilmemiş", "açılmamış", "verilmemiş": the negation of a verb that only says a record came to
+    exist ("kesilen fatura"). Negated, the record does not exist — an absence, like a light verb's."""
+    root = verb_root(tok) or ""
+    base = re.sub(r"(ma|me)$", "", root)
+    return bool(base) and base in {verb_root(v) for v in _RECORD_VERBS}
 
 
 def _negated_light_verb(tok: str) -> bool:
@@ -1040,7 +1048,7 @@ class SemanticResolver:
                 record.update(decision="SEMANTIC", evidence_source="catalog", concept_ids=[undone.concept_id],
                               resolved_as="DIMENSION_VALUE:INFERRED", negated_label=True)
                 sq.explanation.append(undone.explain["why"])
-            elif is_negative(tok) and _negated_light_verb(tok) and (absent := next((s_ for s_ in left if s_.mapping
+            elif is_negative(tok) and (_negated_light_verb(tok) or _negated_record_verb(tok)) and (absent := next((s_ for s_ in left if s_.mapping
                     and s_.semantic_type in (SemanticType.METRIC, SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)), None)) is not None:
                 # "hiç sevkiyat almamış müşteriler": the light verb carries the negation and the thing
                 # negated is the measure just before it — the customers with no shipment record at all.
@@ -1564,6 +1572,8 @@ class SemanticResolver:
         for _ in (0,):
             if _COUNT_CUE.fullmatch(fold(tok)):
                 continue        # "adedi" asks how many; it is not the verbal form of the quantity measure "adet"
+            if stem(tok) in _ENTITY_WORDS or short_root(tok) in _ENTITY_WORDS:
+                continue        # "kartı" is the customer's card, not a past tense of "kâr"
             root = verb_root(tok)
             if not root or is_negative(tok):
                 continue        # "satmayan" is the opposite of "satış": bridging it would invert the answer

@@ -96,3 +96,18 @@ def test_negating_a_record_kind_is_absence_not_the_other_kinds(catalog, profiles
     assert sq.shape == "ABSENCE", (sq.shape, sq.explanation)
     assert not any(s.mapping and (s.mapping.operator or "").upper() == "NOT IN" for s in sq.slots), [(s.term, s.mapping.operator) for s in sq.slots if s.mapping]
     assert any(m.get("decision") == "ABSENCE" and m.get("absent_entity") == "INVOICE" for m in sq.modifiers), sq.modifiers
+
+
+def test_a_negated_record_verb_after_a_document_label_is_absence(catalog, profiles):
+    """2026-09-17, soru 21: "bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler" — 'kesilmemiş' is the
+    negation of a record verb; 'kartı' is the customer's card, not the measure "kâr"; 'duran' is grammar."""
+    _certify(catalog, "fatura", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             column="TRCODE", operator="IN", values=["7", "8", "9"], extra={"count_key": "LOGICALREF"}))
+    _certify(catalog, "kâr", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+             formula="SUM(STLINE.TOTAL)"), synonyms=["kar"])
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler kimler?", today=TODAY)
+    assert sq.shape == "ABSENCE", (sq.shape, sq.explanation)
+    assert not any(s.semantic_type == SemanticType.METRIC and s.mapping and s.mapping.entity == "STLINE" for s in sq.slots), [(s.term, s.semantic_type) for s in sq.slots]
+    assert not any(m.get("token") == "duran" for m in (sq.model_qualifiers or [])), sq.model_qualifiers
+    assert sq.temporal and sq.temporal[0].text == "bu yil"        # a stated period stays: "this year" is part of the absence

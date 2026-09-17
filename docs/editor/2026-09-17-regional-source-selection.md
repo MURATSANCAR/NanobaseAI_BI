@@ -19,3 +19,9 @@ Ayrı gerçek restore ortamı API18810, `regional-source-v6-20260917`, ilk nesil
 ## Durum ve açık kabul
 
 V6 ana kurulumda değildir. Ayrı ortamın R2 nesli `evidence/regional-source-run.json` dosyasında; gerçek kaynak ve model akışı izleniyor. Ham kaynaklar/inceleme kararları elle düzeltilmedi. Tam 48 sayfa, yeni adaylar, kaynak seçim ekranı ve taze model çağrıları kabulü tamamlanmadan v6 üretime hazır sayılmaz. Diğer kitaplar, görsel kimlik, bütün-kitap sentezi ve P0–P7'nin kalan maddeleri açık.
+
+## R2 canlı kanıt
+
+Yeni nesil `e15b1d4a-1007-48c8-8f3b-35926ab5db60`, iş `432c8b28-1d9a-4d35-a907-848dccf1f7de`. Ana v5 koşusu tamamlanmış; bu R2 ayrı kabul ortamında tek ağır model koşusudur. Bölgesel kaynak seçim ekranı dört genişlikte gerçek seçilen/ham metin/API eşliği ve bbox ile geçti: `evidence/regional-source-ui-verification-r2.log`, `evidence/review-ui/verification.json`, `regional-source-{width}.png`. Modelin ikinci sayfadaki taze çıkarımı devam ediyor; tam kabul henüz yok.
+
+Kitap klasörü denetiminde beş ek gerçek PDF bulundu; önceki “başka kitap yok” ifadesi mevcut dosya durumu için yanlış. Kahramanını Yutan Kitap ve Dünyanın En Korkak Hayvanı dosyaları gerçek kaynak hazırlama kabulüne alınıyor; model analizi aynı anda çoğaltılmıyor.

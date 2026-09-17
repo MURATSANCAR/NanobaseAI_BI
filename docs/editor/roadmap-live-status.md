@@ -2,7 +2,7 @@
 
 > Güncel v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](2026-09-17-text-attribution.md).
 
-> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
+> Önceki yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 
@@ -16,8 +16,8 @@
 
 ## Kabul yöntemi
 
-**Güncel analiz:** Canlı nesil `99881d8f-77b9-499c-9876-fe114b4afc01`,
-iş `9a727ff9-3167-4a59-8dd6-c0a3fcdabca1`; `source-spans-v4`.
+**Güncel analiz:** Canlı nesil `14a79646-79c6-4cdb-8714-00adf5698770`,
+iş `75b25439-09f5-425d-9e18-08cf15898d9a`; `source-spans-v5`.
 48/48 sayfa, 821 kaynak anlaşması ve 328 inceleme bölgesi vardır.
 V1 iptal edilip korundu. Yeni akışın sonu NEEDS_REVIEW; konuşmacı/semantik kabul
 ve buna bağlı sentez/indeks/soru-cevap açık. CPU 48, model slotu **1**.
@@ -33,20 +33,20 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
 | P1 Kaynak hattı | Yükleme, 48 sayfa ve kaynak paneli çalışıyor; 7 yanlış kelime eşliği düzeltildi | 328 kaynak bölgesi; görsel kaynak doğruluğu |
-| P2 Karakter/olay | Adaylar ve kanıt kapıları var | Konuşmacı/kimlik, olay modu ve sahne eşliği |
-| P3 Edebî örnekler | Kabul bekliyor | P2, diğer iki gerçek kitap ve editör rubriği |
+| P2 Karakter/olay | 10 kaynaklı metin atfı ve mobil kaynak bağlantısı doğrulandı; claim-speaker 0 | Konuşmacı/kimlik, olay modu ve sahne eşliği |
+| P3 Edebî örnekler | Kabul bekliyor | P2, diğer kitapların gerçek kabulü ve editör rubriği |
 | P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
 | P5 Editör akışı | Kaynak/OCR/bbox ve yetki ekranları çalışıyor | Genel düzeltme ve bağımlılık yenileme kabulü |
-| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | Son kaynak v4-r2 paket kabulü, farklı kullanıcı/yük/topolojiler |
+| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | V5 son paket kabulü, farklı kullanıcı/yük/topolojiler; v4-r2 offline kabulü geçti |
 | P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
 
 ## Planın tüm bölümleri
 
-V4 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 821 anlaşma/328 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. Gerçek API/PG, kaynak ve yayın kapıları geçti; bu sürümün ayrı kurulum/restore kabulü ayrıca izleniyor. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-word-boundary-gate.md).
+V5 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 821 anlaşma/328 inceleme, 10 açık metin atfı. İş COMPLETED; nesil NEEDS_REVIEW. Gerçek ana API/PG, kaynak/atıf ve mobil kontrolü geçti. V6 bölgesel kaynak seçimi ayrı ortamda R2 kabulündedir; ana sürüm sayılarıyla karıştırılmaz. [V5 kabul](2026-09-17-text-attribution.md), [V6 devam eden kabul](2026-09-17-regional-source-selection.md).
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
-| 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Diğer iki kitap ve ayrılmış kabul kitabı yok |
+| 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Aynı kitap klasöründe beş ek gerçek PDF bulundu; iki kitapta kaynak hazırlama kabulü başlatılıyor; ayrılmış anlamsal kabul seti henüz belirlenmedi |
 | 2 Doğrulama evresi | Sunucu envanteri, kaynak hashleri, gerçek API/DB | Tam uçtan uca süre, görev başarısı, editör emeği ve kalan efor ölçümü açık |
 | 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; bbox/OCR inceleme ekranı doğrulandı; PDF.js özel görüntüleyici ve anlamsal kabul kapsamı ayrıca açık |
 | 4 Uçtan uca | 48 kaynak/okuma/görsel aday/kontrol kaydı; v2 iş COMPLETED | NEEDS_REVIEW; doğrulanmış sahne → sentez → indeks → cevap kabulü açık |
@@ -106,7 +106,7 @@ Kanıt: `evidence/unassisted-reused-visual-findings.json`.
 
 Kaynak bütünlüğü ve izlenebilir işlem kayıtları olumlu. Modelin görsel okuması güvenilir kabul edilecek düzeyde gösterilemedi: yanlış konuşmacı, yazı, nesne ve ayrıntı örnekleri var. 48/48 işleme yalnız kapsama işaret eder. Yeni koşu, bu hataların sonraki analiz ve cevaplara taşınıp taşınmadığını gösterecek. Henüz bir başarı yüzdesi veya üretime hazırlık iddiası yoktur.
 
-Gerçek ikinci baskı, diğer iki kitap ve yayınevi editör zamanı dış girdidir; tahminle veya yapay örnekle tamamlanmış gösterilmez. Ön yüzsüz API koşusu mobil arayüz kabulü değildir. Önceki temel kurulumun restore kanıtı güncel analiz sürümüne otomatik taşınmaz.
+Gerçek ikinci baskı ve yayınevi editör zamanı dış girdidir. Aynı klasörde ek gerçek kitap dosyaları bulundu; iki kitabın kaynak hazırlaması ayrıca deneniyor, anlamsal kabul yerine sayılmaz. Tahminle veya yapay örnekle tamamlanmış gösterilmez. Ön yüzsüz API koşusu mobil arayüz kabulü değildir. Önceki temel kurulumun restore kanıtı güncel analiz sürümüne otomatik taşınmaz.
 
 ## 16 Eylül eski koşuda ölçülen çalışma darboğazı
 
