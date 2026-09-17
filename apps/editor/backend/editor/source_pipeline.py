@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v2'
+VERSION = 'source-spans-v3'
 
 
 def norm(value):
@@ -33,6 +33,54 @@ def quote_tokens(value):
     value = re.sub(r'-\s*\n\s*', '', value)
     value = unicodedata.normalize('NFKC',value).replace('İ','i').replace('I','ı').lower()
     return re.findall(r'[^\W_]+',value)
+
+
+def optical_verdict(line, secondary, pdf_text, pdf_usable, reread=None):
+    primary = bool(norm(line['text'])) and norm(line['text']) == norm(line.get('region_text') or '')
+    second = bool(norm(secondary)) and norm(secondary) == norm(line['text'])
+    native = pdf_usable and bool(norm(pdf_text)) and norm(pdf_text) == norm(line['text'])
+    conflict = (bool(norm(secondary)) and not second) or (pdf_usable and not native)
+    score = min(line['score'], line.get('region_score') or 0)
+    issues = []
+    if not primary: issues.append('REGIONAL_READING_DISAGREES')
+    if not second: issues.append('SECOND_READER_DISAGREES_OR_MISSING')
+    if not native: issues.append('PDF_TEXT_DISAGREES_OR_UNUSABLE')
+    if score < .9: issues.append('LOW_RECOGNITION_SCORE')
+    # Stored "stable"/"matching" flags are diagnostic, not acceptance authority.
+    # Recompute from the two immutable raw readings; a new contradiction blocks.
+    reread_state = 'NOT_AVAILABLE'
+    if reread is not None:
+        readings = reread['readings']
+        if len(readings) != 2 or [r['psm'] for r in readings] != [7,13]:
+            raise RuntimeError('REREAD_SCHEMA_MISMATCH')
+        tokens = [quote_tokens(r['text']) for r in readings]
+        stable = bool(tokens[0]) and tokens[0] == tokens[1]
+        reread_state = 'AGREES' if stable and tokens[0] == quote_tokens(line['text']) else 'DISAGREES' if stable else 'UNSTABLE'
+        if reread_state == 'DISAGREES':
+            conflict = True
+            issues.append('REREAD_CONFLICT')
+        elif reread_state == 'UNSTABLE':
+            issues.append('REREAD_UNSTABLE')
+    return {'status': 'TEXT_AGREED' if primary and (second or native) and not conflict and score >= .9 else 'NEEDS_REVIEW',
+            'issues': issues, 'pdf_matches': native, 'reread_state': reread_state}
+
+
+def reread_measurements(root, parent, evidence):
+    if not parent:
+        return {}, None
+    path = root/'region-reread-v1'/str(parent)/f"page-{evidence['data']['pdf_page']:04}.json"
+    if not path.exists():
+        return {}, None
+    raw = path.read_bytes(); report = json.loads(raw); d = evidence['data']
+    if (report['generation_id'] != str(parent) or report['source_sha256'] != d['source_sha256']
+            or report['render_sha256'] != d['ocr_render_sha256'] or report['pdf_page'] != d['pdf_page']):
+        raise RuntimeError('REREAD_SOURCE_SCOPE_MISMATCH')
+    rows = {r['source_span_id']:r for r in report['regions']}
+    if len(rows) != len(report['regions']):
+        raise RuntimeError('DUPLICATE_REREAD_SOURCE')
+    return rows, {'artifact_sha256':sha(raw),'generation_id':str(parent),
+                  'method':report['method'],'code_sha256':report['code_sha256'],
+                  'engine':report['engine'],'models':report['models']}
 
 
 def quote_check(quote, rows, all_rows=None):
@@ -107,23 +155,18 @@ def optical(job, evidence, document, root, parent=None):
     if not pdf_path.exists():raise RuntimeError('NATIVE_PDF_REGIONS_REQUIRED')
     pdf=json.loads(pdf_path.read_text())
     if pdf['source_sha256']!=d['source_sha256'] or pdf['pdf_page']!=page:raise RuntimeError('PDF_SOURCE_SCOPE_MISMATCH')
+    rereads, reread_provenance = reread_measurements(root,parent,evidence)
     for i,line in enumerate(result['lines']):
         xs=[p[0] for p in line['polygon']]; ys=[p[1] for p in line['polygon']]
         bbox=line.get('bbox') or [min(xs)/width,min(ys)/height,(max(xs)-min(xs))/width,(max(ys)-min(ys))/height]
         # Match readers by position; never promote a similar word elsewhere on the page.
         secondary,neighbors,_=reader_text(bbox,d['blocks'])
         pdf_text,pdf_neighbors,pdf_usable=reader_text(bbox,pdf['lines'])
-        primary_agrees=bool(norm(line['text'])) and norm(line['text'])==norm(line.get('region_text',''))
-        second_agrees=bool(norm(secondary)) and norm(secondary)==norm(line['text'])
-        pdf_agrees=pdf_usable and bool(norm(pdf_text)) and norm(pdf_text)==norm(line['text'])
-        independent_agrees=second_agrees or pdf_agrees
-        reader_conflict=(bool(norm(secondary)) and not second_agrees) or (pdf_usable and not pdf_agrees)
-        status='TEXT_AGREED' if primary_agrees and independent_agrees and not reader_conflict and min(line['score'],line.get('region_score',0))>=.9 else 'NEEDS_REVIEW'
-        issues=[]
-        if not primary_agrees: issues.append('REGIONAL_READING_DISAGREES')
-        if not second_agrees: issues.append('SECOND_READER_DISAGREES_OR_MISSING')
-        if not pdf_agrees: issues.append('PDF_TEXT_DISAGREES_OR_UNUSABLE')
-        if min(line['score'],line.get('region_score',0))<.9: issues.append('LOW_RECOGNITION_SCORE')
+        reread = rereads.get(line.get('reused_source_span_id'))
+        if reread is not None and reread['bbox'] != bbox:
+            raise RuntimeError('REREAD_REGION_MISMATCH')
+        verdict = optical_verdict(line,secondary,pdf_text,pdf_usable,reread)
+        status,issues,pdf_agrees = verdict['status'],verdict['issues'],verdict['pdf_matches']
         sid=identifier(gen,'source_spans',key+f'-{i:04}')
         value={'pdf_page':page,'evidence_refs':[str(evidence['id'])], 'bbox':bbox,
             'coordinate_system':'normalized_top_left','text':line['text'],'raw_text':line['text'],
@@ -134,6 +177,8 @@ def optical(job, evidence, document, root, parent=None):
             'score':line['score'],'region_score':line.get('region_score'),
             'status':status,'issues':issues,'engine':result['engine'],'model_manifest':result['models'],
             'render_sha256':result['image_sha256'],'pipeline_version':VERSION,
+            'reread_measurement':reread,'reread_provenance':reread_provenance if reread else None,
+            'reread_state':verdict['reread_state'],
             'reused_source_span_id':line.get('reused_source_span_id'),
             'reused_from_generation':result.get('reused_from_generation'),
             'role':'PAGE_LABEL_CANDIDATE' if bbox[1]>.85 and line['text'].strip().isdigit() else 'TEXT',

@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
+from editor.source_alignment import corrupt_character
 
 
 def extract(source):
@@ -29,7 +30,7 @@ def extract(source):
             a=line.attrib;text=' '.join(word['text'] for word in words)
             lines.append({'text':text,'words':words,'bbox':[float(a['xMin'])/w,float(a['yMin'])/h,
                 (float(a['xMax'])-float(a['xMin']))/w,(float(a['yMax'])-float(a['yMin']))/h],
-                'corrupt_private_unicode':any(0xE000<=ord(c)<=0xF8FF or c=='\ufffd' for c in text)})
+                'corrupt_private_unicode':any(corrupt_character(c) for c in text)})
         out.write_text(json.dumps({'source_sha256':manifest['sha256'],'pdf_page':n,'lines':lines,
             'raw_xml_sha256':hashlib.sha256(raw).hexdigest(),'engine':'poppler_pdftotext_bbox_layout',
             'coordinate_system':'normalized_top_left'},ensure_ascii=False,indent=2))

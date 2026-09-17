@@ -1,5 +1,15 @@
 """Geometry-only reader alignment. Never search for a matching answer in the text."""
 import math
+import unicodedata
+
+
+def corrupt_character(character):
+    """All Unicode private-use planes, surrogates and replacement characters.
+
+    Historical artifacts checked only BMP private-use code points. Re-evaluate
+    actual words on read so those immutable artifacts never become authorities.
+    """
+    return unicodedata.category(character) in ('Co', 'Cs') or character == '\ufffd'
 
 
 def valid_box(box):
@@ -35,7 +45,8 @@ def aligned_words(box, lines):
                     and overlap_x >= .5 and overlap_y >= .5):
                 selected.append({**word, 'line_index': line_index,
                                  'word_index': word_index,
-                                 'corrupt_private_unicode': line.get('corrupt_private_unicode', False)})
+                                 'corrupt_private_unicode': line.get('corrupt_private_unicode', False)
+                                 or any(corrupt_character(c) for c in word.get('text', ''))})
     # Explicitly retain positions so independent checks can reproduce selection.
     return selected
 

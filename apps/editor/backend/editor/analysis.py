@@ -16,6 +16,7 @@ from psycopg.types.json import Jsonb
 
 from editor.config import connection, secret, RELEASE, code_manifest
 from editor.book_store import ROOT, sha, identifier, get_records, save_record, fence, source_for
+from editor.source_alignment import corrupt_character
 
 PROMPT_VERSION = 'book-e2e-v3'
 VISUAL_PROMPT_VERSION = 'visual-observation-v2'
@@ -140,7 +141,7 @@ def ingest(job):
               'coordinate_system':'normalized_top_left','duplicates_removed':duplicates,
               'verification_status':'SOURCE_LINKED','review_status':'PENDING',
               'quality_signals':{'text_ocr_differ':normalized(layer).split()!=(' '.join(b['text'] for b in blocks)).split(),
-                                 'text_layer_private_unicode':sum(0xE000<=ord(c)<=0xF8FF for c in layer)}}
+                                 'text_layer_private_unicode':sum(corrupt_character(c) for c in layer)}}
         commit(job,'evidence',key,data)
     return {'stage':'visuals'}
 
@@ -453,7 +454,7 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2'):
+    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3'):
         from editor.source_pipeline import run as run_source_pages
         return run_source_pages(job)
     with connection() as db:
