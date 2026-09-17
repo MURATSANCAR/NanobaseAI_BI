@@ -1,5 +1,19 @@
 # Kaynak karşılaştırmasında kelime sınırı düzeltmesi
 
+## R2 — değişmeyen adayların sıkılaşan kapıdan geçirilmesi
+
+Güncel yayın `source-boundaries-v4-r2-20260917`. İlk yeni nesilde yalnız güvenilir kaynak kümesi daralmasına rağmen model aynı adayları yeniden üretmek için çağrılıyordu. Genel yeniden kullanım kuralı düzeltildi: kaynak kimlikleri, ham metin, kutu, rol ve render değişmiyorsa ve hiçbir bölge güvenilir kümeye yükselmiyorsa önceki **kabul edilmemiş** adaylar yeniden kapıdan geçirilir. Eski doğrulama kararı taşınmaz; geçersiz kaynak referansı `MATCH` olamaz. Yeni kaynak/metin/konum veya güvenilirlik artışı olduğunda bu kısayol kullanılmaz.
+
+Gerçek 48 sayfanın API/PG kayıtlarında aday denetimi geçti; 7 sayfa sıkılaşan kapı, diğerleri aynı bağlam olarak ayrıldı. Gerçek v2 → v3 kaynak artışının bulunduğu 44–48. sayfalarda yeniden kullanım reddedildi. Bu karşı kontrol sentetik veri üretmedi; gerçek geçmiş nesilleri okudu. Konuşmacı veya insan kabulü üretilmedi.
+
+İlk nesil `33b5bb70` API üzerinden iptal edildi; 13 sayfanın kaynak okuması ve 12 sayfanın aday/kontrol kayıtları korundu. İlk paketin oluşturma/içe alma adımları geçti, fakat iptal edilen analiz nedeniyle kurulum denetimi `ANALYSIS_CANCELLED` ile durdu; ilk paket tam kabul sayılmaz.
+
+R2 nesli `99881d8f-77b9-499c-9876-fe114b4afc01`, işi `9a727ff9-3167-4a59-8dd6-c0a3fcdabca1`; özgün tamamlanmış `b652f63c` ham ölçümlerini kullanır. Çalışan 35 dosyanın ağaç hash'i `254a05cccb228d45c656b2ae55821a61b88a6406621e797ec7f89d00c33f9c37`; işlem hattı hash'i `415c64ea702437bb737663b228ded8cbe2896fa432ec1e79e26f9678c1bc1f57`.
+
+Yeni neslin bütün kayıtları, kaynaklardan sonraki aday bağlantıları ve bu sürümün offline/restore kabulü ayrıca izleniyor. Kanıtlar sunucuda `source-boundaries-reuse-with-promotion-check.log`, `source-boundaries-r2-follow.log`, `source-boundaries-r2-final-checks.log`, `source-boundaries-r2-qualification.log`.
+
+Kod `main` üzerinde; GitHub push HTTPS kimlik bilgisi bulunamadığı için tamamlanamadı. Bu oturum yeni dal açmadı. Denetlenen diğer bütün dalların `main` dışında commit sayısı 0.
+
 ## Hata ve kod çözümü
 
 `source_pipeline.optical_verdict` okuyucu karşılaştırmalarında bütün boşluk ve noktalama işaretlerini silen `norm` kullanıyordu. Böylece bölünmüş/birleşmiş kelimeler aynı sayılabiliyordu. Gerçek kitabın 1.149 kaynak bölgesinde 19 okuyucu karşılaştırmasında bu fark bulundu; daha önce `TEXT_AGREED` verilen 7 ayrı bölge etkilendi (PDF sayfaları 10, 13, 18, 20, 27, 29, 31).

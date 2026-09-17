@@ -10,7 +10,7 @@ import uuid
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
-generation = str(uuid.UUID(json.loads((root/'evidence/source-spans-run.json').read_text())['generation_id']))
+generation = str(uuid.UUID(json.loads((root/os.environ.get('EDITOR_VERIFY_RUN_FILE','evidence/source-spans-run.json')).read_text())['generation_id']))
 headers = {'Authorization': 'Bearer '+(root/'secrets/api_token').read_text().strip()}
 rows = []
 while True:
@@ -26,15 +26,37 @@ def database():
     return json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query], text=True))
 assert rows == database(), 'API_DB_MISMATCH'
 code = '''import json,sys
-from editor.source_pipeline import optical_verdict,VERSION
+from editor.source_pipeline import optical_verdict,VERSION,reusable_claim_candidates
+from editor.book_store import get_records
 rows=json.load(sys.stdin)
-print(json.dumps({'version':VERSION,'verdicts':[optical_verdict(r['data'],r['data']['secondary_text'],r['data']['pdf_text'],r['data']['pdf_usable'],r['data'].get('reread_measurement')) for r in rows]}))
+verdicts=[optical_verdict(r['data'],r['data']['secondary_text'],r['data']['pdf_text'],r['data']['pdf_usable'],r['data'].get('reread_measurement')) for r in rows]
+predicted=[{**r,'data':{**r['data'],'status':v['status'],'issues':v['issues']}} for r,v in zip(rows,verdicts)]
+reuse=[]
+for page in get_records(sys.argv[1],'page_claims'):
+ spans=[r for r in predicted if r['data']['pdf_page']==page['data']['pdf_page']]
+ result=reusable_claim_candidates(sys.argv[1],page['record_key'],spans)
+ assert result is not None, 'UNCHANGED_OR_STRICTER_CONTEXT_NOT_REUSED'
+ assert all(c['eligible_for_synthesis'] is False for c in result[0]['claims'])
+ reuse.append({'page':page['data']['pdf_page'],'policy':result[0]['measurement_reuse_policy']})
+promotion_rejections=[]
+if len(sys.argv)>2:
+ baseline=sys.argv[2];old={r['record_key']:r for r in get_records(baseline,'source_spans')}
+ for page in get_records(baseline,'page_claims'):
+  spans=[r for r in rows if r['data']['pdf_page']==page['data']['pdf_page']]
+  promoted=[r for r in spans if r['record_key'] in old and r['data']['status']=='TEXT_AGREED' and old[r['record_key']]['data']['status']!='TEXT_AGREED']
+  if promoted:
+   assert reusable_claim_candidates(baseline,page['record_key'],spans) is None, 'PROMOTED_CONTEXT_REUSED'
+   promotion_rejections.append(page['data']['pdf_page'])
+ assert promotion_rejections, 'NO_REAL_PROMOTION_CASES'
+print(json.dumps({'version':VERSION,'verdicts':verdicts,'candidate_reuse':reuse,'real_promotion_rejections':promotion_rejections}))
 '''
 command = ['docker','compose','run','--rm','--no-deps','-T']
 candidate = os.environ.get('EDITOR_BOUNDARY_CANDIDATE')
 if candidate:
     command += ['-v', str(Path(candidate).resolve(strict=True))+':/app/editor/source_pipeline.py:ro']
-command += ['--entrypoint','python','api','-c',code]
+command += ['--entrypoint','python','api','-c',code,generation]
+if os.environ.get('EDITOR_REUSE_BASELINE'):
+    command.append(str(uuid.UUID(os.environ['EDITOR_REUSE_BASELINE'])))
 result = json.loads(subprocess.check_output(command,input=json.dumps(rows),text=True))
 assert len(result['verdicts']) == len(rows)
 # Independent lexical reference: scan Unicode letters/numbers into runs.
@@ -67,6 +89,8 @@ for row, verdict in zip(rows,result['verdicts']):
         changes.append({'id':row['id'],'page':d['pdf_page'],'before':d['status'],'after':verdict['status'],'issues':verdict['issues']})
 assert rows==database(), 'SOURCE_RECORDS_CHANGED'
 report={'generation_id':generation,'version':result['version'],'api_pg_equal':True,'source_records_unchanged':True,
+    'candidate_reuse':result['candidate_reuse'],
+    'real_promotion_rejections':result['real_promotion_rejections'],
     'regions':len(rows),'old_agreed':old_agreed,'new_agreed':new_agreed,'review':len(rows)-new_agreed,
     'changes':changes,'semantic_acceptance':False,'candidate':bool(candidate),
     'code_sha256':hashlib.sha256(Path(candidate or root/'backend/editor/source_pipeline.py').read_bytes()).hexdigest()}
@@ -92,8 +116,35 @@ if metadata['manifest']['pipeline_version']=='source-spans-v4':
     expected=json.loads((root/'evidence/word-boundaries-candidate.json').read_text())
     assert expected['generation_id']==parent
     assert sorted(changed)==sorted(row['id'] for row in expected['changes']), 'UNEXPECTED_GATE_CHANGES'
+    claims=[]
+    while True:
+        request=urllib.request.Request(f'http://127.0.0.1:8810/v1/generations/{generation}/page_claims?offset={len(claims)}&limit=100',headers=headers)
+        with urllib.request.urlopen(request,timeout=60) as response:
+            batch=json.load(response)
+        claims.extend(batch['items'])
+        if not batch['has_more']: break
+        assert batch['items'], 'EMPTY_CLAIM_PAGE'
+    claim_query=query.replace("kind='source_spans'", "kind='page_claims'")
+    reference=json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',claim_query],text=True))
+    assert claims==reference, 'CLAIM_API_DB_MISMATCH'
+    assert len(claims)==len({r['data']['pdf_page'] for r in rows}), 'MISSING_CLAIM_PAGES'
+    sources={r['id']:r['data'] for r in rows};strict_pages=[]
+    for row in claims:
+        d=row['data']
+        assert d['reused_claim_candidates_from'] and d['reused_from_generation']==parent
+        if d['candidate_reuse_policy']=='UNCHANGED_MEASUREMENTS_STRICTER_SOURCE_GATE':
+            strict_pages.append(d['pdf_page'])
+        else:
+            assert d['candidate_reuse_policy']=='IDENTICAL_CONTEXT'
+        for claim in d['claims']+d['blocked_claims']:
+            assert claim['eligible_for_synthesis'] is False and claim['speaker'] is None
+            if claim['source_gate']=='MATCH':
+                assert claim['span_refs'] and all(sources[ref]['status']=='TEXT_AGREED' for ref in claim['span_refs']), 'INVALIDATED_SOURCE_REACHED_MATCH'
+    assert sorted(strict_pages)==sorted({r['page'] for r in expected['changes']}), 'WRONG_REUSE_POLICY'
     report['new_generation_acceptance']={'parent':parent,'raw_measurements_unchanged':True,
-        'expected_gate_changes':len(changed),'stored_verdicts_equal':True}
+        'expected_gate_changes':len(changed),'stored_verdicts_equal':True,
+        'reused_candidate_pages':len(claims),'strict_context_pages':strict_pages,
+        'invalidated_source_match_count':0,'fresh_candidate_model_calls':0}
 name='word-boundaries-candidate.json' if candidate else 'word-boundaries-deployed.json'
 (root/'evidence'/name).write_text(json.dumps(report,ensure_ascii=False,indent=2))
 print(json.dumps(report,ensure_ascii=False,indent=2))

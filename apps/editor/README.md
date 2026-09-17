@@ -1,6 +1,6 @@
 # Editör modülü — bağımsız kurulum
 
-Güncel yayın `source-boundaries-v4-20260917`: kelime sınırlarını silen optik karşılaştırma düzeltildi. Gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı; yeni analiz nesli ve bu sürümün paket kabulü ayrıca izleniyor. [Kod, kabul kanıtı ve açık işler](../../docs/editor/2026-09-17-word-boundary-gate.md).
+Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırlarını silen optik karşılaştırma düzeltildi. Gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı; yeni analiz nesli ve bu sürümün paket kabulü ayrıca izleniyor. [Kod, kabul kanıtı ve açık işler](../../docs/editor/2026-09-17-word-boundary-gate.md).
 
 Bu modül ana BI deposunda geliştirilir; kendi Docker projesi, PostgreSQL kayıtları,
 Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, tablolarını,

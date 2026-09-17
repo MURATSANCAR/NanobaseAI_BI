@@ -305,8 +305,27 @@ def reusable_claim_candidates(parent,key,spans):
     def context(rows):
         return [(r['data']['text'] if r['data']['status']=='TEXT_AGREED' and r['data']['role']=='TEXT' else '[UNVERIFIED_REGION]',
                  r['data']['bbox']) for r in reading_order(rows)]
-    if context(old)!=context(spans):
-        return None
+    previous_context, current_context = context(old), context(spans)
+    reuse_policy = 'IDENTICAL_CONTEXT'
+    if previous_context != current_context:
+        # Tightening a source gate adds no information. Retain the machine's
+        # original proposals as proposals, then run every quote/reference gate
+        # again below. A removed source can only invalidate a proposal. Never
+        # reuse this way when text/geometry changes or any source is promoted.
+        before = {r['record_key']: r['data'] for r in old}
+        after = {r['record_key']: r['data'] for r in spans}
+        if before.keys() != after.keys():
+            return None
+        for key in before:
+            a, b = before[key], after[key]
+            if any(a.get(k) != b.get(k) for k in ('text', 'raw_text', 'bbox', 'role', 'render_sha256')):
+                return None
+            if b['status'] == 'TEXT_AGREED' and a['status'] != 'TEXT_AGREED':
+                return None
+        if any(c.get('eligible_for_synthesis') is not False
+               for c in prior['data']['claims'] + prior['data']['blocked_claims']):
+            return None
+        reuse_policy = 'UNCHANGED_MEASUREMENTS_STRICTER_SOURCE_GATE'
     new_by_key={r['record_key']:str(r['id']) for r in spans}
     mapping={str(r['id']):new_by_key[r['record_key']] for r in old if r['record_key'] in new_by_key}
     candidates=[]
@@ -315,6 +334,7 @@ def reusable_claim_candidates(parent,key,spans):
             return None
         candidates.append({**candidate,'span_refs':[mapping[ref] for ref in candidate.get('span_refs',[])]})
     return {'page_role':prior['data']['page_role'],'claims':candidates,
+            'measurement_reuse_policy':reuse_policy,
             'uncertainties':prior['data']['uncertainties']},prior['data']['metrics'],str(prior['id'])
 
 
@@ -366,6 +386,7 @@ def interpret(job,evidence,spans,parent=None):
         'claims':accepted,'blocked_claims':blocked,'excluded_span_ids':excluded,
         'input_span_ids':list(allowed),'input_visual_descriptions':False,
         'reused_claim_candidates_from':reused_id if reused else None,
+        'candidate_reuse_policy':result.get('measurement_reuse_policy') if reused else None,
         'reused_from_generation':str(parent) if reused else None,
         'uncertainties':result.get('uncertainties',[]),'metrics':metrics,'review_status':'PENDING'})
     save(job,'page_checks',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
