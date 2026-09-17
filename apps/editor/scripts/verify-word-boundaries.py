@@ -50,11 +50,13 @@ if len(sys.argv)>2:
  assert promotion_rejections, 'NO_REAL_PROMOTION_CASES'
 print(json.dumps({'version':VERSION,'verdicts':verdicts,'candidate_reuse':reuse,'real_promotion_rejections':promotion_rejections}))
 '''
-command = ['docker','compose','run','--rm','--no-deps','-T']
 candidate = os.environ.get('EDITOR_BOUNDARY_CANDIDATE')
 if candidate:
-    command += ['-v', str(Path(candidate).resolve(strict=True))+':/app/editor/source_pipeline.py:ro']
-command += ['--entrypoint','python','api','-c',code,generation]
+    command = ['docker','compose','run','--rm','--no-deps','-T','-v',
+        str(Path(candidate).resolve(strict=True))+':/app/editor/source_pipeline.py:ro',
+        '--entrypoint','python','api','-c',code,generation]
+else:
+    command = ['docker','compose','exec','-T','api','python','-c',code,generation]
 if os.environ.get('EDITOR_REUSE_BASELINE'):
     command.append(str(uuid.UUID(os.environ['EDITOR_REUSE_BASELINE'])))
 result = json.loads(subprocess.check_output(command,input=json.dumps(rows),text=True))
