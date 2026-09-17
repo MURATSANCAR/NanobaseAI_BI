@@ -446,6 +446,15 @@ class SemanticResolver:
                 continue
             # After a named set of records ("bekleyen sipariş", "fatura") the word counts them. After a
             # measure ("satışta adet") or a breakdown column ("kitap adet") it is the quantity measure.
+            # "stok adedi", "elde kalan stok miktarı": after a *state* measure the word is only its unit —
+            # the balance is already a quantity. Kept, it added the sold-quantity measure beside the
+            # stock and dragged the default year onto a balance that has no period.
+            state_before = [h for h in hits if h is not slot and h.mapping and h.span and h.span[1] == k
+                            and h.semantic_type == SemanticType.METRIC and (h.mapping.extra or {}).get("state_measure")]
+            if state_before:
+                hits.remove(slot)
+                sq.explanation.append(f"'{qf.tokens[k]}' '{state_before[0].term}' ölçüsünün birimi olarak okundu")
+                continue
             left = [h for h in hits if h is not slot and h.mapping and h.span and h.span[1] == k
                     and h.semantic_type in (SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)]
             if left and all(h.mapping.entity != slot.mapping.entity for h in left):
@@ -496,6 +505,16 @@ class SemanticResolver:
                                      explain={"source": "defined_cue", "why": f"'{tok}': {m.entity}.{m.column} dolu olan kayıtlar ({m.column} <> {m.values[0]!r})"}))
             consumed.add(k)
             sq.explanation.append(f"'{col_slot.term} {tok}' → {m.entity}.{m.column} <> {m.values[0]!r} (değeri girilmiş kayıtlar)")
+
+        # 2g) one measure named twice ("elde kalan stok") is one measure: the second name is dropped, or
+        #     the answer carries the same column twice.
+        seen_metric: set[str] = set()
+        for slot in list(hits):
+            if slot.semantic_type == SemanticType.METRIC and slot.concept_id:
+                if slot.concept_id in seen_metric:
+                    hits.remove(slot)
+                else:
+                    seen_metric.add(slot.concept_id)
 
         # An adjacent explicit measure gives a single-word, ambiguous label its
         # modifier reading when the catalog certifies that value on the measure's entity.
@@ -666,8 +685,11 @@ class SemanticResolver:
         # to it was a restriction nobody asked for that the gate then could not find on any column.
         # A count the resolver composed from "kaç" is not a certified measure either.
         placed = [s_ for s_ in hits if s_.mapping is not None]
+        # A state measure (stock on hand) is a balance over every movement: it has no period of its own,
+        # and a default year put on it made the gate refuse the statement — or, worse, a model date it.
         undated = bool(placed) and not any(s_.semantic_type == SemanticType.METRIC
                                            and (s_.explain or {}).get("source") != "count_cue"
+                                           and not (s_.mapping.extra or {}).get("state_measure")
                                            for s_ in placed)
         if not sq.temporal and self.default_temporal is not None and not undated:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal

@@ -274,3 +274,20 @@ def test_the_current_copy_is_the_one_measured_furthest_forward_up_to_today():
     st = [_p("LG_211_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2021-01-01", "2030-03-20"), ctx={"n0": "211", "n1": "01"}),
           _p("LG_411_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2026-01-01", "2027-03-23"), ctx={"n0": "411", "n1": "01"})]
     assert [p.table_name for p in tables_for(st, None, None)] == ["LG_411_01_STLINE"]
+
+
+def test_a_card_table_alone_in_its_select_is_read_from_one_copy():
+    """2026-09-18: "geçen yıl fatura kesilip bu yıl hiç kesilmemiş müşteriler" returned 67.308 rows for 33.573
+    customers — CLCARD stood alone in FROM, the dated invoices only inside EXISTS, and the card table was
+    read from both firm copies in step: every customer once per copy."""
+    c21 = SchemaProfile(datasource_id="d", table_name="LG_211_CLCARD", table_pattern="LG_{n0}_CLCARD", entity="CLCARD", schema_name="dbo",
+                        columns=[ColumnProfile(name="LOGICALREF", data_type="int"), ColumnProfile(name="CODE", data_type="varchar")], row_count=10, context={"n0": "211"})
+    c41 = SchemaProfile(datasource_id="d", table_name="LG_411_CLCARD", table_pattern="LG_{n0}_CLCARD", entity="CLCARD", schema_name="dbo",
+                        columns=[ColumnProfile(name="LOGICALREF", data_type="int"), ColumnProfile(name="CODE", data_type="varchar")], row_count=10, context={"n0": "411"})
+    sql = physicalize_sql("SELECT c.CODE FROM CLCARD c WHERE EXISTS (SELECT 1 FROM STLINE s WHERE s.TOTAL > 0 AND s.DATE_ >= '2025-01-01' AND s.DATE_ < '2026-01-01') "
+                          "AND NOT EXISTS (SELECT 1 FROM STLINE s2 WHERE s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01')",
+                          [Y2021, Y2026, c21, c41], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert "LG_411_CLCARD" in sql and "LG_211_CLCARD" not in sql, sql
+    joined = physicalize_sql("SELECT c.CODE, SUM(s.TOTAL) FROM STLINE s JOIN CLCARD c ON c.LOGICALREF = s.TOTAL GROUP BY c.CODE",
+                             [Y2021, Y2026, c21, c41], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert "LG_211_CLCARD" in joined and "LG_411_CLCARD" in joined, joined      # beside the dated table it stays in step
