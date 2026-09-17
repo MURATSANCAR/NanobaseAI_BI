@@ -31,8 +31,15 @@ def route_region(line, secondary, pdf_text, pdf_usable, reread):
         readers.update({f'TESSERACT_PSM_{r["psm"]}':r['text'] for r in reread['readings']})
     lexical=[key for key,text in readers.items()
              if any(sum(c.isalpha() for c in token)>=2 for token in word_tokens(text))]
+    # A drop cap or a single-character label is legitimate text when native
+    # geometry or stable cropped recognition supports it. Do not discard it.
+    if pdf_usable and word_tokens(pdf_text):lexical.append('NATIVE_SINGLE_GLYPH')
+    readings=[word_tokens(r['text']) for r in reread['readings']] if reread else []
+    if (len(readings)==2 and readings[0] and readings[0]==readings[1]
+            and readings[0]==word_tokens(line.get('region_text') or '')):
+        lexical.append('STABLE_CROP_GLYPH')
     return {'method':'lexical-routing-v1','request_ocr':bool(lexical),
-            'reason':'LEXICAL_READER_EVIDENCE' if lexical else 'NO_LEXICAL_READER_EVIDENCE',
+            'reason':'LEXICAL_OR_SUPPORTED_GLYPH_EVIDENCE' if lexical else 'NO_LEXICAL_READER_EVIDENCE',
             'supporting_readers':lexical,'changes_source_acceptance':False}
 
 
