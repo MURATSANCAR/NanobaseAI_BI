@@ -6,6 +6,12 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör kaynak kutuları ve sınırlı OCR-VL pilotu
+
+- Kaynak ekranına özgün sayfada metin kutusu gösterme, kullanılabilir PDF/yeniden okuma karşılaştırması ve ölçüm yeniden kullanımı bilgisi eklendi. Sunucuda web imajı dağıtıldı; gerçek Chrome/API/PG ile 320/390/768/1440 px, altı sekme, metin/kutu eşliği ve çıkış kontrolü geçti.
+- Ağsız PaddleOCR-VL aracı 4 CPU/10 GiB sınırıyla 15 gerçek başarısız bölgeyi işliyor. İki ilk entegrasyon hatası genel araç kodunda giderildi, loglar korundu. İlk tamamlanan sonuç okuyucularla eşleşmedi; metin kabulü yapılmadı. Gerçek API/PG/artifact denetçisi ve isteğe bağlı offline paket desteği eklendi.
+- V3 inceleme API'si ilk 45 sayfada gerçek DB ile eşleşti; yayın/soru kapıları kapalı, kaynaklar değişmedi. Tam koşu ve OCR pilotu devam ediyor. [Ayrıntı](editor/2026-09-17-source-v3.md).
+
 ## 2026-09-17 — Editör v3: bozuk PDF Unicode ve yeniden okuma entegrasyonu
 
 - Ek düzlem özel kullanım karakterlerinin metin sayılması genel kodda düzeltildi. Gerçek API/PG/artifact tekrarında 778 → 828 okuyucu anlaşması, 371 → 321 inceleme; eski kaynak kayıtları değişmedi. 92 kararlı yeniden okuma çelişkisi engellendi.
