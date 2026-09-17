@@ -407,6 +407,9 @@ class SemanticQuery:
     # ("payı yüzde kaç" needs a denominator). Unlike `unhandled`, this is a request to write different
     # SQL, not a meaning nobody has defined — so it routes to the model instead of refusing.
     shape: Optional[str] = None
+    # "X, Y'nin ne kadarı": a ratio of two resolved measures — numerator and denominator by term. Set
+    # beside shape "RATIO"; with it the deterministic compiler writes the ratio column itself.
+    ratio: Optional[dict[str, str]] = None
     # Çıktının biçimi soruda tarif edildiyse istenen kolonlar, sorulduğu sırayla ("1. kolon kanal
     # adı 2. kolon yıl"). Anlamı değil sunumu belirler: neyin hangi sırayla görüneceğini söyler.
     projection: list[str] = field(default_factory=list)
@@ -493,6 +496,7 @@ class SemanticQuery:
             "clarification": list(self.clarification),
             "modifierTelemetry": self.modifier_telemetry,
             "shape": self.shape,
+            "ratio": dict(self.ratio) if self.ratio else None,
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
             "languageCandidates": [dict(c) for c in self.language_candidates],

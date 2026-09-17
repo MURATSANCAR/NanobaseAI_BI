@@ -167,13 +167,20 @@ def _lit(v: str) -> str:
 def _pred_sql(alias: str, m: Mapping, d: Dialect) -> str:
     col = f"{alias}.{d.q(m.column)}"
     op = (m.operator or "IN").upper()
+    def val(v: str) -> str:
+        # A condition may compare two columns of the entity ("AMOUNT > SHIPPEDAMOUNT": the open order
+        # line is the one not fully shipped). Written ENTITY.COLUMN, the value is that column, not text.
+        mm = re.fullmatch(r"(\w+)\.(\w+)", str(v).strip())
+        if mm and mm.group(1).upper() == (m.entity or "").upper():
+            return f"{alias}.{d.q(mm.group(2))}"
+        return _lit(v)
     if op in ("IN", "NOT IN"):
-        return f"{col} {op} ({', '.join(_lit(v) for v in m.values)})"
+        return f"{col} {op} ({', '.join(val(v) for v in m.values)})"
     if op == "BETWEEN" and len(m.values) == 2:
-        return f"{col} BETWEEN {_lit(m.values[0])} AND {_lit(m.values[1])}"
+        return f"{col} BETWEEN {val(m.values[0])} AND {val(m.values[1])}"
     if op == "=" and len(m.values) > 1:
-        return f"{col} IN ({', '.join(_lit(v) for v in m.values)})"
-    return f"{col} {op} {_lit(m.values[0])}"
+        return f"{col} IN ({', '.join(val(v) for v in m.values)})"
+    return f"{col} {op} {val(m.values[0])}"
 
 
 def _pred_key_sql(entity: str, key: str, d: Dialect) -> Optional[str]:
@@ -285,7 +292,7 @@ class DeterministicCompiler:
             # the source's encoding; the model reads the description and the gate checks the result.
             return None, "qualifiers answered by a column whose values the source does not spell out: " + ", ".join(
                 f"{c['token']}→{c['entity']}.{c['column']}" for c in q.qualifier_columns)
-        if q.shape:
+        if q.shape and not (q.shape == "RATIO" and q.ratio):
             return None, f"question asks for a {q.shape.lower()} this compiler cannot express"
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
         if not metrics:
@@ -511,6 +518,15 @@ class DeterministicCompiler:
                 metric_aliases.append(malias)
                 select.append(f"{formula} AS {malias}")
             explain.append(f"ölçü: '{s.term}' → {s.mapping.formula}")
+        if q.ratio and not pivots:
+            # "X, Y'nin ne kadarı": the two totals stay beside the ratio — the figure asked for, with
+            # what it was made of. A zero denominator gives no ratio rather than an error.
+            num = next((m for m in plan.metrics if m.term == q.ratio.get("numerator")), None)
+            den = next((m for m in plan.metrics if m.term == q.ratio.get("denominator")), None)
+            if num is not None and den is not None and num is not den:
+                select.append(f"CAST({scoped_formula(num)} AS FLOAT) / NULLIF({scoped_formula(den)}, 0) AS oran")
+                metric_aliases.append("oran")
+                explain.append(f"oran: '{num.term}' / '{den.term}'")
         where: list[str] = []
         for m in self._default_filters(plan.entity):
             where.append(_pred_sql(alias, m, d))

@@ -142,6 +142,10 @@ _RANK_CUE = frozenset("en ilk top bastaki basta cok fazla yuksek dusuk buyuk".sp
 _WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
 # "payı yüzde kaç" asks for a share: a plain total is a different answer, not a rounder one.
 _SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzdelik)\b")
+#: "indirim yüzdesi tanımlı", "vadesi girilmiş", "grup kodu dolu": the column right before carries a value.
+_DEFINED_CUE = frozenset("tanimli tanimlanmis tanimlanan dolu girilmis girili belirlenmis atanmis".split())
+#: "X, Y'nin ne kadarı?", "X Y'nin yüzde kaçı?", "X'in Y'ye oranı": two measures, one divided by the other.
+_RATIO_CUE = re.compile(r"\b(ne kadari|ne kadarini|kacta kaci|yuzde kaci|yuzde kacini|orani|oranini|oran)\b")
 
 
 def _parse_condition(key: str) -> Optional[tuple[tuple[str, str], set[str]]]:
@@ -430,13 +434,38 @@ class SemanticResolver:
             k = slot.span[0]
             if not _COUNT_CUE.fullmatch(fold(qf.tokens[k])):
                 continue
+            # After a named set of records ("bekleyen sipariş", "fatura") the word counts them. After a
+            # measure ("satışta adet") or a breakdown column ("kitap adet") it is the quantity measure.
             left = [h for h in hits if h is not slot and h.mapping and h.span and h.span[1] == k
-                    and h.semantic_type != SemanticType.METRIC]          # "satışta adet": after a measure it is the quantity
+                    and h.semantic_type in (SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)]
             if left and all(h.mapping.entity != slot.mapping.entity for h in left):
                 hits.remove(slot)
                 consumed.discard(k)
                 sq.explanation.append(f"'{qf.tokens[k]}' sayım sözcüğü olarak okundu: '{left[0].term}' kayıtları sayılır, "
                                       f"{slot.mapping.entity} ölçüsü değil")
+
+        # 2e) "kartında indirim yüzdesi tanımlı müşteriler": a column named and then said to be filled.
+        #     The word is a condition on that column — non-zero for a number, non-empty for text — not
+        #     a word the catalog lacks. Left unread, the question was refused for "tanımlı".
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or fold(tok) not in _DEFINED_CUE:
+                continue
+            col_slot = next((h for h in hits if h.semantic_type == SemanticType.COLUMN and h.mapping and h.mapping.column
+                             and h.span and h.span[1] == k), None)
+            if col_slot is None:
+                continue
+            prof = self.by_entity.get(col_slot.mapping.entity)
+            column = prof.column(col_slot.mapping.column) if prof else None
+            if column is None:
+                continue
+            numeric = any(t in (column.data_type or "").lower() for t in ("int", "float", "decimal", "numeric", "money", "real", "double", "bit"))
+            m = Mapping(concept_id="", entity=col_slot.mapping.entity, table_pattern=col_slot.mapping.table_pattern,
+                        column=column.name, operator="<>", values=["0" if numeric else ""])
+            hits.append(ResolvedSlot(term=f"{col_slot.term} {tok}", semantic_type=SemanticType.DIMENSION_VALUE, status="INFERRED", mapping=m,
+                                     confidence=0.8, span=(k, k + 1),
+                                     explain={"source": "defined_cue", "why": f"'{tok}': {m.entity}.{m.column} dolu olan kayıtlar ({m.column} <> {m.values[0]!r})"}))
+            consumed.add(k)
+            sq.explanation.append(f"'{col_slot.term} {tok}' → {m.entity}.{m.column} <> {m.values[0]!r} (değeri girilmiş kayıtlar)")
 
         # An adjacent explicit measure gives a single-word, ambiguous label its
         # modifier reading when the catalog certifies that value on the measure's entity.
@@ -756,6 +785,12 @@ class SemanticResolver:
         entity = next(iter(metric_entities)) if len(metric_entities) == 1 else None
         from semantic_layer.runtime import periods
 
+        # A count the resolver composed ("bekleyen sipariş adedi") is dated like any measure of its
+        # entity: without a binding the gate had nothing to check the period against, and a period
+        # the question stated could be dropped from the statement unnoticed.
+        bound_entities = metric_entities | {s.mapping.entity for s in sq.metrics if s.mapping and s.status == "COMPOSED"}
+        if sq.temporal and bound_entities:
+            metric_entities = bound_entities
         if sq.temporal and metric_entities:
             # One binding per measured entity: a question over two facts is bounded on both, or the
             # period check silently covers neither.
@@ -800,9 +835,20 @@ class SemanticResolver:
                 "doğrulanmadı. Sonuç eş süreli performans değişimi olarak yorumlanmamalı."
             )
 
+        # 8b) "son üç ayda satılan adet, aynı dönemde üretilen adedin ne kadarı?": two measures and a
+        #     word asking for one over the other. The first measure named is the numerator, the second
+        #     the denominator — the shape Turkish gives it ("X, Y'nin ne kadarı", "X'in Y'ye oranı").
+        #     Answered as two totals the question "how much of" became "how much"; the ratio is asked.
+        two = [s_ for s_ in hits if s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.span and s_.span[1] > s_.span[0]]
+        two.sort(key=lambda s_: s_.span[0])
+        if len(two) == 2 and _RATIO_CUE.search(fold(question)) and not any("/" in (s_.mapping.formula or "") for s_ in two):
+            sq.shape = "RATIO"
+            sq.ratio = {"numerator": two[0].term, "denominator": two[1].term}
+            sq.explanation.append(f"oran istendi: '{two[0].term}' / '{two[1].term}'")
+
         # 9) a share question needs a denominator. When no certified ratio supplies one, answering with
         #    the plain total would quietly replace "what percent" with "how much".
-        if _SHARE_CUE.search(fold(question)) and not any(
+        if not sq.ratio and _SHARE_CUE.search(fold(question)) and not any(
             s_.semantic_type == SemanticType.METRIC and s_.mapping and "/" in (s_.mapping.formula or "") for s_ in hits
         ):
             cue = next((t for t in qf.tokens if _SHARE_CUE.fullmatch(stem(t)) or _SHARE_CUE.fullmatch(fold(t))), "pay")
@@ -1557,12 +1603,17 @@ class SemanticResolver:
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
         entity = None
         # "bekleyen sipariş adedi": the thing counted is the resolved term the count word follows.
+        count_key = None
         for k, tok in enumerate(qf.tokens):
             if not _COUNT_CUE.fullmatch(fold(tok)):
                 continue
             before = [h for h in hits if h.mapping and h.span and h.span[1] == k and h.semantic_type != SemanticType.METRIC]
             if before:
                 entity = before[0].mapping.entity
+                # The catalog may say how this thing is counted: an order is a document, its lines are
+                # not orders — "count_key" on the concept names the column whose distinct values are one
+                # each ("ORDFICHEREF" on the order-line filter counts orders, not lines).
+                count_key = (before[0].mapping.extra or {}).get("count_key")
                 break
         for k, tok in enumerate(qf.tokens):
             if entity:
@@ -1577,11 +1628,14 @@ class SemanticResolver:
         if prof is None:
             return None
         key = next((c.name for c in prof.columns if c.is_primary_key), None)
+        if count_key and prof.column(count_key) is not None:
+            key = prof.column(count_key).name
         formula = f"COUNT(DISTINCT {entity}.{key})" if key else f"COUNT(*)"
         m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, formula=formula)
         return ResolvedSlot(
             term="kayıt sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED", mapping=m, confidence=0.75,
-            explain={"why": f"soru adet soruyor → {entity} kayıtları {('anahtar ' + key) if key else 'satır'} üzerinden sayıldı",
+            explain={"why": f"soru adet soruyor → {entity} kayıtları {('anahtar ' + key) if key else 'satır'} üzerinden sayıldı"
+                            + (" (kavramın sayım anahtarı)" if count_key else ""),
                      "source": "count_cue"},
         )
 

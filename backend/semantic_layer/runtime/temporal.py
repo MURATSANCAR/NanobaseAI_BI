@@ -214,8 +214,11 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         n = _count(m.group(1))
         if n is None:
             continue
+        # The N months ending with the current one: "son üç ay" on 17 September is July, August and
+        # September. Counted from one month earlier it read four months, and a sold-to-produced ratio
+        # over "the same period" silently carried an extra month.
         y, mo = today.year, today.month
-        start_m = mo - n
+        start_m = mo - n + 1
         while start_m <= 0:
             start_m += 12
             y -= 1
