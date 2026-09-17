@@ -53,7 +53,8 @@ from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
 from semantic_layer.runtime.audit import audit_sql, unmet_obligations
 from semantic_layer.runtime import critic
 from semantic_layer.runtime.guardrails import is_query_timeout, allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
-from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
+from semantic_layer.runtime.llm_jobs import LlmJobs
+from semantic_layer.runtime.llm_queue import NORMAL, LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
 
@@ -110,6 +111,10 @@ class Runtime:
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
         self.queue = queue or LlmQueue.from_env(self.store.engine)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
+        # Prompts other modules leave at the door (202 + id). Reads `self.llm` at run time: the admin
+        # screen swaps the client without a restart.
+        self.jobs = LlmJobs.from_env(self.store.engine, lambda: self.llm, slots=self.queue.slots,
+                                     tenant_id=settings.tenant_id, datasource_id=settings.datasource_id)
         self._engine_lock = threading.Lock()
         # Executed results, kept whole so the table, the chart and the export read the same rows.
         self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
@@ -322,7 +327,10 @@ class Runtime:
                 # choice to itself. It is not wanted here and the person asking pays for it.
                 client = LlmClient(base, model, s.llm_key, timeout,
                                    extra={"chat_template_kwargs": {"enable_thinking": False}} | s.llm_extra)
-                existing.selector = TableSelector(client)
+                # Through the same line as every other call: it used to go straight to the provider,
+                # one more concurrent request than the slot count says there is.
+                existing.selector = TableSelector(QueuedLlm(client, self.queue, purpose="nl2sql:selector",
+                                                            tenant_id=s.tenant_id, datasource_id=s.datasource_id))
                 log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
             except Exception as e:  # noqa: BLE001
                 log.warning("table selector unavailable, sending every retrieved table: %s", e)
@@ -664,6 +672,11 @@ class Runtime:
     def stop_refresher(self) -> None:
         self._stop.set()
 
+    def llm_for(self, module: str, priority: Optional[int] = None):
+        """The shared model, asked on behalf of `module`: the queue shares slots between modules, so
+        it has to know which one is asking. None when no model is configured."""
+        return self.llm.for_module(module, priority=priority) if isinstance(self.llm, QueuedLlm) else self.llm
+
     def _refresh_loop(self) -> None:
         while not self._stop.wait(self._refresh_sec):
             try:
@@ -729,7 +742,7 @@ class Runtime:
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
                       f"Soru: {question}\nSatır sayısı: {result['totalRows']}\nİlk satırlar (JSON): {json.dumps(sample, ensure_ascii=False)[:4000]}")
             try:
-                return self.llm.chat([{"role": "user", "content": prompt}], max_tokens=300).strip() + note
+                return self.llm_for("summary").chat([{"role": "user", "content": prompt}], max_tokens=300).strip() + note
             except Exception as e:  # noqa: BLE001
                 log.warning("llm summary failed: %s", e)
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
@@ -786,7 +799,7 @@ class Runtime:
         # Certified data concepts are positive evidence of a BI request. Only unplaced
         # questions need the conversational classifier; unknown terms remain eligible.
         if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
-                question, self.llm, has_context=bool(self.thread_plans.get(thread_id))):
+                question, self.llm_for("chat"), has_context=bool(self.thread_plans.get(thread_id))):
             qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
                        resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
@@ -1369,7 +1382,7 @@ class Runtime:
         def run():
             try:
                 only = [(entity, column)] if column is not None else [(entity, c.name) for p in self.profiles if p.entity == entity for c in p.columns] + [(entity, None)]
-                out = vocabulary.maintain(self.store, self.settings, self.llm, self.profiles, max_targets=len(only) or 1, only=only)
+                out = vocabulary.maintain(self.store, self.settings, self.llm_for("vocabulary", NORMAL), self.profiles, max_targets=len(only) or 1, only=only)
                 log.info("vocabulary generated for %s.%s: %s", entity, column or "*", out)
             except Exception as e:  # noqa: BLE001
                 log.warning("vocabulary generation failed for %s.%s: %s", entity, column, e)
@@ -1742,9 +1755,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         rt = state["rt"]
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
         rt.start_refresher()
+        # Every request waiting for the model holds one of these threads while it waits. Forty (the
+        # default) is forty waiting prompts and then /health queues behind them too.
+        try:
+            import anyio.to_thread
+
+            anyio.to_thread.current_default_thread_limiter().total_tokens = int(os.environ.get("SEMANTIC_THREADPOOL", "200"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("thread pool size left at its default: %s", e)
+        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
+            rt.jobs.start()
         try:
             yield
         finally:
+            rt.jobs.stop()
             rt.stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
@@ -1964,7 +1988,89 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def llm_queue() -> dict[str, Any]:
         """Who is using the model and who is waiting — the cockpit shows this instead of a spinner."""
         r = rt()
-        return r.queue.status()
+        return r.queue.status() | {"jobs": r.jobs.stats()}
+
+    # ---------------------------------------------------------------- prompts left at the door
+    def _job_for(job_id: str, request: Request) -> dict[str, Any]:
+        """The job, if this caller may see it: whoever left it, an admin, or a service caller."""
+        r = rt()
+        found, owner = r.jobs.owner(job_id)
+        user = _ask_user(request)
+        if found and owner and user and owner != user and not admin_mod.is_admin(user):
+            found = False
+        view = r.jobs.get(job_id) if found else None
+        if view is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "İş bulunamadı."})
+        return view
+
+    @app.post("/api/v1/llm/jobs", status_code=202)
+    def llm_job_submit(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Leave a prompt, get an id. The connection closes now; the answer is asked for later
+        (GET …/{id}, …/{id}?wait=25 or …/{id}/events). Nothing here waits for the model."""
+        _require_caller(request)
+        r = rt()
+        if r.llm is None:
+            raise HTTPException(status_code=503, detail={"code": "NO_MODEL", "message": "Model bağlı değil."})
+        module = str(body.get("module") or "").strip()
+        if not module:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "module: hangi modülün sorduğu gerekli."})
+        try:
+            return r.jobs.submit(body.get("messages"), module=module, priority=body.get("priority"), user_id=_ask_user(request),
+                                 max_tokens=int(body.get("maxTokens") or 4096), temperature=float(body.get("temperature") or 0.0),
+                                 dedup=bool(body.get("dedup", True)), cache_ttl_sec=int(body.get("cacheTtlSec") or 0))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)}) from e
+
+    @app.get("/api/v1/llm/jobs/{job_id}")
+    async def llm_job_get(job_id: str, request: Request, wait: float = 0.0) -> dict[str, Any]:
+        """`wait` (seconds, at most 300) holds the answer back until the job closes — one request
+        instead of a polling loop, without holding a server thread while it waits."""
+        _require_caller(request)
+        view = await run_in_threadpool(_job_for, job_id, request)
+        deadline = time.monotonic() + max(0.0, min(float(wait or 0.0), 300.0))
+        pause = 0.25
+        while view["status"] in ("QUEUED", "RUNNING") and time.monotonic() < deadline:
+            await asyncio.sleep(min(pause, max(0.0, deadline - time.monotonic())))
+            pause = min(pause * 1.5, 2.0)
+            view = await run_in_threadpool(_job_for, job_id, request)
+        return view
+
+    @app.get("/api/v1/llm/jobs/{job_id}/events")
+    async def llm_job_events(job_id: str, request: Request):
+        """The job's life as it happens, one JSON object per line: every change of status or place in
+        line, a heartbeat every 15 seconds, and the closed job last."""
+        _require_caller(request)
+        first = await run_in_threadpool(_job_for, job_id, request)
+
+        async def events():
+            view, seen, quiet, pause = first, None, 0.0, 0.5
+            while True:
+                mark = (view["status"], view["phase"], view["position"])
+                if mark != seen:
+                    seen, quiet, pause = mark, 0.0, 0.5
+                    yield json.dumps({"event": "status", "job": view}, ensure_ascii=False, default=str) + "\n"
+                    if view["status"] not in ("QUEUED", "RUNNING"):
+                        return
+                elif quiet >= 15:
+                    quiet = 0.0
+                    yield json.dumps({"event": "heartbeat"}) + "\n"
+                await asyncio.sleep(pause)
+                quiet += pause
+                pause = min(pause * 1.5, 2.0)
+                try:
+                    view = await run_in_threadpool(_job_for, job_id, request)
+                except HTTPException:
+                    yield json.dumps({"event": "error", "message": "İş bulunamadı."}, ensure_ascii=False) + "\n"
+                    return
+
+        return StreamingResponse(events(), media_type="application/x-ndjson",
+                                 headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"})
+
+    @app.delete("/api/v1/llm/jobs/{job_id}")
+    def llm_job_cancel(job_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        _job_for(job_id, request)
+        return rt().jobs.cancel(job_id) or {}
 
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:
@@ -2860,7 +2966,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not question:
             raise _report_fail(reports_mod.ReportError("Önce bir veri sorusu gerekiyor."))
         try:
-            plan = reports_mod.refine_plan(r.llm, question, body.get("columns") or [], str(body.get("instruction") or ""))
+            plan = reports_mod.refine_plan(r.llm_for("reports"), question, body.get("columns") or [], str(body.get("instruction") or ""))
         except reports_mod.ReportError as e:
             raise _report_fail(e) from e
         except Exception as e:  # noqa: BLE001

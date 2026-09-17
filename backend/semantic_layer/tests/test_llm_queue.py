@@ -44,8 +44,10 @@ def queue_store(tmp_path):
     return store
 
 
-def _ask(llm, text, results, idx):
+def _ask(llm, text, results, idx, waits=None):
     results[idx] = llm.chat([{"role": "user", "content": text}])
+    if waits is not None:
+        waits[idx] = llm.last_wait_ms          # what a call waited is known to the thread that made it
 
 
 def test_requests_are_serialised_and_ordered(queue_store):
@@ -80,8 +82,9 @@ def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
     queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
     client = QueuedLlm(llm, queue)
     results: dict[int, str] = {}
+    waits: dict[int, int] = {}
     a = threading.Thread(target=_ask, args=(client, "uzun", results, 0))
-    b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1))
+    b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1, waits))
     a.start()
     try:
         assert started.wait(timeout=5), "first request never reached the model"
@@ -99,7 +102,7 @@ def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
         if b.ident is not None:
             b.join(timeout=20)
     assert results[1] == "ok:beklesin"
-    assert client.last_wait_ms > 0
+    assert waits[1] > 0
 
 
 def test_a_dead_worker_does_not_block_the_line(queue_store):
