@@ -946,7 +946,9 @@ def empty_result_note(sql: str, rules_text: str) -> str:
 #: the pack silently pushes the schema, the catalog and the examples out of the window, and the only
 #: symptom is worse SQL. The budget is generous — the hand-written documentation for a live
 #: deployment is a tenth of it — and what it drops is said out loud rather than vanishing.
-RULES_BUDGET = int(os.environ.get("SEMANTIC_PROMPT_RULES_CHARS", "20000"))
+#: 40 000, not 20 000 (2026-09-17): the hand-written pack passed 20 000 characters and the newest rule was
+#: exactly the one cut off. The hosted model carries a 128k context; the schema keeps its own budget.
+RULES_BUDGET = int(os.environ.get("SEMANTIC_PROMPT_RULES_CHARS", "40000"))
 
 
 def clean_rules(text: str, budget: int = 0) -> str:
@@ -2100,8 +2102,12 @@ class CompilerRouter:
             out = self.deterministic.compile(q, catalog)
             if out is not None:
                 return out
-            return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
-                                 explain=["Bu yokluk sorusunun ilişki, işlem türü veya dönem kapsamı tanımlı değil. Hangi işlem ve dönem için kayıt aramadığınızı belirtir misiniz?"], certified=False)
+            # An absence the resolver pinned to an entity ("hiç sevkiyat almamış" → no STLINE row) is
+            # a question the model can write: the gate then demands the anti-join over that entity.
+            # An absence read only from a verb root, with no certified contract, is still asked back.
+            if not any(m.get("decision") == "ABSENCE" and m.get("absent_entity") for m in (q.modifiers or [])):
+                return CompiledQuery(sql="", compiler="clarification", catalog_version=q.catalog_version,
+                                     explain=["Bu yokluk sorusunun ilişki, işlem türü veya dönem kapsamı tanımlı değil. Hangi işlem ve dönem için kayıt aramadığınızı belirtir misiniz?"], certified=False)
         if self.primary:
             comp = {"deterministic": self.deterministic, "existing_llm": self.existing, "existing": self.existing}.get(self.primary) or self.alternates.get(self.primary)
             if comp is not None:

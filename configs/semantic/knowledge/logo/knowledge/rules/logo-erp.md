@@ -45,7 +45,7 @@ veya COUNT(DISTINCT başlık.LOGICALREF) kullan.
 
 ## Kural 9 — Üretim: baskı, üretim emri, sarf, üretimden giriş — iş teyidi bekliyor
 Yayınevinde bir kitabın **baskısı** bir **üretim emridir**: `PRODORD` (bir satır = bir baskı/üretim emri; `ITEMREF` → ITEMS, `DATE_` emir tarihi,
-`PLNAMOUNT` planlanan adet, `STATUS` 3 = tamamlandı, `CANCELLED` = 0). "Son üç baskı" = ürünün `DATE_`'e göre en yeni üç üretim emri
+`PLNAMOUNT` planlanan adet, `STATUS` 3 = tamamlandı, `CANCELLED` = 0). "Son üç baskı" = ürünün **tamamlanmış** (`STATUS = 3`) ve `DATE_`'e göre en yeni üç üretim emri
 (ROW_NUMBER() OVER (PARTITION BY ITEMREF ORDER BY DATE_ DESC)); "kaç baskı yaptı" = ürünün üretim emri sayısı.
 - **Çekilen / sarf edilen malzeme miktarı** = `STLINE` sarf fişi satırları: `TRCODE = 12 AND IOCODE = 4 AND LINETYPE = 0 AND CANCELLED = 0`,
   emre bağ `STLINE.PRODORDERREF = PRODORD.LOGICALREF`; miktar `AMOUNT` (malzeme kartı `STOCKREF`). Baskı başına toplam: emir bazında SUM(AMOUNT).
@@ -53,4 +53,17 @@ Yayınevinde bir kitabın **baskısı** bir **üretim emridir**: `PRODORD` (bir 
 - Reçete/alt malzeme tabloları (`STCOMPLN` karma koli, `BOMLINE` reçete) **planlanan** bileşeni verir, fiilen çekilen miktarı vermez; "çekilen/sarf/kullanılan" sorularında sarf fişi okunur.
 - "Bir kitabın …" genel bir isimdir, belli bir kitap değil: kitap kırılımı (ITEMS.CODE/NAME ile GROUP BY) yapılır, `NAME = 'kitap'` gibi bir filtre yazılmaz.
 - Örnek sorular: bir kitabın son üç baskısındaki malzeme farkı; son üç ayda üretilen adet; baskı başına sarf; kaç baskı yapıldı.
+
+## Kural 10 — Sevkiyat ve "sipariş verip hiç sevkiyat almamış" — iş teyidi bekliyor
+- **Sevkiyat** = malzeme çıkış hareketi: `STLINE` satış satırları `TRCODE IN (7,8)`, `IOCODE = 4`, `LINETYPE = 0`, `CANCELLED = 0`; miktar `AMOUNT`, cari `CLIENTREF` (irsaliye satırı `STFICHEREF`, faturalanmışsa `INVOICEREF`). Sipariş satırındaki `SHIPPEDAMOUNT` ise **o satırdan** sevk edilen miktardır.
+- "Hiç sevkiyat almamış / hiç sevk edilmemiş müşteri" **müşteri düzeyinde yokluktur**: siparişi olan (`LG_ORFICHE` TRCODE 1, CANCELLED 0) ama hiç sevkiyat kaydı olmayan cari → `NOT EXISTS (SELECT 1 FROM STLINE s WHERE s.CLIENTREF = c.LOGICALREF AND s.TRCODE IN (7,8) …)` (ya da sipariş satırlarının hiçbirinde `SHIPPEDAMOUNT > 0` yok). `SHIPPEDAMOUNT = 0` satırlarını listelemek "sevk bekleyen satırlar"dır, "hiç sevkiyat almamış müşteri" değildir.
+- Bekleyen tutar = Σ (`AMOUNT − SHIPPEDAMOUNT`) × `PRICE` (satır fiyatı) ya da açık satırlarda Σ `TOTAL`; bekleyen adet = Σ (`AMOUNT − SHIPPEDAMOUNT`).
+- Örnek sorular: sipariş verip sevkiyat almamış müşteriler; sevk edilen adet; hiç sevk edilmemiş siparişler.
+
+## Kural 11 — Tanım kararları (2026-09-17, operatör; iş teyidi bekliyor)
+- **Net ciro** satır düzeyinde: satış satırları (TRCODE 7,8,9) `LINENET` − iade satırları (2,3) `LINENET`; `LINETYPE = 0`, `CANCELLED = 0`.
+- **Maliyet** yalnız satış satırlarında (TRCODE 7,8,9): `AMOUNT × OUTCOST`; `OUTCOST = 0` satırlar dahil, sayısı yazılır. **Kâr** = `LINENET − AMOUNT × OUTCOST` (iade eksi). CRM "senaryo kârı" ayrı kavramdır; yalın "kâr" Logo kârıdır.
+- **Perakende / toptan / diğer satış** = TRCODE 7 / 8 / 9 (INVOICE ve STLINE). **İskonto oranı** satır düzeyinde: Σ TOTAL (LINETYPE 2) / Σ TOTAL (LINETYPE 0); kartta tanımlı iskonto `CLCARD.DISCRATE`.
+- **Müşteri grubu / kanal** = `CLCARD.SPECODE2`; boş kod "Grup kodu boş".
+- **Stok bakiyesi** yalnız cari kopyadan (açılış devri içinde); **bekleyen sipariş** `CLOSED = 0 AND AMOUNT > SHIPPEDAMOUNT`, adet fiş sayısı; **sipariş** = LG_ORFICHE TRCODE 1; **sevkiyat** = STLINE TRCODE 7,8 IOCODE 4.
 

@@ -2,7 +2,7 @@
 
 ## Durum
 
-Yetki kodu ayrı gerçek kurulumda doğrulanıyor; bu kayıt yazıldığında ana sunucu hâlâ `upload-queue-v2-20260917` sürümündedir. Aday `book-access-v1-20260917` gerçek API ve mobil kontrollerden geçti; editör önizlemesi için ek izin kontrolü sonrası son sürüm tekrar doğrulanacak. Tüm roadmap veya farklı kullanıcılarla üretim kabulü verilmedi.
+Ana sunucu `book-access-v3-20260917` sürümüne yükseltildi. Gerçek API/PostgreSQL, mevcut 48 sayfalık kitabın tüm kaynak kayıtları ve yönetici/okuyucu mobil kontrolleri geçti (`MAIN_ACCESS_V3_PASS`). Tüm roadmap veya farklı gerçek kişilerle üretim kabulü verilmedi. Bu sürümün offline paket ve restore kabulü ayrıca yürütülüyor.
 
 ## Genel sistem düzeltmesi
 
@@ -29,4 +29,14 @@ Kanıtlar: ayrı kurulum `evidence/access-api.log`, `access-api-retry.log`, `acc
 
 ## Açık kabul
 
-Farklı gerçek kişiler, gerçek kitap paylaşımları ve kuruluşun işletim politikaları için kullanıcı bilgisi istendi; henüz gelmedi. Mevcut operatörün sınırlı anahtarlarıyla yapılan kontrol, kişiler arası bütün rol matrisinin kabulü değildir. Ana dağıtım, dolu analiz kayıtlarıyla yetki kontrolü ve yeni release'in offline restore denetimi henüz sonuçlanmadı. Kaynak/konuşmacı ve anlamsal kabul bağımsız olarak açık kalır.
+Farklı gerçek kişiler, gerçek kitap paylaşımları ve kuruluşun işletim politikaları için kullanıcı bilgisi istendi; henüz gelmedi. Mevcut operatörün sınırlı anahtarlarıyla yapılan kontrol, kişiler arası bütün rol matrisinin kabulü değildir. Ana dağıtım ve dolu analiz kayıtlarıyla yetki kontrolü tamamlandı; yeni release'in offline restore denetimi henüz sonuçlanmadı. Kaynak/konuşmacı ve anlamsal kabul bağımsız olarak açık kalır.
+
+## Son sürüm: ana sunucuda gerçek kabul
+
+`book-access-v3-20260917` backend SHA-256: `644a338bb22b793e5408ab6b61c635ed30df23995d40a0ee11442eaa523f245a`; 35 backend ve dokuz web kaynak dosyası çalışan imajla eşleşti. Web imajı `book-access-v1-20260917`, parser/document imajı `upload-queue-v2-20260917` olarak kaldı.
+
+Son iki düzeltme: editör önizlemesi yazma yetkisi gerektirir; hash ile hazır kaynak bağlama yalnız genel yöneticiye açıktır. Kitap sahibinin örtük erişimini grant kaldırma ile kaldırmış gibi göstermek 409 ile engellenir. Gerçek kaynak, analiz kayıtları ve inceleme kararlarının değişmediği bağımsız DB parmak izleriyle kontrol edildi. Ölçümde kullanılan kapsamlı anahtarlar API'den iptal edildi ve 401 denetlendi.
+
+Ana sunucu kanıt kökü `/data/nanobaseai/editor/evidence/`: `access-publish.log`, `access-release-verify-release.py.log`, `access-release-verify-access.py.log`, `access-release-reader-ui.log`, `access-release-ui.log`. Dört genişlik: 320/390/768/1440 px. Okuyucunun gerçek kaynak/OCR/bbox ekranları ve yönetici/okuyucu kontrol görünürlüğü geçti; yatay taşma yok.
+
+Bu kabul, 321 açık kaynak bölgesini veya konuşmacı belirsizliklerini çözmüş sayılmaz.

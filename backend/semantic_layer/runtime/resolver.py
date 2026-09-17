@@ -986,6 +986,20 @@ class SemanticResolver:
                 record.update(decision="SEMANTIC", evidence_source="catalog", concept_ids=[undone.concept_id],
                               resolved_as="DIMENSION_VALUE:INFERRED", negated_label=True)
                 sq.explanation.append(undone.explain["why"])
+            elif is_negative(tok) and _negated_light_verb(tok) and (absent := next((s_ for s_ in left if s_.mapping
+                    and s_.semantic_type in (SemanticType.METRIC, SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)), None)) is not None:
+                # "hiç sevkiyat almamış müşteriler": the light verb carries the negation and the thing
+                # negated is the measure just before it — the customers with no shipment record at all.
+                # Read as a verb root ("al" → a purchase measure) or left to the model, this became
+                # "order lines with nothing shipped yet", a different question with a longer answer.
+                sq.shape = "ABSENCE"
+                absent.explain["absent"] = True
+                record.update(decision="ABSENCE", evidence_source="catalog", verb_root=str(absent.explain.get("normalized") or absent.term),
+                              absent_entity=absent.mapping.entity, concept_ids=[absent.concept_id])
+                if len(sq.temporal) == 1 and (sq.temporal[0].params or {}).get("default"):
+                    sq.temporal = []             # "never" is not "not this year"
+                    sq.explanation.append("yokluk sorusu: varsayılan dönem uygulanmadı, tüm kayıtlara bakılır")
+                sq.explanation.append(f"'{absent.term} {tok}': {absent.mapping.entity} kaydı hiç olmayan kayıtlar isteniyor (NOT EXISTS)")
             elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
                 sq.shape = "ABSENCE"
                 record.update(decision="ABSENCE", evidence_source="catalog", verb_root=root)

@@ -294,6 +294,11 @@ def _walk(scope: Scope, carried: list[exp.Expression], root_alias: str, sources:
                     col.set("table", None)
                 stripped.append(cc)
             out.extend(_walk(source, stripped, root_alias or alias, sources, opaque))
+    # A correlated subquery — `WHERE EXISTS (SELECT 1 FROM LG_ORFICHE o WHERE o.TRCODE IN (1) …)` — reads
+    # its table under its own WHERE. Unvisited, the order filter written there was "not in the result's
+    # scope" and a correct statement was refused for the very condition it carried.
+    for sub in getattr(scope, "subquery_scopes", None) or []:
+        out.extend(_walk(sub, [], root_alias, sources, opaque))
     return out
 
 
@@ -1135,6 +1140,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
     for metric in sq.metrics:
         if not metric.mapping:
             continue
+        if (metric.explain or {}).get("absent"):
+            continue        # "hiç sevkiyat almamış": the measure is excluded, not attributed — no reference to rank
         fact = metric.mapping.entity
         for slot in sq.group_by:
             if not slot.mapping:
@@ -1146,8 +1153,17 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                 if not isinstance(node, exp.EQ):
                     return None
                 return frozenset((_normalise_formula(node.left, context), _normalise_formula(node.right, context)))
-            actual = {equality(part, scope) for join in tree.args.get("joins") or []
-                      if join.args.get("on") is not None for part in _split_and(join.args["on"])}
+            # The rule may be honoured in a derived table or a correlated subquery, as a JOIN … ON or
+            # as a WHERE equality between two columns: every SELECT of the statement is looked at.
+            actual = set()
+            for sel in tree.find_all(exp.Select):
+                for join in sel.args.get("joins") or []:
+                    if join.args.get("on") is not None:
+                        actual.update(equality(part, scope) for part in _split_and(join.args["on"]))
+                where = sel.args.get("where")
+                if where is not None:
+                    actual.update(equality(part, scope) for part in _split_and(where.this)
+                                  if isinstance(part, exp.EQ) and isinstance(part.left, exp.Column) and isinstance(part.right, exp.Column))
             for expression in (via_predicate(fact, rule), reference_predicate(slot.mapping, fact, rule)):
                 expected_tree = parse_sql(expression)
                 expected_scope = _Scope(expected_tree, None)
@@ -1210,11 +1226,51 @@ def _closing(sq, tree) -> list[Unmet]:
     out = []
     if sq.shape == "ABSENCE":
         expected = (sq.absence_contract or {}).get("sql")
-        if not expected or parse_sql(expected) != tree:
+        absent = {str(m.get("absent_entity")).upper() for m in (sq.modifiers or []) if m.get("decision") == "ABSENCE" and m.get("absent_entity")}
+        if expected:
+            if parse_sql(expected) != tree:
+                out.append(Unmet("absence", "yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı"))
+        elif absent:
+            # No certified contract: the statement must at least *exclude* the absent entity's rows —
+            # NOT EXISTS / NOT IN over a subquery reading it, or a LEFT JOIN to it tested IS NULL.
+            # Filtering its rows ("SHIPPEDAMOUNT = 0") keeps the customers who did receive shipments.
+            if not _anti_joins(tree, absent):
+                who = ", ".join(sorted(absent))
+                out.append(Unmet("absence", f"yokluk sorusu: {who} kaydı olmayanlar NOT EXISTS / NOT IN / LEFT JOIN … IS NULL ile dışlanmalı; "
+                                 f"{who} satırlarını filtrelemek 'hiç olmayan'ı vermez",
+                                 f"{who} tablosunu ana sorguda okuma; WHERE NOT EXISTS (SELECT 1 FROM {who} … WHERE <anahtar eşitliği>) yaz."))
+        else:
             out.append(Unmet("absence", "yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı"))
     if sq.measure_expressions:
         out.append(Unmet("expression", "hesap ifadesinin bileşenleri ve işlemi sertifikalı bir formülle doğrulanmadı"))
     return out
+
+
+def _anti_joins(tree: exp.Expression, entities: set[str]) -> bool:
+    """Does the statement exclude rows of one of `entities` — NOT EXISTS / NOT IN over a subquery that
+    reads it, or a LEFT JOIN to it whose column is tested IS NULL?"""
+    def reads(node: exp.Expression) -> bool:
+        return any(_same_entity(logical_table((t.db + "." if t.db else "") + t.name).entity, e)
+                   for t in node.find_all(exp.Table) for e in entities)
+    for node in tree.find_all(exp.Not):
+        inner = node.this
+        if isinstance(inner, exp.Exists) and reads(inner):
+            return True
+        if isinstance(inner, exp.In) and any(reads(q) for q in inner.args.get("expressions") or [] if isinstance(q, exp.Expression)) \
+                or isinstance(inner, exp.In) and inner.args.get("query") is not None and reads(inner.args["query"]):
+            return True
+    for sel in tree.find_all(exp.Select):
+        left_aliases = set()
+        for join in sel.args.get("joins") or []:
+            if (join.side or "").upper() == "LEFT" and isinstance(join.this, exp.Table) and reads(join.this):
+                left_aliases.add((join.this.alias_or_name or "").upper())
+        where = sel.args.get("where")
+        if left_aliases and where is not None:
+            for isn in where.find_all(exp.Is):
+                col = isn.this
+                if isinstance(col, exp.Column) and (col.table or "").upper() in left_aliases and isinstance(isn.expression, exp.Null):
+                    return True
+    return False
 
 
 def _opaque_note(occ, entity: str) -> str:

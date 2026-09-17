@@ -96,9 +96,10 @@ def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Kanal bazında 2026 net ciro")
     assert cols == ["kanal", "net_ciro"] and dict(rows)["DAGITICI"] == pytest.approx(1500 - 80)
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Perakende ile toptan satışları 2026 ay bazında karşılaştır")
-    assert cols[0] == "ay" and "perakende_satis" in cols and "toptan_satis" in cols
+    per = next(c for c in cols if c.startswith("perakende_satis")); top = next(c for c in cols if c.startswith("toptan_satis"))
+    assert cols[0] == "ay" and per and top
     jan = next(rw for rw in rows if rw[0] == "2026-01-01")
-    assert jan[cols.index("perakende_satis")] == 100 and jan[cols.index("toptan_satis")] == 1000
+    assert jan[cols.index(per)] == 100 and jan[cols.index(top)] == 1000
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Temmuz 2026 satılan adet")
     assert rows[0][0] == 5
     sq = r.resolve("Günlük satış (son günler)")

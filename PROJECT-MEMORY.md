@@ -1,5 +1,10 @@
 # NanobaseAI BI — Proje Belleği
 
+## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
+
+`book-access-v3-20260917` ana sunucuya yayımlandı. Gerçek kitap/API/PostgreSQL, kaynak kayıtlarının değişmezliği, kapsam dışı erişim, okuyucu yazma yasağı ve anahtar iptali geçti; yönetici/okuyucu ekranları 320/390/768/1440 px doğrulandı. Yeni sürüm için offline/restore kabulü ayrı yürütülüyor. 48 sayfa işlenmiş olsa da 321 kaynak bölgesi ve konuşmacı/anlamsal kabul açık. Ayrıntılar: `docs/editor/2026-09-17-book-access.md`.
+
+
 Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır (eski bilgi silinir/düzeltilir). Kronolojik geçmiş için [docs/GELISTIRME-GUNLUGU.md](docs/GELISTIRME-GUNLUGU.md)'ye bak.
 
 ## Proje ne
@@ -137,6 +142,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 ## Notlar
 
 - Çalışma zamanı davranışları (2026-09-17): sorunun veri tabanı (Logo/CRM) ölçünün kaynağından, ölçü yoksa soru kelimelerinin eşleştiği **tablo adlarından** okunur (`SemanticQuery.source_hint` → derleyici tablo kapsamı); yıl kopyaları ortak kolon adlarıyla birleştirilir, tek yönlü tarih sınırı açık uçlu dönemdir, 1899/1900 sentinel tarih dönem değildir; eleştirmen çapraz birleştirmeyi ve farklı hedefli anahtar eşitliklerini bloke eder; kapı `LEFT JOIN … ON` filtresini kabul eder ve `-- yorum`da adı geçen tablonun okunmasını ister; sonuç deposu sınırda hata değil kısmi sonuç + `truncated` döner. Tek tek karne: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg
+- Çalışma zamanı davranışları (2026-09-17, soru 12–17): kapıda durum ölçüsünün bakiye okuması ve ölçünün dışladığı satırları okuyan alt sorgu dönem kuralından muaf; varlık adı karşılaştırması `LG_` önekine duyarsız; sorunun kelimesi sütun değeri yazılamaz; yokluk sorusu ("hiç X almamış") dışlama yapısı (NOT EXISTS / NOT IN / LEFT JOIN … IS NULL) ister. Çözücü: zaman kelimeleri yeniden aranmaz; adlandırılmış kümeden sonraki sayım sözcüğü o kümenin COUNT'u (`count_key` ile fiş sayımı); "X, Y'nin ne kadarı" oran (`SemanticQuery.ratio`); kolon + "tanımlı/dolu" = dolu koşulu; ölçünün yanındaki kolonlar kırılım; "son N ay" = cari ayla biten N ay. Planlayıcı: aynı hedef tabloya bağlanan eşlemeler referans kuralı taşıyanın yolunu paylaşır; kolon-kolon koşul (`AMOUNT > SHIPPEDAMOUNT`) yazılır; oran sütunu eklenir; kolon başlıkları kavramın kendi adından. Hatırlanan örnek SQL'ler mantıksal adla gösterilir. `LlmClient` süreyi bütün uygular. Env (`semantic-bridge.env`): `LLM_CTX=32768`, `SEMANTIC_PROMPT_RULES_CHARS=40000`, `LLM_TIMEOUT_SEC=900`, `SEMANTIC_SELECTOR_TIMEOUT_SEC=60` (NVIDIA kuyruğu 4+ dk). İş tanımları kararları: [docs/TIMAS-IS-TANIMLARI.md](docs/TIMAS-IS-TANIMLARI.md) (katalogda operatör sertifikası, iş teyidi bekliyor).
 
 - **Kokpit yayını:** kaynak sunucuda derlenir. `rsync -a --delete src/ nanobase-direct:/data/nanobaseai/bi/frontend/src/`, sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build`, sonra `sudo rsync -a --delete --no-o --no-g dist/ /data/nanobaseai/bi/cockpit/dist/`. Commit etmek yayınlamak değildir; canlıdaki `index.html` tarihine bak.
 
