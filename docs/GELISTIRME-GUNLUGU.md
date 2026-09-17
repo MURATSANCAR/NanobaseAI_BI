@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Editörün farklı kitaplara genellenebilirlik incelemesi
+
+- Kullanıcının başka kitaplar da yükleneceği talebi AGENTS.md kuralına işlendi; kitap/sayfa/karaktere özel üretim çözümü yasak, gerçek regresyon girdileri ayrı.
+- Paralel kod incelemesinde yeni metin atıf adayının ortak/kısmi özne, geniş alıntı ve sayfa sınırı riskleri bulundu. Çalışma ağacındaki aday muhafazakârlaştırıldı; aynı ad eşliği karakter kimliğine çevrilmiyor.
+- Gerçek sunucuda 1.149 API kaydı bağımsız PostgreSQL sorgusuyla aynı; sıkılaştırılan aday 10 açık atıf üretti, kaynaklar önce/sonra değişmedi. Yeni adayın SHA ve ayrıntısı `evidence/text-attribution-generality-candidate.json`. Bu salt okunur kaynak/provenans ölçümüdür; yayımlanmış uçtan uca veya anlamsal kabul değildir.
+- Sayfa/boyut limit sözleşmesi, küçük görsel kapsamı ve farklı kitaplarla kabul açık. [Ayrıntılar](editor/2026-09-17-generality-review.md).
+
 ## 2026-09-17 — Tüm oturumların belge denetimi; proje belleğindeki bayat bilgiler düzeltildi
 
 - Neden: kullanıcı "tüm konuşmalarda yapılan işlere bak, md dosyalarını güncelle" dedi. 16 Eylül 10:16'daki önceki denetimden sonra etkin olan BI oturumları (CRM tablo/kolon araştırması — soru 5–18 turu, sağ üst zoom, AD Administrators erişimi, kurumsal sohbet analizi, promt izleyici) ve `main` commit'leri günlükle tek tek karşılaştırıldı. Sonuç: her oturum kendi günlük girişini yazmış, eksik giriş yok; 12 `claude/*` dalının hepsi `main`de (taşınmamış commit 0), worktree'ler temiz. Ana dizinde commit'lenmemiş iki editör dosyası (`apps/editor/README.md`, `scripts/verify-word-boundaries.py`) süren editör işine aittir, dokunulmadı.

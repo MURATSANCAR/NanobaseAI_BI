@@ -2,6 +2,8 @@
 
 ## Editör çalışma kaydı ve veri bütünlüğü
 
+Kullanıcının 17 Eylül ek talebi: bütün Editör geliştirmeleri başka kitaplara da uygulanabilir olmalıdır. Üretim kodu, prompt ve kabul kapılarında kitap adı/hash'i, sabit sayfa numarası, karakter adı veya beklenen cevap üzerinden özel durum kurulmaz. Gerçek kitap kimlikleri yalnız regresyon girdisi/kanıt kaydında bulunabilir. Dil, dosya boyutu, sayfa ve işlem sınırları açık sözleşme/yapılandırma ile yönetilir. Bir kitaptaki başarı farklı kitaplarda doğrulanmış başarı sayılmaz; aynı yazılan adlar tek karakter kimliği olarak kanıtsız birleştirilmez.
+
 Kitap metni, model cevabı, konuşmacı ve inceleme kararı elle düzeltilmez; beklenen cevap model girdisine taşınmaz. Genel kod düzeltilir ve gerçek kaynak yeni nesilde yeniden doğrulanır. İşleme tamamlanması anlamsal kabul değildir.
 
 Bulunan hata için genel kod düzeltmesi, başarısız gerçek senaryonun yeniden doğrulanması ve kanıt kaydı tamamlanmadan sonraki adıma geçilmez. Başarısız deney çözüm sayılmaz. Dış kaynak veya insan kararı gerektiren engel açık yazılır; doğrulanmayan iş kapatılmaz.

@@ -10,6 +10,10 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus, gateway ve ağsız parser olmak üzere 11 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
 
+### Farklı kitaplarda çalışma kuralı (2026-09-17)
+
+Üretim kodu/prompt/kapıları kitap adı, hash, karakter veya sayfa numarasına özel çözüm içermez. Aynı ad yazımı karakter kimliği değildir. Paralel inceleme limit sözleşmesi ve küçük görsel kapsam sayacında açık işler buldu. Yeni Türkçe metin konuşmacısı adayındaki ortak/kısmi ad ve geniş alıntı riskleri sıkılaştırıldı; gerçek 1.149 API/PG kaydında değişmeyen kaynakla 10 açık atıf ölçüldü. Bu aday yayımlanmadı; farklı kitaplarla kabul ve görsel kimlik çözümü açık. [İnceleme ve kabul sınırları](docs/editor/2026-09-17-generality-review.md).
+
 ### Güncel yayın — kelime sınırı kapısı (2026-09-17)
 
 Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
