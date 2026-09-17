@@ -43,7 +43,7 @@ from semantic_layer.history.sources import _pid as pair_id, load_project_pairs, 
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.models import Annotation, ConceptStatus, Evidence, EvidenceType, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.models import Mapping as SLMapping, SemanticType
-from semantic_layer.naming import label_context
+from semantic_layer.naming import label_context, logicalize_sql
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
 from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, empty_result_note, fast_summary, is_empty_result
@@ -386,7 +386,7 @@ class Runtime:
             return []
         rows = [{"nl": p.nl, "sql": p.sql} for p in self.pairs if p.source != "seed"]
         for r in self.store.list_validated_queries(self.settings.tenant_id, self.settings.datasource_id, limit=500):
-            rows.append({"nl": r["question"], "sql": r["sql_text"]})
+            rows.append({"nl": r["question"], "sql": logicalize_sql(r["sql_text"])})
         ex = normalize_term(exclude_nl) if exclude_nl else None
         scored = []
         for r in rows:

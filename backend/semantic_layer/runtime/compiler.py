@@ -748,6 +748,7 @@ Kurallar:
 - Çıkarabiliyorsan ```sql bloğunun İLK satırları her terim için şu biçimde olmalı: -- yorum: '<terim>' → <hangi tablo/kolon, hangi hesap>. Bu satır yoksa cevap reddedilir. YORUMU SANA BIRAKILAN NİTELEYİCİLER için de aynı satır zorunludur.
 - SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
 - Soru bir dönem söylemiyorsa tarih sınırı UYDURMA ("DATE_ >= '2015-01-01'" gibi). Dönem verilmemişse güncel dönem tablosu okunur; hangi yılların okunduğunu bu sistem belirler.
+- Sorunun kendi kelimesini bir sütunun DEĞERİ yapma: "bir kitabın", "müşterinin", "ürün" gibi genel isimler belli bir kaydı seçmez; "bir X'in" sorusu bütün X'ler üzerinden kırılım (GROUP BY) ister. `NAME = 'kitabin'` gibi bir filtre yanlıştır.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - Bu blok "(yok)" ise dönem kapsam içindedir. Hangi dönemin veride bulunduğuna bu sistem karar verir
   ve DÖNEM TABLOLARI bloğundaki aralık ölçülmüştür: o aralıktaki bir yıl için "veri yok" deme, tablo

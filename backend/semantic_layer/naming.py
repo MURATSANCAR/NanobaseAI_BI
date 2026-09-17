@@ -166,3 +166,21 @@ def source_rank(name: str, *, is_view: bool = False, markers: Iterable[str] = ()
     if is_shadow_copy(name, markers):
         return 2
     return 1 if is_view else 0
+
+
+_PHYSICAL_TOKEN = re.compile(r"\b(?:(?P<schema>[A-Za-z]\w*)[._])?(?P<name>[A-Za-z]+_\d{3}(?:_\d{2})?_[A-Za-z_]\w*)\b")
+
+
+def logicalize_sql(sql: str, *, known_schemas: Iterable[str] = ("dbo",)) -> str:
+    """A statement as the model should see it: every period/firm copy named by its entity.
+
+    Answered statements are stored physicalised (dbo_LG_411_01_STLINE). Shown back as examples they
+    taught the model to write physical names itself — which pin the answer to one year's copy and
+    step around the compiler's period resolution. The entity is what the prompt speaks."""
+    def swap(m: "re.Match[str]") -> str:
+        schema = (m.group("schema") or "")
+        if schema and schema.lower() not in {s.lower() for s in known_schemas}:
+            return m.group(0)
+        lt = logical_table(m.group("name"))
+        return lt.entity if lt.context else m.group(0)
+    return _PHYSICAL_TOKEN.sub(swap, sql or "")

@@ -281,3 +281,34 @@ def test_the_balance_reading_of_a_state_measure_is_not_asked_for_the_period():
     assert not any("durum ölçüsüdür" in u for u in out), out
     undated_sales = sql.replace(" AND s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01'", "")
     assert any("dönemi" in u for u in unmet_obligations(sq, undated_sales))
+
+
+def test_an_opening_balance_reading_is_not_the_sales_reading_and_needs_no_period():
+    """2026-09-17, soru 12 (devam): the opening stock is the TRCODE 14 transfer rows; the model read them
+    undated and the period rule asked 2026 of them as if they were the sales. Rows the sales measure's
+    own condition excludes are not the measure — the period belongs to the sales reading alone."""
+    sales = ResolvedSlot("satan", "METRIC", "CERTIFIED", mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="AMOUNT", extra={"conditions": ["STLINE.TRCODE IN (7,8,9)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[sales],
+                       temporal=[TemporalSlot(text="varsayılan", primitive="YEAR", start=date(2026, 1, 1), end=date(2027, 1, 1))],
+                       temporal_binding={"entity": "STLINE", "column": "DATE_", "source": "resolved_metric", "alternatives": []})
+    sql = ("SELECT sa.STOCKREF, sa.satis, op.acilis FROM (SELECT s.STOCKREF, SUM(s.AMOUNT) AS satis FROM STLINE s WHERE s.TRCODE IN (7,8,9) "
+           "AND s.DATE_ >= '2026-01-01' AND s.DATE_ < '2027-01-01' GROUP BY s.STOCKREF) sa "
+           "LEFT JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS acilis FROM STLINE s2 WHERE s2.TRCODE = 14 GROUP BY s2.STOCKREF) op ON op.STOCKREF = sa.STOCKREF")
+    out = unmet_obligations(sq, sql)
+    assert not any("dönemi" in u for u in out), out
+    same_rows = sql.replace("s2.TRCODE = 14", "s2.TRCODE IN (7,8)")       # sales rows read undated: still refused
+    assert any("dönemi" in u for u in unmet_obligations(sq, same_rows))
+
+
+def test_a_question_word_written_as_a_column_value_is_refused():
+    """2026-09-17, soru 13: "Bir kitabın son üç baskısında …" — 'kitabın' resolved to ITEMS.NAME and the
+    model wrote `i.NAME = 'kitabin'`: a filter on the question's own word, matching nothing."""
+    book = ResolvedSlot("kitabin", "COLUMN", "CERTIFIED", mapping=Mapping("", "ITEMS", "LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    sq = SemanticQuery(question="Bir kitabın son üç baskısında çekilen malzeme miktarları arasında fark var mı?", tenant_id="t", datasource_id="d", slots=[book])
+    bad = "SELECT i.NAME, SUM(s.AMNT) FROM ITEMS i LEFT JOIN STCOMPLN s ON s.MAINCREF = i.LOGICALREF WHERE i.NAME = 'kitabin' GROUP BY i.NAME"
+    out = unmet_obligations(sq, bad)
+    assert any("sorunun kelimesidir" in u for u in out), out
+    good = "SELECT i.CODE, i.NAME, p.LOGICALREF, SUM(s.AMOUNT) FROM ITEMS i JOIN PRODORD p ON p.ITEMREF = i.LOGICALREF JOIN STLINE s ON s.PRODORDERREF = p.LOGICALREF WHERE s.TRCODE = 12 GROUP BY i.CODE, i.NAME, p.LOGICALREF"
+    assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, good))
+    real_value = "SELECT i.NAME FROM ITEMS i WHERE i.NAME = 'İYİLİK TİMİ'"      # a value the question could carry: not the slot word
+    assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, real_value))
