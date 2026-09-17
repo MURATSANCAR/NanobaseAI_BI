@@ -28,11 +28,10 @@ assert all(rows.values()),'PAGE_NOT_COMPLETE'
 code="""import json,sys
 from editor.config import connection,code_manifest
 with connection() as db:
- rows=db.execute('SELECT kind,id,record_key,data FROM editor.records WHERE generation_id=%s AND data->>\'pdf_page\'=%s',(sys.argv[1],sys.argv[2])).fetchall()
+ rows=db.execute('SELECT kind,id,record_key,data FROM editor.records WHERE generation_id=%s AND data->>$$pdf_page$$=%s',(sys.argv[1],sys.argv[2])).fetchall()
 print(json.dumps({'rows':rows,'code_manifest':code_manifest()},default=str))
 """
 # SQL below uses parameter binding, independently of application API pagination.
-code=code.replace("AND data->>'pdf_page'=%s", "AND data->>$$pdf_page$$=%s")
 db=json.loads(subprocess.check_output(['docker','compose','exec','-T','api','python','-c',code,gen,str(page)]))
 by_id={r['id']:r for r in db['rows']}
 for kind,items in rows.items():
@@ -57,10 +56,15 @@ for row in rows['source_spans']:
         assert d['status']=='TEXT_AGREED' and m['finish_reason']=='stop','INVALID_PROMOTION'
         assert d['ocr_vl_selection']['selected_text']==d['text'] and not d['ocr_vl_selection']['blockers'],'UNSUPPORTED_PROMOTION'
     assert m['eligible_for_synthesis'] is False
-visuals=[o['metrics'] for r in rows['visual_observations'] for o in r['data']['observations']]
-for m in visuals:
-    assert m['model_name']=='qwen3.8-flash-next' and m['model_backend']=='vllm','MAIN_MODEL_MISMATCH'
-    assert m['code_manifest']==db['code_manifest'],'VISUAL_CODE_MISMATCH'
+visuals=[];fresh_visuals=[]
+for r in rows['visual_observations']:
+    for o in r['data']['observations']:
+        m=o['metrics'];visuals.append(m)
+        assert m['model_name']=='qwen3.8-flash-next' and m['model_backend']=='vllm','MAIN_MODEL_MISMATCH'
+        origin=o.get('reused_from_generation') or r['data'].get('reused_from_generation')
+        expected=get('/v1/generations/'+origin)['manifest']['code_manifest'] if origin else db['code_manifest']
+        assert m['code_manifest']==expected,'VISUAL_CODE_MISMATCH'
+        if not origin:fresh_visuals.append(m)
 claims=rows['page_claims'][0]['data']
 assert claims['input_visual_descriptions'] is False
 spans={r['id']:r['data'] for r in rows['source_spans']}
@@ -69,9 +73,15 @@ for c in claims['claims']:
     assert c['eligible_for_synthesis'] is False
 for r in rows['page_checks']:assert r['data']['semantic_acceptance'] is False
 pairs=[{'ocr_start':m['started_at'],'ocr_end':m['finished_at'],'qwen_start':v['started_at'],'qwen_end':v['finished_at']}
-       for m in measurements for v in visuals if max(m['started_at'],v['started_at'])<min(m['finished_at'],v['finished_at'])]
+       for m in measurements for v in fresh_visuals if max(m['started_at'],v['started_at'])<min(m['finished_at'],v['finished_at'])]
+review=get(f'/v1/generations/{gen}/source-review?pdf_page={page}')
+shown={r['span_id']:r.get('ocr_vl') for p in review['pages'] for r in p['regions']}
+for row in rows['source_spans']:
+    m=row['data'].get('ocr_vl_measurement')
+    if m and row['data']['status']!='TEXT_AGREED':
+        assert shown.get(row['id']) and shown[row['id']]['text']==m['text'],'REVIEW_OCR_NOT_EXPOSED'
 report={'generation_id':gen,'pdf_page':page,'api':base,'api_pg_match':True,
-        'ocr_regions':len(measurements),'ocr_supported_promotions':promoted,'qwen_visual_calls':len(visuals),
+        'ocr_regions':len(measurements),'ocr_supported_promotions':promoted,'qwen_visual_calls':len(fresh_visuals),'qwen_visual_observations':len(visuals),
         'overlapping_call_pairs':pairs,'parallel_overlap_observed':bool(pairs),
         'code_manifest':db['code_manifest'],'semantic_acceptance':False,'application_writes':0}
 target=root/'evidence'/f'parallel-ocr-{gen}-page-{page:04}.json'

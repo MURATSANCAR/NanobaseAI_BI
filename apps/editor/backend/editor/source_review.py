@@ -27,6 +27,25 @@ def reading_class(text):
 def ocr_vl_measurement(root, generation, row, source_sha256):
     from editor.book_store import sha
     d=row['data']
+    if d.get('ocr_vl_measurement'):
+        import base64
+        r=d['ocr_vl_measurement']
+        raw=r['raw_response'].encode()
+        answer=json.loads(raw)
+        if (r['source_sha256']!=source_sha256 or r['pdf_page']!=d['pdf_page']
+                or r['render_sha256']!=d['render_sha256'] or r['bbox']!=d['bbox']
+                or sha(raw)!=r['response_sha256']
+                or sha(base64.b64decode(r['crop_image_base64'],validate=True))!=r['crop_sha256']
+                or answer['choices'][0]['message']['content']!=r['text']
+                or answer['choices'][0]['finish_reason']!=r['finish_reason']
+                or answer['model']!=r['model'] or r['eligible_for_synthesis']):
+            raise RuntimeError('OCR_VL_SOURCE_SCOPE_MISMATCH')
+        return {'text':r['text'],'complete':r['finish_reason']=='stop','status':r['status'],
+                'reading_class':reading_class(r['text']),
+                'source_generation_id':str(generation),'measured_source_span_id':str(row['id']),
+                'artifact_sha256':r['response_sha256'],'crop_sha256':r['crop_sha256'],
+                'code_sha256':r['code_sha256'],'model_revision':r['model_revision'],
+                'model':r['model'],'seconds':r['seconds'],'eligible_for_synthesis':False}
     candidates=[(str(generation),str(row['id']))]
     if d.get('reused_from_generation') and d.get('reused_source_span_id'):
         candidates.append((d['reused_from_generation'],d['reused_source_span_id']))
