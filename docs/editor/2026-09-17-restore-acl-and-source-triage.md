@@ -42,3 +42,23 @@ Tüm kitap ölçümünün ilk denemesi API dağıtım sırasında yeniden başla
 48 sayfa tamamlandı; 1.149 bölgenin 799'unda bağımsız okuyucunun kelime geometrisi bulundu ve ölçüm yapılabildi. 350 bölge için kutu yoktu; bunlar sessizce başarılı sayılmadı. Alternatif yöntem 19 bölgenin optik kapısını iyileştirirken önceki 47 anlaşmayı bozdu; OCR süresi 113,58 saniye. Dolayısıyla yöntem genel varsayılan için reddedildi. Başarısız aday ana OCR koduna bağlanmadı; kaynak sayıları **828/321 olarak kaldı**. Kanıt `evidence/word-crops-45d719f5-3a31-4fdd-b54d-d990f99c4f9e/report.json`. Üç sayfalık pilotun toplam sonuç yerine kullanılmaması bu geniş kontrolde gerçek gerilemeyi yakaladı.
 
 Ana v4 yayınında `MAIN_ACCESS_V4_PASS`: kod/web hashleri, gerçek API/PG, kaynaklar, yayın kapıları, kapsamlı erişim ve yönetici/okuyucu dört genişlik kontrolleri geçti. Yeni v4 offline paket/restore koşusu `evidence/access-v4-installation-qualification.log` üzerinden ayrıca izleniyor.
+
+## V4 kendi offline paketinin son kabulü
+
+17 Eylül 10:00:32 UTC: `book-access-v4-20260917` kendi paketinden offline export/import, 14 tablolu gerçek yedek, yeni boş kuruluma restore, gerçek API/PG, OCR adayları ve 320/390/768/1440 px mobil ekran kontrollerini geçti. Hedef `editor-qualification-b652f63c-08636b` 10:00:35 UTC'de durduruldu; veriler ve kanıtlar korundu. Kaynak `/data/nanobaseai/editor-qualifications/book-access-v4-20260917/b652f63c/qualification.json`; ana log `evidence/access-v4-installation-qualification.log`. Restore aşaması aynı sunucuda yaklaşık 224 saniye sürdü; farklı müşteri donanımı için RTO garantisi değildir.
+
+Runtime kodu `c7e9b7d` ile yerel `main`e kaydedildi ve aynı runtime ana sunucuya yayımlandı. `git fetch origin` geçti; `git push origin main` HTTPS kimlik bilgisi bulunamadığından başarısız oldu (`could not read Username`). Mevcut dalların `main` dışında kalan commit sayısı 0. Bu, yeni commit'in origin'e gönderildiği anlamına gelmez.
+
+## Font kodu denemesi — ana hatta çözülmüş değil
+
+PDFium incelemesi 44–48. sayfalarda Caveat Brush fontuna ait 2.320 bozuk UTF-16 kod birimi gösterdi. Bunlar 1.160 harf gösterimidir; iki kod birimi tek supplementary Unicode karakteri oluşturur. Gömülü fontta cmap/post eşleme tabloları yok; mevcut ToUnicode özel kullanım karakterlerine yönlendiriyor. Kaynağı harf tahminleriyle değiştirmek yerine resmî fontun vektör çizimleri ve fontun kendi GSUB ilişkileriyle tam eşleme denendi.
+
+Ağsız ayrı imajda fontTools/pypdf kullanıldı; paket ve font sürüm/hashleri sabitlendi. Çizim işlemleri, kontrol noktaları, em boyutu ve glyph genişliği bire bir eşleşmelidir. Font adı veya kelime benzerliği kabul için yeterli sayılmaz; birden fazla veya hiç karşılık bulunamayan glyph belirsiz kalır. 47 özel glyph türünün 45'ine tek eşleme bulundu. Beş sayfada 1.160 bozuk gösterimin 1.156'sı eşleşti, 4'ü eşleşmedi. Kitap metni, PDF dosyası veya DB kayıtları elle ya da deney tarafından değiştirilmedi.
+
+Gerçek API/PG eşliğiyle 101 kaynak bölgesi üzerinde ölçüm: 68 bölgedeki PDF metni font adayıyla kullanılabilir hale geldi; diğer okuyucu çelişkilerini koruyan mevcut kapıda iyileşme **0**, yeni çelişki **0**. Ana kaynak durumu hâlâ **828 anlaşma / 321 inceleme**. Bu, font okuma adayının ölçümüdür; konuşmacı veya güvenilir kitap analizi çözülmüş değildir. Ana parser/OCR akışına bağlanmadı.
+
+Kod ve bağımlılıklar `apps/editor/ocr/experiments/font-probe/` altında deney olarak arşivlendi. Kanıtlar `evidence/font-gsub-character-probe-v2.json`, `font-recovery-source-comparison.json`, `native-font-audit.json`. Referans font: [Google Fonts metadata](https://raw.githubusercontent.com/google/fonts/main/ofl/caveatbrush/METADATA.pb), [font lisansı](https://raw.githubusercontent.com/google/fonts/main/ofl/caveatbrush/OFL.txt); indirilen revision/SHA manifestte sabittir.
+
+### Konuşmacı için açık teşhis
+
+29. sayfada `source-review` API'si balon kuyruğunun `observation-0/figure-0` adayını gösterdiğini döndürüyor; neden `CHARACTER_IDENTITY_NOT_GROUNDED`. Balon bulma ve koordinat eşliği mevcut, figürün karakter adıyla kaynaklı kimlik bağı henüz yok. Bu bulgu kodla çözülüp doğrulanmış olarak raporlanmaz.

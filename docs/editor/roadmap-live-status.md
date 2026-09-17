@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
+
 > Güncel ek: V3 yetki sürümünde restore izin hatası bulundu, v4 düzeltmesi aynı gerçek yedekle yeni kurulumda API/PG ve mobil kabulünden geçti. 321 kaynak bölgesi hâlâ açık; yeni kırpım yöntemi ölçüm aşamasında, kaynak veya inceleme kararı değiştirilmedi. [Güncel hata ve kabul kaydı](2026-09-17-restore-acl-and-source-triage.md). Aşağıdaki önceki yayın özetleri tarihçedir.
 
 > Son ek yayın: `upload-queue-v2-20260917` ana kurulumda. Yeni PDF yükleme, otomatik ağsız ayrıştırma, iptal ve yeniden takip gerçek kitapla geçti; 321 kaynak incelemesi/anlamsal kabul açık. Yeni yayının offline restore sonucu ayrıca izlenir. [Yükleme akışı ve kanıtlar](2026-09-17-upload-pipeline.md). Aşağıdaki önceki yayın kayıtları tarihçedir.
