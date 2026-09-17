@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Türk Telekom GPU sunucusu: Mac üzerinden VPN, envanter, Qwen3.8-Flash-Next hazırlığı
+
+- Test sunucusu TT VPN ağ geçidine ulaşamadığı için (aşağıdaki giriş) VPN kullanıcı kararıyla Mac'te açıldı: sudo gerektirmeyen `~/homebrew` altında openconnect 9.21 + ocproxy derlendi, `~/bin/ttvpn-mac` tüneli kullanıcı alanında tutar (SOCKS5 11080), Mac'in rotalarına dokunmaz. Parola ve OTP'yi kullanıcı girdi. Sertifika uyarısı bağımsız doğrulandı (neden: GnuTLS kök dosyasını bulmuyor), betiğe `--cafile` eklendi.
+- `tt-gpu` (2 × H100 NVL, 2 TB RAM) ve `tt-gpu-vm` için SSH adları ve test sunucusuna ters tünel (`~/bin/ttvpn-bridge`) kuruldu; sunucudan iki makinenin SSH karşılaması doğrulandı. Sunucu anahtarının TT makinelerine eklenmesi izin denetiminde reddedildi, yapılmadı.
+- Envanter çıkarıldı: iki GPU'yu dolduran Gemma-4-31B vLLM'leri 13 ve 20 gündür istek almıyordu; durduruldu, silinmedi. Kullanıcı Qwen3.8-27B dosyalarını, Docker derleme önbelleğini ve kullanılmayan imaj/konteynerleri sildi (sistem diski 175 → 269 GB boş). `mssql-logo` çalışmaya devam ediyor.
+- Ölçüldü: GPU'lar arasında NVLink yok (`SYS`); internet çıkışı toplam ≈ 100 Mbit ile sınırlı (iki bağımsız kaynakla sınandı), bu yüzden 186 GB'lık indirme yaklaşık 5 saat sürüyor.
+- `Qwen/Qwen3.8-Flash-Next-FP8` indirmesi `/data/hf-cache` altına başlatıldı (xet takıldı, düz HTTP'ye alındı), özel vLLM imajı çekildi, iki GPU'yu tek model olarak kullanan `/data/qwen38/docker-compose.yml` yazıldı ve doğrulandı. Model henüz başlatılmadı; iki H100 tarifte doğrulanmış bir yapılandırma değil, açılmama ihtimali gerçek. Geri dönüş: Qwen3.8-27B-FP8 tek kartta veya mevcut Gemma.
+- Editör için OCR kararı verildi, denenmedi: «Ekrana Sığmayan Macera»da düz yazı PDF'te gömülü, balon yazıları eğriye çevrilmiş. Ana okuyucu PaddleOCR-VL-1.6, ikinci bağımsız okuyucu ve konuşmacı ataması Flash-Next; kanıt yolu kayıtlı 1.149 bölgenin yeniden koşturulması. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
 ## 2026-09-17 — Türk Telekom VPN istemcisi hazırlandı, ağ geçidine erişim kapalı
 
 - Test sunucusuna `openconnect` kuruldu; etkileşimli giriş betiği `ttvpn-login` ve rota koruyan `ttvpn-script` yerleştirildi. Betik varsayılan rotayı ve DNS'i devralmaz; amaç TİMAŞ `tun0` tünelini ve sunucu erişimini bozmamak. Kimlik bilgisi ve OTP diske yazılmaz, girişte kullanıcı tarafından yazılır.
