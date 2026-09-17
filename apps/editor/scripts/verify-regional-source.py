@@ -82,9 +82,36 @@ def reference(data):
     return bool(candidate and clean(region) and valid_score and support and not conflict and state != 'DISAGREES'), support, state
 
 
-manifest = sql(f"SELECT manifest FROM editor.generations WHERE id='{gen}'")
-assert manifest['pipeline_version'] == 'source-spans-v6'
-parent = str(uuid.UUID(manifest['reuse_measurements_from']))
+generation_row = sql(f"SELECT json_build_object('content_version_id',content_version_id,'manifest',manifest) FROM editor.generations WHERE id='{gen}'")
+manifest = generation_row['manifest']
+assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7')
+root_parent = str(uuid.UUID(manifest['reuse_measurements_from']))
+
+
+def nearest_parent(page, key):
+    current = root_parent; seen = set(); lineage = []
+    for _ in range(64):
+        assert current not in seen, 'ANCESTRY_CYCLE'
+        seen.add(current)
+        actual = get('/v1/generations/'+current)
+        stored = sql(f"SELECT json_build_object('content_version_id',content_version_id,'manifest',manifest) FROM editor.generations WHERE id='{current}'")
+        assert stored and stored['manifest']==actual['manifest']
+        assert stored['content_version_id']==actual['content_version_id']==generation_row['content_version_id'], 'ANCESTRY_CONTENT_MISMATCH'
+        present = []
+        for kind in ('page_readings','layout_regions','visual_observations','page_claims','page_checks'):
+            records = equal_rows(current,kind,page)
+            assert len(records)<=1, 'DUPLICATE_PARENT_PAGE'
+            if records:
+                assert records[0]['record_key']==key and records[0]['data']['pdf_page']==page
+                present.append(kind)
+        lineage.append({'generation_id':current,'present_kinds':present})
+        if len(present)==5:
+            return current,lineage
+        previous = stored['manifest'].get('reuse_measurements_from')
+        if previous is None:
+            return None,lineage
+        current = str(uuid.UUID(previous))
+    raise AssertionError('ANCESTRY_DEPTH_EXCEEDED')
 # page_readings is committed after all optical spans. Freeze only these pages;
 # never compare global row counts while the next page is being written.
 boundary = {r['data']['pdf_page']: r for r in api_rows(gen,'page_readings')}
@@ -96,15 +123,36 @@ immutable_fields = ('raw_text','bbox','region_text','region_score','secondary_te
 for page, frozen in sorted(boundary.items()):
     reading_rows = equal_rows(gen,'page_readings',page)
     assert reading_rows == [frozen], 'COMPLETED_READING_CHANGED'
+    expected_parent,lineage = nearest_parent(page,frozen['record_key'])
+    parent = frozen['data'].get('reused_from_generation')
+    if manifest['pipeline_version']=='source-spans-v7':
+        assert parent==expected_parent, 'NOT_NEAREST_COMPLETE_PAGE_PARENT'
+    else:
+        assert parent==root_parent, 'V6_DIRECT_PARENT_MISMATCH'
+    if parent:
+        parent_reading = equal_rows(parent,'page_readings',page)
+        assert len(parent_reading)==1 and frozen['data']['reused_reading_id']==parent_reading[0]['id']
+    evidence = equal_rows(gen,'evidence',page)
+    assert len(evidence)==1 and frozen['data']['evidence_refs']==[evidence[0]['id']]
+    if parent:
+        previous_evidence = equal_rows(parent,'evidence',page)
+        assert len(previous_evidence)==1
+        for field in ('source_sha256','render_sha256','ocr_render_sha256','ocr_artifact_sha256'):
+            assert evidence[0]['data'][field]==previous_evidence[0]['data'][field]
     spans = equal_rows(gen,'source_spans',page)
-    parents = {r['record_key']: r for r in equal_rows(parent,'source_spans',page)}
-    assert len(spans) == len(parents) == frozen['data']['span_count']
+    parents = {r['record_key']: r for r in equal_rows(parent,'source_spans',page)} if parent else {}
+    assert len(spans)==frozen['data']['span_count']
+    if parent: assert {r['record_key'] for r in spans}==parents.keys()
     changed_context = False; regional = 0
     for row in spans:
-        d = row['data']; old = parents[row['record_key']]
-        for field in immutable_fields:
-            assert d[field] == old['data'][field], 'RAW_MEASUREMENT_CHANGED:'+field+':'+row['id']
-        assert d['reused_source_span_id'] == old['id'] and d['reused_from_generation'] == parent
+        d = row['data']; old = parents.get(row['record_key'])
+        assert d['evidence_refs']==[evidence[0]['id']] and d['pdf_page']==page
+        if old:
+            for field in immutable_fields:
+                assert d[field] == old['data'][field], 'RAW_MEASUREMENT_CHANGED:'+field+':'+row['id']
+            assert d['reused_source_span_id'] == old['id'] and d['reused_from_generation'] == parent
+        else:
+            assert d.get('reused_source_span_id') is None and d.get('reused_from_generation') is None
         supported, readers, reread_state = reference(d)
         selection = d['regional_selection']
         assert (selection['status']=='SUPPORTED_REGIONAL_CANDIDATE') == supported
@@ -125,11 +173,11 @@ for page, frozen in sorted(boundary.items()):
             regional += 1
         else:
             assert d['selected_reader'] == 'FULL_PAGE_OCR' and d['text'] == d['raw_text']
-        old_agreed = old['data']['status']=='TEXT_AGREED'; agreed = d['status']=='TEXT_AGREED'
+        old_agreed = old is not None and old['data']['status']=='TEXT_AGREED'; agreed = d['status']=='TEXT_AGREED'
         counts['agreed' if agreed else 'review'] += 1
-        if agreed and not old_agreed: promoted.append({'id':row['id'],'parent_id':old['id'],'key':row['record_key'],'pdf_page':page})
+        if old and agreed and not old_agreed: promoted.append({'id':row['id'],'parent_id':old['id'],'key':row['record_key'],'pdf_page':page})
         if old_agreed and not agreed: demoted.append({'id':row['id'],'parent_id':old['id'],'key':row['record_key'],'pdf_page':page})
-        changed_context |= d['text'] != old['data']['text'] or agreed and not old_agreed
+        changed_context |= old is None or d['text'] != old['data']['text'] or agreed and not old_agreed
     assert sum(r['data']['status']=='TEXT_AGREED' for r in spans) == frozen['data']['agreed_spans']
     assert sum(r['data']['status']!='TEXT_AGREED' for r in spans) == frozen['data']['review_spans']
     # Only inspect claims after their page_checks commit; source processing may
@@ -139,14 +187,28 @@ for page, frozen in sorted(boundary.items()):
         claims = equal_rows(gen,'page_claims',page)
         assert len(claims) == 1
         if changed_context: assert claims[0]['data']['reused_claim_candidates_from'] is None, 'CHANGED_CONTEXT_REUSED'
+        reused_claim = claims[0]['data'].get('reused_claim_candidates_from')
+        if reused_claim:
+            previous_claims = equal_rows(parent,'page_claims',page)
+            assert len(previous_claims)==1 and reused_claim==previous_claims[0]['id']
+            assert claims[0]['data']['reused_from_generation']==parent
+        visuals = equal_rows(gen,'visual_observations',page)
+        assert len(visuals)==1
+        if visuals[0]['data'].get('reused_visual_observation_id'):
+            previous_visual = equal_rows(parent,'visual_observations',page)
+            assert len(previous_visual)==1
+            assert visuals[0]['data']['reused_visual_observation_id']==previous_visual[0]['id']
+            assert visuals[0]['data']['reused_from_generation']==parent
+            assert set(visuals[0]['data']['source_span_ids'])=={r['id'] for r in spans}
         assert all(c['eligible_for_synthesis'] is False for key in ('claims','blocked_claims') for c in claims[0]['data'][key])
     assert equal_rows(gen,'source_spans',page) == spans, 'IMMUTABLE_PAGE_CHANGED'
     pages.append({'pdf_page':page,'spans':len(spans),'regional_selections':regional,
-                  'context_changed':changed_context,'claims_checked':claims_checked,'api_pg_equal':True})
+                  'context_changed':changed_context,'claims_checked':claims_checked,'api_pg_equal':True,
+                  'selected_parent_generation_id':parent,'nearest_complete_parent':expected_parent,'lineage':lineage})
 reviews = sql(f"SELECT count(*) FROM editor.reviews WHERE generation_id='{gen}'")
 assert reviews == 0
 job_status = get('/v1/jobs/'+job)
-report = {'generation_id':gen,'parent_generation_id':parent,'api':base,'job_status':job_status['status'],
+report = {'generation_id':gen,'parent_generation_id':root_parent,'api':base,'job_status':job_status['status'],
           'frozen_optical_pages':len(boundary),'pages':pages,'counts':dict(counts),'promoted':promoted,'demoted':demoted,
           'manual_reviews':reviews,'source_or_review_writes':0,'semantic_acceptance':False,
           'complete_generation_coverage':len(boundary)==job_status['source_coverage']['expected_pages'],

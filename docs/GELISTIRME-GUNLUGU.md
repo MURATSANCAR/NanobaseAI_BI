@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Sayfa atasıyla devam, kısa model girdisi ve öncelik
+
+- V7 aynı içerik zincirindeki en yakın tamamlanmış sayfayı seçer; eksik sayfa önceki atadan gelir. Gerçek API/PG sayfa 2/7 ölçümü geçti; kayıtlar yeniden kaynak kapısından geçer.
+- Kaydedilen metin/geometri değişmeden model girdisi sıkıştırıldı. Gerçek tokenizer 3.952→1.873 token ölçtü; hız/kalite kabulü ayrıca yapılacak. Genel priority_pages parametresi sorunlu sayfayı öne alır, kalan sayfaları atlamaz.
+- R2 beşinci sayfa tamamlanınca API ile iptal edildi; sonuçlar korundu. V7 ayrı ortam kabulüne geçiliyor; ana sürüm v5. [Ayrıntı](editor/2026-09-17-page-resume.md).
+
 ## 2026-09-17 — Bölgesel OCR kaynak seçimi ve model açılışı hatası
 
 - Bağımsız okuyucularla desteklenen kırpılmış OCR için genel kaynak seçim fonksiyonu ve v6 entegrasyonu eklendi. Ham metin, kutu ve bütün okuyucu kökenleri korunur; eski model adayları değişen kaynakta yeniden kullanılmaz. Gerçek 1.149 kayıtta 39 aday yükselme/0 gerileme ölçüldü.

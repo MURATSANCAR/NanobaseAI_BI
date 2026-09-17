@@ -233,6 +233,7 @@ def attach_source(edition:uuid.UUID,body:Source,idempotency_key:str=Header()):
 class AnalysisRequest(BaseModel):
     purpose: Literal['validation']='validation'
     reuse_measurements_from: uuid.UUID|None=None
+    priority_pages: list[int]=Field(default_factory=list,max_length=20)
 
 
 @router.post('/content-versions/{version}/analyses',status_code=202)
@@ -241,15 +242,20 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         row=db.execute('SELECT e.work_id FROM editor.content_versions cv JOIN editor.editions e ON e.id=cv.edition_id WHERE cv.id=%s',(version,)).fetchone()
         if not row: raise HTTPException(404,'Kayıt bulunamadı')
         own_work(db,row['work_id'])
+        source=db.execute('SELECT sp.manifest FROM editor.content_versions cv JOIN editor.source_probes sp ON sp.sha256=cv.sha256 WHERE cv.id=%s',(version,)).fetchone()
+        if not source: raise HTTPException(409,'SOURCE_NOT_READY')
+        if len(set(body.priority_pages))!=len(body.priority_pages) or any(p<1 or p>source['manifest']['pdf_pages'] for p in body.priority_pages):
+            raise HTTPException(422,'INVALID_PRIORITY_PAGES')
         if db.execute("SELECT id FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')").fetchone(): raise HTTPException(429,'ANALYSIS_CAPACITY_FULL')
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7'):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION
         manifest={'release':RELEASE,'pipeline_version':VERSION,'mode':'validation','human_accepted':False,
+          'priority_pages':body.priority_pages,
           'reuse_measurements_from':str(body.reuse_measurements_from) if body.reuse_measurements_from else None,
           'model':'Qwen3.8-27B-Q4_K_M','image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
           'context_tokens':8192,'temperature':0,'seed':17,'old_visual_reuse':False}

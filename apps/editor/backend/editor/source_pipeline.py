@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v6'
+VERSION = 'source-spans-v7'
 
 
 def norm(value):
@@ -356,8 +356,9 @@ def interpret(job,evidence,spans,parent=None):
     usable=[s for s in spans if s['data']['status']=='TEXT_AGREED' and s['data']['role']=='TEXT']
     excluded=[str(s['id']) for s in spans if s not in usable]
     usable_ids={str(s['id']) for s in usable}
-    context=[{'span_id':str(s['id']),'text':s['data']['text'] if str(s['id']) in usable_ids else '[UNVERIFIED_REGION]',
-              'usable':str(s['id']) in usable_ids,'bbox':s['data']['bbox']} for s in reading_order(spans)]
+    # Only the model input is packed; stored source coordinates stay exact.
+    context=[[str(s['id']),s['data']['text'] if str(s['id']) in usable_ids else '[UNVERIFIED_REGION]',
+              str(s['id']) in usable_ids,[round(v,3) for v in s['data']['bbox']]] for s in reading_order(spans)]
     reused=reusable_claim_candidates(parent,key,spans)
     if reused:
         result,metrics,reused_id=reused
@@ -372,8 +373,11 @@ def interpret(job,evidence,spans,parent=None):
             '"span_refs":["id"],"actor":null,"speaker":null,'
             '"narrative_mode":"ACTUAL|REPORTED|PLANNED|HYPOTHETICAL|DREAM|JOKE|UNKNOWN",'
             '"polarity":"AFFIRMED|NEGATED|UNKNOWN"}],"uncertainties":["..."]}. '
+            'ACTIVITY, FRONT_MATTER, APPENDIX veya UNKNOWN sayfada claims boş dizi olmalı. '
             'Etkinlik yönergeleri ve künye hikaye olayı değildir. Bağlaç/zarfı kişi adı sayma. '
-            'Adı açık metinle bağlanamayan konuşmacı null. En fazla 4 aday. Alıntıyı yeniden yazma.\n'+json.dumps(context,ensure_ascii=False))
+            'Adı açık metinle bağlanamayan konuşmacı null. En fazla 4 aday. Alıntıyı yeniden yazma. '
+            'Her kaynak satırı [span_id,metin,kullanılabilir,bbox] sırasındadır. '
+            'bbox yalnız yerleşim içindir; metin ve span_id değişmez.\n'+json.dumps(context,ensure_ascii=False,separators=(',',':')))
         try:
             result,metrics=model([{'role':'user','content':prompt}],max_tokens=1400,prompt_version=VERSION+'-claims')
         except RuntimeError as exc:
@@ -417,6 +421,7 @@ def interpret(job,evidence,spans,parent=None):
 
 def run(job):
     from editor.analysis import ingest
+    from editor.page_reuse import resolve_page_parent
     gen=job['generation_id']; source=source_for(gen); root=ROOT/source['sha256']
     with connection() as db:
         fence(db,job)
@@ -433,16 +438,19 @@ def run(job):
     ingest(job)
     document=json.loads((root/'docling.json').read_text())
     evidence=get_records(gen,'evidence'); done={r['record_key'] for r in get_records(gen,'page_readings')}
+    priorities={page:i for i,page in enumerate(previous.get('priority_pages',[]))}
+    evidence.sort(key=lambda r:(priorities.get(r['data']['pdf_page'],len(priorities)),r['data']['pdf_page']))
     observed={r['record_key'] for r in get_records(gen,'visual_observations')}
     checked={r['record_key'] for r in get_records(gen,'page_checks')}
     for row in evidence:
         with connection() as db: fence(db,job)
-        if row['record_key'] not in done: optical(job,row,document,root,parent)
+        page_parent=resolve_page_parent(parent,row['record_key'],source['content_version_id'])
+        if row['record_key'] not in done: optical(job,row,document,root,page_parent)
         layouts={r['record_key']:r for r in get_records(gen,'layout_regions')}
         all_spans=get_records(gen,'source_spans')
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
-        if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,parent)
-        if row['record_key'] not in checked: interpret(job,row,spans,parent)
+        if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,page_parent)
+        if row['record_key'] not in checked: interpret(job,row,spans,page_parent)
     with connection() as db:
         fence(db,job)
         db.execute("UPDATE editor.jobs SET status='COMPLETED',finished_at=now(),progress=%s WHERE id=%s",
