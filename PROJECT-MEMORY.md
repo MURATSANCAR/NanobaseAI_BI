@@ -2,6 +2,8 @@
 
 ## 18 Eylül — V12 teknik koşu tamamlandı, V13 aday
 
+GPU OCR gateway kodu `apps/editor/gpu/` altında sürümlendi; idle/istek yarış düzeltmesi ayrı GPU adayında gerçek kitap kırpımı ve HTTP gövde kontrollerinden geçti. Ana gateway değişimi ve idle sınır kabulü henüz açık. [Kapsam](apps/editor/gpu/README.md).
+
 V12 nesli `2d774b82-e04f-45a3-92fc-eadaa8a37934` 48/48 teknik kontrol ve türetilmiş kayıtların gerçek API/PostgreSQL eşliğiyle tamamlandı; sonuç NEEDS_REVIEW, tam anlamsal kabul yok. V13 küçük kaynak bölgeleri/sayfa bağlamı/sınırlı konuşma bağlantısı API, worker, document ve web olarak yayımlandı. Yeni iş `4ca9b23a-7027-4909-b49f-1fd26c93b497`, nesil `18417f1b-d9db-4873-aeb8-b8c719fc0d0d`; gerçek uçtan uca kabul sürüyor. [Güncel ayrıntılar](docs/editor/2026-09-18-source-analysis-v13.md).
 
 ## 18 Eylül — kimlik ve anlamsal analiz V12
