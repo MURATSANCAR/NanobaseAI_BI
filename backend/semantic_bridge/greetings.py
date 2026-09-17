@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable, Optional
 from zoneinfo import ZoneInfo
 
@@ -73,7 +73,33 @@ def _keys(user: str, display: str) -> set[str]:
 
 def _row(r: Any) -> dict[str, Any]:
     at = r.created_at if r.created_at.tzinfo else r.created_at.replace(tzinfo=timezone.utc)
-    return {"id": r.id, "from": r.from_display, "to": r.to_name, "occasion": r.occasion, "at": at.isoformat()}
+    return {"id": r.id, "from": r.from_display, "to": r.to_name, "occasion": r.occasion, "at": at.isoformat(),
+            "seen": r.seen_at is not None}
+
+
+def _since(days: int, now: Optional[datetime]) -> datetime:
+    return (now or _now()) - timedelta(days=max(0, int(days)))
+
+
+def received(engine: sa.engine.Engine, tenant: str, user: str, display: str, days: int = 30,
+             now: Optional[datetime] = None) -> list[dict[str, Any]]:
+    """Bu kişiye son `days` günde gelen bütün kutlamalar (görülmüş olanlar dahil); yeniden eskiye.
+    Kampüs'teki zil bunu listeler; `inbox` yalnız görülmemişleri verir ve toast'tan sonra boşalır."""
+    with engine.connect() as c:
+        rows = c.execute(sa.select(GREETINGS).where(
+            GREETINGS.c.tenant_id == tenant, GREETINGS.c.to_key.in_(_keys(user, display)),
+            GREETINGS.c.created_at >= _since(days, now),
+        ).order_by(GREETINGS.c.created_at.desc())).all()
+    return [_row(r) for r in rows]
+
+
+def wall(engine: sa.engine.Engine, tenant: str, days: int = 30, now: Optional[datetime] = None) -> list[dict[str, Any]]:
+    """Alkış duvarı: kiracıdaki herkesin son `days` günde gönderdiği kutlamalar; yeniden eskiye."""
+    with engine.connect() as c:
+        rows = c.execute(sa.select(GREETINGS).where(
+            GREETINGS.c.tenant_id == tenant, GREETINGS.c.created_at >= _since(days, now),
+        ).order_by(GREETINGS.c.created_at.desc())).all()
+    return [_row(r) for r in rows]
 
 
 def send(engine: sa.engine.Engine, tenant: str, user: str, display: str, body: dict[str, Any],

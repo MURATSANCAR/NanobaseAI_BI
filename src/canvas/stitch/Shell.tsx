@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
 import { useIsAdmin } from '../useAdmin';
+import { useTimasSession } from '../TimasSession';
 
 const RAIL_ICONS = [
   (
@@ -47,6 +48,13 @@ export type ShellHead = {
   zoom?: string;
 };
 
+/** "Deniz Kaya" → "DK"; hesap adı ise ilk iki harf. */
+const initials = (name: string) => {
+  const parts = name.trim().split(/[\s._@-]+/).filter(Boolean);
+  const s = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? '?').slice(0, 2);
+  return s.toLocaleUpperCase('tr');
+};
+
 export const ZOOM_MIN = 0.5;
 export const ZOOM_MAX = 2;
 const ZoomContext = createContext(1);
@@ -85,6 +93,8 @@ export default function Shell({
   children: React.ReactNode;
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
+  const who = useTimasSession();
+  const whoName = who.data?.displayName || who.data?.username || '';
   // Yakınlaştırma: kanvas kendi durumunu verir (onZoom); öteki ekranlarda kabuk kendisi tutar.
   // Önceden bu ekranlarda düğme sabit "%100" gösteriyor ve tıklamaya bağlı değildi.
   const [ownZoom, setOwnZoom] = useState(1);
@@ -155,9 +165,9 @@ export default function Shell({
           T
         </div>
         <div className="flex min-w-0 items-center text-xs font-semibold tracking-tight text-ink">
-          <span className="hidden sm:inline text-ink font-bold hover:text-violet cursor-pointer transition">{head.tenant}</span>
+          <Link to="/" className="hidden sm:inline text-ink font-bold hover:text-violet transition">{head.tenant}</Link>
           <svg className="hidden sm:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-          <span className="hidden md:inline text-muted hover:text-ink cursor-pointer transition">{head.section}</span>
+          <span className="hidden md:inline text-muted">{head.section}</span>
           <svg className="hidden md:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
           <span className="min-w-0 truncate bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-violet animate-pulse"></span>
@@ -169,12 +179,13 @@ export default function Shell({
 
       {/* Top-Right Actions & Collaboration Pill */}
       <div className="flex items-center gap-1.5 sm:gap-3 pointer-events-auto">
-        {/* Collaboration Avatars */}
+        {/* Oturumdaki kişi: AD'deki ad soyadın baş harfleri. Önceden tasarımdan kalan üç sahte kişi vardı. */}
         <div className="hidden lg:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2">
-          <div className="flex -space-x-1.5 items-center">
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm" title="Emre Berk (Genel Yayın Yönetmeni)">EB</div>
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm" title="Elif Aydın (Yazar & Danışman)">EA</div>
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm" title="Selin Kara (Üretim & Telif)">SK</div>
+          <div
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm"
+            title={whoName || 'Oturum'}
+          >
+            {initials(whoName)}
           </div>
           <span className="text-[11px] font-semibold text-muted pl-1">{head.presence}</span>
         </div>

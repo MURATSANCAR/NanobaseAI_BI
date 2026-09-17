@@ -131,7 +131,15 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose}>
       <div
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Promt ayrıntısı"
+        tabIndex={-1}
+        ref={(el) => el?.focus()}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none sm:rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-6">
@@ -227,9 +235,11 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="İnceleme notu (nereyi düzeltelim?)"
                 className={field}
-                onBlur={() => note !== (d.reviewNote ?? '') && mark.mutate({ note })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') mark.mutate({ note });
+                }}
               />
-              <button type="button" disabled={mark.isPending} onClick={() => mark.mutate({ note })} className={btnGhost}>
+              <button type="button" disabled={mark.isPending || note === (d.reviewNote ?? '')} onClick={() => mark.mutate({ note })} className={btnGhost}>
                 Kaydet
               </button>
             </div>

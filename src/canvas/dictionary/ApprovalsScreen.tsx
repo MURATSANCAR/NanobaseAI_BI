@@ -342,7 +342,7 @@ function ApprovalsScreenInner() {
                     type="button"
                     disabled={act.isPending}
                     onClick={() => act.mutate('APPROVE')}
-                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-canvas-mint to-emerald-600 px-4 py-2.5 text-[12.5px] font-extrabold text-white shadow-md disabled:opacity-60"
+                    className="flex min-h-11 items-center gap-1.5 rounded-xl bg-gradient-to-r from-canvas-mint to-emerald-600 px-4 py-2.5 text-[12.5px] font-extrabold text-white shadow-md disabled:opacity-60"
                   >
                     {act.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                     Onayla

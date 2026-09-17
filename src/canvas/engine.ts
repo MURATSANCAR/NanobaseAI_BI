@@ -829,11 +829,12 @@ async function roomsSend<T>(method: string, path: string, body?: unknown): Promi
   return (await res.json()) as T;
 }
 
-export type Greeting = { id: string; from: string; to: string; occasion: string | null; at: string };
+export type Greeting = { id: string; from: string; to: string; occasion: string | null; at: string; seen: boolean };
 
-/** Kampüs kutlamaları: `sent` bugün kutladıklarım, `inbox` bana gelen ve henüz görmediklerim. */
+/** Kampüs kutlamaları: `sent` bugün kutladıklarım, `inbox` bana gelen ve henüz görmediklerim,
+ *  `received` son 30 günde bana gelenlerin hepsi (zil), `wall` herkesin son 30 günü (alkış duvarı). */
 export const greetingsApi = {
-  state: () => roomsSend<{ sent: string[]; inbox: Greeting[] }>('GET', '/api/v1/greetings'),
+  state: () => roomsSend<{ sent: string[]; inbox: Greeting[]; received: Greeting[]; wall: Greeting[] }>('GET', '/api/v1/greetings'),
   send: (to: string, occasion?: string) => roomsSend<Greeting & { created: boolean }>('POST', '/api/v1/greetings', { to, occasion }),
   seen: (ids: string[]) => roomsSend<{ marked: number }>('POST', '/api/v1/greetings/seen', { ids }),
 };

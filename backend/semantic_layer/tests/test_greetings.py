@@ -45,3 +45,21 @@ def test_cannot_greet_yourself_or_nobody(engine):
         G.send(engine, T, "deniz", "Deniz Kaya", {"to": "deniz kaya"}, now=NOW)
     with pytest.raises(G.GreetingError):
         G.send(engine, T, "deniz", "Deniz Kaya", {"to": "  "}, now=NOW)
+
+
+def test_received_and_wall_keep_seen_rows_newest_first(engine):
+    from datetime import timedelta
+
+    a = G.send(engine, T, "deniz", "Deniz Kaya", {"to": "Ahmet Yıldız", "occasion": "Alkış: kapak"}, now=NOW)
+    b = G.send(engine, T, "busra", "Büşra Aksoy", {"to": "Ahmet Yıldız"}, now=NOW + timedelta(minutes=5))
+    G.send(engine, T, "deniz", "Deniz Kaya", {"to": "Büşra Aksoy"}, now=NOW + timedelta(minutes=9))
+    assert G.mark_seen(engine, T, "ahmety", "Ahmet Yıldız", [a["id"]], now=NOW + timedelta(minutes=10)) == 1
+
+    got = G.received(engine, T, "ahmety", "Ahmet Yıldız", now=NOW + timedelta(minutes=11))
+    assert [g["id"] for g in got] == [b["id"], a["id"]]
+    assert [g["seen"] for g in got] == [False, True]
+    assert G.received(engine, T, "ahmety", "Ahmet Yıldız", days=0, now=NOW + timedelta(days=2)) == []
+
+    wall = G.wall(engine, T, now=NOW + timedelta(minutes=11))
+    assert [(g["from"], g["to"]) for g in wall] == [("Deniz Kaya", "Büşra Aksoy"), ("Büşra Aksoy", "Ahmet Yıldız"), ("Deniz Kaya", "Ahmet Yıldız")]
+    assert wall[2]["occasion"] == "Alkış: kapak"

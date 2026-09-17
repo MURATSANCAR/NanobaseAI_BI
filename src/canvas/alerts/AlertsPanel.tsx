@@ -132,6 +132,7 @@ export default function AlertsPanel({
   rules,
   email,
   draft,
+  inline = false,
 }: {
   mode: 'kurallar' | 'yeni';
   onMode: (m: 'kurallar' | 'yeni') => void;
@@ -139,10 +140,12 @@ export default function AlertsPanel({
   rules: AlertRule[];
   email: AlertEmail;
   draft: RuleDraft | null;
+  /** Uyarılar ekranının kendi gövdesi: kanvasın üstünde yüzen kart değil, sayfanın içeriği. Kapat düğmesi çıkmaz. */
+  inline?: boolean;
 }) {
   return (
-    <div className="absolute bottom-[148px] left-2 right-2 z-50 flex justify-center sm:bottom-28 sm:left-[92px] sm:right-6">
-      <div className="max-h-[calc(100dvh-230px)] w-full max-w-[1040px] overflow-auto rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5">
+    <div className={inline ? 'flex justify-center pb-4' : 'absolute bottom-[148px] left-2 right-2 z-50 flex justify-center sm:bottom-28 sm:left-[92px] sm:right-6'}>
+      <div className={`${inline ? '' : 'max-h-[calc(100dvh-230px)] overflow-auto '}w-full max-w-[1040px] rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">
             {(
@@ -164,9 +167,11 @@ export default function AlertsPanel({
               </button>
             ))}
           </div>
-          <button type="button" onClick={onClose} title="Kapat" aria-label="Kapat" className="rounded-lg p-2.5 sm:p-1.5 text-canvas-muted hover:bg-slate-100">
-            <X className="h-4 w-4" />
-          </button>
+          {!inline && (
+            <button type="button" onClick={onClose} title="Kapat" aria-label="Kapat" className="rounded-lg p-2.5 sm:p-1.5 text-canvas-muted hover:bg-slate-100">
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
 
         {!email.configured && (
@@ -454,14 +459,19 @@ function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }
           {rule.status === 'paused' ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
         </button>
         {confirm ? (
-          <button
-            type="button"
-            onClick={() => del.mutate()}
-            disabled={del.isPending}
-            className="rounded-lg bg-red-50 px-2 py-1 text-[11.5px] font-extrabold text-red-700 hover:bg-red-100"
-          >
-            Silinsin mi? Evet
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => del.mutate()}
+              disabled={del.isPending}
+              className="rounded-lg bg-red-50 px-2 py-1 text-[11.5px] font-extrabold text-red-700 hover:bg-red-100"
+            >
+              Silinsin mi? Evet
+            </button>
+            <button type="button" onClick={() => setConfirm(false)} disabled={del.isPending} className="rounded-lg px-2 py-1 text-[11.5px] font-bold text-canvas-muted hover:bg-slate-100">
+              Vazgeç
+            </button>
+          </>
         ) : (
           <button type="button" title="Sil" onClick={() => setConfirm(true)} className={btn}>
             <Trash2 className="h-4 w-4" />
