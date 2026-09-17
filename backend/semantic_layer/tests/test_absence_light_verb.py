@@ -71,3 +71,16 @@ def test_an_absent_measure_has_no_reference_priority_to_prove():
     out = unmet_obligations(sq, sql)
     assert not any("ilişki önceliği" in u for u in out), out
     assert not any("yokluk" in u for u in out), out
+
+
+def test_a_header_filter_is_proven_on_its_line_table_by_the_same_column():
+    """The model checked the order type on LG_ORFLINE; the certified filter names LG_ORFICHE. The line
+    points at exactly one header and carries TRCODE as the header does."""
+    order = ResolvedSlot("siparis", "DIMENSION_VALUE", "CERTIFIED",
+                         mapping=Mapping("", "LG_ORFICHE", "LG_{n0}_{n1}_ORFICHE", column="TRCODE", operator="IN", values=["1"]))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[order])
+    sources = {"LG_ORFLINE": {"types": {}, "window": None, "declared": False, "refs": {"ORDFICHEREF": "LG_ORFICHE"}}}
+    sql = "SELECT c.CODE FROM CLCARD c WHERE EXISTS (SELECT 1 FROM LG_ORFLINE o WHERE o.CLIENTREF = c.LOGICALREF AND o.TRCODE IN (1) AND o.CANCELLED = 0)"
+    assert not any("koşulu sonuç kapsamında" in u for u in unmet_obligations(sq, sql, sources=sources)), unmet_obligations(sq, sql, sources=sources)
+    other = sql.replace("o.TRCODE IN (1)", "o.TRCODE IN (2)")
+    assert any("koşulu sonuç kapsamında" in u for u in unmet_obligations(sq, other, sources=sources))
