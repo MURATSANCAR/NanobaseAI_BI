@@ -1,5 +1,7 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
+> Güncel ek: V3 yetki sürümünde restore izin hatası bulundu, v4 düzeltmesi aynı gerçek yedekle yeni kurulumda API/PG ve mobil kabulünden geçti. 321 kaynak bölgesi hâlâ açık; yeni kırpım yöntemi ölçüm aşamasında, kaynak veya inceleme kararı değiştirilmedi. [Güncel hata ve kabul kaydı](2026-09-17-restore-acl-and-source-triage.md). Aşağıdaki önceki yayın özetleri tarihçedir.
+
 > Son ek yayın: `upload-queue-v2-20260917` ana kurulumda. Yeni PDF yükleme, otomatik ağsız ayrıştırma, iptal ve yeniden takip gerçek kitapla geçti; 321 kaynak incelemesi/anlamsal kabul açık. Yeni yayının offline restore sonucu ayrıca izlenir. [Yükleme akışı ve kanıtlar](2026-09-17-upload-pipeline.md). Aşağıdaki önceki yayın kayıtları tarihçedir.
 
 > 17 Eylül son güncelleme: `source-review-v2-r2-20260917` ile yeni nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b` 48/48 tamamlandı; 828 anlaşma/321 inceleme, NEEDS_REVIEW. 371 yeniden okuma ve 15 ek OCR adayının kökeni korundu; veri elle değiştirilmedi. Kaynakta kutu ve aday görüntüleme dört genişlikte gerçek tarayıcı/API kontrolünden geçti. Son offline paket/import ve ayrı kuruluma geri yükleme 07:18:10 UTC itibarıyla geçti; geri yüklenen gerçek API/PG, OCR adayları ve 320/390/768/1440 px arayüz doğrulandı. Aşağıdaki v2 restore kayıtları tarihçedir. [Kod, ölçümler ve güncel kanıtlar](2026-09-17-source-v3.md).
@@ -8,7 +10,7 @@
 
 17 Eylül 2026 tarihinde gerçek sunucudaki API ve kanıt dosyaları yeniden okundu. Bu belge güncel durum kaydıdır; 16 Eylül tarihli belgeler kendi tarihlerinin uygulama ve deney geçmişini korur.
 
-## Sonuç: işleme tamamlandı, anlamsal kabul açık
+## Önceki v2 sonucu: işleme tamamlandı, anlamsal kabul açık
 
 | Ölçüm | Gerçek sonuç |
 |---|---|

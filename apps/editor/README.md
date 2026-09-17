@@ -5,7 +5,11 @@ Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, ta
 Docker ağlarını veya kimlik bilgilerini kullanmaz. BI ekran entegrasyonu sonraki
 aşamada tanımlı API sözleşmeleriyle yapılacaktır.
 
-## Son yayın: otomatik PDF kabulü
+## Güncel kurulum ve erişim
+
+`book-access-v4-20260917`, kullanıcı/kitap kapsamlı erişim ve yedekten dönüşte yetki tablolarının izinlerini yeniden kuran başlangıç kodunu içerir. `verify.py` gerçek DB’de 28 izin kontrolünü, API ve kaynak hashlerini doğrular. [Restore hatası ve gerçek kabul kaydı](../../docs/editor/2026-09-17-restore-acl-and-source-triage.md).
+
+## Önceki yayın: otomatik PDF kabulü
 
 `upload-queue-v2-20260917`: yeni kitap arayüzden yüklenir, ağsız `parser` tarafından otomatik hazırlanır. 202/job_id, kalıcı ilerleme ve iptal API'si vardır. Gerçek kitabın 48 sayfası boş ayrı kurulumda; kuyruk sınırı, iptal, yeniden başlatma ve dört ekran genişliğiyle doğrulandı. [Ayrıntılı kod, imaj hashleri ve kabul sınırları](../../docs/editor/2026-09-17-upload-pipeline.md).
 

@@ -24,6 +24,11 @@ def main():
         db.execute('''GRANT SELECT, INSERT, UPDATE ON editor.works, editor.editions,
             editor.content_versions, editor.generations, editor.jobs, editor.records,
             editor.outbox, editor.reviews, editor.idempotency, editor.uploads TO editor_app''')
+        # Access tables also need their least-privilege ACLs restored. Alembic
+        # does not replay 0006 when a current database dump is restored.
+        db.execute('GRANT SELECT, INSERT, UPDATE ON editor.users, editor.access_keys TO editor_app')
+        db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON editor.book_access TO editor_app')
+        db.execute('GRANT SELECT, INSERT ON editor.access_audit TO editor_app')
         db.execute('GRANT USAGE ON SCHEMA checkpoints TO editor_app')
         db.execute('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA checkpoints TO editor_app')
         db.execute('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA checkpoints TO editor_app')

@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> Güncel ek: V3 yetki sürümünde restore izin hatası bulundu, v4 düzeltmesi aynı gerçek yedekle yeni kurulumda API/PG ve mobil kabulünden geçti. 321 kaynak bölgesi hâlâ açık; yeni kırpım yöntemi ölçüm aşamasında, kaynak veya inceleme kararı değiştirilmedi. [Güncel hata ve kabul kaydı](2026-09-17-restore-acl-and-source-triage.md). Aşağıdaki önceki yayın özetleri tarihçedir.
+
 > Son ek yayın: `upload-queue-v2-20260917` ana kurulumda. Yeni PDF yükleme, otomatik ağsız ayrıştırma, iptal ve yeniden takip gerçek kitapla geçti; 321 kaynak incelemesi/anlamsal kabul açık. Yeni yayının offline restore sonucu ayrıca izlenir. [Yükleme akışı ve kanıtlar](2026-09-17-upload-pipeline.md). Aşağıdaki önceki yayın kayıtları tarihçedir.
 
 > 17 Eylül son güncelleme: `source-review-v2-r2-20260917` ile yeni nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b` 48/48 tamamlandı; 828 anlaşma/321 inceleme, NEEDS_REVIEW. 371 yeniden okuma ve 15 ek OCR adayının kökeni korundu; veri elle değiştirilmedi. Kaynakta kutu ve aday görüntüleme dört genişlikte gerçek tarayıcı/API kontrolünden geçti. Son offline paket/import ve ayrı kuruluma geri yükleme 07:18:10 UTC itibarıyla geçti; geri yüklenen gerçek API/PG, OCR adayları ve 320/390/768/1440 px arayüz doğrulandı. Aşağıdaki v2 restore kayıtları tarihçedir. [Kod, ölçümler ve güncel kanıtlar](2026-09-17-source-v3.md).
@@ -8,9 +10,9 @@
 
 ## Kabul yöntemi
 
-**Güncel durum:** Aşağıdaki eski koşu paragrafları tarihsel kanıttır. Canlı nesil
-`a9471749-7447-4826-b003-f25e53943763`, iş `0d53b03d-67e5-44c4-b523-bf9a2aa56ac2`.
-`source-spans-v2` kelime eşleştirmesi ve kesintisiz alıntı kontrolünü içerir.
+**Güncel analiz:** Canlı nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b`,
+iş `c70995d2-496b-451d-8b34-a84eda4985f9`; `source-spans-v3`.
+48/48 sayfa, 828 kaynak anlaşması ve 321 inceleme bölgesi vardır.
 V1 iptal edilip korundu. Yeni akışın sonu NEEDS_REVIEW; konuşmacı/semantik kabul
 ve buna bağlı sentez/indeks/soru-cevap açık. CPU 48, model slotu **1**.
 [Güncel sistem düzeltmeleri ve kanıtlar](2026-09-16-system-quality-followup.md).
@@ -19,18 +21,31 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 
 Önceki `18c22ea1-35e8-4e49-b762-82b3320ed49c` neslinde 48 görsel model çıktısı oluştu. Codex kaynak karşılaştırmasından gelen ret kararları sonraki sahne girdisini filtrelediği için bu nesil müdahalesiz kabul sayılamaz. İçerik düzeltmesi API kayıt sayısı 0 olarak canlı doğrulandı. İnceleme kararları eski nesilde korunur; yeni nesil aynı özgün model çıktılarını, kendi kaynak kimlikleriyle ve inceleme kararı olmadan yeniden kullanır. Bu yeniden kullanım görsellerin tekrar üretilmesi olarak sayılmaz.
 
+## P0–P7 gerçek çıkış durumu
+
+| Paket | Durum | Kalan kabul |
+|---|---|---|
+| P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
+| P1 Kaynak hattı | Yükleme, 48 sayfa ve kaynak paneli çalışıyor | 321 kaynak bölgesi; görsel kaynak doğruluğu |
+| P2 Karakter/olay | Adaylar ve kanıt kapıları var | Konuşmacı/kimlik, olay modu ve sahne eşliği |
+| P3 Edebî örnekler | Kabul bekliyor | P2, diğer iki gerçek kitap ve editör rubriği |
+| P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
+| P5 Editör akışı | Kaynak/OCR/bbox ve yetki ekranları çalışıyor | Genel düzeltme ve bağımlılık yenileme kabulü |
+| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | Son v4 paket kabulü, farklı kullanıcı/yük/topolojiler |
+| P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
+
 ## Planın tüm bölümleri
 
-V2 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 778 anlaşma/371 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. API/PG eşliği ve ayrı kurulum restore/mobil kontrolü geçti. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-status-and-handoff.md).
+V3 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 828 anlaşma/321 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. API/PG eşliği ve ayrı kurulum restore/mobil kontrolü geçti. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-status-and-handoff.md).
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
 | 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Diğer iki kitap ve ayrılmış kabul kitabı yok |
 | 2 Doğrulama evresi | Sunucu envanteri, kaynak hashleri, gerçek API/DB | Tam uçtan uca süre, görev başarısı, editör emeği ve kalan efor ölçümü açık |
-| 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; PDF.js/bbox incelemesi eksik |
+| 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; bbox/OCR inceleme ekranı doğrulandı; PDF.js özel görüntüleyici ve anlamsal kabul kapsamı ayrıca açık |
 | 4 Uçtan uca | 48 kaynak/okuma/görsel aday/kontrol kaydı; v2 iş COMPLETED | NEEDS_REVIEW; doğrulanmış sahne → sentez → indeks → cevap kabulü açık |
-| 5 Dosya kabulü | Gerçek 19.806.912 bayt PDF, aynı hash, yarım yükleme reddi, idempotency | Tüm hata profilleri ve otomatik yeni PDF ayrıştırma akışı eksik |
-| 6 OCR/görsel | 48/48; PDF/Paddle/Tesseract kelime geometrisi, 1.149 span, 778 anlaşma/371 inceleme | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
+| 5 Dosya kabulü | Gerçek 19.806.912 bayt PDF, aynı hash, yarım yükleme reddi, idempotency | Otomatik yeni PDF ayrıştırma, kuyruk, iptal ve yeniden başlatma doğrulandı; bütün hata profilleri açık |
+| 6 OCR/görsel | 48/48; PDF/Paddle/Tesseract kelime geometrisi, 1.149 span, 828 anlaşma/321 inceleme | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
 | 7 Görsel bağlam | Kaynak/görsel API, 48 hash eşleşmesi ve gerçek sayfa/model adayını gösteren mobil ekran | Sahne eşleme kabulü, bölge/geçici kimlik ve görsel bağı düzenleme eksik |
 | 8 Veri modeli | Sürümlü kaynak/generation/record/job/review/outbox | Planın ayrıntılı varlık sözleşmesine karşı tam eşleme kabulü açık |
 | 9 İddia/zaman/bakış | Olay modu, fail, nesne, konuşmacı, bakış ve göreli zaman alanları | Alanların gerçek kitapta anlamsal doğruluğu bekleniyor |
@@ -44,7 +59,7 @@ V2 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 778 anlaşma/371 incele
 | 17 B01–B18 | Ayrı senaryo takip tablosu mevcut | Çalışan uygulamanın sonuçlarıyla tek tek kapatılacak; B18 kaynağı yok |
 | 18 P0–P7 | Bağımlılık ve açık paketler bu tabloda görünür | Paketlerin hiçbiri yalnız kod bulunduğu için tamamlanmış sayılmaz |
 | 19 API | Eser/baskı/yükleme/analiz/job/kaynak/görsel/inceleme/soru uçları | Bütün API sözleşmesi, request/run metadata ve genel correction kabulü açık |
-| 20 İşletim/yetki | V2 offline paket, gerçek tam kitap yedeği, ayrı restore/API-PG/mobil kontrolü geçti | Kullanıcı-kitap-rol, farklı müşteri topolojileri, saklama/silme ve RPO/RTO kabulü eksik |
+| 20 İşletim/yetki | V2 offline paket, gerçek tam kitap yedeği, ayrı restore/API-PG/mobil kontrolü geçti | Kullanıcı/kitap yetkisi gerçek sınırlı anahtarlarla geçti; farklı gerçek kullanıcı matrisi, müşteri topolojileri, saklama/silme ve RPO/RTO kabulü açık |
 | 21 Pilot/üretim | `pilot_ready=false`, insan onayı verilmedi | Üretim kararı verilemez; kritik kaynak hataları ve açık teknik koşullar var |
 | 22 Kaynaklar | Analiz belgesinin teknik referansları | Referans belgeleri gerçek ürün kabulünün yerine geçmez |
 

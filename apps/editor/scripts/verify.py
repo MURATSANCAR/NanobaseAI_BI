@@ -21,6 +21,22 @@ assert state['details']['schema_revision'] == reference['revision']
 assert [row['release'] for row in state['details']['deployments']] == reference['deployments']
 assert reference['app_superuser'] is False
 assert state['details']['source_probes'] == reference['source_probes']
+# Verify effective permissions, including forbidden writes, independently of
+# API responses. A healthy process alone does not detect missing restore ACLs.
+expected_access = {
+    'users': {'SELECT', 'INSERT', 'UPDATE'},
+    'access_keys': {'SELECT', 'INSERT', 'UPDATE'},
+    'book_access': {'SELECT', 'INSERT', 'UPDATE', 'DELETE'},
+    'access_audit': {'SELECT', 'INSERT'},
+}
+acl_query = """SELECT json_agg(json_build_object('table',t,'privilege',p,
+    'allowed',has_table_privilege('editor_app','editor.'||t,p)))
+    FROM unnest(ARRAY['users','access_keys','book_access','access_audit']) t
+    CROSS JOIN unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) p"""
+access_permissions = json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres',
+    'psql','-U','postgres','-d','editor','-Atc',acl_query],text=True))
+for permission in access_permissions:
+    assert permission['allowed'] == (permission['privilege'] in expected_access[permission['table']]), permission
 if 'models' in settings.get('COMPOSE_PROFILES','').split(','):
     with urllib.request.urlopen(urllib.request.Request(base+'/v1/model-services',headers={'Authorization':'Bearer '+token}),timeout=20) as response:
         models = json.load(response)
@@ -52,3 +68,5 @@ print(json.dumps({'environment':'remote Linux Docker installation', 'api':base,
                   'database':'isolated editor PostgreSQL / editor schema',
                   'state':state, 'independent_reference':reference, 'unauthorized_status':401,
                   'artifact_hash_verified_sources':len(reference['source_probes'])}, indent=2))
+print(json.dumps({'access_table_permissions_verified':len(access_permissions),
+                  'access_audit_update_delete_forbidden':True}))

@@ -7,3 +7,7 @@ Gerçek 48 sayfalık kitabın sorunlu sayfalarında, aynı sayfa/render/hash ve 
 Üretim OCR imajı değiştirilmedi. Kaynak/iddia/review kaydı yazılmadı. Ayrı deney konteyneri durduruldu. Temel imaj `sha256:4e69a4268296fc59285a5c137ebb411c78fe4ed00a23a5486e4671fd700f1deb`; deney `sha256:68bab438b92417280e8351d2e93746b48044a419a15b18068353f4b9fbdab7aa`.
 
 Gerçek sunucudaki ölçüm betiği `scripts/probe-ocr-geometry.py`; kanıt `evidence/ocr-geometry-summary.json` ve sayfa bazlı aynı önekli JSON dosyalarıdır. Tek başına kırpım geometrisini değiştirmek bu iki sayfadaki blokajı çözmediği için üretim varsayılanı yapılmadı.
+
+## Bağımsız kelime kutusu kırpımı
+
+`word_geometry_probe.py` + `scripts/probe-word-crops.py`, model cevabı verilmeden yalnız gerçek görüntülerle ölçüm yapar. 48 sayfada 799 ölçülebilir bölge: 19 optik iyileşme, 47 gerileme; 350 bölgede bağımsız kelime kutusu bulunmadı. Varsayılan yöntem için reddedildi, kaynak kayıtları değiştirilmedi. Detay ve gerçek sunucu kanıtı `docs/editor/2026-09-17-restore-acl-and-source-triage.md`.

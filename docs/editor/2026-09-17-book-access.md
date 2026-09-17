@@ -40,3 +40,7 @@ Son iki düzeltme: editör önizlemesi yazma yetkisi gerektirir; hash ile hazır
 Ana sunucu kanıt kökü `/data/nanobaseai/editor/evidence/`: `access-publish.log`, `access-release-verify-release.py.log`, `access-release-verify-access.py.log`, `access-release-reader-ui.log`, `access-release-ui.log`. Dört genişlik: 320/390/768/1440 px. Okuyucunun gerçek kaynak/OCR/bbox ekranları ve yönetici/okuyucu kontrol görünürlüğü geçti; yatay taşma yok.
 
 Bu kabul, 321 açık kaynak bölgesini veya konuşmacı belirsizliklerini çözmüş sayılmaz.
+
+## V3 restore hatası ve v4 düzeltmesi
+
+V3'ün ayrı kurulum denetiminde API, `users` tablosu izinleri nedeniyle 500 verdi. Hata gizlenmedi: v3 paketinin restore kabulü başarısızdır. V4 `migrate.py` ile izinleri yeniden kurar; aynı gerçek yedeğin yeni hedefte 14 tablo/artifact eşliği, 28 izin, gerçek API ve mobil ekran kabulü geçti. [Ayrıntılı neden, sürüm ve kanıtlar](2026-09-17-restore-acl-and-source-triage.md).

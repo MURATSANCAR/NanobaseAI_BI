@@ -1,7 +1,7 @@
 name: ${COMPOSE_PROJECT_NAME:-nanobase-editor}
 
 x-app: &app
-  image: ${EDITOR_IMAGE:-nanobase-editor:book-access-v3-20260917}
+  image: ${EDITOR_IMAGE:-nanobase-editor:book-access-v4-20260917}
   build:
     context: .
     target: runtime
@@ -17,7 +17,7 @@ x-app: &app
   cpu_shares: 256
   mem_limit: 512m
   environment: &app-env
-    EDITOR_RELEASE: ${EDITOR_RELEASE:-book-access-v3-20260917}
+    EDITOR_RELEASE: ${EDITOR_RELEASE:-book-access-v4-20260917}
     EDITOR_MODEL_CONCURRENCY: ${EDITOR_MODEL_CONCURRENCY:-1}
     EDITOR_IMAGE_MAX_TOKENS: ${EDITOR_IMAGE_MAX_TOKENS:-1024}
     HF_HUB_OFFLINE: '1'
