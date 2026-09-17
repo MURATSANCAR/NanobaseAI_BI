@@ -2,7 +2,7 @@
 
 ## 2026-09-17 — Editör kelime sınırı kapısı
 
-Ana yayın `source-boundaries-v4-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `33b5bb70-ddd5-4591-a09d-536b656791dc` aynı ham ölçümlerden işleniyor; tamamlanma ve bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
+Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` aynı ham ölçümlerden işleniyor; tamamlanma ve bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
 
 ## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
 
