@@ -241,6 +241,20 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
     return mutate('/jobs/'+str(job_id)+'/cancel',body,idempotency_key,action)
 
 
+@router.get('/generations/{generation}/source-review')
+def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
+    from editor.source_review import source_review
+    if pdf_page is not None and pdf_page < 1:
+        raise HTTPException(400,'INVALID_PAGE')
+    with connection() as db:
+        scope(db,generation)
+        rows=db.execute("""SELECT id,kind,record_key,data FROM editor.records
+          WHERE generation_id=%s AND kind IN ('source_spans','layout_regions','visual_observations')
+          AND (%s::integer IS NULL OR (data->>'pdf_page')::integer=%s)
+          ORDER BY kind,record_key""",(generation,pdf_page,pdf_page)).fetchall()
+    return {'generation_id':str(generation),**source_review(rows)}
+
+
 @router.get('/generations/{generation}/{kind}')
 def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks'],offset:int=0,limit:int=50,pdf_page:int|None=None):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')

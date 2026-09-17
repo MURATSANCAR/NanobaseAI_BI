@@ -1990,6 +1990,7 @@ class CompilerRouter:
         sources = self.gate_sources()
         unmet = gate_report(q, out.sql, sources=sources)
         problems = [u.text for u in unmet] + audit_sql(q, out.sql)
+        refused = out.sql
         if problems and unmet and out.compiler == "existing_llm" and self.existing is not None:
             hints = "; ".join(u.hint or u.text for u in unmet)
             fixed = self.existing.repair(q, out.sql, "Sorgu şu koşulları kanıtlamıyor — " + hints, thread, recall=recall)
@@ -2000,10 +2001,12 @@ class CompilerRouter:
                     out.explain = list(out.explain) + ["kapı onarımı: " + hints]
                     return out
                 problems = again
+                refused = fixed
         if problems:
             # The refused statement is evidence: without it a refusal cannot be told apart from a
-            # gate that misread a correct query.
-            log.warning("gate refused q=%r problems=%s sql=%s", q.question[:80], problems, " ".join((out.sql or "").split())[:1500])
+            # gate that misread a correct query. When the repair was refused too, its statement is
+            # the one the problems describe.
+            log.warning("gate refused q=%r problems=%s sql=%s", q.question[:80], problems, " ".join((refused or "").split())[:3000])
             return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
                                  explain=problems, certified=False)
         return out
