@@ -14,7 +14,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg.conninfo import make_conninfo
 from psycopg.types.json import Jsonb
 
-from editor.config import connection, secret, RELEASE, code_manifest
+from editor.config import connection, secret, RELEASE, code_manifest, DATABASE_NAME
 from editor.book_store import ROOT, sha, identifier, get_records, save_record, fence, source_for
 from editor.source_alignment import corrupt_character
 
@@ -474,13 +474,13 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9'):
+    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10'):
         from editor.source_pipeline import run as run_source_pages
         return run_source_pages(job)
     with connection() as db:
         fence(db,job)
         db.execute("UPDATE editor.generations SET manifest=manifest || %s WHERE id=%s",(Jsonb({'execution_release':RELEASE,'code_manifest':code_manifest(),'analysis_prompt_version':PROMPT_VERSION}),job['generation_id']))
-    dsn=make_conninfo(host='postgres',dbname='editor',user='editor_app',password=secret('db_app'),options='-c search_path=checkpoints')
+    dsn=make_conninfo(host='postgres',dbname=DATABASE_NAME,user='editor_app',password=secret('db_app'),options='-c search_path=checkpoints')
     graph=StateGraph(State)
     stages=[('source',ingest),('visuals',visuals),('scenes',scenes),('merge',merge_events),('support',verify_support),('synthesis',synthesis),('index',index)]
     for name,fn in stages:

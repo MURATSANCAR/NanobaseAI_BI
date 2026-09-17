@@ -5,6 +5,8 @@ from pathlib import Path
 import psycopg
 from psycopg.rows import dict_row
 
+DATABASE_NAME = os.environ.get('EDITOR_DB_NAME', 'editor')
+
 
 def secret(name: str) -> str:
     value = Path('/run/secrets/' + name).read_text().strip()
@@ -15,7 +17,7 @@ def secret(name: str) -> str:
 
 def connection(owner=False):
     role = 'editor_owner' if owner else 'editor_app'
-    return psycopg.connect(host='postgres', dbname='editor', user=role,
+    return psycopg.connect(host='postgres', dbname=DATABASE_NAME, user=role,
                            password=secret('db_owner' if owner else 'db_app'),
                            connect_timeout=5, row_factory=dict_row)
 

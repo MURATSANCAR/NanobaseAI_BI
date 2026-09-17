@@ -102,11 +102,12 @@ def reference(data, method):
 
 generation_row = sql(f"SELECT json_build_object('content_version_id',content_version_id,'manifest',manifest) FROM editor.generations WHERE id='{gen}'")
 manifest = generation_row['manifest']
-assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9')
-root_parent = str(uuid.UUID(manifest['reuse_measurements_from']))
+assert manifest['pipeline_version'] in ('source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10')
+root_parent = str(uuid.UUID(manifest['reuse_measurements_from'])) if manifest.get('reuse_measurements_from') else None
 
 
 def nearest_parent(page, key):
+    if root_parent is None:return None,[]
     current = root_parent; seen = set(); lineage = []
     for _ in range(64):
         assert current not in seen, 'ANCESTRY_CYCLE'
@@ -143,7 +144,7 @@ for page, frozen in sorted(boundary.items()):
     assert reading_rows == [frozen], 'COMPLETED_READING_CHANGED'
     expected_parent,lineage = nearest_parent(page,frozen['record_key'])
     parent = frozen['data'].get('reused_from_generation')
-    if manifest['pipeline_version'] in ('source-spans-v7','source-spans-v8','source-spans-v9'):
+    if manifest['pipeline_version'] in ('source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10'):
         assert parent==expected_parent, 'NOT_NEAREST_COMPLETE_PAGE_PARENT'
     else:
         assert parent==root_parent, 'V6_DIRECT_PARENT_MISMATCH'
@@ -158,6 +159,8 @@ for page, frozen in sorted(boundary.items()):
         for field in ('source_sha256','render_sha256','ocr_render_sha256','ocr_artifact_sha256'):
             assert evidence[0]['data'][field]==previous_evidence[0]['data'][field]
     spans = equal_rows(gen,'source_spans',page)
+    from reread_artifact_reference import verify_artifacts
+    artifact_proof=verify_artifacts(spans,evidence[0]['data'],gen)
     parents = {r['record_key']: r for r in equal_rows(parent,'source_spans',page)} if parent else {}
     assert len(spans)==frozen['data']['span_count']
     if parent: assert {r['record_key'] for r in spans}==parents.keys()
@@ -167,6 +170,11 @@ for page, frozen in sorted(boundary.items()):
         assert d['evidence_refs']==[evidence[0]['id']] and d['pdf_page']==page
         if old:
             for field in immutable_fields:
+                if field=='reread_measurement' and d.get('reread_generated_in_generation'):
+                    assert manifest['pipeline_version']=='source-spans-v10'
+                    assert d['reread_provenance']['method']=='region-reread-queue-v1'
+                    assert d['reread_provenance']['generation_id']==gen
+                    continue
                 assert d[field] == old['data'][field], 'RAW_MEASUREMENT_CHANGED:'+field+':'+row['id']
             assert d['reused_source_span_id'] == old['id'] and d['reused_from_generation'] == parent
         else:
@@ -227,7 +235,8 @@ for page, frozen in sorted(boundary.items()):
     assert equal_rows(gen,'source_spans',page) == spans, 'IMMUTABLE_PAGE_CHANGED'
     pages.append({'pdf_page':page,'spans':len(spans),'regional_selections':regional,
                   'context_changed':changed_context,'claims_checked':claims_checked,'api_pg_equal':True,
-                  'selected_parent_generation_id':parent,'nearest_complete_parent':expected_parent,'lineage':lineage})
+                  'selected_parent_generation_id':parent,'nearest_complete_parent':expected_parent,'lineage':lineage,
+                  'artifact_proof':artifact_proof})
 reviews = sql(f"SELECT count(*) FROM editor.reviews WHERE generation_id='{gen}'")
 assert reviews == 0
 job_status = get('/v1/jobs/'+job)

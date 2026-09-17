@@ -30,10 +30,22 @@ for page in pages:
         results.append({'page':page,'status':'PENDING'});continue
     claims=rows(gen,'page_claims',page)[0]['data'];visual=rows(gen,'visual_observations',page)[0]['data'];layout=rows(gen,'layout_regions',page)[0]['data']
     reading=rows(gen,'page_readings',page)[0]['data'];spans=rows(gen,'source_spans',page)
-    parent=str(uuid.UUID(reading['reused_from_generation']));previous={r['record_key']:r for r in rows(parent,'source_spans',page)}
+    parent=str(uuid.UUID(reading['reused_from_generation'])) if reading.get('reused_from_generation') else None
+    previous={r['record_key']:r for r in rows(parent,'source_spans',page)} if parent else {}
+    from reread_artifact_reference import verify_artifacts
+    source_evidence=rows(gen,'evidence',page)
+    assert len(source_evidence)==1
+    artifact_proof=verify_artifacts(spans,source_evidence[0]['data'],gen)
     for r in spans:
+        if parent is None:
+            assert r['data'].get('reused_source_span_id') is None
+            continue
         old=previous[r['record_key']];assert r['data']['reused_source_span_id']==old['id']
         for field in ('raw_text','bbox','region_text','secondary_text','pdf_text','reread_measurement'):
+            if field=='reread_measurement' and r['data'].get('reread_generated_in_generation'):
+                assert r['data']['pipeline_version']=='source-spans-v10'
+                assert r['data']['reread_provenance']['generation_id']==gen
+                continue
             assert r['data'][field]==old['data'][field],field
     candidates=claims['claims']+claims['blocked_claims'];closed=claims['page_role'] not in ('NARRATIVE','MIXED')
     for c in candidates:
@@ -53,7 +65,8 @@ for page in pages:
     assert rows(gen,'source_spans',page)==spans
     results.append({'page':page,'status':'PASS','page_role':claims['page_role'],'claims':len(candidates),
                     'blocked':len(claims['blocked_claims']),'matched':len(claims['claims']),
-                    'omitted_regions':visual['omitted_regions'],'parent_generation':parent,'raw_source_unchanged':True})
+                    'omitted_regions':visual['omitted_regions'],'parent_generation':parent,
+                    'parent_raw_source_unchanged':True if parent else None,'artifact_proof':artifact_proof})
 q=f"SELECT count(*) FROM editor.reviews WHERE generation_id='{gen}'"
 assert int(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',q],text=True))==0
 report={'generation_id':gen,'api':base,'pages':results,'api_pg_equal':True,'manual_reviews':0,'application_writes':0,

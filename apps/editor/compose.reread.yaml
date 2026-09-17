@@ -1,0 +1,53 @@
+# Worker source mount stays read-only; consumer writes only new OCR evidence.
+services:
+  reread-storage-init:
+    image: ${EDITOR_DOCUMENT_IMAGE:-nanobase-editor-document:upload-queue-v2-20260917}
+    user: '0:0'
+    network_mode: none
+    read_only: true
+    entrypoint: [python, -c, 'import os; os.chown("/data/reread-queue",10001,10001); os.chmod("/data/reread-queue",0o700)']
+    volumes: [editor_reread_queue:/data/reread-queue]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER]
+    security_opt: [no-new-privileges:true]
+    restart: 'no'
+  worker:
+    volumes:
+      - artifacts:/data/artifacts:ro
+      - editor_reread_queue:/data/reread-queue
+    depends_on:
+      reread-storage-init: {condition: service_completed_successfully}
+      reread-worker: {condition: service_healthy}
+  reread-worker:
+    image: ${EDITOR_DOCUMENT_IMAGE:-nanobase-editor-document:upload-queue-v2-20260917}
+    entrypoint: [python, -m, editor.reread_queue]
+    network_mode: none
+    read_only: true
+    user: '10001:10001'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 1
+    mem_limit: 1g
+    pids_limit: 32
+    restart: unless-stopped
+    tmpfs: ['/tmp:size=128m,mode=1777']
+    environment:
+      OMP_THREAD_LIMIT: '1'
+      OMP_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      HF_HUB_OFFLINE: '1'
+    volumes:
+      - artifacts:/data/artifacts
+      - editor_reread_queue:/data/reread-queue
+    depends_on:
+      reread-storage-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import json,time; from pathlib import Path; assert time.time()-json.loads(Path('/data/reread-queue/heartbeat.json').read_text())['at']<45"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '3'}
+volumes:
+  editor_reread_queue:

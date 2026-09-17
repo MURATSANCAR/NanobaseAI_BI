@@ -65,6 +65,7 @@ const stages: Record<string, string> = {
   passages: "Arama indeksi",
   complete: "İşleme tamamlandı",
   source_spans: "Konumlu metin okuma",
+  region_rereads: "Metin bölgeleri yeniden okunuyor",
   layout_regions: "Sayfa yerleşimi",
   page_readings: "Sayfa OCR kontrolü",
   visual_observations: "Bölgesel görsel gözlem",

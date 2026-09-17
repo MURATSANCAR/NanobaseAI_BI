@@ -250,7 +250,7 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10'):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION
@@ -329,6 +329,23 @@ def region_rereads(generation:uuid.UUID,pdf_page:int|None=None):
         if item['generation_id']!=str(generation) or item['source_sha256']!=source['sha256']:
             raise HTTPException(409,'REREAD_SOURCE_SCOPE_MISMATCH')
         items.append(item)
+    from editor.reread_queue import VERSION as queue_method, load_verified
+    queue_directory=ROOT/source['sha256']/queue_method/str(generation)
+    queue_paths=([queue_directory/f'page-{pdf_page:04}.json'] if pdf_page is not None
+                 else sorted(queue_directory.glob('page-*.json')))
+    for path in queue_paths:
+        if not path.exists():continue
+        raw=path.read_bytes();report=json.loads(raw);request=report['request']
+        if request['generation_id']!=str(generation) or request['source_sha256']!=source['sha256']:
+            raise HTTPException(409,'REREAD_SOURCE_SCOPE_MISMATCH')
+        provenance={k:request[k] for k in ('method','generation_id','request_id','request_sha256',
+                                          'code_sha256','engine','models','render_sha256')}
+        provenance['artifact_sha256']=sha(raw)
+        measured=load_verified(provenance,{'source_sha256':source['sha256'],
+                              'pdf_page':request['pdf_page'],'ocr_render_sha256':request['render_sha256']})
+        items.append({**provenance,'source_sha256':source['sha256'],'pdf_page':request['pdf_page'],
+                      'regions':list(measured.values()),'status':report['result']['status']})
+    items.sort(key=lambda item:(item['pdf_page'],item['method']))
     return {'generation_id':str(generation),'items':items,
             'semantic_acceptance':False,'original_records_modified':False}
 

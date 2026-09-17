@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v9'
+VERSION = 'source-spans-v10'
 
 
 def norm(value):
@@ -92,6 +92,16 @@ def reread_measurements(root, parent, evidence):
             if d['pdf_page']!=evidence['data']['pdf_page'] or not d.get('reread_measurement'):
                 continue
             p=d['reread_provenance'];origin=p['generation_id']
+            if p.get('method')=='region-reread-queue-v1':
+                from editor.reread_queue import load_verified
+                if origin not in reports:
+                    reports[origin]=load_verified(p,evidence)
+                measurement=d['reread_measurement']
+                if reports[origin].get(measurement['source_span_id'])!=measurement or measurement['bbox']!=d['bbox']:
+                    raise RuntimeError('INHERITED_REREAD_MEASUREMENT_MISMATCH')
+                if provenance is not None and provenance!=p:raise RuntimeError('MIXED_REREAD_PROVENANCE')
+                provenance=p;inherited[str(row['id'])]=measurement
+                continue
             if origin not in reports:
                 original=root/'region-reread-v1'/origin/f"page-{d['pdf_page']:04}.json"
                 raw=original.read_bytes();report=json.loads(raw)
@@ -193,17 +203,52 @@ def optical(job, evidence, document, root, parent=None):
     pdf=json.loads(pdf_path.read_text())
     if pdf['source_sha256']!=d['source_sha256'] or pdf['pdf_page']!=page:raise RuntimeError('PDF_SOURCE_SCOPE_MISMATCH')
     rereads, reread_provenance = reread_measurements(root,parent,evidence)
+    from editor.optical_selection import select_regional_candidate, word_tokens
+    drafts=[]
     for i,line in enumerate(result['lines']):
-        xs=[p[0] for p in line['polygon']]; ys=[p[1] for p in line['polygon']]
+        xs=[p[0] for p in line['polygon']];ys=[p[1] for p in line['polygon']]
         bbox=line.get('bbox') or [min(xs)/width,min(ys)/height,(max(xs)-min(xs))/width,(max(ys)-min(ys))/height]
-        # Match readers by position; never promote a similar word elsewhere on the page.
+        line={**line,'bbox':bbox}
         secondary,neighbors,_=reader_text(bbox,d['blocks'])
         pdf_text,pdf_neighbors,pdf_usable=reader_text(bbox,pdf['lines'])
-        reread = rereads.get(line.get('reused_source_span_id'))
+        reread=rereads.get(line.get('reused_source_span_id'))
+        if reread is not None and reread['bbox']!=bbox:raise RuntimeError('REREAD_REGION_MISMATCH')
+        verdict=optical_verdict(line,secondary,pdf_text,pdf_usable,reread)
+        selection=select_regional_candidate(line,secondary,pdf_text,pdf_usable,reread)
+        needs_review=verdict['status']!='TEXT_AGREED' and selection['selected_text'] is None
+        drafts.append({'line':line,'secondary':secondary,'neighbors':neighbors,'pdf_text':pdf_text,
+                       'pdf_neighbors':pdf_neighbors,'pdf_usable':pdf_usable,'reread':reread,
+                       'needs_review':needs_review,'sid':str(identifier(gen,'source_spans',key+f'-{i:04}'))})
+    generated_reread=False
+    if any(draft['needs_review'] and draft['reread'] is None for draft in drafts):
+        from editor.reread_queue import submit, await_result
+        targets=[draft for draft in drafts if draft['needs_review'] or draft['reread'] is not None]
+        def check_active():
+            with connection() as db:fence(db,job)
+        check_active()
+        request=submit(gen,d['source_sha256'],page,d['ocr_render_sha256'],
+                       [{'region_key':draft['sid'],'bbox':draft['line']['bbox']} for draft in targets])
+        with connection() as db:
+            fence(db,job)
+            db.execute('UPDATE editor.jobs SET progress=%s WHERE id=%s',
+                (Jsonb({'stage':'region_rereads','pdf_page':page,'region_count':len(targets),
+                        'request_id':request['request_id']}),job['id']))
+        measurements,reread_provenance=await_result(request,check_active=check_active)
+        if set(measurements)!={draft['sid'] for draft in targets}:raise RuntimeError('REREAD_RESULT_INCOMPLETE')
+        for draft in targets:
+            draft['reread']=measurements[draft['sid']]
+            if draft['reread']['bbox']!=draft['line']['bbox']:raise RuntimeError('REREAD_REGION_MISMATCH')
+        generated_reread=True
+    for i,draft in enumerate(drafts):
+        line=draft['line']
+        bbox=line['bbox']
+        # Match readers by position; never promote a similar word elsewhere on the page.
+        secondary,neighbors=draft['secondary'],draft['neighbors']
+        pdf_text,pdf_neighbors,pdf_usable=draft['pdf_text'],draft['pdf_neighbors'],draft['pdf_usable']
+        reread = draft['reread']
         if reread is not None and reread['bbox'] != bbox:
             raise RuntimeError('REREAD_REGION_MISMATCH')
         verdict = optical_verdict(line,secondary,pdf_text,pdf_usable,reread)
-        from editor.optical_selection import select_regional_candidate, word_tokens
         selection = select_regional_candidate(line,secondary,pdf_text,pdf_usable,reread)
         selected_text = line['text']
         selected_reader = 'FULL_PAGE_OCR'
@@ -226,6 +271,7 @@ def optical(job, evidence, document, root, parent=None):
             'status':status,'issues':issues,'engine':result['engine'],'model_manifest':result['models'],
             'render_sha256':result['image_sha256'],'pipeline_version':VERSION,
             'reread_measurement':reread,'reread_provenance':reread_provenance if reread else None,
+            'reread_generated_in_generation':generated_reread and reread is not None,
             'reread_state':verdict['reread_state'],
             'reused_source_span_id':line.get('reused_source_span_id'),
             'reused_from_generation':result.get('reused_from_generation'),
