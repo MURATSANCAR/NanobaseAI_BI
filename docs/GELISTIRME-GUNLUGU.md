@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Kaynaklı kırpım vetosu ve otomatik sürüm devamı
+
+- Bölgesel Paddle + temiz PDF + aynı kutunun stabil iki PSM ölçümüyle eski tam sayfa ikinci okuyucu vetosunu kaynak/provenance koruyarak ele alan kod eklendi. Gerçek 1.149 kayıtta önceki 39/39 iyileşme, 14 yeni aday ve 0 gerileme doğrulandı; bu üretim874 sonucu değildir.
+- V8 koşusu kesilmeden V9 sabit imajı hazırlandı; gerçek sunucuda sınırlı ve hata halinde duran sürüm devam betiği başlatıldı. V8 tamamlanınca ayrı ortamda V9 analiz/API-PG/mobil kontrollerini yürütür. Ana yayını değiştirmez. [Ayrıntı](editor/2026-09-17-crop-source-continuation.md).
+
 ## 2026-09-17 — V8 anlatı kapısı ve açık görsel kapsam
 
 - Künye/etkinlik/UNKNOWN sayfalardaki EVENT dışı iddiaların MATCH kapısından geçmesi kodda düzeltildi. Gerçek 48 sayfanın 15 adayı artık engellenir; 124 anlatı/karma adayın kapı sonucu korunur.
