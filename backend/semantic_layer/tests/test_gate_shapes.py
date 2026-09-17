@@ -312,3 +312,24 @@ def test_a_question_word_written_as_a_column_value_is_refused():
     assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, good))
     real_value = "SELECT i.NAME FROM ITEMS i WHERE i.NAME = 'İYİLİK TİMİ'"      # a value the question could carry: not the slot word
     assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, real_value))
+
+
+def test_the_sources_lg_prefix_does_not_decide_which_entity_was_read():
+    """2026-09-17, soru 14: the deterministic compiler read `[dbo].[LG_411_01_ORFLINE]`, which reads back
+    as ORFLINE, while the certified filter and the period binding name LG_ORFLINE — the gate saw an entity
+    it never found and refused a correct statement on both counts."""
+    pending = ResolvedSlot("bekleyen siparis", "DIMENSION_VALUE", "CERTIFIED",
+                           mapping=Mapping("", "LG_ORFLINE", "LG_{n0}_{n1}_ORFLINE", column="CLOSED", operator="IN", values=["0"],
+                                           extra={"conditions": ["LG_ORFLINE.TRCODE IN (1)", "LG_ORFLINE.CANCELLED IN (0)"]}))
+    count = ResolvedSlot("kayıt sayısı", "METRIC", "COMPOSED", mapping=Mapping("", "LG_ORFLINE", "LG_{n0}_{n1}_ORFLINE", formula="COUNT(DISTINCT LG_ORFLINE.LOGICALREF)"),
+                         explain={"source": "count_cue"})
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[pending, count],
+                       temporal=[TemporalSlot(text="gecen ceyrekte", primitive="LAST_QUARTER", start=date(2026, 4, 1), end=date(2026, 7, 1))],
+                       temporal_binding={"entity": "LG_ORFLINE", "column": "DATE_", "alternatives": []})
+    sql = ("SELECT DATEFROMPARTS(YEAR(LG_ORFLINE.[DATE_]), MONTH(LG_ORFLINE.[DATE_]), 1) AS ay, COUNT(DISTINCT LG_ORFLINE.[LOGICALREF]) AS kayit_sayisi "
+           "FROM [dbo].[LG_411_01_ORFLINE] AS LG_ORFLINE WHERE LG_ORFLINE.[CLOSED] IN (0) AND LG_ORFLINE.[TRCODE] IN (1) AND LG_ORFLINE.[CANCELLED] IN (0) "
+           "AND LG_ORFLINE.[DATE_] >= '2026-04-01' AND LG_ORFLINE.[DATE_] < '2026-07-01' GROUP BY DATEFROMPARTS(YEAR(LG_ORFLINE.[DATE_]), MONTH(LG_ORFLINE.[DATE_]), 1)")
+    out = unmet_obligations(sq, sql)
+    assert out == [], out
+    undated = sql.replace(" AND LG_ORFLINE.[DATE_] >= '2026-04-01' AND LG_ORFLINE.[DATE_] < '2026-07-01'", "")
+    assert any("dönemi" in u for u in unmet_obligations(sq, undated))

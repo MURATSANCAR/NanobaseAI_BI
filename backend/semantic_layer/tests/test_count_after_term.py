@@ -46,7 +46,8 @@ def test_words_the_temporal_parser_read_are_not_looked_up_again(catalog, profile
     assert not {"ay", "ceyrekte", "çeyrekte"} & set(sq.unresolved), sq.unresolved
 
 
-def test_a_quantity_word_on_its_own_still_reaches_the_certified_measure(catalog, profiles):
-    sq = _resolver(catalog, profiles).resolve("Toptan satışta adet ne kadar?", today=TODAY)
+def test_the_measures_own_name_still_reaches_the_certified_measure(catalog, profiles):
+    """A bare "adet" is a count word by design; the measure is reached by its certified name."""
+    sq = _resolver(catalog, profiles).resolve("Toptan satılan adet ne kadar?", today=TODAY)
     assert any(s.mapping and s.mapping.entity == "STLINE" and s.semantic_type == SemanticType.METRIC for s in sq.slots), \
         [(s.term, s.semantic_type, s.mapping.entity if s.mapping else None) for s in sq.slots]

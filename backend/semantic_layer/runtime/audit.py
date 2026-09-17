@@ -35,6 +35,17 @@ from semantic_layer.models import SemanticQuery, SemanticType
 from semantic_layer.naming import logical_table
 
 
+def _ent(name: str) -> str:
+    """An entity name as the gate compares it: upper-cased, without the source's "LG_" prefix. The catalog
+    names one shape both ways (a measure on the bare name, a filter on the prefixed one) and a physical
+    table reads back bare: the prefix is the source's, not the question's, and may not decide."""
+    return re.sub(r"^LG_", "", (name or "").upper())
+
+
+def _same_entity(a: str, b: str) -> bool:
+    return _ent(a) == _ent(b)
+
+
 def _values(pred: Any) -> set[str]:
     return {str(v).strip().strip("'").upper() for v in pred.values}
 
@@ -470,7 +481,7 @@ def _accepts_bound_column(tree, scope, binding, alias, column, *, require_measur
                 return True
             # A line-grain answer need not join its header just to repeat the date.
             # The declared alternative must actually own the output measure.
-            if any(scope.entity_for(c).upper() == entity for projection in tree.expressions
+            if any(_same_entity(scope.entity_for(c), entity) for projection in tree.expressions
                    for agg in projection.find_all(exp.AggFunc) for c in _measure_columns(agg)):
                 return True
             continue
@@ -616,7 +627,7 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
     want = (str(start)[:10], str(end)[:10])
     entity, column = binding["entity"].upper(), binding["column"].upper()
     alts = binding.get("alternatives", [])
-    own = [o for o in occ if o.entity.upper() == entity]
+    own = [o for o in occ if _same_entity(o.entity, entity)]
     if own:
         pieces: list[tuple[str, str]] = []
         for o in own:
@@ -630,7 +641,7 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
                 edge = tuple(str(x).upper() for x in alt["join"])
                 if edge not in edges:
                     continue
-                aw = next((_window_of(x, alt["column"].upper()) for x in here if x.entity.upper() == alt["entity"].upper()), None)
+                aw = next((_window_of(x, alt["column"].upper()) for x in here if _same_entity(x.entity, alt["entity"])), None)
                 if aw == want:
                     ok = True
                     break
@@ -656,10 +667,10 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
     # owns the measure (a line-grain answer need not join its header to repeat the date).
     scope = _AnswerScope(tree)
     for alt in alts:
-        theirs = [o for o in occ if o.entity.upper() == alt["entity"].upper()]
+        theirs = [o for o in occ if _same_entity(o.entity, alt["entity"])]
         if not theirs or not all(_window_of(o, alt["column"].upper()) == want for o in theirs):
             continue
-        if isinstance(tree, exp.Select) and any(scope.entity_for(c).upper() == alt["entity"].upper()
+        if isinstance(tree, exp.Select) and any(_same_entity(scope.entity_for(c), alt["entity"])
                                                  for projection in tree.expressions for agg in projection.find_all(exp.AggFunc)
                                                  for c in _measure_columns(agg)):
             return True
@@ -764,7 +775,7 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
     compatible = {"=", "IN"} if op in ("=", "IN") else {op}
     def holds(o: _Occurrence, col: str, ops: set[str], vals: set[str]) -> bool:
         return any(p.column.upper() == col and p.operator.upper() in ops and _values(p) == vals for p in o.preds)
-    own = [o for o in occ if o.entity == entity]
+    own = [o for o in occ if _same_entity(o.entity, entity)]
     if own and all(holds(o, column, compatible, expected) for o in own):
         return True
     if not own and slot.semantic_type == SemanticType.DEFAULT_FILTER and not slot.explain.get("equivalent_bindings"):
@@ -785,7 +796,7 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
         aop = alt["operator"].upper()
         aops = {"=", "IN"} if aop in ("=", "IN") else {aop}
         avals = {str(v).upper() for v in alt["values"]}
-        theirs = [o for o in occ if o.entity.upper() == alt["entity"].upper()]
+        theirs = [o for o in occ if _same_entity(o.entity, alt["entity"])]
         if not theirs or not all(holds(o, alt["column"].upper(), aops, avals) for o in theirs):
             continue
         if not own:
@@ -808,7 +819,7 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
                     break
                 conditions.append(case.args["ifs"][0].this)
             else:
-                matches.append(all(any(p.entity.upper() == entity and p.column.upper() == column
+                matches.append(all(any(_same_entity(p.entity, entity) and p.column.upper() == column
                                        and p.operator.upper() in compatible and _values(p) == expected
                                        for p in _predicates_from(c, scope, "case", None)) for c in conditions))
                 continue
@@ -821,7 +832,7 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
                      if isinstance(_aggregate_case(agg), exp.Case)
                      for branch in _aggregate_case(agg).args.get("ifs") or []
                      for p in _predicates_from(branch.this, scope, "case", None)
-                     if p.entity.upper() == entity and p.column.upper() == column and p.operator.upper() in ("=", "IN")}
+                     if _same_entity(p.entity, entity) and p.column.upper() == column and p.operator.upper() in ("=", "IN")}
         pivot = len(pivot_values) > 1 or len(competing) > 1
         if matches and (any(matches) if pivot else all(matches)):
             return True
@@ -1161,7 +1172,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         m = metric.mapping
         if not m or not m.formula or metric.status not in ("CERTIFIED", "INFERRED"):
             continue
-        if not any(o.entity.upper() == m.entity.upper() for o in occ):
+        if not any(_same_entity(o.entity, m.entity) for o in occ):
             continue                        # reported by the period/filter rules on that entity, or by the audit
         if not _measure_proven(m.formula, tree, occ):
             out.append(Unmet("measure", f"'{metric.term}' ölçüsü sertifikalı formülle hesaplanmamış: {m.formula}",
@@ -1207,7 +1218,7 @@ def _closing(sq, tree) -> list[Unmet]:
 
 
 def _opaque_note(occ, entity: str) -> str:
-    names = sorted({x for o in occ if o.entity.upper() == entity.upper() for x in o.opaque})
+    names = sorted({x for o in occ if _same_entity(o.entity, entity) for x in o.opaque})
     return f" (anlaşılmayan yapı: {', '.join(names[:3])} türetilmiş bir kolon üzerinden yazılmış)" if names else ""
 
 
@@ -1267,9 +1278,9 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
     alt_cols = {(a["entity"].upper(), a["column"].upper()) for a in (binding or {}).get("alternatives", [])}
 
     def period_of(o: _Occurrence):
-        if o.entity.upper() == entity.upper():
+        if _same_entity(o.entity, entity):
             return _window_of(o, column)
-        if (o.entity.upper(), column) in alt_cols or any(o.entity.upper() == e for e, _ in alt_cols):
+        if (_ent(o.entity), column) in {(_ent(e), c) for e, c in alt_cols} or any(_same_entity(o.entity, e) for e, _ in alt_cols):
             col = next((c for e, c in alt_cols if e == o.entity.upper()), column)
             return _window_of(o, col)
         return None

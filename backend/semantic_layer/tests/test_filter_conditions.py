@@ -42,3 +42,22 @@ def test_the_alias_the_model_wrote_survives_a_case_only_rename():
     sql = physicalize_sql('SELECT NEW_KITAPBASE.new_name FROM Timas_MSCRM_dbo_NEW_KITAPBASE AS NEW_KITAPBASE WHERE NEW_KITAPBASE."NEW_KITAPID" IS NOT NULL', [crm], {}, "tsql")
     assert "AS [NEW_KITAPBASE]" in sql or "AS NEW_KITAPBASE" in sql, sql
     assert "[new_kitapId]" in sql, sql
+
+
+def test_a_column_to_column_condition_and_the_concepts_count_key_reach_the_statement(catalog, profiles):
+    """2026-09-17, soru 14: 21.940 "open" order lines a month — the CLOSED flag is not maintained and the
+    open line is the one not fully shipped (AMOUNT > SHIPPEDAMOUNT), a condition between two columns the
+    condition syntax could only write against a value. And "sipariş adedi" counts orders, not lines: the
+    concept says which column counts one each."""
+    _certify(catalog, "sevk bekleyen toptan", SemanticType.DIMENSION_VALUE,
+             Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE", column="TRCODE", operator="IN", values=["8"],
+                     extra={"conditions": ["STLINE.CANCELLED IN (0)", "STLINE.AMOUNT > (STLINE.OUTCOST)"], "count_key": "STOCKREF"}))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    r = SemanticResolver(catalog, TENANT, DS, profiles)
+    sq = r.resolve("Sevk bekleyen toptan adedi ne?", today=date(2026, 9, 17))
+    out = DeterministicCompiler(profiles, {}, "tsql").compile(sq, catalog)
+    assert out is not None, sq.to_dict()
+    up = out.sql.upper().replace("[", "").replace("]", "")
+    assert "STLINE.AMOUNT > STLINE.OUTCOST" in up, out.sql
+    assert "'STLINE.OUTCOST'" not in out.sql.upper(), out.sql
+    assert "COUNT(DISTINCT STLINE.STOCKREF)" in up, out.sql
