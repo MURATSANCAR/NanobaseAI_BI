@@ -155,8 +155,7 @@ class LlmClient:
                 log.warning("LLM transport error (attempt %d/3): %s", attempt + 1, e)
         else:
             raise RuntimeError(f"LLM unreachable after 3 attempts: {last}") from last
-        # A hosted endpoint answers 429/529 when its queue is full. That is load, not an answer: NVIDIA's API
-        # returned 529 on the first golden-set call of 2026-09-14. Wait and ask again
+        # An endpoint answers 429/529 when its queue is full. That is load, not an answer. Wait and ask again
         # for as long as this client's timeout allows.
         deadline = time.monotonic() + self.timeout
         wait_s = 5.0

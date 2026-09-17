@@ -7,6 +7,12 @@
 - BI semantic/admin/kurulum varsayılanları değişti. Editor model adresi, adı, backend ve bağlam ayarı yapılandırılabilir oldu; vLLM tokenizer/chat-template desteği ve eski modele ait adayların yeni model sonucu diye yeniden kullanılmasını engelleyen kontrol eklendi.
 - Gerçek API/DB kabulü ve güncel yayın sonucu bu bölümde tamamlanınca kaydedilecek; yalnız kod değişikliği başarı değildir.
 
+## 2026-09-18 — Barındırılan model sağlayıcısı kaldırıldı; soru 22 yeni modelle
+
+- Kullanıcı kararı: harici model API'si artık kullanılmıyor, projeden tamamen çıkarıldı. Model: Türk Telekom GPU sunucusundaki `qwen3.8-flash-next` (vLLM), test sunucusunda `127.0.0.1:18881` (Mac üzerindeki TT VPN köprüsü — Mac uyursa model yolu durur, deterministik yol etkilenmez). Ölçüm: 5 token 0,9 sn; gerçek istem boyu (12.390 token) 8,1 sn — önceki sağlayıcıda 244 / 240–300 sn idi.
+- Temizlik: canlı `config.py`, `admin.py`, `llm_client.py` repo sürümüyle eşitlendi (fark yalnız sağlayıcı varsayılanlarıydı); `nanobase-language-pool` ek dosyası ve `nanobase-vocabulary.service` içindeki silinmiş env dosyası satırı kaldırıldı (servis bu yüzden `failed` idi); `semantic-bridge.env` içindeki eski yorum düzeltildi; kalıcı bellek notları yeniden yazıldı (`llm-tt-gpu`). Bırakılanlar: günlükteki tarihsel kayıtlar (silinmez), GPU **donanımı** anlatan satırlar (`nvidia-smi`, `nvidia-container-toolkit`, `lspci`) ve ana sayfadaki "NVIDIA Inception Program Üyesi" rozeti (pazarlama içeriği — kaldırılması ayrı karar).
+- Soru 22 (vadesi geçmiş, tahsil edilmemiş alacaklar): yeni modelle 19 sn'de dürüst red — 2026 kopyasında borç kapama işlenmediği için yaşlandırma yapılamaz (bilgi paketi uyarısı). Bağımsız ölçüm aynı şeyi gösteriyor: 2.079.343 vadesi geçmiş plan satırının hiçbirinde `PAID > 0` yok; "açık" görünen 1,63 Mr ₺ gerçek alacak değil. Karne 1–22 doğru.
+
 ## 2026-09-17 — Test sunucusunda düşen 10 test: kod sağlam, sunucudaki test dosyaları bayattı
 
 - **Neden:** LLM kapısı kabulünde tam paket 10 test düşürdü; aynı 10'u değişmemiş canlı ağaçta da düşüyordu. Kök neden arandı.
