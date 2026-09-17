@@ -84,7 +84,25 @@ Tahmin (ölçüm değil): ilk ayarlarla açılma %35–45, ayar kısarak %35–4
 
 Bellek yetmezse sıra: bağlam 32K → eşzamanlı istek 16 → `--enforce-eager` → MTP kapalı → uzman paralel.
 
-**Henüz yapılmadı:** modelin başlatılması, bellek/hız ölçümü, gerçek BI sorusuyla deneme.
+### 4.4.1 Sonuç (2026-09-18, gece): model iki H100'de ilk ayarlarla açıldı
+
+- İndirme 131/131 parça; 144 dosyanın boyutu Hugging Face listesiyle tek tek karşılaştırıldı, fark yok.
+- Açılış: ağırlıklar kart başına 64,58 GiB (yükleme 69 sn), KV önbelleği kart başına 15,75 GiB = 950.590 token (131K bağlamda 7,25 eşzamanlı tam istek), CUDA grafikleri yakalandı, GPU'larda 88 GiB dolu. Bellek hatası ve yeniden başlama yok; hiçbir ayar kısılmadı.
+- NVLink'siz düzen denetimi: kartlar arası doğrudan erişim okuma/yazma `OK`, PCIe Gen5 x16, vLLM `CUSTOM`+`PYNCCL` all-reduce seçti. Eksik bulunan: işçi süreçleri NUMA düğümüne bağlı değildi (`cpus=0-191`). `--numa-bind` + konteynere `SYS_NICE` eklendi; sonrasında TP0 `0-47,96-143`, TP1 `48-95,144-191` (doğrulandı). Önceki dosya `docker-compose.numa-oncesi.yml`.
+- Hız (düşünme kapalı, aynı betik):
+
+| Test | NUMA öncesi | NUMA sonrası |
+|---|---|---|
+| Tek istek, 881 token Türkçe üretim | 130 tok/sn | 132 tok/sn |
+| BI sorusu → T-SQL (116 token) | 2,0 sn | 0,7 sn |
+| 8 eşzamanlı | 408 tok/sn toplam | 680 tok/sn toplam |
+| 32 eşzamanlı | 1.361 tok/sn toplam | 1.500 tok/sn toplam |
+
+  Uyarı: ilk ölçüm modelin ilk istekleriydi (soğuk önbellek); farkın bir kısmı NUMA'dan değil ısınmadan gelebilir. Ayrıştırmak için aynı koşulda tekrar ölçüm yapılmadı.
+- BI sorusu: satış `TRCODE` kümesi, iptal hariç, aylık kırılımlı doğru T-SQL üretti (tek örnek; golden set koşturulmadı).
+- Kitap sayfası okuma (3 sayfa, 1400 görsel token, 0,3–2,8 sn): s.29 balonu harfi harfine doğru ve konuşmacı "kız"; s.6 yazısız → "YOK"; s.22 metni hatasız okudu **ama** tırnaklar arasındaki anlatı cümlesini (`dedi Profesör Bulut gururla.`) atladı, düz yazıdaki diyaloğu "balon" diye etiketledi ve satır sonu tirelerini kendiliğinden birleştirdi. Sonuç: güçlü ikinci okuyucu, tek kaynak değil — bölüm 5'teki karar geçerli.
+
+**Henüz yapılmadı:** BI golden set'inin bu modelle koşturulması, köprü/LLM kapısına bağlanması, 1.149 bölgelik OCR karşılaştırması, uzun bağlam ve düşünme açıkken ölçüm.
 
 ### 4.5 Geri dönüş
 
@@ -106,7 +124,7 @@ Bilinmeyen: PaddleOCR-VL-1.6'nın Türkçe büyük harf balon yazısındaki baş
 
 ## 6. Açık işler
 
-1. İndirme bitince dosya bütünlüğü (131 parça) → modeli başlat → bellek ve hız ölçümü → gerçek soru.
+1. Modeli BI köprüsüne / LLM kapısına bağlama kararı ve golden set koşusu (model çalışıyor: `tt-gpu:8001`, ad `qwen3.8-flash-next`).
 2. `mssql-logo` ve Logo yedeği hakkında kullanıcı kararı.
 3. TT'den `38.247.162.28` için VPN izni ve internet çıkış sınırının yükseltilmesi talebi.
 4. OCR karşılaştırması (bölüm 5).
