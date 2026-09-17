@@ -942,7 +942,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                 if not _period_proven(p, binding, dated, tree):
                     text = getattr(period, "text", None) or p.get("text") or f"{p.get('start')}–{p.get('end')}"
                     out.append(Unmet("period", f"'{text}' dönemi doğru tarih sütununda doğrulanamadı" + _opaque_note(occ, binding['entity']),
-                                     f"{binding['entity']} kaynağını {binding['column']} >= '{p.get('start')}' AND {binding['column']} < '{p.get('end')}' ile sınırla (kaynağı okuyan her SELECT/CTE'de).",
+                                     f"{binding['entity']} kaynağını {binding['column']} >= '{p.get('start')}' AND {binding['column']} < '{p.get('end')}' ile sınırla (kaynağı okuyan her SELECT/CTE'de"
+                                     + ("; durum ölçüsünün bakiyesini hesaplayan alt sorgu hariç — o tarihsiz kalır)." if len(dated) < len(occ) else ")."),
                                      binding["entity"], binding["column"]))
 
     scope = _AnswerScope(tree)
