@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Türk Telekom VPN istemcisi hazırlandı, ağ geçidine erişim kapalı
+
+- Test sunucusuna `openconnect` kuruldu; etkileşimli giriş betiği `ttvpn-login` ve rota koruyan `ttvpn-script` yerleştirildi. Betik varsayılan rotayı ve DNS'i devralmaz; amaç TİMAŞ `tun0` tünelini ve sunucu erişimini bozmamak. Kimlik bilgisi ve OTP diske yazılmaz, girişte kullanıcı tarafından yazılır.
+- Bağlantı kurulamadı ve denenmedi: sunucudan `sgmvpn.turktelekom.com.tr:443` TCP zaman aşımı veriyor, aynı adres Türkiye çıkışlı bağlantıdan 302 ile yanıt veriyor. DNS doğru çözülüyor. Neden büyük olasılıkla ağ geçidinde yurt dışı IP engeli; TT'den 38.247.162.28 için izin istenmesi gerekiyor. Betikler söz dizimi denetiminden geçti, gerçek oturumla doğrulanmadı.
+
+
 ## 2026-09-17 — Test sunucusunda düşen 10 test: kod sağlam, sunucudaki test dosyaları bayattı
 
 - **Neden:** LLM kapısı kabulünde tam paket 10 test düşürdü; aynı 10'u değişmemiş canlı ağaçta da düşüyordu. Kök neden arandı.
