@@ -27,7 +27,7 @@ def route_region(line, secondary, pdf_text, pdf_usable, reread):
     readers={'PPOCR_PAGE':line['text'],'PPOCR_REGION':line.get('region_text') or '',
              'TESSERACT':secondary}
     if pdf_usable:readers['NATIVE_PDF']=pdf_text
-    if reread:
+    if reread and word_tokens(reread['readings'][0]['text'])==word_tokens(reread['readings'][1]['text']):
         readers.update({f'TESSERACT_PSM_{r["psm"]}':r['text'] for r in reread['readings']})
     lexical=[key for key,text in readers.items()
              if any(sum(c.isalpha() for c in token)>=2 for token in word_tokens(text))]
