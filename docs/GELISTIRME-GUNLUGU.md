@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör v3: bozuk PDF Unicode ve yeniden okuma entegrasyonu
+
+- Ek düzlem özel kullanım karakterlerinin metin sayılması genel kodda düzeltildi. Gerçek API/PG/artifact tekrarında 778 → 828 okuyucu anlaşması, 371 → 321 inceleme; eski kaynak kayıtları değişmedi. 92 kararlı yeniden okuma çelişkisi engellendi.
+- V3 gerçek API üzerinden yeni nesilde başlatıldı; değişmeyen 43 sayfanın ham adayları kökeni korunarak tekrar kapılardan geçirilir. Son beş sayfada yeni çıkarım sürüyor. 28 backend dosyası çalışan imajla eşleşti.
+- Ağsız ve sınırlı PaddleOCR-VL pilot araçları eklendi; sabit model revision/hashleri doğrulandı. Henüz çıkarım veya anlamsal kabul sonucu yok. Kitap metni/review elle değiştirilmedi; yerel ürün testi yok.
+- [Ayrıntı, kimlikler ve açık plan](editor/2026-09-17-source-v3.md).
+
 ## 2026-09-17 — 371 sorunlu bölge otomatik yeniden okundu
 
 - Genel `region_reread.py`, sunucu koşucusu ve gerçek API/artifact/PG doğrulayıcısı eklendi. Ağsız belge konteyneri özgün kutuları kırpıp Tesseract PSM 7/13 ile okur; kod/model/render/kırpım hashleri, ham sonuçlar ve skorlar ayrı değişmez artifact’larda tutulur. Eski veri veya review elle değiştirilmez.
@@ -108,7 +115,9 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Soru 10 (iş istasyonu planlanan/gerçekleşen süre): kolon-adı onarım ipucu tabloyu mantıksal varlığa göre bulur (model `LG_211_01_DISPLINE` gibi olmayan kopya yazsa da), eksik kolon tarih/durum türündeyse o türün gerçek kolonlarını (ya da "bu tabloda yok") söyler; kuru çalıştırma 3 deneme. Sonuç 10 istasyon, bağımsız sorguyla birebir. İlk 10 soru tamam: 10/10 doğru (3'ü dürüst red/okuma görünür).
 - Soru 11 (iade oranı): kod düzeltmesi gerekmedi; 2.130 cari birebir. İş notu: oran için asgari sevk tabanı.
 - Soru 12 (en çok satan 20 kitabın stok devir hızı) — kapıda iki kural birbirini yalanlıyordu: dönem kuralı STLINE'ı okuyan **her** alt sorgudan yılın tarih filtresini istiyor, durum ölçüsü kuralı stok bakiyesinin tarihsiz hesaplanmasını şart koşuyordu; aynı tabloyu hem akış (satış) hem durum (stok) için okuyan hiçbir soru geçemezdi. `audit.py`: durum ölçüsünün bakiye okuması dönem kuralından muaf (`_state_reading`); ölçünün kendi koşulunun dışladığı satırları okuyan alt sorgu (açılış devri TRCODE 14, satış 7/8/9 iken) ölçünün satırı değildir, dönem ondan istenmez (`_other_rows`); onarım ipucu "durum ölçüsü alt sorgusu hariç" der. `compiler.py`: "gate refused" logu artık onarılmış (gerçekten reddedilen) SQL'i yazar — önce ilk SQL yazılıyordu, teşhis 1 saat yanlış yöne gitti. `naming.logicalize_sql` + `app.recall`: hatırlanan örnek SQL'ler fiziksel adla (dbo_LG_411_01_STLINE) saklanıyor ve model bu adları kopyalıyordu (dönem çözümünü atlar) → örnekler mantıksal adla gösterilir. Sonuç bağımsız sorguyla birebir (İYİLİK TİMİ 148.662 satış, 58.273 açılış, 213.633 güncel → 1,09). Not: güncel stok yalnız cari kopyadan okunur; 2021-25 kopyasıyla birleşim açılış devrini çift sayar (796.995) — `run_sql` ucu dönem yokken bu birleşimi yapıyor, `ask` yolu yapmıyor; açık iş.
-- Testler 783 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–12 doğru.
+- Soru 13 (bir kitabın son üç baskısında çekilen malzeme farkı) — ilk cevap 0 satır: model "kitabın" kelimesini değer yaptı (`ITEMS.NAME = 'kitabin'`), "baskı" çözümlenemedi, "malzeme miktarı" reçete/karma koli tablosuna (STCOMPLN, kural madencisinden) gitti. Üç düzeltme: (1) yayıncılık sözlüğü operatör tanımı olarak sertifikalandı — "baskı" = üretim emri (PRODORD), "çekilen/sarf edilen malzeme" = STLINE TRCODE 12 IOCODE 4 (PRODORDERREF ile emre bağlı), "üretilen adet" = TRCODE 13 IOCODE 1; bilgi paketine `rules/logo-erp.md` Kural 9 (Üretim); tanımlar sayfası 12–14 (iş teyidi bekliyor). (2) Kapı: sorunun kendi kelimesi sütun değeri yazılırsa (`_question_word_literals`; yalnız kolon/varlık yuvaları, "İstanbul" gibi değer yuvaları muaf) reddedilir, onarım ipucu "bir X'in bütün X'ler üzerinden kırılım ister"; aynı kural istemde. (3) Bilgi paketi 20.166 karakter olup 20.000'lik kural bütçesini aşmıştı; yeni kural tam kesilen yerdeydi → `semantic-bridge.env`: `LLM_CTX=32768` (barındırılan model 128k taşır; 16384 eski yerel GPU değeriydi), `SEMANTIC_PROMPT_RULES_CHARS=40000`. Sonuç 10 kitap, bağımsız sorguyla (yalnız tamamlanmış emirler) aynı küme ve aynı miktarlar; bir kitapta aynı tarihli iki emrin sıralama beraberliği. İş notu: "son üç baskı" tamamlanmış emirler mi.
+- Açık: derleme 551 sn sürdü (LLM 263 sn) — NVIDIA yanıt süresi; kod tarafında iş yok. `run_sql` ucu dönem yokken STLINE'ı 2021-25 + 2026 birleştiriyor (durum ölçüsünde açılış devrini çift sayar) — `ask` yolunda yok; ayrı iş.
+- Testler 784 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–13 doğru.
 
 ## 2026-09-16 — Kural madencisi: iş kuralları Logo görünümleri ve CRM kayıtlı görünümlerinden
 

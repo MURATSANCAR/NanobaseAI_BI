@@ -218,6 +218,7 @@ def optical(job, evidence, document, root, parent=None):
 
 def observe(job,evidence,layout,spans,root,parent=None):
     from editor.analysis import model
+    from editor.source_review import speaker_candidates
     gen=job['generation_id']; page=evidence['data']['pdf_page']; key=evidence['record_key']
     illustrations=[r for r in layout['data']['regions'] if r['type']=='PICTURE' and r['bbox'][2]*r['bbox'][3]>.06]
     observations=[]
@@ -229,6 +230,7 @@ def observe(job,evidence,layout,spans,root,parent=None):
                 'source_span_ids':[str(s['id']) for s in spans],
                 'reused_visual_observation_id':str(prior['id']),
                 'reused_from_generation':str(parent),'pipeline_version':VERSION}
+            value['speaker_links']=speaker_candidates(layout['data'],value)
             # Keep original metrics and provenance; do not claim a new model call.
             save(job,'visual_observations',key,value)
             return
@@ -259,13 +261,37 @@ def observe(job,evidence,layout,spans,root,parent=None):
     # No inferred speaker may become a named character without independent grounding.
     save(job,'visual_observations',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
         'observations':observations,'omitted_regions':max(0,len(illustrations)-3),
+        'speaker_links':speaker_candidates(layout['data'],{'observations':observations}),
         'speaker':'UNKNOWN','speaker_status':'TAIL_AND_CHARACTER_GROUNDING_NOT_VERIFIED',
         'verification_status':'CANDIDATE','eligible_as_claim_source':False,
         'source_span_ids':[str(s['id']) for s in spans], 'pipeline_version':VERSION,
         'review_status':'PENDING'})
 
 
-def interpret(job,evidence,spans):
+def reusable_claim_candidates(parent,key,spans):
+    if not parent:
+        return None
+    prior=next((r for r in get_records(parent,'page_claims') if r['record_key']==key),None)
+    if prior is None:
+        return None
+    old=[r for r in get_records(parent,'source_spans') if r['data']['pdf_page']==int(key)]
+    def context(rows):
+        return [(r['data']['text'] if r['data']['status']=='TEXT_AGREED' and r['data']['role']=='TEXT' else '[UNVERIFIED_REGION]',
+                 r['data']['bbox']) for r in reading_order(rows)]
+    if context(old)!=context(spans):
+        return None
+    new_by_key={r['record_key']:str(r['id']) for r in spans}
+    mapping={str(r['id']):new_by_key[r['record_key']] for r in old if r['record_key'] in new_by_key}
+    candidates=[]
+    for candidate in prior['data']['claims']+prior['data']['blocked_claims']:
+        if any(ref not in mapping for ref in candidate.get('span_refs',[])):
+            return None
+        candidates.append({**candidate,'span_refs':[mapping[ref] for ref in candidate.get('span_refs',[])]})
+    return {'page_role':prior['data']['page_role'],'claims':candidates,
+            'uncertainties':prior['data']['uncertainties']},prior['data']['metrics'],str(prior['id'])
+
+
+def interpret(job,evidence,spans,parent=None):
     from editor.analysis import model
     page=evidence['data']['pdf_page']; key=evidence['record_key']
     usable=[s for s in spans if s['data']['status']=='TEXT_AGREED' and s['data']['role']=='TEXT']
@@ -273,7 +299,10 @@ def interpret(job,evidence,spans):
     usable_ids={str(s['id']) for s in usable}
     context=[{'span_id':str(s['id']),'text':s['data']['text'] if str(s['id']) in usable_ids else '[UNVERIFIED_REGION]',
               'usable':str(s['id']) in usable_ids,'bbox':s['data']['bbox']} for s in reading_order(spans)]
-    if not usable:
+    reused=reusable_claim_candidates(parent,key,spans)
+    if reused:
+        result,metrics,reused_id=reused
+    elif not usable:
         result={'page_role':'UNKNOWN','claims':[],'uncertainties':['NO_AGREED_TEXT_SPANS']}; metrics={}
     else:
         prompt=('Yalnız verilen OCR metin bölgelerinden aday çıkar. Görsel betimleme girdisi yoktur. '
@@ -309,6 +338,8 @@ def interpret(job,evidence,spans):
     save(job,'page_claims',key,{'pdf_page':page,'page_role':result.get('page_role','UNKNOWN'),
         'claims':accepted,'blocked_claims':blocked,'excluded_span_ids':excluded,
         'input_span_ids':list(allowed),'input_visual_descriptions':False,
+        'reused_claim_candidates_from':reused_id if reused else None,
+        'reused_from_generation':str(parent) if reused else None,
         'uncertainties':result.get('uncertainties',[]),'metrics':metrics,'review_status':'PENDING'})
     save(job,'page_checks',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
         'status':'NEEDS_REVIEW','text_matched_candidates':len(accepted),'blocked_claims':len(blocked),
@@ -343,7 +374,7 @@ def run(job):
         all_spans=get_records(gen,'source_spans')
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
         if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,parent)
-        if row['record_key'] not in checked: interpret(job,row,spans)
+        if row['record_key'] not in checked: interpret(job,row,spans,parent)
     with connection() as db:
         fence(db,job)
         db.execute("UPDATE editor.jobs SET status='COMPLETED',finished_at=now(),progress=%s WHERE id=%s",

@@ -93,6 +93,15 @@ def source_review(rows):
                                'issues': d.get('issues', []), 'readers': readers,
                                'next_action': 'REGION_READING_REQUIRED',
                                'status': 'NEEDS_REVIEW'})
+            if d.get('reread_measurement'):
+                measurement=d['reread_measurement']
+                unresolved[-1]['reread']={
+                    'method':d['reread_provenance']['method'],
+                    'status':measurement['status'],
+                    'crop_sha256':measurement['crop_sha256'],
+                    'stable_reread':measurement['stable_reread'],
+                    'source_generation_id':d['reread_provenance']['generation_id']}
+                unresolved[-1]['next_action']='RECONCILE_READER_EVIDENCE'
         results.append({'pdf_page': page, 'span_count': len(item['spans']),
                         'review_spans': len(unresolved), 'regions': unresolved,
                         'speakers': speaker_candidates(item['layout'], item['visual']),
