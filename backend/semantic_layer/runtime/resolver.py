@@ -115,6 +115,8 @@ _AVG_WORDS = frozenset(stem(w) for w in "ortalama ortalamasi".split())
 _COMPARE_CUE = re.compile(r"\b(karsilastir|karsilastirma|kiyasla|kiyaslama|vs|ayri ayri|yan yana|ikisini)\b")
 # "kaç fatura", "fatura sayısı", "kaç tane" — the question asks how many rows, not how much value.
 _COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariyla|sayi)\b")
+# "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
+_LINE_UNIT = re.compile(r"\b(kalem|kalemi|kalemleri|satir|satiri|satirlari)\b")
 # A movement word turns one number into a series: the answer has to be broken down over time.
 # Cue words are recognised through the morphology, not by allowing any letters to follow. A tail of
 # "up to six more letters" after "trend" also spells trendyol, a marketplace: the question then picked
@@ -1766,6 +1768,8 @@ class SemanticResolver:
         if prof is None:
             return None
         key = next((c.name for c in prof.columns if c.is_primary_key), None)
+        if count_key and any(_LINE_UNIT.fullmatch(fold(t)) for t in qf.tokens):
+            count_key = None                   # "kaç kalem": lines are counted, not the documents they belong to
         if count_key and prof.column(count_key) is not None:
             key = prof.column(count_key).name
         formula = f"COUNT(DISTINCT {entity}.{key})" if key else f"COUNT(*)"

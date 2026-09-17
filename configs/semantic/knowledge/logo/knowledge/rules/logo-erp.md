@@ -82,3 +82,15 @@ Ambar numarası hareket satırında `STLINE.SOURCEINDEX`; adı `L_CAPIWHOUSE.NAM
 ## Kural 15 — Kasa ve banka giriş / çıkış
 Kasa hareketleri `KSLINES` (`SIGN` 0 = giriş/tahsil, 1 = çıkış/ödeme; tutar `AMOUNT`; `CANCELLED = 0`; tarih `DATE_`). Banka hareketleri `BNFLINE` (`SIGN` 0 = giriş, 1 = çıkış; `AMOUNT`; `CANCELLED = 0`; `DATE_`). "Giriş çıkış farkı" = giriş − çıkış (net). Kasa ve banka **ayrı tablolardır**: her biri kendi alt sorgusunda ay bazında toplanır, sonra yan yana / toplam olarak verilir; iki tablo satır satır birleştirilmez. İki ay karşılaştırmasında her ay ayrı sütun ya da ayrı satırdır.
 
+## Kural 16 — Gider ve masraf merkezi (muhasebe fişi satırlarından)
+
+- **Gider** stok/fatura satırından okunmaz; kaynağı muhasebe fiş satırlarıdır: `EMFLINE`. Satırın hesabı `EMFLINE.ACCOUNTCODE` (hesap planı kodu), tutarı `DEBIT` (borç) ve `CREDIT` (alacak), tarihi `DATE_`, iptali `CANCELLED = 0`.
+- Gider hesapları Tekdüzen Hesap Planı'nın **7 ile başlayan** maliyet/gider hesaplarıdır: `ACCOUNTCODE LIKE '7%'`. Gider tutarı = `SUM(DEBIT - CREDIT)`.
+- **Masraf merkezi** `EMFLINE.CENTERREF → EMCENTER.LOGICALREF`; adı `EMCENTER.DEFINITION_`, kodu `EMCENTER.CODE`. "Masraf merkezi bazında gider" = EMFLINE ⨝ EMCENTER, `ACCOUNTCODE LIKE '7%'`, `CANCELLED = 0`, dönem `EMFLINE.DATE_` üzerinde, `GROUP BY EMCENTER.CODE, EMCENTER.DEFINITION_`.
+- STLINE/INVOICE üzerindeki CENTERREF hizmet/masraf satırının merkezidir; "gider" sorusu onunla cevaplanmaz.
+
+## Kural 17 — Malzeme (stok kartı) listeleri ve hareketsiz stok
+
+- Malzeme/stok kartlarının **listesi ya da sayısı** istenince yalnız kullanımdaki kartlar alınır: `ITEMS.ACTIVE = 0` (1 = kullanım dışı). Bu koşul kart listesine aittir; satış/hareket toplamlarına eklenmez.
+- "Hareketsiz / hiç hareket görmemiş stok" = dönemde `STLINE` satırı olmayan malzeme (`NOT EXISTS`, `CANCELLED = 0`, `LINETYPE = 0`). Listede malzemenin **eldeki miktarı** (stok bakiyesi) de gösterilir; bakiye ayrı bir alt sorguda, tarih filtresi olmadan hesaplanır ve `LEFT JOIN` ile eklenir.
+
