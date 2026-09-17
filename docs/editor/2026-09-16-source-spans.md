@@ -1,5 +1,15 @@
 # Sayfa bazlı kaynak akışı
 
+## 17 Eylül güncellemesi
+
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
+
+V1 nesli iptal edilerek korundu. V2, 18 sayfanın ham makine ölçümlerini köken/hash denetimiyle yeniden kullanıp türetilen adayları yeniden üretti. Kelime sınırı, kesintisiz alıntı ve doğrulanmamış bölge boşlukları eklendi.
+
+[Ayrıntılı güncel durum, sürümler ve kanıtlar](2026-09-17-status-and-handoff.md).
+
+## 16 Eylül tarihsel kayıtları
+
 Kullanıcının talebiyle eski `99b42a5b-7eaf-40b2-b2e3-980046965b0f` işi API üzerinden iptal edildi. Eski 48 kaynak, 48 görsel aday ve 12 sahne kaydı korundu; takipçi/soru kapasite betikleri durduruldu. Kaynak metinleri veya eski analizler silinmedi.
 
 İlk source-spans canary nesli `2d3b55d3-2087-492e-8102-17d5b7b86ffd`, yerel PDF kelime konumları eklenmeden önce çalıştı. Bu deneme de iptal edilip korundu. Yöntem değişikliğini aynı nesle karıştırmadan yeni nesil başlatıldı:

@@ -1,5 +1,15 @@
 # Editör altyapı kurulumu — 16 Eylül 2026
 
+## 17 Eylül güncellemesi
+
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
+
+Güncel paket 8 imaj/94 dosya/dört GGUF içerir. On servis ve OCR ana Compose içinde; LLM 48 CPU, tek slot, 8192 bağlam/1024 görsel token. Eski paket boyutu, UI yokluğu ve 256-token ayarı aşağıda ilk kurulum tarihçesidir.
+
+[Ayrıntılı güncel durum, sürümler ve kanıtlar](2026-09-17-status-and-handoff.md).
+
+## 16 Eylül tarihsel kayıtları
+
 ## Talep ve kapsam
 
 Kullanıcı mevcut sunucu altyapısının değerlendirilmesini, kullanılabilecek

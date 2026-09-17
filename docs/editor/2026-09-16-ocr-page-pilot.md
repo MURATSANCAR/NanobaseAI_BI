@@ -1,5 +1,15 @@
 # Gerçek sayfada ikinci okuyucu pilotu
 
+## 17 Eylül güncellemesi
+
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
+
+Pilot ana sisteme source-spans-v2 ile bağlandı. PDF/Tesseract karşılaştırması artık kelime geometrisiyle yapılır; tam koşunun s.38 kaydı 24 bölge/20 anlaşma/4 incelemedir. Eski pilot imajı güncel dağıtım imajı değildir.
+
+[Ayrıntılı güncel durum, sürümler ve kanıtlar](2026-09-17-status-and-handoff.md).
+
+## 16 Eylül tarihsel kayıtları
+
 Kullanıcının talebiyle PaddleOCR 3.2.0 / PaddlePaddle 3.2.0, PP-OCRv5 mobile detection ve Türkçe Latin recognition modelleri ayrı Docker servisi olarak kuruldu. Model revision ve taban imaj digestleri sabit; bütün ağırlıklar imaj içinde. Özel ağ, dışarı açılan port yok, 4 CPU/4 GiB, salt okunur dosya sistemi. Dış TCP erişimi engelli olduğu canlı konteynerde doğrulandı. İmaj: `sha256:5ee7b3015cf37db8dcdd7da19010ca6fb7bb9b970c1a696c17516be1554aa75c`.
 
 ## Yürütme ve kanıt

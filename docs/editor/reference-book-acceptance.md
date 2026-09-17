@@ -9,11 +9,11 @@ Bu dosya değerlendirme ölçütlerini ve henüz kapanmamış kontrolleri tutar;
 testlerin geçtiği anlamına gelmez. Modelin atıf kimliğinin varlığı, iddianın o
 kaynakla desteklendiği anlamına gelmez. Referans notları model istemine eklenmez.
 
-Müdahalesiz gerçek koşu: `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b`. Önceki
-`18c22ea1-35e8-4e49-b762-82b3320ed49c` neslindeki Codex ret kararları bu koşuya taşınmadı;
-içerik düzeltmesi verilmedi. API çıktıları aynı sunucudaki
-Editör PostgreSQL sorgularıyla ve değişmez kaynak dosyalarıyla karşılaştırılır.
-Yerel mock veya sentetik kitap kullanılmaz. İnsan editör onayı taklit edilmez.
+## 17 Eylül güncel kabul durumu
+
+V2 nesli `a9471749-7447-4826-b003-f25e53943763`: işleme 48/48 tamamlandı, nesil NEEDS_REVIEW. 1.149 span (778 anlaşma/371 inceleme), 48 sayfanın altı kayıt türü API/PG eşliği; manuel review/kaynak düzeltmesi 0. Offline paket ve gerçek tam kitap restore/API-PG/mobil kabulü geçti. Bunlar aşağıdaki anlamsal B/V senaryolarını kapatmaz. [Ayrıntılı son durum](2026-09-17-status-and-handoff.md).
+
+Önceki caption nesli `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` iptal edildi. O nesilde görülen anlamsal hatalar regresyon gereksinimidir; v2’nin düzeldiği veya aynı çıktıyı ürettiği ayrıca kanıtlanmalıdır. Gerçek uygulama sonuçları bağımsız PostgreSQL ve değişmez kaynakla karşılaştırılır; yerel mock/sentetik kitap veya insan onayı taklidi kullanılmaz.
 
 ## Kitap senaryoları
 
@@ -21,7 +21,7 @@ Yerel mock veya sentetik kitap kullanılmaz. İnsan editör onayı taklit edilme
 |---|---|---|---|
 | B01 | 44–48 | Bozuk metin katmanı fark edilir; OCR, özgün görüntüyle karşılaştırılır. Küçük OCR hataları görünür kalır. | Sayfa içi OCR var; kusursuz metin/editör kabulü verilmedi. |
 | B02 | 28–29 | Balon okunur, metindeki aynı konuşmaya bağlanır; tek kanonik olayda iki kaynak korunur. | Balon kaynakta doğrulandı; olay birleştirme çıktısı bekleniyor. |
-| B03 | 6/12/14/37 | Az yazılı sayfalarda görsel kayıt ve kaynak erişimi bulunur. | Teknik kapsam: 48 görsel kayıt mevcut, 48 API görüntüsü kaynak hashleriyle eşleşti. Anlamsal doğruluk ayrı. |
+| B03 | 6/12/14/37 | Az yazılı sayfalarda görsel kayıt ve kaynak erişimi bulunur. | V2 teknik kapsam: 48 visual_observations sayfa kaydı ve kaynak API/PG eşliği; anlamsal doğruluk DOĞRULANAMADI. |
 | B04 | 4/32–33 | Samet Can katkıcı; Can öykü kişisidir. Varlık kayıtları ve cevap ikisini ayırır. | Gerçek çıkarım ve cevap bekleniyor. |
 | B05 | 10–11 | Bilge'nin erken geliş açıklaması bulunur; sırf erken geldi diye hata denmez. | Gerçek cevap bekleniyor. |
 | B06 | 23 | Max'in hitabı şaka/kişileştirme; robotlar arasında gerçek akrabalık kurulmaz. | Olay/ilişki ve cevap bekleniyor. |
@@ -47,8 +47,8 @@ Yerel mock veya sentetik kitap kullanılmaz. İnsan editör onayı taklit edilme
 | V03 | 28–29 konuşması aynı olaya bağlanır. | B02 ile birlikte değerlendirilecek. |
 | V04 | Hayal/plan görseli gerçekleşmiş olay sayılmaz. | B08 ile birlikte değerlendirilecek. |
 | V05 | Kompozisyonu bozan parçalama yapılmaz. | Tam sayfa render korunuyor; anlamsal kompozisyon kabulü verilmedi. |
-| V06 | Belirsiz kişi/nesne eşlemesi kesin olgu sayılmaz. | BAŞARISIZ görsel örneği: yeni koşuda 6. sayfadaki açık gözlü kişi “uyuyan/mavi gözlü” diye betimlendi. Sonraki aşamaya etkisi bekleniyor; bu nesle manuel ret/düzeltme girilmedi. |
-| V07 | Tekrar kullanımlar korunur; düzeltme bağımlı görünümleri yeniler. | Ret kararı sahne girdisinden dışlanıyor; tamamlanmış nesilde kapsamlı düzeltme akışı DOĞRULANAMADI. |
+| V06 | Belirsiz kişi/nesne eşlemesi kesin olgu sayılmaz. | Tarihsel caption koşusunda BAŞARISIZ örnek: 6. sayfadaki açık gözlü kişi “uyuyan/mavi gözlü” diye betimlendi. V2 anlamsal regresyon kabulü DOĞRULANAMADI; adaylar senteze açık değildir. |
+| V07 | Tekrar kullanımlar korunur; düzeltme bağımlı görünümleri yeniler. | V2 ham ölçüm kökeni korunur, eski review aktarılmaz; genel düzeltme-bağımlılık akışı DOĞRULANAMADI. |
 | V08 | Yetki ve sürüm, görsel ve önbellekte korunur. | Operatör jetonsuz kaynak/görsel 401 ve no-store var; kitap bazlı çok kullanıcılı yetki DOĞRULANAMADI. |
 
 ## Sonuçları değerlendirirken
@@ -59,5 +59,5 @@ Yerel mock veya sentetik kitap kullanılmaz. İnsan editör onayı taklit edilme
 - Her 10 tamamlanmış soru için başarılı/başarısız/doğrulanamayan sayısı ayrı
   tutulur. Üretilmiş cevap sayısı, geçmiş test sayısı değildir.
 - Bu tek kitaptan üç kitaplık pilot, üretim kapasitesi veya yayınevi editör
-  kabulü sonucu çıkarılmaz. Yeni uygulama sürümüyle offline restore ayrıca
-  doğrulanmalıdır; eski altyapı restore sonucu onun yerine geçmez.
+  kabulü sonucu çıkarılmaz. V2 offline restore 17 Eylül
+  doğrulandı; bu sonuç anlamsal veya farklı müşteri ortamı kabulünün yerine geçmez.

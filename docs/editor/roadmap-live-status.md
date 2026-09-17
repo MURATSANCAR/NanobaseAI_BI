@@ -1,6 +1,6 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-16 Eylül 2026. Kaynak: kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx`, sürüm 1.1. Bu belge kabul sonucu değil, açık kapsam kaydıdır.
+17 Eylül 2026 güncellemesi. Kaynak: kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx`, sürüm 1.1. Bu belge kabul sonucu değil, açık kapsam kaydıdır.
 
 ## Kabul yöntemi
 
@@ -17,18 +17,16 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 
 ## Planın tüm bölümleri
 
-Yeni müdahalesiz nesil: `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b`; iş: `99b42a5b-7eaf-40b2-b2e3-980046965b0f`. Sunucu takibi: `evidence/reference-follow-unassisted.log`. 48 CPU/48 thread, dört model slotu. Sonuç ve kabul bekleniyor.
-
-Sürüm denetimi: önceki 48 görselin 10'u `book-e2e-v1`, 38'i `visual-observation-v2` istemiyle üretilmiş. Yeni koşu ilk 10'u güncel istemle yeniden üretir; yalnız sürümü eşleşen 38 çıktı yeniden kullanılabilir. 48 görselin tamamı yeniden kullanıldı denmez.
+V2 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 778 anlaşma/371 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. API/PG eşliği ve ayrı kurulum restore/mobil kontrolü geçti. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-status-and-handoff.md).
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
 | 1 Kapsam | Türkçe resimli iç baskı PDF, bir gerçek kitap | Diğer iki kitap ve ayrılmış kabul kitabı yok |
 | 2 Doğrulama evresi | Sunucu envanteri, kaynak hashleri, gerçek API/DB | Tam uçtan uca süre, görev başarısı, editör emeği ve kalan efor ölçümü açık |
 | 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; PDF.js/bbox incelemesi eksik |
-| 4 Uçtan uca | Kaynak ve 48 görsel mevcut; devam edilebilir iş | Sahne → sentez → indeks → cevap tam koşu sonucu bekleniyor |
+| 4 Uçtan uca | 48 kaynak/okuma/görsel aday/kontrol kaydı; v2 iş COMPLETED | NEEDS_REVIEW; doğrulanmış sahne → sentez → indeks → cevap kabulü açık |
 | 5 Dosya kabulü | Gerçek 19.806.912 bayt PDF, aynı hash, yarım yükleme reddi, idempotency | Tüm hata profilleri ve otomatik yeni PDF ayrıştırma akışı eksik |
-| 6 OCR/görsel | 48/48 muhasebe, 2400px OCR, metin katmanı ve ham adaylar korunuyor | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
+| 6 OCR/görsel | 48/48; PDF/Paddle/Tesseract kelime geometrisi, 1.149 span, 778 anlaşma/371 inceleme | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
 | 7 Görsel bağlam | Kaynak/görsel API, 48 hash eşleşmesi ve gerçek sayfa/model adayını gösteren mobil ekran | Sahne eşleme kabulü, bölge/geçici kimlik ve görsel bağı düzenleme eksik |
 | 8 Veri modeli | Sürümlü kaynak/generation/record/job/review/outbox | Planın ayrıntılı varlık sözleşmesine karşı tam eşleme kabulü açık |
 | 9 İddia/zaman/bakış | Olay modu, fail, nesne, konuşmacı, bakış ve göreli zaman alanları | Alanların gerçek kitapta anlamsal doğruluğu bekleniyor |
@@ -37,16 +35,18 @@ Sürüm denetimi: önceki 48 görselin 10'u `book-e2e-v1`, 38'i `visual-observat
 | 12 Kanıt/cevap | Hybrid arama, reranker, kapsam/atıf kimliği denetimi | 13 gerçek soru; destek, yeterlilik ve kapsama göre bağımsız değerlendirme bekleniyor |
 | 13 Sürümler/düzeltme | Immutable kayıt, inceleme sürümü ve etkinleştirme kapısı | Genel düzeltme-bağımlılık yenileme ve gerçek ikinci baskı B18 eksik |
 | 14 Kuyruk/checkpoint | Lease, fencing, SKIP LOCKED, gerekçeli retry; kayıtlar kesintide korundu | Tam hata/kesinti matrisi ve kullanıcı yükü kabulü açık |
-| 15 Kapasite/maliyet | 48 CPU, 4 model slotu, çağrı süre/token izleri | Tam kitap süresi, tepe kaynak, maliyet ve hizmet hedefi açık |
+| 15 Kapasite/maliyet | 48 CPU, tek model slotu, 8192 bağlam/1024 görsel token; çağrı izleri | Tam kitap süresi, tepe kaynak, maliyet ve hizmet hedefi açık |
 | 16 Kalite/editör | B/V senaryoları ve bağımsız kaynak notları | Üç kitap, ayrılmış set, editör dakika/örnek ve uzlaşma ölçümü yok |
 | 17 B01–B18 | Ayrı senaryo takip tablosu mevcut | Çalışan uygulamanın sonuçlarıyla tek tek kapatılacak; B18 kaynağı yok |
 | 18 P0–P7 | Bağımlılık ve açık paketler bu tabloda görünür | Paketlerin hiçbiri yalnız kod bulunduğu için tamamlanmış sayılmaz |
 | 19 API | Eser/baskı/yükleme/analiz/job/kaynak/görsel/inceleme/soru uçları | Bütün API sözleşmesi, request/run metadata ve genel correction kabulü açık |
-| 20 İşletim/yetki | Ayrı ağ, yerel modeller, sırlar, temel offline paket/restore; yeni analiz paketi hash/imaj import kontrolü | Kullanıcı-kitap-rol yetkisi, yeni web sürümü dahil offline uçtan uca/restore, saklama/silme politikası kabulü eksik |
+| 20 İşletim/yetki | V2 offline paket, gerçek tam kitap yedeği, ayrı restore/API-PG/mobil kontrolü geçti | Kullanıcı-kitap-rol, farklı müşteri topolojileri, saklama/silme ve RPO/RTO kabulü eksik |
 | 21 Pilot/üretim | `pilot_ready=false`, insan onayı verilmedi | Üretim kararı verilemez; kritik kaynak hataları ve açık teknik koşullar var |
 | 22 Kaynaklar | Analiz belgesinin teknik referansları | Referans belgeleri gerçek ürün kabulünün yerine geçmez |
 
-## Kalite değerlendirmesi
+## 16 Eylül tarihsel kalite değerlendirmesi
+
+Aşağıdaki caption/sahne koşuları ve restore bekleme notları tarihsel kayıttır; 17 Eylül v2 sonucu yukarıdadır. İptal edilen caption nesli `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` güncel kabul nesli değildir.
 
 Gerçek React ekranı 320/390/768/1440 px sunucu Chrome tarayıcısıyla kontrol edildi:
 altı sekmede yatay taşma yok, kontroller en az 44px, kaynak sayfası geçişi ve
@@ -83,7 +83,7 @@ Kaynak bütünlüğü ve izlenebilir işlem kayıtları olumlu. Modelin görsel 
 
 Gerçek ikinci baskı, diğer iki kitap ve yayınevi editör zamanı dış girdidir; tahminle veya yapay örnekle tamamlanmış gösterilmez. Ön yüzsüz API koşusu mobil arayüz kabulü değildir. Önceki temel kurulumun restore kanıtı güncel analiz sürümüne otomatik taşınmaz.
 
-## Ölçülen çalışma darboğazı
+## 16 Eylül eski koşuda ölçülen çalışma darboğazı
 
 İlk künye grubu çağrısı 758,808 saniye sürdü; bu çağrı duvar süresidir, CPU saati veya tüm kitabın toplam süresi değildir. Üç dört-sayfalık sahne çağrısı 1800 çıktı token sınırına ulaştı; kesilmiş çıktı kabul edilmeyerek otomatik bölündü. Tekrar maliyetini azaltmak için sahne bütçesi 3600’e çıkarıldı; 8192 toplam bağlam kontrolü korunuyor. Aynı iş ikinci denemede, eski tamamlanan kayıtları koruyarak devam ediyor. Bu hata ve yeniden deneme toplam kullanıcı süresinden çıkarılmaz.
 

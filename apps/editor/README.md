@@ -5,54 +5,17 @@ Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, ta
 Docker ağlarını veya kimlik bilgilerini kullanmaz. BI ekran entegrasyonu sonraki
 aşamada tanımlı API sözleşmeleriyle yapılacaktır.
 
-## Bu teslimatın kapsamı
+## Güncel teslimat ve doğrulama — 17 Eylül 2026
 
-Analiz belgesinin P0 altyapısı: FastAPI, PostgreSQL/Alembic, PostgreSQL LangGraph
-checkpointer, bağımsız Qdrant, gözetilen işçi süreci, Prometheus, ağsız
-Docling/Poppler/Tesseract Türkçe araçları, kaynak inceleme komutu, offline kurulum
-paketi ve yedek/ayrı ortama geri yükleme betikleri.
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
 
-**Kitap analiz ürünü henüz pilot kabulünde değildir.** Operatör API'sine eser,
-baskı, gerçek dosya yükleme, hash ile kaynak sürümü, analiz ve soru işleri,
-sayfalanan kaynak/karakter/olay/görsel/inceleme uçları eklendi. İşçi PostgreSQL
-kuyruğunu lease/fencing ile tüketir; LangGraph checkpoint ve değişmez adım
-kayıtlarıyla devam eder. Yerel görsel okuma → kaynaklı sahne adayları → destek
-kontrolü → sınırlı kitap sentezi → Qdrant/dense + yerel BM25/reranker hattı
-gerçek referans kitapta çalıştırılmaktadır. **Kodun bulunması, tüm aşamaların
-tamamlanıp anlamsal kabulden geçtiği anlamına gelmez.**
+Canlı nesil `a9471749-7447-4826-b003-f25e53943763`, iş `0d53b03d-67e5-44c4-b523-bf9a2aa56ac2`, sürüm `source-spans-v2-6f14bb9`. Kaynak, okuma, yerleşim, görsel gözlem, iddia adayı ve sayfa kontrolü ayrı kaydedilir. OCR/PDF kelime eşleştirmesi ve kesintisiz alıntı kapısı uygulanır. Konuşmacı UNKNOWN kalır; adaylar senteze açılmaz.
 
-Bağımsız sayfa/sahne/destek grupları `EDITOR_MODEL_CONCURRENCY` ile 1–4
-eşzamanlı çağrıya sınırlandırılır. Varsayılan müşteri profili tek çağrıdır.
-Sunucuda ölçülen boş kapasite ve kullanıcının CPU artırma izniyle mevcut kitap
-koşusu 48 CPU/48 thread, 4 model slotu ve toplam 32768 bağlam token'ı kullanır
-(slot başına 8192). Model PID sınırı 512'dir: 128 sınırında 32 thread'li gerçek
-başlatma `libgomp: Thread creation failed` hatası verdi. Her grubun sonucu aynı
-lease/fencing altında değişmez kayda alınır; tamamlanan kayıtlar yeniden
-işlenmez. Ortak host sağlık gözlemi, tam hizmet seviyesi kabulü değildir.
+FastAPI, PostgreSQL/Alembic, LangGraph checkpoint, Qdrant, lease/fencing kullanan işçi, ana Compose OCR servisi, yerel modeller, Prometheus, ağsız belge araçları ve salt okunur React ekranı kuruldu. BI entegrasyonu API üzerinden sonraki aşamadır. LLM son koşuda 48 CPU/thread, tek slot, 8192 bağlam, 1024 görsel token ve PID sınırı 512 kullanır; embedding/reranker dörder CPU kullanır.
 
-Kitaba özel anlamsal ölçütler ve açık kontroller:
-[referans kitap kabul kayıtları](../../docs/editor/reference-book-acceptance.md).
+Sentez/indeks/soru kodunun bulunması v2 neslin bu aşamalardan geçtiği anlamına gelmez. `pilot_ready=false`; çok kullanıcılı kitap/rol, editör düzeltme bağımlılıkları, PDF.js/bbox incelemesi ve genel yeni PDF ayrıştırma akışı açık. Henüz ayrıştırılmamış kaynak `SOURCE_PARSE_REQUIRED` döndürür. Kitap metni/cevabı/review elle düzeltilmez; genel kod düzeltmesi sonrası yeni nesil doğrulanır.
 
-Bu koşu tek kurulum operatörü içindir; çok kullanıcılı kitap/rol yetkisi ve düzeltme
-bağımlılıklarının yeniden hesaplanması tamamlanmadı. `/editor/` altında gerçek
-API'ye bağlı salt okunur React inceleme ekranı vardır; kaynak, ham model adayları
-ve mevcut analiz/soru kayıtlarını gösterir. Mobil kontrol ve derleme ayrıntıları
-[frontend/README.md](frontend/README.md) içindedir. Editör karar/düzeltme arayüzü
-ve PDF.js bölge incelemesi bu ekranın tamamlanmış özellikleri değildir.
-Yükleme tamamlama, mevcut ağsız parser ile doğrulanmış hash'i kabul eder;
-yeni, henüz ayrıştırılmamış PDF `SOURCE_PARSE_REQUIRED` döndürür.
-Kaynakların modelle okunması insan editör kabulü değildir. İncelenmeyen nesil
-etkinleştirilmez; `editor_preview` cevapları açıkça taslaktır, `pilot_ready=false`.
-İlk offline müşteri paketi bu yeni analiz kodundan önceki altyapı sürümüdür.
-
-Güncel kabul nesli `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` yalnız yerel model
-çıktılarıyla çalışır. Codex kaynak açıklamaları veya önceki manuel ret kararları
-model girdisine verilmez; karşılaştırmalar ayrı raporda tutulur. İz:
-`evidence/reference-follow-unassisted.log`. Embedding ve reranker CPU/thread
-sınırları ayrı ortam değişkenleriyle ayarlanır; müşteri varsayılanı 1, mevcut
-ölçüm sunucusunda her biri 4'tür. Soru koşusunda dört geçici işçi kullanılıp
-13 soru terminal duruma gelince bir işçiye dönülür; bu tam öncelikli kuyruk
-veya çok kullanıcılı kapasite kabulü değildir.
+[Ayrıntılı yapılan işler, sürüm hashleri, kanıtlar ve açık işler](../../docs/editor/2026-09-17-status-and-handoff.md). [Kitap kabul defteri](../../docs/editor/reference-book-acceptance.md). [Mobil ekran](frontend/README.md).
 
 ## Ön yüz olmadan gerçek kitap koşusu
 
@@ -204,8 +167,7 @@ başlamadan karşılaştırılır. Eski manifestlerde bu kontrol yoktur ve sonu�
 `book_records_and_artifacts_equal=false` görünür. Sonrasında arama betiği
 PostgreSQL pasajlarından Qdrant indeksini kurar; her vektörü ve kaynak bağını
 kontrol eder. Bu adım aktif işi olan kurulumda çalışmaz. Geri dönen gerçek API
-cevapları, atıflar ve kaynak ekranı ayrıca doğrulanmalıdır. Güncel dolu kitap
-yedeğinin tam restore kabulü henüz yapılmadı. Tek host/tek DB
+cevapları, atıflar ve kaynak ekranı ayrıca doğrulanmalıdır. 17 Eylül v2 dolu kitap yedeği ayrı kurulumda restore edildi; gerçek API/PG ve mobil ekran denetimi geçti. Sentez/arama/cevap kalitesi bu restore ile doğrulanmış değildir. Tek host/tek DB
 topolojisi yüksek erişilebilirlik sağlamaz; RPO/RTO henüz taahhüt edilmemiştir.
 
 Referans kitap kabul betiklerinde `EDITOR_VERIFY_BASE_URL` ile hedef kurulumun

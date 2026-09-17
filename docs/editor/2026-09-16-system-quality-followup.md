@@ -1,5 +1,15 @@
 # Sistem düzeltmesi ve gerçek koşu denetimi
 
+## 17 Eylül güncellemesi
+
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
+
+Bekleyen denetçi tamamlandı: restore 01:54:29 UTC, hedef API/PG 01:55:48, mobil kontrol 01:56:09. Ayrı hedef 01:56:12’de durduruldu; kanıt ve volume’lar korundu. Aşağıdaki bekleme kayıtları 16 Eylül anlık durumudur.
+
+[Ayrıntılı güncel durum, sürümler ve kanıtlar](2026-09-17-status-and-handoff.md).
+
+## 16 Eylül tarihsel kayıtları
+
 Kullanıcı bilgisayar başında değilken mevcut koşuyu izleme, uçtan uca kontrol,
 hata/eksikleri kod üzerinden giderme ve yapılanları Markdown'a kaydetme talebi.
 Kitap içeriği, beklenen cevap, konuşmacı veya kabul kararı elle yazılmaz.

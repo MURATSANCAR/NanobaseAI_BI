@@ -1,5 +1,13 @@
 # Editör inceleme ekranı
 
+## 17 Eylül doğrulanmış durum
+
+Restore ortamındaki gerçek Chrome kontrolü 17 Eylül 01:56:09 UTC’de geçti: 320/390/768/1440 px, altı sekme ve gerçek kaynak kaydı. Ekran salt okunur kalır; işin bitişi ile inceleme durumu ayrı gösterilir. Bu sonuç editör karar/yükleme/rol veya anlamsal kabul yerine geçmez.
+
+48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
+
+[Ayrıntılı çalışma kaydı](../../../docs/editor/2026-09-17-status-and-handoff.md).
+
 Bağımsız React/TypeScript uygulaması `/editor/` altında gerçek operatör API'sini
 kullanır. Kitap ve analiz sürümü seçimi, üç ayrı durum (işleme/kaynak kapsamı/editör
 incelemesi), özgün sayfa, OCR/PDF metin adayları, ham görsel model çıktıları,
