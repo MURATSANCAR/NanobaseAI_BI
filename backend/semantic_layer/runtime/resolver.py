@@ -1715,6 +1715,13 @@ class SemanticResolver:
                 continue
             if (m.operator or "IN").upper() not in ("IN", "="):
                 continue
+            # A label names a *state* of the record ("iptal", "tamamlandı") and its negation is the
+            # other state. A label that names the record's *kind* — a document type, a set the catalog
+            # counts by a key ("sipariş") — is not a state: "sipariş vermemiş" is a customer with no such
+            # record at all, which the absence branch reads; flipped here it became "orders of another
+            # type", a filter nobody asked for. The catalog marks a kind with `count_key`.
+            if (m.extra or {}).get("count_key"):
+                continue
             slot.mapping = Mapping(concept_id=m.concept_id, entity=m.entity, table_pattern=m.table_pattern, column=m.column,
                                    operator="NOT IN", values=list(m.values), extra=dict(m.extra or {}))
             slot.status = "INFERRED"

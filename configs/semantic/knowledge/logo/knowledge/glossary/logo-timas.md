@@ -23,3 +23,10 @@ STLINE LINETYPE 2 satırları; TOTAL iskonto tutarıdır. Malzeme satırı LINET
 
 ## Maliyetlendirme
 OUTCOST birim maliyet; Logo maliyetlendirme aylık gecikmeli çalışır, OUTCOST = 0 satırlar maliyetlendirilmemiştir.
+
+## Müşterinin "alması" — alan / almış / alıp / satın alan müşteri
+Müşteri bizden **satın almıştır** = adına satış faturası kesilmiştir (INVOICE TRCODE 7, 8, 9; iptal hariç). "Geçen yıl alıp" = geçen yıl satış faturası olan cari. Alım (TRCODE 1) tedarikçiden bizim alımımızdır, müşterinin alması değil.
+
+## Kaybedilen müşteri
+Geçen dönemde satış faturası olan, bu dönemde hiç satış faturası **olmayan** cari (müşteri düzeyinde yokluk, NOT EXISTS); yanına geçen dönem cirosu yazılır. "Bu yıl hiç sipariş vermemiş" dendiğinde sipariş fişi (LG_ORFICHE TRCODE 1) aranır — sipariş modülü tüm satışları kapsamadığı için cevapta "sipariş" ölçütü olduğu belirtilir.
+

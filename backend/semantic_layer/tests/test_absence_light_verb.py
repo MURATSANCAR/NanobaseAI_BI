@@ -84,3 +84,15 @@ def test_a_header_filter_is_proven_on_its_line_table_by_the_same_column():
     assert not any("koşulu sonuç kapsamında" in u for u in unmet_obligations(sq, sql, sources=sources)), unmet_obligations(sq, sql, sources=sources)
     other = sql.replace("o.TRCODE IN (1)", "o.TRCODE IN (2)")
     assert any("koşulu sonuç kapsamında" in u for u in unmet_obligations(sq, other, sources=sources))
+
+
+def test_negating_a_record_kind_is_absence_not_the_other_kinds(catalog, profiles):
+    """"bu yıl hiç sipariş vermemiş müşteriler": 'sipariş' names the order document (TRCODE 1). Flipped to
+    TRCODE NOT IN (1) it asked for customers with orders of another type; asked was no order at all."""
+    _certify(catalog, "sipariş", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             column="TRCODE", operator="IN", values=["1"], extra={"count_key": "LOGICALREF"}))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Bu yıl hiç sipariş vermemiş müşteriler kimler?", today=TODAY)
+    assert sq.shape == "ABSENCE", (sq.shape, sq.explanation)
+    assert not any(s.mapping and (s.mapping.operator or "").upper() == "NOT IN" for s in sq.slots), [(s.term, s.mapping.operator) for s in sq.slots if s.mapping]
+    assert any(m.get("decision") == "ABSENCE" and m.get("absent_entity") == "INVOICE" for m in sq.modifiers), sq.modifiers
