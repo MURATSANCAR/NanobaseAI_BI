@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — OCR gateway yarış düzeltmesi ve gerçek kalite dökümü
+
+GPU gateway kaynak kodunda boşta kapanma kararı ile yeni isteğin kabulü arasında yarış bulundu; aynı lifecycle/state kilitleriyle kapanma kararı atomikleştirildi. Monotonic süre, gövde sınırı ve açık upstream hataları eklendi. Ayrı uzak GPU aday konteynerinde gerçek kitap kırpımı200/stop, hatalı uzunluk400 ve aşırı gövde413 geçti; aday durduruldu. Ana gateway henüz değişmedi; idle sınır kabulü açık. V12 gerçek API/PG kalite dökümü887 anlaşmalı/262 inceleme bölgesi,52 sentez adayı,23 taslak ifade gösterdi. Genel salt okunur döküm scripti eklendi. [Gateway kanıtı](../apps/editor/gpu/README.md).
+
 ## 2026-09-18 — V12 48 sayfa teknik kontrol ve V13 paralel hazırlık
 
 V12 ana koşu 48/48 teknik kontrolden geçti. Gerçek API ve bağımsız PostgreSQL üzerinde 1.149 kaynak, 48 kimlik, 48 anlamsal inceleme, 12 figür karşılaştırması ve bir sentezin bütünlüğü doğrulandı; tam anlamsal kabul false kaldı. V13 küçük bölge/sayfa bağlamı/konuşma bağlantısı ve mobil arayüzü paralel geliştirildi; API/document/web aday imajları canlı hizmetlerden ayrı hazırlandı. Paralel ajan kullanım limiti sonrası entegrasyon ana oturumda sürüyor. [Kanıt ve açık sınırlar](editor/2026-09-18-source-analysis-v13.md).
