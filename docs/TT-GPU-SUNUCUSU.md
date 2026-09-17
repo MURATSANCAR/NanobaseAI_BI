@@ -122,6 +122,15 @@ Elenenler: `chandra-ocr-2` (OpenRAIL lisansı belirsiz), `baidu/Unlimited-OCR` v
 
 Bilinmeyen: PaddleOCR-VL-1.6'nın Türkçe büyük harf balon yazısındaki başarısı. Kanıt yolu: bu kitabın kayıtlı 1.149 bölgesi (821 anlaşma / 328 inceleme) iki yeni okuyucuyla koşturulur; 328'in kaçı çözülüyor, 821'in kaçı bozuluyor, İ/Ş/Ğ hataları sayılır. Kitaba özel ayar yapılmaz.
 
+### 5.1 PaddleOCR-VL-1.6 kuruldu: istek gelince açılan, boşta kapanan Docker servisi (2026-09-18)
+
+- Model (1,93 GB, 20 dosya) `/data/hf-cache` altına indi. Dosyalar `/data/paddleocr-vl/`: `docker-compose.yml`, `gateway.py`.
+- İki konteyner: `paddleocr-vl` (vLLM 0.27.1, GPU 1, `restart: "no"`, dışarıya port açmaz) ve `paddleocr-gateway` (python:3.12-slim, yalnız standart kütüphane, port **8010**, `unless-stopped`, birkaç MB bellek). Kapı Docker soketi üzerinden hedef konteyneri başlatır/durdurur; soket bağlandığı için kapı konteyneri makinede root eşdeğeridir.
+- Davranış: `GET /gateway/status` konteyneri başlatmadan durumu verir. Diğer her istek konteyneri açar, `/health` 200 olana kadar bekler, isteği iletir (soğuk açılışta yanıta `X-Cold-Start-Seconds` eklenir). `IDLE_SECONDS` (varsayılan 600, `OCR_IDLE_SECONDS` ile değişir) boyunca istek yoksa konteyner durdurulur.
+- Doğrulandı: soğuk açılış 68,6 sn; Flash-Next kartı %90 kullanırken kalan payda açıldı (`--gpu-memory-utilization 0.05`, 2,15 GiB ağırlık + 2,21 GiB KV = 128.912 token, `--enforce-eager`); geçici 60 sn sınırıyla 66. saniyede kendiliğinden kapandı (çıkış 0), GPU 1 belleği 94,9 → 89,6 GiB'e döndü, Flash-Next sağlıklı kaldı. Açıkken GPU 1'de yaklaşık 1 GiB boş kalıyor — dar.
+- İlk okuma denemesi (2 sayfa, 1400 px JPEG, sayfa başına 0,6–2,2 sn): kutu koordinatı veriyor (`Spotting:`) ve metni eksiksiz aktarıyor (Flash-Next'in atladığı `dedi Profesör Bulut gururla.` cümlesi var). **Ama Türkçe harflerde zayıf:** "DUR!" → "DURI", "Gıcırtıyla" → "Gıcirtıyla", "biriktirdiği" → "biriktirdigi", "Işık" → "İsik", "karışmıştı" → "karışmıştır"; `Spotting:` kipinde ş/ç/ğ/ı büyük ölçüde düşüyor. Flash-Next aynı sayfalarda harfleri doğru okumuştu.
+- Bu, bölüm 5'teki iş bölümünü değiştirir (kanıtlanmış değil, iki sayfalık gözlem): **kutu ve eksiksizlik PaddleOCR-VL'den, harf doğruluğu Flash-Next'ten** gelmeli — örneğin PaddleOCR-VL kutuları bulur, her kutunun kırpımını Flash-Next okur, iki metin karşılaştırılır. Daha yüksek çözünürlükte PaddleOCR-VL'nin Türkçe başarısı ölçülmedi. Karar 1.149 bölgelik karşılaştırmaya bağlı; kullanıcı bu adım için beklememi istedi.
+
 ## 6. Açık işler
 
 1. Modeli BI köprüsüne / LLM kapısına bağlama kararı ve golden set koşusu (model çalışıyor: `tt-gpu:8001`, ad `qwen3.8-flash-next`).

@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — PaddleOCR-VL-1.6: ihtiyaç olunca açılan OCR servisi
+
+- TT GPU makinesine PaddleOCR-VL-1.6 Docker olarak kuruldu. Küçük bir kapı konteyneri (port 8010) ilk istekte OCR konteynerini başlatır, 10 dakika istek gelmezse durdurur; kullanılmadığında GPU belleği tutmaz. Soğuk açılış 68,6 sn, boşta kapanma ve belleğin geri dönüşü ölçülerek doğrulandı; Flash-Next ile aynı kartta kalan dar payda çalışıyor.
+- İki gerçek sayfada deneme: kutu koordinatı ve eksiksiz metin veriyor, fakat Türkçe harflerde hatalı ("DUR!" → "DURI", ş/ğ/ı düşüyor). Flash-Next'in tersi: o harfleri doğru okuyup cümle atlamıştı. İş bölümü buna göre düşünülecek; editöre bağlama ve 1.149 bölgelik karşılaştırma kullanıcı onayını bekliyor. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
 ## 2026-09-18 — Qwen3.8-Flash-Next iki H100'de açıldı
 
 - 186 GB indirme bitti, 144 dosya boyutu kaynakla eşleşti. Model resmî doğrulanmış olmayan 2 × H100 NVL düzeninde ilk ayarlarla açıldı: kart başına 64,6 GiB ağırlık, 950.590 token KV önbelleği, bellek hatası yok.
