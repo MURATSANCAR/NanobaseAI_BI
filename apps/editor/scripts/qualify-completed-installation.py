@@ -56,7 +56,9 @@ def settings(path,updates):
 
 try:
     execute('release_bytes',['python3','scripts/verify-release.py'])
-    execute('offline_bundle',['python3','scripts/bundle.py',str(work/'offline'),'--with-models'],timeout=7200)
+    bundle_args=['python3','scripts/bundle.py',str(work/'offline'),'--with-models']
+    if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':bundle_args.append('--with-ocr-vl')
+    execute('offline_bundle',bundle_args,timeout=7200)
     manifest=json.loads((work/'offline/release-manifest.json').read_text())
     for name in manifest['files']:
         parts=Path(name).parts
@@ -65,6 +67,7 @@ try:
         if Path(name).name.startswith('.env') and Path(name).name!='.env.example':
             raise RuntimeError('PRIVATE_ENV_IN_BUNDLE')
     assert manifest['ocr_included'] is True
+    if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':assert manifest['ocr_vl_included'] is True
     execute('offline_import',['python3','scripts/import-bundle.py',str(work/'offline')],timeout=7200)
     record('wait_for_pinned_analysis','WAITING')
     start=time.monotonic();failures=0
@@ -87,6 +90,20 @@ try:
     active=subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',
         "SELECT count(*) FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')"],text=True).strip()
     if active!='0':raise RuntimeError('OTHER_ACTIVE_JOBS_NO_BACKUP_RESTART')
+    # These networkless tools write artifacts outside the DB job queue. A backup
+    # must not race a live OCR or document process, even after analysis completes.
+    config=json.loads(subprocess.check_output(['docker','compose','config','--format','json'],text=True))
+    record('wait_for_artifact_tools','WAITING')
+    for _ in range(240):
+        live=[]
+        for service in ('ocr-vl','document'):
+            live.extend(subprocess.check_output(['docker','ps','-q',
+                '--filter','label=com.docker.compose.project='+config['name'],
+                '--filter','label=com.docker.compose.service='+service],text=True).split())
+        if not live:break
+        time.sleep(30)
+    else:raise RuntimeError('ARTIFACT_TOOLS_STILL_RUNNING')
+    record('wait_for_artifact_tools','PASS')
     record('wait_for_pinned_analysis','PASS','İşleme tamamlandı; anlamsal kabul değil.')
     execute('source_api_pg',['python3','scripts/verify-source-pipeline.py'])
     execute('release_bytes_after_analysis',['python3','scripts/verify-release.py'])
