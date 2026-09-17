@@ -14,11 +14,15 @@ Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nan
 
 Üretim kodu/prompt/kapıları kitap adı, hash, karakter veya sayfa numarasına özel çözüm içermez. Aynı ad yazımı karakter kimliği değildir. Paralel inceleme limit sözleşmesi ve küçük görsel kapsam sayacında açık işler buldu. Yeni Türkçe metin konuşmacısı adayındaki ortak/kısmi ad ve geniş alıntı riskleri sıkılaştırıldı; gerçek 1.149 API/PG kaydında değişmeyen kaynakla 10 açık atıf ölçüldü. Bu aday yayımlanmadı; farklı kitaplarla kabul ve görsel kimlik çözümü açık. [İnceleme ve kabul sınırları](docs/editor/2026-09-17-generality-review.md).
 
-### Devam eden v5 kabulü (2026-09-17)
+### Güncel yayın — v5 metin atıfları (2026-09-17)
 
-Kaynaklı metin atıfları ve kesilen yüklemeye devam kodu, gerçek yedekten restore edilmiş API 18810 ortamında çalışıyor. Yeni nesil `8c780a30` 48/48 tamamlandı; metin atıf arayüzü dört genişlikte, backend/web dosya eşliği ve kaynak API/PG kontrolü geçti. Ana yayın ve kalan kabul kontrolleri sürüyor; anlamsal kabul yok. [Güncel adım](docs/editor/2026-09-17-text-attribution.md).
+Ana yayın `text-attribution-v5-20260917`; nesil `14a79646` 48/48 COMPLETED/NEEDS_REVIEW, kaynak 821/328. 10 açık metin atfı, model iddialarına bağlanan konuşmacı 0. Gerçek ana API/PG tam sayfa ve dört genişlikte atıf/bbox kabulü geçti; aynı sürümün bağımsız gerçek restore ortamında sekiz kesilen yükleme senaryosu geçti. Görsel kimlik ve anlamsal kabul açık. [Kod ve kanıt](docs/editor/2026-09-17-text-attribution.md).
 
-### Güncel yayın — kelime sınırı kapısı (2026-09-17)
+### Devam eden v6 — bölgesel kaynak seçimi
+
+Bölgesel OCR seçim kodu gerçek 1.149 kayıtta 39 iyileşme adayı/0 gerileme gösterdi. Ayrı restore API18810 ortamının ilk v6 koşusunda iki kaynak yükseldi, model açılışındaki HTTP hatası işi durdurdu. Sınırlı geçici hata tekrarı ve durum kodu kaydı eklendi; 48 CPU ile R2 gerçek koşusu sürüyor. Ana yayın v5 olarak kalır; v6 tam kabul henüz yok. [Kök neden ve kanıt](docs/editor/2026-09-17-regional-source-selection.md).
+
+### Önceki yayın — kelime sınırı kapısı (2026-09-17)
 
 Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
 

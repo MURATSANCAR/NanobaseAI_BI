@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Bölgesel OCR kaynak seçimi ve model açılışı hatası
+
+- Bağımsız okuyucularla desteklenen kırpılmış OCR için genel kaynak seçim fonksiyonu ve v6 entegrasyonu eklendi. Ham metin, kutu ve bütün okuyucu kökenleri korunur; eski model adayları değişen kaynakta yeniden kullanılmaz. Gerçek 1.149 kayıtta 39 aday yükselme/0 gerileme ölçüldü.
+- Gerçek restore koşusunda ilk iki sayfanın kaynak kabulü geçti; model açılışındaki HTTP hatası işi durdurdu. Geçici reddetmeler için sınırlı tekrar ve açık durum kodu eklendi; R2 soğuk başlangıç kabulü sürüyor. Tam v6 kabulü yok; ana yayın doğrulanmış v5.
+- [Ayrıntı ve gerçek kanıt](editor/2026-09-17-regional-source-selection.md).
+
 ## 2026-09-17 — V5 ana yayın kabulü tamamlandı
 
 - `text-attribution-v5-20260917`, ana nesil `14a79646`: 48/48, 10 metin atfı, 0 claim-speaker; kaynak 821/328 ve anlamsal kabul açık. Tam API/PG, backend/web hash ve dört genişlikte atıf/kutu kontrolü geçti. Bağımsız restore ortamında sekiz gerçek kesilen-yükleme senaryosu geçti.
