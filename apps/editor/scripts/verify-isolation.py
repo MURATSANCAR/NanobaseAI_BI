@@ -17,7 +17,12 @@ for container in containers:
     service = container['Config']['Labels']['com.docker.compose.service']
     host = container['HostConfig']
     networks = list(container['NetworkSettings']['Networks'])
-    if service not in ('gateway',):
+    if service == 'parser':
+        assert host['NetworkMode'] == 'none' and networks == ['none'], (service,networks)
+        assert host['ReadonlyRootfs'] and host['CapDrop'] == ['ALL']
+        assert not host.get('PortBindings')
+        assert not any(m['Destination'].startswith('/run/secrets') or 'docker.sock' in m['Destination'] for m in container['Mounts'])
+    elif service not in ('gateway',):
         assert len(networks)==1 and networks[0].endswith('_private'), (service,networks)
         assert not host.get('PortBindings'), service+' unexpectedly publishes a port'
     assert host['Memory'] > 0 and host['NanoCpus'] > 0, service+' has no resource bounds'

@@ -4,10 +4,13 @@ import json
 import subprocess
 
 
-def book_reference(config):
+def book_reference(config, tables=None):
     compose = ['docker', 'compose']
-    tables = ('works', 'editions', 'content_versions', 'generations', 'jobs',
-              'records', 'reviews', 'idempotency')
+    allowed = ('works', 'editions', 'content_versions', 'generations', 'jobs',
+              'records', 'reviews', 'idempotency', 'uploads', 'outbox')
+    tables = allowed if tables is None else tuple(tables)
+    if not tables or any(t not in allowed for t in tables):
+        raise ValueError('Unexpected book reference table')
     database = {}
     for table in tables:
         # PostgreSQL owns the canonical JSON representation on both installations.

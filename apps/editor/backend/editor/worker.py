@@ -35,6 +35,8 @@ def main():
             active.clear()
     while running:
         try:
+            from editor.parse_jobs import reconcile
+            reconcile()
             with connection() as db:
                 db.execute('''INSERT INTO editor.worker_heartbeats(worker_id,release,mode)
                     VALUES ('foundation',%s,'book_analysis_worker')

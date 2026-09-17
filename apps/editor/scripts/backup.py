@@ -23,7 +23,7 @@ for service in ('document','ocr-vl'):
                                            '--filter','label=com.docker.compose.service='+service],text=True).strip()
     if active_tools:
         raise SystemExit('Finish active artifact tools before taking a consistent backup: '+service)
-subprocess.run(compose + ['stop', 'api', 'worker'], check=True)
+subprocess.run(compose + ['stop', 'api', 'worker', 'parser'], check=True)
 try:
     with (destination / 'database.dump').open('wb') as stream:
         subprocess.run(compose + ['exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'editor', '-Fc', '--schema=editor', '--schema=checkpoints', '--no-owner', '--no-acl'], stdout=stream, check=True)
@@ -44,4 +44,4 @@ try:
     (destination/'manifest.json').write_text(json.dumps(manifest, indent=2))
     print('Backup complete: ' + str(destination))
 finally:
-    subprocess.run(compose + ['start', 'worker', 'api'], check=True)
+    subprocess.run(compose + ['start', 'parser', 'worker', 'api'], check=True)

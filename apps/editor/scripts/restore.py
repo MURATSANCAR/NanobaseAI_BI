@@ -45,7 +45,7 @@ with (source/'artifacts.tar').open('rb') as stream:
 # Compare the snapshot before starting writers, which can legitimately resume jobs.
 book_verified = False
 if 'book_reference' in manifest:
-    if book_reference(config) != manifest['book_reference']:
+    if book_reference(config, manifest['book_reference']['database'].keys()) != manifest['book_reference']:
         raise SystemExit('Restored book records or artifact bytes differ from backup')
     book_verified = True
 query = "SELECT json_build_object('revision',(SELECT version_num FROM editor.alembic_version),'deployments',(SELECT json_agg(release ORDER BY release) FROM editor.deployments),'sources',COALESCE((SELECT json_agg(json_build_object('sha256',sha256,'manifest_md5',md5(manifest::text)) ORDER BY sha256) FROM editor.source_probes),'[]'::json))"

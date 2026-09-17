@@ -8,7 +8,9 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 ## Editör modülü — bağımsız altyapı (2026-09-17)
 
-Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus ve gateway olmak üzere 10 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
+Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus, gateway ve ağsız parser olmak üzere 11 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
+
+**Son yayın — otomatik yükleme:** `upload-queue-v2-20260917`. Yeni PDF arayüzden yüklenir, ağsız parser kuyruğunda hazırlanır; 202/job_id, kalıcı durum, iptal, iki iş sınırı ve tekrar kontrolü vardır. Boş ayrı kurulumda özgün kitabın 48 sayfası, gerçek API/PG/Poppler ve dört ekran genişliğiyle doğrulandı. Kuyruk doluluğu, dosya mühürleme, iptal ve servis yeniden başlatmada devam geçti. Ana kurulumda özgün PDF tekrar kuyruğa alındı, mevcut sürüm kullanıldı; analiz kayıtları değişmedi. Bu yayının yeni paket/restore kontrolü henüz sonuçlanmadı. [Kod ve gerçek kabul](docs/editor/2026-09-17-upload-pipeline.md).
 
 **Bağlayıcı kalite kuralı:** Kitap metni, model cevabı, konuşmacı veya kabul kararı Codex tarafından elle düzeltilmez; beklenen cevap prompt/kural/veriye yazılmaz. Genel kod değiştirilir, gerçek kaynak uygulama tarafından yeniden işlenir. Önceki nesiller silinmez. İşlenen sayfa ile doğrulanmış analiz birbirinden ayrıdır.
 

@@ -1,7 +1,7 @@
 name: ${COMPOSE_PROJECT_NAME:-nanobase-editor}
 
 x-app: &app
-  image: ${EDITOR_IMAGE:-nanobase-editor:foundation-20260916}
+  image: ${EDITOR_IMAGE:-nanobase-editor:upload-queue-v2-20260917}
   build:
     context: .
     target: runtime
@@ -17,7 +17,7 @@ x-app: &app
   cpu_shares: 256
   mem_limit: 512m
   environment: &app-env
-    EDITOR_RELEASE: ${EDITOR_RELEASE:-foundation-20260916}
+    EDITOR_RELEASE: ${EDITOR_RELEASE:-upload-queue-v2-20260917}
     EDITOR_MODEL_CONCURRENCY: ${EDITOR_MODEL_CONCURRENCY:-1}
     EDITOR_IMAGE_MAX_TOKENS: ${EDITOR_IMAGE_MAX_TOKENS:-1024}
     HF_HUB_OFFLINE: '1'
@@ -147,7 +147,7 @@ services:
     logging: *logs
 
   gateway:
-    image: ${EDITOR_WEB_IMAGE:-nanobase-editor-web:review-20260916}
+    image: ${EDITOR_WEB_IMAGE:-nanobase-editor-web:upload-queue-v2-20260917}
     build:
       context: ./frontend
     restart: unless-stopped
@@ -170,8 +170,8 @@ services:
     pids_limit: 64
     logging: *logs
 
-  document:
-    image: ${EDITOR_DOCUMENT_IMAGE:-nanobase-editor-document:foundation-20260916}
+  document: &document_tools
+    image: ${EDITOR_DOCUMENT_IMAGE:-nanobase-editor-document:upload-queue-v2-20260917}
     build:
       context: .
       target: document
@@ -193,6 +193,28 @@ services:
       HF_HUB_OFFLINE: '1'
     volumes: [artifacts:/data/artifacts]
     logging: *logs
+
+  parser:
+    <<: *document_tools
+    profiles: []
+    restart: unless-stopped
+    cpus: ${EDITOR_PARSER_CPUS:-4}
+    entrypoint: [python, -m, editor.parse_worker]
+    environment:
+      EDITOR_MAX_SOURCE_BYTES: ${EDITOR_MAX_SOURCE_BYTES:-52428800}
+      EDITOR_MAX_PAGES: ${EDITOR_MAX_PAGES:-100}
+      EDITOR_PARSE_TIMEOUT: ${EDITOR_UPLOAD_PARSE_TIMEOUT:-3600}
+      HF_HUB_OFFLINE: '1'
+      OMP_NUM_THREADS: ${EDITOR_PARSER_THREADS:-4}
+      OPENBLAS_NUM_THREADS: ${EDITOR_PARSER_THREADS:-4}
+    depends_on:
+      storage-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import json,time; from pathlib import Path; assert time.time()-json.loads(Path('/data/artifacts/parse-queue/heartbeat.json').read_text())['at'] < 45"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 networks:
   private:

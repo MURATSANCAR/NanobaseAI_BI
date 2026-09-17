@@ -146,7 +146,7 @@ try:
             if name not in ('database.dump','artifacts.tar'):raise RuntimeError('INVALID_BACKUP_MEMBER')
             with (work/'backup'/name).open('rb') as stream:
                 if hashlib.file_digest(stream,'sha256').hexdigest()!=expected:raise RuntimeError('BACKUP_HASH_MISMATCH')
-        if backup['book_reference']!=book_reference(config):raise RuntimeError('SOURCE_CHANGED_SINCE_BACKUP')
+        if backup['book_reference']!=book_reference(config,backup['book_reference']['database'].keys()):raise RuntimeError('SOURCE_CHANGED_SINCE_BACKUP')
         record('backup','REUSED','Hash ve canlı kaynak/kitap kaydı eşliği yeniden doğrulandı.')
     else:
         execute('backup',['python3','scripts/backup.py',str(work/'backup')])
@@ -160,7 +160,9 @@ try:
     else:
         shutil.copytree(work/'offline/editor',target)
         execute('target_init',['python3','scripts/init.py'],cwd=target)
-    project='editor-qualification-'+run['generation_id'][:8]
+    # Different releases can qualify the same immutable generation. Never reuse
+    # volumes retained as evidence by an earlier qualification of that generation.
+    project='editor-qualification-'+run['generation_id'][:8]+'-'+hashlib.sha256(str(work.resolve()).encode()).hexdigest()[:6]
     private_subnet,ingress_subnet=available_subnets()
     settings(target/'.env',{'COMPOSE_PROJECT_NAME':project,'EDITOR_PORT':'18810','EDITOR_METRICS_PORT':'19096',
         'EDITOR_PRIVATE_SUBNET':private_subnet,'EDITOR_INGRESS_SUBNET':ingress_subnet})

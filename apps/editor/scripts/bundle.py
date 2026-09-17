@@ -17,7 +17,7 @@ destination.mkdir(parents=True, exist_ok=False)
 source = destination/'editor'
 def excluded(directory, names):
     fixed={'.git','secrets','runtime','dist','evidence','__pycache__','node_modules','.venv','venv'}
-    return {name for name in names if name in fixed or
+    return {name for name in names if name in fixed or name.startswith('._') or name=='.DS_Store' or
             (name.startswith('.env') and name!='.env.example')}
 shutil.copytree(root, source, ignore=excluded)
 config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))

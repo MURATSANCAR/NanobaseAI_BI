@@ -4,7 +4,7 @@ import os
 import uuid
 from typing import Literal
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 from psycopg.types.json import Jsonb
 from editor.config import connection, RELEASE
@@ -40,6 +40,7 @@ def authorized_upload(db,upload):
 async def upload_bytes(upload:uuid.UUID,request:Request):
     with connection() as db: row=authorized_upload(db,upload)
     if row['status']=='COMPLETED': return {'id':str(upload),'status':'COMPLETED'}
+    if row['status'] not in ('CREATED','RECEIVED'): raise HTTPException(409,'UPLOAD_SEALED')
     directory=ROOT/'uploads'; directory.mkdir(exist_ok=True)
     temporary=directory/(str(upload)+'.'+str(uuid.uuid4())+'.part'); destination=directory/(str(upload)+'.pdf')
     size=0
@@ -53,8 +54,11 @@ async def upload_bytes(upload:uuid.UUID,request:Request):
         if sha(temporary.read_bytes())!=row['expected_sha256']: raise HTTPException(409,'SOURCE_HASH_MISMATCH')
         with temporary.open('rb') as stream:
             if stream.read(5)!=b'%PDF-': raise HTTPException(415,'INVALID_PDF')
-        temporary.replace(destination)
-        with connection() as db: db.execute("UPDATE editor.uploads SET status='RECEIVED' WHERE id=%s AND status!='COMPLETED'",(upload,))
+        with connection() as db:
+            locked=db.execute('SELECT status FROM editor.uploads WHERE id=%s FOR UPDATE',(upload,)).fetchone()
+            if locked['status'] not in ('CREATED','RECEIVED'): raise HTTPException(409,'UPLOAD_SEALED')
+            temporary.replace(destination)
+            db.execute("UPDATE editor.uploads SET status='RECEIVED' WHERE id=%s",(upload,))
     finally:
         temporary.unlink(missing_ok=True)
     return {'id':str(upload),'status':'RECEIVED','bytes':size}
@@ -67,19 +71,54 @@ class CompleteUpload(BaseModel):
 @router.post('/uploads/{upload}/complete',status_code=201)
 def complete_upload(upload:uuid.UUID,body:CompleteUpload,idempotency_key:str=Header()):
     def action(db):
+        authorized_upload(db,upload)
+        db.execute('SELECT id FROM editor.uploads WHERE id=%s FOR UPDATE',(upload,))
         row=authorized_upload(db,upload)
+        if row['status'] in ('FAILED','CANCELLED'):
+            raise HTTPException(409,row['error_code'] or 'SOURCE_PARSE_CANCELLED')
+        if row['status']=='COMPLETED':
+            source=db.execute('SELECT manifest FROM editor.source_probes WHERE sha256=%s',(row['expected_sha256'],)).fetchone()
+            return {'id':str(row['content_version_id']),'upload_id':str(upload),
+                    'sha256':row['expected_sha256'],'pages':source['manifest']['pdf_pages']}
         path=ROOT/'uploads'/(str(upload)+'.pdf')
         if not path.exists() or path.stat().st_size!=row['expected_bytes']: raise HTTPException(409,'INCOMPLETE_UPLOAD')
         if sha(path.read_bytes())!=row['expected_sha256']: raise HTTPException(409,'SOURCE_HASH_MISMATCH')
-        source=db.execute('SELECT manifest FROM editor.source_probes WHERE sha256=%s',(row['expected_sha256'],)).fetchone()
-        if not source or not source['manifest'].get('source_accounting_complete'):
-            raise HTTPException(409,'SOURCE_PARSE_REQUIRED')
-        rid=str(uuid.uuid4())
-        result=db.execute('''INSERT INTO editor.content_versions(id,edition_id,sha256) VALUES (%s,%s,%s)
-          ON CONFLICT(edition_id,sha256) DO UPDATE SET sha256=excluded.sha256 RETURNING id''',(rid,row['edition_id'],row['expected_sha256'])).fetchone()
-        db.execute("UPDATE editor.uploads SET status='COMPLETED',content_version_id=%s WHERE id=%s",(result['id'],upload))
-        return {'id':str(result['id']),'upload_id':str(upload),'sha256':row['expected_sha256'],'pages':source['manifest']['pdf_pages']}
-    return mutate('/uploads/'+str(upload)+'/complete',body,idempotency_key,action)
+        from editor.parse_contract import QUEUE, atomic_json
+        db.execute("SELECT pg_advisory_xact_lock(hashtextextended('editor:parser-admission',0))")
+        count=db.execute("SELECT count(*) AS n FROM editor.uploads WHERE status='PARSING' AND id!=%s",(upload,)).fetchone()['n']
+        if count>=2: raise HTTPException(429,'SOURCE_PARSE_CAPACITY_FULL')
+        request_path=QUEUE/(str(upload)+'.request.json')
+        if not request_path.exists():
+            atomic_json(request_path,{'sha256':row['expected_sha256'],'bytes':row['expected_bytes']})
+        db.execute("UPDATE editor.uploads SET status='PARSING' WHERE id=%s AND status IN ('CREATED','RECEIVED')",(upload,))
+        return {'id':str(upload),'job_id':str(upload),'status':'PARSING','status_url':'/v1/uploads/'+str(upload)}
+    result=mutate('/uploads/'+str(upload)+'/complete',body,idempotency_key,action)
+    return JSONResponse(result,status_code=202) if result.get('status')=='PARSING' else result
+
+
+@router.get('/uploads/{upload}')
+def upload_status(upload:uuid.UUID):
+    with connection() as db: row=authorized_upload(db,upload)
+    result={'id':str(upload),'status':row['status'],
+            'work_id':str(row['work_id']),
+            'content_version_id':str(row['content_version_id']) if row['content_version_id'] else None}
+    if row['status']=='FAILED':
+        result['error_code']=row['error_code']
+    if row['status']=='PARSING':
+        from editor.parse_contract import QUEUE
+        path=QUEUE/(str(upload)+'.status.json')
+        if path.exists(): result['progress']=json.loads(path.read_text())
+    return result
+
+
+@router.get('/uploads')
+def recent_uploads(offset:int=0,limit:int=50):
+    if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
+    with connection() as db:
+        rows=db.execute('''SELECT u.id,u.status,w.title FROM editor.uploads u
+            JOIN editor.editions e ON e.id=u.edition_id JOIN editor.works w ON w.id=e.work_id
+            WHERE w.owner_id=%s ORDER BY u.created_at DESC,u.id DESC LIMIT %s OFFSET %s''',(ACTOR,limit+1,offset)).fetchall()
+    return {'items':rows[:limit],'has_more':len(rows)>limit}
 
 
 class Work(BaseModel):
@@ -209,7 +248,11 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
 def job(job_id:uuid.UUID):
     with connection() as db:
         row=db.execute('SELECT * FROM editor.jobs WHERE id=%s',(job_id,)).fetchone()
-        if not row: raise HTTPException(404,'Kayıt bulunamadı')
+        if not row:
+            upload=upload_status(job_id)
+            upload.update({'job_id':str(job_id),'task':'source_parse','generation_id':None,
+                'status':('RUNNING' if upload.get('progress') else 'QUEUED') if upload['status']=='PARSING' else upload['status']})
+            return upload
         generation=scope(db,row['generation_id'])
         counts=db.execute('SELECT kind,count(*) FROM editor.records WHERE generation_id=%s GROUP BY kind',(row['generation_id'],)).fetchall()
         sizes={c['kind']:c['count'] for c in counts}
@@ -234,7 +277,13 @@ def generation_detail(generation:uuid.UUID):
 def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
     def action(db):
         row=db.execute('SELECT * FROM editor.jobs WHERE id=%s',(job_id,)).fetchone()
-        if not row: raise HTTPException(404,'Kayıt bulunamadı')
+        if not row:
+            upload=authorized_upload(db,job_id)
+            locked=db.execute('SELECT status FROM editor.uploads WHERE id=%s FOR UPDATE',(job_id,)).fetchone()
+            if locked['status']!='PARSING': raise HTTPException(409,'JOB_NOT_RUNNING')
+            from editor.parse_contract import QUEUE, atomic_json
+            atomic_json(QUEUE/(str(job_id)+'.cancel.json'),{'cancellation_requested':True})
+            return {'job_id':str(job_id),'cancellation_requested':True}
         scope(db,row['generation_id'])
         db.execute("UPDATE editor.jobs SET cancellation_requested=true,status=CASE WHEN status='QUEUED' THEN 'CANCELLED' ELSE status END WHERE id=%s",(job_id,))
         return {'job_id':str(job_id),'cancellation_requested':True}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
+import { UploadBook } from "./UploadBook";
 
 type Row = { id: string; record_key: string; data: Record<string, any> };
 type Work = { id: string; title: string };
@@ -356,6 +357,10 @@ function App() {
         <button onClick={logout}>Çıkış</button>
       </header>
       <main className="workspace">
+        <UploadBook token={token} onStarted={async id => {
+          const rows = await all('/works'); setWorks(rows); setWork(id);
+          const analyses = await all(`/works/${id}/analyses`); setRuns(analyses); setRun(analyses[0]?.id ?? '');
+        }} />
         <section className="heading">
           <div>
             <p className="eyebrow">KİTAP İNCELEME</p>

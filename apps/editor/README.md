@@ -5,6 +5,14 @@ Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, ta
 Docker ağlarını veya kimlik bilgilerini kullanmaz. BI ekran entegrasyonu sonraki
 aşamada tanımlı API sözleşmeleriyle yapılacaktır.
 
+## Son yayın: otomatik PDF kabulü
+
+`upload-queue-v2-20260917`: yeni kitap arayüzden yüklenir, ağsız `parser` tarafından otomatik hazırlanır. 202/job_id, kalıcı ilerleme ve iptal API'si vardır. Gerçek kitabın 48 sayfası boş ayrı kurulumda; kuyruk sınırı, iptal, yeniden başlatma ve dört ekran genişliğiyle doğrulandı. [Ayrıntılı kod, imaj hashleri ve kabul sınırları](../../docs/editor/2026-09-17-upload-pipeline.md).
+
+Web yayını sunucuda `python3 scripts/build-web.py <imaj-etiketi>` ile derlenir; `EDITOR_VERIFY_WEB=1 python3 scripts/verify-release.py` kaynak ve çıktı hashlerini çalışan imajla karşılaştırır. Müşteri kurulumu doğrulanmış offline imajları yükler; çalışma anında npm/model indirmesi yapmaz. Parser varsayılan 4 CPU, 6 GiB, 3600 saniye; sunucudaki doğrulamada 8 CPU kullanıldı. `EDITOR_PARSER_CPUS`, `EDITOR_PARSER_THREADS`, `EDITOR_UPLOAD_PARSE_TIMEOUT` ortam ayarlarıdır.
+
+Aşağıdaki v2 işleme kayıtları tarihçedir; güncel analiz nesli `b652f63c-6ec4-4f9a-aff4-00b32d220b1b`, 828 anlaşma/321 inceleme ve NEEDS_REVIEW durumundadır. Kaynak hazırlama anlamsal kabul değildir.
+
 ## Sorunlu bölgelerin otomatik yeniden okunması
 
 Sunucuda `python3 scripts/reread-source-regions.py 16 29 38` sınırlı gerçek sayfa koşusunu, argümansız çağrı bütün NEEDS_REVIEW bölgelerini işler. İki Tesseract satır ayarı ağsız belge konteynerinde çalışır; makine çıktıları ayrı artifact dosyalarına yazılır. Eski kayıtlar değişmez, sonuçlar otomatik onaylanmaz. Gerçek API: `GET /v1/generations/{generation}/region-rereads`; doğrulama `python3 scripts/verify-region-rereads.py`. [Ayrıntılar ve koşu sonucu](../../docs/editor/2026-09-17-region-reread.md).
@@ -21,7 +29,7 @@ Canlı nesil `a9471749-7447-4826-b003-f25e53943763`, iş `0d53b03d-67e5-44c4-b52
 
 FastAPI, PostgreSQL/Alembic, LangGraph checkpoint, Qdrant, lease/fencing kullanan işçi, ana Compose OCR servisi, yerel modeller, Prometheus, ağsız belge araçları ve salt okunur React ekranı kuruldu. BI entegrasyonu API üzerinden sonraki aşamadır. LLM son koşuda 48 CPU/thread, tek slot, 8192 bağlam, 1024 görsel token ve PID sınırı 512 kullanır; embedding/reranker dörder CPU kullanır.
 
-Sentez/indeks/soru kodunun bulunması v2 neslin bu aşamalardan geçtiği anlamına gelmez. `pilot_ready=false`; çok kullanıcılı kitap/rol, editör düzeltme bağımlılıkları, PDF.js/bbox incelemesi ve genel yeni PDF ayrıştırma akışı açık. Henüz ayrıştırılmamış kaynak `SOURCE_PARSE_REQUIRED` döndürür. Kitap metni/cevabı/review elle düzeltilmez; genel kod düzeltmesi sonrası yeni nesil doğrulanır.
+Sentez/indeks/soru kodunun bulunması v2 neslin bu aşamalardan geçtiği anlamına gelmez. `pilot_ready=false`; çok kullanıcılı kitap/rol, editör düzeltme bağımlılıkları, PDF.js/bbox incelemesi açık. Genel yeni PDF ayrıştırma akışı sonraki `upload-queue-v2-20260917` yayınıyla eklendi; ayrıştırılmamış kaynak artık 202 ile kuyruğa alınır. Kitap metni/cevabı/review elle düzeltilmez; genel kod düzeltmesi sonrası yeni nesil doğrulanır.
 
 [Ayrıntılı yapılan işler, sürüm hashleri, kanıtlar ve açık işler](../../docs/editor/2026-09-17-status-and-handoff.md). [Kitap kabul defteri](../../docs/editor/reference-book-acceptance.md). [Mobil ekran](frontend/README.md).
 

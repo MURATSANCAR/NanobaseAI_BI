@@ -1,4 +1,5 @@
 import hmac
+import json
 import time
 import uuid
 from pathlib import Path
@@ -55,6 +56,11 @@ def infrastructure():
     except Exception:
         checks['qdrant'] = False
     checks['source_storage'] = Path('/data/artifacts').is_dir()
+    try:
+        stamp=json.loads(Path('/data/artifacts/parse-queue/heartbeat.json').read_text())['at']
+        checks['parser']=0 <= time.time()-stamp < 45
+    except (OSError,ValueError,KeyError):
+        checks['parser']=False
     return {'release': RELEASE, 'infrastructure_ready': all(checks.values()), 'checks': checks,
             'details': details, 'pilot_ready': False,
             'pending': ['reference_books', 'model_and_visual_qualification', 'book_pipeline',

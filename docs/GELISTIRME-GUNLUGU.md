@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör otomatik PDF yükleme ve ağsız ayrıştırma
+
+- Yeni PDF için operatör betiği gereği kaldırıldı: kalıcı dosya kuyruğu, ağsız parser, 202/job_id, kaynak doğrulama, iptal ve hata durumları eklendi. Arayüz yükleme/yeniden takip akışı gerçek kitapla dört genişlikte çalıştı.
+- Boş ayrı PostgreSQL/artifact kurulumunda özgün PDF'nin 48 sayfası hazırlandı; HTTP/PG ve bağımsız pdfinfo/özgün bayt karşılaştırması geçti. Kuyruk kapasitesi, mühürleme, iptal ve servis yeniden başlatma geçti; kaynak manifesti ve editör kararları değişmedi.
+- `upload-queue-v2-20260917` ana sunucuya kuruldu; gerçek yükleme mevcut içerik sürümüne bağlandı. 32 backend dosyası ve web kaynak/çıktı hashleri doğrulandı. macOS metadata ve eski web build hataları gerçek kurulum testinde giderildi. Yeni sürümün offline restore kabulü ayrı izleniyor.
+- Kitabın 321 inceleme bölgesi ve anlamsal kabul açık. [Sürüm, hatalar ve kanıtlar](editor/2026-09-17-upload-pipeline.md).
+
 ## 2026-09-17 — Editör son sürüm ayrı kurulum ve restore kabulü
 
 - `source-review-v2-r2-20260917`, `b652f63c` nesli: offline paket/import, gerçek kitap yedeği, ayrı kurulumda restore, API/PG ve OCR aday eşliği geçti. Geri yüklenen arayüz gerçek Chrome’da 320/390/768/1440 px doğrulandı (07:18:10 UTC).
