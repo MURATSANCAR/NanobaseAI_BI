@@ -490,8 +490,11 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10'):
-        from editor.source_pipeline import run as run_source_pages
+    version=manifest.get('pipeline_version')
+    if version is not None:
+        from editor.source_pipeline import VERSION, run as run_source_pages
+        if version != VERSION:
+            raise RuntimeError('PIPELINE_VERSION_CHANGED_NEW_GENERATION_REQUIRED')
         return run_source_pages(job)
     with connection() as db:
         fence(db,job)
