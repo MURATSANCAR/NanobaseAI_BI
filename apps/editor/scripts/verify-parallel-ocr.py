@@ -39,10 +39,15 @@ for kind,items in rows.items():
         expected=by_id[row['id']]
         assert expected['kind']==kind and expected['record_key']==row['record_key'] and expected['data']==row['data'],'API_PG_MISMATCH'
 sha=lambda raw:hashlib.sha256(raw).hexdigest()
-measurements=[];promoted=0
+measurements=[];promoted=0;skipped=0
 for row in rows['source_spans']:
     d=row['data'];m=d.get('ocr_vl_measurement')
-    if not m:continue
+    if not m:
+        route=d.get('ocr_vl_routing')
+        if route and not route['request_ocr']:
+            skipped+=1
+            assert d['status']=='NEEDS_REVIEW' and route['changes_source_acceptance'] is False,'SKIPPED_SOURCE_PROMOTED'
+        continue
     measurements.append(m)
     assert m['code_sha256']==db['code_manifest']['ocr_vl.py'],'OCR_CODE_MISMATCH'
     assert m['render_sha256']==d['render_sha256'] and m['bbox']==d['bbox'] and m['pdf_page']==page,'OCR_SCOPE_MISMATCH'
@@ -62,9 +67,20 @@ for r in rows['visual_observations']:
         m=o['metrics'];visuals.append(m)
         assert m['model_name']=='qwen3.8-flash-next' and m['model_backend']=='vllm','MAIN_MODEL_MISMATCH'
         origin=o.get('reused_from_generation') or r['data'].get('reused_from_generation')
-        expected=get('/v1/generations/'+origin)['manifest']['code_manifest'] if origin else db['code_manifest']
+        expected=db['code_manifest']
+        seen=set()
+        while origin:
+            assert origin not in seen and len(seen)<100,'VISUAL_PROVENANCE_CYCLE'
+            seen.add(origin)
+            expected=get('/v1/generations/'+origin)['manifest']['code_manifest']
+            if m['code_manifest']==expected:break
+            prior=get(f'/v1/generations/{origin}/visual_observations?pdf_page={page}&limit=100')['items']
+            assert len(prior)==1,'VISUAL_ORIGIN_MISSING'
+            matches=[x for x in prior[0]['data']['observations'] if x['metrics']==m and x['crop_sha256']==o['crop_sha256']]
+            assert len(matches)==1,'VISUAL_ORIGIN_CONTENT_MISMATCH'
+            origin=matches[0].get('reused_from_generation') or prior[0]['data'].get('reused_from_generation')
         assert m['code_manifest']==expected,'VISUAL_CODE_MISMATCH'
-        if not origin:fresh_visuals.append(m)
+        if not seen:fresh_visuals.append(m)
 claims=rows['page_claims'][0]['data']
 assert claims['input_visual_descriptions'] is False
 spans={r['id']:r['data'] for r in rows['source_spans']}
@@ -81,7 +97,7 @@ for row in rows['source_spans']:
     if m and row['data']['status']!='TEXT_AGREED':
         assert shown.get(row['id']) and shown[row['id']]['text']==m['text'],'REVIEW_OCR_NOT_EXPOSED'
 report={'generation_id':gen,'pdf_page':page,'api':base,'api_pg_match':True,
-        'ocr_regions':len(measurements),'ocr_supported_promotions':promoted,'qwen_visual_calls':len(fresh_visuals),'qwen_visual_observations':len(visuals),
+        'ocr_regions':len(measurements),'ocr_skipped_regions':skipped,'ocr_supported_promotions':promoted,'qwen_visual_calls':len(fresh_visuals),'qwen_visual_observations':len(visuals),
         'overlapping_call_pairs':pairs,'parallel_overlap_observed':bool(pairs),
         'code_manifest':db['code_manifest'],'semantic_acceptance':False,'application_writes':0}
 target=root/'evidence'/f'parallel-ocr-{gen}-page-{page:04}.json'

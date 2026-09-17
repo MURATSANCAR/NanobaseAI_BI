@@ -18,6 +18,24 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def route_region(line, secondary, pdf_text, pdf_usable, reread):
+    """Avoid asking a generative reader to transcribe isolated graphic marks.
+
+    This is a compute-routing hint, never a NON_TEXT decision or source approval.
+    Single-letter/empty regions stay visible and NEEDS_REVIEW.
+    """
+    readers={'PPOCR_PAGE':line['text'],'PPOCR_REGION':line.get('region_text') or '',
+             'TESSERACT':secondary}
+    if pdf_usable:readers['NATIVE_PDF']=pdf_text
+    if reread:
+        readers.update({f'TESSERACT_PSM_{r["psm"]}':r['text'] for r in reread['readings']})
+    lexical=[key for key,text in readers.items()
+             if any(sum(c.isalpha() for c in token)>=2 for token in word_tokens(text))]
+    return {'method':'lexical-routing-v1','request_ocr':bool(lexical),
+            'reason':'LEXICAL_READER_EVIDENCE' if lexical else 'NO_LEXICAL_READER_EVIDENCE',
+            'supporting_readers':lexical,'changes_source_acceptance':False}
+
+
 def crop_request(client, payload):
     # Crop and recognition share the CPU service slot. Parallel consumers must
     # retry explicit busy rejections; never retry ambiguous read timeouts.

@@ -295,9 +295,11 @@ def optical(job, evidence, document, root, parent=None, on_layout=None):
             verdict = {'status':'TEXT_AGREED', 'issues':['FULL_PAGE_READING_SUPERSEDED'],
                 'pdf_matches':bool(pdf_usable and word_tokens(pdf_text)==word_tokens(selected_text)),
                 'reread_state':selection['reread_state']}
-        vl_measurement=None; vl_selection=None
+        vl_measurement=None; vl_selection=None; vl_routing=None
         if verdict['status']!='TEXT_AGREED' and os.environ.get('EDITOR_OCR_VL_BASE_URL'):
-            from editor.ocr_vl import read_region, select_supported
+            from editor.ocr_vl import read_region, select_supported, route_region
+            vl_routing=route_region(line,secondary,pdf_text,pdf_usable,reread)
+        if vl_routing and vl_routing['request_ocr']:
             with connection() as db: fence(db,job)
             vl_measurement=read_region(raw,d,bbox)
             with connection() as db: fence(db,job)
@@ -311,7 +313,7 @@ def optical(job, evidence, document, root, parent=None, on_layout=None):
         value={'pdf_page':page,'evidence_refs':[str(evidence['id'])], 'bbox':bbox,
             'coordinate_system':'normalized_top_left','text':selected_text,'raw_text':line['text'],
             'selected_reader':selected_reader,'regional_selection':selection,
-            'ocr_vl_measurement':vl_measurement,'ocr_vl_selection':vl_selection,
+            'ocr_vl_measurement':vl_measurement,'ocr_vl_selection':vl_selection,'ocr_vl_routing':vl_routing,
             'region_text':line.get('region_text'), 'secondary_text':secondary,
             'pdf_text':pdf_text,'pdf_usable':pdf_usable,'pdf_matches':pdf_agrees,
             'pdf_word_regions':pdf_neighbors,'secondary_word_regions':neighbors,
@@ -332,6 +334,8 @@ def optical(job, evidence, document, root, parent=None, on_layout=None):
         'span_ids':[r['id'] for r in spans], 'span_count':len(spans),
         'agreed_spans':sum(r['data']['status']=='TEXT_AGREED' for r in spans),
         'review_spans':sum(r['data']['status']!='TEXT_AGREED' for r in spans),
+        'ocr_vl_requested_regions':sum(bool(r['data'].get('ocr_vl_measurement')) for r in spans),
+        'ocr_vl_skipped_regions':sum(bool(r['data'].get('ocr_vl_routing')) and not r['data']['ocr_vl_routing']['request_ocr'] for r in spans),
         'regional_truncated':result['regional_truncated'],'seconds':result['seconds'],
         'measurement_reused':bool(result.get('reused_from_generation')),
         'reused_from_generation':result.get('reused_from_generation'),
