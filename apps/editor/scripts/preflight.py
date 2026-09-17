@@ -25,6 +25,14 @@ if platform.system() != 'Linux' or platform.machine() != 'x86_64':
 subprocess.run(['docker', 'info', '--format', '{{.ServerVersion}}'], check=True)
 subprocess.run(['docker', 'compose', 'config', '--quiet'], check=True)
 config = json.loads(subprocess.check_output(['docker','compose','config','--format','json']))
+if (root/'backend/editor/reread_queue.py').is_file():
+    for service in ('reread-storage-init','reread-worker'):
+        if service not in config['services']:
+            errors.append('Automatic regional OCR requires compose.reread.yaml: missing '+service)
+    mounts = config['services'].get('worker',{}).get('volumes',[])
+    if not any(mount.get('target') == '/data/reread-queue' and not mount.get('read_only',False)
+               for mount in mounts):
+        errors.append('Analysis worker requires a writable regional OCR queue volume.')
 networks = subprocess.check_output(['docker','network','ls','-q'],text=True).split()
 owned_bridges = set()
 occupied = []

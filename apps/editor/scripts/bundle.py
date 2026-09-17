@@ -24,6 +24,8 @@ config = json.loads(subprocess.check_output(['docker','compose','-f','compose.ya
 images = sorted({service['image'] for service in config['services'].values()})
 with_models = '--with-models' in sys.argv
 with_ocr_vl = '--with-ocr-vl' in sys.argv
+with_reread = ('--with-reread' in sys.argv or
+               (root/'backend/editor/reread_queue.py').is_file())
 with_ocr = 'ocr' in config['services'] or '--with-ocr' in sys.argv
 if with_ocr:
     ocr_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','-f','compose.ocr.yaml','config','--format','json']))
@@ -47,6 +49,23 @@ if with_ocr_vl:
         '-f','compose.ocr-vl.yaml','--profile','ocr-vl','config','--format','json']))
     config['services']['ocr-vl'] = fallback_config['services']['ocr-vl']
     images = sorted(set(images) | {fallback_config['services']['ocr-vl']['image']})
+if with_reread:
+    reread_config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml',
+        '-f','compose.reread.yaml','config','--format','json']))
+    for name in ('reread-storage-init','reread-worker'):
+        config['services'][name] = reread_config['services'][name]
+    images = sorted(set(images) | {config['services'][name]['image']
+        for name in ('reread-storage-init','reread-worker')})
+    # A document image without the consumer would yield an unusable offline
+    # installation. Check the actual packaged image, without network or books.
+    expected_helper = hashlib.sha256((root/'backend/editor/reread_queue.py').read_bytes()).hexdigest()
+    for service in ('api', 'worker', 'reread-worker'):
+        actual_helper = subprocess.check_output(['docker','run','--rm','--network','none','--read-only',
+            '--cap-drop','ALL','--entrypoint','python',config['services'][service]['image'],'-c',
+            'import hashlib;from pathlib import Path;import editor.reread_queue as q;'
+            'print(hashlib.sha256(Path(q.__file__).read_bytes()).hexdigest())'],text=True).strip()
+        if actual_helper != expected_helper:
+            raise SystemExit('Regional OCR code differs between package and '+service+' image')
 inspection = json.loads(subprocess.check_output(['docker','image','inspect',*images]))
 # docker load need not preserve registry digests. Use content-derived local tags,
 # verify image IDs after import, and override every service to those offline tags.
@@ -65,7 +84,7 @@ lines=[line for line in example.read_text().splitlines() if not line.startswith(
 lines.append('EDITOR_RELEASE='+config['services']['api']['environment']['EDITOR_RELEASE'])
 example.write_text('\n'.join(lines)+'\n')
 with (source/'.env.example').open('a') as stream:
-    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + ('compose.ocr-vl.yaml:' if with_ocr_vl else '') + 'compose.offline.yaml\n')
+    stream.write('\nCOMPOSE_FILE=compose.yaml:' + ('compose.models.yaml:' if with_models else '') + ('compose.ocr.yaml:' if with_ocr else '') + ('compose.ocr-vl.yaml:' if with_ocr_vl else '') + ('compose.reread.yaml:' if with_reread else '') + 'compose.offline.yaml\n')
     if with_models:
         stream.write('COMPOSE_PROFILES=models\n')
 inspection = json.loads(subprocess.check_output(['docker','image','inspect',*sorted(tags)]))
@@ -73,6 +92,7 @@ subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*sort
 manifest = {'kind':'editor-foundation-offline', 'architecture':'linux/amd64',
             'ocr_included':with_ocr,
             'ocr_vl_included':with_ocr_vl,
+            'reread_included':with_reread,
             'release':config['services']['api']['environment']['EDITOR_RELEASE'],
             'images':[{'id':i['Id'],'tags':[tag],'digests':i['RepoDigests']} for tag,i in zip(sorted(tags),inspection)],
             'model_qualification':'candidate weights included; semantic acceptance pending' if with_models else 'pending; LLM/VLM weights not included', 'files':{}}

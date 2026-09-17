@@ -10,6 +10,10 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus, gateway ve ağsız parser olmak üzere 11 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
 
+### Otomatik bölgesel okuma: V10 kabul çalışması
+
+Yeni kitaplarda bölgesel yeniden okumanın yalnız önceki neslin artifactlerine bağlı kalması kodda giderildi. Ağsız ayrı tüketici, yazılabilir kuyruk ve değiştirilmeyen kaynak/kırpım/TSV kanıtları eklendi. İlk gerçek 61 bölge bileşen kontrolü geçti; yeni lease ile iptalden toparlanma açığı sonrasında düzeltildiği için V10-r2 yeniden doğrulanıyor. Yeni kitap optical API/PG kabulü ve müşteri offline/yedek kabulü henüz tamamlanmadı. Ana V5 değişmedi; ayrı V8 koşusu 17 Eylül 14:51 UTC'de 20 sayfa kontrolünü tamamlamıştı. [Bileşen kanıtı](docs/editor/2026-09-17-reread-queue-component.md), [toparlanma](docs/editor/2026-09-17-reread-attempt-recovery.md), [kurulum/yedek](docs/editor/2026-09-17-reread-deployment.md).
+
 ### Farklı kitaplarda çalışma kuralı (2026-09-17)
 
 Üretim kodu/prompt/kapıları kitap adı, hash, karakter veya sayfa numarasına özel çözüm içermez. Aynı ad yazımı karakter kimliği değildir. Paralel inceleme limit sözleşmesi ve küçük görsel kapsam sayacında açık işler buldu. Yeni Türkçe metin konuşmacısı adayındaki ortak/kısmi ad ve geniş alıntı riskleri sıkılaştırıldı; gerçek 1.149 API/PG kaydında değişmeyen kaynakla 10 açık atıf ölçüldü. Metin atfı v5 ile yayımlandı; farklı kitaplarla anlamsal kabul ve görsel kimlik çözümü açık. [İnceleme ve kabul sınırları](docs/editor/2026-09-17-generality-review.md).

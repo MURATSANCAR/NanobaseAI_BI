@@ -23,8 +23,14 @@ for service in ('document','ocr-vl'):
                                            '--filter','label=com.docker.compose.service='+service],text=True).strip()
     if active_tools:
         raise SystemExit('Finish active artifact tools before taking a consistent backup: '+service)
-subprocess.run(compose + ['stop', 'api', 'worker', 'parser'], check=True)
+# The reread consumer also writes durable crop/TSV artifacts. Stop all active
+# writers before either half of the snapshot, preserving pre-backup stop state.
+writers = [name for name in ('api', 'worker', 'parser', 'reread-worker')
+           if name in config['services']]
+running = set(subprocess.check_output(compose + ['ps', '--status', 'running', '--services'], text=True).split())
+restart_writers = [name for name in writers if name in running]
 try:
+    subprocess.run(compose + ['stop', *writers], check=True)
     with (destination / 'database.dump').open('wb') as stream:
         subprocess.run(compose + ['exec', '-T', 'postgres', 'pg_dump', '-U', 'postgres', '-d', 'editor', '-Fc', '--schema=editor', '--schema=checkpoints', '--no-owner', '--no-acl'], stdout=stream, check=True)
     # Tar is streamed from a read-only volume; no book content is logged.
@@ -44,4 +50,5 @@ try:
     (destination/'manifest.json').write_text(json.dumps(manifest, indent=2))
     print('Backup complete: ' + str(destination))
 finally:
-    subprocess.run(compose + ['start', 'parser', 'worker', 'api'], check=True)
+    if restart_writers:
+        subprocess.run(compose + ['start', *reversed(restart_writers)], check=True)

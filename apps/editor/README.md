@@ -1,5 +1,7 @@
 # Editör modülü — bağımsız kurulum
 
+> V10 otomatik bölgesel yeniden okuma geliştirmesi: ilk 61 gerçek bölge bileşen kontrolü geçti; son lease/toparlanma düzeltmesi V10-r2 ile yeniden kabul ediliyor. Yeni kitap uçtan uca optical kabulü ve yeni offline/restore kabulü henüz tamamlanmadı. [Kurulum ve kabul sınırı](../../docs/editor/2026-09-17-reread-deployment.md).
+
 > Ayrı API18810 doğrulaması: V8 `7e7db466` koşusu devam ediyor. Künye/etkinlik iddiası engeli ve görsel kapsam kaydı kodda düzeltildi; gerçek 2/13/29 sayfa API/PG ve dört genişlikte arayüz kabulü geçti. Ana yayın V5 olarak kalır. [Anlatı kapısı](../../docs/editor/2026-09-17-narrative-gate.md), [görsel kapsam](../../docs/editor/2026-09-17-visual-coverage.md).
 
 > İki ek gerçek kitabın 64/32 sayfalık kaynak hazırlaması doğrulandı; analizleri henüz başlatılmadı. [Çok kitaplı kabul](../../docs/editor/2026-09-17-multibook-ingestion.md).
