@@ -668,6 +668,38 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
     return False
 
 
+def _question_word_literals(sq: SemanticQuery, tree: exp.Expression) -> list[tuple[str, str]]:
+    """(word, column) for every string literal compared to a column when the literal is a term of
+    the question that the resolver placed on that very column — or on any column, as a bare noun."""
+    from semantic_layer.normalize import fold as _f
+    slot_words: dict[str, Optional[str]] = {}
+    for sl in sq.slots:
+        m = sl.mapping
+        # A value slot ("İstanbul" → CITY = 'İstanbul') is the question's word *as* a value; only a
+        # word that named a column or an entity has no value to be.
+        if m is None or m.values or str(sl.semantic_type or "").upper() not in (SemanticType.COLUMN, SemanticType.ENTITY):
+            continue
+        col = f"{m.entity}.{m.column}" if m.column else m.entity
+        for w in str(sl.term or "").split():
+            slot_words[_f(w)] = col
+    if not slot_words:
+        return []
+    out: list[tuple[str, str]] = []
+    for node in tree.find_all(exp.EQ, exp.Like, exp.ILike):
+        col, lit = None, None
+        for side in (node.left, node.right):
+            if isinstance(side, exp.Column):
+                col = side
+            elif isinstance(side, exp.Literal) and side.is_string:
+                lit = side
+        if col is None or lit is None:
+            continue
+        word = _f(str(lit.this).strip().strip("%"))
+        if word and word in slot_words and not any(ch.isdigit() for ch in word):
+            out.append((str(lit.this), col.sql()))
+    return out
+
+
 def _cond_columns(conditions: list[str]) -> list[str]:
     out = []
     for c in conditions:
@@ -690,6 +722,31 @@ def _state_reading(sq: SemanticQuery, o: _Occurrence) -> bool:
         own_cols = {c.split(".")[-1].upper() for c in _cond_columns((m.extra or {}).get("conditions") or [])}
         if _unrestricted_reading(o, own_cols):
             return True
+    return False
+
+
+_COND = re.compile(r"^\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*(?:=|IN)\s*\(?\s*([^)]*?)\s*\)?\s*$", re.I)
+
+
+def _other_rows(sq: SemanticQuery, o: _Occurrence) -> bool:
+    """This occurrence reads rows a dated measure of the question certifiably excludes: on a column
+    the measure's own conditions restrict, it keeps a disjoint set of values (the opening-balance
+    document type beside a sales measure restricted to the sales document types). Whatever it is — an
+    opening balance, a lookup — it is not the measure's rows, and the period the question puts on the
+    measure is not a period on it."""
+    for metric in sq.metrics:
+        m = metric.mapping
+        if not m or (m.extra or {}).get("state_measure"):
+            continue
+        for cond in (m.extra or {}).get("conditions") or []:
+            mm = _COND.match(str(cond))
+            if not mm:
+                continue
+            col = mm.group(1).upper()
+            theirs = {v.strip().strip("'\"").upper() for v in mm.group(2).split(",") if v.strip()}
+            for p in o.preds:
+                if p.column.upper() == col and p.operator.upper() in ("=", "IN") and theirs and _values(p).isdisjoint(theirs):
+                    return True
     return False
 
 
@@ -935,7 +992,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         # A state measure beside a flow measure reads the same entity twice: the flow reading for the
         # period, the balance reading over every movement. The period rule judges the flow readings;
         # the balance reading — the measure's own conditions and nothing else — is the state rule's.
-        dated = [o for o in occ if not _state_reading(sq, o)]
+        dated = [o for o in occ if not _state_reading(sq, o) and not _other_rows(sq, o)]
         for binding in _bindings(sq):
             for period in sq.temporal:
                 p = _period_dict(period)
@@ -945,6 +1002,14 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                                      f"{binding['entity']} kaynağını {binding['column']} >= '{p.get('start')}' AND {binding['column']} < '{p.get('end')}' ile sınırla (kaynağı okuyan her SELECT/CTE'de"
                                      + ("; durum ölçüsünün bakiyesini hesaplayan alt sorgu hariç — o tarihsiz kalır)." if len(dated) < len(occ) else ")."),
                                      binding["entity"], binding["column"]))
+
+    # A word of the question written as a column's value: `NAME = 'kitabin'` for "bir kitabın …".
+    # The word named the column (a resolved slot); the question gave no value for it. Such a filter
+    # matches nothing and the empty answer looks like a true one.
+    for word, column in _question_word_literals(sq, tree):
+        out.append(Unmet("literal", f"'{word}' sorunun kelimesidir, {column} sütununun değeri değil",
+                         f"{column} için soru bir değer vermiyor: bu filtreyi kaldır; 'bir X'in' bütün X'ler üzerinden "
+                         f"kırılım ister (GROUP BY {column} ya da anahtarı), tek kaydı seçmez."))
 
     scope = _AnswerScope(tree)
     # A qualifier the source explains on a column ("iptal edilmemiş" → CANCELLED — "İptal Edilmiş").

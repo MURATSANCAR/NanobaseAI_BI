@@ -42,3 +42,15 @@ satır sayısı kadar çoğalır (fan-out). Sipariş TUTARI = ORFICHE."NETTOTAL"
 Fiş tarihi ORFICHE."DATE_", iptal filtresi ORFICHE."CANCELLED" = 0. Genel ilke: başlık tablosundan sayarken satır tablosuna JOIN yapma
 veya COUNT(DISTINCT başlık.LOGICALREF) kullan.
 - **Fiyat listesi karşılaştırması satır düzeyindedir:** `PRCLIST` (alış/satış fiyatları) malzeme kartına bağlıdır (`PRCLIST.CARDREF = STLINE.STOCKREF`), cariye değil. Satış listesi `PTYPE = 2`, aktif `ACTIVE = 0`, TL `CURRENCY = 160`, geçerlilik `BEGDATE <= satır tarihi <= ENDDATE`. Kıyas satırın **birim fiyatı** `STLINE.PRICE` ile yapılır; fatura toplamı (`INVOICE.NETTOTAL`) birim fiyatla kıyaslanmaz. Bir ürünün aynı anda birden çok geçerli listesi olabilir (kanal/cari özel kodu `CLSPECODE`, öncelik `PRIORITY`): "listenin altında" derken hangi liste alındığı (en düşük geçerli liste fiyatı ya da carinin `CLSPECODE`'una uyan liste) cevapta yazılır. Büyük listeler yerine önce toplam (satır/fatura sayısı ve tutar) verilir, örnek satırlar sınırlı sayıda gösterilir.
+
+## Kural 9 — Üretim: baskı, üretim emri, sarf, üretimden giriş — iş teyidi bekliyor
+Yayınevinde bir kitabın **baskısı** bir **üretim emridir**: `PRODORD` (bir satır = bir baskı/üretim emri; `ITEMREF` → ITEMS, `DATE_` emir tarihi,
+`PLNAMOUNT` planlanan adet, `STATUS` 3 = tamamlandı, `CANCELLED` = 0). "Son üç baskı" = ürünün `DATE_`'e göre en yeni üç üretim emri
+(ROW_NUMBER() OVER (PARTITION BY ITEMREF ORDER BY DATE_ DESC)); "kaç baskı yaptı" = ürünün üretim emri sayısı.
+- **Çekilen / sarf edilen malzeme miktarı** = `STLINE` sarf fişi satırları: `TRCODE = 12 AND IOCODE = 4 AND LINETYPE = 0 AND CANCELLED = 0`,
+  emre bağ `STLINE.PRODORDERREF = PRODORD.LOGICALREF`; miktar `AMOUNT` (malzeme kartı `STOCKREF`). Baskı başına toplam: emir bazında SUM(AMOUNT).
+- **Üretilen adet / üretimden giriş** = `STLINE` üretimden giriş fişi: `TRCODE = 13 AND IOCODE = 1 AND LINETYPE = 0 AND CANCELLED = 0`, aynı `PRODORDERREF` bağı; `STOCKREF` üretilen mamul.
+- Reçete/alt malzeme tabloları (`STCOMPLN` karma koli, `BOMLINE` reçete) **planlanan** bileşeni verir, fiilen çekilen miktarı vermez; "çekilen/sarf/kullanılan" sorularında sarf fişi okunur.
+- "Bir kitabın …" genel bir isimdir, belli bir kitap değil: kitap kırılımı (ITEMS.CODE/NAME ile GROUP BY) yapılır, `NAME = 'kitap'` gibi bir filtre yazılmaz.
+- Örnek sorular: bir kitabın son üç baskısındaki malzeme farkı; son üç ayda üretilen adet; baskı başına sarf; kaç baskı yapıldı.
+
