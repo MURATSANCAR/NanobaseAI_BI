@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v3'
+VERSION = 'source-spans-v4'
 
 
 def norm(value):
@@ -36,10 +36,14 @@ def quote_tokens(value):
 
 
 def optical_verdict(line, secondary, pdf_text, pdf_usable, reread=None):
-    primary = bool(norm(line['text'])) and norm(line['text']) == norm(line.get('region_text') or '')
-    second = bool(norm(secondary)) and norm(secondary) == norm(line['text'])
-    native = pdf_usable and bool(norm(pdf_text)) and norm(pdf_text) == norm(line['text'])
-    conflict = (bool(norm(secondary)) and not second) or (pdf_usable and not native)
+    # Preserve word boundaries, just as the downstream quote gate does. Joining
+    # all letters hid split/merged words and could certify a different reading.
+    primary_tokens = quote_tokens(line['text'])
+    secondary_tokens = quote_tokens(secondary)
+    primary = bool(primary_tokens) and primary_tokens == quote_tokens(line.get('region_text') or '')
+    second = bool(secondary_tokens) and secondary_tokens == primary_tokens
+    native = pdf_usable and bool(quote_tokens(pdf_text)) and quote_tokens(pdf_text) == primary_tokens
+    conflict = (bool(secondary_tokens) and not second) or (pdf_usable and not native)
     score = min(line['score'], line.get('region_score') or 0)
     issues = []
     if not primary: issues.append('REGIONAL_READING_DISAGREES')
