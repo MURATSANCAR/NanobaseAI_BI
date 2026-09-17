@@ -41,3 +41,20 @@ def test_the_deterministic_compiler_writes_the_ratio_beside_both_totals(catalog,
 def test_two_measures_without_a_ratio_word_stay_two_totals(catalog, profiles):
     sq = _resolver(catalog, profiles).resolve("Son üç ayda satılan adet ve üretilen adet", today=TODAY)
     assert sq.shape is None and sq.ratio is None, (sq.shape, sq.ratio)
+
+
+def test_a_label_and_a_ratio_word_reach_the_certified_ratio_named_after_the_label(catalog, profiles):
+    """2026-09-17, soru 20: "iade faturalarının satış cirosuna oranı" — 'iade' became a filter on every row and the
+    two 'satış/ciro' words one measure divided by itself: a ratio of 1 over the returns alone."""
+    _certify(catalog, "iade", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             column="TRCODE", operator="IN", values=["2", "3"]))
+    _certify(catalog, "iade oranı", SemanticType.METRIC, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             formula="SUM(CASE WHEN INVOICE.TRCODE IN (2, 3) THEN INVOICE.NETTOTAL ELSE 0 END) / NULLIF(SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END), 0)",
+             extra={"conditions": ["INVOICE.TRCODE IN (2,3,7,8,9)"]}))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Son çeyrekte iade faturalarının satış cirosuna oranı yüzde kaç?", today=TODAY)
+    metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC]
+    assert len(metrics) == 1 and "/" in metrics[0].mapping.formula, [(s.term, s.mapping.formula) for s in metrics]
+    assert not any(s.semantic_type == SemanticType.DIMENSION_VALUE and s.mapping and set(s.mapping.values) == {"2", "3"} for s in sq.slots)
+    det = DeterministicCompiler(profiles, {}, "tsql")
+    assert det.compile(sq, catalog) is not None, (det.plan(sq)[1], sq.explanation)
