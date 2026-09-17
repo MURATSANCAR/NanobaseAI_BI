@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> Güncel v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](2026-09-17-text-attribution.md).
+
 > Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).

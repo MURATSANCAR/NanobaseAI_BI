@@ -870,9 +870,32 @@ class SemanticResolver:
         #     word asking for one over the other. The first measure named is the numerator, the second
         #     the denominator — the shape Turkish gives it ("X, Y'nin ne kadarı", "X'in Y'ye oranı").
         #     Answered as two totals the question "how much of" became "how much"; the ratio is asked.
+        # "iade faturalarının satış cirosuna oranı": a label and a ratio word, and the catalog certifies a
+        # measure named after exactly that — "<label> oranı". The certified ratio is the answer; the label
+        # is its numerator, not a filter on everything (which left only the returns and a ratio of 1).
+        if _RATIO_CUE.search(fold(question)) and not sq.ratio:
+            for label in [h for h in hits if h.semantic_type == SemanticType.DIMENSION_VALUE and h.mapping and h.span]:
+                key = normalize_term(f"{(label.explain or {}).get('canonical') or label.term} oranı")
+                senses = [(c, ms) for c, ms in (index.get(key) or []) if c.semantic_type == SemanticType.METRIC]
+                if not senses:
+                    continue
+                named = self._slot_from_senses(key, f"{label.term} oranı", senses, label.span)
+                if named is None or not named.mapping or "/" not in (named.mapping.formula or ""):
+                    continue
+                for old_slot in [h for h in hits if h is label or h.semantic_type == SemanticType.METRIC]:
+                    hits.remove(old_slot)
+                hits.append(named)
+                sq.slots = hits
+                # The label no longer filters anything: a "conflict" it had with another label on the
+                # same column ("iade" against "satış") was the two sides of the ratio, not a contradiction.
+                gone = f"{label.mapping.entity}.{(label.mapping.column or '').upper()}"
+                sq.conflicts = [c for c in sq.conflicts if c.upper() != gone.upper()]
+                sq.explanation.append(f"'{label.term}' + oran → sertifikalı '{key}' ölçüsü")
+                break
         two = [s_ for s_ in hits if s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.span and s_.span[1] > s_.span[0]]
         two.sort(key=lambda s_: s_.span[0])
-        if len(two) == 2 and _RATIO_CUE.search(fold(question)) and not any("/" in (s_.mapping.formula or "") for s_ in two):
+        if (len(two) == 2 and two[0].concept_id != two[1].concept_id
+                and _RATIO_CUE.search(fold(question)) and not any("/" in (s_.mapping.formula or "") for s_ in two)):
             sq.shape = "RATIO"
             sq.ratio = {"numerator": two[0].term, "denominator": two[1].term}
             sq.explanation.append(f"oran istendi: '{two[0].term}' / '{two[1].term}'")

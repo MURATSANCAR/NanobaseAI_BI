@@ -24,3 +24,9 @@ Ana kurulumun yeni yayın kabulü, son atıf denetimi ve yükleme matrisi henüz
 ## Restore ortamı son kabul
 
 Tam neslin atıf denetimi geçti: 48 sayfa, 10 açık atıf; mevcut model claimlerine bağlanan konuşmacı 0. Dolayısıyla dolu claim-speaker dalının kabulü DOĞRULANAMADI; atıfların kaynakları ve arayüzü doğrulandı. `evidence/character-evidence-verification-20260917T132125735234Z.json`, `evidence/text-attribution-verify-final-retry.log`. Sekiz kesilen yükleme senaryosu geçti; dört genişlikte CREATED bir PUT, RECEIVED sıfır PUT ile gerçek API/PG eşliğinde tamamlandı. Kanıt `evidence/upload-resume-c88caacf-d2c3-404d-b8e8-56aa82a30032/verification.json`. Ana kurulum yayını başlatılıyor.
+
+## Ana kurulum kabulü
+
+`text-attribution-v5-20260917` ana API/web/worker üzerinde yayımlandı. Nesil `14a79646-79c6-4cdb-8714-00adf5698770`, iş `75b25439-09f5-425d-9e18-08cf15898d9a`: 48/48 COMPLETED/NEEDS_REVIEW. `evidence/text-attribution-main-check-final.log`: tam kapsama true, 10 atıf, 0 claim-speaker, PASS. `text-attribution-main-source-check.log`: tamamlanmış neslin bütün kaynak/atıf/kontrol kayıtları API/PG eşit. `text-attribution-main-ui.log`: dört genişlik/altı sekme, gerçek kaynak kutuları ve atıflar PASS. `text-attribution-main-release.log`: çalışan 36 backend ve 9 web kaynak dosyası eşit. Önceki 45 sayfalık ara denetim tam kabul sayılmadı; final ayrıca alındı.
+
+Git commit `37ef67a` main üzerinde; origin push HTTPS kimliği olmadığı için başarısız (`could not read Username`). Sunucu kodu yerel main kaynaklarından yayımlandı. Sonraki bölgesel OCR çalışması bu kapanmış v5 kabulünden ayrıdır.
