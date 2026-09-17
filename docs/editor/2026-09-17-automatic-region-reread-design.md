@@ -14,7 +14,7 @@ Aşağıdaki tarihsel tasarımın ardından uygulama **`backend/editor/reread_qu
 
 Gerçek bağımsız kurulumda **61 bölge/122 TSV bileşen kabulü PASS**: 13/29/38. sayfalar, API=PG, bağımsız crop/TSV doğrulaması, aynı istekte ek deneme olmaması ve kaynak/review değişmezliği doğrulandı. Ayrıntılar [bileşen kabul belgesinde](2026-09-17-reread-queue-component.md).
 
-**Ürün optical uçtan uca kabulü halen bekliyor.** Parent olmadan yeni kitabın otomatik tekrar okumasını doğrulamak için ayrı gerçek DB klonunda 64 sayfalık gerçek kitap API canary'si hazırlanıyor. Bu hazırlık tamamlanmış koşu veya başarı değildir; mevcut V8/V9 akışları kesilmeyecek. Fencing/cancellation ve yeni ölçümlerin backup/restore akışı da bileşen PASS sonucuyla kapanmış sayılmaz.
+**Güncel sınırlı ürün optical kabulü:** ayrı gerçek DB klonunda 64 ve 32 sayfalık iki yeni kitabın birer sayfasında parent olmadan otomatik tekrar okuma doğrulandı: 33+33 span ve 14+11 yeni ölçüm. İkinci kitapta gerçek worker SIGKILL/restart sonrası aynı iş owner/fence değişimiyle tamamlandı; iki canary normal cancellation akışından kapandı. Ayrı boş queue'da immutable rapor yeniden kullanımı da doğrulandı. [Gerçek canary kanıtı ve sınırları](2026-09-17-automatic-reread-live-canary.md). **Bu, iki kitabın tamamının veya anlamsal analiz/QA/backup-offline paket kabulünün tamamlandığı anlamına gelmez.** V8/V9 servisleri bu deneylerde kesilmedi.
 
 ## Tarihsel tasarım notları — aşağıdaki öneriler uygulama kanıtı değildir
 

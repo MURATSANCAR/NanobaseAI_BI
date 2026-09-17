@@ -6,13 +6,21 @@ from pathlib import Path
 p=argparse.ArgumentParser();p.add_argument('--base',required=True);p.add_argument('--database',required=True)
 p.add_argument('--content-version',required=True,type=uuid.UUID);p.add_argument('--priority-page',required=True,type=int)
 p.add_argument('--worker-service',required=True);p.add_argument('--timeout',type=int,default=1200)
+p.add_argument('--retry-failed',action='store_true')
+p.add_argument('--exercise-lease-restart',action='store_true')
 a=p.parse_args();assert re.fullmatch('[a-zA-Z0-9_]+',a.database) and 'canary' in a.worker_service and re.fullmatch('[a-z0-9-]+',a.worker_service)
 assert 1<=a.timeout<=3600 and a.priority_page>0
 root=Path(__file__).resolve().parents[1];os.chdir(root);cv=str(a.content_version);token=(root/'secrets/api_token').read_text().strip()
 out=root/'evidence'/('automatic-reread-'+a.database+'-'+cv+'.json');out.parent.mkdir(exist_ok=True)
+previous_evidence=None
+if a.retry_failed and out.exists():
+ previous=json.loads(out.read_text());assert previous['status']=='FAILED','ONLY_FAILED_CANARY_CAN_BE_RETRIED'
+ previous_evidence=out.with_name(out.stem+'-failed-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'.json')
+ out.rename(previous_evidence)
 report=json.loads(out.read_text()) if out.exists() else {'status':'STARTED','api':a.base,'database':a.database,'content_version_id':cv,
  'priority_page':a.priority_page,'idempotency_key':'automatic-reread:'+str(uuid.uuid4()),'started_at':datetime.now(timezone.utc).isoformat(),
  'semantic_acceptance':False,'book_complete':False,'fence_cancellation_verification':'PARTIAL','source_or_review_manual_writes':0}
+if previous_evidence:report['previous_failed_evidence']=str(previous_evidence)
 assert report['api']==a.base and report['database']==a.database and report['priority_page']==a.priority_page
 def save():out.write_text(json.dumps(report,ensure_ascii=False,indent=2))
 def sql(q):return json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d',a.database,'-Atc',q],text=True))
@@ -46,7 +54,11 @@ try:
  source=sql("SELECT json_build_object('sha',c.sha256,'manifest',s.manifest) FROM editor.content_versions c JOIN editor.source_probes s ON s.sha256=c.sha256 WHERE c.id='"+cv+"'")
  assert a.priority_page<=source['manifest']['pdf_pages']
  if 'before' not in report:
-  assert sql("SELECT count(*) FROM editor.generations WHERE content_version_id='"+cv+"'")==0,'CONTENT_ALREADY_ANALYZED'
+  previous_count=sql("SELECT count(*) FROM editor.generations WHERE content_version_id='"+cv+"'")
+  if previous_count:
+   assert a.retry_failed,'CONTENT_ALREADY_ANALYZED'
+   assert sql("SELECT count(*) FROM editor.jobs j JOIN editor.generations g ON g.id=j.generation_id WHERE g.content_version_id='"+cv+"' AND j.status NOT IN ('FAILED','CANCELLED')")==0,'PREVIOUS_ANALYSIS_STILL_ACTIVE_OR_COMPLETE'
+   assert sql("SELECT count(*) FROM editor.records r JOIN editor.generations g ON g.id=r.generation_id WHERE g.content_version_id='"+cv+"' AND r.kind='page_readings'")==0,'PREVIOUS_OPTICAL_ALREADY_COMPLETED'
   original_hash=subprocess.check_output(['docker','compose','exec','-T','reread-worker','python','-c',
    "import hashlib,sys;from pathlib import Path;p=Path('/data/artifacts')/sys.argv[1]/'original.pdf';print(hashlib.sha256(p.read_bytes()).hexdigest())",source['sha']],text=True).strip()
   assert original_hash==source['sha']
@@ -63,10 +75,24 @@ try:
   if readings:break
   job=call('GET','/v1/jobs/'+report['job_id']);progress=job.get('progress',{})
   if progress and (not report['observed_progress'] or report['observed_progress'][-1]!=progress):report['observed_progress'].append(progress);save()
+  if a.exercise_lease_restart and progress.get('stage')=='region_rereads' and 'lease_restart' not in report:
+   before_lease=sql("SELECT json_build_object('id',id,'owner_id',owner_id,'fencing_token',fencing_token,'attempt_no',attempt_no,'lease_until',lease_until,'status',status,'progress',progress) FROM editor.jobs WHERE id='"+report['job_id']+"'")
+   subprocess.run(['docker','compose','kill','-s','SIGKILL',a.worker_service],check=True,capture_output=True)
+   report['lease_restart']={'before':before_lease,'killed_service':a.worker_service,'kill_signal':'SIGKILL','at':datetime.now(timezone.utc).isoformat()};save()
+   subprocess.run(['docker','compose','up','-d','--no-deps',a.worker_service],check=True,capture_output=True)
+   report['lease_restart']['restarted']=True;save()
   if job['status'] in ('FAILED','CANCELLED','COMPLETED'):raise RuntimeError('CANARY_ENDED_BEFORE_OPTICAL:'+job['status'])
   if time.monotonic()>deadline:raise RuntimeError('CANARY_OPTICAL_TIMEOUT')
   time.sleep(.5)
  stop()
+ if a.exercise_lease_restart:
+  assert report.get('lease_restart',{}).get('restarted'),'LEASE_WINDOW_NOT_OBSERVED'
+  after_lease=sql("SELECT json_build_object('id',id,'owner_id',owner_id,'fencing_token',fencing_token,'attempt_no',attempt_no,'lease_until',lease_until,'status',status,'progress',progress) FROM editor.jobs WHERE id='"+report['job_id']+"'")
+  before_lease=report['lease_restart']['before']
+  assert after_lease['id']==before_lease['id'] and after_lease['fencing_token']>before_lease['fencing_token'] and after_lease['attempt_no']>before_lease['attempt_no']
+  assert after_lease['owner_id']!=before_lease['owner_id']
+  report['lease_restart']['after']=after_lease
+  report['fence_cancellation_verification']='REAL_WORKER_LEASE_RESTART_PASS_CANCELLATION_FINALIZATION_PARTIAL';save()
  rows={kind:records(kind,a.priority_page) for kind in ('source_spans','evidence','page_readings')}
  for kind,items in rows.items():
   db=sql("SELECT coalesce(json_agg(json_build_object('id',id,'record_key',record_key,'data',data) ORDER BY record_key),'[]'::json) FROM editor.records WHERE generation_id='"+gen+"' AND kind='"+kind+"' AND (data->>'pdf_page')::int="+str(a.priority_page))
