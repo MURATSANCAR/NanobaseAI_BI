@@ -313,6 +313,10 @@ class SemanticResolver:
         #     the sentence is written, and in this catalog "2" and "3" are also TRCODE values, so a
         #     later pass reads the item numbers as a returns filter and the question quietly narrows.
         consumed: set[int] = set()
+        # The words the temporal parser read — "geçen çeyrekte", and the grain phrase "ay ay" — are
+        # spent: looked up again, "ay" found a CRM project-month column and "çeyrek" a sales-quarter
+        # field, and both were then reported as words the catalog cannot place.
+        consumed.update(self._temporal_positions(qf))
         expression_idx = self._measure_expressions(question, qf, sq)
         consumed.update(expression_idx)
         frame_idx, projection = self._report_frame(qf, consumed, index)
@@ -415,6 +419,24 @@ class SemanticResolver:
             if stem(nxt) in _ENTITY_WORDS:
                 hits.remove(slot)
                 sq.explanation.append(f"'{slot.term} {nxt}' bir belge türü olarak okundu, ölçü değil")
+
+        # 2d) "bekleyen sipariş adedi": a bare count word right after a resolved term asks how many of
+        #     *that* thing there are. The catalog also certifies "adet" as a measure of its own (sold
+        #     quantity on the sales lines) — read that way the question moved to another table, and
+        #     the gate then looked for the period on a table the answer never read.
+        for slot in list(hits):
+            if slot.semantic_type != SemanticType.METRIC or slot.span[1] - slot.span[0] != 1 or not slot.mapping:
+                continue
+            k = slot.span[0]
+            if not _COUNT_CUE.fullmatch(fold(qf.tokens[k])):
+                continue
+            left = [h for h in hits if h is not slot and h.mapping and h.span and h.span[1] == k
+                    and h.semantic_type != SemanticType.METRIC]          # "satışta adet": after a measure it is the quantity
+            if left and all(h.mapping.entity != slot.mapping.entity for h in left):
+                hits.remove(slot)
+                consumed.discard(k)
+                sq.explanation.append(f"'{qf.tokens[k]}' sayım sözcüğü olarak okundu: '{left[0].term}' kayıtları sayılır, "
+                                      f"{slot.mapping.entity} ölçüsü değil")
 
         # An adjacent explicit measure gives a single-word, ambiguous label its
         # modifier reading when the catalog certifies that value on the measure's entity.
@@ -1412,6 +1434,8 @@ class SemanticResolver:
         dropped, and which concept was used is written into the slot.
         """
         for _ in (0,):
+            if _COUNT_CUE.fullmatch(fold(tok)):
+                continue        # "adedi" asks how many; it is not the verbal form of the quantity measure "adet"
             root = verb_root(tok)
             if not root or is_negative(tok):
                 continue        # "satmayan" is the opposite of "satış": bridging it would invert the answer
@@ -1509,17 +1533,45 @@ class SemanticResolver:
                   for _, maps in senses for m in maps}
         return next(iter(owners)) if len(owners) == 1 else None
 
+    @staticmethod
+    def _temporal_positions(qf: Any) -> set[int]:
+        """Token positions the temporal parser spent: the words of every period it read, and — when it
+        read a breakdown grain — the calendar word that carries it ("ay ay", "aylık", "günlük")."""
+        out: set[int] = set()
+        folded = [fold(t) for t in qf.tokens]
+        for period in qf.temporal or []:
+            words = [fold(w) for w in tokenize(getattr(period, "text", "") or "")]
+            if not words:
+                continue
+            for i in range(len(folded) - len(words) + 1):
+                if folded[i:i + len(words)] == words:
+                    out.update(range(i, i + len(words)))
+        if getattr(qf, "grain", None):
+            unit = {"MONTH": "ay", "DAY": "gun", "WEEK": "hafta", "QUARTER": "ceyrek", "YEAR": "yil"}.get(qf.grain, "")
+            for k, w in enumerate(folded):
+                if unit and stem(w) == stem(unit) or short_root(qf.tokens[k]) == unit:
+                    out.add(k)
+        return out
+
     def _count_metric(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int]) -> Optional[ResolvedSlot]:
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
         entity = None
+        # "bekleyen sipariş adedi": the thing counted is the resolved term the count word follows.
         for k, tok in enumerate(qf.tokens):
+            if not _COUNT_CUE.fullmatch(fold(tok)):
+                continue
+            before = [h for h in hits if h.mapping and h.span and h.span[1] == k and h.semantic_type != SemanticType.METRIC]
+            if before:
+                entity = before[0].mapping.entity
+                break
+        for k, tok in enumerate(qf.tokens):
+            if entity:
+                break
             # A word a certified phrase already covers is that phrase's word, not a table of its own:
             # "YK onayında bekleyen sözleşmeler kaç tane" counts contracts, whatever "YK" alone recalls.
             if k in consumed or not is_domain_candidate(tok) or _COUNT_CUE.fullmatch(fold(tok)):
                 continue                       # "tane" asks how many; it names nothing
             entity = self._entity_of_word(tok, index)
-            if entity:
-                break
         entity = entity or self._primary_entity(hits)
         prof = self.by_entity.get(entity or "")
         if prof is None:
