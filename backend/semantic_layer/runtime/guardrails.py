@@ -212,6 +212,12 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             # years those literals ask for; failing that, the most recent table. The representative
             # (the biggest copy) is never the answer: a 2026 query was silently run against 2021–2025.
             start, end = _literal_period(tree)
+            if start is not None and end is None and _covers_all(same, start):
+                # `DATE_ >= '2015-01-01'` with no ceiling, in a question that named no period, is the
+                # model reaching for "everything there is" — which the convention for an unasked
+                # period already answers with the current copy. Eight firm copies, 700k rows and a
+                # truncated answer came from honouring it; the current copy is what was meant.
+                start, end = None, None
             picked = periods.tables_for(same, start, end)
             return picked or [prof]
         picked = periods.tables_for(same, period[0], period[1])
@@ -314,9 +320,15 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 # copy it came from, so a join below only ever meets rows of its own copy.
                 alias = node.alias or prof.entity
                 parts = []
+                # The copies are the same table in name, not always in shape: a firm created years
+                # apart carries the columns in another order, with a few added or dropped. UNION ALL
+                # matches by position, so `SELECT *` put a date under STATUS. Columns are listed by
+                # name — the ones every copy has, in the representative's order.
+                shared = _common_columns(wanted, prof)
                 for x in wanted:
                     firm = str((x.context or {}).get("n0") or "")
-                    cols = [exp.alias_(exp.Literal.string(firm), _FIRM_COL), exp.Star()] if lockstep else [exp.Star()]
+                    body = [exp.column(c) for c in shared] if shared else [exp.Star()]
+                    cols = [exp.alias_(exp.Literal.string(firm), _FIRM_COL)] + body if lockstep else body
                     parts.append(exp.select(*cols).from_(_physical_table(x, context)))
                 union: exp.Expression = parts[0]
                 for nxt in parts[1:]:
@@ -329,7 +341,11 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             # Renaming the table and leaving that qualifier behind is a column the server cannot bind,
             # so the written name stays on as the alias.
             alias = node.alias or raw
-            if alias.upper() != _spelling(wanted[0], context).upper():
+            # Compared exactly, not case-folded: the CRM database matches identifiers case-sensitively,
+            # so a statement written as NEW_KITAPBASE.new_kitapId over a table renamed to
+            # [new_kitapBase] could not be bound. The name the model wrote stays on as the alias
+            # whenever it differs at all from the database's spelling.
+            if alias != _spelling(wanted[0], context).split(".")[-1]:
                 new.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
             return new
         return node
@@ -417,6 +433,30 @@ def _norm_key(*parts: Optional[str]) -> str:
     return joined.replace(".", "_").upper()
 
 
+def _common_columns(copies: list[SchemaProfile], representative: SchemaProfile) -> list[str]:
+    """The column names every copy has, in the representative's order; empty when any copy's columns
+    are unknown (then `*` is all there is)."""
+    if any(not c.columns for c in copies):
+        return []
+    names = [c.name for c in representative.columns] if representative.columns else [c.name for c in copies[0].columns]
+    have = [{c.name.upper() for c in x.columns} for x in copies]
+    return [n for n in names if all(n.upper() in h for h in have)]
+
+
+def _covers_all(copies: list[SchemaProfile], start) -> bool:
+    """Does a lower bound alone reach back to (or before) the oldest measured copy — i.e. ask for all
+    of the data rather than a period of it?"""
+    starts = []
+    for c in copies:
+        w = c.time_window
+        if w and w[0]:
+            try:
+                starts.append(str(w[0])[:10])
+            except Exception:  # noqa: BLE001
+                pass
+    return bool(starts) and start.isoformat() <= min(starts)
+
+
 def _literal_period(tree) -> tuple:
     """[start, end) as the statement's own date literals bound it: the smallest lower bound and the
     largest upper bound written against a column. None, None when it writes none."""
@@ -431,6 +471,8 @@ def _literal_period(tree) -> tuple:
             d = _date.fromisoformat(text)
         except ValueError:
             continue
+        if d.year < 1950:
+            continue                 # '1899-12-30' / '1900-01-01': Logo's empty date, a null check, not a period
         (lows if isinstance(node, (exp.GTE, exp.GT)) else highs).append(d)
     if not lows and not highs:
         return None, None

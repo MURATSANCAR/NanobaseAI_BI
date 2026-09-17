@@ -747,6 +747,7 @@ Kurallar:
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
 - Çıkarabiliyorsan ```sql bloğunun İLK satırları her terim için şu biçimde olmalı: -- yorum: '<terim>' → <hangi tablo/kolon, hangi hesap>. Bu satır yoksa cevap reddedilir. YORUMU SANA BIRAKILAN NİTELEYİCİLER için de aynı satır zorunludur.
 - SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
+- Soru bir dönem söylemiyorsa tarih sınırı UYDURMA ("DATE_ >= '2015-01-01'" gibi). Dönem verilmemişse güncel dönem tablosu okunur; hangi yılların okunduğunu bu sistem belirler.
 - KAPSAM DIŞI DÖNEM bloğu doluysa SQL yazma; tek satır: NO_SQL: <dönem> bu veri kaynağında yok.
 - Bu blok "(yok)" ise dönem kapsam içindedir. Hangi dönemin veride bulunduğuna bu sistem karar verir
   ve DÖNEM TABLOLARI bloğundaki aralık ölçülmüştür: o aralıktaki bir yıl için "veri yok" deme, tablo
@@ -825,8 +826,16 @@ def interpretations(sql: str) -> list[str]:
     return [m.group(1) for m in _INTERPRETATION.finditer(sql or "")]
 
 
+_OPEN_BLOCK = re.compile(r"```(?:sql)?\s*(.*)$", re.S | re.I)
+
+
 def extract_sql(text: str) -> Optional[str]:
     m = _SQL_BLOCK.search(text or "")
+    if m is None:
+        # A fence opened and never closed: the answer ran out of tokens mid-statement. What is there
+        # is still the model's SQL — taken as written, it fails validation on its own merits (or
+        # passes, when only the fence was lost) instead of being mistaken for "no SQL".
+        m = _OPEN_BLOCK.search(text or "")
     sql = (m.group(1) if m else (text or "")).strip().rstrip(";").strip()
     # Leading comment lines are allowed — the model's "-- yorum:" readings go there — and a reading
     # the model wrote outside the fenced block is carried in, not lost with the prose around it.
@@ -848,6 +857,8 @@ def no_sql_reason(text: str) -> str:
 
 
 _WORD = re.compile(r"[a-zçğıöşü]+", re.IGNORECASE)
+_FORMULA = re.compile(r"\b(AVG|SUM|COUNT|MIN|MAX|SELECT|DATEDIFF|CASE)\s*\(|\bSELECT\b", re.I)
+_ABSENCE = re.compile(r"yapılamaz|ölçülemez|hesaplanamaz|işlenmemiş|kayıt(ı)? yok|veri(si)? yok|bulunmaz|mümkün değil", re.I)
 _FOLD = str.maketrans("çğıöşüâîû", "cgiosuaiu")
 
 
@@ -866,10 +877,14 @@ def caveat_for(reason: str, rules_text: str) -> str:
     best, best_hit = "", 0
     for line in rules_text.splitlines():
         body = line.strip().lstrip("-• ").strip()
-        if len(body) < 40:
-            continue
+        if len(body) < 40 or _FORMULA.search(body):
+            continue                                   # a definition is how to compute; a caveat is prose
         vocab = {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(body) if len(w) >= 4}
         hit = len(words & vocab)
+        # A caveat says what cannot be had; a metric definition says how to compute it. For a refusal
+        # or an empty result the caveat is the answer, so a line that speaks of absence wins ties.
+        if _ABSENCE.search(body):
+            hit += 2
         if hit > best_hit and hit >= max(3, len(words) // 2):
             best, best_hit = body, hit
     if not best:
@@ -1099,6 +1114,11 @@ class ExistingCompiler:
         # The source is read from the question's own evidence: what the resolver placed counts most,
         # then what the searches found, ranked. Where the evidence points at both, both stay.
         sources = self._question_sources(resolved, evidence)
+        if not {self.source_of(e) for e in resolved if e in self.by_entity} and getattr(q, "source_hint", None) is not None:
+            # Nothing certified pins a database; the resolver read one from the tables the question's
+            # words name. That beats the search vote, which the other database's tables can win by
+            # sheer number ("fatura numarası" on a CRM shipment table outranked the ERP invoice).
+            sources = {q.source_hint}
         q.sources = sorted(sources)
 
         def in_scope(entity: str) -> bool:
@@ -1872,12 +1892,33 @@ class ExistingCompiler:
                     prof = p
                     break
             if prof is None:
+                # The model may spell a copy that is not the profiled one (`LG_211_01_DISPLINE` for a
+                # firm-level LG_{n0}_DISPLINE): the name still says which entity it means, and the
+                # entity's columns are what the repair needs. Without this the hint stayed silent and
+                # three repairs re-invented CANCELLED on a table that has none.
+                from semantic_layer.naming import logical_table as _lt
+                want = {_lt(table.name).entity.upper(), re.sub(r"^(?:DBO_)?(?:LG_)?(?:\d{3}_)?(?:\d{2}_)?", "", table.name.upper())}
+                prof = next((p for p in self.profiles if p.entity.upper() in want
+                             or re.sub(r"^(?:LG_)", "", p.entity.upper()) in want), None)
+            if prof is None:
                 continue
             names = [c.name for c in prof.columns]
             near = sorted({n for m in missing for n in difflib.get_close_matches(m, names, n=5, cutoff=0.5)})
+            # The invented name says what kind of column was wanted. `DATE_` on a table that has no
+            # DATE_ is a date the model needs — its real dates are ACTBEGDATE, OPDUEDATE…; `CANCELLED`
+            # or `STATUS` is a state column. Named by kind, the repair lands in one attempt instead of
+            # guessing a second wrong name from a list of two hundred.
+            by_kind: list[str] = []
+            if any(re.search(r"DATE|TARIH|TIME", m, re.I) for m in missing):
+                dates = [c.name for c in prof.columns if re.search(r"date|time", (c.data_type or ""), re.I) or re.search(r"DATE|TARIH", c.name, re.I)]
+                if dates:
+                    by_kind.append("tarih kolonları: " + ", ".join(dates[:12]))
+            if any(re.search(r"CANCEL|STATUS|ACTIVE|CLOSED|IPTAL|DURUM", m, re.I) for m in missing):
+                states = [c.name for c in prof.columns if re.search(r"STATUS|CANCEL|ACTIVE|CLOSED|RECSTAT|WFSTAT", c.name, re.I)]
+                by_kind.append("durum kolonları: " + (", ".join(states[:12]) if states else "yok — bu tabloda iptal/durum kolonu bulunmuyor, koşulu yazma"))
             shown = names if len(names) <= 60 else near
-            if shown:
-                lines.append(f"- {self.table_label(prof)} kolonları: " + ", ".join(shown))
+            if shown or by_kind:
+                lines.append(f"- {self.table_label(prof)} kolonları: " + ", ".join(shown) + ("; " + "; ".join(by_kind) if by_kind else ""))
         if not lines:
             return ""
         return ("\nSunucuda olmayan kolon: " + ", ".join(sorted(set(missing)))

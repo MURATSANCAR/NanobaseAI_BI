@@ -92,12 +92,28 @@ def refute(g: Grouped, catalog: Catalog, connector, *, timeout_note: dict[str, A
     return True, "", ms
 
 
-def decide(g: Grouped, passed: bool, *, conflict: bool, ambiguous: bool = False) -> str:
+def names_its_own_entity(g: Grouped, catalog: Catalog) -> bool:
+    """'fiyat listesi' → new_fiyatlistesi (statecode 0): the view is named after the table it lists.
+    That is the table's name, not a business state — certified as a filter it claims every question
+    that says the table's name, in either database ("fiyat listesinde tanımlı fiyatın altında kesilen
+    faturalar" is about the ERP's price list). Left to a person."""
+    from semantic_layer.normalize import stem, tokenize
+    prof = catalog.by_pattern.get(g.cand.table_pattern.upper())
+    if prof is None or g.cand.kind not in ("saved_query", "user_query"):
+        return False
+    words = {stem(w) for w in tokenize(g.cand.term)}
+    title = (prof.description or "").split(".")[0]
+    base = re.sub(r"(?i)^(new_|lg_)|base$", "", prof.table_name or "")
+    own = {stem(w) for w in tokenize(title)} | {stem(w) for w in tokenize(re.sub(r"(?<=[a-z])(?=[A-Z])", " ", base))}
+    return bool(words) and words <= own
+
+
+def decide(g: Grouped, passed: bool, *, conflict: bool, ambiguous: bool = False, entity_name: bool = False) -> str:
     """CERTIFIED for the business's own rule that survived refutation and contradicts no certified term;
     CANDIDATE (approval screen) otherwise. A generic word ("tutar"), a word the mined views themselves
     use for several different things ("fiş no" on five tables), or a column alias a single view coined
     is left to a person: certified, each would claim every question that says it."""
-    if not passed or conflict or ambiguous or is_generic(g.cand.term):
+    if not passed or conflict or ambiguous or entity_name or is_generic(g.cand.term):
         return ConceptStatus.CANDIDATE
     if g.kinds <= {"column_alias"} and len(g.sources) < 2:
         return ConceptStatus.CANDIDATE
@@ -159,7 +175,7 @@ def run(groups: list[Grouped], catalog: Catalog, connector_for: Callable[[Candid
         passed, why, ms = refute(g, catalog, conn, timeout_note={})
         conflict = conflicts(store, settings, g) if passed else False
         ambiguous = len(meanings[normalize_term(g.cand.term)]) > 1
-        status = decide(g, passed, conflict=conflict, ambiguous=ambiguous) if passed else "REFUTED"
+        status = decide(g, passed, conflict=conflict, ambiguous=ambiguous, entity_name=names_its_own_entity(g, catalog)) if passed else "REFUTED"
         row = {"term": g.cand.term, "type": g.cand.semantic_type, "key": g.cand.key(), "kind": sorted(g.kinds),
                "sources": len(g.sources), "passed": passed, "why": why, "conflict": conflict, "ambiguous": ambiguous, "status": status, "ms": ms}
         report.append(row)

@@ -57,3 +57,29 @@ def test_a_measure_on_the_other_side_keeps_the_word_because_the_measures_then_sp
     EvidenceEngine(catalog, min_support=3).run(TENANT, DS, list(profiles) + [crm])
     sq = SemanticResolver(catalog, TENANT, DS, list(profiles) + [crm]).resolve("Net ciro ve senaryo karı, kâr bazında", today=TODAY)
     assert "kar" not in sq.unresolved, sq.explanation
+
+
+def test_a_top_n_grouping_the_resolver_added_itself_does_not_protect_the_foreign_word(catalog, profiles):
+    """The rank rule turns every COLUMN slot into a grouping; that is bookkeeping, not the person's
+    "X bazında". 'kâr' grouped that way still leaves for the model when the measure is elsewhere."""
+    r = _with_crm_profit(catalog, profiles)
+    sq = r.resolve("En çok net ciro yaptığımız on kanal, kâr ile", today=TODAY)
+    assert "NEW_SATISSENARYOSUBASE" not in {s.mapping.entity for s in list(sq.slots) + list(sq.group_by) if s.mapping}
+    assert "kar" in sq.unresolved, sq.unresolved
+
+
+def test_without_a_measure_the_named_things_decide_the_database(catalog, profiles):
+    """'… faturalar' names invoices; a two-word CRM state ("fiyat listesi") in the same question is
+    left to the model, to be read in the ERP."""
+    crm = SchemaProfile(datasource_id=DS, table_name="new_fiyatlistesiBase", table_pattern="new_fiyatlistesiBase", entity="NEW_FIYATLISTESIBASE",
+                        schema_name="Timas_MSCRM.dbo", description="Fiyat listesi", columns=[ColumnProfile(name="statecode", data_type="int")], row_count=40)
+    catalog.upsert_profile(crm)
+    _certify(catalog, "fiyat listesi", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="NEW_FIYATLISTESIBASE",
+             table_pattern="new_fiyatlistesiBase", column="statecode", operator="IN", values=["0"]))
+    inv = next(p for p in profiles if p.entity == "INVOICE")
+    inv.description = "Fatura"                                   # the table's own name, as the live scan carries it
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, list(profiles) + [crm])
+    sq = SemanticResolver(catalog, TENANT, DS, list(profiles) + [crm]).resolve("Fiyat listesinde tanımlı fiyatın altında kesilen faturalar hangileri?", today=TODAY)
+    assert "NEW_FIYATLISTESIBASE" not in {s.mapping.entity for s in sq.slots if s.mapping}, [(s.term, s.mapping.entity) for s in sq.slots if s.mapping]
+    assert sq.source_hint == "", "the ERP is the connection's own database: its source name is empty"
+    assert any("faturalar" in e or "yorumlayacak" in e for e in sq.explanation)

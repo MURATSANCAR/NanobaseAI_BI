@@ -32,3 +32,13 @@ def test_columns_are_spelled_as_the_source_spells_them():
     sql = physicalize_sql('SELECT COUNT(DISTINCT NEW_SOZLESMEBASE."NEW_SOZLESMEID") AS n FROM Timas_MSCRM_dbo_new_sozlesmeBase AS NEW_SOZLESMEBASE WHERE NEW_SOZLESMEBASE."STATECODE" IN (0)',
                           [crm], {}, "tsql")
     assert "[statecode]" in sql and "[new_sozlesmeId]" in sql and "STATECODE" not in sql, sql
+
+
+def test_the_alias_the_model_wrote_survives_a_case_only_rename():
+    """2026-09-17, soru 8: NEW_KITAPBASE.new_kitapId over a table physicalized as [new_kitapBase] — the CRM
+    server compares names case-sensitively and could not bind the qualifier."""
+    crm = SchemaProfile(datasource_id="d", table_name="new_kitapBase", table_pattern="new_kitapBase", entity="NEW_KITAPBASE",
+                        schema_name="Timas_MSCRM.dbo", columns=[ColumnProfile(name="new_kitapId", data_type="uniqueidentifier"), ColumnProfile(name="new_name", data_type="nvarchar")])
+    sql = physicalize_sql('SELECT NEW_KITAPBASE.new_name FROM Timas_MSCRM_dbo_NEW_KITAPBASE AS NEW_KITAPBASE WHERE NEW_KITAPBASE."NEW_KITAPID" IS NOT NULL', [crm], {}, "tsql")
+    assert "AS [NEW_KITAPBASE]" in sql or "AS NEW_KITAPBASE" in sql, sql
+    assert "[new_kitapId]" in sql, sql

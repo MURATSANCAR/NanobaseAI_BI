@@ -36,6 +36,9 @@ CTE_B = f'b AS (SELECT MONTH("DATE_") ay, COUNT(*) n FROM {T} WHERE {F} AND {P} 
 CTE_B_UNFILTERED = f'b AS (SELECT MONTH("DATE_") ay, COUNT(*) n FROM {T} WHERE {P} GROUP BY MONTH("DATE_"))'
 
 ACCEPT = {
+    # 2026-09-16: an outer join's ON restricts the *joined* table's own rows — cancelled invoices are
+    # never paired, and the WHERE on i.DATE_ drops the unpaired rows; the sum is right.
+    "filter_in_left_join_on": f"SELECT SUM(i.NETTOTAL) FROM LG_411_CLCARD c LEFT JOIN {T} i ON c.LOGICALREF = i.CLIENTREF AND i.{F} WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
     "flat": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND {P}",
     "flat_alias": f"SELECT SUM(i.NETTOTAL) FROM {T} i WHERE i.{F} AND i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
     "filter_in_list": f"SELECT SUM(NETTOTAL) FROM {T} WHERE \"CANCELLED\" IN (0) AND {P}",
@@ -71,7 +74,6 @@ REFUSE = {
     "cte_one_of_two_unfiltered": f"WITH {CTE_A}, {CTE_B_UNFILTERED} SELECT a.ay, a.t, b.n FROM a JOIN b ON a.ay = b.ay",
     "unused_cte": f"WITH f AS (SELECT * FROM {T} WHERE {F} AND {P}) SELECT SUM(NETTOTAL) FROM {T}",
     "or_widening": f"SELECT SUM(NETTOTAL) FROM {T} WHERE ({F} AND {P}) OR TRCODE = 9",
-    "filter_in_left_join_on": f"SELECT SUM(i.NETTOTAL) FROM LG_411_CLCARD c LEFT JOIN {T} i ON c.LOGICALREF = i.CLIENTREF AND i.{F} WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
     "union_one_unfiltered": f"SELECT SUM(NETTOTAL) FROM (SELECT NETTOTAL FROM {T} WHERE {F} AND {P} UNION ALL SELECT NETTOTAL FROM LG_411_02_INVOICE WHERE {P}) u",
     "wrong_period": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND {P_PREV}",
     "filter_in_exists_only": f"SELECT SUM(i.NETTOTAL) FROM {T} i WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01' AND EXISTS (SELECT 1 FROM {T} j WHERE j.{F})",
@@ -215,8 +217,8 @@ def test_a_left_joins_on_restricts_the_joined_tables_own_rows():
     the ON of an outer join was read as never dropping rows. It drops none of the invoices; it is the
     only place the cancelled *lines* can be kept out without dropping invoices that have no lines."""
     base = (f'SELECT i."CLIENTREF", SUM(sl."AMOUNT" * sl."OUTCOST") AS maliyet FROM {T} i '
-            'LEFT JOIN LG_411_01_STLINE sl ON sl."INVOICEREF" = i."LOGICALREF"{on} '
-            f'WHERE i.{P} GROUP BY i."CLIENTREF"')
+            'LEFT JOIN LG_411_01_STLINE sl ON sl."INVOICEREF" = i."LOGICALREF" AND sl."DATE_" >= \'2026-01-01\' AND sl."DATE_" < \'2027-01-01\'{on} '
+            'WHERE i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\' GROUP BY i."CLIENTREF"')
     assert unmet_obligations(_lines_plan(), base.format(on=' AND sl."CANCELLED" = 0')) == []
     assert unmet_obligations(_lines_plan(), base.format(on="")), "without the filter the lines are unrestricted"
     # A restriction on the preserved side written in the ON keeps proving nothing: those rows stay.
@@ -226,3 +228,35 @@ def test_a_left_joins_on_restricts_the_joined_tables_own_rows():
                         temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
                         temporal_binding={"entity": "INVOICE", "column": "DATE_"})
     assert unmet_obligations(inv, base.format(on=' AND i."CANCELLED" = 0')), "an ON condition on the left side drops nothing"
+
+
+def test_a_reading_that_names_a_table_the_query_never_reads_is_refused():
+    """2026-09-16, soru 7: '-- yorum: tanımlı → PRCLIST fiyat listesi ile karşılaştırma' above a
+    statement reading only a CRM shipment table. The reading is shown to the person as the answer's
+    reading; it must be the reading of this query."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", model_qualifiers=[{"token": "tanimli", "position": 0}])
+    lying = ("-- yorum: 'tanimli' → PRCLIST fiyat listesi, INVOICE.NETTOTAL ile karşılaştırma\n"
+             f"SELECT i.FICHENO FROM {T} i WHERE i.NETTOTAL IS NOT NULL")
+    out = unmet_obligations(sq, lying, sources={**SOURCES, "LG_411_PRCLIST": {"types": {}, "window": None, "declared": False}})
+    assert any("PRCLIST" in u and "okunmuyor" in u for u in out), out
+    honest = ("-- yorum: 'tanimli' → PRCLIST fiyat listesi, satır fiyatı ile karşılaştırma\n"
+              f"SELECT i.FICHENO FROM {T} i JOIN LG_411_PRCLIST p ON p.CARDREF = i.LOGICALREF WHERE i.NETTOTAL < p.PRICE")
+    out = unmet_obligations(sq, honest, sources={**SOURCES, "LG_411_PRCLIST": {"types": {}, "window": None, "declared": False}})
+    assert not any("okunmuyor" in u for u in out), out
+
+
+def test_a_state_measure_computed_under_a_period_or_type_filter_is_refused():
+    """2026-09-17, soru 12: stock on hand summed inside the sales-only SELECT (TRCODE 7,8 and the year)
+    came out as minus the sales. A state measure must be read somewhere unrestricted."""
+    stock = ResolvedSlot("stok bakiyesi", "METRIC", "CERTIFIED",
+                         mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", formula="SUM(CASE WHEN STLINE.IOCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+                                         extra={"state_measure": True, "conditions": ["STLINE.LINETYPE = (0)", "STLINE.CANCELLED = (0)", "STLINE.IOCODE IN (1,2,3,4)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[stock])
+    bad = ("SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok FROM LG_411_01_STLINE s "
+           "WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) AND s.TRCODE IN (7, 8) AND s.\"DATE_\" >= '2026-01-01' AND s.\"DATE_\" < '2027-01-01' GROUP BY s.STOCKREF")
+    out = unmet_obligations(sq, bad)
+    assert any("durum ölçüsüdür" in u for u in out), out
+    good = ("SELECT st.STOCKREF, st.stok, sa.satis FROM (SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok "
+            "FROM LG_411_01_STLINE s WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) GROUP BY s.STOCKREF) st "
+            "JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS satis FROM LG_411_01_STLINE s2 WHERE s2.TRCODE IN (7,8) AND s2.\"DATE_\" >= '2026-01-01' AND s2.\"DATE_\" < '2027-01-01' GROUP BY s2.STOCKREF) sa ON sa.STOCKREF = st.STOCKREF")
+    assert not any("durum ölçüsüdür" in u for u in unmet_obligations(sq, good)), unmet_obligations(sq, good)
