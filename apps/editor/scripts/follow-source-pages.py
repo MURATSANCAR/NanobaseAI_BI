@@ -13,13 +13,14 @@ from datetime import datetime, timezone
 
 root=Path(__file__).resolve().parents[1]
 lock=(root/'evidence/source-pages-follow.lock').open('w');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-run=json.loads((root/'evidence/source-spans-run.json').read_text())
+run=json.loads((root/os.environ.get('EDITOR_VERIFY_RUN_FILE','evidence/source-spans-run.json')).read_text())
+base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810').rstrip('/')
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 (root/'evidence/source-pages-follow.pid').write_text(str(os.getpid()))
 previous=None;last_change=time.monotonic();last_audited=-1;last_audit_attempt=0
 for attempt in range(4320):
     try:
-        req=urllib.request.Request('http://127.0.0.1:8810/v1/jobs/'+run['job_id'],headers=headers)
+        req=urllib.request.Request(base+'/v1/jobs/'+run['job_id'],headers=headers)
         with urllib.request.urlopen(req,timeout=30) as response: job=json.load(response)
         report={k:job[k] for k in ('id','status','progress','counts','error_code')}
         line=json.dumps(report,ensure_ascii=False)

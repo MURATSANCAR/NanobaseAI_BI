@@ -53,16 +53,35 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
     if structured:
         body['response_format'] = {'type':'json_object'}
     start = time.monotonic()
+    transient_retries = []
     with httpx.Client(timeout=3600,trust_env=False) as client:
+        def post(path, payload):
+            # A loading runner returns 503; a busy runner may return 429. These
+            # explicit rejections can be retried without accepting partial text.
+            # Read timeouts are not retried: inference may still be in flight.
+            for attempt in range(7):
+                try:
+                    response = client.post('http://llm:8080'+path,json=payload)
+                except httpx.ConnectError:
+                    status = 'CONNECT_ERROR'
+                else:
+                    status = response.status_code
+                    if status not in (429,503):
+                        if response.is_error:
+                            raise RuntimeError(f'MODEL_HTTP_{status}')
+                        return response
+                if attempt == 6:
+                    raise RuntimeError(f'MODEL_UNAVAILABLE_{status}')
+                delay = min(30,2**attempt)
+                transient_retries.append({'path':path,'status':status,'delay_seconds':delay})
+                time.sleep(delay)
         # Ask the actual runner tokenizer; do not silently shrink source context.
         texts='\n'.join(str(m['content']) if isinstance(m['content'],str) else
                         '\n'.join(p.get('text','') for p in m['content']) for m in body['messages'])
-        tokenized=client.post('http://llm:8080/tokenize',json={'content':texts})
-        tokenized.raise_for_status()
+        tokenized=post('/tokenize',{'content':texts})
         if len(tokenized.json()['tokens'])+max_tokens+512>8192:
             raise RuntimeError('CONTEXT_BUDGET_EXCEEDED')
-        response = client.post('http://llm:8080/v1/chat/completions',json=body)
-        response.raise_for_status()
+        response = post('/v1/chat/completions',body)
     result = response.json()
     choice = result['choices'][0]
     if choice['finish_reason'] != 'stop':
@@ -74,6 +93,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         return aliases.get(value,value) if isinstance(value,str) else value
     return (resolve(json.loads(content)) if structured else content), {'seconds':round(time.monotonic()-start,3),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
+        'transient_retries':transient_retries,
         'runner_fingerprint':result.get('system_fingerprint'),
         'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
         'release':RELEASE,'code_manifest':code_manifest(),
@@ -454,7 +474,7 @@ class State(TypedDict):
 def run(job):
     with connection() as db:
         manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
-    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5'):
+    if manifest.get('pipeline_version') in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6'):
         from editor.source_pipeline import run as run_source_pages
         return run_source_pages(job)
     with connection() as db:

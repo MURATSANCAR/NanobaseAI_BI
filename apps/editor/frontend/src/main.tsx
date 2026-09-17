@@ -562,6 +562,11 @@ function App() {
                         setSelectedSpan(r.id);
                         document.getElementById("source-frame")?.scrollIntoView({block: "center", behavior: "smooth"});
                       }}>Kaynakta göster</button>
+                      {r.data.selected_reader === "REGIONAL_OCR" && <div data-testid="regional-source-selection">
+                        <p>Kaynak metin, diğer okumalarla uyuşan bölgesel okumadan alındı.</p>
+                        <p>İlk tam sayfa okuması: {r.data.raw_text}</p>
+                        <p className="hint">İlk okuma korunur; bu uyuşma olay veya karakter doğrulaması değildir.</p>
+                      </div>}
                       <p>İkinci okuma: {r.data.secondary_text || "Metin bulunamadı"}</p>
                       <p>Bölgesel okuma: {r.data.region_text || "Bekliyor"}</p>
                       <p>PDF metni: {r.data.pdf_usable ? r.data.pdf_text : "Kullanılamıyor; metin kanıtı sayılmadı"}</p>

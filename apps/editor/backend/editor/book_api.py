@@ -245,7 +245,7 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6'):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION

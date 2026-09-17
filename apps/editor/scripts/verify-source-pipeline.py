@@ -13,12 +13,18 @@ base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810')
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 def get(path):
     with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=60) as r: return json.load(r)
+api_cache={};db_cache={}
 def rows(kind,page=None):
+    if snapshot_job['status']=='COMPLETED':
+        if kind in api_cache:return [r for r in api_cache[kind] if page is None or r['data']['pdf_page']==page]
+        if page is not None:return [r for r in rows(kind) if r['data']['pdf_page']==page]
     result=[];offset=0
     while True:
         data=get(f'/v1/generations/{gen}/{kind}?offset={offset}&limit=100'+(f'&pdf_page={page}' if page else ''))
         result+=data['items']
-        if not data['has_more']:return result
+        if not data['has_more']:
+            if snapshot_job['status']=='COMPLETED':api_cache[kind]=result
+            return result
         offset+=len(data['items'])
 def sql(query):
     return json.loads(subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',query],text=True))
@@ -33,10 +39,14 @@ for reading in readings:
     kinds=('source_spans','layout_regions','page_readings')
     if page in completed:
         kinds+=('visual_observations','page_claims','page_checks')
-        if reading['data'].get('pipeline_version')=='source-spans-v5':kinds+=('character_evidence',)
+        if reading['data'].get('pipeline_version') in ('source-spans-v5','source-spans-v6'):kinds+=('character_evidence',)
     for kind in kinds:
         api=rows(kind,page)
-        db=sql("SELECT COALESCE(json_agg(json_build_object('id',id,'record_key',record_key,'data',data) ORDER BY record_key),'[]'::json) FROM editor.records WHERE generation_id='"+gen+"' AND kind='"+kind+"' AND data->>'pdf_page'='"+str(page)+"'")
+        query="SELECT COALESCE(json_agg(json_build_object('id',id,'record_key',record_key,'data',data) ORDER BY record_key),'[]'::json) FROM editor.records WHERE generation_id='"+gen+"' AND kind='"+kind+"'"
+        if snapshot_job['status']=='COMPLETED':
+            if kind not in db_cache:db_cache[kind]=sql(query)
+            db=[r for r in db_cache[kind] if r['data']['pdf_page']==page]
+        else:db=sql(query+" AND data->>'pdf_page'='"+str(page)+"'")
         assert api==db, f'API_DB_MISMATCH:{kind}:{page}'
         if kind=='source_spans':
             assert len(api)==reading['data']['span_count']

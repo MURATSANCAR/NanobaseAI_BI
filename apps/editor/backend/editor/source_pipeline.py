@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v5'
+VERSION = 'source-spans-v6'
 
 
 def norm(value):
@@ -193,10 +193,21 @@ def optical(job, evidence, document, root, parent=None):
         if reread is not None and reread['bbox'] != bbox:
             raise RuntimeError('REREAD_REGION_MISMATCH')
         verdict = optical_verdict(line,secondary,pdf_text,pdf_usable,reread)
+        from editor.optical_selection import select_regional_candidate, word_tokens
+        selection = select_regional_candidate(line,secondary,pdf_text,pdf_usable,reread)
+        selected_text = line['text']
+        selected_reader = 'FULL_PAGE_OCR'
+        if verdict['status'] != 'TEXT_AGREED' and selection['selected_text'] is not None:
+            selected_text = selection['selected_text']
+            selected_reader = selection['selected_reader']
+            verdict = {'status':'TEXT_AGREED', 'issues':['FULL_PAGE_READING_SUPERSEDED'],
+                'pdf_matches':bool(pdf_usable and word_tokens(pdf_text)==word_tokens(selected_text)),
+                'reread_state':selection['reread_state']}
         status,issues,pdf_agrees = verdict['status'],verdict['issues'],verdict['pdf_matches']
         sid=identifier(gen,'source_spans',key+f'-{i:04}')
         value={'pdf_page':page,'evidence_refs':[str(evidence['id'])], 'bbox':bbox,
-            'coordinate_system':'normalized_top_left','text':line['text'],'raw_text':line['text'],
+            'coordinate_system':'normalized_top_left','text':selected_text,'raw_text':line['text'],
+            'selected_reader':selected_reader,'regional_selection':selection,
             'region_text':line.get('region_text'), 'secondary_text':secondary,
             'pdf_text':pdf_text,'pdf_usable':pdf_usable,'pdf_matches':pdf_agrees,
             'pdf_word_regions':pdf_neighbors,'secondary_word_regions':neighbors,

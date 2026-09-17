@@ -133,7 +133,7 @@ for page in completed:
     claims_rows = records('page_claims', page)
     assert len(character) == len(claims_rows) == 1, 'MISSING_OR_DUPLICATE_PAGE_EVIDENCE'
     evidence = character[0]['data']; claims = claims_rows[0]['data']
-    assert evidence['pipeline_version'] == 'source-spans-v5', 'WRONG_PIPELINE_VERSION'
+    assert evidence['pipeline_version'] in ('source-spans-v5','source-spans-v6'), 'WRONG_PIPELINE_VERSION'
     assert evidence['page_role'] == claims['page_role']
     assert evidence['visual_identity_verified'] is False and evidence['eligible_for_synthesis'] is False
     attributions = evidence['attributions']
