@@ -260,3 +260,24 @@ def test_a_state_measure_computed_under_a_period_or_type_filter_is_refused():
             "FROM LG_411_01_STLINE s WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) GROUP BY s.STOCKREF) st "
             "JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS satis FROM LG_411_01_STLINE s2 WHERE s2.TRCODE IN (7,8) AND s2.\"DATE_\" >= '2026-01-01' AND s2.\"DATE_\" < '2027-01-01' GROUP BY s2.STOCKREF) sa ON sa.STOCKREF = st.STOCKREF")
     assert not any("durum ölçüsüdür" in u for u in unmet_obligations(sq, good)), unmet_obligations(sq, good)
+
+
+def test_the_balance_reading_of_a_state_measure_is_not_asked_for_the_period():
+    """2026-09-17, soru 12 (devam): the period rule asked every STLINE reading for 2026 — the stock
+    balance reading too — while the state rule forbade exactly that. Both together made a question
+    with a flow and a state measure unanswerable. The balance reading is the state rule's alone."""
+    stock = ResolvedSlot("stok", "METRIC", "CERTIFIED",
+                         mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", formula="SUM(CASE WHEN STLINE.IOCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+                                         extra={"state_measure": True, "conditions": ["STLINE.LINETYPE = (0)", "STLINE.CANCELLED = (0)", "STLINE.IOCODE IN (1,2,3,4)"]}))
+    sales = ResolvedSlot("satan", "METRIC", "CERTIFIED", mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="AMOUNT", extra={"conditions": ["STLINE.TRCODE IN (7,8,9)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[sales, stock],
+                       temporal=[TemporalSlot(text="varsayılan", primitive="YEAR", start=date(2026, 1, 1), end=date(2027, 1, 1))],
+                       temporal_binding={"entity": "STLINE", "column": "DATE_", "source": "resolved_metric", "alternatives": []})
+    sql = ("SELECT st.STOCKREF, st.stok, sa.satis FROM (SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok "
+           "FROM STLINE s WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) GROUP BY s.STOCKREF) st "
+           "JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS satis FROM STLINE s2 WHERE s2.TRCODE IN (7,8,9) AND s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01' GROUP BY s2.STOCKREF) sa ON sa.STOCKREF = st.STOCKREF")
+    out = unmet_obligations(sq, sql)
+    assert not any("dönemi" in u for u in out), out
+    assert not any("durum ölçüsüdür" in u for u in out), out
+    undated_sales = sql.replace(" AND s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01'", "")
+    assert any("dönemi" in u for u in unmet_obligations(sq, undated_sales))

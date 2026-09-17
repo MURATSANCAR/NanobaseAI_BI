@@ -677,6 +677,22 @@ def _cond_columns(conditions: list[str]) -> list[str]:
     return out
 
 
+def _state_reading(sq: SemanticQuery, o: _Occurrence) -> bool:
+    """This occurrence computes a state measure of the question: it reads the measure's entity under
+    the measure's own conditions only, with no period on it."""
+    for metric in sq.metrics:
+        m = metric.mapping
+        if not m or not (m.extra or {}).get("state_measure"):
+            continue
+        ent = m.entity.upper()
+        if o.entity.upper() not in (ent, re.sub(r"^LG_", "", ent), "LG_" + ent):
+            continue
+        own_cols = {c.split(".")[-1].upper() for c in _cond_columns((m.extra or {}).get("conditions") or [])}
+        if _unrestricted_reading(o, own_cols):
+            return True
+    return False
+
+
 def _unrestricted_reading(o: _Occurrence, own_cols: set[str]) -> bool:
     """This occurrence restricts nothing but the measure's own columns — no date predicate either.
     Judged on the predicates written, not on `intervals`: a declared coverage window is recorded
@@ -916,10 +932,14 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             comp["satisfied"] = matched
 
     if not comp and sq.temporal:
+        # A state measure beside a flow measure reads the same entity twice: the flow reading for the
+        # period, the balance reading over every movement. The period rule judges the flow readings;
+        # the balance reading — the measure's own conditions and nothing else — is the state rule's.
+        dated = [o for o in occ if not _state_reading(sq, o)]
         for binding in _bindings(sq):
             for period in sq.temporal:
                 p = _period_dict(period)
-                if not _period_proven(p, binding, occ, tree):
+                if not _period_proven(p, binding, dated, tree):
                     text = getattr(period, "text", None) or p.get("text") or f"{p.get('start')}–{p.get('end')}"
                     out.append(Unmet("period", f"'{text}' dönemi doğru tarih sütununda doğrulanamadı" + _opaque_note(occ, binding['entity']),
                                      f"{binding['entity']} kaynağını {binding['column']} >= '{p.get('start')}' AND {binding['column']} < '{p.get('end')}' ile sınırla (kaynağı okuyan her SELECT/CTE'de).",
