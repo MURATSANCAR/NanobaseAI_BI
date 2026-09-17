@@ -14,7 +14,7 @@
 |---|---|---|
 | Köprü (`nanobase-semantic-bridge`, :8795) | uvicorn **2 işçi**, işçi başına ayrı katalog + pyodbc bağlantısı | Dashboard paralel sorguları tek köprüden |
 | Önbellek | Köprü içinde, TTL **300 s**, 15 s'de bir arka planda tazelenir (`/health` → `cache`) | Aynı SQL 5 dk boyunca Logo'ya gitmez (`cached: true`) |
-| LLM (yerel GPU Flash-Next `qwen3.8-flash-next`) | OpenAI uyumlu, `thinking:false`; `OPENAI_API_BASE=http://127.0.0.1:18881/v1` | Yerel GPU yok; model dışarıdan sorulur, yanıt ~2-5 sn |
+| LLM (yerel GPU Flash-Next `qwen3.8-flash-next`) | OpenAI uyumlu, `enable_thinking:false`; `OPENAI_API_BASE=http://127.0.0.1:18881/v1` | Türk Telekom H100 GPU; Mac VPN/SSH tüneli. Yeni model süre ve gerçek SQL kabulü ayrıca ölçülür. |
 | BI API | `MODEL_MAX_CONCURRENCY=2` (LLM slot sayısıyla aynı olmalı) | |
 | SQL zaman aşımı | Profilde `statement_timeout: "120"` (string!) | Ağır sorgu 120 s'de kesilir |
 | Strict mode | `SEMANTIC_STRICT_MISS` — katalogda CERTIFIED karşılığı olmayan soru cevaplanmaz | |

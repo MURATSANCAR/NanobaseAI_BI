@@ -103,7 +103,7 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 - Frontend: React + Vite + TypeScript (`src/`), Tailwind.
 - Backend: Python/FastAPI (`backend/nanobase_api`, `backend/nanobase_awel`, `backend/query_gateway`, `backend/semantic_layer`, `backend/semantic_bridge`).
 - Şema tarama/gömme: `tools/schema-indexer`.
-- Kurulum: Docker Compose (`deploy/compose`, müşteri paketi); müşteri VM'ine yayın `scripts/server/deploy-customer-vm.sh`. LLM dışarıda (NVIDIA hosted); depoda LLM sunucu tanımı yok.
+- Kurulum: Docker Compose (`deploy/compose`, müşteri paketi); müşteri VM'ine yayın `scripts/server/deploy-customer-vm.sh`. LLM Türk Telekom GPU sunucusundaki Qwen3.8-Flash-Next-FP8 üzerinde; harici NVIDIA API sağlayıcısı kaldırılıyor. Mevcut erişim Mac VPN/SOCKS ve SSH tüneliyle sağlanır.
 - Editör: ayrı yığın `apps/editor/` (kendi Compose, PostgreSQL, Qdrant, OCR, yerel LLM).
 - Meta DB: Postgres (:5434).
 
@@ -115,7 +115,7 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 | API (`nanobase_api`) | 8790 |
 | Query Gateway | 8792 |
 | Semantic Bridge (Timaş) | 8795 |
-| LLM (OpenAI uyumlu) | NVIDIA hosted `integrate.api.nvidia.com/v1`, `deepseek-ai/deepseek-v4-flash-0731`, düşünme kapalı (köprü drop-in `semantic-bridge-nvidia.env`, `LLM_EXTRA_BODY_JSON`); eski GPU sunucusu yok. 2026-09-16/17: sağlayıcıda aralıklı 504 ve ~25 dk 404 kesintisi görüldü; yedek model kararı açık (`z-ai/glm-5.3` tek yanıt veren, yavaş) |
+| LLM (OpenAI uyumlu) | Yerel GPU `qwen3.8-flash-next` / `Qwen/Qwen3.8-Flash-Next-FP8`; GPU `tt-gpu`, 2×H100 NVL. CPU host erişimi `127.0.0.1:18881/v1` (Mac VPN/SSH tüneli); Editor Docker erişimi `10.203.48.1:18882`. 18 Eylül geçiş/gerçek kabul çalışması sürüyor; harici sağlayıcıya fallback yok. |
 | Gömme servisi | 8083 (embedder, CPU) |
 | Meta DB (Postgres) | 5434 |
 | Zeki AI sohbet | 127.0.0.1:4000 (ayrı Docker, `~/zeki-chat` deposu); portalda `/timas/sohbet/` altında AD oturumu arkasında sunulur |

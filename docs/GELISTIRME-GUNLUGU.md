@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Harici NVIDIA API sağlayıcısından yerel Flash-Next geçişi
+
+- Kullanıcı kararı: model çağrıları Türk Telekom GPU sunucusundaki Flash-Next üzerinden çalışacak; harici NVIDIA API adresi, eski model varsayılanı ve aktif sağlayıcı override dosyaları kaldırılır. Tarihsel günlük girişleri korunur. NVIDIA GPU sürücüleri/CUDA kapsam dışıdır.
+- Mac VPN/SOCKS tüneli CPU localhost18881 üzerinden GPU8001 adresine yönlendirildi. Editor Docker özel ağları için18882 nginx/UFW erişimi kuruldu; herkese açık model portu eklenmedi.
+- BI semantic/admin/kurulum varsayılanları değişti. Editor model adresi, adı, backend ve bağlam ayarı yapılandırılabilir oldu; vLLM tokenizer/chat-template desteği ve eski modele ait adayların yeni model sonucu diye yeniden kullanılmasını engelleyen kontrol eklendi.
+- Gerçek API/DB kabulü ve güncel yayın sonucu bu bölümde tamamlanınca kaydedilecek; yalnız kod değişikliği başarı değildir.
+
 ## 2026-09-17 — Test sunucusunda düşen 10 test: kod sağlam, sunucudaki test dosyaları bayattı
 
 - **Neden:** LLM kapısı kabulünde tam paket 10 test düşürdü; aynı 10'u değişmemiş canlı ağaçta da düşüyordu. Kök neden arandı.
