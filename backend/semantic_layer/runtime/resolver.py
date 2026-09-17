@@ -804,6 +804,30 @@ class SemanticResolver:
         #     nobody wrote down, not about something this deployment has no answer for.
         self._from_data(sq, index, qf, consumed)
 
+        # 6c) "karşılıksız çıkan VEYA protesto olan çekler": two labels of one column joined by "or" are one
+        #     restriction to either — not two restrictions that contradict each other (which refused the
+        #     question as ambiguous). The first label takes both value sets; the second is folded into it.
+        ors = {k for k, t in enumerate(qf.tokens) if fold(t) in ("veya", "yahut", "veyahut")}
+        ors |= {k for k, t in enumerate(qf.tokens[:-1]) if fold(t) == "ya" and fold(qf.tokens[k + 1]) == "da"}
+        if ors:
+            labels = sorted((h for h in hits if h.semantic_type == SemanticType.DIMENSION_VALUE and h.mapping and h.mapping.column
+                             and h.span and (h.mapping.operator or "IN").upper() in ("IN", "=")), key=lambda h: h.span[0])
+            for a in list(labels):
+                for b in list(labels):
+                    if a is b or a not in hits or b not in hits or a.span[0] >= b.span[0]:
+                        continue
+                    same = (a.mapping.entity, a.mapping.column.upper()) == (b.mapping.entity, b.mapping.column.upper())
+                    if same and any(a.span[1] <= k < b.span[0] for k in ors):
+                        merged = list(dict.fromkeys([*a.mapping.values, *b.mapping.values]))
+                        a.mapping = Mapping(concept_id=a.mapping.concept_id, entity=a.mapping.entity, table_pattern=a.mapping.table_pattern,
+                                            column=a.mapping.column, operator="IN", values=merged, extra=dict(a.mapping.extra or {}))
+                        a.term = f"{a.term} veya {b.term}"
+                        a.span = (a.span[0], b.span[1])
+                        a.status = "INFERRED" if "INFERRED" in (a.status, b.status) else a.status
+                        hits.remove(b)
+                        sq.explanation.append(f"'{a.term}': aynı kolonda iki etiket 'veya' ile birleşti → {a.mapping.entity}.{a.mapping.column} IN ({', '.join(merged)})")
+            sq.slots = hits
+
         # 7) conflicting filters: two different value sets ANDed on one column (no comparison cue)
         by_col: dict[tuple[str, str], set[frozenset[str]]] = {}
         for s_ in hits:

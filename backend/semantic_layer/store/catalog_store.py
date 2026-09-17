@@ -1137,9 +1137,11 @@ class CatalogStore:
                     by_concept.setdefault(str(r["concept_id"]), []).append(self._row_to_mapping(r))
         for c in concepts:
             maps = by_concept.get(c.id, [])
-            for k in [c.normalized_term, *c.synonyms]:
-                if k:
-                    index.setdefault(k, []).append((c, maps))
+            # Synonyms are looked up the way terms are: normalised. One written by a person ("çek",
+            # "müşteri grubu") was stored as typed and never matched the normalised word of a question.
+            keys = [c.normalized_term, *c.synonyms, *(normalize_term(x) for x in c.synonyms if x)]
+            for k in dict.fromkeys(k for k in keys if k):
+                index.setdefault(k, []).append((c, maps))
         self._index_cache[key] = (ver, index)
         return index
 
