@@ -1,6 +1,6 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` ve offline/restore kabulü izleniyor. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
+> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü izleniyor. P1 kaynak doğruluğu, P2 konuşmacı ve anlamsal kabul açık. [Güncel kanıt](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları kendi tarih/sürümlerine aittir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 
@@ -14,9 +14,9 @@
 
 ## Kabul yöntemi
 
-**Güncel analiz:** Canlı nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b`,
-iş `c70995d2-496b-451d-8b34-a84eda4985f9`; `source-spans-v3`.
-48/48 sayfa, 828 kaynak anlaşması ve 321 inceleme bölgesi vardır.
+**Güncel analiz:** Canlı nesil `99881d8f-77b9-499c-9876-fe114b4afc01`,
+iş `9a727ff9-3167-4a59-8dd6-c0a3fcdabca1`; `source-spans-v4`.
+48/48 sayfa, 821 kaynak anlaşması ve 328 inceleme bölgesi vardır.
 V1 iptal edilip korundu. Yeni akışın sonu NEEDS_REVIEW; konuşmacı/semantik kabul
 ve buna bağlı sentez/indeks/soru-cevap açık. CPU 48, model slotu **1**.
 [Güncel sistem düzeltmeleri ve kanıtlar](2026-09-16-system-quality-followup.md).
@@ -30,17 +30,17 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 | Paket | Durum | Kalan kabul |
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
-| P1 Kaynak hattı | Yükleme, 48 sayfa ve kaynak paneli çalışıyor | 321 kaynak bölgesi; görsel kaynak doğruluğu |
+| P1 Kaynak hattı | Yükleme, 48 sayfa ve kaynak paneli çalışıyor; 7 yanlış kelime eşliği düzeltildi | 328 kaynak bölgesi; görsel kaynak doğruluğu |
 | P2 Karakter/olay | Adaylar ve kanıt kapıları var | Konuşmacı/kimlik, olay modu ve sahne eşliği |
 | P3 Edebî örnekler | Kabul bekliyor | P2, diğer iki gerçek kitap ve editör rubriği |
 | P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
 | P5 Editör akışı | Kaynak/OCR/bbox ve yetki ekranları çalışıyor | Genel düzeltme ve bağımlılık yenileme kabulü |
-| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | Son v4 paket kabulü, farklı kullanıcı/yük/topolojiler |
+| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | Son kaynak v4-r2 paket kabulü, farklı kullanıcı/yük/topolojiler |
 | P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
 
 ## Planın tüm bölümleri
 
-V3 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 828 anlaşma/321 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. API/PG eşliği ve ayrı kurulum restore/mobil kontrolü geçti. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-status-and-handoff.md).
+V4 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 821 anlaşma/328 inceleme. İş COMPLETED; nesil NEEDS_REVIEW. Gerçek API/PG, kaynak ve yayın kapıları geçti; bu sürümün ayrı kurulum/restore kabulü ayrıca izleniyor. [Sürüm kimlikleri, kod düzeltmeleri ve kanıtlar](2026-09-17-word-boundary-gate.md).
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
@@ -49,7 +49,7 @@ V3 işleme tamamlandı: 48 sayfa, 1.149 kaynak bölgesi, 828 anlaşma/321 incele
 | 3 Teknoloji | PostgreSQL, LangGraph, Qdrant, Docling, Poppler, Tesseract, yerel modeller ve salt okunur React ekranı | Model görev uygunluğu kabul edilmedi; bbox/OCR inceleme ekranı doğrulandı; PDF.js özel görüntüleyici ve anlamsal kabul kapsamı ayrıca açık |
 | 4 Uçtan uca | 48 kaynak/okuma/görsel aday/kontrol kaydı; v2 iş COMPLETED | NEEDS_REVIEW; doğrulanmış sahne → sentez → indeks → cevap kabulü açık |
 | 5 Dosya kabulü | Gerçek 19.806.912 bayt PDF, aynı hash, yarım yükleme reddi, idempotency | Otomatik yeni PDF ayrıştırma, kuyruk, iptal ve yeniden başlatma doğrulandı; bütün hata profilleri açık |
-| 6 OCR/görsel | 48/48; PDF/Paddle/Tesseract kelime geometrisi, 1.149 span, 828 anlaşma/321 inceleme | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
+| 6 OCR/görsel | 48/48; PDF/Paddle/Tesseract kelime geometrisi, 1.149 span, 821 anlaşma/328 inceleme | CER ve bölge doğruluğu ölçülmedi; görsel adaylarda gerçek yanlışlar var |
 | 7 Görsel bağlam | Kaynak/görsel API, 48 hash eşleşmesi ve gerçek sayfa/model adayını gösteren mobil ekran | Sahne eşleme kabulü, bölge/geçici kimlik ve görsel bağı düzenleme eksik |
 | 8 Veri modeli | Sürümlü kaynak/generation/record/job/review/outbox | Planın ayrıntılı varlık sözleşmesine karşı tam eşleme kabulü açık |
 | 9 İddia/zaman/bakış | Olay modu, fail, nesne, konuşmacı, bakış ve göreli zaman alanları | Alanların gerçek kitapta anlamsal doğruluğu bekleniyor |

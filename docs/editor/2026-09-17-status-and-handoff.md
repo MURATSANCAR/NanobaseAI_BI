@@ -1,6 +1,6 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
-> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` ve offline/restore kabulü izleniyor. Konuşmacı ve anlamsal kabul açık. [Güncel kod/kanıt/iş sırası](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları tarihçedir.
+> Güncel yayın `source-boundaries-v4-r2-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `99881d8f` 48/48 tamamlandı; 821/328, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; offline/restore kabulü izleniyor. Konuşmacı ve anlamsal kabul açık. [Güncel kod/kanıt/iş sırası](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları tarihçedir.
 
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 

@@ -10,7 +10,11 @@ Gerçek 48 sayfanın API/PG kayıtlarında aday denetimi geçti; 7 sayfa sıkıl
 
 R2 nesli `99881d8f-77b9-499c-9876-fe114b4afc01`, işi `9a727ff9-3167-4a59-8dd6-c0a3fcdabca1`; özgün tamamlanmış `b652f63c` ham ölçümlerini kullanır. Çalışan 35 dosyanın ağaç hash'i `254a05cccb228d45c656b2ae55821a61b88a6406621e797ec7f89d00c33f9c37`; işlem hattı hash'i `415c64ea702437bb737663b228ded8cbe2896fa432ec1e79e26f9678c1bc1f57`.
 
-Yeni neslin bütün kayıtları, kaynaklardan sonraki aday bağlantıları ve bu sürümün offline/restore kabulü ayrıca izleniyor. Kanıtlar sunucuda `source-boundaries-reuse-with-promotion-check.log`, `source-boundaries-r2-follow.log`, `source-boundaries-r2-final-checks.log`, `source-boundaries-r2-qualification.log`.
+Yeni nesil 10:46:25 UTC gözleminde **48/48 COMPLETED / NEEDS_REVIEW**. Gerçek API/PG kabulü geçti: 1.149 bölge, 821 anlaşma / 328 inceleme; ham metin/kutu/okuyucu ölçümleri değişmedi. Beklenen 7 bölge incelemeye geçti, geçersizleşen kaynağa rağmen `MATCH` kalan aday 0. 48 aday sayfası yeniden denetlendi; yeni aday model çağrısı 0. Yayın engelleri, kaynak inceleme geometrisi, OCR-VL bağlantıları ve temel API/PG kontrolü geçti. Bu, konuşmacı veya edebî analiz kabulü değildir.
+
+Son denetimin ilk denemesi ek API test konteynerinin oluşturulmasını bekledi. Yalnız o denetim durduruldu; oluşturulmuş, çalışmamış test konteyneri kaldırıldı. Denetleyici üretim kabulünde mevcut çalışan API konteynerindeki kodu kullanacak şekilde düzeltildi; ayrı aday kod denemesinde izolasyon korunur. Gerçek yeni nesilde tekrar geçti. Kitap koşusu ve kayıtları değiştirilmedi.
+
+Bu sürümün offline/restore kabulü ayrıca izleniyor. Kanıtlar sunucuda `source-boundaries-reuse-with-promotion-check.log`, `source-boundaries-r2-follow.log`, `source-boundaries-r2-final-checks-retry.log`, `word-boundaries-deployed.json`, `source-boundaries-r2-qualification.log`. İlk başarısız/durdurulmuş denetim logları korunur.
 
 Kod `main` üzerinde; GitHub push HTTPS kimlik bilgisi bulunamadığı için tamamlanamadı. Bu oturum yeni dal açmadı. Denetlenen diğer bütün dalların `main` dışında commit sayısı 0.
 
