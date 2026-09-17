@@ -84,7 +84,7 @@ Oracle / SAP kaynakları için `secrets/oracle-ro.datasources.json` ve
 sınırı ile birebir aynıdır.
 
 LLM şimdilik yerel GPU Flash-Next `qwen3.8-flash-next` (OpenAI uyumlu). `.env` →
-`LLM_API_BASE=http://127.0.0.1:18881/v1`, `LLM_API_KEY=<yerel model erişim anahtarı; gerekiyorsa>`.
+`LLM_API_BASE=http://GPU_PRIVATE_HOST:8001/v1`, `LLM_API_KEY=<yerel model erişim anahtarı; gerekiyorsa>`.
 Müşteri kendi LLM ucunu isterse yalnız bu iki değer değişir.
 
 ## Tahmin (forecast) servisi
@@ -120,3 +120,8 @@ Yedek: `secrets/`, `data/`, `.env` ve `meta-db-data` volume'u (`docker run --rm 
 
 Arayüz, hata mesajları ve loglar yalnız **NanobaseAI BI** adını taşır; kullanılan alt
 bileşenlerin adları müşteriye görünmez.
+
+GPU_PRIVATE_HOST kurulum ortamından erişilen özel model adresidir. Docker içinden
+127.0.0.1 sunucuyu değil ilgili konteyneri gösterir; özel ağ geçidi adresi kullanılır.
+Bu kurulumda Mac VPN/SSH tüneli gerekir; Mac kapalıysa model erişimi kesilir.
+Harici bulut API sağlayıcısına otomatik geri dönüş yapılmaz.
