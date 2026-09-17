@@ -69,4 +69,4 @@ Tazelik: kuralın tarih kolonunun son değeri → bayat veride durum `veri_bayat
 
 - Logo'da son kayıt 2026-08-17 (29 gün bayat) — bugün her kural `veri_bayat` görünür.
 - Yıl devri: Aralık 2025'in 109 açık siparişi 2026 firmasındaki faturasına ref ile bağlanamıyor; D adımı bunu uyuşmazlık olarak gösterir, çözümü devir kaydının incelenmesi.
-- LLM ucu (NVIDIA) 529 veriyor; kural kurulumu 1-3 dk sürebilir → kurulum arka plan işi + ilerleme göstergesi.
+- LLM ucu yük altında 529 verebiliyor; kural kurulumu 1-3 dk sürebilir → kurulum arka plan işi + ilerleme göstergesi.
