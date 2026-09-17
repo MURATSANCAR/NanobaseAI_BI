@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Tüm oturumların belge denetimi; proje belleğindeki bayat bilgiler düzeltildi
+
+- Neden: kullanıcı "tüm konuşmalarda yapılan işlere bak, md dosyalarını güncelle" dedi. 16 Eylül 10:16'daki önceki denetimden sonra etkin olan BI oturumları (CRM tablo/kolon araştırması — soru 5–18 turu, sağ üst zoom, AD Administrators erişimi, kurumsal sohbet analizi, promt izleyici) ve `main` commit'leri günlükle tek tek karşılaştırıldı. Sonuç: her oturum kendi günlük girişini yazmış, eksik giriş yok; 12 `claude/*` dalının hepsi `main`de (taşınmamış commit 0), worktree'ler temiz. Ana dizinde commit'lenmemiş iki editör dosyası (`apps/editor/README.md`, `scripts/verify-word-boundaries.py`) süren editör işine aittir, dokunulmadı.
+- `PROJECT-MEMORY.md` düzeltmeleri (özet, arşiv değil): (1) "VPN hesabı kısıtı" paragrafı bayattı — 14 Eylül'deki yalnız-RDP kısıtı kalktı, 16–17 Eylül'de test sunucusundan Logo `.155`, CRM `.28` ve VM `.55` gerçek sorgu/yayınla kullanıldı; paragraf güncel erişim kapsamı + aynı belirtide ne yapılacağı olarak yeniden yazıldı. (2) Depoda olmayan `deploy/llm-server` Stack ve dizin haritasından çıkarıldı (LLM NVIDIA hosted). (3) Dizin haritasına eksikler eklendi: `apps/editor/`, `docs/editor/`, `docs/TIMAS-IS-TANIMLARI.md`, bilgi paketi dizini, `docs/analiz`, `deploy/nginx|docker|helm|k8s`, `scripts/server/deploy-customer-vm.sh`. (4) Dosyanın en üstüne yığılmış iki tarihli editör bölümü Editör başlığının altına alındı; giriş ve "Proje ne" yeniden en üstte. (5) Soru hattına test durumu (1–18 doğru, 801 birim testi) ve yerel model kararı (ölçüldü, benimsenmedi) eklendi.
+- Kod değişikliği yok; yalnız belge.
+
 ## 2026-09-17 — Sıkılaşan kaynak kapısının yeni nesil kabulü
 
 - `source-boundaries-v4-r2-20260917`, `99881d8f` nesli 48/48 tamamlandı: 1.149 bölge, 821 anlaşma / 328 inceleme. 7 yanlış eşlik kaldırıldı; ham okumalar aynı kaldı; geçersiz kaynaktan geçen aday 0. Gerçek API/PG, yayın kapıları, kaynak inceleme ve OCR aday bağlantıları geçti.
