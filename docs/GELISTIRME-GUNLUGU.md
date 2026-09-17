@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Editör kelime sınırı hatası
+
+- Optik kapının farklı kelime bölünmelerini eşit sayması gerçek kitapta bulundu ve genel kodda düzeltildi. 1.149 gerçek API/PG bölgesinde 7 yanlış eşlik kaldırıldı; eski ham veriler korundu. Aday ve yayımlanmış kod kontrolü geçti; yeni nesil ayrıca yürütülüyor.
+- `source-boundaries-v4-20260917` sunucuda; API sürüm kaydı ve worker yönlendirmesi v4 ile eşitlendi. Bağımsız kelime tarayıcılı gerçek regresyon denetçisi eklendi. Kitap metni veya konuşmacı elle düzeltilmedi.
+- [Kod, gerçek kanıt, yeni nesil ve açık kabul](editor/2026-09-17-word-boundary-gate.md). Hata kapatılmadan diğer adıma geçmeme talebi AGENTS.md'ye eklendi.
+
 ## 2026-09-17 — V4 paket kabulü ve font eşleme deneyi
 
 - `book-access-v4-20260917` kendi offline paketinden 14 tablolu gerçek yedek/restore, API/PG/OCR ve mobil kontrolleri 10:00:32 UTC'de geçti. Restore ACL hatası kapatıldı; kaynak/anlamsal kabul açık.

@@ -4,6 +4,8 @@
 
 Kitap metni, model cevabı, konuşmacı ve inceleme kararı elle düzeltilmez; beklenen cevap model girdisine taşınmaz. Genel kod düzeltilir ve gerçek kaynak yeni nesilde yeniden doğrulanır. İşleme tamamlanması anlamsal kabul değildir.
 
+Bulunan hata için genel kod düzeltmesi, başarısız gerçek senaryonun yeniden doğrulanması ve kanıt kaydı tamamlanmadan sonraki adıma geçilmez. Başarısız deney çözüm sayılmaz. Dış kaynak veya insan kararı gerektiren engel açık yazılır; doğrulanmayan iş kapatılmaz.
+
 17 Eylül yapılan işler, sürümler ve gerçek kabul sınırları [güncel durum belgesinde](docs/editor/2026-09-17-status-and-handoff.md) tutulur. Editör README, OCR/frontend belgeleri, roadmap, kabul defteri, proje belleği ve günlük ilgili değişikliklerde birlikte güncellenir; geçmiş sonuçlar kendi nesil/tarihleriyle korunur.
 
 @/Users/msancar/.codex/RTK.md
