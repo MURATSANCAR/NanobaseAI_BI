@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V12 48 sayfa teknik kontrol ve V13 paralel hazırlık
+
+V12 ana koşu 48/48 teknik kontrolden geçti. Gerçek API ve bağımsız PostgreSQL üzerinde 1.149 kaynak, 48 kimlik, 48 anlamsal inceleme, 12 figür karşılaştırması ve bir sentezin bütünlüğü doğrulandı; tam anlamsal kabul false kaldı. V13 küçük bölge/sayfa bağlamı/konuşma bağlantısı ve mobil arayüzü paralel geliştirildi; API/document/web aday imajları canlı hizmetlerden ayrı hazırlandı. Paralel ajan kullanım limiti sonrası entegrasyon ana oturumda sürüyor. [Kanıt ve açık sınırlar](editor/2026-09-18-source-analysis-v13.md).
+
 ## 2026-09-18 — V12 izleyici bağlantı kesintisinden toparlandı
 
 Gateway değişiminde s1/s2 salt okunur kontrolü ConnectionRefused aldı; uygulama analizi sürdü. Kontrol GET'lerine sınırlı geçici hata tekrarı ve izleyiciye mevcut durum/ayrı deneme logu eklendi. Aynı gerçek sayfalar yeniden geçti; ilk20 teknik denetim20 geçti/0 başarısız. İlk hata logları korunur, anlamsal kabul iddiası yok. V12 webin dört genişlik OCR regresyonu ve hash eşliği geçti. Harici GPU uygulama offline paketi üretildi; import/restore ayrıca doğrulanıyor. [Ayrıntı](editor/2026-09-18-source-analysis-v12.md).

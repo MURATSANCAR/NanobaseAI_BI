@@ -1,6 +1,20 @@
 # V13 hazırlığı: küçük kaynak bölgeleri ve sayfa bağlamı
 
-Bu kayıt aday geliştirmeyi anlatır; V13 henüz canlı yayın veya tam kitap kabulü değildir. Canlı API/worker V12-r1 olarak çalışmaya devam eder. Kitap içeriğine elle müdahale edilmez.
+V13-r1 API/worker, ağsız document/reread tüketicisi ve web yayımlandı; tam kitap kabulü değildir. Kitap içeriğine elle müdahale edilmez.
+
+## Canlı V13-r1
+
+Yayın `source-analysis-v13-r1-20260918`, pipeline `source-spans-v13`; 46 backend dosyasının kaynak/imaj eşliği `b87cc35c7998650cbdb060218df7cc5899920678d58f1cac984546b92c542b76`. Yeni iş `4ca9b23a-7027-4909-b49f-1fd26c93b497`, nesil `18417f1b-d9db-4873-aeb8-b8c719fc0d0d`; V12 ölçümleri kaynak olarak tekrar kullanılır. Öncelik sayfaları yalnız koşu parametresidir. Salt okunur sayfa izleyicisi ayrıca başlatıldı.
+
+Son kaynakla sayfa bağlamı gerçek pilotu 41 API/PG kaydı ve parent hash kontrolünü geçti; iki model çağrısı, kapsam/kimlik belirsizliklerini görünür koruyarak yalnız sayfa amacını kabul etti. Aynı hashlerle cross-page kontrolü 22 sayfada 1 sınırlı söz bağlantısı, 0 genel kimlik, 0 scope_error verdi. Kanıtlar `page-context-0eb7d199-cebc-4454-96f6-1d5cb1685986-0029-75505f9c06f8-fd8be57224ff.json` ve `cross-page-attribution-0eb7d199-cebc-4454-96f6-1d5cb1685986-c01ff688fefd-5de054fe0542-5630f696aae4.json`.
+
+Dağıtım sonrası altyapı denetimi OCR STOPPED durumunu arıza saydı. `verify.py`, yalnız on_demand=true, gateway_reachable=true ve state=STOPPED için beklemeyi kabul edecek biçimde düzeltildi; diğer servis hataları hâlâ engellenir. Çıktı açıkça bunun OCR uyanma/çıkarım kabulü olmadığını belirtir. Gerçek altyapı kontrolü tekrar geçti. Yeni kitabın OCR gerektiren çağrısının otomatik uyanması ayrıca izleniyor. Kanıt `evidence/source-analysis-v13-infrastructure.log`.
+
+## V12 kapanış ölçümü ve devam
+
+V12 nesli `2d774b82-e04f-45a3-92fc-eadaa8a37934` 48/48 teknik kaynak kontrolüyle tamamlandı; hata listesi boş, sonuç NEEDS_REVIEW. Gerçek API ve bağımsız PostgreSQL kontrolünde 48 evidence, 1.149 source_spans, 48 page_claims, 48 figure_identity, 12 figure_comparisons, 48 semantic_reviews ve bir semantic_synthesis kaydı eşleşti. 52 iddia sentez adayı olarak kapıları geçti; bu bütün kitabın anlamsal kabulü değildir. Kanıt `evidence/source-analysis-2d774b82-e04f-45a3-92fc-eadaa8a37934.json`; application_writes=0, semantic_acceptance=false.
+
+V13 API ve document aday imajları sunucuda mevcut bağımlılıklardan ağsız build edildi; web adayı da ayrı oluşturuldu. Henüz aktif hizmetler değiştirilmedi. Üç paralel ajan kullanım limitine takıldığı için ana oturum entegrasyonu devraldı. Son kaynak hashine ait olmayan bağlam kanıtı cross-page verifier tarafından CONTEXT_MODULE_HASH_MISMATCH ile reddedildi; mevcut kaynakla yeni gerçek ölçüm başlatıldı. Eski kanıt yeni kodun kabulü yerine kullanılmaz.
 
 ## Paralel çalışma
 

@@ -40,7 +40,14 @@ for permission in access_permissions:
 if 'models' in settings.get('COMPOSE_PROFILES','').split(','):
     with urllib.request.urlopen(urllib.request.Request(base+'/v1/model-services',headers={'Authorization':'Bearer '+token}),timeout=20) as response:
         models = json.load(response)
-    assert all(item['ready'] for item in models['services'].values()), models
+    for name,item in models['services'].items():
+        standby = (name == 'ocr_vl' and item.get('on_demand') is True
+                   and item.get('gateway_reachable') is True
+                   and item.get('state') == 'STOPPED')
+        assert item.get('ready') is True or standby, {name:item}
+    print(json.dumps({'model_service_states':models['services'],
+                      'on_demand_standby_allowed':True,
+                      'ocr_wake_and_inference_verified_by_this_check':False}))
 for source in reference['source_probes']:
     with urllib.request.urlopen(urllib.request.Request(base+'/v1/source-probes/'+source['sha256'], headers={'Authorization':'Bearer '+token}),timeout=20) as response:
         manifest = json.load(response)
