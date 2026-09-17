@@ -28,6 +28,7 @@ def test_bu_ara_is_a_period_nobody_bounded():
     assert [(t.primitive, t.ambiguous) for t in slots] == [("AMBIGUOUS_RECENT", True)]
 
 
-def test_a_vague_period_must_be_read_out_loud(catalog, profiles):
+def test_a_vague_period_is_asked_back_not_guessed(catalog, profiles):
     sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Net ciro ne kadar oldu bu ara?", today=TODAY)
-    assert "bu ara" in sq.unresolved, sq.unresolved
+    assert any("bu ara" in c and "hangi dönemi" in c for c in sq.clarification), sq.clarification
+    assert "bu ara" not in sq.unresolved
