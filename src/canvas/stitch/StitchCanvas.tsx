@@ -256,7 +256,10 @@ function CanvasBody({
                 {d.q.text}
               </h1>
             </div>
-            <span className="w-2.5 h-2.5 rounded-full bg-mintSuccess ring-4 ring-mintSuccess/20 ml-2" title="ZEKİ AI Analiz Etti"></span>
+            <span
+              className={d.c5.sql ? 'w-2.5 h-2.5 rounded-full bg-mintSuccess ring-4 ring-mintSuccess/20 ml-2' : 'w-2.5 h-2.5 rounded-full bg-slate-300 ring-4 ring-slate-200/60 ml-2'}
+              title={d.c5.sql ? 'ZEKİ AI bu soruyu veriden cevapladı' : 'Henüz soru sorulmadı; kartlar özet dosyasından'}
+            ></span>
           </div>
         </div>
 
@@ -477,8 +480,11 @@ function CanvasBody({
           </div>
 
           <div className="mt-3 space-y-2">
-            <div className={showSql ? 'text-[11px] font-mono text-ink break-all max-h-24 overflow-auto' : 'text-xs font-bold text-ink'}>
-            {d.c5.summary}
+            <div className="text-xs font-bold text-ink">{d.c5.summary}</div>
+            {showSql && d.c5.sql && (
+              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-2 text-[11px] font-mono font-normal leading-snug text-ink">{d.c5.sql}</pre>
+            )}
+            <div className="hidden">
           </div>
 
             <div className="space-y-1.5 pt-1">
@@ -509,8 +515,15 @@ function CanvasBody({
 
             <div className="pt-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => setShowSql((v) => !v)} className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1">
-                  <span>{showSql ? 'Gizle' : "SQL'i göster"}</span>
+                <button
+                  type="button"
+                  onClick={() => setShowSql((v) => !v)}
+                  disabled={!d.c5.sql}
+                  title={d.c5.sql ? undefined : 'Bu görünümde çalıştırılan bir SQL yok; bir soru sorunca çıkar.'}
+                  aria-expanded={showSql}
+                  className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1 disabled:text-muted disabled:no-underline"
+                >
+                  <span>{showSql ? "SQL'i gizle" : "SQL'i göster"}</span>
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 </button>
                 {d.c5.sql && (

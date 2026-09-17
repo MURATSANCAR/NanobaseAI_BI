@@ -14,6 +14,7 @@ const KINDS = [
   ['annotation', 'Kolon açıklaması'],
   ['room', 'Toplantı odası'],
   ['booking', 'Oda rezervasyonu'],
+  ['session', 'Oturum'],
 ] as const;
 const ACTIONS = [
   ['', 'Her işlem'],

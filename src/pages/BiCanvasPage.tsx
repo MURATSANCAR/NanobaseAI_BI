@@ -1,40 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import StitchCanvas from '@/canvas/stitch/StitchCanvas';
-import { ZOOM_MAX, ZOOM_MIN } from '../canvas/stitch/Shell';
-import Shell from '@/canvas/stitch/Shell';
+import Shell, { ZOOM_MAX, ZOOM_MIN, ZoomStage } from '@/canvas/stitch/Shell';
 import Splash, { markSplashSeen, splashSeen } from '@/canvas/stitch/Splash';
 import SessionGate from '@/canvas/stitch/SessionGate';
-import { alertsData, cfoData, schedulesData } from '@/canvas/stitch/screens';
+import { alertsData, cfoData } from '@/canvas/stitch/screens';
 import { useCfoData } from '@/canvas/cfo';
 import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, boardApi, type AskAnswer } from '@/canvas/engine';
 import { fromDto, newId, nextSlot, topZ, type BoardCard } from '@/canvas/board/store';
 import type { BoardAction } from '@/canvas/stitch/data';
 import { useQueryClient } from '@tanstack/react-query';
-import { summarizeAlerts, summarizeSchedules, useCanvasQueries } from '@/canvas/data';
-import AlertsPanel, { parseRule, type RuleDraft } from '@/canvas/alerts/AlertsPanel';
+import { summarizeAlerts, useCanvasQueries } from '@/canvas/data';
+import AlertsPanel from '@/canvas/alerts/AlertsPanel';
 
-/** Yol parçası → ekran. Yeni ekran eklemek bu listeye bir satır eklemektir. */
-const SCREENS = ['planli-raporlar', 'uyarilar'] as const;
-type ScreenId = (typeof SCREENS)[number];
-const isScreen = (v: string | undefined): v is ScreenId => SCREENS.includes((v ?? '') as ScreenId);
+/** Bu sayfa iki yolu çizer: /genel-bakis (CFO kanvası) ve /uyarilar (kural listesi). Planlı raporlar ayrı ekrandır. */
 
 
 export default function BiCanvasPage() {
   // Ekran yolun son parçasından okunur: /timas/uyarilar → 'uyarilar'.
   const { pathname } = useLocation();
   const screen = pathname.split('/').filter(Boolean).pop();
-  // Uyarılar paneli adresten açılır: ?panel=kurallar | ?panel=yeni. Geri tuşu paneli kapatır.
+  // Uyarılar ekranı sekmesini adres taşır: ?panel=yeni → "Yeni kural"; yoksa kural listesi. Geri tuşu sekmeyi geri alır.
   const [params, setParams] = useSearchParams();
-  const panelParam = params.get('panel');
-  const panel = panelParam === 'kurallar' || panelParam === 'yeni' ? panelParam : null;
-  const [draft, setDraft] = useState<RuleDraft | null>(null);
+  const panel: 'kurallar' | 'yeni' = params.get('panel') === 'yeni' ? 'yeni' : 'kurallar';
 
-  const { schedules, alerts } = useCanvasQueries();
+  const { alerts } = useCanvasQueries();
   const qc = useQueryClient();
   const cfo = useCfoData();
 
-  const sched = useMemo(() => summarizeSchedules(schedules.data?.schedules ?? []), [schedules.data]);
   const alert = useMemo(() => summarizeAlerts(alerts.data?.alerts ?? [], alerts.data?.email), [alerts.data]);
   const source = ENGINE_ENABLED ? 'Canlı veri' : 'Bağlantı yok';
 
@@ -52,23 +45,10 @@ export default function BiCanvasPage() {
 
   const d = useMemo(() => {
     const z = `%${Math.round(zoom * 100)}`;
-    if (!isScreen(screen)) {
-      // Genel bakış CFO ekranıdır. Motor yolu yoksa
-      // portal özetine düşer.
-      return { ...cfoData(cfo, source), zoom: z };
-    }
-    if (screen === 'planli-raporlar') return { ...schedulesData(sched, schedules.isLoading, source), zoom: z };
+    // Genel bakış CFO ekranıdır; uyarılar yalnız kabuk verisini (kırıntı, ray) kullanır.
+    if (screen !== 'uyarilar') return { ...cfoData(cfo, source), zoom: z };
     return { ...alertsData(alert, alerts.isLoading, source), zoom: z };
-  }, [
-    screen,
-    cfo,
-    sched,
-    alert,
-    source,
-    zoom,
-    schedules.isLoading,
-    alerts.isLoading,
-  ]);
+  }, [screen, cfo, alert, source, zoom, alerts.isLoading]);
 
   // Soru kutusu başka ürüne gitmez: cevap kanvasın kendi karar kartına düşer.
   const [answer, setAnswer] = useState<AskAnswer | null>(null);
@@ -138,15 +118,7 @@ export default function BiCanvasPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);
 
-  // Uyarılar ekranında soru çubuğu kural yazar: cümle taslağa çevrilir, kişi panelde düzeltip kaydeder.
-  const onAsk = (q: string) => {
-    if (screen === 'uyarilar') {
-      setDraft(parseRule(q));
-      setParams({ panel: 'yeni' });
-      return;
-    }
-    ask(q);
-  };
+  const onAsk = (q: string) => ask(q);
 
   // Sohbet cevabı → pano kartı. Doğrusu sunucudaki pano: önce güncel liste okunur (başka sekmede eklenen
   // kart ezilmesin), kart boş yere eklenir, sonra sonucu sunucuda hesaplanır ki pano açılınca hazır olsun.
@@ -224,29 +196,25 @@ export default function BiCanvasPage() {
   return (
     <>
       {screen === 'uyarilar' ? (
-        // Uyarılar ekranı şimdilik boş: yalnız kabuk (üst şerit + ray). İçerik ayrıca tasarlanacak.
-        <Shell
-          head={{ tenant: view.tenant, section: view.section, crumb: view.crumb, source: view.source, presence: view.presence, zoom: view.zoom }}
-          rail={view.rail}
-          onZoom={onZoom}
-        >
-          {null}
+        // Uyarılar: kural listesi ve yeni kural formu sayfanın kendisidir. Önceden burası boş kabuktu ve
+        // panele götüren hiçbir düğme yoktu; kural kurma akışına arayüzden ulaşılamıyordu.
+        <Shell head={{ tenant: view.tenant, section: view.section, crumb: view.crumb, source: view.source, presence: view.presence }} rail={view.rail}>
+          <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+            <ZoomStage className="h-full">
+              <AlertsPanel
+                inline
+                mode={panel}
+                onMode={(m) => setParams(m === 'yeni' ? { panel: m } : {})}
+                onClose={() => setParams({})}
+                rules={alerts.data?.alerts ?? []}
+                email={alerts.data?.email ?? { configured: false, sender: null }}
+                draft={null}
+              />
+            </ZoomStage>
+          </main>
         </Shell>
       ) : (
         <StitchCanvas d={view} onAsk={onAsk} onZoom={onZoom} zoom={zoom} screen={screen ?? 'genel'} />
-      )}
-      {screen === 'uyarilar' && panel && (
-        <AlertsPanel
-          mode={panel}
-          onMode={(m) => setParams({ panel: m })}
-          onClose={() => {
-            setParams({});
-            setDraft(null);
-          }}
-          rules={alerts.data?.alerts ?? []}
-          email={alerts.data?.email ?? { configured: false, sender: null }}
-          draft={draft}
-        />
       )}
       {needsLogin && <SessionGate onDone={() => qc.invalidateQueries()} />}
     </>

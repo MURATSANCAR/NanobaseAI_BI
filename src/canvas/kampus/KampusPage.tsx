@@ -1,39 +1,25 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import {
   Activity,
+  Download,
   ArrowRight,
   Bell,
   Bot,
-  BookOpen,
-  Cake,
-  Calendar,
   ChevronDown,
-  ChevronRight,
   Contact,
-  FileCheck,
-  Flag,
-  Gift,
-  Headphones,
   HeartHandshake,
   LayoutGrid,
-  Laptop,
-  LifeBuoy,
   MessageCircle,
   Mic,
-  Pause,
   Phone,
   PhoneCall,
-  Play,
   Plus,
-  Radio,
   Search,
   Sparkle,
   Sparkles,
-  Ticket,
-  Truck,
 } from 'lucide-react';
 import groups from '../modules.json';
 import { LIVE } from '../stitch/ModulesMenu';
@@ -41,24 +27,23 @@ import { useTimasSession } from '../TimasSession';
 import { useIsAdmin } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
+import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, prefsApi, type Person } from '../engine';
+import { relative } from '../format';
 import PersonAvatar from './PersonAvatar';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
-import ahmetImg from '@/assets/kampus/ahmet.jpg';
-import busraImg from '@/assets/kampus/busra.jpg';
-import book1Img from '@/assets/kampus/book1.jpg';
-import book2Img from '@/assets/kampus/book2.jpg';
 import './kampus.css';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
  * Stitch ekranı projects/13426839861607265553/screens/a6864de4bb2047878357e34f67bda769
  * birebir JSX'e çevrildi. Tasarıma eklenen tek bölüm "Modüller": kanvas ekranlarına
- * buradan geçilir. Rehber CRM'deki gerçek, etkin kullanıcılardan gelir (dizinle kesiştirilir); kutlama ve alkış
- * içerikleri henüz bir kaynağa bağlı değil, tasarımdaki metinlerdir.
+ * buradan geçilir. Rehber CRM'deki gerçek, etkin kullanıcılardan gelir (dizinle kesiştirilir). Alkış duvarı ve zil
+ * sunucudaki kutlama kayıtlarını gösterir; günün modu kişinin tercihine yazılır. Tasarımdaki sesli bülten, çekiliş,
+ * doğum günü, ajanda, yeni kitap ve yemekhane kartları bir kaynağa bağlanamadığı için 2026-09-17'de kaldırıldı:
+ * çalışmayan düğme bırakılmaz.
  */
 
 /** Rehberde kat süzgeci: kat bilgisi CRM/dizin ya da kişinin profilinden gelir; düğmeler veriden türetilir. */
@@ -67,11 +52,12 @@ const ALL_FLOORS = 'ALL';
 /** "4. Kat E-12" gibi serbest metinden sıralanabilir kat etiketi. */
 const floorKey = (f: string) => f.trim();
 
+/** ZEKİ yalnız finans/satış verisine cevap verir (chat_scope); örnekler de o kapsamdan. */
 const PROMPTS = [
-  { label: '📍 3. Kat Masaları', q: 'Kat 3 editör masası dahili hatlarını listele' },
-  { label: '📦 Yeni Kitap Künyeleri', q: 'Matbaadan bu hafta çıkan eserlerin tam künyesini göster' },
-  { label: '🌴 İzin Bakiyem', q: 'Yıllık izin bakiye durumumu ve onay akışını ver' },
-  { label: '🎪 TÜYAP Sorumlusu', q: 'TÜYAP Fuarı stand lojistik sorumlusu kim?' },
+  { label: '💰 Bu yıl net ciro', q: 'Bu yıl net ciro ne kadar?' },
+  { label: '🏬 En çok satan 5 kanal', q: 'Bu yıl en çok satış yapılan 5 kanalı göster' },
+  { label: '📈 Aylara göre ciro', q: 'Bu yıl aylara göre net ciro' },
+  { label: '🧾 İade oranı', q: 'Bu yıl iade oranı yüzde kaç?' },
 ];
 
 /** Modül kutucukları: kanvasta açılan ekranlar. Yeni ekran geldikçe satır eklenir. */
@@ -83,31 +69,6 @@ const MODULE_TILES = [
   { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700', adminOnly: true },
   { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700', adminOnly: true },
   { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar, tanımlar, değişiklik kaydı', tone: 'bg-slate-200 text-slate-700', adminOnly: true },
-];
-
-type Praise = { from: string; to: string; when: string; text: string; emoji: string; likes: number; tag: string; tagTone: string; fresh?: boolean };
-
-const PRAISE: Praise[] = [
-  {
-    from: 'Selin K.',
-    to: 'Ahmet Yıldız',
-    when: '10 dk önce',
-    text: '"Yeni şiir dizisinin kapak tipografisi muazzam oldu, baskı öncesi son dakika revizyonundaki sabrın için sonsuz teşekkürler! 🎨👏"',
-    emoji: '❤️',
-    likes: 14,
-    tag: 'Tasarım Harikası',
-    tagTone: 'text-amber-800 bg-amber-50',
-  },
-  {
-    from: 'Emre V.',
-    to: 'Büşra Aksoy',
-    when: '45 dk önce',
-    text: '"Bologna Fuarı sözleşmelerinin sisteme 24 saat içinde eksiksiz işlenmesi büyük başarıydı. Timaş\'ta 5. yılın da kutlu olsun! 🏆✨"',
-    emoji: '👏',
-    likes: 29,
-    tag: 'Süper Koordinasyon',
-    tagTone: 'text-purple-800 bg-purple-50',
-  },
 ];
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
@@ -180,49 +141,85 @@ export default function KampusPage() {
   const isAdmin = useIsAdmin();
   const moduleTiles = MODULE_TILES.filter((m) => !m.adminOnly || isAdmin);
 
-  const [mood, setMood] = useState<string | null>(null);
-  // Kutla: kutlanan kişinin ekranına bildirim düşer (GreetingsInbox). Bugün kutladıklarım sunucudan gelir.
+  // Günün modu: kişinin tercihinde saklanır (prefs kampus:mood); önceden yalnız sekme belleğindeydi, "kaydedildi" yazıyordu.
   const qc = useQueryClient();
-  const greetings = useQuery({ queryKey: ['greetings'], queryFn: greetingsApi.state, enabled: ENGINE_ENABLED, retry: false });
-  const [greeted, setGreeted] = useState<Record<string, boolean>>({});
-  const [greetingTo, setGreetingTo] = useState<string | null>(null);
-  const isGreeted = (name: string) => greeted[name] || (greetings.data?.sent ?? []).includes(name);
-  const greet = async (name: string, occasion: string) => {
-    if (!ENGINE_ENABLED) {
-      setGreeted((g) => ({ ...g, [name]: true }));
-      return;
-    }
-    setGreetingTo(name);
-    try {
-      await greetingsApi.send(name, occasion);
-      setGreeted((g) => ({ ...g, [name]: true }));
-      toast.success(`${name} kutlandı`, { description: 'Bildirim ekranına gönderildi.' });
-      void qc.invalidateQueries({ queryKey: ['greetings'] });
-    } catch (e) {
-      toast.error('Kutlama gönderilemedi', { description: e instanceof Error ? e.message : undefined });
-    } finally {
-      setGreetingTo(null);
-    }
+  const moodQ = useQuery({ queryKey: ['prefs', 'kampus:mood'], queryFn: () => prefsApi.get<string>('kampus:mood'), enabled: ENGINE_ENABLED, retry: false, staleTime: 5 * 60_000 });
+  const [moodLocal, setMoodLocal] = useState<string | null>(null);
+  const mood = moodLocal ?? moodQ.data?.value ?? null;
+  const setMood = (e: string) => {
+    setMoodLocal(e);
+    if (!ENGINE_ENABLED) return;
+    prefsApi.put('kampus:mood', e).then(
+      () => void qc.invalidateQueries({ queryKey: ['prefs', 'kampus:mood'] }),
+      (err) => toast.error('Mod kaydedilemedi', { description: err instanceof Error ? err.message : undefined }),
+    );
   };
-  const [lottery, setLottery] = useState(false);
-  const [praise, setPraise] = useState(PRAISE);
-  const [liked, setLiked] = useState<Record<number, boolean>>({});
+
+  // Alkış / kutlama: sunucuda tutulur; alan kişinin ekranında bildirim çıkar, duvarda herkes görür.
+  const greetings = useQuery({ queryKey: ['greetings'], queryFn: greetingsApi.state, enabled: ENGINE_ENABLED, retry: false, refetchInterval: 60_000 });
+  const wall = greetings.data?.wall ?? [];
+  const received = greetings.data?.received ?? [];
+  const unseen = greetings.data?.inbox?.length ?? 0;
+  const [notifOpen, setNotifOpen] = useState(false);
+  useEffect(() => {
+    if (!notifOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setNotifOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [notifOpen]);
+
   const [praiseOpen, setPraiseOpen] = useState(false);
   const [praiseTo, setPraiseTo] = useState('');
   const [praiseText, setPraiseText] = useState('');
-  const [playing, setPlaying] = useState(false);
-
-  const sendPraise = (e: React.FormEvent) => {
+  const [praiseBusy, setPraiseBusy] = useState(false);
+  const sendPraise = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!praiseTo.trim() || !praiseText.trim()) return;
-    setPraise((p) => [
-      { from: firstName, to: praiseTo.trim(), when: 'Şimdi', text: `"${praiseText.trim()}"`, emoji: '❤️', likes: 1, tag: 'Taze Alkış', tagTone: 'text-violet bg-violet/10', fresh: true },
-      ...p,
-    ]);
-    setLiked((l) => Object.fromEntries(Object.entries(l).map(([k, v]) => [Number(k) + 1, v])));
-    setPraiseTo('');
-    setPraiseText('');
-    setPraiseOpen(false);
+    const to = praiseTo.trim();
+    const text = praiseText.trim();
+    if (!to || !text || praiseBusy) return;
+    if (!ENGINE_ENABLED) {
+      toast.error('Motor bağlı değil; alkış gönderilemez.');
+      return;
+    }
+    setPraiseBusy(true);
+    try {
+      const r = await greetingsApi.send(to, text);
+      toast.success(r.created ? `${to} alkışlandı` : `${to} bugün zaten alkışlanmış`, {
+        description: r.created ? 'Ekranına bildirim düştü, duvarda görünüyor.' : 'Aynı kişiye günde bir alkış gider.',
+      });
+      setPraiseTo('');
+      setPraiseText('');
+      setPraiseOpen(false);
+      void qc.invalidateQueries({ queryKey: ['greetings'] });
+    } catch (err) {
+      toast.error('Alkış gönderilemedi', { description: err instanceof Error ? err.message : undefined });
+    } finally {
+      setPraiseBusy(false);
+    }
+  };
+
+  // Alt bilgi: rehberi dosya olarak indir (Excel'in Türkçe ayarla açtığı ; ayraçlı, BOM'lu CSV).
+  const downloadDirectory = () => {
+    const cols: Array<[string, (p: Person) => string]> = [
+      ['Ad Soyad', (p) => p.name],
+      ['Ünvan', (p) => p.title],
+      ['Birim', (p) => p.unit],
+      ['Dahili', (p) => p.extension],
+      ['Kat', (p) => p.floor],
+      ['Masa', (p) => p.desk ?? ''],
+      ['Cep', (p) => p.mobile],
+      ['Telefon', (p) => p.phone],
+      ['E-posta', (p) => p.email],
+    ];
+    const cell = (v: string) => `"${(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [cols.map(([h]) => cell(h)).join(';'), ...everyone.map((p) => cols.map(([, f]) => cell(f(p))).join(';'))];
+    const blob = new Blob([`﻿${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dahili-rehber-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -268,22 +265,48 @@ export default function KampusPage() {
               </a>
             ))}
           </nav>
-          <a
-            href="#podcast-hub"
-            className="kp-press hidden shrink-0 items-center gap-2 rounded-xl bg-violet/10 px-3 py-2 text-xs font-bold text-violet hover:bg-violet/15 lg:flex"
-          >
-            <span className="h-2 w-2 animate-pulse rounded-full bg-coral" />
-            <Headphones className="h-3.5 w-3.5" /> Sesli Bülten #42
-          </a>
-          <button
-            type="button"
-            title="Bildirimler"
-            aria-label="Bildirimler"
-            className="kp-press relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-muted hover:bg-white hover:text-ink sm:h-9 sm:w-9"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />
-          </button>
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              title="Bildirimler"
+              aria-label={unseen ? `Bildirimler (${unseen} yeni)` : 'Bildirimler'}
+              aria-haspopup="dialog"
+              aria-expanded={notifOpen}
+              onClick={() => setNotifOpen((v) => !v)}
+              className="kp-press relative flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-white hover:text-ink sm:h-9 sm:w-9"
+            >
+              <Bell className="h-4 w-4" />
+              {unseen > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
+            </button>
+            {notifOpen && (
+              <>
+                <button type="button" aria-label="Bildirimleri kapat" onClick={() => setNotifOpen(false)} className="fixed inset-0 z-40 cursor-default" />
+                <div role="dialog" aria-label="Bildirimler" className="glass-panel absolute right-0 top-full z-50 mt-2 w-[min(92vw,360px)] rounded-2xl p-3 shadow-glass-float">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Sana gelen kutlamalar</span>
+                    <span className="kp-mono text-[11px] text-muted">son 30 gün</span>
+                  </div>
+                  {greetings.isLoading ? (
+                    <p className="text-xs text-muted">Yükleniyor…</p>
+                  ) : received.length === 0 ? (
+                    <p className="text-xs text-muted">Henüz kutlama yok. Alkış duvarından arkadaşlarını alkışlayabilirsin.</p>
+                  ) : (
+                    <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+                      {received.map((g) => (
+                        <li key={g.id} className="rounded-xl border border-slate-200/70 bg-white/80 p-2 text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-bold text-ink">{g.from}</span>
+                            <span className="kp-mono shrink-0 text-[11px] text-muted">{relative(g.at)}</span>
+                          </div>
+                          <p className="mt-0.5 text-ink/80">{g.occasion || 'Seni kutladı 🎉'}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => setProfileOpen(true)}
@@ -320,15 +343,11 @@ export default function KampusPage() {
             </div>
             <div className="rounded-xl border border-violet/15 bg-gradient-to-br from-coral/5 to-violet/5 p-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink">Günün Ofis Modu:</span>
-                <span className="kp-mono text-xs font-bold text-violet">🎨 %89 Yaratıcı</span>
+                <span className="text-xs font-semibold text-ink">Günün modun</span>
+                <span className="kp-mono text-xs font-bold text-violet">{mood ?? '—'}</span>
               </div>
-              <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200/80">
-                <div className="h-full rounded-full bg-gradient-to-r from-coral to-violet" style={{ width: '89%' }} />
-              </div>
-              <p className="mt-2 text-[11px] italic leading-tight text-muted">"Yayın kurulu haftası telaşı yerini taze matbaa kokusuna bıraktı!"</p>
               <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1 border-t border-slate-200/60 pt-2 text-[11px]">
-                <span className="text-muted">{mood ? `Modun kaydedildi ${mood}` : 'Senin modun nasıl?'}</span>
+                <span className="text-muted">{mood ? 'Modun kaydedildi.' : 'Senin modun nasıl?'}</span>
                 <div className="flex items-center gap-0.5 sm:gap-1.5">
                   {[
                     ['🔥', 'Alev Aldık'],
@@ -352,69 +371,6 @@ export default function KampusPage() {
             </div>
           </Card>
 
-          <Card className="p-4">
-            <h3 className="kp-display mb-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted">
-              <span>Hızlı Operasyon &amp; Destek</span>
-              <LifeBuoy className="h-3.5 w-3.5 text-muted/70" />
-            </h3>
-            <div className="space-y-2 text-xs">
-              {[
-                { icon: <Laptop className="h-3.5 w-3.5" />, title: 'BT & Ağ Desteği Aç', note: 'Ortalama yanıt: 6 dk', box: 'bg-violet/10 text-violet', hover: 'hover:bg-violet/5 hover:border-violet/30', q: 'BT ve ağ desteği talebi açmak istiyorum' },
-                { icon: <Truck className="h-3.5 w-3.5" />, title: 'Kurye & Kargo Çağır', note: 'Öğle toplama saati 14:30', box: 'bg-amber-100 text-amber-800', hover: 'hover:bg-amber-50/70 hover:border-amber-300', q: 'Kurye ve kargo çağırmak istiyorum' },
-                { icon: <FileCheck className="h-3.5 w-3.5" />, title: 'Telif & Hukuk Danışma', note: 'Standart şablonlar & onay', box: 'bg-purple-100 text-purple-700', hover: 'hover:bg-purple-50/70 hover:border-purple-300', q: 'Telif ve hukuk danışma şablonları' },
-              ].map((t) => (
-                <button
-                  key={t.title}
-                  type="button"
-                  onClick={() => askZeki(t.q)}
-                  className={`kp-press min-h-11 sm:min-h-0 group flex w-full items-center justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 p-2.5 text-left ${t.hover}`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-lg font-bold ${t.box}`}>{t.icon}</div>
-                    <div>
-                      <p className="font-semibold text-ink">{t.title}</p>
-                      <p className="text-[11px] text-muted">{t.note}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-muted/70 group-hover:text-violet" />
-                </button>
-              ))}
-            </div>
-          </Card>
-
-          <RoomsCard />
-
-          <section id="coffee-lottery" className="kp-card relative overflow-hidden rounded-2xl border border-amber-300/80 bg-gradient-to-br from-white/95 to-amber-50/70 p-4">
-            <div className="mb-2 flex items-center gap-2 text-amber-900">
-              <Gift className="h-4 w-4 text-amber-700" />
-              <h3 className="kp-display text-xs font-bold uppercase tracking-wider">Haftalık Kahve &amp; Çekiliş</h3>
-            </div>
-            <p className="text-xs leading-snug text-ink/80">
-              Bu haftanın çekilişi: <strong>Yazar İmzalı 3 Özel Cilt Eser</strong> + Genel Yayın Yönetmeniyle Teras Kahvesi Sohbeti!
-            </p>
-            <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-white/80 p-2.5 text-xs">
-              <div>
-                <span className="kp-mono text-[11px] font-semibold uppercase text-amber-800">Katılanlar</span>
-                <p className="font-bold text-ink">{lottery ? 65 : 64} Çalışanımız</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setLottery(true)}
-                disabled={lottery}
-                className={`kp-press min-h-11 sm:min-h-0 flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-white shadow-sm ${
-                  lottery ? 'bg-emerald-600' : 'bg-amber-600 hover:bg-amber-700'
-                }`}
-              >
-                {lottery ? (
-                  '✅ Katıldınız! (Bilet #65)'
-                ) : (
-                  <>
-                    <Ticket className="h-3.5 w-3.5" /> Çekilişe Katıl
-                  </>
-                )}
-              </button>
-            </div>
-          </section>
         </aside>
 
         {/* ORTA SÜTUN */}
@@ -429,7 +385,7 @@ export default function KampusPage() {
                   <img src={zekiImg} alt="ZEKİ AI - Timaş Kurumsal Asistanı" className="h-auto w-full object-cover" />
                   <div className="kp-mono absolute left-2.5 top-2.5 flex items-center gap-2 rounded-lg bg-ink/80 px-2.5 py-1 text-[11px] text-white backdrop-blur-md">
                     <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-                    <span>ZEKİ CANLI • v3.8</span>
+                    <span>ZEKİ CANLI</span>
                   </div>
                   <div className="absolute bottom-2 left-2 right-2 rounded-xl border border-slate-200/70 bg-white/90 px-3 py-1.5 text-center text-xs text-ink/80 backdrop-blur-md">
                     <span className="kp-display font-semibold text-violet">Timaş Kurumsal Zekası</span>
@@ -445,7 +401,7 @@ export default function KampusPage() {
                   Selam {firstName}! Ben <span className="text-violet">ZEKİ</span>, bugün hangi işi kolaylaştıralım?
                 </h2>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                  Dahili masalar, matbaa baskı takvimi, telif süreçleri, İK izinleri veya kitap arka kapak taslakları için her an buradayım.
+                  Satış, ciro, iade, tahsilat ve cari sorularını Logo verisinden cevaplarım; kişi ve dahili aramak için üstteki arama kutusu var.
                 </p>
                 <form
                   className="mt-4"
@@ -461,7 +417,7 @@ export default function KampusPage() {
                     <input
                       value={zekiQ}
                       onChange={(e) => setZekiQ(e.target.value)}
-                      placeholder="ZEKİ'ye sor: 'Kurgu dışı yayın takvimi ne zaman?', 'Deniz Kaya kimdir?'..."
+                      placeholder="ZEKİ'ye sor: 'Bu ay net ciro ne?', 'En çok satan 5 kanal'..."
                       className="w-full min-w-0 border-0 bg-transparent px-2.5 py-1.5 text-xs text-ink placeholder:text-muted/70 focus:outline-none focus:ring-0 sm:text-sm"
                     />
                     <button
@@ -723,215 +679,60 @@ export default function KampusPage() {
                 <input
                   value={praiseTo}
                   onChange={(e) => setPraiseTo(e.target.value)}
-                  placeholder="Kimi alkışlıyorsunuz?"
+                  list="kp-people"
+                  required
+                  aria-label="Kimi alkışlıyorsunuz?"
+                  placeholder="Kimi alkışlıyorsunuz? (rehberden ad soyad)"
                   className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-1.5 text-xs focus:border-violet focus:outline-none"
                 />
+                <datalist id="kp-people">
+                  {everyone.map((p) => (
+                    <option key={p.id} value={p.name} />
+                  ))}
+                </datalist>
                 <input
                   value={praiseText}
                   onChange={(e) => setPraiseText(e.target.value)}
+                  required
+                  maxLength={200}
+                  aria-label="Tebrik notu"
                   placeholder="Mikro tebrik notunuz"
                   className="rounded-lg border border-slate-200/70 bg-white px-2.5 py-1.5 text-xs focus:border-violet focus:outline-none"
                 />
-                <button type="submit" className="kp-press min-h-11 sm:min-h-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700">
-                  Gönder
+                <button type="submit" disabled={praiseBusy} className="kp-press min-h-11 sm:min-h-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-60">
+                  {praiseBusy ? 'Gönderiliyor…' : 'Gönder'}
                 </button>
               </form>
             )}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {praise.map((p, i) => (
-                <div
-                  key={`${p.from}-${p.to}-${i}`}
-                  className={`flex flex-col justify-between rounded-xl border p-3 ${p.fresh ? 'border-violet/20 bg-violet/5' : 'border-slate-200/70 bg-slate-50/80'}`}
-                >
-                  <div>
+            {greetings.isLoading ? (
+              <p className="text-xs text-muted">Yükleniyor…</p>
+            ) : greetings.error ? (
+              <p className="text-xs text-rose-700">{greetings.error instanceof EngineAuthError ? 'Oturum gerekli.' : 'Alkış duvarı yüklenemedi.'}</p>
+            ) : wall.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-200 p-4 text-center text-xs text-muted">Son 30 günde alkış yok. İlkini sen gönder.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {wall.map((g) => (
+                  <div key={g.id} className="flex flex-col justify-between rounded-xl border border-slate-200/70 bg-slate-50/80 p-3">
                     <div className="mb-1.5 flex items-center justify-between gap-2 text-[11px]">
                       <span className="font-bold text-ink">
-                        {p.from} ➔ {p.to}
+                        {g.from} ➔ {g.to}
                       </span>
-                      <span className={p.fresh ? 'kp-mono font-semibold text-violet' : 'text-muted/70'}>{p.when}</span>
+                      <span className="kp-mono shrink-0 text-muted/70">{relative(g.at)}</span>
                     </div>
-                    <p className="text-xs leading-snug text-ink/80">{p.text}</p>
+                    <p className="text-xs leading-snug text-ink/80">{g.occasion || 'Kutladı 🎉'}</p>
                   </div>
-                  <div className="mt-2.5 flex items-center justify-between border-t border-slate-200/60 pt-2 text-xs">
-                    <button
-                      type="button"
-                      aria-pressed={!!liked[i]}
-                      onClick={() => setLiked((l) => ({ ...l, [i]: !l[i] }))}
-                      className={`kp-press min-h-11 sm:min-h-0 flex items-center gap-1 ${liked[i] ? 'text-rose-600' : 'text-muted hover:text-rose-600'}`}
-                    >
-                      <span>{p.emoji}</span> <span className="kp-mono font-bold">{p.likes + (liked[i] ? 1 : 0)}</span>
-                    </button>
-                    <span className={`kp-mono rounded px-1.5 py-0.5 text-[11px] ${p.tagTone}`}>{p.tag}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </Card>
 
-          {/* SESLİ BÜLTEN */}
-          <section id="podcast-hub" className="kp-card relative overflow-hidden rounded-2xl bg-gradient-to-r from-ink via-[#262b45] to-ink p-5 text-white">
-            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-1/3 bg-gradient-to-l from-violet/25 to-transparent" />
-            <div className="relative z-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <div className="flex min-w-0 items-center gap-3.5">
-                <div className="kp-glow flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet text-white">
-                  <Radio className="h-6 w-6" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="kp-mono whitespace-nowrap rounded border border-violet/40 bg-violet/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-coral">
-                      Haftanın Sesli Bülteni
-                    </span>
-                    <span className="kp-mono text-[11px] text-muted/70">14 Dk • Bölüm #42</span>
-                  </div>
-                  <h3 className="kp-display mt-1 text-sm font-bold text-white">"Matbaadan Raflara: Editör Masasında Bir Kitabın Doğuşu"</h3>
-                  <p className="mt-0.5 text-xs text-muted/60">Konuk: Prof. Dr. M. Yılmaz &amp; Deniz Kaya (Seslendiren: ZEKİ Voice)</p>
-                </div>
-              </div>
-              <div className="flex w-full items-center justify-end gap-3 sm:w-auto">
-                <button
-                  type="button"
-                  aria-label={playing ? 'Duraklat' : 'Oynat'}
-                  onClick={() => setPlaying((v) => !v)}
-                  className="kp-press flex h-11 w-11 items-center justify-center rounded-full bg-white sm:h-10 sm:w-10 text-ink shadow-md hover:bg-violet hover:text-white"
-                >
-                  {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
-                </button>
-                <div className="hidden text-right sm:block">
-                  <span className={`kp-mono block text-[11px] ${playing ? 'text-coral' : 'text-muted/70'}`}>
-                    {playing ? '02:15 / 14:12 (Çalıyor)' : '00:00 / 14:12'}
-                  </span>
-                  <span className="text-[11px] text-coral">Bölüm Notları (.md)</span>
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 flex h-4 items-center gap-1 border-t border-white/10 pt-3">
-              {[
-                ['bg-violet', 'h-2', true],
-                ['bg-coral', 'h-3', true],
-                ['bg-slate-500', 'h-1.5', false],
-                ['bg-violet', 'h-4', true],
-                ['bg-slate-500', 'h-2', false],
-                ['bg-coral', 'h-3.5', true],
-                ['bg-slate-500', 'h-1', false],
-                ['bg-violet', 'h-3', false],
-                ['bg-slate-600', 'h-2', false],
-                ['bg-coral/70', 'h-4', false],
-              ].map(([c, h, pulse], i) => (
-                <span key={i} className={`w-1 shrink-0 rounded-full ${c} ${h} ${pulse && playing ? 'animate-pulse' : ''}`} />
-              ))}
-              <span className="ml-2 h-1 w-full rounded-full bg-white/10">
-                <span className="block h-1 rounded-full bg-violet" style={{ width: playing ? '16%' : '24%' }} />
-              </span>
-            </div>
-          </section>
         </main>
 
         {/* SAĞ SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
-          <Card id="kutlamalar" className="relative overflow-hidden p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Cake className="h-4 w-4 text-amber-600" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Bugün Doğanlar (2)</h3>
-              </div>
-              <span className="kp-mono whitespace-nowrap rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-800">17 Nisan</span>
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { name: 'Ahmet Yıldız', occasion: 'Doğum Günü', note: 'Grafik • Doğum Günü 🎈', img: ahmetImg, ring: 'ring-amber-300', btn: 'bg-amber-100 text-amber-900 hover:bg-amber-200' },
-                { name: 'Büşra Aksoy', occasion: '5. Yıl', note: 'Yayın Koor. • 5. Yıl 🏆', img: busraImg, ring: 'ring-sky-300', btn: 'bg-sky-100 text-sky-900 hover:bg-sky-200' },
-              ].map((p) => (
-                <div key={p.name} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-2.5">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <img src={p.img} alt={p.name} className={`h-8 w-8 shrink-0 rounded-lg object-cover ring-2 ${p.ring}`} />
-                    <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-ink">{p.name}</h4>
-                      <p className="text-[11px] text-muted">{p.note}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    disabled={isGreeted(p.name) || greetingTo === p.name}
-                    aria-busy={greetingTo === p.name}
-                    onClick={() => greet(p.name, p.occasion)}
-                    className={`kp-press min-h-11 sm:min-h-0 shrink-0 rounded-lg whitespace-nowrap px-3 py-1 text-xs font-medium sm:px-2 sm:text-[11px] ${isGreeted(p.name) ? 'bg-emerald-100 text-emerald-800' : p.btn}`}
-                  >
-                    {isGreeted(p.name) ? 'Kutlandı ✓' : greetingTo === p.name ? 'Gönderiliyor…' : 'Kutla'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <Card id="ajanda" className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-sky-600" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Önemli Günler &amp; Ajanda</h3>
-              </div>
-              <span className="shrink-0 text-[11px] font-medium text-violet">Takvime Ekle</span>
-            </div>
-            <div className="relative space-y-3.5 border-l-2 border-slate-200/70 pl-3.5 text-xs">
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-sky-600 ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
-                <h4 className="mt-0.5 font-bold text-ink">Dünya Kitap ve Telif Hakları Günü</h4>
-                <p className="text-[11px] text-muted">Genel merkez fuayesinde mini sergi &amp; söyleşi</p>
-              </div>
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-violet ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-violet">26 Nisan Cuma • 15:30</span>
-                <h4 className="mt-0.5 font-bold text-ink">Aylık Yayın Kurulu Değerlendirmesi</h4>
-                <p className="text-[11px] text-muted">Büyük Divan Salonu &amp; Zoom Hibrit</p>
-              </div>
-              <div className="rounded-xl border border-violet/20 bg-violet/5 p-3 text-xs">
-                <div className="flex items-center justify-between gap-2 font-bold text-ink">
-                  <span className="flex items-center gap-1">
-                    <Flag className="h-3.5 w-3.5 text-rose-500" /> TÜYAP Fuarı 2024
-                  </span>
-                  <span className="kp-mono whitespace-nowrap rounded bg-rose-100 px-1.5 py-0.5 text-[11px] text-rose-700">18 Gün</span>
-                </div>
-                <p className="mt-1 text-[11px] text-muted">Stand planı, görev listesi ve yazar imza saatleri ZEKİ AI üzerinden görüntülenebilir.</p>
-              </div>
-            </div>
-          </Card>
-
-          <Card id="yeni-kitaplar" className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-violet" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Matbaadan Yeni Çıkanlar</h3>
-              </div>
-              <span className="kp-mono shrink-0 text-[11px] font-semibold text-muted">6 Yeni Baskı</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { title: 'Gecenin Sessiz Yankısı', author: 'Selin Karahan', img: book1Img, badge: 'YENİ', badgeTone: 'bg-violet', hover: 'hover:border-violet/30' },
-                { title: 'İpek Yolunun Muhafızları', author: 'Prof. Dr. M. Yılmaz', img: book2Img, badge: '2. BASKI', badgeTone: 'bg-emerald-600', hover: 'hover:border-emerald-300' },
-              ].map((b) => (
-                <div key={b.title} className={`kp-cover min-w-0 rounded-xl border border-slate-200/70 bg-slate-50/80 p-2 transition-colors ${b.hover}`}>
-                  <div className="relative mb-1.5 aspect-[2/3] w-full overflow-hidden rounded-lg bg-slate-200">
-                    <img src={b.img} alt={b.title} className="h-full w-full object-cover" />
-                    <span className={`kp-mono absolute left-1 top-1 rounded px-1 text-[11px] font-bold text-white ${b.badgeTone}`}>{b.badge}</span>
-                  </div>
-                  <h5 className="truncate text-[11px] font-bold text-ink">{b.title}</h5>
-                  <p className="truncate text-[11px] text-muted">{b.author}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/70 bg-slate-100/90 p-3.5 text-xs">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="text-base">🍲</span>
-              <div className="min-w-0">
-                <span className="block font-bold text-ink">Yemekhane Bugün (12:00-14:00)</span>
-                <span className="text-[11px] text-muted">Yayla Çorbası • Fırın Tavuk Rosto • Bulgur</span>
-              </div>
-            </div>
-            <span className="shrink-0 text-[11px] font-semibold text-violet">Detay</span>
-          </div>
+          <RoomsCard />
         </aside>
       </div>
 
@@ -945,12 +746,15 @@ export default function KampusPage() {
             <span>•</span>
             <span className="font-medium text-violet">Birlikte Üretiyor, Birlikte Okuyoruz</span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1">
-            <span>Dahili Rehber (.xls)</span>
-            <span>İK İzin Formları</span>
-            <span>Telif &amp; Hukuk Şablonları</span>
-            <span>KVKK</span>
-          </div>
+          <button
+            type="button"
+            onClick={downloadDirectory}
+            disabled={everyone.length === 0}
+            className="kp-press flex min-h-11 items-center gap-1.5 rounded-xl px-3 font-semibold text-violet hover:bg-white disabled:text-muted sm:min-h-0 sm:py-1.5"
+            title="Rehberdeki herkesi CSV olarak indir (Excel açar)"
+          >
+            <Download className="h-3.5 w-3.5" /> Dahili Rehber (CSV)
+          </button>
         </div>
       </footer>
       </ZoomStage>

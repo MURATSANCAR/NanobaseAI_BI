@@ -3083,7 +3083,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def greetings_state(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = _greetings(request)
         return {"sent": greetings_mod.sent_today(engine, tenant, user),
-                "inbox": greetings_mod.inbox(engine, tenant, user, display)}
+                "inbox": greetings_mod.inbox(engine, tenant, user, display),
+                # Kampüs zili ve alkış duvarı: görülmüş olsa da son 30 günün kayıtları.
+                "received": greetings_mod.received(engine, tenant, user, display),
+                "wall": greetings_mod.wall(engine, tenant)}
 
     @app.post("/api/v1/greetings", status_code=201)
     def greetings_send(request: Request, body: dict[str, Any]) -> dict[str, Any]:
