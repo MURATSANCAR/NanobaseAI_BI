@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Qwen3.8-Flash-Next iki H100'de açıldı
+
+- 186 GB indirme bitti, 144 dosya boyutu kaynakla eşleşti. Model resmî doğrulanmış olmayan 2 × H100 NVL düzeninde ilk ayarlarla açıldı: kart başına 64,6 GiB ağırlık, 950.590 token KV önbelleği, bellek hatası yok.
+- NVLink olmadığı için iletişim yolu denetlendi (doğrudan erişim açık, PCIe Gen5 x16). İşçi süreçlerinin NUMA'ya bağlı olmadığı görüldü; `--numa-bind` + `SYS_NICE` eklendi ve bağlanma süreç düzeyinde doğrulandı.
+- Ölçüm: tek istek ≈ 130 tok/sn, 32 eşzamanlı ≈ 1.500 tok/sn, BI sorusundan doğru T-SQL 0,7–2,0 sn. İlk ölçüm soğuk olduğu için NUMA kazancı ayrıştırılmadı.
+- Kitap sayfası denemesi: balonu harfi harfine okudu, fakat bir düz yazı sayfasında anlatı cümlesi atladı ve diyaloğu balon diye etiketledi. Editörde tek kaynak olarak kullanılmayacak; OCR kararı değişmedi. Golden set ve 1.149 bölgelik karşılaştırma açık. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
 ## 2026-09-17 — Türk Telekom GPU sunucusu: Mac üzerinden VPN, envanter, Qwen3.8-Flash-Next hazırlığı
 
 - Test sunucusu TT VPN ağ geçidine ulaşamadığı için (aşağıdaki giriş) VPN kullanıcı kararıyla Mac'te açıldı: sudo gerektirmeyen `~/homebrew` altında openconnect 9.21 + ocproxy derlendi, `~/bin/ttvpn-mac` tüneli kullanıcı alanında tutar (SOCKS5 11080), Mac'in rotalarına dokunmaz. Parola ve OTP'yi kullanıcı girdi. Sertifika uyarısı bağımsız doğrulandı (neden: GnuTLS kök dosyasını bulmuyor), betiğe `--cafile` eklendi.
