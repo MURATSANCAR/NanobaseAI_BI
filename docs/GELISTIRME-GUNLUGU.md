@@ -45,6 +45,33 @@ Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karş
 - Temizlik: canlı `config.py`, `admin.py`, `llm_client.py` repo sürümüyle eşitlendi (fark yalnız sağlayıcı varsayılanlarıydı); `nanobase-language-pool` ek dosyası ve `nanobase-vocabulary.service` içindeki silinmiş env dosyası satırı kaldırıldı (servis bu yüzden `failed` idi); `semantic-bridge.env` içindeki eski yorum düzeltildi; kalıcı bellek notları yeniden yazıldı (`llm-tt-gpu`). Bırakılanlar: günlükteki tarihsel kayıtlar (silinmez), GPU **donanımı** anlatan satırlar (`nvidia-smi`, `nvidia-container-toolkit`, `lspci`) ve ana sayfadaki "NVIDIA Inception Program Üyesi" rozeti (pazarlama içeriği — kaldırılması ayrı karar).
 - Soru 22 (vadesi geçmiş, tahsil edilmemiş alacaklar): yeni modelle 19 sn'de dürüst red — 2026 kopyasında borç kapama işlenmediği için yaşlandırma yapılamaz (bilgi paketi uyarısı). Bağımsız ölçüm aynı şeyi gösteriyor: 2.079.343 vadesi geçmiş plan satırının hiçbirinde `PAID > 0` yok; "açık" görünen 1,63 Mr ₺ gerçek alacak değil. Karne 1–22 doğru.
 
+## 2026-09-18 — PaddleOCR-VL-1.6: ihtiyaç olunca açılan OCR servisi
+
+- TT GPU makinesine PaddleOCR-VL-1.6 Docker olarak kuruldu. Küçük bir kapı konteyneri (port 8010) ilk istekte OCR konteynerini başlatır, 10 dakika istek gelmezse durdurur; kullanılmadığında GPU belleği tutmaz. Soğuk açılış 68,6 sn, boşta kapanma ve belleğin geri dönüşü ölçülerek doğrulandı; Flash-Next ile aynı kartta kalan dar payda çalışıyor.
+- İki gerçek sayfada deneme: kutu koordinatı ve eksiksiz metin veriyor, fakat Türkçe harflerde hatalı ("DUR!" → "DURI", ş/ğ/ı düşüyor). Flash-Next'in tersi: o harfleri doğru okuyup cümle atlamıştı. İş bölümü buna göre düşünülecek; editöre bağlama ve 1.149 bölgelik karşılaştırma kullanıcı onayını bekliyor. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
+## 2026-09-18 — Qwen3.8-Flash-Next iki H100'de açıldı
+
+- 186 GB indirme bitti, 144 dosya boyutu kaynakla eşleşti. Model resmî doğrulanmış olmayan 2 × H100 NVL düzeninde ilk ayarlarla açıldı: kart başına 64,6 GiB ağırlık, 950.590 token KV önbelleği, bellek hatası yok.
+- NVLink olmadığı için iletişim yolu denetlendi (doğrudan erişim açık, PCIe Gen5 x16). İşçi süreçlerinin NUMA'ya bağlı olmadığı görüldü; `--numa-bind` + `SYS_NICE` eklendi ve bağlanma süreç düzeyinde doğrulandı.
+- Ölçüm: tek istek ≈ 130 tok/sn, 32 eşzamanlı ≈ 1.500 tok/sn, BI sorusundan doğru T-SQL 0,7–2,0 sn. İlk ölçüm soğuk olduğu için NUMA kazancı ayrıştırılmadı.
+- Kitap sayfası denemesi: balonu harfi harfine okudu, fakat bir düz yazı sayfasında anlatı cümlesi atladı ve diyaloğu balon diye etiketledi. Editörde tek kaynak olarak kullanılmayacak; OCR kararı değişmedi. Golden set ve 1.149 bölgelik karşılaştırma açık. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
+## 2026-09-17 — Türk Telekom GPU sunucusu: Mac üzerinden VPN, envanter, Qwen3.8-Flash-Next hazırlığı
+
+- Test sunucusu TT VPN ağ geçidine ulaşamadığı için (aşağıdaki giriş) VPN kullanıcı kararıyla Mac'te açıldı: sudo gerektirmeyen `~/homebrew` altında openconnect 9.21 + ocproxy derlendi, `~/bin/ttvpn-mac` tüneli kullanıcı alanında tutar (SOCKS5 11080), Mac'in rotalarına dokunmaz. Parola ve OTP'yi kullanıcı girdi. Sertifika uyarısı bağımsız doğrulandı (neden: GnuTLS kök dosyasını bulmuyor), betiğe `--cafile` eklendi.
+- `tt-gpu` (2 × H100 NVL, 2 TB RAM) ve `tt-gpu-vm` için SSH adları ve test sunucusuna ters tünel (`~/bin/ttvpn-bridge`) kuruldu; sunucudan iki makinenin SSH karşılaması doğrulandı. Sunucu anahtarının TT makinelerine eklenmesi izin denetiminde reddedildi, yapılmadı.
+- Envanter çıkarıldı: iki GPU'yu dolduran Gemma-4-31B vLLM'leri 13 ve 20 gündür istek almıyordu; durduruldu, silinmedi. Kullanıcı Qwen3.8-27B dosyalarını, Docker derleme önbelleğini ve kullanılmayan imaj/konteynerleri sildi (sistem diski 175 → 269 GB boş). `mssql-logo` çalışmaya devam ediyor.
+- Ölçüldü: GPU'lar arasında NVLink yok (`SYS`); internet çıkışı toplam ≈ 100 Mbit ile sınırlı (iki bağımsız kaynakla sınandı), bu yüzden 186 GB'lık indirme yaklaşık 5 saat sürüyor.
+- `Qwen/Qwen3.8-Flash-Next-FP8` indirmesi `/data/hf-cache` altına başlatıldı (xet takıldı, düz HTTP'ye alındı), özel vLLM imajı çekildi, iki GPU'yu tek model olarak kullanan `/data/qwen38/docker-compose.yml` yazıldı ve doğrulandı. Model henüz başlatılmadı; iki H100 tarifte doğrulanmış bir yapılandırma değil, açılmama ihtimali gerçek. Geri dönüş: Qwen3.8-27B-FP8 tek kartta veya mevcut Gemma.
+- Editör için OCR kararı verildi, denenmedi: «Ekrana Sığmayan Macera»da düz yazı PDF'te gömülü, balon yazıları eğriye çevrilmiş. Ana okuyucu PaddleOCR-VL-1.6, ikinci bağımsız okuyucu ve konuşmacı ataması Flash-Next; kanıt yolu kayıtlı 1.149 bölgenin yeniden koşturulması. [Ayrıntı](TT-GPU-SUNUCUSU.md).
+
+## 2026-09-17 — Türk Telekom VPN istemcisi hazırlandı, ağ geçidine erişim kapalı
+
+- Test sunucusuna `openconnect` kuruldu; etkileşimli giriş betiği `ttvpn-login` ve rota koruyan `ttvpn-script` yerleştirildi. Betik varsayılan rotayı ve DNS'i devralmaz; amaç TİMAŞ `tun0` tünelini ve sunucu erişimini bozmamak. Kimlik bilgisi ve OTP diske yazılmaz, girişte kullanıcı tarafından yazılır.
+- Bağlantı kurulamadı ve denenmedi: sunucudan `sgmvpn.turktelekom.com.tr:443` TCP zaman aşımı veriyor, aynı adres Türkiye çıkışlı bağlantıdan 302 ile yanıt veriyor. DNS doğru çözülüyor. Neden büyük olasılıkla ağ geçidinde yurt dışı IP engeli; TT'den 38.247.162.28 için izin istenmesi gerekiyor. Betikler söz dizimi denetiminden geçti, gerçek oturumla doğrulanmadı.
+
+
 ## 2026-09-17 — Test sunucusunda düşen 10 test: kod sağlam, sunucudaki test dosyaları bayattı
 
 - **Neden:** LLM kapısı kabulünde tam paket 10 test düşürdü; aynı 10'u değişmemiş canlı ağaçta da düşüyordu. Kök neden arandı.
