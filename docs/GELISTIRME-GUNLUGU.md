@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Qwen ana model / paralel OCR V11
+
+Bağımsız görsel gözlem ve ihtiyaç halinde GPU bölgesel OCR paralelleştirildi; kaynak bağımlı iddialar ikisini bekler. Ham ölçüm/provenance ve çelişki kapıları korunur. Gerçek yeni nesil kabulü sürüyor. [Ayrıntı](editor/2026-09-18-qwen-ocr-parallel.md).
+
 ## 2026-09-18 — GPU OCR açılış hatası düzeltildi
 
 Yeniden başlatma aynı bellek hatasıyla503 verdi. OCR rezervasyonu %5 → %4 indirildi; gerçek GPU gateway healthy ve model listesi200 doğrulandı. Qwen kesilmedi; boşta kapanma600 saniye korundu. Komut override'ı depoya eklendi. Gerçek OCR ve tam yaşam döngüsü kabulü ayrı açık işlerdir. [Kayıt](editor/2026-09-18-paddleocr-vl-readiness.md).
