@@ -54,7 +54,7 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Yönetim: değişiklik kaydı süzgecine `session` türü; promt notunda blur+tık çift PATCH kaldırıldı (Enter/Kaydet); ayrıntı penceresi Esc ile kapanır; Onaylar'da "Onayla" 44 px.
 - Doğrulama: portal (nanobase-direct) dosyaları main ile aynıydı → yalnız değişen 14 dosya kopyalandı, sunucuda derlendi, köprü yeniden başlatıldı (yeni API alanı), tarayıcıda timasai oturumuyla Kampüs (zil, mod PUT, alkış duvarı, sahte kartlar yok), Uyarılar (panel), kabuk (baş harfler) doğrulandı. Not: denetim sırasında VPN tüneli düşmüştü, SQL kapalıyken 0 ₺/503 görüldü; kullanıcı MFA ile açtı, veri geri geldi (848,1 Mn ₺).
 - Sunucu notu: `/tmp/bi-docker`'a `rsync --delete` yapılırken sunucuya özel `docker-compose.override.yml` (web :8090) silindi, aynı içerikle geri yazıldı; bir dahaki eşitlemede `--exclude docker-compose.override.yml`.
-- Müşteri VM'i (192.168.0.55) bu değişiklikleri ve zoom düzeltmesini henüz almadı; kurulum betiği (`deploy-customer-vm.sh`, tam yığın derleme) kullanıcı onayı bekliyor.
+- Müşteri VM'i (192.168.0.55): kullanıcı onayıyla güncel main `/tmp/bi-docker`'a eşitlenip (`--exclude docker-compose.override.yml/.env/secrets`) `deploy-customer-vm.sh` systemd-run ile koşturuldu; bridge/web/login yeniden derlendi, kesinti yalnız konteyner değişimi. Doğrulama VM'de: dış kapı 200, yeni bundle (`index-rLypPCXQ`), chunk'larda `shell-zoom-stage`/`Dahili Rehber (CSV)` var, sahte içerik yok; köprü `db:true llm:true` 4.874 profil; timasai kısa oturumuyla session/engine/cfo.json/board/people/prefs 200, greetings `received/wall` alanları geliyor; oturum silindi.
 
 ## 2026-09-16 — Sağ üst yakınlaştırma düğmesi kanvas dışındaki ekranlarda çalışmıyordu
 
