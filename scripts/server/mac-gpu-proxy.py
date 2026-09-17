@@ -33,7 +33,7 @@ def main():
     parser.add_argument('--listen-port', type=int, default=18081)
     args = parser.parse_args()
     slots = threading.BoundedSemaphore(16)
-    allowed = {'/health', '/v1/models', '/tokenize', '/v1/chat/completions'}
+    allowed = {'/health', '/gateway/status', '/v1/models', '/tokenize', '/v1/chat/completions'}
     hop = {'host', 'connection', 'transfer-encoding', 'keep-alive', 'upgrade',
            'proxy-authorization', 'proxy-authenticate', 'te', 'trailer'}
 

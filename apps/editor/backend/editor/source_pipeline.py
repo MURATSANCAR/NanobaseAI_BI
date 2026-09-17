@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v10'
+VERSION = 'source-spans-v11'
 
 
 def same_model(metrics):
@@ -193,7 +193,7 @@ def reused_reading(parent,evidence):
         'reused_from_generation':str(parent),'reused_reading_id':str(readings[key]['id'])}
 
 
-def optical(job, evidence, document, root, parent=None):
+def optical(job, evidence, document, root, parent=None, on_layout=None):
     gen=job['generation_id']; page=evidence['data']['pdf_page']; key=evidence['record_key']
     d=evidence['data']; image_path=root/'ocr-regions-v2'/f'page-{page:04}.png'
     raw=image_path.read_bytes()
@@ -227,6 +227,27 @@ def optical(job, evidence, document, root, parent=None):
         drafts.append({'line':line,'secondary':secondary,'neighbors':neighbors,'pdf_text':pdf_text,
                        'pdf_neighbors':pdf_neighbors,'pdf_usable':pdf_usable,'reread':reread,
                        'needs_review':needs_review,'sid':str(identifier(gen,'source_spans',key+f'-{i:04}'))})
+    regions=[]; size=document['pages'][str(page)]['size']
+    for group in ('texts','pictures'):
+        for item in document.get(group,[]):
+            for p in item.get('prov',[]):
+                if p['page_no']!=page: continue
+                b=p['bbox']; top=(size['height']-b['t']) if b['coord_origin']=='BOTTOMLEFT' else b['t']
+                x=max(0,b['l']/size['width']); y=max(0,top/size['height'])
+                bbox=[x,y,min(1-x,abs(b['r']-b['l'])/size['width']),min(1-y,abs(b['t']-b['b'])/size['height'])]
+                if min(bbox[2:])<=0: continue
+                regions.append({'type':'PICTURE' if group=='pictures' else 'TEXT',
+                    'label':item.get('label'),'bbox':bbox,'source_ref':item['self_ref']})
+    layout_value={'pdf_page':page,'evidence_refs':[str(evidence['id'])],
+        'regions':regions,'method':'existing_hash_verified_docling_layout',
+        'native_pdf_regions':pdf['lines'],'native_pdf_artifact_sha256':sha(pdf_path.read_bytes()),
+        'balloon_candidates':result.get('balloon_candidates',[]),
+        'balloons_truncated':result.get('balloons_truncated',False),
+        'source_artifact_sha256':sha((root/'docling.json').read_bytes()),
+        'verification_status':'CANDIDATE','does_not_supply_text':True}
+    save(job,'layout_regions',key,layout_value)
+    if on_layout:
+        on_layout({'data':layout_value}, [{'id':identifier(gen,'source_spans',key+f'-{i:04}')} for i in range(len(result['lines']))])
     generated_reread=False
     if any(draft['needs_review'] and draft['reread'] is None for draft in drafts):
         from editor.reread_queue import submit, await_result
@@ -267,11 +288,23 @@ def optical(job, evidence, document, root, parent=None):
             verdict = {'status':'TEXT_AGREED', 'issues':['FULL_PAGE_READING_SUPERSEDED'],
                 'pdf_matches':bool(pdf_usable and word_tokens(pdf_text)==word_tokens(selected_text)),
                 'reread_state':selection['reread_state']}
+        vl_measurement=None; vl_selection=None
+        if verdict['status']!='TEXT_AGREED' and os.environ.get('EDITOR_OCR_VL_BASE_URL'):
+            from editor.ocr_vl import read_region, select_supported
+            with connection() as db: fence(db,job)
+            vl_measurement=read_region(raw,d,bbox)
+            with connection() as db: fence(db,job)
+            vl_selection=select_supported(vl_measurement,line,secondary,pdf_text,pdf_usable,reread)
+            if vl_selection['selected_text'] is not None:
+                selected_text=vl_selection['selected_text']; selected_reader='PADDLEOCR_VL'
+                verdict={**verdict,'status':'TEXT_AGREED','pdf_matches':vl_selection['pdf_matches'],
+                         'issues':['OCR_VL_INDEPENDENTLY_SUPPORTED']}
         status,issues,pdf_agrees = verdict['status'],verdict['issues'],verdict['pdf_matches']
         sid=identifier(gen,'source_spans',key+f'-{i:04}')
         value={'pdf_page':page,'evidence_refs':[str(evidence['id'])], 'bbox':bbox,
             'coordinate_system':'normalized_top_left','text':selected_text,'raw_text':line['text'],
             'selected_reader':selected_reader,'regional_selection':selection,
+            'ocr_vl_measurement':vl_measurement,'ocr_vl_selection':vl_selection,
             'region_text':line.get('region_text'), 'secondary_text':secondary,
             'pdf_text':pdf_text,'pdf_usable':pdf_usable,'pdf_matches':pdf_agrees,
             'pdf_word_regions':pdf_neighbors,'secondary_word_regions':neighbors,
@@ -288,24 +321,6 @@ def optical(job, evidence, document, root, parent=None):
             'review_status':'PENDING'}
         save(job,'source_spans',key+f'-{i:04}',value)
         spans.append({'id':sid,'data':value})
-    regions=[]; size=document['pages'][str(page)]['size']
-    for group in ('texts','pictures'):
-        for item in document.get(group,[]):
-            for p in item.get('prov',[]):
-                if p['page_no']!=page: continue
-                b=p['bbox']; top=(size['height']-b['t']) if b['coord_origin']=='BOTTOMLEFT' else b['t']
-                x=max(0,b['l']/size['width']); y=max(0,top/size['height'])
-                bbox=[x,y,min(1-x,abs(b['r']-b['l'])/size['width']),min(1-y,abs(b['t']-b['b'])/size['height'])]
-                if min(bbox[2:])<=0: continue
-                regions.append({'type':'PICTURE' if group=='pictures' else 'TEXT',
-                    'label':item.get('label'),'bbox':bbox,'source_ref':item['self_ref']})
-    save(job,'layout_regions',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
-        'regions':regions,'method':'existing_hash_verified_docling_layout',
-        'native_pdf_regions':pdf['lines'],'native_pdf_artifact_sha256':sha(pdf_path.read_bytes()),
-        'balloon_candidates':result.get('balloon_candidates',[]),
-        'balloons_truncated':result.get('balloons_truncated',False),
-        'source_artifact_sha256':sha((root/'docling.json').read_bytes()),
-        'verification_status':'CANDIDATE','does_not_supply_text':True})
     save(job,'page_readings',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
         'span_ids':[r['id'] for r in spans], 'span_count':len(spans),
         'agreed_spans':sum(r['data']['status']=='TEXT_AGREED' for r in spans),
@@ -510,7 +525,8 @@ def run(job):
             raise RuntimeError('PIPELINE_VERSION_CHANGED_NEW_GENERATION_REQUIRED')
         db.execute('UPDATE editor.generations SET manifest=manifest || %s WHERE id=%s',
             (Jsonb({'pipeline_version':VERSION,'code_manifest':code_manifest(),
-                   'old_visual_reuse':False,'processing_order':'one_page_source_visual_claim_gate_then_next',
+                   'old_visual_reuse':False,'processing_order':'one_page_parallel_optical_visual_then_claim_gate',
+                   'ocr_vl_model':os.environ.get('EDITOR_OCR_VL_MODEL'),
                    'source_of_quotes':'source_spans_only'}),gen))
     parent=previous.get('reuse_measurements_from')
     if parent and source_for(parent)['content_version_id']!=source['content_version_id']:
@@ -525,7 +541,19 @@ def run(job):
     for row in evidence:
         with connection() as db: fence(db,job)
         page_parent=resolve_page_parent(parent,row['record_key'],source['content_version_id'])
-        if row['record_key'] not in done: optical(job,row,document,root,page_parent)
+        from concurrent.futures import ThreadPoolExecutor
+        # Only independent image observation overlaps OCR. Claims wait for both.
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            visual_future=None
+            def on_layout(layout,pending_spans):
+                nonlocal visual_future
+                if row['record_key'] not in observed:
+                    visual_future=pool.submit(observe,job,row,layout,pending_spans,root,page_parent)
+            if row['record_key'] not in done:
+                optical(job,row,document,root,page_parent,on_layout=on_layout)
+            if visual_future is not None:
+                visual_future.result()
+                observed.add(row['record_key'])
         layouts={r['record_key']:r for r in get_records(gen,'layout_regions')}
         all_spans=get_records(gen,'source_spans')
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]

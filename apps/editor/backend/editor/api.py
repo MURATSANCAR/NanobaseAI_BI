@@ -1,5 +1,6 @@
 import hmac
 import json
+import os
 import time
 import uuid
 from pathlib import Path
@@ -107,10 +108,25 @@ def model_services():
     with httpx.Client(timeout=3, trust_env=False) as client:
         for name in ('llm', 'embedding', 'reranker'):
             try:
-                response = client.get(f'http://{name}:8080/health')
+                base=(os.environ.get('EDITOR_MODEL_BASE_URL','http://llm:8080').rstrip('/')
+                      if name=='llm' else f'http://{name}:8080')
+                response = client.get(base+'/health')
                 services[name] = {'ready': response.status_code == 200}
+                if name=='llm':
+                    services[name]['model']=os.environ.get('EDITOR_MODEL_NAME','editor-qwen38')
+                    services[name]['backend']=os.environ.get('EDITOR_MODEL_BACKEND','llama.cpp')
             except Exception:
                 services[name] = {'ready': False}
+        if os.environ.get('EDITOR_OCR_VL_BASE_URL'):
+            try:
+                response=client.get(os.environ['EDITOR_OCR_VL_BASE_URL'].rstrip('/')+'/gateway/status')
+                response.raise_for_status(); state=response.json()
+                services['ocr_vl']={'ready':bool(state['healthy']), 'on_demand':True,
+                    'state':'READY' if state['healthy'] else 'STARTING_OR_UNHEALTHY' if state['running'] else 'STOPPED',
+                    'gateway_reachable':True,'idle_seconds':state['idle_seconds'],
+                    'model':os.environ.get('EDITOR_OCR_VL_MODEL','paddleocr-vl-1.6')}
+            except Exception:
+                services['ocr_vl']={'ready':False,'on_demand':True,'state':'UNREACHABLE'}
     return {'services': services, 'semantic_qualification': 'PENDING', 'pilot_ready': False}
 
 

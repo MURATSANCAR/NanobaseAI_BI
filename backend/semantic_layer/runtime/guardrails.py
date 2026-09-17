@@ -300,6 +300,41 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         picked = [x for x in picked if x is not None]
         return picked
 
+    def _beside_a_period_table(node: exp.Table) -> bool:
+        """Is this table joined, in its own SELECT's FROM/JOIN list, to something that carries a period —
+        a period table, or a derived table / CTE (which may hold one)? Alone, or beside other card tables
+        only, it is not."""
+        sel = node.find_ancestor(exp.Select)
+        if sel is None:
+            return False
+        direct = []
+        frm = sel.args.get("from_") or sel.args.get("from")
+        if frm is not None:
+            direct.append(frm.this)
+        for j in sel.args.get("joins") or []:
+            direct.append(j.this)
+        for t in direct:
+            if t is node:
+                continue
+            if not isinstance(t, exp.Table):
+                return True                          # a derived table: what it holds is its own business
+            if not t.name or t.name.upper() in cte_names:
+                return True
+            p2 = resolve_prof(t)
+            if p2 is not None and "{n1}" in (p2.table_pattern or ""):
+                return True
+        return False
+
+    # Decided on the statement as written: once the rewrite starts, the dated table beside a card is
+    # already a UNION subquery and no longer looks like a table.
+    lone_cards = set()
+    for t in tree.find_all(exp.Table):
+        if not t.name or t.name.upper() in cte_names:
+            continue
+        p0 = resolve_prof(t)
+        if p0 is not None and "{n0}" in (p0.table_pattern or "") and "{n1}" not in (p0.table_pattern or "") and not _beside_a_period_table(t):
+            lone_cards.add((t.alias_or_name or "").upper())
+
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
             raw = node.name
@@ -309,6 +344,13 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             if prof is None:
                 return node
             lockstep = [] if wrote_physical(node) else in_step(prof)
+            if len(lockstep) > 1 and "{n1}" not in (prof.table_pattern or "") and (node.alias_or_name or "").upper() in lone_cards:
+                # A card table (customers, items: one copy per firm, no period of its own) standing
+                # alone in its SELECT, with the dated tables only inside correlated subqueries — "bought
+                # last year, nothing this year". Read from every firm in step it returned each customer
+                # once per copy (67.308 rows for 33.573 customers); cards keep their reference across
+                # copies, so the newest copy is the one list of them.
+                lockstep = [lockstep[-1]] if firms == sorted(firms) else [max(lockstep, key=lambda x: str((x.context or {}).get("n0") or ""))]
             if lockstep:
                 wanted = lockstep
             else:

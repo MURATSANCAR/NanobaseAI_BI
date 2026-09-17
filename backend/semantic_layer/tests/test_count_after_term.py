@@ -51,3 +51,30 @@ def test_the_measures_own_name_still_reaches_the_certified_measure(catalog, prof
     sq = _resolver(catalog, profiles).resolve("Toptan satılan adet ne kadar?", today=TODAY)
     assert any(s.mapping and s.mapping.entity == "STLINE" and s.semantic_type == SemanticType.METRIC for s in sq.slots), \
         [(s.term, s.semantic_type, s.mapping.entity if s.mapping else None) for s in sq.slots]
+
+
+def test_a_state_measure_alone_gets_no_default_period(catalog, profiles):
+    """2026-09-18, soru 25 ve 'elimizde en çok stok bulunan on kitap': stok bakiyesi bir dönem ölçüsü değildir."""
+    _certify(catalog, "stok bakiyesi", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+             formula="SUM(CASE WHEN STLINE.TRCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+             extra={"state_measure": True, "conditions": ["STLINE.LINETYPE = (0)"]}), synonyms=["stok"])
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    from semantic_layer.runtime.temporal import TemporalSlot  # noqa: F401
+    r = SemanticResolver(catalog, TENANT, DS, profiles, default_temporal=lambda: __import__("semantic_layer.runtime.temporal", fromlist=["parse_temporal"]).parse_temporal("bu yıl", TODAY)[0][0])
+    sq = r.resolve("Stok bakiyesi en yüksek on kitap hangileri?", today=TODAY)
+    assert not sq.temporal, sq.temporal
+
+
+def test_a_unit_word_after_a_state_measure_and_a_repeated_name_are_one_measure(catalog, profiles):
+    """2026-09-18, soru 25: "elde kalan stok adedi" — two names of one balance and its unit word became three
+    measures, one of them sold quantity, and the default year landed on the balance."""
+    _certify(catalog, "stok bakiyesi", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+             formula="SUM(CASE WHEN STLINE.TRCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+             extra={"state_measure": True}), synonyms=["stok", "elde kalan"])
+    _certify(catalog, "adet", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern="LG_{n0}_{n1}_STLINE",
+             formula="SUM(STLINE.AMOUNT)", extra={"conditions": ["STLINE.TRCODE IN (7,8)"]}), synonyms=["satilan adet"])
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Elde kalan stok adedi en yüksek yirmi kitap hangileri?", today=TODAY)
+    metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC]
+    assert len(metrics) == 1 and (metrics[0].mapping.extra or {}).get("state_measure"), [(s.term, s.mapping.formula) for s in metrics]
+    assert sq.limit == 20

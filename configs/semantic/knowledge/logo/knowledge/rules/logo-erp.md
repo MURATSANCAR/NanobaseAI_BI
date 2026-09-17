@@ -67,3 +67,18 @@ Yayınevinde bir kitabın **baskısı** bir **üretim emridir**: `PRODORD` (bir 
 - **Müşteri grubu / kanal** = `CLCARD.SPECODE2`; boş kod "Grup kodu boş".
 - **Stok bakiyesi** yalnız cari kopyadan (açılış devri içinde); **bekleyen sipariş** `CLOSED = 0 AND AMOUNT > SHIPPEDAMOUNT`, adet fiş sayısı; **sipariş** = LG_ORFICHE TRCODE 1; **sevkiyat** = STLINE TRCODE 7,8 IOCODE 4.
 
+## Kural 12 — Çek / senet (LG_CSCARD) — durum kodları veriyle doğrulandı (2026-09-18)
+`LG_CSCARD`: bir satır = bir çek/senet. `DOC`: 1 müşteri çeki, 2 müşteri senedi, 3 kendi çekimiz, 4 borç senedimiz. Tutar `AMOUNT`, vade `DUEDATE`, düzenleme `SETDATE`, iptal `CANCELLED = 0`.
+`CURRSTAT` (güncel durum; son `CSTRANS.STATUS` ile aynı kod): 1 portföyde · 2 ciro edildi · 3 teminata verildi · 4 tahsile verildi · 5 protestolu tahsile verildi · 6 iade edildi · 7 protesto edildi · 8 **tahsil edildi** · 11 **karşılığı yok (karşılıksız)** · 12 tahsil edilemiyor.
+- "Karşılıksız çıkan" = `CURRSTAT = 11`; "protesto olan / protestolu" = `CURRSTAT IN (5, 7)`. İkisi ayrı ayrı tutar ve adet olarak verilir (koşullu toplam), toplam ayrıca yazılır. "Bu yıl" için vade tarihi `DUEDATE` kullanılır ve hangi tarihin alındığı yazılır.
+- Danışman görünümü `ABCekSenetView` bu kodları farklı adlandırır (8 = "karşılıksız iade" der); veride 8'in son hareketi tahsil bordrosudur — görünümün adları kullanılmaz.
+
+## Kural 13 — Cari risk limiti (CLRNUMS)
+`CLRNUMS` (cari risk tablosu, `CLCARDREF` → CLCARD): `ACCRISKLIMIT` açık hesap risk limiti, `ACCRISKTOTAL` güncel açık hesap riski. **Limiti aşan cari** = `ACCRISKLIMIT > 0 AND ACCRISKTOTAL > ACCRISKLIMIT`; aşım tutarı = `ACCRISKTOTAL − ACCRISKLIMIT`. `ACCRISKOVER` bir durum değil, **ayardır** ("limit aşılınca işlem durdurulsun mu": 1 evet / 0 hayır) — aşanları bulmak için kullanılmaz. Limit tanımsız (0) cariler aşmış sayılmaz; `ACCRISKTOTAL` NULL ise 0 alınır.
+
+## Kural 14 — Ambar (depo)
+Ambar numarası hareket satırında `STLINE.SOURCEINDEX`; adı `L_CAPIWHOUSE.NAME` (`L_CAPIWHOUSE.NR = STLINE.SOURCEINDEX AND L_CAPIWHOUSE.FIRMNR = <firma no>`). Ambar bazında stok = malzeme ve `SOURCEINDEX` kırılımında giriş − çıkış. Malzeme–ambar parametreleri `INVDEF` (`ITEMREF`, `INVENNO` = ambar no, `MINLEVEL` asgari, `MAXLEVEL` azami, `MINLEVELCTRL` 0 kontrol yok).
+
+## Kural 15 — Kasa ve banka giriş / çıkış
+Kasa hareketleri `KSLINES` (`SIGN` 0 = giriş/tahsil, 1 = çıkış/ödeme; tutar `AMOUNT`; `CANCELLED = 0`; tarih `DATE_`). Banka hareketleri `BNFLINE` (`SIGN` 0 = giriş, 1 = çıkış; `AMOUNT`; `CANCELLED = 0`; `DATE_`). "Giriş çıkış farkı" = giriş − çıkış (net). Kasa ve banka **ayrı tablolardır**: her biri kendi alt sorgusunda ay bazında toplanır, sonra yan yana / toplam olarak verilir; iki tablo satır satır birleştirilmez. İki ay karşılaştırmasında her ay ayrı sütun ya da ayrı satırdır.
+
