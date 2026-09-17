@@ -1,5 +1,7 @@
 # Kaynak uyuşmazlığı ve konuşmacı bağlantısı — 17 Eylül
 
+Sonraki uygulama: [otomatik bölge yeniden okuma](2026-09-17-region-reread.md). Yeni ölçümler inceleme API’sine bağlandı; aşağıdaki ilk inceleme yayınının tarihsel sonuçları korunur.
+
 ## Yapılan kod değişikliği
 
 `backend/editor/source_review.py` gerçek kayıtların inceleme nedenlerini sayfa/bölge bazında ayırır. PDF okuyucusunun kullanılamaması, Tesseract veya bölgesel Paddle metninin eksikliği ayrı gösterilir. Mevcut inceleme kararları ve kaynak metni değiştirilmez; çıktı yalnız yeniden üretilebilir teknik inceleme görünümüdür.

@@ -241,6 +241,28 @@ def cancel(job_id:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
     return mutate('/jobs/'+str(job_id)+'/cancel',body,idempotency_key,action)
 
 
+@router.get('/generations/{generation}/region-rereads')
+def region_rereads(generation:uuid.UUID,pdf_page:int|None=None):
+    if pdf_page is not None and not 1 <= pdf_page <= 100:
+        raise HTTPException(400,'INVALID_PAGE')
+    with connection() as db:
+        scope(db,generation)
+    source=source_for(generation)
+    directory=ROOT/source['sha256']/'region-reread-v1'/str(generation)
+    paths=([directory/f'page-{pdf_page:04}.json'] if pdf_page is not None
+           else sorted(directory.glob('page-*.json')))
+    items=[]
+    for path in paths:
+        if not path.exists():
+            continue
+        item=json.loads(path.read_text())
+        if item['generation_id']!=str(generation) or item['source_sha256']!=source['sha256']:
+            raise HTTPException(409,'REREAD_SOURCE_SCOPE_MISMATCH')
+        items.append(item)
+    return {'generation_id':str(generation),'items':items,
+            'semantic_acceptance':False,'original_records_modified':False}
+
+
 @router.get('/generations/{generation}/source-review')
 def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
     from editor.source_review import source_review
@@ -252,7 +274,20 @@ def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
           WHERE generation_id=%s AND kind IN ('source_spans','layout_regions','visual_observations')
           AND (%s::integer IS NULL OR (data->>'pdf_page')::integer=%s)
           ORDER BY kind,record_key""",(generation,pdf_page,pdf_page)).fetchall()
-    return {'generation_id':str(generation),**source_review(rows)}
+    report=source_review(rows)
+    rereads=region_rereads(generation,pdf_page)['items']
+    measurements={region['source_span_id']:(page,region)
+                  for page in rereads for region in page['regions']}
+    for page in report['pages']:
+        for region in page['regions']:
+            if region['span_id'] in measurements:
+                measurement,candidate=measurements[region['span_id']]
+                region['reread']={'method':measurement['method'],
+                                  'status':candidate['status'],
+                                  'crop_sha256':candidate['crop_sha256'],
+                                  'stable_reread':candidate['stable_reread']}
+                region['next_action']='RECONCILE_READER_EVIDENCE'
+    return {'generation_id':str(generation),**report}
 
 
 @router.get('/generations/{generation}/{kind}')

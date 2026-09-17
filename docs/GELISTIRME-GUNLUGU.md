@@ -6,6 +6,14 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — 371 sorunlu bölge otomatik yeniden okundu
+
+- Genel `region_reread.py`, sunucu koşucusu ve gerçek API/artifact/PG doğrulayıcısı eklendi. Ağsız belge konteyneri özgün kutuları kırpıp Tesseract PSM 7/13 ile okur; kod/model/render/kırpım hashleri, ham sonuçlar ve skorlar ayrı değişmez artifact’larda tutulur. Eski veri veya review elle değiştirilmez.
+- Pilot s.16/29/38: 25 bölge, 7 kararlı okuma, 5 desteklenen aday. S.29’da desteklenen aday yok. Tam koşu: 46 sayfa/371 bölge, 175 kararlı, 147 mevcut okuyucuyla eşleşen aday; hiçbirine anlamsal kabul verilmedi.
+- `region-rereads` API’si ve `source-review` bağlantısı dağıtıldı. Kaynak API/PG eşliği ve kayıt parmak izi korundu. API/worker ve belge imajı ayrı hashlerle kayıtlı; 28 backend dosyası çalışan API ile eşleşti.
+- Son gerçek doğrulama 46 sayfa/371 bölgede API/artifact/PG eşliği, filtre, yetki ve inceleme bağlantısı üzerinden geçti. Son sürümde soru/yayın kapıları 401/409; review ve soru sayısı 0.
+- [Yöntem, dağıtım ve kabul sınırları](editor/2026-09-17-region-reread.md). Yeni offline paket/restore kabulü ve adayların anlamsal çözümü açık.
+
 ## 2026-09-17 — Kaynak inceleme API ve balon–figür aday bağlantısı
 
 - Genel `source_review.py` eklendi: uyuşmazlık nedenleri, eksik/kullanılamayan okuyucular ve kırpım koordinatından sayfa koordinatına figür dönüşümü. Kuyruk tek figüre değse de karakter kimliği kanıtı olmadan konuşmacı atanmaz.
@@ -87,7 +95,9 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Soru 8 (stokta yok + bekleyen sipariş): takma ad yalnız harf farkıyla bile korunur (CRM harf duyarlı); katalogda stok/bekleyen sipariş tanımı yoktu → "stok bakiyesi", "bekleyen sipariş", "bekleyen sipariş miktarı" operatör tanımı olarak sertifikalandı (iş teyidi bekliyor, tanımlar sayfası 9–10); eleştirmene **chasm** kuralı: aynı anahtara bağlı iki çoklu ilişki (sipariş × stok satırları) tek sorguda toplanırsa bloke (miktarlar 40 kat şişmişti). Sonuç 52 ürün, birebir.
 - Soru 9 (gecikmiş üretim emirleri): çözücü olumsuz çekimi sertifikalı durum etiketinin tersine bağlar — "tamamlanmadı" → `PRODORD.STATUS NOT IN (3)` (`_negated_label`), "iptal edilmemiş" gibi olumsuz hafif fiil bir önceki etiket yuvasını tersler (`_negate_left_state`, `_negated_light_verb`). Önceden "tamamlanmadı" modele kalıyor ve "muhasebeleştirilmedi" okunuyordu (1.204 satır; doğrusu 7).
 - Soru 10 (iş istasyonu planlanan/gerçekleşen süre): kolon-adı onarım ipucu tabloyu mantıksal varlığa göre bulur (model `LG_211_01_DISPLINE` gibi olmayan kopya yazsa da), eksik kolon tarih/durum türündeyse o türün gerçek kolonlarını (ya da "bu tabloda yok") söyler; kuru çalıştırma 3 deneme. Sonuç 10 istasyon, bağımsız sorguyla birebir. İlk 10 soru tamam: 10/10 doğru (3'ü dürüst red/okuma görünür).
-- Testler 777 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–6 doğru, 7 açık.
+- Soru 11 (iade oranı): kod düzeltmesi gerekmedi; 2.130 cari birebir. İş notu: oran için asgari sevk tabanı.
+- Soru 12 (en çok satan 20 kitabın stok devir hızı) — kapıda iki kural birbirini yalanlıyordu: dönem kuralı STLINE'ı okuyan **her** alt sorgudan yılın tarih filtresini istiyor, durum ölçüsü kuralı stok bakiyesinin tarihsiz hesaplanmasını şart koşuyordu; aynı tabloyu hem akış (satış) hem durum (stok) için okuyan hiçbir soru geçemezdi. `audit.py`: durum ölçüsünün bakiye okuması dönem kuralından muaf (`_state_reading`); ölçünün kendi koşulunun dışladığı satırları okuyan alt sorgu (açılış devri TRCODE 14, satış 7/8/9 iken) ölçünün satırı değildir, dönem ondan istenmez (`_other_rows`); onarım ipucu "durum ölçüsü alt sorgusu hariç" der. `compiler.py`: "gate refused" logu artık onarılmış (gerçekten reddedilen) SQL'i yazar — önce ilk SQL yazılıyordu, teşhis 1 saat yanlış yöne gitti. `naming.logicalize_sql` + `app.recall`: hatırlanan örnek SQL'ler fiziksel adla (dbo_LG_411_01_STLINE) saklanıyor ve model bu adları kopyalıyordu (dönem çözümünü atlar) → örnekler mantıksal adla gösterilir. Sonuç bağımsız sorguyla birebir (İYİLİK TİMİ 148.662 satış, 58.273 açılış, 213.633 güncel → 1,09). Not: güncel stok yalnız cari kopyadan okunur; 2021-25 kopyasıyla birleşim açılış devrini çift sayar (796.995) — `run_sql` ucu dönem yokken bu birleşimi yapıyor, `ask` yolu yapmıyor; açık iş.
+- Testler 783 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–12 doğru.
 
 ## 2026-09-16 — Kural madencisi: iş kuralları Logo görünümleri ve CRM kayıtlı görünümlerinden
 

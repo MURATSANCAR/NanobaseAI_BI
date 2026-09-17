@@ -5,6 +5,10 @@ Qdrant indeksi, kaynak alanı ve yayın paketi vardır. BI'ın Python kodunu, ta
 Docker ağlarını veya kimlik bilgilerini kullanmaz. BI ekran entegrasyonu sonraki
 aşamada tanımlı API sözleşmeleriyle yapılacaktır.
 
+## Sorunlu bölgelerin otomatik yeniden okunması
+
+Sunucuda `python3 scripts/reread-source-regions.py 16 29 38` sınırlı gerçek sayfa koşusunu, argümansız çağrı bütün NEEDS_REVIEW bölgelerini işler. İki Tesseract satır ayarı ağsız belge konteynerinde çalışır; makine çıktıları ayrı artifact dosyalarına yazılır. Eski kayıtlar değişmez, sonuçlar otomatik onaylanmaz. Gerçek API: `GET /v1/generations/{generation}/region-rereads`; doğrulama `python3 scripts/verify-region-rereads.py`. [Ayrıntılar ve koşu sonucu](../../docs/editor/2026-09-17-region-reread.md).
+
 ## Kaynak inceleme API — 17 Eylül ek yayını
 
 `GET /v1/generations/{generation}/source-review?pdf_page=29`, kayıtlı bölge uyuşmazlıklarını ve balon kuyruğunun sayfa koordinatındaki figür adaylarını döndürür. Yeni okuma veya kabul kararı yazmaz. Gerçek API/PG kontrolü 48/48 sayfada geçti; 371 bölge hâlâ incelemededir. [Kod değişikliği, sürüm ve kanıtlar](../../docs/editor/2026-09-17-source-review.md). Önceki v2 offline restore kabulü aşağıdaki kitap işleme sürümüne aittir; bu ek API imajının restore kontrolü henüz yoktur.
