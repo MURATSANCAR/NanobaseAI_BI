@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — İki ek gerçek kitap ve V7 soğuk başlangıç kanıtı
+
+- 64 ve 32 sayfalık iki ek özgün PDF gerçek API/parser/PostgreSQL ve bağımsız Poppler/hash kontrollerinden geçti. Kaynak hazırlama kabulüdür; anlamsal analiz kabulü değildir.
+- V7 ab85c397 gerçek model açılışındaki üç bağlantı hatası ve iki 503 sonrasında otomatik toparlandı; 29. sayfa taze model çağrısı tamamlandı. Dört mobil/masaüstü genişlikte kaynak arayüzü geçti.
+- 13. sayfada isim metni olsa da balon/figür kaydı yok; 29. sayfada figür olsa da kaynaklı isim bağlantısı yok. Elle kimlik atanmadı; görsel bölge kapsamı genel kod düzeltmesine alındı. [Kanıtlar](editor/2026-09-17-page-resume.md).
+
 ## 2026-09-17 — Sayfa atasıyla devam, kısa model girdisi ve öncelik
 
 - V7 aynı içerik zincirindeki en yakın tamamlanmış sayfayı seçer; eksik sayfa önceki atadan gelir. Gerçek API/PG sayfa 2/7 ölçümü geçti; kayıtlar yeniden kaynak kapısından geçer.

@@ -12,23 +12,27 @@ Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nan
 
 ### Farklı kitaplarda çalışma kuralı (2026-09-17)
 
-Üretim kodu/prompt/kapıları kitap adı, hash, karakter veya sayfa numarasına özel çözüm içermez. Aynı ad yazımı karakter kimliği değildir. Paralel inceleme limit sözleşmesi ve küçük görsel kapsam sayacında açık işler buldu. Yeni Türkçe metin konuşmacısı adayındaki ortak/kısmi ad ve geniş alıntı riskleri sıkılaştırıldı; gerçek 1.149 API/PG kaydında değişmeyen kaynakla 10 açık atıf ölçüldü. Bu aday yayımlanmadı; farklı kitaplarla kabul ve görsel kimlik çözümü açık. [İnceleme ve kabul sınırları](docs/editor/2026-09-17-generality-review.md).
+Üretim kodu/prompt/kapıları kitap adı, hash, karakter veya sayfa numarasına özel çözüm içermez. Aynı ad yazımı karakter kimliği değildir. Paralel inceleme limit sözleşmesi ve küçük görsel kapsam sayacında açık işler buldu. Yeni Türkçe metin konuşmacısı adayındaki ortak/kısmi ad ve geniş alıntı riskleri sıkılaştırıldı; gerçek 1.149 API/PG kaydında değişmeyen kaynakla 10 açık atıf ölçüldü. Metin atfı v5 ile yayımlandı; farklı kitaplarla anlamsal kabul ve görsel kimlik çözümü açık. [İnceleme ve kabul sınırları](docs/editor/2026-09-17-generality-review.md).
 
 ### Güncel yayın — v5 metin atıfları (2026-09-17)
 
 Ana yayın `text-attribution-v5-20260917`; nesil `14a79646` 48/48 COMPLETED/NEEDS_REVIEW, kaynak 821/328. 10 açık metin atfı, model iddialarına bağlanan konuşmacı 0. Gerçek ana API/PG tam sayfa ve dört genişlikte atıf/bbox kabulü geçti; aynı sürümün bağımsız gerçek restore ortamında sekiz kesilen yükleme senaryosu geçti. Görsel kimlik ve anlamsal kabul açık. [Kod ve kanıt](docs/editor/2026-09-17-text-attribution.md).
 
+### Çok kitaplı kaynak kabulü
+
+Özgün 48 sayfalık kitaba ek olarak Kahramanını Yutan Kitap (64 sayfa) ve Dünyanın En Korkak Hayvanı (32 sayfa) ayrı API18810 ortamında değişmeyen PDF ile yüklendi. Gerçek API/PG, bağımsız Poppler sayfa sayısı ve kaynak artifact hashleri geçti. Bu iki kitabın analiz koşusu henüz başlatılmadı; üç kitapta anlamsal kabul iddiası yok.
+
 ### Devam eden v7 — kaynağı koruyarak devam
 
-V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; v7 tam koşu kabulü sürüyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).
+V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; nesil ab85c397 çalışıyor. Gerçek soğuk model başlangıcında üç bağlantı hatası ve iki 503 sınırlı tekrarlarla toparlandı; 29. sayfa taze çağrısı tamamlandı. Dört genişlikte kaynak UI geçti; v7 tam koşu ve görsel kimlik kabulü sürüyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).
 
 ### Devam eden v6 — bölgesel kaynak seçimi
 
-Bölgesel OCR seçim kodu gerçek 1.149 kayıtta 39 iyileşme adayı/0 gerileme gösterdi. Ayrı restore API18810 ortamının ilk v6 koşusunda iki kaynak yükseldi, model açılışındaki HTTP hatası işi durdurdu. Sınırlı geçici hata tekrarı ve durum kodu kaydı eklendi; 48 CPU ile R2 gerçek koşusu sürüyor. Ana yayın v5 olarak kalır; v6 tam kabul henüz yok. [Kök neden ve kanıt](docs/editor/2026-09-17-regional-source-selection.md).
+Bölgesel OCR seçim kodu gerçek 1.149 kayıtta 39 iyileşme adayı/0 gerileme gösterdi. Ayrı restore API18810 ortamının ilk v6 koşusunda iki kaynak yükseldi, model açılışındaki HTTP hatası işi durdurdu. Sınırlı geçici hata tekrarı ve durum kodu kaydı eklendi; R2 beş sayfalık kontrol sonrası korunarak iptal edildi; aynı düzeltme V7 koşusunda devam ediyor. Ana yayın v5 olarak kalır; v6 tam kabul henüz yok. [Kök neden ve kanıt](docs/editor/2026-09-17-regional-source-selection.md).
 
 ### Önceki yayın — kelime sınırı kapısı (2026-09-17)
 
-Ana yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
+Önceki yayın `source-boundaries-v4-r2-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `99881d8f-77b9-499c-9876-fe114b4afc01` 48/48 tamamlandı; 821/328, ham ölçümler değişmedi, geçersiz kaynaktan geçen aday 0, yeni aday model çağrısı 0. Gerçek API/PG ve kaynak/yayın kontrolleri geçti; bu sürümün offline/restore kabulü 17 Eylül 11:02:51 UTC’de geçti. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
 
 ### Kitap kapsamlı yetki sürümü (2026-09-17)
 
