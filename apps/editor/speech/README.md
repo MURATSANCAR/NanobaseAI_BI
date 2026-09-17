@@ -32,7 +32,7 @@ indirilmedi. Önceki Khan Academy denemesi yeni ses seçimi olarak kullanılmaz.
 2. Kaynak `speaker=sıla` etiketi içeriyor. Referansların temizliği, ses benzerliği
    ve kullanım kapsamı ayrıca değerlendirilmeli; bu etiket kişi kimliği kanıtı değil.
 3. Türkçe destekleyen referans-sesli TTS modelini lisans/donanım/gerçek dinleme
-   ölçümüyle seç. Kısa pilot adayı Chatterbox Multilingual 0.1.7; CPU üzerinde ayrı ortam hazırlanıyor. Mevcut OCR/LLM GPU
+   ölçümüyle seç. Kısa pilot adayı Chatterbox Multilingual 0.1.7; CPU üzerinde ayrı ortamda pilot üretildi. Mevcut OCR/LLM GPU
    işlerinin yanına ölçümsüz yeni servis başlatma.
 4. Kitap API sözleşmesi: kaynak sürüm + source_span kimlikleri + tam metin hash'i,
    dil, ses profili ve model revision; çıktı: parça sırası, ses hash'i, süre,
@@ -56,9 +56,31 @@ metin/referans/çıktı hashleri ve süre raporu yazılır. Dinleme ve üretim k
 varsayılan false kalır. Aynı çıktı üzerine yazılmaz.
 
 Python 3.12 üzerinde chatterbox 0.1.6'nın numpy<1.26 bağımlılığı kurulamadı;
-başarısız log korundu, 0.1.7 ile yeniden kurulum başlatıldı. Yerel ürün testi yok.
+başarısız log korundu, 0.1.7 ile yeniden kurulum tamamlandı. Yerel ürün testi yok.
 
 Pilot checkpoint: `ResembleAI/chatterbox`, revision
 `5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18`, `t3_mtl23ls_v2.safetensors`.
 Paket 0.1.7'nin yükleyicisi V2 checkpoint kullanır; bu pilot V3 olarak sunulmaz.
 İndirme ağ gerektirir; çevrimdışı ürün paketine henüz eklenmemiştir.
+
+## 18 Eylül pilot sonucu
+
+`nanobase-direct:/data/nanobaseai/editor/runtime/speech-pilot` üzerinde, 8 CPU
+thread ile gerçek API8810 kaynak metni bağımsız PostgreSQL kaydıyla karşılaştırıldı.
+Dört TEXT_AGREED kaynak span'inin metni yalnız boşlukla birleştirildi; kaynak
+veya inceleme kararı değiştirilmedi. Bu optik eşlik, anlamsal kabul değildir.
+
+`sample-001.wav`: 11,56 saniye, 24 kHz mono. Yerel kopyanın SHA-256 değeri
+sunucu raporuyla aynı. Toplam 346,25 saniye model indirme/yükleme dahil süredir,
+sıcak çıkarım hız ölçümü değildir. İlk Xet indirmesi yavaşlık nedeniyle durduruldu,
+HF_HUB_DISABLE_XET=1 ile ikinci deneme tamamlandı; iki log da korunur.
+
+**Kalite DOĞRULANAMADI:** model `Detected 2x repetition of token` uyarısıyla EOS
+üretti. Dosya oluşması metnin eksiksiz okunduğu veya ses benzerliğinin kabul
+edildiği anlamına gelmez. Bağımsız ASR/dinleme yapılmadı. Bu örnek dinleme adayıdır;
+tam kitap üretimine/ürün servisine geçilmedi. Başarısız kalite adayı düzeltilmeden
+üretim kabulü verilemez. Kaynak/çıktı kanıtları:
+`docs/editor/evidence/2026-09-18-speech-source.json` ve
+`docs/editor/evidence/2026-09-18-speech-pilot.json` (depo köküne göre).
+
+Yerel dinleme dosyası: `apps/editor/runtime/speech/turkish-tts/sample-001.wav`.

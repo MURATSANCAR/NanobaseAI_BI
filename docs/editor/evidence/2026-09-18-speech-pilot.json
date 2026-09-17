@@ -1,0 +1,17 @@
+{
+  "text_sha256": "b04e48ba18c65ee25834a84c703fee88c0fe0c3967d75124943afcbb2f6480a9",
+  "reference_sha256": "5e8d498769db27d4d94b300a2cc2dd6111503792d59c90d39d20d0fb93741be9",
+  "output_sha256": "89d0cdf3e76b088c8bdf9ac00c2ca23ed0ae2ed114276c7046b1f2f66a681d08",
+  "sample_rate": 24000,
+  "duration_seconds": 11.56,
+  "elapsed_seconds": 346.2474005629774,
+  "device": "cpu",
+  "language": "tr",
+  "seed": 42,
+  "chatterbox_version": "0.1.7",
+  "model_revision": "5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18",
+  "listening_accepted": false,
+  "production_accepted": false,
+  "model_warning": "Detected 2x repetition of token; forcing EOS",
+  "content_completeness_verified": false
+}

@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
-Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](speech/README.md).
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](speech/README.md).
 
 > V10 otomatik bölgesel yeniden okuma geliştirmesi: ilk 61 gerçek bölge bileşen kontrolü geçti; son lease/toparlanma düzeltmesi V10-r2 ile yeniden kabul ediliyor. Yeni kitap uçtan uca optical kabulü ve yeni offline/restore kabulü henüz tamamlanmadı. [Kurulum ve kabul sınırı](../../docs/editor/2026-09-17-reread-deployment.md).
 

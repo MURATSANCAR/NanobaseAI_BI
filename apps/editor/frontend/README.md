@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
-Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](../speech/README.md).
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](../speech/README.md).
 
 > Son ek yayın: `upload-queue-v2-20260917` yeni kitap yükleme, kalıcı iş takibi, iptal ve analiz başlatma kontrollerini içerir. Kaynak/analiz görüntüleme salt okunurdur; yükleme ve iş kontrolü API'ye yazar. Gerçek PDF ve 320/390/768/1440 px kabulü geçti. [Yükleme doğrulaması](../../../docs/editor/2026-09-17-upload-pipeline.md). Aşağıdaki eski salt-okunur sürüm notları tarihçedir.
 
