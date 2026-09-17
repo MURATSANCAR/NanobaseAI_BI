@@ -398,6 +398,9 @@ class SemanticQuery:
     # Which databases the question's evidence points at (schema database prefix; "" is the connection's
     # own). Set by the compiler when it chooses tables; two entries mean the answer needs a plan.
     sources: list[str] = field(default_factory=list)
+    # The resolver's own reading of which database the question is about, from the tables the
+    # question's words name ("fatura" → INVOICE, "fiyat" → PRCLIST); used when nothing certified pins it.
+    source_hint: Optional[str] = None            # "" is the connection's own database; None is no reading
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can

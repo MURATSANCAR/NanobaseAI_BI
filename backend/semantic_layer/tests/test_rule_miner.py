@@ -91,3 +91,15 @@ def test_a_status_label_gets_the_forms_people_ask_it_in():
     assert "devam eden" in spoken_variants("devam ediyor")
     assert spoken_variants("yk onayında bekliyor") == ["yk onayında bekleyen"]
     assert spoken_variants("kanal") == []
+
+
+def test_a_view_named_after_its_own_table_is_not_a_business_state():
+    fl = _p("new_fiyatlistesiBase", "new_fiyatlistesiBase", "NEW_FIYATLISTESIBASE", [("statecode", "int"), ("statuscode", "int")], schema="Timas_MSCRM.dbo")
+    fl.description = "Fiyat Listesi Yeni"
+    cat = Catalog([fl], [fl])
+    xml = '<fetch><entity name="new_fiyatlistesi"><filter type="and"><condition attribute="statecode" operator="eq" value="0"/></filter></entity></fetch>'
+    (own,) = crm_queries.candidates("Fiyat Listeleri", xml, cat)
+    assert probe.names_its_own_entity(probe.group([own])[0], cat)
+    two = xml.replace('value="0"/>', 'value="0"/><condition attribute="statuscode" operator="eq" value="2"/>')
+    (state,) = crm_queries.candidates("Onay Bekleyen Fiyat Listeleri", two, cat)
+    assert not probe.names_its_own_entity(probe.group([state])[0], cat)

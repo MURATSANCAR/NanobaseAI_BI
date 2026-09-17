@@ -56,7 +56,7 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 | API (`nanobase_api`) | 8790 |
 | Query Gateway | 8792 |
 | Semantic Bridge (Timaş) | 8795 |
-| LLM (OpenAI uyumlu) | NVIDIA hosted `integrate.api.nvidia.com/v1`, `deepseek-ai/deepseek-v4-flash-0731`, düşünme kapalı (köprü drop-in `semantic-bridge-nvidia.env`); eski GPU sunucusu yok |
+| LLM (OpenAI uyumlu) | NVIDIA hosted `integrate.api.nvidia.com/v1`, `deepseek-ai/deepseek-v4-flash-0731`, düşünme kapalı (köprü drop-in `semantic-bridge-nvidia.env`, `LLM_EXTRA_BODY_JSON`); eski GPU sunucusu yok. 2026-09-16/17: sağlayıcıda aralıklı 504 ve ~25 dk 404 kesintisi görüldü; yedek model kararı açık (`z-ai/glm-5.3` tek yanıt veren, yavaş) |
 | Gömme servisi | 8083 (embedder, CPU) |
 | Meta DB (Postgres) | 5434 |
 | Zeki AI sohbet | 127.0.0.1:4000 (ayrı Docker, `~/zeki-chat` deposu); portalda `/timas/sohbet/` altında AD oturumu arkasında sunulur |
@@ -86,6 +86,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 | `src/` | React + Vite arayüz (tek frontend, kanvas: `src/canvas`) |
 | `src/canvas/stitch/Shell.tsx` | Ortak kabuk (üst şerit, ray, modül menüsü). Sağ üstteki yakınlaştırma (%50–%200, adım 10) kabuğun kendi durumudur: ekranlar içeriklerini `ZoomStage` ile sarar (CSS `zoom`, `main` sabit kalır, yazdırmada 1); Genel bakış kanvası `onZoom` ile kendi ölçeğini verir (sığdırma × zoom). Pano sürüklemesi ölçeğe bölünür. 2026-09-16'ya kadar kanvas dışındaki 8 ekranda düğme sabit %100 gösteriyordu |
 | `src/canvas/board/` | Panolar: kişiye özel kart panosu (sürükle/boyutlandır, SQL paneli, son sorgu saati, başlık/not, CSV/PDF, KPI karşılaştırma, ECharts-GL 3B); düzen + son sonuç sunucuda `semantic_board_cards` (`backend/semantic_bridge/board.py`, `/api/v1/board`), tarayıcı yalnız önbellek; zamanlayıcı `timas-board.timer` |
+| `backend/semantic_layer/rule_miner/` + `scripts/mine_rules.py`, `scripts/rule_probe.py` | İş kuralı madencisi (2026-09-16): Logo danışman görünümleri (`sys.sql_modules`, 211/411 okuyan 240 görünüm) ve CRM kayıtlı görünümleri (`SavedQueryBase`/`UserQueryBase` FetchXML) → etiket haritası / kolon adı / ölçü / adlandırılmış durum adayları; canlıda çürütme; politika: kaynağın kendi kuralı + çürütmeden geçti + çakışma/çok anlam/genel kelime/tek kelime(<3 kaynak)/tablo-adı değil → `rule-miner` sertifikası, aksi onay ekranı. Canlı: Logo 335 + CRM ~870 sertifika, ~600 onayda. `rule_probe` çözücü seviyesinde ölçer (kolon %90, durum %80, ölçü %73). CRM kolon adları harf duyarlı: profildeki yazım kullanılır |
 | `backend/semantic_layer/vocabulary.py` | Eş anlamlı üretim hattı: alan açıklaması → aday → çürütme → insan onayı → kavram `synonyms`; `sl_vocabulary`; ezmeme kuralı (`human`/karar verilmiş satıra üretim dokunmaz); ekran `/es-anlamlilar` |
 | `backend/semantic_bridge/reports.py` | Planlı raporlar: cümleden plan (`parse_prompt`), `semantic_reports` tablosu, Excel/CSV üretimi (`/data/nanobaseai/bi/var/reports`), SMTP (ALERT_SMTP_*) yoksa dosya indirilir; `/api/v1/reports*`, zamanlayıcı `timas-reports.timer` (5 dk); ekran `src/canvas/reports/ReportsScreen.tsx` (`/planli-raporlar`) |
 | `backend/semantic_bridge/prefs.py` | Kişi tercihleri `semantic_user_prefs` (AD hesabı + anahtar → JSON), `/api/v1/me/prefs/{key}`; Genel bakış kanvas düzeni `layout:<ekran>` burada. Kişiye özel alanların hepsi sunucuda: planlı raporlar (`username`), pano (`username`), uyarılar (`created_by`), kanvas düzeni (prefs); tarayıcı yalnız önbellek |
@@ -116,6 +117,8 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 - Tam kural metni: [AGENTS.md](AGENTS.md).
 
 ## Notlar
+
+- Çalışma zamanı davranışları (2026-09-17): sorunun veri tabanı (Logo/CRM) ölçünün kaynağından, ölçü yoksa soru kelimelerinin eşleştiği **tablo adlarından** okunur (`SemanticQuery.source_hint` → derleyici tablo kapsamı); yıl kopyaları ortak kolon adlarıyla birleştirilir, tek yönlü tarih sınırı açık uçlu dönemdir, 1899/1900 sentinel tarih dönem değildir; eleştirmen çapraz birleştirmeyi ve farklı hedefli anahtar eşitliklerini bloke eder; kapı `LEFT JOIN … ON` filtresini kabul eder ve `-- yorum`da adı geçen tablonun okunmasını ister; sonuç deposu sınırda hata değil kısmi sonuç + `truncated` döner. Tek tek karne: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg
 
 - **Kokpit yayını:** kaynak sunucuda derlenir. `rsync -a --delete src/ nanobase-direct:/data/nanobaseai/bi/frontend/src/`, sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build`, sonra `sudo rsync -a --delete --no-o --no-g dist/ /data/nanobaseai/bi/cockpit/dist/`. Commit etmek yayınlamak değildir; canlıdaki `index.html` tarihine bak.
 

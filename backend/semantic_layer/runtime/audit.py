@@ -668,6 +668,22 @@ def _period_proven(period: dict, binding: dict, occ: list[_Occurrence], tree) ->
     return False
 
 
+def _cond_columns(conditions: list[str]) -> list[str]:
+    out = []
+    for c in conditions:
+        mm = re.match(r"^\s*([A-Za-z_][\w]*\.[A-Za-z_][\w]*)", c or "")
+        if mm:
+            out.append(mm.group(1))
+    return out
+
+
+def _unrestricted_reading(o: _Occurrence, own_cols: set[str]) -> bool:
+    """This occurrence restricts nothing but the measure's own columns — no date predicate either.
+    Judged on the predicates written, not on `intervals`: a declared coverage window is recorded
+    there for every table the catalog dated, and is not a restriction the statement made."""
+    return all(p.column.upper() in own_cols for p in o.preds)
+
+
 def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
     entity, column = m.entity.upper(), m.column.upper()
     expected = {str(v).strip().upper() for v in m.values}
@@ -946,6 +962,9 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
     # certified meanings already restrict — otherwise the word was dropped, whatever the comment says.
     if getattr(sq, "model_qualifiers", None):
         from semantic_layer.normalize import fold as _fold, stem as _stem
+        known_entities = set()
+        for t in (sources or {}):
+            known_entities |= {logical_table(t).entity.upper(), re.sub(r"^(?:DBO_)?(?:LG_)?(?:\d{3}_)?(?:\d{2}_)?", "", t.upper())}
         readings = [_fold(r) for r in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or "")]
         known = {str(s.mapping.column).upper() for s in _filter_slots(sq) if s.mapping and s.mapping.column}
         known |= {str(b.get("column", "")).upper() for b in _bindings(sq)}
@@ -967,6 +986,40 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             elif not extra:
                 out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisi sorguda hiçbir koşula dönüşmedi",
                                  f"'{want.get('token')}' için yazdığın yorumu WHERE, HAVING, NOT EXISTS ya da JOIN ile uygula."))
+        # The reading must be the query's reading. "'tanımlı' → PRCLIST fiyat listesi ile karşılaştırma"
+        # above a statement that never reads PRCLIST is a comment about a different query: the person
+        # is shown a reading the answer does not use. Every table a reading names must be read.
+        def _bare(name: str) -> str:
+            return re.sub(r"^(?:DBO_)?(?:LG_)?(?:\d{3}_)?(?:\d{2}_)?", "", (name or "").upper())
+        read_here = set()
+        for o in occ:
+            read_here |= {o.entity.upper(), o.table.upper(), o.alias.upper(), _bare(o.entity), _bare(o.table)}
+        for raw in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or ""):
+            named = {t for t in re.findall(r"\b([A-Z][A-Z0-9_]{3,})\b", raw.split("→", 1)[-1])
+                     if not re.fullmatch(r"(SUM|AVG|MIN|MAX|COUNT|CASE|WHEN|THEN|ELSE|END|AND|OR|NOT|NULL|IN|IS|LIKE|BETWEEN|DISTINCT|SELECT|FROM|WHERE|JOIN|LEFT|INNER|GROUP|ORDER|HAVING|TOP|DATEDIFF|CAST|CONVERT|DAY|MONTH|YEAR|TRUE|FALSE|KDV|TL|USD|EUR|ISNULL|COALESCE|NULLIF|ABS|ROUND|FLOOR|CEILING|GETDATE|DATEADD|DATEPART|OVER|PARTITION|ROW_NUMBER|RANK|EXISTS|UNION|ALL|WITH|AS|ON|BY|ASC|DESC)", t)}
+            tables = {_bare(t.split(".")[0]) for t in named if any(ch.isalpha() for ch in t)}
+            tables = {t for t in tables if t in known_entities} if known_entities else tables
+            missing = {t for t in tables if t not in read_here}
+            if missing:
+                out.append(Unmet("qualifier", f"yorumda adı geçen {', '.join(sorted(missing))} sorguda okunmuyor",
+                                 f"Yorumda yazdığın {', '.join(sorted(missing))} tablosunu sorguda gerçekten oku, ya da yorumu sorgunun yaptığıyla uyumlu yaz."))
+
+    # A state measure (stock on hand) is the balance of *all* movements: computed inside a SELECT that
+    # keeps only a period or a document type, it is the balance of those rows — sales alone gave a
+    # stock of minus the sales and a turnover of −1. Its entity must be read somewhere unrestricted
+    # beyond the measure's own conditions; the restricted reading may stand beside it for the flow.
+    for metric in sq.metrics:
+        m = metric.mapping
+        if not m or not (m.extra or {}).get("state_measure"):
+            continue
+        own_cols = {c.split(".")[-1].upper() for c in _cond_columns((m.extra or {}).get("conditions") or [])}
+        readings = [o for o in occ if o.entity.upper() in (m.entity.upper(), re.sub(r"^LG_", "", m.entity.upper()), "LG_" + m.entity.upper())]
+        if readings and not any(_unrestricted_reading(o, own_cols) for o in readings):
+            out.append(Unmet("state", f"'{metric.term}' durum ölçüsüdür: tarih ya da işlem türü filtresi altında hesaplanamaz; "
+                             f"okunan her {m.entity} filtreli.",
+                             f"{m.entity} kaynağını '{metric.term}' için ayrı bir alt sorguda, yalnız kendi koşullarıyla "
+                             f"({', '.join(sorted(own_cols)) or 'koşulsuz'}) ve tarih filtresi olmadan hesapla; dönemli ölçüyü ayrı alt sorguda al, anahtar üzerinden birleştir.",
+                             m.entity, None))
 
     for slot in _filter_slots(sq):
         m = slot.mapping

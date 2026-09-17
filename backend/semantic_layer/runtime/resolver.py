@@ -172,6 +172,14 @@ def _rooted(key: str) -> str:
 _YEARLY_BREAKDOWN = re.compile(r"\b(yillara gore|yil yil|yil bazinda|yillar bazinda|yillara bol\w*|her yil)\b")
 
 
+def _negated_light_verb(tok: str) -> bool:
+    """"edilmemiş", "verilmedi", "olmamış": a light verb carrying the negation. `is_light_verb` knows the
+    affirmative roots; the negation infix hides them, so it is stripped first."""
+    root = verb_root(tok) or ""
+    base = re.sub(r"(ma|me)$", "", root)
+    return bool(base) and (is_light_verb(base) or base in {"et", "ed", "edil", "ol", "olun", "yap", "yapil", "ver", "veril", "al", "alin", "kil", "kilin", "bulun", "gel", "gecir"})
+
+
 class SemanticResolver:
     def _all_years(self, sq: SemanticQuery, today: date) -> "Optional[TemporalSlot]":
         """"Yıllara göre ciro" bir yılı değil, yılları sorar.
@@ -841,6 +849,14 @@ class SemanticResolver:
             if fold(tok) in _COPULA:
                 consumed.add(k)          # "olan", "olduğu": grammar that links words, never a restriction
                 continue
+            if is_negative(tok) and _negated_light_verb(tok) and k not in consumed:
+                # "iptal edilmemiş": the light verb is grammar and would be skipped below with the
+                # stopwords — but its negation belongs to the state label placed just before it.
+                flipped = self._negate_left_state(tok, k, [s_ for s_ in sq.slots if getattr(s_, "span", None) and s_.span[1] == k])
+                if flipped is not None:
+                    consumed.add(k)
+                    sq.explanation.append(flipped.explain["why"])
+                    continue
             if (any(tok in tokenize(t.text) for t in qf.temporal)
                     or (stem(tok) in STOPWORDS_S | MODIFIERS_S
                         and not self._modifies_a_noun(qf.tokens, k, consumed))):
@@ -871,6 +887,23 @@ class SemanticResolver:
                 record.update(decision="SEMANTIC", evidence_source="catalog",
                               concept_ids=[s.concept_id for s in covering],
                               resolved_as=",".join(sorted({f"{s.semantic_type}:{s.status}" for s in covering})))
+            elif is_negative(tok) and _negated_light_verb(tok) and (flipped := self._negate_left_state(tok, k, left)) is not None:
+                # "iptal edilmemiş": the state noun matched the label "iptal edildi" on its own and the
+                # negation sat on the light verb beside it. The label is the same; its sense is the
+                # complement. Read as placed, the answer was the cancelled invoices — the opposite.
+                consumed.add(k)
+                record.update(decision="SEMANTIC", evidence_source="catalog", concept_ids=[flipped.concept_id],
+                              resolved_as="DIMENSION_VALUE:INFERRED", negated_label=True)
+                sq.explanation.append(flipped.explain["why"])
+            elif is_negative(tok) and (undone := self._negated_label(tok, k, index)) is not None:
+                # "tamamlanmadı" over a certified status label "tamamlandı" (STATUS IN (3)): the rows
+                # outside that state, said as the label's negation — not a word left to the model,
+                # which read it as "not yet accounted" and answered a different question.
+                sq.slots.append(undone)
+                consumed.add(k)
+                record.update(decision="SEMANTIC", evidence_source="catalog", concept_ids=[undone.concept_id],
+                              resolved_as="DIMENSION_VALUE:INFERRED", negated_label=True)
+                sq.explanation.append(undone.explain["why"])
             elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
                 sq.shape = "ABSENCE"
                 record.update(decision="ABSENCE", evidence_source="catalog", verb_root=root)
@@ -1166,18 +1199,29 @@ class SemanticResolver:
         does everything when the measures themselves span both databases, or there is no measure."""
         metrics = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.METRIC]
         homes = {self._source_of(m.mapping.entity) for m in metrics}
+        if not metrics:
+            # No measure: the things the question names decide. "Fiyat listesinde tanımlı fiyatın
+            # altında kesilen faturalar" names invoices — an ERP thing — and "fiyat listesi" is a
+            # word both databases use. The entities the plain words reach (outside any placed
+            # phrase) say which database the question is about.
+            covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
+            votes, named = self._source_votes(qf, covered)
+            ranked = sorted(votes.items(), key=lambda kv: -kv[1])
+            homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
+            if len(homes) == 1:
+                sq.source_hint = next(iter(homes))
         if len(homes) != 1:
             return
         home = next(iter(homes))
         others = [s for s in list(sq.slots) + list(sq.group_by)
                   if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                   and self._source_of(s.mapping.entity) != home]
-        homes_entities = {m.mapping.entity for m in metrics}
+        homes_entities = {m.mapping.entity for m in metrics} | {e for e in (named if not metrics else []) if e}
         for lone in {id(s): s for s in others}.values():
             span = getattr(lone, "span", None)
-            if not span or span[1] - span[0] != 1:
-                continue                                  # a certified phrase of several words is meant
-            if lone in sq.group_by:
+            if not span or span[1] - span[0] > 2:
+                continue                                  # a certified phrase of three or more words is meant
+            if lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
                 continue                                  # "kanal bazında": the grouping is the question's structure
             if self._linked_across(lone.mapping.entity, homes_entities):
                 continue                                  # the catalog measured a bridge: the question may span both
@@ -1191,6 +1235,31 @@ class SemanticResolver:
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
             sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
                                   f"ölçü {home or 'ana veri tabanı'} verisinde → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+
+    def _source_votes(self, qf, covered: set[int]) -> tuple[dict[str, int], list[str]]:
+        """Which database the question's plain words name, read from the tables' own names.
+
+        "Fiyat listesinde tanımlı fiyatın altında kesilen faturalar": "fatura" is the ERP invoice
+        table's own name and "fiyat" the price list's; the CRM has a price list too, so that word is
+        no vote. Table names are the source's own words for its things — the certified vocabulary,
+        mined from both databases, says "fatura" in eleven CRM terms and four ERP terms and would
+        vote the wrong way. One vote per word, for a source whose tables alone answer to it."""
+        votes: dict[str, int] = {}
+        named: list[str] = []
+        for k, tok in enumerate(qf.tokens):
+            if k in covered or not is_domain_candidate(tok) or _COUNT_CUE.fullmatch(fold(tok)):
+                continue
+            forms = {f for f in (stem(tok), short_root(tok)) if f and len(f) >= 3}
+            hit: dict[str, list[str]] = {}
+            for prof in self.by_entity.values():
+                if is_shadow_copy(prof.entity) or not (self._entity_name_stems(prof) & forms):
+                    continue
+                hit.setdefault(self._source_of(prof.entity), []).append(prof.entity)
+            if len(hit) == 1:
+                src, ents = next(iter(hit.items()))
+                votes[src] = votes.get(src, 0) + 1
+                named += ents
+        return votes, named
 
     def _linked_across(self, entity: str, others: set[str]) -> bool:
         """Has the catalog measured a cross-source relationship between `entity` and any of `others`?"""
@@ -1502,6 +1571,61 @@ class SemanticResolver:
                                     explain={"why": f"'{tok} {nxt}' kırılım istiyor → sertifikalı '{key}' kolonu ({m.entity}.{m.column})", "role": "group_by"},
                                     span=(nxt_i, nxt_i + 1))
         return None
+
+    def _negate_left_state(self, tok: str, k: int, left: list[ResolvedSlot]) -> Optional[ResolvedSlot]:
+        """A negated light verb ("edilmemiş", "verilmedi", "olmamış") right after a state label slot
+        turns that slot into its complement, in place; None when nothing to its left is such a slot."""
+        for slot in left:
+            m = slot.mapping
+            if slot.semantic_type != SemanticType.DIMENSION_VALUE or m is None or not m.column:
+                continue
+            if (m.operator or "IN").upper() not in ("IN", "="):
+                continue
+            slot.mapping = Mapping(concept_id=m.concept_id, entity=m.entity, table_pattern=m.table_pattern, column=m.column,
+                                   operator="NOT IN", values=list(m.values), extra=dict(m.extra or {}))
+            slot.status = "INFERRED"
+            slot.confidence = min(slot.confidence, 0.75)
+            slot.span = (slot.span[0], k + 1)
+            slot.term = f"{slot.term} {tok}"
+            slot.explain = {**(slot.explain or {}), "source": "negated_label",
+                            "why": f"'{slot.term}' olumsuz: durumun dışı → {m.entity}.{m.column} NOT IN ({', '.join(map(str, m.values))})"}
+            return slot
+        return None
+
+    def _negated_label(self, tok: str, k: int, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> Optional[ResolvedSlot]:
+        """The certified state label this negated verb undoes, as a NOT IN slot — or None.
+
+        Labels are certified in their affirmative form ("tamamlandı", "iptal edildi", "kapandı"); people
+        ask for the other side ("tamamlanmadı", "iptal edilmemiş", "kapanmamış"). The negated verb's
+        root minus its negation infix is the label's verb root. One label on one entity, or nothing —
+        two labels answering the same root are the person's choice, not a guess."""
+        root = verb_root(tok) or ""
+        base = re.sub(r"(ma|me)$", "", root)
+        if len(base) < 4:
+            return None
+        hits: list[tuple[Concept, Mapping]] = []
+        for key, senses in index.items():
+            for c, maps in senses:
+                if c.semantic_type != SemanticType.DIMENSION_VALUE or not maps or is_negative(c.term):
+                    continue
+                label_root = verb_root(c.term) or stem(c.term)
+                if not label_root or len(label_root) < 4:
+                    continue
+                if label_root == base or label_root.startswith(base) or base.startswith(label_root):
+                    hits.append((c, maps[0]))
+        concepts = {c.id for c, _ in hits}
+        entities = {m.entity for _, m in hits}
+        if len(concepts) != 1 or len(entities) != 1:
+            return None
+        c, m = hits[0]
+        if (m.operator or "IN").upper() not in ("IN", "="):
+            return None
+        undone = Mapping(concept_id=m.concept_id, entity=m.entity, table_pattern=m.table_pattern, column=m.column,
+                         operator="NOT IN", values=list(m.values), extra=dict(m.extra or {}))
+        return ResolvedSlot(term=tok, semantic_type=SemanticType.DIMENSION_VALUE, status="INFERRED", concept_id=c.id,
+                            mapping=undone, confidence=min(c.confidence, 0.75), span=(k, k + 1),
+                            explain={"why": f"'{tok}' olumsuz: '{c.term}' durumunun dışı → {m.entity}.{m.column} NOT IN ({', '.join(map(str, m.values))})",
+                                     "source": "negated_label"})
 
     @staticmethod
     def _metric_keys_for_root(root: str, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> list[tuple[str, list[tuple[Concept, list[Mapping]]]]]:

@@ -52,14 +52,30 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
     if len(profiles) <= 1:
         return list(profiles)
     dated = [(p, _window(p)) for p in profiles]
+    if (start is None) != (end is None):
+        # One bound only — `DATE_ >= '2015-01-01'` with no ceiling, or a ceiling alone — is an open
+        # period, not no period: every copy on the open side is read. Taken as "no period" it read the
+        # newest copy alone and 2021–2025 vanished from an answer that asked for everything since 2015.
+        start = start or date(1900, 1, 1)
+        end = end or date(2999, 12, 31)
     if start is None or end is None:
         known = [(p, w) for p, w in dated if w]
         if not known:
             return list(profiles)
-        # by where each period *begins*, not where it ends: a single forward-dated row can push an old
-        # table's window years into the future and make it look like the current one
-        latest = max(w[0] for _, w in known)
-        return [p for p, w in known if w[0] == latest]
+        # The current copy is the one measured furthest forward *up to today*: a forward-dated row
+        # (a 2030 due date) is clipped, so it cannot make an old copy look current, and master data
+        # copied whole into every firm (items, customers, price lists — all beginning on the same old
+        # day) does not tie eight ways on "begins latest" and get read eight times. A tie left after
+        # clipping goes to the newest firm number, the way the copies were created.
+        today = date.today().isoformat()
+
+        def rank(p, w):
+            end_ = min(str(w[1] or "")[:10], today) if w[1] else ""
+            firm = str((p.context or {}).get("n0") or "")
+            return (end_, int(firm) if firm.isdigit() else -1, str(w[0] or "")[:10])
+
+        best = max(rank(p, w) for p, w in known)
+        return [p for p, w in known if rank(p, w) == best]
     hit = [p for p, w in dated if w and w[0] < end and start <= w[1]]
     # A table whose period was never measured cannot be ruled out — but it can be set aside once a
     # measured table covers what was asked. Carried along regardless, an unmeasured 2026 table joined

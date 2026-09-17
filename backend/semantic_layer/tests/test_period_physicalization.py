@@ -216,3 +216,61 @@ def test_a_grouped_subquery_carries_the_tag_in_its_group_by_and_a_total_does_not
         'SELECT t.n, c."SPECODE2" FROM (SELECT COUNT(*) AS n FROM INVOICE WHERE "DATE_" >= \'2025-01-01\' AND "DATE_" < \'2027-01-01\') t '
         'JOIN CLCARD c ON 1 = 1', _q4_tables(), {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
     assert "__nb_firm = " not in total, total
+
+
+def test_a_lower_bound_alone_is_an_open_period_and_reads_every_copy_after_it():
+    """2026-09-17, soru 7: `DATE_ >= '2015-01-01'` with no ceiling read the 2026 copy alone; 408.785
+    invoices of 2021–2025 were silently missing from "which invoices"."""
+    # a floor before the oldest copy asks for everything: with no period in the question that is the
+    # current copy, by the same convention as no date at all (2026-09-17, eight copies and 700k rows)
+    sql = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.\"DATE_\" >= '2015-01-01'", [Y2021, Y2026], {}, period=None)
+    assert "LG_411_01_STLINE" in sql and "LG_211_01_STLINE" not in sql, sql
+    # a floor inside the data is a period the statement really asks for: both copies from there on
+    sql = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.\"DATE_\" >= '2024-01-01'", [Y2021, Y2026], {}, period=None)
+    assert "LG_211_01_STLINE" in sql and "LG_411_01_STLINE" in sql, sql
+    only_new = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.\"DATE_\" >= '2026-03-01'", [Y2021, Y2026], {}, period=None)
+    assert "LG_411_01_STLINE" in only_new and "LG_211_01_STLINE" not in only_new, only_new
+    ceiling = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.\"DATE_\" < '2025-06-01'", [Y2021, Y2026], {}, period=None)
+    assert "LG_211_01_STLINE" in ceiling and "LG_411_01_STLINE" not in ceiling, ceiling
+
+
+def test_copies_are_unioned_by_column_name_not_position():
+    """2026-09-17: LG_171_PRODORD and LG_411_PRODORD carry the same columns in another order; `SELECT *`
+    UNION ALL put a date under STATUS. Copies are projected by the names they share."""
+    old = SchemaProfile(datasource_id="d", table_name="LG_211_01_STLINE", table_pattern="LG_{n0}_{n1}_STLINE", entity="STLINE", schema_name="dbo",
+                        columns=[ColumnProfile(name="DATE_", data_type="datetime"), ColumnProfile(name="TOTAL", data_type="decimal"), ColumnProfile(name="OLDONLY", data_type="int")],
+                        row_count=10, time_window=("2021-01-01", "2025-12-31"), context={"n0": "211", "n1": "01"})
+    new = SchemaProfile(datasource_id="d", table_name="LG_411_01_STLINE", table_pattern="LG_{n0}_{n1}_STLINE", entity="STLINE", schema_name="dbo",
+                        columns=[ColumnProfile(name="TOTAL", data_type="decimal"), ColumnProfile(name="DATE_", data_type="datetime"), ColumnProfile(name="NEWONLY", data_type="int")],
+                        row_count=1000, time_window=("2026-01-01", "2026-08-17"), context={"n0": "411", "n1": "01"})
+    sql = physicalize_sql("SELECT SUM(s.\"TOTAL\") FROM STLINE s WHERE s.\"DATE_\" >= '2025-01-01' AND s.\"DATE_\" < '2027-01-01'",
+                          [old, new], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
+    assert "SELECT *" not in sql.upper().replace("SELECT  *", "SELECT *"), sql
+    assert sql.upper().count("[TOTAL], [DATE_]") == 2 or sql.upper().count("TOTAL, DATE_") == 2, sql
+    assert "OLDONLY" not in sql and "NEWONLY" not in sql
+
+
+def test_logo_empty_dates_are_not_a_period():
+    sql = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.\"DATE_\" > '1900-01-02'", [Y2021, Y2026], {}, period=None)
+    assert "LG_411_01_STLINE" in sql and "LG_211_01_STLINE" not in sql, sql
+
+
+def test_master_data_copies_that_all_begin_on_the_same_day_resolve_to_the_current_one():
+    """2026-09-17, soru 7: PRCLIST/ITEMS/CLCARD are copied whole into every firm and all begin in 2010;
+    'begins latest' tied and every copy was read — eight price lists joined to one year of invoices."""
+    from semantic_layer.runtime.periods import tables_for
+    copies = [_p(f"LG_{f}_PRCLIST", "LG_{n0}_PRCLIST", ("2014-12-29", end), entity="PRCLIST", ctx={"n0": f})
+              for f, end in (("105", "2016-01-09"), ("201", "2020-12-31"), ("211", "2026-01-05"), ("411", "2026-08-12"))]
+    assert [p.table_name for p in tables_for(copies, None, None)] == ["LG_411_PRCLIST"]
+
+
+def test_the_current_copy_is_the_one_measured_furthest_forward_up_to_today():
+    from semantic_layer.runtime.periods import tables_for
+    # customers: copies whose windows begin on different old days — the one measured to 2026 is current
+    cl = [_p(f"LG_{f}_CLCARD", "LG_{n0}_CLCARD", w, entity="CLCARD", ctx={"n0": f})
+          for f, w in (("105", ("2014-11-18", "2016-01-15")), ("191", ("2010-01-01", "2020-01-16")), ("211", ("2010-01-01", "2026-03-12")), ("411", ("2010-01-01", "2026-08-16")))]
+    assert [p.table_name for p in tables_for(cl, None, None)] == ["LG_411_CLCARD"]
+    # lines: a forward-dated row pushes 2021–2025's window to 2030; clipped to today it loses to 2026
+    st = [_p("LG_211_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2021-01-01", "2030-03-20"), ctx={"n0": "211", "n1": "01"}),
+          _p("LG_411_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2026-01-01", "2027-03-23"), ctx={"n0": "411", "n1": "01"})]
+    assert [p.table_name for p in tables_for(st, None, None)] == ["LG_411_01_STLINE"]

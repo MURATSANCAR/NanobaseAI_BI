@@ -380,3 +380,24 @@ def test_a_keyword_alias_is_quoted():
 
     out = physicalize_sql("WITH plan AS (SELECT 1 AS x FROM INVOICE) SELECT AVG(x) FROM plan", _copies(), {})
     assert "[plan]" in out, out
+
+
+def test_a_negated_verb_over_a_certified_status_label_is_the_labels_complement(catalog, profiles):
+    """2026-09-17, soru 9: 'tamamlanmadı' with 'tamamlandı' → PRODORD.STATUS IN (3) certified. Left to the
+    model it became 'not accounted'. It is the same label, negated: STATUS NOT IN (3)."""
+    from semantic_layer.models import Mapping
+    from semantic_layer.tests.test_runtime import _certify
+    from semantic_layer.evidence.engine import EvidenceEngine
+    _certify(catalog, "iptal edildi", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="CANCELLED", operator="IN", values=["1"]))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = resolve(catalog, profiles, "İptal edilmemiş faturalar kaç tane?")
+    on_cancelled = [s for s in sq.slots if s.mapping and s.mapping.column == "CANCELLED" and s.semantic_type == SemanticType.DIMENSION_VALUE]
+    assert on_cancelled and all(s.mapping.operator == "NOT IN" and s.mapping.values == ["1"] for s in on_cancelled), sq.to_dict()
+    assert any((s.explain or {}).get("source") == "negated_label" for s in on_cancelled)
+    assert "edilmemis" not in sq.unresolved
+    # the single-word form goes the same way
+    _certify(catalog, "tamamlandi", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE", column="TRCODE", operator="IN", values=["9"]))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = resolve(catalog, profiles, "Tamamlanmadı olan faturalar")
+    neg = [s for s in sq.slots if (s.explain or {}).get("source") == "negated_label"]
+    assert neg and neg[0].mapping.operator == "NOT IN" and neg[0].mapping.values == ["9"], sq.to_dict()

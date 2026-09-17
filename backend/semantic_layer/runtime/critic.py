@@ -224,6 +224,55 @@ def _is_numeric(prof: SchemaProfile, column: str) -> Optional[bool]:
     return any(col.data_type.lower().startswith(t) for t in _NUMERIC)
 
 
+def _bare_entity(name: str) -> str:
+    return re.sub(r"^(?:DBO_)?(?:LG_)?", "", (name or "").upper())
+
+
+def _mismatched_keys(tree: exp.Expression, by_table: dict, by_entity: dict, dialect: str) -> list[Finding]:
+    """`PRCLIST.CARDREF = INVOICE.CLIENTREF`: two foreign keys that the catalog measured to point at
+    different tables (items, customers) set equal — a join that matches rows by coincidence of
+    numbers. Found wherever it is written, in a JOIN or a correlated WHERE, and refused with the
+    relationships the catalog does know, so the repair goes through the right table."""
+    alias_prof: dict[str, SchemaProfile] = {}
+    for node in tree.find_all(exp.Table):
+        if not node.name:
+            continue
+        prof = by_table.get(node.name.upper()) or by_entity.get(node.name.upper()) or by_entity.get(_bare_entity(node.name)) \
+            or by_entity.get("LG_" + _bare_entity(node.name))
+        if prof is not None:
+            alias_prof[(node.alias or node.name).upper()] = prof
+            alias_prof.setdefault(node.name.upper(), prof)
+
+    def targets(prof: SchemaProfile, column: str) -> set[str]:
+        return {_bare_entity(r.get("ref_entity") or "") for r in (prof.relationships or [])
+                if str(r.get("column") or "").upper() == column.upper() and r.get("ref_entity")}
+
+    out: list[Finding] = []
+    seen: set[str] = set()
+    for eq in tree.find_all(exp.EQ):
+        l, r = eq.left, eq.right
+        if not (isinstance(l, exp.Column) and isinstance(r, exp.Column)) or not l.table or not r.table:
+            continue
+        pl, pr = alias_prof.get(l.table.upper()), alias_prof.get(r.table.upper())
+        if pl is None or pr is None or pl is pr:
+            continue
+        tl, tr = targets(pl, l.name), targets(pr, r.name)
+        if not tl or not tr:
+            continue                                   # a key against a non-key: the join checks above judge it
+        if tl & tr or _bare_entity(pr.entity) in tl or _bare_entity(pl.entity) in tr:
+            continue                                   # the same target, or one side is the other's target
+        key = f"{pl.entity}.{l.name}={pr.entity}.{r.name}"
+        if key in seen:
+            continue
+        seen.add(key)
+        known = "; ".join(f"{pl.entity}.{l.name} → {', '.join(sorted(tl))}" for _ in [0]) + "; " + \
+                "; ".join(f"{pr.entity}.{r.name} → {', '.join(sorted(tr))}" for _ in [0])
+        out.append(Finding("UNKNOWN_JOIN", "block",
+            f"{eq.sql(dialect=dialect)}: iki kolon katalogda farklı tablolara giden anahtarlar ({known}); "
+            f"eşitlenmeleri satırları rastlantıyla eşler. Bağlantıyı bu anahtarların gerçek hedefi üzerinden kur."))
+    return out
+
+
 def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
            names: Optional[dict[str, set[str]]] = None) -> list[Finding]:
     """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read.
@@ -264,9 +313,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         # other side's rows are preserved and *this* side's rows are repeated once per match.
         repeated: set[str] = set()           # aliases whose rows are multiplied by a join
         uncertain: set[str] = set()          # neither side keyed: could go either way
+        many_of: dict[str, set[str]] = {}    # keyed alias → the many-sided aliases joined to it
+        chasm: set[str] = set()              # many-sided aliases multiplied by a sibling many-side
         for join in select.args.get("joins") or []:
             on = join.args.get("on")
             if on is None or not _in_scope(join, select):
+                continue
+            # `JOIN x ON 1 = 1`: every row of one side against every row of the other. Nothing keyed,
+            # nothing meant — a cross product wearing a JOIN. Refused before any aggregate is looked at.
+            if not any(isinstance(eq.left, exp.Column) and isinstance(eq.right, exp.Column) for eq in on.find_all(exp.EQ)):
+                findings.append(Finding("FANOUT", "block",
+                    f"{join.sql(dialect=dialect)[:80]}: iki tabloyu bağlayan kolon eşitliği yok (çapraz birleştirme); "
+                    f"her satır diğer tablonun her satırıyla çoğalıyor. JOIN'i ilişki kolonları üzerinden yaz."))
                 continue
             # Columns each side is joined on, gathered across the whole ON clause: a composite key
             # is only covered when every one of its columns is in the join, and a join that covers
@@ -300,8 +358,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                 # The keyed side matches at most one row per row of the other side, so *its* rows are
                 # the ones repeated — once per matching row on the other side.
                 repeated.update(keyed)
+                for k in keyed:
+                    many_of.setdefault(k, set()).update(sides - keyed)
             elif sides and not keyed:
                 uncertain.update(sides)
+        # Two many-sided relations hung off the same key (items ← order lines, items ← stock lines):
+        # every order line meets every stock line of its item, and a sum on either side is multiplied
+        # by the other's row count. Neither side is keyed, so the rule above sees nothing — this is
+        # the join shape that returned 2.000 pending postcards for an order of 100.
+        for k, manys in many_of.items():
+            if len(manys) > 1:
+                repeated.update(manys)
+                chasm.update(manys)
 
         for agg in select.find_all(exp.AggFunc):
             if not _in_scope(agg, select):
@@ -352,6 +420,12 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                         findings.append(Finding("FANOUT", "warn",
                             f"{agg.sql(dialect=dialect)}: {who} satırları join'de tekrarlanıyor; ortalama ince "
                             f"tarafın satır sayısıyla ağırlıklı. {who} başına ortalama isteniyorsa önce o seviyede topla."))
+                    elif aliases & chasm:
+                        others = ", ".join(sorted(rels[a].entity for a in (chasm - aliases) if a in rels)) or "diğer ilişki"
+                        findings.append(Finding("FANOUT", "block",
+                            f"{agg.sql(dialect=dialect)} şişirilmiş: {who} satırları aynı anahtara bağlı ikinci bir "
+                            f"çoklu ilişkinin ({others}) satır sayısıyla çarpılıyor. Her çoklu ilişkiyi kendi alt "
+                            f"sorgusunda (anahtar bazında) topla, sonra anahtar üzerinden birleştir."))
                     else:
                         findings.append(Finding("FANOUT", "block",
                             f"{agg.sql(dialect=dialect)} şişirilmiş: {who} tablosunun satırları join yüzünden "
@@ -435,6 +509,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                 findings.append(Finding("UNKNOWN_COLUMN", "block",
                     f"{prof.entity} tablosunda {c.name} adında kolon yok."))
 
+    findings += _mismatched_keys(tree, by_table, by_entity, dialect)
     order = {"block": 0, "warn": 1}
     seen: set[tuple] = set()
     out = []

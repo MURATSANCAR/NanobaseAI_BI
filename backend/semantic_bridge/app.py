@@ -887,7 +887,7 @@ class Runtime:
         error: Optional[str] = None
         critic_notes: list[dict] = []
         if self.connector is not None:
-            for attempt in range(2):
+            for attempt in range(3):
                 try:
                     self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
                     error = None
@@ -903,7 +903,7 @@ class Runtime:
                     if not blocking:
                         break
                     log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
-                    if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
+                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
                         # Out of attempts, or the SQL came from the deterministic compiler — which
                         # builds from the catalog rather than guessing, so a finding against it is
                         # this system's own bug and rewriting it with a model would hide that.
@@ -929,7 +929,7 @@ class Runtime:
                                 "explanation": _ds_msg,
                                 "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
                     log.warning("dry_run failed (attempt %d) q=%r err=%s", attempt + 1, question[:80], error[:300])
-                    if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
+                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
                         break
                     repairs += 1
                     fixed = self.existing.repair(sq, sql, error, thread)

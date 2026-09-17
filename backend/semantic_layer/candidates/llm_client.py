@@ -24,7 +24,10 @@ class LlmClient:
         # is turned off, and returns the same name.
         self.extra = dict(extra or {})
 
-    def chat(self, messages: list[dict[str, str]], *, max_tokens: int = 1024, temperature: float = 0.0) -> str:
+    def chat(self, messages: list[dict[str, str]], *, max_tokens: int = 4096, temperature: float = 0.0) -> str:
+        # 4096, not 1024: a statement with its reading lines, two derived tables and a CASE per
+        # measure ran past 1024 tokens; cut mid-fence it read as "no SQL" and the question was
+        # refused after a correct answer had been written.
         headers = {"Content-Type": "application/json"}
         if self.key:
             headers["Authorization"] = f"Bearer {self.key}"
@@ -61,7 +64,12 @@ class LlmClient:
                 log.warning("LLM transport error while retrying: %s", e)
         if r.status_code >= 400:
             raise RuntimeError(f"LLM HTTP {r.status_code}: {r.text[:300]}")
-        return str(r.json()["choices"][0]["message"]["content"] or "")
+        body = r.json()
+        choice = body["choices"][0]
+        if choice.get("finish_reason") == "length":
+            # Said out loud: a cut answer looks like a bad answer downstream, and the fix is a budget.
+            log.warning("LLM answer cut at max_tokens=%d (model %s); raise the budget if this repeats", max_tokens, self.model)
+        return str(choice["message"]["content"] or "")
 
 
 class FakeLlm:

@@ -23,21 +23,30 @@ class ResultFiles:
         digest = hashlib.sha256()
         columns = []
         used = sum(p.stat().st_size for p in Path(self.directory.name).glob('*.jsonl'))
+        truncated = False
         try:
             with os.fdopen(fd, 'wb') as stream:
                 for columns, rows in batches:
                     for row in rows:
                         encoded = (json.dumps(row, ensure_ascii=False, allow_nan=False) + '\n').encode()
+                        if used + size + len(encoded) > self.disk_budget:
+                            raise ValueError('Rapor saklama alanı dolu; eski sonuçlar temizlenmeden yeni sonuç saklanamaz.')
+                        if count + 1 > self.max_rows or size + len(encoded) > self.max_bytes:
+                            # The answer is bigger than what is kept. What was read is kept and said to be
+                            # a part — the person sees the rows and the note, not an error in place of
+                            # an answer. Nothing is dropped quietly: `truncated` travels with the result.
+                            truncated = True
+                            break
                         count += 1
                         size += len(encoded)
-                        if count > self.max_rows or size > self.max_bytes or used + size > self.disk_budget:
-                            raise ValueError('Rapor saklama sınırını aşıyor; dönemi veya kırılımı daraltın. Kısmi sonuç yayınlanmadı.')
                         stream.write(encoded)
                         digest.update(encoded)
                         if len(preview) < preview_size:
                             preview.append(row)
+                    if truncated:
+                        break
             return {'columns': columns, 'records': preview, 'totalRows': count,
-                    'truncated': False, '_result_file': name, 'resultFingerprint': digest.hexdigest()}
+                    'truncated': truncated, '_result_file': name, 'resultFingerprint': digest.hexdigest()}
         except BaseException:
             Path(name).unlink(missing_ok=True)
             raise
