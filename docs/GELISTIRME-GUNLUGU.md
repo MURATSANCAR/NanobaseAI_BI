@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Yeni kitap için otomatik bölgesel yeniden okuma
+
+- V10 kaynak hattı, inceleme gerektiren bölgeyi kitap metni/cevap beklemeden bbox ve kaynak hashleriyle ağsız tüketiciye gönderir; sonuç gelmeden kaynak span'larını tamamlamaz. İlk 61 gerçek bölge bileşen kontrolü geçti; tam ürün kabulü değildir.
+- Lease kaybının kalıcı iptal kaydına takılması bulundu; attempt bazlı istek/rapor ve tamamlanmış artifactten toparlanma eklendi. V10-r2 gerçek hata ve yeni kitap kabulü sürüyor; eski bileşen sonucu yeni helper hashine taşınmaz.
+- Müşteri paketine tüketici dahil edilmesi, eksik kuyruk için kurulum öncesi hata ve yedekte tüketicinin durdurulması kodlandı. Yeni offline/restore kabulü bekleniyor. [Kapsam](editor/2026-09-17-reread-deployment.md).
+
 ## 2026-09-17 — Kaynaklı kırpım vetosu ve otomatik sürüm devamı
 
 - Bölgesel Paddle + temiz PDF + aynı kutunun stabil iki PSM ölçümüyle eski tam sayfa ikinci okuyucu vetosunu kaynak/provenance koruyarak ele alan kod eklendi. Gerçek 1.149 kayıtta önceki 39/39 iyileşme, 14 yeni aday ve 0 gerileme doğrulandı; bu üretim874 sonucu değildir.
