@@ -22,9 +22,13 @@ Ana yayın `text-attribution-v5-20260917`; nesil `14a79646` 48/48 COMPLETED/NEED
 
 Özgün 48 sayfalık kitaba ek olarak Kahramanını Yutan Kitap (64 sayfa) ve Dünyanın En Korkak Hayvanı (32 sayfa) ayrı API18810 ortamında değişmeyen PDF ile yüklendi. Gerçek API/PG, bağımsız Poppler sayfa sayısı ve kaynak artifact hashleri geçti. Bu iki kitabın analiz koşusu henüz başlatılmadı; üç kitapta anlamsal kabul iddiası yok.
 
-### Devam eden v7 — kaynağı koruyarak devam
+### Devam eden v8 — anlatı ve görsel kapsam kapıları
 
-V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; nesil ab85c397 çalışıyor. Gerçek soğuk model başlangıcında üç bağlantı hatası ve iki 503 sınırlı tekrarlarla toparlandı; 29. sayfa taze çağrısı tamamlandı. Dört genişlikte kaynak UI geçti; v7 tam koşu ve görsel kimlik kabulü sürüyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).
+Ayrı API18810 ortamı `narrative-coverage-v8-20260917`, nesil `7e7db466-3576-4c23-85b2-73483ab4508e`, iş `72f75bb3-a807-4e0b-8ca3-35f7ad0d0cbe`. Anlatı dışı bütün iddialar kodda engellenir; gerçek önceki 48 sayfada 15 yanlış MATCH adayını engelleyip 124 anlatı/karma adayı değiştirmedi. Görsel kapsam küçük alan nedeniyle dışlanan 52 bölgeyi açık gösterir; eski 19 büyük kırpım korunur, yeni model çağrısı eklenmez. Backend/web hash eşliği, gerçek 2/13/29 sayfalarında API/PG/ata ham kaynak ve anlatı/kapsam kontrolleri, dört genişlikte mobil kapsam ekranı geçti. Tam nesil koşusu sürüyor. Ana yayın v5 kalır. [Anlatı kapısı](docs/editor/2026-09-17-narrative-gate.md), [görsel kapsam](docs/editor/2026-09-17-visual-coverage.md).
+
+### V7 — kaynağı koruyarak devam
+
+V6 R2 sayfa 2 taze çıkarımı 448,115 saniyede tamamlandı; kaynaklı seçim UI dört genişlikte geçti. Beşinci sayfa tamamlandıktan sonra API iptaliyle kayıtlar korundu. V7 en yakın tamamlanmış sayfa atasını seçer, model girdisini sıkıştırır ve genel priority_pages sırası ekler; kalan bütün sayfalar işlenir. Gerçek ata/tokenizer ölçümü geçti; nesil ab85c397 dokuz sayfanın kontrollerinden sonra API ile iptal edildi; sonuçlar korunarak V8 nesline geçildi. Gerçek soğuk model başlangıcında üç bağlantı hatası ve iki 503 sınırlı tekrarlarla toparlandı; 29. sayfa taze çağrısı tamamlandı. Dört genişlikte kaynak UI geçti; V7 tam koşu kabulü verilmedi; kalan iş V8 üzerinde devam ediyor. [Kayıt](docs/editor/2026-09-17-page-resume.md).
 
 ### Devam eden v6 — bölgesel kaynak seçimi
 
