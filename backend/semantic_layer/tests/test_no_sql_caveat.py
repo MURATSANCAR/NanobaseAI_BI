@@ -73,3 +73,15 @@ def test_an_unclosed_sql_fence_is_still_the_models_sql():
     out = extract_sql(cut)
     assert out is not None and out.startswith("-- yorum") and "SELECT TOP 20" in out, out
     assert extract_sql("```sql\nNO_SQL: tanım yok\n```") is None
+
+
+def test_the_caveat_that_shares_the_distinctive_words_wins_not_the_longest():
+    """2026-09-18, soru 26: a minimum-stock question was answered with the receivables-ageing caveat — both
+    share 'veride', 'ölçüm', 'yapılamaz'; only one speaks of 'asgari stok seviyesi'."""
+    from semantic_layer.runtime.compiler import caveat_for
+    rules = ("- Açık alacak / alacak yaşlandırması bu veride fatura bazında yapılamaz (ölçüm 2026-09-16): Logo yaşlandırması ödeme planı "
+             "satırlarının kapatılmasına dayanır. 2026 kopyasında plan satırlarının hiçbiri kapatılmamış; veride tanımlı değil.\n"
+             "- Asgari / azami stok seviyesi bu veride tanımlı değil (ölçüm 2026-09-18): INVDEF.MINLEVEL malzeme–ambar satırlarının "
+             "hiçbirinde sıfırdan büyük değil. Asgari stok seviyesinin altına düşen malzemeler sorusu bu yüzden boş döner.\n")
+    reason = "Asgari stok seviyesi bu veride tanımlı değil (ölçüm): INVDEF.MINLEVEL hiçbir malzeme satırında sıfırdan büyük değil, hesaplanamaz."
+    assert caveat_for(reason, rules).startswith("Asgari"), caveat_for(reason, rules)

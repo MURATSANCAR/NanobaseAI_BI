@@ -1,5 +1,9 @@
 # Referans kitabın kabul kayıtları
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](../../apps/editor/speech/README.md).
+
 Kaynak: kullanıcının sağladığı *Ekrana Sığmayan Macera İç Baskı* PDF'si,
 SHA-256 `94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50`.
 Numaralar PDF sayfa sırasıdır. Kapsam, kullanıcının üretim geliştirme planındaki

@@ -1,5 +1,9 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](../../apps/editor/speech/README.md).
+
 > V10 otomatik bölgesel yeniden okuma geliştirmesi: ilk 61 gerçek bölge bileşen kontrolü geçti; son lease/toparlanma düzeltmesi V10-r2 ile yeniden kabul ediliyor. Yeni kitap uçtan uca optical kabulü ve yeni offline/restore kabulü henüz tamamlanmadı. [Kurulum ve kabul sınırı](2026-09-17-reread-deployment.md).
 
 > Ana yayın v5: `text-attribution-v5-20260917`, ana nesil `14a79646` 48/48; 10 açık metin atfı, 0 claim-speaker. Gerçek API/PG, mobil atıf/kutu ve sekiz kesilen-yükleme kabulü geçti. Kaynak 821/328; figür kimliği ve anlamsal kabul açık. [Güncel kayıt](2026-09-17-text-attribution.md).

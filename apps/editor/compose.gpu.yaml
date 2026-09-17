@@ -1,6 +1,9 @@
 # Private GPU model endpoint. No cloud-provider fallback.
 # The base URL is the runner root (without /v1), reachable from this Docker network.
 services:
+  # GPU profile keeps embedding/reranker, but the old CPU LLM is opt-in only.
+  llm:
+    profiles: !override [cpu-llm]
   api:
     environment: &gpu-env
       EDITOR_MODEL_BACKEND: vllm

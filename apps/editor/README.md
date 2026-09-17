@@ -1,5 +1,9 @@
 # Editör modülü — bağımsız kurulum
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](speech/README.md).
+
 > V10 otomatik bölgesel yeniden okuma geliştirmesi: ilk 61 gerçek bölge bileşen kontrolü geçti; son lease/toparlanma düzeltmesi V10-r2 ile yeniden kabul ediliyor. Yeni kitap uçtan uca optical kabulü ve yeni offline/restore kabulü henüz tamamlanmadı. [Kurulum ve kabul sınırı](../../docs/editor/2026-09-17-reread-deployment.md).
 
 > Ayrı API18810 doğrulaması: V8 `7e7db466` koşusu devam ediyor. Künye/etkinlik iddiası engeli ve görsel kapsam kaydı kodda düzeltildi; gerçek 2/13/29 sayfa API/PG ve dört genişlikte arayüz kabulü geçti. Ana yayın V5 olarak kalır. [Anlatı kapısı](../../docs/editor/2026-09-17-narrative-gate.md), [görsel kapsam](../../docs/editor/2026-09-17-visual-coverage.md).

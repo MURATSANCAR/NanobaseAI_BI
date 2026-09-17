@@ -1,5 +1,9 @@
 # Editör inceleme ekranı
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](../speech/README.md).
+
 > Son ek yayın: `upload-queue-v2-20260917` yeni kitap yükleme, kalıcı iş takibi, iptal ve analiz başlatma kontrollerini içerir. Kaynak/analiz görüntüleme salt okunurdur; yükleme ve iş kontrolü API'ye yazar. Gerçek PDF ve 320/390/768/1440 px kabulü geçti. [Yükleme doğrulaması](../../../docs/editor/2026-09-17-upload-pipeline.md). Aşağıdaki eski salt-okunur sürüm notları tarihçedir.
 
 > 17 Eylül son güncelleme: `source-review-v2-r2-20260917` ile yeni nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b` 48/48 tamamlandı; 828 anlaşma/321 inceleme, NEEDS_REVIEW. 371 yeniden okuma ve 15 ek OCR adayının kökeni korundu; veri elle değiştirilmedi. Kaynakta kutu ve aday görüntüleme dört genişlikte gerçek tarayıcı/API kontrolünden geçti. Son offline paket/import ve ayrı kuruluma geri yükleme 07:18:10 UTC itibarıyla geçti; geri yüklenen gerçek API/PG, OCR adayları ve 320/390/768/1440 px arayüz doğrulandı. Aşağıdaki v2 restore kayıtları tarihçedir. [Kod, ölçümler ve güncel kanıtlar](../../../docs/editor/2026-09-17-source-v3.md).

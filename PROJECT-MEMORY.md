@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](apps/editor/speech/README.md).
+
 ## 2026-09-18 — Qwen ana model / paralel OCR V11
 
 Bağımsız görsel gözlem ve ihtiyaç halinde GPU bölgesel OCR paralelleştirildi; kaynak bağımlı iddialar ikisini bekler. Ham ölçüm/provenance ve çelişki kapıları korunur. Gerçek yeni nesil kabulü sürüyor. [Ayrıntı](docs/editor/2026-09-18-qwen-ocr-parallel.md).

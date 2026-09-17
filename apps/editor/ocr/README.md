@@ -1,5 +1,9 @@
 # İkinci OCR okuyucusu
 
+## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
+
+Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan kısa TTS pilotu hazırlanıyor; ürün kabulü henüz yok. [Hazırlık ve sonraki kabul adımları](../speech/README.md).
+
 ## 17 Eylül doğrulanmış durum
 
 V2, bölgesel Paddle metnini PDF/Tesseract kelime kutularıyla karşılaştırır; bütün satırı bölge yerine kullanmaz. Ham ölçümler korunur. TEXT_AGREED için bölgesel anlaşma, bağımsız okuyucu desteği, skor ve çelişki kontrolleri gerekir. Konuşmacı OCR’ın görevi değildir. OCR artık pilot eklentisi değil ana Compose servisidir.
