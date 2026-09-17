@@ -215,3 +215,7 @@ bağımlı kalınmaz; import imaj ID'lerini ayrıca karşılaştırır.
 Kaynak plan: kullanıcının sağladığı `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx`,
 sürüm 1.1, 16 Eylül 2026. Belgedeki yaklaşık iki haftalık doğrulama ufku teslim
 garantisi değildir; üretim kabulü P0–P7 kanıtlarına bağlıdır.
+
+## Kaynak v3 ve sınırlı OCR-VL
+
+Ek Unicode özel kullanım karakterlerinin PDF metni sayılması düzeltildi; değişmez yeniden okuma ölçümleri yeni nesilde kullanılır. [Gerçek koşu ve açık kabul](../../docs/editor/2026-09-17-source-v3.md). Sorunlu kırpımlar için isteğe bağlı [ağsız OCR-VL aracı](ocr-vl/README.md) ve `bundle.py --with-ocr-vl` paketleme desteği vardır; pilot ve yeni restore sonucu doğrulanmadan üretim kabulü değildir.

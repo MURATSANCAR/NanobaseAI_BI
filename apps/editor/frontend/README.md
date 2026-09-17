@@ -1,5 +1,7 @@
 # Editör inceleme ekranı
 
+> 17 Eylül v3 güncellemesi: Yeni kaynak nesli çalışıyor; salt okunur gerçek veri tekrarında 828 anlaşma/321 inceleme. 45 sayfanın inceleme API/PG kontrolü geçti; tam yeni nesil henüz tamamlanmadı. Kaynakta kutu işaretleme ve yeniden okuma karşılaştırması yeni web imajıyla yayımlandı; gerçek Chrome/API üzerinde 320/390/768/1440 kontrolü geçti. OCR-VL sınırlı pilotu sürüyor. Aşağıdaki tamamlanmış 48 sayfa ve restore sonuçları önceki v2 sürümüne aittir. [Yeni kod ve kanıtlar](../../../docs/editor/2026-09-17-source-v3.md).
+
 ## 17 Eylül doğrulanmış durum
 
 Restore ortamındaki gerçek Chrome kontrolü 17 Eylül 01:56:09 UTC’de geçti: 320/390/768/1440 px, altı sekme ve gerçek kaynak kaydı. Ekran salt okunur kalır; işin bitişi ile inceleme durumu ayrı gösterilir. Bu sonuç editör karar/yükleme/rol veya anlamsal kabul yerine geçmez.

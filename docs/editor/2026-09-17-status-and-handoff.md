@@ -1,5 +1,7 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
+> 17 Eylül v3 güncellemesi: Yeni kaynak nesli çalışıyor; salt okunur gerçek veri tekrarında 828 anlaşma/321 inceleme. 45 sayfanın inceleme API/PG kontrolü geçti; tam yeni nesil henüz tamamlanmadı. Kaynakta kutu işaretleme ve yeniden okuma karşılaştırması yeni web imajıyla yayımlandı; gerçek Chrome/API üzerinde 320/390/768/1440 kontrolü geçti. OCR-VL sınırlı pilotu sürüyor. Aşağıdaki tamamlanmış 48 sayfa ve restore sonuçları önceki v2 sürümüne aittir. [Yeni kod ve kanıtlar](2026-09-17-source-v3.md).
+
 17 Eylül sonraki yayın: [Kaynak inceleme API ve balon–figür aday bağlantısı](2026-09-17-source-review.md). Aşağıdaki v2 işleme/restore sonucu korunur; yeni inceleme API’sinin ek kabulü bağlantılı kayıttadır.
 
 17 Eylül 2026 tarihinde gerçek sunucudaki API ve kanıt dosyaları yeniden okundu. Bu belge güncel durum kaydıdır; 16 Eylül tarihli belgeler kendi tarihlerinin uygulama ve deney geçmişini korur.

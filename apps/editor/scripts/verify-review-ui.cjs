@@ -32,11 +32,18 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     const spans=await spansResponse.json();if(!spans.items?.length)throw new Error('Real page spans missing');
     const details=page.locator('.source-notes details').first();await details.locator('summary').click();
     if(!(await details.textContent()).includes(spans.items[0].data.text))throw new Error('UI span differs from API');
+    await details.getByRole('button',{name:'Kaynakta göster',exact:true}).click();
+    const overlay=await page.locator('.source-highlight').evaluate(element=>{
+      const box=element.getBoundingClientRect(),parent=element.parentElement.getBoundingClientRect();
+      return [(box.x-parent.x)/parent.width,(box.y-parent.y)/parent.height,box.width/parent.width,box.height/parent.height];
+    });
+    if(overlay.some((value,i)=>Math.abs(value-spans.items[0].data.bbox[i])>.003))throw new Error('Source highlight differs from API bbox');
     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Expanded source span overflow');
     await page.screenshot({path:path.join(out,'spans-'+width+'.png'),fullPage:true});
    }
    await page.locator('#page').selectOption('6');
    await page.waitForFunction(()=>document.querySelector('.source-image')?.alt.includes('6. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0);
+   if(await page.locator('.source-highlight').count())throw new Error('Stale source highlight after page change');
    const checks=[];
    for(const name of ['Kaynak & görsel','Sahneler','Karakter & varlık','Olaylar','Kitap yorumu','Soru & cevap']){
     await page.getByRole('button',{name,exact:true}).click();

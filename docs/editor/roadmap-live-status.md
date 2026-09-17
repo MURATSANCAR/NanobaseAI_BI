@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> 17 Eylül v3 güncellemesi: Yeni kaynak nesli çalışıyor; salt okunur gerçek veri tekrarında 828 anlaşma/321 inceleme. 45 sayfanın inceleme API/PG kontrolü geçti; tam yeni nesil henüz tamamlanmadı. Kaynakta kutu işaretleme ve yeniden okuma karşılaştırması yeni web imajıyla yayımlandı; gerçek Chrome/API üzerinde 320/390/768/1440 kontrolü geçti. OCR-VL sınırlı pilotu sürüyor. Aşağıdaki tamamlanmış 48 sayfa ve restore sonuçları önceki v2 sürümüne aittir. [Yeni kod ve kanıtlar](2026-09-17-source-v3.md).
+
 17 Eylül 2026 güncellemesi. Kaynak: kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx`, sürüm 1.1. Bu belge kabul sonucu değil, açık kapsam kaydıdır.
 
 ## Kabul yöntemi

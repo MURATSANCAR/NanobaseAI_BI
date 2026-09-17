@@ -93,6 +93,7 @@ function App() {
     [questions, setQuestions] = useState<any[]>([]),
     [updated, setUpdated] = useState("");
   const [pageSpans, setPageSpans] = useState<Row[]>([]);
+  const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
   const [sourceText, setSourceText] = useState("ocr"),
     [busy, setBusy] = useState(false);
   const selected = runs.find((r) => r.id === run),
@@ -221,13 +222,14 @@ function App() {
   const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
   const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
   useEffect(() => {
-    let active = true; setPageSpans([]);
+    let active = true; setPageSpans([]); setSelectedSpan(null);
     if (gen && signed) all(`/generations/${gen}/source_spans?pdf_page=${page}`)
       .then((rows) => active && setPageSpans(rows))
       .catch((e) => active && setError(e.message));
     return () => { active = false; };
   }, [gen, page, signed, pageReading?.id]);
   const sourceImage = imageFor === source?.id ? image : "";
+  const highlighted = pageSpans.find((r) => r.id === selectedSpan);
   useEffect(() => {
     setImage("");
     if (!source) return;
@@ -412,7 +414,7 @@ function App() {
                   {job?.source_coverage.expected_pages ?? "—"} sayfa
                 </strong>
                 <small>
-                  {job?.source_coverage.ocr_processed_pages ?? 0} yeni OCR kontrolü · {" "}
+                  {job?.source_coverage.ocr_processed_pages ?? 0} sayfa OCR kontrol kaydı · {" "}
                   {job?.source_coverage.visual_read_pages ?? 0} görsel okuma
                   kaydı · doğruluk oranı değildir
                 </small>
@@ -495,6 +497,8 @@ function App() {
                   {sourceImage ? (
                     <>
                       <a
+                        className="source-frame"
+                        id="source-frame"
                         href={sourceImage}
                         target="_blank"
                         rel="noreferrer"
@@ -505,7 +509,11 @@ function App() {
                           src={sourceImage}
                           alt={`Kitabın özgün PDF ${page}. sayfası`}
                         />
+                        {highlighted && <span className="source-highlight" aria-hidden="true"
+                          style={{left: `${highlighted.data.bbox[0]*100}%`, top: `${highlighted.data.bbox[1]*100}%`,
+                            width: `${highlighted.data.bbox[2]*100}%`, height: `${highlighted.data.bbox[3]*100}%`}} />}
                       </a>
+                      {highlighted && <p className="hint" role="status">Seçili metin bölgesi kaynak üzerinde işaretlendi. Okuma adayı: {highlighted.data.text}</p>}
                       <p className="hint">
                         Görüntüye dokunarak özgün boyutta açın. PDF sırası,
                         basılı sayfa etiketiyle aynı olmayabilir.
@@ -521,10 +529,20 @@ function App() {
                     <h2>{statuses[pageReading.data.status] ?? "İnceleme bekliyor"}</h2>
                     <p>{pageReading.data.agreed_spans} uyumlu bölge · {pageReading.data.review_spans} inceleme gereken bölge</p>
                     <p className="hint">Okumaların uyuşması, olayın veya konuşmacının doğrulandığı anlamına gelmez.</p>
+                    {pageReading.data.measurement_reused && <p className="hint">Kaynak ölçümleri önceki koşudan alındı; bu sürümde yeniden karşılaştırıldı.</p>}
                     {pageSpans.map((r) => <details key={r.id}>
                       <summary>{r.data.status === "TEXT_AGREED" ? "✓" : "⚠"} {r.data.text}</summary>
+                      <button className="show-region" aria-pressed={selectedSpan === r.id} onClick={() => {
+                        setSelectedSpan(r.id);
+                        document.getElementById("source-frame")?.scrollIntoView({block: "center", behavior: "smooth"});
+                      }}>Kaynakta göster</button>
                       <p>İkinci okuma: {r.data.secondary_text || "Metin bulunamadı"}</p>
                       <p>Bölgesel okuma: {r.data.region_text || "Bekliyor"}</p>
+                      <p>PDF metni: {r.data.pdf_usable ? r.data.pdf_text : "Kullanılamıyor; metin kanıtı sayılmadı"}</p>
+                      {r.data.reread_measurement?.readings.map((reading: any) => <p key={reading.psm}>
+                        Yeniden okuma ({reading.psm}): {reading.text || "Metin bulunamadı"}
+                      </p>)}
+                      {r.data.reread_measurement && <p className="hint">Yeniden okumalar aynı OCR motorunun iki yöntemidir; ayrı editör onayı değildir.</p>}
                       <small>{statuses[r.data.status] ?? r.data.status}</small>
                     </details>)}
                   </article>}
