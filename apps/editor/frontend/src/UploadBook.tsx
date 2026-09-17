@@ -11,6 +11,8 @@ export function UploadBook({ token, onStarted }: Props) {
   const [upload, setUpload] = useState("");
   const [state, setState] = useState<any>(null);
   const [recent, setRecent] = useState<any[]>([]);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [refresh, setRefresh] = useState(0);
   const attempt = useRef<any>({});
   const alive = useRef(true);
   const controller = useRef(new AbortController());
@@ -38,6 +40,8 @@ export function UploadBook({ token, onStarted }: Props) {
         const next = await request("/uploads/" + upload);
         if (!active) return;
         setState(next); setError("");
+        if (next.status === "CREATED") { setMessage("Dosya aktarımı tamamlanmamış. Aynı PDF dosyasını seçerek yüklemeyi sürdürebilirsiniz."); return; }
+        if (next.status === "RECEIVED") { setMessage("PDF alındı. Kaynak hazırlamayı başlatabilirsiniz."); return; }
         if (next.status === "COMPLETED") { setMessage("Kaynak hazır. Kitap analizini başlatabilirsiniz."); return; }
         if (next.status === "FAILED") { setError("Kaynak hazırlanamadı: " + next.error_code); return; }
         if (next.status === "CANCELLED") { setMessage("Kaynak hazırlama iptal edildi. Önceki kayıtlar korundu."); return; }
@@ -48,7 +52,41 @@ export function UploadBook({ token, onStarted }: Props) {
     }
     void poll();
     return () => { active = false; clearTimeout(timer); };
-  }, [upload, token]);
+  }, [upload, token, refresh]);
+
+  async function resume() {
+    const selectedUpload = upload;
+    setBusy(true); setError("");
+    try {
+      // Recheck server state: another browser may have completed this upload.
+      const current = await request("/uploads/" + selectedUpload);
+      if (alive.current) setState(current);
+      if (current.status === "CREATED") {
+        if (!resumeFile) throw new Error("Bu yüklemeyi başlatırken kullandığınız PDF dosyasını seçin.");
+        setMessage("PDF gönderiliyor; dosya boyutu ve bütünlüğü sunucuda doğrulanıyor…");
+        // The server checks the retained expected byte count and SHA-256 before
+        // publishing the file. A mismatching file cannot replace this source.
+        const response = await fetch(`/v1/uploads/${selectedUpload}/content`, {
+          method: "PUT", signal: controller.current.signal,
+          headers: { Authorization: "Bearer " + token, "Content-Type": "application/pdf" }, body: resumeFile,
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          if (["SOURCE_HASH_MISMATCH", "INCOMPLETE_UPLOAD", "SOURCE_LIMIT_EXCEEDED"].includes(result.detail))
+            throw new Error("Seçilen dosya bu yüklemenin özgün PDF dosyasıyla eşleşmiyor. Aynı dosyayı seçip tekrar deneyin.");
+          throw new Error(`PDF yüklenemedi (${response.status}). Tekrar deneyebilirsiniz.`);
+        }
+      } else if (current.status !== "RECEIVED") {
+        if (alive.current) setRefresh(value => value + 1);
+        return;
+      }
+      // A failed /complete request leaves RECEIVED recoverable without another PUT.
+      if (alive.current) { setState({ ...current, status: "RECEIVED" }); setResumeFile(null); }
+      await request(`/uploads/${selectedUpload}/complete`, { confirm: true }, 'upload:' + selectedUpload + ':resume-complete');
+      if (alive.current) setRefresh(value => value + 1);
+    } catch (e) { if (alive.current) setError((e as Error).message); }
+    finally { if (alive.current) setBusy(false); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -93,7 +131,7 @@ export function UploadBook({ token, onStarted }: Props) {
   }
   return <details className="upload-book">
     <summary>Yeni kitap yükle</summary>
-    {!!recent.length && !busy && <label>Önceki yüklemeyi takip et<select value={upload} onChange={e => { setUpload(e.target.value); setState(null); setMessage(''); setError(''); }}>
+    {!!recent.length && !busy && <label>Önceki yüklemeyi takip et<select value={upload} onChange={e => { setUpload(e.target.value); setState(null); setResumeFile(null); setMessage(''); setError(''); }}>
       <option value="">Yeni yükleme</option>{recent.map(r => <option key={r.id} value={r.id}>{r.title} · {({ CREATED: 'Dosya bekliyor', RECEIVED: 'Dosya alındı', PARSING: 'Hazırlanıyor', COMPLETED: 'Kaynak hazır', FAILED: 'Hata', CANCELLED:'İptal edildi' } as any)[r.status] ?? r.status}</option>)}
     </select></label>}
     {!upload && <form onSubmit={submit}>
@@ -105,8 +143,14 @@ export function UploadBook({ token, onStarted }: Props) {
     </form>}
     {message && <p role="status">{message}</p>}
     {error && <p role="alert" className="error">{error}</p>}
+    {state?.status === "CREATED" && <form onSubmit={e => { e.preventDefault(); void resume(); }}>
+      <label>Özgün PDF dosyası<input key={upload} type="file" accept="application/pdf,.pdf" required disabled={busy} onChange={e => setResumeFile(e.target.files?.[0] ?? null)} /></label>
+      <p className="hint">Dosya boyutu ve içeriği önceki yükleme kaydıyla doğrulanır. Farklı bir kitap için yeni yükleme açın.</p>
+      <button className="primary" disabled={busy || !resumeFile}>{busy ? "İşleniyor…" : "Yüklemeyi sürdür"}</button>
+    </form>}
+    {state?.status === "RECEIVED" && <button className="primary" disabled={busy} onClick={resume}>{busy ? "İşleniyor…" : "Kaynak hazırlamayı başlat"}</button>}
     {state?.status === "COMPLETED" && <button className="primary" disabled={busy} onClick={start}>Kitap analizini başlat</button>}
     {state?.status === "PARSING" && <button disabled={busy} onClick={cancel}>Kaynak hazırlamayı iptal et</button>}
-    {!busy && (error || upload) && <button onClick={() => { attempt.current = {}; setUpload(''); setState(null); setError(''); setMessage(''); setFile(null); }}>Yeni yükleme aç</button>}
+    {!busy && (error || upload) && <button onClick={() => { attempt.current = {}; setUpload(''); setState(null); setResumeFile(null); setError(''); setMessage(''); setFile(null); }}>Yeni yükleme aç</button>}
   </details>;
 }

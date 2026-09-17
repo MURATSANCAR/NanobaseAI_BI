@@ -48,7 +48,10 @@ for row in rows('page_claims'):
     assert row['data']['input_visual_descriptions'] is False
     for c in row['data']['claims']+row['data']['blocked_claims']:
         assert c['eligible_for_synthesis'] is False
-        assert c['speaker'] is None
+        if c['speaker'] is not None:
+            assert c['speaker_status']=='EXPLICIT_TEXT_ATTRIBUTION'
+            assert c['source_gate']=='MATCH' and c['kind']=='STATEMENT'
+            assert c['speaker_source_span_refs'] and c['visual_identity_verified'] is False
 reviews=sql("SELECT count(*) FROM editor.reviews WHERE generation_id='"+gen+"'")
 assert reviews==0 and not rows('visual_corrections')
 job=get('/v1/jobs/'+run['job_id'])

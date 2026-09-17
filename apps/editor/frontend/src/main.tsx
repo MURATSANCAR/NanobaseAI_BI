@@ -69,6 +69,7 @@ const stages: Record<string, string> = {
   page_readings: "Sayfa OCR kontrolü",
   visual_observations: "Bölgesel görsel gözlem",
   page_claims: "Metne bağlı iddia adayları",
+  character_evidence: "Kaynaklı konuşma atıfları",
   page_checks: "Sayfa kabul kontrolü",
 };
 const answerStatuses: Record<string, string> = {
@@ -192,7 +193,7 @@ function App() {
             "events",
             "literary",
             "validation",
-            "page_readings", "visual_observations", "page_claims", "page_checks",
+            "page_readings", "visual_observations", "page_claims", "page_checks", "character_evidence",
           ];
           const entries = await Promise.all(
             kinds.map(async (k) => [k, await all(`/generations/${gen}/${k}`)]),
@@ -227,6 +228,15 @@ function App() {
   const pageReading = data.page_readings?.find((r) => r.data.pdf_page === page);
   const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
   const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
+  const pageCharacters = data.character_evidence?.find((r) => r.data.pdf_page === page);
+  const namedMentions = Array.from((data.character_evidence ?? []).reduce((map, row) => {
+    for (const mention of row.data.named_mentions ?? []) {
+      const item = map.get(mention.label_key) ?? { label: mention.label, pages: [] as number[] };
+      if (!item.pages.includes(row.data.pdf_page)) item.pages.push(row.data.pdf_page);
+      map.set(mention.label_key, item);
+    }
+    return map;
+  }, new Map<string, { label: string; pages: number[] }>()).entries());
   useEffect(() => {
     let active = true; setPageSpans([]); setSelectedSpan(null); setSourceReview(null);
     if (gen && signed) Promise.all([
@@ -572,8 +582,21 @@ function App() {
                   {pageClaims && <article className="paper">
                     <h2>Metne bağlı adaylar</h2>
                     <p className="hint">Henüz doğrulanmış olay değildir. Kaynaksız alıntılar ve kimliği belirsiz varlıklar incelemeye ayrılır.</p>
-                    {pageClaims.data.claims.map((c: any, i: number) => <p key={i}>{c.text}</p>)}
-                    <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Konuşmacı doğrulaması bekliyor</p>
+                    {pageClaims.data.claims.map((c: any, i: number) => <div key={i}><p>{c.text}</p>
+                      {c.speaker_status === "EXPLICIT_TEXT_ATTRIBUTION" && <small>Metindeki konuşmacı: {c.speaker}</small>}
+                    </div>)}
+                    <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Görsel figürlerin kimlik eşleştirmesi bekliyor</p>
+                  </article>}
+                  {pageCharacters?.data.attributions.length > 0 && <article className="paper" data-testid="text-attributions">
+                    <h2>Metindeki konuşmacılar</h2>
+                    <p className="hint">Metinde açıkça kime atfedildiği belirtilen sözler. Resimdeki figürün kimliği ayrıca doğrulanır.</p>
+                    {pageCharacters.data.attributions.map((a: any, i: number) => <div className="claim" key={i}>
+                      <b>{a.label}</b><blockquote>{a.quote}</blockquote>
+                      <button className="show-region" onClick={() => {
+                        setSelectedSpan(a.source_span_refs[0]);
+                        document.getElementById("source-frame")?.scrollIntoView({ block: "center", behavior: "smooth" });
+                      }}>Kaynakta göster</button>
+                    </div>)}
                   </article>}
                   <article className="paper">
                     <p className="eyebrow">MODELİN GÖRSEL OKUMASI</p>
@@ -677,6 +700,14 @@ function App() {
             )}
             {tab === "entities" && (
               <section className="cards">
+                {namedMentions.map(([key, mention]) => <article className="paper" key={"mention-"+key} data-testid="named-mention">
+                  <span className="badge">Metinde konuşmacı olarak geçen ad</span>
+                  <h2>{mention.label}</h2>
+                  <p>Görsel kimlik ve karakter özellikleri henüz doğrulanmadı.</p>
+                  <div className="segmented">{mention.pages.map((p) => <button key={p} onClick={() => {
+                    setPage(p); setTab("source");
+                  }}>Kaynak: sayfa {p}</button>)}</div>
+                </article>)}
                 {(data.entities ?? []).map((r) => (
                   <article className="paper" key={r.id}>
                     <span className="badge">
@@ -687,7 +718,7 @@ function App() {
                     {refs(r.data.evidence_refs)}
                   </article>
                 ))}
-                {!data.entities?.length && (
+                {!data.entities?.length && !namedMentions.length && (
                   <Empty
                     title="Varlık kayıtları henüz oluşmadı"
                     text="Karakterler ve diğer varlıklar kitap sentezinden sonra kaydedilir."

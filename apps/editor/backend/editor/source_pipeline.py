@@ -14,7 +14,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v4'
+VERSION = 'source-spans-v5'
 
 
 def norm(value):
@@ -340,6 +340,7 @@ def reusable_claim_candidates(parent,key,spans):
 
 def interpret(job,evidence,spans,parent=None):
     from editor.analysis import model
+    from editor.text_attribution import extract as text_attributions, speaker_for_claim
     page=evidence['data']['pdf_page']; key=evidence['record_key']
     usable=[s for s in spans if s['data']['status']=='TEXT_AGREED' and s['data']['role']=='TEXT']
     excluded=[str(s['id']) for s in spans if s not in usable]
@@ -367,6 +368,9 @@ def interpret(job,evidence,spans,parent=None):
         except RuntimeError as exc:
             if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED'): raise
             result={'page_role':'UNKNOWN','claims':[],'uncertainties':[str(exc)]};metrics={}
+    attribution = text_attributions(spans, result.get('page_role','UNKNOWN'))
+    save(job,'character_evidence',key,{'pdf_page':page,
+        'evidence_refs':[str(evidence['id'])], 'pipeline_version':VERSION, **attribution})
     allowed={str(s['id']):s for s in usable}; accepted=[]; blocked=[]
     for c in result.get('claims',[]):
         refs=c.get('span_refs',[]); chosen=[allowed[r] for r in refs if r in allowed]
@@ -378,7 +382,12 @@ def interpret(job,evidence,spans,parent=None):
         if c.get('kind')=='ENTITY': reason='ENTITY_IDENTITY_REQUIRES_REVIEW'
         # Supported transcription is not entailment. Keep all semantic candidates out
         # of accepted facts until semantic and speaker checks exist for that claim.
-        item={**c,'speaker':None,'speaker_status':'UNKNOWN',
+        speaker = speaker_for_claim(c, attribution['attributions']) if reason=='MATCH' else None
+        item={**c,'speaker':speaker['label'] if speaker else None,
+            'speaker_status':'EXPLICIT_TEXT_ATTRIBUTION' if speaker else 'UNKNOWN',
+            'speaker_source_span_refs':speaker['source_span_refs'] if speaker else [],
+            'speaker_method':speaker['method'] if speaker else None,
+            'visual_identity_verified':False,
             'source_gate':reason,'verification_status':'TEXT_MATCHED_CANDIDATE' if reason=='MATCH' else 'NEEDS_REVIEW',
             'eligible_for_synthesis':False,'evidence_refs':[str(evidence['id'])]}
         (accepted if reason=='MATCH' else blocked).append(item)
