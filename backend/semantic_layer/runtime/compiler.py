@@ -2208,7 +2208,7 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
 
     if is_empty_result(columns, rows, total):
         # "satis: None" reads as a number; it is the absence of one
-        return "Sorgu sonuç döndürmedi."
+        return "Bu koşullara uyan kayıt yok (sonuç boş)."
     if total == 1 and len(columns) == 1:
         return f"{column_label(columns[0])}: {fmt(rows[0][columns[0]])}"
     if total == 1:
