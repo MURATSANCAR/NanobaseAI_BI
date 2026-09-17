@@ -10,7 +10,8 @@ root=Path(__file__).resolve().parents[1];os.chdir(root)
 run=json.loads((root/'evidence/source-spans-run.json').read_text())
 gen=run['generation_id']
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
-url=f'http://127.0.0.1:8810/v1/generations/{gen}/source-review'
+base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810').rstrip('/')
+url=f'{base}/v1/generations/{gen}/source-review'
 with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=60) as response:
     report=json.load(response)
 code='''import json,sys

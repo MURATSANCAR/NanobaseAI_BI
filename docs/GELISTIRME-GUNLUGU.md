@@ -6,6 +6,18 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör son sürüm ayrı kurulum ve restore kabulü
+
+- `source-review-v2-r2-20260917`, `b652f63c` nesli: offline paket/import, gerçek kitap yedeği, ayrı kurulumda restore, API/PG ve OCR aday eşliği geçti. Geri yüklenen arayüz gerçek Chrome’da 320/390/768/1440 px doğrulandı (07:18:10 UTC).
+- Docker boş IPAM yapılandırması hatası giderildi; hash/veri eşliği denetimli devam eklendi. Aktif OCR yazıcısı varken yedek başlamaması gerçek kitap okuyucusuyla doğrulandı. Kaynak veriler elle değiştirilmedi.
+- 321 inceleme bölgesi ve anlamsal kabul açık; tüm roadmap tamamlandı denmez. [Kod, hatalar ve kanıt](editor/2026-09-17-source-v3.md).
+
+## 2026-09-17 — Editör çok nesilli yeniden kullanım doğrulandı
+
+- Son `b652f63c` nesli 48/48 tamamlandı; 1.149 span, 828 anlaşma/321 inceleme. 371 yeniden okuma ve 92 çelişki korunuyor; önceki veri değişmedi. 48 sayfada yeniden kullanılan ham adaylar, görseller ve yeni kaynak kimlikleri gerçek API/PG ile doğrulandı; yeni model çağrısı 0.
+- Üç nesil üzerinden 15 OCR-VL adayının gerçek kaynak bağlantısı geçti. API/worker son imajı `source-review-v2-r2-20260917`; 28 backend dosyası çalışan imajla eşleşti. Soru/yayın kapısı açık sorunlar bitmeden açılmadı.
+- Son offline paket ve import/hash/imaj kontrolü geçti; yedek/restore kontrolü devam ediyor. [Son kimlikler ve kanıtlar](editor/2026-09-17-source-v3.md).
+
 ## 2026-09-17 — Editör v3 tamamlandı, inceleme entegrasyonu doğrulandı
 
 - V3 yeni nesli 48/48 sayfada tamamlandı, 828 anlaşma/321 inceleme ve NEEDS_REVIEW. Kaynak metin/konuşmacı/review elle değiştirilmedi.

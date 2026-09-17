@@ -1,6 +1,6 @@
 # Editör inceleme ekranı
 
-> 17 Eylül v3 güncellemesi: Yeni kaynak nesli çalışıyor; salt okunur gerçek veri tekrarında 828 anlaşma/321 inceleme. 45 sayfanın inceleme API/PG kontrolü geçti; tam yeni nesil henüz tamamlanmadı. Kaynakta kutu işaretleme ve yeniden okuma karşılaştırması yeni web imajıyla yayımlandı; gerçek Chrome/API üzerinde 320/390/768/1440 kontrolü geçti. OCR-VL sınırlı pilotu sürüyor. Aşağıdaki tamamlanmış 48 sayfa ve restore sonuçları önceki v2 sürümüne aittir. [Yeni kod ve kanıtlar](../../../docs/editor/2026-09-17-source-v3.md).
+> 17 Eylül son güncelleme: `source-review-v2-r2-20260917` ile yeni nesil `b652f63c-6ec4-4f9a-aff4-00b32d220b1b` 48/48 tamamlandı; 828 anlaşma/321 inceleme, NEEDS_REVIEW. 371 yeniden okuma ve 15 ek OCR adayının kökeni korundu; veri elle değiştirilmedi. Kaynakta kutu ve aday görüntüleme dört genişlikte gerçek tarayıcı/API kontrolünden geçti. Son offline paket/import ve ayrı kuruluma geri yükleme 07:18:10 UTC itibarıyla geçti; geri yüklenen gerçek API/PG, OCR adayları ve 320/390/768/1440 px arayüz doğrulandı. Aşağıdaki v2 restore kayıtları tarihçedir. [Kod, ölçümler ve güncel kanıtlar](../../../docs/editor/2026-09-17-source-v3.md).
 
 ## 17 Eylül doğrulanmış durum
 

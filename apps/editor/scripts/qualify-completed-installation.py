@@ -5,6 +5,7 @@ Never grades literature, changes source text, publishes a generation, retries a
 failed analysis, or starts another analysis. Run on the connected Linux server.
 """
 import fcntl
+import hashlib
 import ipaddress
 import json
 import os
@@ -31,7 +32,10 @@ report={'generation_id':run['generation_id'],'job_id':run['job_id'],
 target=None;target_started=False
 if resume:
     previous=json.loads((work/'qualification.json').read_text())
-    if previous['generation_id']!=run['generation_id'] or (work/'installation').exists():
+    restore_started=any(s['stage']=='restore' for s in previous['steps'])
+    initialized=any(s['stage']=='target_init' and s['state']=='PASS' for s in previous['steps'])
+    if (previous['generation_id']!=run['generation_id'] or restore_started
+            or ((work/'installation').exists() and not initialized)):
         raise RuntimeError('QUALIFICATION_RESUME_SCOPE_MISMATCH')
     report=previous
 
@@ -64,7 +68,8 @@ def settings(path,updates):
 def available_subnets():
     ids=subprocess.check_output(['docker','network','ls','-q'],text=True).split()
     networks=json.loads(subprocess.check_output(['docker','network','inspect',*ids],text=True)) if ids else []
-    used=[ipaddress.ip_network(c['Subnet']) for n in networks for c in n.get('IPAM',{}).get('Config',[]) if c.get('Subnet')]
+    used=[ipaddress.ip_network(c['Subnet']) for n in networks
+          for c in ((n.get('IPAM') or {}).get('Config') or []) if c.get('Subnet')]
     for octet in range(50,250,2):
         pair=[ipaddress.ip_network(f'10.203.{n}.0/24') for n in (octet,octet+1)]
         if not any(a.version==b.version and a.overlaps(b) for a in pair for b in used):
@@ -134,10 +139,27 @@ try:
             if path.read_bytes()!=(packaged/path.relative_to(root/'backend')).read_bytes():
                 raise RuntimeError('RELEASE_CHANGED_DURING_ANALYSIS')
     execute('source_isolation',['python3','scripts/verify-isolation.py'])
-    execute('backup',['python3','scripts/backup.py',str(work/'backup')])
+    if resume and (work/'backup/manifest.json').exists():
+        from snapshot_reference import book_reference
+        backup=json.loads((work/'backup/manifest.json').read_text())
+        for name,expected in backup['files'].items():
+            if name not in ('database.dump','artifacts.tar'):raise RuntimeError('INVALID_BACKUP_MEMBER')
+            with (work/'backup'/name).open('rb') as stream:
+                if hashlib.file_digest(stream,'sha256').hexdigest()!=expected:raise RuntimeError('BACKUP_HASH_MISMATCH')
+        if backup['book_reference']!=book_reference(config):raise RuntimeError('SOURCE_CHANGED_SINCE_BACKUP')
+        record('backup','REUSED','Hash ve canlı kaynak/kitap kaydı eşliği yeniden doğrulandı.')
+    else:
+        execute('backup',['python3','scripts/backup.py',str(work/'backup')])
     target=work/'installation'
-    shutil.copytree(work/'offline/editor',target)
-    execute('target_init',['python3','scripts/init.py'],cwd=target)
+    if target.exists():
+        for path in (packaged).rglob('*'):
+            if path.is_file() and '__pycache__' not in path.parts:
+                if path.read_bytes()!=(target/'backend'/path.relative_to(packaged)).read_bytes():
+                    raise RuntimeError('TARGET_RELEASE_CHANGED')
+        record('target_init','REUSED','Restore başlamamış hedefin uygulama dosyaları paketle eşleşti.')
+    else:
+        shutil.copytree(work/'offline/editor',target)
+        execute('target_init',['python3','scripts/init.py'],cwd=target)
     project='editor-qualification-'+run['generation_id'][:8]
     private_subnet,ingress_subnet=available_subnets()
     settings(target/'.env',{'COMPOSE_PROJECT_NAME':project,'EDITOR_PORT':'18810','EDITOR_METRICS_PORT':'19096',
@@ -149,6 +171,9 @@ try:
     env={**os.environ,'EDITOR_VERIFY_BASE_URL':'http://127.0.0.1:18810',
          'EDITOR_VERIFY_RUN_FILE':'evidence/source-spans-run.json'}
     execute('restored_source_api_pg',['python3','scripts/verify-source-pipeline.py'],cwd=target,env=env)
+    if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':
+        env['EDITOR_VERIFY_OCR_VL']='1'
+        execute('restored_ocr_vl_api_pg',['python3','scripts/verify-ocr-vl-review.py'],cwd=target,env=env)
     # Browser tooling is an external test dependency, not part of the customer package.
     shutil.copytree(root/'runtime/browser-check',target/'runtime/browser-check')
     execute('restored_mobile_ui',['node','scripts/verify-review-ui.cjs'],cwd=target,env=env)

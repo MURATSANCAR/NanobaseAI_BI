@@ -18,10 +18,11 @@ config = json.loads(subprocess.check_output(compose + ['config', '--format', 'js
 project = config['name']
 image = config['services']['api']['image']
 volume = config['volumes']['artifacts']['name']
-active_parsers = subprocess.check_output(['docker','ps','-q','--filter','label=com.docker.compose.project='+project,
-                                         '--filter','label=com.docker.compose.service=document'],text=True).strip()
-if active_parsers:
-    raise SystemExit('Finish the active document probe before taking a consistent artifact backup.')
+for service in ('document','ocr-vl'):
+    active_tools = subprocess.check_output(['docker','ps','-q','--filter','label=com.docker.compose.project='+project,
+                                           '--filter','label=com.docker.compose.service='+service],text=True).strip()
+    if active_tools:
+        raise SystemExit('Finish active artifact tools before taking a consistent backup: '+service)
 subprocess.run(compose + ['stop', 'api', 'worker'], check=True)
 try:
     with (destination / 'database.dump').open('wb') as stream:
