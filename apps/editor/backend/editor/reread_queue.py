@@ -110,6 +110,10 @@ def validate_request(request, require_current_code=True):
     if set(request['models']) != set(request['languages'].split('+')):
         raise RuntimeError('REREAD_MODEL_MANIFEST_INVALID')
     policy = {k: request[k] for k in ('method','code_sha256','languages','models','engine','psm','deadline_seconds')}
+    if 'batch_key' in request:
+        if not isinstance(request['batch_key'], str) or not re.fullmatch('[a-zA-Z0-9_-]{1,80}', request['batch_key']):
+            raise RuntimeError('REREAD_BATCH_KEY_INVALID')
+        policy['batch_key'] = request['batch_key']
     if 'attempt_token' in request:
         if type(request['attempt_token']) is not int or request['attempt_token'] < 1:
             raise RuntimeError('REREAD_ATTEMPT_INVALID')
@@ -123,7 +127,8 @@ def validate_request(request, require_current_code=True):
 
 
 def submit(generation_id, source_sha256, pdf_page, render_sha256, regions, *,
-           languages='tur+eng', deadline_seconds=600, expected_models=None, attempt_token=None):
+           languages='tur+eng', deadline_seconds=600, expected_models=None, attempt_token=None,
+           batch_key=None):
     cap = json.loads((QUEUE / 'capabilities.json').read_text())
     if cap['code_sha256'] != code_hash() or cap['method'] != VERSION:
         raise RuntimeError('REREAD_CONSUMER_VERSION_MISMATCH')
@@ -132,6 +137,10 @@ def submit(generation_id, source_sha256, pdf_page, render_sha256, regions, *,
         raise RuntimeError('REREAD_MODEL_MISMATCH')
     policy = {'method': VERSION, 'code_sha256': code_hash(), 'languages': languages,
               'models': models, 'engine': cap['engine'], 'psm': [7, 13], 'deadline_seconds': deadline_seconds}
+    if batch_key is not None:
+        if not isinstance(batch_key, str) or not re.fullmatch('[a-zA-Z0-9_-]{1,80}', batch_key):
+            raise RuntimeError('REREAD_BATCH_KEY_INVALID')
+        policy['batch_key'] = batch_key
     if attempt_token is not None:
         if type(attempt_token) is not int or attempt_token < 1:
             raise RuntimeError('REREAD_ATTEMPT_INVALID')
@@ -208,7 +217,7 @@ def validate_result(request, result, require_current_code=True):
 
 
 def artifact_report(request):
-    suffix = '-' + request['request_id'] if 'attempt_token' in request else ''
+    suffix = '-' + request['request_id'] if 'attempt_token' in request or 'batch_key' in request else ''
     return SOURCE / request['source_sha256'] / VERSION / request['generation_id'] / f"page-{request['pdf_page']:04}{suffix}.json"
 
 

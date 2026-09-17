@@ -333,3 +333,36 @@ def test_the_sources_lg_prefix_does_not_decide_which_entity_was_read():
     assert out == [], out
     undated = sql.replace(" AND LG_ORFLINE.[DATE_] >= '2026-04-01' AND LG_ORFLINE.[DATE_] < '2026-07-01'", "")
     assert any("dönemi" in u for u in unmet_obligations(sq, undated))
+
+
+def test_a_comparison_told_apart_inside_each_union_branch_is_proven():
+    """2026-09-18, soru 27: cash and bank are two tables; each UNION branch carried both months as CASE columns
+    and the gate, looking only at the outer SELECT, refused the statement."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[],
+                       temporal=[TemporalSlot(text="bu ay", primitive="THIS_MONTH", start=date(2026, 9, 1), end=date(2026, 10, 1)),
+                                 TemporalSlot(text="gecen aya", primitive="LAST_MONTH", start=date(2026, 8, 1), end=date(2026, 9, 1))])
+    sq.comparison = {"kind": "PERIOD", "current": {"start": "2026-09-01", "end": "2026-10-01"}, "reference": {"start": "2026-08-01", "end": "2026-09-01"},
+                     "entity": None, "dateColumn": None}
+    branch = ("SELECT '{n}' AS kaynak, SUM(CASE WHEN DATE_ >= '2026-08-01' AND DATE_ < '2026-09-01' THEN AMOUNT ELSE 0 END) AS gecen_ay, "
+              "SUM(CASE WHEN DATE_ >= '2026-09-01' AND DATE_ < '2026-10-01' THEN AMOUNT ELSE 0 END) AS bu_ay FROM {t} WHERE CANCELLED = 0")
+    sql = branch.format(n="Kasa", t="LG_KSLINES") + " UNION ALL " + branch.format(n="Banka", t="LG_BNFLINE")
+    out = unmet_obligations(sq, sql)
+    assert not any("karşılaştırma" in u for u in out), out
+    one_month = sql.replace("SUM(CASE WHEN DATE_ >= '2026-09-01' AND DATE_ < '2026-10-01' THEN AMOUNT ELSE 0 END) AS bu_ay", "0 AS bu_ay")
+    assert any("karşılaştırma" in u for u in unmet_obligations(sq, one_month))
+
+
+def test_a_comparison_as_month_rows_over_exactly_the_two_periods_is_proven():
+    """2026-09-18, soru 27: the model summed cash and bank per month (GROUP BY the month of DATE_) over exactly
+    August–September and picked the months apart outside; with no certified measure that is a proof."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[])
+    sq.comparison = {"kind": "PERIOD", "current": {"start": "2026-09-01", "end": "2026-10-01"}, "reference": {"start": "2026-08-01", "end": "2026-09-01"},
+                     "entity": None, "dateColumn": None}
+    sq.temporal = [TemporalSlot(text="bu ay", primitive="THIS_MONTH", start=date(2026, 9, 1), end=date(2026, 10, 1)),
+                   TemporalSlot(text="gecen aya", primitive="LAST_MONTH", start=date(2026, 8, 1), end=date(2026, 9, 1))]
+    sql = ("WITH k AS (SELECT DATEFROMPARTS(YEAR(DATE_), MONTH(DATE_), 1) AS ay, SUM(AMOUNT) AS giris FROM LG_KSLINES "
+           "WHERE CANCELLED = 0 AND DATE_ >= '2026-08-01' AND DATE_ < '2026-10-01' GROUP BY DATEFROMPARTS(YEAR(DATE_), MONTH(DATE_), 1)) "
+           "SELECT MAX(CASE WHEN ay = '2026-09-01' THEN giris END) AS bu_ay, MAX(CASE WHEN ay = '2026-08-01' THEN giris END) AS gecen_ay FROM k")
+    assert not any("karşılaştırma" in u for u in unmet_obligations(sq, sql)), unmet_obligations(sq, sql)
+    wider = sql.replace("DATE_ >= '2026-08-01'", "DATE_ >= '2026-01-01'")
+    assert any("karşılaştırma" in u for u in unmet_obligations(sq, wider))
