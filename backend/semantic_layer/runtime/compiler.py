@@ -891,11 +891,12 @@ def no_sql_reason(text: str) -> str:
 
 _WORD = re.compile(r"[a-zçğıöşü]+", re.IGNORECASE)
 _FORMULA = re.compile(r"\b(AVG|SUM|COUNT|MIN|MAX|SELECT|DATEDIFF|CASE)\s*\(|\bSELECT\b", re.I)
-_ABSENCE = re.compile(r"yapılamaz|ölçülemez|hesaplanamaz|işlenmemiş|kayıt(ı)? yok|veri(si)? yok|bulunmaz|mümkün değil", re.I)
+_ABSENCE = re.compile(r"yapılamaz|ölçülemez|hesaplanamaz|işlenmemiş|kayıt(ı)? yok|veri(si)? yok|bulunmaz|mümkün değil"
+                      r"|tanımlı değil|girilmemiş|boş döner|hiçbir", re.I)
 _FOLD = str.maketrans("çğıöşüâîû", "cgiosuaiu")
 
 
-def caveat_for(reason: str, rules_text: str) -> str:
+def caveat_for(reason: str, rules_text: str, *, absence_only: bool = False) -> str:
     """The knowledge-pack bullet the model's NO_SQL reason rests on, or "" when none does.
 
     Matched by shared content words (folded, 4+ letters, stems of 5). A caveat is operator-written
@@ -912,6 +913,8 @@ def caveat_for(reason: str, rules_text: str) -> str:
         body = line.strip().lstrip("-• ").strip()
         if len(body) < 40 or _FORMULA.search(body):
             continue                                   # a definition is how to compute; a caveat is prose
+        if absence_only and not _ABSENCE.search(body):
+            continue                                   # an empty result is explained by what is missing, not by a rule
         lines.append((body, {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(body) if len(w) >= 4}))
     # A word every caveat uses ("veride", "ölçüm", "2026", "yapılamaz") says nothing about *which* one
     # is meant: counted equally, the longest caveat won and a question about minimum stock levels was
@@ -923,7 +926,9 @@ def caveat_for(reason: str, rules_text: str) -> str:
     best, best_hit = "", 0.0
     for body, vocab in lines:
         shared = words & vocab
-        if len(shared) < max(3, len(words) // 2):
+        # The readings of a statement name every word it interpreted; the caveat that explains an empty
+        # result shares only the few that matter, so the bar is lower there than for a model's refusal.
+        if len(shared) < max(3, len(words) // (4 if absence_only else 2)):
             continue
         hit = sum(1.0 / df[w] for w in shared)
         # A caveat says what cannot be had; a metric definition says how to compute it. For a refusal
@@ -949,7 +954,7 @@ def empty_result_note(sql: str, rules_text: str) -> str:
     that documents that very thing as absent ("kapatan ödeme kaydı yok") is the reason the result is
     empty, and the person asking is told it in the operator's words. Nothing matched: no note."""
     readings = " ".join(interpretations(sql or ""))
-    why = caveat_for(readings, rules_text) if readings else ""
+    why = caveat_for(readings, rules_text, absence_only=True) if readings else ""
     return f" Muhtemel neden (bilgi paketi): {why}" if why else ""
 
 
