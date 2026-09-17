@@ -374,7 +374,7 @@ function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
         <button type="button" onClick={onNew} className="font-bold text-canvas-violet underline-offset-2 hover:underline">
           İlk kuralı kurun
         </button>{' '}
-        ya da aşağıdaki çubuğa “bu ayın iade tutarı 5 milyonu aşarsa haber ver” yazın.
+        : örneğin “bu ayın iade tutarı 5 milyonu aşarsa haber ver”.
       </div>
     );
   }
