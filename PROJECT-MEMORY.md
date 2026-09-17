@@ -4,6 +4,8 @@
 
 Kaynak işlemeden sonra ayrı kimlik ve anlamsal denetim kolları eklendi; backend `source-analysis-v12-r1-20260918`, 43 dosya hash eşliği `d6c3a68a40911519ddfe16677c03abe347c4bc1e3adfeaa862d55f276d5884c9`. Yeni nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`, iş `791de2a0-a440-419c-8db4-2095405eed23` çalışıyor. R9 22 sayfanın teknik denetiminden sonra API ile iptal edilerek korundu; yeni nesil ölçümleri tekrar kullanır. S7/s38 gerçek API/PG ve ayrı model denetimi bileşeni çalıştı; s38 dört sentez önerisinin ikisi kaynak dışı genişleme nedeniyle reddedildi. Figür karşılaştırması gerçek kırpımlarla çalıştı; kaynaklı ad kabulü hâlâ yok. Tam kitap/üretim kabulü açık. [Kod, kanıt ve sınırlar](docs/editor/2026-09-18-source-analysis-v12.md).
 
+V12 web kaynak/kimlik/anlam taslak kartları yayımlandı; gerçek OCR ile dört genişlik regresyonu geçti, dolu yeni sentez kartı kabulü bekliyor. Gateway yenilemesinden gelen iki ulaşım hatası kaynak hatasından ayrıldı; salt okunur izleyicinin sınırlı tekrar ve kalıcı durum düzeltmesi sonrası ilk20 sayfa20 geçti/0 başarısız. Harici model uygulama offline paketi üretildi; import/ayrı kurulum kabulü sürüyor. GitHub HTTPS kimliği yok; yerel main/sunucu güncel, push bekliyor.
+
 ## Güncel Editör model akışı — 18 Eylül
 
 Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Son dağıtım `parallel-ocr-v11-r9-20260918`; tam kitap ve semantik kabul henüz yok. R6 ilk11 sayfa teknik denetim ve dört mobil/masaüstü genişliğinde OCR görünümü geçti. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-qwen-ocr-parallel.md).

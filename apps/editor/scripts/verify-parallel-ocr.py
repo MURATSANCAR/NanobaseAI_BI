@@ -4,6 +4,9 @@ import base64
 import hashlib
 import json
 import os
+import socket
+import time
+import urllib.error
 from pathlib import Path
 import subprocess
 import sys
@@ -15,7 +18,23 @@ gen=str(uuid.UUID(sys.argv[1]));page=int(sys.argv[2])
 base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810')
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 def get(path):
-    with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:return json.load(r)
+    for attempt in range(5):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers),timeout=30) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as error:
+            if error.code not in (429, 502, 503, 504):
+                raise
+            reason = 'HTTP_' + str(error.code)
+        except (urllib.error.URLError, ConnectionError, TimeoutError, socket.timeout) as error:
+            reason = type(error).__name__
+            cause = getattr(error, 'reason', error)
+            if not isinstance(cause, (ConnectionError, TimeoutError, socket.timeout, socket.gaierror)):
+                raise
+        if attempt == 4:
+            print('TRANSIENT_TRANSPORT_EXHAUSTED:' + reason, file=sys.stderr)
+            raise SystemExit(75)
+        time.sleep(min(8, 2 ** attempt))
 def records(kind):
     result=[];offset=0
     while True:

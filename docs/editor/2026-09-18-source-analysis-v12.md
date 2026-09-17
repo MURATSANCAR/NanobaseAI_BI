@@ -35,3 +35,13 @@ Gerçek API ve bağımsız PostgreSQL eşliğiyle, uygulama kayıtlarına yazmad
 - Kimlik bileşeni: 460 API/PG kaydı ve 19 tamamlanmış sayfa eşliği; doğrulanmış yerel kimlik 0. Gerçek iki figür kırpımı Qwen tarafından 108,681 saniyede DIFFERENT olarak değerlendirildi; isim verilmedi. `evidence/figure-identity-r9-api-pg.json`, `figure-identity-r9-real-pair.json`.
 
 Mevcut CPU sunucuda yeni preflight geçti (96 mantıksal CPU; hata listesi boş). Bu başka müşteri ağının veya GPU offline restore kabulü değildir.
+
+## V12 arayüzü ve izleme toparlanması
+
+`nanobase-editor-web:source-analysis-v12-20260918` kaynak ekranına gerçek kimlik/anlam kayıtlarını, kitap yorumuna kaynak sayfalarına bağlı kısmi sentez kartlarını ekler. Sunucuda derleme ve kaynak/çıktı hashleri geçti; gerçek OCR kayıtlarıyla dört genişlik regresyonu geçti. Yeni dolu kimlik/sentez kartlarının kabulü, koşu bu kayıtları oluşturunca `EDITOR_VERIFY_SEMANTIC=1` ile ayrıca yapılmalıdır; boş kart kontrolü dolu akış kabulü değildir.
+
+Gateway yenilenirken salt okunur kontrol betiğinde iki ConnectionRefused hatası oluştu. Analiz işi devam etti. `verify-parallel-ocr.py` yalnız geçici ulaşım hatalarına sınırlı GET tekrarı ekler; `monitor-parallel-ocr.py` mevcut durumu ve deneme geçmişini koruyarak yeniden başlar, gerçek assertion hatasını tekrar deneyerek gizlemez. S1/s2 eski hata logları korundu; gerçek tekrar kontrolleri geçti. Yeni koşunun ilk20 sayfası teknik denetimde20 geçti/0 başarısız; semantik kabul değildir.
+
+Harici model uygulama paketi `/data/nanobaseai/editor-qualifications/source-analysis-v12-r1-external-20260918` üretildi. Qwen/OCR GPU imaj ve ağırlıkları dahil değildir; müşteri endpointleri açık bağımlılıktır. Import ve ayrı restore sonucu ayrıca kaydedilecektir.
+
+Git: geliştirme yerel `main`e `d446842` ile alındı. Dal denetiminde bulunan dört GPU/VPN dokümantasyon commit'i `6ac9302` merge'üyle main'e taşındı; günlükte iki tarafın kayıtları korundu. Başka aktif worktree'nin kullandığı VPN dalı Git tarafından silinemedi; main dışında commit kalmadı. HTTPS GitHub kimliği bulunmadığı için `git push origin main` başarısız; uzak yayın yapılmış sayılmaz.

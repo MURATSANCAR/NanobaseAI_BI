@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V12 izleyici bağlantı kesintisinden toparlandı
+
+Gateway değişiminde s1/s2 salt okunur kontrolü ConnectionRefused aldı; uygulama analizi sürdü. Kontrol GET'lerine sınırlı geçici hata tekrarı ve izleyiciye mevcut durum/ayrı deneme logu eklendi. Aynı gerçek sayfalar yeniden geçti; ilk20 teknik denetim20 geçti/0 başarısız. İlk hata logları korunur, anlamsal kabul iddiası yok. V12 webin dört genişlik OCR regresyonu ve hash eşliği geçti. Harici GPU uygulama offline paketi üretildi; import/restore ayrıca doğrulanıyor. [Ayrıntı](editor/2026-09-18-source-analysis-v12.md).
+
 ## 2026-09-18 — paralel figür kimliği ve kaynaklı anlam denetimi
 
 - Kullanıcının paralel yürütme isteğiyle kimlik çözümü, anlamsal kontrol ve kaynak arayüzü ayrı ele alındı. Değişmez kaynaklar korunur; kitap cevabı/verisi elle yazılmaz.
