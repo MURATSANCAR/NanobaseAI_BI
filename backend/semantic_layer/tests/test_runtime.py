@@ -527,7 +527,7 @@ def test_an_empty_answer_says_whether_the_data_is_missing_or_the_business_is(cat
     from semantic_layer.runtime.compiler import fast_summary, is_empty_result
 
     assert is_empty_result(["satis"], [{"satis": None}], 1) and not is_empty_result(["satis"], [{"satis": 0}], 1)
-    assert fast_summary("x", ["satis"], [{"satis": None}], 1) == "Sorgu sonuç döndürmedi."
+    assert fast_summary("x", ["satis"], [{"satis": None}], 1) == "Bu koşullara uyan kayıt yok (sonuç boş)."
 
     client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm(["NO_SQL"]))))
     inv = next(p for p in profiles if p.entity == "INVOICE")
