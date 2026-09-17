@@ -10,16 +10,12 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 from editor.config import connection, secret, RELEASE
+from editor.access import authorize, admin, principal, visible_works
 
 app = FastAPI(title='Nanobase Editör — Altyapı API', version=RELEASE,
               docs_url=None, redoc_url=None, openapi_url=None)
 requests = Counter('editor_http_requests_total', 'Requests', ['status'])
 latency = Histogram('editor_http_duration_seconds', 'Request duration')
-
-
-def authorize(authorization: str = Header(default='')):
-    if not hmac.compare_digest(authorization, 'Bearer ' + secret('api_token')):
-        raise HTTPException(401, 'Oturum gerekli', headers={'WWW-Authenticate': 'Bearer'})
 
 
 @app.middleware('http')
@@ -81,12 +77,17 @@ def ready():
 
 @app.get('/v1/system', dependencies=[Depends(authorize)])
 def system():
+    admin()
     return infrastructure()
 
 
 @app.get('/v1/source-probes/{sha256}', dependencies=[Depends(authorize)])
 def source_probe(sha256: str):
     with connection() as db:
+        p=principal()
+        if not (p.role=='ADMIN' and p.system_role=='ADMIN' and p.work_ids is None):
+            allowed=db.execute('SELECT 1 FROM editor.content_versions cv JOIN editor.editions e ON e.id=cv.edition_id WHERE cv.sha256=%s AND e.work_id=ANY(%s::uuid[]) LIMIT 1',(sha256,visible_works(db))).fetchone()
+            if not allowed:raise HTTPException(404,'Kayıt bulunamadı')
         row = db.execute('SELECT manifest FROM editor.source_probes WHERE sha256=%s', (sha256,)).fetchone()
     if not row:
         raise HTTPException(404, 'Kayıt bulunamadı')
@@ -95,11 +96,13 @@ def source_probe(sha256: str):
 
 @app.get('/metrics', dependencies=[Depends(authorize)])
 def metrics():
+    admin()
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get('/v1/model-services', dependencies=[Depends(authorize)])
 def model_services():
+    admin()
     services = {}
     with httpx.Client(timeout=3, trust_env=False) as client:
         for name in ('llm', 'embedding', 'reranker'):
@@ -113,3 +116,5 @@ def model_services():
 
 from editor.book_api import router as book_router
 app.include_router(book_router, dependencies=[Depends(authorize)])
+from editor.access_api import router as access_router
+app.include_router(access_router, dependencies=[Depends(authorize)])

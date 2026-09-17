@@ -11,7 +11,7 @@ from editor.config import connection, RELEASE
 from editor.book_store import ROOT, sha, source_for, save_record
 
 router=APIRouter(prefix='/v1')
-ACTOR='installation-operator'
+from editor.access import actor_id, idempotency_actor, principal, admin, require_write, write_scope, touched_works, ensure_work, visible_works
 
 
 class Upload(BaseModel):
@@ -38,7 +38,9 @@ def authorized_upload(db,upload):
 
 @router.put('/uploads/{upload}/content')
 async def upload_bytes(upload:uuid.UUID,request:Request):
-    with connection() as db: row=authorized_upload(db,upload)
+    with connection() as db:
+        row=authorized_upload(db,upload)
+        ensure_work(db,row['work_id'],write=True)
     if row['status']=='COMPLETED': return {'id':str(upload),'status':'COMPLETED'}
     if row['status'] not in ('CREATED','RECEIVED'): raise HTTPException(409,'UPLOAD_SEALED')
     directory=ROOT/'uploads'; directory.mkdir(exist_ok=True)
@@ -117,7 +119,7 @@ def recent_uploads(offset:int=0,limit:int=50):
     with connection() as db:
         rows=db.execute('''SELECT u.id,u.status,w.title FROM editor.uploads u
             JOIN editor.editions e ON e.id=u.edition_id JOIN editor.works w ON w.id=e.work_id
-            WHERE w.owner_id=%s ORDER BY u.created_at DESC,u.id DESC LIMIT %s OFFSET %s''',(ACTOR,limit+1,offset)).fetchall()
+            WHERE w.id=ANY(%s::uuid[]) ORDER BY u.created_at DESC,u.id DESC LIMIT %s OFFSET %s''',(visible_works(db),limit+1,offset)).fetchall()
     return {'items':rows[:limit],'has_more':len(rows)>limit}
 
 
@@ -135,36 +137,46 @@ class Source(BaseModel):
 
 
 def mutate(path,body,key,fn):
+    if path!='/questions': require_write()
     if not key or len(key)>200: raise HTTPException(400,'Idempotency-Key gerekli')
     fingerprint=sha((path+body.model_dump_json(exclude_none=True)).encode())
     with connection() as db:
-        db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',(ACTOR+key,))
-        old=db.execute('SELECT * FROM editor.idempotency WHERE actor_id=%s AND key=%s',(ACTOR,key)).fetchone()
+        db.execute('SELECT pg_advisory_xact_lock(hashtextextended(%s,0))',(idempotency_actor()+key,))
+        old=db.execute('SELECT * FROM editor.idempotency WHERE actor_id=%s AND key=%s',(idempotency_actor(),key)).fetchone()
         if old:
             if old['request_hash']!=fingerprint: raise HTTPException(409,'IDEMPOTENCY_CONFLICT')
+            for work in old['required_work_ids']:ensure_work(db,work,write=path!='/questions')
             return old['response']
-        result=fn(db)
-        db.execute('INSERT INTO editor.idempotency VALUES (%s,%s,%s,%s)',(ACTOR,key,fingerprint,Jsonb(result)))
+        context=write_scope.set(path!='/questions')
+        touched=touched_works.set(frozenset())
+        try:
+            result=fn(db)
+            required=list(touched_works.get())
+        finally:
+            write_scope.reset(context)
+            touched_works.reset(touched)
+        db.execute('INSERT INTO editor.idempotency(actor_id,key,request_hash,response,required_work_ids) VALUES (%s,%s,%s,%s,%s)',(idempotency_actor(),key,fingerprint,Jsonb(result),required))
         return result
 
 
 def own_work(db,work):
-    if not db.execute('SELECT id FROM editor.works WHERE id=%s AND owner_id=%s',(work,ACTOR)).fetchone():
-        raise HTTPException(404,'Kayıt bulunamadı')
+    ensure_work(db,work)
 
 
 def scope(db,generation):
     row=db.execute('''SELECT g.*,w.id AS work_id FROM editor.generations g
       JOIN editor.content_versions cv ON cv.id=g.content_version_id JOIN editor.editions e ON e.id=cv.edition_id
-      JOIN editor.works w ON w.id=e.work_id WHERE g.id=%s AND w.owner_id=%s''',(generation,ACTOR)).fetchone()
+      JOIN editor.works w ON w.id=e.work_id WHERE g.id=%s''',(generation,)).fetchone()
     if not row: raise HTTPException(404,'Kayıt bulunamadı')
+    ensure_work(db,row['work_id'])
     return row
 
 
 @router.post('/works',status_code=201)
 def create_work(body:Work,idempotency_key:str=Header()):
+    if principal().work_ids is not None: raise HTTPException(403,'Yeni kitap oluşturma kapsamı yok')
     def create(db):
-        rid=str(uuid.uuid4()); db.execute('INSERT INTO editor.works(id,title,owner_id) VALUES (%s,%s,%s)',(rid,body.title,ACTOR)); return {'id':rid,'title':body.title}
+        rid=str(uuid.uuid4()); db.execute('INSERT INTO editor.works(id,title,owner_id) VALUES (%s,%s,%s)',(rid,body.title,actor_id())); return {'id':rid,'title':body.title}
     return mutate('/works',body,idempotency_key,create)
 
 
@@ -172,9 +184,9 @@ def create_work(body:Work,idempotency_key:str=Header()):
 def list_works(offset:int=0,limit:int=50):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
-        rows=db.execute('SELECT id,title FROM editor.works WHERE owner_id=%s ORDER BY title,id LIMIT %s OFFSET %s',
-                        (ACTOR,limit,offset)).fetchall()
-        total=db.execute('SELECT count(*) AS n FROM editor.works WHERE owner_id=%s',(ACTOR,)).fetchone()['n']
+        rows=db.execute('SELECT id,title FROM editor.works WHERE id=ANY(%s::uuid[]) ORDER BY title,id LIMIT %s OFFSET %s',
+                        (visible_works(db),limit,offset)).fetchall()
+        total=db.execute('SELECT count(*) AS n FROM editor.works WHERE id=ANY(%s::uuid[])',(visible_works(db),)).fetchone()['n']
     return {'items':rows,'total':total,'has_more':offset+len(rows)<total}
 
 
@@ -202,6 +214,8 @@ def create_edition(body:Edition,idempotency_key:str=Header()):
 @router.post('/editions/{edition}/verified-sources',status_code=201)
 def attach_source(edition:uuid.UUID,body:Source,idempotency_key:str=Header()):
     # Existing networkless parser output is attached only after original/hash verification.
+    # An SHA guess must never grant another user's source to an editor's own book.
+    admin()
     def create(db):
         e=db.execute('SELECT work_id FROM editor.editions WHERE id=%s',(edition,)).fetchone()
         if not e: raise HTTPException(404,'Kayıt bulunamadı')
@@ -422,7 +436,7 @@ def visual_correction(body:VisualCorrection,idempotency_key:str=Header()):
             'human_accepted':False})
         rid=save_record(db,row['generation_id'],'visual_corrections',row['record_key']+f':{version+1:04}',corrected)
         db.execute('INSERT INTO editor.reviews(id,generation_id,target_id,actor_id,decision,reason,version) VALUES (%s,%s,%s,%s,%s,%s,%s)',
-          (str(uuid.uuid4()),row['generation_id'],body.target_id,ACTOR,'REJECT',body.reason,version+1))
+          (str(uuid.uuid4()),row['generation_id'],body.target_id,actor_id(),'REJECT',body.reason,version+1))
         return {'id':rid,'target_id':str(body.target_id),'version':version+1,'human_accepted':False}
     return mutate('/visual-corrections',body,idempotency_key,action)
 
@@ -437,7 +451,7 @@ def review(body:Review,idempotency_key:str=Header()):
         if version!=body.expected_version: raise HTTPException(409,'REVIEW_VERSION_CONFLICT')
         rid=str(uuid.uuid4())
         db.execute('INSERT INTO editor.reviews(id,generation_id,target_id,actor_id,decision,reason,version) VALUES (%s,%s,%s,%s,%s,%s,%s)',
-          (rid,row['generation_id'],body.target_id,ACTOR,body.decision,body.reason,version+1))
+          (rid,row['generation_id'],body.target_id,actor_id(),body.decision,body.reason,version+1))
         return {'id':rid,'version':version+1,'decision':body.decision}
     return mutate('/reviews',body,idempotency_key,action)
 
@@ -464,6 +478,7 @@ class Question(BaseModel):
 
 @router.post('/questions',status_code=202)
 def question(body:Question,idempotency_key:str=Header()):
+    if body.mode=='editor_preview':require_write()
     def action(db):
         g=scope(db,body.generation_id)
         if g['status'] not in ('VALIDATED','ACTIVE','RETIRED'): raise HTTPException(409,'GENERATION_NOT_READY')
@@ -512,7 +527,7 @@ def retry(job_id:uuid.UUID,body:RetryRequest,idempotency_key:str=Header()):
             raise HTTPException(409,'OPERATOR_RECOVERY_REASON_REQUIRED')
         history=row['payload'].get('operator_retries',[])
         history.append({'after_attempt':row['attempt_no'],'previous_error':row['error_code'],
-                        'reason':body.reason,'actor':ACTOR})
+                        'reason':body.reason,'actor':actor_id()})
         db.execute("UPDATE editor.jobs SET status='QUEUED',error_code=NULL,finished_at=NULL,max_attempts=GREATEST(max_attempts,attempt_no+1),payload=payload || %s WHERE id=%s",(Jsonb({'operator_retries':history}),job_id))
         return {'job_id':str(job_id),'status':'QUEUED'}
     return mutate('/jobs/'+str(job_id)+'/retry',body,idempotency_key,action)

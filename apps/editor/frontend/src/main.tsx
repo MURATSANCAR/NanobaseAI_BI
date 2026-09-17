@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { UploadBook } from "./UploadBook";
+import { AccessPanel } from "./AccessPanel";
 
 type Row = { id: string; record_key: string; data: Record<string, any> };
 type Work = { id: string; title: string };
@@ -78,6 +79,7 @@ const answerStatuses: Record<string, string> = {
 };
 
 function App() {
+  const [identity, setIdentity] = useState<any>(null);
   const [token, setToken] = useState(""),
     [signed, setSigned] = useState(false),
     [error, setError] = useState("");
@@ -130,7 +132,9 @@ function App() {
     setBusy(true);
     setError("");
     try {
+      const who = await api('/me');
       const rows = await all("/works");
+      setIdentity(who);
       setWorks(rows);
       setWork(rows[0]?.id ?? "");
       setSigned(true);
@@ -322,7 +326,7 @@ function App() {
             adaylarını aynı yerde görün.
           </p>
           <form onSubmit={signIn}>
-            <label htmlFor="access">Operatör erişim anahtarı</label>
+            <label htmlFor="access">Erişim anahtarı</label>
             <input
               id="access"
               type="password"
@@ -336,7 +340,7 @@ function App() {
             </button>
           </form>
           <p className="hint">
-            Bu ilk sürüm operatör erişimi kullanır. Anahtar yalnız açık oturumun
+            Anahtar, kullanıcı ve kitap yetkilerinizle çalışır. Yalnız açık oturumun
             belleğinde tutulur.
           </p>
           {error && (
@@ -357,10 +361,11 @@ function App() {
         <button onClick={logout}>Çıkış</button>
       </header>
       <main className="workspace">
-        <UploadBook token={token} onStarted={async id => {
+        {identity?.can_manage_access && <AccessPanel token={token} works={works} />}
+        {identity?.can_create_work && <UploadBook token={token} onStarted={async id => {
           const rows = await all('/works'); setWorks(rows); setWork(id);
           const analyses = await all(`/works/${id}/analyses`); setRuns(analyses); setRun(analyses[0]?.id ?? '');
-        }} />
+        }} />}
         <section className="heading">
           <div>
             <p className="eyebrow">KİTAP İNCELEME</p>

@@ -37,3 +37,11 @@ def test_the_defined_column_question_compiles_without_the_model(catalog, profile
     assert out is not None, sq.to_dict()
     up = out.sql.upper().replace("[", "").replace("]", "")
     assert "CLCARD.SPECODE2 <> ''" in up, out.sql
+
+
+def test_columns_named_beside_a_measure_are_its_breakdown(catalog, profiles):
+    """The measure is asked per customer, with the card's rate beside it — not one average of everyone."""
+    sq = _resolver(catalog, profiles).resolve("Kartında indirim yüzdesi tanımlı müşteriler gerçekte ortalama ne kadar iskonto alıyor?", today=TODAY)
+    assert "SPECODE2" in {g.mapping.column for g in sq.group_by}, [(g.term, g.mapping.column) for g in sq.group_by]
+    out = DeterministicCompiler(profiles, {}, "tsql").compile(sq, catalog)
+    assert out is not None and "GROUP BY" in out.sql.upper(), (sq.to_dict(), out.sql if out else None)

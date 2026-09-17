@@ -16,7 +16,7 @@ if(!base||!source)throw new Error('Explicit real API and original PDF are requir
   for(const width of [320,390,768,1440]){
    const context=await browser.newContext({viewport:{width,height:1000}});const page=await context.newPage();
    await page.goto(base+'/editor/');
-   await page.getByLabel('Operatör erişim anahtarı').fill(token);
+   await page.getByLabel('Erişim anahtarı').fill(token);
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
    await page.locator('.upload-book summary').click();
    await page.getByLabel('Kitap adı',{exact:true}).fill('Ekrana Sığmayan Macera — gerçek yükleme kabulü');
@@ -39,7 +39,7 @@ if(!base||!source)throw new Error('Explicit real API and original PDF are requir
     result.upload_id=body.id;
     // Reload demonstrates that tracking is recovered from durable API state.
     await page.reload();
-    await page.getByLabel('Operatör erişim anahtarı').fill(token);
+    await page.getByLabel('Erişim anahtarı').fill(token);
     await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
     await page.locator('.upload-book summary').click();
     await page.getByLabel('Önceki yüklemeyi takip et').selectOption(body.id);
@@ -56,7 +56,7 @@ if(!base||!source)throw new Error('Explicit real API and original PDF are requir
     console.log(JSON.stringify({stage:'SOURCE_READY',pages:manifest.pdf_pages,upload_id:body.id}));
    }
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
-   if(await page.getByLabel('Operatör erişim anahtarı').inputValue())throw new Error('Credential persisted after logout');
+   if(await page.getByLabel('Erişim anahtarı').inputValue())throw new Error('Credential persisted after logout');
    await context.close();
   }
   fs.writeFileSync(path.join(out,reuse?'verification-final.json':'verification.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));

@@ -7,7 +7,8 @@ import subprocess
 def book_reference(config, tables=None):
     compose = ['docker', 'compose']
     allowed = ('works', 'editions', 'content_versions', 'generations', 'jobs',
-              'records', 'reviews', 'idempotency', 'uploads', 'outbox')
+              'records', 'reviews', 'idempotency', 'uploads', 'outbox',
+              'users', 'book_access', 'access_keys', 'access_audit')
     tables = allowed if tables is None else tuple(tables)
     if not tables or any(t not in allowed for t in tables):
         raise ValueError('Unexpected book reference table')

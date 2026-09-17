@@ -5,7 +5,12 @@ const root=path.resolve(__dirname,'..');
 const base=(process.env.EDITOR_VERIFY_BASE_URL||'http://127.0.0.1:8810').replace(/\/$/,'');
 const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/playwright'));
 (async()=>{
- const token=fs.readFileSync(path.join(root,'secrets/api_token'),'utf8').trim();
+ const token=fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_TOKEN_FILE||'secrets/api_token'),'utf8').trim();
+ if(process.env.EDITOR_VERIFY_TOKEN_FILE){
+  const response=await fetch(base+'/v1/me',{headers:{Authorization:'Bearer '+token}});
+  const identity=await response.json();
+  if(!response.ok||identity.role!=='READER')throw new Error('Expected an actual read-only credential');
+ }
  const run=JSON.parse(fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_RUN_FILE||'evidence/reference-book-run.json'),'utf8'));
  const out=path.join(root,'evidence/review-ui');fs.mkdirSync(out,{recursive:true,mode:0o700});
  const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
@@ -15,11 +20,11 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    const context=await browser.newContext({viewport:{width,height:1000}});
    const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(base+'/editor/');
-   await page.getByLabel('Operatör erişim anahtarı').waitFor();
+   await page.getByLabel('Erişim anahtarı').waitFor();
    const loginOverflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
    if(loginOverflow)throw new Error('Login horizontal overflow '+width);
    if(width===390)await page.screenshot({path:path.join(out,'login-390.png'),fullPage:true});
-   await page.getByLabel('Operatör erişim anahtarı').fill(token);
+   await page.getByLabel('Erişim anahtarı').fill(token);
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
    await page.locator('footer code').waitFor({state:'attached',timeout:30000});
    const generation=(await page.locator('footer code').textContent()).trim();
@@ -100,7 +105,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(errors.length)throw new Error('Browser errors '+errors.join('; '));
    if(await page.evaluate(()=>localStorage.length||sessionStorage.length))throw new Error('Unexpected persisted browser state');
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
-   if(await page.getByLabel('Operatör erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
+   if(await page.getByLabel('Erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
    results.push({width,generation,checks,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
