@@ -2,7 +2,8 @@
 
 ## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
 
-`book-access-v3-20260917` ana sunucuya yayımlandı. Gerçek kitap/API/PostgreSQL, kaynak kayıtlarının değişmezliği, kapsam dışı erişim, okuyucu yazma yasağı ve anahtar iptali geçti; yönetici/okuyucu ekranları 320/390/768/1440 px doğrulandı. V3 offline restore denetiminde yeni yetki tablolarının izinleri eksik bulundu. `migrate.py` düzeltmesiyle v4 aynı gerçek yedeği yeni kuruluma başarıyla geri yükledi; 28 izin, gerçek API/PG ve mobil kontroller geçti. V4 ana yayın ve yeniden paketleme takibi [restore/kalite raporunda](docs/editor/2026-09-17-restore-acl-and-source-triage.md). 48 sayfa işlenmiş olsa da 321 kaynak bölgesi ve konuşmacı/anlamsal kabul açık. Ayrıntılar: `docs/editor/2026-09-17-book-access.md`.
+**Güncel kabul:** `book-access-v4-20260917` ana sunucuda. Kendi offline paketinden 14 tablo/artifact eşliğiyle yeni restore, gerçek API/PG/OCR ve dört genişlikte mobil kabulü 10:00:32 UTC'de geçti; restore ACL hatası kapatıldı. Font eşleme yalnız deneydir: 1.160 bozuk harf gösteriminin 1.156'sına aday karşılık bulundu, fakat optik kapıda iyileşme 0. Ana kaynak sayısı 828/321; 29. sayfa figür–karakter kimliği hâlâ açık. [Ayrıntılar](docs/editor/2026-09-17-restore-acl-and-source-triage.md).
+
 
 
 Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır (eski bilgi silinir/düzeltilir). Kronolojik geçmiş için [docs/GELISTIRME-GUNLUGU.md](docs/GELISTIRME-GUNLUGU.md)'ye bak.
