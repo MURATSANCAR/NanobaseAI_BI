@@ -48,8 +48,15 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
     for message in messages:
         if isinstance(message['content'],str):
             message['content']=re.sub(r'\b[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\b',short,message['content'])
-    body = {'model':'editor-qwen38','temperature':0,'seed':17,'max_tokens':max_tokens,
+    backend=os.environ.get('EDITOR_MODEL_BACKEND','llama.cpp')
+    if backend not in ('llama.cpp','vllm'):raise RuntimeError('MODEL_BACKEND_UNSUPPORTED')
+    base=os.environ.get('EDITOR_MODEL_BASE_URL','http://llm:8080').rstrip('/')
+    name=os.environ.get('EDITOR_MODEL_NAME','editor-qwen38')
+    context_limit=int(os.environ.get('EDITOR_MODEL_CONTEXT','8192'))
+    body = {'model':name,'temperature':0,'seed':17,'max_tokens':max_tokens,
             'messages':[{'role':'system','content':SYSTEM}]+messages}
+    if backend=='vllm':
+        body['chat_template_kwargs']={'enable_thinking':False}
     if structured:
         body['response_format'] = {'type':'json_object'}
     start = time.monotonic()
@@ -61,7 +68,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
             # Read timeouts are not retried: inference may still be in flight.
             for attempt in range(7):
                 try:
-                    response = client.post('http://llm:8080'+path,json=payload)
+                    response = client.post(base+path,json=payload)
                 except httpx.ConnectError:
                     status = 'CONNECT_ERROR'
                 else:
@@ -78,8 +85,13 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         # Ask the actual runner tokenizer; do not silently shrink source context.
         texts='\n'.join(str(m['content']) if isinstance(m['content'],str) else
                         '\n'.join(p.get('text','') for p in m['content']) for m in body['messages'])
-        tokenized=post('/tokenize',{'content':texts})
-        if len(tokenized.json()['tokens'])+max_tokens+512>8192:
+        tokenizer_payload=({'model':name,'messages':body['messages'],
+                            'add_generation_prompt':True,
+                            'chat_template_kwargs':{'enable_thinking':False}}
+                           if backend=='vllm' else {'content':texts})
+        tokenized=post('/tokenize',tokenizer_payload)
+        token_count=len(tokenized.json()['tokens'])
+        if token_count+max_tokens+512>context_limit:
             raise RuntimeError('CONTEXT_BUDGET_EXCEEDED')
         response = post('/v1/chat/completions',body)
     result = response.json()
@@ -94,6 +106,8 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
     return (resolve(json.loads(content)) if structured else content), {'seconds':round(time.monotonic()-start,3),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
         'transient_retries':transient_retries,
+        'model_name':name,'model_backend':backend,'context_limit':context_limit,
+        'input_token_count':token_count,
         'runner_fingerprint':result.get('system_fingerprint'),
         'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
         'release':RELEASE,'code_manifest':code_manifest(),

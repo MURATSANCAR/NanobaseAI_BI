@@ -257,8 +257,11 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         manifest={'release':RELEASE,'pipeline_version':VERSION,'mode':'validation','human_accepted':False,
           'priority_pages':body.priority_pages,
           'reuse_measurements_from':str(body.reuse_measurements_from) if body.reuse_measurements_from else None,
-          'model':'Qwen3.8-27B-Q4_K_M','image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
-          'context_tokens':8192,'temperature':0,'seed':17,'old_visual_reuse':False}
+          'model':os.environ.get('EDITOR_MODEL_NAME','editor-qwen38'),
+          'model_backend':os.environ.get('EDITOR_MODEL_BACKEND','llama.cpp'),
+          'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
+          'context_tokens':int(os.environ.get('EDITOR_MODEL_CONTEXT','8192')),
+          'temperature':0,'seed':17,'old_visual_reuse':False}
         db.execute('INSERT INTO editor.generations(id,content_version_id,manifest) VALUES (%s,%s,%s)',(gen,version,Jsonb(manifest)))
         db.execute('INSERT INTO editor.jobs(id,generation_id) VALUES (%s,%s)',(job,gen))
         return {'job_id':job,'generation_id':gen,'content_version_id':str(version)}

@@ -37,7 +37,7 @@ npm run dev            # http://127.0.0.1:5174/bi/
 | Gömme servisi | 8083 |
 | Meta DB (Postgres) | 5434 |
 
-LLM: NVIDIA hosted `deepseek-ai/deepseek-v4-flash-0731` (OpenAI uyumlu; `OPENAI_API_BASE=https://integrate.api.nvidia.com/v1`).
+LLM: yerel GPU Flash-Next `qwen3.8-flash-next` (OpenAI uyumlu; `OPENAI_API_BASE=http://127.0.0.1:18881/v1`).
 
 ## Yapı
 

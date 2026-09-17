@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # NanobaseAI BI — tek komutla müşteri kurulumu
 #
-#   ./install.sh                  LLM: NVIDIA hosted (LLM_API_BASE / LLM_API_KEY .env'de)
+#   ./install.sh                  LLM: yerel GPU Flash-Next (LLM_API_BASE / LLM_API_KEY .env'de)
 #   ./install.sh --with-analytics analitik paneli de kur
 #   ./install.sh --with-demo      örnek raporlama DB'sini de kur (yalnız demo)
 #

@@ -1,0 +1,11 @@
+# Private GPU model endpoint. No cloud-provider fallback.
+# The base URL is the runner root (without /v1), reachable from this Docker network.
+services:
+  api:
+    environment: &gpu-env
+      EDITOR_MODEL_BACKEND: vllm
+      EDITOR_MODEL_BASE_URL: ${EDITOR_MODEL_BASE_URL:?Set the private GPU URL reachable from Editor containers}
+      EDITOR_MODEL_NAME: ${EDITOR_MODEL_NAME:-qwen3.8-flash-next}
+      EDITOR_MODEL_CONTEXT: ${EDITOR_MODEL_CONTEXT:-32768}
+  worker:
+    environment: *gpu-env
