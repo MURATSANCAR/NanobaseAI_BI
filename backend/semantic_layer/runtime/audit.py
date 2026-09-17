@@ -119,6 +119,7 @@ class _Occurrence:
     preds: list[Any] = field(default_factory=list)          # canonical Predicate(entity, column, op, values)
     intervals: dict[str, tuple[Optional[str], Optional[str]]] = field(default_factory=dict)   # column → [lo, hi)
     opaque: list[str] = field(default_factory=list)  # restrictions above that could not be carried down (computed columns)
+    refs: dict[str, str] = field(default_factory=dict)   # this table's reference columns → the entity they point at
 
 
 class _Stub:
@@ -281,9 +282,10 @@ def _walk(scope: Scope, carried: list[exp.Expression], root_alias: str, sources:
                 p = _single_predicate(c, stub, "where", None)
                 if p is not None:
                     occ.preds.append(p)
-            src = sources.get(name.upper()) or sources.get(source.name.upper()) or {}
+            src = sources.get(name.upper()) or sources.get(source.name.upper()) or sources.get(_ent(entity)) or sources.get("LG_" + _ent(entity)) or {}
             # A measured min/max is a statistic, not a promise: only a declared coverage stands in for a date filter.
             occ.intervals = _intervals(mine, src.get('window') if src.get('declared') else None, src.get('types') or {})
+            occ.refs = dict(src.get("refs") or {})
             out.append(occ)
         elif isinstance(source, Scope):
             # Written against this alias; one level down the alias is gone.
@@ -783,6 +785,13 @@ def _filter_proven(m, slot, occ: list[_Occurrence], tree, scope) -> bool:
     own = [o for o in occ if _same_entity(o.entity, entity)]
     if own and all(holds(o, column, compatible, expected) for o in own):
         return True
+    if not own:
+        # The header is not read; its lines are, and the line carries the header's column under the
+        # same name (Logo writes TRCODE on the order line as on the order). `LG_ORFLINE.TRCODE IN (1)`
+        # is the order-type filter as surely as on LG_ORFICHE — the line points at exactly one header.
+        lines = [o for o in occ if any(_same_entity(e, entity) for e in o.refs.values())]
+        if lines and all(holds(o, column, compatible, expected) for o in lines):
+            return True
     if not own and slot.semantic_type == SemanticType.DEFAULT_FILTER and not slot.explain.get("equivalent_bindings"):
         # A default row scope restricts the rows read from its entity. An answer that never reads the
         # entity has no such rows; whether it should have read them is the measure rule's question.
@@ -1409,13 +1418,22 @@ def sources_from(profiles, *, declared: Optional[set[str]] = None) -> dict[str, 
     for p in profiles or []:
         w = getattr(p, "time_window", None)
         dw = getattr(p, "declared_window", None)      # set by semantic_layer.coverage.apply: declared and not refuted
+        refs = {str(r.get("column", "")).upper(): str(r.get("ref_entity", "")).upper()
+                for r in (getattr(p, "relationships", None) or []) if r.get("column") and r.get("ref_entity")}
         entry = {"types": {c.name.upper(): (c.data_type or "") for c in getattr(p, "columns", [])},
                  "window": (str(dw[0]), str(dw[1])) if dw else ((str(w[0]), str(w[1])) if w and w[0] and w[1] else None),
-                 "declared": bool(dw) or p.table_name.upper() in declared}
+                 "declared": bool(dw) or p.table_name.upper() in declared,
+                 "refs": refs}
         out[p.table_name.upper()] = entry
         if getattr(p, "schema_name", ""):
             out[f"{p.schema_name}_{p.table_name}".upper()] = entry
             out[f"{p.schema_name}.{p.table_name}".upper()] = entry
+        # The model writes the entity's logical name (STLINE, LG_ORFLINE): its column types and
+        # references are the copies' own; a coverage window is not claimed for a name that is every copy.
+        ent = str(getattr(p, "entity", "") or "").upper()
+        if ent:
+            out.setdefault(ent, {"types": entry["types"], "window": None, "declared": False, "refs": refs})
+            out.setdefault(_ent(ent), {"types": entry["types"], "window": None, "declared": False, "refs": refs})
     return out
 
 
