@@ -130,6 +130,8 @@ def run(job, root):
     from editor.config import connection
     from editor.source_pipeline import save
     gen = job['generation_id']
+    from editor.cross_page_attribution import run as cross_page_run
+    cross_report=cross_page_run(job)
     by_kind = {k:get_records(gen,k) for k in ('evidence','layout_regions','visual_observations',
                                            'source_spans','character_evidence')}
     pages = {r['data']['pdf_page']:r['data'] for r in by_kind['evidence']}
@@ -154,6 +156,10 @@ def run(job, root):
     for page, row in sorted(attrs.items()):
         if page in done_pages: continue
         identity = resolved[page]
+        identity['cross_page_dialogue_links']=[x for x in cross_report['links'] if x['pdf_page']==page]
+        identity['cross_page_dialogue_method']=cross_report['version']
+        identity['cross_page_dialogue_input_sha256']=cross_report['input_sha256']
+        identity['cross_page_dialogue_links_are_global_identity']=False
         comparisons = [r['data'] for r in prior_comparisons if r['data'].get('target_page')==page]
         proposed = []
         targets = {x['local_figure_candidate'] for x in identity['links']

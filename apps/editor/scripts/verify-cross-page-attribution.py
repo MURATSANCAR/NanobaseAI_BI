@@ -28,15 +28,60 @@ indexes={kind:{r['data']['pdf_page']:r for r in items} for kind,items in p['rows
 bundles=[]
 for page in sorted(set.intersection(*(set(v) for v in indexes.values()))):
  bundles.append({'evidence':indexes['evidence'][page],'layout':indexes['layout_regions'][page]['data'],'visual':indexes['visual_observations'][page]['data'],'page_role':indexes['page_claims'][page]['data']['page_role'],'spans':[r for r in p['rows']['source_spans'] if r['data']['pdf_page']==page]})
+fragment_report=p.get('fragment_report')
+if fragment_report:
+ assert fragment_report['generation_id']==p['gen'] and fragment_report['api_pg_match'] is True,'FRAGMENT_REPORT_SCOPE_MISMATCH'
+ matched=False
+ for bundle in bundles:
+  if bundle['evidence']['data']['pdf_page']==fragment_report['pdf_page']:
+   assert fragment_report['source_sha256']==bundle['evidence']['data']['source_sha256'],'FRAGMENT_SOURCE_MISMATCH'
+   assert fragment_report['page_role_for_extraction']==bundle['page_role'],'FRAGMENT_PAGE_ROLE_MISMATCH'
+   assert fragment_report['page_role_source_record_id']==indexes['page_claims'][fragment_report['pdf_page']]['id'],'FRAGMENT_ROLE_RECORD_MISMATCH'
+   bundle['fragments']=fragment_report['fragments'];matched=True
+ assert matched,'FRAGMENT_PAGE_NOT_READY'
+context_report=p.get('context_report')
+if context_report:
+ assert context_report['generation_id']==p['gen'] and context_report['application_writes']==0,'CONTEXT_REPORT_SCOPE_MISMATCH'
+ assert context_report['fragment_artifact_sha256']==p.get('fragment_report_sha256'),'CONTEXT_FRAGMENT_ARTIFACT_MISMATCH'
+ assert context_report['module_sha256']==hashlib.sha256(p['context_module'].encode()).hexdigest(),'CONTEXT_MODULE_HASH_MISMATCH'
+ context_module=types.ModuleType('editor.page_context');exec(compile(p['context_module'],'candidate-pagecontext.py','exec'),context_module.__dict__)
+ sys.modules['editor.page_context']=context_module
+ projections=context_report.get('fragment_record_id_projection',[])
+ if projections:
+  from editor.book_store import identifier
+  projected_by_measurement={x['measurement_identity']:x for x in projections}
+  for bundle in bundles:
+   projected=[]
+   for fragment in bundle.get('fragments',[]):
+    data=fragment['data'];parent=by_id[data['parent_source_span_id']]
+    key=parent['record_key']+'-fragment-'+hashlib.sha256(json.dumps(data['bbox'],separators=(',',':')).encode()).hexdigest()[:16]
+    expected={'measurement_identity':fragment['id'],'record_key':key,
+              'projected_record_id':identifier(p['gen'],'source_fragments',key),'persisted':False}
+    assert projected_by_measurement[fragment['id']]==expected,'CONTEXT_FRAGMENT_ID_PROJECTION_MISMATCH'
+    projected.append({'id':expected['projected_record_id'],'record_key':key,'data':data})
+   bundle['fragments']=projected
+ for bundle in bundles:
+  if bundle['evidence']['data']['pdf_page']==context_report['target_page']:
+   bundle['context_role']=context_report['result']
 module=types.ModuleType('cross_page_candidate');exec(compile(p['module'],'candidate-crosspage.py','exec'),module.__dict__)
 result=module.resolve(bundles)
-print(json.dumps({'gen':p['gen'],'api_pg_match':True,'application_writes':0,'code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'result':result},ensure_ascii=False))
+print(json.dumps({'gen':p['gen'],'api_pg_match':True,'application_writes':0,'code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'fragment_report_sha256':p.get('fragment_report_sha256'),'context_report_sha256':p.get('context_report_sha256'),'result':result},ensure_ascii=False))
 '''
 module=Path(sys.argv[2]).read_text() if len(sys.argv)>2 else (root/'backend/editor/cross_page_attribution.py').read_text()
 code_hash=hashlib.sha256(module.encode()).hexdigest()
-out=root/f'evidence/cross-page-attribution-{gen}-{code_hash[:12]}.json'
+fragment_raw=Path(sys.argv[3]).read_bytes() if len(sys.argv)>3 else None
+fragment_report=json.loads(fragment_raw) if fragment_raw else None
+fragment_hash=hashlib.sha256(fragment_raw).hexdigest() if fragment_raw else None
+context_raw=Path(sys.argv[4]).read_bytes() if len(sys.argv)>4 else None
+context_report=json.loads(context_raw) if context_raw else None
+context_hash=hashlib.sha256(context_raw).hexdigest() if context_raw else None
+context_module=Path(sys.argv[5]).read_text() if len(sys.argv)>5 else None
+if context_report and not context_module:raise SystemExit('Context candidate module required')
+suffix='-'+fragment_hash[:12] if fragment_hash else ''
+if context_hash:suffix+='-'+context_hash[:12]
+out=root/f'evidence/cross-page-attribution-{gen}-{code_hash[:12]}{suffix}.json'
 if out.exists(): raise SystemExit('Evidence exists; preserve earlier result')
-p=subprocess.run(['docker','compose','exec','-T','api','python','-c',code],input=json.dumps({'gen':gen,'rows':rows,'module':module}),capture_output=True,text=True,cwd=root)
+p=subprocess.run(['docker','compose','exec','-T','api','python','-c',code],input=json.dumps({'gen':gen,'rows':rows,'module':module,'fragment_report':fragment_report,'fragment_report_sha256':fragment_hash,'context_report':context_report,'context_report_sha256':context_hash,'context_module':context_module}),capture_output=True,text=True,cwd=root)
 if p.returncode:print(p.stderr);raise SystemExit(p.returncode)
 with out.open('x') as target: target.write(p.stdout)
-r=json.loads(p.stdout);print(json.dumps({'evidence':str(out),'api_pg':True,'code_sha256':r['code_sha256'],'pages':len(r['result']['input_pages']),'named':r['result']['named_identity_count'],'scope_errors':r['result']['scope_errors'],'links':[{'page':x['pdf_page'],'reason':x['reason']} for x in r['result']['links']]}))
+r=json.loads(p.stdout);print(json.dumps({'evidence':str(out),'api_pg':True,'code_sha256':r['code_sha256'],'pages':len(r['result']['input_pages']),'named':r['result']['named_identity_count'],'dialogue_links':r['result']['grounded_dialogue_link_count'],'scope_errors':r['result']['scope_errors'],'links':[{'page':x['pdf_page'],'reason':x['reason']} for x in r['result']['links']]}))

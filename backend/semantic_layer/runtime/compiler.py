@@ -777,7 +777,7 @@ Kurallar:
 - Yalnız SELECT üret; DML/DDL yok. Kullanıcı açıkça bir sayı ile sınır istemediyse dış sorguya TOP/LIMIT ekleme. Önizleme ve sayfalama uygulama tarafından yapılır; raporu SQL içinde 50 satıra kesme.
 - Sütun takma adı rakamla başlamasın ("2025_ciro" geçersizdir; "ciro_2025" yaz).
 - ÇÖZÜMLENEMEYEN TERİMLER bloğundaki bir terimin fiziksel karşılığını kurallardan ve şemadan çıkaramıyorsan SQL yazma; tek satır: NO_SQL: <terim> anlamı katalogda tanımlı değil.
-- Çıkarabiliyorsan ```sql bloğunun İLK satırları her terim için şu biçimde olmalı: -- yorum: '<terim>' → <hangi tablo/kolon, hangi hesap>. Bu satır yoksa cevap reddedilir. YORUMU SANA BIRAKILAN NİTELEYİCİLER için de aynı satır zorunludur.
+- Çıkarabiliyorsan ```sql bloğunun İLK satırları her terim için şu biçimde olmalı: -- yorum: '<terim>' → <hangi tablo/kolon, hangi hesap>. Bu satır yoksa cevap reddedilir. Yorum satırı TEK ve KISA bir cümledir (en çok 25 kelime): vardığın sonucu yaz, akıl yürütmeyi, alternatifleri, 'ancak/fakat' tartışmasını yazma. YORUMU SANA BIRAKILAN NİTELEYİCİLER için de aynı satır zorunludur.
 - SORUDAKİ DEĞERLER bloğu doluysa o terim veride bulunmuştur: yazımı aynen kullan ve soruyu cevapla, "tanımlı değil" deme.
 - Soru bir dönem söylemiyorsa tarih sınırı UYDURMA ("DATE_ >= '2015-01-01'" gibi). Dönem verilmemişse güncel dönem tablosu okunur; hangi yılların okunduğunu bu sistem belirler.
 - Sorunun kendi kelimesini bir sütunun DEĞERİ yapma: "bir kitabın", "müşterinin", "ürün" gibi genel isimler belli bir kaydı seçmez; "bir X'in" sorusu bütün X'ler üzerinden kırılım (GROUP BY) ister. `NAME = 'kitabin'` gibi bir filtre yanlıştır.
@@ -2224,6 +2224,16 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
     lines = [f"{total} satır döndü. İlk {len(head)}:"]
     for i, r in enumerate(head, 1):
         lines.append(f"{i}. " + " · ".join(cell(c, r.get(c)) for c in display))
+    # "toplam tutar ve en çok bekleyen müşteri": the breakdown answers the second half; the first half is
+    # the sum of the very rows shown. Only when every row is in hand and the column is additive — a
+    # ratio, an average or a price summed over groups is a number that means nothing.
+    from semantic_layer.normalize import fold as _fold
+    if re.search(r"\btoplam", _fold(question or "")) and len(rows) == total:
+        additive = [c for c in measures if not re.search(r"oran|yuzde|ortalama|pay|fiyat|sira|rank|_ref$|^ref|kod|yil|ay$", _fold(c))
+                    and all(isinstance(r.get(c), (int, float)) or r.get(c) is None for r in rows)]
+        if additive:
+            c = additive[0]
+            lines.append(f"Genel toplam ({column_label(c)}): {fmt(sum((r.get(c) or 0) for r in rows))}")
     return "\n".join(lines)
 
 

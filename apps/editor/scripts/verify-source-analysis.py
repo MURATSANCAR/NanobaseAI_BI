@@ -20,6 +20,9 @@ base = os.environ.get('EDITOR_VERIFY_BASE_URL', 'http://127.0.0.1:8810')
 headers = {'Authorization': 'Bearer ' + (root/'secrets/api_token').read_text().strip()}
 kinds = ('evidence', 'source_spans', 'page_claims', 'figure_identity', 'figure_comparisons',
          'semantic_reviews', 'semantic_synthesis')
+extended = '--fragments' in sys.argv
+if extended:
+    kinds += ('source_fragments','fragment_checks','page_context_roles','cross_page_attributions')
 def read(kind):
     rows = []
     while True:
@@ -53,6 +56,40 @@ assert {r['data']['pdf_page'] for r in api['semantic_reviews']} == expected_page
 assert {r['data']['pdf_page'] for r in api['figure_identity']} == expected_pages, 'IDENTITY_PASS_INCOMPLETE'
 assert len(api['semantic_synthesis']) == 1, 'SYNTHESIS_NOT_READY'
 spans = {r['id']:r['data'] for r in api['source_spans']}
+if extended:
+    assert {r['data']['pdf_page'] for r in api['fragment_checks']} == expected_pages, 'FRAGMENT_CHECKS_INCOMPLETE'
+    for row in api['source_fragments']:
+        fragment=row['data']; parent=spans[fragment['parent_source_span_id']]
+        assert digest(parent)==fragment['parent_record_sha256'], 'FRAGMENT_PARENT_HASH_MISMATCH'
+        assert fragment['parent_generation_id']==generation and parent['status']=='NEEDS_REVIEW'
+        assert fragment['pdf_page']==parent['pdf_page'] and fragment['render_sha256']==parent['render_sha256']
+        x,y,w,h=fragment['bbox'];px,py,pw,ph=parent['bbox']
+        assert px<=x and py<=y and x+w<=px+pw+1e-9 and y+h<=py+ph+1e-9
+        proof=fragment['measurement']
+        assert hashlib.sha256(base64.b64decode(proof['crop_image_base64'],validate=True)).hexdigest()==proof['crop_sha256']
+        assert hashlib.sha256(proof['paddle_raw_response'].encode()).hexdigest()==proof['paddle_response_sha256']
+        for reading in proof['readings']:
+            assert hashlib.sha256(reading['raw_tsv'].encode()).hexdigest()==reading['tsv_sha256']
+        if fragment['status']=='TEXT_AGREED':
+            assert not proof['blockers'] and proof['selected_text_is_unmodified_reader_output']
+            if fragment['selected_reader']=='TESSERACT_PSM7_FRAGMENT':
+                assert fragment['text']==proof['readings'][0]['text']
+                assert hashlib.sha256(proof['vl_raw_response'].encode()).hexdigest()==proof['vl_response_sha256']
+            else:
+                assert fragment['selected_reader']=='PPOCR_FRAGMENT', 'UNKNOWN_FRAGMENT_READER'
+                raw=json.loads(proof['paddle_raw_response'])
+                assert raw['image_sha256']==proof['crop_sha256']
+                ordered=sorted(raw['lines'],key=lambda line:(min(p[1] for p in line['polygon']),min(p[0] for p in line['polygon'])))
+                assert fragment['text']==' '.join(line['text'] for line in ordered), 'FRAGMENT_RAW_READER_MISMATCH'
+        assert fragment['eligible_for_synthesis'] is False and fragment['visual_identity_verified'] is False
+    assert len(api['cross_page_attributions'])==1, 'CROSS_PAGE_PASS_INCOMPLETE'
+    links=api['cross_page_attributions'][0]['data']
+    assert links['source_page_coverage_complete'] and not links['scope_errors']
+    for link in links['links']:
+        assert link['eligible_for_synthesis'] is False
+        if link.get('dialogue_link_verified'):
+            assert link['identity_evidence'] and link.get('speaker')
+            assert not link.get('semantic_acceptance', False)
 eligible = {}
 for row in api['semantic_reviews']:
     review = row['data']; page = pages[review['pdf_page']]

@@ -250,7 +250,7 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12','source-spans-v13'):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION
@@ -388,7 +388,7 @@ def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
 
 
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks','character_evidence','figure_identity','figure_comparisons','semantic_reviews','semantic_synthesis'],offset:int=0,limit:int=50,pdf_page:int|None=None):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks','character_evidence','figure_identity','figure_comparisons','semantic_reviews','semantic_synthesis','source_fragments','fragment_checks','cross_page_attributions','page_context_roles'],offset:int=0,limit:int=50,pdf_page:int|None=None):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)

@@ -12,13 +12,15 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
   if(!response.ok||identity.role!=='READER')throw new Error('Expected an actual read-only credential');
  }
  const run=JSON.parse(fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_RUN_FILE||'evidence/reference-book-run.json'),'utf8'));
+ const verifyContextDialogue=process.env.EDITOR_VERIFY_CONTEXT_DIALOGUE==='1';
+ const verifyFragments=process.env.EDITOR_VERIFY_FRAGMENTS==='1';
  const verifySemantic=process.env.EDITOR_VERIFY_SEMANTIC==='1';
  const verifyCharacters=process.env.EDITOR_VERIFY_CHARACTER_EVIDENCE==='1';
  const verifyRegional=process.env.EDITOR_VERIFY_REGIONAL_SOURCE==='1';
  const verifyVlSelection=process.env.EDITOR_VERIFY_OCR_VL_SELECTION==='1';
  const targetGeneration=(run.job||run).generation_id;
  let regionalSpan=null,vlSpan=null,targetWork=null,targetJob=null;
- if(verifyRegional||verifyVlSelection||verifySemantic){
+ if(verifyRegional||verifyVlSelection||verifySemantic||verifyFragments||verifyContextDialogue){
   const read=async endpoint=>{const response=await fetch(base+'/v1'+endpoint,{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw new Error('Real regional API failed '+response.status);return response.json();};
   targetWork=(await read('/generations/'+targetGeneration)).work_id;
   for(let offset=0;;){
@@ -70,7 +72,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(width===390)await page.screenshot({path:path.join(out,'login-390.png'),fullPage:true});
    await page.getByLabel('Erişim anahtarı').fill(token);
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
-   if(verifyRegional||verifyVlSelection||verifySemantic){
+   if(verifyRegional||verifyVlSelection||verifySemantic||verifyFragments||verifyContextDialogue){
     await page.locator('.selectors select').nth(0).selectOption(targetWork);
     await page.locator('.selectors select').nth(1).selectOption(targetJob);
     await page.waitForFunction(expected=>document.querySelector('footer code')?.textContent.trim()===expected,targetGeneration);
@@ -203,6 +205,76 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     await page.getByRole('heading',{name:'PDF sayfası '+expectedPage,exact:true}).waitFor();
     semanticCheck={identity_page:identity.data.pdf_page,review_page:review.data.pdf_page,statements:synthesis.data.statements.length,literal_api_equal:true,source_navigation:true,full_book_acceptance:false};
    }
+   let fragmentCheck=null;
+   if(verifyFragments){
+    let fragment=null;
+    for(let offset=0;;){
+     const response=await context.request.get(base+'/v1/generations/'+generation+'/source_fragments?offset='+offset+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+     if(!response.ok())throw new Error('Actual fragment API failed');
+     const batch=await response.json();fragment=batch.items.find(r=>r.data.status==='TEXT_AGREED');
+     if(fragment||!batch.has_more)break;if(!batch.items.length)throw new Error('Empty fragment pagination');offset+=batch.items.length;
+    }
+    if(!fragment)throw new Error('Real agreed fragment required');
+    const number=fragment.data.pdf_page;
+    const response=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?pdf_page='+number+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+    if(!response.ok())throw new Error('Fragment parent API failed');
+    const parents=(await response.json()).items,parent=parents.find(r=>r.id===fragment.data.parent_source_span_id);
+    if(!parent)throw new Error('Actual fragment parent missing');
+    await page.getByRole('button',{name:'Kaynak & görsel',exact:true}).click();
+    await page.locator('#page').selectOption(String(number));
+    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,number);
+    const detail=page.locator('[data-fragment-id="'+fragment.id+'"]');await detail.waitFor();
+    if(await detail.getAttribute('open')===null)await detail.locator('summary').click();
+    if(await detail.getByTestId('fragment-raw-text').textContent()!==fragment.data.raw_text)throw new Error('Fragment raw text differs from API');
+    if(await detail.getByTestId('fragment-parent').textContent()!=='İlk satır: '+parent.data.raw_text)throw new Error('Fragment parent raw text differs from API');
+    const readerNames={PPOCR_FRAGMENT:'PaddleOCR bölgesel okuma',TESSERACT_PSM7_FRAGMENT:'Tesseract bölgesel okuma'};
+    if(await detail.getByTestId('fragment-reader').textContent()!=='Okuyucu: '+(readerNames[fragment.data.selected_reader]||fragment.data.selected_reader))throw new Error('Fragment reader differs from API');
+    for(const [label,expected] of [['Küçük bölgeyi kaynakta göster',fragment],['İlk satırı kaynakta göster',parent]]){
+     await detail.getByRole('button',{name:label,exact:true}).click();
+     const overlay=await page.locator('.source-highlight').evaluate(element=>{const box=element.getBoundingClientRect(),p=element.parentElement.getBoundingClientRect();return [(box.x-p.x)/p.width,(box.y-p.y)/p.height,box.width/p.width,box.height/p.height];});
+     if(overlay.some((v,i)=>Math.abs(v-expected.data.bbox[i])>.003))throw new Error('Fragment or parent source bbox differs from API');
+    }
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Fragment source overflow '+width);
+    await page.screenshot({path:path.join(out,'fragments-'+width+'.png'),fullPage:true});
+    fragmentCheck={id:fragment.id,pdf_page:number,parent_id:parent.id,raw_text_reader_parent_exact:true,bbox_navigation:true};
+   }
+   let contextDialogueCheck=null;
+   if(verifyContextDialogue){
+    const read=async kind=>{
+     const rows=[];
+     for(let offset=0;;){
+      const response=await context.request.get(base+'/v1/generations/'+generation+'/'+kind+'?offset='+offset+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+      if(!response.ok())throw new Error('Context/dialogue real API failed');
+      const batch=await response.json();rows.push(...batch.items);
+      if(!batch.has_more)break;if(!batch.items.length)throw new Error('Empty context pagination');offset+=batch.items.length;
+     }
+     return rows;
+    };
+    const contexts=await read('page_context_roles'),identities=await read('figure_identity');
+    const contextRow=contexts[0],identity=identities.find(r=>(r.data.cross_page_dialogue_links||[]).some(x=>x.dialogue_link_verified));
+    if(!contextRow||!identity)throw new Error('Real context and verified dialogue link required');
+    await page.getByRole('button',{name:'Kaynak & görsel',exact:true}).click();
+    await page.locator('#page').selectOption(String(contextRow.data.pdf_page));
+    const contextPanel=page.getByTestId('page-context-role');await contextPanel.waitFor();
+    const names={NARRATIVE:'Öykü anlatısı',ACTIVITY:'Etkinlik',FRONT_MATTER:'Ön bilgi / künye',APPENDIX:'Ek',MIXED:'Birden fazla amaç',UNKNOWN:'Belirsiz'};
+    if(await contextPanel.locator('p').first().textContent()!==(names[contextRow.data.page_role]||'Belirsiz'))throw new Error('Context role differs from API');
+    if(!(await contextPanel.textContent()).includes('otomatik sınıflandırmadır'))throw new Error('Context classification limitation missing');
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Context overflow '+width);
+    await page.screenshot({path:path.join(out,'context-'+width+'.png'),fullPage:true});
+    await page.locator('#page').selectOption(String(identity.data.pdf_page));
+    const links=identity.data.cross_page_dialogue_links.filter(x=>x.dialogue_link_verified),cards=page.getByTestId('cross-page-dialogue');await cards.first().waitFor();
+    if(await cards.count()!==links.length)throw new Error('Dialogue count differs from API');
+    for(let i=0;i<links.length;i++){
+     if(await cards.nth(i).locator('b').textContent()!==(links[i].speaker||'Konuşmacı kimliği bilinmiyor')||await cards.nth(i).locator('blockquote').textContent()!==(links[i].supported_quote||links[i].quote))throw new Error('Dialogue speaker or literal quote differs from API');
+     if(!(await cards.nth(i).textContent()).includes('figürün bütün kimliği'))throw new Error('Dialogue identity limitation missing');
+    }
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Dialogue overflow '+width);
+    await page.screenshot({path:path.join(out,'dialogue-'+width+'.png'),fullPage:true});
+    const link=cards.first().locator('.refs button').first();await link.waitFor();
+    const target=(await link.textContent()).match(/\d+/)[0];await link.click();
+    await page.getByRole('heading',{name:'PDF sayfası '+target,exact:true}).waitFor();
+    contextDialogueCheck={context_page:contextRow.data.pdf_page,dialogue_page:identity.data.pdf_page,links:links.length,literal_api_equal:true,source_navigation:true};
+   }
    let regionalCheck=null;
    if(verifyRegional){
     const number=regionalSpan.data.pdf_page;
@@ -270,8 +342,8 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(await page.locator('#page').inputValue()!==String(number))throw new Error('Named mention returned to wrong page');
     characterCheck={pdf_page:number,attributions:characterPage.attributions.length,literal_api_equal:true,first_ref_bbox_equal:true,named_mention_source_navigation:true};
    }
-   const currentSourcePage=verifyCharacters?characterPage.pdf_page:verifyRegional?regionalSpan.data.pdf_page:verifyVlSelection?vlSpan.data.pdf_page:null;
-   const resetPage=(verifyCharacters||verifyRegional||verifyVlSelection)?await page.locator('#page option').evaluateAll((options,current)=>options.find(option=>option.value!==String(current))?.value||String(current),currentSourcePage):'6';
+   const currentSourcePage=verifyCharacters?characterPage.pdf_page:verifyRegional?regionalSpan.data.pdf_page:verifyVlSelection?vlSpan.data.pdf_page:fragmentCheck?fragmentCheck.pdf_page:null;
+   const resetPage=(verifyCharacters||verifyRegional||verifyVlSelection||verifyFragments)?await page.locator('#page option').evaluateAll((options,current)=>options.find(option=>option.value!==String(current))?.value||String(current),currentSourcePage):'6';
    await page.locator('#page').selectOption(resetPage);
    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,resetPage);
    if((currentSourcePage===null||resetPage!==String(currentSourcePage))&&await page.locator('.source-highlight').count())throw new Error('Stale source highlight after page change');
@@ -312,7 +384,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(await page.evaluate(()=>localStorage.length||sessionStorage.length))throw new Error('Unexpected persisted browser state');
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
    if(await page.getByLabel('Erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
-   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,ocr_vl_selection:vlSelectionCheck,semantic:semanticCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
+   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,ocr_vl_selection:vlSelectionCheck,semantic:semanticCheck,fragments:fragmentCheck,context_dialogue:contextDialogueCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
   fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',api:base,results,semantic_acceptance:false},null,2));

@@ -743,7 +743,39 @@ def _state_reading(sq: SemanticQuery, o: _Occurrence) -> bool:
     return False
 
 
-_COND = re.compile(r"^\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*(?:=|IN)\s*\(?\s*([^)]*?)\s*\)?\s*$", re.I)
+_COND = re.compile(r"^\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*(?:=|\bIN\b)\s*\(?\s*([^()<>=]*?)\s*\)?\s*$", re.I)
+
+
+_COLCMP = re.compile(r"^\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*(<>|!=|>=|<=|=|>|<)\s*\(?\s*(?:[A-Za-z_]\w*\.)?([A-Za-z_]\w*)\s*\)?\s*$", re.I)
+
+
+def _condition_holds(cond: str, own: list[_Occurrence]) -> bool:
+    """Every reading of the entity carries this catalog condition: a value test as a predicate on the
+    column, a column-to-column comparison as a conjunct with the same two columns and operator."""
+    mm = _COND.match(cond)
+    if mm:
+        col = mm.group(1).upper()
+        want = {v.strip().strip("'\"").upper() for v in mm.group(2).split(",") if v.strip()}
+        return all(any(p.column.upper() == col and p.operator.upper() in ("=", "IN") and _values(p) == want for p in o.preds) for o in own)
+    cc = _COLCMP.match(cond)
+    if cc and cc.group(3).upper() not in ("NULL",) and not cc.group(3).isdigit():
+        left, op, right = cc.group(1).upper(), cc.group(2), cc.group(3).upper()
+        flipped = {">": "<", "<": ">", ">=": "<=", "<=": ">=", "=": "=", "<>": "<>", "!=": "!="}[op]
+        def has(o: _Occurrence) -> bool:
+            for c in o.conjuncts:
+                for node in c.find_all(exp.Binary):
+                    if not isinstance(node, (exp.GT, exp.LT, exp.GTE, exp.LTE, exp.EQ, exp.NEQ)):
+                        continue
+                    a, b = node.this, node.expression
+                    if not (isinstance(a, exp.Column) and isinstance(b, exp.Column)):
+                        continue
+                    o_ = {exp.GT: ">", exp.LT: "<", exp.GTE: ">=", exp.LTE: "<=", exp.EQ: "=", exp.NEQ: "<>"}[type(node)]
+                    pair = (a.name.upper(), b.name.upper())
+                    if (pair == (left, right) and o_ == op) or (pair == (right, left) and o_ == flipped):
+                        return True
+            return False
+        return all(has(o) for o in own)
+    return True                                     # a shape this proof does not read is not a refusal
 
 
 def _other_rows(sq: SemanticQuery, o: _Occurrence) -> bool:
@@ -1125,6 +1157,9 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             continue
         own_cols = {c.split(".")[-1].upper() for c in _cond_columns((m.extra or {}).get("conditions") or [])}
         readings = [o for o in occ if o.entity.upper() in (m.entity.upper(), re.sub(r"^LG_", "", m.entity.upper()), "LG_" + m.entity.upper())]
+        # A reading that only tests existence ("geçen ay hiç hareket görmemiş") computes no balance:
+        # the rule is about the measure being *calculated* under a filter, so only aggregating SELECTs count.
+        readings = [o for o in readings if o.select is None or o.select.find(exp.AggFunc) is not None]
         if readings and not any(_unrestricted_reading(o, own_cols) for o in readings):
             out.append(Unmet("state", f"'{metric.term}' durum ölçüsüdür: tarih ya da işlem türü filtresi altında hesaplanamaz; "
                              f"okunan her {m.entity} filtreli.",
@@ -1142,6 +1177,22 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             out.append(Unmet("filter", f"'{slot.term}' koşulu sonuç kapsamında doğrulanamadı: {m.entity}.{m.column} {op} {vals}" + _opaque_note(occ, m.entity),
                              f"{m.entity} kaynağını okuyan her SELECT/CTE'nin WHERE'ine {m.column} {op} ({', '.join(vals)}) ekle.",
                              m.entity, m.column))
+
+    # A certified filter concept may carry more than its own column: "bekleyen sipariş" is CLOSED = 0
+    # *and* item lines only *and* an unshipped remainder. The main column proved above, each extra
+    # condition must reach the same rows — one promotion line summed in "bekleyen tutar" is money that
+    # was never ordered. Metric concepts' conditions are the measure rule's business.
+    for slot in _filter_slots(sq):
+        m = slot.mapping
+        if not m or slot.status not in ("CERTIFIED", "INFERRED"):
+            continue
+        own = [o for o in occ if _same_entity(o.entity, m.entity)]
+        if not own:
+            continue
+        for cond in (m.extra or {}).get("conditions") or []:
+            if not _condition_holds(str(cond), own):
+                out.append(Unmet("filter", f"'{slot.term}' kavramının koşulu sonuç kapsamında doğrulanamadı: {cond}",
+                                 f"{m.entity} kaynağını okuyan her SELECT/CTE'nin WHERE'ine {cond} ekle.", m.entity, None))
 
     # A certified dimension can define which reference wins when header and line
     # values differ. Merely mentioning the target table cannot establish this.

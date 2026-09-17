@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v12'
+VERSION = 'source-spans-v13'
 
 
 def same_model(metrics):
@@ -571,6 +571,10 @@ def run(job):
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
         if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,page_parent)
         if row['record_key'] not in checked: interpret(job,row,spans,page_parent)
+    from editor.source_fragments import run as resolve_fragments
+    resolve_fragments(job,root)
+    from editor.page_context import run as resolve_page_context
+    resolve_page_context(job)
     from editor.figure_identity import run as resolve_figures
     from editor.semantic_acceptance import run as review_semantics
     # Both consume immutable page sources. Neither promotes the other's model

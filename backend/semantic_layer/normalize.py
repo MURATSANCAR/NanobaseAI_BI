@@ -28,7 +28,7 @@ STOPWORDS: frozenset[str] = frozenset(
     kiyasla kiyaslar grafik grafigi tablo tablosu liste listesi rapor raporu gorsel cizelge
     yoksa taraf tarafi tarafini yani sekilde bakimindan acisindan
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
-    gercekte gercekten fiilen aslinda hakikaten
+    gercekte gercekten fiilen aslinda hakikaten hala halen henuz tamamen tumuyle
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
     sahip ait
     olan oldugu olup olsun olacak bulunsun bulunan gorunsun yazilsin eklensin ekleyin ekle ekleyelim

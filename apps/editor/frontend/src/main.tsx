@@ -194,7 +194,7 @@ function App() {
             "events",
             "literary",
             "validation",
-            "page_readings", "visual_observations", "page_claims", "page_checks", "character_evidence", "figure_identity", "semantic_reviews", "semantic_synthesis",
+            "page_readings", "visual_observations", "page_claims", "page_checks", "character_evidence", "figure_identity", "semantic_reviews", "semantic_synthesis", "source_fragments", "fragment_checks", "page_context_roles", "cross_page_attributions",
           ];
           const entries = await Promise.all(
             kinds.map(async (k) => [k, await all(`/generations/${gen}/${k}`)]),
@@ -230,6 +230,9 @@ function App() {
   const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
   const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
   const pageCharacters = data.character_evidence?.find((r) => r.data.pdf_page === page);
+  const pageFragments = (data.source_fragments ?? []).filter((r) => r.data.pdf_page === page);
+  const fragmentCheck = data.fragment_checks?.find((r) => r.data.pdf_page === page);
+  const pageContext = data.page_context_roles?.find((r) => r.data.pdf_page === page);
   const pageIdentity = data.figure_identity?.find((r) => r.data.pdf_page === page);
   const pageSemantic = data.semantic_reviews?.find((r) => r.data.pdf_page === page);
   const pageCandidates = [...(pageClaims?.data.claims ?? []), ...(pageClaims?.data.blocked_claims ?? [])];
@@ -252,7 +255,7 @@ function App() {
     return () => { active = false; };
   }, [gen, page, signed, pageReading?.id]);
   const sourceImage = imageFor === source?.id ? image : "";
-  const highlighted = pageSpans.find((r) => r.id === selectedSpan);
+  const highlighted = [...pageSpans, ...pageFragments].find((r) => r.id === selectedSpan);
   useEffect(() => {
     setImage("");
     if (!source) return;
@@ -606,12 +609,40 @@ function App() {
                     </div>)}
                     <p>{pageClaims.data.blocked_claims.length} bloke edilmiş aday · Görsel figürlerin kimlik eşleştirmesi bekliyor</p>
                   </article>}
+                  {(pageFragments.length > 0 || fragmentCheck) && <article className="paper" data-testid="source-fragments">
+                    <h2>Küçük bölge okumaları</h2>
+                    <p className="hint">İlk satır okuması korunur. Küçük bölgedeki okuyucu uyumu, bütün satırın veya anlamın doğrulandığı anlamına gelmez.</p>
+                    {fragmentCheck && <p>{fragmentCheck.data.agreed_fragments} uyumlu · {fragmentCheck.data.review_fragments} inceleme gereken küçük bölge</p>}
+                    {pageFragments.map((fragment) => {
+                      const parent = pageSpans.find((row) => row.id === fragment.data.parent_source_span_id);
+                      return <details key={fragment.id} data-fragment-id={fragment.id}>
+                        <summary>{fragment.data.status === "TEXT_AGREED" ? "Doğrulanan küçük bölge" : "Küçük bölge inceleme bekliyor"}</summary>
+                        <p data-testid="fragment-raw-text">{fragment.data.raw_text}</p>
+                        <p data-testid="fragment-reader">Okuyucu: {({PPOCR_FRAGMENT: "PaddleOCR bölgesel okuma", TESSERACT_PSM7_FRAGMENT: "Tesseract bölgesel okuma"} as Record<string, string>)[fragment.data.selected_reader] || fragment.data.selected_reader}</p>
+                        <p data-testid="fragment-parent">İlk satır: {parent ? parent.data.raw_text : "Üst kaynak kaydı bu sayfada bulunamadı"}</p>
+                        <button className="show-region" onClick={() => {setSelectedSpan(fragment.id); document.getElementById("source-frame")?.scrollIntoView({block: "center", behavior: "smooth"});}}>Küçük bölgeyi kaynakta göster</button>
+                        {parent && <button className="show-region" onClick={() => setSelectedSpan(parent.id)}>İlk satırı kaynakta göster</button>}
+                      </details>;
+                    })}
+                  </article>}
+                  {pageContext && <article className="paper" data-testid="page-context-role">
+                    <h2>Sayfanın amacı</h2>
+                    <p>{({NARRATIVE: "Öykü anlatısı", ACTIVITY: "Etkinlik", FRONT_MATTER: "Ön bilgi / künye", APPENDIX: "Ek", MIXED: "Birden fazla amaç", UNKNOWN: "Belirsiz"} as Record<string, string>)[pageContext.data.page_role] || "Belirsiz"}</p>
+                    <p className="hint">Kaynak ve komşu sayfa bağlamından üretilen otomatik sınıflandırmadır; ilk sayfa kaydını değiştirmez, karakter kimliği veya editör onayı değildir.</p>
+                    {source && refs([source.id])}
+                  </article>}
                   {pageIdentity && <article className="paper" data-testid="figure-identity">
                     <h2>Figür ve konuşmacı eşleştirmesi</h2>
                     <p className="hint">Bu sayfadaki kaynak bağı incelenir; sayfalar arasında aynı karakter olduğu veya kitabın tamamı doğrulanmış değildir.</p>
                     {(pageIdentity.data.links ?? []).map((link: any, i: number) => <div className="claim" key={i}>
                       <b>{link.visual_identity_verified ? link.speaker : "Konuşmacı kimliği bilinmiyor"}</b>
                       <p>{link.visual_identity_verified ? "Bu sayfadaki söz ve balon yönü kimliği destekliyor; genel karakter kimliği onayı değildir." : "Figür adayı bir karakter adıyla yeterli kaynak üzerinden eşleştirilemedi."}</p>
+                    </div>)}
+                    {(pageIdentity.data.cross_page_dialogue_links ?? []).filter((link: any) => link.dialogue_link_verified).map((link: any, i: number) => <div className="claim" key={"dialogue-"+i} data-testid="cross-page-dialogue">
+                      <b>{link.speaker || "Konuşmacı kimliği bilinmiyor"}</b>
+                      <blockquote>{link.supported_quote || link.quote}</blockquote>
+                      <p className="hint">Yalnız bu söz parçasının kaynaklı konuşmacı bağıdır; figürün bütün kimliği ve aynı adlı karakterlerin birliği doğrulanmış değildir.</p>
+                      {refs((link.identity_evidence ?? []).map((item: any) => item.evidence_ref).filter(Boolean))}
                     </div>)}
                     {!pageIdentity.data.links?.length && <p>Bu sayfada bağlanabilecek konuşmacı kaydı bulunmadı.</p>}
                     {pageIdentity.data.unprocessed_pairs > 0 && <p>{pageIdentity.data.unprocessed_pairs} figür karşılaştırması henüz yapılmadı.</p>}

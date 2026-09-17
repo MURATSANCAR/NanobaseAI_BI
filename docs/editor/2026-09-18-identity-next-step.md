@@ -67,3 +67,25 @@ Gerçek kanıtlar:
 - `evidence/source-fragments-0eb7d199-cebc-4454-96f6-1d5cb1685986-page-0028-b7bc58d1fefe.json`: gerçek sayfa rolüyle üçüncü okuyucu sonrası ret.
 
 Pilot altyapısı hataları da düzeltildi: bağımsız SQL kontrolündeki string quoting parametre bağlamaya taşındı; eski ağsız reread imajında bulunmayan seçim modülü yalnız karar aşamasında ağlı API imajında lazy-import edilir. Bunlar ürün veya kimlik kabulü değildir.
+
+### Alanlara ayrılmış optik destek sonrası geçen gerçek pilot
+
+Son genel kapı yeniden ölçülen tek bir okuyucunun **ham Tesseract PSM 7 metnini aynen** seçer; okuyuculardan kelime/harf birleştirmez. Sözcük dizisinin tamamı PP-OCR + Tesseract 7 + Tesseract 13 arasında eşleşmelidir. Noktalama ve tırnakların sözcük sırasına göre konumları Tesseract 7 + Tesseract 13 + PaddleOCR-VL arasında eşleşmelidir. Yalnız genel noktalama dizisi eşliği yeterli değildir: tırnağın hangi kelimeden önce/sonra olduğu da denetlenir. VL olumsuzluk çatışması veya token sayısı farkı reddedilir; VL harf farkları `vl_lexical_conflicts` içinde ham ölçümle korunur. Bu, VL harf farkını düzeltmek veya VL'yi tek otorite saymak değildir.
+
+Gerçek tekrar `1 fragment / 1 TEXT_AGREED / 1 otomatik açık metin atfı` verdi. Gerçek `page_claims` rolü NARRATIVE, API ve PG verileri eşit; üretim DB yazımı sıfır. Parçanın `parent_record_sha256` değeri değişmemiş üst kaydın canonical JSON hashidir. Son aday kod ve yeniden ölçüm kanıtı:
+
+- `evidence/source-fragments-0eb7d199-cebc-4454-96f6-1d5cb1685986-page-0028-fac346ed30f5.json`.
+
+Atıftaki söz yalnız tek kelimedir. Bu sonuç s29 figürünün kimliğini doğrulamaz; çapraz sayfa kapısı kısa/tekrarlanabilir sözleri tek başına anchor kabul etmemelidir. Geçen şey optik alt bölge ve metindeki açık atıftır.
+
+Üretim adayı `run(job, root)` ayrı `batch_key` destekli reread kuyruğunu kullanır; batch başına en fazla 256 bölge, sabit aday anahtarlarıyla yeniden başlama, queue crop/TSV hash doğrulaması ve aynı kırpıma PP/VL çağrısı vardır. Sonuçlar ayrı immutable `source_fragments`, kapsam ve limitler `fragment_checks` kaydına gider. Üst `source_spans` değiştirilmez. Bu üretim kuyruğu entegrasyonu henüz gerçek yeni nesilde doğrulanmamıştır; çalışan V12-r1 davranışının değiştiği iddia edilmez.
+
+### Kaynak bağlamıyla sayfa amacı denemesi
+
+`verify-page-context.py`, gerçek komşu kaynaklar ve geçen fragment sidecar'ı ile `page_context.classify` adayını uzak API ortamında çalıştırdı. 41 API/PG kaydı ve fragment parent hash/geometrisi eşleşti. Tamamlanmamış komşu sayfa bağlama boş sayfa olarak eklenmedi. Beklenen rol veya konuşmacı verilmedi; veriler doğrudan kayıtlardan alındı.
+
+İlk iki sürümde model dayanak olarak inceleme bekleyen üst kaydın kimliğini seçti; `INVALID_PAGE_CONTEXT_CLASSIFICATION` ile reddedildi. Genel giriş düzeltmesi bu bölgelerin atıf kimliğini kaldırdı ve `can_cite=false` yaptı. Pilot fragment'in ham ölçüm hash'i üretim kayıt kimliği değildir: son verifier, metin/proof alanlarına dokunmadan üretimdeki parent-key/bbox-hash/UUID5 şemasını yeniden üreterek `persisted=false` projection map kaydetti.
+
+Son ölçümde model NARRATIVE önerdi ve dört geçerli kaynak atfı döndürdü; ancak şu belirsizliği ekledi: “Sayfadaki UNVERIFIED_REGION bölgelerinin içeriği bilinmemektedir; ancak okunabilir metinler anlatı akışını desteklemektedir.” Mevcut kapı herhangi bir belirsizlikte inceleme istediğinden `eligible_for_identity_context=false` kaldı ve ikinci model denetimi çalışmadı. Sayfa rolü veya kimlik elle kabul edilmedi. Belirsizliğin kaynak kapsamı mı sayfa amacı mı olduğu sonraki genel sözleşmede ayrıştırılmalıdır; bu sonuç anlamsal kabul değildir.
+
+Son kanıt: `evidence/page-context-0eb7d199-cebc-4454-96f6-1d5cb1685986-0029-6072b5f38bbc-16dcc078b697.json`.
