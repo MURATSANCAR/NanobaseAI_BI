@@ -291,3 +291,14 @@ def test_a_card_table_alone_in_its_select_is_read_from_one_copy():
     joined = physicalize_sql("SELECT c.CODE, SUM(s.TOTAL) FROM STLINE s JOIN CLCARD c ON c.LOGICALREF = s.TOTAL GROUP BY c.CODE",
                              [Y2021, Y2026, c21, c41], {}, period=(date(2025, 1, 1), date(2026, 12, 31)))
     assert "LG_211_CLCARD" in joined and "LG_411_CLCARD" in joined, joined      # beside the dated table it stays in step
+
+
+def test_an_undated_table_with_no_period_asked_is_read_from_the_newest_copy():
+    """2026-09-18, soru 24 (doğrudan DB denetimi buldu): the risk-limit table has no date, so no copy had a measured
+    window and *every* firm copy since 2015 was unioned — "customers over their limit" came from old books."""
+    r105 = SchemaProfile(datasource_id="d", table_name="LG_105_01_CLRNUMS", table_pattern="LG_{n0}_{n1}_CLRNUMS", entity="CLRNUMS", schema_name="dbo",
+                         columns=[ColumnProfile(name="ACCRISKLIMIT", data_type="float")], row_count=10, context={"n0": "105", "n1": "01"})
+    r411 = SchemaProfile(datasource_id="d", table_name="LG_411_01_CLRNUMS", table_pattern="LG_{n0}_{n1}_CLRNUMS", entity="CLRNUMS", schema_name="dbo",
+                         columns=[ColumnProfile(name="ACCRISKLIMIT", data_type="float")], row_count=10, context={"n0": "411", "n1": "01"})
+    sql = physicalize_sql("SELECT COUNT(*) FROM CLRNUMS WHERE ACCRISKLIMIT > 0", [r105, r411], {})
+    assert "LG_411_01_CLRNUMS" in sql and "LG_105_01_CLRNUMS" not in sql, sql

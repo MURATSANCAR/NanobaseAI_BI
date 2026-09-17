@@ -67,7 +67,9 @@ def test_deterministic_compiler_binds_scope_before_it_emits_physical_unions():
     assert scoped is not None and 'ERP_411_ACCOUNT' in scoped.sql and 'ERP_211_ACCOUNT' not in scoped.sql
     q.context_scope={}
     ordinary=compiler.compile(q,None)
-    assert ordinary is not None and 'ERP_211_ACCOUNT' in ordinary.sql and 'ERP_411_ACCOUNT' in ordinary.sql
+    # 2026-09-18: with no scope and no period an undated table is read from the newest copy, as a dated
+    # one already was — unioned across every copy, "customers over their risk limit" came from 2015's books.
+    assert ordinary is not None and 'ERP_411_ACCOUNT' in ordinary.sql and 'ERP_211_ACCOUNT' not in ordinary.sql
     assert compiler.profiles is ps and compiler.context=={}
 
 

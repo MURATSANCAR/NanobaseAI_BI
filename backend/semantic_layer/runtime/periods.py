@@ -61,7 +61,14 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
     if start is None or end is None:
         known = [(p, w) for p, w in dated if w]
         if not known:
-            return list(profiles)
+            # No copy of this table has a measured window (a table with no date of its own: the risk
+            # limits, the item–warehouse parameters). "Now" is still the newest firm's copy — read from
+            # every copy, a question about customers over their risk limit answered from 2015's books.
+            def firm_no(p):
+                f = str((p.context or {}).get("n0") or "")
+                return int(f) if f.isdigit() else -1
+            newest = max(firm_no(p) for p in profiles)
+            return [p for p in profiles if firm_no(p) == newest] if newest >= 0 else list(profiles)
         # The current copy is the one measured furthest forward *up to today*: a forward-dated row
         # (a 2030 due date) is clipped, so it cannot make an old copy look current, and master data
         # copied whole into every firm (items, customers, price lists — all beginning on the same old
