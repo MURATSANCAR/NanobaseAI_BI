@@ -56,7 +56,7 @@ for page in p['pages']:
   root=SOURCE/d['source_sha256'];manifest=json.loads((root/'manifest.json').read_text())
   assert manifest['sha256']==d['source_sha256'] and page<=manifest['pdf_pages']
   assert h((root/'ocr-regions-v2'/f'page-{page:04}.png').read_bytes())==d['ocr_render_sha256']
- request=submit(p['generation'],d['source_sha256'],page,d['ocr_render_sha256'],regions)
+ request=submit(p['generation'],d['source_sha256'],page,d['ocr_render_sha256'],regions,attempt_token=1)
  measurements,provenance=await_result(request,check_active=check_source,queue_wait_seconds=p['wait'])
  assert load_verified(provenance,evidence)==measurements
  original=(SOURCE/d['source_sha256']/'ocr-regions-v2'/f'page-{page:04}.png').read_bytes()
@@ -78,7 +78,7 @@ for page in p['pages']:
   checked.append({'source_span_id':row['id'],'bbox':m['bbox'],'crop_sha256':m['crop_sha256'],
                   'independent_geometry_equal':True,'raw_tsv_text_confidences_equal':True})
  first=snapshot(request)
- again=submit(p['generation'],d['source_sha256'],page,d['ocr_render_sha256'],regions)
+ again=submit(p['generation'],d['source_sha256'],page,d['ocr_render_sha256'],regions,attempt_token=1)
  repeat,repeat_provenance=await_result(again,check_active=check_source,queue_wait_seconds=p['wait'])
  assert again==request and repeat==measurements and repeat_provenance==provenance and snapshot(again)==first
  reports.append({'pdf_page':page,'regions':len(rows),'request':request,'provenance':provenance,

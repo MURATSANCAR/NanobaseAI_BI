@@ -227,7 +227,8 @@ def optical(job, evidence, document, root, parent=None):
             with connection() as db:fence(db,job)
         check_active()
         request=submit(gen,d['source_sha256'],page,d['ocr_render_sha256'],
-                       [{'region_key':draft['sid'],'bbox':draft['line']['bbox']} for draft in targets])
+                       [{'region_key':draft['sid'],'bbox':draft['line']['bbox']} for draft in targets],
+                       attempt_token=job['fencing_token'])
         with connection() as db:
             fence(db,job)
             db.execute('UPDATE editor.jobs SET progress=%s WHERE id=%s',

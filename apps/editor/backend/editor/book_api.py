@@ -331,7 +331,8 @@ def region_rereads(generation:uuid.UUID,pdf_page:int|None=None):
         items.append(item)
     from editor.reread_queue import VERSION as queue_method, load_verified
     queue_directory=ROOT/source['sha256']/queue_method/str(generation)
-    queue_paths=([queue_directory/f'page-{pdf_page:04}.json'] if pdf_page is not None
+    queue_paths=([queue_directory/f'page-{pdf_page:04}.json',
+                  *sorted(queue_directory.glob(f'page-{pdf_page:04}-*.json'))] if pdf_page is not None
                  else sorted(queue_directory.glob('page-*.json')))
     for path in queue_paths:
         if not path.exists():continue

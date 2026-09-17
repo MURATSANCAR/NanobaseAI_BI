@@ -29,12 +29,20 @@ for row in p['spans']:
  origin=str(uuid.UUID(prov['generation_id']));rid=str(uuid.UUID(prov['request_id']))
  assert generated==(origin==p['generation'])
  if origin not in reports:
-  raw=(source/'region-reread-queue-v1'/origin/f'page-{page:04}.json').read_bytes()
+  report_path=source/'region-reread-queue-v1'/origin/f'page-{page:04}-{rid}.json'
+  if not report_path.exists():report_path=source/'region-reread-queue-v1'/origin/f'page-{page:04}.json'
+  raw=report_path.read_bytes()
   assert digest(raw)==prov['artifact_sha256'];report=json.loads(raw);request=report['request'];result=report['result']
   assert request['generation_id']==origin and request['request_id']==rid and request['source_sha256']==e['source_sha256']
   assert request['pdf_page']==page and request['render_sha256']==e['ocr_render_sha256']
   unsigned={k:v for k,v in request.items() if k!='request_sha256'}
   assert digest(json.dumps(unsigned,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode())==request['request_sha256']
+  policy={k:request[k] for k in ('method','code_sha256','languages','models','engine','psm','deadline_seconds')}
+  if 'attempt_token' in request:
+   assert type(request['attempt_token']) is int and request['attempt_token']>=1
+   policy['attempt_token']=request['attempt_token']
+  policy_hash=digest(json.dumps(policy,sort_keys=True,separators=(',',':'),ensure_ascii=True).encode())
+  assert str(uuid.uuid5(uuid.UUID(origin),str(page)+':'+policy_hash))==rid
   for field in ('request_sha256','request_id','render_sha256','code_sha256','engine','models'):
    assert prov[field]==request[field] and result[field]==request[field]
   assert result['status']=='COMPLETED' and len(result['regions'])==len(request['regions'])

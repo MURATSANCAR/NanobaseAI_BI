@@ -110,6 +110,10 @@ def validate_request(request, require_current_code=True):
     if set(request['models']) != set(request['languages'].split('+')):
         raise RuntimeError('REREAD_MODEL_MANIFEST_INVALID')
     policy = {k: request[k] for k in ('method','code_sha256','languages','models','engine','psm','deadline_seconds')}
+    if 'attempt_token' in request:
+        if type(request['attempt_token']) is not int or request['attempt_token'] < 1:
+            raise RuntimeError('REREAD_ATTEMPT_INVALID')
+        policy['attempt_token'] = request['attempt_token']
     expected_id = str(uuid.uuid5(uuid.UUID(request['generation_id']), str(request['pdf_page']) + ':' + digest(canonical(policy))))
     if expected_id != request['request_id']:
         raise RuntimeError('REREAD_REQUEST_ID_MISMATCH')
@@ -119,7 +123,7 @@ def validate_request(request, require_current_code=True):
 
 
 def submit(generation_id, source_sha256, pdf_page, render_sha256, regions, *,
-           languages='tur+eng', deadline_seconds=600, expected_models=None):
+           languages='tur+eng', deadline_seconds=600, expected_models=None, attempt_token=None):
     cap = json.loads((QUEUE / 'capabilities.json').read_text())
     if cap['code_sha256'] != code_hash() or cap['method'] != VERSION:
         raise RuntimeError('REREAD_CONSUMER_VERSION_MISMATCH')
@@ -128,6 +132,10 @@ def submit(generation_id, source_sha256, pdf_page, render_sha256, regions, *,
         raise RuntimeError('REREAD_MODEL_MISMATCH')
     policy = {'method': VERSION, 'code_sha256': code_hash(), 'languages': languages,
               'models': models, 'engine': cap['engine'], 'psm': [7, 13], 'deadline_seconds': deadline_seconds}
+    if attempt_token is not None:
+        if type(attempt_token) is not int or attempt_token < 1:
+            raise RuntimeError('REREAD_ATTEMPT_INVALID')
+        policy['attempt_token'] = attempt_token
     generation_id = str(uuid.UUID(str(generation_id)))
     rid = str(uuid.uuid5(uuid.UUID(generation_id), str(pdf_page) + ':' + digest(canonical(policy))))
     request = {**policy, 'request_id': rid, 'generation_id': generation_id,
@@ -135,6 +143,23 @@ def submit(generation_id, source_sha256, pdf_page, render_sha256, regions, *,
                'render_sha256': render_sha256, 'regions': regions}
     request['request_sha256'] = digest(canonical(request))
     validate_request(request)
+    # A lease may end after durable measurement publication or partial span
+    # persistence. Reuse that exact completed proof, never mix attempt provenance
+    # in an immutable page. Failed/cancelled attempts have no completed report.
+    if attempt_token is not None:
+        directory = SOURCE / source_sha256 / VERSION / generation_id
+        ignored = {'attempt_token', 'request_id', 'request_sha256'}
+        identity = {k: v for k, v in request.items() if k not in ignored}
+        for path in sorted(directory.glob(f'page-{pdf_page:04}*.json')):
+            report = json.loads(path.read_bytes()); prior = report['request']
+            if {k: v for k, v in prior.items() if k not in ignored} != identity:
+                continue
+            pointer = QUEUE / 'results' / (prior['request_id'] + '.json')
+            if pointer.exists() and json.loads(pointer.read_bytes()).get('status') != 'COMPLETED':
+                continue
+            validate_result(prior, report['result'])
+            request = prior; rid = prior['request_id']
+            break
     saved = artifact_report(request)
     if saved.exists():
         report = json.loads(saved.read_bytes())
@@ -183,7 +208,8 @@ def validate_result(request, result, require_current_code=True):
 
 
 def artifact_report(request):
-    return SOURCE / request['source_sha256'] / VERSION / request['generation_id'] / f"page-{request['pdf_page']:04}.json"
+    suffix = '-' + request['request_id'] if 'attempt_token' in request else ''
+    return SOURCE / request['source_sha256'] / VERSION / request['generation_id'] / f"page-{request['pdf_page']:04}{suffix}.json"
 
 
 def artifact_directory(request):
@@ -200,7 +226,11 @@ def load_verified(provenance, evidence):
     generation = str(uuid.UUID(provenance['generation_id']))
     if not hash_ok(source_hash) or type(page) is not int or page < 1:
         raise RuntimeError('REREAD_SOURCE_SCOPE_MISMATCH')
-    path = SOURCE / source_hash / VERSION / generation / f'page-{page:04}.json'
+    rid = str(uuid.UUID(provenance['request_id']))
+    directory = SOURCE / source_hash / VERSION / generation
+    path = directory / f'page-{page:04}-{rid}.json'
+    if not path.exists():
+        path = directory / f'page-{page:04}.json'
     raw = path.read_bytes()
     if digest(raw) != provenance['artifact_sha256']:
         raise RuntimeError('REREAD_ARTIFACT_HASH_MISMATCH')
@@ -243,6 +273,8 @@ def await_result(request, *, check_active, queue_wait_seconds=900, poll_seconds=
                 'pdf_page': request['pdf_page'], 'ocr_render_sha256': request['render_sha256']})
             return measured, provenance
         if time.monotonic() >= deadline:
+            publish(QUEUE / 'cancel' / (request['request_id'] + '.json'),
+                    {'request_id': request['request_id']}, immutable=True)
             raise RuntimeError('REREAD_QUEUE_TIMEOUT')
         time.sleep(poll_seconds)
 
