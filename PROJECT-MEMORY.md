@@ -6,6 +6,10 @@ Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır
 
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz, FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi. İlk/ana müşteri: TİMAŞ Logo (mağaza/satış verisi).
 
+## PaddleOCR-VL-1.6 hazırlık durumu (2026-09-18)
+
+GPU kurulumu mevcut; canlı gateway8010 sağlık isteği503, model açılışında GPU bellek yetersizliği görüldü. Editör entegrasyonu ve gerçek kitap kabulü DOĞRULANAMADI. Diğer oturumun GPU ayarları değiştirilmedi. [Kontrol kaydı](docs/editor/2026-09-18-paddleocr-vl-readiness.md).
+
 ## Editör modülü — bağımsız altyapı (2026-09-17)
 
 Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus, gateway ve ağsız parser olmak üzere 11 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.

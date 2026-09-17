@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — PaddleOCR-VL kurulum sonrası canlı kontrol
+
+Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karşı 4.0 GiB boş bellek hatası doğrulandı. GPU servis ayarları ve kitap verileri değiştirilmedi; entegrasyon kabulü verilmedi. [Kanıt ve sonraki adım](editor/2026-09-18-paddleocr-vl-readiness.md).
+
 ## 2026-09-18 — Harici NVIDIA API sağlayıcısından yerel Flash-Next geçişi
 
 - Kullanıcı kararı: model çağrıları Türk Telekom GPU sunucusundaki Flash-Next üzerinden çalışacak; harici NVIDIA API adresi, eski model varsayılanı ve aktif sağlayıcı override dosyaları kaldırılır. Tarihsel günlük girişleri korunur. NVIDIA GPU sürücüleri/CUDA kapsam dışıdır.
