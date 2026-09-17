@@ -245,10 +245,11 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4'):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
-        manifest={'release':RELEASE,'pipeline_version':'source-spans-v3','mode':'validation','human_accepted':False,
+        from editor.source_pipeline import VERSION
+        manifest={'release':RELEASE,'pipeline_version':VERSION,'mode':'validation','human_accepted':False,
           'reuse_measurements_from':str(body.reuse_measurements_from) if body.reuse_measurements_from else None,
           'model':'Qwen3.8-27B-Q4_K_M','image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
           'context_tokens':8192,'temperature':0,'seed':17,'old_visual_reuse':False}

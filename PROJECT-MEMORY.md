@@ -1,8 +1,12 @@
 # NanobaseAI BI — Proje Belleği
 
+## 2026-09-17 — Editör kelime sınırı kapısı
+
+Ana yayın `source-boundaries-v4-20260917`. OCR karşılaştırmasının boşlukları silerek farklı kelime bölünmelerini eşit sayması kodda düzeltildi. Eski neslin gerçek 1.149 API/PG bölgesinde 7 yanlış eşlik kaldırıldı (821 anlaşma/328 inceleme); çalışan kod/dosya eşliği ve temel API/PG kabulü geçti. Yeni nesil `33b5bb70-ddd5-4591-a09d-536b656791dc` aynı ham ölçümlerden işleniyor; tamamlanma ve bu sürümün offline/restore kabulü ayrıca izleniyor. Kitap verisi elle değiştirilmedi; konuşmacı ve anlamsal kabul açık. [Kanıt ve güncel kapsam](docs/editor/2026-09-17-word-boundary-gate.md).
+
 ## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
 
-**Güncel kabul:** `book-access-v4-20260917` ana sunucuda. Kendi offline paketinden 14 tablo/artifact eşliğiyle yeni restore, gerçek API/PG/OCR ve dört genişlikte mobil kabulü 10:00:32 UTC'de geçti; restore ACL hatası kapatıldı. Font eşleme yalnız deneydir: 1.160 bozuk harf gösteriminin 1.156'sına aday karşılık bulundu, fakat optik kapıda iyileşme 0. Ana kaynak sayısı 828/321; 29. sayfa figür–karakter kimliği hâlâ açık. [Ayrıntılar](docs/editor/2026-09-17-restore-acl-and-source-triage.md).
+**Önceki yayın kabulü:** `book-access-v4-20260917` kendi offline paketinden 14 tablo/artifact eşliğiyle yeni restore, gerçek API/PG/OCR ve dört genişlikte mobil kabulü 10:00:32 UTC'de geçti; restore ACL hatası kapatıldı. Font eşleme yalnız deneydir: 1.160 bozuk harf gösteriminin 1.156'sına aday karşılık bulundu, fakat optik kapıda iyileşme 0. Bu yayının kaynak sayısı 828/321 idi; 29. sayfa figür–karakter kimliği hâlâ açık. [Ayrıntılar](docs/editor/2026-09-17-restore-acl-and-source-triage.md).
 
 
 

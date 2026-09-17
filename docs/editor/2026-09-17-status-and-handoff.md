@@ -1,5 +1,7 @@
 # Editör — yapılan işler ve doğrulanmış son durum
 
+> Güncel yayın `source-boundaries-v4-20260917`: kelime sınırı hatası kodda düzeltildi, eski neslin gerçek API/PG tekrarında 7 yanlış eşlik kaldırıldı (821/328). Yeni nesil `33b5bb70` ve offline/restore kabulü izleniyor. Konuşmacı ve anlamsal kabul açık. [Güncel kod/kanıt/iş sırası](2026-09-17-word-boundary-gate.md). Aşağıdaki yayın notları tarihçedir.
+
 > V4 offline paket / restore / API / PG / OCR / mobil: **PASS**, 17 Eylül 10:00:32 UTC. Kaynak ve konuşmacı kabulü açık; 828/321. [Kabul ve deney raporu](2026-09-17-restore-acl-and-source-triage.md).
 
 > Güncel ek: V3 yetki sürümünde restore izin hatası bulundu, v4 düzeltmesi aynı gerçek yedekle yeni kurulumda API/PG ve mobil kabulünden geçti. 321 kaynak bölgesi hâlâ açık; yeni kırpım yöntemi ölçüm aşamasında, kaynak veya inceleme kararı değiştirilmedi. [Güncel hata ve kabul kaydı](2026-09-17-restore-acl-and-source-triage.md). Aşağıdaki önceki yayın özetleri tarihçedir.
