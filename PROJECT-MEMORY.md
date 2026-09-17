@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## 2026-09-18 — Qwen ana model / paralel OCR V11
+
+Bağımsız görsel gözlem ve ihtiyaç halinde GPU bölgesel OCR paralelleştirildi; kaynak bağımlı iddialar ikisini bekler. Ham ölçüm/provenance ve çelişki kapıları korunur. Gerçek yeni nesil kabulü sürüyor. [Ayrıntı](docs/editor/2026-09-18-qwen-ocr-parallel.md).
+
 Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır (eski bilgi silinir/düzeltilir). Kronolojik geçmiş için [docs/GELISTIRME-GUNLUGU.md](docs/GELISTIRME-GUNLUGU.md)'ye bak.
 
 ## Proje ne

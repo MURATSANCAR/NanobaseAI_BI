@@ -59,6 +59,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         body['chat_template_kwargs']={'enable_thinking':False}
     if structured:
         body['response_format'] = {'type':'json_object'}
+    started_at = time.time()
     start = time.monotonic()
     transient_retries = []
     with httpx.Client(timeout=3600,trust_env=False) as client:
@@ -104,6 +105,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         if isinstance(value,dict): return {k:resolve(v) for k,v in value.items()}
         return aliases.get(value,value) if isinstance(value,str) else value
     return (resolve(json.loads(content)) if structured else content), {'seconds':round(time.monotonic()-start,3),
+        'started_at':started_at,'finished_at':time.time(),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
         'transient_retries':transient_retries,
         'model_name':name,'model_backend':backend,'context_limit':context_limit,

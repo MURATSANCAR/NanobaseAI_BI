@@ -269,7 +269,14 @@ def optical(job, evidence, document, root, parent=None, on_layout=None):
             draft['reread']=measurements[draft['sid']]
             if draft['reread']['bbox']!=draft['line']['bbox']:raise RuntimeError('REREAD_REGION_MISMATCH')
         generated_reread=True
+    completed_spans={str(r['id']):r for r in get_records(gen,'source_spans')}
     for i,draft in enumerate(drafts):
+        if draft['sid'] in completed_spans:
+            stored=completed_spans[draft['sid']]
+            if stored['data']['render_sha256']!=d['ocr_render_sha256'] or stored['data']['bbox']!=draft['line']['bbox']:
+                raise RuntimeError('RESUMED_SPAN_SOURCE_MISMATCH')
+            spans.append(stored)
+            continue
         line=draft['line']
         bbox=line['bbox']
         # Match readers by position; never promote a similar word elsewhere on the page.
