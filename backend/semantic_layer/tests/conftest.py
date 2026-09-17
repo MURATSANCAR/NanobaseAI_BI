@@ -135,3 +135,40 @@ def synthetic_profiles():
     clc = _mk_profile("CLCARD", "LG_{n0}_CLCARD", [("LOGICALREF", "int", None), ("CODE", "varchar(17)", None), ("DEFINITION_", "varchar(51)", None), ("SPECODE2", "varchar(11)", [("KITAPCI", 10), ("E-TICARET", 5), ("DAGITICI", 3)])], description="Cari hesap kartı (müşteri / tedarikçi)")
     itm = _mk_profile("ITEMS", "LG_{n0}_ITEMS", [("LOGICALREF", "int", None), ("CODE", "varchar(25)", None), ("NAME", "varchar(51)", None), ("SPECODE", "varchar(11)", None)])
     return [inv, stl, clc, itm]
+
+
+@pytest.fixture
+def gate_engine(tmp_path):
+    """The database behind the model queue and the job table.
+
+    SQLite by default. With LLM_GATE_TEST_DSN set (PostgreSQL) the same tests run where the
+    PostgreSQL-only paths live — the advisory lock around admission, SKIP LOCKED in the job claim —
+    inside a schema of their own, so a live `sl_llm_queue` in the same database is never touched."""
+    import os
+    import uuid
+
+    import sqlalchemy as sa
+
+    from semantic_layer.store import schema as S
+
+    tables = [S.sl_llm_queue, S.sl_llm_gate, S.sl_llm_job]
+    dsn = os.environ.get("LLM_GATE_TEST_DSN", "").strip()
+    if not dsn:
+        engine = sa.create_engine(f"sqlite:///{tmp_path}/gate.db", connect_args={"timeout": 30})
+        S.metadata.create_all(engine, tables=tables)
+        yield engine
+        engine.dispose()
+        return
+    schema = f"llm_gate_test_{uuid.uuid4().hex[:8]}"
+    admin = sa.create_engine(dsn)
+    with admin.begin() as conn:
+        conn.execute(sa.text(f'CREATE SCHEMA "{schema}"'))
+    engine = sa.create_engine(dsn, connect_args={"options": f"-csearch_path={schema}"}, pool_size=20, max_overflow=40)
+    try:
+        S.metadata.create_all(engine, tables=tables)
+        yield engine
+    finally:
+        engine.dispose()
+        with admin.begin() as conn:
+            conn.execute(sa.text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()

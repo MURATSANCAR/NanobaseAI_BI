@@ -218,7 +218,62 @@ sl_llm_queue = sa.Table(
     sa.Column("finished_at", sa.DateTime(timezone=True)),
     sa.Column("heartbeat_at", sa.DateTime(timezone=True)),
     sa.Column("worker", sa.String(128)),
+    # Which part of the product is asking, and how urgent it is: 0 a person is watching, 1 somebody
+    # will read it soon (a scheduled report), 2 nobody is watching (background reading). NULL on rows
+    # written by older code — read as the "bg:" prefix used to be read.
+    sa.Column("module", sa.String(64)),
+    sa.Column("priority", sa.Integer()),
+    # True when the holder refreshes heartbeat_at while RUNNING; such a ticket is judged by its
+    # heartbeat, not by the lease.
+    sa.Column("beats", sa.Boolean()),
     sa.Index("ix_sl_llm_queue_order", "status", "enqueued_at"),
+)
+
+
+# What every process has learned about the provider, shared: one 429 seen by the nightly worker
+# slows the bridge's admissions too. One row per model endpoint.
+sl_llm_gate = sa.Table(
+    "sl_llm_gate",
+    metadata,
+    sa.Column("id", sa.String(128), primary_key=True),
+    sa.Column("effective_slots", sa.Integer()),
+    sa.Column("cooldown_until", sa.DateTime(timezone=True)),
+    sa.Column("pressure_count", sa.Integer(), nullable=False, server_default="0"),
+    sa.Column("last_status", sa.Integer()),
+    sa.Column("last_pressure_at", sa.DateTime(timezone=True)),
+    sa.Column("last_success_at", sa.DateTime(timezone=True)),
+    sa.Column("last_raise_at", sa.DateTime(timezone=True)),
+)
+
+
+# A prompt left at the door: the caller gets an id at once and the connection closes; a runner in
+# the bridge takes it through the same queue as everything else. Survives a restart.
+sl_llm_job = sa.Table(
+    "sl_llm_job",
+    metadata,
+    sa.Column("id", sa.String(64), primary_key=True),
+    sa.Column("tenant_id", sa.String(64), nullable=False),
+    sa.Column("datasource_id", sa.String(128), nullable=False),
+    sa.Column("module", sa.String(64), nullable=False),
+    sa.Column("priority", sa.Integer(), nullable=False, server_default="1"),
+    sa.Column("user_id", sa.String(128)),
+    sa.Column("status", sa.String(16), nullable=False, server_default="QUEUED"),  # QUEUED | RUNNING | DONE | FAILED | CANCELLED
+    sa.Column("messages_json", sa.Text(), nullable=False),
+    sa.Column("params_json", sa.Text(), nullable=False, server_default="{}"),
+    sa.Column("dedup_key", sa.String(64)),
+    sa.Column("result", sa.Text()),
+    sa.Column("error", sa.Text()),
+    sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("started_at", sa.DateTime(timezone=True)),     # a runner took it (it may still be in the model's line)
+    sa.Column("admitted_at", sa.DateTime(timezone=True)),    # the model's line let it through: the call is being made
+    sa.Column("finished_at", sa.DateTime(timezone=True)),
+    sa.Column("heartbeat_at", sa.DateTime(timezone=True)),
+    sa.Column("worker", sa.String(128)),
+    sa.Column("queue_wait_ms", sa.Integer()),
+    sa.Column("llm_ms", sa.Integer()),
+    sa.Index("ix_sl_llm_job_pick", "status", "priority", "created_at"),
+    sa.Index("ix_sl_llm_job_dedup", "dedup_key", "status"),
 )
 
 

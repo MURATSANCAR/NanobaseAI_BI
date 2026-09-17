@@ -10,6 +10,7 @@ from pathlib import Path
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
+from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
 from semantic_layer.runtime.language_pool import LanguagePool, VERSION, MAX_ENTRIES, atomic_write, digest, schema_documents, validate_candidate
 from semantic_layer.store.catalog_store import open_store
 
@@ -150,8 +151,11 @@ def main():
     for a in sorted(store.list_annotations(settings.datasource_id), key=lambda a: a.created_at):
         if a.table_pattern in by_pattern and a.text:
             annotations[(by_pattern[a.table_pattern], (a.column or "").upper() or None)] = a.text
-    client = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
-                       extra={"chat_template_kwargs": {"enable_thinking": False}})
+    # In line with everyone else, behind anyone who is waiting: this went straight to the provider.
+    client = QueuedLlm(LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
+                                 extra={"chat_template_kwargs": {"enable_thinking": False}}),
+                       LlmQueue.from_env(store.engine), purpose="bg:language-pool",
+                       tenant_id=settings.tenant_id, datasource_id=settings.datasource_id)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.with_suffix(output.suffix + ".lock").open("a") as lock:
