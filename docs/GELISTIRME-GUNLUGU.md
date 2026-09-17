@@ -6,6 +6,13 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör tam kaynak koşusu ve restore sonucu belgelendi
+
+- Gerçek sunucu API’si ve son kanıt dosyaları yeniden okundu: v2 iş COMPLETED, nesil NEEDS_REVIEW. 48/48 sayfa, 1.149 span; 778 okuyucu anlaşması ve 371 inceleme bölgesi. 48 sayfanın altı kayıt türü API/PG eşliğinde geçti; manuel review ve kaynak düzeltmesi 0.
+- Offline 8 imaj/94 dosya/dört GGUF paketi ve tam kitap yedeği ayrı kuruluma geri yüklendi. Kaynak/restore API-PG, sürüm/izolasyon ve restore mobil ekran kontrolü geçti; hedef servisler kanıtları koruyarak durduruldu. Anlamsal sentez/arama/soru kabulü açık.
+- Bütün Editör Markdown belgeleri ve kök README/AGENTS/CLAUDE/proje belleği güncellendi; tarihsel pilotlar güncel v2 sonucundan ayrıldı. Genel kod düzeltmeleri, sürüm/iş kimlikleri, kanıt yolları, kurulum sınırları ve açık roadmap ayrıntılı devir belgesinde toplandı.
+- Bu tur dokümantasyondur: uygulama veya kitap verisi değiştirilmedi, yerel ürün testi başlatılmadı. [Ayrıntılı kayıt](editor/2026-09-17-status-and-handoff.md).
+
 ## 2026-09-16 — Editör v2 dağıtımı ve kurulum denetimi hazırlığı
 
 - 20:19:50 UTC: V2 offline paket export/importu geçti (8 imaj, 94 dosya, dört GGUF ve OCR); bütün dosya hashleri ve yüklenen imaj kimlikleri doğrulandı. Tek seferlik denetçi kitabın tamamlanmasını bekliyor; ardından ayrı kurulumda gerçek yedek/restore/API/PG/tarayıcı kontrolü yapacak. Restore ve anlamsal kitap kabulü henüz verilmedi.

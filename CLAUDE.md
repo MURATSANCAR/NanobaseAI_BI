@@ -1,5 +1,9 @@
 # Oturum başlangıcı
 
+## Editör dokümantasyon dizini
+
+Editörün ayrıntılı yapılan işleri, hataları, kod çözümleri, gerçek sunucu doğrulamaları ve açık kapsamı: [17 Eylül durum ve devir kaydı](docs/editor/2026-09-17-status-and-handoff.md). İlgili belge haritası bu kaydın sonundadır. Dokümantasyonda işleme, kaynak eşliği, kurulum kabulü ve anlamsal kabul ayrı yazılır; yalnız kodun veya kaydın bulunması başarı sayılmaz.
+
 Her oturumda şu iki dosyayı oku:
 
 1. [PROJECT-MEMORY.md](PROJECT-MEMORY.md) — canlı özet: proje ne, mimari, stack, sunucu/port yapısı, dizin haritası.

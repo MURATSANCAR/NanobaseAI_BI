@@ -6,7 +6,7 @@ Bu dosya canlı özet, tek doğru kaynak. Değişiklik olunca üzerine yazılır
 
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz, FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi. İlk/ana müşteri: TİMAŞ Logo (mağaza/satış verisi).
 
-## Editör modülü — bağımsız altyapı (2026-09-16)
+## Editör modülü — bağımsız altyapı (2026-09-17)
 
 Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nanobase-direct`, kök `/data/nanobaseai/editor`; API/web localhost 8810, metrikler 9096. Ayrı PostgreSQL, Qdrant, API/worker, OCR, yerel LLM/embedding/reranker, Prometheus ve gateway olmak üzere 10 servis. PDF araçları ağsız Docling/Poppler/Tesseract konteynerindedir. BI iç kodu/tablosu kullanılmaz; entegrasyon API üzerinden yapılacaktır.
 
@@ -16,14 +16,18 @@ Editör aynı depoda `apps/editor/` altında BI'dan bağımsızdır. Sunucu `nan
 
 **Düzeltmeler:** Bölgesel Paddle ölçümü artık PDF/Tesseract satırının tamamıyla değil konumca karşılık gelen kelimelerle karşılaştırılır. S.16'da gerçek veri tekrarında anlaşan bölge 1/56 → 46/56; ham metin değişmedi, bu anlamsal doğruluk oranı değildir. Alıntıda kelime sınırı, sıralı/kesintisiz kaynak ve yinelenen referans kontrolü vardır; uyuşmayan bölgeler model bağlamında boşluk olarak korunur. Serbest `visuals.description` iddia girdisi değildir. `source_spans`, `layout_regions`, `visual_observations`, `page_claims`, `page_checks` ayrı tutulur.
 
-**Açık kapsam:** Konuşmacı kimliği ve anlamsal kabul henüz tamamlanmadı; bütün sayfaların işlenmesi nesli `NEEDS_REVIEW` yapar. Kitap sentezi, indeks, soru-cevap, kullanıcı/kitap rolleri, editör düzeltme bağımlılıkları ve tam müşteri kurulum kabulü tamamlanmış sayılmaz. `pilot_ready=false`. Diğer iki gerçek kitap, ikinci baskı ve insan editör süresi yoktur. Bu eksikler tahmin veya sentetik veriyle kapatılmaz.
+**Açık kapsam:** Konuşmacı kimliği ve anlamsal kabul henüz tamamlanmadı; bütün sayfaların işlenmesi nesli `NEEDS_REVIEW` yapar. Kitap sentezi, indeks, soru-cevap, kullanıcı/kitap rolleri, editör düzeltme bağımlılıkları tam müşteri ortam çeşitliliği kabulü tamamlanmış sayılmaz. `pilot_ready=false`. Diğer iki gerçek kitap, ikinci baskı ve insan editör süresi yoktur. Bu eksikler tahmin veya sentetik veriyle kapatılmaz.
 
 **Takip:** `evidence/source-spans-run.json` canlı kimlik, `source-pages-v2-follow.log` ilerleme, `source-pages-status.md` tarihli görünüm. Her 10 sayfada ve terminal durumda `verify-source-pipeline.py` gerçek API/PG eşliğini denetler. Kod/model değişikliğinden sonra eski kabul aktarılmaz. LLM Qwen3.8-27B Q4_K_M, 48 CPU/thread, tek slot, 8192 bağlam, 1024 görsel token; embedding/reranker dörder CPU. PaddleOCR ana Compose servisidir; PP-OCRv5 Latin ağırlıkları imaj içinde, çalışma ağı kapalıdır.
 
 **Kanıt/belgeler:** [Sistem düzeltmeleri ve açık işler](docs/editor/2026-09-16-system-quality-followup.md), [v1 kaynak akışının tarihçesi](docs/editor/2026-09-16-source-spans.md), [22 bölümlük kapsam](docs/editor/roadmap-live-status.md), [kurulum/restore](apps/editor/README.md). İlk OCR pilotu, eski caption yanlışları, iptal edilen koşular ve önceki mobil/altyapı kabulleri geliştirme günlüğünde ve bağlantılı raporlarda korunur; güncel sürüm kabulü olarak sunulmaz.
 
 
-**Kurulum denetimi:** V2 offline paket export/importu geçti: 8 imaj, 94 dosya, OCR ve dört GGUF; kaynak kitaplar/sırlar pakette yok. Paket `/data/nanobaseai/editor-qualifications/a9471749/offline`. Tek seferlik denetçi bu kitabın işlenmesini bekleyip ayrı kurulumda yedek/restore ve gerçek API/PG/tarayıcı kontrolü yapacak; restore henüz geçti sayılmaz. Takip `evidence/installation-qualification-status.md`. Sunucu betikleri bilgisayar kapalıyken de sürer; yeni kod düzeltmesi veya anlamsal editör kararı üretmez.
+**Sonuç:** 48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti. Manuel review ve kaynak düzeltmesi 0.
+
+**Kurulum denetimi:** 17 Eylül 01:56:09 UTC itibarıyla v2 offline paket (8 imaj, 94 dosya, dört GGUF ve OCR), gerçek yedek/restore, hedef API/PG ve mobil kontrol geçti. Denetim `/data/nanobaseai/editor-qualifications/a9471749`; hedef servisler kontrol sonrası durduruldu, veriler korundu. Aynı hostta ayrı kurulum doğrulaması bütün müşteri ortamlarının kabulü değildir.
+
+**Ayrıntılı devir:** [Yapılan işler ve son durum](docs/editor/2026-09-17-status-and-handoff.md).
 
 ## Mimari (üstten alta)
 
