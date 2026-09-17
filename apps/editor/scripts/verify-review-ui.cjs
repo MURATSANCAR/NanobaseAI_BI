@@ -14,9 +14,10 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
  const run=JSON.parse(fs.readFileSync(path.join(root,process.env.EDITOR_VERIFY_RUN_FILE||'evidence/reference-book-run.json'),'utf8'));
  const verifyCharacters=process.env.EDITOR_VERIFY_CHARACTER_EVIDENCE==='1';
  const verifyRegional=process.env.EDITOR_VERIFY_REGIONAL_SOURCE==='1';
+ const verifyVlSelection=process.env.EDITOR_VERIFY_OCR_VL_SELECTION==='1';
  const targetGeneration=(run.job||run).generation_id;
- let regionalSpan=null,targetWork=null,targetJob=null;
- if(verifyRegional){
+ let regionalSpan=null,vlSpan=null,targetWork=null,targetJob=null;
+ if(verifyRegional||verifyVlSelection){
   const read=async endpoint=>{const response=await fetch(base+'/v1'+endpoint,{headers:{Authorization:'Bearer '+token}});if(!response.ok)throw new Error('Real regional API failed '+response.status);return response.json();};
   targetWork=(await read('/generations/'+targetGeneration)).work_id;
   for(let offset=0;;){
@@ -25,12 +26,20 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(targetJob||!batch.has_more)break;if(!batch.items.length)throw new Error('Empty analysis pagination');offset+=batch.items.length;
   }
   if(!targetJob)throw new Error('Target generation analysis unavailable');
-  for(let offset=0;;){
+  if(verifyRegional)for(let offset=0;;){
    const batch=await read('/generations/'+targetGeneration+'/source_spans?offset='+offset+'&limit=100');
    regionalSpan=batch.items.find(r=>r.data.selected_reader==='REGIONAL_OCR');
    if(regionalSpan||!batch.has_more)break;if(!batch.items.length)throw new Error('Empty regional pagination');offset+=batch.items.length;
   }
-  if(!regionalSpan)throw new Error('No actual regional selection available');
+  if(verifyRegional&&!regionalSpan)throw new Error('No actual regional selection available');
+  if(verifyVlSelection){
+   for(let offset=0;;){
+    const batch=await read('/generations/'+targetGeneration+'/source_spans?offset='+offset+'&limit=100'+(process.env.EDITOR_VERIFY_OCR_VL_SELECTION_PAGE?'&pdf_page='+encodeURIComponent(process.env.EDITOR_VERIFY_OCR_VL_SELECTION_PAGE):''));
+    vlSpan=batch.items.find(r=>r.data.selected_reader==='PADDLEOCR_VL'&&r.data.status==='TEXT_AGREED');
+    if(vlSpan||!batch.has_more)break;if(!batch.items.length)throw new Error('Empty OCR selection pagination');offset+=batch.items.length;
+   }
+   if(!vlSpan)throw new Error('No actual accepted OCR VL selection available');
+  }
  }
  let characterPage=null;
  if(verifyCharacters){
@@ -60,7 +69,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(width===390)await page.screenshot({path:path.join(out,'login-390.png'),fullPage:true});
    await page.getByLabel('Erişim anahtarı').fill(token);
    await page.getByRole('button',{name:'Çalışma alanını aç'}).click();
-   if(verifyRegional){
+   if(verifyRegional||verifyVlSelection){
     await page.locator('.selectors select').nth(0).selectOption(targetWork);
     await page.locator('.selectors select').nth(1).selectOption(targetJob);
     await page.waitForFunction(expected=>document.querySelector('footer code')?.textContent.trim()===expected,targetGeneration);
@@ -129,6 +138,27 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
      await page.screenshot({path:path.join(out,'ocr-'+number+'-'+width+'.png'),fullPage:true});
     }
    }
+   let vlSelectionCheck=null;
+   if(verifyVlSelection){
+    const number=vlSpan.data.pdf_page;
+    await page.locator('#page').selectOption(String(number));
+    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,number);
+    const detail=page.locator('[data-span-id="'+vlSpan.id+'"]');await detail.waitFor();
+    if(await detail.getAttribute('open')===null)await detail.locator('summary').click();
+    const info=detail.getByTestId('ocr-vl-source-selection');await info.waitFor();
+    if(await detail.locator('summary').textContent()!=='✓ '+vlSpan.data.text)throw new Error('Selected OCR text differs from real API');
+    if(await info.getByTestId('ocr-vl-selected-text').textContent()!=='Seçilen metin: '+vlSpan.data.text)throw new Error('OCR selection text missing');
+    if(await info.getByTestId('ocr-vl-original-text').textContent()!=='İlk tam sayfa okuması: '+vlSpan.data.raw_text)throw new Error('Original OCR measurement differs from API');
+    if(await info.getByTestId('ocr-vl-reader').textContent()!=='Okuyucu: '+vlSpan.data.ocr_vl_measurement.model)throw new Error('OCR model provenance differs from API');
+    if(!(await info.textContent()).includes('bu uyuşma olay, konuşmacı veya karakter kimliği doğrulaması değildir.'))throw new Error('OCR acceptance limit missing');
+    if(await detail.locator('.ocr-fallback').count())throw new Error('Accepted OCR has contradictory candidate notice');
+    await detail.getByRole('button',{name:'Kaynakta göster',exact:true}).click();
+    const overlay=await page.locator('.source-highlight').evaluate(element=>{const box=element.getBoundingClientRect(),parent=element.parentElement.getBoundingClientRect();return [(box.x-parent.x)/parent.width,(box.y-parent.y)/parent.height,box.width/parent.width,box.height/parent.height];});
+    if(overlay.some((v,i)=>Math.abs(v-vlSpan.data.bbox[i])>.003))throw new Error('OCR selection source bbox differs from API');
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('OCR selection overflow '+width);
+    await page.screenshot({path:path.join(out,'ocr-selection-'+width+'.png'),fullPage:true});
+    vlSelectionCheck={span_id:vlSpan.id,pdf_page:number,raw_and_selected_text_exact:true,model_provenance:true,acceptance_limit:true,bbox_equal:true};
+   }
    let regionalCheck=null;
    if(verifyRegional){
     const number=regionalSpan.data.pdf_page;
@@ -196,8 +226,8 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(await page.locator('#page').inputValue()!==String(number))throw new Error('Named mention returned to wrong page');
     characterCheck={pdf_page:number,attributions:characterPage.attributions.length,literal_api_equal:true,first_ref_bbox_equal:true,named_mention_source_navigation:true};
    }
-   const currentSourcePage=verifyCharacters?characterPage.pdf_page:verifyRegional?regionalSpan.data.pdf_page:null;
-   const resetPage=(verifyCharacters||verifyRegional)?await page.locator('#page option').evaluateAll((options,current)=>options.find(option=>option.value!==String(current))?.value||String(current),currentSourcePage):'6';
+   const currentSourcePage=verifyCharacters?characterPage.pdf_page:verifyRegional?regionalSpan.data.pdf_page:verifyVlSelection?vlSpan.data.pdf_page:null;
+   const resetPage=(verifyCharacters||verifyRegional||verifyVlSelection)?await page.locator('#page option').evaluateAll((options,current)=>options.find(option=>option.value!==String(current))?.value||String(current),currentSourcePage):'6';
    await page.locator('#page').selectOption(resetPage);
    await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,resetPage);
    if((currentSourcePage===null||resetPage!==String(currentSourcePage))&&await page.locator('.source-highlight').count())throw new Error('Stale source highlight after page change');
@@ -238,10 +268,10 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(await page.evaluate(()=>localStorage.length||sessionStorage.length))throw new Error('Unexpected persisted browser state');
    await page.getByRole('button',{name:'Çıkış',exact:true}).click();
    if(await page.getByLabel('Erişim anahtarı').inputValue())throw new Error('Credential remained after logout');
-   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
+   results.push({width,generation,checks,character_evidence:characterCheck,regional_source:regionalCheck,ocr_vl_selection:vlSelectionCheck,scene_candidates_compared_to_real_api:scenes.length>0,logout_clears_credential:true});
    await context.close();
   }
   fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({environment:'remote Chrome / real Editor HTTP API and PostgreSQL',api:base,results,semantic_acceptance:false},null,2));
-  console.log(JSON.stringify({viewports:results.map(r=>r.width),tabs:6,character_evidence:verifyCharacters,character_source_page:characterPage?.pdf_page??null,horizontal_overflow:false,semantic_acceptance:false}));
+  console.log(JSON.stringify({viewports:results.map(r=>r.width),tabs:6,character_evidence:verifyCharacters,ocr_vl_selection:verifyVlSelection,character_source_page:characterPage?.pdf_page??null,horizontal_overflow:false,semantic_acceptance:false}));
  }finally{await browser.close();}
 })().catch(e=>{console.error(e.message);process.exitCode=1;});

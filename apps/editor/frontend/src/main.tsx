@@ -568,6 +568,16 @@ function App() {
                         <p>İlk tam sayfa okuması: {r.data.raw_text}</p>
                         <p className="hint">İlk okuma korunur; bu uyuşma olay veya karakter doğrulaması değildir.</p>
                       </div>}
+                      {r.data.selected_reader === "PADDLEOCR_VL" && <div data-testid="ocr-vl-source-selection">
+                        <p>Kaynak metin, diğer okumalarla uyuşan ek bölgesel OCR okumadan alındı.</p>
+                        <p data-testid="ocr-vl-selected-text">Seçilen metin: {r.data.text}</p>
+                        <p data-testid="ocr-vl-original-text">İlk tam sayfa okuması: {r.data.raw_text}</p>
+                        <p data-testid="ocr-vl-reader">Okuyucu: {r.data.ocr_vl_measurement?.model || "PaddleOCR-VL"}</p>
+                        <p>Uyuşan kaynaklar: {(r.data.ocr_vl_selection?.supporting_readers || []).map((reader: string) =>
+                          (({NATIVE_PDF: "PDF metni", TESSERACT_CROP: "Tesseract bölgesel yeniden okuma", PPOCR_REGION: "PaddleOCR bölgesel okuma"} as Record<string, string>)[reader] || reader)
+                        ).join(", ") || "Kaynak ayrıntısı kaydedilmedi"}</p>
+                        <p className="hint">İlk okuma korunur; bu uyuşma olay, konuşmacı veya karakter kimliği doğrulaması değildir.</p>
+                      </div>}
                       <p>İkinci okuma: {r.data.secondary_text || "Metin bulunamadı"}</p>
                       <p>Bölgesel okuma: {r.data.region_text || "Bekliyor"}</p>
                       <p>PDF metni: {r.data.pdf_usable ? r.data.pdf_text : "Kullanılamıyor; metin kanıtı sayılmadı"}</p>
@@ -576,7 +586,7 @@ function App() {
                       </p>)}
                       {r.data.reread_measurement && <p className="hint">Yeniden okumalar aynı OCR motorunun iki yöntemidir; ayrı editör onayı değildir.</p>}
                       {review?.reading_class === "SYMBOLS_ONLY" && <p className="hint">Sembol adayı; inceleme bekliyor.</p>}
-                      {review?.ocr_vl && <div className="ocr-fallback">
+                      {review?.ocr_vl && r.data.selected_reader !== "PADDLEOCR_VL" && <div className="ocr-fallback">
                         <p>Ek bölgesel OCR: {review.ocr_vl.text || "Metin bulunamadı"}</p>
                         <p className="hint">{!review.ocr_vl.complete ? "Tamamlanmayan çıktı; kaynak olarak kullanılamaz."
                           : review.ocr_vl.reading_class === "NON_LATIN_TEXT_CANDIDATE" ? "Latin dışı yazı adayı; kaynakla doğrulanmadı."
