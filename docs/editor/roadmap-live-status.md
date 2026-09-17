@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> 18 Eylül — Qwen ana model + isteğe bağlı PaddleOCR-VL-1.6 akışı canlıya alındı. R6 ilk11 sayfanın API/PG ve ham kaynak kanıtı denetimi geçti;29. sayfada11 OCR bölgesi ve Qwen çağrısının örtüşmesi öncekiR5 koşusunda ölçüldü. Mobil OCR görünümü dört genişlikte geçti. Gereksiz simge çağrılarını azaltanR9, gerçek67 önceki çağrıda23 çağrıyı inceleme statüsünü değiştirmeden eleyebiliyor; destekli tek-glif okuması korunuyor. **P1/P2 henüz kapanmadı**: figür–karakter kimliği ve anlamsal kabul açık. [Sürüm, hatalar ve kanıt](2026-09-18-qwen-ocr-parallel.md).
+
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
 Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](../../apps/editor/speech/README.md).
