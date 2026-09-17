@@ -883,6 +883,20 @@ class SemanticResolver:
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
         self._keep_to_one_source(sq, qf)
+        # A measure asked beside named columns is asked *per* those columns: "kartında indirim yüzdesi
+        # tanımlı müşteriler … ne kadar iskonto alıyor" is one line per customer with the card's rate
+        # and the discount actually taken — not one average over all of them, and not a question the
+        # deterministic compiler must hand to the model for lack of "bazında". After the source rule:
+        # a lone word certified on the other database is the model's, not a breakdown.
+        if any(s_.semantic_type == SemanticType.METRIC and s_.mapping for s_ in sq.slots):
+            added = []
+            for slot in sq.slots:
+                if slot.semantic_type == SemanticType.COLUMN and slot.mapping and slot.mapping.column and slot not in sq.group_by:
+                    sq.group_by.append(slot)
+                    slot.explain["role"] = "subject_group_by"
+                    added.append(slot.term)
+            if added:
+                sq.explanation.append("ölçü, sorudaki kolonlar bazında kırılacak: " + ", ".join(added))
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -1076,7 +1090,7 @@ class SemanticResolver:
             concept_id=c.id,
             mapping=maps[0],
             confidence=c.confidence,
-            explain={"normalized": key, "sense": c.sense_id, "version": c.version, "support": support, "evidence_types": sorted({e.evidence_type for e in ev}), "alternatives": alternatives},
+            explain={"normalized": key, "canonical": c.term, "sense": c.sense_id, "version": c.version, "support": support, "evidence_types": sorted({e.evidence_type for e in ev}), "alternatives": alternatives},
             span=span,
         )
 

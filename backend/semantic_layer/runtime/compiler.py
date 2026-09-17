@@ -152,8 +152,10 @@ def _snake(term: str) -> str:
 
 
 def _alias_of(slot: ResolvedSlot) -> str:
-    """Stable alias from the catalog key (perakende_satis), not from the surface form (satislari)."""
-    return _snake(str(slot.explain.get("normalized") or slot.term))
+    """Stable alias from the concept's own name (musteri, kartinda_tanimli_iskonto), not from the
+    surface form (satislari) and not from the stemmed index key — "muster" and "kart_indir_yuz" were
+    column headings people read."""
+    return _snake(str(slot.explain.get("canonical") or slot.explain.get("normalized") or slot.term))
 
 
 def _lit(v: str) -> str:
@@ -305,11 +307,25 @@ class DeterministicCompiler:
         if prof is None:
             return None, f"entity {entity} not profiled"
         filters = [s for s in q.filters if s.mapping]
+        group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
         joins: list[tuple[str, str, str, str]] = []
         overrides, extra_columns, join_kinds = {}, {}, {}
+        # One joined entity, one way to reach it. A mapping certified with a reference rule (the
+        # customer of a line is the invoice's customer, read through the invoice) decides the path for
+        # every other mapping on that entity in the same question: the card's discount rate is read
+        # from the same customer row as the customer's name, or the two paths "conflict" and a
+        # question with a filter and a breakdown on the same card was refused.
+        from semantic_layer.runtime.reference_contracts import reference_rule
+        ruled = {}
+        for s in filters + group_cols:
+            if s.mapping.entity != entity and reference_rule(s.mapping, entity):
+                ruled.setdefault(s.mapping.entity, s.mapping)
+        def binding_of(mapping):
+            return ruled.get(mapping.entity, mapping) if not reference_rule(mapping, entity) else mapping
         for s in filters:
             if s.mapping.entity != entity:
-                path, custom_on, required = self._mapping_joins(entity, s.mapping)
+                bound = binding_of(s.mapping)
+                path, custom_on, required = self._mapping_joins(entity, bound)
                 if path is None:
                     return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
@@ -317,15 +333,15 @@ class DeterministicCompiler:
                         if any(old[2] == j[2] for old in joins):
                             return None, "conflicting relationship bindings"
                         joins.append(j)
-                if path and (s.mapping.extra or {}).get("join_kind") == "LEFT":
+                if path and (bound.extra or {}).get("join_kind") == "LEFT":
                     join_kinds[path[-1]] = "LEFT"
                 overrides.update(custom_on)
                 for owner, cols in required.items():
                     extra_columns.setdefault(owner, set()).update(cols)
-        group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
         for s in group_cols:
             if s.mapping.entity != entity:
-                path, custom_on, required = self._mapping_joins(entity, s.mapping)
+                bound = binding_of(s.mapping)
+                path, custom_on, required = self._mapping_joins(entity, bound)
                 if path is None:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
@@ -333,7 +349,7 @@ class DeterministicCompiler:
                         if any(old[2] == j[2] for old in joins):
                             return None, "conflicting relationship bindings"
                         joins.append(j)
-                if path and (s.mapping.extra or {}).get("join_kind") == "LEFT":
+                if path and (bound.extra or {}).get("join_kind") == "LEFT":
                     join_kinds[path[-1]] = "LEFT"
                 overrides.update(custom_on)
                 for owner, cols in required.items():

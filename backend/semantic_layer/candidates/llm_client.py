@@ -24,6 +24,25 @@ class LlmClient:
         # is turned off, and returns the same name.
         self.extra = dict(extra or {})
 
+    def _post(self, payload: dict[str, Any], headers: dict[str, str]) -> "httpx.Response":
+        """One request, bounded by `timeout` as a whole. httpx's timeout is per socket operation: a
+        gateway that trickles bytes while the model works never trips it, and a 30-second table
+        selector ran for four minutes. The request is made on a worker thread and abandoned at the
+        deadline; the abandoned response, if it ever comes, is dropped."""
+        import concurrent.futures
+
+        def go() -> "httpx.Response":
+            with httpx.Client(timeout=self.timeout) as c:
+                return c.post(f"{self.base}/chat/completions", json=payload, headers=headers)
+
+        pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        try:
+            return pool.submit(go).result(timeout=self.timeout)
+        except concurrent.futures.TimeoutError as e:
+            raise httpx.ReadTimeout(f"LLM answer not complete within {self.timeout:.0f}s") from e
+        finally:
+            pool.shutdown(wait=False)
+
     def chat(self, messages: list[dict[str, str]], *, max_tokens: int = 4096, temperature: float = 0.0) -> str:
         # 4096, not 1024: a statement with its reading lines, two derived tables and a CASE per
         # measure ran past 1024 tokens; cut mid-fence it read as "no SQL" and the question was
@@ -38,8 +57,7 @@ class LlmClient:
             if wait_s:
                 time.sleep(wait_s)
             try:
-                with httpx.Client(timeout=self.timeout) as c:
-                    r = c.post(f"{self.base}/chat/completions", json=payload, headers=headers)
+                r = self._post(payload, headers)
                 break
             except httpx.TimeoutException:
                 raise
@@ -58,8 +76,7 @@ class LlmClient:
             time.sleep(wait_s)
             wait_s = min(60.0, wait_s * 2)
             try:
-                with httpx.Client(timeout=self.timeout) as c:
-                    r = c.post(f"{self.base}/chat/completions", json=payload, headers=headers)
+                r = self._post(payload, headers)
             except httpx.TransportError as e:
                 log.warning("LLM transport error while retrying: %s", e)
         if r.status_code >= 400:
