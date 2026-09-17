@@ -265,7 +265,7 @@ def region_rereads(generation:uuid.UUID,pdf_page:int|None=None):
 
 @router.get('/generations/{generation}/source-review')
 def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
-    from editor.source_review import source_review
+    from editor.source_review import source_review,ocr_vl_measurement
     if pdf_page is not None and pdf_page < 1:
         raise HTTPException(400,'INVALID_PAGE')
     with connection() as db:
@@ -278,8 +278,12 @@ def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
     rereads=region_rereads(generation,pdf_page)['items']
     measurements={region['source_span_id']:(page,region)
                   for page in rereads for region in page['regions']}
+    source=source_for(generation)
+    by_id={str(r['id']):r for r in rows if r['kind']=='source_spans'}
     for page in report['pages']:
         for region in page['regions']:
+            region['ocr_vl']=ocr_vl_measurement(ROOT/source['sha256'],generation,
+                                               by_id[region['span_id']],source['sha256'])
             if region['span_id'] in measurements:
                 measurement,candidate=measurements[region['span_id']]
                 region['reread']={'method':measurement['method'],

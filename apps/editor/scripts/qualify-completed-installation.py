@@ -5,6 +5,7 @@ Never grades literature, changes source text, publishes a generation, retries a
 failed analysis, or starts another analysis. Run on the connected Linux server.
 """
 import fcntl
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -21,12 +22,18 @@ run=json.loads((root/'evidence/source-spans-run.json').read_text())
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 base='http://127.0.0.1:8810'
 work=Path(os.environ.get('EDITOR_QUALIFICATION_ROOT',str(root.parent/'editor-qualifications')))/run['generation_id'][:8]
-work.mkdir(mode=0o700,parents=True,exist_ok=False)
+resume=os.environ.get('EDITOR_QUALIFICATION_RESUME')=='1'
+work.mkdir(mode=0o700,parents=True,exist_ok=resume)
 status=root/'evidence/installation-qualification-status.md'
 report={'generation_id':run['generation_id'],'job_id':run['job_id'],
         'environment':'connected Linux host / real PDF / PostgreSQL',
         'work_directory':str(work),'steps':[],'semantic_acceptance':False}
 target=None;target_started=False
+if resume:
+    previous=json.loads((work/'qualification.json').read_text())
+    if previous['generation_id']!=run['generation_id'] or (work/'installation').exists():
+        raise RuntimeError('QUALIFICATION_RESUME_SCOPE_MISMATCH')
+    report=previous
 
 
 def record(stage,state,detail=''):
@@ -54,11 +61,25 @@ def settings(path,updates):
     path.write_text('\n'.join(lines+[k+'='+v for k,v in updates.items()])+'\n')
 
 
+def available_subnets():
+    ids=subprocess.check_output(['docker','network','ls','-q'],text=True).split()
+    networks=json.loads(subprocess.check_output(['docker','network','inspect',*ids],text=True)) if ids else []
+    used=[ipaddress.ip_network(c['Subnet']) for n in networks for c in n.get('IPAM',{}).get('Config',[]) if c.get('Subnet')]
+    for octet in range(50,250,2):
+        pair=[ipaddress.ip_network(f'10.203.{n}.0/24') for n in (octet,octet+1)]
+        if not any(a.version==b.version and a.overlaps(b) for a in pair for b in used):
+            return tuple(map(str,pair))
+    raise RuntimeError('NO_FREE_QUALIFICATION_SUBNETS')
+
+
 try:
     execute('release_bytes',['python3','scripts/verify-release.py'])
     bundle_args=['python3','scripts/bundle.py',str(work/'offline'),'--with-models']
     if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':bundle_args.append('--with-ocr-vl')
-    execute('offline_bundle',bundle_args,timeout=7200)
+    if resume and (work/'offline/release-manifest.json').exists():
+        record('offline_bundle','REUSED','Hash ve imaj kontrolü offline_import aşamasında tekrarlanacak.')
+    else:
+        execute('offline_bundle',bundle_args,timeout=7200)
     manifest=json.loads((work/'offline/release-manifest.json').read_text())
     for name in manifest['files']:
         parts=Path(name).parts
@@ -118,8 +139,9 @@ try:
     shutil.copytree(work/'offline/editor',target)
     execute('target_init',['python3','scripts/init.py'],cwd=target)
     project='editor-qualification-'+run['generation_id'][:8]
+    private_subnet,ingress_subnet=available_subnets()
     settings(target/'.env',{'COMPOSE_PROJECT_NAME':project,'EDITOR_PORT':'18810','EDITOR_METRICS_PORT':'19096',
-        'EDITOR_PRIVATE_SUBNET':'10.203.50.0/24','EDITOR_INGRESS_SUBNET':'10.203.51.0/24'})
+        'EDITOR_PRIVATE_SUBNET':private_subnet,'EDITOR_INGRESS_SUBNET':ingress_subnet})
     target_started=True
     execute('restore',['python3','scripts/restore.py',str(work/'backup'),project],cwd=target,timeout=7200)
     (target/'evidence').mkdir(exist_ok=True,mode=0o700)

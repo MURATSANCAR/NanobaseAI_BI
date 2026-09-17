@@ -70,7 +70,30 @@ def reread_measurements(root, parent, evidence):
         return {}, None
     path = root/'region-reread-v1'/str(parent)/f"page-{evidence['data']['pdf_page']:04}.json"
     if not path.exists():
-        return {}, None
+        # A parent may itself reuse measurements. Follow the stored original
+        # artifact identity, never silently lose reader conflicts on generation 3+.
+        inherited={};provenance=None;reports={}
+        for row in get_records(parent,'source_spans'):
+            d=row['data']
+            if d['pdf_page']!=evidence['data']['pdf_page'] or not d.get('reread_measurement'):
+                continue
+            p=d['reread_provenance'];origin=p['generation_id']
+            if origin not in reports:
+                original=root/'region-reread-v1'/origin/f"page-{d['pdf_page']:04}.json"
+                raw=original.read_bytes();report=json.loads(raw)
+                e=evidence['data']
+                if (sha(raw)!=p['artifact_sha256'] or report['generation_id']!=origin
+                        or report['source_sha256']!=e['source_sha256'] or report['pdf_page']!=e['pdf_page']
+                        or report['render_sha256']!=e['ocr_render_sha256']):
+                    raise RuntimeError('INHERITED_REREAD_SOURCE_MISMATCH')
+                reports[origin]={r['source_span_id']:r for r in report['regions']}
+                if len(reports[origin])!=len(report['regions']):raise RuntimeError('DUPLICATE_REREAD_SOURCE')
+            measurement=d['reread_measurement']
+            if reports[origin].get(measurement['source_span_id'])!=measurement or measurement['bbox']!=d['bbox']:
+                raise RuntimeError('INHERITED_REREAD_MEASUREMENT_MISMATCH')
+            if provenance is not None and provenance!=p:raise RuntimeError('MIXED_REREAD_PROVENANCE')
+            provenance=p;inherited[str(row['id'])]=measurement
+        return inherited, provenance
     raw = path.read_bytes(); report = json.loads(raw); d = evidence['data']
     if (report['generation_id'] != str(parent) or report['source_sha256'] != d['source_sha256']
             or report['render_sha256'] != d['ocr_render_sha256'] or report['pdf_page'] != d['pdf_page']):

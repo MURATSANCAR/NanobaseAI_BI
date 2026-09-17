@@ -52,7 +52,7 @@ for request in requests:
     if digest(raw)!=request['render_sha256']:raise RuntimeError('RENDER_MISMATCH')
     image=Image.open(io.BytesIO(raw)).convert('RGB')
     if image.width*image.height>20_000_000:raise ValueError('PIXEL_LIMIT')
-    directory=root/'ocr-vl-regions-v1'/generation;directory.mkdir(parents=True,exist_ok=True)
+    directory=root/'ocr-vl-regions-v2'/generation;directory.mkdir(parents=True,exist_ok=True)
     for row in request['spans']:
         span_id=str(uuid.UUID(row['id']));d=row['data'];box=d['bbox']
         if not valid_box(box) or d['render_sha256']!=request['render_sha256'] or d['pdf_page']!=page:
@@ -70,10 +70,11 @@ for request in requests:
         # Fixed OCR instruction only, no caption/context/answer from any reader.
         messages=[{'role':'user','content':[{'type':'image','image':crop},{'type':'text','text':'OCR:'}]}]
         inputs=processor.apply_chat_template(messages,add_generation_prompt=True,tokenize=True,
-            return_dict=True,return_tensors='pt',images_kwargs={'size':{
-                'shortest_edge':image_config['min_pixels'],'longest_edge':image_config['max_pixels']}})
+            return_dict=True,return_tensors='pt',processor_kwargs={'images_kwargs':{'size':{
+                'shortest_edge':image_config['min_pixels'],'longest_edge':image_config['max_pixels']}}})
         begin=time.monotonic()
-        with torch.inference_mode():output=model.generate(**inputs,max_new_tokens=192,do_sample=False)
+        with torch.inference_mode():output=model.generate(**inputs,max_new_tokens=192,do_sample=False,
+            use_cache=True,max_time=120)
         tokens=output[0][inputs['input_ids'].shape[-1]:]
         eos=model.generation_config.eos_token_id
         eos=set(eos if isinstance(eos,list) else [eos])
@@ -86,6 +87,7 @@ for request in requests:
             'model_manifest':manifest,'code_sha256':digest(Path(__file__).read_bytes()),
             'seconds':round(time.monotonic()-begin,3),'tokens':len(tokens),
             'prompt':'OCR:','dtype':'float32','device':'cpu','max_new_tokens':192,
+            'use_cache':True,'max_time_seconds':120,'input_tokens':inputs['input_ids'].shape[-1],
             'eligible_for_synthesis':False,'expected_answer_supplied':False}
         temporary=target.with_suffix('.'+str(uuid.uuid4())+'.tmp')
         try:

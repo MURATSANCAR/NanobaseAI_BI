@@ -6,6 +6,24 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 
 ---
 
+## 2026-09-17 — Editör v3 tamamlandı, inceleme entegrasyonu doğrulandı
+
+- V3 yeni nesli 48/48 sayfada tamamlandı, 828 anlaşma/321 inceleme ve NEEDS_REVIEW. Kaynak metin/konuşmacı/review elle değiştirilmedi.
+- Ek OCR ölçümleri kaynak kimliği ve değişmez artifact kökeniyle API/ekrana bağlandı. Gerçek API/PG ve dört mobil/masaüstü genişliğinde kontroller geçti; kesilmiş ve Latin dışı adaylar görünür, kabul kapısı kapalı.
+- V3'ten tekrar kullanımda yeniden okuma ölçümlerinin aktarılmadığı gerçek veride kanıtlandı (371 yerine 0). Genel köken izleme ve hash/kutu denetimi düzeltildi; ikinci tekrar kontrolü hazırlanıyor. [Kanıtlar](editor/2026-09-17-source-v3.md).
+
+## 2026-09-17 — Editör OCR-VL gerçek pilot sonucu
+
+- 15 bölge tamamlandı: 14 EOS/1 kesilmiş çıktı; toplam 67,11 sn, medyan 3,519 sn. Yalnız bir sözcüklü metin mevcut okuyucularla eşleşti. Ek okuyucu ana metin kaynağına yükseltilmedi; inceleme kararları değiştirilmedi.
+- Aynı ilk kırpımda önbellekli/önbelleksiz çıktı birebir eşit, 10,54 → 1,935 sn; bu tüm bölgelerin kalite kabulü değildir. Gerçek API/PG/artifact hash ve kaynak değişmezliği kontrolü geçti.
+- Aday ölçümlerini gerçek source_span kimliklerine bağlayan inceleme API/ekran entegrasyonu hazırlandı; kaynak ve konuşmacı kabulü kapalı kalır. [Detay ve sınırlar](editor/2026-09-17-source-v3.md).
+
+## 2026-09-17 — Editör CPU OCR ve kurulum denetimi sağlamlaştırması
+
+- Gerçek pilotta kapalı üretim önbelleği saptandı; yeni sürüm önbellek ve bölge başına süre sınırıyla ayrı artifact alanında çalışıyor. Eski çıktılar korunuyor, başarısız/kesilmiş sonuçlar kabul edilmez.
+- Kurulum denetçisi aktif dosya yazan araçları bekler ve Docker'da mevcut ağlarla çakışmayan alt ağları seçer. Tamamlanmış paket aşamasından güvenli devam desteği eklendi. Okuyucu sürümü değiştiği için eski paket denemesi durduruldu; yeni restore kabulü henüz yok.
+- [Sürüm ve ölçümler](editor/2026-09-17-source-v3.md). Kitap verisi değiştirilmedi, yerel test çalıştırılmadı.
+
 ## 2026-09-17 — Editör kaynak kutuları ve sınırlı OCR-VL pilotu
 
 - Kaynak ekranına özgün sayfada metin kutusu gösterme, kullanılabilir PDF/yeniden okuma karşılaştırması ve ölçüm yeniden kullanımı bilgisi eklendi. Sunucuda web imajı dağıtıldı; gerçek Chrome/API/PG ile 320/390/768/1440 px, altı sekme, metin/kutu eşliği ve çıkış kontrolü geçti.
@@ -123,7 +141,8 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Soru 12 (en çok satan 20 kitabın stok devir hızı) — kapıda iki kural birbirini yalanlıyordu: dönem kuralı STLINE'ı okuyan **her** alt sorgudan yılın tarih filtresini istiyor, durum ölçüsü kuralı stok bakiyesinin tarihsiz hesaplanmasını şart koşuyordu; aynı tabloyu hem akış (satış) hem durum (stok) için okuyan hiçbir soru geçemezdi. `audit.py`: durum ölçüsünün bakiye okuması dönem kuralından muaf (`_state_reading`); ölçünün kendi koşulunun dışladığı satırları okuyan alt sorgu (açılış devri TRCODE 14, satış 7/8/9 iken) ölçünün satırı değildir, dönem ondan istenmez (`_other_rows`); onarım ipucu "durum ölçüsü alt sorgusu hariç" der. `compiler.py`: "gate refused" logu artık onarılmış (gerçekten reddedilen) SQL'i yazar — önce ilk SQL yazılıyordu, teşhis 1 saat yanlış yöne gitti. `naming.logicalize_sql` + `app.recall`: hatırlanan örnek SQL'ler fiziksel adla (dbo_LG_411_01_STLINE) saklanıyor ve model bu adları kopyalıyordu (dönem çözümünü atlar) → örnekler mantıksal adla gösterilir. Sonuç bağımsız sorguyla birebir (İYİLİK TİMİ 148.662 satış, 58.273 açılış, 213.633 güncel → 1,09). Not: güncel stok yalnız cari kopyadan okunur; 2021-25 kopyasıyla birleşim açılış devrini çift sayar (796.995) — `run_sql` ucu dönem yokken bu birleşimi yapıyor, `ask` yolu yapmıyor; açık iş.
 - Soru 13 (bir kitabın son üç baskısında çekilen malzeme farkı) — ilk cevap 0 satır: model "kitabın" kelimesini değer yaptı (`ITEMS.NAME = 'kitabin'`), "baskı" çözümlenemedi, "malzeme miktarı" reçete/karma koli tablosuna (STCOMPLN, kural madencisinden) gitti. Üç düzeltme: (1) yayıncılık sözlüğü operatör tanımı olarak sertifikalandı — "baskı" = üretim emri (PRODORD), "çekilen/sarf edilen malzeme" = STLINE TRCODE 12 IOCODE 4 (PRODORDERREF ile emre bağlı), "üretilen adet" = TRCODE 13 IOCODE 1; bilgi paketine `rules/logo-erp.md` Kural 9 (Üretim); tanımlar sayfası 12–14 (iş teyidi bekliyor). (2) Kapı: sorunun kendi kelimesi sütun değeri yazılırsa (`_question_word_literals`; yalnız kolon/varlık yuvaları, "İstanbul" gibi değer yuvaları muaf) reddedilir, onarım ipucu "bir X'in bütün X'ler üzerinden kırılım ister"; aynı kural istemde. (3) Bilgi paketi 20.166 karakter olup 20.000'lik kural bütçesini aşmıştı; yeni kural tam kesilen yerdeydi → `semantic-bridge.env`: `LLM_CTX=32768` (barındırılan model 128k taşır; 16384 eski yerel GPU değeriydi), `SEMANTIC_PROMPT_RULES_CHARS=40000`. Sonuç 10 kitap, bağımsız sorguyla (yalnız tamamlanmış emirler) aynı küme ve aynı miktarlar; bir kitapta aynı tarihli iki emrin sıralama beraberliği. İş notu: "son üç baskı" tamamlanmış emirler mi.
 - Açık: derleme 551 sn sürdü (LLM 263 sn) — NVIDIA yanıt süresi; kod tarafında iş yok. `run_sql` ucu dönem yokken STLINE'ı 2021-25 + 2026 birleştiriyor (durum ölçüsünde açılış devrini çift sayar) — `ask` yolunda yok; ayrı iş.
-- Testler 784 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–13 doğru.
+- Soru 14 (geçen çeyrek bekleyen sipariş adedi ay ay) — dört kök sebep: (1) çözücü "adedi"yi STLINE "satılan adet" ölçüsüne bağlıyordu (fiil kökü köprüsü) → sayım sözcüğü adlandırılmış kayıt kümesinden sonra o kümenin COUNT'udur (`_count_metric` çapa, 2d kuralı; ölçü/kolon sonrası miktar kalır), köprü sayım sözcüğüne kapalı, bileşik sayım da dönem bağı alır; (2) zaman ayrıştırıcısının okuduğu kelimeler ("geçen çeyrekte", "ay ay") tekrar aranmaz (`_temporal_positions`) — önce CRM "projenin ayı" kolonuna gidiyordu; (3) kapı varlık karşılaştırması LG_ önekine duyarsız (`_same_entity`) — `[dbo].[LG_411_01_ORFLINE]` ORFLINE okunup katalogun LG_ORFLINE'ı bulunamıyordu, doğru deterministik sorgu iki gerekçeyle reddediliyordu; (4) veri: CLOSED=0 Nisan satırlarının %96'sı tamamen sevk edilmiş (bayrak tutulmuyor) → "bekleyen sipariş" tanımına `AMOUNT > SHIPPEDAMOUNT` koşulu ve sayım anahtarı `count_key=ORDFICHEREF` (sipariş adedi fiş sayısıdır); derleyici `_pred_sql` kolon-kolon koşulu yazar. Sonuç deterministik, 5 sn: Nisan 12 · Mayıs 9 · Haziran 60, bağımsız sorguyla birebir. Not: "ay sonu itibarıyla" kümülatif açık sipariş satır kapanış tarihi olmadığı için kurulamaz; seri "o ay açılan, hâlâ bekleyen".
+- Testler 789 geçiyor. Tek tek karne sayfası: https://claude.ai/artifact/V99abTkwYZakQNLbA1qTpg — 1–14 doğru.
 
 ## 2026-09-16 — Kural madencisi: iş kuralları Logo görünümleri ve CRM kayıtlı görünümlerinden
 

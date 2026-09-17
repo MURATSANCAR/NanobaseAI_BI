@@ -4,9 +4,51 @@ Figure boxes are crop-relative; balloon tips are page-relative. A geometric
 candidate is not a named speaker and cannot serve as an accepted claim source.
 """
 from collections import Counter
+import json
 import math
+import unicodedata
+import uuid
 
 from editor.source_alignment import valid_box
+
+
+def reading_class(text):
+    """Diagnostics only: symbols are not lexical agreement or automatic rejection."""
+    if not text.strip():
+        return 'EMPTY'
+    letters=[c for c in text if c.isalpha()]
+    if any('LATIN' not in unicodedata.name(c,'') for c in letters):
+        return 'NON_LATIN_TEXT_CANDIDATE'
+    if letters:
+        return 'TEXT_CANDIDATE'
+    return 'NUMERIC_CANDIDATE' if any(c.isdigit() for c in text) else 'SYMBOLS_ONLY'
+
+
+def ocr_vl_measurement(root, generation, row, source_sha256):
+    from editor.book_store import sha
+    d=row['data']
+    candidates=[(str(generation),str(row['id']))]
+    if d.get('reused_from_generation') and d.get('reused_source_span_id'):
+        candidates.append((d['reused_from_generation'],d['reused_source_span_id']))
+    if d.get('reread_provenance') and d.get('reread_measurement'):
+        candidates.append((d['reread_provenance']['generation_id'],d['reread_measurement']['source_span_id']))
+    for origin,span_id in candidates:
+        origin=str(uuid.UUID(origin));span_id=str(uuid.UUID(span_id))
+        path=root/'ocr-vl-regions-v2'/origin/(span_id+'.json')
+        if not path.exists():continue
+        raw=path.read_bytes();r=json.loads(raw)
+        if (r['generation_id']!=origin or r['source_span_id']!=span_id
+                or r['source_sha256']!=source_sha256 or r['pdf_page']!=d['pdf_page']
+                or r['render_sha256']!=d['render_sha256'] or r['bbox']!=d['bbox']
+                or r['eligible_for_synthesis'] or r['expected_answer_supplied']):
+            raise RuntimeError('OCR_VL_SOURCE_SCOPE_MISMATCH')
+        return {'text':r['text'],'complete':r['complete'],'status':r['status'],
+                'reading_class':reading_class(r['text']),
+                'source_generation_id':origin,'measured_source_span_id':span_id,
+                'artifact_sha256':sha(raw),'crop_sha256':r['crop_sha256'],
+                'code_sha256':r['code_sha256'],'model_revision':r['model_manifest']['revision'],
+                'seconds':r['seconds'],'eligible_for_synthesis':False}
+    return None
 
 
 def point_valid(point):
@@ -91,6 +133,7 @@ def source_review(rows):
             }
             unresolved.append({'span_id': str(row['id']), 'bbox': d['bbox'],
                                'issues': d.get('issues', []), 'readers': readers,
+                               'reading_class':reading_class(d['raw_text']),
                                'next_action': 'REGION_READING_REQUIRED',
                                'status': 'NEEDS_REVIEW'})
             if d.get('reread_measurement'):

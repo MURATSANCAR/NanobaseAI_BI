@@ -41,6 +41,26 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Expanded source span overflow');
     await page.screenshot({path:path.join(out,'spans-'+width+'.png'),fullPage:true});
    }
+   if(process.env.EDITOR_VERIFY_OCR_VL==='1'){
+    for(const number of [29,38]){
+     const response=await context.request.get(base+'/v1/generations/'+generation+'/source-review?pdf_page='+number,
+       {headers:{Authorization:'Bearer '+token}});
+     if(!response.ok())throw new Error('OCR review API failed');
+     const review=await response.json();
+     const regions=review.pages[0].regions.filter(r=>r.ocr_vl);
+     const candidate=regions.find(r=>!r.ocr_vl.complete)||regions[0];
+     if(!candidate)throw new Error('Real OCR candidate missing');
+     await page.locator('#page').selectOption(String(number));
+     await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,number);
+     const detail=page.locator('[data-span-id="'+candidate.span_id+'"]');
+     await detail.locator('summary').click();
+     await detail.locator('.ocr-fallback').waitFor();
+     if(!(await detail.locator('.ocr-fallback').textContent()).includes(candidate.ocr_vl.text))throw new Error('OCR UI differs from real API');
+     if(!candidate.ocr_vl.complete&&!(await detail.textContent()).includes('Tamamlanmayan çıktı'))throw new Error('Truncated OCR not identified');
+     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('OCR candidate overflow '+width);
+     await page.screenshot({path:path.join(out,'ocr-'+number+'-'+width+'.png'),fullPage:true});
+    }
+   }
    await page.locator('#page').selectOption('6');
    await page.waitForFunction(()=>document.querySelector('.source-image')?.alt.includes('6. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0);
    if(await page.locator('.source-highlight').count())throw new Error('Stale source highlight after page change');

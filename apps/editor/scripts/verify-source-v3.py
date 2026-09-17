@@ -47,5 +47,7 @@ print(json.dumps({'source_records':before,'generation_id':gen,'totals':dict(tota
 result=json.loads(subprocess.check_output(['docker','compose','run','--rm','--no-deps','-T','--entrypoint','python','api','-c',code,gen],text=True))
 assert result.pop('source_records')==rows,'API_PG_SOURCE_MISMATCH'
 result['api_pg_source_equal']=True
-(root/'evidence/source-v3-replay.json').write_text(json.dumps(result,indent=2))
+output=os.environ.get('EDITOR_REPLAY_OUTPUT','source-v3-replay.json')
+assert Path(output).name==output and output.endswith('.json'),'INVALID_OUTPUT_NAME'
+(root/'evidence'/output).write_text(json.dumps(result,indent=2))
 print(json.dumps(result),flush=True)

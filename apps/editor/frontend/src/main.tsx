@@ -93,6 +93,7 @@ function App() {
     [questions, setQuestions] = useState<any[]>([]),
     [updated, setUpdated] = useState("");
   const [pageSpans, setPageSpans] = useState<Row[]>([]);
+  const [sourceReview, setSourceReview] = useState<any>(null);
   const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
   const [sourceText, setSourceText] = useState("ocr"),
     [busy, setBusy] = useState(false);
@@ -222,9 +223,12 @@ function App() {
   const pageObservation = data.visual_observations?.find((r) => r.data.pdf_page === page);
   const pageClaims = data.page_claims?.find((r) => r.data.pdf_page === page);
   useEffect(() => {
-    let active = true; setPageSpans([]); setSelectedSpan(null);
-    if (gen && signed) all(`/generations/${gen}/source_spans?pdf_page=${page}`)
-      .then((rows) => active && setPageSpans(rows))
+    let active = true; setPageSpans([]); setSelectedSpan(null); setSourceReview(null);
+    if (gen && signed) Promise.all([
+      all(`/generations/${gen}/source_spans?pdf_page=${page}`),
+      api(`/generations/${gen}/source-review?pdf_page=${page}`),
+    ])
+      .then(([rows, review]) => { if (active) { setPageSpans(rows); setSourceReview(review.pages[0] ?? null); } })
       .catch((e) => active && setError(e.message));
     return () => { active = false; };
   }, [gen, page, signed, pageReading?.id]);
@@ -530,7 +534,9 @@ function App() {
                     <p>{pageReading.data.agreed_spans} uyumlu bölge · {pageReading.data.review_spans} inceleme gereken bölge</p>
                     <p className="hint">Okumaların uyuşması, olayın veya konuşmacının doğrulandığı anlamına gelmez.</p>
                     {pageReading.data.measurement_reused && <p className="hint">Kaynak ölçümleri önceki koşudan alındı; bu sürümde yeniden karşılaştırıldı.</p>}
-                    {pageSpans.map((r) => <details key={r.id}>
+                    {pageSpans.map((r) => {
+                      const review = sourceReview?.regions.find((region: any) => region.span_id === r.id);
+                      return <details key={r.id} data-span-id={r.id}>
                       <summary>{r.data.status === "TEXT_AGREED" ? "✓" : "⚠"} {r.data.text}</summary>
                       <button className="show-region" aria-pressed={selectedSpan === r.id} onClick={() => {
                         setSelectedSpan(r.id);
@@ -543,8 +549,15 @@ function App() {
                         Yeniden okuma ({reading.psm}): {reading.text || "Metin bulunamadı"}
                       </p>)}
                       {r.data.reread_measurement && <p className="hint">Yeniden okumalar aynı OCR motorunun iki yöntemidir; ayrı editör onayı değildir.</p>}
+                      {review?.reading_class === "SYMBOLS_ONLY" && <p className="hint">Sembol adayı; inceleme bekliyor.</p>}
+                      {review?.ocr_vl && <div className="ocr-fallback">
+                        <p>Ek bölgesel OCR: {review.ocr_vl.text || "Metin bulunamadı"}</p>
+                        <p className="hint">{!review.ocr_vl.complete ? "Tamamlanmayan çıktı; kaynak olarak kullanılamaz."
+                          : review.ocr_vl.reading_class === "NON_LATIN_TEXT_CANDIDATE" ? "Latin dışı yazı adayı; kaynakla doğrulanmadı."
+                          : "Ek okuyucu adayı; kaynak metni olarak kabul edilmedi."}</p>
+                      </div>}
                       <small>{statuses[r.data.status] ?? r.data.status}</small>
-                    </details>)}
+                    </details>})}
                   </article>}
                   {pageClaims && <article className="paper">
                     <h2>Metne bağlı adaylar</h2>

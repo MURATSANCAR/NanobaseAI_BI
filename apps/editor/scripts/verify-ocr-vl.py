@@ -27,7 +27,7 @@ for request in requests:
  assert source['sha256']==request['source_sha256']
  for row in request['spans']:
   assert rows[row['id']]==row
-  path=ROOT/source['sha256']/'ocr-vl-regions-v1'/gen/(row['id']+'.json')
+  path=ROOT/source['sha256']/'ocr-vl-regions-v2'/gen/(row['id']+'.json')
   if not path.exists():totals['pending']+=1;continue
   raw=path.read_bytes();candidate=json.loads(raw);d=row['data']
   assert candidate['generation_id']==gen and candidate['source_span_id']==row['id']
@@ -40,10 +40,17 @@ for request in requests:
     and quote_tokens(candidate['text'])==quote_tokens(d.get(key) or '')]
   totals['processed']+=1;totals['complete']+=candidate['complete'];totals['matches_any_reader']+=bool(matches)
   totals['matches_paddle_and_tesseract']+=('raw_text' in matches and 'secondary_text' in matches)
+  baseline=ROOT/source['sha256']/'ocr-vl-regions-v1'/gen/(row['id']+'.json')
+  cache_comparison=None
+  if baseline.exists():
+   old=json.loads(baseline.read_text())
+   assert old['crop_sha256']==candidate['crop_sha256']
+   cache_comparison={'both_complete':old['complete'] and candidate['complete'],
+    'exact_output_equal':old['text']==candidate['text'],'uncached_seconds':old['seconds']}
   results.append({'span_id':row['id'],'page':d['pdf_page'],'complete':candidate['complete'],
     'matching_readers':matches,'seconds':candidate['seconds'],'tokens':candidate['tokens'],
     'artifact_sha256':sha(raw),'model_revision':candidate['model_manifest']['revision'],
-    'code_sha256':candidate['code_sha256']})
+    'code_sha256':candidate['code_sha256'],'cache_comparison':cache_comparison})
 print(json.dumps({'generation_id':gen,'totals':dict(totals),'regions':results,
  'api_pg_unchanged':True,'semantic_acceptance':False,'source_records_modified':False}))
 '''
