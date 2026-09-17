@@ -3,20 +3,25 @@ import { Link, useNavigate } from 'react-router-dom';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import {
-  Activity,
   Download,
   ArrowRight,
   Bell,
+  BookOpen,
   Bot,
+  Calendar,
   ChevronDown,
   Contact,
+  Flag,
   HeartHandshake,
   LayoutGrid,
   MessageCircle,
   Mic,
+  Pause,
   Phone,
   PhoneCall,
+  Play,
   Plus,
+  Radio,
   Search,
   Sparkle,
   Sparkles,
@@ -27,13 +32,15 @@ import { useTimasSession } from '../TimasSession';
 import { useIsAdmin } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, prefsApi, type Person } from '../engine';
+import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
 import { relative } from '../format';
 import PersonAvatar from './PersonAvatar';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
 import zekiImg from '@/assets/kampus/zeki.jpg';
+import book1Img from '@/assets/kampus/book1.jpg';
+import book2Img from '@/assets/kampus/book2.jpg';
 import './kampus.css';
 
 /**
@@ -89,6 +96,10 @@ export default function KampusPage() {
 
   // ZEKİ kutusu: soru BI kanvasına gider, cevabı motor verir.
   const [zekiQ, setZekiQ] = useState('');
+  // Sesli bülten oynatıcı: gerçek ses kaynağı sonra bağlanacak; şimdilik oynat/duraklat durumu.
+  const [playing, setPlaying] = useState(false);
+  // Kitap seçme: tasarım geri geldi, gerçek katalog sonra bağlanacak.
+  const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const askZeki = (q: string) => {
     const text = q.trim();
     if (!text) return;
@@ -141,19 +152,7 @@ export default function KampusPage() {
   const isAdmin = useIsAdmin();
   const moduleTiles = MODULE_TILES.filter((m) => !m.adminOnly || isAdmin);
 
-  // Günün modu: kişinin tercihinde saklanır (prefs kampus:mood); önceden yalnız sekme belleğindeydi, "kaydedildi" yazıyordu.
   const qc = useQueryClient();
-  const moodQ = useQuery({ queryKey: ['prefs', 'kampus:mood'], queryFn: () => prefsApi.get<string>('kampus:mood'), enabled: ENGINE_ENABLED, retry: false, staleTime: 5 * 60_000 });
-  const [moodLocal, setMoodLocal] = useState<string | null>(null);
-  const mood = moodLocal ?? moodQ.data?.value ?? null;
-  const setMood = (e: string) => {
-    setMoodLocal(e);
-    if (!ENGINE_ENABLED) return;
-    prefsApi.put('kampus:mood', e).then(
-      () => void qc.invalidateQueries({ queryKey: ['prefs', 'kampus:mood'] }),
-      (err) => toast.error('Mod kaydedilemedi', { description: err instanceof Error ? err.message : undefined }),
-    );
-  };
 
   // Alkış / kutlama: sunucuda tutulur; alan kişinin ekranında bildirim çıkar, duvarda herkes görür.
   const greetings = useQuery({ queryKey: ['greetings'], queryFn: greetingsApi.state, enabled: ENGINE_ENABLED, retry: false, refetchInterval: 60_000 });
@@ -334,43 +333,93 @@ export default function KampusPage() {
       <div className="mx-auto grid w-full max-w-[1720px] grid-cols-1 gap-4 py-4 sm:gap-5 lg:grid-cols-12">
         {/* SOL SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-4 lg:col-span-3">
-          <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="kp-mono flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted">
-                <Activity className="h-3.5 w-3.5 text-amber-500" /> Şirket Nabzı
-              </span>
-              <span className="kp-mono whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">{people.data ? `${people.data.total} Aktif` : '…'}</span>
-            </div>
-            <div className="rounded-xl border border-violet/15 bg-gradient-to-br from-coral/5 to-violet/5 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-ink">Günün modun</span>
-                <span className="kp-mono text-xs font-bold text-violet">{mood ?? '—'}</span>
-              </div>
-              <div className="mt-2.5 flex flex-wrap items-center justify-between gap-1 border-t border-slate-200/60 pt-2 text-[11px]">
-                <span className="text-muted">{mood ? 'Modun kaydedildi.' : 'Senin modun nasıl?'}</span>
-                <div className="flex items-center gap-0.5 sm:gap-1.5">
-                  {[
-                    ['🔥', 'Alev Aldık'],
-                    ['☕', 'Kahve Lazım'],
-                    ['✨', 'İlham Dolu'],
-                    ['🧘‍♂️', 'Odaklandım'],
-                  ].map(([e, t]) => (
-                    <button
-                      key={e}
-                      type="button"
-                      title={t}
-                      aria-pressed={mood === e}
-                      onClick={() => setMood(e)}
-                      className={`kp-press flex h-11 w-11 items-center justify-center rounded-md text-lg sm:h-auto sm:w-auto sm:px-0.5 sm:text-sm ${mood === e ? 'bg-violet/10 ring-1 ring-violet/25' : ''}`}
-                    >
-                      {e}
-                    </button>
-                  ))}
+          {/* SESLİ BÜLTEN — podcast oynatıcı (ses kaynağı sonra bağlanacak) */}
+          <section id="podcast-hub" className="kp-card relative overflow-hidden rounded-2xl bg-gradient-to-r from-ink via-[#262b45] to-ink p-5 text-white">
+            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-1/3 bg-gradient-to-l from-violet/25 to-transparent" />
+            <div className="relative z-10 flex flex-col items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="kp-glow flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet text-white">
+                  <Radio className="h-6 w-6" />
                 </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="kp-mono whitespace-nowrap rounded border border-violet/40 bg-violet/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-coral">
+                      Haftanın Sesli Bülteni
+                    </span>
+                    <span className="kp-mono text-[11px] text-muted/70">14 Dk • Bölüm #42</span>
+                  </div>
+                  <h3 className="kp-display mt-1 text-sm font-bold text-white">"Matbaadan Raflara: Editör Masasında Bir Kitabın Doğuşu"</h3>
+                  <p className="mt-0.5 text-xs text-muted/60">Konuk: Prof. Dr. M. Yılmaz &amp; Deniz Kaya (Seslendiren: ZEKİ Voice)</p>
+                </div>
+              </div>
+              <div className="flex w-full items-center justify-between gap-3">
+                <button
+                  type="button"
+                  aria-label={playing ? 'Duraklat' : 'Oynat'}
+                  onClick={() => setPlaying((v) => !v)}
+                  className="kp-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-md hover:bg-violet hover:text-white"
+                >
+                  {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
+                </button>
+                <span className={`kp-mono text-[11px] ${playing ? 'text-coral' : 'text-muted/70'}`}>
+                  {playing ? '02:15 / 14:12 (Çalıyor)' : '00:00 / 14:12'}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 flex h-4 items-center gap-1 border-t border-white/10 pt-3">
+              {[
+                ['bg-violet', 'h-2', true],
+                ['bg-coral', 'h-3', true],
+                ['bg-slate-500', 'h-1.5', false],
+                ['bg-violet', 'h-4', true],
+                ['bg-slate-500', 'h-2', false],
+                ['bg-coral', 'h-3.5', true],
+                ['bg-slate-500', 'h-1', false],
+                ['bg-violet', 'h-3', false],
+                ['bg-slate-600', 'h-2', false],
+                ['bg-coral/70', 'h-4', false],
+              ].map(([c, h, pulse], i) => (
+                <span key={i} className={`w-1 shrink-0 rounded-full ${c} ${h} ${pulse && playing ? 'animate-pulse' : ''}`} />
+              ))}
+              <span className="ml-2 h-1 w-full rounded-full bg-white/10">
+                <span className="block h-1 rounded-full bg-violet" style={{ width: playing ? '16%' : '24%' }} />
+              </span>
+            </div>
+          </section>
+
+          {/* ÖNEMLİ GÜNLER & AJANDA — içerik sonra gerçek takvime bağlanacak */}
+          <Card id="ajanda" className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-sky-600" />
+                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Önemli Günler &amp; Ajanda</h3>
+              </div>
+              <span className="shrink-0 text-[11px] font-medium text-violet">Takvime Ekle</span>
+            </div>
+            <div className="relative space-y-3.5 border-l-2 border-slate-200/70 pl-3.5 text-xs">
+              <div className="relative">
+                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-sky-600 ring-2 ring-white" />
+                <span className="kp-mono text-[11px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
+                <h4 className="mt-0.5 font-bold text-ink">Dünya Kitap ve Telif Hakları Günü</h4>
+                <p className="text-[11px] text-muted">Genel merkez fuayesinde mini sergi &amp; söyleşi</p>
+              </div>
+              <div className="relative">
+                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-violet ring-2 ring-white" />
+                <span className="kp-mono text-[11px] font-semibold uppercase text-violet">26 Nisan Cuma • 15:30</span>
+                <h4 className="mt-0.5 font-bold text-ink">Aylık Yayın Kurulu Değerlendirmesi</h4>
+                <p className="text-[11px] text-muted">Büyük Divan Salonu &amp; Zoom Hibrit</p>
+              </div>
+              <div className="rounded-xl border border-violet/20 bg-violet/5 p-3 text-xs">
+                <div className="flex items-center justify-between gap-2 font-bold text-ink">
+                  <span className="flex items-center gap-1">
+                    <Flag className="h-3.5 w-3.5 text-rose-500" /> TÜYAP Fuarı 2024
+                  </span>
+                  <span className="kp-mono whitespace-nowrap rounded bg-rose-100 px-1.5 py-0.5 text-[11px] text-rose-700">18 Gün</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted">Stand planı, görev listesi ve yazar imza saatleri ZEKİ AI üzerinden görüntülenebilir.</p>
               </div>
             </div>
           </Card>
-
         </aside>
 
         {/* ORTA SÜTUN */}
@@ -733,6 +782,44 @@ export default function KampusPage() {
         {/* SAĞ SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-5 lg:col-span-3">
           <RoomsCard />
+
+          {/* YENİ KİTAPLAR — kitap seçme (gerçek katalog sonra bağlanacak) */}
+          <Card id="yeni-kitaplar" className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-violet" />
+                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Matbaadan Yeni Çıkanlar</h3>
+              </div>
+              <span className="kp-mono shrink-0 text-[11px] font-semibold text-muted">6 Yeni Baskı</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              {[
+                { title: 'Gecenin Sessiz Yankısı', author: 'Selin Karahan', img: book1Img, badge: 'YENİ', badgeTone: 'bg-violet', hover: 'hover:border-violet/30' },
+                { title: 'İpek Yolunun Muhafızları', author: 'Prof. Dr. M. Yılmaz', img: book2Img, badge: '2. BASKI', badgeTone: 'bg-emerald-600', hover: 'hover:border-emerald-300' },
+              ].map((b) => {
+                const active = selectedBook === b.title;
+                return (
+                  <button
+                    key={b.title}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setSelectedBook((v) => (v === b.title ? null : b.title))}
+                    className={`kp-cover kp-press min-w-0 rounded-xl border bg-slate-50/80 p-2 text-left transition-colors ${active ? 'border-violet ring-2 ring-violet/40' : `border-slate-200/70 ${b.hover}`}`}
+                  >
+                    <div className="relative mb-1.5 aspect-[2/3] w-full overflow-hidden rounded-lg bg-slate-200">
+                      <img src={b.img} alt={b.title} className="h-full w-full object-cover" />
+                      <span className={`kp-mono absolute left-1 top-1 rounded px-1 text-[11px] font-bold text-white ${b.badgeTone}`}>{b.badge}</span>
+                    </div>
+                    <h5 className="truncate text-[11px] font-bold text-ink">{b.title}</h5>
+                    <p className="truncate text-[11px] text-muted">{b.author}</p>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2.5 text-[11px] text-muted">
+              {selectedBook ? <>Seçilen kitap: <strong className="text-ink">{selectedBook}</strong></> : 'Bir kitap seçmek için kapağa dokun.'}
+            </p>
+          </Card>
         </aside>
       </div>
 
