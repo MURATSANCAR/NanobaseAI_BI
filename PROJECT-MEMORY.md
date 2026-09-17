@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## 18 Eylül — V12 teknik koşu tamamlandı, V13 aday
+
+V12 nesli `2d774b82-e04f-45a3-92fc-eadaa8a37934` 48/48 teknik kontrol ve türetilmiş kayıtların gerçek API/PostgreSQL eşliğiyle tamamlandı; sonuç NEEDS_REVIEW, tam anlamsal kabul yok. V13 küçük kaynak bölgeleri/sayfa bağlamı/sınırlı konuşma bağlantısı API, worker, document ve web olarak yayımlandı. Yeni iş `4ca9b23a-7027-4909-b49f-1fd26c93b497`, nesil `18417f1b-d9db-4873-aeb8-b8c719fc0d0d`; gerçek uçtan uca kabul sürüyor. [Güncel ayrıntılar](docs/editor/2026-09-18-source-analysis-v13.md).
+
 ## 18 Eylül — kimlik ve anlamsal analiz V12
 
 Kaynak işlemeden sonra ayrı kimlik ve anlamsal denetim kolları eklendi; backend `source-analysis-v12-r1-20260918`, 43 dosya hash eşliği `d6c3a68a40911519ddfe16677c03abe347c4bc1e3adfeaa862d55f276d5884c9`. Yeni nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`, iş `791de2a0-a440-419c-8db4-2095405eed23` çalışıyor. R9 22 sayfanın teknik denetiminden sonra API ile iptal edilerek korundu; yeni nesil ölçümleri tekrar kullanır. S7/s38 gerçek API/PG ve ayrı model denetimi bileşeni çalıştı; s38 dört sentez önerisinin ikisi kaynak dışı genişleme nedeniyle reddedildi. Figür karşılaştırması gerçek kırpımlarla çalıştı; kaynaklı ad kabulü hâlâ yok. Tam kitap/üretim kabulü açık. [Kod, kanıt ve sınırlar](docs/editor/2026-09-18-source-analysis-v12.md).
