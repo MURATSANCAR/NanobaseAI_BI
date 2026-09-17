@@ -32,3 +32,16 @@ def test_a_vague_period_is_asked_back_not_guessed(catalog, profiles):
     sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Net ciro ne kadar oldu bu ara?", today=TODAY)
     assert any("bu ara" in c and "hangi dönemi" in c for c in sq.clarification), sq.clarification
     assert "bu ara" not in sq.unresolved
+
+
+def test_two_labels_of_one_column_joined_by_or_are_one_restriction(catalog, profiles):
+    """2026-09-18, soru 23: "karşılıksız çıkan veya protesto olan çekler" was refused as contradictory filters."""
+    _certify(catalog, "karşılıksız", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             column="TRCODE", operator="IN", values=["11"]))
+    _certify(catalog, "protestolu", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+             column="TRCODE", operator="IN", values=["5", "7"]))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    sq = SemanticResolver(catalog, TENANT, DS, profiles).resolve("Karşılıksız veya protestolu faturaların net cirosu ne kadar?", today=TODAY)
+    assert not sq.conflicts, (sq.conflicts, sq.explanation)
+    merged = [s for s in sq.slots if s.mapping and s.mapping.column == "TRCODE" and set(s.mapping.values) == {"11", "5", "7"}]
+    assert merged, [(s.term, s.mapping.values) for s in sq.slots if s.mapping]

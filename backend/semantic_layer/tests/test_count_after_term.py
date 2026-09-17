@@ -78,3 +78,14 @@ def test_a_unit_word_after_a_state_measure_and_a_repeated_name_are_one_measure(c
     metrics = [s for s in sq.slots if s.semantic_type == SemanticType.METRIC]
     assert len(metrics) == 1 and (metrics[0].mapping.extra or {}).get("state_measure"), [(s.term, s.mapping.formula) for s in metrics]
     assert sq.limit == 20
+
+
+def test_a_synonym_typed_by_a_person_is_found_in_its_normalised_form(catalog, profiles):
+    """2026-09-18, soru 23: 'çeklerin' stayed unresolved although "çek" was a synonym of the certified concept —
+    synonyms updated by hand are stored as typed, and the index held them under that spelling only."""
+    c = _certify(catalog, "müşteri çeki", SemanticType.DIMENSION_VALUE, Mapping(concept_id="", entity="INVOICE", table_pattern="LG_{n0}_{n1}_INVOICE",
+                 column="TRCODE", operator="IN", values=["1"]))
+    EvidenceEngine(catalog, min_support=3).run(TENANT, DS, profiles)
+    catalog.update_concept(c.id, synonyms=["çek", "çekler"])
+    idx = catalog.certified_index(TENANT, DS)
+    assert "cek" in idx, [k for k in idx if "ek" in k][:10]

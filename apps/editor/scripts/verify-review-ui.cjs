@@ -46,7 +46,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
   characterPage=records.find(r=>r.data.attributions?.length&&r.data.named_mentions?.length)?.data;
   if(!characterPage)throw new Error('No actual source attribution available for UI acceptance');
  }
- const out=path.join(root,'evidence/review-ui');fs.mkdirSync(out,{recursive:true,mode:0o700});
+ const out=path.join(root,process.env.EDITOR_VERIFY_OUTPUT_DIR||'evidence/review-ui');fs.mkdirSync(out,{recursive:true,mode:0o700});
  const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
  const results=[];
  try{
@@ -73,7 +73,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
    if(process.env.EDITOR_VERIFY_RUN_FILE){
     let availableSpan=null;
     for(let offset=0;;){
-     const response=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?offset='+offset+'&limit=100',{headers:{Authorization:'Bearer '+token}});
+     const response=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?offset='+offset+'&limit=100'+(process.env.EDITOR_VERIFY_SOURCE_PAGE?'&pdf_page='+encodeURIComponent(process.env.EDITOR_VERIFY_SOURCE_PAGE):''),{headers:{Authorization:'Bearer '+token}});
      if(!response.ok())throw new Error('Actual source spans API failed');
      const batch=await response.json();
      availableSpan=batch.items[0]??null;
@@ -121,7 +121,7 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
      await page.locator('#page').selectOption(String(number));
      await page.waitForFunction(n=>document.querySelector('.source-image')?.alt.includes(n+'. sayfası')&&document.querySelector('.source-image')?.naturalWidth>0,number);
      const detail=page.locator('[data-span-id="'+candidate.span_id+'"]');
-     await detail.locator('summary').click();
+     if(await detail.getAttribute('open')===null)await detail.locator('summary').click();
      await detail.locator('.ocr-fallback').waitFor();
      if(!(await detail.locator('.ocr-fallback').textContent()).includes(candidate.ocr_vl.text))throw new Error('OCR UI differs from real API');
      if(!candidate.ocr_vl.complete&&!(await detail.textContent()).includes('Tamamlanmayan çıktı'))throw new Error('Truncated OCR not identified');
