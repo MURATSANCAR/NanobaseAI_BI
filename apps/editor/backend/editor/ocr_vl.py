@@ -18,6 +18,19 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def crop_request(client, payload):
+    # Crop and recognition share the CPU service slot. Parallel consumers must
+    # retry explicit busy rejections; never retry ambiguous read timeouts.
+    for attempt in range(7):
+        response=client.post('http://ocr:8080/crop',json=payload)
+        if response.status_code not in (429,503):
+            response.raise_for_status()
+            return response
+        if attempt==6:
+            raise RuntimeError('CROP_BUSY_RETRIES_EXHAUSTED')
+        time.sleep(min(8,2**attempt))
+
+
 def read_region(raw, evidence, bbox):
     if not valid_box(bbox) or digest(raw) != evidence['ocr_render_sha256']:
         raise RuntimeError('OCR_VL_SOURCE_MISMATCH')
@@ -26,7 +39,7 @@ def read_region(raw, evidence, bbox):
     started = time.time()
     with httpx.Client(timeout=900, trust_env=False) as client:
         # The CPU crop service supplies geometry only, not a transcription prompt.
-        response = client.post('http://ocr:8080/crop', json={
+        response = crop_request(client, {
             'image_base64':base64.b64encode(raw).decode(), 'bbox':bbox})
         response.raise_for_status(); crop = response.json()
         png = base64.b64decode(crop['image_base64'], validate=True)

@@ -373,7 +373,8 @@ def observe(job,evidence,layout,spans,root,parent=None):
             continue
         raw=(root/f'page-{page:04}.png').read_bytes()
         with httpx.Client(timeout=60,trust_env=False) as client:
-            response=client.post('http://ocr:8080/crop',json={'image_base64':base64.b64encode(raw).decode(),'bbox':region['bbox']})
+            from editor.ocr_vl import crop_request
+            response=crop_request(client,{'image_base64':base64.b64encode(raw).decode(),'bbox':region['bbox']})
             response.raise_for_status(); crop=response.json()
         if crop['source_image_sha256']!=evidence['data']['render_sha256']: raise RuntimeError('CROP_SOURCE_MISMATCH')
         prompt=('Yalnız bu kırpılmış resimde görünen figür ve hareket adaylarını kaydet. '

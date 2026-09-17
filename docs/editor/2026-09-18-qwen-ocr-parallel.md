@@ -9,3 +9,10 @@ Yeni `ocr_vl.py`, özgün render ve bbox üzerinden CPU servisine kırpım yapt�
 Dağıtım ve gerçek API/PostgreSQL kabulü devam ediyor. Önceki V5 ve kitap kaynakları değiştirilmez; yeni nesil üretilir. P1 kaynak, P2 konuşmacı ve semantik kabul tamamlandı iddiası yoktur.
 
 Model görev istemi: https://huggingface.co/PaddlePaddle/PaddleOCR-VL-1.6 (resmi model kartı).
+
+## Gerçek koşuda bulunan ve kodda kapatılan engeller
+
+- R3 yeni sürüm yönlendirme listesinde yoktu; eski akışa geçiş bulundu, API iptali ve worker durdurmasıyla kesildi. R4 artık manifest sürümü çalışan sürümle eşleşmezse açık hata verir; legacy fallback yoktur. Başarısız nesil `2f95aef0` korunur, kabul değildir.
+- R4 nesil `145d114a`, 38. sayfada dört gerçek VL bölgesi üretti; API/PG ve ham cevap/kırpım hashleri geçti, destek yetersiz olduğundan sıfır yükseltme. Seçilmiş resim bölgesi olmadığından bu sayfada paralel görsel çağrısı yoktu.
+- 29. sayfada paylaşılan CPU kırpım servisi429 verdi. R5 açık429/503 cevaplarına sınırlı tekrar ekler; read timeout tekrar edilmez. R4 FAILED kaydı korunur. R5 aynı gerçek sayfada yeniden kabul edilecek.
+- İlk arşivde AppleDouble dosyaları migration yüklemesini durdurdu; aday imajdaki metadata temizlendi. R4 uygulama/check-out 41 dosya birebir eşleşti, backend tree SHA256 `2b2bbc22fc7aa1e3600f395e6f8ce7196b4c73754678c29c94d5845bb0c29e26`. Bu hash sonraki R5 kabulünün yerine geçmez.
