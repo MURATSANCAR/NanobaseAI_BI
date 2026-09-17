@@ -109,7 +109,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         'model_name':name,'model_backend':backend,'context_limit':context_limit,
         'input_token_count':token_count,
         'runner_fingerprint':result.get('system_fingerprint'),
-        'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
+        'image_max_tokens':(int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')) if backend=='llama.cpp' else None),
         'release':RELEASE,'code_manifest':code_manifest(),
         'prompt_version':prompt_version,'max_output_tokens':max_tokens,
         'citation_dictionary':aliases,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}

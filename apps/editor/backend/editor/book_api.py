@@ -259,7 +259,8 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
           'reuse_measurements_from':str(body.reuse_measurements_from) if body.reuse_measurements_from else None,
           'model':os.environ.get('EDITOR_MODEL_NAME','editor-qwen38'),
           'model_backend':os.environ.get('EDITOR_MODEL_BACKEND','llama.cpp'),
-          'image_max_tokens':int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')),
+          'image_max_tokens':(int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024'))
+                             if os.environ.get('EDITOR_MODEL_BACKEND','llama.cpp')=='llama.cpp' else None),
           'context_tokens':int(os.environ.get('EDITOR_MODEL_CONTEXT','8192')),
           'temperature':0,'seed':17,'old_visual_reuse':False}
         db.execute('INSERT INTO editor.generations(id,content_version_id,manifest) VALUES (%s,%s,%s)',(gen,version,Jsonb(manifest)))

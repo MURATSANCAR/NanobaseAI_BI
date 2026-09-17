@@ -43,3 +43,20 @@ henüz tamamlanmadı. Eski CPU model servisleri bu işlemde değiştirilmedi.
 Mac/VPN/SSH oturumu kapanırsa bu yol kesilir. Otomatik yeniden başlatma servisi
 kurulmadı; mevcut yönlendirme müşteri ortamı için Mac'ten bağımsız kalıcı ağ
 kurulumunun yerine geçmez.
+
+## 18 Eylül ek: büyük görsel aktarımı ve ayrı OCR kurulumu
+
+İlk SSH `-L` yönlendirmesinde büyük gerçek sayfa POST'u beklerken diğer
+istekler de takıldı. GPU'nun kendi health ucu sağlıklı kaldı. Mac üzerinde
+`scripts/server/mac-gpu-proxy.py` loopback ara servisi eklendi; her HTTP isteği
+mevcut ocproxy üzerinden ayrı SOCKS bağlantısı kullanır. GPU'ya giden PNG
+baytları değiştirilmez. Eski yerel SSH18081 listener kaldırıldı; CPU18881
+reverse SSH aynı loopback portuna bağlanır. Mac kullanıcı servisi
+`ai.nanobase.gpu-proxy` ile yönetilir; script çalışma kopyası macOS Documents
+izin kısıtından ötürü `~/Library/Application Support/NanobaseAI/` altındadır.
+Bu geliştirme sırasında görsel kabulü tekrar yürütülüyor; önceki iki başarısız
+aktarım başarı sayılmadı.
+
+Kullanıcı GPU makinesine **PaddleOCR-VL-1.6** kurulumunun başka oturumda
+sürdüğünü bildirdi. Bu oturum ilgili GPU OCR konteyner/port/model dosyalarını
+değiştirmez. OCR endpoint'i o kurulumun sözleşmesiyle daha sonra bağlanacaktır.
