@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-17 — Editör restore ACL hatası ve kaynak sorunlarının ölçümü
+
+- V3 ayrı restore kabulü `/v1/system` 500 ile başarısız oldu; neden yeni yetki tablolarında uygulama DB izinlerinin yeniden kurulmamasıydı. `migrate.py` düzeltildi, gerçek PG'de 28 izin kontrolü eklendi. Aynı gerçek yedeğin yeni v4 kurulumuna dönüşü, 14 tablo/artifact eşliği, API/PG, yetki ve dört genişlikte mobil ekran kabulü geçti.
+- 321 açık kaynak bölgesinin örtüşen hata nedenleri bağımsız API/PG karşılaştırmasıyla çıkarıldı. Kelime kutusu kırpımı üç gerçek sayfada 5 iyileşme/2 gerileme gösterdi; ana OCR'ye alınmadı ve veriler değiştirilmedi. Tüm kitap ölçümü ayrıca izleniyor.
+- [Hata, genel kod çözümü, imaj/kod hashleri ve kanıtlar](editor/2026-09-17-restore-acl-and-source-triage.md). Yerel test yok; bütün ürün kabulleri bağlı gerçek kitap/API/PG üzerinde.
+
+
 ## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
 
 `book-access-v3-20260917` ana sunucuya yayımlandı. Gerçek kitap/API/PostgreSQL, kaynak kayıtlarının değişmezliği, kapsam dışı erişim, okuyucu yazma yasağı ve anahtar iptali geçti; yönetici/okuyucu ekranları 320/390/768/1440 px doğrulandı. Yeni sürüm için offline/restore kabulü ayrı yürütülüyor. 48 sayfa işlenmiş olsa da 321 kaynak bölgesi ve konuşmacı/anlamsal kabul açık. Ayrıntılar: `docs/editor/2026-09-17-book-access.md`.
