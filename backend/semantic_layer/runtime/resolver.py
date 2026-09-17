@@ -142,6 +142,8 @@ _RANK_CUE = frozenset("en ilk top bastaki basta cok fazla yuksek dusuk buyuk".sp
 _WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
 # "payı yüzde kaç" asks for a share: a plain total is a different answer, not a rounder one.
 _SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzdelik)\b")
+#: "iade hariç", "iptaller dışında", "fuar haricinde": the label right before is what the answer leaves out.
+_EXCLUDE_CUE = frozenset("haric harici haricinde disinda disindaki olmadan olmaksizin".split())
 #: "indirim yüzdesi tanımlı", "vadesi girilmiş", "grup kodu dolu": the column right before carries a value.
 _DEFINED_CUE = frozenset("tanimli tanimlanmis tanimlanan dolu girilmis girili belirlenmis atanmis".split())
 #: "X, Y'nin ne kadarı?", "X Y'nin yüzde kaçı?", "X'in Y'ye oranı": two measures, one divided by the other.
@@ -444,6 +446,26 @@ class SemanticResolver:
                 sq.explanation.append(f"'{qf.tokens[k]}' sayım sözcüğü olarak okundu: '{left[0].term}' kayıtları sayılır, "
                                       f"{slot.mapping.entity} ölçüsü değil")
 
+        # 2f) "iade hariç toplam ciro": the label is named in order to be left out. Read as a filter it
+        #     asked for the returns alone, and the gate refused every statement that did what was asked.
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or fold(tok) not in _EXCLUDE_CUE:
+                continue
+            label = next((h for h in hits if h.semantic_type == SemanticType.DIMENSION_VALUE and h.mapping and h.mapping.column
+                          and h.span and h.span[1] == k and (h.mapping.operator or "IN").upper() in ("IN", "=")), None)
+            if label is None:
+                continue
+            m0 = label.mapping
+            label.mapping = Mapping(concept_id=m0.concept_id, entity=m0.entity, table_pattern=m0.table_pattern, column=m0.column,
+                                    operator="NOT IN", values=list(m0.values), extra=dict(m0.extra or {}))
+            label.status = "INFERRED"
+            label.term = f"{label.term} {tok}"
+            label.span = (label.span[0], k + 1)
+            label.explain = {**(label.explain or {}), "source": "exclude_cue",
+                             "why": f"'{label.term}': {m0.entity}.{m0.column} NOT IN ({', '.join(map(str, m0.values))}) — dışarıda bırakılır"}
+            consumed.add(k)
+            sq.explanation.append(label.explain["why"])
+
         # 2e) "kartında indirim yüzdesi tanımlı müşteriler": a column named and then said to be filled.
         #     The word is a condition on that column — non-zero for a number, non-empty for text — not
         #     a word the catalog lacks. Left unread, the question was refused for "tanımlı".
@@ -615,6 +637,12 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
+        # "bu ara": a period the person did not bound. Whoever writes the statement chooses a range and
+        # must say which — the phrase joins the words whose reading has to be written above the answer.
+        for t in sq.temporal:
+            if t.ambiguous and t.text and t.text not in sq.unresolved:
+                sq.unresolved.append(t.text)
+                sq.explanation.append(f"'{t.text}' belirsiz bir dönem: alınan tarih aralığı cevabın üstünde yazılacak")
         if not sq.temporal and sq.grain == "YEAR" and _YEARLY_BREAKDOWN.search(fold(question)):
             span = self._all_years(sq, today or date.today())
             if span is not None:

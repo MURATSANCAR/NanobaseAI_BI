@@ -225,6 +225,9 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_MONTHS", _month_start(y, start_m), _next_month(today.year, today.month), "MONTH", params={"n": n}))
     for m in re.finditer(r"\bson\s+(gunler|gunlerde|donem|donemde|zamanlar|zamanlarda|haftalar)\b", text):
         add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
+    # "bu ara", "bu sıralar", "yakın zamanda", "geçenlerde": a recent stretch nobody put a number on.
+    for m in re.finditer(r"\b(bu ara|bu aralar|bu siralar|bu gunlerde|yakin zamanda|yakinlarda|gecenlerde)\b", text):
+        add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
     simple = {
         rf"\bbugun{_CASE}\b": ("TODAY", today, today + timedelta(days=1), "DAY"),
         rf"\bdun{_CASE}\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
