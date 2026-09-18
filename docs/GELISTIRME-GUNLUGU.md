@@ -3,6 +3,7 @@
 ## 2026-09-18 — Rol V8: kaynak okuma kökeni ve somut yanlış kabullerin kapatılması
 
 Genel okuma projectionı, büyük başlangıç harfi/satırsonu bölünmelerini ham OCR'a yazmadan geometri ve kompakt karakter aralıklarıyla doğrular.14 gerçekpasajAPI/PG+bağımsızprojeksiyon kabulü geçti. Son8pasaj birleşik kontrolünde3doğru kabul,2yanlışfailaktarımı ve1eksikiçönerme engeli doğrulandı;2doğru dolaylıanlatım hâlâgereksizret. Kaynak/reviewhashleri aynı,0uygulamayazımı; modelsonuçlarına ellemüdahale yok. Alıntı/sentez/retrieval/bağımsızUIverifier sözleşmeleri güncellendi. V8aday yayınlanmadı;R5livekorundu, tamkitaptekrarı yok. [Sonuç, kanıtveaçıkkapsam](editor/2026-09-18-role-binding-v8-candidate.md).
+
 ## 2026-09-18 12:30 UTC — En zor 100: iki kaynaklı (CRM × Logo) sorular uçtan uca çalışıyor, Q69 doğrulandı
 
 Q69, Q72, Q75–Q78'in ortak kök nedeni: çözücü tek kaynak seçip diğer veritabanındaki **sertifikalı** kavramı "tanımsız" sayıyor, iki sunuculu plan hiç devreye girmiyordu. Hepsi genel kural, soruya özel SQL/kalıp yok; her adım nanobase-direct köprüsünde gerçek soruyla denendi.
