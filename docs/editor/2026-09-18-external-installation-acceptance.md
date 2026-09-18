@@ -1,5 +1,17 @@
 # External model uygulama paketi: ayrı kurulum kabulü
 
+## Güncel R2 nesli / web R3 yedek ve restore kabulü
+
+R2 işi COMPLETED olduktan ve çalışan başka analiz olmadığı PostgreSQL'den doğrulandıktan sonra `/data/nanobaseai/editor-qualifications/v13-r2-completed-20260918/backup` alındı. API/worker/parser/reread yazıcıları tutarlı snapshot için durdurulup önceki çalışma durumlarına döndürüldü; kaynak metin/inceleme kararı elle değiştirilmedi.
+
+Yeni hedef `v13-r2-completed-20260918/installation`, proje `editor-v13-r2-restore`, API18822/metrik19102 ve subnet68/69 oldu. Paket backend R2/web R3 external modudur; yeni GPU model kopyası başlatılmadı. Gerçek bağlı PostgreSQL, bütün kitap/artifact snapshot eşliği, migration0006,28 ACL kontrolü,401 ve özgün PDF/48 render hashleri PASS. Mac'siz model yoluna yalnız test ağı için dar erişim tanındı.
+
+Güncel nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` restore API/PG karşılaştırmasında48 evidence,1149 kaynak span,48 iddia,48 kimlik,12 figür karşılaştırması,48 anlam incelemesi,1 sentez,27 küçük kaynak,48 küçük kaynak kontrolü,6 sayfa bağlamı ve1 cross-page raporu birebir eşleşti.51 sınırlı sentez iddiası korunur; semantic_acceptance=false. İmaj/kaynak backend ve web eşliği de geçti.
+
+Restore sonrası320/390/768/1440px gerçek Chrome kontrolü PASS: altı sekme, metinsel karakter kanıtı, bölgesel OCR/VL seçimi, küçük kaynak/üst satır/bbox, sınırlı diyalog bağı ve24 sentez ifadesi API ile eşleşti; yatay taşma yok ve çıkış kimliği temizledi. Verifier'ın yeni diyalog etiketlerini de sayan düzeltmesi test aracına taşındı; uygulama imajı değiştirilmedi.
+
+Hedefin `evidence/restore.log`, `release.log`, `restored-derived-api-pg.log`, `restored-complete-ui/verification.json` kanıtlarıdır. Kabul sonunda hedefte çalışan konteyner sayısı0; volume ve kanıt korundu. Geçici nginx18886/18888 dosyası ve iki UFW kuralı kaldırıldı, `cleanup.json` kaydedildi. Ana Editör ve kalıcı doğrudan model tüneli çalışıyor. Arama indeksi rebuild/cevap kalitesi ve yeni GPU üzerinde offline açılış bu kabulün dışında kalır.
+
 18 Eylül 2026. Test ortamı bağlı gerçek Linux Docker sunucusudur; yerel/sentetik kitap testi değildir. Ana Editör koşusu durdurulmadı, ana veritabanı ve env değiştirilmedi. Yeni GPU modeli veya kopya ana LLM başlatılmadı.
 
 ## Paket ve yeni kurulum

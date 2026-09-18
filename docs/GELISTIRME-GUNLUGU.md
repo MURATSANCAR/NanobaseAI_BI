@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — güncel R2 tam kayıtlı ayrı restore kabulü
+
+Tamamlanan gerçek R2 kitabı tutarlı yedekten yeni external model kurulumuna döndü. Snapshot'taki DB/artifact kayıtları birebir eşleşti; migration,28 ACL/401, özgün PDF/48 render ve backend/web kaynak hashleri geçti.48 kaynak/kimlik/anlam sayfası,27 fragment,12 figür karşılaştırması ve24 sentez ifadesi restore API/PG ve dört genişlikte gerçek tarayıcıyla kontrol edildi. OCR/VL, metinsel karakter, küçük kaynak, diyalog ve sentez kontrolleri birlikte PASS. Hedef servisler durduruldu, dar geçici nginx/UFW kuralları kaldırıldı; volume ve kanıt korundu. Arama rebuild/cevap ve tam anlamsal kabul açık. HTTPS push kimliği yok; GitHub SSH publickey de reddedildi, origin güncel değildir. [Kanıt](editor/2026-09-18-external-installation-acceptance.md).
+
 ## 2026-09-18 — R2 kapanışı, GPU paketi ve Mac'siz çıkarım
 
 R2 attempt2 COMPLETED/NEEDS_REVIEW;48/48 kaynak ile bütün türetilmiş API/PG kayıtları eşleşti.51 sınırlı iddia/24 taslak ifade,262 açık kaynak ve0 genel karakter kimliği var. Dolu fragment/kimlik/anlam/sentez/diyalog ekranları320/390/768/1440px tekrarında geçti; ilk verifier yeni diyalog etiketini beklenen listeye katmıyordu, API'ye birebir karşılaştırma düzeltilip önceki log korundu. GPU paketi172 dosya/3 imaj hash eşliğiyle importtan geçti. GPU→CPU systemd ters tüneli kuruldu; mevcut admin SSH config eşliği ve komut/izinsiz port/local forward reddi doğrulandı. Drop-in include eksikliği gerçek denemeyle yakalanıp yalnız ilgili dosyaya Include eklenerek giderildi. Aynı gerçek model isteği doğrudan3,184sn, Mac yolunda20,870sn; OCR0,878sn. Nginx graceful geçişi sonrası sürüm/API/PG altyapı kontrolü geçti. Güncel tutarlı yedek ve ayrı restore başlatılacak; tam anlamsal veya üretim kabulü yok. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
