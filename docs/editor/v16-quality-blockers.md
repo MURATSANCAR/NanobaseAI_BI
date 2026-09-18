@@ -76,3 +76,15 @@ V2 gerçek yedi kayıt probe'unda üç doğal olumlu örnek yapısal PASS; kriti
 Kesin yanlış isimli atama artık `ROLE_PERSON_TRANSFER_UNPROVEN` nedeniyle reddediliyor; V1/V2 şema reddinden farklıdır. Model çağrısız bağımsız literal/graf replay `evidence/role-binding-reuse-reference-bd88a673-0168-4168-b01e-af3e8a6dc2b9.json`, mevcut source first-person → claim NAME/third-person çakışmasını yeniden saptadı. Bu yalnız sınırlı ilişki çakışması kabulüdür.
 
 Üç doğru aktarım örneği hâlâ kapsam/alıntı hizalaması nedeniyle incelemede kaldı. Dolayısıyla3PASS/4ret genel kalite başarısı değildir; aday üretime bağlanmadı, yeni tam kitap koşusu başlamadı. Sonraki geliştirme doğrudan sözden adsız/dolaylı aktarıma dönüşümü ve iç içe söz ediminin özne kapsamını kanıtlamak olmalıdır; tüm UNKNOWN sonuçları kabul ederek kapıyı gevşetmek çözüm değildir.
+
+### V4 raporlanan konuşma adayı
+
+Üretime bağlı olmayan V4, `reports:[{wrapper_clause_id,content_clause_ids,reporter_kind}]` ekler. Kaynak çıkarımı hâlâ iddiayı görmez; claim çıkarımı kaynak görmez. Sınırlı dilbilgisel raporlama yüklemleri, geçerli clause kimlikleri, döngüsüz raporlama kenarları ve ayrı içerik yüklemleri zorunludur. Adsız pasif raporlama yeni kişi/isim yetkisi vermez. Her içerik ayrıca kaynak öznesiyle denetlenir; adlandırılmış içeriğin birinci kişi kaynağa transferi ret kalır.
+
+`konuşmacı`, `konuşan kişi`, `the speaker` sınırlı söyleyen işaretçileridir: biyolojik insan/tür/karakter kimliği kanıtı değildir. Yalnız geçerli ANONYMOUS raporlama kenarında kaynak doğrudan konuşmanın birinci kişi öznesine bağlanabilirler. Yeni adlandırma muafiyeti oluşturmazlar. Birebir doğrudan alıntı, predicate çıkarımı eksik olsa da yalnız literal token dizisi eşliğiyle taşınabilir; named reporter yüklemi ayrıca geçmelidir. Eksik içerik yüklemi düzeltilmiş sayılmaz.
+
+`review_with_source_graph(claim, regions, source_graph, model, *, artifact_version, artifact_sha256, artifact_path, artifact_code_sha256)` eski gerçek kaynak grafını değişmeden kullanır, yeni bağımsız claim grafı ve alignment için en fazla iki model çağrısı yapar. Provenance önceki sözleşmeyle zorunludur. Kod yalnız AST ile incelendi; gerçek V4 kabulünü root yapacak, canlı yayın değişmedi. Scope kategorileri model çıkarımıdır; bu aday genel dilbilgisel/kimlik doğruluğu garantisi değildir.
+
+## V8 / rol V7: genişletilmiş gerçek regresyon
+
+İlk14pasaj6PASS/8inceleme verdi; ikinci yanlış fail aktarımı engellendi, fakat bir PASS iç yüklem atlandığı için güvenilir değildi. Genel iç-yüklem kapsamı ve raporlayan/içerik ayrımı, NAMEkişi kontrolü, modelinputtan karakterofsetlerini çıkarma kodlandı. Doğru dolaylı anlatım ve sahiplik öbeği yanlışretleri açık; yalnızretoranıyla kalite ilan edilmez. R5live korunuyor, V8/rolV7 yayımlanmadı. [Ayrıntı ve kanıtlar](2026-09-18-role-binding-v8-candidate.md).

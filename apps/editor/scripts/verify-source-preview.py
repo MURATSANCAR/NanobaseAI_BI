@@ -20,6 +20,7 @@ import uuid
 import unicodedata
 from source_obligation_reference import verify_obligations
 from source_qualification_reference import verify_qualification
+from source_role_reference import verify_role_bindings
 
 
 def verify_surface_references(claim,views,gate):
@@ -178,14 +179,21 @@ try:
     # can validate its historical inputs, but cannot identify the current index.
     code_names = ('source_retrieval.py','semantic_acceptance.py','page_context.py',
                   'source_unit_claims.py','source_pipeline.py','source_alignment.py',
-                  'text_attribution.py','retrieval.py','source_qualification.py','source_obligations.py')
+                  'text_attribution.py','retrieval.py','source_qualification.py','source_obligations.py','source_role_bindings.py','role_reading_projection.py')
     script = 'import json,hashlib; from pathlib import Path; import editor; p=Path(editor.__file__).parent; print(json.dumps({name:hashlib.sha256((p/name).read_bytes()).hexdigest() for name in '+repr(list(code_names))+' if (p/name).is_file()}))'
     installed_hashes = json.loads(command(['docker', 'compose', 'exec', '-T', 'api', 'python', '-c', script]))
-    require(set(code_names[:-2]) <= set(installed_hashes), 'Required current code file missing')
-    extras=set(code_names[-2:]) & set(installed_hashes)
-    require(not extras or extras == set(code_names[-2:]), 'Incomplete source gate deployment')
-    if any(row['data'].get('version')=='source-semantic-review-v7' for row in records['semantic_reviews']):
-        require(extras == set(code_names[-2:]), 'V7 source gate code absent')
+    core_names={'source_retrieval.py','semantic_acceptance.py','page_context.py','source_unit_claims.py',
+                'source_pipeline.py','source_alignment.py','text_attribution.py','retrieval.py'}
+    qualification_names={'source_qualification.py','source_obligations.py'}
+    role_names={'source_role_bindings.py','role_reading_projection.py'}
+    require(core_names <= set(installed_hashes), 'Required current code file missing')
+    extras=qualification_names & set(installed_hashes)
+    require(not extras or extras == qualification_names, 'Incomplete source gate deployment')
+    if any(row['data'].get('version') in ('source-semantic-review-v7','source-semantic-review-v8') for row in records['semantic_reviews']):
+        require(qualification_names <= set(installed_hashes), 'V7/V8 source gate code absent')
+    if any(row['data'].get('version')=='source-semantic-review-v8' for row in records['semantic_reviews']):
+        require(role_names <= set(installed_hashes), 'V8 role/projection code absent')
+    require(all(row['data'].get('version') in tuple('source-semantic-review-v'+str(i) for i in range(1,9)) for row in records['semantic_reviews']), 'Unknown semantic review version')
     report['code_identity'] = installed_hashes
     manifests = []
     historical_code_count = 0
@@ -228,17 +236,22 @@ try:
         require(refs and all(ref in span_rows for ref in refs), 'Source span absent')
         return [{'span_id': ref, **{key: span_rows[ref]['data'][key] for key in ('text', 'bbox', 'render_sha256')}} for ref in refs]
     def cited_support(review, refs, regions, claim):
+        require(review.get('version') in tuple('source-semantic-review-v'+str(i)+'-cited-support' for i in range(2,9)), 'Unknown citation review version')
         require(review.get('passed') is True and review['source_sha256'] == digest(regions)
                 and review['source_regions'] == regions and review['support_span_refs'] == refs
                 and review['metrics']['finish_reason'] == 'stop', 'Citation support scope/hash incomplete')
         verdict = review['model_result']
         axes=('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode')
-        if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support'):
+        if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support','source-semantic-review-v8-cited-support'):
             axes+=('epistemic_strength',)
             verify_surface_references(claim,review['source_reading_segments'],review['surface_reference_gate'])
-            if review.get('version')=='source-semantic-review-v7-cited-support':
+            if review.get('version') in ('source-semantic-review-v7-cited-support','source-semantic-review-v8-cited-support'):
                 verify_qualification(claim,review['source_reading_segments'],review.get('qualification_gate'))
                 verify_obligations(claim,regions,review['obligation_review'])
+                if review['version']=='source-semantic-review-v8-cited-support':
+                    require(review['role_binding_review']['version']=='source-role-bindings-v8' and review['role_binding_review']['passed'] is True, 'V8 role binding failed')
+                    require(review['role_binding_review'].get('reading_views')==review['source_reading_segments'], 'Role reading views differ from cited source')
+                    verify_role_bindings(claim,regions,review['role_binding_review'])
         require(verdict['checks'] == {key: 'PASS' for key in axes}
                 and verdict['reason'].strip() and verdict['support_span_refs']
                 and set(verdict['support_span_refs']) <= set(refs), 'Citation axes/references failed')

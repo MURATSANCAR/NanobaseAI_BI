@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V8 kişi–eylem ve konuşmacı–alıntı kapıları
+
+Genel rol adayı, alıntı ve sentezde eski semantik/qualification/obligation kapılarıyla AND olarak bağlandı. Kaynak konuşmacı–içerik kenarı, anonim ortak özne, tırnaklı zamir ve birebir NOMINAL cümlecik taşınması kodda düzeltildi. Retrieval yeniden denetimi, kod parmak izi ve üç kabul betiği V8'e uyarlandı; bağımsız literal/kenar/hash/çağrı doğrulayıcısı eklendi. Gerçek yedi kayıt tekrarları format/çıkarım değişkenliğini gösterdi: son bağımsız kanıt 5 yapısal doğrulama/1 kişi çatışması reddi/1 inceleme. Yeni kodun 14 gerçek pasajla birleşik kontrolü sürüyor; canlı dağıtım/tam anlam kabulü verilmedi. Kaynak/review/model çıktıları elle değiştirilmedi, yerel test yok. [Ayrıntı](editor/2026-09-18-role-binding-v8-candidate.md).
+
 ## 2026-09-18 11:00 UTC — En zor 100: Q68–Q78, faturasız sevkiyatın müşterisi ve yanlış "kapsam dışı" reddi
 
 TT VPN (Mac, `~/bin/ttvpn-mac`) 06:50'de düştüğü için köprünün model yolu `127.0.0.1:18881` 502 veriyordu; kullanıcı VPN'i yeniden açınca test Q68'den sürdü. Aynı model Mac'siz Editör tünelinde (`127.0.0.1:18885`) çalışıyor; BI köprüsü oraya **alınmadı** (env satır 63/66 hâlâ 18881) — VPN her düştüğünde LLM gerektiren sorular durur. Her soru gerçek köprü API'sinden (`/api/v1/ask`, nanobase-direct) soruldu; referanslar `connector_from_file` ile doğrudan Logo/CRM'den.

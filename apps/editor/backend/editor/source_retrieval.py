@@ -23,12 +23,57 @@ KINDS = ('evidence', 'layout_regions', 'source_spans', 'source_fragments',
 REVIEW_KINDS = KINDS + ('source_passages', 'source_index')
 DEPENDENCIES = ('source_retrieval.py', 'semantic_acceptance.py', 'page_context.py',
                 'source_unit_claims.py', 'source_pipeline.py', 'source_alignment.py',
-                'text_attribution.py', 'retrieval.py', 'source_qualification.py', 'source_obligations.py')
+                'text_attribution.py', 'retrieval.py', 'source_qualification.py', 'source_obligations.py',
+                'source_role_bindings.py', 'role_reading_projection.py')
 
 
 def require(condition, reason):
     if not condition:
         raise RuntimeError(reason)
+
+
+def require_role_binding(review, claim, regions, reading_views):
+    """Reconstruct the stored production three-call role gate without model calls.
+
+    This structural condition is additional to, not a replacement for, the
+    citation axes, qualification and obligation authority checked by snapshot.
+    """
+    from editor import source_role_bindings as roles
+    require(isinstance(review,dict), 'PREVIEW_ROLE_BINDING_ABSENT')
+    from editor.role_reading_projection import project
+    require(review.get('reading_views')==reading_views, 'PREVIEW_ROLE_READING_SCOPE_INVALID')
+    projection=project(regions,reading_views)
+    require(review.get('source_projection')==projection, 'PREVIEW_ROLE_PROJECTION_INVALID')
+    source_tokens=roles.tokens(projection['projected_regions'],'SOURCE')
+    claim_tokens=roles.tokens([{'span_id':'claim','text':claim['text']}],'CLAIM')
+    require(review.get('version')==roles.VERSION and review.get('passed') is True
+            and review.get('status')=='STRUCTURAL_CANDIDATE'
+            and review.get('semantic_acceptance') is False
+            and review.get('complete') is False and review.get('predicate_coverage_proven') is False
+            and review.get('claim_sha256')==digest(claim['text'])
+            and review.get('source_sha256')==digest(regions)
+            and review.get('source_tokens')==source_tokens and review.get('claim_tokens')==claim_tokens
+            and 0<len(source_tokens)<=512 and 0<len(claim_tokens)<=128
+            and 'reuse' not in review, 'PREVIEW_ROLE_BINDING_SCOPE_INVALID')
+    source=review.get('source_graph');proposed=review.get('claim_graph');alignment=review.get('alignment')
+    require(roles.graph_valid(source,source_tokens) and roles.graph_valid(proposed,claim_tokens)
+            and 'reports' in source and 'reports' in proposed, 'PREVIEW_ROLE_BINDING_GRAPH_INVALID')
+    passed,reason=roles.validate_alignment(source,proposed,source_tokens,claim_tokens,alignment)
+    require(review.get('resolved_claim_reports')==roles.resolved_reports(proposed,claim_tokens)
+            and passed is True and review.get('reason')==reason
+            and review.get('diagnostics')==roles.alignment_diagnostics(source,proposed,source_tokens,claim_tokens,alignment),
+            'PREVIEW_ROLE_BINDING_ALIGNMENT_INVALID')
+    expected=[('source',roles.model_tokens(source_tokens),source),('claim',roles.model_tokens(claim_tokens),proposed),
+              ('alignment',{'source_graph':source,'source_tokens':roles.model_tokens(source_tokens),
+                            'claim_graph':proposed,'claim_tokens':roles.model_tokens(claim_tokens)},alignment)]
+    attempts=review.get('attempts')
+    require(isinstance(attempts,list) and len(attempts)==3 and review.get('model_calls')==3,
+            'PREVIEW_ROLE_BINDING_ATTEMPTS_INVALID')
+    for attempt,(stage,payload,output) in zip(attempts,expected):
+        require(isinstance(attempt,dict) and attempt.get('stage')==stage
+                and attempt.get('input_sha256')==digest(payload) and attempt.get('output')==output
+                and attempt.get('metrics',{}).get('finish_reason')=='stop',
+                'PREVIEW_ROLE_BINDING_ATTEMPT_MISMATCH')
 
 
 def code_identity():
@@ -52,6 +97,8 @@ def build_passages(generation, records, decisions, manifest):
     from editor.source_unit_claims import reading_segments, incomplete_word_refs
     from editor.text_attribution import extract, speaker_for_claim
     generation = str(uuid.UUID(str(generation)))
+    require(REVIEW_VERSION in ('source-semantic-review-v7','source-semantic-review-v8'),
+            'PREVIEW_UNSUPPORTED_REVIEW_VERSION')
     require(manifest.get('pipeline_version') in SUPPORTED_PIPELINES, 'PREVIEW_PIPELINE_VERSION_MISMATCH')
     all_rows = {str(row['id']): row for kind in KINDS for row in records[kind]}
     require(len(all_rows) == sum(len(records[kind]) for kind in KINDS), 'PREVIEW_DUPLICATE_RECORD_ID')
@@ -153,7 +200,7 @@ def build_passages(generation, records, decisions, manifest):
             require(current_reference_gate.get('passed') is True
                     and citation.get('surface_reference_gate') == current_reference_gate,
                     'PREVIEW_NAMED_REFERENCE_AUTHORITY_INVALID')
-            if REVIEW_VERSION == 'source-semantic-review-v7':
+            if REVIEW_VERSION in ('source-semantic-review-v7','source-semantic-review-v8'):
                 current_qualification = qualification_gate(claim.get('text') or '', cited_payload['source_reading_segments'])
                 require(citation.get('version') == REVIEW_VERSION+'-cited-support'
                         and current_qualification['passed'] is True
@@ -170,6 +217,8 @@ def build_passages(generation, records, decisions, manifest):
                         and obligation.get('input_sha256') == digest({'claim':claim,
                             'obligations':checked['obligations'],'source_regions':obligation_sources}),
                         'PREVIEW_OBLIGATION_AUTHORITY_INVALID')
+            if REVIEW_VERSION == 'source-semantic-review-v8':
+                require_role_binding(citation.get('role_binding_review'),claim,regions,cited_payload['source_reading_segments'])
             require(citation.get('passed') is True and citation.get('source_sha256') == digest(regions)
                     and citation.get('input_sha256') == digest(cited_payload)
                     and citation.get('source_regions') == regions and citation.get('support_span_refs') == refs

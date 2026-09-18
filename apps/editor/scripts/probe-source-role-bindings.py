@@ -16,8 +16,10 @@ p=argparse.ArgumentParser()
 p.add_argument('generation');p.add_argument('module');p.add_argument('--pages',required=True)
 p.add_argument('--support-module',action='append',default=[])
 p.add_argument('--reuse-probe')
+p.add_argument('--source-only',action='store_true')
 a=p.parse_args();generation=str(uuid.UUID(a.generation));pages=sorted({int(v) for v in a.pages.split(',')})
 assert pages and min(pages)>0 and len(pages)<=10
+assert not a.source_only or a.reuse_probe, 'Source-only reuse needs actual prior proof'
 assert sys.platform.startswith('linux') and os.environ.get('EDITOR_VERIFY_REMOTE_HOST')==socket.gethostname()
 root=Path(os.environ['EDITOR_VERIFY_ROOT']);module=Path(a.module).read_text()
 support_modules={}
@@ -74,8 +76,13 @@ for row in p['records']['source_passages']:
  if p['reuse']:
   old=p['reuse']['rows'][row['id']];prior=old['review']
   assert old['passage_sha256']==m.digest(data) and prior['claim_sha256']==m.digest(data['claim']['text']) and prior['source_sha256']==m.digest(regions),'REUSE_INPUT_CHANGED'
-  review=m.review_from_graphs(data['claim'],regions,prior['source_graph'],prior['claim_graph'],model,artifact_version=prior['version'],artifact_sha256=p['reuse']['artifact_sha256'],artifact_path=p['reuse']['artifact_path'],artifact_code_sha256=p['reuse']['artifact_code_sha256'])
-  assert review['source_graph']==prior['source_graph'] and review['claim_graph']==prior['claim_graph'],'REUSED_GRAPH_CHANGED'
+  provenance={'artifact_version':prior['version'],'artifact_sha256':p['reuse']['artifact_sha256'],'artifact_path':p['reuse']['artifact_path'],'artifact_code_sha256':p['reuse']['artifact_code_sha256']}
+  if p['reuse_source_only']:
+   review=m.review_with_source_graph(data['claim'],regions,prior['source_graph'],model,**provenance)
+  else:
+   review=m.review_from_graphs(data['claim'],regions,prior['source_graph'],prior['claim_graph'],model,**provenance)
+   assert review['claim_graph']==prior['claim_graph'],'REUSED_CLAIM_GRAPH_CHANGED'
+  assert review['source_graph']==prior['source_graph'],'REUSED_SOURCE_GRAPH_CHANGED'
  else:
   review=m.review(data['claim'],regions,model)
  output.append({'passage_id':row['id'],'passage_sha256':m.digest(data),'pdf_page':data['pdf_page'],'claim':data['claim'],'review':review})
@@ -84,7 +91,7 @@ for row in p['records']['source_passages']:
 after=fingerprint();assert before==after,'PROTECTED_RECORDS_CHANGED'
 print(json.dumps({'generation_id':p['generation'],'pages':p['pages'],'candidate_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'support_module_sha256':{name:hashlib.sha256(source.encode()).hexdigest() for name,source in p['support_modules'].items()},'runtime_code_manifest':code_manifest(),'protected_before':before,'protected_after':after,'api_pg_match':True,'application_writes':0,'semantic_acceptance':False,'results':output},ensure_ascii=False))
 '''
-payload={'generation':generation,'pages':pages,'module':module,'support_modules':support_modules,'records':records,'reuse':reuse}
+payload={'generation':generation,'pages':pages,'module':module,'support_modules':support_modules,'records':records,'reuse':reuse,'reuse_source_only':a.source_only}
 raw=subprocess.check_output(['docker','compose','exec','-T','api','python','-c',code],cwd=root,input=json.dumps(payload).encode())
 report=json.loads(raw)
 destination=root/'evidence'/('source-role-bindings-probe-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.json')

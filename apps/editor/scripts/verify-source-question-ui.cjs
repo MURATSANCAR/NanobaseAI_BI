@@ -38,6 +38,27 @@ function protectedState() {
 }
 const countJobs = () => sql(`SELECT count(*)::int FROM editor.jobs WHERE generation_id='${generation}' AND task='question'`);
 const job = id => sql(`SELECT row_to_json(j) FROM editor.jobs j WHERE id='${uuid(id)}'`);
+// Freeze both independent modules before any browser/job action. Projection is
+// installed first because the role reference imports it when verifying claims.
+const referenceModules = [
+  ['role_projection_reference', 'role_projection_reference.py', 'role_projection_reference_sha256'],
+  ['source_role_reference', 'source_role_reference.py', 'role_reference_sha256'],
+];
+const referenceBootstrapLines = ['import base64, hashlib, sys, types'];
+for (const [name, filename, proofKey] of referenceModules) {
+  const bytes = fs.readFileSync(path.join(__dirname, filename));
+  const sha256 = crypto.createHash('sha256').update(bytes).digest('hex');
+  report[proofKey] = sha256;
+  referenceBootstrapLines.push(
+    'reference_source = base64.b64decode(' + JSON.stringify(bytes.toString('base64')) + ', validate=True)',
+    'assert hashlib.sha256(reference_source).hexdigest() == ' + JSON.stringify(sha256),
+    'reference_module = types.ModuleType(' + JSON.stringify(name) + ')',
+    'reference_module.__file__ = ' + JSON.stringify('<frozen-' + name + '>'),
+    'sys.modules[' + JSON.stringify(name) + '] = reference_module',
+    "exec(compile(reference_source, reference_module.__file__, 'exec'), reference_module.__dict__)",
+  );
+}
+const roleReferenceBootstrap = referenceBootstrapLines.join('\n') + '\n';
 const referencePython = String.raw`
 import sys,json,hashlib,re
 from editor.config import connection
@@ -100,15 +121,22 @@ for c in answer['claims']:
  claim={key:c.get(key) for key in ('text','actor','speaker','narrative_mode','polarity')}
  claim.update(kind='STATEMENT',span_refs=p['source_span_refs'],quote=p['text'])
  assert review['input_sha256']==digest({'claim':claim,'cited_source_regions':p['regions'],'source_reading_segments':review['source_reading_segments']})
+ assert review.get('version') in tuple('source-semantic-review-v'+str(i)+'-cited-support' for i in range(2,9))
  axes=('entailment','actor','speaker','polarity','narrative_mode')
- if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support'):
+ if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support','source-semantic-review-v8-cited-support'):
   axes+=('epistemic_strength',)
   assert review.get('surface_reference_gate',{}).get('passed') is True
-  if review.get('version')=='source-semantic-review-v7-cited-support':
+  if review.get('version') in ('source-semantic-review-v7-cited-support','source-semantic-review-v8-cited-support'):
    assert review.get('qualification_gate',{}).get('passed') is True
    obligation=review.get('obligation_review',{})
    assert obligation.get('version') in ('source-obligations-v2','source-obligations-v3','source-obligations-v4') and obligation.get('passed') is True
    assert obligation.get('coverage_complete') is True and obligation.get('metrics',{}).get('finish_reason')=='stop'
+   if review['version']=='source-semantic-review-v8-cited-support':
+    from source_role_reference import verify_role_bindings
+    role=review['role_binding_review']
+    assert role.get('version')=='source-role-bindings-v8' and role.get('passed') is True
+    assert role.get('reading_views')==review['source_reading_segments']
+    verify_role_bindings(claim,p['regions'],role)
  assert review['model_result']['checks']=={key:'PASS' for key in axes}
  assert review['model_result']['support_span_refs'] and set(review['model_result']['support_span_refs'])<=set(p['source_span_refs'])
  assert review['metrics']['finish_reason']=='stop' and c['relevance_review']['metrics']['finish_reason']=='stop'
@@ -184,7 +212,7 @@ print(json.dumps({'api_pg_answer_equal':True,'source_regions_verified':True,'pas
       const actual = await terminal(queued.job_id);
       fs.writeFileSync(path.join(out, `question-${index + 1}.json`), JSON.stringify(actual, null, 2), { mode: 0o600 });
       assert(actual.job_status === 'COMPLETED' && actual.answer, 'Question did not produce a completed real answer');
-      const proof = JSON.parse(command(['docker', 'compose', 'exec', '-T', 'api', 'python', '-c', referencePython], JSON.stringify(actual)));
+      const proof = JSON.parse(command(['docker', 'compose', 'exec', '-T', 'api', 'python', '-c', roleReferenceBootstrap + referencePython], JSON.stringify(actual)));
       report.scenarios.push({ scenario: 'QUESTION_' + (index + 1), job_id: queued.job_id, question, ...proof }); save();
       if (index === 1) assert(actual.answer.status === 'INSUFFICIENT_EVIDENCE', 'Unsupported birth-date question was not insufficient; preserve result for correction');
       const postCount = posts.length, jobs = countJobs();

@@ -16,6 +16,7 @@ import uuid
 import unicodedata
 from source_obligation_reference import verify_obligations
 from source_qualification_reference import verify_qualification
+from source_role_reference import verify_role_bindings
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
@@ -410,26 +411,27 @@ for page in pages.values():
 
 for row in api['semantic_reviews']:
     review = row['data']; page = pages[review['pdf_page']]
+    assert review.get('version') in tuple('source-semantic-review-v'+str(i) for i in range(1,9)), 'UNKNOWN_SEMANTIC_REVIEW_VERSION'
     assert review['input_page_claims_sha256'] == digest(page), 'REVIEW_INPUT_MISMATCH'
     assert review['semantic_acceptance'] is False and review['source_records_modified'] is False
     candidates = page['claims']+page['blocked_claims']
-    if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7'):
+    if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
         verify_purpose(review['pdf_page'],review['page_purpose_gate'])
     assert len(review['claims']) == len(candidates), 'REVIEW_COVERAGE_MISMATCH'
     for verdict in review['claims']:
         candidate = candidates[verdict['candidate_ordinal']]
         assert verdict['candidate_sha256'] == digest(candidate), 'CANDIDATE_HASH_MISMATCH'
         if verdict['eligible_for_synthesis']:
-            if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7'):assert review['page_purpose_gate']['passed']
+            if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):assert review['page_purpose_gate']['passed']
             assert verdict['source_gate']=='MATCH' and verdict['status']=='MACHINE_SUPPORTED_CANDIDATE'
             assert all(value=='PASS' for value in verdict['model_result']['checks'].values())
-            if review['version'] in ('source-semantic-review-v6','source-semantic-review-v7'):
+            if review['version'] in ('source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
                 assert set(verdict['model_result']['checks'])=={'entailment','actor','speaker','polarity','narrative_mode','epistemic_strength','page_role'}
             assert all(spans[ref]['status']=='TEXT_AGREED' and spans[ref]['pdf_page']==review['pdf_page'] for ref in candidate['span_refs'])
             assert verdict['identity_gate'] in ('NOT_REQUIRED','SOURCE_VERIFIED')
             assert verdict['claim_id'] not in eligible, 'CLAIM_ID_COLLISION'
             carried=candidate['span_refs']
-            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7'):
+            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
                 carried=verdict['verified_support_span_refs']
                 assert set(candidate['span_refs'])<=set(carried)
                 assert set(verdict['model_result']['support_span_refs'])<=set(carried)
@@ -438,22 +440,27 @@ for row in api['semantic_reviews']:
                 regions=[{'span_id':ref,**{k:spans[ref][k] for k in ('text','bbox','render_sha256')}} for ref in carried]
                 assert verdict['verified_support_regions']==regions
                 cited=verdict['citation_review'];assert cited['passed'] is True
-                if review['version'] in ('source-semantic-review-v6','source-semantic-review-v7'):
+                assert cited.get('version') in tuple('source-semantic-review-v'+str(i)+'-cited-support' for i in range(2,9)), 'UNKNOWN_CITATION_REVIEW_VERSION'
+                if review['version'] in ('source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
                     verify_surface_references(candidate,cited['source_reading_segments'],cited['surface_reference_gate'])
-                    if review['version']=='source-semantic-review-v7':
+                    if review['version'] in ('source-semantic-review-v7','source-semantic-review-v8'):
                         verify_qualification(candidate,cited['source_reading_segments'],cited.get('qualification_gate'))
                     assert set(cited['model_result']['checks'])=={'entailment','actor','speaker','polarity','narrative_mode','epistemic_strength'}
                 assert cited['source_sha256']==digest(regions)
                 assert all(v=='PASS' for v in cited['model_result']['checks'].values())
-                if review['version'] in ('source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7'):
+                if review['version'] in ('source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5','source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
                     views=cited['source_reading_segments'];view_refs=[ref for view in views for ref in view['span_refs']]
                     assert len(view_refs)==len(set(view_refs)) and set(view_refs)==set(carried)
                     for view in views:verify_reading_view(view,carried,review['pdf_page'])
                     claim={k:candidate.get(k) for k in ('kind','text','quote','span_refs','actor','speaker','narrative_mode','polarity')}
                     assert cited['input_sha256']==digest({'claim':claim,'cited_source_regions':regions,'source_reading_segments':views})
-                    if review['version']=='source-semantic-review-v7':
-                        assert cited.get('version')=='source-semantic-review-v7-cited-support'
+                    if review['version'] in ('source-semantic-review-v7','source-semantic-review-v8'):
+                        assert cited.get('version')==review['version']+'-cited-support'
                         verify_obligations(claim,regions,cited['obligation_review'])
+                        if review['version']=='source-semantic-review-v8':
+                            assert cited['role_binding_review']['version']=='source-role-bindings-v8' and cited['role_binding_review']['passed'] is True
+                            assert cited['role_binding_review']['reading_views']==cited['source_reading_segments']
+                            verify_role_bindings(claim,regions,cited['role_binding_review'])
             eligible[verdict['claim_id']] = {**candidate,'span_refs':carried}
 for row in api['figure_identity']:
     identity = row['data']
@@ -475,6 +482,7 @@ for row in api['figure_comparisons']:
         assert hashlib.sha256(base64.b64decode(image,validate=True)).hexdigest()==wanted, 'IDENTITY_CROP_MISMATCH'
 for row in api['semantic_synthesis']:
     result = row['data']
+    assert result.get('version') in tuple('source-semantic-review-v'+str(i) for i in range(1,9)), 'UNKNOWN_SYNTHESIS_VERSION'
     assert result['semantic_acceptance'] is False and result['complete_book'] is False
     assert result['input_claim_count']==len(eligible)
     for statement in result['statements']:
@@ -482,15 +490,19 @@ for row in api['semantic_synthesis']:
         assert statement['verification']['supported'] is True
         expected_spans = {ref for cid in statement['claim_refs'] for ref in eligible[cid]['span_refs']}
         assert set(statement['source_span_refs'])==expected_spans
-        if result['version'] in ('source-semantic-review-v6','source-semantic-review-v7'):
+        if result['version'] in ('source-semantic-review-v6','source-semantic-review-v7','source-semantic-review-v8'):
             views=statement['source_reading_segments']
             assert {ref for view in views for ref in view['span_refs']}==expected_spans
             for view in views:verify_reading_view(view,expected_spans,spans[view['span_refs'][0]]['pdf_page'])
             verify_surface_references(statement,views,statement['surface_reference_gate'])
-            if result['version']=='source-semantic-review-v7':
+            if result['version'] in ('source-semantic-review-v7','source-semantic-review-v8'):
                 verify_qualification(statement,views,statement.get('qualification_gate'))
                 obligation_regions=[{'span_id':ref,**{k:spans[ref][k] for k in ('text','bbox','render_sha256')}} for ref in sorted(expected_spans)]
                 verify_obligations({'kind':statement['kind'],'text':statement['text']},obligation_regions,statement['obligation_review'])
+                if result['version']=='source-semantic-review-v8':
+                    assert statement['role_binding_review']['version']=='source-role-bindings-v8' and statement['role_binding_review']['passed'] is True
+                    assert statement['role_binding_review']['reading_views']==statement['source_reading_segments']
+                    verify_role_bindings({'kind':statement['kind'],'text':statement['text']},obligation_regions,statement['role_binding_review'])
 model_calls={};incomplete_calls=[]
 def verify_attempts(value):
     if isinstance(value,list):

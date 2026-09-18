@@ -8,7 +8,7 @@ import json
 import re
 import unicodedata
 
-VERSION = 'source-semantic-review-v7'
+VERSION = 'source-semantic-review-v8'
 AXES = ('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode', 'epistemic_strength', 'page_role')
 CITED_AXES = tuple(axis for axis in AXES if axis != 'page_role')
 
@@ -109,6 +109,12 @@ def review_cited_support(claim, refs, allowed, model, source_rows):
         output['obligation_review']=obligations
         if obligations['passed'] is not True:
             output.update(passed=False,reason=obligations['reason'])
+    if output['passed']:
+        from editor.source_role_bindings import review as review_role_bindings
+        role=review_role_bindings(claim,regions,model,reading_views=reading)
+        output['role_binding_review']=role
+        if role.get('passed') is not True:
+            output.update(passed=False,reason=role.get('reason','ROLE_BINDING_REQUIRES_REVIEW'))
     return output
 
 
@@ -387,6 +393,13 @@ def synthesize_reviewed(pages, reviews, model, source_spans=None):
                 entry['obligation_review']=obligations
                 if obligations['passed'] is not True:
                     entry['reason']=obligations['reason']
+                    output['blocked_statements'].append(entry)
+                    continue
+                from editor.source_role_bindings import review as review_role_bindings
+                role=review_role_bindings(obligation_claim,source_regions(sorted(carried),source_by_id),model,reading_views=reading)
+                entry['role_binding_review']=role
+                if role.get('passed') is not True:
+                    entry['reason']=role.get('reason','ROLE_BINDING_REQUIRES_REVIEW')
                     output['blocked_statements'].append(entry)
                     continue
                 entry['verification_status'] = 'MACHINE_SOURCE_SUPPORTED_DRAFT'

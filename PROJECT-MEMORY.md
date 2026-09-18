@@ -6,6 +6,10 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
+## 18 Eylül — kişi/alıntı bağlama düzeltmesi, henüz aday
+
+Semantik V8 adayı alıntı ve senteze mevcut kapılarla birlikte zorunlu kişi–eylem denetimi ekler; eski belirsizlik/dayanak kontrolleri korunur. Konuşmacı–alıntının aynı kaynak kenarından gelmesi, anonim ortak öznenin farklı kişileri birleştirmemesi ve tırnaklı zamir kontrolü kodlandı. Bağımsız rol kanıt denetleyicisi eklendi. Son bileşen 5 yapısal PASS/1 doğru ret/1 eksik özne incelemesi verdi; bir önceki 6 PASS sonraki koda taşınmadı. Birebir NOMINAL anlatı taşıma düzeltmesinden sonra 14 gerçek pasajın birleşik alıntı+rol kabulü yürütülüyor. R5 canlı sürüm değiştirilmedi; kitap/inceleme verisine yazılmadı, yeni tam kitap koşusu yok. [Kod, sürümler ve kabul sınırı](docs/editor/2026-09-18-role-binding-v8-candidate.md).
+
 ## Güncel canlı sürüm — 18 Eylül, V16-r5 koşusu tamamlandı, anlam kabulü açık
 
 Canlı backend/document `source-analysis-v16-r5-20260918`; kaynak anlık görüntüsü main `1200bdd859bd9b704e62f3af754cea81f27a20f0`. 52 backend dosyası ve 11 web kaynak dosyası imajlarla eşleşti; gerçek API/PG ve release kontrolü geçti. P5 etki ekranı da canlı webde. Dağıtım sözleşmesi `runtime/v16-r5-deployment-contract.json`; kanıt `evidence/v16-r5-build-proof.json`.
