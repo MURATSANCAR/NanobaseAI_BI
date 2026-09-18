@@ -1,10 +1,12 @@
 # NanobaseAI BI — Proje Belleği
 
-## 18 Eylül — V12 teknik koşu tamamlandı, V13 aday
+## 18 Eylül — V13-r2 canlı kabul
 
 GPU OCR gateway kodu `apps/editor/gpu/` altında sürümlendi; idle/istek yarış düzeltmesi ayrı GPU adayında ve ardından ana gateway8010'da gerçek kitap kırpımı ve HTTP gövde kontrollerinden geçti. OCR modeli yeniden başlatılmadan V2 yayımlandı; canlı idle sınır kabulü henüz açık. [Kapsam](apps/editor/gpu/README.md).
 
-V12 nesli `2d774b82-e04f-45a3-92fc-eadaa8a37934` 48/48 teknik kontrol ve türetilmiş kayıtların gerçek API/PostgreSQL eşliğiyle tamamlandı; sonuç NEEDS_REVIEW, tam anlamsal kabul yok. V13 küçük kaynak bölgeleri/sayfa bağlamı/sınırlı konuşma bağlantısı API, worker, document ve web olarak yayımlandı. Yeni iş `4ca9b23a-7027-4909-b49f-1fd26c93b497`, nesil `18417f1b-d9db-4873-aeb8-b8c719fc0d0d`; gerçek uçtan uca kabul sürüyor. [Güncel ayrıntılar](docs/editor/2026-09-18-source-analysis-v13.md).
+Gateway V2 normal yaşam döngüsü de doğrulandı:603sn doğal idle kapanması, gerçek kırpımla otomatik açılma ve200 yanıt. Web R3 hata durumunda mobil taşma ve erken üst kaynak bulunamadı mesajını düzeltti; gerçek fragment kartı dört genişlikte API metin/okuyucu/bbox eşliğiyle geçti. Adversarial idle/istek stres matrisi ve tam anlamsal kabul açık kalır.
+
+V12 nesli48/48 teknik kontrol ve türetilmiş API/PostgreSQL eşliğiyle tamamlandı; tam anlamsal kabul yok. V13-r1 kaynak48/48 ve27 fragment üretti, kimlik kolundaki native UUID hatası R2 ile düzeltildi. Değişen kodla eski nesli devam ettirmeme koruması korunur. Canlı backend `source-analysis-v13-r2-20260918`; iş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` gerçek kabulde. [Güncel ayrıntılar](docs/editor/2026-09-18-source-analysis-v13.md).
 
 ## 18 Eylül — kimlik ve anlamsal analiz V12
 
