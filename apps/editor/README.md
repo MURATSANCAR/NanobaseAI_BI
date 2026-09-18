@@ -1,3 +1,9 @@
+## Bağlayıcı kural — bütün kitaplar için genel yapı
+
+Kullanıcının18Eylül2026talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
+
+Ayrıntı: [AGENTS.md](AGENTS.md).
+
 > Güncel backend/document: `source-analysis-v15-r7-20260918`; web: `source-preview-v15-r2-20260918`. Gerçek soru akışında bulunan API500, eksik sözcük atfı ve cevap güncelliği sorunları kodda düzeltildi. Yeni canlı soru/tam kitap/arama restore kabulü sürüyor. [Ayrıntılar](../../docs/editor/2026-09-18-source-analysis-v15.md).
 
 # Editör modülü — bağımsız kurulum

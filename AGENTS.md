@@ -2,7 +2,11 @@
 
 ## Editör çalışma kaydı ve veri bütünlüğü
 
-Kullanıcının 17 Eylül ek talebi: bütün Editör geliştirmeleri başka kitaplara da uygulanabilir olmalıdır. Üretim kodu, prompt ve kabul kapılarında kitap adı/hash'i, sabit sayfa numarası, karakter adı veya beklenen cevap üzerinden özel durum kurulmaz. Gerçek kitap kimlikleri yalnız regresyon girdisi/kanıt kaydında bulunabilir. Dil, dosya boyutu, sayfa ve işlem sınırları açık sözleşme/yapılandırma ile yönetilir. Bir kitaptaki başarı farklı kitaplarda doğrulanmış başarı sayılmaz; aynı yazılan adlar tek karakter kimliği olarak kanıtsız birleştirilmez.
+Kullanıcının 18 Eylül 2026'da yeniden kesinleştirdiği bağlayıcı kural: Editörde hiçbir üretim kodu veya geliştirme mevcut kitaba özel yapılamaz; yapı yüklenen bütün kitaplar için genel olmalıdır. Bu kural OCR, yerleşim, kaynak seçimi, figür/karakter/konuşmacı, olay, edebî analiz, arama, soru-cevap, prompt, arayüz, veri modeli, migration, yapılandırma ve kurulumun tamamını kapsar.
+
+Üretim kodu, prompt ve kabul kapılarında kitap adı/hash'i, sabit sayfa numarası, karakter adı, bilinen cümle veya beklenen cevap üzerinden özel durum, gizli sözlük, cevap anahtarı ya da koşullu istisna kurulmaz. Aynı istisnayı config, veritabanı veya prompt dosyasına taşımak da yasaktır. İşleme kararları yüklenen kaynağın ölçümleri, geometrisi ve doğrulanabilir kanıtlarından türetilir; dil, dosya boyutu, sayfa ve işlem sınırları açık genel sözleşme/yapılandırma ile yönetilir.
+
+Gerçek kitap kimlikleri ve sorunlu sayfalar yalnız ayrı doğrulama senaryolarında ve kanıt kayıtlarında bulunabilir; beklenen cevap üretim akışına/model girdisine sızdırılmaz. Bir kitaptaki başarı farklı kitaplarda doğrulanmış başarı sayılmaz; aynı yazılan adlar tek karakter kimliği olarak kanıtsız birleştirilmez. Her düzeltmede genel hata sınıfı ve farklı kitaplara uygulanabilirlik açıklanır; genellenebilirlik kanıtı yoksa açıkça DOĞRULANAMADI yazılır. Modülün ayrıntılı kuralı: [apps/editor/AGENTS.md](apps/editor/AGENTS.md).
 
 Kitap metni, model cevabı, konuşmacı ve inceleme kararı elle düzeltilmez; beklenen cevap model girdisine taşınmaz. Genel kod düzeltilir ve gerçek kaynak yeni nesilde yeniden doğrulanır. İşleme tamamlanması anlamsal kabul değildir.
 

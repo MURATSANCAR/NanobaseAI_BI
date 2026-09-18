@@ -2,6 +2,8 @@
 
 ## Editör dokümantasyon dizini
 
+**Bağlayıcı genellik kuralı (18 Eylül 2026):** Editörde hiçbir üretim geliştirmesi mevcut kitaba özel olamaz. Kitap/sayfa/karakter/beklenen cevap üzerinden istisna yasaktır; doğrulama örnekleri üretim akışından ayrı tutulur. [Modül kuralları](apps/editor/AGENTS.md) ve [ana kurallar](AGENTS.md) her geliştirmede uygulanır.
+
 Editörün ayrıntılı yapılan işleri, hataları, kod çözümleri, gerçek sunucu doğrulamaları ve açık kapsamı: [17 Eylül durum ve devir kaydı](docs/editor/2026-09-17-status-and-handoff.md). İlgili belge haritası bu kaydın sonundadır. Dokümantasyonda işleme, kaynak eşliği, kurulum kabulü ve anlamsal kabul ayrı yazılır; yalnız kodun veya kaydın bulunması başarı sayılmaz.
 
 Her oturumda şu iki dosyayı oku:

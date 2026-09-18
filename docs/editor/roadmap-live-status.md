@@ -1,5 +1,11 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+## Bağlayıcı kural — bütün kitaplar için genel yapı
+
+Kullanıcının18Eylül2026talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
+
+Bu kural P0–P7 paketlerinin tamamında geçerlidir: [modül talimatları](../../apps/editor/AGENTS.md).
+
 > **18 Eylül — V15 yayını, R5 tamamlanmış kabulü:** Canlı backend/document `source-analysis-v15-r5-20260918`, web `source-preview-v15-r2-20260918`. 49 backend dosyasının tree SHA256 değeri `71a90dcd7ed8337e87f89eeedae345390a0da2d94aabf25ebf5e466c2b771e75`; web imajı `sha256:37c90054ed5b94fbf5189e44d324ba2801436a5c655871dabf4ebe150d135f90`. **Tamamlanmış son kitap kabulü V14-r5 nesli `d9ff5c60-dd47-47cb-bf66-70a5cad59cb1` içindir:** 48 sayfa, 896 kaynak anlaşması/253 inceleme, 61 sınırlı semantik uygun aday; gerçek dolu yedek/ayrı restore ve mobil kabulü 06:08 UTC'de geçti. Bu eski neslin sonucu yeni V15 kodunun tam kitap kabulü değildir.
 >
 > V15 tam kaynak koşusu henüz başlamadı. Bu durum kaydı hazırlanırken gerçek ilk kaynaklı soru işi `0d53b588-e40e-4d0d-96ca-c8d6d3d0008b` çalışıyordu; soru/indeks/cevap kabulü henüz verilmedi. Kaynak preview yalnız **PARTIAL_SOURCE_SUPPORTED_DRAFT** kapsamındadır; yayımlanmış cevap veya tam kitap anlamsal kabulü değildir. Son web imajının doğru analiz kaydını yeniden açması 64 sayfalık farklı gerçek kitapla, ayrı API18810/PostgreSQL ve dört genişlikte geçti. [V15 sürüm/kanıt](2026-09-18-source-analysis-v15.md), [son web navigasyon kabulü](2026-09-18-upload-analysis-navigation-acceptance.md). Aşağıdaki R4 ve önceki sonuçlar tarihçedir.
