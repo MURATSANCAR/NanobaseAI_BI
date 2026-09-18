@@ -820,6 +820,11 @@ _REFUSALS = {
     "qualifier": "'{terms}' koşulunu veride karşılayan bir tanım yok; onu yok sayıp daha geniş bir soruyu cevaplamak doğru olmaz.",
     "vague": "Hangi ölçüyü ve hangi kırılımı istediğinizi yazar mısınız? (ör. ciro, iade oranı, sipariş sayısı)",
     "off_topic": "Yalnızca bu veri kaynağındaki verilerle ilgili soruları cevaplayabiliyorum.",
+    # Every word was found in the catalog and still no query could be written. Calling that question
+    # "not about this data" is false — it is about this data, and the person would go and rephrase a
+    # question that was understood. Say what was understood and what is missing.
+    "uncombined": ("Sorudaki kavramlar tanımlı ({terms}), ama bunları tek bir hesapta birleştiren bir tanım "
+                   "veya ilişki yok; bu yüzden cevap üretemedim."),
 }
 
 
@@ -846,6 +851,9 @@ def refusal_for(q: SemanticQuery) -> str:
         return _REFUSALS["qualifier"].format(terms=", ".join(q.unhandled[:3]))
     if q.shape == "UNDERSPECIFIED" or not q.slots:
         return _REFUSALS["vague"] if q.temporal or q.shape else _REFUSALS["off_topic"]
+    understood = list(dict.fromkeys(s.term for s in q.slots if s.mapping and s.term))
+    if understood:
+        return _REFUSALS["uncombined"].format(terms=", ".join(understood[:5]))
     return _REFUSALS["off_topic"]
 
 
