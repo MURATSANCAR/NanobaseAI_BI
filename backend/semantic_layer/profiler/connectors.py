@@ -264,11 +264,52 @@ class MSSQLConnector(_DbApiBase):
         # Logo declares no foreign keys at all, so the honest answer above is an empty graph and every
         # join has to be guessed from column names. The vendor's dictionary states the graph outright.
         # What the database itself declares always wins; the dictionary only fills what is missing.
-        extra = self._dictionary_foreign_keys(schema)
+        extra = self._dictionary_foreign_keys(schema) + self._dynamics_foreign_keys(schema)
         if not extra:
             return declared
         have = {(fk["table"].upper(), fk["column"].upper()) for fk in declared}
-        return declared + [fk for fk in extra if (fk["table"].upper(), fk["column"].upper()) not in have]
+        out = list(declared)
+        for fk in extra:
+            key = (fk["table"].upper(), fk["column"].upper())
+            if key not in have:
+                have.add(key)
+                out.append(fk)
+        return out
+
+    def _dynamics_foreign_keys(self, schema: str) -> list[dict[str, str]]:
+        """Dynamics CRM declares no foreign keys either, but its own metadata names every lookup:
+        MetadataSchema.Relationship says which attribute of which entity points at which entity's
+        key. Read as joins between the `<Entity>Base` tables the schema actually holds; without it
+        the column-name guess pointed every lookup back at its own table."""
+        names = {n.upper(): n for n in self._table_names(schema)}
+        if not any(n.endswith("BASE") for n in names):
+            return []                          # not a Dynamics schema
+        try:
+            _, rows = self._rows(
+                """SELECT e1.Name, a1.Name, e2.Name, a2.Name
+                   FROM MetadataSchema.Relationship r
+                   JOIN MetadataSchema.Entity e1 ON e1.EntityId = r.ReferencingEntityId
+                   JOIN MetadataSchema.Entity e2 ON e2.EntityId = r.ReferencedEntityId
+                   JOIN MetadataSchema.Attribute a1 ON a1.AttributeId = r.ReferencingAttributeId
+                   JOIN MetadataSchema.Attribute a2 ON a2.AttributeId = r.ReferencedAttributeId
+                   WHERE r.OverwriteTime = '1900-01-01' AND e1.OverwriteTime = '1900-01-01' AND e2.OverwriteTime = '1900-01-01'
+                     AND a1.OverwriteTime = '1900-01-01' AND a2.OverwriteTime = '1900-01-01'""",
+                (),
+            )
+        except Exception as e:  # noqa: BLE001
+            log.debug("Dynamics metadata unavailable: %s", e)
+            return []
+        links: list[dict[str, str]] = []
+        for ent, attr, ref_ent, ref_attr in rows:
+            if str(ref_ent).lower() == "owner":
+                ref_ent, ref_attr = "SystemUser", "SystemUserId"      # an owner is a user (or a team); the user table names people
+            t, rt = names.get(f"{ent}BASE".upper()), names.get(f"{ref_ent}BASE".upper())
+            if not t or not rt or t == rt and str(attr).lower() == str(ref_attr).lower():
+                continue                       # "Owner", "BusinessUnit" and the like are not scanned tables
+            links.append({"table": t, "column": str(attr), "ref_table": rt, "ref_column": str(ref_attr)})
+        if links:
+            log.info("Dynamics metadata supplied %d lookups the database does not declare", len(links))
+        return links
 
     def _table_names(self, schema: str) -> list[str]:
         """The scanned table names, read once per schema — both dictionary lookups need them."""

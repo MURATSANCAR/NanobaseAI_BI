@@ -89,3 +89,11 @@ def test_a_synonym_typed_by_a_person_is_found_in_its_normalised_form(catalog, pr
     catalog.update_concept(c.id, synonyms=["çek", "çekler"])
     idx = catalog.certified_index(TENANT, DS)
     assert "cek" in idx, [k for k in idx if "ek" in k][:10]
+
+
+def test_a_cardinal_wearing_a_case_ending_is_still_a_number():
+    from semantic_layer.normalize import cardinal
+    assert cardinal("yirminin") == 20
+    assert cardinal("beşten") == 5
+    assert cardinal("yüzü") == 100
+    assert cardinal("onun") is None          # pronoun, not "on" + genitive

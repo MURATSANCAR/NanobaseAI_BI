@@ -2157,13 +2157,23 @@ class CompilerRouter:
 
 
 def default_filters_provider(store: CatalogStore, tenant_id: str, datasource_id: str) -> Callable[[str], list[Mapping]]:
-    def _get(entity: str) -> list[Mapping]:
-        out = []
-        for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.DEFAULT_FILTER, status=ConceptStatus.CERTIFIED, limit=1000):
+    """Default row scopes by entity. Read once per provider (the router rebuilds it when the catalog
+    moves): with one scope per CRM table there are hundreds, and reading them all on every compile
+    was hundreds of round trips for one answer."""
+    cache: dict[str, list[Mapping]] = {}
+    loaded = False
+
+    def _load() -> None:
+        nonlocal loaded
+        for c in store.find_concepts(tenant_id, datasource_id, semantic_type=SemanticType.DEFAULT_FILTER, status=ConceptStatus.CERTIFIED, limit=5000):
             for m in store.list_mappings(c.id):
-                if m.entity == entity:
-                    out.append(m)
-        return out
+                cache.setdefault(m.entity, []).append(m)
+        loaded = True
+
+    def _get(entity: str) -> list[Mapping]:
+        if not loaded:
+            _load()
+        return list(cache.get(entity, []))
     return _get
 
 
@@ -2228,6 +2238,12 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
     # the sum of the very rows shown. Only when every row is in hand and the column is additive — a
     # ratio, an average or a price summed over groups is a number that means nothing.
     from semantic_layer.normalize import fold as _fold
+    # A column that is NULL on every row shown is a field nobody filled in, not a figure of nothing;
+    # "Belirtilmemiş" down a whole column says so only if the reader counts.
+    if len(rows) == total and rows:
+        blank = [c for c in columns if all(r.get(c) is None for r in rows)]
+        if blank:
+            lines.append("Not: " + ", ".join(f"'{column_label(c)}'" for c in blank) + " sütunu hiçbir satırda dolu değil (veri girilmemiş).")
     if re.search(r"\btoplam", _fold(question or "")) and len(rows) == total:
         additive = [c for c in measures if not re.search(r"oran|yuzde|ortalama|pay|fiyat|sira|rank|_ref$|^ref|kod|yil|ay$", _fold(c))
                     and all(isinstance(r.get(c), (int, float)) or r.get(c) is None for r in rows)]

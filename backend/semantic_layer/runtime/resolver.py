@@ -301,6 +301,9 @@ class SemanticResolver:
         # the measure's scope, for example dropping returns from net sales.
         n_max = max([3] + [len(key.split()) for key in index])
         qf = extract_question_facts(question, n_max=n_max)
+        # A written-out number is a number: "beş" is the five of "en pahalı beş yazar", not a term the
+        # catalog may know as a column ("5 yaş"). Bare cardinals are never looked up.
+        qf.terms = [t for t in qf.terms if not (t[1] - t[0] == 1 and cardinal(qf.tokens[t[0]]) is not None)]
         # In a ranking request, an explicitly named certified measure (including
         # parenthesized units) must not be discarded as generic query grammar.
         rank_requested = qf.limit is not None or any(
@@ -611,7 +614,7 @@ class SemanticResolver:
         #     and then a certified term that contains it and belongs to exactly one concept ("alım"
         #     occurs only inside "mal alım"). Both are INFERRED, never certified by this step.
         for k, tok in enumerate(qf.tokens):
-            if k in consumed or not is_domain_candidate(tok) or self._modifier_candidate(qf.tokens, k, consumed):
+            if k in consumed or not is_domain_candidate(tok) or self._modifier_candidate(qf.tokens, k, consumed) or cardinal(tok) is not None:
                 continue
             slot = self._backoff(tok, k, index)
             if slot is not None:
@@ -666,6 +669,13 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
+        # "son iki yılda nasıl değişti": a change over a window of whole years is read year by year —
+        # one figure for the window would answer "how much", not "how did it change".
+        if not sq.grain and sq.temporal and re.search(r"\b(nasil degis|degisim|degisti|degismis|seyri|trend)", fold(question)):
+            t0 = sq.temporal[0]
+            if getattr(t0, "start", None) and getattr(t0, "end", None) and (t0.end.year - t0.start.year) >= 2 and t0.start.month == 1 and t0.start.day == 1:
+                sq.grain = "YEAR"
+                sq.explanation.append("çok yıllık pencerede değişim soruldu → yıl bazında kırılım")
         # "bu ara", "son günlerde": a period the person did not bound. Left to whoever writes the
         # statement, a range was picked silently and the figure looked like an answer to the question;
         # the range is the person's to give, so it is asked for — once, with examples.
@@ -689,9 +699,13 @@ class SemanticResolver:
         placed = [s_ for s_ in hits if s_.mapping is not None]
         # A state measure (stock on hand) is a balance over every movement: it has no period of its own,
         # and a default year put on it made the gate refuse the statement — or, worse, a model date it.
+        # Nor is a measure the resolver composed over a card's column ("liste fiyatları", "önerilen
+        # baskı adedi"): an attribute of a record, not something that happened on a date.
         undated = bool(placed) and not any(s_.semantic_type == SemanticType.METRIC
+                                           and s_.status in ("CERTIFIED", "INFERRED")
                                            and (s_.explain or {}).get("source") != "count_cue"
                                            and not (s_.mapping.extra or {}).get("state_measure")
+                                           and not (s_.mapping.extra or {}).get("undated")   # a cost on a card, not an event
                                            for s_ in placed)
         if not sq.temporal and self.default_temporal is not None and not undated:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
@@ -744,11 +758,21 @@ class SemanticResolver:
                 slot.explain["equivalent_bindings"] = bindings
         # A qualitative price judgment needs a business definition, not a
         # similarly named numeric column or a threshold invented by the model.
+        price_rank: Optional[bool] = None
         for k, token in enumerate(qf.tokens):
             if stem(token) not in {stem("pahali"), stem("ucuz")}:
                 continue
             proven = any(s.status == "CERTIFIED" and s.mapping and s.span[0] <= k < s.span[1]
                          for s in sq.slots)
+            # "en pahalı beş yazar" beside a measure of money is a ranking by that measure, not a
+            # price judgment needing a threshold: the superlative says which end of the order.
+            ranked = (k > 0 and fold(qf.tokens[k - 1]) == "en"
+                      and any(s.semantic_type == SemanticType.METRIC and s.mapping for s in sq.slots))
+            if ranked:
+                price_rank = stem(token) == stem("pahali")
+                consumed.add(k)
+                sq.explanation.append(f"'en {token}' → ölçüye göre {'azalan' if price_rank else 'artan'} sıralama")
+                continue
             if not proven:
                 sq.clarification.append(
                     f"‘{token}’ derken hangi fiyatı, para birimini ve hangi eşik veya karşılaştırma grubunu kastediyorsunuz?"
@@ -958,6 +982,40 @@ class SemanticResolver:
 
         # 9) a share question needs a denominator. When no certified ratio supplies one, answering with
         #    the plain total would quietly replace "what percent" with "how much".
+        if not sq.ratio and (_SHARE_CUE.search(fold(question)) or _RATIO_CUE.search(fold(question))) and not any(
+            s_.semantic_type == SemanticType.METRIC and s_.mapping and "/" in (s_.mapping.formula or "") for s_ in hits
+        ):
+            cue = next((t for t in qf.tokens if _SHARE_CUE.fullmatch(stem(t)) or _SHARE_CUE.fullmatch(fold(t)) or _RATIO_CUE.fullmatch(fold(t))), "pay")
+            # 9a) "aracılı sözleşmelerin payı yüzde kaç": one record-kind label and no measure. The share
+            #     is that kind's count over the count of all such records — the label's own kind
+            #     conditions on both, the label's value only on the numerator. Composed here so the
+            #     deterministic path writes it and the gate does not demand the label on every reading.
+            labels = [h for h in hits if h.semantic_type == SemanticType.DIMENSION_VALUE and h.mapping and h.mapping.column
+                      and h.mapping.values and (h.mapping.extra or {}).get("count_key") and h.span]
+            metrics_here = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping
+                            and (h.explain or {}).get("source") != "count_cue"]
+            if len(labels) == 1 and not metrics_here:
+                for stray in [h for h in hits if h.semantic_type == SemanticType.METRIC and (h.explain or {}).get("source") == "count_cue"]:
+                    hits.remove(stray)                # "yüzde kaç" asks a share, not how many
+                lab = labels[0]; m = lab.mapping
+                key = m.extra["count_key"]
+                own = f"{m.entity}.{m.column} {(m.operator or 'IN').upper()} ({', '.join(str(v) for v in m.values)})"
+                kind = list((m.extra or {}).get("conditions") or [])
+                formula = f"COUNT(DISTINCT {m.entity}.{key})"
+                num = ResolvedSlot(term=f"{lab.term} sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED",
+                                   mapping=Mapping(concept_id="", entity=m.entity, table_pattern=m.table_pattern, formula=formula,
+                                                   extra={"func": "COUNT", "conditions": [own] + kind, "undated": True}),
+                                   confidence=0.75, explain={"why": f"pay istendi → '{lab.term}' kayıtları {key} üzerinden sayıldı", "source": "share_of_label"})
+                den = ResolvedSlot(term="toplam kayıt sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED",
+                                   mapping=Mapping(concept_id="", entity=m.entity, table_pattern=m.table_pattern, formula=formula,
+                                                   extra={"func": "COUNT", "conditions": kind, "undated": True}),
+                                   confidence=0.75, explain={"why": f"payda: aynı türden bütün kayıtlar ({key})", "source": "share_of_label"})
+                hits.remove(lab)
+                hits.extend([num, den])
+                sq.slots = hits
+                sq.shape = "RATIO"
+                sq.ratio = {"numerator": num.term, "denominator": den.term}
+                sq.explanation.append(f"'{cue}' → '{lab.term}' payı: {own} olan kayıt sayısı / aynı türden bütün kayıtlar")
         if not sq.ratio and _SHARE_CUE.search(fold(question)) and not any(
             s_.semantic_type == SemanticType.METRIC and s_.mapping and "/" in (s_.mapping.formula or "") for s_ in hits
         ):
@@ -985,7 +1043,7 @@ class SemanticResolver:
                 sq.explanation.append("soru neyin ölçüleceğini söylemiyor; hangi ölçü ve hangi kırılım istendiği sorulmalı")
 
         sq.limit = qf.limit
-        sq.order_desc = qf.order_desc
+        sq.order_desc = qf.order_desc if price_rank is None else price_rank
         for s in hits:
             sq.explanation.append(self._why(s))
         if sq.unresolved:
@@ -1007,6 +1065,11 @@ class SemanticResolver:
                     added.append(slot.term)
             if added:
                 sq.explanation.append("ölçü, sorudaki kolonlar bazında kırılacak: " + ", ".join(added))
+            # The column a composed measure was built from is the measure, not a breakdown of it:
+            # grouping "ortalama telif tutarı" by telif tutarı gives one row per distinct amount.
+            measured = {re.sub(r"^\w+\((?:\w+\.)?(\w+)\)$", r"\1", (s_.mapping.formula or "")).upper()
+                        for s_ in sq.slots if s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.status == "COMPOSED"}
+            sq.group_by = [g for g in sq.group_by if not (g.mapping and g.mapping.column and g.mapping.column.upper() in measured)]
         # Default row scopes belong to the semantic contract too. Otherwise the
         # model fallback can omit cancelled/non-item exclusions while deterministic
         # SQL applies them, returning different totals for the same measure.
@@ -1403,19 +1466,56 @@ class SemanticResolver:
         slot from the other source is handed to the model to read within the measure's source, under
         a `-- yorum` line the person sees. A multi-word certified phrase is deliberate and stays; so
         does everything when the measures themselves span both databases, or there is no measure."""
-        metrics = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.METRIC]
+        metrics = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.METRIC
+                   and (s.explain or {}).get("source") != "count_cue"]
         homes = {self._source_of(m.mapping.entity) for m in metrics}
+        named: list[str] = []
         if not metrics:
+            # A count the resolver composed from "adedi" is not a measure the question named: "baskı
+            # adedi arttıkça telif yüzdemiz" asks about the royalty column, and the one source holding
+            # a certified column the question names is the source the question is about.
+            column_homes = {self._source_of(s.mapping.entity) for s in sq.slots
+                            if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.COLUMN
+                            and s.status in ("CERTIFIED", "INFERRED")}
+            if len(column_homes) == 1:
+                homes = column_homes
+                sq.source_hint = next(iter(homes))
+        if not metrics and len(homes) != 1:
             # No measure: the things the question names decide. "Fiyat listesinde tanımlı fiyatın
             # altında kesilen faturalar" names invoices — an ERP thing — and "fiyat listesi" is a
             # word both databases use. The entities the plain words reach (outside any placed
             # phrase) say which database the question is about.
             covered = {k for s in sq.slots if getattr(s, "span", None) for k in range(s.span[0], s.span[1])}
             votes, named = self._source_votes(qf, covered)
+            plain = dict(votes)
+            # A certified phrase names its database as surely as a table's own word does: "fiziki
+            # arşivde emanete verilmiş" is three CRM things, and the plain "kayıtlar" beside them is
+            # one ERP word, not the question's subject.
+            for s_ in sq.slots:
+                if s_.mapping is not None and s_.mapping.entity and s_.status == "CERTIFIED" and getattr(s_, "span", None) \
+                        and s_.semantic_type != SemanticType.DEFAULT_FILTER:
+                    src = self._source_of(s_.mapping.entity)
+                    votes[src] = votes.get(src, 0) + 1
             ranked = sorted(votes.items(), key=lambda kv: -kv[1])
             homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
+            if not homes and ranked and votes.get("", 0) == ranked[0][1] and plain.get("", 0) > 0:
+                homes = {""}                   # a tie with a table's own word on the ERP side goes to the connection's own database
             if len(homes) == 1:
                 sq.source_hint = next(iter(homes))
+        if len(homes) > 1:
+            # Measures on both sides: "sevkiyatlarda liste fiyatı üzerinden indirim" names an ERP
+            # measure by one word and two CRM things by phrase. The side the question names more
+            # certified things on, by a clear margin, is the side it is about.
+            tally: dict[str, int] = {}
+            for s_ in sq.slots:
+                if s_.mapping is not None and s_.mapping.entity and s_.status == "CERTIFIED" and s_.semantic_type != SemanticType.DEFAULT_FILTER:
+                    src = self._source_of(s_.mapping.entity)
+                    tally[src] = tally.get(src, 0) + 1
+            ranked = sorted(tally.items(), key=lambda kv: -kv[1])
+            if len(ranked) >= 2 and ranked[0][1] >= 2 * ranked[1][1]:
+                homes = {ranked[0][0]}
+                sq.source_hint = ranked[0][0]
+                sq.explanation.append(f"iki kaynakta da ölçü var; soru {ranked[0][0] or 'ana veri tabanı'} tarafında daha çok tanımlı şey adlandırıyor → o kaynak seçildi")
         if len(homes) != 1:
             return
         home = next(iter(homes))
@@ -1425,6 +1525,9 @@ class SemanticResolver:
         homes_entities = {m.mapping.entity for m in metrics} | {e for e in (named if not metrics else []) if e}
         for lone in {id(s): s for s in others}.values():
             span = getattr(lone, "span", None)
+            if lone.semantic_type == SemanticType.METRIC and (lone.explain or {}).get("source") == "count_cue":
+                sq.slots.remove(lone)                     # a count composed on the other source's table
+                continue
             if not span or span[1] - span[0] > 2:
                 continue                                  # a certified phrase of three or more words is meant
             if lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
@@ -1904,6 +2007,8 @@ class SemanticResolver:
             if not found:
                 continue
             column, source_term = found
+            if agg == "SUM" and re.search(r"oran|yuzde|ortalama|puan|katsayi|fiyat|birim", fold(f"{source_term} {column}")):
+                agg = "AVG"                    # a rate summed over rows is a number nobody asked for
             m = Mapping(concept_id="", entity=entity, table_pattern=prof.table_pattern, formula=f"{agg}({entity}.{column})", extra={"composed_from": source_term})
             phrase = " ".join(qf.tokens[max(0, k - 1) : k + 1])
             # the column this measure is built from is no longer a column being asked for: it *is* the

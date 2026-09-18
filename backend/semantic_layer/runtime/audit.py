@@ -39,7 +39,8 @@ def _ent(name: str) -> str:
     """An entity name as the gate compares it: upper-cased, without the source's "LG_" prefix. The catalog
     names one shape both ways (a measure on the bare name, a filter on the prefixed one) and a physical
     table reads back bare: the prefix is the source's, not the question's, and may not decide."""
-    return re.sub(r"^LG_", "", (name or "").upper())
+    n = re.sub(r"^[A-Z0-9_]+?_DBO_", "", (name or "").upper())     # "Timas_MSCRM_dbo_NEW_X": a second source's table
+    return re.sub(r"^LG_", "", n)
 
 
 def _same_entity(a: str, b: str) -> bool:
@@ -1025,7 +1026,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         return [Unmet("analytics", t) for t in check(sq, sql, unmet_obligations)]
     out: list[Unmet] = []
     try:
-        tree = parse_sql(sql)
+        tree = repair_table_qualifiers(parse_sql(sql))
     except Exception:
         return [Unmet("parse", "sorgu ayrıştırılamadı; soru koşulları doğrulanamadı", "Geçerli tek bir SELECT yaz.")]
     occ = _occurrences(tree, sources)
@@ -1078,8 +1079,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         def same_entity(name: str) -> bool:
             # A physical table reads back as INVOICE where the catalog calls the shape LG_INVOICE:
             # the prefix is the source's, not the question's, so it may not decide this.
-            a, b = name.upper().removeprefix("LG_"), entity.removeprefix("LG_")
-            return name.upper() == "UNKNOWN" or a == b
+            return name.upper() == "UNKNOWN" or _same_entity(name, entity)
 
         used = any(col.name.upper() == column and same_entity(scope.entity_for(col))
                    for node in restricting if node is not None for col in node.find_all(exp.Column))
@@ -1133,12 +1133,22 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         # above a statement that never reads PRCLIST is a comment about a different query: the person
         # is shown a reading the answer does not use. Every table a reading names must be read.
         def _bare(name: str) -> str:
-            return re.sub(r"^(?:DBO_)?(?:LG_)?(?:\d{3}_)?(?:\d{2}_)?", "", (name or "").upper())
+            # "Timas_MSCRM_dbo_NEW_X" is how a second source's table reads in the statement; the yorum
+            # names it "NEW_X". The database and schema are the source's, not the question's.
+            n = re.sub(r"^[A-Z0-9_]+?_DBO_", "", (name or "").upper())
+            return re.sub(r"^(?:DBO_)?(?:LG_)?(?:\d{3}_)?(?:\d{2}_)?", "", n)
         read_here = set()
         for o in occ:
             read_here |= {o.entity.upper(), o.table.upper(), o.alias.upper(), _bare(o.entity), _bare(o.table)}
+        body = re.sub(r"(?im)^\s*--.*$", "", sql or "")
+        def _is_column_here(name: str) -> bool:
+            # "NEW_SOZLESMETARAFIBASE.NEW_ODEME": the second part is a column the statement reads as
+            # t."new_Odeme" — written somewhere in the body, never after FROM/JOIN.
+            return bool(re.search(rf"[\.\[\"]?\b{re.escape(name)}\b", body, re.I)) and not re.search(rf"\b(?:FROM|JOIN)\s+[\[\]\w\.]*\b{re.escape(name)}\b", body, re.I)
         for raw in re.findall(r"(?im)^\s*--\s*yorum\s*:\s*(.+?)\s*$", sql or ""):
-            named = {t for t in re.findall(r"\b([A-Z][A-Z0-9_]{3,})\b", raw.split("→", 1)[-1])
+            named = {t.split(".")[0] for t in re.findall(r"\b([A-Z][A-Z0-9_]{3,}(?:\.[A-Za-z_]\w*)?)", raw.split("→", 1)[-1])
+                     if not _is_column_here(t.split(".")[0])}
+            named = {t for t in named
                      if not re.fullmatch(r"(SUM|AVG|MIN|MAX|COUNT|CASE|WHEN|THEN|ELSE|END|AND|OR|NOT|NULL|IN|IS|LIKE|BETWEEN|DISTINCT|SELECT|FROM|WHERE|JOIN|LEFT|INNER|GROUP|ORDER|HAVING|TOP|DATEDIFF|CAST|CONVERT|DAY|MONTH|YEAR|TRUE|FALSE|KDV|TL|USD|EUR|ISNULL|COALESCE|NULLIF|ABS|ROUND|FLOOR|CEILING|GETDATE|DATEADD|DATEPART|OVER|PARTITION|ROW_NUMBER|RANK|EXISTS|UNION|ALL|WITH|AS|ON|BY|ASC|DESC)", t)}
             tables = {_bare(t.split(".")[0]) for t in named if any(ch.isalpha() for ch in t)}
             tables = {t for t in tables if t in known_entities} if known_entities else tables
@@ -1506,6 +1516,40 @@ def _comparison_proven(sq, tree, occ, current, reference) -> tuple[bool, str]:
                 if satisfied(found):
                     return True, ""
     return False, why
+
+
+def repair_table_qualifiers(tree: exp.Expression) -> exp.Expression:
+    """`FROM Timas_MSCRM_dbo_NEW_X` … `WHERE NEW_X.statecode = 0`: the model qualified the column with
+    the table's bare entity name instead of the name it read the table under. Nothing else in the
+    statement can be meant, so the qualifier is rewritten to the table's own alias-or-name — for the
+    gate and for the database alike, which would otherwise refuse the identifier."""
+    for sel in tree.find_all(exp.Select):
+        tables = [t for t in sel.find_all(exp.Table) if t.find_ancestor(exp.Select) is sel]
+        known = {(t.alias_or_name or "").upper() for t in tables} | {t.name.upper() for t in tables}
+        by_entity: dict[str, list[str]] = {}
+        for t in tables:
+            by_entity.setdefault(_ent(t.name), []).append(t.alias_or_name or t.name)
+        for col in sel.find_all(exp.Column):
+            q = (col.table or "")
+            if not q or q.upper() in known or col.find_ancestor(exp.Select) is not sel:
+                continue
+            hits = by_entity.get(_ent(q), [])
+            if len(hits) == 1:
+                col.set("table", exp.to_identifier(hits[0]))
+    return tree
+
+
+def repair_qualifiers_sql(sql: str) -> str:
+    """The same repair on the statement text; leading `-- yorum` lines are kept."""
+    try:
+        head = "".join(line + "\n" for line in (sql or "").splitlines() if line.strip().startswith("--"))
+        body = "\n".join(line for line in (sql or "").splitlines() if not line.strip().startswith("--"))
+        tree = parse_sql(body)
+        before = tree.sql(dialect="tsql")
+        after = repair_table_qualifiers(tree).sql(dialect="tsql")
+        return sql if before == after else head + after
+    except Exception:  # noqa: BLE001
+        return sql
 
 
 def unmet_obligations(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, strict: Optional[bool] = None) -> list[str]:

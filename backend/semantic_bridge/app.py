@@ -50,7 +50,7 @@ from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompile
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
-from semantic_layer.runtime.audit import audit_sql, unmet_obligations
+from semantic_layer.runtime.audit import audit_sql, repair_qualifiers_sql, unmet_obligations
 from semantic_layer.runtime import critic
 from semantic_layer.runtime.guardrails import is_query_timeout, allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_jobs import LlmJobs
@@ -865,7 +865,7 @@ class Runtime:
             qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
                        answer_type="NON_SQL_QUERY", answer_summary=reason, gate={"explain": list(compiled.explain)})
             return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        sql = strip_trailing_semicolon(compiled.sql)
+        sql = repair_qualifiers_sql(strip_trailing_semicolon(compiled.sql))
         ok, why = validate_sql(sql)
         if not ok:
             reason = f"Guardrail: {why}"

@@ -29,6 +29,7 @@ STOPWORDS: frozenset[str] = frozenset(
     yoksa taraf tarafi tarafini yani sekilde bakimindan acisindan
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
     gercekte gercekten fiilen aslinda hakikaten hala halen henuz tamamen tumuyle
+    arttikca azaldikca yukseldikce dustukce buyudukce kuculdukce halde ragmen
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
     sahip ait
     olan oldugu olup olsun olacak bulunsun bulunan gorunsun yazilsin eklensin ekleyin ekle ekleyelim
@@ -374,7 +375,15 @@ def cardinal(token: str) -> Optional[int]:
     t = fold(token)
     if t.isdigit():
         return int(t)
-    return _CARDINALS.get(t)
+    if t in _CARDINALS:
+        return _CARDINALS[t]
+    # "yirminin üstünde", "beşten fazla": the cardinal wears a case ending. Only roots of three or more
+    # letters are read through a suffix — "onun" is a pronoun, not "on" + genitive.
+    for suf in _SHORT_CASES:
+        root = t[: -len(suf)] if t.endswith(suf) else ""
+        if len(root) >= 3 and root in _CARDINALS:
+            return _CARDINALS[root]
+    return None
 
 
 # A participle turns a verb into a noun's modifier ("bekleyen siparişler"), a converb chains clauses
