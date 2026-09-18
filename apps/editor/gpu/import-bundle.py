@@ -17,6 +17,17 @@ subprocess.run(['docker','load','-i',str(root/'images.tar')],check=True)
 for role,image in manifest['images'].items():
     actual=subprocess.check_output(['docker','image','inspect','--format','{{.Id}}',image['tag']],text=True).strip()
     assert actual==image['id'],'GPU_IMAGE_ID_MISMATCH:'+role
+resolutions=[]
+for role,model in manifest['models'].items():
+    repo=root/'hf-cache/hub'/('models--'+model['repository'].replace('/','--'))
+    assert (repo/'refs/main').read_text()==model['revision'],'HF_CACHE_REF_NOT_EXACT:'+role
+    assert (repo/'snapshots'/model['revision']/'config.json').is_file(),'HF_SNAPSHOT_CONFIG_MISSING:'+role
+    code="import json,pathlib,sys;from huggingface_hub import snapshot_download;p=pathlib.Path(snapshot_download(sys.argv[1],local_files_only=True));assert p.name==sys.argv[2];assert (p/'config.json').is_file();print(json.dumps({'repository':sys.argv[1],'revision':p.name,'offline_snapshot_resolved':True}))"
+    raw=subprocess.check_output(['docker','run','--rm','--network','none','--entrypoint','python',
+        '-e','HF_HUB_OFFLINE=1','-v',str(root/'hf-cache')+':/root/.cache/huggingface:ro',
+        manifest['images'][role]['tag'],'-c',code,model['repository'],model['revision']],text=True)
+    resolutions.append(json.loads(raw))
 subprocess.run(['docker','compose','-f',str(root/'compose.yaml'),'config','--quiet'],cwd=root,check=True)
 print(json.dumps({'gpu_package_hashes_match':True,'images':len(manifest['images']),
-                  'models':manifest['models'],'containers_started':False,'fresh_gpu_install_verified':False}))
+                  'models':manifest['models'],'offline_cache_resolution':resolutions,
+                  'model_servers_started':False,'fresh_gpu_install_verified':False}))

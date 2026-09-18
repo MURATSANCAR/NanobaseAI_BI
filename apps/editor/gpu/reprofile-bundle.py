@@ -32,9 +32,16 @@ compose=json.loads((source/'compose.yaml').read_bytes())
 compose['services']['qwen']['command']=command
 data=(json.dumps(compose,indent=2)+'\n').encode();replace('compose.yaml',data)
 manifest['files']['compose.yaml']=hashlib.sha256(data).hexdigest()
+for model in manifest['models'].values():
+    name=str(Path('hf-cache/hub')/('models--'+model['repository'].replace('/','--'))/'refs/main')
+    data=model['revision'].encode();replace(name,data)
+    manifest['files'][name]=hashlib.sha256(data).hexdigest()
+for name in ('import-bundle.py','INSTALL.md'):
+    data=Path(__file__).with_name(name).read_bytes();replace(name,data)
+    manifest['files'][name]=hashlib.sha256(data).hexdigest()
 manifest.update(created_at=time.time(),derived_from_manifest_sha256=hashlib.sha256(raw).hexdigest(),
     qualification='LIVE_RUNNER_PROFILE_UPDATED_REQUIRES_IMPORT_AND_FRESH_GPU_ACCEPTANCE',
-    derivation='SAME_WEIGHTS_AND_IMAGES_LIVE_QWEN_COMMAND_UPDATED')
+    derivation='SAME_WEIGHTS_AND_IMAGES_PINNED_CACHE_REFS_AND_LIVE_QWEN_COMMAND_UPDATED')
 replace('gpu-release-manifest.json',json.dumps(manifest,indent=2).encode())
 assert (source/'gpu-release-manifest.json').read_bytes()==raw,'PREVIOUS_RELEASE_CHANGED'
 subprocess.run(['docker','compose','-f',str(dest/'compose.yaml'),'config','--quiet'],cwd=dest,check=True)

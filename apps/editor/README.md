@@ -247,3 +247,5 @@ garantisi değildir; üretim kabulü P0–P7 kanıtlarına bağlıdır.
 ## Kaynak v3 ve sınırlı OCR-VL
 
 Ek Unicode özel kullanım karakterlerinin PDF metni sayılması düzeltildi; değişmez yeniden okuma ölçümleri yeni nesilde kullanılır. [Gerçek koşu ve açık kabul](../../docs/editor/2026-09-17-source-v3.md). Sorunlu kırpımlar için isteğe bağlı [ağsız OCR-VL aracı](ocr-vl/README.md) ve `bundle.py --with-ocr-vl` paketleme desteği vardır; pilot ve yeni restore sonucu doğrulanmadan üretim kabulü değildir.
+
+18 Eylül R3 kodu canlı: öykü dünyası ile okura verilen bilgi/öğüt için kaynaklı kapsam kapısı eklendi. Gerçek45/5/6 pilotları geçti, R3 tam kitap koşusu bekliyor. R2 dolu restore/mobil PASS. GPU cache paketindeki refs/main newline hatası gerçek offline açılışta bulundu; exporter/importer düzeltildi ve yeni cache-v2 doğrulanıyor. [Güncel kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md).

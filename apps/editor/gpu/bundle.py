@@ -62,7 +62,9 @@ for role,model in models.items():
         relative=Path('hf-cache/hub')/repo_name/'snapshots'/model['revision']/path.relative_to(model['snapshot'])
         copy_file(path,destination/relative)
         if index%10==0:print(json.dumps({'stage':'model_files','role':role,'completed':index,'total':len(model['files'])}),flush=True)
-    write(str(Path('hf-cache/hub')/repo_name/'refs/main'),model['revision']+'\n')
+    # HF reads a ref literally; a trailing newline becomes part of the directory
+    # name and breaks offline snapshot resolution despite valid file hashes.
+    write(str(Path('hf-cache/hub')/repo_name/'refs/main'),model['revision'])
 tags={}
 for role,identity in images.items():
     tag='nanobase-editor-gpu/image:'+identity.split(':')[1][:24]

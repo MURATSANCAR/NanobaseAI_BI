@@ -34,6 +34,8 @@ env={**os.environ,'COMPOSE_PROJECT_NAME':project,'GPU_BIND_ADDRESS':'127.0.0.1',
 overlay=out/'offline-network.json';overlay.write_text(json.dumps({'networks':{'default':{'internal':True}}}))
 compose=['docker','compose','-f',str(bundle/'compose.yaml'),'-f',str(overlay)]
 report={'started_at':time.time(),'bundle':str(bundle),'project':project,'stages':[],
+        'verifier_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        'shared_verifier_sha256':hashlib.sha256(Path(args.verification_script).read_bytes()).hexdigest(),
         'application_writes':0,'semantic_acceptance':False,'different_physical_gpu_host':False}
 maintenance=False;candidate_created=False;original={}
 def interrupted(signum,frame):
@@ -60,9 +62,13 @@ def request(url,payload=None,timeout=10):
     with urllib.request.urlopen(req,timeout=timeout) as response:
         return response.status,response.read(),dict(response.headers)
 
-def wait_qwen(base,seconds=1800):
+def wait_qwen(base,seconds=1800,container=None):
     start=time.monotonic()
     while time.monotonic()-start<seconds:
+        if container:
+            state=json.loads(command(['docker','inspect',container]))[0]
+            if state['RestartCount'] or state['State']['Status'] not in ('running','created'):
+                raise RuntimeError('QWEN_BOOT_EXITED_OR_RESTARTED:'+container)
         try:
             if request(base+'/health')[0]==200:
                 models=json.loads(request(base+'/v1/models')[1])
@@ -101,6 +107,10 @@ try:
         with path.open('rb') as stream:assert hashlib.file_digest(stream,'sha256').hexdigest()==wanted,'PACKAGE_HASH_MISMATCH:'+name
     for role,value in manifest['images'].items():
         assert command(['docker','image','inspect','--format','{{.Id}}',value['tag']])==value['id'],'IMAGE_ID_MISMATCH:'+role
+    for role,model in manifest['models'].items():
+        repo=bundle/'hf-cache/hub'/('models--'+model['repository'].replace('/','--'))
+        assert (repo/'refs/main').read_text()==model['revision'],'HF_CACHE_REF_NOT_EXACT:'+role
+        assert (repo/'snapshots'/model['revision']/'config.json').is_file(),'HF_SNAPSHOT_CONFIG_MISSING:'+role
     report['package_manifest_sha256']=hashlib.sha256((bundle/'gpu-release-manifest.json').read_bytes()).hexdigest()
     mark('PACKAGE_VERIFIED',files=len(manifest['files']),models=manifest['models'])
     assert not command(['docker','ps','-aq','--filter','label=com.docker.compose.project='+project])
@@ -134,7 +144,7 @@ try:
     candidate_created=True
     logged('create-offline-ocr',compose+['create','--no-build','--pull','never','ocr'])
     logged('start-offline-models',compose+['up','-d','--no-build','--pull','never','qwen','gateway'])
-    report['qwen_cold_ready_seconds']=wait_qwen('http://127.0.0.1:18001')
+    report['qwen_cold_ready_seconds']=wait_qwen('http://127.0.0.1:18001',container=project+'-qwen')
     mark('COLD_QWEN_READY',seconds=report['qwen_cold_ready_seconds'])
     wake_ocr('http://127.0.0.1:18010','cold-ocr-real-request')
     checks=[]
