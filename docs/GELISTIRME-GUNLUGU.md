@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R2 restore PASS; bilgi/öykü kapsamı için R3 düzeltmesi
+
+R2’nin gerçek ayrı restore, kaynak/türetilmiş/atıf/yayın ve dört genişlikte mobil kabulü geçti, geçici ortam kapandı. İçerik incelemesinde45. sayfadaki bilgi eki öykü temasına karışmıştı; bütün sayfaları açık içerik alanıyla sınıflandıran V4, kaynak hashli öykü kapısını anlam/figür/çapraz akışa ekledi. Gerçek45 pilotu0 öykü iddiası/0 sentez verdi;16 etkinlik,5/29/38 öykü sınıfları korundu. Son kod gerçek45/5/6 kontrolünde geçti;45 kapalı,5 iki uygun iddia,6 inceleme. R3 imajları ağsız derlendi, henüz canlı değil. GPU internet kapalı/boş-cache kurulum denetimi başlatıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 (gece) — En zor 100: Q28–Q59 kök neden düzeltmeleri, CRM bilgi paketi ve metadata ilişkileri
 
 Kullanıcı uyurken tek başına ilerlendi; her soru doğrudan Logo/CRM veritabanına bağlanarak (köprüden bağımsız) doğrulandı ve karneye yazıldı (Q1–59: 57 DOĞRU, Q38 kısmen, Q56 açık). Örnek başına SQL yok; her düzeltme genel:
