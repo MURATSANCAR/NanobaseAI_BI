@@ -39,3 +39,8 @@ Ayrı regresyon girdisi: gerçek nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`, k
 İlk kabul scripti wrap-label içindeki seçeneklerin erişilebilir ada katılmasını hesaba katmayan exact seçici nedeniyle durdu; teşhis kaydı gerçek ekranın ve API'nin açık olduğunu gösterdi. Genel kontrol seçicisi combobox rolü + etiket başlangıcıyla düzeltildi. İlk başarısız kanıtlar `source-impact-ui-324f97af-b87e-4716-a295-958bce55a79d` ve teşhis `source-impact-ui-1d4018e9-351e-45ea-9fcb-d7c8541d4818` korunur; ikisinde de kaynak/review değişmedi. Ürün verisi veya beklenen cevap değiştirilmedi.
 
 Bu sonuç **izole aday** kabulüdür; ana R7 yayını değiştirilmedi ve ana üretim kabulü değildir. Hedefin UNRESOLVED durumu başarıya çevrilmedi. Graph `complete=false`, `semantic_acceptance=false` kaldı. UI409 çatışma yolu ve geciken yanıt sırasında nesil/hedef değişimi halen DOĞRULANAMADI; gerçek kaynak mutasyonu yaparak zorlanmadı. Kaynakları değiştirmeyen backend stale-snapshot409 kontrolü ayrı API kanıtında bulunur.
+
+
+## V16-r5 canlı web tekrar kabulü
+
+Ana API/web `http://127.0.0.1:8810` üzerinde gerçek tamamlanmış nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4` ve kaynak `dd24320c-8545-5e52-b0e5-ed6b68e6e2e2` kullanıldı. Bağımsız PG/API kanıtı `evidence/source-impact-20260918T092619206574Z.json`; canlı tarayıcı kanıtı `evidence/source-impact-ui-93791cba-493c-46c2-8e2b-e58dab0c4fa7/verification.json`. 134 bağlı kayıt, snapshot bağlantılı gerçek sayfalama, panel açılmadan istek yapılmaması ve 320/390/768/1440px taşma kontrolü PASS. Kaynak/inceleme kayıtları değişmedi; uygulama yazımı yapılmadı. Bu UI kabulü yeni çalışan neslin anlamsal kabulü değildir. Snapshot409/yarış yolu bu koşuda tetiklenmedi.

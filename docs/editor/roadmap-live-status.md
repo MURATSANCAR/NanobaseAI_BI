@@ -6,9 +6,13 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Bu kural P0–P7 paketlerinin tamamında geçerlidir: [modül talimatları](../../apps/editor/AGENTS.md).
 
-> **18 Eylül — güncel V15-r7 tamamlandı:** Nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`: 48 sayfa, 1149 kaynak bölgesi, 1494 kaynak birimi; 77 inceleme, sıfır işlenmemiş/kısmi grup; 100 sınırlı uygun iddia. Teknik kaynak/türetilmiş API/PG kontrolleri, iki gerçek soru, 100 pasaj API/PG/Qdrant ve dört mobil genişlik geçti. Anlamsal kabul false; sayı benzersiz/doğru olay sayısı değildir. Yeni backup/ayrı restore/dolu indeks ve geri yüklenmiş API/PG kabulü geçti; qualifier mobil/temizlik dahil 08:43:33 UTC’de teknik PASS.
+> **18 Eylül — güncel yayın V16-r5:** `source-analysis-v16-r5-20260918` canlı; dağıtım, 52 backend dosyası ve 11 web kaynağı/imaj eşliği geçti. Yeni nesil `116bb4a8-b7b5-45dd-9986-ac80fd706533`, iş `8032d654-bf44-4462-aca4-962d6f68d030` başladı; yeni tam kitap kabulü henüz yok. Son birleşik 19 gerçek iddia tekrarında 12 PASS/7 inceleme; iki anonim söz edimi ayrıca geçti, karakter kimliği doğrulanmış sayılmaz.
 >
-> **V7 son aday:** V6 gerçek anlamsal regresyonda başarısız oldu; genel kaynak belirsizliği ve her iddia parçasına kaynak-ID desteği kapıları eklendi. V3 dayanak pilotu19kayıtta biçim hatası0,14modelPASS/5inceleme; bağımsızliteral/hash kontrolü geçti, birleşikV7pilot sürüyor. V16-r3 ikiimaj52backenddosyasıyla derlendi fakat ana yayına alınmadı. [Son kanıtlar](2026-09-18-source-analysis-v16.md).
+> R5 çevrimdışı paket/import 09:30:26 UTC’de PASS: 238 dosya ve sekiz imaj; yeni web kaynak/çıktı kapısı gerçek pakette geçti. Yeni neslin soru, dolu yedek/restore ve mobil kabulü henüz yapılmadı; önceki R7 kanıtları R5'e taşınmaz. P5 salt okunur etki görünümü R5 webinde bulunur; genel düzeltme ve bağımlılık yenileme açık. [R5 yayın/koşu](2026-09-18-source-analysis-v16.md), [paket kanıtı](2026-09-18-v16-r5-offline-package.md).
+
+> **18 Eylül — önceki V15-r7 tamamlandı:** Nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`: 48 sayfa, 1149 kaynak bölgesi, 1494 kaynak birimi; 77 inceleme, sıfır işlenmemiş/kısmi grup; 100 sınırlı uygun iddia. Teknik kaynak/türetilmiş API/PG kontrolleri, iki gerçek soru, 100 pasaj API/PG/Qdrant ve dört mobil genişlik geçti. Anlamsal kabul false; sayı benzersiz/doğru olay sayısı değildir. Yeni backup/ayrı restore/dolu indeks ve geri yüklenmiş API/PG kabulü geçti; qualifier mobil/temizlik dahil 08:43:33 UTC’de teknik PASS.
+>
+> **V7 önceki aday aşaması (tarihsel):** V6 gerçek anlamsal regresyonda başarısız oldu; genel kaynak belirsizliği ve her iddia parçasına kaynak-ID desteği kapıları eklendi. V3 dayanak pilotu19kayıtta biçim hatası0,14modelPASS/5inceleme; bağımsızliteral/hash kontrolü geçti, birleşikV7pilot sürüyor. V16-r3 ikiimaj52backenddosyasıyla derlendi fakat ana yayına alınmadı. [Son kanıtlar](2026-09-18-source-analysis-v16.md).
 >
 > V16 kaynak→amaç→iddia, bölünmez balon birimi ve kaynak dışı isim kapısı geliştirmesi henüz adaydır. Gerçek anonim diyalog bileşeni geçti; beş kanıtsız isim eklemesi genel kapıyla engellendi. Belirsizlik, konum/sahiplik ve genel karakter kimliği açık. P5 etki API/UI ayrı gerçek ortamda geçti, ana yayın değişmedi. [V15](2026-09-18-source-analysis-v15.md), [V16](2026-09-18-source-analysis-v16.md), [anlam bulguları](2026-09-18-semantic-source-audit.md), [P5](2026-09-18-source-impact-ui.md).
 
@@ -68,17 +72,17 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 | Paket | Durum | Kalan kabul |
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
-| P1 Kaynak hattı | Üç gerçek kitabın 48/64/32 sayfalık kaynak hazırlaması doğrulandı; V14-r5 ana kitapta48 sayfa,896 anlaşma/253 inceleme | 253 kaynak incelemesi; yeni V15 tam koşusu, görsel doğruluk ve anlamsal kabul açık |
-| P2 Karakter/olay | Metin atfı, sınırlı çapraz diyalog ve iki aşamalı anlam denetimi; V14-r5'te61 sınırlı uygun aday. V15 kaynak birimi kapsam muhasebesi kodu/pilotları hazır | Genel figür–karakter kimliği ve tam olay/sahne/anlam kabulü açık; V15 tam nesli henüz yok |
+| P1 Kaynak hattı | Üç kitabın 48/64/32 sayfalık hazırlığı; önceki V15-r7 48 sayfa/1149 bölge/1494 birim tamamlandı | Yeni V16-r5 nesli çalışıyor; kaynak incelemeleri ve anlamsal kabul açık |
+| P2 Karakter/olay | V16-r5 kaynak amacı önce, atomik balon, anonim söz edimi, V7 dayanak ve belirsizlik kapıları canlı | Yeni tam nesil, genel figür–karakter kimliği ve olay/sahne/anlam kabulü açık |
 | P3 Edebî örnekler | Kabul bekliyor | P2, diğer kitapların gerçek kabulü ve editör rubriği |
-| P4 Arama/cevap | V15-r7 iki gerçek soru, 53 pasaj API/PG/Qdrant ve dört genişlik mobil kabulü geçti | Yeni tam nesil ve vektörlerle restore kabulü; preview tam kitap/yayın kabulü değildir |
-| P5 Editör akışı | Gerçek PDF yükleme/sürdürme, kaynak/OCR/bbox ve yetki ekranları var. Son webin kesin analiz kimliğine dönüşü ayrı gerçek64sayfa kitapta dört genişlikte geçti | Kaynak soru formu gerçek kabulü geçti; salt okunur etki görünümü ayrı aday kabulünde, genel düzeltme ve bağımlılık yenileme açık |
-| P6 İşletim | V14-r5 gerçek dolu restore/mobil06:08UTC'de geçti; V15 imaj/kod eşliği ve API/PG altyapı kontrolü geçti | Yeni V15 dolu restore, GPU internet kapalı soğuk açılış, kapasite ve farklı topoloji kabulü açık |
+| P4 Arama/cevap | Önceki V15-r7 iki soru, 100 pasaj API/PG/Qdrant, mobil ve dolu restore geçti | V16-r5 yeni nesil soru/indeks kabulü beklenir; preview tam kitap/yayın kabulü değildir |
+| P5 Editör akışı | Yükleme/sürdürme, kaynak/OCR/bbox, soru ve salt okunur etki görünümü R5'te mevcut; P5 ayrı aday gerçek kabulü var | R5 dolu UI kabulü, genel düzeltme ve bağımlılık yenileme açık |
+| P6 İşletim | V15-r7 dolu restore/temizlik geçti; V16-r5 dağıtım ve yeni offline paket/import geçti | V16-r5 dolu restore, GPU internet kapalı soğuk açılış, kapasite/farklı topoloji açık |
 | P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
 
 ## Planın tüm bölümleri
 
-Son tamamlanmış kitap nesli V14-r5'tir:48 sayfa,1.149 kaynak bölgesi,896 anlaşma/253 inceleme; işleme tamamlanmış, tam anlamsal kabul verilmemiştir. Yeni V15-r7 tam kaynak nesli çalışıyor; henüz tamamlanmadı. Tarihsel V5/V6/V8 değerleri ve iptal edilen nesiller kendi kanıtlarında korunur; güncel ölçüm yerine kullanılmaz. [V14-r5 kabul](2026-09-18-source-analysis-v14-r5.md), [V15 güncel yayın](2026-09-18-source-analysis-v15.md).
+Son tamamlanmış kitap nesli V15-r7'dir: 48 sayfa, 1149 kaynak bölgesi, 1494 kaynak birimi, 100 sınırlı uygun iddia; tam anlamsal kabul verilmemiştir. V16-r5 yeni nesli `116bb4a8-b7b5-45dd-9986-ac80fd706533` başladı; önceki nesil ölçümleri yeni neslin sonucu değildir. [V15 tarihsel kabul](2026-09-18-source-analysis-v15.md), [V16 güncel yayın](2026-09-18-source-analysis-v16.md). Aşağıdaki ayrıntı tablosunun eski sürümle işaretli sayıları tarihsel kanıttır; güncel çıkış tablosu yukarıdadır.
 
 | Bölüm | Mevcut kanıt / uygulama | Açık iş ve kabul sınırı |
 |---|---|---|
