@@ -11,9 +11,11 @@ only that positive signal.  It never proves a claim: third person singular is
 unmarked in Turkish, an ambiguous word is never counted, and a name that also
 occurs outside the utterance (a possible reporter) is left to the speaker gates.
 
-Speech is recognised from quotation marks only.  A dialogue dash gives a start but
-no end, and first-person narration has no marks at all; in both cases the gate
-returns NOT_APPLICABLE with the reason instead of staying silent.
+Speech is recognised from quotation marks and from dialogue-dash lines.  A dash
+line is closed by an inverted reporting clause inside it or by a following dash
+line; a wrapped continuation line stays uncertain, and first-person narration has
+no marks at all.  In those cases the gate returns NOT_APPLICABLE with the reason
+instead of staying silent.  Callers must keep source line breaks ("\n").
 
 The analyzer is injected: ``analyze(word) -> [(lemma, pos, [morpheme ids])]``.
 No word list, name list or book specific rule is used.
@@ -21,7 +23,7 @@ No word list, name list or book specific rule is used.
 import re
 import unicodedata
 
-VERSION = 'source-person-agreement-v3'
+VERSION = 'source-person-agreement-v4'
 FIRST_PERSONS = frozenset({'A1sg', 'A1pl'})
 SECOND_PERSONS = frozenset({'A2sg', 'A2pl'})
 PERSONS = FIRST_PERSONS | SECOND_PERSONS | {'A3sg', 'A3pl'}
@@ -34,6 +36,9 @@ POSSESSED = frozenset({'P3sg', 'P3pl'})
 ANY_POSSESSIVE = POSSESSED | {'P1sg', 'P2sg', 'P1pl', 'P2pl'}
 PARTICIPLES = frozenset({'PastPart', 'FutPart'})
 COORDINATORS = frozenset({'ve', 'ile', 'veya'})
+QUOTATIVE = 'diye'
+CASES = frozenset({'Acc', 'Dat', 'Loc', 'Abl', 'Gen', 'Ins'})
+REPORT_TENSES = frozenset({'Past', 'Narr', 'Prog1', 'Aor'})
 SENTENCE_END = '.!?…'
 MAX_BARE_SUFFIX = 4
 DASH_LINE = re.compile(r'^[ \t]*[—–-][ \t]*(?=\S)', re.M)
@@ -63,7 +68,7 @@ def words(text):
     return found
 
 
-def quoted(text):
+def quoted(text, analyze=None):
     """(start, end, certain) spans of direct speech.  A span is uncertain when
     its opening mark is followed by another opening mark: its real end is unknown."""
     marks = []
@@ -90,17 +95,63 @@ def quoted(text):
             spans.append((0, index, True))
     if start is not None:
         spans.append((start, len(text), True))
-    # A dialogue dash opens speech, but nothing marks where the narrator resumes
-    # on that line ("— Geldim, dedi Ali."), so the span is never certain.
-    for match in DASH_LINE.finditer(text):
-        line_end = text.find('\n', match.end())
-        spans.append((match.end(), len(text) if line_end < 0 else line_end, False))
+    spans.extend(dash_spans(text, analyze))
     return sorted(span for span in spans if span[0] < span[1])
 
 
-def utterances(text):
-    """Text without any quotation mark is one utterance (a speech balloon unit)."""
-    return quoted(text) or [(0, len(text), True)]
+def narrator_inserts(text, begin, end, analyze):
+    """Inverted reporting clauses inside one dialogue-dash line: after , ! ? … an
+    optional quotative, a lower-case word whose every reading is a finite
+    third-person verb, then one to four words of which the first can be
+    nominative, closed by . : ; or a comma (a question or exclamation is speech) ("…, dedi Kirpicik.")."""
+    line_words = [w for w in words(text) if begin <= w['start'] < end]
+    found = []
+    for index, word in enumerate(line_words):
+        if text[:word['start']].rstrip(' ' + CLOSING + STRAIGHT)[-1:] not in tuple(',!?…'):
+            continue
+        verb_at = index + 1 if word['stem'] == QUOTATIVE and word['suffix'] is None else index
+        if verb_at >= len(line_words) - 1:
+            continue
+        verb = line_words[verb_at]
+        parsed = readings(verb, analyze)
+        if verb['surface'][0].isupper() or not parsed or not all(
+                r['verbal_root'] and r['person'] in ('A3sg', 'A3pl') and REPORT_TENSES & set(r['tenses']) for r in parsed):
+            continue
+        subject = readings(line_words[verb_at + 1], analyze)
+        if subject and all(CASES & set(r['morphemes']) for r in subject):
+            continue
+        for last in line_words[verb_at + 1:verb_at + 5]:
+            closer = text[last['end']:last['end'] + 1]
+            if closer in tuple('.:;,'):
+                found.append((word['start'], last['end'] + 1))
+                break
+            if closer.strip():
+                break
+    return found
+
+
+def dash_spans(text, analyze=None):
+    """Speech opened by a dialogue dash.  The line end closes it only when the next
+    non-empty line is another dash line or the text ends; a wrapped continuation
+    line may be speech or narration, which page text alone cannot tell.  Without an
+    analyzer no narrator insert can be found and every dash span stays uncertain."""
+    spans, matches = [], list(DASH_LINE.finditer(text))
+    for match in matches:
+        newline = text.find('\n', match.end())
+        line_end = len(text) if newline < 0 else newline
+        rest = text[line_end:].lstrip()
+        closed = analyze is not None and (not rest or bool(DASH_LINE.match(rest)))
+        cursor, inserts = match.end(), narrator_inserts(text, match.end(), line_end, analyze) if analyze else []
+        for insert_start, insert_end in inserts:
+            spans.append((cursor, insert_start, True))
+            cursor = insert_end
+        spans.append((cursor, line_end, closed))
+    return spans
+
+
+def utterances(text, analyze=None):
+    """Text without any speech mark is one utterance (a speech balloon unit)."""
+    return quoted(text, analyze) or [(0, len(text), True)]
 
 
 def readings(word, analyze):
@@ -117,7 +168,7 @@ def readings(word, analyze):
 def first_person_predicates(text, analyze):
     """Finite first-person verb-root words, split into usable ones (inside a
     certain utterance) and ones the gate cannot judge, with the reason."""
-    spans, usable, skipped = utterances(text), [], []
+    spans, usable, skipped = utterances(text, analyze), [], []
     for word in words(text):
         parsed = readings(word, analyze)
         if not parsed or not all(r['verbal_root'] and r['person'] in FIRST_PERSONS for r in parsed):

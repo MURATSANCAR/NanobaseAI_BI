@@ -42,3 +42,11 @@ Açık: bu tablo sayfa metni düzeyindedir, üretimdeki 1–3 satırlık kaynak 
 Bilinen gerçek hata örneği 1 iken hiçbir kapının yakalama oranı ölçülemez. `scripts/export-validation-sheet.py`, kabul edilmiş gerçek iddiaları ve kayıtlı kaynak metinlerini etiketleme dosyasına çıkarır. Dosya uygulama kökünün dışındadır (`/data/nanobaseai/editor-qualifications/editor-validation/`, mod 600), Git'e ve pakete girmez, üretim kodu tarafından okunmaz, kapı sonuçlarını içermez (etiketleyeni yönlendirmemek için). İlk dosya: R5 + R7, yinelenenler atılınca 164 satır.
 
 Etiket: `SADIK`, `SADIK_DEGIL`, `KARARSIZ`. Hata sınıfı: `OZNE_KAYMASI`, `KONUSMACI_YANLIS`, `KONUM_SAHIPLIK_EKLEME`, `ZAMAN_KAYMASI`, `KESINLIK_KAYMASI`, `LISTE_GENELLEME`, `KAYNAKTA_OLMAYAN_AD`, `DIGER`. Etiketler insan tarafından doldurulur; beklenen cevap hiçbir zaman modele, isteme ya da üretim koduna verilmez. Açık: etiketleme yapılmadı; tek kitap; roman dilimi yok.
+
+## 4. Konuşma çizgisinde konuşma sonu — `source-person-agreement-v4`
+
+İki genel kural kodlandı: (a) çizgili satırın içinde "virgül/ünlem/soru + isteğe bağlı `diye` + bütün çözümlemeleri üçüncü kişi çekimli fiil + yalın olabilen özne + nokta" kalıbı anlatıcı ara cümlesidir ve adı konuşmanın dışına çıkarır; (b) bir sonraki dolu satır da çizgiyle başlıyorsa ya da metin bitiyorsa konuşma satır sonunda biter. Soru ve ünlemle biten parça konuşma sayılır (ilk denemede "görmüyor musun?" yanlışlıkla anlatıcı sayılmıştı; düzeltildi).
+
+Gerçek ölçüm (`evidence/utterance-profile-probe-20260918T211611107556Z.json`, modül SHA-256 `085842f5…`): iki kitaptaki 123 konuşma parçasının yalnız **15**'i kesinleşti, 1 anlatıcı ara cümlesi bulundu; ikinci örnek satır sonunda bölündüğü için ("…, dedi ‖ Kirpicik.") kaçtı. R5/R7 sonucu değişmedi (1 / 0).
+
+Sonuç: sayfa metni düzeyinde kural kazancı küçüktür. Alt satıra sarılan devamın konuşma mı yeni anlatıcı paragrafı mı olduğu ancak satır geometrisinden (girinti, satır aralığı; `source_spans` kutuları) çıkar. Sıradaki genel iş paragraf sınırını geometriyle belirlemek ve kuralı birleştirilmiş paragraf metninde çalıştırmaktır; yapılmadı. Kapı bu arada belirsiz yerde `NOT_APPLICABLE` döner.

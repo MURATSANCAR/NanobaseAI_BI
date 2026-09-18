@@ -39,7 +39,7 @@ def analyze(word):
 
 DASH_LINE = re.compile(r'^\s*[—–-]\s*\S', re.M)
 raw = sys.stdin.buffer.read()
-books, report = json.loads(raw), {}
+books, report, inserts = json.loads(raw), {}, []
 for label, pages in books.items():
     c = Counter()
     for number, text in pages.items():
@@ -50,7 +50,15 @@ for label, pages in books.items():
         page_words = gate.words(text)
         c['words'] += len(page_words)
         c['unanalysed_words'] += sum(not analyze(w['stem'] + (w['suffix'] or '')) for w in page_words)
-        spans = gate.quoted(text)
+        spans = gate.quoted(text, analyze)
+        dash = gate.dash_spans(text, analyze)
+        c['dash_speech_segments'] += len(dash)
+        c['dash_speech_segments_certain'] += sum(d[2] for d in dash)
+        for m in gate.DASH_LINE.finditer(text):
+            end = text.find('\n', m.end()); end = len(text) if end < 0 else end
+            for i_start, i_end in gate.narrator_inserts(text, m.end(), end, analyze):
+                c['narrator_inserts'] += 1
+                inserts.append(text[i_start:i_end])
         c['quoted_spans'] += len(spans)
         c['uncertain_quoted_spans'] += sum(not s[2] for s in spans)
         c['pages_without_any_quotation_mark'] += not spans
@@ -69,3 +77,4 @@ out.write_text(json.dumps({'input_sha256': hashlib.sha256(raw).hexdigest(),
                            'analyzer': 'zeyrek', 'model_calls': 0, 'application_writes': 0,
                            'book_text_stored': False, 'books': report}, ensure_ascii=False, indent=1))
 print(json.dumps({'evidence': str(out), 'books': report}, ensure_ascii=False, indent=1))
+print('ANLATICI ARA CÜMLELERİ (yalnız ekrana):', inserts)

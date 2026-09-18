@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 21:20 UTC — Editör: konuşma çizgisinde konuşma sonu kuralları
+
+Kişi eki kapısı v4: çizgili satır içindeki devrik aktarma cümlesi ("…, dedi Kirpicik.") ve ardışık çizgili satır kuralı kodlandı. Gerçek iki kitapta 123 konuşma parçasının yalnız 15'i kesinleşti. **Neden önemli:** sayfa metni satır sarmasını paragraf sonundan ayıramıyor; çözüm satır geometrisinde. R5/R7 sonucu değişmedi, üretime bağlı değil. [Ölçüm](editor/2026-09-18-generality-measurements.md).
+
 ## 2026-09-18 21:30 UTC — Altın dosya 69 soru, tam kapının ilk gerçek karnesi: SAĞLAM 44 · KARARSIZ 7 · BOZUK 18
 
 - **Altın dosya:** kalan doğrulanmış sorular altı paralel ajanla yazıldı (salt okunur; referans iş tanımından kuruldu, canlı Logo/CRM'de koşturuldu, köprünün SQL'i kopyalanmadı; köprü referansla uyuşmuyorsa `verified:false` + neden). Ortak talimat `tests/text2sql/gold-parts/AGENT-BRIEF.md`, birleştirme `tests/text2sql/merge-gold-parts.py`. Sonuç: 69 soru (Q1–Q67'den 66'sı + Q68, Q69, Q71); Q7 tanım belirsiz olduğu için alınmadı. Ajan ölçümüne göre dünkü "66 doğru/dürüst" karnesinin bağımsız referansla karşılığı ~üçte iki.
