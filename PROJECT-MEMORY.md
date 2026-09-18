@@ -1,14 +1,14 @@
 # NanobaseAI BI — Proje Belleği
 
-## V14-r2 canlı — kaynak sözcüğü, atıf ve sayfa amacı
+## V14-r3 canlı kod — öykü / bilgilendirici içerik kapsamı
 
-Backend/document `source-analysis-v14-r2-20260918`, web R3. Yerel main, sunucu checkout ve çalışan imajdaki47 backend dosyası tree hash `88837115b1fa9a2052c5a74094d0b499ad6f8f888e5af86ceb2e13a1cd967e80`;9 web dosyası ve gerçek API/PG/28 ACL geçti. Kod `814d7ea` ile main üzerinde; GitHub push kimliği olmadığı için origin'e yayınlanamadı.
+Backend/document/web `source-analysis-v14-r3-20260918`;47 backend dosyası tree hash `e07cdb27015c9df481a99bb1a5784dbf600f62170205165511478748e3c225a6`,9 web kaynak/çıktı eşliği geçti. Kod `ccbeccc` main üzerinde; R3 kitap koşusu henüz başlamadı. GitHub push kimliği eksik.
 
 Yeni iş `efeeb1cb-4741-48f6-87a0-7b4e5285f786`, nesil `3db56430-4821-41c6-a513-4d6e4645bcd6` COMPLETED/NEEDS_REVIEW.48 sayfa kaynak/türetilmiş API-PG,31 sentez ifadesinde tam atıf ve yayın kapıları geçti;63 sınırlı uygun iddia/65 inceleme. Alıntı değişmez kaynak biriminden gelir; satır sonu ve ayrı büyük başlangıç harfi yalnız geometri ve doğrulanmış kaynaklarla okuma görünümünde birleşir, ham OCR değişmez. Eksik sözcük kapısı, tam ek dayanak aktarımı ve non-narrative sayfa-amacı önerileri için ayrı kaynak bağlamı eklendi. Gerçek5/8/16/29/38 pilotları ve canlı5/8 üretimi geçti; tam kitap anlamsal kabulü açık.
 
 R1 nesli `6dca7f01-590c-4a28-a969-a8c8fbb67776`48/48 teknik bütünlük ve27 sentez ifadesinin eksiksiz atıf kontrolüyle tamamlandı; anlamsal kabul değildir.5/8/29 hataları R1 kayıtlarında korunur. R2 paket/import geçti; `/data/nanobaseai/editor-qualifications/v14-r2-20260918/3db56430` ayrı restore/mobil kabulü02:09:58UTC’de geçti; target ve geçici proxy kapatıldı. API18824/metrik19104, subnet72/73 ve geçici dar18886/18888 model proxy'si seçildi. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
 
-R3 adayı:45. sayfadaki bilgilendirici ek, R2 sentezinde öykü teması olmuştu. Bütün sayfalarda açık içerik kapsamı ve kaynak hashli öykü-amacı kapısı eklendi; gerçek45/16 olumsuz,5/29/38 olumlu kaynak pilotları çalıştı. Son-hash45/5/6 pilotu geçti, yeni tam koşu bekleniyor; canlı R2 henüz anlamsal kabul almadı. GPU cold-boot484269 aktif, bu bakım bitmeden yeni kitap işi açılmaz.
+R3 canlı kod:45. sayfadaki bilgilendirici ek, R2 sentezinde öykü teması olmuştu. Bütün sayfalarda açık içerik kapsamı ve kaynak hashli öykü-amacı kapısı eklendi; gerçek45/16 olumsuz,5/29/38 olumlu kaynak pilotları çalıştı. Son-hash45/5/6 pilotu geçti, yeni tam koşu bekleniyor; önceki R2 nesli anlamsal kabul almadı. İlk GPU cold-boot refs/main newline hatasında başarısız; mevcut runner’lar geri getiriliyor. Kod düzeltildi, cache-v2 yeni paket import ediliyor. Bu bakım ve gerçek çıkarım kabulü bitmeden yeni kitap işi açılmaz.
 
 ## 18 Eylül — V13-r2 tarihsel kabul
 

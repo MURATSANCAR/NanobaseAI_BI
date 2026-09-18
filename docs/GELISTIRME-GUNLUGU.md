@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R3 kodu canlı; GPU offline cache ref düzeltmesi
+
+R3 backend/document/web yayımlandı,47 dosya ve9 web kaynak/çıktı eşliği geçti; yeni kitap koşusu GPU bakımı bitene kadar başlatılmadı. Gerçek soğuk GPU açılışı paket cache refs/main dosyasındaki fazladan newline nedeniyle başarısız oldu. Bundle/export ve import doğrulaması kodda düzeltildi; eski paket korunarak cache-v2 türetildi. Import artık gerçek HF kütüphanesiyle internet kapalı snapshot çözümlemesi de yapıyor. Mevcut runner’ların geri açılması ve yeni paketin tekrar kabulü izleniyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 — R2 restore PASS; bilgi/öykü kapsamı için R3 düzeltmesi
 
 R2’nin gerçek ayrı restore, kaynak/türetilmiş/atıf/yayın ve dört genişlikte mobil kabulü geçti, geçici ortam kapandı. İçerik incelemesinde45. sayfadaki bilgi eki öykü temasına karışmıştı; bütün sayfaları açık içerik alanıyla sınıflandıran V4, kaynak hashli öykü kapısını anlam/figür/çapraz akışa ekledi. Gerçek45 pilotu0 öykü iddiası/0 sentez verdi;16 etkinlik,5/29/38 öykü sınıfları korundu. Son kod gerçek45/5/6 kontrolünde geçti;45 kapalı,5 iki uygun iddia,6 inceleme. R3 imajları ağsız derlendi, henüz canlı değil. GPU internet kapalı/boş-cache kurulum denetimi başlatıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
