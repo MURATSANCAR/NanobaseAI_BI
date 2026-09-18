@@ -198,6 +198,7 @@ def verify_unit_coverage(page,units,lookup):
                         r['data']['bbox'][1]+r['data']['bbox'][3]>b[1]+b[3]+1e-9)) for r in members):reason='BALLOON_REGION_BOUNDARY_AMBIGUOUS'
                 elif any(r['data']['status']!='TEXT_AGREED' or r['data']['role']!='TEXT'
                          or not isinstance(r['data'].get('text'),str) or not r['data']['text'].strip() for r in members):reason='BALLOON_SOURCE_REQUIRES_REVIEW'
+                elif [positions[ref] for ref in refs]!=list(range(positions[refs[0]],positions[refs[0]]+len(refs))):reason='BALLOON_READING_ORDER_AMBIGUOUS'
                 elif len({r['data']['render_sha256'] for r in members})!=1 or any(required&selected and (not readable or not required<=selected) for required,readable in initial_pairs+wrapped_pairs):reason='BALLOON_WORD_OR_RENDER_BOUNDARY_INCOMPLETE'
                 atomic_groups.append({'balloon_index':i,'bbox':b,'span_refs':refs,
                                       'status':'NEEDS_REVIEW' if reason else 'ATOMIC_SOURCE_UNIT','reason':reason})

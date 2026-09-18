@@ -134,7 +134,7 @@ def balloon_partition(page,spans,layout_record):
         return manifest
     if any(not valid_box(r['data'].get('bbox')) for r in rows):raise RuntimeError('SOURCE_UNIT_REGION_GEOMETRY_INVALID')
     touched={str(r['id']):[i for i,b in enumerate(boxes) if overlaps(r['data']['bbox'],b)] for r in rows}
-    blocked=set()
+    blocked=set();positions={str(r['id']):i for i,r in enumerate(rows)}
     for index,box in enumerate(boxes):
         members=[r for r in rows if index in touched[str(r['id'])]]
         if not members:continue
@@ -147,6 +147,8 @@ def balloon_partition(page,spans,layout_record):
         elif any(r['data'].get('status')!='TEXT_AGREED' or r['data'].get('role')!='TEXT'
                  or not isinstance(r['data'].get('text'),str) or not r['data']['text'].strip() for r in members):
             reason='BALLOON_SOURCE_REQUIRES_REVIEW'
+        elif [positions[ref] for ref in refs]!=list(range(positions[refs[0]],positions[refs[0]]+len(refs))):
+            reason='BALLOON_READING_ORDER_AMBIGUOUS'
         elif len({r['data']['render_sha256'] for r in members})!=1 or incomplete_word_refs(rows,refs):
             reason='BALLOON_WORD_OR_RENDER_BOUNDARY_INCOMPLETE'
         manifest['groups'].append({'balloon_index':index,'bbox':box,'span_refs':refs,

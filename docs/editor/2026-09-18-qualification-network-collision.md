@@ -7,3 +7,7 @@ Yeni genel `scripts/qualification-network-plan.py`, açık IPv4 havuzu/prefix ya
 CPU sunucusunda gerçek salt okunur kontrol `10.203.64.0/18` havuzundan70/71 çiftini seçti. `/data/nanobaseai/editor/evidence/v15-r7-network-plan.json` kanıtıdır. Bu yalnız seçim kontrolüdür; restore kabulü değildir. Resume wrapper `runtime/run-v15-r7-qualification-resume.py` tek kopya proxy lock ile hazırlandı. İlk başarısız log `evidence/v15-r7-qualification-network-failure-preserved.log` olarak ayrıca korundu.
 
 Yeni R7 gerçek soru/indeks kabulü tamamlanana kadar snapshot/restore başlatılmadı. Önceki backup yeni soru kayıtlarını içermez; QA sonrasında eski backup silinmeden arşivlenmeli ve aynı pinned offline paket/restore başlamamış hedef üzerinde yeni backup alınmalıdır. Ana backend/model/kaynaklar değiştirilmedi. Ağ düzeltmesinin tam restore kabulü henüz **DOĞRULANAMADI**.
+
+## Sonraki kabul engeli
+
+R7 gerçek soru arayüzü kanıtı `source-question-ui-ac2208e5-aa2c-44d6-9194-906d06c5abf3` PASS bildirdi; ancak bağımsız100pasaj denetimi `source-preview-20260918T082747212072Z.json` içinde `Passage exposes a partial hyphenated word` hatasıyla FAILED oldu. Arayüz başarısı bu kaynak bütünlüğü hatasını kapatmaz. Backend/verifier teşhisi ve gerçek yeniden kabul tamamlanmadan restore başlatılmayacak, backup değiştirilmeden korunacak. IPAM düzeltmesi bu anlamsal/kaynak bütünlüğü kontrolünün yerine geçmez.
