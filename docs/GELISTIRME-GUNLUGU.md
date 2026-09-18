@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 21:30 UTC — Editör: NanoJev incelemesi ve büyük Qwen'den kapalı kümeli olasılık
+
+NanoJev (Qwen3-0.6B + karar başlıkları, MIT, iki günlük depo) incelendi: mimari ~60 satır, veri biçimi metin görevine uygun, kitap bazlı eğitim/test ayrımı yapılabilir; ama Türkçe eğitim verisi yok ve canlı Qwen GPU belleğinin %82'sini tutuyor. Aynı çıktı sözleşmesi canlı büyük Qwen'den eğitimsiz alındı: vLLM `structured_outputs.choice` + `logprobs`. 91 gerçek iddiada tek token'lık "özne aynı mı" sorusu: bilinen yanlış PDF27 en düşük 2. (P=0,22), iki geçiş arasında fark 0,0, 78 iddia ≥0,9. **Neden:** serbest JSON formu aynı hatayı geçiriyor ve kararsızdı; tek token kapalı küme ikisini de çözüyor. NanoJev eğitimi şimdilik gereksiz. Etiket olmadan oran ölçülemez; üretime bağlı değil. [Ölçüm](editor/2026-09-18-choice-logprob-probe.md).
+
 ## 2026-09-19 00:30 (yerel) — 1000 soruluk setin ilk canlı koşusu ve denetimi
 
 `set1000.jsonl` nanobase-direct köprüsünde 25 paralelle soruldu (`~/testset/run1000-0918.jsonl`, koşturucu `~/testset/run_set1000.py` — `run_testset.py`'nin tam SQL, ilk 8 satır ve uyarıları da kaydeden kopyası; systemd `timas-set1000`). Model yuvası 8 olduğundan soru başına ortalama 203 sn. Cevap dönen 359 sorunun SQL'i ve ilk satırları denetçilerle tek tek okundu (veritabanında yeniden sorgu koşulmadı). Karne: `tests/text2sql/set1000-karne-0918.jsonl`, sayfa https://claude.ai/artifact/RxX3Yvv5Q6SJyXdk2fNPV2.
