@@ -14,15 +14,20 @@ import subprocess
 import time
 
 p=argparse.ArgumentParser();p.add_argument('source');p.add_argument('destination')
-p.add_argument('--container',default='qwen38-flash-next');args=p.parse_args()
+p.add_argument('--container',default='qwen38-flash-next')
+p.add_argument('--enforce-eager',action='store_true',
+               help='Derive an explicit cold-boot candidate without torch.compile or CUDA graphs.')
+args=p.parse_args()
 source=Path(args.source).resolve();dest=Path(args.destination).resolve()
 assert not dest.exists() and not dest.is_relative_to(source),'INVALID_NEW_RELEASE_PATH'
 raw=(source/'gpu-release-manifest.json').read_bytes();manifest=json.loads(raw)
 live=json.loads(subprocess.check_output(['docker','inspect',args.container]))[0]
 assert live['Image']==manifest['images']['qwen']['id'],'RUNNER_IMAGE_CHANGED_REEXPORT_REQUIRED'
-command=live['Config']['Cmd']
+command=list(live['Config']['Cmd'])
 assert command[0]==manifest['models']['qwen']['repository'],'MODEL_CHANGED_REEXPORT_REQUIRED'
 assert not any(v.split('=',1)[0] in ('--api-key','--hf-token','--token') for v in command),'SECRET_BEARING_COMMAND'
+if args.enforce_eager and '--enforce-eager' not in command:
+    command.append('--enforce-eager')
 shutil.copytree(source,dest,copy_function=os.link)
 def replace(name,data):
     path=dest/name;tmp=path.with_name(path.name+'.new')
@@ -44,7 +49,9 @@ for name in ('import-bundle.py','INSTALL.md'):
     manifest['files'][name]=hashlib.sha256(data).hexdigest()
 manifest.update(created_at=time.time(),derived_from_manifest_sha256=hashlib.sha256(raw).hexdigest(),
     qualification='LIVE_RUNNER_PROFILE_UPDATED_REQUIRES_IMPORT_AND_FRESH_GPU_ACCEPTANCE',
-    derivation='SAME_WEIGHTS_AND_IMAGES_PINNED_CACHE_REFS_AND_LIVE_QWEN_COMMAND_UPDATED')
+    derivation='SAME_WEIGHTS_AND_IMAGES_PINNED_CACHE_REFS_AND_LIVE_QWEN_COMMAND_UPDATED',
+    runner_profile_overrides={'enforce_eager':args.enforce_eager},
+    live_runner_modified=False)
 replace('gpu-release-manifest.json',json.dumps(manifest,indent=2).encode())
 assert (source/'gpu-release-manifest.json').read_bytes()==raw,'PREVIOUS_RELEASE_CHANGED'
 subprocess.run(['docker','compose','-f',str(dest/'compose.yaml'),'config','--quiet'],cwd=dest,check=True)
