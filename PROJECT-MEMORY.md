@@ -239,3 +239,5 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 - 18 Eylül Editör R4 hazırlığı: anlam denetimiV5 okunmamış bölge kimliğini modele atıf olarak sunmaz; mevcut ret kapıları korunur. Gerçek21/22/28 API/PG aday kontrolü geçti; R4 imajları hazır, R3 kabulü tamamlanmadan canlıya alınmadı. Kaynak/inceleme kararı elle değiştirilmedi. Ayrıntı `docs/editor/2026-09-18-source-analysis-v14.md`.
 
 - 18 Eylül03:19UTC: EditorR3 dolu restore/mobil kabulü geçti;60 sınırlı iddia/27 taslak ve atıf boşluğu0, tam anlamsal kabul yok. R4 `0e4bdc7` canlı,47 backend eşliği ve28ACL geçti; R4 yeni analiz GPUcold kontrolünü bekliyor.262 kaynak incelemesi/genel kimlik açık.
+
+- 18 Eylül GPUoffline: CPUoffload/NCCL çalışma ayarları pakette kaybolduğu için bellek64,58→88,42GiB olmuş. Paketleyici/importer runtime-environment sözleşmesiyle düzeltildi; runtime-env-v5 import ve eski paketin reddi gerçek ortamda geçti. Yeni cold-boot başlatılırken yönetimVPN koptu, başlangıç/sonuç DOĞRULANAMADI. DoğrudanGPU→CPU model tüneli erişimi sürüyor. `docs/editor/2026-09-18-gpu-cold-boot.md`.
