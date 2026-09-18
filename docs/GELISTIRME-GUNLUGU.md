@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V14 kaynak birimi ve atıf kapsamı düzeltmesi hazırlandı
+
+Gerçek R2 bağımsız denetimi6 ek dayanaklı iddia/4 eksik sentez bağlantısı buldu. Modelin alıntıyı yeniden yazması yerine değişmez OCR birimi seçimi eklendi; ham öneri ve kaynak hashleri saklanır. Anlam V2, tam sayfa incelemesine ek olarak yalnız gerçekten taşınan kaynaklarla kör denetim yapar; null actor/speaker metindeki atamayı kontrol dışı bırakamaz. Sentez ek dayanakları ham metin/kutu/hash eşliğiyle doğrular ve taşır. Gerçek19/28/38/16 pilotları,19'da iki ek ret ve38'de tam dayanak aktarımı kanıtı verdi. V14 tam kitap kabulü henüz açık; veri elle değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 — güncel R2 tam kayıtlı ayrı restore kabulü
 
 Tamamlanan gerçek R2 kitabı tutarlı yedekten yeni external model kurulumuna döndü. Snapshot'taki DB/artifact kayıtları birebir eşleşti; migration,28 ACL/401, özgün PDF/48 render ve backend/web kaynak hashleri geçti.48 kaynak/kimlik/anlam sayfası,27 fragment,12 figür karşılaştırması ve24 sentez ifadesi restore API/PG ve dört genişlikte gerçek tarayıcıyla kontrol edildi. OCR/VL, metinsel karakter, küçük kaynak, diyalog ve sentez kontrolleri birlikte PASS. Hedef servisler durduruldu, dar geçici nginx/UFW kuralları kaldırıldı; volume ve kanıt korundu. Arama rebuild/cevap ve tam anlamsal kabul açık. HTTPS push kimliği yok; GitHub SSH publickey de reddedildi, origin güncel değildir. [Kanıt](editor/2026-09-18-external-installation-acceptance.md).
