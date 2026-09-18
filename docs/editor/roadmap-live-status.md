@@ -2,7 +2,7 @@
 
 ## Bağlayıcı kural — bütün kitaplar için genel yapı
 
-Kullanıcının18Eylül2026talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
+Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
 
 Bu kural P0–P7 paketlerinin tamamında geçerlidir: [modül talimatları](../../apps/editor/AGENTS.md).
 
