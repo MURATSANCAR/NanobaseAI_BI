@@ -1218,7 +1218,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         for slot in sq.group_by:
             if not slot.mapping:
                 continue
-            rule = reference_rule(slot.mapping, fact)
+            rule = reference_rule(slot.mapping, fact, [f.mapping for f in sq.filters if f.mapping])
             if not rule:
                 continue
             def equality(node, context):
