@@ -60,6 +60,7 @@ _AUXILIARY_ROOTS = ("edil", "edile", "edilm", "ediliyor", "olun", "olus", "yapil
 _RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
     yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
     kaydedilen kayitli tutulan""".split())
+_BREAKDOWN_CUES = frozenset("bazinda bazli basina gore kiriliminda kirilimli ozelinde".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
 # Bir aday, ikincisinden bu kadar önde olmalı ki "tek belirgin aday" sayılsın.
@@ -435,6 +436,11 @@ class SemanticResolver:
             if slot.semantic_type != SemanticType.METRIC or slot.span[1] - slot.span[0] != 1:
                 continue
             nxt = qf.tokens[slot.span[1]] if slot.span[1] < len(qf.tokens) else ""
+            after = qf.tokens[slot.span[1] + 1] if slot.span[1] + 1 < len(qf.tokens) else ""
+            if fold(after) in _BREAKDOWN_CUES:
+                # "ciroyu kitap bazında", "tirajı kitap bazında": the entity word opens a breakdown
+                # phrase of its own; it is not the head of a document name the measure modifies.
+                continue
             if stem(nxt) in _ENTITY_WORDS:
                 hits.remove(slot)
                 sq.explanation.append(f"'{slot.term} {nxt}' bir belge türü olarak okundu, ölçü değil")
@@ -1550,6 +1556,11 @@ class SemanticResolver:
                   if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                   and self._source_of(s.mapping.entity) != home]
         homes_entities = {m.mapping.entity for m in metrics} | {e for e in (named if not metrics else []) if e}
+        # Everything the question placed on the home side is something a bridge may land on: the
+        # breakdown ("kitap bazında" → the product card) as much as the measure's own table.
+        homes_entities |= {s.mapping.entity for s in list(sq.slots) + list(sq.group_by)
+                           if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
+                           and self._source_of(s.mapping.entity) == home}
         for lone in {id(s): s for s in others}.values():
             span = getattr(lone, "span", None)
             if lone.semantic_type == SemanticType.METRIC and (lone.explain or {}).get("source") == "count_cue":
@@ -1604,7 +1615,34 @@ class SemanticResolver:
             for rel in (prof.relationships if prof is not None else []) or []:
                 if rel.get("cross_source") and str(rel.get("ref_entity") or "").upper() in {b.upper() for b in bs}:
                     return True
+        # The bridge rarely lands on the table the question named: targets are kept by barcode, the
+        # barcode table is what the catalog measured against them, and the product card is one join
+        # further. A measured bridge whose far end joins, inside its own source, to a table of the
+        # question is the same bridge; without this step every such question lost its other half.
+        def bare(name: str) -> str:
+            return re.sub(r"^LG_", "", str(name or "").upper())
+        wanted = {bare(o) for o in others}
+        for landing in self._bridge_landings(entity):
+            if bare(landing) in wanted:
+                return True
+            for candidate in (n for n in self.by_entity if bare(n) == bare(landing)):
+                for other in (n for n in self.by_entity if bare(n) in wanted):
+                    if self.conventions.join_path(candidate, other):
+                        return True
         return False
+
+    def _bridge_landings(self, entity: str) -> set[str]:
+        """Tables on the other source that a measured cross-source relationship ties `entity` to."""
+        found: set[str] = set()
+        prof = self.by_entity.get(entity)
+        for rel in (prof.relationships if prof is not None else []) or []:
+            if rel.get("cross_source") and rel.get("ref_entity"):
+                found.add(str(rel["ref_entity"]))
+        for other in self.profiles:
+            for rel in other.relationships or []:
+                if rel.get("cross_source") and str(rel.get("ref_entity") or "").upper() == entity.upper():
+                    found.add(other.entity)
+        return found
 
     def _source_of(self, entity: str) -> str:
         prof = self.by_entity.get(entity)
