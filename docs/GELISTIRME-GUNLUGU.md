@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V13 tam koşuda UUID ve kapsam hataları düzeltildi
+
+V13 kaynak48/48 ve anlamsal kayıtları üretip kimlik kolunda TypeError ile FAILED oldu. Gerçek PostgreSQL UUID türüyle yeniden üretildi; yalnız UUID için kanonik hash dönüşümü eklendi. Tam48 sayfa ve27 fragmentte meşru NEEDS_REVIEW ölçümlerinin provenance hatası sayılması ve uzak okunmamış balonun komşu sayfa bağlantısını engellemesi giderildi. Gerçek API/PG/native-type eşliği48 sayfada1 sınırlı konuşma bağlantısı/0 scope_error verdi; eksik kaynaklı37. sayfa reddi korundu. Fragment arayüzündeki erken bulunamadı mesajı yüklenme durumuyla ayrıldı. İlk başarısız loglar korunur; R2 mevcut checkpointleri API retry ile sürdürecektir. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
+
 ## 2026-09-18 — OCR gateway yarış düzeltmesi ve gerçek kalite dökümü
 
 GPU gateway kaynak kodunda boşta kapanma kararı ile yeni isteğin kabulü arasında yarış bulundu; aynı lifecycle/state kilitleriyle kapanma kararı atomikleştirildi. Monotonic süre, gövde sınırı ve açık upstream hataları eklendi. Ayrı uzak GPU aday konteynerinde gerçek kitap kırpımı200/stop, hatalı uzunluk400 ve aşırı gövde413 geçti; aday durduruldu. Ana gateway henüz değişmedi; idle sınır kabulü açık. V12 gerçek API/PG kalite dökümü887 anlaşmalı/262 inceleme bölgesi,52 sentez adayı,23 taslak ifade gösterdi. Genel salt okunur döküm scripti eklendi. [Gateway kanıtı](../apps/editor/gpu/README.md).
