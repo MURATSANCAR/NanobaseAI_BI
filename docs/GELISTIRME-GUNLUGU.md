@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Editör durumunun ve açık planın kapsamlı belge kapanışı
+
+[Güncel devir kaydı](editor/2026-09-18-current-status-and-handoff.md) son doğrulanmış canlı R5 ile yayımlanmamış semantik V8/rol V8 adayını ayırır. Koşu/nesil/sürüm ve kod hashleri, 48 sayfa kaynak muhasebesi, 774 incelemenin nedenleri, soru/indeks/mobil/restore kabulü, genel kod düzeltmeleri ve sunucudaki kanıt yolları kaydedildi. Son 8 pasajın 3 doğru kabul/2 yanlış fail reddi/1 güvensiz iç önerme engeli/2 yanlış ret ayrımı ve P0–P7'nin bütün açık kapsamı yazıldı; tam anlamsal/üretim kabulü verilmedi.
+
+Roadmap'in 22 bölüm tablosu, kalite engelleri, final kabul, aday tarihçesi, modül README, eski devir yönlendirmesi, proje belleği ve CLAUDE belge girişleri paralelde güncellendi. Tarihsel “koşu sürüyor” ve eski kaynak sayıları güncel sonuçlarla karıştırılmayacak biçimde işaretlendi. Bu tur yalnız Markdown: yeni ürün testi/model koşusu, dağıtım, kod veya kitap/review verisi değişikliği yok. Belge bağlantıları ve diff bütünlüğü statik olarak kontrol edilir; bu kontrol gerçek ürün kabulü değildir.
+
+**Tarihçe okuma kuralı:** Aşağıdaki kayıtların “sürüyor/canlı” ifadeleri ilgili kayıt anına aittir; güncel Editör durumu yukarıdaki devir belgesindedir. Önceki kanıtlar ve diğer iş kollarının günlükleri korunur.
+
 ## 2026-09-18 — Rol V8: kaynak okuma kökeni ve somut yanlış kabullerin kapatılması
 
 Genel okuma projectionı, büyük başlangıç harfi/satırsonu bölünmelerini ham OCR'a yazmadan geometri ve kompakt karakter aralıklarıyla doğrular.14 gerçekpasajAPI/PG+bağımsızprojeksiyon kabulü geçti. Son8pasaj birleşik kontrolünde3doğru kabul,2yanlışfailaktarımı ve1eksikiçönerme engeli doğrulandı;2doğru dolaylıanlatım hâlâgereksizret. Kaynak/reviewhashleri aynı,0uygulamayazımı; modelsonuçlarına ellemüdahale yok. Alıntı/sentez/retrieval/bağımsızUIverifier sözleşmeleri güncellendi. V8aday yayınlanmadı;R5livekorundu, tamkitaptekrarı yok. [Sonuç, kanıtveaçıkkapsam](editor/2026-09-18-role-binding-v8-candidate.md).
