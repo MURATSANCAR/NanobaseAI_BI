@@ -1,10 +1,12 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-> **18 Eylül V14 canlı:** Backend/document V14-r1, web R3; yeni nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776` çalışıyor. Kaynak birimi seçimi ve eksiksiz atıf aktarımı düzeltildi; R2 bağımsız genişletilmiş kontrolde4 eksik sentez bağlantısı verdi, eski bütünlük başarısı tam atıf kabulü sayılmaz. Yeni gerçek47 backend dosyası/web hashleri, API/PG altyapı ve28 ACL geçti. Tam kitap, dolu UI ve yeni paket/restore kabulü beklenir. R2 restore tamamlandı; aşağıdaki eski durumlar tarihçedir. [V14 kanıtları](2026-09-18-source-analysis-v14.md).
+> **18 Eylül V14-r2 canlı:** Yeni nesil `3db56430-4821-41c6-a513-4d6e4645bcd6` çalışıyor. Sözcük sınırı, eksiksiz atıf ve sayfa-amacı düzeltmeleri gerçek sorunlu sayfalarda geçti; ham kitap verisi değiştirilmedi. R2 paket/import geçti, tam kitap/ayrı restore/mobil kabulü sürüyor. R1 teknik48/48 ve atıf kontrolü geçti; bilinen anlamsal hataları R2 kabulü sayılmaz. [Güncel kanıt](2026-09-18-source-analysis-v14.md).
 
-> **18 Eylül V13-r2 güncel:** Backend R2, web R3 ve GPU gateway V2 canlı. İş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05`: COMPLETED/NEEDS_REVIEW;48/48 teknik kaynak ve türetilmiş API/PG bütünlüğü geçti.51 sınırlı iddia/24 taslak ifade;262 kaynak incelemesi ve genel kimlik açık. Qwen/OCR eşzamanlı OOM, ortak bellek profiliyle düzeltildi; gerçek paralel çağrılar geçti. Mac'siz sunucular arası model yolu, uygulama/GPU offline import ve dört genişlikte dolu fragment/kimlik/anlam/sentez UI kabulü geçti. Güncel neslin yedek/restore kontrolüne geçildi. [V13 sürüm/kanıt](2026-09-18-source-analysis-v13.md). Aşağıdaki eski yayın etiketleri tarihçedir.
+> **18 Eylül V14-r1 tarihsel:** Backend/document V14-r1, web R3; yeni nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776` çalışıyor. Kaynak birimi seçimi ve eksiksiz atıf aktarımı düzeltildi; R2 bağımsız genişletilmiş kontrolde4 eksik sentez bağlantısı verdi, eski bütünlük başarısı tam atıf kabulü sayılmaz. Yeni gerçek47 backend dosyası/web hashleri, API/PG altyapı ve28 ACL geçti. Tam kitap, dolu UI ve yeni paket/restore kabulü beklenir. R2 restore tamamlandı; aşağıdaki eski durumlar tarihçedir. [V14 kanıtları](2026-09-18-source-analysis-v14.md).
 
-> **18 Eylül V12 güncel:** kaynak sonrası figür kimliği ve anlam denetimi ayrı paralel kollara bağlandı. Yeni iş `791de2a0-a440-419c-8db4-2095405eed23`, nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`. R9 22 sayfa teknik kontrolünden sonra kayıtları korunarak iptal edildi. Gerçek s7/s38 bileşen kontrolü ve gerçek figür kırpım karşılaştırması çalıştı; tam yeni nesil, kimlik ve anlamsal kabul hâlâ açık. [V12 ayrıntıları](2026-09-18-source-analysis-v12.md). Aşağıdaki eski sürüm sayıları tarihsel kanıttır.
+> **18 Eylül V13-r2 tarihsel:** Backend R2, web R3 ve GPU gateway V2 canlı. İş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05`: COMPLETED/NEEDS_REVIEW;48/48 teknik kaynak ve türetilmiş API/PG bütünlüğü geçti.51 sınırlı iddia/24 taslak ifade;262 kaynak incelemesi ve genel kimlik açık. Qwen/OCR eşzamanlı OOM, ortak bellek profiliyle düzeltildi; gerçek paralel çağrılar geçti. Mac'siz sunucular arası model yolu, uygulama/GPU offline import ve dört genişlikte dolu fragment/kimlik/anlam/sentez UI kabulü geçti. Güncel neslin yedek/restore kontrolüne geçildi. [V13 sürüm/kanıt](2026-09-18-source-analysis-v13.md). Aşağıdaki eski yayın etiketleri tarihçedir.
+
+> **18 Eylül V12 tarihsel:** kaynak sonrası figür kimliği ve anlam denetimi ayrı paralel kollara bağlandı. Yeni iş `791de2a0-a440-419c-8db4-2095405eed23`, nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`. R9 22 sayfa teknik kontrolünden sonra kayıtları korunarak iptal edildi. Gerçek s7/s38 bileşen kontrolü ve gerçek figür kırpım karşılaştırması çalıştı; tam yeni nesil, kimlik ve anlamsal kabul hâlâ açık. [V12 ayrıntıları](2026-09-18-source-analysis-v12.md). Aşağıdaki eski sürüm sayıları tarihsel kanıttır.
 
 > 18 Eylül — Qwen ana model + isteğe bağlı PaddleOCR-VL-1.6 akışı canlıya alındı. R6 ilk11 sayfanın API/PG ve ham kaynak kanıtı denetimi geçti;29. sayfada11 OCR bölgesi ve Qwen çağrısının örtüşmesi öncekiR5 koşusunda ölçüldü. Mobil OCR görünümü dört genişlikte geçti. Gereksiz simge çağrılarını azaltanR9, gerçek67 önceki çağrıda23 çağrıyı inceleme statüsünü değiştirmeden eleyebiliyor; destekli tek-glif okuması korunuyor. **P1/P2 henüz kapanmadı**: figür–karakter kimliği ve anlamsal kabul açık. [Sürüm, hatalar ve kanıt](2026-09-18-qwen-ocr-parallel.md).
 
@@ -46,12 +48,12 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 | Paket | Durum | Kalan kabul |
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
-| P1 Kaynak hattı | Üç gerçek kitabın 48/64/32 sayfalık kaynak hazırlaması doğrulandı; ilk kitap kaynak paneli ve kelime sınırı kapısı çalışıyor | 328 kaynak bölgesi; görsel kaynak doğruluğu |
-| P2 Karakter/olay | 10 kaynaklı metin atfı ve mobil kaynak bağlantısı doğrulandı; claim-speaker 0 | Konuşmacı/kimlik, olay modu ve sahne eşliği |
+| P1 Kaynak hattı | Üç gerçek kitabın 48/64/32 sayfalık kaynak hazırlaması doğrulandı; V14-r2 ana kitapta48 kaynak kontrolü geçti | 262 kaynak incelemesi; görsel doğruluk ve tam anlamsal kabul açık |
+| P2 Karakter/olay | Metin atfı, sınırlı çapraz diyalog, kaynak birimi ve iki aşamalı anlam denetimi var; V14-r2 çalışıyor | Genel figür–karakter kimliği0; tam olay/sahne/anlam kabulü açık |
 | P3 Edebî örnekler | Kabul bekliyor | P2, diğer kitapların gerçek kabulü ve editör rubriği |
 | P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
 | P5 Editör akışı | Kaynak/OCR/bbox ve yetki ekranları çalışıyor | Genel düzeltme ve bağımlılık yenileme kabulü |
-| P6 İşletim | Kuyruk/yetki/offline/restore kontrolleri yürütüldü | V5 son paket kabulü, farklı kullanıcı/yük/topolojiler; v4-r2 offline kabulü geçti |
+| P6 İşletim | V13-r2 gerçek dolu restore/mobil geçti; V14-r2 paket/import geçti; doğrudan GPU tüneli çalışıyor | V14-r2 dolu restore/mobil sürüyor; GPU internet kapalı soğuk açılış, kapasite ve farklı topoloji kabulü açık |
 | P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
 
 ## Planın tüm bölümleri

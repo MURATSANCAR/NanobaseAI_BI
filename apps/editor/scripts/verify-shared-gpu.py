@@ -14,6 +14,10 @@ import urllib.request
 p=argparse.ArgumentParser()
 p.add_argument('visual_artifact');p.add_argument('fragment_artifact');p.add_argument('output')
 p.add_argument('--pair-artifact',required=True)
+p.add_argument('--qwen-base',default='http://127.0.0.1:8001')
+p.add_argument('--ocr-base',default='http://127.0.0.1:8010')
+p.add_argument('--qwen-container',default='qwen38-flash-next')
+p.add_argument('--ocr-container',default='paddleocr-vl')
 args=p.parse_args();target=Path(args.output)
 if target.exists():raise RuntimeError('EVIDENCE_ALREADY_EXISTS')
 visual=json.loads(Path(args.visual_artifact).read_bytes())
@@ -48,24 +52,25 @@ def qwen(use_pair=False):
     prompt=('İki gerçek figür kırpımındaki görünür biçimlerin eşleşen ve farklı ayrıntılarını kaydet. İsim, yazı veya konuşmacı tahmin etme. JSON {"visible_details":["..."],"uncertainties":["..."]}.' if use_pair else
         'Bu gerçek figür kırpımında görünen biçim ve duruşu kaydet. Yazı okuma, isim veya konuşmacı tahmin etme. JSON {"visible_details":["..."],"uncertainties":["..."]}.')
     images=pair_data['crop_image_base64'] if use_pair else [v['crop_image_base64']]
-    return call('http://127.0.0.1:8001',{'model':'qwen3.8-flash-next','temperature':0,'max_tokens':500,
+    return call(args.qwen_base.rstrip('/'),{'model':'qwen3.8-flash-next','temperature':0,'max_tokens':500,
         'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'},
         'messages':[{'role':'user','content':[{'type':'text','text':prompt}]+
             [{'type':'image_url','image_url':{'url':'data:image/png;base64,'+png}} for png in images]}]})
 def ocr():
     start_gate.wait(timeout=30);results=[]
     for _ in range(12):
-        results.append(call('http://127.0.0.1:8010',{'model':'paddleocr-vl-1.6','temperature':0,'max_tokens':256,
+        results.append(call(args.ocr_base.rstrip('/'),{'model':'paddleocr-vl-1.6','temperature':0,'max_tokens':256,
             'messages':[{'role':'user','content':[{'type':'text','text':'OCR:'},
                 {'type':'image_url','image_url':{'url':'data:image/png;base64,'+f['crop_image_base64']}}]}]}))
         time.sleep(.5)
     return results
 sampler=threading.Thread(target=sample);sampler.start()
 def runners():
-    rows=json.loads(subprocess.check_output(['docker','inspect','qwen38-flash-next','paddleocr-vl']))
+    rows=json.loads(subprocess.check_output(['docker','inspect',args.qwen_container,args.ocr_container]))
     return {r['Name']:{'container_id':r['Id'],'image_id':r['Image'],
                       'started_at':r['State']['StartedAt'],'command':r['Config']['Cmd']} for r in rows}
 report={'environment':'GPU host / actual book crops verified against API and PostgreSQL',
+        'qwen_base':args.qwen_base,'ocr_base':args.ocr_base,
         'visual_artifact_sha256':hashlib.sha256(Path(args.visual_artifact).read_bytes()).hexdigest(),
         'fragment_artifact_sha256':hashlib.sha256(Path(args.fragment_artifact).read_bytes()).hexdigest(),
         'pair_artifact_sha256':hashlib.sha256(Path(args.pair_artifact).read_bytes()).hexdigest(),

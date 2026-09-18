@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V14-r2 canlı; yeni tam koşu ve ayrı restore zinciri
+
+R1'in48 kaynak/kimlik/anlam kaydı ve27 sentez ifadesinde tam atıf kontrolü geçti;5/8/29 anlamsal hataları korunarak R2'ye geçildi. Backend/document R2 ve web R3 yayımlandı;47 dosya yerel/sunucu/imaj hash eşliği `88837115...`, gerçek API/PG/28 ACL PASS. Yeni nesil `3db56430-4821-41c6-a513-4d6e4645bcd6`, iş `efeeb1cb-4741-48f6-87a0-7b4e5285f786`. Canlı5/8 sistem çıktıları kaynak sözcüklerini doğru üretti. Paket/import geçti; ayrı restore, tam atıf ve dört genişlikte mobil kabul zinciri kaynak koşusunu bekliyor. GPU boş-cache/internal-ağ açılış aracı hazırlandı; kitap işleri tamamlanmadan çalıştırılmayacak. Yeni tam kabul henüz açık. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 — R2 sözcük sınırı düzeltmeleri gerçek kaynakla sınandı
 
 R1'de8. sayfada satıra bölünen sözcük anlamı ve5. sayfada ayrı büyük başlangıç harfi nedeniyle yanlış kişi adı üretildi. Ham OCR değişmedi; genel geometriye dayalı ayrı okuma görünümü, iki kaynaklı başlangıç harfi birleşimi ve eksik sözcük kapısı eklendi. Yeni5/8 çıktıları sistemden doğru kaynak sözcükleriyle geldi; eski yanlış5 iddiası yeni kapıda reddedildi.29'un gerçek ACTIVITY kaydı ve kayıtlı alt bölgeleriyle bağlam/çapraz kontrol1 sınırlı diyalog bağı verdi, genel kimlik0. Isınmış GPU'da2 Qwen+12 OCR PASS/min5114MiB/restart0. İzolasyon aracındaki ağsız reread-worker varsayımı düzeltildi ve gerçek tekrar geçti. R2 henüz canlı değil;16/38 son-hash ve tam nesil/restore kabulü devam edecek. [Kanıtlar](editor/2026-09-18-source-analysis-v14.md).

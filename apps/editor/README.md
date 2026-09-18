@@ -1,5 +1,7 @@
 # Editör modülü — bağımsız kurulum
 
+> **Güncel yayın V14-r2:** Backend/document `source-analysis-v14-r2-20260918`, web R3. Qwen ana model ve istekle açılan PaddleOCR-VL-1.6 GPU üzerinde; model yolu Mac’den bağımsızdır. Kaynak birimleri, sözcük sınırı, tam atıf ve sayfa amacı düzeltmeleri canlıdır. Yeni48 sayfa ve ayrı restore/mobil kabulü sürüyor; tam anlamsal veya üretim kabulü henüz verilmedi. [Güncel sürüm ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md). Aşağıdaki eski yayın notları tarihçedir.
+
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
 Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](speech/README.md).
