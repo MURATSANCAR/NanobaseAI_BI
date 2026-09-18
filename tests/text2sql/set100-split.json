@@ -1,0 +1,26 @@
+{
+ "rule": "kaynak katmanlı %20; sıra sha1(id); holdout sorusu için kural/kavram yazılmaz",
+ "holdout": [
+  "A019",
+  "A022",
+  "A041",
+  "A044",
+  "A047",
+  "A053",
+  "A060",
+  "A072",
+  "B019",
+  "B029",
+  "B039",
+  "B049",
+  "B057",
+  "B062",
+  "B074",
+  "B083",
+  "B085",
+  "B089",
+  "B094",
+  "C011",
+  "C040"
+ ]
+}

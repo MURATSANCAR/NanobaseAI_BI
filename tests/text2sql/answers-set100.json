@@ -1,0 +1,106 @@
+{
+ "about": "Tam kapının altın cevapları. Her giriş bağımsız yazılmış referans SQL taşır; köprünün ürettiği SQL buraya kopyalanmaz. Yanlış nesneye bakan kontrol altın sayılmaz.",
+ "cases": [
+  {
+   "n": 68,
+   "id": "A022",
+   "soru": "Sevkiyatı yapılmış ama faturalaşmamış işleri müşteri bazında listeler misin?",
+   "kaynak": "ikisi",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.DEFINITION_ AS musteri, SUM(S.AMOUNT) AS adet FROM LG_411_01_STLINE S LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.TRCODE=8 AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.BILLED=0 AND S.INVOICEREF=0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' GROUP BY C.DEFINITION_ ORDER BY 2 DESC",
+   "checks": [
+    {
+     "kind": "rows"
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "sevkiyat",
+      "sevk_edilen_adet",
+      "adet"
+     ],
+     "reference": "adet"
+    },
+    {
+     "kind": "pairs",
+     "answer_key": [
+      "musteri",
+      "musteri_unvani"
+     ],
+     "answer_value": [
+      "sevkiyat",
+      "sevk_edilen_adet",
+      "adet"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "adet",
+     "top": 10
+    }
+   ],
+   "note": "2026-09-18: 532 müşteri, 466.118 adet, 13.004.505,45 ₺. Cevap adet veriyor; sevk tutarı kolonu beklenen cevapta var, üründe yok (açık)."
+  },
+  {
+   "n": 69,
+   "id": "A023",
+   "soru": "Bu yıl satış hedefi ile gerçekleşen ciroyu kitap bazında karşılaştır.",
+   "kaynak": "ikisi",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "checks": [
+    {
+     "kind": "lookup",
+     "top": 3,
+     "source": "crm",
+     "answer_key": [
+      "barkod",
+      "barcode_key",
+      "barcode"
+     ],
+     "answer_value": [
+      "satis_hedefi",
+      "hedef_adet",
+      "hedef_tutar",
+      "hedef"
+     ],
+     "reference": "h",
+     "sql": "SELECT SUM(new_ToplamHedef) AS h FROM Timas_MSCRM.dbo.new_satishedefleriBase WHERE statecode=0 AND new_yil=100000000 AND LTRIM(RTRIM(new_Barkod))='{key}'"
+    },
+    {
+     "kind": "lookup",
+     "top": 3,
+     "source": "logo",
+     "answer_key": [
+      "barkod",
+      "barcode_key",
+      "barcode"
+     ],
+     "answer_value": [
+      "gerceklesen_ciro",
+      "ciro_tutar",
+      "ciro"
+     ],
+     "reference": "t",
+     "sql": "SELECT SUM(S.LINENET) AS t FROM LG_411_01_STLINE S WHERE S.TRCODE IN (7,8,9) AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' AND S.STOCKREF IN (SELECT ITEMREF FROM LG_411_UNITBARCODE WHERE LTRIM(RTRIM(BARCODE))='{key}')"
+    }
+   ],
+   "note": "İki kaynaklı. 5 denemede 5 farklı sonuç görüldü; bir kez üç barkodda iki veritabanıyla eşleşti. Hedef adet, ciro ₺ — fark kolonu birim karıştırıyor; kitap adı yerine barkod dönüyor. verified=false: sağlam olana kadar kapıyı kırmaz ama raporlanır."
+  },
+  {
+   "n": 71,
+   "id": "A046",
+   "soru": "Telif yüzdesine göre bu yıl hangi yazara ne kadar telif tahakkuk etti?",
+   "kaynak": "ikisi",
+   "holdout": false,
+   "expect": "deny",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT YEAR(CreatedOn) AS yil, COUNT(*) AS kayit FROM Timas_MSCRM.dbo.NEW_ODEMEBASE GROUP BY YEAR(CreatedOn)",
+   "checks": [],
+   "note": "Dürüst ret: tahakkuk kayıtları yalnız 2014 (50 kayıt). Referans, reddin dayandığı veri durumunu gösterir; bu yıl kaydı belirirse beklenti yeniden yazılır. Telifin yüzde × satıştan hesaplanması ayrı, açık bir iş."
+  }
+ ]
+}
