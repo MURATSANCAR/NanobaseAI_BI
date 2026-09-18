@@ -14,6 +14,8 @@ R2 nesli48/48 teknik ve türetilmiş API/PG bütünlüğüyle COMPLETED/NEEDS_RE
 
 Editör çıkarım yolu artık Mac'e bağlı değildir: GPU `editor-gpu-tunnel.service`, CPU127.0.0.1:18885/18887'yi GPU8001/8010'a bağlar. CPU nginx Docker bridge18882/18884 adreslerini korur. Ayrı SSH sistem hesabı yalnız bu iki remote porta izin verir; komut, local forward ve ek port gerçek denemede reddedildi, mevcut admin SSH config'i değişmedi. Gerçek aynı figür isteği3,184sn (Mac20,870sn); OCR0,878sn. Eski Mac tünelleri diğer tüketiciler için korunur; BI'ın bağlantı yolu bu değişiklikle otomatik taşınmış sayılmaz. [Kurulum](apps/editor/gpu/tunnel/README.md).
 
+Güncel R2 tamamlanmış neslinin tutarlı yedeği ve ayrı `editor-v13-r2-restore` kurulumu geçti: bütün kitap/artifact eşliği, API/PG/ACL, backend/web hashleri ve320/390/768/1440px dolu OCR/kimlik/fragment/diyalog/sentez akışları doğrulandı. Hedef servisler kapatıldı, geçici ağ kuralları kaldırıldı; volume/kanıt korundu. Arama rebuild ve cevap kalitesi bu restore kabulünde yoktur. [Kanıtlar](docs/editor/2026-09-18-external-installation-acceptance.md).
+
 ## Güncel Editör model akışı — 18 Eylül
 
 Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Canlı backend `source-analysis-v13-r2-20260918`, web `source-analysis-v13-r3-20260918`; tam kitap ve semantik kabul henüz yok. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-source-analysis-v13.md).
