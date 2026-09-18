@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v14'
+VERSION = 'source-spans-v15'
 
 
 def same_model(metrics):
@@ -466,14 +466,17 @@ def interpret(job,evidence,spans,parent=None):
     excluded=[str(s['id']) for s in spans if s not in usable]
     # Optical/visual measurements can be reused. Semantic proposals are fresh
     # for this source-unit contract; legacy generated quotations are not reused.
-    if not usable:
-        result={'page_role':'UNKNOWN','claims':[],'uncertainties':['NO_AGREED_TEXT_SPANS']}; metrics={}
-    else:
-        try:
-            result,metrics=propose(page,spans,model)
-        except RuntimeError as exc:
-            if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED'): raise
-            result={'page_role':'UNKNOWN','claims':[],'uncertainties':[str(exc)]};metrics={}
+    def fenced_model(*args,**kwargs):
+        # Multi-chunk pages must observe cancellation/lease loss between calls,
+        # not only after the entire page has finished using the model.
+        with connection() as db:fence(db,job)
+        response=model(*args,**kwargs)
+        with connection() as db:fence(db,job)
+        return response
+    # Even a page without agreed text gets an explicit, empty coverage ledger.
+    # The proposer records per-chunk budget/truncation failures. Unexpected
+    # failures must fail the job instead of persisting a false complete ledger.
+    result,metrics=propose(page,spans,fenced_model)
     attribution = text_attributions(spans, result.get('page_role','UNKNOWN'))
     save(job,'character_evidence',key,{'pdf_page':page,
         'evidence_refs':[str(evidence['id'])], 'pipeline_version':VERSION, **attribution})
@@ -501,6 +504,7 @@ def interpret(job,evidence,spans,parent=None):
         'input_span_ids':list(allowed),'input_visual_descriptions':False,
         'reused_claim_candidates_from':None,'candidate_reuse_policy':None,'reused_from_generation':None,
         'source_unit_method':UNIT_VERSION,'source_units':result.get('source_units',[]),
+        'source_unit_coverage':result.get('source_unit_coverage'),
         'raw_model_result':result.get('raw_model_result'),
         'rejected_model_candidates':result.get('rejected_model_candidates',[]),
         'uncertainties':result.get('uncertainties',[]),'metrics':metrics,'review_status':'PENDING'})

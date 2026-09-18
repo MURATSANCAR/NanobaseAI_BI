@@ -137,7 +137,8 @@ class Source(BaseModel):
 
 
 def mutate(path,body,key,fn):
-    if path!='/questions': require_write()
+    writing=path!='/questions' or getattr(body,'mode',None)=='editor_preview'
+    if writing: require_write()
     if not key or len(key)>200: raise HTTPException(400,'Idempotency-Key gerekli')
     fingerprint=sha((path+body.model_dump_json(exclude_none=True)).encode())
     with connection() as db:
@@ -145,9 +146,9 @@ def mutate(path,body,key,fn):
         old=db.execute('SELECT * FROM editor.idempotency WHERE actor_id=%s AND key=%s',(idempotency_actor(),key)).fetchone()
         if old:
             if old['request_hash']!=fingerprint: raise HTTPException(409,'IDEMPOTENCY_CONFLICT')
-            for work in old['required_work_ids']:ensure_work(db,work,write=path!='/questions')
+            for work in old['required_work_ids']:ensure_work(db,work,write=writing)
             return old['response']
-        context=write_scope.set(path!='/questions')
+        context=write_scope.set(writing)
         touched=touched_works.set(frozenset())
         try:
             result=fn(db)
@@ -247,10 +248,11 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if len(set(body.priority_pages))!=len(body.priority_pages) or any(p<1 or p>source['manifest']['pdf_pages'] for p in body.priority_pages):
             raise HTTPException(422,'INVALID_PRIORITY_PAGES')
         if db.execute("SELECT id FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')").fetchone(): raise HTTPException(429,'ANALYSIS_CAPACITY_FULL')
+        from editor.source_pipeline import VERSION
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12','source-spans-v13','source-spans-v14'):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12','source-spans-v13','source-spans-v14',VERSION):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION
@@ -387,8 +389,14 @@ def source_review_detail(generation:uuid.UUID,pdf_page:int|None=None):
     return {'generation_id':str(generation),**report}
 
 
+@router.get('/generations/{generation}/source-preview')
+def source_preview(generation:uuid.UUID):
+    with connection() as db:
+        return source_preview_capability(db,scope(db,generation))
+
+
 @router.get('/generations/{generation}/{kind}')
-def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks','character_evidence','figure_identity','figure_comparisons','semantic_reviews','semantic_synthesis','source_fragments','fragment_checks','cross_page_attributions','page_context_roles'],offset:int=0,limit:int=50,pdf_page:int|None=None):
+def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks','character_evidence','figure_identity','figure_comparisons','semantic_reviews','semantic_synthesis','source_fragments','fragment_checks','cross_page_attributions','page_context_roles','source_passages','source_index'],offset:int=0,limit:int=50,pdf_page:int|None=None):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         g=scope(db,generation)
@@ -506,12 +514,44 @@ class Question(BaseModel):
     mode:Literal['editor_preview','published']='published'
 
 
+def source_preview_capability(db,g):
+    result={'ready':False,'scope':'PARTIAL_SOURCE_SUPPORTED_DRAFT','reason':'SOURCE_ANALYSIS_NOT_READY'}
+    if g['manifest'].get('pipeline_version') not in ('source-spans-v14','source-spans-v15'):
+        return result
+    complete=db.execute("SELECT 1 FROM editor.jobs WHERE generation_id=%s AND task='analysis' AND status='COMPLETED'",(g['id'],)).fetchone()
+    if not complete:return result
+    from editor.source_retrieval import verified_passages
+    try:
+        passages=verified_passages(g['id'])
+    except (RuntimeError,KeyError,TypeError,ValueError):
+        return {**result,'reason':'SOURCE_PREVIEW_REQUIRES_REVIEW'}
+    return {**result,'ready':True,'reason':None,'eligible_passages':len(passages),
+            'complete_book':False,'semantic_acceptance':False}
+
+
+def visible_answer(generation,data,current_hashes=None,decision=None):
+    if data and data.get('version') in ('source-answer-preview-v1','source-answer-preview-v2'):
+        from editor.source_answers import answer_is_current
+        try:current=answer_is_current(generation,data,current_hashes)
+        except RuntimeError:current=False
+        if not current or decision in ('REJECT','NEEDS_REVIEW'):
+            return {'version':data['version'],'status':'NEEDS_REVIEW','answer':'','claims':[],
+                    'is_final':False,'semantic_acceptance':False,
+                    'limitations':['Kaynak veya inceleme durumu değişti; önceki taslak cevap gösterilmiyor.']}
+    return data
+
+
 @router.post('/questions',status_code=202)
 def question(body:Question,idempotency_key:str=Header()):
     if body.mode=='editor_preview':require_write()
     def action(db):
         g=scope(db,body.generation_id)
-        if g['status'] not in ('VALIDATED','ACTIVE','RETIRED'): raise HTTPException(409,'GENERATION_NOT_READY')
+        source_generation=g['manifest'].get('pipeline_version') is not None
+        if source_generation:
+            if body.mode!='editor_preview':raise HTTPException(409,'EDITOR_REVIEW_REQUIRED')
+            if not source_preview_capability(db,g)['ready']:raise HTTPException(409,'SOURCE_PREVIEW_NOT_READY')
+            if db.execute("SELECT 1 FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')").fetchone():raise HTTPException(429,'ANALYSIS_CAPACITY_FULL')
+        elif g['status'] not in ('VALIDATED','ACTIVE','RETIRED'): raise HTTPException(409,'GENERATION_NOT_READY')
         if body.mode=='published' and g['status']!='ACTIVE': raise HTTPException(409,'EDITOR_REVIEW_REQUIRED')
         rid=str(uuid.uuid4())
         db.execute("INSERT INTO editor.jobs(id,generation_id,task,payload) VALUES (%s,%s,'question',%s)",(rid,body.generation_id,Jsonb(body.model_dump(mode='json'))))
@@ -525,8 +565,12 @@ def answer(job_id:uuid.UUID):
         job=db.execute("SELECT * FROM editor.jobs WHERE id=%s AND task='question'",(job_id,)).fetchone()
         if not job: raise HTTPException(404,'Kayıt bulunamadı')
         scope(db,job['generation_id'])
-        row=db.execute("SELECT data FROM editor.records WHERE generation_id=%s AND kind='answers' AND record_key=%s",(job['generation_id'],str(job_id))).fetchone()
-        return {'job_id':str(job_id),'job_status':job['status'],'generation_id':str(job['generation_id']),'answer':row['data'] if row else None}
+        row=db.execute("""SELECT r.data,(SELECT decision FROM editor.reviews WHERE target_id=r.id
+          ORDER BY version DESC LIMIT 1) AS decision FROM editor.records r
+          WHERE generation_id=%s AND kind='answers' AND record_key=%s""",(job['generation_id'],str(job_id))).fetchone()
+    # Source/vector validation may take longer than the DB idle-transaction limit.
+    # Release the short authorization/read transaction before external checks.
+    return {'job_id':str(job_id),'job_status':job['status'],'generation_id':str(job['generation_id']),'answer':visible_answer(job['generation_id'],row['data'],decision=row['decision']) if row else None}
 
 
 @router.get('/question-jobs')
@@ -534,11 +578,20 @@ def question_jobs(generation_id:uuid.UUID,offset:int=0,limit:int=50):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
     with connection() as db:
         scope(db,generation_id)
-        rows=db.execute('''SELECT j.id,j.status,j.payload->>'question' AS question,j.error_code,r.data AS answer
+        rows=db.execute('''SELECT j.id,j.status,j.payload->>'question' AS question,j.error_code,r.data AS answer,
+          (SELECT decision FROM editor.reviews WHERE target_id=r.id ORDER BY version DESC LIMIT 1) AS answer_decision
           FROM editor.jobs j LEFT JOIN editor.records r ON r.generation_id=j.generation_id
           AND r.kind='answers' AND r.record_key=j.id::text
           WHERE j.generation_id=%s AND j.task='question' ORDER BY j.created_at,j.id LIMIT %s OFFSET %s''',
           (generation_id,limit+1,offset)).fetchall()
+    if any(row['answer'] and row['answer'].get('version') in ('source-answer-preview-v1','source-answer-preview-v2') for row in rows[:limit]):
+        from editor.source_answers import current_passage_hashes
+        try:
+            hashes=current_passage_hashes(generation_id)
+            if hashes is None:hashes=False
+        except RuntimeError:hashes=False
+        for row in rows[:limit]:row['answer']=visible_answer(generation_id,row['answer'],hashes,row['answer_decision'])
+    for row in rows[:limit]:row.pop('answer_decision',None)
     return {'items':rows[:limit],'has_more':len(rows)>limit}
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Real API/PG checks: unqualified book output must not publish or answer.
+"""Real API/PG checks: unqualified book output must not publish.
 
 Only rejection paths are exercised; no content or editorial decisions are written.
 """
@@ -40,8 +40,25 @@ before=state()
 assert before['status'] in ('BUILDING','NEEDS_REVIEW'), 'Do not probe mutation paths on an accepted generation'
 checks=[]
 rejected('/v1/generations/'+gen, None,401,authenticated=False)
-for mode in ('editor_preview','published'):
-    rejected('/v1/questions',{'generation_id':gen,'question':'Bu kitabın ana karakterleri kimler?','mode':mode},409,'GENERATION_NOT_READY')
+preview=None
+try:
+    request=urllib.request.Request(base+'/v1/generations/'+gen+'/source-preview',headers={'Authorization':'Bearer '+token})
+    with urllib.request.urlopen(request,timeout=60) as response:preview=json.load(response)
+except urllib.error.HTTPError as exc:
+    # Older installations have no dedicated source-preview capability route.
+    if exc.code not in (404,422):raise
+if preview is not None:
+    assert type(preview.get('ready')) is bool and preview.get('scope')=='PARTIAL_SOURCE_SUPPORTED_DRAFT'
+    assert preview.get('semantic_acceptance',False) is False and preview.get('complete_book',False) is False
+    checks.append({'path':'/v1/generations/'+gen+'/source-preview','status':200,'capability':preview})
+    rejected('/v1/questions',{'generation_id':gen,'question':'Bu kitabın ana karakterleri kimler?','mode':'published'},409,'EDITOR_REVIEW_REQUIRED')
+    if not preview['ready']:
+        rejected('/v1/questions',{'generation_id':gen,'question':'Bu kitabın ana karakterleri kimler?','mode':'editor_preview'},409,'SOURCE_PREVIEW_NOT_READY')
+    # A ready, limited editor preview is intentionally available. Its positive
+    # real-job/answer acceptance is separate; this rejection-only probe creates none.
+else:
+    for mode in ('editor_preview','published'):
+        rejected('/v1/questions',{'generation_id':gen,'question':'Bu kitabın ana karakterleri kimler?','mode':mode},409,'GENERATION_NOT_READY')
 rejected('/v1/generations/'+gen+'/activate',{'purpose':'validation'},409,'GENERATION_NOT_VALIDATED')
 after=state()
 assert after['status']!='ACTIVE' and before['reviews']==after['reviews'] and before['questions']==after['questions']

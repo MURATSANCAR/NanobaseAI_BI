@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { UploadBook } from "./UploadBook";
 import { AccessPanel } from "./AccessPanel";
+import { SourceQuestionForm } from "./SourceQuestionForm";
 
 type Row = { id: string; record_key: string; data: Record<string, any> };
 type Work = { id: string; title: string };
@@ -90,6 +91,7 @@ const answerStatuses: Record<string, string> = {
 };
 
 function App() {
+  const requestedAnalysis = useRef<{ work: string; job: string } | null>(null);
   const [identity, setIdentity] = useState<any>(null);
   const [token, setToken] = useState(""),
     [signed, setSigned] = useState(false),
@@ -114,6 +116,8 @@ function App() {
     [busy, setBusy] = useState(false);
   const selected = runs.find((r) => r.id === run),
     gen = selected?.generation_id;
+  const displayedScope = useRef({ generation: gen, token });
+  displayedScope.current = { generation: gen, token };
   async function api(path: string) {
     const r = await fetch("/v1" + path, {
       headers: { Authorization: "Bearer " + token },
@@ -167,7 +171,13 @@ function App() {
       .then((rows) => {
         if (active) {
           setRuns(rows);
-          setRun(rows[0]?.id ?? "");
+          const requested = requestedAnalysis.current;
+          if (requested?.work === work) {
+            const found = rows.some(row => row.id === requested.job);
+            setRun(found ? requested.job : "");
+            if (!found) setError('İstenen analiz kaydı görüntülenemedi. Yükleme panelinden tekrar açın.');
+            requestedAnalysis.current = null;
+          } else setRun(rows[0]?.id ?? "");
         }
       })
       .catch((e) => active && setError(e.message));
@@ -390,9 +400,13 @@ function App() {
       </header>
       <main className="workspace">
         {identity?.can_manage_access && <AccessPanel token={token} works={works} />}
-        {identity?.can_create_work && <UploadBook token={token} onStarted={async id => {
-          const rows = await all('/works'); setWorks(rows); setWork(id);
-          const analyses = await all(`/works/${id}/analyses`); setRuns(analyses); setRun(analyses[0]?.id ?? '');
+        {identity?.can_create_work && <UploadBook token={token} onStarted={async (id, jobId) => {
+          const rows = await all('/works');
+          const analyses = await all(`/works/${id}/analyses`);
+          if (!analyses.some(row => row.id === jobId)) throw new Error('Analiz kaydı henüz görüntülenemiyor. Analizi görüntüle düğmesiyle tekrar deneyin.');
+          setWorks(rows);
+          if (work === id) { setRuns(analyses); setRun(jobId); }
+          else { requestedAnalysis.current = { work: id, job: jobId }; setWork(id); }
         }} />}
         <section className="heading">
           <div>
@@ -911,6 +925,12 @@ function App() {
             )}
             {tab === "questions" && (
               <section className="cards">
+                {gen && identity?.can_create_work && <SourceQuestionForm token={token} generationId={gen} onQueued={async () => {
+                  const generation = gen, credential = token;
+                  const rows = await all('/question-jobs?generation_id=' + generation);
+                  if (displayedScope.current.generation === generation && displayedScope.current.token === credential)
+                    setQuestions(rows);
+                }} />}
                 {questions.map((q) => (
                   <article className="paper wide" key={q.id}>
                     <span className="badge">
@@ -957,7 +977,7 @@ function App() {
             )}
             <footer>
               <span>
-                İçerik ve geçmiş kayıtlar korunur. Bu ekran salt okunur.
+                İçerik ve geçmiş kayıtlar korunur. Taslaklar editör kabulü değildir.
               </span>
               <details>
                 <summary>Analiz kimliği</summary>

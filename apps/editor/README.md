@@ -1,6 +1,10 @@
+> Güncel backend/document: `source-analysis-v15-r7-20260918`; web: `source-preview-v15-r2-20260918`. Gerçek soru akışında bulunan API500, eksik sözcük atfı ve cevap güncelliği sorunları kodda düzeltildi. Yeni canlı soru/tam kitap/arama restore kabulü sürüyor. [Ayrıntılar](../../docs/editor/2026-09-18-source-analysis-v15.md).
+
 # Editör modülü — bağımsız kurulum
 
-> **Güncel yayın V14-r4:** Backend/document `source-analysis-v14-r4-20260918`, web R3. Nesil `08ca6877`48 sayfada COMPLETED/NEEDS_REVIEW;64 sınırlı uygun iddia/27 taslak, atıf boşluğu0. Gerçek API/PG, offline paket/import, ayrı dolu restore ve320/390/768/1440px mobil kabulü18 Eylül04:25UTC'de geçti.262 kaynak incelemesi ve genel figür kimliği açık; tam anlamsal/üretim kabulü yok. Qwen + isteğe bağlı PaddleOCR-VL doğrudan GPU→CPU tüneli üzerinden Mac VPN'i olmadan koşuyu tamamladı. Son GPU offline cold-boot sonucu yönetim VPN nedeniyle DOĞRULANAMADI. [Sürüm ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md). Aşağıdaki eski yayın notları tarihçedir.
+> **Güncel yayın V14-r5:** Backend/document `source-analysis-v14-r5-20260918`, web R3. Aynı girdili sınırlı model yeniden denemesi ve güçlü PDF/kırpım/OCR-VL uzlaşması canlı.47 backend dosyası,9 web kaynak/çıktı eşliği ve gerçek API/PG/28ACL geçti.10/32 kesilmiş çağrı bileşenleri ve9 ek destekli bölge gerçek kaynaklarda doğrulandı; yeni tam kitap/restore kabulü henüz beklenir. [R5 kod ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14-r5.md). Aşağıdaki R4 ve önceki sürümler tarihçedir.
+
+> **Tamamlanmış önceki yayın V14-r4:** Backend/document `source-analysis-v14-r4-20260918`, web R3. Nesil `08ca6877`48 sayfada COMPLETED/NEEDS_REVIEW;64 sınırlı uygun iddia/27 taslak, atıf boşluğu0. Gerçek API/PG, offline paket/import, ayrı dolu restore ve320/390/768/1440px mobil kabulü18 Eylül04:25UTC'de geçti.262 kaynak incelemesi ve genel figür kimliği açık; tam anlamsal/üretim kabulü yok. Qwen + isteğe bağlı PaddleOCR-VL doğrudan GPU→CPU tüneli üzerinden Mac VPN'i olmadan koşuyu tamamladı. Son GPU offline cold-boot sonucu yönetim VPN nedeniyle DOĞRULANAMADI. [Sürüm ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md). Aşağıdaki eski yayın notları tarihçedir.
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 
@@ -251,3 +255,10 @@ Ek Unicode özel kullanım karakterlerinin PDF metni sayılması düzeltildi; de
 18 Eylül R3 kodu canlı: öykü dünyası ile okura verilen bilgi/öğüt için kaynaklı kapsam kapısı eklendi. Gerçek45/5/6 pilotları geçti, R3 tam kitap koşusu bekliyor. R2 dolu restore/mobil PASS. GPU cache paketindeki refs/main newline hatası gerçek offline açılışta bulundu; exporter/importer düzeltildi ve yeni cache-v2 doğrulanıyor. [Güncel kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md).
 
 18 Eylül03:19UTC: R3 gerçek kitap dolu restore ve320/390/768/1440px mobil kabulünü geçti. R4 genel atıf-kimliği düzeltmesi canlı;47 backend/imaj eşliği ve gerçekAPI/PG altyapı/28ACL geçti. R4 tam kitap koşusu henüz başlamadı; GPU soğuk kurulum kabulü sürüyor.262 kaynak incelemesi ve tam anlamsal kabul açık. [Kanıt](../../docs/editor/2026-09-18-source-analysis-v14.md).
+# Güncel yayın — V15 kaynaklı editör taslağı
+
+Backend/document `source-analysis-v15-r5-20260918`, web `source-preview-v15-r2-20260918`.49 backend ve10 web dosya eşliği ile gerçek altyapı kontrolü geçti. Kaynak birimi gruplaması, kaynak destekli hibrit arama ve gerçek editör soru formu bağlı; yeni soru/tam nesil/indeks restore kabulü henüz tamamlanmadı. `published`, insan kabulü ve tam kitap doğruluğu açık kalır. [Güncel kanıt ve sınırlar](../../docs/editor/2026-09-18-source-analysis-v15.md).
+
+Önceki V14-r5 tam teknik koşu, ayrı restore ve dört genişlikte mobil kontrol06:08UTC'de geçti; kaynak896/253, uygun sınırlı iddia61. Aşağıdaki eski sürüm notları tarihçedir.
+
+API ve işçi kaynak sınırları `.env` üzerinden `EDITOR_API_CPUS`, `EDITOR_API_MEMORY`, `EDITOR_WORKER_CPUS`, `EDITOR_WORKER_MEMORY` ile ayarlanır; varsayılan her servis2CPU/1GiB. Bu sınırlar model eşzamanlılık sayısını değiştirmez. YarımCPU sınırı gerçek cevap ekranında zaman aşımına neden olduğu için kaldırıldı; kaynak güvenlik denetimleri korunur.

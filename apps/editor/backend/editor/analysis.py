@@ -554,6 +554,13 @@ def run(job):
 
 
 def answer_question(job):
+    # Source generations must never fall through to the legacy whole-page OCR
+    # answer path, even when an older caller omitted the preview marker.
+    with connection() as db:
+        manifest=db.execute('SELECT manifest FROM editor.generations WHERE id=%s',(job['generation_id'],)).fetchone()['manifest']
+    if manifest.get('pipeline_version') is not None:
+        from editor.source_answers import answer_question as source_answer
+        return source_answer(job)
     from editor.retrieval import search
     gen=job['generation_id']; question=job['payload']['question']
     candidates=search(gen,question)

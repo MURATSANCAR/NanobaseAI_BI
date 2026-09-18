@@ -196,6 +196,15 @@ try:
     (target/'evidence/source-spans-run.json').write_text(json.dumps(run))
     env={**os.environ,'EDITOR_VERIFY_BASE_URL':'http://127.0.0.1:'+port,
          'EDITOR_VERIFY_RUN_FILE':'evidence/source-spans-run.json'}
+    execute('restored_search_rebuild',['python3','scripts/rebuild-search.py',project],cwd=target,env=env)
+    preview_generation=os.environ.get('EDITOR_QUALIFY_SOURCE_PREVIEW_GENERATION')
+    preview_jobs=os.environ.get('EDITOR_QUALIFY_SOURCE_PREVIEW_JOB_IDS')
+    if bool(preview_generation)!=bool(preview_jobs):raise RuntimeError('PREVIEW_RESTORE_SCOPE_INCOMPLETE')
+    if preview_generation:
+        import socket
+        preview_env={**env,'EDITOR_VERIFY_ROOT':str(target),'EDITOR_VERIFY_REMOTE_HOST':socket.gethostname(),
+                     'EDITOR_VERIFY_GENERATION_ID':preview_generation,'EDITOR_VERIFY_QUESTION_JOB_IDS':preview_jobs}
+        execute('restored_source_preview_api_pg_vectors',['python3','scripts/verify-source-preview.py'],cwd=target,env=preview_env)
     execute('restored_source_api_pg',['python3','scripts/verify-source-pipeline.py'],cwd=target,env=env)
     if os.environ.get('EDITOR_QUALIFY_DERIVED')=='1':
         execute('restored_derived_api_pg',['python3','scripts/verify-source-analysis.py',run['generation_id'],'--fragments'],cwd=target,env=env)

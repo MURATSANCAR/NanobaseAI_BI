@@ -1,8 +1,28 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V15-r7: kaynak kimlik yetkisi, gerçek soru/mobil ve CPU sınırları
+
+R6 gerçek iki soru ve dört mobil genişlik geçti; ilk2iddia/PARTIAL, desteksiz doğum tarihi0iddia/INSUFFICIENT_EVIDENCE. Bağımsız içerik incelemesi actor konum/eyleyen hatası buldu; R7 kaynak pasajının aynı alan yetkisi dışındaki actor/speaker etiketlerini engeller, eski v1 cevapları güncel göstermez. R7 canlı49backend/10web ve altyapıPASS; yeni gerçekQAakışı çalışıyor. API/worker2CPU/1GiB yapılandırılabilir sınırlar gerçekkonteyner/izolasyonla doğrulandı.48sayfa/1466birim/162sözcükbağımlılığı salt-okunur kaynak kontrolü PASS. İki eski arama manifestini güncel sayan bağımsız verifier betiği kurulu kodhash seçimine düzeltildi; başarısızkanıtkorundu. [Detaylar](editor/2026-09-18-source-analysis-v15.md).
+
+## 2026-09-18 — V15-r6: gerçek soru akışındaki hataların genel kod düzeltmesi
+
+R5 ilk gerçek soru modelde tamamlandı ancak kaynak doğrulaması DB işlemi açıkken çalıştığı için API500/IdleInTransactionSessionTimeout verdi. Cevap okuması kısa DB işlemi sonrasına taşındı. Kaynak satır sonu sözcük parçalarının beraber atıf zorunluluğu eklendi; boş cevaplar dahil kesin indeks hash'i ve ayrı cevap inceleme kapısı bağlandı. R6 sunucuda ağsız build/deploy,49backend/10web dosya eşliği ve gerçek altyapı geçti. Yeni gerçek soru UI koşusu devam ediyor; tamV15henüzbaşlamadı, anlamsal başarı ilan edilmedi. Başarısız kayıtlar ve kaynak verileri korundu. Triage yanlış katman sayımı düzeltilip gerçekR5API/PGile61uygun iddia yeniden doğrulandı. [Kanıt/ayrıntı](editor/2026-09-18-source-analysis-v15.md).
+
+## 2026-09-18 06:10 UTC — V14-r5 tam kabul, V15 kaynaklı soru akışı canlı
+
+V14-r5 gerçek48sayfa API/PG/atıf/yayın korumaları ve dolu yedek/ayrı restore/dört mobil genişlik kabulünü tamamladı.896 anlaşma/253 inceleme,61 sınırlı uygun iddia; tam anlamsal kabul yok. Yeni V15-r5 backend/document ve source-preview-v15-r2 web49/10 dosya eşliği ve gerçek altyapı kontrolüyle yayımlandı. Kaynak birimi grupları, kaynaklı hibrit arama, güncel insan kararlarıyla eski cevabı gizleme, kitap yazma yetkili soru taslağı ve gerçek soru formu bağlandı. Vektörler exact readback değerleriyle PG manifestinde saklanıyor; customer restore modeli tekrar çağırmadan yeniden kuracak. [Kod/sürüm](editor/2026-09-18-source-analysis-v15.md).
+
+Son web imajının yüklemeden analiz açma regresyonu64sayfalık gerçek farklı kitap/API18810/PG ile dört genişlikte geçti. İlk yeni soru UI denemesi hatalı tam-label seçicisi yüzünden soru oluşturmadan durdu; ekran görüntüsü ve başarısız kanıt korundu. Doğrulama betiği gerçek `.selectors select` alanına bağlandı, aynı gerçek akış yeniden başlatıldı; ürün veya kitap cevabı elle değiştirilmedi. Yeni soru/tam V15/arama restore kabulü henüz açık.
+
+## 2026-09-18 05:50 UTC — Kapsam düzeltmesi ve gerçek analiz navigasyonu
+
+Kullanıcının kesintisiz devam talebiyle V15 kaynak birimi gruplaması, birim bazlı eksik kayıtları, grup arası iş fencing ve bağımsız V3 verifier geliştirildi. Gerçek48sayfa planında2058birim/190çağrı, son s10pilotunda37birim/4çağrı/11aday/2inceleme; anlamsal kabul verilmedi. İki backend/document aday imajı CPU'da ağsız derlendi, R5 devam ettiği için ana kaynaklar değiştirilmedi. [Kod ve kanıt](editor/2026-09-18-source-unit-coverage.md).
+
+Yüklemeden başlatılan analizin kesin iş kimliğini izleyen frontend düzeltmesi gerçek başka kitap/API18810/PG ile320/390/768/1440 genişliklerinde geçti. Daha yeni bir iş varken ilk işi açma ve reload idempotency doğrulandı; iki kontrollü iş API ile iptal edildi, kaynak/karar değişmedi. Geçici aday gateway kapatıldı. Ana web yayını ve yeni birleşik sürüm kabulü henüz bekler. [Kanıt](editor/2026-09-18-upload-analysis-navigation-acceptance.md).
+
 ## 2026-09-18 05:28UTC — R5 model kesilmesi ve güçlü OCR uzlaşması
 
-Kullanıcının devam talebiyle iki genel düzeltme yapıldı.10/32 gerçek kesilmiş model çağrıları aynı girdili tek ek denemeyle tamamlandı; partial JSON kullanılmadı. Temiz PDF,iki kırpım ve OCR-VL noktalaması birlikte uyuşursa tek bölgesel OCR vetosu kayıtlı olarak aşılır.1149 gerçek API/PG bölgesinde9 ek destekli bölge;13 mevcut seçim korundu. CPU R5 imajları ağsız derlendi, henüz yayımlanmadı. Başarı ilanı için yeni nesil tam koşu/restore gerekiyor. [Ayrıntı](editor/2026-09-18-source-analysis-v14-r5.md).
+Kullanıcının devam talebiyle iki genel düzeltme yapıldı.10/32 gerçek kesilmiş model çağrıları aynı girdili tek ek denemeyle tamamlandı; partial JSON kullanılmadı. Temiz PDF,iki kırpım ve OCR-VL noktalaması birlikte uyuşursa tek bölgesel OCR vetosu kayıtlı olarak aşılır.1149 gerçek API/PG bölgesinde9 ek destekli bölge;13 mevcut seçim korundu. CPU R5 imajları ağsız derlendi ve boş iş kuyruğu kontrolünden sonra yayımlandı;47 backend/9 web eşliği ve gerçek API/PG/28ACL geçti. Yeni iş4b0895be/nesild9ff5c60 ile tam koşu ve ayrı qualifier başlatıldı; başarı ilanı için bu neslin tam koşu/restore sonucu gerekiyor. [Ayrıntı](editor/2026-09-18-source-analysis-v14-r5.md).
 
 ## 2026-09-18 04:25 UTC — R4 tam teknik koşu, restore ve mobil PASS
 

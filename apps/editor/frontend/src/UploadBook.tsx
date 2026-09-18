@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-type Props = { token: string; onStarted: (work: string) => Promise<void> };
+type Props = { token: string; onStarted: (work: string, job: string) => Promise<void> };
 export function UploadBook({ token, onStarted }: Props) {
   const [title, setTitle] = useState("");
   const [label, setLabel] = useState("İlk yükleme");
@@ -11,6 +11,10 @@ export function UploadBook({ token, onStarted }: Props) {
   const [upload, setUpload] = useState("");
   const [state, setState] = useState<any>(null);
   const [recent, setRecent] = useState<any[]>([]);
+  const [recentOffset, setRecentOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingRecent, setLoadingRecent] = useState(false);
+  const [startedJob, setStartedJob] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [refresh, setRefresh] = useState(0);
   const attempt = useRef<any>({});
@@ -30,8 +34,21 @@ export function UploadBook({ token, onStarted }: Props) {
     return result;
   }
   useEffect(() => {
-    request('/uploads').then(r => { if (alive.current) setRecent(r.items); }).catch(e => { if (alive.current) setError(e.message); });
+    request('/uploads').then(r => { if (alive.current) { setRecent(r.items); setRecentOffset(r.items.length); setHasMore(r.has_more); } }).catch(e => { if (alive.current) setError(e.message); });
   }, []);
+  async function loadMore() {
+    setLoadingRecent(true);
+    try {
+      const result = await request('/uploads?offset=' + recentOffset);
+      if (result.has_more && !result.items.length) throw new Error('Yükleme listesi ilerlemedi. Tekrar deneyin.');
+      if (alive.current) {
+        setRecent(previous => Array.from(new Map([...previous, ...result.items].map(row => [row.id, row])).values()));
+        setRecentOffset(previous => previous + result.items.length);
+        setHasMore(result.has_more);
+      }
+    } catch (e) { if (alive.current) setError((e as Error).message); }
+    finally { if (alive.current) setLoadingRecent(false); }
+  }
   useEffect(() => {
     if (!upload) return;
     let active = true, timer: ReturnType<typeof setTimeout>;
@@ -116,10 +133,12 @@ export function UploadBook({ token, onStarted }: Props) {
   async function start() {
     setBusy(true); setError("");
     try {
-      const a = attempt.current;
-      await request(`/content-versions/${state.content_version_id}/analyses`, { purpose: "validation" }, 'upload:' + upload + ':analysis');
-      await onStarted(state.work_id);
-      if (alive.current) { setMessage("Analiz başladı. Sayfa ilerlemesini aşağıdan takip edebilirsiniz."); setState(null); }
+      // Retain the server's exact job even if refreshing the workspace fails.
+      // Reopening it must not start another analysis or select a newer edition.
+      const result = startedJob ? { job_id: startedJob } : await request(`/content-versions/${state.content_version_id}/analyses`, { purpose: "validation" }, 'upload:' + upload + ':analysis');
+      if (alive.current) setStartedJob(result.job_id);
+      await onStarted(state.work_id, result.job_id);
+      if (alive.current) setMessage("Analiz kaydı açıldı. Sayfa ilerlemesini aşağıdan takip edebilirsiniz. İşlemenin bitmesi kitabın doğrulandığı anlamına gelmez.");
     } catch (e) { if (alive.current) setError((e as Error).message); }
     finally { if (alive.current) setBusy(false); }
   }
@@ -131,9 +150,10 @@ export function UploadBook({ token, onStarted }: Props) {
   }
   return <details className="upload-book">
     <summary>Yeni kitap yükle</summary>
-    {!!recent.length && !busy && <label>Önceki yüklemeyi takip et<select value={upload} onChange={e => { setUpload(e.target.value); setState(null); setResumeFile(null); setMessage(''); setError(''); }}>
+    {!!recent.length && !busy && <label>Önceki yüklemeyi takip et<select value={upload} onChange={e => { setUpload(e.target.value); setStartedJob(''); setState(null); setResumeFile(null); setMessage(''); setError(''); }}>
       <option value="">Yeni yükleme</option>{recent.map(r => <option key={r.id} value={r.id}>{r.title} · {({ CREATED: 'Dosya bekliyor', RECEIVED: 'Dosya alındı', PARSING: 'Hazırlanıyor', COMPLETED: 'Kaynak hazır', FAILED: 'Hata', CANCELLED:'İptal edildi' } as any)[r.status] ?? r.status}</option>)}
     </select></label>}
+    {hasMore && !busy && <button disabled={loadingRecent} onClick={loadMore}>{loadingRecent ? 'Yüklemeler getiriliyor…' : 'Daha eski yüklemeleri getir'}</button>}
     {!upload && <form onSubmit={submit}>
       <label>Kitap adı<input required maxLength={300} value={title} disabled={busy || !!attempt.current.key} onChange={e => setTitle(e.target.value)} /></label>
       <label>Baskı / sürüm<input required maxLength={200} value={label} disabled={busy || !!attempt.current.key} onChange={e => setLabel(e.target.value)} /></label>
@@ -149,8 +169,8 @@ export function UploadBook({ token, onStarted }: Props) {
       <button className="primary" disabled={busy || !resumeFile}>{busy ? "İşleniyor…" : "Yüklemeyi sürdür"}</button>
     </form>}
     {state?.status === "RECEIVED" && <button className="primary" disabled={busy} onClick={resume}>{busy ? "İşleniyor…" : "Kaynak hazırlamayı başlat"}</button>}
-    {state?.status === "COMPLETED" && <button className="primary" disabled={busy} onClick={start}>Kitap analizini başlat</button>}
+    {state?.status === "COMPLETED" && <button className="primary" disabled={busy} onClick={start}>{startedJob ? 'Analizi görüntüle' : 'Kitap analizini başlat'}</button>}
     {state?.status === "PARSING" && <button disabled={busy} onClick={cancel}>Kaynak hazırlamayı iptal et</button>}
-    {!busy && (error || upload) && <button onClick={() => { attempt.current = {}; setUpload(''); setState(null); setResumeFile(null); setError(''); setMessage(''); setFile(null); }}>Yeni yükleme aç</button>}
+    {!busy && (error || upload) && <button onClick={() => { attempt.current = {}; setUpload(''); setStartedJob(''); setState(null); setResumeFile(null); setError(''); setMessage(''); setFile(null); }}>Yeni yükleme aç</button>}
   </details>;
 }

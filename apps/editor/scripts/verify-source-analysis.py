@@ -83,8 +83,150 @@ def verify_reading_view(view,allowed_refs,page):
                 text=re.sub(r'-\s*$','',text)+b['text'].lstrip()
         else:text+='\n'+b['text']
     assert text==view['reading_text'],'UNDECLARED_READING_TEXT_CHANGE'
+
+def source_order(page):
+    # Independent reconstruction from API/PG geometry; do not import the proposer.
+    baselines=[]
+    rows=[r for r in api['source_spans'] if r['data']['pdf_page']==page]
+    for row in sorted(rows,key=lambda r:(r['data']['bbox'][1],r['data']['bbox'][0])):
+        x,y,w,h=row['data']['bbox'];matches=[]
+        for index,(top,height,members) in enumerate(baselines):
+            overlap=max(0,min(y+h,top+height)-max(y,top))/min(h,height)
+            distance=abs(y+h/2-top-height/2)
+            if overlap>=.5 and distance<=.6*max(h,height):matches.append((distance,index))
+        if matches:baselines[min(matches)[1]][2].append(row)
+        else:baselines.append((y,h,[row]))
+    return [row for _,_,members in baselines for row in sorted(members,key=lambda r:r['data']['bbox'][0])]
+
+coverage_totals={'pages':0,'units':0,'chunks':0,'needs_review_units':0,'unprocessed_units':0,'partial_context_chunks':0}
+def verify_unit_coverage(page,units,lookup):
+    ledger=page['source_unit_coverage'];limits=ledger['limits'];entries=ledger['unit_dispositions']
+    assert ledger['method']=='source-unit-claims-v3'
+    assert ledger['semantic_complete'] is False and ledger['human_accepted'] is False,'UNIT_LEDGER_PROMOTED_ACCEPTANCE'
+    assert ledger['catalogue_sha256']==digest(units),'UNIT_CATALOGUE_HASH_MISMATCH'
+    assert ledger['catalogue_units']==len(units) and set(entries)==set(lookup),'UNIT_LEDGER_SET_MISMATCH'
+    assert ledger['accounting_complete'] is True
+    bounds={'units_per_chunk':48,'input_characters_per_chunk':48000,'chunks_per_page':256}
+    assert set(limits)==set(bounds)
+    assert all(type(limits[key]) is int and 1<=limits[key]<=maximum for key,maximum in bounds.items()),'UNIT_LIMIT_INVALID'
+    agreed={ref for ref,d in spans.items() if d['pdf_page']==page['pdf_page'] and d['status']=='TEXT_AGREED' and d['role']=='TEXT'}
+    catalogued={ref for unit in units for ref in unit['span_refs']}
+    assert ledger['agreed_text_span_refs']==sorted(agreed)
+    assert ledger['catalogued_span_refs']==sorted(catalogued)
+    assert ledger['uncatalogued_agreed_span_refs']==sorted(agreed-catalogued)
+    # Reconstruct bounded partitions, including every deferred catalogue unit.
+    partitions=[];current=[];characters=0;deferred={}
+    for unit in units:
+        size=len(json.dumps(unit,ensure_ascii=False,separators=(',',':')))
+        if size>limits['input_characters_per_chunk']:
+            deferred[unit['unit_id']]={'status':'NEEDS_REVIEW','reason':'UNIT_EXCEEDS_INPUT_BUDGET'}
+            continue
+        if current and (len(current)==limits['units_per_chunk'] or characters+size>limits['input_characters_per_chunk']):
+            partitions.append(current);current=[];characters=0
+        current.append(unit['unit_id']);characters+=size
+    if current:partitions.append(current)
+    for chunk in partitions[limits['chunks_per_page']:]:
+        for uid in chunk:deferred[uid]={'status':'UNPROCESSED','reason':'PAGE_CALL_BUDGET_EXCEEDED'}
+    partitions=partitions[:limits['chunks_per_page']]
+    assert all(entries[uid]==value for uid,value in deferred.items()),'UNIT_DEFERRED_REASON_MISMATCH'
+    chunks=page['raw_model_result']['chunks'];measurements=page['metrics']['chunks']
+    assert page['metrics']['method']=='source-unit-claims-v3'
+    assert ledger['processed_chunks']==len(chunks)==len(partitions)==len(measurements),'UNIT_CHUNK_COUNT_MISMATCH'
+    ordered=source_order(page['pdf_page']);positions={r['id']:i for i,r in enumerate(ordered)}
+    initial_pairs=[]
+    for left,right in zip(ordered,ordered[1:]):
+        a,b=left['data'],right['data'];glyph=a.get('text','').strip();body=b.get('text','').lstrip()
+        if len(glyph)!=1 or not glyph.isalnum() or not body or not body[0].islower() or a['render_sha256']!=b['render_sha256']:continue
+        x,y,w,h=a['bbox'];xx,yy,ww,hh=b['bbox']
+        if h>=1.4*hh and x<xx and -.5*w<=xx-(x+w)<=.15*hh and max(0,min(y+h,yy+hh)-max(y,yy))>=.5*hh and y+h>yy+hh:
+            initial_pairs.append(({left['id'],right['id']},glyph.isalpha() and glyph.isupper() and
+                                  all(d['status']=='TEXT_AGREED' and d['role']=='TEXT' for d in (a,b))))
+    wrapped_pairs=[]
+    for index,left in enumerate(ordered):
+        a=left['data']
+        if not re.search(r'\w-\s*$',a.get('text','')):continue
+        required={left['id']};readable=False
+        if index+1<len(ordered):
+            right=ordered[index+1];b=right['data'];x,y,w,h=a['bbox'];xx,yy,ww,hh=b['bbox']
+            compatible=(a['pdf_page']==b['pdf_page'] and a['render_sha256']==b['render_sha256']
+                        and yy>=y+.5*h and yy-(y+h)<=2*max(h,hh)
+                        and max(0,min(x+w,xx+ww)-max(x,xx))>=.5*min(w,ww))
+            if compatible:
+                required.add(right['id'])
+                readable=all(d['status']=='TEXT_AGREED' and d['role']=='TEXT' for d in (a,b)) and bool(re.match(r'^\s*\w',b.get('text','')))
+        wrapped_pairs.append((required,readable))
+    for unit in units:
+        refs=unit['span_refs'];sequence=[positions[ref] for ref in refs]
+        assert unit['pdf_page']==page['pdf_page'] and 1<=len(refs)<=3
+        assert sequence==list(range(sequence[0],sequence[0]+len(sequence))),'UNIT_NONCONTIGUOUS_SOURCE'
+        for pair,readable in initial_pairs:
+            if pair&set(refs):assert readable and pair<=set(refs),'UNIT_PARTIAL_INITIAL_WORD'
+        for pair,readable in wrapped_pairs:
+            if pair&set(refs):assert readable and pair<=set(refs),'UNIT_PARTIAL_LINE_END_WORD'
+    context=[]
+    for position,row in enumerate(ordered):
+        d=row['data'];available=(d['status']=='TEXT_AGREED' and d['role']=='TEXT' and isinstance(d.get('text'),str) and bool(d['text'].strip()))
+        context.append({'position':position,'text':d['text'] if available else '[UNVERIFIED_REGION]','available':available})
+    saved=page['claims']+page['blocked_claims'];roles=[]
+    for index,(chunk,expected,measurement) in enumerate(zip(chunks,partitions,measurements)):
+        assert chunk['chunk_index']==measurement['chunk_index']==index
+        assert chunk['unit_ids']==expected,'UNIT_CHUNK_MEMBERSHIP_MISMATCH'
+        raw=chunk['result'];trace=measurement['metrics'];manifest=chunk['reading_context_manifest']
+        if trace.get('error'):
+            assert trace['error'] in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED')
+            assert raw is None and manifest is None
+        else:
+            assert manifest and trace['finish_reason']=='stop'
+            assert trace['prompt_version']=='source-unit-claims-v3'
+            assert manifest['full_context_sha256']==digest(context),'UNIT_FULL_CONTEXT_HASH_MISMATCH'
+            assert type(manifest['prompt_characters']) is int and 0<manifest['prompt_characters']<=limits['input_characters_per_chunk']
+            if manifest['scope']=='FULL_PAGE':used=context
+            else:
+                assert manifest['scope']=='PARTIAL_PAGE'
+                selected={positions[ref] for uid in expected for ref in lookup[uid]['span_refs']}
+                used=[row if row['position'] in selected else {'position':row['position'],'text':'[UNVERIFIED_OR_OMITTED_REGION]','available':False}
+                      for row in context if min(selected)<=row['position']<=max(selected)]
+                coverage_totals['partial_context_chunks']+=1
+            assert manifest['positions']==[row['position'] for row in used]
+            assert manifest['sha256']==digest(used),'UNIT_USED_CONTEXT_HASH_MISMATCH'
+            retained={row['position']:row for row in used};ranges=[]
+            for row in context:
+                if retained.get(row['position'])==row:continue
+                position=row['position']
+                if ranges and ranges[-1][1]+1==position:ranges[-1][1]=position
+                else:ranges.append([position,position])
+            assert manifest['omitted_position_ranges']==ranges,'UNIT_OMITTED_CONTEXT_MISMATCH'
+        valid_schema=(isinstance(raw,dict) and raw.get('page_role') in ('NARRATIVE','ACTIVITY','FRONT_MATTER','APPENDIX','MIXED','UNKNOWN')
+                      and isinstance(raw.get('claims'),list) and len(raw['claims'])<=4
+                      and isinstance(raw.get('uncertainties'),list) and all(isinstance(v,str) for v in raw['uncertainties']))
+        roles.append(raw['page_role'] if valid_schema else 'UNKNOWN')
+        local_saved=[claim for claim in saved if claim['source_unit_id'] in expected]
+        if not valid_schema:assert not local_saved,'INVALID_UNIT_CHUNK_PRODUCED_CLAIM'
+        for claim in local_saved:
+            assert claim['model_candidate'] in raw['claims'],'CLAIM_NOT_IN_OWN_UNIT_CHUNK'
+            assert claim['model_candidate']['source_unit_id']==claim['source_unit_id'],'CLAIM_UNIT_SELECTION_CHANGED'
+        reviews=raw.get('unit_reviews',[]) if isinstance(raw,dict) else []
+        if not isinstance(reviews,list):reviews=[]
+        selected={claim['source_unit_id'] for claim in local_saved}
+        for uid in expected:
+            assert entries[uid]['chunk_index']==index
+            matching=[review for review in reviews if isinstance(review,dict) and review.get('source_unit_id')==uid]
+            valid_review=(valid_schema and len(matching)==1 and matching[0].get('status') in ('CANDIDATE','NO_CLAIM','NEEDS_REVIEW')
+                          and isinstance(matching[0].get('reason'),str) and bool(matching[0]['reason'].strip()))
+            if valid_review:valid_review=((uid in selected)==(matching[0]['status']=='CANDIDATE'))
+            expected_entry=({'status':matching[0]['status'],'reason':matching[0]['reason'],'chunk_index':index} if valid_review else
+                            {'status':'NEEDS_REVIEW','reason':'INVALID_OR_MISSING_UNIT_REVIEW','chunk_index':index})
+            assert entries[uid]==expected_entry,'UNIT_MODEL_DISPOSITION_MISMATCH'
+    assert page['page_role']==(roles[0] if roles and len(set(roles))==1 else 'UNKNOWN'),'UNIT_PAGE_ROLE_PROMOTION'
+    incomplete=[value for value in entries.values() if value['status'] in ('NEEDS_REVIEW','UNPROCESSED')]
+    assert ledger['all_units_have_model_disposition']==(bool(units) and not incomplete)
+    if incomplete:assert 'SOURCE_UNIT_COVERAGE_REQUIRES_REVIEW' in page['uncertainties']
+    coverage_totals['pages']+=1;coverage_totals['units']+=len(units);coverage_totals['chunks']+=len(chunks)
+    coverage_totals['needs_review_units']+=sum(value['status']=='NEEDS_REVIEW' for value in entries.values())
+    coverage_totals['unprocessed_units']+=sum(value['status']=='UNPROCESSED' for value in entries.values())
+
 for page in pages.values():
-    if page.get('source_unit_method') not in ('source-unit-claims-v1','source-unit-claims-v2'):continue
+    if page.get('source_unit_method') not in ('source-unit-claims-v1','source-unit-claims-v2','source-unit-claims-v3'):continue
     units=page.get('source_units',[]);lookup={u['unit_id']:u for u in units}
     assert len(lookup)==len(units),'SOURCE_UNIT_ID_COLLISION'
     for unit in units:
@@ -93,7 +235,7 @@ for page in pages.values():
                    and spans[r]['pdf_page']==page['pdf_page'] and spans[r]['render_sha256']==unit['render_sha256'] for r in refs)
         assert unit['quote']=='\n'.join(spans[r]['text'] for r in refs),'SOURCE_UNIT_TEXT_MODIFIED'
         assert unit['sha256']==digest({k:unit[k] for k in ('pdf_page','span_refs','quote','render_sha256')})
-        if page['source_unit_method']=='source-unit-claims-v2':
+        if page['source_unit_method'] in ('source-unit-claims-v2','source-unit-claims-v3'):
             assert unit['reading_view']['span_refs']==refs
             verify_reading_view(unit['reading_view'],refs,page['pdf_page'])
     for claim in page['claims']+page['blocked_claims']:
@@ -102,6 +244,7 @@ for page in pages.values():
         assert claim['quote']==unit['quote'] and claim['span_refs']==unit['span_refs']
         assert claim['source_unit_sha256']==unit['sha256']
         assert claim['text']==claim['model_candidate']['text'],'MODEL_CLAIM_TEXT_CHANGED'
+    if page['source_unit_method']=='source-unit-claims-v3':verify_unit_coverage(page,units,lookup)
 if extended:
     assert {r['data']['pdf_page'] for r in api['fragment_checks']} == expected_pages, 'FRAGMENT_CHECKS_INCOMPLETE'
     for row in api['source_fragments']:
@@ -230,11 +373,25 @@ for row in api['semantic_synthesis']:
         assert statement['verification']['supported'] is True
         expected_spans = {ref for cid in statement['claim_refs'] for ref in eligible[cid]['span_refs']}
         assert set(statement['source_span_refs'])==expected_spans
-model_calls={}
+model_calls={};incomplete_calls=[]
 def verify_attempts(value):
     if isinstance(value,list):
         for item in value:verify_attempts(item)
     elif isinstance(value,dict):
+        if value.get('error')=='MODEL_OUTPUT_TRUNCATED':
+            attempts=value['generation_attempts']
+            assert 1<=len(attempts)<=2,'UNBOUNDED_INCOMPLETE_MODEL_RETRY'
+            assert len({a['messages_sha256'] for a in attempts})==1,'INCOMPLETE_MODEL_RETRY_INPUT_CHANGED'
+            assert attempts[-1]['finish_reason']!='stop','COMPLETED_OUTPUT_RECORDED_AS_TRUNCATED'
+            for attempt in attempts:
+                assert type(attempt['max_output_tokens']) is int and attempt['max_output_tokens']>0
+                assert isinstance(attempt['incomplete_output'],str)
+                assert all(re.fullmatch('[0-9a-f]{64}',attempt[key]) for key in ('messages_sha256','request_sha256','response_sha256'))
+                assert attempt['usage']['completion_tokens']<=attempt['max_output_tokens']
+            if len(attempts)==2:
+                assert attempts[0]['finish_reason']=='length','COMPLETED_INCOMPLETE_VERDICT_RETRIED'
+                assert attempts[0]['max_output_tokens']<attempts[1]['max_output_tokens']<=2*attempts[0]['max_output_tokens']
+            incomplete_calls.append(attempts)
         if value.get('generation_retry_policy')=='LENGTH_ONLY_IDENTICAL_INPUT_ONCE_WITHIN_CONTEXT':
             attempts=value['generation_attempts']
             assert 1<=len(attempts)<=2,'UNBOUNDED_MODEL_RETRY'
@@ -255,8 +412,10 @@ def verify_attempts(value):
 for items in api.values():
     for row in items:verify_attempts(row['data'])
 report = {'generation_id':generation,'api':base,'api_pg_match':True,
+          'source_unit_coverage_integrity':coverage_totals,
           'counts':{kind:len(api[kind]) for kind in kinds},'eligible_claims':len(eligible),
           'bounded_model_calls_verified':len(model_calls),
+          'bounded_incomplete_model_calls_verified':len(incomplete_calls),
           'length_retry_calls_verified':sum(n==2 for n in model_calls.values()),
           'derived_integrity_passed':True,'semantic_acceptance':False,'application_writes':0}
 target = root/'evidence'/('source-analysis-'+generation+'.json')

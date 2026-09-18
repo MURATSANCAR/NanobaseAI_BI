@@ -42,6 +42,7 @@ def records(kind):
 spans = records('source_spans')
 readings = records('page_readings')
 claims = records('page_claims')
+semantic_reviews = records('semantic_reviews')
 pending = [row for row in spans if row['data']['status'] != 'TEXT_AGREED']
 issues = Counter(issue for row in pending for issue in row['data']['issues'])
 combinations = Counter('|'.join(sorted(row['data']['issues'])) for row in pending)
@@ -64,7 +65,9 @@ report = {'at': datetime.now(timezone.utc).isoformat(), 'generation_id': generat
     'reread_states': dict(Counter(row['data'].get('reread_state','NOT_AVAILABLE') for row in pending)),
     'page_label_candidates': sum(row['data'].get('role') == 'PAGE_LABEL_CANDIDATE' for row in pending),
     'claim_gates': dict(Counter(claim['source_gate'] for claim in all_claims)),
-    'synthesis_eligible_claims': sum(bool(claim['eligible_for_synthesis']) for claim in all_claims),
+    'page_candidate_eligible_flags': sum(bool(claim['eligible_for_synthesis']) for claim in all_claims),
+    'synthesis_eligible_claims': sum(claim.get('eligible_for_synthesis') is True
+        for row in semantic_reviews for claim in row['data'].get('claims', [])),
     'pages': sorted(pages, key=lambda page: (-page['review'], page['pdf_page'])),
     'semantic_acceptance': False, 'source_or_review_writes': 0}
 destination = root/'evidence'/('source-quality-triage-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.json')

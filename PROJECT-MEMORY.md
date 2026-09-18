@@ -1,8 +1,24 @@
 # NanobaseAI BI — Proje Belleği
 
+## Güncel canlı sürüm — 18 Eylül, V15-r7
+
+Editör backend/document `source-analysis-v15-r7-20260918`, web `source-preview-v15-r2-20260918`;49 backend/10 web dosya eşliği ve gerçek API/PG altyapı kontrolü PASS. Backend tree `f4ed2a6e31949e03808e8372dd6d745bd4f019b1490558924cdc4bc2f264c638`. R5 soru koşusunda gerçek API500 bulundu; DB işlemi dışında kaynak kontrolüyle düzeltildi. Bölünmüş sözcük atıfları, boş cevap indeks hash'i ve cevap/kaynak inceleme ayrımı genel kodda düzeltildi. R6 iki gerçek soru ve dört genişlik teknik kabulü geçti; çıktının actor alanı bağımsız incelemede hata verdi. R7 cevap-v2 kaynak kimlik yetkisi sınırıyla canlı; yeni gerçek kabul sürüyor. API/worker varsayılanı yapılandırılabilir2CPU/1GiB, izolasyon gerçek kontrolde PASS. Kaynak bileşeni48/48sayfa1466birim/162sözcükbağımlılığı PASS. Yeni tam V15 kitap koşusu henüz başlamadı. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v15.md).
+
+## Önceki yayın — 18 Eylül 06:10 UTC
+
+Editör backend/document `source-analysis-v15-r5-20260918`, web `source-preview-v15-r2-20260918`;49 backend/10 web dosya eşliği, gerçek API/PG altyapı kabulü PASS. Kaynak birimi kapsamı, kaynaklı hibrit arama ve ayrı editör soru taslağı akışı kodda bağlı. Yeni soru ve tam V15 nesil kabulü henüz sürüyor; insan kabulü/published kapısı açılmadı. [Sürüm ve açık kabul](docs/editor/2026-09-18-source-analysis-v15.md).
+
+Önceki V14-r5 tam teknik koşu ve ayrı restore/mobil06:08UTC'de geçti:48sayfa,896 anlaşmış/253 inceleme bölgesi,61 sınırlı uygun iddia,370 model çağrısı/4 kesilme tekrarı. Genel kimlik ve tam anlamsal kabul açık. R5 kaynağı değiştirilmeden V15 geliştirmesine geçildi; aşağıdaki kayıtlar önceki aşamaların tarihçesidir.
+
+## Devam eden geliştirme — 18 Eylül 05:50 UTC
+
+R5 ana koşusunda kaynak denetimi48/48 ve başarısız sayfa0; kaynak sonrası amaç/anlam denetimleri sürüyor, yeni tam kabul verilmedi. V15 adayında sayfa başına dört iddia tavanı yerine kaynak birimi grupları ve eksik birim muhasebesi eklendi; aynı kaynaklı s10 gerçek pilotu37birim/4çağrı/11aday/2inceleme verdi. Pipeline gruplar arasında gerçek iş fencing kontrolü yapar, coverage kaydını saklar; V3 verifier hazır, tam yeni nesilde henüz çalışmadı. İki V15 imajı CPU'da ağsız derlendi, canlıya alınmadı. [Kapsam](docs/editor/2026-09-18-source-unit-coverage.md).
+
+Yükleme ekranının başlatılan tam iş kimliğini açması düzeltildi. Aday web, ayrı gerçek API18810/PG ve farklı32sayfalık kitapla dört genişlikte geçti; daha yeni iş varken ilk işe dönüş/reload aynı işi korudu, ek iş oluşturmadı. Kontrollü iki iş iptal edildi; kaynak/inceleme verisi değişmedi. Ana web henüz R3. [Gerçek kabul](docs/editor/2026-09-18-upload-analysis-navigation-acceptance.md).
+
 ## R5 geliştirmesi —18 Eylül05:28UTC
 
-Kesilmiş model çıktısına aynı girdili tek bounded retry ve temiz PDF+iki kırpım+OCR-VL noktalama uzlaşması hazırlandı. Gerçek10/32 tekrarları iki aşamada tamamlandı;1149 gerçek bölgenin bağımsız API/PG incelemesinde9 ek bölge güçlü destek buldu,13 mevcut seçim korundu. Yeni imajlar derlendi; R5 henüz canlı değil, R4 aşağıda geçerli sürümdür. Kitap verisi veya inceleme kararı değiştirilmedi. [Kod/kanıt](docs/editor/2026-09-18-source-analysis-v14-r5.md).
+Kesilmiş model çıktısına aynı girdili tek bounded retry ve temiz PDF+iki kırpım+OCR-VL noktalama uzlaşması hazırlandı. Gerçek10/32 tekrarları iki aşamada tamamlandı;1149 gerçek bölgenin bağımsız API/PG incelemesinde9 ek bölge güçlü destek buldu,13 mevcut seçim korundu. R5 canlıya alındı:47 backend dosyası tree cffbf1094e794a28c294fda9e3cbf5aefcc8f62934da490e59730875732824a5,9 web kaynak/çıktı, gerçek API/PG ve28ACL geçti. Yeni R5 iş4b0895be/nesild9ff5c60 çalışıyor, monitor126887/qualifier126888; tam analiz/restore kabulü beklenir; aşağıdaki R4 tamamlanmış önceki kabuldür. Kitap verisi veya inceleme kararı değiştirilmedi. [Kod/kanıt](docs/editor/2026-09-18-source-analysis-v14-r5.md).
 
 ## Editör canlı durum — 18 Eylül 04:25 UTC
 
