@@ -1,5 +1,7 @@
 # V8 rol bağlama adayı — 18 Eylül 2026
 
+Güncel devir kaydı: [18 Eylül güncel durum](2026-09-18-current-status-and-handoff.md). Bu belge aday deneylerinin tarihçesini korur. Son durum itibarıyla arka planda devam eden test yoktur.
+
 Mevcut canlı yayın V16 R5'tir. Semantik V8 ve yeni rol bağlama kapısı adaydır; yayınlanmadı. Kitabın tam anlamsal kabulü verilmedi. Son semantik V8/rol V8 adayı gerçek API/PG üzerinde sınandı. Kaynak okuma görünümü 14/14 bağımsız kontrolden geçti; son sekiz-pasaj birleşik kontrolde üç doğru ifade kabul edildi, iki yanlış fail aktarımı ve bir güvensiz iç-önerme kabulü engellendi; iki doğru dolaylı anlatım gereksiz incelemede kaldı. Tam üretim kabulü yoktur.
 
 ## Sorun ve genel çözüm
@@ -16,7 +18,7 @@ Raporlanan konuşma ayrıca ele alınır: dış raporlama yüklemi ile iç içer
 - V6 ilk taze koşusunda yedi örneğin yalnız üçü yapısal PASS oldu. Yeniden kullanım ile baştan çıkarım arasındaki fark açık kalite sınırıdır; eski altı PASS bu koşuya taşınamaz.
 - Daha sonraki taze koşu, zaman damgası `110117` olan gerçek kanıtta yedi örneğin altısında yapısal PASS üretti. Bu kanıt yalnız kaydettiği modül hashleri için geçerlidir.
 - `source-role-bindings-probe-20260918T110315859425Z.json`: sonraki taze koşu 5 yapısal PASS, 1 doğru kişi-aktarımı reddi, 1 eksik özne çıkarımı nedeniyle inceleme. Bağımsız `role-binding-reference-20260918T110329736089Z.json`, gerçek API/PG ve değişmez kayıt hashleriyle bu ayrımı doğruladı; model çağrısı ve uygulama yazımı sıfır.
-- Sonrasında, eksiksiz ve birebir aynı anlatı cümleciğinin açık NOMINAL öznesi yalnız o cümlecikte kullanılıyorsa kaynak metni taşıma kontrolü eklendi. Adlandırılmış, örtük veya paylaşılan özneye muafiyet verilmez. Kaynak grafı düzeltilmedi. Bu yeni kodun birleşik 14-pasaj koşusu sürüyor; önceki kanıt sonradan değişen koda kabul sağlamaz.
+- Sonrasında, eksiksiz ve birebir aynı anlatı cümleciğinin açık NOMINAL öznesi yalnız o cümlecikte kullanılıyorsa kaynak metni taşıma kontrolü eklendi. Adlandırılmış, örtük veya paylaşılan özneye muafiyet verilmez. Kaynak grafı düzeltilmedi. Bu aşamada yeni kodun birleşik 14-pasaj koşusu başlatılmıştı; tamamlanan tarihsel sonuçlar ve sonraki rol V8 kanıtı aşağıdadır. Önceki kanıt sonradan değişen koda kabul sağlamaz.
 
 PASS burada sınırlı rol yapısı kontrolüdür; editör onayı, bütün anlamın doğruluğu veya kitabın tamamlandığı anlamına gelmez. Beklenen kötü örneğin herhangi bir format hatasıyla reddedilmesi doğru özne ilişkisi yakalandı diye sunulmaz; gerçek ret nedeni ayrıca incelenir.
 
@@ -51,7 +53,7 @@ Yedi bileşen örneği geniş gerçek regresyon veya farklı kitaplarda başarı
 
 Model artık yalnız `{id,literal}` token girdisini görür; kaynak konum/hash bilgileri değişmez kanıt kaydında kalır. NAME için üçüncü kişi zorunludur. Sınırlı Türkçe isimleşmiş yüklem biçimleri predicate kapsamına alınmadan grafik geçmez; iç yüklem dış raporlama yüklemiyle aynı clause içine yığılamaz. Aynı cümleciğin birebir NOMINAL taşınması yalnız kaynak öznesi UNKNOWN ise kullanılabilir; bilinen özne çelişkileri atlanamaz. Üretim yeniden denetimi ve bağımsız yardımcı bu sözleşmeye güncellendi. Yapısal destek hâlâ tam dilbilgisel/edebî doğruluk değildir; `predicate_coverage_proven=false` korunur.
 
-Bu V7 rol koduyla birleşik 14-pasaj kontrolü yeniden başlatıldı. Önceki V6 kanıtları bu son kodun kabulü sayılmaz. Kaynak, claim veya review verisi elle düzeltilmedi; yeni tam kitap nesli açılmadı.
+Tarihsel V7 adımında birleşik 14-pasaj kontrolü yeniden başlatılmıştı; tamamlanan sonucu aşağıdadır. Önceki V6 kanıtları bu son kodun kabulü sayılmaz. Kaynak, claim veya review verisi elle düzeltilmedi; yeni tam kitap nesli açılmadı.
 
 ## Son durum — rol V8, doğrulanmış okuma görünümü
 

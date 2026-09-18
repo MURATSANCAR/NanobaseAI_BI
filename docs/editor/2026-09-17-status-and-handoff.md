@@ -1,4 +1,13 @@
-# Editör — yapılan işler ve doğrulanmış son durum
+# Editör — 17 Eylül tarihsel çalışma ve devir kaydı
+
+## 18 Eylül güncel durum — V16 R5 canlı, V8 aday
+
+Güncel ve bağlayıcı devir kaydı: [18 Eylül güncel durum](2026-09-18-current-status-and-handoff.md).
+
+Canlı sürüm V16 R5'tir; semantik V8/rol V8 henüz yayınlanmadı. Gerçek kaynak okuma projeksiyonu 14/14 bağımsız kontrolü geçti (`role-reading-projection-20260918T111841188511Z.json`). Son sekiz gerçek pasajın birleşik kontrolünde üç doğru ifade kabul edildi, iki yanlış özne aktarımı reddedildi, iç yüklemi güvenilir çıkarılmayan bir ifade engellendi; iki doğru ifade hâlâ gereksiz incelemeye ayrılıyor. Kanıtlar `cited-semantics-probe-20260918T112138821828Z.json` ve bağımsız `role-binding-reference-20260918T112156139346Z.json` dosyalarıdır. Bu sınırlı sonuç tam kitap veya üretim anlamsal kabulü değildir.
+
+Bu durum kaydında arka planda devam eden test bulunmuyor. Yeni tam kitap koşusu açılmadı; kitap metni, model grafı/cevabı ve inceleme kararları elle düzeltilmedi. Farklı kitaplarda geniş kabul, figür–karakter kimliği ve adayın yayın/geri yükleme/soğuk başlangıç kabulü açıktır. Aşağıdaki eski sürüm ve “devam ediyor” notları kendi deney tarihçeleridir; güncel çalışan iş bildirimi değildir.
+
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 

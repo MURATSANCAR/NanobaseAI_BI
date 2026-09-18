@@ -1,5 +1,7 @@
 # V16-r5 içerik kabulü: ilişki bağlama hatası
 
+> Güncel birleşik durum: [18 Eylül devir kaydı](2026-09-18-current-status-and-handoff.md). R5 teknik koşu ve ayrı restore tamamlandı; bütünsel anlam kabulü açık, semantik V8/rol V8 yayımlanmamış adaydır. Aşağıdaki ara durumlar kendi kayıt zamanlarına aittir; yeniden işleme planı endpoint kabulü ve GPU soğuk açılış hâlâ DOĞRULANAMADI.
+
 ## Kapsam ve kanıt
 
 Nesil `116bb4a8-b7b5-45dd-9986-ac80fd706533`, frozen R5. Gerçek PostgreSQL’den 91 synthesis-eligible iddia, değişmeyen kaynak bölgeleri ve tam model denetimleri `evidence/v16-r5-eligible-claims-readonly.json` içine salt okunur dışa aktarıldı. Bu kayıt kitap metni, model çıktısı veya inceleme kararı değişikliği değildir. Kaynak literal eşliği/atıf bütünlüğü bağımsız API/PG kontrollerinde geçti; aşağıdaki anlam değerlendirmesi teknik eşlikten ayrıdır.

@@ -1,10 +1,18 @@
+## 18 Eylül güncel durum — V16 R5 canlı, V8 aday
+
+Güncel ve bağlayıcı devir kaydı: [18 Eylül güncel durum](../../docs/editor/2026-09-18-current-status-and-handoff.md).
+
+Canlı sürüm V16 R5'tir; semantik V8/rol V8 henüz yayınlanmadı. Gerçek kaynak okuma projeksiyonu 14/14 bağımsız kontrolü geçti (`role-reading-projection-20260918T111841188511Z.json`). Son sekiz gerçek pasajın birleşik kontrolünde üç doğru ifade kabul edildi, iki yanlış özne aktarımı reddedildi, iç yüklemi güvenilir çıkarılmayan bir ifade engellendi; iki doğru ifade hâlâ gereksiz incelemeye ayrılıyor. Kanıtlar `cited-semantics-probe-20260918T112138821828Z.json` ve bağımsız `role-binding-reference-20260918T112156139346Z.json` dosyalarıdır. Bu sınırlı sonuç tam kitap veya üretim anlamsal kabulü değildir.
+
+Bu durum kaydında arka planda devam eden test bulunmuyor. Yeni tam kitap koşusu açılmadı; kitap metni, model grafı/cevabı ve inceleme kararları elle düzeltilmedi. Farklı kitaplarda geniş kabul, figür–karakter kimliği ve adayın yayın/geri yükleme/soğuk başlangıç kabulü açıktır. Aşağıdaki eski sürüm ve “devam ediyor” notları kendi deney tarihçeleridir; güncel çalışan iş bildirimi değildir.
+
 ## Bağlayıcı kural — bütün kitaplar için genel yapı
 
 Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
 
 Ayrıntı: [AGENTS.md](AGENTS.md).
 
-> Güncel backend/document: `source-analysis-v15-r7-20260918`; web: `source-preview-v15-r2-20260918`. Gerçek soru akışında bulunan API500, eksik sözcük atfı ve cevap güncelliği sorunları kodda düzeltildi. Yeni canlı soru/tam kitap/arama restore kabulü sürüyor. [Ayrıntılar](../../docs/editor/2026-09-18-source-analysis-v15.md).
+> Tarihsel V15 notu — backend/document: `source-analysis-v15-r7-20260918`; web: `source-preview-v15-r2-20260918`. Gerçek soru akışında bulunan API500, eksik sözcük atfı ve cevap güncelliği sorunları kodda düzeltildi. Yeni canlı soru/tam kitap/arama restore kabulü sürüyor. [Ayrıntılar](../../docs/editor/2026-09-18-source-analysis-v15.md).
 
 # Editör modülü — bağımsız kurulum
 
@@ -261,7 +269,7 @@ Ek Unicode özel kullanım karakterlerinin PDF metni sayılması düzeltildi; de
 18 Eylül R3 kodu canlı: öykü dünyası ile okura verilen bilgi/öğüt için kaynaklı kapsam kapısı eklendi. Gerçek45/5/6 pilotları geçti, R3 tam kitap koşusu bekliyor. R2 dolu restore/mobil PASS. GPU cache paketindeki refs/main newline hatası gerçek offline açılışta bulundu; exporter/importer düzeltildi ve yeni cache-v2 doğrulanıyor. [Güncel kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md).
 
 18 Eylül03:19UTC: R3 gerçek kitap dolu restore ve320/390/768/1440px mobil kabulünü geçti. R4 genel atıf-kimliği düzeltmesi canlı;47 backend/imaj eşliği ve gerçekAPI/PG altyapı/28ACL geçti. R4 tam kitap koşusu henüz başlamadı; GPU soğuk kurulum kabulü sürüyor.262 kaynak incelemesi ve tam anlamsal kabul açık. [Kanıt](../../docs/editor/2026-09-18-source-analysis-v14.md).
-# Güncel yayın — V15 kaynaklı editör taslağı
+# Tarihsel yayın — V15 kaynaklı editör taslağı
 
 Backend/document `source-analysis-v15-r5-20260918`, web `source-preview-v15-r2-20260918`.49 backend ve10 web dosya eşliği ile gerçek altyapı kontrolü geçti. Kaynak birimi gruplaması, kaynak destekli hibrit arama ve gerçek editör soru formu bağlı; yeni soru/tam nesil/indeks restore kabulü henüz tamamlanmadı. `published`, insan kabulü ve tam kitap doğruluğu açık kalır. [Güncel kanıt ve sınırlar](../../docs/editor/2026-09-18-source-analysis-v15.md).
 

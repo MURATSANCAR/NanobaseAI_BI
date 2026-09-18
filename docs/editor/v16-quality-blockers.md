@@ -1,5 +1,14 @@
 # V16 R5 gerçek kalite engelleri — 18 Eylül 2026
 
+## Güncel durum — canlı R5, aday semantik V8 / rol V8
+
+[Güncel durum ve sonraki görevlerin tek giriş noktası](2026-09-18-current-status-and-handoff.md). R5 teknik kurulum kabulü tamamlandı; anlamsal kabul yok. Aşağıdaki V1–V7 geliştirme/pilot notları kendi aşamalarının tarihçesidir; içlerindeki “sürüyor/henüz çalıştırılmadı” ifadeleri güncel iş durumu değildir.
+
+Son adayda geometrik okuma görünümü 14/14 gerçek API/PG projection kontrolünden geçti: `evidence/role-reading-projection-20260918T111841188511Z.json`. Bu kaynak-köken kontrolüdür, anlamsal başarı değildir. Son sekiz gerçek pasaj `evidence/cited-semantics-probe-20260918T112138821828Z.json`; bağımsız `evidence/role-binding-reference-20260918T112156139346Z.json`: üç doğru ifade PASS, iki yanlış fail aktarımı ret, iç yüklemi atlanan bir güvensiz aday ret; iki doğru dolaylı anlatım hâlâ yanlışret/incelemede. 3/8 oranını genel kalite skoru saymak veya bütün retleri doğru kabul etmek yanlıştır. Kaynak/review elle değiştirilmedi; üretim istisnası eklenmedi. Aday canlıya kurulmadı; yeni tam kitap koşusu yapılmadı.
+
+Açık iş yalnız bu iki yanlışret değildir: figür–karakter kimliği, kaynak/öykü dışı kapsam, edebî rubrik, farklı kitaplarda anlamsal kabul, kontrollü düzeltme-bağımlılık yenileme, kapasite ve farklı müşteri topolojileri açık. GPU coldboot DOĞRULANAMADI; önceki yönetimVPN engelinin güncel durumu yeni bağlantı kontrolü gerektirir. R5 restore/UI teknik PASS bu başlıkların yerine geçmez.
+
+
 Nesil `116bb4a8-b7b5-45dd-9986-ac80fd706533`, yayın `source-analysis-v16-r5-20260918`. İşleme tamamlandı; kitabın anlamsal kabulü verilmedi. Bu incelemede model/QA çağrısı, uygulama veya kitap kaydı yazımı yapılmadı. CPU gerçek API ve PostgreSQL kullanıldı.
 
 ## 774 inceleme biriminin anlamı
@@ -85,6 +94,6 @@ Kesin yanlış isimli atama artık `ROLE_PERSON_TRANSFER_UNPROVEN` nedeniyle red
 
 `review_with_source_graph(claim, regions, source_graph, model, *, artifact_version, artifact_sha256, artifact_path, artifact_code_sha256)` eski gerçek kaynak grafını değişmeden kullanır, yeni bağımsız claim grafı ve alignment için en fazla iki model çağrısı yapar. Provenance önceki sözleşmeyle zorunludur. Kod yalnız AST ile incelendi; gerçek V4 kabulünü root yapacak, canlı yayın değişmedi. Scope kategorileri model çıkarımıdır; bu aday genel dilbilgisel/kimlik doğruluğu garantisi değildir.
 
-## V8 / rol V7: genişletilmiş gerçek regresyon
+## Önceki aday aşaması — semantik V8 / rol V7 genişletilmiş regresyon
 
 İlk14pasaj6PASS/8inceleme verdi; ikinci yanlış fail aktarımı engellendi, fakat bir PASS iç yüklem atlandığı için güvenilir değildi. Genel iç-yüklem kapsamı ve raporlayan/içerik ayrımı, NAMEkişi kontrolü, modelinputtan karakterofsetlerini çıkarma kodlandı. Doğru dolaylı anlatım ve sahiplik öbeği yanlışretleri açık; yalnızretoranıyla kalite ilan edilmez. R5live korunuyor, V8/rolV7 yayımlanmadı. [Ayrıntı ve kanıtlar](2026-09-18-role-binding-v8-candidate.md).

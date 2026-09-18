@@ -1,5 +1,7 @@
 # V16-r5 çevrimdışı kurulum paketi
 
+> Güncel birleşik durum: [18 Eylül devir kaydı](2026-09-18-current-status-and-handoff.md). R5 teknik koşu ve ayrı restore tamamlandı; bütünsel anlam kabulü açık, semantik V8/rol V8 yayımlanmamış adaydır. Aşağıdaki ara durumlar kendi kayıt zamanlarına aittir; yeniden işleme planı endpoint kabulü ve GPU soğuk açılış hâlâ DOĞRULANAMADI.
+
 Canlı dağıtımın `deployment-result.json` PASS sonucu ve gerçek `/v1/system` yanıtındaki `source-analysis-v16-r5-20260918` sürümü doğrulandı. Temiz main `1200bdd859bd9b704e62f3af754cea81f27a20f0` manifestindeki 234 uygulama dosyasının CPU üzerindeki hashleri birebir eşleşti. Kaynak kod donduruldu; aktif yeni kitap nesli paketleme girdisi değildir.
 
 Paket hedefi `/data/nanobaseai/editor-qualifications/v16-r5-20260918/release/offline`. `bundle.py --external-models`, uygulama kaynaklarını, yerel embedding/reranker dosyalarını ve sekiz Docker imajını paketler. Harici Qwen/OCR GPU ağırlıkları pakette yoktur; müşteri ortamında uç nokta ve erişim kabulü gerekir. Kitap, gerçek .env, secrets, runtime ve evidence kopyalanmaz. `.env.example` yalnız yayın/çevrimdışı compose/harici model kimliği için dönüşür; uç noktalar boş kalır.

@@ -1,5 +1,7 @@
 # V16 adayı: kaynak bağlamından sonra iddia çıkarma
 
+> Güncel birleşik durum: [18 Eylül devir kaydı](2026-09-18-current-status-and-handoff.md). R5 teknik koşu ve ayrı restore tamamlandı; bütünsel anlam kabulü açık, semantik V8/rol V8 yayımlanmamış adaydır. Aşağıdaki ara durumlar kendi kayıt zamanlarına aittir; yeniden işleme planı endpoint kabulü ve GPU soğuk açılış hâlâ DOĞRULANAMADI.
+
 ## Gerçek hata ve sınırı
 
 V15-r7 nesli `382da5b3-a13a-4986-85ba-1a38fd92ff44` içinde PDF29'un altı kaynak birimi NO_CLAIM olmuş; model balondaki soruyu etkinlik yönergesi saymış ve hiç iddia üretmemiştir. Özgün sayfa render'ı bağımsız incelendi; bu bir balon diyaloğudur. Render SHA256 `27e900ff76c22e9b36a5fcbad3704f10a25df61fd374d66cecf1d4620d063b84`, gerçek evidence kaydıyla aynıdır. Önceki tamamlanmış R5 neslinin aynı sayfa için kaynak bağlamı sınıflandırması NARRATIVE/STORY_WORLD ve desteklidir. Bu eski sonuç yeni neslin anlamsal kabulü değildir.
