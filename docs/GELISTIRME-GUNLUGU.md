@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — Kullanıcı talebi: kitaba özel geliştirme kesinlikle yasak
 
-Bütün Editör üretim kodu/prompt/config/UI/veri modeli/kurulumunun tüm kitaplarda geçerli genel yapı olması bağlayıcı kural olarak ana AGENTS, modül AGENTS, CLAUDE, README, proje belleği ve roadmap belgelerine yazıldı. Kitap/sayfa/karakter/hash/beklenen cevapla istisna ve istisnayı config/DBye taşıma yasaklandı; gerçek regresyon örneği ile üretim kararı ayrıldı. Kod incelemesindeki hedefli taramada backend/frontend içinde mevcut kitabın adları/kimlikleriyle eşleşme bulunmadı; bu sınırlı statik tarama tüm kitaplarda canlı kabul değildir. Mevcut gerçek doğrulama çalışması sürüyor.
+Bütün Editör üretim kodu/prompt/config/UI/veri modeli/kurulumunun tüm kitaplarda geçerli genel yapı olması bağlayıcı kural olarak ana AGENTS, modül AGENTS, CLAUDE, README, proje belleği ve roadmap belgelerine yazıldı. Kitap/sayfa/karakter/hash/beklenen cevapla istisna ve istisnayı config veya veritabanına taşıma yasaklandı; gerçek regresyon örneği ile üretim kararı ayrıldı. Kod incelemesindeki hedefli taramada backend/frontend içinde mevcut kitabın adları/kimlikleriyle eşleşme bulunmadı; bu sınırlı statik tarama tüm kitaplarda canlı kabul değildir. Mevcut gerçek doğrulama çalışması sürüyor.
 
 ## 2026-09-18 — V15-r7: kaynak kimlik yetkisi, gerçek soru/mobil ve CPU sınırları
 
