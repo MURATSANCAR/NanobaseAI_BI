@@ -27,4 +27,6 @@
 - **Etkinlik yazarı yok:** etkinlik–yazar eşleşme tablosu boş, `new_lgiliYazar` boş; yazar bazında etkinlik gideri hesaplanamaz.
 - **Etkinlik bütçesi yok:** etkinliklere bağlı bütçe kaydı/sütunu bulunmuyor; "etkinlik gideri bütçenin neresinde" sorusunda karşılaştırma yapılamaz, yalnız toplam gider verilir.
 - **Reklam planı onayı boş:** 68 reklam planının hiçbirinde onay tarihi/onay biti ve teslim işareti dolu değil; "onaylanmış ama teslim edilmemiş" sorusu 0 döner (veri girilmemiş).
+- **Telif tahakkuk verisi eski:** `NEW_ODEMEBASE` tahakkuk kayıtları yalnız 2014 (48 kayıt); "bu yıl telif tahakkuku" boş döner — veri yok.
+- **Kampanya ciro alanları boş:** `NEW_KAMPANYABASE.new_planlananciro` ve `new_gerceklesenciro` 4 kampanyanın hiçbirinde dolu değil; planlanan/gerçekleşen kampanya cirosu karşılaştırması veri yokluğundan yapılamaz.
 

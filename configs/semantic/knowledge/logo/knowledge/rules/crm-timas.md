@@ -112,3 +112,11 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 
 - Etkinliklere bağlı bir bütçe tablosu yoktur: `NEW_ETKINLIKBASE`'te bütçe sütunu yok; `NEW_BUTCEKALEMIBASE` (iş planı/iş emri bütçe kalemleri, 2013–2014) ve `NEW_PROMOSYONBUTCESIBASE` (promosyon bütçesi: `new_butce`, `new_kullanilanbutce`, `new_kalanbutce`; 2 kayıt, 2017/2020) etkinlikle ilişkili değildir. "Etkinlik giderleri bütçenin neresinde" sorusuna toplam etkinlik gideri verilir ve karşılaştırılacak bir etkinlik bütçesinin tanımlı olmadığı söylenir; promosyon bütçesi etkinlik bütçesi yerine kullanılmaz.
 
+## Kural C22 — Telif ödemesi / tahakkuk (NEW_ODEMEBASE)
+
+- Telif tahakkuk kaydı `NEW_ODEMEBASE`: tahakkuk tutarı `new_TahakkukTutari`, ödeme tarihi `new_odemetarihi`, onay tarihi `new_onaytarihi`, sözleşme `new_sozlesmeid → NEW_SOZLESMEBASE` (yazar = sözleşme sahibi, Kural C9). "Bu yıl hangi yazara ne kadar telif tahakkuk etti" = yıl içindeki tahakkuklar yazar bazında `SUM(new_TahakkukTutari)`. Bu kurulumda kayıtlar yalnız 2014'te (48 kayıt, 274.021 ₺); 2026 için sonuç boştur — veri yok. Satış adedi × fiyat × telif yüzdesi ile tahakkuk **hesaplanmaz** (satış verisi Logo'da, sözleşme yüzdesi CRM'de; çapraz hesap iş teyidi ister).
+
+## Kural C23 — Kampanyalar (NEW_KAMPANYABASE)
+
+- Kampanya `NEW_KAMPANYABASE`: adı `new_name`, tarih aralığı `new_baslangictarihi`–`new_bitistarihi`, **planlanan ciro** `new_planlananciro`, **gerçekleşen ciro** `new_gerceklesenciro`, ek iskonto `new_ekiskonto`. "Planlanan ile gerçekleşen ciro" = kampanya bazında bu iki sütun ve fark; her ikisi de bu kurulumda boş (4 kampanya, 2025–2026) — sonuç "veri girilmemiş" olur. Logo faturalarıyla kampanya eşlemesi (tarih aralığına düşen ciro) yalnız kullanıcı isterse ve kampanya tarihine göre yapılır; bu cevapta iş teyidi gerekir.
+

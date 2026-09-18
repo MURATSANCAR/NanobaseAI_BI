@@ -100,3 +100,12 @@ Kasa hareketleri `KSLINES` (`SIGN` 0 = giriş/tahsil, 1 = çıkış/ödeme; tuta
 - **Faturası kesilmemiş sipariş** = iptal edilmemiş satış siparişi (`ORFICHE TRCODE 1, CANCELLED 0`) olup hiçbir satırı faturalanmamış olan: `NOT EXISTS (SELECT 1 FROM STLINE s WHERE s.ORDFICHEREF = o.LOGICALREF AND s.CANCELLED = 0 AND s.INVOICEREF > 0)`; adedi `COUNT(*)`, tutarı `SUM(ORFICHE.NETTOTAL)`; müşteri `CLIENTREF → CLCARD`. Eşleştirme anahtarı ORDFICHEREF'tir. CRM sipariş tablosu bu soruda kullanılmaz (`new_anliklimit` bir limit sütunudur, tutar değildir).
 - **Sevk edilmiş ama faturalanmamış iş** = `STLINE TRCODE 8, CANCELLED 0, LINETYPE 0, INVOICEREF = 0, BILLED = 0` satırları; müşteri bazında satır/irsaliye adedi, `SUM(LINENET)` açık tutar, ilk/son sevk tarihi (`DATE_`); irsaliye başlığı `STFICHEREF → STFICHE`.
 
+## Kural 19 — Sipariş termini ile irsaliye tarihi (teslim gecikmesi)
+
+- Sipariş satırının **termini** `ORFLINE.DUEDATE`; satırın sevkiyatı satış irsaliyesi satırı `STLINE` (`TRCODE 8`, `CANCELLED 0`, `LINETYPE 0`) ve `STLINE.ORDTRANSREF = ORFLINE.LOGICALREF` ile bağlanır; irsaliye tarihi `STLINE.DATE_` (başlık `STFICHE`).
+- **Gecikme günü** = `DATEDIFF(day, ORFLINE.DUEDATE, STLINE.DATE_)`; ortalama gecikme bu farkın ortalamasıdır, **geciken oranı** = `DATE_ > DUEDATE` olan satır / tüm sevk edilen satır. Termini boş/sentinel (`< 1901-01-01`) satırlar dışlanır. Müşteri kırılımı `STLINE.CLIENTREF → CLCARD`. CRM sipariş tablosu bu soruda kullanılmaz.
+
+## Kural 20 — Basılan / satılan / elde kalan (tiraj)
+
+- **Basılan adet (tiraj)** = üretimden giriş `STLINE TRCODE 13, IOCODE 1` (`'üretilen adet'` ölçüsü); **satılan adet** = satış faturası satırları (`TRCODE 7,8,9`, `IOCODE 3,4`); **elde kalan** = stok bakiyesi (`IOCODE 1,2` giriş − `3,4` çıkış, tarih filtresiz). Üçü kitap (`ITEMS`) bazında aynı STLINE üzerinden CASE ile hesaplanır; tükenme oranı = satılan / basılan. İmha adedi ayrı işlem türüdür ve düşülmez (söylenir).
+
