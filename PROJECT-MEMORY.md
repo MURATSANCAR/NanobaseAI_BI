@@ -6,9 +6,9 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
-## 18 Eylül — kişi/alıntı bağlama düzeltmesi, henüz aday
+## 18 Eylül — genel kişi/alıntı ve kaynak okuma düzeltmesi, henüz aday
 
-Semantik V8 adayı alıntı ve senteze mevcut kapılarla birlikte zorunlu kişi–eylem denetimi ekler; eski belirsizlik/dayanak kontrolleri korunur. Konuşmacı–alıntının aynı kaynak kenarından gelmesi, anonim ortak öznenin farklı kişileri birleştirmemesi ve tırnaklı zamir kontrolü kodlandı. Bağımsız rol kanıt denetleyicisi eklendi. Son bileşen 5 yapısal PASS/1 doğru ret/1 eksik özne incelemesi verdi; bir önceki 6 PASS sonraki koda taşınmadı. Birebir NOMINAL anlatı taşıma düzeltmesinden sonra 14 gerçek pasajın birleşik alıntı+rol kabulü yürütülüyor. R5 canlı sürüm değiştirilmedi; kitap/inceleme verisine yazılmadı, yeni tam kitap koşusu yok. [Kod, sürümler ve kabul sınırı](docs/editor/2026-09-18-role-binding-v8-candidate.md).
+Semantik V8/rol V8 alıntı ve senteze zorunlu kişi–eylem, konuşmacı–içerik bağı ve iç-yüklem kapsam denetimi ekler; eski belirsizlik/dayanak kapıları korunur. Model yalnız stringtoken/literal alır; grafik dışındaki kaynak konum/hashleri korunur. Geometrik büyük-harf/satırsonu birleşimleri ayrı okumada karakter kökeniyle doğrulanır: gerçek API/PG14/14 projection PASS. Son8 gerçekpasajda3doğru ifade kabul edildi,2yanlış fail aktarımı ve1güvensiz iç-önerme kabulü engellendi;2doğru dolaylıanlatım gereksizreddediliyor. Bağımsız kanıt112156; hamkaynak/reviewhashleri aynı. Aday yayımlanmadı; R5 canlıkorundu, yeni tamkitapkoşusu yok. [Kod, kanıtlar ve açık kapsam](docs/editor/2026-09-18-role-binding-v8-candidate.md).
 
 ## Güncel canlı sürüm — 18 Eylül, V16-r5 koşusu tamamlandı, anlam kabulü açık
 
