@@ -1,6 +1,6 @@
 # Editör modülü — bağımsız kurulum
 
-> **Güncel yayın V14-r2:** Backend/document `source-analysis-v14-r2-20260918`, web R3. Qwen ana model ve istekle açılan PaddleOCR-VL-1.6 GPU üzerinde; model yolu Mac’den bağımsızdır. Kaynak birimleri, sözcük sınırı, tam atıf ve sayfa amacı düzeltmeleri canlıdır. Yeni48 sayfa ve ayrı restore/mobil kabulü sürüyor; tam anlamsal veya üretim kabulü henüz verilmedi. [Güncel sürüm ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md). Aşağıdaki eski yayın notları tarihçedir.
+> **Güncel yayın V14-r4:** Backend/document `source-analysis-v14-r4-20260918`, web R3. Nesil `08ca6877`48 sayfada COMPLETED/NEEDS_REVIEW;64 sınırlı uygun iddia/27 taslak, atıf boşluğu0. Gerçek API/PG, offline paket/import, ayrı dolu restore ve320/390/768/1440px mobil kabulü18 Eylül04:25UTC'de geçti.262 kaynak incelemesi ve genel figür kimliği açık; tam anlamsal/üretim kabulü yok. Qwen + isteğe bağlı PaddleOCR-VL doğrudan GPU→CPU tüneli üzerinden Mac VPN'i olmadan koşuyu tamamladı. Son GPU offline cold-boot sonucu yönetim VPN nedeniyle DOĞRULANAMADI. [Sürüm ve kanıtlar](../../docs/editor/2026-09-18-source-analysis-v14.md). Aşağıdaki eski yayın notları tarihçedir.
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 

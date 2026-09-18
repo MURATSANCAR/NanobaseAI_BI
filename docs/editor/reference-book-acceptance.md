@@ -13,7 +13,15 @@ Bu dosya değerlendirme ölçütlerini ve henüz kapanmamış kontrolleri tutar;
 testlerin geçtiği anlamına gelmez. Modelin atıf kimliğinin varlığı, iddianın o
 kaynakla desteklendiği anlamına gelmez. Referans notları model istemine eklenmez.
 
-## 17 Eylül güncel kabul durumu
+## 18 Eylül — güncel teknik kanıtın anlamsal sınırı
+
+R3 (`97814b6c-98fc-4c8e-b442-cbfcd9306889`) kaynak ve türetilmiş kayıtlar, eksiksiz atıf, yayın engelleri, ayrı kurulumda dolu yedek/restore ve 320/390/768/1440 px kontrollerinden geçti. 60 uygun sınırlı iddia ve 27 taslak ifade vardır; bu sayılar B01–B18 anlamsal kabulü değildir. Özellikle 29. sayfanın sınırlı diyalog bağı genel figür–karakter kimliği olarak yorumlanmaz.
+
+R4 (`08ca6877-6e30-4bb3-b1fa-767f048248e4`)48 kaynak/amaç/anlam/figür kontrolüyle COMPLETED/NEEDS_REVIEW.64 sınırlı uygun iddia/27 taslak, atıf boşluğu0; yeni neslin gerçek API/PG, dolu restore ve dört mobil genişlik kabulü04:25UTC'de geçti.1.149 kaynak bölgesi:887 anlaşma/262 inceleme; genel figür kimliği0. Atıf şeması hatası0;10/32 ikinci denetimleri kesilmiş yanıt nedeniyle kabul edilmedi. Kitap içeriği ve insan inceleme kararları değiştirilmedi. Bunlar aşağıdaki B/V anlamsal senaryolarını kapatmaz. [Sürüm ve kanıt dosyaları](2026-09-18-source-analysis-v14.md).
+
+Aşağıdaki B/V tablosu tarihsel regresyon gereksinimlerini korur; eski teknik sınırlamalar güncel teknik kabulün yerine geçmez ve güncel teknik başarı anlamsal satırları otomatik kapatmaz. Gerçek ikinci baskı, editör rubriği ve diğer kitapların tam anlamsal kabulü hâlâ eksiktir.
+
+## 17 Eylül tarihsel kabul durumu
 
 V2 nesli `a9471749-7447-4826-b003-f25e53943763`: işleme 48/48 tamamlandı, nesil NEEDS_REVIEW. 1.149 span (778 anlaşma/371 inceleme), 48 sayfanın altı kayıt türü API/PG eşliği; manuel review/kaynak düzeltmesi 0. Offline paket ve gerçek tam kitap restore/API-PG/mobil kabulü geçti. Bunlar aşağıdaki anlamsal B/V senaryolarını kapatmaz. [Ayrıntılı son durum](2026-09-17-status-and-handoff.md).
 

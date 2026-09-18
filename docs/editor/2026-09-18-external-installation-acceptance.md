@@ -1,6 +1,6 @@
 # External model uygulama paketi: ayrı kurulum kabulü
 
-> **V14-r3 kabulü sürüyor:** `/data/nanobaseai/editor-qualifications/v14-r3-20260918/97814b6c` paket/importu geçti. Nesil `97814b6c-98fc-4c8e-b442-cbfcd9306889` tamamlanınca gerçek yedek/restore/atıf/mobil kontrolleri yapılacak; API18826/metrik19106, subnet74/75 ayrıldı. V14-r2 `3db56430` dolu restore/mobil kabulü02:09:58UTC’de geçti; hedef durduruldu ve geçici ağ kuralları temizlendi. Bu R3 kabulünün yerine geçmez. [Güncel koşu](2026-09-18-source-analysis-v14.md).
+> **V14-r4 kabulü PASS —04:25:11UTC:** `/data/nanobaseai/editor-qualifications/v14-r4-20260918/08ca6877` gerçek paket/import, dolu yedek/ayrı restore, kaynak/türetilmiş API-PG, tam atıf ve yayın korumaları, dört mobil genişlik kontrolünden geçti. Nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`:64 sınırlı uygun iddia/27 taslak; anlamsal kabul false. API18828/metrik19108, subnet76/77; hedef kapatıldı, geçici nginx/UFW temizlendi, kanıt/volume korundu. Tanılama betiğinin son koşu seçimi düzeltmesi bu dondurulmuş paketten sonra kuruldu; uygulama imajları aynı. Bu mevcut harici modellerle uygulama kurulum kabulüdür; yeni GPU cold-boot, cevap kalitesi ve farklı müşteri donanımı kabulü değildir. [Kanıtlar](2026-09-18-source-analysis-v14.md).
 
 ## Tarihsel V13-r2 nesli / web R3 yedek ve restore kabulü
 

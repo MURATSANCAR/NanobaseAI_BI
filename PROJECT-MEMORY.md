@@ -1,16 +1,16 @@
 # NanobaseAI BI — Proje Belleği
 
-## Editör canlı durum — 18 Eylül 04:01 UTC
+## Editör canlı durum — 18 Eylül 04:25 UTC
 
-Backend/document `source-analysis-v14-r4-20260918`, web `source-analysis-v14-r3-20260918`. R4 kodu `0e4bdc7`, 47 backend dosyası tree hash `bec5b4ff0cbcc81e5b61744359c5dfa207b63f20a490b0b6e5a692e8fda870d8`. Gerçek API/PG, 28 ACL ve yayın dosyası eşliği geçti. Güncel iş `28aad122-3c1d-49ee-a182-f00ac449312c`, nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`: 48 kaynak sayfası kontrol edildi, hata 0; kaynak sonrası kontroller sürüyor. Monitor 3629239, qualifier 3629240. Paket ve import geçti; bu neslin dolu restore/mobil kabulü henüz bekliyor. Önceki R3 nesli `97814b6c` tamamlandı: 60 sınırlı iddia/27 taslak, eksik atıf 0; ayrı restore ve dört mobil genişlik geçti. Bunlar tam kitap anlamsal kabulü değildir.
+Backend/document `source-analysis-v14-r4-20260918`, web `source-analysis-v14-r3-20260918`. R4 kodu `0e4bdc7`, 47 backend dosyası tree SHA256 `bec5b4ff0cbcc81e5b61744359c5dfa207b63f20a490b0b6e5a692e8fda870d8`. İş `28aad122-3c1d-49ee-a182-f00ac449312c`, nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`: COMPLETED / NEEDS_REVIEW. Kaynak/amaç/anlam/figür 48/48; 64 sınırlı uygun iddia, 27 taslak, atıf boşluğu0; 8 figür karşılaştırması, kaynakla doğrulanmış isimli figür kimliği0. Kaynak 1.149=887 anlaşma+262 inceleme. Atıf şeması hatası0; 10/32 ikinci atıf denetiminde kesilmiş yanıtlar kabul edilmedi. Tam kitap anlamsal kabulü yok.
 
-R4 kaynakla doğrulanmamış bölge kimliklerinin alıntılanmasını model girdisinde kapatır; özgün iddianın bütün kaynak referanslarını zorunlu tutar. Canlı 21/22/28 gerçek bileşen kontrolünde geçersiz atıf şeması görülmedi; 28. sayfada 4 uygun iddia/3 sentez ifadesi. R3'te düzeltilen bilgi eki/öykü kapsam kapısı korunur. Ham OCR, kitap içeriği ve insan inceleme kararları değiştirilmedi.
+R4 gerçek API/PG, kaynak/türetilmiş/atıf/yayın engeli, imaj dosyası eşliği, offline paket/import, dolu yedek/ayrı restore ve320/390/768/1440px mobil kabulü PASS. Çalışma dizini `/data/nanobaseai/editor-qualifications/v14-r4-20260918/08ca6877`; 04:25:11UTC tamamlandı, hedef kapandı, geçici ağ kuralları temizlendi, kanıt/volume korundu. Ana uygulama çalışır. R3 restore/mobil de geçmişti; yeni kabul doğrudan R4'e aittir. [Ayrıntı/kanıt](docs/editor/2026-09-18-source-analysis-v14.md).
 
-04:00:54 UTC gerçek API ve bağımsız PostgreSQL triage eşliği: 1.149 bölge, 887 anlaşma, 262 inceleme (248 metin, 14 sayfa etiketi adayı). İnceleme ve genel figür–karakter kimliği açık; P0–P7 üretim kabulü tamamlanmadı. Triage betiği artık `EDITOR_VERIFY_RUN_FILE` ile seçili nesle bağlanır; R4 gerçek verisinde doğrulandı. [Koşu/kanıt](docs/editor/2026-09-18-source-analysis-v14.md).
+R4, doğrulanmamış bölge kimliklerini alıntı girdisinden çıkarır ve özgün iddianın bütün referanslarını zorunlu tutar; R3 bilgi eki/öykü kapısı korunur. Ham OCR veya insan inceleme kararı değiştirilmedi. `triage-source-quality.py` seçili koşu dosyasına bağlandı (`efb794f`), CPU scripts yoluna kuruldu, R4 gerçek API/PG tekrarı geçti; son tanılama düzeltmesi dondurulmuş eski pakete sonradan yazılmadı.
 
-GPU paketleme eksik `VLLM_PLE_CPU_OFFLOAD=1` / `NCCL_P2P_LEVEL=SYS` ayarlarını güvenli izin listesiyle taşır; düzeltme `44bc77d`. Eksik ayar ağırlık belleğini GPU başına 64,58 GiB'den 88,42 GiB'ye çıkarıyordu. Düzeltilmiş runtime-env-v5 paketi import/offline model çözümleme kontrolünden geçti; son tam soğuk açılış sonucu yönetim VPN'i koptuğu için DOĞRULANAMADI. Önceki başarısız denemelerin canlı modelleri geri getirme kontrolleri geçti. Mevcut Qwen compiled profil çalışır; eager denemesi canlı ayar değildir. Doğrudan GPU→CPU tüneli ayakta, kitap işleniyor. Yeni yönetim VPN bağlantısı e-posta OTP gerektiriyor; kullanıcı adına aşılmadı. [GPU kök neden ve sınır](docs/editor/2026-09-18-gpu-cold-boot.md).
+GPU paketi `44bc77d` ile güvenli runtime-env izin listesini taşır: eksik `VLLM_PLE_CPU_OFFLOAD=1` / `NCCL_P2P_LEVEL=SYS` ağırlık belleğini GPU başına64,58'den88,42GiB'ye çıkarıyordu. Düzeltilmiş runtime-env-v5 import/offline çözümleme PASS; son tam cold-boot yönetim VPN koptuğundan DOĞRULANAMADI. VPN e-posta OTP gerektiriyor; aşılmadı. Canlı Qwen compiled profil çalışıyor, eager denemesi canlı ayar değil. Doğrudan GPU→CPU tüneli sayesinde R4 tam kitap koşusu Mac VPN'i olmadan tamamlandı. [GPU kök neden](docs/editor/2026-09-18-gpu-cold-boot.md).
 
-Değişiklikler yerel main'de; GitHub HTTPS kimliği yok, origin push başarısız. Canlı sürüm/hash ile paket ve restore kanıtı ayrı tutulur. Aşağıdaki eski sürümler tarihçedir.
+Üretim kabulü açık:262 kaynak incelemesi, genel figür–karakter kimliği, tam anlamsal kapsam, güvenli arama/cevap, editör düzeltme-bağımlılık akışı, çok kitaplı rubrik/gerçek ikinci baskı, farklı donanım ve yük/SLO. Değişiklikler yerel main'de; GitHub HTTPS kimliği yok, origin push başarısız. Aşağıdaki eski sürümler tarihçedir.
 
 ## 18 Eylül — V13-r2 tarihsel kabul
 
@@ -28,7 +28,7 @@ Editör çıkarım yolu artık Mac'e bağlı değildir: GPU `editor-gpu-tunnel.s
 
 Güncel R2 tamamlanmış neslinin tutarlı yedeği ve ayrı `editor-v13-r2-restore` kurulumu geçti: bütün kitap/artifact eşliği, API/PG/ACL, backend/web hashleri ve320/390/768/1440px dolu OCR/kimlik/fragment/diyalog/sentez akışları doğrulandı. Hedef servisler kapatıldı, geçici ağ kuralları kaldırıldı; volume/kanıt korundu. Arama rebuild ve cevap kalitesi bu restore kabulünde yoktur. [Kanıtlar](docs/editor/2026-09-18-external-installation-acceptance.md).
 
-## Güncel Editör model akışı — 18 Eylül
+## Tarihsel Editör model akışı — 18 Eylül V13
 
 Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Canlı backend `source-analysis-v13-r2-20260918`, web `source-analysis-v13-r3-20260918`; tam kitap ve semantik kabul henüz yok. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-source-analysis-v13.md).
 

@@ -160,3 +160,27 @@ Başlatma kontrol betiğinin ilk yazımında shell tırnak hatası Pythonparse a
 ### 04:01 UTC — R4 kaynak kontrolleri ve tanılama
 
 48/48 kaynak sayfası kontrol edildi, başarısız sayfa yok. İş kaynak sonrası kontrollerde sürüyor; tam analiz/restore sonucu henüz yok. Yeni paket/import geçti. `triage-source-quality.py` eski sabit koşu dosyasına bağlıydı; `EDITOR_VERIFY_RUN_FILE` ve raporda `run_file` eklendi. Gerçek R4 nesliyle API/bağımsız PG eşliği geçti: 1149 bölge, 887 anlaşma/262 inceleme. Kanıt CPU `evidence/source-quality-triage-20260918T040054080902Z.json`, log `evidence/v14-r4-source-triage.log`; aday betik `runtime/triage-source-quality-r4.py`. Bu salt okunur tanılama; kitap/inceleme kararı yazımı yok. Aktif qualifier'ın donmuş paket dosyaları değiştirilmedi.
+
+### R4 kaynak sonrası canlı gözlem — 04:18 UTC
+
+48 sayfa amaç, 48 anlam incelemesi ve 48 figür kaydı oluştu; 8 gerçek görsel karşılaştırma var. Doğrulanmış yerel isimli figür kimliği 0, genel kimlik 0. İlk 22 sayfalık gözlemde `INVALID_SEMANTIC_REVIEW_SCHEMA` yoktu; 10. sayfadaki bir ikinci atıf denetimi `MODEL_OUTPUT_TRUNCATED` nedeniyle fail-closed kaldı. İlk modelin olumlu yanıtı bu eksik ikinci yanıt yerine kullanılmadı. 21/22/28 tam koşusunda sırasıyla 1/1/4 senteze uygun iddia bulundu; bunlar ayrı bileşen pilotunun sayılarıyla aynı olmak zorunda değildir ve anlamsal doğruluk kabulü değildir. Sentez bitimi ve yeni neslin qualifier sonucu beklenir.
+
+### 04:25 UTC — R4 tamamlandı; yeni neslin ayrı restore/mobil kabulü PASS
+
+- İş `28aad122-3c1d-49ee-a182-f00ac449312c`, nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`: COMPLETED / NEEDS_REVIEW. Kaynak, sayfa amacı, anlam ve figür kolları 48/48. 8 figür karşılaştırması; doğrulanmış yerel isimli figür ve genel kimlik 0. Ham kitap/inceleme kararına insan müdahalesi yok.
+- Gerçek API ve bağımsız PostgreSQL aynı kayıtları döndürdü. 64 sınırlı uygun iddia, 27 taslak ifade, 7 engellenmiş taslak ifade; 7 iddiada ek kaynak dayanağı var. Atıf boşluğu 0. Bunlar tam kitap anlamsal doğruluğu değildir.
+- Tam 48 sayfada `INVALID_SEMANTIC_REVIEW_SCHEMA=0`. 10 ve 32. sayfalarda ikinci atıf denetimi `MODEL_OUTPUT_TRUNCATED` nedeniyle kabul edilmedi. Toplam 90 aday ayrı model denetiminden geçti, bunların yalnız 64'ü kimlik/kaynak kapılarıyla senteze uygun; 90 ile 64 birbirinin yerine kullanılmaz. 12 öykü dışı aday ayrı analiz gerektirir, 14 atıf denetimi belirsiz/başarısız, 2 eksik sözcük ve 7 olumsuzluk incelemesi vardır.
+- Kaynak 1.149 bölge: 887 anlaşma, 262 inceleme (248 metin/14 sayfa etiketi). `complete_book=false`, `semantic_acceptance=false`. Sınırlı diyalog bağı tüm balon konuşmacısı veya kanonik karakter kimliği değildir.
+
+CPU kanıtları:
+
+- `evidence/source-analysis-08ca6877-6e30-4bb3-b1fa-767f048248e4.json`
+- `evidence/semantic-provenance-08ca6877-6e30-4bb3-b1fa-767f048248e4-e68d2b148bc5.json`
+- `evidence/publication-gates-08ca6877-6e30-4bb3-b1fa-767f048248e4.json`
+- `evidence/v14-r4-semantic-reason-summary.json` (salt okunur PG özeti; tek başına bağımsız anlamsal kabul değildir)
+
+Ayrı kurulum `/data/nanobaseai/editor-qualifications/v14-r4-20260918/08ca6877`: offline paket/import, canlı sürüm eşliği, kaynak/türetilmiş API-PG, atıf, yayın engelleri, izolasyon, tutarlı dolu yedek, temiz kurulum/restore ve restore sonrası aynı kontroller PASS. Gerçek Chrome 320/390/768/1440 px dolu kitap arayüzü 04:25:11 UTC'de PASS. API18828/metrik19108, subnet76/77 kullanıldı. Hedef servisler 04:25:14'te kapandı; volume/kanıt korundu. Geçici nginx/UFW kuralları temizlendi: `evidence/v14-r4-qualification-network-cleanup.json`, returncode0, cleanup_errors[]. Bu kurulum mevcut harici GPU modellerini kullanır; yeni GPU'nun internet kapalı soğuk açılışı veya farklı donanım kabulü değildir.
+
+Qualifier tamamlandıktan sonra `triage-source-quality.py` normal CPU scripts yoluna kuruldu ve seçili R4 nesliyle tekrar gerçek API/PG üzerinden geçti. SHA256 `7622ba11fb51286f675bbc995ea780ea9a25483d046e36a1b8e614f762f5dee5`; kanıt `evidence/source-quality-triage-20260918T042552426508Z.json`. Kod `efb794f` yerel main'dedir. Bu son tanılama düzeltmesi daha önce dondurulmuş R4 offline paketi içinde değildir; uygulama imajlarını değiştirmez. Eski paket sonradan değiştirilmedi.
+
+GPU runtime-env-v5 importu geçmiştir; son cold-boot sonucu yönetim VPN/OTP erişimi nedeniyle hâlâ DOĞRULANAMADI. Buna rağmen Mac VPN'i kapalıyken doğrudan GPU→CPU tüneli üzerinden R4 tam koşusu tamamlanmıştır. GitHub HTTPS kimliği yok; push tamamlanmadı. Genel figür kimliği, tam kaynak/anlam kapsamı, güvenli arama/cevap, editör düzeltme-bağımlılık akışı, çok kitaplı rubrik, gerçek ikinci baskı, yük/SLO ve P7 üretim kabulü açık kalır.
