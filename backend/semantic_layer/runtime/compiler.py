@@ -326,15 +326,16 @@ class DeterministicCompiler:
         # question with a filter and a breakdown on the same card was refused.
         from semantic_layer.runtime.reference_contracts import reference_rule
         ruled = {}
+        asked = [s.mapping for s in filters]
         for s in filters + group_cols:
-            if s.mapping.entity != entity and reference_rule(s.mapping, entity):
+            if s.mapping.entity != entity and reference_rule(s.mapping, entity, asked):
                 ruled.setdefault(s.mapping.entity, s.mapping)
         def binding_of(mapping):
-            return ruled.get(mapping.entity, mapping) if not reference_rule(mapping, entity) else mapping
+            return ruled.get(mapping.entity, mapping) if not reference_rule(mapping, entity, asked) else mapping
         for s in filters:
             if s.mapping.entity != entity:
                 bound = binding_of(s.mapping)
-                path, custom_on, required = self._mapping_joins(entity, bound)
+                path, custom_on, required = self._mapping_joins(entity, bound, asked)
                 if path is None:
                     return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
@@ -350,7 +351,7 @@ class DeterministicCompiler:
         for s in group_cols:
             if s.mapping.entity != entity:
                 bound = binding_of(s.mapping)
-                path, custom_on, required = self._mapping_joins(entity, bound)
+                path, custom_on, required = self._mapping_joins(entity, bound, asked)
                 if path is None:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
                 for j in path:
@@ -700,9 +701,9 @@ class DeterministicCompiler:
     def _join(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
         return self.conventions.join_path(entity, other)
 
-    def _mapping_joins(self, entity, mapping):
+    def _mapping_joins(self, entity, mapping, asked=()):
         from semantic_layer.runtime.reference_contracts import reference_rule, reference_predicate
-        rule = reference_rule(mapping, entity)
+        rule = reference_rule(mapping, entity, asked)
         if not rule:
             return self._join_chain(entity, mapping.entity), {}, {}
         via = rule.get("via")
@@ -1829,7 +1830,7 @@ class ExistingCompiler:
             for slot in q.group_by:
                 if not slot.mapping:
                     continue
-                rule = reference_rule(slot.mapping, fact)
+                rule = reference_rule(slot.mapping, fact, [f.mapping for f in q.filters if f.mapping])
                 if rule:
                     predicate = via_predicate(fact, rule) + " AND " + reference_predicate(slot.mapping, fact, rule)
                     ctx.append("## ZORUNLU İLİŞKİ\n" + (predicate or f"{fact} → {rule['via']} → {slot.mapping.entity}") +
