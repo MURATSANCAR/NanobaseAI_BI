@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 12:00 UTC — Editör: belgelerin okunması, açık kaynak araştırması, birinci kişi–ad uyumu adayı
+
+Editörün 88 md belgesi okundu; açık sorunlar için üç başlıkta açık kaynak araştırması yapıldı (balon–figür–karakter kimliği, iddia–kaynak ilişki doğrulama, OCR okuyucu uzlaşması). Sonuç: uçtan uca hazır ve ticari kullanılabilir çözüm yok; Magi (ticari değil, manga dışında zayıf), NLI tabanlı denetçiler (sözcük örtüşürken rol hatasına kör, Türkçe yok), CorPipe (NC lisans), VNLP (AGPL) elendi. Seçilen yön: deterministik Türkçe biçimbilim kapısı, tek kapalı kümeli LLM çağrısı, DINOv2 kümeleme, sözlük tanıklı OCR uzlaşması.
+
+İlk adım uygulandı: `source_person_agreement.py` adayı, kaynakta birinci kişi çekimli yüklemi iddiada aynı konuşmanın içinde üçüncü kişi geçen ada bağlayan iddiayı model çağırmadan işaretler. **Neden:** V16-r5'te kabul edilmiş PDF27 hatası bu sınıftandı ve mevcut kapılar ile üç çağrılı rol grafı onu güvenilir yakalayamıyordu. Gerçek sunucuda, kayıtlı 91 (R5) ve 100 (R7) kabul edilmiş iddiada: yalnız bilinen yanlış iddia işaretlendi, yüklemi taşıyan diğer 30 iddia işaretlenmedi; model çağrısı 0, yazım 0. Kural R5'e bakılarak geliştirildi, R7 ilk koşuda bir yanlış işaret verdi; görülmemiş veri ve başka kitap kabulü yok. Üretime bağlanmadı. [Ayrıntı](editor/2026-09-18-person-agreement-candidate.md).
 ## 2026-09-18 — Editör durumunun ve açık planın kapsamlı belge kapanışı
 
 [Güncel devir kaydı](editor/2026-09-18-current-status-and-handoff.md) son doğrulanmış canlı R5 ile yayımlanmamış semantik V8/rol V8 adayını ayırır. Koşu/nesil/sürüm ve kod hashleri, 48 sayfa kaynak muhasebesi, 774 incelemenin nedenleri, soru/indeks/mobil/restore kabulü, genel kod düzeltmeleri ve sunucudaki kanıt yolları kaydedildi. Son 8 pasajın 3 doğru kabul/2 yanlış fail reddi/1 güvensiz iç önerme engeli/2 yanlış ret ayrımı ve P0–P7'nin bütün açık kapsamı yazıldı; tam anlamsal/üretim kabulü verilmedi.
