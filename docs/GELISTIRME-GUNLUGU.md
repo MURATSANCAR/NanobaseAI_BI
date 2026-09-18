@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 14:15 UTC — Doğrulanmış cevaplar bozulmuş: kural bütçesi kök nedeni ve regresyon betiği
+
+100 soru gerçek köprüde yeniden soruldu (`~/testset/run100-0918b.jsonl`) ve her sorunun 08:30 UTC öncesi son cevabıyla karşılaştırıldı: **aynı 59, değişen 19** (ikisi Q68/Q69 — bugün düzeltilen; kalan 17'si dün doğrulanmış cevaplar), temel çizgisi olmayan 22. Cevaptan redde düşenler: Q10, Q11, Q18, Q24, Q35, Q40, Q45, Q58; satır sayısı değişenler: Q4, Q6, Q7, Q8, Q13, Q17, Q30, Q31, Q65. Redler bugünkü kod değişikliklerinden **önce** de vardı (08:41 UTC, Q72).
+
+- **Kök neden 1 — kural bütçesi:** bilgi paketi 50.893 karakter, istem bütçesi 40.000. Belgeler dosya adı sırasıyla ekleniyor, fazlası sondan kesiliyordu: gece eklenen CRM kuralları (C1–C21, 16.040 karakter) Logo ERP kurallarının son ~10.500 karakterini istemden düşürdü. Aynı sorun 17 Eylül'de 20.000 sınırında yaşanmış, sınır büyütülmüştü. **Kalıcı çözüm:** belge kendi kaynağını beyan eder (`<!-- kaynak: TIMAS_MSCRM -->`, `<!-- kaynak: ANA -->`) ve o kaynağı okumayan soruya girmez; yine sığmazsa `## ` bölümleri sorunun yerleşmiş tablo/kolonlarına ve kelimelerine göre seçilir (sondan kesme yok); aşım açılışta ve soru başına `WARNING` olarak loglanır (`ExistingCompiler.rules_for`, `_relevant_rules`; `_load_rules` belge sınırı işaretler). Q35 geri geldi.
+- **Kök neden 2 — geceki katalog/kaynak değişiklikleri önceki soruları bozdu (açık):** Q24 gece 49 Logo tablosundan seçiyordu, şimdi 292 CRM tablosundan — ölçüsüz soruda tek kelimelik sözlük eş anlamlıları ('risk' → `NEW_SIPARISBASE.NEW_ANLIKRISK`, 'limit' → `ACCOUNTBASE.CREDITLIMIT`) kaynağı CRM'e çekiyor; Q18'de 'alıp' → `ITEMS.CARDTYPE`; Q40'ta 'telif yüzdemiz' yeni Logo 'baskı adedi' ölçüsü yüzünden düşürülüyor; Q35'te 'yüzü' → "ilk 100" okunuyor (133 → 100 satır).
+- **Süreç düzeltmesi:** `scripts/testset_regress.py <sorular> <koşu> --before <an>` — bir koşuyu `sl_query_log`'daki önceki cevaplarla karşılaştırır, bozulan varsa çıkış kodu 1. Her kod/katalog/kural değişikliğinden sonra 100 soru yeniden sorulup bu betikle karşılaştırılmadan iş bitmiş sayılmaz; tek soruyu doğrulamak yetmiyor.
+- Kural düzeltmesi sonrası ikinci tam koşu `run100-0918c.jsonl` başlatıldı. Yerel test koşulmadı.
+
 ## 2026-09-18 12:00 UTC — Editör: belgelerin okunması, açık kaynak araştırması, birinci kişi–ad uyumu adayı
 
 Editörün 88 md belgesi okundu; açık sorunlar için üç başlıkta açık kaynak araştırması yapıldı (balon–figür–karakter kimliği, iddia–kaynak ilişki doğrulama, OCR okuyucu uzlaşması). Sonuç: uçtan uca hazır ve ticari kullanılabilir çözüm yok; Magi (ticari değil, manga dışında zayıf), NLI tabanlı denetçiler (sözcük örtüşürken rol hatasına kör, Türkçe yok), CorPipe (NC lisans), VNLP (AGPL) elendi. Seçilen yön: deterministik Türkçe biçimbilim kapısı, tek kapalı kümeli LLM çağrısı, DINOv2 kümeleme, sözlük tanıklı OCR uzlaşması.
