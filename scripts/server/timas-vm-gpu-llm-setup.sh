@@ -84,13 +84,13 @@ local_code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' --resolve portal.nanob
 
 echo "== 3/5 uç, VM'den deneniyor (anahtarsız 401, anahtarla 200 beklenir)"
 no_key=$($SSH "$VM" "curl -s -m 15 -o /dev/null -w '%{http_code}' $PUBLIC/models")
-with_key=$(printf '%s' "$KEY" | $SSH "$VM" "read -r K; curl -s -m 15 -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$K\" $PUBLIC/models")
+with_key=$(printf '%s\n' "$KEY" | $SSH "$VM" "read -r K; curl -s -m 15 -o /dev/null -w '%{http_code}' -H \"Authorization: Bearer \$K\" $PUBLIC/models")
 echo "anahtarsız: $no_key · anahtarla: $with_key"
 [[ "$no_key" == 401 && "$with_key" == 200 ]] || {
   echo "HATA: uç beklenen cevabı vermedi. 403 ise VM'in çıkış IP'si $ALLOW_IP değildir (VM'de: curl https://api.ipify.org) — ALLOW_IP=… ile yeniden çalıştırın."; exit 1; }
 
 echo "== 4/5 VM ayarı (.env) — eski hâli .env.before-gpu-llm olarak saklanır"
-printf '%s' "$KEY" | $SSH "$VM" "set -e; read -r K; cd $VM_DIR
+printf '%s\n' "$KEY" | $SSH "$VM" "set -e; read -r K; cd $VM_DIR
   test -f .env.before-gpu-llm || cp .env .env.before-gpu-llm
   put() { if grep -q \"^\$1=\" .env; then sed -i \"s#^\$1=.*#\$1=\$2#\" .env; else printf '%s=%s\n' \"\$1\" \"\$2\" >> .env; fi; }
   put OPENAI_API_BASE '$PUBLIC'
