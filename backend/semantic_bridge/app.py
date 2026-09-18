@@ -171,7 +171,10 @@ class Runtime:
         pd = self.settings.project_dir
         if not pd or not (pd / "knowledge").exists():
             return ""
-        parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md"))
+        # Each document keeps its boundary: the compiler leaves out, per question, a document that
+        # declares itself to be about a source the question does not read (see `rules_for`).
+        parts = [f"<!-- belge: {f.relative_to(pd / 'knowledge').as_posix()} -->\n" + f.read_text(encoding="utf-8")
+                 for f in sorted((pd / "knowledge").rglob("*.md"))
                  if f.parent.name not in self._NOT_IN_PROMPT]
         return "\n\n".join(parts)
 

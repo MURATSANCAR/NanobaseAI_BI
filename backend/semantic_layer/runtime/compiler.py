@@ -814,6 +814,11 @@ Kurallar:
   ya da sohbetle ilgili hiçbir şey yazma; bunlar sorulursa tek satır: NO_SQL: kapsam dışı.
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
+def _ascii_fold(text: str) -> str:
+    table = str.maketrans("çğıöşüâîûÇĞİIÖŞÜ", "cgiosuaiucgiiosu")
+    return (text or "").translate(table).lower()
+
+
 def _reads_both_sources(sql: str) -> bool:
     """Does one statement name tables of the CRM database and tables outside it?"""
     names = re.findall(r"(?i)\b(?:FROM|JOIN)\s+([\[\]\w.\"]+)", sql or "")
@@ -1059,6 +1064,11 @@ class ExistingCompiler:
         self.profiles = profiles
         self.context = context
         self.rules_text = clean_rules(rules_text)
+        self.rules_full = rules_text or ""
+        if len(self.rules_full) > RULES_BUDGET:
+            log.warning("knowledge pack is %d chars, prompt budget is %d: rules are selected per question "
+                        "(by declared source, then by relevance); nothing is cut from the end any more",
+                        len(self.rules_full), RULES_BUDGET)
         self.recall = recall
         self.model_naming = model_naming
         self.dialect = dialect
@@ -1267,6 +1277,72 @@ class ExistingCompiler:
             keep = max(self.max_prompt_tables, len(resolved))    # never drop a table the question named
             ordered = ordered[:keep]
         return ordered
+
+    _RULE_DOC = re.compile(r"(?m)^<!-- belge: .*? -->\n")
+    _RULE_SOURCE = re.compile(r"(?mi)^<!--\s*kaynak:\s*([\w .-]*?)\s*-->")
+
+    def rules_for(self, q: SemanticQuery) -> str:
+        """The operator's rules this question can use, inside the prompt budget.
+
+        The pack is written per source and only grows: a night of CRM rules pushed the ERP rules
+        past the budget, the cut fell on them, and ERP questions that had been answered from those
+        rules the day before were refused as "not defined". A document may say which source it is
+        about (`<!-- kaynak: TIMAS_MSCRM -->`, `<!-- kaynak: ANA -->` for the connection's own
+        database); it is left out of a question that does not read that source. Undeclared
+        documents, and every document when the source is unknown, are kept as before."""
+        sources = {s.upper() for s in (q.sources or [])}
+        if not sources or not self._RULE_DOC.search(self.rules_full):
+            return self.rules_text
+        kept = []
+        for doc in self._RULE_DOC.split(self.rules_full):
+            declared = {("" if d.strip().upper() in ("ANA", "MAIN") else d.strip().upper())
+                        for d in self._RULE_SOURCE.findall(doc)}
+            if declared and not (declared & sources):
+                continue
+            kept.append(doc)
+        text = "\n".join(line for line in "\n\n".join(k.strip("\n") for k in kept if k.strip()).splitlines()
+                         if not _VIEW_LINES.search(line))
+        if len(text) <= RULES_BUDGET:
+            return text
+        return self._relevant_rules(q, text)
+
+    def _relevant_rules(self, q: SemanticQuery, text: str) -> str:
+        """The pack does not fit even after leaving out other sources' documents: keep the sections
+        this question can use, not the ones that happen to come first.
+
+        Cutting from the end drops whatever was written last or sorts last by file name — twice the
+        newest rule, then half of one source's rules — and nothing about the question decided it. A
+        section ("## …") is kept by what it shares with the question: the tables and columns the
+        resolver placed, and the question's own words. What is left out is named in the log and
+        counted in the prompt, so a rule the model was not shown never looks like a rule that does
+        not exist."""
+        sections = re.split(r"(?m)^(?=##? )", text)
+        names = set()
+        for slot in q.slots:
+            if slot.mapping is not None:
+                for name in (slot.mapping.entity, slot.mapping.column):
+                    if name:
+                        names.add(re.sub(r"^LG_", "", str(name).upper()))
+        words = {w for w in re.findall(r"[a-z0-9]{4,}", _ascii_fold(q.question))}
+        def score(section: str) -> tuple[int, int]:
+            upper, folded = section.upper(), _ascii_fold(section)
+            return (sum(1 for n in names if n and n in upper), sum(1 for w in words if w[:6] in folded))
+        ranked = sorted(range(len(sections)), key=lambda i: (-score(sections[i])[0], -score(sections[i])[1], i))
+        chosen, size = set(), 0
+        for i in ranked:
+            if size + len(sections[i]) > RULES_BUDGET:
+                continue
+            chosen.add(i)
+            size += len(sections[i])
+        dropped = [sections[i].splitlines()[0][:80] for i in range(len(sections)) if i not in chosen and sections[i].strip()]
+        if dropped:
+            log.warning("rules over budget (%d > %d chars): %d sections left out of this prompt, chosen by relevance q=%r dropped=%s",
+                        len(text), RULES_BUDGET, len(dropped), q.question[:60], dropped[:12])
+        out = "".join(sections[i] for i in sorted(chosen))
+        if dropped:
+            out += (f"\n(iş kuralları istem bütçesine sığmadı: soruyla ilgisi en az olan {len(dropped)} bölüm listelenmedi — "
+                    f"burada olmayan bir kuralı varsayma)")
+        return out
 
     def _with_bridges(self, q: SemanticQuery, entities: list[str]) -> list[str]:
         """The far end of every measured cross-source link that starts at a table the question placed.
@@ -1811,7 +1887,7 @@ class ExistingCompiler:
             *([federated.FORMAT, federated.links_block(self.profiles)] if self._plans_enabled(q) else []),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
-            "## İş kuralları\n" + (self.rules_text or "(yok)"),
+            "## İş kuralları\n" + (self.rules_for(q) or "(yok)"),
             "## SERTİFİKALI KATALOG (kesin eşlemeler)\n" + self.catalog_block(q),
             # A word the catalog does not define is the model's reading, and the person is owed
             # that reading: without it "alacak" was quietly answered as the sum of invoices issued.

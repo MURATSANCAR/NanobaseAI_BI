@@ -1,5 +1,7 @@
 # CRM (TIMAS_MSCRM) kuralları
 
+<!-- kaynak: TIMAS_MSCRM -->
+
 CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, `NEW_SATISHEDEFLERIBASE`). Sütun adları büyük/küçük harf karışıktır; şemadaki yazımıyla kullan.
 
 ## Kural C1 — Kayıt durumu
