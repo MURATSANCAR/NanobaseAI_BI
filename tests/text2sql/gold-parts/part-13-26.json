@@ -1,0 +1,296 @@
+{
+ "cases": [
+  {
+   "n": 13,
+   "id": "C026",
+   "soru": "Bir kitabın son üç baskısında çekilen malzeme miktarları arasında fark var mı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "WITH P AS ( SELECT '411' AS f, p.LOGICALREF, i.CODE, i.NAME, p.DATE_ FROM LG_411_PRODORD p JOIN LG_411_ITEMS i ON i.LOGICALREF=p.ITEMREF WHERE p.STATUS=3 AND p.CANCELLED=0 UNION ALL SELECT '211', p.LOGICALREF, i.CODE, i.NAME, p.DATE_ FROM LG_211_PRODORD p JOIN LG_211_ITEMS i ON i.LOGICALREF=p.ITEMREF WHERE p.STATUS=3 AND p.CANCELLED=0), R AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY CODE ORDER BY DATE_ DESC, f DESC, LOGICALREF DESC) AS rn FROM P), S AS ( SELECT R.CODE, R.rn, R.DATE_, ISNULL(CASE WHEN R.f='411' THEN (SELECT SUM(s.AMOUNT) FROM LG_411_01_STLINE s WHERE s.PRODORDERREF=R.LOGICALREF AND s.TRCODE=12 AND s.IOCODE=4 AND s.LINETYPE=0 AND s.CANCELLED=0) ELSE (SELECT SUM(s.AMOUNT) FROM LG_211_01_STLINE s WHERE s.PRODORDERREF=R.LOGICALREF AND s.TRCODE=12 AND s.IOCODE=4 AND s.LINETYPE=0 AND s.CANCELLED=0) END,0) AS cekilen FROM R WHERE R.rn<=3) SELECT S.CODE AS stok_kodu, MAX(P2.NAME) AS kitap, COUNT(*) AS baski_sayisi, MAX(CASE WHEN rn=1 THEN cekilen END) AS son_baski, MAX(CASE WHEN rn=2 THEN cekilen END) AS onceki_baski, MAX(CASE WHEN rn=3 THEN cekilen END) AS ucuncu_baski, MAX(cekilen)-MIN(cekilen) AS miktar_farki FROM S JOIN (SELECT CODE, MAX(NAME) NAME FROM P GROUP BY CODE) P2 ON P2.CODE=S.CODE GROUP BY S.CODE HAVING COUNT(*)>=2 AND MAX(cekilen)-MIN(cekilen)<>0 ORDER BY miktar_farki DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0.01
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "StokKodu",
+      "stok_kodu",
+      "CODE",
+      "kod",
+      "kitap_kodu"
+     ],
+     "answer_value": [
+      "MiktarFarki",
+      "miktar_farki",
+      "fark"
+     ],
+     "reference_key": "stok_kodu",
+     "reference_value": "miktar_farki",
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: referans 1.705 kitap (son üç tamamlanmış baskının 1.030'unda üç, 675'inde iki emir var; fark ≠ 0). Tanım: Kural 9 / iş tanımı 12–13 — baskı = tamamlanmış üretim emri (PRODORD STATUS 3, CANCELLED 0), 'son üç' = kitabın DATE_'e göre en yeni üç emri; çekilen malzeme = sarf satırları STLINE TRCODE 12, IOCODE 4, LINETYPE 0, PRODORDERREF ile emre bağlı, emir başına SUM(AMOUNT). 'Son üç baskı' dönemsiz bir sıralama kavramıdır: emirler iki yıl kopyasından (LG_211 2021–25 + LG_411 2026) birlikte sıralanır, kitap eşlemesi stok koduyla (ITEMS LOGICALREF 71 kartta kopyalar arasında farklı), sarf her emrin kendi kopyasından okunur. KÖPRÜ UYUŞMUYOR: köprü yalnız 2026 kopyasını okudu (STLINE'a 2026 tarih filtresi) → 94 kitap; bağımsız 'yalnız LG_411' sorgusu da tam 94 veriyor (17 HAZİRAN 39.370,20; ALİ NAZİK 44.832,33 aynı). 2026'da 1.088 kitabın yalnız 10'unun üç, 87'sinin iki emri var; yani köprünün 'son üç baskı'sı fiilen 'bu yılki baskılar'. Örn. 17 HAZİRAN'ın referanstaki farkı önceki yıl baskılarını da içerir. Veri notu: SUM(AMOUNT) farklı birimli malzemeleri (kâğıt kg, kapak adet) toplar — tanım böyle, iş teyidi bekliyor. Aynı tarihli emirlerde sıra beraberliği olduğundan satır toleransı %1."
+  },
+  {
+   "n": 14,
+   "id": "C038",
+   "soru": "Geçen çeyrekte bekleyen sipariş adedi ay ay nasıl değişti?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT DATEFROMPARTS(YEAR(L.DATE_),MONTH(L.DATE_),1) AS ay, COUNT(DISTINCT L.ORDFICHEREF) AS bekleyen_siparis FROM LG_411_01_ORFLINE L WHERE L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT AND L.DATE_>=DATEADD(QUARTER,DATEDIFF(QUARTER,0,GETDATE())-1,0) AND L.DATE_<DATEADD(QUARTER,DATEDIFF(QUARTER,0,GETDATE()),0) GROUP BY DATEFROMPARTS(YEAR(L.DATE_),MONTH(L.DATE_),1) ORDER BY 1",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "kayit_sayisi",
+      "bekleyen_siparis",
+      "bekleyen_siparis_adedi",
+      "siparis_adedi",
+      "adet"
+     ],
+     "reference": "bekleyen_siparis",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: Nisan 12 · Mayıs 9 · Haziran 60 (toplam 81 fiş; 2.613 satır, bekleyen miktar 70.308). Köprü birebir aynı (12/9/60). Tanım: iş tanımı 10 — satış sipariş satırı TRCODE 1, CLOSED 0, AMOUNT > SHIPPEDAMOUNT, iptal hariç; adet = fiş sayısı (ORDFICHEREF). 'Geçen çeyrek' = tamamlanmış son çeyrek, referans GETDATE() ile hesaplar. Açık nokta: beklenen cevap 'ay sonu itibarıyla' kümülatif açık sipariş serisi diyor; satır kapanış tarihi tutulmadığı için kurulamıyor, seri 'o ay açılan ve bugün hâlâ bekleyen' siparişlerdir (günlük 09-17, soru 14). Ay kolonu metin/tarih olabileceği için pairs yerine satır + toplam kontrolü."
+  },
+  {
+   "n": 15,
+   "id": "C040",
+   "soru": "Son üç ayda satılan adet, aynı dönemde üretilen adedin ne kadarı?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS satilan_adet, SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END) AS uretilen_adet, CAST(SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS FLOAT)/NULLIF(SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END),0) AS oran FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9,13) AND DATE_>=DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())-2,0) AND DATE_<DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())+1,0)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "oran",
+      "satis_uretim_orani",
+      "yuzde"
+     ],
+     "reference": "oran",
+     "tolerance": 0.002
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "uretilen_adet",
+      "uretilen",
+      "uretim_adedi"
+     ],
+     "reference": "uretilen_adet",
+     "tolerance": 0
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "adet",
+      "satilan_adet",
+      "satilan",
+      "satis_adedi"
+     ],
+     "reference": "satilan_adet",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: satılan 1.620.882 / üretilen 3.375.200 = 0,4802. Köprü birebir aynı. Tanım: satılan adet = satış faturası satırları TRCODE 7,8,9 (IOCODE 3,4), üretilen adet = üretimden giriş TRCODE 13 IOCODE 1 (Kural 9, 20); LINETYPE 0, CANCELLED 0. 'Son üç ay' = içinde bulunulan ayla biten üç takvim ayı (Temmuz–Eylül; temporal.py kuralı, günlük soru 15); kayan 90 gün okunursa 1.850.079 / 4.028.065 = 0,459 — dönem kuralı değişirse referans da değişmeli. İade (109.670 adet) düşülmez. Veri notu: 2026 kopyasında satış 17.08.2026'da bitiyor, üretim girişi sürüyor; oran bu yüzden düşük. Cevap yüzde (48,02) dönerse oran kontrolü birim yüzünden düşer. 2026 kopyası yeter: dönem tümüyle 2026."
+  },
+  {
+   "n": 16,
+   "id": "D015",
+   "soru": "Kartında indirim yüzdesi tanımlı müşteriler gerçekte ortalama ne kadar iskonto alıyor?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS musteri, C.DISCRATE AS kart_iskonto_yuzdesi, SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) AS fiili_iskonto_orani FROM LG_411_CLCARD C JOIN LG_411_01_STLINE S ON S.CLIENTREF=C.LOGICALREF WHERE C.DISCRATE<>0 AND S.CANCELLED=0 AND S.TRCODE IN (7,8) AND S.LINETYPE IN (0,2) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_, C.DISCRATE ORDER BY 4 DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "musteri",
+      "unvan",
+      "cari",
+      "musteri_unvani",
+      "DEFINITION_"
+     ],
+     "answer_value": [
+      "iskonto_orani",
+      "fiili_iskonto_orani",
+      "ortalama_iskonto",
+      "oran"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "fiili_iskonto_orani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: 2 müşteri — ÖMER SEFA OKÇU kart %100 → fiili 0,9139 (4.930,42 / 5.395,00); HASAN ŞEVKİ BİLGİN kart %100 → 0,8643 (2.152,00 / 2.490,00). Köprü birebir (0,91 / 0,86). Tanım: kartında tanımlı iskonto = CLCARD.DISCRATE <> 0; iskonto oranı satır düzeyinde Σ TOTAL (LINETYPE 2) / Σ TOTAL (LINETYPE 0), TRCODE 7,8, CANCELLED 0 (iş tanımı 04, metrik iskonto_yuku). Referans faturadan değil doğrudan STLINE.CLIENTREF'ten gider (bağımsız yol). Soru dönem söylemiyor; ürünün varsayılanı 'bu yıl' — referans da 2026. Kartında iskonto tanımlı 5 cari var (hepsi 12001.01.TAR00x, aktif); 2026'da yalnız 2'sinin satışı var. 2021–25 kopyası eklenirse 4 müşteri (AHMET BOZKURT kart %50 → 0,5236; MÜCAHİT ARLI %100 → 0,9099) — varsayılan dönem kalkarsa referans yeniden yazılır. Birim uyarısı: kart yüzdesi 0–100, fiili oran 0–1 ölçeğinde dönüyor."
+  },
+  {
+   "n": 17,
+   "id": "D037",
+   "soru": "Sipariş verip de hiç sevkiyat almamış müşterilerimiz var mı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS unvan, (SELECT SUM((L.AMOUNT-L.SHIPPEDAMOUNT)*L.PRICE) FROM LG_411_01_ORFLINE L JOIN LG_411_01_ORFICHE O ON O.LOGICALREF=L.ORDFICHEREF WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0 AND L.CANCELLED=0 AND L.LINETYPE=0 AND L.CLOSED=0) AS bekleyen_tutar FROM LG_411_CLCARD C WHERE EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0) AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "cari_kodu",
+      "CODE",
+      "kod",
+      "musteri_kodu"
+     ],
+     "answer_value": [
+      "cari_kodu",
+      "CODE",
+      "kod",
+      "musteri_kodu"
+     ],
+     "reference_key": "cari_kodu",
+     "reference_value": "cari_kodu"
+    }
+   ],
+   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor. Tanım: Kural 10 / iş tanımı 15–16 — sipariş = ORFICHE TRCODE 1 iptal hariç; sevkiyat = STLINE TRCODE 7,8 IOCODE 4; müşteri düzeyinde yokluk (NOT EXISTS), güncel kopya. İki açık nokta: (1) köprü cevabında beklenen 'bekleyen tutar' kolonu yok (yalnız kod + unvan) — tutar kontrolü bu yüzden konmadı; (2) 'hiç' iki yıl kopyası birlikte okunursa (2021–25 + 2026, cari koduyla) siparişi olup hiçbir kopyada sevkiyatı olmayan 1.826 cari çıkıyor — güncel kopya okuması iş teyidi bekliyor."
+  },
+  {
+   "n": 18,
+   "id": "D039",
+   "soru": "Geçen yıl alıp bu yıl hiç sipariş vermemiş müşterileri çıkarır mısın?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS musteri, G.satis_ciro AS gecen_yil_ciro, G.net_ciro AS gecen_yil_net_ciro FROM (SELECT I.CLIENTREF, SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE 0 END) AS satis_ciro, SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE -I.NETTOTAL END) AS net_ciro FROM LG_211_01_INVOICE I WHERE I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1) GROUP BY I.CLIENTREF HAVING SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN 1 ELSE 0 END)>0) G JOIN LG_211_CLCARD C ON C.LOGICALREF=G.CLIENTREF WHERE NOT EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O JOIN LG_411_CLCARD C2 ON C2.LOGICALREF=O.CLIENTREF WHERE C2.CODE=C.CODE AND O.TRCODE=1 AND O.CANCELLED=0 AND O.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND O.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) ORDER BY G.satis_ciro DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: referans 34.531 cari (2025'te alan 34.588 carinin 57'si 2026'da sipariş vermiş); 2025 net ciroları 733.178.030,47 ₺ (iade düşülmüş). Günlükteki 09-17 ölçümüyle aynı sayı (34.531). Tanım (günlük soru 18): 'alıp' = adına satış faturası kesilmiş (INVOICE TRCODE 7,8,9, CANCELLED 0), geçen yıl = 2025 → LG_211 kopyası; 'bu yıl hiç sipariş vermemiş' = 2026'da ORFICHE TRCODE 1 fişi yok (LG_411) — yokluk, NOT EXISTS; iki kopya cari koduyla eşlenir (LOGICALREF 14 kartta farklı). KÖPRÜ UYUŞMUYOR: bugünkü koşuda cevap yerine INCOMPLETE_ANSWER döndü — \"'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']\"; 'alıp' kelimesi müşteri alımı yerine malzeme kartı türüne (ITEMS.CARDTYPE = 1, 'alım') bağlanmış. 09-17 karnesinde aynı soru 34.531 ile doğruydu → gerileme. İş notu: sipariş modülü tüm satışları kapsamıyor (e-ticaret kanalı); 2026'da faturası da olmayan 33.573 cari ayrı bir okumadır. Ciro toplamı kontrolü konmadı (brüt satış mı net mi belirsiz)."
+  },
+  {
+   "n": 22,
+   "id": "A008",
+   "soru": "Vadesi geçmiş ama hâlâ tahsil edilmemiş müşteri alacaklarımız toplam ne kadar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "deny",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(*) AS fatura_plan_satiri, SUM(CASE WHEN PAID=1 OR CROSSREF>0 THEN 1 ELSE 0 END) AS kapatilan_satir, SUM(TOTAL) AS plan_tutari, SUM(CASE WHEN DATE_<CAST(GETDATE() AS DATE) THEN TOTAL ELSE 0 END) AS vadesi_gecmis_gorunen_plan FROM LG_411_01_PAYTRANS WHERE MODULENR=4 AND SIGN=0 AND CANCELLED=0 AND TRCODE IN (7,8,9)",
+   "checks": [],
+   "note": "Dürüst ret beklenir. 2026-09-18: 2026 kopyasında satış faturası ödeme planı 70.470 satır / 917.158.478,81 ₺; kapatılan (PAID = 1 ya da CROSSREF > 0) 0 satır — PAYTRANS'ın tüm modüllerinde de kapama 0. Borç kapama çalıştırılmadığı için 'vadesi geçmiş ve tahsil edilmemiş' tutar ölçülemiyor: vadesi geçmiş görünen plan 662.534.419,26 ₺ ama bu kesilen faturadır, alacak değil (tahsilatlar düşülmemiş). Köprü NON_SQL_QUERY ile tam bu gerekçeyi söylüyor (caveat 2026-09-16; köprü 70.521 satır diyor, fark ölçüm tarihi/TRCODE kapsamı). Referans SQL reddin dayandığı veri durumunu gösterir: kapatilan_satir > 0 olursa beklenti 'answer' olarak yeniden yazılır. Dolu bir 'vadesi geçmiş alacak' rakamı bozulmadır; cari net bakiye (CLFLINE) verilirse bunun yaşlandırma olmadığı açıkça yazılmalı."
+  },
+  {
+   "n": 23,
+   "id": "A010",
+   "soru": "Karşılıksız çıkan veya protesto olan çeklerin bu yılki toplam tutarı ne kadar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(DISTINCT CASE WHEN T.STATUS=11 THEN T.CSREF END) AS karsiliksiz_adet, ISNULL(SUM(CASE WHEN T.STATUS=11 THEN C.AMOUNT END),0) AS karsiliksiz_tutar, COUNT(DISTINCT CASE WHEN T.STATUS IN (5,7) THEN T.CSREF END) AS protestolu_adet, ISNULL(SUM(CASE WHEN T.STATUS IN (5,7) THEN C.AMOUNT END),0) AS protestolu_tutar, ISNULL(SUM(C.AMOUNT),0) AS toplam_tutar FROM (SELECT DISTINCT CSREF, STATUS FROM LG_411_01_CSTRANS WHERE CANCELLED=0 AND TRCODE<>0 AND STATUS IN (5,7,11) AND DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) T JOIN LG_411_01_CSCARD C ON C.LOGICALREF=T.CSREF WHERE C.CANCELLED=0 AND C.DOC=1",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "toplam_tutar",
+      "toplam",
+      "tutar",
+      "*"
+     ],
+     "reference": "toplam_tutar",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18 — KÖPRÜ UYUŞMUYOR, bulgu: köprü ve caveat 'güncel durum' okuyor (CSCARD.CURRSTAT IN (11,5,7) + DUEDATE 2026) → boş; bu okuma veriyle doğru (CURRSTAT 11 olan 20 müşteri çeki 2.517.753 ₺ 2018–2019 vadeli; CURRSTAT 7 olan 83 kayıt müşteri SENEDİ, 877.714 ₺, 2017–2022 vadeli; 2026 vadeli çeklerde 5/7/11 yok). Ama soru bir OLAY soruyor ('karşılıksız ÇIKAN'): çek hareketlerinde (CSTRANS) 2026'da karşılıksız işlemi (STATUS 11, TRCODE 9 işlem bordrosu) görmüş 6 müşteri çeki var, toplam 6.326.658,00 ₺ (portföy 21105322 476.658 · 21105247 350.000 · 21105375 1.000.000 · 21105376/77/78 3×1.500.000; vadeleri 31.01–05.05.2026; işlem tarihleri 09.02, 01.04, 04.05, 04.06.2026). Hepsi karşılıksız çıktıktan sonra müşteriye iade edildiği için güncel durumları 6 (iade edildi) — CURRSTAT okuması bu yüzden kaçırıyor. Protestolu çek olayı 2026'da yok (0). Referans olay okumasıdır; TRCODE 0 devir hareketleri (01.01.2026 açılış: 20 eski karşılıksız çek + 83 protestolu senet) dışlanır. Kural 12 ('karşılıksız = CURRSTAT 11') ve caveat ('kayıt yok') iş teyidiyle gözden geçirilmeli; iş tarafı güncel-durum okumasını seçerse beklenti [\"deny\",\"answer\"] + empty olur."
+  },
+  {
+   "n": 25,
+   "id": "A027",
+   "soru": "Ambar bazında elde kalan stok adedi en yüksek yirmi kitap hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT TOP 20 S.SOURCEINDEX AS ambar, W.NAME AS ambar_adi, I.CODE AS stok_kodu, I.NAME AS kitap, SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT ELSE -S.AMOUNT END) AS kalan_adet FROM LG_411_01_STLINE S JOIN LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF LEFT JOIN L_CAPIWHOUSE W ON W.NR=S.SOURCEINDEX AND W.FIRMNR=411 WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.IOCODE IN (1,2,3,4) GROUP BY S.SOURCEINDEX, W.NAME, I.CODE, I.NAME ORDER BY kalan_adet DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "stok_bakiyesi",
+      "kalan_adet",
+      "kalan_stok",
+      "kalan",
+      "stok"
+     ],
+     "reference": "kalan_adet",
+     "tolerance": 0.0005
+    }
+   ],
+   "note": "2026-09-18: ilk 20 (ambar, malzeme) toplamı referansla; ilk üç: ambar 4 (Timaş Satış Deposu 2) ÇOCUK ÖZEL AÇIK AYRAÇ 981.000 · ambar 24 (Tarçın Kafe) BREZİLYA KAHVE ÇEKİRDEĞİ 326.376,284 · ambar 4 İYİLİK TİMİ 213.467. Köprünün ilk üç satırı birebir aynı. Tanım: iş tanımı 09 + Kural 14 — stok = giriş (IOCODE 1,2) − çıkış (3,4), LINETYPE 0, CANCELLED 0, tarihsiz, yalnız güncel kopya (açılış devri içinde); ambar = STLINE.SOURCEINDEX. BULGU (tanım açığı): listede kitap olmayan malzemeler var — ayraç (15701), kahve çekirdeği (15312, Tarçın Kafe), BANDROL (15001, üç matbaa ambarında: 196.386 / 167.188 / 86.508). Katalogda 'kitap' = ITEMS'in tamamı; kitap kartı tanımı (ör. CARDTYPE 12 ve kod 15201*) yok. İlk 20'nin 5'i kitap değil (ayraç, kahve, 3×bandrol); yalnız kitap kartları alınırsa bunlar düşer ve sıradaki 5 kitap girer. Referans bugünkü belgelenmiş tanımı izler; 'kitap' tanımı iş tarafınca verilince yeniden yazılmalı. Köprü cevabında ambar adı yok (yalnız numara) ve kırılım kitap adıyla (kod değil) — BANDROL üç ambarda ayrı satır olduğu için pairs kontrolü konmadı."
+  },
+  {
+   "n": 26,
+   "id": "A028",
+   "soru": "Asgari stok seviyesinin altına düşmüş malzemeler hangi ambarlarda var?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT ITEMREF, INVENNO AS ambar, MINLEVEL FROM LG_411_INVDEF WHERE MINLEVEL>0",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "Dürüst ret ya da boş sonuç + aynı gerekçe. 2026-09-18: LG_411_INVDEF 3.980.876 malzeme–ambar satırı; MINLEVEL > 0 olan 0 (MAXLEVEL > 0: 0, SAFELEVEL > 0: 0, MINLEVELCTRL <> 0: 0). Asgari seviye hiç girilmediği için 'asgari seviyenin altına düşen' kümesi tanımsız; köprü NON_SQL_QUERY ile bunu söylüyor (caveat 2026-09-18). Küçük fark: caveat 'seviye kontrolü açık 125.682 satır' diyor, bugünkü ölçümde MINLEVELCTRL <> 0 satır 0 — sonucu değiştirmez ama caveat'teki sayı doğrulanmalı. Referans MINLEVEL > 0 satırlarını listeler; satır belirirse beklenti 'answer' olarak yeniden yazılır. Dolu bir liste (ör. stok < 0 olanları 'asgari altı' diye sunmak) bozulmadır."
+  }
+ ]
+}
