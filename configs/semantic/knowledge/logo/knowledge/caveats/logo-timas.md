@@ -15,3 +15,8 @@
 - Cari risk limiti bu veride **tanımlı değil** (ölçüm 2026-09-18, doğrudan veritabanı): güncel kopyada (`LG_411_01_CLRNUMS`, 4.893 satır) ve 2021–25 kopyasında (237.228 satır) `ACCRISKLIMIT > 0` olan hiçbir cari yok. "Risk limitini aşan cariler" sorusu bu yüzden boş döner; boş sonuç "kimse limitini aşmadı" değil, "limit girilmemiş" demektir. (2015–2020 eski firma kopyalarında limitli kayıtlar vardır; güncel soruda okunmaz.)
 - Karşılıksız / protestolu çek: güncel kopyada (`LG_411_01_CSCARD`) 2026 vadeli karşılıksız (CURRSTAT 11) ya da protestolu (5, 7) müşteri çeki **kayıt yok** (ölçüm 2026-09-18, doğrudan veritabanı); karşılıksız görünen 20 çek (2,52 M ₺) 2018–2019 vadelidir. "Bu yıl karşılıksız çıkan çekler" sorusu bu yüzden boş döner.
 
+## CRM sözleşme tutar alanları boş
+
+- `NEW_SOZLESMEBASE.new_teliftutari` ve `new_ajansservisucreti` bu kurulumda hiçbir sözleşmede dolu değil (14.824 aktif sözleşme, 0 dolu); telif hakediş tablosu `NEW_ODEMEHAKEDISBASE` boştur. "Ortalama telif tutarı", "ajans servis ücreti toplamı" soruları bu yüzden boş/NULL döner — veri yok, hesap hatası değil. Sözleşme adedi ve yüzde tabanlı telif (`new_Telif`, `NEW_TELIFTANIMBASE.new_TelifYuzdesi`) verilebilir.
+- `NEW_URETIMBASE.new_UretimAdedi` hiç dolu değil; gerçekleşen üretim `NEW_BASKIBASE.new_uretimadedi` (39 kayıt).
+

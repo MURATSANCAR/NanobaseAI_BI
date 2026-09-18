@@ -189,10 +189,17 @@ class Conventions:
                                                 "reason": rule["reason"]})
         return out
 
+    # Audit columns every CRM row carries: who created or last edited a record is not the record's
+    # owner, customer or author. When a table points at the same target through several columns,
+    # the business reference wins over the bookkeeping one.
+    _AUDIT_REFS = frozenset({"CREATEDBY", "MODIFIEDBY", "CREATEDONBEHALFBY", "MODIFIEDONBEHALFBY", "OWNINGUSER", "OWNINGBUSINESSUNIT", "OWNINGTEAM"})
+
     def join_path(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
-        for col, (ref_entity, ref_col) in self.ref_columns.get(entity, {}).items():
-            if ref_entity == other:
-                return (entity, col, other, ref_col)
+        candidates = [(col, ref_col) for col, (ref_entity, ref_col) in self.ref_columns.get(entity, {}).items() if ref_entity == other]
+        if candidates:
+            business = [c for c in candidates if c[0].upper() not in self._AUDIT_REFS]
+            col, ref_col = (business or candidates)[0]
+            return (entity, col, other, ref_col)
         for col, (ref_entity, ref_col) in self.ref_columns.get(other, {}).items():
             if ref_entity == entity:
                 return (other, col, entity, ref_col)
