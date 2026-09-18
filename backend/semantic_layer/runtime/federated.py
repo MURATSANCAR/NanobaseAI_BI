@@ -240,7 +240,21 @@ def execute(plan: Plan, fetch: Callable[[Part], Iterable[tuple[list[dict], list[
                                    [[_value(r.get(c)) for c in columns] for r in rows])
             if not created:
                 raise ValueError(f"'{part.name}' parçası kolon döndürmedi")
-        cur = db.execute(plan.final)
+        try:
+            cur = db.execute(plan.final)
+        except sqlite3.OperationalError as first:
+            # Every other statement in the conversation is T-SQL, and the model carries its habits
+            # into the one statement that is not: ISNULL(a, b), TOP n, LEN(). The combining step
+            # reads in-memory tables only, so its dialect carries no meaning of its own — the same
+            # statement is translated and tried once before the question is failed over spelling.
+            try:
+                import sqlglot
+                translated = sqlglot.transpile(plan.final, read="tsql", write="sqlite")[0]
+            except Exception:
+                raise first
+            if translated.strip() == plan.final.strip():
+                raise
+            cur = db.execute(translated)
         names = [d[0] for d in cur.description or []]
         rows = [dict(zip(names, row)) for row in cur.fetchall()]
         return [{"name": n, "type": ""} for n in names], rows

@@ -299,6 +299,17 @@ class DeterministicCompiler:
         metrics = [s for s in q.metrics if s.mapping and s.mapping.formula]
         if not metrics:
             return None, "no certified metric"
+        # Everything the question placed must live where the measure lives. A certified thing on the
+        # other server ("satış hedefi" beside an ERP revenue) is half of the question; this compiler
+        # writes one statement for one server, and writing it anyway answered a narrower question
+        # with nothing on screen to say so.
+        def _src(entity: str) -> str:
+            schema = (getattr(self.by_entity.get(entity), "schema_name", "") or "")
+            return schema.split(".")[0].upper() if "." in schema else ""
+        placed_sources = {_src(s.mapping.entity) for s in q.slots
+                          if s.mapping and s.mapping.entity and s.mapping.entity in self.by_entity}
+        if len(placed_sources) > 1:
+            return None, "question names things on two servers"
         entities = {s.mapping.entity for s in metrics}
         if len(entities) != 1:
             return None, "metrics span multiple entities"
@@ -803,6 +814,15 @@ Kurallar:
   ya da sohbetle ilgili hiçbir şey yazma; bunlar sorulursa tek satır: NO_SQL: kapsam dışı.
 - Çıktı biçimi: sadece ```sql ... ``` bloğu, başka açıklama yazma."""
 
+def _reads_both_sources(sql: str) -> bool:
+    """Does one statement name tables of the CRM database and tables outside it?"""
+    names = re.findall(r"(?i)\b(?:FROM|JOIN)\s+([\[\]\w.\"]+)", sql or "")
+    defined = {m.lower() for m in re.findall(r"(?i)\b(\w+)\s+AS\s*\(", sql or "")}
+    tables = [n for n in names if n.strip('[]"').lower() not in defined]
+    crm = [n for n in tables if "mscrm" in n.lower()]
+    return bool(crm) and len(crm) < len(tables)
+
+
 _SQL_BLOCK = re.compile(r"```(?:sql)?\s*(.*?)```", re.S | re.I)
 _VIEW_LINES = re.compile(r"(?i)(v_monthly_sales|v_channel_net|v_imprint_perf|sales_cube|line_cube|orders_cube|küp|cube|görünüm)")
 
@@ -1247,6 +1267,26 @@ class ExistingCompiler:
             keep = max(self.max_prompt_tables, len(resolved))    # never drop a table the question named
             ordered = ordered[:keep]
         return ordered
+
+    def _with_bridges(self, q: SemanticQuery, entities: list[str]) -> list[str]:
+        """The far end of every measured cross-source link that starts at a table the question placed.
+
+        A plan may only join its parts over a measured link, and the link usually lands on a table
+        the question never names (targets are tied to the barcode table, not to the product card).
+        Ranked by relevance to the question's words that table is dropped, and the model — shown a
+        link whose other table it cannot see — correctly says the two sources cannot be joined."""
+        def bare(name: str) -> str:
+            return re.sub(r"^LG_", "", str(name or "").upper())
+        known: dict[str, str] = {}
+        for name in self.by_entity:
+            known.setdefault(bare(name), name)
+        placed = {bare(s.mapping.entity) for s in q.slots if s.mapping and s.mapping.entity}
+        out, shown = list(entities), {bare(e) for e in entities}
+        for a, _col, b, _ref in sorted(federated.cross_links(self.profiles)):
+            if bare(a) in placed and bare(b) not in shown and bare(b) in known:
+                out.append(known[bare(b)])
+                shown.add(bare(b))
+        return out
 
     @staticmethod
     def _plans_enabled(q: SemanticQuery) -> bool:
@@ -1758,6 +1798,8 @@ class ExistingCompiler:
         recalled = recall_fn(q.question) if recall_fn else []
         examples = "\n\n".join(f"Soru: {r.get('nl')}\nSQL:\n{r.get('sql')}" for r in recalled if r.get("sql"))
         entities = self.narrow(q, self.relevant_entities(q, recalled), report=report)
+        if self._plans_enabled(q):
+            entities = self._with_bridges(q, entities)
         language_hits = [h for h in self.language_pool.search(q.question)
                          if all(c["entity"] in entities for c in h["columns"])] if self.language_pool else []
         ctx = [
@@ -1915,6 +1957,23 @@ class ExistingCompiler:
                 return CompiledQuery(sql=plan.text(), compiler=self.name, catalog_version=q.catalog_version,
                                      explain=["LLM iki sunuculu plan yazdı; parçalar ayrı çalışır, bellekte birleşir"],
                                      llm_ms=ms, certified=False, plan=plan)
+            # Asked for a plan, the model sometimes still writes one statement that reads both
+            # servers. No server can run it, and the repair loop that follows only sees "cannot be
+            # joined" and rewrites the same statement. It is told once, here, what is wrong with the
+            # form — the reading of the question in that statement is usually right and is kept.
+            attempt = extract_sql(text)
+            if attempt and _reads_both_sources(attempt):
+                retry = messages + [{"role": "assistant", "content": text},
+                                    {"role": "user", "content": "Bu tek SQL iki ayrı sunucunun tablolarını birlikte okuyor; hiçbir sunucu "
+                                     "bunu çalıştıramaz. Aynı hesabı İKİ AYRI SUNUCU biçimindeki plan olarak yaz: her kaynağın okuması "
+                                     "kendi parçasında, birleştirme final'de. Yalnız ```json bloğu döndür."}]
+                text2 = self.llm.chat(retry)
+                ms = int((time.perf_counter() - t0) * 1000)
+                plan = federated.parse_plan(text2)
+                if plan is not None:
+                    return CompiledQuery(sql=plan.text(), compiler=self.name, catalog_version=q.catalog_version,
+                                         explain=["LLM iki sunuculu plan yazdı (tek SQL denemesinden sonra); parçalar ayrı çalışır, bellekte birleşir"],
+                                         llm_ms=ms, certified=False, plan=plan)
         sql = self._requested_row_limit(extract_sql(text), q)
         if not sql:
             # The model's own words never reach the person asking. Its job here is to write SQL; when it
@@ -2099,6 +2158,19 @@ class CompilerRouter:
         problems = federated.check_plan(plan, profiles, context, dialect)
         if problems:
             return problems
+        # Each part is an ordinary statement on its own server, and goes wrong the ordinary way: a
+        # header total summed across its lines comes out multiplied. The single-statement path is
+        # reviewed for that after its dry run; a part that skipped the review returned a revenue
+        # several times the truth, per book, with nothing to show it.
+        from semantic_layer.runtime import critic
+        for part in plan.parts:
+            try:
+                found = critic.review(part.sql, profiles, dialect)
+            except Exception:  # noqa: BLE001
+                continue
+            blocking = [f"'{part.name}' parçası: {f.message}" for f in found if f.severity == "block"]
+            if blocking:
+                return blocking
         head = "".join(f"-- yorum: {r}\n" for r in plan.readings)
         sources = self.gate_sources()
         unmet_sets = []
@@ -2111,16 +2183,23 @@ class CompilerRouter:
 
     def _gate_plan(self, q: SemanticQuery, out: CompiledQuery, thread) -> CompiledQuery:
         problems = self.plan_problems(q, out.plan)
-        if problems and self.existing is not None and hasattr(self.existing, "repair_plan"):
-            fixed = self.existing.repair_plan(q, out.plan, "; ".join(problems), thread)
-            if fixed is not None:
-                again = self.plan_problems(q, fixed)
-                if not again:
-                    out.plan, out.sql = fixed, fixed.text()
-                    out.explain = list(out.explain) + ["plan onarımı: " + "; ".join(problems)]
-                    problems = []
-                else:
-                    problems = again
+        # As many rounds as a single statement gets. A plan has more places to go wrong — several
+        # parts and a join — and the second finding is usually a different one from the first.
+        current = out.plan
+        for _ in range(2):
+            if not problems or self.existing is None or not hasattr(self.existing, "repair_plan"):
+                break
+            fixed = self.existing.repair_plan(q, current, "; ".join(problems), thread)
+            if fixed is None:
+                break
+            again = self.plan_problems(q, fixed)
+            current = fixed
+            if not again:
+                out.plan, out.sql = fixed, fixed.text()
+                out.explain = list(out.explain) + ["plan onarımı: " + "; ".join(problems)]
+                problems = []
+            else:
+                problems = again
         if problems:
             return CompiledQuery(sql="", compiler="incomplete", catalog_version=q.catalog_version,
                                  explain=problems, certified=False)
