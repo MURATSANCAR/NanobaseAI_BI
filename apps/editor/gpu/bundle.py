@@ -83,7 +83,7 @@ for role in ('qwen','ocr'):
     if host.get('CapAdd'):services[role]['cap_add']=host['CapAdd']
     if host.get('Ulimits'):services[role]['ulimits']={v['Name']:{'soft':v['Soft'],'hard':v['Hard']} for v in host['Ulimits']}
 services['qwen']['ports']=['${GPU_BIND_ADDRESS:-127.0.0.1}:${QWEN_PORT:-8001}:8000']
-services['qwen']['healthcheck']={'test':['CMD','python','-c','import urllib.request;urllib.request.urlopen("http://127.0.0.1:8000/health",timeout=5)'],
+services['qwen']['healthcheck']={'test':['CMD','python3','-c','import urllib.request;urllib.request.urlopen("http://127.0.0.1:8000/health",timeout=5)'],
     'interval':'15s','timeout':'8s','retries':80,'start_period':'180s'}
 services['gateway']={'image':tags['gateway'],'pull_policy':'never','restart':'unless-stopped',
     'command':['python','/app/gateway.py'],'read_only':True,'cap_drop':['ALL'],

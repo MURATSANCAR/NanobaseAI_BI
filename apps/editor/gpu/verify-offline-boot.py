@@ -156,7 +156,7 @@ try:
         networks=list(container['NetworkSettings']['Networks']);assert len(networks)==1
         assert json.loads(command(['docker','network','inspect',networks[0]]))[0]['Internal'] is True
         probe="import os,socket,json; assert os.environ.get('HF_HUB_OFFLINE')=='1'; s=socket.socket();s.settimeout(2);blocked=s.connect_ex(('1.1.1.1',443))!=0;print(json.dumps({'external_tcp_blocked':blocked}));assert blocked"
-        blocked=json.loads(command(['docker','exec',name,'python','-c',probe]))
+        blocked=json.loads(command(['docker','exec',name,'python3','-c',probe]))
         checks.append({'role':role,'image':container['Image'],'packaged_model_mount_read_only':True,**blocked})
     mark('OFFLINE_RUNTIME_BOUNDARIES',checks=checks)
     shared('cold-shared-inference','http://127.0.0.1:18001','http://127.0.0.1:18010',project+'-qwen',project+'-ocr')

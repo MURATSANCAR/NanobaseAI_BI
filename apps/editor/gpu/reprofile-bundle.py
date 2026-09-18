@@ -30,6 +30,9 @@ def replace(name,data):
     os.replace(tmp,path)
 compose=json.loads((source/'compose.yaml').read_bytes())
 compose['services']['qwen']['command']=command
+test=compose['services']['qwen']['healthcheck']['test']
+assert test[:2] in (['CMD','python'],['CMD','python3']),'UNEXPECTED_HEALTHCHECK'
+test[1]='python3'
 data=(json.dumps(compose,indent=2)+'\n').encode();replace('compose.yaml',data)
 manifest['files']['compose.yaml']=hashlib.sha256(data).hexdigest()
 for model in manifest['models'].values():
