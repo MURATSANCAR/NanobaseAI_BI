@@ -45,7 +45,8 @@ def review_cited_support(claim, refs, allowed, model, source_rows):
         result,metrics=model([{'role':'user','content':prompt}],max_tokens=800,prompt_version=VERSION+'-cited-support')
     except RuntimeError as exc:
         if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED'):raise
-        return {**output,'reason':str(exc)}
+        return {**output,'reason':str(exc),
+                'generation_attempts':getattr(exc,'generation_attempts',[])}
     output.update(model_result=result,metrics=metrics)
     checks=result.get('checks') if isinstance(result,dict) else None
     support=result.get('support_span_refs') if isinstance(result,dict) else None
@@ -136,6 +137,7 @@ def review_page(page_claims, spans, model, verified_identity_claims=None, page_p
             if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED', 'MODEL_OUTPUT_TRUNCATED'):
                 raise
             item['reason'] = str(exc)
+            item['generation_attempts'] = getattr(exc,'generation_attempts',[])
             reports.append(item)
             continue
         item.update({'model_result': result, 'metrics': metrics,
@@ -263,6 +265,7 @@ def synthesize_reviewed(pages, reviews, model, source_spans=None):
             if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED', 'MODEL_OUTPUT_TRUNCATED'):
                 raise
             output['blocked_statements'].append({'reason': str(exc), 'batch_start': start,
+                                                 'generation_attempts':getattr(exc,'generation_attempts',[]),
                                                  'claim_refs': sorted(ids)})
             continue
         if (not isinstance(proposed, dict) or not isinstance(proposed.get('statements'), list)
@@ -293,7 +296,8 @@ def synthesize_reviewed(pages, reviews, model, source_spans=None):
             except RuntimeError as exc:
                 if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED', 'MODEL_OUTPUT_TRUNCATED'):
                     raise
-                output['blocked_statements'].append({**statement, 'reason': str(exc)})
+                output['blocked_statements'].append({**statement, 'reason': str(exc),
+                    'generation_attempts':getattr(exc,'generation_attempts',[])})
                 continue
             entry = {**statement, 'verification': verdict, 'metrics': metrics,
                      'verification_metrics': check_metrics,

@@ -35,6 +35,14 @@ def parallel_items(fn, items):
         list(pool.map(fn,items))
 
 
+class IncompleteModelOutput(RuntimeError):
+    """Retain the failed attempts without treating partial JSON as a result."""
+
+    def __init__(self, attempts):
+        super().__init__('MODEL_OUTPUT_TRUNCATED')
+        self.generation_attempts = attempts
+
+
 def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERSION):
     # Short, server-owned citation handles save tokens without dropping any source.
     # Resolve them back to immutable UUIDs before schema/scope validation.
@@ -62,6 +70,7 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
     started_at = time.time()
     start = time.monotonic()
     transient_retries = []
+    generation_attempts = []
     with httpx.Client(timeout=3600,trust_env=False) as client:
         def post(path, payload):
             # A loading runner returns 503; a busy runner may return 429. These
@@ -94,11 +103,32 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         token_count=len(tokenized.json()['tokens'])
         if token_count+max_tokens+512>context_limit:
             raise RuntimeError('CONTEXT_BUDGET_EXCEEDED')
-        response = post('/v1/chat/completions',body)
-    result = response.json()
-    choice = result['choices'][0]
-    if choice['finish_reason'] != 'stop':
-        raise RuntimeError('MODEL_OUTPUT_TRUNCATED')
+        # A length-limited response is not a semantic verdict. Retry once with
+        # the identical sources and prompt, never a partial answer or feedback.
+        # Completed FAIL/UNKNOWN verdicts are never retried to obtain a PASS.
+        retry_budget = min(max_tokens * 2, context_limit - token_count - 512)
+        budgets = [max_tokens]
+        if retry_budget > max_tokens:
+            budgets.append(retry_budget)
+        for budget in budgets:
+            body['max_tokens'] = budget
+            response = post('/v1/chat/completions',body)
+            result = response.json()
+            choice = result['choices'][0]
+            attempt = {'max_output_tokens':budget, 'finish_reason':choice['finish_reason'],
+                       'usage':result.get('usage',{}),
+                       'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode()),
+                       'messages_sha256':sha(json.dumps(body['messages'],ensure_ascii=False).encode()),
+                       'response_sha256':sha(response.content)}
+            if choice['finish_reason'] != 'stop':
+                attempt['incomplete_output'] = choice['message'].get('content')
+            generation_attempts.append(attempt)
+            if choice['finish_reason'] == 'stop':
+                break
+            if choice['finish_reason'] != 'length':
+                raise IncompleteModelOutput(generation_attempts)
+        else:
+            raise IncompleteModelOutput(generation_attempts)
     content = choice['message']['content']
     def resolve(value):
         if isinstance(value,list): return [resolve(x) for x in value]
@@ -108,12 +138,15 @@ def model(messages, max_tokens=1000, structured=True, prompt_version=PROMPT_VERS
         'started_at':started_at,'finished_at':time.time(),
         'usage':result.get('usage',{}),'finish_reason':choice['finish_reason'],
         'transient_retries':transient_retries,
+        'generation_attempts':generation_attempts,
+        'generation_retry_policy':'LENGTH_ONLY_IDENTICAL_INPUT_ONCE_WITHIN_CONTEXT',
         'model_name':name,'model_backend':backend,'context_limit':context_limit,
         'input_token_count':token_count,
         'runner_fingerprint':result.get('system_fingerprint'),
         'image_max_tokens':(int(os.environ.get('EDITOR_IMAGE_MAX_TOKENS','1024')) if backend=='llama.cpp' else None),
         'release':RELEASE,'code_manifest':code_manifest(),
-        'prompt_version':prompt_version,'max_output_tokens':max_tokens,
+        'prompt_version':prompt_version,'max_output_tokens':body['max_tokens'],
+        'requested_max_output_tokens':max_tokens,
         'citation_dictionary':aliases,'request_sha256':sha(json.dumps(body,ensure_ascii=False).encode())}
 
 
