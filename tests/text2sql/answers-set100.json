@@ -2,6 +2,62 @@
  "about": "Tam kapının altın cevapları. Her giriş bağımsız yazılmış referans SQL taşır; köprünün ürettiği SQL buraya kopyalanmaz. Yanlış nesneye bakan kontrol altın sayılmaz.",
  "cases": [
   {
+   "n": 8,
+   "id": "C004",
+   "soru": "Elimizde hiç kalmamış ama hâlâ bekleyen siparişi olan kitaplar hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT I.CODE, I.NAME FROM LG_411_ITEMS I WHERE EXISTS (SELECT 1 FROM LG_411_01_ORFLINE L WHERE L.STOCKREF=I.LOGICALREF AND L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT) AND ISNULL((SELECT SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT WHEN S.IOCODE IN (3,4) THEN -S.AMOUNT ELSE 0 END) FROM LG_411_01_STLINE S WHERE S.STOCKREF=I.LOGICALREF AND S.CANCELLED=0 AND S.LINETYPE=0),0) <= 0",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "NAME",
+      "urun",
+      "kitap",
+      "kitap_adi",
+      "malzeme"
+     ],
+     "answer_value": [
+      "NAME",
+      "urun",
+      "kitap",
+      "kitap_adi",
+      "malzeme"
+     ],
+     "reference_key": "NAME",
+     "reference_value": "NAME"
+    }
+   ],
+   "note": "2026-09-18: 52 kitap. Stok bakiyesi tarihsiz ve yalnız cari kopyadan (giriş 1,2 − çıkış 3,4) ≤ 0; bekleyen sipariş = TRCODE 1, CLOSED 0, AMOUNT > SHIPPEDAMOUNT."
+  },
+  {
+   "n": 9,
+   "id": "C010",
+   "soru": "Hangi üretim emirleri planlanan bitiş tarihini geçti ve hâlâ tamamlanmadı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT LOGICALREF FROM LG_411_PRODORD WHERE CANCELLED=0 AND STATUS<>3 AND PLNENDDATE < CAST(GETDATE() AS DATE)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 20 üretim emri (STATUS 1: 21 emrin 20'sinin planlanan bitişi geçmiş; STATUS 3 = tamamlandı). Referans 'bugün'ü kendisi hesaplar."
+  },
+  {
    "n": 19,
    "id": "A002",
    "soru": "İptal edilmemiş satış faturalarında iade hariç toplam ciro ne kadar oldu bu ara?",
