@@ -1,5 +1,8 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 12:10 UTC — Editör: diakritik çelişkilerinde sözlük tanığı ölçümü
+
+328 gerçek inceleme bölgesinde, model çağırmadan ölçüldü: NFC eşdeğerliği hiçbir çelişkiyi kapatmıyor (0; varsayım reddedildi). Paddle ↔ Tesseract yalnız diakritikte ayrışan 74 bölgenin 52'sinde sözlük tanığı tek geçerli sözcüğü buluyor; seçilen sözcük hizalı temiz PDF sözcüğüyle 56 karşılaştırmanın 55'inde, en az 3 harflilerde 53/53 aynı. **Neden:** 253 inceleme bölgesinin bir kısmı anlam değil diakritik farkı; hata iki okuyucuya da dağıldığı için "tek okuyucuya güven" çözmüyor. Yan bulgu: Paddle 5 bölgede Romence `ș` (U+0219) üretiyor. Kural kodlanmadı, kapıya bağlanmadı; PDF'i bozuk sayfalarda doğruluk ölçülemedi. [Ölçüm](editor/2026-09-18-diacritic-witness-probe.md).
 ## 2026-09-18 14:15 UTC — Doğrulanmış cevaplar bozulmuş: kural bütçesi kök nedeni ve regresyon betiği
 
 100 soru gerçek köprüde yeniden soruldu (`~/testset/run100-0918b.jsonl`) ve her sorunun 08:30 UTC öncesi son cevabıyla karşılaştırıldı: **aynı 59, değişen 19** (ikisi Q68/Q69 — bugün düzeltilen; kalan 17'si dün doğrulanmış cevaplar), temel çizgisi olmayan 22. Cevaptan redde düşenler: Q10, Q11, Q18, Q24, Q35, Q40, Q45, Q58; satır sayısı değişenler: Q4, Q6, Q7, Q8, Q13, Q17, Q30, Q31, Q65. Redler bugünkü kod değişikliklerinden **önce** de vardı (08:41 UTC, Q72).
