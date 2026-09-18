@@ -6,14 +6,22 @@ Inputs are current-generation evidence-scoped page bundles, never free captions.
 import hashlib
 import json
 import re
+import uuid
 from collections import defaultdict
 
-VERSION = 'cross-page-literal-attribution-v6'
+VERSION = 'cross-page-literal-attribution-v7'
 
 
 def _hash(value):
+    def scalar(item):
+        # PostgreSQL returns UUID objects; HTTP returns their canonical strings.
+        # Preserve the same hash at both boundaries without accepting arbitrary
+        # non-JSON application objects through a broad default=str fallback.
+        if isinstance(item, uuid.UUID):
+            return str(item)
+        raise TypeError('UNSUPPORTED_CROSS_PAGE_HASH_TYPE:'+type(item).__name__)
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False,
-                                     separators=(',', ':')).encode()).hexdigest()
+                                     separators=(',', ':'),default=scalar).encode()).hexdigest()
 
 
 def _overlap(a, b):
@@ -99,18 +107,25 @@ def resolve(pages, minimum_quote_tokens=4, max_page_distance=1):
         for fragment in bundle.get('fragments', []):
             fd = fragment['data']; parent = by_id.get(fd.get('parent_source_span_id'))
             proof = fd.get('measurement', {})
-            valid_fragment = (parent is not None and fd.get('status') == 'TEXT_AGREED'
+            valid_fragment = (parent is not None and parent['data'].get('status') == 'NEEDS_REVIEW'
+                and fd.get('status') in ('TEXT_AGREED','NEEDS_REVIEW')
                 and fd.get('role') == 'TEXT' and fd.get('pdf_page') == page
                 and fd.get('evidence_refs') == [eid] and fd.get('render_sha256') == ed['ocr_render_sha256']
                 and contained(fd.get('bbox'), parent['data'].get('bbox'))
                 and fd.get('parent_record_sha256', fragment.get('parent_record_sha256')) == _hash(parent['data'])
                 and proof.get('parent_source_span_id') == str(parent['id'])
                 and proof.get('parent_render_sha256') == ed['ocr_render_sha256']
-                and proof.get('bbox') == fd['bbox'] and proof.get('blockers') == []
+                and proof.get('bbox') == fd['bbox'] and isinstance(proof.get('blockers'),list)
                 and proof.get('selected_text_is_unmodified_reader_output') is True)
+            if fd.get('status') == 'TEXT_AGREED' and proof.get('blockers'):
+                valid_fragment = False
             if not valid_fragment:
                 scope_errors.append({'pdf_page':page,'fragment_id':str(fragment['id']),
                                      'reason':'FRAGMENT_PARENT_OR_MEASUREMENT_SCOPE_MISMATCH'})
+                continue
+            if fd['status'] != 'TEXT_AGREED':
+                # A legitimate rejected reading is not corrupt provenance and
+                # must not invalidate independently supported dialogue elsewhere.
                 continue
             # Never concatenate across its unresolved parent or another fragment.
             extracted['attributions'].extend(extract([fragment], effective_role)['attributions'])
@@ -224,7 +239,13 @@ def resolve(pages, minimum_quote_tokens=4, max_page_distance=1):
             if _punctuation(entry['quote']) != _punctuation(item.get('supported_quote',item['quote'])):
                 item['reason']='SHORT_QUOTE_PUNCTUATION_MISMATCH'
                 continue
-            if scope_errors or any('quote' not in other for other in balloons):
+            local_balloon_coverage=[other for other in balloons
+                if abs(other['pdf_page']-match['pdf_page'])<=max_page_distance]
+            item['balloon_coverage_scope_pages']=sorted({other['pdf_page'] for other in local_balloon_coverage})
+            # This is an adjacent-page dialogue link, never a global identity.
+            # An unread balloon in a distant scene cannot be a candidate for
+            # this narration under the configured page-distance contract.
+            if scope_errors or any('quote' not in other for other in local_balloon_coverage):
                 item['reason']='SHORT_QUOTE_BALLOON_COVERAGE_INCOMPLETE'
                 continue
         if quote_tokens(' '.join(negation(entry['quote']))) != quote_tokens(' '.join(negation(item.get('supported_quote',item['quote'])))):

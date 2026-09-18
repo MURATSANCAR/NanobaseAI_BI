@@ -226,7 +226,9 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     const detail=page.locator('[data-fragment-id="'+fragment.id+'"]');await detail.waitFor();
     if(await detail.getAttribute('open')===null)await detail.locator('summary').click();
     if(await detail.getByTestId('fragment-raw-text').textContent()!==fragment.data.raw_text)throw new Error('Fragment raw text differs from API');
-    if(await detail.getByTestId('fragment-parent').textContent()!=='İlk satır: '+parent.data.raw_text)throw new Error('Fragment parent raw text differs from API');
+    await detail.locator('[data-testid="fragment-parent"][data-source-loaded="true"]').waitFor();
+    const parentText=await detail.getByTestId('fragment-parent').textContent();
+    if(parentText!=='İlk satır: '+parent.data.raw_text)throw new Error('Fragment parent raw text differs from API: '+JSON.stringify({actual:parentText,expected:'İlk satır: '+parent.data.raw_text}));
     const readerNames={PPOCR_FRAGMENT:'PaddleOCR bölgesel okuma',TESSERACT_PSM7_FRAGMENT:'Tesseract bölgesel okuma'};
     if(await detail.getByTestId('fragment-reader').textContent()!=='Okuyucu: '+(readerNames[fragment.data.selected_reader]||fragment.data.selected_reader))throw new Error('Fragment reader differs from API');
     for(const [label,expected] of [['Küçük bölgeyi kaynakta göster',fragment],['İlk satırı kaynakta göster',parent]]){

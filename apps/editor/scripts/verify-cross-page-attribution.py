@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Remote read-only real API/PostgreSQL cross-page attribution acceptance."""
-import json,subprocess,urllib.request,hashlib,sys,uuid
+import json,subprocess,urllib.request,hashlib,sys,uuid,os
 from pathlib import Path
 root=Path(__file__).resolve().parents[1];gen=str(uuid.UUID(sys.argv[1]))
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 rows={}
-for kind in ('evidence','source_spans','layout_regions','visual_observations','page_claims'):
+requested_kinds=['evidence','source_spans','layout_regions','visual_observations','page_claims']
+if os.environ.get('EDITOR_VERIFY_PERSISTED_CONTEXT')=='1':
+ requested_kinds+=['source_fragments','page_context_roles']
+for kind in requested_kinds:
  items=[];offset=0
  while True:
   request=urllib.request.Request(f'http://127.0.0.1:8810/v1/generations/{gen}/{kind}?offset={offset}&limit=100',headers=headers)
@@ -24,10 +27,15 @@ assert len(by_id)==sum(map(len,p['rows'].values())),'API_PG_COUNT_MISMATCH'
 for kind,items in p['rows'].items():
  for r in items:
   d=by_id[r['id']];assert d['kind']==kind and d['record_key']==r['record_key'] and d['data']==r['data'],'API_PG_MISMATCH'
-indexes={kind:{r['data']['pdf_page']:r for r in items} for kind,items in p['rows'].items() if kind!='source_spans'}
+indexes={kind:{r['data']['pdf_page']:r for r in items} for kind,items in p['rows'].items() if kind not in ('source_spans','source_fragments','page_context_roles')}
 bundles=[]
 for page in sorted(set.intersection(*(set(v) for v in indexes.values()))):
  bundles.append({'evidence':indexes['evidence'][page],'layout':indexes['layout_regions'][page]['data'],'visual':indexes['visual_observations'][page]['data'],'page_role':indexes['page_claims'][page]['data']['page_role'],'spans':[r for r in p['rows']['source_spans'] if r['data']['pdf_page']==page]})
+ if 'source_fragments' in p['rows']:
+  context=next((r for r in p['rows']['page_context_roles'] if r['data']['pdf_page']==page),None)
+  bundles[-1].update(fragments=[r for r in p['rows']['source_fragments'] if r['data']['pdf_page']==page],
+                    context_role=context['data'] if context else None,
+                    context_role_record_id=context['id'] if context else None)
 fragment_report=p.get('fragment_report')
 if fragment_report:
  assert fragment_report['generation_id']==p['gen'] and fragment_report['api_pg_match'] is True,'FRAGMENT_REPORT_SCOPE_MISMATCH'
@@ -65,7 +73,17 @@ if context_report:
    bundle['context_role']=context_report['result']
 module=types.ModuleType('cross_page_candidate');exec(compile(p['module'],'candidate-crosspage.py','exec'),module.__dict__)
 result=module.resolve(bundles)
-print(json.dumps({'gen':p['gen'],'api_pg_match':True,'application_writes':0,'code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'fragment_report_sha256':p.get('fragment_report_sha256'),'context_report_sha256':p.get('context_report_sha256'),'result':result},ensure_ascii=False))
+# Exercise the actual psycopg UUID types as well as HTTP JSON strings. Keeping
+# only API-shaped bundles previously missed a production serialization failure.
+def native_row(row):
+ original=by_id[row['id']]
+ return {key:original[key] for key in ('id','record_key','data')}
+native_bundles=[{**bundle,'evidence':native_row(bundle['evidence']),
+                'spans':[native_row(row) for row in bundle['spans']]} for bundle in bundles]
+if 'source_fragments' in p['rows']:
+ for bundle in native_bundles:bundle['fragments']=[native_row(row) for row in bundle.get('fragments',[])]
+assert module.resolve(native_bundles)==result,'NATIVE_POSTGRES_API_RESULT_MISMATCH'
+print(json.dumps({'gen':p['gen'],'api_pg_match':True,'native_postgres_types_match':True,'application_writes':0,'code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'fragment_report_sha256':p.get('fragment_report_sha256'),'context_report_sha256':p.get('context_report_sha256'),'result':result},ensure_ascii=False))
 '''
 module=Path(sys.argv[2]).read_text() if len(sys.argv)>2 else (root/'backend/editor/cross_page_attribution.py').read_text()
 code_hash=hashlib.sha256(module.encode()).hexdigest()
@@ -79,6 +97,8 @@ context_module=Path(sys.argv[5]).read_text() if len(sys.argv)>5 else None
 if context_report and not context_module:raise SystemExit('Context candidate module required')
 suffix='-'+fragment_hash[:12] if fragment_hash else ''
 if context_hash:suffix+='-'+context_hash[:12]
+if os.environ.get('EDITOR_VERIFY_PERSISTED_CONTEXT')=='1':
+ suffix+='-persisted-'+hashlib.sha256(json.dumps(rows,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()[:12]
 out=root/f'evidence/cross-page-attribution-{gen}-{code_hash[:12]}{suffix}.json'
 if out.exists(): raise SystemExit('Evidence exists; preserve earlier result')
 p=subprocess.run(['docker','compose','exec','-T','api','python','-c',code],input=json.dumps({'gen':gen,'rows':rows,'module':module,'fragment_report':fragment_report,'fragment_report_sha256':fragment_hash,'context_report':context_report,'context_report_sha256':context_hash,'context_module':context_module}),capture_output=True,text=True,cwd=root)

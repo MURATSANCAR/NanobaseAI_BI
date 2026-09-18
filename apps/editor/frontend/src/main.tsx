@@ -98,6 +98,7 @@ function App() {
     [questions, setQuestions] = useState<any[]>([]),
     [updated, setUpdated] = useState("");
   const [pageSpans, setPageSpans] = useState<Row[]>([]);
+  const [pageSourcesLoading, setPageSourcesLoading] = useState(false);
   const [sourceReview, setSourceReview] = useState<any>(null);
   const [selectedSpan, setSelectedSpan] = useState<string | null>(null);
   const [sourceText, setSourceText] = useState("ocr"),
@@ -246,12 +247,13 @@ function App() {
   }, new Map<string, { label: string; pages: number[] }>()).entries());
   useEffect(() => {
     let active = true; setPageSpans([]); setSelectedSpan(null); setSourceReview(null);
+    setPageSourcesLoading(Boolean(gen && signed));
     if (gen && signed) Promise.all([
       all(`/generations/${gen}/source_spans?pdf_page=${page}`),
       api(`/generations/${gen}/source-review?pdf_page=${page}`),
     ])
-      .then(([rows, review]) => { if (active) { setPageSpans(rows); setSourceReview(review.pages[0] ?? null); } })
-      .catch((e) => active && setError(e.message));
+      .then(([rows, review]) => { if (active) { setPageSpans(rows); setSourceReview(review.pages[0] ?? null); setPageSourcesLoading(false); } })
+      .catch((e) => { if (active) { setError(e.message); setPageSourcesLoading(false); } });
     return () => { active = false; };
   }, [gen, page, signed, pageReading?.id]);
   const sourceImage = imageFor === source?.id ? image : "";
@@ -619,7 +621,7 @@ function App() {
                         <summary>{fragment.data.status === "TEXT_AGREED" ? "Doğrulanan küçük bölge" : "Küçük bölge inceleme bekliyor"}</summary>
                         <p data-testid="fragment-raw-text">{fragment.data.raw_text}</p>
                         <p data-testid="fragment-reader">Okuyucu: {({PPOCR_FRAGMENT: "PaddleOCR bölgesel okuma", TESSERACT_PSM7_FRAGMENT: "Tesseract bölgesel okuma"} as Record<string, string>)[fragment.data.selected_reader] || fragment.data.selected_reader}</p>
-                        <p data-testid="fragment-parent">İlk satır: {parent ? parent.data.raw_text : "Üst kaynak kaydı bu sayfada bulunamadı"}</p>
+                        <p data-testid="fragment-parent" data-source-loaded={!pageSourcesLoading}>İlk satır: {pageSourcesLoading ? "Kaynak satırı yükleniyor…" : parent ? parent.data.raw_text : "Üst kaynak kaydı bu sayfada bulunamadı"}</p>
                         <button className="show-region" onClick={() => {setSelectedSpan(fragment.id); document.getElementById("source-frame")?.scrollIntoView({block: "center", behavior: "smooth"});}}>Küçük bölgeyi kaynakta göster</button>
                         {parent && <button className="show-region" onClick={() => setSelectedSpan(parent.id)}>İlk satırı kaynakta göster</button>}
                       </details>;

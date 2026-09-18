@@ -10,7 +10,25 @@ Son kaynakla sayfa bağlamı gerçek pilotu 41 API/PG kaydı ve parent hash kont
 
 Dağıtım sonrası altyapı denetimi OCR STOPPED durumunu arıza saydı. `verify.py`, yalnız on_demand=true, gateway_reachable=true ve state=STOPPED için beklemeyi kabul edecek biçimde düzeltildi; diğer servis hataları hâlâ engellenir. Çıktı açıkça bunun OCR uyanma/çıkarım kabulü olmadığını belirtir. Gerçek altyapı kontrolü tekrar geçti. Yeni kitabın OCR gerektiren çağrısının otomatik uyanması ayrıca izleniyor. Kanıt `evidence/source-analysis-v13-infrastructure.log`.
 
+Yeni koşu sırasında pasif gateway ölçümü running=true, healthy=true, active_requests=1 gösterdi; önceki STOPPED durumundan otomatik uyanma görüldü (`evidence/v13-ocr-auto-wake-status.json`). Bu ölçüm tek başına bütün idle/istek yarış matrisi kabulü değildir.
+
+Webin dokuz kaynak dosyası ve dağıtım çıktıları imajla eşleşti. V13 web üzerinde gerçek V12 kimlik/inceleme/sentez kayıtları 320/390/768/1440 px kontrolünü geçti; ham API eşliği, kaynak gezinmesi ve tam kitap kabulü sınırı doğrulandı. Kanıt `evidence/v13-web-v12-semantic/verification.json`, terminal `evidence/v13-web-v12-semantic.log`. V13'e özgü dolu fragment/bağlam/diyalog kartlarının kabulü yeni kayıtları bekler.
+
+V13-r1 external uygulama paketi `/data/nanobaseai/editor-qualifications/source-analysis-v13-r1-external-20260918` oluşturuldu; bütün paket dosyaları ve Docker imaj kimlikleri importta geçti. İlk import komutunda dosya adı alt çizgiyle yanlış yazıldığı için Python dosyayı bulamadı; ürün çalışmadı/veri değişmedi, log korundu. Doğru `import-bundle.py` komutunun kanıtı `evidence/source-analysis-v13-import-r2.log`. Qwen/OCR GPU imaj/ağırlıkları bu uygulama paketine dahil değildir. V13 ayrı restore kabulü açık kalır.
+
+Git: uygulama kodu yerel main üzerindedir; `git push origin main` HTTPS kullanıcı kimliği bulunamadığı için başarısızdır. Sunucu yayını ile yerel kaynak hash eşliği doğrulanmıştır; origin güncellendi iddiası yoktur.
+
 ## V12 kapanış ölçümü ve devam
+
+## V13-r1 gerçek hata ve R2 düzeltmesi
+
+Kaynak aşaması48/48 ve anlamsal kayıtlar tamamlandıktan sonra iş FAILED/TypeError oldu. PostgreSQL kayıt kimlikleri UUID nesnesi, API kimlikleri JSON string olduğundan cross-page hash hesabı üretim çağrısında çöktü. Hata gerçek PostgreSQL kaydıyla yeniden üretildi. Hash yalnız UUID türünü kanonik stringe çevirir; genel default=str ile bilinmeyen nesneler sessiz kabul edilmez. Verifier artık aynı gerçek kayıtları hem API şekliyle hem yerel PostgreSQL UUID türleriyle çalıştırıp sonuç eşliğini karşılaştırır.
+
+Tam48 sayfalık ve27 gerçek fragmentli kontrol ayrıca iki yanlış engellemeyi gösterdi: meşru NEEDS_REVIEW fragmentleri bozuk provenance sayılıyor, uzak bir sayfanın okunmayan balonu bütün kısa alıntıları engelliyordu. Cross-page V7, üst kaynak/hash/geometri kontrolünü korur; okunması reddedilmiş geçerli fragmenti kaynak olarak kullanmadan atlar. Eksik balon kapsamı mevcut komşu sayfa mesafesi sözleşmesiyle sınırlıdır; genel karakter birleştirme hâlâ yoktur. Tam gerçek API/PG ve native-type eşliğinde48 sayfa,1 sınırlı söz bağlantısı,0 genel kimlik,0 scope_error geçti.37. sayfanın desteklenmeyen balonu reddedilmeye devam etti. Kanıt `cross-page-attribution-18417f1b-d9db-4873-aeb8-b8c719fc0d0d-cee662005cd3-persisted-f15374332517.json`.
+
+Yeni fragment mobil kontrolünde kaynak satırı henüz yüklenirken UI'nın bulunamadı mesajı gösterdiği görüldü. Yüklenme durumu ayrıldı; kabul kontrolü de tamamlanan gerçek kaynak isteğini bekler. İlk başarısız `v13-fragment-ui.log` korunur. R2 web uzak build geçti; yayın sonrası aynı dört genişlik tekrar koşulacaktır. Bu düzeltmeler ham kitap kayıtlarını değiştirmez; başarısız iş API retry ile mevcut checkpointlerden devam ettirilir, yeni çalıştırılan aşamanın yayın sürümü ayrıca belirtilir.
+
+V13 kaynak kontrolleri de 48/48 geçti; hata listesi boş. Ardından 48 fragment_checks ve 27 yeni source_fragment üretildi:9 TEXT_AGREED/18 NEEDS_REVIEW. İlk kaynak kayıtları değişmedi. 29. sayfanın kaynaklı bağlam sınıflandırması ana koşuda NARRATIVE/eligible=true geçti; altı bağlam kaydının dört tanesi okunmuş hedef metni olmadığı için UNKNOWN kaldı, künye sayfası anlatı kabul edilmedi. Kimlik/anlam aşaması ve yeni dolu UI kabulü bu ölçüm anında sürüyordu.
 
 V12 nesli `2d774b82-e04f-45a3-92fc-eadaa8a37934` 48/48 teknik kaynak kontrolüyle tamamlandı; hata listesi boş, sonuç NEEDS_REVIEW. Gerçek API ve bağımsız PostgreSQL kontrolünde 48 evidence, 1.149 source_spans, 48 page_claims, 48 figure_identity, 12 figure_comparisons, 48 semantic_reviews ve bir semantic_synthesis kaydı eşleşti. 52 iddia sentez adayı olarak kapıları geçti; bu bütün kitabın anlamsal kabulü değildir. Kanıt `evidence/source-analysis-2d774b82-e04f-45a3-92fc-eadaa8a37934.json`; application_writes=0, semantic_acceptance=false.
 
