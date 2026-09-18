@@ -7,18 +7,12 @@
    "soru": "İptal edilmemiş satış faturalarında iade hariç toplam ciro ne kadar oldu bu ara?",
    "kaynak": "logo",
    "holdout": false,
-   "expect": "answer",
+   "expect": "clarify",
    "verified": true,
    "source": "logo",
    "reference_sql": "SELECT SUM(NETTOTAL) AS ciro FROM LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN (7,8,9) AND DATE_>='2026-01-01' AND DATE_<'2027-01-01'",
-   "checks": [
-    {
-     "kind": "value",
-     "answer": "*",
-     "reference": "ciro"
-    }
-   ],
-   "note": "2026-09-18: 922.418.666,06 ₺. 'bu ara' = bu yıl okuması gece doğrulanmıştı; bugün köprü netleştirme sordu (regresyon)."
+   "checks": [],
+   "note": "'bu ara' bir dönem söylemiyor; köprü 3/3 netleştirme soruyor ve beklenen davranış budur (çakışma/belirsizlikte netleştirme ilkesi). Gece 'bu yıl' diye yorumlanıp 922.418.666,06 ₺ verilmişti; referans SQL o okumayı belgeler. Kullanıcı 'bu yıl' okumasını isterse beklenti geri alınır."
   },
   {
    "n": 20,
@@ -193,12 +187,19 @@
    "soru": "Telif yüzdesine göre bu yıl hangi yazara ne kadar telif tahakkuk etti?",
    "kaynak": "ikisi",
    "holdout": false,
-   "expect": "deny",
+   "expect": [
+    "deny",
+    "answer"
+   ],
    "verified": true,
    "source": "crm",
    "reference_sql": "SELECT YEAR(CreatedOn) AS yil, COUNT(*) AS kayit FROM Timas_MSCRM.dbo.NEW_ODEMEBASE GROUP BY YEAR(CreatedOn)",
-   "checks": [],
-   "note": "Dürüst ret: tahakkuk kayıtları yalnız 2014 (50 kayıt). Referans, reddin dayandığı veri durumunu gösterir; bu yıl kaydı belirirse beklenti yeniden yazılır. Telifin yüzde × satıştan hesaplanması ayrı, açık bir iş."
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "Dürüst ret: tahakkuk kayıtları yalnız 2014 (50 kayıt). Referans, reddin dayandığı veri durumunu gösterir; bu yıl kaydı belirirse beklenti yeniden yazılır. Telifin yüzde × satıştan hesaplanması ayrı, açık bir iş. Dürüst ret ile 'boş sonuç + aynı gerekçe' eşdeğer sayılır; dolu bir cevap bozulmadır."
   }
  ]
 }

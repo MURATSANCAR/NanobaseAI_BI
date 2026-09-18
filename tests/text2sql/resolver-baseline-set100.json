@@ -1,5 +1,5 @@
 {
- "recordedAt": "2026-09-18T13:04:55Z",
+ "recordedAt": "2026-09-18T13:20:50Z",
  "state": {
   "catalogHash": "200e0cf6f90c5b827f968534361b2c3b41297ef15cef5d666df2464d2b35559b",
   "languagePoolHash": "",
@@ -1805,13 +1805,9 @@
      }
     ],
     "groupBy": [],
-    "unresolved": [
-     "acilan"
-    ],
+    "unresolved": [],
     "unhandled": [],
-    "leftToModel": [
-     "tamamen"
-    ],
+    "leftToModel": [],
     "qualifierColumns": [],
     "drops": [],
     "shape": null,
@@ -1824,7 +1820,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "RESOLVED"
    }
   },
   "A031": {

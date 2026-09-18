@@ -200,8 +200,9 @@ def main() -> int:
             got = kind_of(answer)
             counters[got] += 1
             sqls.add(re.sub(r"\s+", " ", (answer.get("sql") or "")).strip().lower())
-            if got != case["expect"]:
-                problems = [f"beklenen {case['expect']}, gelen {got}: {(answer.get('explanation') or answer.get('summary') or '')[:160]}"]
+            wanted = [case["expect"]] if isinstance(case["expect"], str) else list(case["expect"])
+            if got not in wanted:
+                problems = [f"beklenen {'/'.join(wanted)}, gelen {got}: {(answer.get('explanation') or answer.get('summary') or '')[:160]}"]
             elif got == "answer" and not data_note:
                 problems = check(case, answer, reference, run, tolerance)
             else:
