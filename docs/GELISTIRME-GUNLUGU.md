@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 00:45 UTC — Editör: yükleme sınırı hatası, devam satırı ölçümü, üç yeni kitap
+
+Genel hata: `book_api.py` yükleme şeması 52.428.800 baytı sabit yazıyordu; belgelenen `EDITOR_MAX_SOURCE_BYTES` yalnız ayrıştırıcıda okunuyordu, nginx `client_max_body_size 50m` idi. Şema artık ortamdan okur, değişken ortak `x-app` bloğuna eklendi, nginx 512m (asıl sınırı API uygular). Bulunma nedeni: kullanıcının verdiği üç yeni kitap (54/58/360 MB) kabul kurulumunda 422 ile reddedildi; kurulum `.env`'i kullanıcı tarafından 400 MiB/200 sayfaya çıkarıldı, kod yaması henüz kurulmadı. PDF'ler `/data/nanobaseai/editor-qualifications/incoming-books/` altında.
+
+Devam satırı kararı tek token + logprobs ile ölçüldü (`scripts/probe-continuation-logprob.py`; etiket tırnaklı kitaptan türetildi, tırnaklar silinip konuşma çizgili biçimde soruldu): 48 sayfalık kitapta 67 örnek, 0,5 eşiğinde 65 karar/45 doğru, 0,8 eşiğinde 41 karar/34 doğru. Emin ama yanlış 7 örneğin hepsi aynı sınıf: alt satırdaki anlatıcı ara cümlesi ("dedi Bilge heyecanla") konuşmanın devamı sanılıyor. **Sonuç:** kural tabanlı anlatıcı ara cümlesi tespiti ile birlikte kullanılmalı; tek başına yetmez. Kanıt `evidence/continuation-logprob-probe-20260918T213430Z.json`. Üretime bağlı değil.
+
 ## 2026-09-18 21:30 UTC — Editör: NanoJev incelemesi ve büyük Qwen'den kapalı kümeli olasılık
 
 NanoJev (Qwen3-0.6B + karar başlıkları, MIT, iki günlük depo) incelendi: mimari ~60 satır, veri biçimi metin görevine uygun, kitap bazlı eğitim/test ayrımı yapılabilir; ama Türkçe eğitim verisi yok ve canlı Qwen GPU belleğinin %82'sini tutuyor. Aynı çıktı sözleşmesi canlı büyük Qwen'den eğitimsiz alındı: vLLM `structured_outputs.choice` + `logprobs`. 91 gerçek iddiada tek token'lık "özne aynı mı" sorusu: bilinen yanlış PDF27 en düşük 2. (P=0,22), iki geçiş arasında fark 0,0, 78 iddia ≥0,9. **Neden:** serbest JSON formu aynı hatayı geçiriyor ve kararsızdı; tek token kapalı küme ikisini de çözüyor. NanoJev eğitimi şimdilik gereksiz. Etiket olmadan oran ölçülemez; üretime bağlı değil. [Ölçüm](editor/2026-09-18-choice-logprob-probe.md).

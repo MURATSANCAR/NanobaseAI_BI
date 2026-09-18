@@ -14,8 +14,10 @@ router=APIRouter(prefix='/v1')
 from editor.access import actor_id, idempotency_actor, principal, admin, require_write, write_scope, touched_works, ensure_work, visible_works
 
 
+# The same provisional limit the parser enforces; a hardcoded schema bound ignored the setting.
+MAX_SOURCE_BYTES=int(os.environ.get('EDITOR_MAX_SOURCE_BYTES','52428800'))
 class Upload(BaseModel):
-    expected_bytes:int=Field(gt=0,le=52428800)
+    expected_bytes:int=Field(gt=0,le=MAX_SOURCE_BYTES)
     expected_sha256:str=Field(pattern=r'^[a-f0-9]{64}$')
 
 
