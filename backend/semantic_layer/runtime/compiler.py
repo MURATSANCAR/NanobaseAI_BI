@@ -308,6 +308,11 @@ class DeterministicCompiler:
             return None, f"entity {entity} not profiled"
         filters = [s for s in q.filters if s.mapping]
         group_cols = [s for s in q.group_by if s.mapping and s.mapping.column]
+        # The catalog names one shape both ways (a measure on STLINE, a label on LG_STLINE): the same
+        # table, so the label needs no join — it is read where the measure is read.
+        for s in filters + group_cols:
+            if s.mapping.entity != entity and re.sub(r"^LG_", "", s.mapping.entity.upper()) == re.sub(r"^LG_", "", entity.upper()):
+                s.mapping.entity = entity
         joins: list[tuple[str, str, str, str]] = []
         overrides, extra_columns, join_kinds = {}, {}, {}
         # One joined entity, one way to reach it. A mapping certified with a reference rule (the
