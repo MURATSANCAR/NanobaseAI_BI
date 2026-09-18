@@ -119,3 +119,15 @@ Genel düzeltme: okunmamış bölgelerin kimliği modele `null`, `can_cite=false
 Gerçek R3 API/PG kayıtları ve canlı modellerle ayrı aday bileşen koşusu:21. sayfa0 aday/0 sentez (eksik kaynak ve olumsuzluk retleri korunur),22. sayfa1 aday/1 sentez,28. sayfa4 aday/4 sentez; üçünde geçersiz semantik şema hatası görülmedi. Uygulama yazımı0, kaynak/inceleme kararı değişmedi. Kanıtlar `evidence/v14-r3-semantic-v5-page-0021.json`, `0022.json`, `0028.json` ve `v14-r3-semantic-v5-probe.log`; aday dosyasının SHA256'sı ayrıca kayıtlıdır. Çağrı metriğindeki yayın manifesti mevcut R3 çalışma ortamıdır, aday kod hashinin yerine geçmez. Bu üç sayfa tam kitap/üretim kabulü değildir.
 
 R4 API/document imajları bağlı Linux sunucusunda ağsız derlendi ve içlerindeki modül baytları aynı hashle eşleşti: `evidence/v14-r4-build-proof.json`. Henüz canlıya alınmadı; R3 dolu restore/mobil kabulünün sürümü değiştirilmeden tamamlanması bekleniyor.
+
+### 18 Eylül03:15:57UTC — R3 ayrı kurulum kabulü tamamlandı
+
+R3 `97814b6c` COMPLETED/NEEDS_REVIEW.48 kaynak,48 sayfa-amacı,48 kimlik,48 anlam incelemesi,8 seçilmiş figür karşılaştırması,27 alt kaynak,60 sınırlı uygun iddia ve27 taslak ifade gerçek API/PG ile eşleşti. Eksik atıf0;7 iddianın ek dayanağı eksiksiz taşınıyor.45. sayfa INFORMATIONAL olarak öykü sentezinden ayrıldı. Genel figür kimliği0,262 kaynak incelemesi ve tam anlamsal kabul açık.
+
+`/data/nanobaseai/editor-qualifications/v14-r3-20260918/97814b6c/qualification.json`: paket/import, kaynak/türetilmiş API-PG, atıf, yayın engelleri, sürüm, izolasyon, dolu yedek, ayrı restore ve320/390/768/1440px mobil kontrol PASS. Target03:16:00UTC’de durdu; geçici nginx/UFW temizlendi, cleanup_errors boş. Bu kalite rubriği veya tam kitap anlam kabulü değildir.
+
+### R4 canlı sürüm; yeni tam koşu henüz başlamadı
+
+Anlam denetimiV5 bağlı Linux ortamına R4 olarak yayımlandı. API/worker/parser/reread aynı yeni backend/document imajında; web kaynağı değişmediği için doğrulanmışR3 web imajı korunur.47 backend dosyası/imaj eşliği PASS; tree `bec5b4ff0cbcc81e5b61744359c5dfa207b63f20a490b0b6e5a692e8fda870d8`. GerçekAPI/PG altyapı,401 ve28ACL kontrolü PASS (`v14-r4-release.log`, `v14-r4-infrastructure.log`). Kod `0e4bdc7`; GitHub push oturum kimliği yokluğu nedeniyle başarısız, yerel main ve sunucu kodu kayıtlı.
+
+GPU cache-v3 soğuk açılış tekrarının çıktısı `/data/editor-gpu-packaging/20260918/cold-boot-v14-cache-v3-r2/`; PID556706. R3 qualifier bittiği ve Editor aktif iş sayısı0 olduğu doğrulandıktan sonra başlatıldı. Model servisleri geri doğrulanmadan yeni R4 kitap koşusu başlamayacak. Bu noktada cold-boot henüz PASS değil.
