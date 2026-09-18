@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 p=argparse.ArgumentParser()
 p.add_argument('generation');p.add_argument('module');p.add_argument('--pages',required=True)
 p.add_argument('--support-module',action='append',default=[])
+p.add_argument('--reuse-probe')
 a=p.parse_args();generation=str(uuid.UUID(a.generation));pages=sorted({int(v) for v in a.pages.split(',')})
 assert pages and min(pages)>0 and len(pages)<=10
 assert sys.platform.startswith('linux') and os.environ.get('EDITOR_VERIFY_REMOTE_HOST')==socket.gethostname()
@@ -24,6 +25,11 @@ for value in a.support_module:
     path=Path(value);name=path.stem
     assert name.isidentifier() and path.suffix=='.py' and name not in support_modules
     support_modules[name]=path.read_text()
+reuse=None
+if a.reuse_probe:
+    raw=Path(a.reuse_probe).read_bytes();prior=json.loads(raw)
+    assert prior['generation_id']==generation and prior['api_pg_match'] is True and prior['protected_before']==prior['protected_after']
+    reuse={'artifact_sha256':hashlib.sha256(raw).hexdigest(),'artifact_path':str(Path(a.reuse_probe).resolve()),'artifact_code_sha256':prior['candidate_sha256'],'rows':{r['passage_id']:r for r in prior['results']}}
 token=(root/'secrets/api_token').read_text().strip()
 records={}
 for kind in ('source_spans','source_passages'):
@@ -64,14 +70,21 @@ output=[]
 for row in p['records']['source_passages']:
  data=row['data'];spans=[r for r in p['records']['source_spans'] if r['data']['pdf_page']==data['pdf_page']]
  allowed={r['id']:r for r in spans if r['data']['status']=='TEXT_AGREED' and r['data']['role']=='TEXT'}
- review=m.review(data['claim'],source_regions(data['source_span_refs'],allowed),model)
+ regions=source_regions(data['source_span_refs'],allowed)
+ if p['reuse']:
+  old=p['reuse']['rows'][row['id']];prior=old['review']
+  assert old['passage_sha256']==m.digest(data) and prior['claim_sha256']==m.digest(data['claim']['text']) and prior['source_sha256']==m.digest(regions),'REUSE_INPUT_CHANGED'
+  review=m.review_from_graphs(data['claim'],regions,prior['source_graph'],prior['claim_graph'],model,artifact_version=prior['version'],artifact_sha256=p['reuse']['artifact_sha256'],artifact_path=p['reuse']['artifact_path'],artifact_code_sha256=p['reuse']['artifact_code_sha256'])
+  assert review['source_graph']==prior['source_graph'] and review['claim_graph']==prior['claim_graph'],'REUSED_GRAPH_CHANGED'
+ else:
+  review=m.review(data['claim'],regions,model)
  output.append({'passage_id':row['id'],'passage_sha256':m.digest(data),'pdf_page':data['pdf_page'],'claim':data['claim'],'review':review})
  if len(output)%10==0:
   print(json.dumps({'progress_completed':len(output),'model_passed':sum(r['review']['passed'] for r in output),'blocked':sum(not r['review']['passed'] for r in output),'semantic_acceptance':False}),file=sys.stderr,flush=True)
 after=fingerprint();assert before==after,'PROTECTED_RECORDS_CHANGED'
 print(json.dumps({'generation_id':p['generation'],'pages':p['pages'],'candidate_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'support_module_sha256':{name:hashlib.sha256(source.encode()).hexdigest() for name,source in p['support_modules'].items()},'runtime_code_manifest':code_manifest(),'protected_before':before,'protected_after':after,'api_pg_match':True,'application_writes':0,'semantic_acceptance':False,'results':output},ensure_ascii=False))
 '''
-payload={'generation':generation,'pages':pages,'module':module,'support_modules':support_modules,'records':records}
+payload={'generation':generation,'pages':pages,'module':module,'support_modules':support_modules,'records':records,'reuse':reuse}
 raw=subprocess.check_output(['docker','compose','exec','-T','api','python','-c',code],cwd=root,input=json.dumps(payload).encode())
 report=json.loads(raw)
 destination=root/'evidence'/('source-role-bindings-probe-'+datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')+'.json')

@@ -4,7 +4,7 @@
 
 - Kaynak/iddia muhasebesi: 48/48 API/PG teknik PASS; sıfır işlenmemiş/kısmi kaynak grubu.
 - Yeni neslin iki gerçek soru akışı ve 320/390/768/1440px mobil kontrolü PASS; 91 pasaj API/PG/Qdrant eşliği PASS. Bu sınırlı P4 akış kabulüdür, bütün arama/anlam kapsamı değildir.
-- Aynı frozen sürümün dolu yedek/restore kabulü sürüyor; offline paket/import daha önce geçti.
+- Aynı frozen sürümün dolu yedek/restore,91pasaj geri yüklenmiş indeks ve dört genişlikte altı ekran kabulü tamamlandı. Doğrulama seçici/sorgu hataları giderilip yalnız başarısız mobil adım yeniden çalıştırıldı; hedef temiz biçimde durduruldu. Bu müşteri GPU soğuk açılışı/farklı topoloji kabulü değildir.
 - P2 anlam kabulü **FAIL / açık**: birinci kişi yükleminin kaynakta adı geçen başka kişiye aktarılması yanlış kabul edilmiş. Kelime tanıkları ilişkisel doğruluğu sağlamıyor. [İçerik kanıtı](2026-09-18-v16-semantic-content-review.md).
 - 774 inceleme biriminin 666'sı öykü dışı kapsam, 10'u belirsiz amaç, 98'i anlatı içi kaynak/model sorunu. Üç ara etkinlik sayfasının kaynak başlık/yönergeleri sınıflamayı destekliyor; sayı774bağımsızOCRhatası değildir. [Kök neden ayrımı](v16-quality-blockers.md).
 - Yeni tam koşu veya yan özellik yayını başlamadı. Önce ilişki bağlama kök nedeni gerçek bileşen kabulüyle giderilecek. Önceki tarihli durumlar aşağıda tarihçedir.

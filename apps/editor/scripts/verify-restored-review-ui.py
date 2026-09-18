@@ -11,6 +11,7 @@ assert config['name'].startswith('editor-qualification-'),'QUALIFICATION_TARGET_
 identifier=str(uuid.uuid4());prefix='restored-mobile-resume-'+identifier
 p=r/'evidence'/(prefix+'.json');output='evidence/'+prefix
 candidate=pathlib.Path(os.environ['EDITOR_VERIFY_CANDIDATE_SCRIPT']).resolve();assert candidate.parent==t/'scripts'
+run=json.loads((t/'evidence/source-spans-run.json').read_text());assert (run.get('job') or run)['generation_id']==generation,'RESTORED_RUN_GENERATION_MISMATCH'
 report={'status':'RUNNING','semantic_acceptance':False,'model_calls':0,'generation_id':generation,'target':str(t),'failed_qualification_preserved':True,'frozen_bundle_unchanged':True}
 sha=lambda path:hashlib.sha256(path.read_bytes()).hexdigest()
 report['frozen_verifier_sha256']=sha(t/'scripts/verify-review-ui.cjs');report['candidate_verifier_sha256']=sha(candidate)
@@ -40,7 +41,10 @@ try:
  with (r/'evidence'/(prefix+'.log')).open('x') as log:result=subprocess.run(['node',str(candidate)],env=env,stdout=log,stderr=subprocess.STDOUT,timeout=600)
  report['returncode']=result.returncode;report['after']=protected();assert report['before']==report['after'],'PROTECTED_STATE_CHANGED'
  assert result.returncode==0,'RESTORED_MOBILE_FAILED'
- report.update(status='PASS',ui_proof=str(t/output/'verification.json'))
+ ui_path=t/output/'verification.json';ui=json.loads(ui_path.read_text())
+ assert ui.get('results') and all(item['generation']==generation for item in ui['results']),'RESTORED_UI_GENERATION_MISMATCH'
+ assert ui['api']==base,'RESTORED_UI_ENDPOINT_MISMATCH'
+ report.update(status='PASS',ui_proof=str(ui_path))
 except Exception as error:report.update(status='FAILED',error=str(error));raise
 finally:
  with (r/'evidence'/(prefix+'-stop.log')).open('x') as log:stop=subprocess.run(['docker','compose','stop'],stdout=log,stderr=subprocess.STDOUT)

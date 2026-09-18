@@ -61,3 +61,18 @@ Aday v1 son statik daraltma: açık ben/biz/sen/siz (ve I/we/you) tokenları men
 `source-role-bindings-probe-20260918T104003728832Z.json` gerçek yedi kayıtta bir yapısal PASS/altı ret üretti. Kritik PDF27 iddiası INVALID_CLAIM_ROLE_GRAPH ile reddedildi: bu, özne ilişkisinin başarıyla yakalandığı kanıtı değildir. Yüklemsiz parçanın UNKNOWN sentinel öznesi ve iç içe cümleciklerin kesintili token sırası gereksiz format retlerine neden oldu.
 
 Aday v2 UNKNOWN subject sentinel'ini açık destekler; hizalanan yüklem UNKNOWN özneye sahipse hâlâ ROLE_SUBJECT_UNRESOLVED döner. Token kapsamı artık sıralı flatten yerine tam/ayrık birleşimle denetlenir; her clause içi token sırası korunur. Yüklemsiz UNKNOWN parça tek başına diğer yüklemleri geçersiz yapmaz. Üçüncü kişi NOMINAL/PRONOUN kategorileri yalnız aynı boş olmayan literal yüzeyde eşleşebilir; bu referent kimliği veya NAME aktarımı kabulü değildir. Açık kişi zamiri, kaynak literal, ortak özne ve kapsam kapıları korunur. V2 yalnız AST ile incelendi; gerçek kabul henüz yok, üretime bağlı değil.
+
+### V3 iç içe dilbilgisi sözleşmesi
+
+V2 gerçek yedi kayıt probe'unda üç doğal olumlu örnek yapısal PASS; kritik yanlış iddia yine format nedeniyle reddedildi. Üst cümle tokenları ile alt cümlecik tokenlarının örtüşmesi dilbilgisinde olağandır; ayrık clause şartı yanlıştı. V3 token birleşiminin tamlığını korur, örtüşmeye izin verir, her yüklem tokenının yalnız bir clause predicate_ids alanında sahiplenilmesini zorunlu tutar. Bütün geçerli eşleşmelerin tanıları toplanır; eksik üst raporlama clause'u veya scope farkı başka alt ilişkideki kişi aktarımını gizlemez. Kişi aktarımı tanısı önceliklidir; kalan belirsizlikler PASS'a çevrilmez.
+
+`review_from_graphs` önceki gerçek kaynak/iddia grafını değiştirmeden alır; zorunlu artifact_version/artifact_sha256, ayrıca tüm graf/iddia/kaynak hashleri korunur. Çağıran eski artefaktın byte hashini bağımsız doğrular; aday mevcut graf şemasını yeniden denetler ve yalnız alignment modeli çağırır (en fazla bir çağrı). Kaynak graf yeniden iddiaya göre üretilmez. V3 AST kontrolü dışında çalıştırılmadı; üretime bağlı değildir.
+
+
+## V3 gerçek bileşen tekrar sonucu
+
+`evidence/source-role-bindings-probe-20260918T104537500262Z.json`: özgün7gerçek iddiada3yapısalPASS/4inceleme. V2 kaynak ve iddia grafikleri aynen kullanıldı; her biri için yalnız1hizalama çağrısı yapıldı. Gerçek API/PG pasaj eşliği, claim/source hashleri, eski artefakt SHA ve eski graphların değişmezliği doğrulandı. Kaynak/review kayıtları değişmedi; doğru cevap modele verilmedi.
+
+Kesin yanlış isimli atama artık `ROLE_PERSON_TRANSFER_UNPROVEN` nedeniyle reddediliyor; V1/V2 şema reddinden farklıdır. Model çağrısız bağımsız literal/graf replay `evidence/role-binding-reuse-reference-bd88a673-0168-4168-b01e-af3e8a6dc2b9.json`, mevcut source first-person → claim NAME/third-person çakışmasını yeniden saptadı. Bu yalnız sınırlı ilişki çakışması kabulüdür.
+
+Üç doğru aktarım örneği hâlâ kapsam/alıntı hizalaması nedeniyle incelemede kaldı. Dolayısıyla3PASS/4ret genel kalite başarısı değildir; aday üretime bağlanmadı, yeni tam kitap koşusu başlamadı. Sonraki geliştirme doğrudan sözden adsız/dolaylı aktarıma dönüşümü ve iç içe söz ediminin özne kapsamını kanıtlamak olmalıdır; tüm UNKNOWN sonuçları kabul ederek kapıyı gevşetmek çözüm değildir.

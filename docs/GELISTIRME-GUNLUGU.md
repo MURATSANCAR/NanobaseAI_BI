@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Kişi–eylem bağı için genel aday ve gerçek sınırı
+
+Kaynak grafı iddiadan, iddia grafı kaynaktan ayrı çıkarılan source_role_bindings adayı eklendi; literal token kimliği, kişi ve ortak özne kontrolleri var. Gerçek7kayıt pilotlarında cümlecik şemasının nested/UNKNOWN hataları kodda düzeltildi. SonV3, kaynak/iddia grafını değiştirmeden7hizalama çağrısıyla3doğruörneği geçirdi ve kesin yanlış isimli kişi aktarımını doğru roleperson gerekçesiyle reddetti; bağımsızmodelsiz kanıt geçti. Üç doğru alıntı/aktarım örneği hâlâ inceleme gerektiriyor; üretime bağlanmadı ve tam kitabın kabulü verilmedi. Hiçbir kitap/inceleme/model çıktısı elle değiştirilmedi. [Bulgular ve gerçek kanıtlar](editor/v16-quality-blockers.md).
+
+## 2026-09-18 — R5 dolu geri yükleme ve mobil kabulü kapandı
+
+Aynı frozen R5 yedeği ayrı kuruluma geri yüklendi; kaynak/türetilmiş API/PG,91pasaj/Qdrant, provenance/yayın kapıları geçti. Mobil verifier yeni etki panelini kaynak spanı sanıyordu; genel seçici gerçek data-span-id ile düzeltildi. Tekrar aracının bütün geçmişi büyük JSONa toplaması PGprocesssignal9 verdi; tek tek satır hashlerinden küçük agregasyon, hazır kapıları ve finallystop eklendi. Yalnız başarısız mobil adım tekrarlandı; altıekran320/390/768/1440px PASS, veri/reviewhashleri aynı, targetstop0. İlk hatalar korundu; ana API/PG/release sağlıklı. İlişki bileşeni adaydır, üretime bağlanmadı; kitabın anlamsal kabulü açık.
+
 ## 2026-09-18 — R5 tam koşu ve yeni soru kabulü, ilişki bağlama açığı
 
 Mevcut sürüm değiştirilmeden48/48teknik kaynak/ledger, semantic provenance ve yayın kapıları geçti. Yeni iki gerçek UI sorusu API/PG eşliği ve dört genişlikte geçti;91pasaj bağımsızAPI/PG/Qdrant kabulü tamamlandı. Dolu restore aynı frozen sürümle başladı. İçerik incelemesi birinci kişi yüklemini metindeki başka isme atayan kesin yanlışPASS buldu; token desteği fail–yüklem ilişkisini kanıtlamıyor. Başarı olarak kapatılmadı,91gerçekiddia/kaynak/review kanıtı korundu.774incelemebiriminin neden ayrımı sürüyor; bütününü OCRhatası saymıyoruz. Yanözellik adayı durduruldu, yeni tam koşu başlamadı.
