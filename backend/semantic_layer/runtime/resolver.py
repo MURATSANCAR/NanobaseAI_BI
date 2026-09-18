@@ -60,6 +60,7 @@ _AUXILIARY_ROOTS = ("edil", "edile", "edilm", "ediliyor", "olun", "olus", "yapil
 _RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
     yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
     kaydedilen kayitli tutulan""".split())
+_DEGREE_ADVERBS = frozenset("tamamen tumuyle butunuyle hala halen henuz gercekten gercekte fiilen aslinda hakikaten".split())
 _BREAKDOWN_CUES = frozenset("bazinda bazli basina gore kiriliminda kirilimli ozelinde".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
@@ -830,6 +831,14 @@ class SemanticResolver:
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 continue
+            if fold(tok) in _RECORD_VERBS and not is_negative(tok):
+                # "bu yıl açılan ama hâlâ …": the participle stands beside the period, not a noun, and
+                # says only that the record came to exist then — which the period already restricts.
+                # Left as an undefined word it sent a fully defined question to the model.
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
+                sq.explanation.append(f"'{tok}' kaydın oluşumunu anlatan fiil; kayıtları daraltmaz")
+                continue
             if tok not in sq.unresolved:
                 sq.unresolved.append(tok)
 
@@ -1132,6 +1141,14 @@ class SemanticResolver:
             if (any(tok in tokenize(t.text) for t in qf.temporal)
                     or (stem(tok) in STOPWORDS_S | MODIFIERS_S
                         and not self._modifies_a_noun(qf.tokens, k, consumed))):
+                continue
+            if fold(tok) in _DEGREE_ADVERBS:
+                # "tamamen sevk edilmemiş", "hâlâ bekleyen": an adverb of degree or time qualifies the
+                # verb beside it, and that verb's phrase is what the catalog defines. Handed to the
+                # model as a condition of its own, "tamamen" became SHIPPEDAMOUNT = 0 in two runs out
+                # of three — "not shipped at all" — where the certified phrase already says "not
+                # fully shipped".
+                consumed.add(k)
                 continue
             if not self._modifier_candidate(qf.tokens, k, consumed):
                 continue
