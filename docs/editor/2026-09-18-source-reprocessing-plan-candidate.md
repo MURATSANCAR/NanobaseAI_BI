@@ -13,3 +13,8 @@ R5 ana imajını değiştirmeden CPU üzerinde ayrı aday context oluşturun: ta
 Tamamlanmış gerçek nesil ve gerçek hedef env parametresi olsun; aktif yeni nesli kabul girdisi yapmayın. Bağımsız PostgreSQL sorgusuyla generation/content_version/source SHA ve hedef nesil üyeliğini karşılaştırın. Gerçek impact ve yeni plan aynı snapshotla okunmalı; plan target/snapshot/count değerleri eşleşmeli. Bağımsız canonical JSON SHA ile plan_sha256 kontrol edilmeli. Bütün kaynak/review kayıt hashleri önce/sonra eş olmalı. Erişim yetkisi olmayan gerçek kullanıcıyla ACL, aynı kitaptaki başka gerçek hedef/nesil kombinasyonuyla scope denetlenmeli; kitap metni veya inceleme kararı yazılmamalı. Eski gerçek snapshot kanıtı varsa409 tekrarına girdi olabilir; sırf409 üretmek için gerçek kaynak/review değiştirmeyin. Gerçek snapshot değişimi yoksa409 davranışını DOĞRULANAMADI bırakın. Koruma/ret eşikleri için yapay kayıt veya sentetik veri üretmeyin.
 
 Kanıtlar aday tam kaynak/imaj hashini, canlı R5'ten ayrı port/imajı, API yanıtını, bağımsız PG karşılaştırmasını ve korunmuş önce/sonra hashleri içermeli. Aday kabulü canlı R5 yayını veya yeniden işleme yürütücüsü kabulü sayılmaz. İş başlatma sonraki ayrı geliştirmedir.
+
+
+## Aday durdurma / öncelik
+
+CPU üzerinde ayrı aday imaj `sha256:e7466e3b43cc5598e9c8d2802910565c9942b2b362bea6bf58e4770dd5b718aa` derlendi. İlk Dockerfile image-ID FROM çözümlemesi başarısız oldu; SHA ile doğrulanmış yerel tag kullanılarak build düzeltildi, başarısız log korundu. Loopback18838 read-only aday başlatıldı; kullanıcı geri bildirimi üzerine ana R5 analiz kapanışına odaklanmak için durduruldu. Gerçek yeni endpoint kabulü yapılmadı; verifier taslağı çalıştırılmadı. Ana yayın/koşu değiştirilmedi.

@@ -98,3 +98,10 @@ Mevcut `book_api.py:488 visual_correction` yalnız eski `visuals` kaydını kabu
 Önerilen sıradaki sınırlı iş: **snapshot bağlı yeniden işleme planı**. Önce salt okunur plan API'si hedef kayıt, kaynak/hash, review sürümü ve kod manifestini sabitlesin; güvenilir açık bağımlılıklarla çıkarılan aşamaları ve çözülemeyen kapsamı ayrı göstersin. Etki grafiği eksik olduğundan kısmi listeyi tam yenileme planı saymasın; kapsam ispatlanamıyorsa yeni tam nesle yöneltsin. İkinci adım, bu planı idempotency ve snapshot kontrolüyle yeni nesil/gerçek işe çevirsin; eski kayıtları değiştirmesin, kaynak metni/kimlik/review kararını otomatik düzeltmesin. Yeniden okumayı ve analizi yine sistem üretsin. Uygulama alanları book_api, source_dependencies, source_pipeline/job dispatch ve SourceImpact olacaktır.
 
 Gerçek kabul yolu: tamamlanmış gerçek nesilde planın kaynak/API/PG bağlantıları bağımsız karşılaştırılır; yetkili plan çalıştırıldığında yalnız bir yeni job/nesil oluşması, eski kaynak/review hashlerinin korunması ve yeni kayıtların kendi kod/kaynak hashlerine bağlanması sınanır. Kaynak/snapshot değişirse eski plan 409 ile reddedilir; yeni sonuçlar gerçek kaynak/semantik kapıları geçmeden önceki cevap veya indeks kabulü miras alınmaz. Aktif R5 koşusunda bu geliştirme uygulanmadı; canlı kaynak ve review yazımı yapılmadı.
+
+
+## İlerleme odağı — kullanıcı geri bildirimi
+
+Kullanıcı küçük düzeltmeler ve yeni tam koşular nedeniyle planda somut kapanış göremediğini bildirdi. Mevcut R5 koşusu sabit kodla tamamlanacak; yeni P5 yeniden işleme planı adayı yayınlanmayacak. Teknik sayfa PASS, anlamsal kitap kabulü veya P0–P7 kapanışı değildir. Yeni tam koşu ancak tamamlanan çıktıda kanıtlanan genel kök neden düzeltmesi bunu gerektiriyorsa başlatılır; mevcut sonuçları değerlendirmeden bir sonraki sürüme geçilmez.
+
+Kapanış sırası: (1) mevcut neslin48sayfalık kaynak/iddia muhasebesi, (2) figür–karakter ve anlamsal retlerin tek kök neden listesi, (3) aynı neslin gerçek soru/API/PG/Qdrant kabulü, (4) aynı frozen sürümün dolu restore kabulü. Yan özellikler bu sıranın yerine geçmez. İlerleme bildirimleri kapanan plan maddesi, doğrulama kanıtı ve açık kalan nedeni içerecek.
