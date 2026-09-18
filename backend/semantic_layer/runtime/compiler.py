@@ -2248,8 +2248,8 @@ def fast_summary(question: str, columns: list[str], rows: list[dict[str, Any]], 
         blank = [c for c in columns if all(r.get(c) is None for r in rows)]
         if blank:
             lines.append("Not: " + ", ".join(f"'{column_label(c)}'" for c in blank) + " sütunu hiçbir satırda dolu değil (veri girilmemiş).")
-    if re.search(r"\btoplam", _fold(question or "")) and len(rows) == total:
-        additive = [c for c in measures if not re.search(r"oran|yuzde|ortalama|pay|fiyat|sira|rank|_ref$|^ref|kod|yil|ay$", _fold(c))
+    if re.search(r"\btoplam|tutar\w*\s+ne kadar|ne kadar tutar|kac\w*\s+ve\s+tutar", _fold(question or "")) and len(rows) == total:
+        additive = [c for c in measures if not re.search(r"oran|yuzde|ortalama|pay|fiyat|sira|rank|ref$|^ref|kod|yil|ay$|logicalref|trcode|cancelled|lineno|no$", _fold(c))
                     and all(isinstance(r.get(c), (int, float)) or r.get(c) is None for r in rows)]
         if additive:
             c = additive[0]

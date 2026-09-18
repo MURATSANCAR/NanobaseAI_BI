@@ -29,7 +29,7 @@ STOPWORDS: frozenset[str] = frozenset(
     yoksa taraf tarafi tarafini yani sekilde bakimindan acisindan
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
     gercekte gercekten fiilen aslinda hakikaten hala halen henuz tamamen tumuyle
-    arttikca azaldikca yukseldikce dustukce buyudukce kuculdukce halde ragmen
+    arttikca azaldikca yukseldikce dustukce buyudukce kuculdukce halde ragmen sistemde sistemdeki isleri islerin
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
     sahip ait
     olan oldugu olup olsun olacak bulunsun bulunan gorunsun yazilsin eklensin ekleyin ekle ekleyelim

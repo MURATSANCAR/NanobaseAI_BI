@@ -142,6 +142,12 @@ class Conventions:
             if all(self.join_path(j[0], j[2]) == tuple(j) for j in rule["joins"]) and all(
                     self.has(e, c) for e, cols in rule["columns"].items() for c in cols):
                 self.absence_rules.append(rule)
+            else:
+                import logging
+                logging.getLogger(__name__).info(
+                    "absence rule %s/%s not loaded: joins=%s missing_columns=%s", rule.get("subject"), rule.get("verb_root"),
+                    [(j, self.join_path(j[0], j[2])) for j in rule["joins"] if self.join_path(j[0], j[2]) != tuple(j)],
+                    [(e, c) for e, cols in rule["columns"].items() for c in cols if not self.has(e, c)])
         for rule in declarations.get("equivalent_dates", []):
             left, right = rule["left"], rule["right"]
             join = tuple(rule["join"])

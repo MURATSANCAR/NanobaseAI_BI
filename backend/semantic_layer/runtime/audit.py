@@ -1181,6 +1181,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         m = slot.mapping
         if not m or not m.column or slot.status not in ("CERTIFIED", "INFERRED"):
             continue
+        if (slot.explain or {}).get("absent"):
+            continue                        # "faturası kesilmemiş": the label names what must be absent, not a filter on the rows kept
         if not _filter_proven(m, slot, occ, tree, scope):
             op = (m.operator or "IN").upper()
             vals = sorted({str(v).strip().upper() for v in m.values})
@@ -1194,7 +1196,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
     # was never ordered. Metric concepts' conditions are the measure rule's business.
     for slot in _filter_slots(sq):
         m = slot.mapping
-        if not m or slot.status not in ("CERTIFIED", "INFERRED"):
+        if not m or slot.status not in ("CERTIFIED", "INFERRED") or (slot.explain or {}).get("absent"):
             continue
         own = [o for o in occ if _same_entity(o.entity, m.entity)]
         if not own:
@@ -1250,7 +1252,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                     out.append(Unmet("reference", f"'{slot.term}' atanmamış değerleri koruyan ilişki doğrulanamadı", "Bu ilişkiyi LEFT JOIN olarak yaz."))
 
     if not strict:
-        return out + _closing(sq, tree)
+        return out + _closing(sq, tree, occ)
 
     # The measure itself: the certified formula, or the same number with its CASE folded into a
     # WHERE that provably reaches the rows, or its aggregate parts computed and combined on the way out.
@@ -1289,10 +1291,10 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             out.append(Unmet("limit", f"ilk {sq.limit} için sıralama/sınır doğrulanamadı",
                              f"Ölçüye göre {'azalan' if sq.order_desc else 'artan'} sırala ve {sq.limit} satırla sınırla."))
 
-    return out + _closing(sq, tree)
+    return out + _closing(sq, tree, occ)
 
 
-def _closing(sq, tree) -> list[Unmet]:
+def _closing(sq, tree, occ=None) -> list[Unmet]:
     out = []
     if sq.shape == "ABSENCE":
         expected = (sq.absence_contract or {}).get("sql")
@@ -1309,11 +1311,63 @@ def _closing(sq, tree) -> list[Unmet]:
                 out.append(Unmet("absence", f"yokluk sorusu: {who} kaydı olmayanlar NOT EXISTS / NOT IN / LEFT JOIN … IS NULL ile dışlanmalı; "
                                  f"{who} satırlarını filtrelemek 'hiç olmayan'ı vermez",
                                  f"{who} tablosunu ana sorguda okuma; WHERE NOT EXISTS (SELECT 1 FROM {who} … WHERE <anahtar eşitliği>) yaz."))
+            else:
+                bad = _uncorrelated_absence(tree, absent, occ or [])
+                if bad:
+                    out.append(Unmet("absence", bad,
+                                     "Yokluk alt sorgusunu iki tabloyu birbirine bağlayan anahtar (bir tarafın referans kolonu = diğerinin anahtarı) "
+                                     "üzerinden ilişkilendir; gerekirse aradaki köprü tabloyu alt sorgunun içinde oku."))
         else:
             out.append(Unmet("absence", "yokluk koşulunun varlık, ilişki ve dönem kapsamı doğrulanamadı"))
     if sq.measure_expressions:
         out.append(Unmet("expression", "hesap ifadesinin bileşenleri ve işlemi sertifikalı bir formülle doğrulanmadı"))
     return out
+
+
+def _uncorrelated_absence(tree: exp.Expression, entities: set[str], occ: list) -> str:
+    """A NOT EXISTS over the absent entity must be tied to the outer row by a reference the catalog
+    knows: a column of one side that points at the other side's key (or at a bridge table read
+    inside the subquery). Equating the two documents' customer columns ties nothing — two documents of
+    the same customer are not the same order — and gave 11 "uninvoiced orders" where there were 297.
+    Returns the refusal text, or "" when a real key equality is found (or nothing can be judged)."""
+    refs: dict[str, dict[str, str]] = {}
+    for o in occ:
+        if o.refs:
+            refs.setdefault(_ent(o.entity), {}).update({k.upper(): _ent(v) for k, v in o.refs.items()})
+    if not refs:
+        return ""
+    alias_entity: dict[str, str] = {}
+    for t in tree.find_all(exp.Table):
+        alias_entity[(t.alias_or_name or t.name).upper()] = _ent(logical_table((t.db + "." if t.db else "") + t.name).entity)
+        alias_entity[t.name.upper()] = _ent(logical_table((t.db + "." if t.db else "") + t.name).entity)
+    def entity_of(col: exp.Column, inner_default: str) -> str:
+        return alias_entity.get((col.table or "").upper(), inner_default)
+    for node in tree.find_all(exp.Not):
+        inner = node.this
+        if not isinstance(inner, exp.Exists):
+            continue
+        sub = inner.this
+        inner_tables = [t for t in sub.find_all(exp.Table)]
+        inner_entities = {_ent(logical_table((t.db + "." if t.db else "") + t.name).entity) for t in inner_tables}
+        if not any(any(_same_entity(e, a) for a in entities) for e in inner_entities):
+            continue
+        inner_default = next(iter(inner_entities)) if len(inner_entities) == 1 else ""
+        pairs = []
+        for eq in sub.find_all(exp.EQ):
+            a, b = eq.this, eq.expression
+            if isinstance(a, exp.Column) and isinstance(b, exp.Column):
+                pairs.append(((entity_of(a, inner_default), a.name.upper()), (entity_of(b, inner_default), b.name.upper())))
+        crossing = [(x, y) for x, y in pairs if x[0] and y[0] and x[0] != y[0]]
+        if not crossing:
+            return ""                          # nothing correlates by column; another rule's business
+        def keyed(x, y) -> bool:
+            return refs.get(x[0], {}).get(x[1]) == y[0] or refs.get(y[0], {}).get(y[1]) == x[0]
+        if any(keyed(x, y) for x, y in crossing):
+            return ""
+        shown = ", ".join(f"{x[0]}.{x[1]} = {y[0]}.{y[1]}" for x, y in crossing[:2])
+        return (f"yokluk alt sorgusu dış satıra anahtarla bağlı değil ({shown}): iki tarafı birbirine bağlayan bir referans kolonu yok; "
+                f"aynı müşteri/tarih eşitliği 'bu kaydın faturası/sevkiyatı' demek değildir")
+    return ""
 
 
 def _anti_joins(tree: exp.Expression, entities: set[str]) -> bool:
