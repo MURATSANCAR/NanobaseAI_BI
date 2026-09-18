@@ -641,7 +641,7 @@ function App() {
                   </article>}
                   {pageContext && <article className="paper" data-testid="page-context-role">
                     <h2>Sayfanın amacı</h2>
-                    <p>{({NARRATIVE: "Öykü anlatısı", ACTIVITY: "Etkinlik", FRONT_MATTER: "Ön bilgi / künye", APPENDIX: "Ek", MIXED: "Birden fazla amaç", UNKNOWN: "Belirsiz"} as Record<string, string>)[pageContext.data.page_role] || "Belirsiz"}</p>
+                    <p>{({NARRATIVE: "Öykü anlatısı", INFORMATIONAL: "Bilgilendirici metin", ACTIVITY: "Etkinlik", FRONT_MATTER: "Ön bilgi / künye", APPENDIX: "Ek", MIXED: "Birden fazla amaç", UNKNOWN: "Belirsiz"} as Record<string, string>)[pageContext.data.page_role] || "Belirsiz"}</p>
                     <p className="hint">Kaynak ve komşu sayfa bağlamından üretilen otomatik sınıflandırmadır; ilk sayfa kaydını değiştirmez, karakter kimliği veya editör onayı değildir.</p>
                     {source && refs([source.id])}
                   </article>}

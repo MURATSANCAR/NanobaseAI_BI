@@ -13,7 +13,7 @@ import httpx
 from editor.source_alignment import valid_box
 from editor.source_review import page_figures, speaker_candidates
 
-VERSION = 'figure-identity-v1'
+VERSION = 'figure-identity-v2'
 
 
 def contained(inner, outer):
@@ -138,18 +138,27 @@ def run(job, root):
     layouts = {r['data']['pdf_page']:r['data'] for r in by_kind['layout_regions']}
     visuals = {r['data']['pdf_page']:r['data'] for r in by_kind['visual_observations']}
     attrs = {r['data']['pdf_page']:r for r in by_kind['character_evidence']}
+    from editor.page_context import story_authority
+    contexts={r['data']['pdf_page']:r for r in get_records(gen,'page_context_roles')}
+    fragments=get_records(gen,'source_fragments')
+    bundles=[{'evidence':r,'layout':layouts[r['data']['pdf_page']],
+              'spans':[s for s in by_kind['source_spans'] if s['data']['pdf_page']==r['data']['pdf_page']],
+              'fragments':[s for s in fragments if s['data']['pdf_page']==r['data']['pdf_page']]} for r in by_kind['evidence']]
+    purposes={page:story_authority(page,bundles,contexts.get(page)) for page in attrs}
     prior_comparisons = get_records(gen,'figure_comparisons')
     done_pages = {r['data']['pdf_page'] for r in get_records(gen,'figure_identity')}
     resolved = {}
     for page, row in sorted(attrs.items()):
         spans = [r for r in by_kind['source_spans'] if r['data']['pdf_page'] == page]
-        resolved[page] = resolve_page(layouts.get(page,{}), visuals.get(page,{}), spans, row['data'])
+        attribution=row['data'] if purposes[page]['passed'] else {**row['data'],'page_role':'UNKNOWN'}
+        resolved[page] = resolve_page(layouts.get(page,{}), visuals.get(page,{}), spans, attribution)
+        resolved[page]['page_purpose_gate']=purposes[page]
     # Text-attributed pages supply candidate anchors even when their local visual
     # grounding is missing. Such anchors can never transfer a name automatically.
     distance = max(0,min(2,int(os.environ.get('EDITOR_IDENTITY_ANCHOR_PAGE_DISTANCE','1'))))
     anchors = [(text_page, image_page, figure)
-               for text_page,row in sorted(attrs.items()) if row['data'].get('attributions')
-               for image_page in sorted(visuals) if abs(image_page-text_page) <= distance
+               for text_page,row in sorted(attrs.items()) if row['data'].get('attributions') and purposes[text_page]['passed']
+               for image_page in sorted(visuals) if abs(image_page-text_page) <= distance and purposes.get(image_page,{}).get('passed')
                for figure in page_figures(visuals[image_page])]
     limit = max(0, min(200, int(os.environ.get('EDITOR_IDENTITY_MAX_PAIRS','12'))))
     used = len(prior_comparisons)

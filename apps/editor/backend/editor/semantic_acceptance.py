@@ -6,7 +6,7 @@ The caller persists the returned report in the new generation.
 import hashlib
 import json
 
-VERSION = 'source-semantic-review-v3'
+VERSION = 'source-semantic-review-v4'
 AXES = ('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode', 'page_role')
 CITED_AXES = tuple(axis for axis in AXES if axis != 'page_role')
 
@@ -59,7 +59,7 @@ def review_cited_support(claim, refs, allowed, model, source_rows):
     return output
 
 
-def review_page(page_claims, spans, model, verified_identity_claims=None):
+def review_page(page_claims, spans, model, verified_identity_claims=None, page_purpose=None):
     """Review candidates in a separate call to the same configured model.
 
     Only agreed text reaches the reviewer. Unreadable regions remain placeholders,
@@ -78,6 +78,7 @@ def review_page(page_claims, spans, model, verified_identity_claims=None):
     candidates = page_claims.get('claims', []) + page_claims.get('blocked_claims', [])
     text_attributions = extract(spans, page_claims.get('page_role', 'UNKNOWN'))['attributions']
     reports = []
+    purpose=page_purpose or {'passed':False,'reason':'PAGE_PURPOSE_REVIEW_REQUIRED'}
     for ordinal, candidate in enumerate(candidates):
         fields = ('kind', 'text', 'quote', 'span_refs', 'actor', 'speaker', 'narrative_mode', 'polarity')
         claim = {k: candidate.get(k) for k in fields} if isinstance(candidate, dict) else {}
@@ -102,6 +103,10 @@ def review_page(page_claims, spans, model, verified_identity_claims=None):
         item = {'claim_id': claim_id, 'candidate_ordinal': ordinal, 'candidate_sha256': digest(candidate),
                 'source_gate': gate, 'status': 'NEEDS_REVIEW', 'eligible_for_synthesis': False,
                 'editorial_acceptance': False}
+        if purpose.get('passed') is not True:
+            item.update(source_gate='PAGE_PURPOSE_REQUIRES_REVIEW',reason=purpose['reason'])
+            reports.append(item)
+            continue
         if gate != 'MATCH':
             item['reason'] = gate
             reports.append(item)
@@ -176,6 +181,7 @@ def review_page(page_claims, spans, model, verified_identity_claims=None):
             item['reason'] = 'SEMANTIC_REVIEW_FAILED_OR_UNCERTAIN'
         reports.append(item)
     return {'pdf_page': page_claims['pdf_page'], 'version': VERSION,
+            'page_purpose_gate':purpose,
             'source_context_sha256': digest(context), 'input_page_claims_sha256': digest(page_claims),
             'claims': reports, 'candidate_count': len(candidates),
             'machine_supported_count': sum(r['status'] == 'MACHINE_SUPPORTED_CANDIDATE' for r in reports),
@@ -204,6 +210,8 @@ def synthesize_reviewed(pages, reviews, model, source_spans=None):
         for verdict in review['claims']:
             if verdict.get('eligible_for_synthesis') is not True:
                 continue
+            if review.get('page_purpose_gate',{}).get('passed') is not True:
+                raise RuntimeError('SYNTHESIS_PAGE_PURPOSE_REVIEW_REQUIRED')
             ordinal = verdict['candidate_ordinal']
             if not isinstance(ordinal, int) or not 0 <= ordinal < len(candidates):
                 raise RuntimeError('SEMANTIC_CANDIDATE_INDEX_MISMATCH')
@@ -308,6 +316,13 @@ def run(job):
     gen = job['generation_id']
     pages = get_records(gen, 'page_claims')
     spans = get_records(gen, 'source_spans')
+    from editor.page_context import story_authority
+    evidence=get_records(gen,'evidence');layouts={r['data']['pdf_page']:r['data'] for r in get_records(gen,'layout_regions')}
+    fragments=get_records(gen,'source_fragments')
+    contexts={r['data']['pdf_page']:r for r in get_records(gen,'page_context_roles')}
+    bundles=[{'evidence':r,'layout':layouts[r['data']['pdf_page']],
+              'spans':[s for s in spans if s['data']['pdf_page']==r['data']['pdf_page']],
+              'fragments':[s for s in fragments if s['data']['pdf_page']==r['data']['pdf_page']]} for r in evidence]
     completed = {r['record_key']: r['data'] for r in get_records(gen, 'semantic_reviews')}
     for page in pages:
         with connection() as db:
@@ -320,7 +335,8 @@ def run(job):
                 raise RuntimeError('SEMANTIC_REVIEW_CHECKPOINT_MISMATCH_NEW_GENERATION_REQUIRED')
             continue
         page_spans = [s for s in spans if s['data']['pdf_page'] == data['pdf_page']]
-        review = review_page(data, page_spans, model)
+        purpose=story_authority(data['pdf_page'],bundles,contexts.get(data['pdf_page']))
+        review = review_page(data, page_spans, model,page_purpose=purpose)
         save(job, 'semantic_reviews', key, review)
         completed[key] = review
     synthesis_input = {'pages': [r['data'] for r in pages],

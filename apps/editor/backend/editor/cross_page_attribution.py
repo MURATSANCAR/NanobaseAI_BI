@@ -9,7 +9,7 @@ import re
 import uuid
 from collections import defaultdict
 
-VERSION = 'cross-page-literal-attribution-v8'
+VERSION = 'cross-page-literal-attribution-v9'
 
 
 def _hash(value):
@@ -75,32 +75,19 @@ def resolve(pages, minimum_quote_tokens=4, max_page_distance=1):
         if not scoped:
             scope_errors.append({'pdf_page':page, 'reason':'SOURCE_RENDER_OR_GEOMETRY_SCOPE_MISMATCH'})
             continue
-        original_role=bundle.get('page_role','UNKNOWN'); effective_role=original_role
+        original_role=bundle.get('page_role','UNKNOWN'); effective_role='UNKNOWN'
         role_authority=None
         contextual=bundle.get('context_role')
-        if original_role not in ('NARRATIVE','MIXED') and contextual and contextual.get('eligible_for_identity_context') is True:
-            from editor.page_context import build_context, digest as context_digest, VERSION as CONTEXT_VERSION
-            payload,allowed_context=build_context(page,pages)
-            refs=contextual.get('source_span_refs',[])
-            context_valid=(contextual.get('version')==CONTEXT_VERSION
-                and contextual.get('pdf_page')==page and contextual.get('input_sha256')==context_digest(payload)
-                and contextual.get('eligible_for_identity_context') is True
-                and contextual.get('page_role') in ('NARRATIVE','MIXED')
-                and contextual.get('review',{}).get('supported') is True
-                and contextual.get('metrics',{}).get('finish_reason')=='stop'
-                and contextual.get('review_metrics',{}).get('finish_reason')=='stop'
-                and contextual.get('uncertainty_review_complete') is True
-                and contextual.get('blocking_uncertainties')==[]
-                and isinstance(refs,list) and bool(refs)
-                and all(isinstance(ref,str) and ref in allowed_context for ref in refs)
-                and page in {allowed_context[ref] for ref in refs})
-            if context_valid:
-                effective_role=contextual['page_role']
-                role_authority={'kind':'SOURCE_CONTEXT_REVIEW','record_id':bundle.get('context_role_record_id'),
-                    'input_sha256':contextual['input_sha256'],'source_span_refs':refs,
-                    'review_method':contextual.get('review_method'),'editorial_acceptance':False}
-            else:
-                scope_errors.append({'pdf_page':page,'reason':'CONTEXT_ROLE_SCOPE_OR_REVIEW_INVALID'})
+        from editor.page_context import story_authority
+        context_row=({'id':bundle.get('context_role_record_id'),'data':contextual} if contextual else None)
+        purpose=story_authority(page,pages,context_row)
+        if purpose['passed']:
+            effective_role=contextual['page_role']
+            role_authority={'kind':'SOURCE_CONTEXT_REVIEW','record_id':bundle.get('context_role_record_id'),
+                'input_sha256':contextual['input_sha256'],'source_span_refs':contextual['source_span_refs'],
+                'review_method':contextual.get('review_method'),'editorial_acceptance':False}
+        elif purpose['reason']=='PAGE_PURPOSE_SOURCE_SCOPE_INVALID':
+            scope_errors.append({'pdf_page':page,'reason':'CONTEXT_ROLE_SCOPE_OR_REVIEW_INVALID'})
         extracted = extract(spans, effective_role)
         fragment_parents = {}
         by_id = {str(row['id']):row for row in spans}

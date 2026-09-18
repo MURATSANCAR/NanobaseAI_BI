@@ -259,12 +259,12 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
      return rows;
     };
     const contexts=await read('page_context_roles'),identities=await read('figure_identity');
-    const contextRow=contexts[0],identity=identities.find(r=>(r.data.cross_page_dialogue_links||[]).some(x=>x.dialogue_link_verified));
+    const contextRow=contexts.find(r=>r.data.page_role==='INFORMATIONAL')||contexts[0],identity=identities.find(r=>(r.data.cross_page_dialogue_links||[]).some(x=>x.dialogue_link_verified));
     if(!contextRow||!identity)throw new Error('Real context and verified dialogue link required');
     await page.getByRole('button',{name:'Kaynak & görsel',exact:true}).click();
     await page.locator('#page').selectOption(String(contextRow.data.pdf_page));
     const contextPanel=page.getByTestId('page-context-role');await contextPanel.waitFor();
-    const names={NARRATIVE:'Öykü anlatısı',ACTIVITY:'Etkinlik',FRONT_MATTER:'Ön bilgi / künye',APPENDIX:'Ek',MIXED:'Birden fazla amaç',UNKNOWN:'Belirsiz'};
+    const names={NARRATIVE:'Öykü anlatısı',INFORMATIONAL:'Bilgilendirici metin',ACTIVITY:'Etkinlik',FRONT_MATTER:'Ön bilgi / künye',APPENDIX:'Ek',MIXED:'Birden fazla amaç',UNKNOWN:'Belirsiz'};
     if(await contextPanel.locator('p').first().textContent()!==(names[contextRow.data.page_role]||'Belirsiz'))throw new Error('Context role differs from API');
     if(!(await contextPanel.textContent()).includes('otomatik sınıflandırmadır'))throw new Error('Context classification limitation missing');
     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Context overflow '+width);

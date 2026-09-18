@@ -57,3 +57,5 @@ Hedef Linux üzerinde paket imajları `scripts/import-bundle.py` ile yüklenir; 
 `compose.external-models.yaml` ile API/worker mevcut ingress ağına da bağlanır; bu yalnız dışarıya model isteği için kullanılır, API/worker host portu açılmaz. Müşteri güvenlik duvarı model adresleri/portlarına erişimi sınırlandırmalıdır. Ana Compose private veri ağı ve veri servislerinin izolasyonu korunur. Eski Mac bridge relay özel adresleri zorunlu değildir.
 
 Preflight URL biçimi, loopback hatası ve API/worker model sözleşmesi eşliğini denetler; endpoint erişimi veya çıkarım başarısını kanıtlamaz. Import yalnız uygulama paket bütünlüğünü doğrular; GPU servislerini kurmaz, ağırlık indirmez, otomatik modele çağrı yapmaz. Gerçek kitap ve idle/wake kabulü tamamlanmadan P6 kapatılmaz.
+
+18 Eylül02:09:58UTC: V14-r2 dolu yedek/ayrı restore, gerçek API/PG/atıf/yayın kapıları ve320/390/768/1440px mobil kabulü PASS. Target durdu, geçici proxy/UFW temizlendi. Kaynak `/data/nanobaseai/editor-qualifications/v14-r2-20260918/3db56430/qualification.json`.45. sayfadaki bilgilendirici ek/öykü kapsamı hatası nedeniyle tam anlamsal kabul yok; R3 aday düzeltme ayrıca doğrulanıyor.

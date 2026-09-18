@@ -19,7 +19,7 @@ os.chdir(root)
 generation = str(uuid.UUID(sys.argv[1]))
 base = os.environ.get('EDITOR_VERIFY_BASE_URL', 'http://127.0.0.1:8810')
 headers = {'Authorization': 'Bearer ' + (root/'secrets/api_token').read_text().strip()}
-kinds = ('evidence', 'source_spans', 'page_claims', 'figure_identity', 'figure_comparisons',
+kinds = ('evidence', 'layout_regions', 'source_spans', 'page_claims', 'figure_identity', 'figure_comparisons',
          'semantic_reviews', 'semantic_synthesis')
 extended = '--fragments' in sys.argv
 if extended:
@@ -137,23 +137,55 @@ if extended:
             assert link['identity_evidence'] and link.get('speaker')
             assert not link.get('semantic_acceptance', False)
 eligible = {}
+def verify_purpose(page,gate):
+    assert extended,'PAGE_PURPOSE_REQUIRES_EXTENDED_VERIFICATION'
+    contexts={r['id']:r['data'] for r in api['page_context_roles']}
+    context=contexts[gate['record_id']]
+    assert context['version']=='source-page-context-v4' and context['pdf_page']==page
+    assert gate['record_sha256']==digest(context)
+    layouts={r['data']['pdf_page']:r['data'] for r in api['layout_regions']}
+    neighbours=[]
+    for row in api['evidence']:
+        n=row['data']['pdf_page']
+        if abs(n-page)>1:continue
+        regions=[]
+        for span in api['source_spans']+api['source_fragments']:
+            d=span['data']
+            if d['pdf_page']!=n:continue
+            agreed=d['status']=='TEXT_AGREED' and d['role']=='TEXT'
+            regions.append({'ref':span['id'] if agreed else None,'can_cite':agreed,
+                'text':d['text'] if agreed else '[UNVERIFIED_REGION]','bbox':d['bbox'],
+                'is_verified_subregion':bool(agreed and d.get('parent_source_span_id'))})
+        neighbours.append({'pdf_page':n,'regions':regions,
+            'balloon_count':len(layouts[n].get('balloon_candidates',[])),
+            'picture_count':sum(r.get('type')=='PICTURE' for r in layouts[n].get('regions',[]))})
+    expected=digest({'target_page':page,'pages':neighbours})
+    assert gate['input_sha256']==context['input_sha256']==expected,'PAGE_PURPOSE_SOURCE_HASH_MISMATCH'
+    if gate['passed']:
+        assert context['content_scope']==context['review']['content_scope']=='STORY_WORLD'
+        assert context['eligible_for_identity_context'] and context['review']['supported']
+        assert context['uncertainty_review_complete'] and context['blocking_uncertainties']==[]
+        assert context['metrics']['finish_reason']==context['review_metrics']['finish_reason']=='stop'
 for row in api['semantic_reviews']:
     review = row['data']; page = pages[review['pdf_page']]
     assert review['input_page_claims_sha256'] == digest(page), 'REVIEW_INPUT_MISMATCH'
     assert review['semantic_acceptance'] is False and review['source_records_modified'] is False
     candidates = page['claims']+page['blocked_claims']
+    if review['version']=='source-semantic-review-v4':
+        verify_purpose(review['pdf_page'],review['page_purpose_gate'])
     assert len(review['claims']) == len(candidates), 'REVIEW_COVERAGE_MISMATCH'
     for verdict in review['claims']:
         candidate = candidates[verdict['candidate_ordinal']]
         assert verdict['candidate_sha256'] == digest(candidate), 'CANDIDATE_HASH_MISMATCH'
         if verdict['eligible_for_synthesis']:
+            if review['version']=='source-semantic-review-v4':assert review['page_purpose_gate']['passed']
             assert verdict['source_gate']=='MATCH' and verdict['status']=='MACHINE_SUPPORTED_CANDIDATE'
             assert all(value=='PASS' for value in verdict['model_result']['checks'].values())
             assert all(spans[ref]['status']=='TEXT_AGREED' and spans[ref]['pdf_page']==review['pdf_page'] for ref in candidate['span_refs'])
             assert verdict['identity_gate'] in ('NOT_REQUIRED','SOURCE_VERIFIED')
             assert verdict['claim_id'] not in eligible, 'CLAIM_ID_COLLISION'
             carried=candidate['span_refs']
-            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3'):
+            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3','source-semantic-review-v4'):
                 carried=verdict['verified_support_span_refs']
                 assert set(candidate['span_refs'])<=set(carried)
                 assert set(verdict['model_result']['support_span_refs'])<=set(carried)
@@ -164,7 +196,7 @@ for row in api['semantic_reviews']:
                 cited=verdict['citation_review'];assert cited['passed'] is True
                 assert cited['source_sha256']==digest(regions)
                 assert all(v=='PASS' for v in cited['model_result']['checks'].values())
-                if review['version']=='source-semantic-review-v3':
+                if review['version'] in ('source-semantic-review-v3','source-semantic-review-v4'):
                     views=cited['source_reading_segments'];view_refs=[ref for view in views for ref in view['span_refs']]
                     assert len(view_refs)==len(set(view_refs)) and set(view_refs)==set(carried)
                     for view in views:verify_reading_view(view,carried,review['pdf_page'])
@@ -173,10 +205,12 @@ for row in api['semantic_reviews']:
             eligible[verdict['claim_id']] = {**candidate,'span_refs':carried}
 for row in api['figure_identity']:
     identity = row['data']
+    if identity['method']=='figure-identity-v2':verify_purpose(identity['pdf_page'],identity['page_purpose_gate'])
     assert identity['semantic_acceptance'] is False
     for link in identity['links']:
         assert link['eligible_for_synthesis'] is False
         if link['visual_identity_verified']:
+            if identity['method']=='figure-identity-v2':assert identity['page_purpose_gate']['passed']
             assert {e['kind'] for e in link['identity_evidence']} == {'EXPLICIT_TEXT_ATTRIBUTION','UNIQUE_BALLOON_TAIL'}
             for evidence in link['identity_evidence']:
                 for ref in evidence.get('source_span_refs',[]):

@@ -6,7 +6,9 @@ Backend/document `source-analysis-v14-r2-20260918`, web R3. Yerel main, sunucu c
 
 Yeni iş `efeeb1cb-4741-48f6-87a0-7b4e5285f786`, nesil `3db56430-4821-41c6-a513-4d6e4645bcd6` COMPLETED/NEEDS_REVIEW.48 sayfa kaynak/türetilmiş API-PG,31 sentez ifadesinde tam atıf ve yayın kapıları geçti;63 sınırlı uygun iddia/65 inceleme. Alıntı değişmez kaynak biriminden gelir; satır sonu ve ayrı büyük başlangıç harfi yalnız geometri ve doğrulanmış kaynaklarla okuma görünümünde birleşir, ham OCR değişmez. Eksik sözcük kapısı, tam ek dayanak aktarımı ve non-narrative sayfa-amacı önerileri için ayrı kaynak bağlamı eklendi. Gerçek5/8/16/29/38 pilotları ve canlı5/8 üretimi geçti; tam kitap anlamsal kabulü açık.
 
-R1 nesli `6dca7f01-590c-4a28-a969-a8c8fbb67776`48/48 teknik bütünlük ve27 sentez ifadesinin eksiksiz atıf kontrolüyle tamamlandı; anlamsal kabul değildir.5/8/29 hataları R1 kayıtlarında korunur. R2 paket/import geçti; `/data/nanobaseai/editor-qualifications/v14-r2-20260918/3db56430` ayrı restore doğrulayıcısı tutarlı yedek/restore aşamasında. API18824/metrik19104, subnet72/73 ve geçici dar18886/18888 model proxy'si seçildi. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
+R1 nesli `6dca7f01-590c-4a28-a969-a8c8fbb67776`48/48 teknik bütünlük ve27 sentez ifadesinin eksiksiz atıf kontrolüyle tamamlandı; anlamsal kabul değildir.5/8/29 hataları R1 kayıtlarında korunur. R2 paket/import geçti; `/data/nanobaseai/editor-qualifications/v14-r2-20260918/3db56430` ayrı restore/mobil kabulü02:09:58UTC’de geçti; target ve geçici proxy kapatıldı. API18824/metrik19104, subnet72/73 ve geçici dar18886/18888 model proxy'si seçildi. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
+
+R3 adayı:45. sayfadaki bilgilendirici ek, R2 sentezinde öykü teması olmuştu. Bütün sayfalarda açık içerik kapsamı ve kaynak hashli öykü-amacı kapısı eklendi; gerçek45/16 olumsuz,5/29/38 olumlu kaynak pilotları çalıştı. Son-hash45/5/6 pilotu geçti, yeni tam koşu bekleniyor; canlı R2 henüz anlamsal kabul almadı. GPU cold-boot484269 aktif, bu bakım bitmeden yeni kitap işi açılmaz.
 
 ## 18 Eylül — V13-r2 tarihsel kabul
 
