@@ -21,6 +21,30 @@
    "note": "2026-09-18: 922.418.666,06 ₺. 'bu ara' = bu yıl okuması gece doğrulanmıştı; bugün köprü netleştirme sordu (regresyon)."
   },
   {
+   "n": 20,
+   "id": "A004",
+   "soru": "Son çeyrekte iade faturalarının satış cirosuna oranı yüzde kaç?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (2,3) THEN NETTOTAL ELSE 0 END) / NULLIF(SUM(CASE WHEN TRCODE IN (7,8,9) THEN NETTOTAL ELSE 0 END),0) AS oran FROM LG_411_01_INVOICE WHERE CANCELLED=0 AND DATE_ >= DATEADD(QUARTER, DATEDIFF(QUARTER,0,GETDATE())-1, 0) AND DATE_ < DATEADD(QUARTER, DATEDIFF(QUARTER,0,GETDATE()), 0)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "iade_orani",
+      "oran",
+      "*"
+     ],
+     "reference": "oran",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "'son çeyrek' = tamamlanmış son çeyrek; referans dönemi GETDATE() ile kendisi hesaplar (as_of). 2026-09-18: Nisan–Haziran, 42.793.188,38 / 344.781.634,12 = %12,41. Cevap yüzde (12,41) dönerse oran (0,1241) ile uyuşmaz — o zaman kontrol birimi netleştirilir."
+  },
+  {
    "n": 21,
    "id": "A006",
    "soru": "Bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler kimler?",
@@ -50,8 +74,7 @@
    "reference_sql": "SELECT CLCARDREF FROM LG_411_01_CLRNUMS WHERE ACCRISKLIMIT>0 AND ACCRISKTOTAL>ACCRISKLIMIT",
    "checks": [
     {
-     "kind": "rows",
-     "tolerance": 0
+     "kind": "empty"
     }
    ],
    "note": "2026-09-18: 0 satır; güncel kopyada risk limiti tanımlı cari yok. Sabah redde düşmüştü: tek kelimelik 'risk'/'limit' eşlemeleri soruyu CRM'e çekiyordu."
