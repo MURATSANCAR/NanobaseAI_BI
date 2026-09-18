@@ -14,4 +14,13 @@ V2 daha sonra ana gateway'e yayımlandı. Editör worker kısa süre duraklatıl
 
 Doğal idle/wake kabulü de geçti: model603 saniye boşta kaldığında kendiliğinden kapandı, gerçek kitap kırpımıyla yeniden açılıp200/stop yanıt verdi; gateway sayaçları starts=1/stops=1. Model elle durdurulmadı. Kanıt `natural-idle-wake-acceptance/result.json`. Bu normal yaşam döngüsü kabulüdür; adversarial eşzamanlı istek/idle sınırı stres kabulü değildir.
 
-Qwen/OCR runner imajları ve ağırlıkları bu dizinde henüz paketlenmemiştir. Uygulama offline paketi bu GPU bağımlılıklarının yerine geçmez; tam GPU offline kurulum kabulü açık kalır.
+Qwen/OCR runner imajları ve ağırlıkları GPU sunucusunda ayrı offline paket olarak oluşturuldu; bu depoda yalnız üretici/doğrulayıcı kod bulunur. Uygulama paketi tek başına GPU bağımlılıklarının yerine geçmez; yeni GPU üzerinde offline açılış kabulü açık kalır.
+# Ortak GPU belleği ve offline model paketi — 18 Eylül
+
+Canlı Qwen0.90/64 profili, OCR çalışırken gerçek CUDA OOM verdi. `/health`200 olması çıkarımın çalıştığını kanıtlamadı. [Yeni ölçülen profil](compose.qwen-shared-gpu.yaml):0.82 bellek payı,16 slot,8192 batched-token ve chunked-prefill; model/ağırlık kimliği değişmedi. Gerçek API/PG kökeni doğrulanmış kitap kırpımlarında iki Qwen çağrısı ve12 OCR çağrısı örtüşerek200/stop geçti; örneklenen en düşük boş bellek11.896MiB. Bu iki H100 NVL için sınırlı kabul, bütün müşteri GPU'ları veya uzun süreli yük kabulü değildir. GPU kanıtı `/data/editor-gpu-packaging/20260918/oom/shared-gpu-acceptance.json`.
+
+`bundle.py` yalnız seçilen Qwen/Paddle snapshot'larını ve üç runner/gateway imajını paketler; sırlar ve kitaplar paketlenmez. `import-bundle.py` bütün dosyaları hash ve imaj kimliğiyle doğrular, servis başlatmaz. `reprofile-bundle.py` aynı ağırlık/imajlarla yeni canlı runner komutunu ayrı pakete taşır; önceki manifest korunur ve yeni import zorunludur. [Müşteri kurulum adımları](INSTALL.md). Yeni GPU üzerinde tam offline açılış/çıkarım kabulü henüz yoktur.
+
+Yeni profil paketi `/data/editor-gpu-releases/source-analysis-v13-shared-memory-v1-20260918`172 dosya hash'i ve üç Docker imaj kimliğiyle importtan geçti. Qwen144 snapshot dosyası ve Paddle20 dosyası, sabit repository revision'larıyla korunur; token/cache sırları yoktur. Eski profil paketi ayrı tutulur. Kanıt `/data/editor-gpu-packaging/20260918/shared-memory-import.log`.
+
+[Kısıtlı sunucular arası tünel](tunnel/README.md) canlı: GPU systemd servisi CPU loopback18885/18887 üzerinden Qwen/OCR taşır. Uygulamanın Docker bridge endpoint'leri değişmedi; nginx upstream'leri graceful reload ile yeni yola geçti. Aynı519.444 bayt gerçek figür isteği doğrudan3,184sn, Mac yolunda20,870sn; tek ölçümdür. OCR doğrudan0,878sn200/stop verdi. Çıkarım artık Mac'in/VPN istemcisinin açık kalmasına bağlı değildir; GPU/CPU ağ ve servisleri yine gereklidir. Model/kitap kalitesi bu bağlantı kabulünden çıkarılmaz.

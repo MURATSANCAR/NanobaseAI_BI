@@ -1,6 +1,6 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-> **18 Eylül V13-r1 güncel:** V12 48/48 teknik kaynak ve türetilmiş API/PG eşliğiyle tamamlandı; NEEDS_REVIEW. Küçük kaynak bölgesi, ayrı sayfa bağlamı ve sınırlı konuşma bağlantısı V13-r1 olarak yayımlandı; iş `4ca9b23a-7027-4909-b49f-1fd26c93b497` gerçek kabulde. Bileşen ölçümünde 29. sayfada bir söz parçası bağlantısı geçti; genel figür kimliği ve tam anlamsal kabul kapanmadı. [V13 sürüm/kanıt](2026-09-18-source-analysis-v13.md). Aşağıdaki eski yayın etiketleri tarihçedir.
+> **18 Eylül V13-r2 güncel:** Backend R2, web R3 ve GPU gateway V2 canlı. İş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05`: COMPLETED/NEEDS_REVIEW;48/48 teknik kaynak ve türetilmiş API/PG bütünlüğü geçti.51 sınırlı iddia/24 taslak ifade;262 kaynak incelemesi ve genel kimlik açık. Qwen/OCR eşzamanlı OOM, ortak bellek profiliyle düzeltildi; gerçek paralel çağrılar geçti. Mac'siz sunucular arası model yolu, uygulama/GPU offline import ve dört genişlikte dolu fragment/kimlik/anlam/sentez UI kabulü geçti. Güncel neslin yedek/restore kontrolüne geçildi. [V13 sürüm/kanıt](2026-09-18-source-analysis-v13.md). Aşağıdaki eski yayın etiketleri tarihçedir.
 
 > **18 Eylül V12 güncel:** kaynak sonrası figür kimliği ve anlam denetimi ayrı paralel kollara bağlandı. Yeni iş `791de2a0-a440-419c-8db4-2095405eed23`, nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`. R9 22 sayfa teknik kontrolünden sonra kayıtları korunarak iptal edildi. Gerçek s7/s38 bileşen kontrolü ve gerçek figür kırpım karşılaştırması çalıştı; tam yeni nesil, kimlik ve anlamsal kabul hâlâ açık. [V12 ayrıntıları](2026-09-18-source-analysis-v12.md). Aşağıdaki eski sürüm sayıları tarihsel kanıttır.
 
@@ -28,7 +28,7 @@ Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İ
 
 ## Kabul yöntemi
 
-**Güncel analiz:** Canlı nesil `14a79646-79c6-4cdb-8714-00adf5698770`,
+**17 Eylül tarihsel analiz:** Nesil `14a79646-79c6-4cdb-8714-00adf5698770`,
 iş `75b25439-09f5-425d-9e18-08cf15898d9a`; `source-spans-v5`.
 48/48 sayfa, 821 kaynak anlaşması ve 328 inceleme bölgesi vardır.
 V1 iptal edilip korundu. Yeni akışın sonu NEEDS_REVIEW; konuşmacı/semantik kabul

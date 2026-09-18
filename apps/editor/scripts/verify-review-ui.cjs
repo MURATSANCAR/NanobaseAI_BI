@@ -187,7 +187,9 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
      const panel=page.getByTestId(testid);await panel.waitFor();
      if(testid==='figure-identity'){
       const labels=await panel.locator('.claim b').allTextContents();
-      const expected=record.data.links.map(link=>link.visual_identity_verified?link.speaker:'Konuşmacı kimliği bilinmiyor');
+      const expected=record.data.links.map(link=>link.visual_identity_verified?link.speaker:'Konuşmacı kimliği bilinmiyor')
+       .concat((record.data.cross_page_dialogue_links||[]).filter(link=>link.dialogue_link_verified)
+        .map(link=>link.speaker||'Konuşmacı kimliği bilinmiyor'));
       if(JSON.stringify(labels)!==JSON.stringify(expected))throw new Error('Identity UI differs from real API');
      }else if(!(await panel.textContent()).includes(record.data.candidate_count+' adayın '+record.data.machine_supported_count+' tanesinde kaynak desteği bulundu.'))throw new Error('Semantic review count differs from API');
      if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Semantic source panel overflow '+width);

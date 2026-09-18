@@ -1,6 +1,6 @@
 # Editör P6: GPU dağıtımı ve taşınabilirlik açıkları
 
-18 Eylül 2026. Bu kayıt depo kodunun incelenmesidir; yeni müşteri kurulumu veya canlı kabul koşusu değildir. Önceki CPU paket/restore kabulleri yeni GPU topolojisini doğrulamaz. Bu çalışma sırasında canlı servis değiştirilmedi ve yerel test çalıştırılmadı.
+18 Eylül 2026 güncellemesi. İlk statik incelemeden sonra external uygulama paketi/import ve ayrı V12 kurulum/eski kitap restore kabulü yapıldı. R2/web R3 uygulama ve ayrı GPU model/imaj paketleri hash/importtan geçti. GPU ortak bellek OOM hatası gerçek eşzamanlı yükle düzeltildi; Mac'ten bağımsız sunucular arası tünel gerçek Qwen/OCR çağrılarıyla canlıya alındı. Yeni GPU üzerinde offline açılış ve güncel R2 neslinin ayrı restore kabulü hâlâ açık. Yerel ürün testi çalıştırılmadı. [Güncel kanıt](2026-09-18-source-analysis-v13.md).
 
 ## Mevcut çalıştırma yolu
 
@@ -10,16 +10,18 @@ Mevcut kurulumun yol haritası:
 
 | Bileşen | Mevcut yol | Müşteride karşılığı |
 |---|---|---|
-| Qwen | Editor Docker köprüsü `18882` → CPU loopback `18881` → Mac proxy `18081` → VPN/SOCKS → GPU `8001` | Editor konteynerlerinden erişilebilen özel ana model adresi |
-| PaddleOCR-VL | Docker köprüsü `18884` → CPU loopback `18883` → Mac proxy `18083` → VPN/SOCKS → GPU gateway `8010` | Özel, istekle açılan OCR gateway adresi |
+| Qwen | Editor Docker köprüsü `18882` → CPU loopback `18885` → GPU'dan kurulan kısıtlı SSH → GPU `8001` | Editor konteynerlerinden erişilebilen özel ana model adresi |
+| PaddleOCR-VL | Docker köprüsü `18884` → CPU loopback `18887` → aynı sunucular arası SSH → GPU gateway `8010` | Özel, istekle açılan OCR gateway adresi |
 | OCR yaşam döngüsü | `/gateway/status` pasif; işlem isteği uyandırır; 600 saniye boşta kapanır | Müşteri GPU kaynaklarıyla açılma/kapanma/yeniden açılma kabulü |
 | Embedding/reranker | CPU Compose `models` profili, yerel GGUF dosyaları | İmaj ve checksum doğrulanmış ağırlıkların offline temini |
 
-Bu ağ bilgileri [18 Eylül entegrasyon kaydına](2026-09-18-qwen-ocr-parallel.md) ve [OCR hazırlık kaydına](2026-09-18-paddleocr-vl-readiness.md) dayanır; burada yeniden canlı ölçülmedi. Mac, VPN ve ters SSH kesilirse model erişimi kesilir. Mac yolu mevcut geliştirme kurulumu için kullanılabilir; müşteriye bağımsız sunucu kurulumu olarak sunulamaz. Depodaki `deploy/gpu-tunnel-proxy.conf` açıkça bu kuruluma ait bridge IP/allowlist içerir; müşteride ağ/subnet ve erişim kuralı yeniden belirlenmelidir.
+Bu yol gerçek çağrılarla ölçüldü: Qwen iki gerçek figürlü istek3,184sn, OCR0,878sn; aynı Qwen isteği eski Mac yolunda20,870sn idi. Tek örnek, genel performans garantisi değildir. Model çıkarımı Mac/VPN istemcisine bağlı değildir; GPU/CPU ve aralarındaki ağ gerekir. `deploy/gpu-tunnel-proxy.conf` bu kuruluma ait bridge IP/allowlist içerir; müşteride ağ/subnet yeniden belirlenmelidir. [Tünel ve etkin SSH kısıtları](../../apps/editor/gpu/tunnel/README.md).
 
 Mevcut kaynak kurulumu `.env` üzerinde `compose.yaml:compose.models.yaml:compose.ocr.yaml:compose.reread.yaml:compose.gpu.yaml` ve `COMPOSE_PROFILES=models` seçer. Ana model ve OCR adresleri ile OCR revizyonu açıkça verilmelidir. API/worker/web/document/OCR imajları doğrulanan yayınla eşleştirilir. `scripts/install.sh`, önce init/preflight, sonra `--no-build --pull never` ile başlatma ve verify çalıştırır. Bu komut eksik GPU servislerini/ağırlıklarını kurmaz. Çalışan kuruluma bu belge nedeniyle yeniden install uygulanmaz.
 
-## Kodla doğrulanan açıklıklar ve bu değişiklik
+## İlk incelemede bulunan açıklar ve takip
+
+Aşağıdaki numaralı maddeler ilk inceleme kapsamıdır. Takipte GPU paketleyici/import/Compose üretimi `apps/editor/gpu/` altında eklendi; gateway kaynak/imajı sürümlendi. External V12 ayrı kurulum ve eski gerçek yedeğin dönüşü geçti. Eski qualification orchestrator'ın external/GPU sözleşmesiyle otomatikleşmesi, yeni R2 restore ve yeni GPU açılışı henüz açık kalır.
 
 1. **Offline paket aktif GPU topolojisini taşımıyordu.** `scripts/bundle.py`, Compose yapılandırmasını yalnız base/models/OCR/reread dosyalarıyla yeniden oluşturuyor; `compose.gpu.yaml`, harici GPU ağırlıkları ve istekle açılan gateway hizmeti pakete eklenmiyor. `--with-ocr-vl` yerel deney servisini seçer; GPU gateway paketleme desteği değildir. Aktif GPU ortamında açık `--external-models` seçimi gerekir; seçilmezse yanlış CPU paketi oluşturulmaz. Yeni external mode uygulama imajlarını ve checksum kontrollü yerel embedding/reranker ağırlıklarını paketler; Qwen/OCR GPU imajları ve ağırlıkları harici bağımlılık olarak manifestte açıkça belirtilir. **GPU servislerinin kendi offline paketi henüz uygulanmadı.**
 2. **Preflight GPU kurulumunda eski CPU modeli gerektiriyordu.** `scripts/preflight.py`, yalnız `COMPOSE_PROFILES=models` üzerinden eski Qwen27B/mmproj dosyaları ve 48 GiB boş RAM istiyordu. GPU overlay aynı profili embedding/reranker için kullanır. Kontrol artık çözümlenen etkin `llm` servisi varsa CPU RAM sınırını uygular; etkin llm/embedding/reranker komutlarındaki `--model` ve `--mmproj` yollarını gerçek bind mount üzerinden doğrular. Genel temel 8 GiB kontrolü korunur. GPU model belleği/yük kapasitesi bu kontrolle doğrulanmış sayılmaz.
@@ -35,7 +37,7 @@ Mevcut kaynak kurulumu `.env` üzerinde `compose.yaml:compose.models.yaml:compos
 - OCR boşta kapanma, talep ile yeniden açılma, model meşgul/bellek yetersizliği ve bağlantı kopması davranışları; yinelenen ağır koşu başlatılmaz.
 - Aynı yayın sürümünde ayrı kurulum/yedek/restore ve API–PG bağımsız eşliği, 320/390/768/1440 px kullanıcı akışı.
 
-Bu script ve Compose düzeltmeleri yalnız statik olarak incelendi; gerçek hedefte external paket/import/preflight **DOĞRULANAMADI**. P6 açık; bu belge üretime hazır kararı değildir.
+External uygulama paketi/import/preflight için artık gerçek V12 kanıtı vardır; R2/web R3 ve ayrı GPU paket/import hashleri de geçti. Bunlar yeni GPU offline açılışı veya bütün müşteri topolojilerinin kabulü değildir. P6 açık; bu belge üretime hazır kararı değildir.
 
 
 ## Müşteri endpointleriyle uygulama paketi
