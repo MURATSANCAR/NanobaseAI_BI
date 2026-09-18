@@ -6,11 +6,13 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
-## Güncel canlı sürüm — 18 Eylül, V16-r5 tam kabul koşusunda
+## Güncel canlı sürüm — 18 Eylül, V16-r5 koşusu tamamlandı, anlam kabulü açık
 
 Canlı backend/document `source-analysis-v16-r5-20260918`; kaynak anlık görüntüsü main `1200bdd859bd9b704e62f3af754cea81f27a20f0`. 52 backend dosyası ve 11 web kaynak dosyası imajlarla eşleşti; gerçek API/PG ve release kontrolü geçti. P5 etki ekranı da canlı webde. Dağıtım sözleşmesi `runtime/v16-r5-deployment-contract.json`; kanıt `evidence/v16-r5-build-proof.json`.
 
-Tam kitap işi `8032d654-bf44-4462-aca4-962d6f68d030`, nesil `116bb4a8-b7b5-45dd-9986-ac80fd706533` çalışıyor. Son gözlem: 48 sayfanın kaynak okuması ve sayfa amacı aşaması tamamlandı; iddia ve anlamsal kabul henüz tamamlanmadı. Çalışan nesil boyunca ürün kaynakları donduruldu. Sayfa amaçları iddia önerisinden önce üretiliyor; tamamlanan iddialar ayrıca onluk API/PG partileriyle denetleniyor.
+Tam kitap işi `8032d654-bf44-4462-aca4-962d6f68d030`, nesil `116bb4a8-b7b5-45dd-9986-ac80fd706533` COMPLETED / NEEDS_REVIEW. 48/48 teknik kaynak ve kaynak birimi API/PG kabulü geçti; 1489 birim/81 parça, 774 inceleme birimi, sıfır işlenmemiş/kısmi grup; 91 sınırlı uygun iddia, 35 sentez ifadesi. 774, kesin OCR hata sayısı değildir; neden ayrımı sürüyor. Kaynak bağlantısı/yayın kapıları ve yeni iki gerçek soru (2 kaynaklı iddia; desteksiz soruda0) dört mobil genişlikte geçti. 91 pasaj bağımsız API/PG/Qdrant kabulü `evidence/source-preview-20260918T103039756197Z.json`. Dolu restore kabulü sürüyor. Çalışan/final kabul sürümü donduruldu; P5 yeni plan adayı canlıya alınmadı.
+
+**Kritik anlam açığı:** R5 içerik incelemesi, kaynakta birinci kişinin söylediği öğrenme isteğini aynı metindeki başka isme atayan yanlış PASS buldu. Kelime desteği bütünlüğü fail–yüklem ilişkisinin doğruluğunu kanıtlamıyor; actor/speaker null olması metindeki atamayı kaldırmıyor. `evidence/v16-r5-eligible-claims-readonly.json` 91 gerçek iddia/kaynak/review dışa aktarımı; kitap/review verisi değiştirilmedi. Bu hata nedeniyle tam anlamsal kabul ve üretim hazırlığı verilmedi. Yeni tam koşu yerine önce genel kök neden ve bileşen doğrulaması gerekir.
 
 V7 anlamsal kapı, V2 belirsizlik kapsamı ve V4 ayrıntılı kaynak desteği son 19 gerçek kayıt pilotunda 12 kabul/7 ret üretti; bağımsız kaynak doğrulaması geçti. Kanıtsız isim, belirsizliği kesinleştirme, konum ve sahiplik örnekleri engellendi. Bir muhafazakâr yanlış ret/model gerekçe–karar çelişkisi hâlâ açık; tam kitap anlam başarısı ilan edilmedi. İki anonim söz edimi kabulü karakter kimliği kanıtı değildir. [V16 ayrıntıları](docs/editor/2026-09-18-source-analysis-v16.md).
 
