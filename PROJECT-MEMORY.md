@@ -2,21 +2,21 @@
 
 ## 18 Eylül — V13-r2 canlı kabul
 
-GPU OCR gateway kodu `apps/editor/gpu/` altında sürümlendi; idle/istek yarış düzeltmesi ayrı GPU adayında ve ardından ana gateway8010'da gerçek kitap kırpımı ve HTTP gövde kontrollerinden geçti. OCR modeli yeniden başlatılmadan V2 yayımlandı; canlı idle sınır kabulü henüz açık. [Kapsam](apps/editor/gpu/README.md).
+Canlı Qwen ortak GPU profili0.82 bellek payı,16 eşzamanlı slot,8192 batched-token ve chunked-prefill oldu. Eski0.90/64 profil gerçek Qwen+OCR yükünde CUDA OOM verdi; sağlık200 yanıltıcıydı. Yeni profilde iki gerçek Qwen görsel isteği+12 OCR isteği örtüşerek geçti; örneklenen boş bellek en az11.896MiB. R2 işi kayıtları korunarak API retry/attempt2 ile devam ediyor. Tam kapasite/uzun süreli yük ve kitaba anlamsal kabul açık. [Kod profili](apps/editor/gpu/compose.qwen-shared-gpu.yaml).
+
+GPU OCR gateway kodu `apps/editor/gpu/` altında sürümlendi; idle/istek yarış düzeltmesi ayrı GPU adayında ve ardından ana gateway8010'da gerçek kitap kırpımı ve HTTP gövde kontrollerinden geçti. OCR modeli yeniden başlatılmadan V2 yayımlandı. [Kapsam](apps/editor/gpu/README.md).
 
 Gateway V2 normal yaşam döngüsü de doğrulandı:603sn doğal idle kapanması, gerçek kırpımla otomatik açılma ve200 yanıt. Web R3 hata durumunda mobil taşma ve erken üst kaynak bulunamadı mesajını düzeltti; gerçek fragment kartı dört genişlikte API metin/okuyucu/bbox eşliğiyle geçti. Adversarial idle/istek stres matrisi ve tam anlamsal kabul açık kalır.
 
 V12 nesli48/48 teknik kontrol ve türetilmiş API/PostgreSQL eşliğiyle tamamlandı; tam anlamsal kabul yok. V13-r1 kaynak48/48 ve27 fragment üretti, kimlik kolundaki native UUID hatası R2 ile düzeltildi. Değişen kodla eski nesli devam ettirmeme koruması korunur. Canlı backend `source-analysis-v13-r2-20260918`; iş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` gerçek kabulde. [Güncel ayrıntılar](docs/editor/2026-09-18-source-analysis-v13.md).
 
-## 18 Eylül — kimlik ve anlamsal analiz V12
+R2 nesli48/48 teknik ve türetilmiş API/PG bütünlüğüyle COMPLETED/NEEDS_REVIEW:51 sınırlı sentez iddiası,24 taslak ifade,262 inceleme bölgesi ve0 genel karakter kimliği. Backend R2/web R3 uygulama paketi `/data/nanobaseai/editor-qualifications/source-analysis-v13-r2-web-r3-external-20260918` importtan geçti. GPU `/data/editor-gpu-releases/source-analysis-v13-shared-memory-v1-20260918`172 dosya/3 imaj hashleriyle importtan geçti; yeni GPU'da offline açılış kabulü değildir. GitHub HTTPS kimliği yok; origin push bekliyor.
 
-Kaynak işlemeden sonra ayrı kimlik ve anlamsal denetim kolları eklendi; backend `source-analysis-v12-r1-20260918`, 43 dosya hash eşliği `d6c3a68a40911519ddfe16677c03abe347c4bc1e3adfeaa862d55f276d5884c9`. Yeni nesil `2d774b82-e04f-45a3-92fc-eadaa8a37934`, iş `791de2a0-a440-419c-8db4-2095405eed23` çalışıyor. R9 22 sayfanın teknik denetiminden sonra API ile iptal edilerek korundu; yeni nesil ölçümleri tekrar kullanır. S7/s38 gerçek API/PG ve ayrı model denetimi bileşeni çalıştı; s38 dört sentez önerisinin ikisi kaynak dışı genişleme nedeniyle reddedildi. Figür karşılaştırması gerçek kırpımlarla çalıştı; kaynaklı ad kabulü hâlâ yok. Tam kitap/üretim kabulü açık. [Kod, kanıt ve sınırlar](docs/editor/2026-09-18-source-analysis-v12.md).
-
-V12 web kaynak/kimlik/anlam taslak kartları yayımlandı; gerçek OCR ile dört genişlik regresyonu geçti, dolu yeni sentez kartı kabulü bekliyor. Gateway yenilemesinden gelen iki ulaşım hatası kaynak hatasından ayrıldı; salt okunur izleyicinin sınırlı tekrar ve kalıcı durum düzeltmesi sonrası ilk20 sayfa20 geçti/0 başarısız. Harici model uygulama offline paketi üretildi; import/ayrı kurulum kabulü sürüyor. GitHub HTTPS kimliği yok; yerel main/sunucu güncel, push bekliyor.
+Editör çıkarım yolu artık Mac'e bağlı değildir: GPU `editor-gpu-tunnel.service`, CPU127.0.0.1:18885/18887'yi GPU8001/8010'a bağlar. CPU nginx Docker bridge18882/18884 adreslerini korur. Ayrı SSH sistem hesabı yalnız bu iki remote porta izin verir; komut, local forward ve ek port gerçek denemede reddedildi, mevcut admin SSH config'i değişmedi. Gerçek aynı figür isteği3,184sn (Mac20,870sn); OCR0,878sn. Eski Mac tünelleri diğer tüketiciler için korunur; BI'ın bağlantı yolu bu değişiklikle otomatik taşınmış sayılmaz. [Kurulum](apps/editor/gpu/tunnel/README.md).
 
 ## Güncel Editör model akışı — 18 Eylül
 
-Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Son dağıtım `parallel-ocr-v11-r9-20260918`; tam kitap ve semantik kabul henüz yok. R6 ilk11 sayfa teknik denetim ve dört mobil/masaüstü genişliğinde OCR görünümü geçti. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-qwen-ocr-parallel.md).
+Ana model GPU Qwen3.8-Flash-Next; ihtiyaç halinde PaddleOCR-VL-1.6. Eski CPU LLM kapalı, embedding/reranker korunuyor. Bağımsız görsel/OCR kolları paralel; kaynak iddiaları tamamlanmalarını bekler. Canlı backend `source-analysis-v13-r2-20260918`, web `source-analysis-v13-r3-20260918`; tam kitap ve semantik kabul henüz yok. [Güncel kanıt ve devam kaydı](docs/editor/2026-09-18-source-analysis-v13.md).
 
 ## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
 

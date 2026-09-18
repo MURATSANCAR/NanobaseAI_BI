@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R2 kapanışı, GPU paketi ve Mac'siz çıkarım
+
+R2 attempt2 COMPLETED/NEEDS_REVIEW;48/48 kaynak ile bütün türetilmiş API/PG kayıtları eşleşti.51 sınırlı iddia/24 taslak ifade,262 açık kaynak ve0 genel karakter kimliği var. Dolu fragment/kimlik/anlam/sentez/diyalog ekranları320/390/768/1440px tekrarında geçti; ilk verifier yeni diyalog etiketini beklenen listeye katmıyordu, API'ye birebir karşılaştırma düzeltilip önceki log korundu. GPU paketi172 dosya/3 imaj hash eşliğiyle importtan geçti. GPU→CPU systemd ters tüneli kuruldu; mevcut admin SSH config eşliği ve komut/izinsiz port/local forward reddi doğrulandı. Drop-in include eksikliği gerçek denemeyle yakalanıp yalnız ilgili dosyaya Include eklenerek giderildi. Aynı gerçek model isteği doğrudan3,184sn, Mac yolunda20,870sn; OCR0,878sn. Nginx graceful geçişi sonrası sürüm/API/PG altyapı kontrolü geçti. Güncel tutarlı yedek ve ayrı restore başlatılacak; tam anlamsal veya üretim kabulü yok. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
+
+## 2026-09-18 — gerçek eşzamanlı GPU yükünde bellek hatası
+
+Takip: yeni profilde gerçek iki Qwen görsel isteği ve12 OCR çağrısı örtüşerek200/stop geçti; konteyner yeniden başlatma yok, örneklenen en düşük boş bellek11.896MiB. API retry attempt2 başlatıldı; kitap kaynakları elle değiştirilmedi. Eski GPU paketinin model/imaj dosyaları korunarak yeni çalışma profilini taşıyan ayrı paket türetildi; tüm byte hashlerinin import kontrolü sürüyor.
+
+R2 kaynak48/48 geçti; Qwen/OCR eşzamanlıyken runner CUDA OOM verdi ve sağlık ucu yanıltıcı200 döndürdü. İş FAILED oldu; tamamlanan27 fragment/6 bağlam/17 anlam/28 kimlik kaydı korunur. Qwen bellek0.90→0.82, istek64→16, batched-token8192 ve chunked-prefill ayarıyla yeniden başlatıldı; eşzamanlı gerçek kırpım kontrolü ve API retry henüz beklenir. Eski GPU profilinin paketi üretim kabulü sayılmaz. R2/web R3 uygulama offline import hashleri geçti. Ayrı gerçek6. sayfa ayrıntı ölçümü önceki betimlemeyi tümüyle desteklemedi; yeni kanıt yazıldı, kitap verisi değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
+
 ## 2026-09-18 — yeni sürüm nesli, mobil hata durumu ve doğal OCR yaşam döngüsü
 
 R2 kod manifesti eski neslin retry'ını doğru biçimde reddetti; koruma kaldırılmadan kaynak atalı yeni nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` başlatıldı. Backend R2 hash/gerçek altyapı kontrolü geçti. Web R3, uzun hata kodunun320px taşmasını ve kaynak yüklenme durumunu düzeltti; dört genişlikte gerçek fragment/ham üst kaynak/okuyucu/bbox eşliği ve altı sekme geçti. GPU OCR doğal603sn idle kapanması ve gerçek kırpımla yeniden açılıp200 yanıtı doğrulandı; model elle durdurulmadı. [Sürüm ve kanıt](editor/2026-09-18-source-analysis-v13.md), [gateway](../apps/editor/gpu/README.md).
