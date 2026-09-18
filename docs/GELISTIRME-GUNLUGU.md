@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V14 R1 sayfa amacı ve kurulum aracı açığı
+
+Gerçek R1 koşusunda29. sayfanın konuşma sorusu ACTIVITY önerildi; yalnız UNKNOWN etiketleri komşu kaynakla inceleyen koşul bu hatayı atlıyordu. R2 adayı bütün non-narrative önerileri ayrı bağlamda inceleyecek ve ham ilk kararı koruyacak. Gerçek29/16 karşı kontrolleri sırasıyla anlatı/etkinlik verdi; token kesintisi başarısız kanıtı korundu, tam JSON dışında kabul yok. Mevcut R1 sürümü yerinde değiştirilmedi. Müşteri kabul aracı external model uçları/seçili koşu/tam atıf restore kontrolüne hazırlanıyor, gerçek restore henüz bekler. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
+## 2026-09-18 — V14 canlı yeni nesil başlatıldı
+
+Değişmez OCR birimi ve tam kaynak aktarımı kodu `73b62fd` ile main'e kaydedildi. Backend/document V14-r1, web R3;47 backend dosyası ve9 web dosyası imajlarla eşleşti, gerçek API/PG/28 ACL geçti. İlk ağsız bağımlılık derleme hatası korunarak R2 imajlarının kilit hashleri doğrulandı ve yalnız uygulama kodu ağsız katmanlandı. Yeni iş `af2264d8-6f77-4860-be29-a5294283e49b`, nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776`; müşteri paketi paralel hazırlanıyor. Tam48 sayfa/atıf/UI/restore henüz açık; HTTPS GitHub push kimliği bulunmadığı için yayın engelli.
+
 ## 2026-09-18 — V14 kaynak birimi ve atıf kapsamı düzeltmesi hazırlandı
 
 Gerçek R2 bağımsız denetimi6 ek dayanaklı iddia/4 eksik sentez bağlantısı buldu. Modelin alıntıyı yeniden yazması yerine değişmez OCR birimi seçimi eklendi; ham öneri ve kaynak hashleri saklanır. Anlam V2, tam sayfa incelemesine ek olarak yalnız gerçekten taşınan kaynaklarla kör denetim yapar; null actor/speaker metindeki atamayı kontrol dışı bırakamaz. Sentez ek dayanakları ham metin/kutu/hash eşliğiyle doğrular ve taşır. Gerçek19/28/38/16 pilotları,19'da iki ek ret ve38'de tam dayanak aktarımı kanıtı verdi. V14 tam kitap kabulü henüz açık; veri elle değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
