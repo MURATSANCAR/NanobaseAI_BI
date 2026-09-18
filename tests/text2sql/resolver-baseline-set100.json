@@ -1,5 +1,5 @@
 {
- "recordedAt": "2026-09-18T12:15:26Z",
+ "recordedAt": "2026-09-18T13:04:55Z",
  "state": {
   "catalogHash": "200e0cf6f90c5b827f968534361b2c3b41297ef15cef5d666df2464d2b35559b",
   "languagePoolHash": "",
@@ -1531,43 +1531,29 @@
    "soru": "Risk limitini aşmış cari hesaplar hangileri, ne kadar aşmışlar?",
    "kaynak": "logo",
    "read": {
-    "sources": [
-     "TIMAS_MSCRM"
-    ],
-    "slots": [
-     {
-      "term": "limitini",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_6842a1fe6f2a",
-      "entity": "ACCOUNTBASE",
-      "what": "CREDITLIMIT",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "risk",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_9cdcf713e9cc",
-      "entity": "NEW_SIPARISBASE",
-      "what": "NEW_ANLIKRISK",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
-     }
-    ],
+    "sources": [],
+    "slots": [],
     "groupBy": [],
     "unresolved": [
-     "asmislar"
+     "asmislar",
+     "limitini",
+     "risk"
     ],
     "unhandled": [],
     "leftToModel": [
      "asmis"
     ],
     "qualifierColumns": [],
-    "drops": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "limitini"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "risk"
+     }
+    ],
     "shape": null,
     "grain": null,
     "limit": null,
@@ -1576,7 +1562,7 @@
     "temporal": [],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "UNRESOLVED"
    }
   },
   "A027": {
@@ -5313,7 +5299,8 @@
    "kaynak": "ikisi",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
      {
@@ -5326,31 +5313,42 @@
       "values": [],
       "role": "group_by",
       "source": "ANA"
+     },
+     {
+      "term": "satis tahmini",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_466452ae906a",
+      "entity": "NEW_PROJEGRBASE",
+      "what": "NEW_SATTAHMINI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "projede",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_016be6b682fb",
+      "entity": "NEW_PROJEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
      }
     ],
     "groupBy": [
      "ITEMS.NAME"
     ],
     "unresolved": [
-     "gerceklesti",
-     "projede",
-     "satis"
+     "gerceklesti"
     ],
     "unhandled": [],
     "leftToModel": [
      "ongorulen"
     ],
     "qualifierColumns": [],
-    "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "projede"
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "satis tahmini"
-     }
-    ],
+    "drops": [],
     "shape": null,
     "grain": null,
     "limit": null,
