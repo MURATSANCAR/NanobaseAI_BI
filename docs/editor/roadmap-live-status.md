@@ -1,6 +1,6 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
-> **18 Eylül R3 kodu canlı:**47 backend dosyası ve9 web kaynak/çıktı eşliği geçti.45. sayfadaki bilgilendirici ek/öykü ayrımı kaynak amaç kapısıyla düzeltildi; final gerçek45/5/6 bileşen kontrolleri geçti. Yeni kitap koşusu henüz başlamadı. GPU internet kapalı soğuk açılış paket refs/main newline hatasını yakaladı; paketleme/import kodu düzeltildi, yeni cache-v2 kabulü sürüyor. R2’nin dolu restore/mobil kabulü geçti, anlamsal kabulü yok. [Ayrıntı](2026-09-18-source-analysis-v14.md).
+> **18 Eylül R3 kodu canlı:**47 backend dosyası ve9 web kaynak/çıktı eşliği geçti.45. sayfadaki bilgilendirici ek/öykü ayrımı kaynak amaç kapısıyla düzeltildi; final gerçek45/5/6 bileşen kontrolleri geçti. R3 yeni nesil97814b6c çalışıyor; bağımsız monitor ve ayrı kurulum qualifier aktif. GPU internet kapalı soğuk açılış paket refs/main newline hatasını yakaladı; paketleme/import kodu düzeltildi, cache-v3 hash/import ve gerçek HF offline çözümleme geçti. Tam GPU cold-boot, başka model isteği görüldüğü için servisler durdurulmadan ertelendi. R2’nin dolu restore/mobil kabulü geçti, anlamsal kabulü yok. [Ayrıntı](2026-09-18-source-analysis-v14.md).
 
 > **18 Eylül V14-r2 tamamlanmış koşu:** Yeni nesil `3db56430-4821-41c6-a513-4d6e4645bcd6` COMPLETED/NEEDS_REVIEW;48 sayfa API/PG ve31 sentez ifadesinin eksiksiz atıf kontrolü geçti. Sözcük sınırı, eksiksiz atıf ve sayfa-amacı düzeltmeleri gerçek sorunlu sayfalarda geçti; ham kitap verisi değiştirilmedi. R2 paket/import geçti; ayrı restore/mobil geçti;45. sayfa bilgi/öykü kapsamı hatası için R3 düzeltmesi sınanıyor, tam kitap anlamsal kabulü açık. R1 teknik48/48 ve atıf kontrolü geçti; bilinen anlamsal hataları R2 kabulü sayılmaz. [Güncel kanıt](2026-09-18-source-analysis-v14.md).
 
@@ -51,11 +51,11 @@ Kitabı yalnız sunucudaki uygulama, OCR ve yerel modeller işler. Codex tarafı
 |---|---|---|
 | P0 Doğrulama | Ortam/model ölçümleri var; kapanmadı | Editör etiket emeği, tam görev başarısı ve birlikte yük |
 | P1 Kaynak hattı | Üç gerçek kitabın 48/64/32 sayfalık kaynak hazırlaması doğrulandı; V14-r2 ana kitapta48 kaynak kontrolü geçti | 262 kaynak incelemesi; görsel doğruluk ve tam anlamsal kabul açık |
-| P2 Karakter/olay | Metin atfı, sınırlı çapraz diyalog, kaynak birimi ve iki aşamalı anlam denetimi var; V14-r2 çalışıyor | Genel figür–karakter kimliği0; tam olay/sahne/anlam kabulü açık |
+| P2 Karakter/olay | Metin atfı, sınırlı çapraz diyalog, kaynak birimi ve iki aşamalı anlam denetimi var; V14-r2 tamamlandı, R3 kaynak-amaç kapısıyla çalışıyor | Genel figür–karakter kimliği0; tam olay/sahne/anlam kabulü açık |
 | P3 Edebî örnekler | Kabul bekliyor | P2, diğer kitapların gerçek kabulü ve editör rubriği |
 | P4 Arama/cevap | Altyapı mevcut; bu nesilde kabul yok | Doğrulanmış iddialarla kaynaklı cevap |
 | P5 Editör akışı | Kaynak/OCR/bbox ve yetki ekranları çalışıyor | Genel düzeltme ve bağımlılık yenileme kabulü |
-| P6 İşletim | V13-r2 gerçek dolu restore/mobil geçti; V14-r2 paket/import geçti; doğrudan GPU tüneli çalışıyor | V14-r2 dolu restore/mobil sürüyor; GPU internet kapalı soğuk açılış, kapasite ve farklı topoloji kabulü açık |
+| P6 İşletim | V14-r2 gerçek dolu restore/mobil geçti; R3 paket/import geçti; doğrudan GPU tüneli çalışıyor | R3 dolu restore/mobil yeni koşuyu bekliyor; GPU internet kapalı soğuk açılış, kapasite ve farklı topoloji kabulü açık |
 | P7 Pilot | Başlatılabilir kabul düzeyinde değil | P1–P6, ayrılmış örnekler ve insan üretim kararı |
 
 ## Planın tüm bölümleri

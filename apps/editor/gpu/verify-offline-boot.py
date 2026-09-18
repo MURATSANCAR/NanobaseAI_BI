@@ -146,6 +146,18 @@ try:
     logged('start-offline-models',compose+['up','-d','--no-build','--pull','never','qwen','gateway'])
     report['qwen_cold_ready_seconds']=wait_qwen('http://127.0.0.1:18001',container=project+'-qwen')
     mark('COLD_QWEN_READY',seconds=report['qwen_cold_ready_seconds'])
+    # HTTP readiness alone does not exercise the packaged Docker health command.
+    # A missing interpreter previously made that command fail independently of
+    # model availability; require the actual packaged check to succeed as well.
+    for _ in range(12):
+        state=json.loads(command(['docker','inspect',project+'-qwen']))[0]
+        if state['RestartCount'] or not state['State']['Running']:
+            raise RuntimeError('COLD_QWEN_RESTARTED_DURING_HEALTH_CHECK')
+        health=state['State'].get('Health',{})
+        if health.get('Status')=='healthy':break
+        time.sleep(5)
+    else:raise RuntimeError('PACKAGED_QWEN_DOCKER_HEALTH_NOT_READY')
+    mark('PACKAGED_DOCKER_HEALTH_PASSED',status=health['Status'])
     wake_ocr('http://127.0.0.1:18010','cold-ocr-real-request')
     checks=[]
     for role in ('qwen','ocr'):
