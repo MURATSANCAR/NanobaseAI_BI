@@ -1499,10 +1499,19 @@ class SemanticResolver:
             # A count the resolver composed from "adedi" is not a measure the question named: "baskı
             # adedi arttıkça telif yüzdemiz" asks about the royalty column, and the one source holding
             # a certified column the question names is the source the question is about.
-            column_homes = {self._source_of(s.mapping.entity) for s in sq.slots
-                            if s.mapping is not None and s.mapping.entity and s.semantic_type == SemanticType.COLUMN
-                            and s.status in ("CERTIFIED", "INFERRED")}
-            if len(column_homes) == 1:
+            columns = [s for s in sq.slots if s.mapping is not None and s.mapping.entity
+                       and s.semantic_type == SemanticType.COLUMN and s.status in ("CERTIFIED", "INFERRED")]
+            # One word matched to one column does not name a database. The vocabulary holds thousands
+            # of everyday one-word names ("risk", "limit") approved for one table's column, and the
+            # same word is ordinary speech about the other server's data: "risk limitini aşmış cari
+            # hesaplar" is an ERP question that two such words carried to the CRM, where the model was
+            # shown 292 tables and none of the right ones. A phrase is deliberate; a lone word decides
+            # only when nothing else in the question speaks (see the fallback below).
+            placed = [s for s in sq.slots if s.mapping is not None and s.mapping.entity and getattr(s, "span", None)
+                      and s.semantic_type != SemanticType.DEFAULT_FILTER and s.status in ("CERTIFIED", "INFERRED")]
+            column_homes = {self._source_of(s.mapping.entity) for s in placed if self._names_a_source(s)}
+            elsewhere = {self._source_of(s.mapping.entity) for s in placed} - column_homes
+            if len(column_homes) == 1 and not elsewhere:
                 homes = column_homes
                 sq.source_hint = next(iter(homes))
         if not metrics and len(homes) != 1:
@@ -1520,7 +1529,10 @@ class SemanticResolver:
                 if s_.mapping is not None and s_.mapping.entity and s_.status == "CERTIFIED" and getattr(s_, "span", None) \
                         and s_.semantic_type != SemanticType.DEFAULT_FILTER:
                     src = self._source_of(s_.mapping.entity)
-                    votes[src] = votes.get(src, 0) + 1
+                    # a phrase or a table's own word is a full voice; a lone word is half of one — two
+                    # of them weigh what one deliberate phrase does, and one alone decides nothing
+                    # against a table the question names in plain words
+                    votes[src] = votes.get(src, 0) + (1 if self._names_a_source(s_) else 0.5)
             ranked = sorted(votes.items(), key=lambda kv: -kv[1])
             homes = {ranked[0][0]} if ranked and (len(ranked) == 1 or ranked[0][1] >= 2 * ranked[1][1]) else set()
             if not homes and ranked and votes.get("", 0) == ranked[0][1] and plain.get("", 0) > 0:
@@ -1582,6 +1594,17 @@ class SemanticResolver:
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
             sq.explanation.append(f"'{lone.term}' katalogda {self._source_of(lone.mapping.entity) or 'ana veri tabanı'} tarafında {where} olarak tanımlı; "
                                   f"ölçü {home or 'ana veri tabanı'} verisinde → bu kelimeyi sorguyu yazan model o kaynakta yorumlayacak")
+
+    @staticmethod
+    def _names_a_source(slot: ResolvedSlot) -> bool:
+        """May this slot say which database the question is about? A table's own word (an ENTITY), a
+        measure, and any phrase of two words or more may; one word matched to one column or label may
+        not — it keeps its meaning if the question turns out to be about its source, and is handed to
+        the model (with the reason on the trace) if it does not."""
+        if slot.semantic_type in (SemanticType.ENTITY, SemanticType.METRIC):
+            return True
+        span = getattr(slot, "span", None)
+        return bool(span) and span[1] - span[0] >= 2
 
     def _source_votes(self, qf, covered: set[int]) -> tuple[dict[str, int], list[str]]:
         """Which database the question's plain words name, read from the tables' own names.

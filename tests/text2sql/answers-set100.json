@@ -2,6 +2,81 @@
  "about": "Tam kapının altın cevapları. Her giriş bağımsız yazılmış referans SQL taşır; köprünün ürettiği SQL buraya kopyalanmaz. Yanlış nesneye bakan kontrol altın sayılmaz.",
  "cases": [
   {
+   "n": 19,
+   "id": "A002",
+   "soru": "İptal edilmemiş satış faturalarında iade hariç toplam ciro ne kadar oldu bu ara?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(NETTOTAL) AS ciro FROM LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN (7,8,9) AND DATE_>='2026-01-01' AND DATE_<'2027-01-01'",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": "*",
+     "reference": "ciro"
+    }
+   ],
+   "note": "2026-09-18: 922.418.666,06 ₺. 'bu ara' = bu yıl okuması gece doğrulanmıştı; bugün köprü netleştirme sordu (regresyon)."
+  },
+  {
+   "n": 21,
+   "id": "A006",
+   "soru": "Bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler kimler?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE, C.DEFINITION_ FROM LG_411_CLCARD C WHERE C.ACTIVE=0 AND NOT EXISTS (SELECT 1 FROM LG_411_01_INVOICE I WHERE I.CLIENTREF=C.LOGICALREF AND I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_>='2026-01-01' AND I.DATE_<'2027-01-01')",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0.0001
+    }
+   ],
+   "note": "2026-09-18: 227.385 aktif cari. Model bazı koşularda CARDTYPE IN (1,3) ekliyor (227.383); tolerans bunu geçirir, fark not edilir."
+  },
+  {
+   "n": 24,
+   "id": "A026",
+   "soru": "Risk limitini aşmış cari hesaplar hangileri, ne kadar aşmışlar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT CLCARDREF FROM LG_411_01_CLRNUMS WHERE ACCRISKLIMIT>0 AND ACCRISKTOTAL>ACCRISKLIMIT",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 0 satır; güncel kopyada risk limiti tanımlı cari yok. Sabah redde düşmüştü: tek kelimelik 'risk'/'limit' eşlemeleri soruyu CRM'e çekiyordu."
+  },
+  {
+   "n": 28,
+   "id": "A030",
+   "soru": "Bu yıl açılan ama hâlâ tamamen sevk edilmemiş müşteri siparişleri kaç kalem?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(*) AS n FROM LG_411_01_ORFLINE L WHERE L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT AND L.DATE_>='2026-01-01' AND L.DATE_<'2027-01-01'",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": "*",
+     "reference": "n",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 6.181. 'tamamen sevk edilmemiş' = AMOUNT > SHIPPEDAMOUNT (kısmen sevk edilen de dahil). Gece 6.179 'doğru' sayılmıştı: model 'hiç sevk edilmemiş' (SHIPPEDAMOUNT = 0) okumuş, kısmen sevk edilmiş 2 satırı atmıştı — elle tek seferlik doğrulamanın kaçırdığı hata."
+  },
+  {
    "n": 68,
    "id": "A022",
    "soru": "Sevkiyatı yapılmış ama faturalaşmamış işleri müşteri bazında listeler misin?",

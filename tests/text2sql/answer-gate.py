@@ -85,13 +85,15 @@ class Bridge:
 def _pick(row: dict, names):
     """Kolon adı model koşusuna göre değişir (barkod / barcode_key): ilk bulunan aday."""
     for name in ([names] if isinstance(names, str) else list(names or [])):
+        if name == "*":                       # tek değerli cevap: ilk sayısal kolon, adı ne olursa olsun
+            return next((v for v in row.values() if _num(v) is not None and not isinstance(v, bool)), None)
         if name in row:
             return row[name]
     return None
 
 
 def _has(row: dict, names) -> bool:
-    return any(n in row for n in ([names] if isinstance(names, str) else list(names or [])))
+    return any(n == "*" or n in row for n in ([names] if isinstance(names, str) else list(names or [])))
 
 
 def kind_of(answer: dict) -> str:
