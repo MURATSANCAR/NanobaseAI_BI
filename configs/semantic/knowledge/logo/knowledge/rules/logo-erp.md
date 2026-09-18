@@ -94,3 +94,9 @@ Kasa hareketleri `KSLINES` (`SIGN` 0 = giriş/tahsil, 1 = çıkış/ödeme; tuta
 - Malzeme/stok kartlarının **listesi ya da sayısı** istenince yalnız kullanımdaki kartlar alınır: `ITEMS.ACTIVE = 0` (1 = kullanım dışı). Bu koşul kart listesine aittir; satış/hareket toplamlarına eklenmez.
 - "Hareketsiz / hiç hareket görmemiş stok" = dönemde `STLINE` satırı olmayan malzeme (`NOT EXISTS`, `CANCELLED = 0`, `LINETYPE = 0`). Listede malzemenin **eldeki miktarı** (stok bakiyesi) de gösterilir; bakiye ayrı bir alt sorguda, tarih filtresi olmadan hesaplanır ve `LEFT JOIN` ile eklenir.
 
+## Kural 18 — Faturalanmamış sipariş ve faturalanmamış sevkiyat (Logo)
+
+- Sipariş → irsaliye → fatura zinciri satırdadır: irsaliye satırı `STLINE` (`TRCODE 8` satış irsaliyesi) siparişe `ORDFICHEREF`/`ORDTRANSREF`, faturaya `INVOICEREF` ile bağlanır; `BILLED = 1` faturalanmış satırdır.
+- **Faturası kesilmemiş sipariş** = iptal edilmemiş satış siparişi (`ORFICHE TRCODE 1, CANCELLED 0`) olup hiçbir satırı faturalanmamış olan: `NOT EXISTS (SELECT 1 FROM STLINE s WHERE s.ORDFICHEREF = o.LOGICALREF AND s.CANCELLED = 0 AND s.INVOICEREF > 0)`; adedi `COUNT(*)`, tutarı `SUM(ORFICHE.NETTOTAL)`; müşteri `CLIENTREF → CLCARD`. Eşleştirme anahtarı ORDFICHEREF'tir. CRM sipariş tablosu bu soruda kullanılmaz (`new_anliklimit` bir limit sütunudur, tutar değildir).
+- **Sevk edilmiş ama faturalanmamış iş** = `STLINE TRCODE 8, CANCELLED 0, LINETYPE 0, INVOICEREF = 0, BILLED = 0` satırları; müşteri bazında satır/irsaliye adedi, `SUM(LINENET)` açık tutar, ilk/son sevk tarihi (`DATE_`); irsaliye başlığı `STFICHEREF → STFICHE`.
+

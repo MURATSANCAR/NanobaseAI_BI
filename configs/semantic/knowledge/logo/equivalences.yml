@@ -47,6 +47,32 @@ absence_queries:
       - {entity: INVOICE, column: CANCELLED, operator: '=', values: ['0']}
     reason: "İptal edilmemiş satış faturalarına (sertifikalı satış kapsamı 7,8,9) bağlı ürün satırının yokluğu; iade satışın gerçekleşmiş olmasını silmez."
 
+  # "Faturası kesilmemiş sipariş": sipariş başlığının hiçbir satırı bir faturaya bağlanmamış.
+  # Zincir satırdadır: STLINE.ORDFICHEREF → sipariş, STLINE.INVOICEREF → fatura. Dönem gerekmez
+  # ("hâlâ kesilmemiş" yüklü tüm siparişler üzerinden bakılır); verilirse fatura tarihine uygulanır.
+  - verb_root: fatura
+    subject: ORFICHE
+    subject_label: siparişler
+    event_label: fatura
+    event: STLINE
+    scope_entity: INVOICE
+    date_column: DATE_
+    requires_period: false
+    joins:
+      - [STLINE, ORDFICHEREF, ORFICHE, LOGICALREF]
+      - [STLINE, INVOICEREF, INVOICE, LOGICALREF]
+    columns:
+      ORFICHE: [LOGICALREF, FICHENO, DATE_, NETTOTAL, CLIENTREF, TRCODE, CANCELLED]
+      STLINE: [ORDFICHEREF, INVOICEREF, CANCELLED]
+      INVOICE: [LOGICALREF, DATE_, TRCODE, CANCELLED]
+    subject_predicates:
+      - {column: CANCELLED, operator: '=', values: ['0']}
+    predicates:
+      - {entity: STLINE, column: CANCELLED, operator: '=', values: ['0']}
+      - {entity: INVOICE, column: TRCODE, operator: IN, values: ['7', '8', '9']}
+      - {entity: INVOICE, column: CANCELLED, operator: '=', values: ['0']}
+    reason: "Sipariş başlığının iptal edilmemiş hiçbir satırı iptal edilmemiş bir satış faturasına (7,8,9) bağlı değil; eşleştirme anahtarı STLINE.ORDFICHEREF ve INVOICEREF."
+
 # --- CRM (Timas_MSCRM) ile Logo arasındaki bağlar ---------------------------------------------
 # Ölçüldü 2026-09-09: cari kodu 36.250/36.395 (%99,6), barkod 8.567/8.569 (%99,98).
 cross_database:

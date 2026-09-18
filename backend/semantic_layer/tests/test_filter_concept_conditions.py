@@ -60,3 +60,18 @@ def test_a_bare_entity_qualifier_is_read_as_the_table_it_names():
     assert "Timas_MSCRM_dbo_NEW_SEVKIYATSATIRIBASE.statecode" in out.replace("[", "").replace("]", "") and out.startswith("-- yorum")
     plain = "SELECT s.a FROM T s WHERE s.b = 1"
     assert repair_qualifiers_sql(plain) == plain
+
+
+def test_an_absence_subquery_must_correlate_by_a_reference_key():
+    from semantic_layer.runtime.audit import gate_report
+    sq = SemanticQuery(question="faturası kesilmemiş siparişler", tenant_id="t", datasource_id="d", slots=[])
+    sq.shape = "ABSENCE"
+    sq.modifiers = [{"decision": "ABSENCE", "absent_entity": "INVOICE"}]
+    sources = {"LG_411_01_STLINE": {"refs": {"ORDFICHEREF": "ORFICHE", "INVOICEREF": "INVOICE"}},
+               "LG_411_01_INVOICE": {"refs": {"CLIENTREF": "CLCARD"}}, "LG_411_01_ORFICHE": {"refs": {"CLIENTREF": "CLCARD"}}}
+    bad = ("SELECT COUNT(*) FROM LG_411_01_ORFICHE o WHERE o.TRCODE = 1 AND NOT EXISTS ("
+           "SELECT 1 FROM LG_411_01_INVOICE i WHERE i.CLIENTREF = o.CLIENTREF AND i.DATE_ >= o.DATE_)")
+    good = ("SELECT COUNT(*) FROM LG_411_01_ORFICHE o WHERE o.TRCODE = 1 AND NOT EXISTS ("
+            "SELECT 1 FROM LG_411_01_STLINE s JOIN LG_411_01_INVOICE i ON i.LOGICALREF = s.INVOICEREF WHERE s.ORDFICHEREF = o.LOGICALREF)")
+    assert any("anahtarla bağlı değil" in u.text for u in gate_report(sq, bad, sources=sources))
+    assert not any("anahtarla bağlı değil" in u.text for u in gate_report(sq, good, sources=sources))

@@ -1138,7 +1138,11 @@ class SemanticResolver:
             if covering and all(s.status == "CERTIFIED" and s.span == (k, k + 1) for s in covering) and not (is_participle(tok) or is_negative(tok)):
                 # A certified noun ending in -en is not an unresolved modifier.
                 continue
-            left = [s for s in sq.slots if s.span[1] == k]
+            # "faturası hâlâ kesilmemiş": a stopword between the thing and its verb does not separate them.
+            k_left = k
+            while k_left > 0 and fold(qf.tokens[k_left - 1]) in STOPWORDS_S:
+                k_left -= 1
+            left = [s for s in sq.slots if s.span and s.span[1] in (k, k_left)]
             right = [s for s in sq.slots if s.span[0] == k + 1]
             record = {"token": tok, "position": k, "decision": "UNKNOWN",
                       "evidence_source": "none", "structural_candidate": bool(left and right),
