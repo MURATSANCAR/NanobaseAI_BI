@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 04:25 UTC — R4 tam teknik koşu, restore ve mobil PASS
+
+R4 nesli08ca6877 COMPLETED/NEEDS_REVIEW:48 kaynak/amaç/anlam/figür sayfası,64 uygun sınırlı iddia/27 taslak, eksik atıf0. Tüm gerçek API/PG ve yayın korumaları geçti; ayrı dolu yedek/restore ve320/390/768/1440px mobil kontrolü04:25:11UTC PASS. Hedef servisler/ağ istisnaları temizlendi, kanıt korundu.262 kaynak incelemesi, genel kimlik0,10/32 kesilmiş ikinci denetim ve tam anlamsal kabul açık. Triage koşu seçimi düzeltmesi efb794f CPU normal scripts yoluna kuruldu ve gerçek R4 API/PG tekrarı geçti; uygulama imajı değişmedi, dondurulmuş paket sonradan değiştirilmedi. GPU yönetim VPN kapalı olsa da sunucular arası model tüneliyle tam koşu tamamlandı; son GPU soğuk kurulum ve GitHub push erişim nedeniyle açık. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 04:01 UTC — R4 kaynak 48/48; seçili nesil triage düzeltmesi
 
 R4 kaynak kontrolleri 48/48, hata 0; kaynak sonrası kontroller sürüyor. Paket/import geçti, yeni neslin ayrı restore/mobil kabulü bekleniyor. Kaynak kalite tanılama betiği sabit eski koşu dosyası yerine `EDITOR_VERIFY_RUN_FILE` okur ve kullanılan dosyayı kanıta yazar. Gerçek R4 API/bağımsız PostgreSQL kontrolü geçti: 1.149 bölge, 887 anlaşma/262 inceleme; veri/karar yazımı 0. CPU kanıtı `evidence/source-quality-triage-20260918T040054080902Z.json`. Çalışan qualifier paketini değiştirmemek için güncellenmiş tanılama ayrı runtime dosyasında çalıştırıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
