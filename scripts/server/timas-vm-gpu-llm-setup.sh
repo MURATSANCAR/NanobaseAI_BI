@@ -21,7 +21,10 @@ ALLOW_IP="${ALLOW_IP:-85.105.129.94}"          # TİMAŞ'ın internete çıkış
 PUBLIC="${PUBLIC:-https://portal.nanobase.ai/gpu-llm/v1}"
 UPSTREAM="${UPSTREAM:-http://127.0.0.1:18885/v1/}"
 MODEL="${MODEL:-qwen3.8-flash-next}"
-SITE=/etc/nginx/sites-available/portal.nanobase.ai
+# nginx'in gerçekten okuduğu dosya. Bu sunucuda sites-enabled bir kısayol değil, ayrı bir kopya: sites-available'a
+# yazılan satır yüklenmez (2026-09-19, ilk denemede 404).
+SITE=/etc/nginx/sites-enabled/portal.nanobase.ai
+STALE=/etc/nginx/sites-available/portal.nanobase.ai
 SNIPPET=/etc/nginx/snippets/timas-vm-gpu-llm.conf
 KEYFILE=/etc/nanobase/timas-vm-gpu-llm.key
 SSH="ssh -o BatchMode=yes -o ConnectTimeout=15"
@@ -30,8 +33,8 @@ if [[ "${1:-}" == "--rollback" ]]; then
   echo "== VM eski ayarına dönüyor"
   $SSH "$VM" "cd $VM_DIR && test -f .env.before-gpu-llm && cp .env.before-gpu-llm .env && docker compose up -d bridge jobs && echo 'VM eski .env ile ayakta'"
   echo "== uç kapatılıyor"
-  sudo sed -i '\#snippets/timas-vm-gpu-llm.conf#d' "$SITE"
-  sudo nginx -t && sudo systemctl reload nginx
+  sudo sed -i '\#snippets/timas-vm-gpu-llm.conf#d' "$SITE" "$STALE"
+  sudo nginx -t && sudo nginx -s reload
   echo "bitti (anahtar ve parça dosyası yerinde bırakıldı: $KEYFILE, $SNIPPET)"
   exit 0
 fi
@@ -64,13 +67,20 @@ location ^~ /gpu-llm/v1/ {
 }
 EOF
 sudo chmod 600 "$SNIPPET"
+if [[ "$(readlink -f "$STALE")" != "$(readlink -f "$SITE")" ]]; then sudo sed -i '\#snippets/timas-vm-gpu-llm.conf#{N;d}' "$STALE" 2>/dev/null || true; fi
 if ! sudo grep -q 'snippets/timas-vm-gpu-llm.conf' "$SITE"; then
   line=$(sudo grep -nE '^\s*location /health \{' "$SITE" | head -1 | cut -d: -f1)
   [[ -n "$line" ]] || { echo "HATA: $SITE içinde 'location /health {' bulunamadı; include satırını 443 sunucu bloğuna elle ekleyin."; exit 1; }
   sudo sed -i "${line}i\\    include $SNIPPET;\\n" "$SITE"
 fi
 sudo nginx -t
-sudo systemctl reload nginx
+sudo nginx -s reload
+sleep 2
+loaded=$(sudo nginx -T 2>/dev/null | grep -c 'location ^~ /gpu-llm/v1/' || true)
+[[ "$loaded" -ge 1 ]] || { echo "HATA: nginx yeni ucu yüklemedi (nginx -T içinde yok)."; exit 1; }
+local_code=$(curl -s -m 10 -o /dev/null -w '%{http_code}' --resolve portal.nanobase.ai:443:127.0.0.1 "$PUBLIC/models")
+# nginx'te "if … return" (rewrite evresi) IP denetiminden (access evresi) önce çalışır: anahtarsız istek 401 alır.
+[[ "$local_code" == 401 ]] || { echo "HATA: uç sunucunun kendisine $local_code döndü (401 beklenirdi: anahtar yok)."; exit 1; }
 
 echo "== 3/5 uç, VM'den deneniyor (anahtarsız 401, anahtarla 200 beklenir)"
 no_key=$($SSH "$VM" "curl -s -m 15 -o /dev/null -w '%{http_code}' $PUBLIC/models")
