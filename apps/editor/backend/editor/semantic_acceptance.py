@@ -166,7 +166,8 @@ def review_page(page_claims, spans, model, verified_identity_claims=None, page_p
             'actor: olayın faili; speaker: konuşmacı; polarity: olumsuzluk; narrative_mode: gerçekleşen/aktarılan/plan/hayal/şaka; '
             'epistemic_strength: kaynak tahmin/ihtimal/kuşku/beklenti içerirken iddiada kesinliğe dönüşmüşse FAIL; '
             'bu belirsizliğin kapsamı anlaşılmıyorsa UNKNOWN. '
-            'page_role: etkinlik ve künye öykü olayı değildir. actor veya speaker null ise bu eksene PASS ver; '
+            'page_role: etkinlik ve künye öykü olayı değildir. actor veya speaker null ve iddia metninde de '
+            'belirli kimlik ataması yoksa ilgili eksene PASS ver; metinde ad/rol varsa alan null olsa da kaynak desteğini denetle. '
             'null değeri bir kişinin kimliğini doğrulamaz. ENTITY için adın açık kişi kullanımını denetle, bağlaç/zarfı kişi sayma. '
             'JSON {"checks":{"entailment":"PASS|FAIL|UNKNOWN","actor":"PASS|FAIL|UNKNOWN",'
             '"speaker":"PASS|FAIL|UNKNOWN","polarity":"PASS|FAIL|UNKNOWN",'
@@ -374,6 +375,14 @@ def run(job):
     from editor.book_store import get_records, fence
     from editor.config import connection
     from editor.source_pipeline import save
+    def fenced_model(*args, **kwargs):
+        with connection() as db:
+            fence(db, job)
+        result = model(*args, **kwargs)
+        with connection() as db:
+            fence(db, job)
+        return result
+
     gen = job['generation_id']
     pages = get_records(gen, 'page_claims')
     spans = get_records(gen, 'source_spans')
@@ -397,7 +406,7 @@ def run(job):
             continue
         page_spans = [s for s in spans if s['data']['pdf_page'] == data['pdf_page']]
         purpose=story_authority(data['pdf_page'],bundles,contexts.get(data['pdf_page']))
-        review = review_page(data, page_spans, model,page_purpose=purpose)
+        review = review_page(data, page_spans, fenced_model,page_purpose=purpose)
         save(job, 'semantic_reviews', key, review)
         completed[key] = review
     synthesis_input = {'pages': [r['data'] for r in pages],
@@ -410,7 +419,7 @@ def run(job):
         return existing[0]['data']
     with connection() as db:
         fence(db, job)
-    result = synthesize_reviewed(synthesis_input['pages'], synthesis_input['reviews'], model,source_spans=spans)
+    result = synthesize_reviewed(synthesis_input['pages'], synthesis_input['reviews'], fenced_model,source_spans=spans)
     result['input_sha256'] = fingerprint
     result['review_method'] = 'SEPARATE_CALL_SAME_CONFIGURED_MODEL_NOT_INDEPENDENT_EVIDENCE'
     save(job, 'semantic_synthesis', 'book', result)

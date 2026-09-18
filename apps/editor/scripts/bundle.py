@@ -33,6 +33,30 @@ def excluded(directory, names):
 shutil.copytree(root, source, ignore=excluded)
 config = json.loads(subprocess.check_output(['docker','compose','-f','compose.yaml','--profile','tools','config','--format','json']))
 images = sorted({service['image'] for service in config['services'].values()})
+# Package exactly the web bytes built from the included sources. A stale .env
+# image tag must not silently ship the previous UI next to a newer checkout.
+frontend = source/'frontend'
+web_paths = list((frontend/'src').rglob('*')) + [frontend/name for name in
+    ('package.json','package-lock.json','index.html','tsconfig.json','vite.config.ts')]
+web_sources = {str(path.relative_to(frontend)):hashlib.sha256(path.read_bytes()).hexdigest()
+               for path in sorted(web_paths) if path.is_file()}
+web_image = config['services']['gateway']['image']
+def web_file(name):
+    path = Path(name)
+    if path.is_absolute() or '..' in path.parts:
+        raise SystemExit('Invalid web manifest output path')
+    return subprocess.check_output(['docker','run','--rm','--pull','never','--network','none','--read-only',
+        '--cap-drop','ALL','--entrypoint','cat',web_image,
+        '/usr/share/nginx/html/editor/'+name])
+web_manifest = json.loads(web_file('build-manifest.json'))
+if web_manifest.get('sources') != web_sources:
+    raise SystemExit('Packaged web image differs from included frontend sources')
+web_outputs = web_manifest.get('outputs')
+if not isinstance(web_outputs,dict) or 'index.html' not in web_outputs:
+    raise SystemExit('Packaged web image has no complete output manifest')
+for name, expected in web_outputs.items():
+    if hashlib.sha256(web_file(name)).hexdigest() != expected:
+        raise SystemExit('Packaged web output differs from its build manifest: '+name)
 with_models = '--with-models' in sys.argv
 with_ocr_vl = '--with-ocr-vl' in sys.argv
 with_reread = ('--with-reread' in sys.argv or

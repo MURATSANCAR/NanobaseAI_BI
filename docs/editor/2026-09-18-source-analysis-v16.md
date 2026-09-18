@@ -21,10 +21,16 @@ CPU `/data/nanobaseai/editor` üzerinde R5'in değiştirilmemiş gerçek kaynakl
 - `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0045-81e67eb13e9d.json`
 - `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0006-81e67eb13e9d.json`
 
-Bu kontroller V4 önericinin güvenli engelleme yoludur; V5 sınıflandırıcının veya V16 tam akışın kabulü değildir. Mevcut R7 işi tamamlanınca tek gerçek PDF29 model/semantik pilotunu başlatacak korumalı süreç hazırdır: PID825965, `evidence/v16-purpose-model-pilot.log`. Aktif model işi varken pilot başlamaz. Olumlu sonuç aramak için sınırsız tekrar yapılmaz.
+Bu kontroller V4 önericinin güvenli engelleme yoludur; V5 sınıflandırıcının veya V16 tam akışın kabulü değildir.
 
-V16-r1 API ve document imajları CPU'da ağsız derlendi; bütün 50 backend dosyası ve ayrı 38 Python modülünün imaj eşliği geçti. Kanıt `evidence/v16-r1-build-proof.json`. API `sha256:3256a990c2f7772516b0b7e7b5d117107da008d2ddae1883c86a11bbe6c136c6`, document `sha256:c276336c52cc3dfc97a16bd5ae6a17cc091a7d394e2ea21e8ebee8c3b451c2a7`. Henüz yayımlanmadı; ana R7 koşusu sabit sürüyor.
+Gerçek ilk diyalog pilotu `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-49eae25011c8.json`: iki aday üretildi, ancak biri çok satırlı sorunun sadece son satırını kaynak seçti; atıf kapısı doğru şekilde engelledi. Genel kök neden balon metninin bölünebilmesiydi.
 
-## Açık kabul
+`source-unit-claims-v4` şimdi tekil geometrik balondaki bütün TEXT_AGREED satırlarını bölünmez ham kaynak birimi yapar. Çakışma, kısmi/okunmayan kutu, kesilme veya kopuk okuma sırası inceleme gerektirir; balonun alt parçalarını prose penceresiyle kaçırmaz. Layout kayıt/hash/bbox ve tüm kaynak kimlikleri taşınır. Gerçek katalog kontrolünde üç satır tek birim oldu; `evidence/atomic-balloon-v16-catalogue-preflight.json`. Gerçek model pilotu `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-871f780ceb5d.json`: bir aday, bütün üç satır, actor/speaker null. İlk semantik kontrolde anonim kimlik alanı yanlışlıkla bilinmeyen isim kanıtı gibi değerlendirildi.
 
-Gerçek diyalog pilotu, yeni V16 neslinin tamamı, aynı sürümde kaynaklı soru/restore/mobil kabulü henüz bekleniyor. Global karakter kimliği ve bütün kitabın edebî doğruluğu bu düzeltmeyle otomatik tamamlanmaz. Yerel test veya yapay kaynak kullanılmadı.
+`source-semantic-review-v6` anonim söz edimi ile kimlik atamasını ayırır; metindeki ad/rol iddiası null alanlarla gizlenemez. Aynı değiştirilmemiş model adayı gerçek sunucuda yeniden değerlendirildi: `evidence/semantic-candidate-7280af899f9e2a9b129a.json`, bir kaynak destekli ifade geçti, kaynak/inceleme yazımı sıfır. Bu figürün karakter kimliğini doğrulamaz.
+
+V6 ayrıca kaynak dışı isim yüzeyi kapısı, belirsizlik derecesini koruyan epistemic_strength ekseni ve sentezde kaynak kapısını içerir. R7'nin 100 gerçek iddiasındaki beş kaynak dışı ad bu kapıda engellendi; küçük harfli konum/sahiplik gibi anlamsal sorunlar bundan ayrı açıktır. [İddia inceleme kaydı](2026-09-18-semantic-source-audit.md).
+
+## Derleme ve açık kabul
+
+Önceki V16-r1/r2 imajları sonraki balon ve anlamsal sözleşme değişikliklerini içermez; yeni yayın için kullanılamaz. Son kaynakla yeni imaj, yeni tam V16 nesli ve aynı sürümde kaynaklı soru/restore/mobil kabulü gerekir. V16 henüz ana yayında değildir. Global karakter kimliği ve bütün kitabın edebî doğruluğu bu düzeltmeyle otomatik tamamlanmaz. Yerel test veya yapay kaynak kullanılmadı.

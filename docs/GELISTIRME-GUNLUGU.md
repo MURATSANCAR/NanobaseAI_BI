@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R7 tam teknik kabulü ve kaynak destekli anlam hataları
+
+R7 48 sayfa/1494 kaynak birimi tamamlandı; 100 pasaj ve iki gerçek soru API/PG/Qdrant/mobil kontrolünden geçti. Restore ağ çakışması IPAM envanteriyle, yeniden koşulabilirlik sabit kanıt adları yerine benzersiz dosyalarla düzeltildi. Yeni restore ve indeks kontrolü geçti; son mobil/temizlik de 08:43:33 UTC’de geçti. İçerik incelemesinde beş kaynak dışı isim ataması, belirsizlik kaybı ve açık konum/sahiplik sorunları bulundu. V16 genel kaynak yüzeyi kapısı beş isim atamasını gerçek kayıtlarda engelledi; belirsizlik için yeni anlamsal eksen eklenip gerçek tekrar kontrolüne alındı. Balonun bütün OCR satırlarının tek birim olması ve anonim söz edimi gerçek bileşende geçti; karakter kimliği kabulü değildir. Kitap verisi değiştirilmedi, yerel test çalıştırılmadı. [Ayrıntılı bulgular](editor/2026-09-18-semantic-source-audit.md).
+
 ## 2026-09-18 07:00 UTC — Paralel P5 kabulü ve genel analiz sıralama düzeltmesi
 
 R7 kaynak denetimi 48/48, başarısız 0; tam anlam/restore henüz sürüyor. İzole P5 etki API'si 134 bağlı kayıt, 164 ilişki ve snapshot sayfalama/ACL korumalarını geçti. Gerçek UI320/390/768/1440px, tembel GET, sıfır mutasyon ve değişmeyen kaynak hashleriyle geçti. Test etiket seçicisi hatası genel betikte düzeltildi, başarısız kanıt korundu. [UI kanıtı](editor/2026-09-18-source-impact-ui.md).

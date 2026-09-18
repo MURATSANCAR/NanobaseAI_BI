@@ -70,3 +70,11 @@ Bağımsız gerçek API/PG/Qdrant kontrolü53pasaj, exactDotvektör/değer/paylo
 Yeni tam analiz işi `19893f4c-e43c-4b99-9680-f9647be12c1d`, nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`; kaynak atası R5 `d9ff5c60-dd47-47cb-bf66-70a5cad59cb1`. Sunucudaki uygulama yeni genel kodla kaynak iddialarını yeniden çıkarıyor. Monitor635347 ve qualifier635348 bağımsız süreçlerde çalışıyor; bunlar tamamlanmış kabul değildir. Güncel offlinepaket06:38:33UTC PASS, import ve tam kitap kabulü sürüyor. Tamamlanınca dolu müşteri restore'unda R7kaynaklı arama/iki gerçek cevap da ayrıca doğrulanacak.
 
 Uygulama kodu yerelmain `6b2494c` içinde; genellik kuralı ilgili belgelerde kaydedildi.27dal/referans taramasında main dışında commit0. Fetchgeçti, pushGitHubkimliği olmadığından başarısız; originyayını tamamlanmadı.
+
+## R7 tam teknik kabul ve dolu müşteri restore — 18 Eylül08:43UTC
+
+R7 nesli `382da5b3-a13a-4986-85ba-1a38fd92ff44` için gerçek soru UI kabulü `source-question-ui-ac2208e5-aa2c-44d6-9194-906d06c5abf3/verification.json` PASS.100gerçek pasajın API/PG/Qdrant denetimi `source-preview-20260918T083135488336Z.json` PASS; önceki hyphen verifier yanlış pozitifi kanıtıyla korunup genel düzeltilmiştir. Bu teknik kontroller anlamsal kitap kabulü değildir.
+
+Aynı pinned R7 offline paketinin yeni QA kayıtlarıyla dolu backup/restore kabulü08:43:33UTC PASS. Kanıt `/data/nanobaseai/editor-qualifications/v15-r7-20260918/382da5b3/qualification.json`; son koşu logu `evidence/v15-r7-qualification-resume2.log`. RestoreR7index100pasaj/vektör ile embedding çağrısı olmadan yeniden kuruldu. Restored QA/API/PG/Qdrant kanıtı `installation/evidence/source-preview-20260918T084121516423Z.json` PASS. Kaynak, türetilmiş kayıtlar, provenance, yayın kapıları ve gerçek320/390/768/1440px6sekme tarayıcı kontrolü PASS. Hedef servisler durduruldu; veriler korundu; geçici proxy/UFW temizlendi.
+
+Başlangıçtaki ağ çakışması, tekrar koşuda sabit kanıt adı çakışmaları ve kabul aracı hash override'ları [ayrı belgede](2026-09-18-qualification-network-collision.md) kayıtlıdır. Donmuş paket/ürün backend hashleri değiştirilmedi. R7'nin adlandırılmış gönderge/anlamsal kalite eksikleri bu teknik PASS ile kapanmaz; `semantic_acceptance=false`.

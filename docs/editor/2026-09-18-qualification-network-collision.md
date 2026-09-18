@@ -25,3 +25,11 @@ Donmuş paketteki eski bağımsız verifier korunmuştur. Yalnız restore hedefi
 İlk resume, kaynak ve türetilmiş API/PG kontrollerini geçtikten sonra `verify-semantic-provenance.py` sabit nesil+hash dosya adına exclusive yazdığı için önceki PASS kanıtında `FileExistsError` verdi. Aynı kusur sonraki `verify-publication-gates.py` betiğinde de statik incelemeyle bulundu. İki araç artık bağımsız koşu UUID'siyle yeni kanıt dosyası açar; önceki kanıt silinmez, bütün gerçek veri/kabul kontrolleri aynıdır.
 
 Araç hashleri: semantic provenance `5feacf7e36be267e98945386e8799e10ac88b4db97edda66b711154150d9c9fc`; publication gates `1856ab94463ddc7870b7deaab532965a5365618742b4518d1e486b401e3fc1b0`. Root ve restore hedefindeki kabul aracı override'ları `v15-r7-provenance-verifier-override.json` ve `v15-r7-publication-verifier-override.json` ile kaydedildi. Donmuş paket/ürün backend değişmedi. Önceki adım logları `resume-attempt1-logs` içinde ayrıca korunur. Tek resume2 PID1493605; log `evidence/v15-r7-qualification-resume2.log`. Tamamlanma henüz doğrulanmadı.
+
+## Sonuç: gerçek ayrı kurulum teknik kabulü PASS
+
+2026-09-18 08:43:33UTC'de resume2 tamamlandı. `/data/nanobaseai/editor-qualifications/v15-r7-20260918/382da5b3/qualification.json` nihai qualification PASS ve hedef servisler STOPPED kaydını içerir. Tam log `/data/nanobaseai/editor/evidence/v15-r7-qualification-resume2.log`. Dinamik IPAM70/71 ağıyla çakışma giderildi; önceki ağların hiçbiri silinmedi. Geçici nginx proxy ve iki UFW kuralı kaldırıldı, cleanup_errors boş. Hedef veriler/kanıtlar tutuldu.
+
+Yeni QA kayıtlarını içeren backup ve gerçek restore PASS. R7 neslin100pasajı ve vektörü depodan yeniden kuruldu (`embedding_calls=0`); ayrı API/PG/Qdrant kontrolü `installation/evidence/source-preview-20260918T084121516423Z.json` PASS. Kaynak/türetilmiş kayıt eşliği, sentez dayanak bağlantıları ve yayın kapıları PASS. Gerçek tarayıcı320/390/768/1440px ve6sekme kontrolünde yatay taşma yok; `restored_mobile_ui.log` ayrıntıyı kaydeder.
+
+Bu teknik taşınabilirlik/kanıt bütünlüğü kabulüdür. `semantic_acceptance=false` korunur; adlandırılmış gönderge veya kitabın bütün anlamsal kalitesi bu sonuçla onaylanmaz. Eski başarısız loglar, eski backup, eski araçlar ve frozen offline paket korunur. Kaynak kitap, model cevabı, konuşmacı ya da editör kararı elle değiştirilmedi.

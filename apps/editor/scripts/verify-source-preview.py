@@ -20,6 +20,25 @@ import uuid
 import unicodedata
 
 
+def verify_surface_references(claim,views,gate):
+    assert gate['version']=='surface-reference-v1' and gate['passed'] is True
+    assert gate['semantic_acceptance'] is False and gate['missing_terms']==[]
+    def words(text):
+        value=unicodedata.normalize('NFKC',text).replace('İ','i').replace('I','ı').lower()
+        return re.findall(r'[^\W_]+',value)
+    cited=set(words('\n'.join(view['reading_text'] for view in views)))
+    text=unicodedata.normalize('NFC',claim['text']);expected=[]
+    for match in re.finditer(r"[^\W\d_]+(?:['’ʼ][^\W\d_]+)?",text):
+        token=match.group();root=re.split("['’ʼ]",token,maxsplit=1)[0]
+        if len(root)<2 or not root[0].isupper():continue
+        before=text[:match.start()].rstrip().rstrip('"“”\'‘’(').rstrip()
+        if (not before or before[-1] in '.!?…:') and token==root:continue
+        normalized=words(root)
+        if len(normalized)!=1:continue
+        assert normalized[0] in cited,'NAMED_REFERENCE_NOT_IN_CITED_SOURCE'
+        expected.append({'term':root,'normalized_root':normalized[0],'present_in_cited_source':True})
+    assert gate['checked']==expected,'NAMED_REFERENCE_GATE_COVERAGE_MISMATCH'
+
 def require(condition, message):
     if not condition:
         raise RuntimeError(message)
@@ -201,7 +220,7 @@ try:
     def source_regions(refs):
         require(refs and all(ref in span_rows for ref in refs), 'Source span absent')
         return [{'span_id': ref, **{key: span_rows[ref]['data'][key] for key in ('text', 'bbox', 'render_sha256')}} for ref in refs]
-    def cited_support(review, refs, regions):
+    def cited_support(review, refs, regions, claim):
         require(review.get('passed') is True and review['source_sha256'] == digest(regions)
                 and review['source_regions'] == regions and review['support_span_refs'] == refs
                 and review['metrics']['finish_reason'] == 'stop', 'Citation support scope/hash incomplete')
@@ -209,7 +228,7 @@ try:
         axes=('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode')
         if review.get('version')=='source-semantic-review-v6-cited-support':
             axes+=('epistemic_strength',)
-            require(review.get('surface_reference_gate',{}).get('passed') is True, 'Missing named-reference gate')
+            verify_surface_references(claim,review['source_reading_segments'],review['surface_reference_gate'])
         require(verdict['checks'] == {key: 'PASS' for key in axes}
                 and verdict['reason'].strip() and verdict['support_span_refs']
                 and set(verdict['support_span_refs']) <= set(refs), 'Citation axes/references failed')
@@ -235,7 +254,7 @@ try:
                 'Passage is not the exact eligible claim support')
         claim = {key: candidate.get(key) for key in ('kind','text','quote','span_refs','actor','speaker','narrative_mode','polarity')}
         require(data['claim'] == claim and verdict['claim_id'] == digest({'pdf_page': page, 'ordinal': verdict['candidate_ordinal'], 'claim': claim}), 'Claim identity mismatch')
-        cited_support(verdict['citation_review'], refs, regions)
+        cited_support(verdict['citation_review'], refs, regions, claim)
         require(data['citation_review_sha256'] == digest(verdict['citation_review']), 'Citation record changed')
         purpose = review['page_purpose_gate']; context = all_rows[purpose['record_id']]['data']
         require(purpose['passed'] is True and purpose['record_sha256'] == digest(context)
@@ -301,7 +320,7 @@ try:
             require(claim['span_refs']==data['source_span_refs'] and claim['source_regions']==regions
                     and claim['evidence_refs']==data['evidence_refs'] and claim['pdf_page']==data['pdf_page']
                     and claim['passage_input_sha256']==manifest['input_sha256'], 'Answer changed cited source')
-            cited_support(claim['citation_review'],data['source_span_refs'],regions)
+            cited_support(claim['citation_review'],data['source_span_refs'],regions,claim)
             checked_claim = {key:claim.get(key) for key in ('text','actor','speaker','narrative_mode','polarity')}
             checked_claim.update(kind='STATEMENT',span_refs=data['source_span_refs'],quote=data['text'])
             checked_payload = {'claim':checked_claim,'cited_source_regions':regions,
