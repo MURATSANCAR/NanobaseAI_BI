@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## V14 hazırlığı — alıntı ve kaynak bağımlılığı
+
+R2'nin6 iddiasında ek OCR desteği,4 sentez ifadesinde eksik aktarılmış span bağlantısı bulundu. Yeni V14 kodu alıntıyı modele yazdırmadan değişmez OCR biriminden seçtirir; ayrıca yalnız taşınan dayanakları gören ayrı anlam kontrolü ve sentezde tam kaynak/hash denetimi ekler. Gerçek19/28/38 ve etkinlik16 bileşen pilotları yapıldı; yeni tam nesil/yayın kabulü henüz yok. Canlı R2 ve restore kanıtı aşağıdadır. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
+
 ## 18 Eylül — V13-r2 canlı kabul
 
 Canlı Qwen ortak GPU profili0.82 bellek payı,16 eşzamanlı slot,8192 batched-token ve chunked-prefill oldu. Eski0.90/64 profil gerçek Qwen+OCR yükünde CUDA OOM verdi; sağlık200 yanıltıcıydı. Yeni profilde iki gerçek Qwen görsel isteği+12 OCR isteği örtüşerek geçti; örneklenen boş bellek en az11.896MiB. R2 işi kayıtları korunarak API retry/attempt2 ile devam ediyor. Tam kapasite/uzun süreli yük ve kitaba anlamsal kabul açık. [Kod profili](apps/editor/gpu/compose.qwen-shared-gpu.yaml).

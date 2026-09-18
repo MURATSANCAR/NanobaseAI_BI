@@ -56,6 +56,22 @@ assert {r['data']['pdf_page'] for r in api['semantic_reviews']} == expected_page
 assert {r['data']['pdf_page'] for r in api['figure_identity']} == expected_pages, 'IDENTITY_PASS_INCOMPLETE'
 assert len(api['semantic_synthesis']) == 1, 'SYNTHESIS_NOT_READY'
 spans = {r['id']:r['data'] for r in api['source_spans']}
+for page in pages.values():
+    if page.get('source_unit_method')!='source-unit-claims-v1':continue
+    units=page.get('source_units',[]);lookup={u['unit_id']:u for u in units}
+    assert len(lookup)==len(units),'SOURCE_UNIT_ID_COLLISION'
+    for unit in units:
+        refs=unit['span_refs'];assert refs and len(set(refs))==len(refs)
+        assert all(spans[r]['status']=='TEXT_AGREED' and spans[r]['role']=='TEXT'
+                   and spans[r]['pdf_page']==page['pdf_page'] and spans[r]['render_sha256']==unit['render_sha256'] for r in refs)
+        assert unit['quote']=='\n'.join(spans[r]['text'] for r in refs),'SOURCE_UNIT_TEXT_MODIFIED'
+        assert unit['sha256']==digest({k:unit[k] for k in ('pdf_page','span_refs','quote','render_sha256')})
+    for claim in page['claims']+page['blocked_claims']:
+        unit=lookup[claim['source_unit_id']]
+        assert claim['quote_origin']=='IMMUTABLE_OCR_UNIT_SELECTION'
+        assert claim['quote']==unit['quote'] and claim['span_refs']==unit['span_refs']
+        assert claim['source_unit_sha256']==unit['sha256']
+        assert claim['text']==claim['model_candidate']['text'],'MODEL_CLAIM_TEXT_CHANGED'
 if extended:
     assert {r['data']['pdf_page'] for r in api['fragment_checks']} == expected_pages, 'FRAGMENT_CHECKS_INCOMPLETE'
     for row in api['source_fragments']:
@@ -106,7 +122,19 @@ for row in api['semantic_reviews']:
             assert all(spans[ref]['status']=='TEXT_AGREED' and spans[ref]['pdf_page']==review['pdf_page'] for ref in candidate['span_refs'])
             assert verdict['identity_gate'] in ('NOT_REQUIRED','SOURCE_VERIFIED')
             assert verdict['claim_id'] not in eligible, 'CLAIM_ID_COLLISION'
-            eligible[verdict['claim_id']] = candidate
+            carried=candidate['span_refs']
+            if review['version']=='source-semantic-review-v2':
+                carried=verdict['verified_support_span_refs']
+                assert set(candidate['span_refs'])<=set(carried)
+                assert set(verdict['model_result']['support_span_refs'])<=set(carried)
+                assert all(spans[r]['status']=='TEXT_AGREED' and spans[r]['role']=='TEXT'
+                           and spans[r]['pdf_page']==review['pdf_page'] for r in carried)
+                regions=[{'span_id':ref,**{k:spans[ref][k] for k in ('text','bbox','render_sha256')}} for ref in carried]
+                assert verdict['verified_support_regions']==regions
+                cited=verdict['citation_review'];assert cited['passed'] is True
+                assert cited['source_sha256']==digest(regions)
+                assert all(v=='PASS' for v in cited['model_result']['checks'].values())
+            eligible[verdict['claim_id']] = {**candidate,'span_refs':carried}
 for row in api['figure_identity']:
     identity = row['data']
     assert identity['semantic_acceptance'] is False

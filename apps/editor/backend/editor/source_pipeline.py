@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v13'
+VERSION = 'source-spans-v14'
 
 
 def same_model(metrics):
@@ -459,35 +459,18 @@ def reusable_claim_candidates(parent,key,spans):
 
 def interpret(job,evidence,spans,parent=None):
     from editor.analysis import model
+    from editor.source_unit_claims import propose, VERSION as UNIT_VERSION
     from editor.text_attribution import extract as text_attributions, speaker_for_claim
     page=evidence['data']['pdf_page']; key=evidence['record_key']
     usable=[s for s in spans if s['data']['status']=='TEXT_AGREED' and s['data']['role']=='TEXT']
     excluded=[str(s['id']) for s in spans if s not in usable]
-    usable_ids={str(s['id']) for s in usable}
-    # Only the model input is packed; stored source coordinates stay exact.
-    context=[[str(s['id']),s['data']['text'] if str(s['id']) in usable_ids else '[UNVERIFIED_REGION]',
-              str(s['id']) in usable_ids,[round(v,3) for v in s['data']['bbox']]] for s in reading_order(spans)]
-    reused=reusable_claim_candidates(parent,key,spans)
-    if reused:
-        result,metrics,reused_id=reused
-    elif not usable:
+    # Optical/visual measurements can be reused. Semantic proposals are fresh
+    # for this source-unit contract; legacy generated quotations are not reused.
+    if not usable:
         result={'page_role':'UNKNOWN','claims':[],'uncertainties':['NO_AGREED_TEXT_SPANS']}; metrics={}
     else:
-        prompt=('Yalnız verilen OCR metin bölgelerinden aday çıkar. Görsel betimleme girdisi yoktur. '
-            'UNVERIFIED_REGION okunması uyuşmayan yeri gösterir; üzerinden atlayıp cümle kurma. '
-            'Eksik bölgeler var; eksik cümleyi tamamlama. Bağlamı eksikse iddia üretme. '
-            'JSON {"page_role":"NARRATIVE|ACTIVITY|FRONT_MATTER|APPENDIX|MIXED|UNKNOWN",'
-            '"claims":[{"kind":"EVENT|ENTITY|STATEMENT","text":"...","quote":"kaynakta aynen geçen dayanak",'
-            '"span_refs":["id"],"actor":null,"speaker":null,'
-            '"narrative_mode":"ACTUAL|REPORTED|PLANNED|HYPOTHETICAL|DREAM|JOKE|UNKNOWN",'
-            '"polarity":"AFFIRMED|NEGATED|UNKNOWN"}],"uncertainties":["..."]}. '
-            'ACTIVITY, FRONT_MATTER, APPENDIX veya UNKNOWN sayfada claims boş dizi olmalı. '
-            'Etkinlik yönergeleri ve künye hikaye olayı değildir. Bağlaç/zarfı kişi adı sayma. '
-            'Adı açık metinle bağlanamayan konuşmacı null. En fazla 4 aday. Alıntıyı yeniden yazma. '
-            'Her kaynak satırı [span_id,metin,kullanılabilir,bbox] sırasındadır. '
-            'bbox yalnız yerleşim içindir; metin ve span_id değişmez.\n'+json.dumps(context,ensure_ascii=False,separators=(',',':')))
         try:
-            result,metrics=model([{'role':'user','content':prompt}],max_tokens=1400,prompt_version=VERSION+'-claims')
+            result,metrics=propose(page,spans,model)
         except RuntimeError as exc:
             if str(exc) not in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED'): raise
             result={'page_role':'UNKNOWN','claims':[],'uncertainties':[str(exc)]};metrics={}
@@ -516,9 +499,10 @@ def interpret(job,evidence,spans,parent=None):
     save(job,'page_claims',key,{'pdf_page':page,'page_role':result.get('page_role','UNKNOWN'),
         'claims':accepted,'blocked_claims':blocked,'excluded_span_ids':excluded,
         'input_span_ids':list(allowed),'input_visual_descriptions':False,
-        'reused_claim_candidates_from':reused_id if reused else None,
-        'candidate_reuse_policy':result.get('measurement_reuse_policy') if reused else None,
-        'reused_from_generation':str(parent) if reused else None,
+        'reused_claim_candidates_from':None,'candidate_reuse_policy':None,'reused_from_generation':None,
+        'source_unit_method':UNIT_VERSION,'source_units':result.get('source_units',[]),
+        'raw_model_result':result.get('raw_model_result'),
+        'rejected_model_candidates':result.get('rejected_model_candidates',[]),
         'uncertainties':result.get('uncertainties',[]),'metrics':metrics,'review_status':'PENDING'})
     save(job,'page_checks',key,{'pdf_page':page,'evidence_refs':[str(evidence['id'])],
         'status':'NEEDS_REVIEW','text_matched_candidates':len(accepted),'blocked_claims':len(blocked),

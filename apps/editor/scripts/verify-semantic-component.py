@@ -17,7 +17,7 @@ for kind in ('page_claims','source_spans'):
  rows[kind]=items
 module=Path(sys.argv[3]).read_text() if len(sys.argv)>3 else (root/'backend/editor/semantic_acceptance.py').read_text()
 payload={'rows':rows,'module':module,'generation':gen,'page':page}
-code='''import sys,json,hashlib,types
+code='''import sys,json,hashlib,types,inspect
 from editor.config import connection,code_manifest
 from editor.analysis import model
 p=json.load(sys.stdin)
@@ -31,10 +31,11 @@ for kind,items in p['rows'].items():
 module=types.ModuleType('semantic_candidate');exec(compile(p['module'],'candidate-semantic.py','exec'),module.__dict__)
 page=p['rows']['page_claims'][0]['data']; review=module.review_page(page,p['rows']['source_spans'],model)
 print(json.dumps({'stage':'review','review':review},ensure_ascii=False),flush=True)
-synthesis=module.synthesize_reviewed([page],[review],model)
+extra={'source_spans':p['rows']['source_spans']} if 'source_spans' in inspect.signature(module.synthesize_reviewed).parameters else {}
+synthesis=module.synthesize_reviewed([page],[review],model,**extra)
 print(json.dumps({'stage':'complete','generation_id':p['generation'],'pdf_page':p['page'],'api_pg_match':True,'application_writes':0,'candidate_code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'runtime_code_manifest':code_manifest(),'review':review,'synthesis':synthesis},ensure_ascii=False),flush=True)
 '''
-out=root/f'evidence/semantic-live-component-{gen}-page{page:04}.jsonl'
+out=root/f'evidence/semantic-live-component-{gen}-page{page:04}-{hashlib.sha256(module.encode()).hexdigest()[:12]}.jsonl'
 if out.exists(): raise SystemExit('Evidence already exists; preserve it and choose a new generation')
 with out.open('w') as target:
  proc=subprocess.run(['docker','compose','exec','-T','api','python','-u','-c',code],input=json.dumps(payload),text=True,stdout=target,stderr=subprocess.PIPE,cwd=root)
