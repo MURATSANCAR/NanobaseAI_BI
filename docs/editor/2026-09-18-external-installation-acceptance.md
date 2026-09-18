@@ -1,8 +1,8 @@
 # External model uygulama paketi: ayrı kurulum kabulü
 
-> **V14-r2 ayrı kabulü sürüyor:** `/data/nanobaseai/editor-qualifications/v14-r2-20260918/3db56430` paket/importu geçti; yeni nesil `3db56430-4821-41c6-a513-4d6e4645bcd6` tamamlanınca yedek/restore/atıf/mobil kontrolü yapılacak. API18824/metrik19104 ve subnet72/73 ayrıldı. Aşağıdaki tamamlanmış kabul V13-r2 içindir; yeni yayın kabulü değildir. [Güncel koşu](2026-09-18-source-analysis-v14.md).
+> **V14-r3 kabulü sürüyor:** `/data/nanobaseai/editor-qualifications/v14-r3-20260918/97814b6c` paket/importu geçti. Nesil `97814b6c-98fc-4c8e-b442-cbfcd9306889` tamamlanınca gerçek yedek/restore/atıf/mobil kontrolleri yapılacak; API18826/metrik19106, subnet74/75 ayrıldı. V14-r2 `3db56430` dolu restore/mobil kabulü02:09:58UTC’de geçti; hedef durduruldu ve geçici ağ kuralları temizlendi. Bu R3 kabulünün yerine geçmez. [Güncel koşu](2026-09-18-source-analysis-v14.md).
 
-## Güncel R2 nesli / web R3 yedek ve restore kabulü
+## Tarihsel V13-r2 nesli / web R3 yedek ve restore kabulü
 
 R2 işi COMPLETED olduktan ve çalışan başka analiz olmadığı PostgreSQL'den doğrulandıktan sonra `/data/nanobaseai/editor-qualifications/v13-r2-completed-20260918/backup` alındı. API/worker/parser/reread yazıcıları tutarlı snapshot için durdurulup önceki çalışma durumlarına döndürüldü; kaynak metin/inceleme kararı elle değiştirilmedi.
 

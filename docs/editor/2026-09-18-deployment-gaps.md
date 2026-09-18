@@ -1,6 +1,6 @@
 # Editör P6: GPU dağıtımı ve taşınabilirlik açıkları
 
-> **Güncel V14-r2:** Kaynak/atıf/sözcük düzeltmeleri canlı; external modelleri ve seçili koşuyu destekleyen qualifier paket/importu geçti, yeni nesil tamamlanınca ayrı restore/API/PG/atıf/mobil kabulünü çalıştıracak. Önceki V13-r2 restore tamamlandı. Yeni boş cache GPU açılış aracı hazır, henüz koşulmadı. [Ayrıntı](2026-09-18-source-analysis-v14.md). Aşağıdaki ilk inceleme maddeleri tarihçedir.
+> **Güncel V14-r3:** R2 dolu restore/mobil kabulü tamamlandı; R3 yeni nesli `97814b6c` 48 kaynak kontrolünü geçti ve türetilmiş analiz sürüyor. R3 paket/import geçti; aynı sürümün dolu restore/mobil kabulü analizi bekliyor. GPU gerçek soğuk açılışı HF ref newline hatasını buldu; kod düzeltildi ve cache-v3 gerçek imajlarla offline HF çözümlemesini geçti. Tam soğuk açılış yeniden denemesi ortak modelde başka istek nedeniyle servisler durdurulmadan ertelendi. [Kanıt ve sınırlar](2026-09-18-source-analysis-v14.md). Aşağıdaki ilk inceleme maddeleri tarihçedir.
 
 18 Eylül 2026 güncellemesi. İlk statik incelemeden sonra external uygulama paketi/import ve ayrı V12 kurulum/eski kitap restore kabulü yapıldı. R2/web R3 uygulama ve ayrı GPU model/imaj paketleri hash/importtan geçti. GPU ortak bellek OOM hatası gerçek eşzamanlı yükle düzeltildi; Mac'ten bağımsız sunucular arası tünel gerçek Qwen/OCR çağrılarıyla canlıya alındı. Yeni GPU üzerinde offline açılış ve güncel R2 neslinin ayrı restore kabulü hâlâ açık. Yerel ürün testi çalıştırılmadı. [Güncel kanıt](2026-09-18-source-analysis-v13.md).
 

@@ -171,21 +171,21 @@ for row in api['semantic_reviews']:
     assert review['input_page_claims_sha256'] == digest(page), 'REVIEW_INPUT_MISMATCH'
     assert review['semantic_acceptance'] is False and review['source_records_modified'] is False
     candidates = page['claims']+page['blocked_claims']
-    if review['version']=='source-semantic-review-v4':
+    if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5'):
         verify_purpose(review['pdf_page'],review['page_purpose_gate'])
     assert len(review['claims']) == len(candidates), 'REVIEW_COVERAGE_MISMATCH'
     for verdict in review['claims']:
         candidate = candidates[verdict['candidate_ordinal']]
         assert verdict['candidate_sha256'] == digest(candidate), 'CANDIDATE_HASH_MISMATCH'
         if verdict['eligible_for_synthesis']:
-            if review['version']=='source-semantic-review-v4':assert review['page_purpose_gate']['passed']
+            if review['version'] in ('source-semantic-review-v4','source-semantic-review-v5'):assert review['page_purpose_gate']['passed']
             assert verdict['source_gate']=='MATCH' and verdict['status']=='MACHINE_SUPPORTED_CANDIDATE'
             assert all(value=='PASS' for value in verdict['model_result']['checks'].values())
             assert all(spans[ref]['status']=='TEXT_AGREED' and spans[ref]['pdf_page']==review['pdf_page'] for ref in candidate['span_refs'])
             assert verdict['identity_gate'] in ('NOT_REQUIRED','SOURCE_VERIFIED')
             assert verdict['claim_id'] not in eligible, 'CLAIM_ID_COLLISION'
             carried=candidate['span_refs']
-            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3','source-semantic-review-v4'):
+            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5'):
                 carried=verdict['verified_support_span_refs']
                 assert set(candidate['span_refs'])<=set(carried)
                 assert set(verdict['model_result']['support_span_refs'])<=set(carried)
@@ -196,7 +196,7 @@ for row in api['semantic_reviews']:
                 cited=verdict['citation_review'];assert cited['passed'] is True
                 assert cited['source_sha256']==digest(regions)
                 assert all(v=='PASS' for v in cited['model_result']['checks'].values())
-                if review['version'] in ('source-semantic-review-v3','source-semantic-review-v4'):
+                if review['version'] in ('source-semantic-review-v3','source-semantic-review-v4','source-semantic-review-v5'):
                     views=cited['source_reading_segments'];view_refs=[ref for view in views for ref in view['span_refs']]
                     assert len(view_refs)==len(set(view_refs)) and set(view_refs)==set(carried)
                     for view in views:verify_reading_view(view,carried,review['pdf_page'])

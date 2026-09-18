@@ -235,3 +235,5 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 
 - Bu proje için ayrıca kalıcı bellek kayıtları `~/.claude/projects/.../memory/MEMORY.md` altında tutulur (semantic layer kararları, sertifikalama, kalite kapısı, vb.) — kod tabanından türetilemeyen proje bağlamı orada.
 - Bu dosya + `docs/GELISTIRME-GUNLUGU.md` çifti bir **talimat**tır, hook değildir: oturumdaki Claude'un CLAUDE.md'yi okuyup uygulamasına bağlıdır, zorlayıcı değildir. Gerçek zorlama istenirse `.claude/settings.json`'a bir hook eklenebilir (örn. commit sonrası günlük güncellendi mi kontrolü) — bu ayrı bir iş, henüz yapılmadı.
+
+- 18 Eylül Editör R4 hazırlığı: anlam denetimiV5 okunmamış bölge kimliğini modele atıf olarak sunmaz; mevcut ret kapıları korunur. Gerçek21/22/28 API/PG aday kontrolü geçti; R4 imajları hazır, R3 kabulü tamamlanmadan canlıya alınmadı. Kaynak/inceleme kararı elle değiştirilmedi. Ayrıntı `docs/editor/2026-09-18-source-analysis-v14.md`.

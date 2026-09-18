@@ -105,3 +105,17 @@ R3 qualifier yolu `/data/nanobaseai/editor-qualifications/v14-r3-20260918/97814b
 ### 18 Eylül 02:51 UTC — R3 ara doğrulama
 
 R3 `97814b6c` kaynak monitoründe43 sayfa geçti, hata listesi boş; iş sürüyor. Paket ve offline import geçti, dolu restore analizin tamamlanmasını bekliyor. Bu ara sonuç anlamsal kabul değildir. GPU soğuk kurulum doğrulayıcısına gerçek Docker healthcheck sonucunu da zorunlu tutan kontrol eklendi; HTTP200 tek başına paket healthcheck kabulü sayılmaz. Bu yeni kontrol henüz GPU üzerinde çalıştırılmadı; ana kitap koşusu sırasında ortak modeller durdurulmayacak.
+
+### R3 kaynak engellerinin bağımsız sayımı
+
+Ana R3 API kaynak kayıtları doğrudan PostgreSQL kayıtlarıyla birebir karşılaştırıldı:1149 bölge,262 inceleme;248 TEXT ve14 PAGE_LABEL_CANDIDATE. İnceleme nedenleri çakışabilir:227 ikinci okuyucu uyuşmazlığı/eksikliği,139 bölgesel okuma uyuşmazlığı,117 düşük skor,191 kullanılamayan/uyuşmayan PDF; yeniden okuma durumları67 DISAGREES,171 UNSTABLE,24 AGREES. Yeniden okumanın anlaşması bütün diğer kanıtların da geçtiği anlamına gelmez. Kanıt CPU `evidence/v14-r3-live-source-triage.json`; API/PG eşliği true, uygulama yazımı0.48 kaynak kontrolünün geçmesi bu262 bölgenin doğru okunması veya tam anlamsal kabul değildir.
+
+### R4 / anlam denetimi V5 aday düzeltmesi
+
+R3 gerçek21/22 sayfalarında model, UNVERIFIED_REGION yer tutucusunun kimliğini destek atfı olarak seçti; kaynak kapısı bunu reddetti.28. sayfada model özgün alıntının bazı kimliklerini destek listesinde atladı. Ham yanıtlar değiştirilmedi; tanı `evidence/v14-r3-invalid-semantic-schema-diagnosis.json`.
+
+Genel düzeltme: okunmamış bölgelerin kimliği modele `null`, `can_cite=false` gider; geometrik boşluk korunur. Yalnız doğrulanmış kimliklerin seçilebilirliği ve özgün alıntı kimliklerinin tam taşınması çıktı sözleşmesinde açıkça belirtilir. Mevcut kaynak, sözcük, olumsuzluk, atıf-altkümesi, ikinci anlam çağrısı ve kimlik kapıları gevşetilmedi. Kod sürümü `source-semantic-review-v5`, SHA256 `eeca3f2ccb5979ab36757a195dc5144050e33b498f23fde3ebe48a1293681f4a`.
+
+Gerçek R3 API/PG kayıtları ve canlı modellerle ayrı aday bileşen koşusu:21. sayfa0 aday/0 sentez (eksik kaynak ve olumsuzluk retleri korunur),22. sayfa1 aday/1 sentez,28. sayfa4 aday/4 sentez; üçünde geçersiz semantik şema hatası görülmedi. Uygulama yazımı0, kaynak/inceleme kararı değişmedi. Kanıtlar `evidence/v14-r3-semantic-v5-page-0021.json`, `0022.json`, `0028.json` ve `v14-r3-semantic-v5-probe.log`; aday dosyasının SHA256'sı ayrıca kayıtlıdır. Çağrı metriğindeki yayın manifesti mevcut R3 çalışma ortamıdır, aday kod hashinin yerine geçmez. Bu üç sayfa tam kitap/üretim kabulü değildir.
+
+R4 API/document imajları bağlı Linux sunucusunda ağsız derlendi ve içlerindeki modül baytları aynı hashle eşleşti: `evidence/v14-r4-build-proof.json`. Henüz canlıya alınmadı; R3 dolu restore/mobil kabulünün sürümü değiştirilmeden tamamlanması bekleniyor.
