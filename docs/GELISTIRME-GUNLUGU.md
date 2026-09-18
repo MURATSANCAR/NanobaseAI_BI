@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 04:01 UTC — R4 kaynak 48/48; seçili nesil triage düzeltmesi
+
+R4 kaynak kontrolleri 48/48, hata 0; kaynak sonrası kontroller sürüyor. Paket/import geçti, yeni neslin ayrı restore/mobil kabulü bekleniyor. Kaynak kalite tanılama betiği sabit eski koşu dosyası yerine `EDITOR_VERIFY_RUN_FILE` okur ve kullanılan dosyayı kanıta yazar. Gerçek R4 API/bağımsız PostgreSQL kontrolü geçti: 1.149 bölge, 887 anlaşma/262 inceleme; veri/karar yazımı 0. CPU kanıtı `evidence/source-quality-triage-20260918T040054080902Z.json`. Çalışan qualifier paketini değiştirmemek için güncellenmiş tanılama ayrı runtime dosyasında çalıştırıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 — R3 tam analiz ve kurulum doğrulaması başladı
 
 GPU ikinci cold-boot, aktif model isteği nedeniyle stop adımından önce güvenle durdu; model kesilmedi. Cache-v3 hash/import ve gerçek HF offline çözümleme PASS, tam cold-boot açık. R3 yeni iş49660185/nesil97814b6c gerçek API üzerinden başladı; monitor3140379 ve qualifier3140380 ayrı süreçler. Yeni paket üretimi geçti, kaynak/amaç/anlam/atıf ve ayrı restore/mobil zinciri çalışıyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
@@ -659,3 +663,7 @@ Gerçek boş-cache offline açılışta Qwen torch Inductor autotuning47,69GiB e
 ## 2026-09-18 — GPU paketinde CPUoffload ayarı kaybı
 
 Gerçek aynı-imaj karşılaştırması64,58/88,42GiB bellek farkını, paketleyicide eksik VLLM_PLE_CPU_OFFLOAD=1/NCCL ayarlarını gösterdi. Allowlist, runtime manifesti ve importer/runtime eşlik kontrolleri eklendi; runtime-env-v5 import PASS, eski paket yeni importer tarafından reddedildi. Yeni cold-boot başlatma isteğinde yönetimVPN kapandı; sonuç DOĞRULANAMADI. Doğrudan model tüneli çalışıyor. [Kanıt](editor/2026-09-18-gpu-cold-boot.md).
+
+## 2026-09-18 03:49UTC — Editör R4 tam kitap koşusu
+
+Yayımlanmış V5semantik modül gerçek21/22/28 sayfaAPI/PG kontrolünde atıf şema sorununu tekrarlamadı; kaynak yazımı0. Yeni ana nesil08ca6877, iş28aad122, ayrı monitor/qualifier başlatıldı. İlk11 kaynak kontrolü geçti. YönetimVPN kesik olsa da doğrudanGPU→CPU model tüneli çalışıyor; GPUsoncoldboot sonucu ayrı DOĞRULANAMADI. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
