@@ -97,3 +97,7 @@ Kesin yanlış isimli atama artık `ROLE_PERSON_TRANSFER_UNPROVEN` nedeniyle red
 ## Önceki aday aşaması — semantik V8 / rol V7 genişletilmiş regresyon
 
 İlk14pasaj6PASS/8inceleme verdi; ikinci yanlış fail aktarımı engellendi, fakat bir PASS iç yüklem atlandığı için güvenilir değildi. Genel iç-yüklem kapsamı ve raporlayan/içerik ayrımı, NAMEkişi kontrolü, modelinputtan karakterofsetlerini çıkarma kodlandı. Doğru dolaylı anlatım ve sahiplik öbeği yanlışretleri açık; yalnızretoranıyla kalite ilan edilmez. R5live korunuyor, V8/rolV7 yayımlanmadı. [Ayrıntı ve kanıtlar](2026-09-18-role-binding-v8-candidate.md).
+
+## Model çağırmayan birinci kişi–ad uyumu adayı
+
+PDF27 sınıfı hata için LLM'siz biçimbilim kapısı ayrı aday olarak ölçüldü: R5'in 91 ve R7'nin 100 gerçek iddiasında yalnız bu kesin yanlış iddia işaretlendi. Üretime bağlı değildir; sınırları ve kanıtlar: [kayıt](2026-09-18-person-agreement-candidate.md).

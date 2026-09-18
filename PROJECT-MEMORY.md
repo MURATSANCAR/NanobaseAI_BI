@@ -6,6 +6,10 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
+## 18 Eylül — birinci kişi–ad uyumu kapısı, aday
+
+`apps/editor/backend/editor/source_person_agreement.py`: model çağırmayan Türkçe biçimbilim kapısı. Kaynaktaki birinci kişi yüklemini, aynı konuşmanın içinde üçüncü kişi geçen ada bağlayan iddiayı NEEDS_REVIEW yapar; hiçbir iddiayı kanıtlamaz. Çözümleyici dışarıdan verilir (sondada zeyrek 0.1.3, MIT). Sunucuda ayrı ortam `/data/nanobaseai/editor/runtime/morph-probe`; sürücü `scripts/probe-person-agreement.py`. R5 91 + R7 100 gerçek iddiada yalnız bilinen PDF27 hatası işaretlendi. Üretime/imaja bağlı değil; görülmemiş veri ve başka kitap kabulü yok. [Kayıt](docs/editor/2026-09-18-person-agreement-candidate.md).
+
 ## Güncel Editör durumu — 18 Eylül 2026
 
 Tam sürüm, koşu, kod hashleri, kanıt dizini, kapanan hatalar ve açık plan: [güncel durum ve devir kaydı](docs/editor/2026-09-18-current-status-and-handoff.md). Son rol kanıtı 11:21:56 UTC / 14:21:56 Türkiye; bu belge güncellemesi yeni canlı ölçüm veya dağıtım değildir.
