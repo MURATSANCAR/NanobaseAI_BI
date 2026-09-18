@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 07:00 UTC — Paralel P5 kabulü ve genel analiz sıralama düzeltmesi
+
+R7 kaynak denetimi 48/48, başarısız 0; tam anlam/restore henüz sürüyor. İzole P5 etki API'si 134 bağlı kayıt, 164 ilişki ve snapshot sayfalama/ACL korumalarını geçti. Gerçek UI320/390/768/1440px, tembel GET, sıfır mutasyon ve değişmeyen kaynak hashleriyle geçti. Test etiket seçicisi hatası genel betikte düzeltildi, başarısız kanıt korundu. [UI kanıtı](editor/2026-09-18-source-impact-ui.md).
+
+Kaynak adayının yanlış etkinlik sınıfıyla balon diyaloğunu atladığı gerçek çıktı/orijinal render ile görüldü. V16 genel kaynak→amaç→iddia sırası, amaç hash referansı, rol çelişkisi/öykü dışı/unknown inceleme ledgerı ve çağrılar arası fencing kodlandı. Paralel statik incelemenin verifier/pilot/izin listesi bulguları giderildi; yeni purpose=false gerçek API/PG bileşenleri model çağrısız geçti. İki R1 imajı 50 dosya eşliğini geçti; parent-reuse v15 desteğinin sonraki düzeltmesi R2 derlemesi gerektirir. Yeni model pilotu aktif R7 bitince tek koşu olarak planlandı; kitabın cevabı veya karakter ismi elle verilmedi. [V16 kanıtı](editor/2026-09-18-source-analysis-v16.md).
+
+## 2026-09-18 06:36 UTC — R7 kaynaklı soru kabulü, yeni tam V15 koşusu
+
+V2 soru akışı iki gerçek soru/API/PG ve320/390/768/1440px kabulünü geçti. Yeni aktör etiketi hatası kapandı;53pasajın bağımsız API/PG/Qdrant exactvektör/hash kontrolü geçti. Yeni iş19893f4c/nesil382da5b3 uygulamada başladı; monitor635347/qualifier635348, gerçek kaynak aynı ve elle karar yok. Paket06:38:33UTCgeçti; tam nesil/restore bekleniyor. Kodmain6b2494c;27refte main dışında commit0; pushkimlikeksikliğiyle başarısız. [Kanıtlar](editor/2026-09-18-source-analysis-v15.md).
+
 ## 2026-09-18 — Kullanıcı talebi: kitaba özel geliştirme kesinlikle yasak
 
 Bütün Editör üretim kodu/prompt/config/UI/veri modeli/kurulumunun tüm kitaplarda geçerli genel yapı olması bağlayıcı kural olarak ana AGENTS, modül AGENTS, CLAUDE, README, proje belleği ve roadmap belgelerine yazıldı. Kitap/sayfa/karakter/hash/beklenen cevapla istisna ve istisnayı config veya veritabanına taşıma yasaklandı; gerçek regresyon örneği ile üretim kararı ayrıldı. Kod incelemesindeki hedefli taramada backend/frontend içinde mevcut kitabın adları/kimlikleriyle eşleşme bulunmadı; bu sınırlı statik tarama tüm kitaplarda canlı kabul değildir. Mevcut gerçek doğrulama çalışması sürüyor.
