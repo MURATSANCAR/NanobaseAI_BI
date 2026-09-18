@@ -100,7 +100,11 @@ for c in answer['claims']:
  claim={key:c.get(key) for key in ('text','actor','speaker','narrative_mode','polarity')}
  claim.update(kind='STATEMENT',span_refs=p['source_span_refs'],quote=p['text'])
  assert review['input_sha256']==digest({'claim':claim,'cited_source_regions':p['regions'],'source_reading_segments':review['source_reading_segments']})
- assert review['model_result']['checks']=={key:'PASS' for key in ('entailment','actor','speaker','polarity','narrative_mode')}
+ axes=('entailment','actor','speaker','polarity','narrative_mode')
+ if review.get('version')=='source-semantic-review-v6-cited-support':
+  axes+=('epistemic_strength',)
+  assert review.get('surface_reference_gate',{}).get('passed') is True
+ assert review['model_result']['checks']=={key:'PASS' for key in axes}
  assert review['model_result']['support_span_refs'] and set(review['model_result']['support_span_refs'])<=set(p['source_span_refs'])
  assert review['metrics']['finish_reason']=='stop' and c['relevance_review']['metrics']['finish_reason']=='stop'
  assert c['relevance_review']['model_result']['relevant'] is True and c['semantic_acceptance'] is False

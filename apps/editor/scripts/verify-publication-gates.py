@@ -4,11 +4,13 @@
 Only rejection paths are exercised; no content or editorial decisions are written.
 """
 import json
+import hashlib
 import os
 from pathlib import Path
 import subprocess
 import urllib.request
 import urllib.error
+import uuid
 from datetime import datetime, timezone
 
 root=Path(__file__).resolve().parents[1];os.chdir(root)
@@ -64,7 +66,10 @@ after=state()
 assert after['status']!='ACTIVE' and before['reviews']==after['reviews'] and before['questions']==after['questions']
 report={'generation_id':gen,'checked_at':datetime.now(timezone.utc).isoformat(),
     'api':base,'checks':checks,'database_before':before,'database_after':after,
-    'editorial_decisions_written':0,'question_jobs_created':0,'semantic_acceptance':False}
-with (root/'evidence'/('publication-gates-'+gen+'.json')).open('x') as stream:
+    'editorial_decisions_written':0,'question_jobs_created':0,'semantic_acceptance':False,
+    'verification_id':str(uuid.uuid4()),'verifier_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+path=root/'evidence'/('publication-gates-'+gen+'-'+report['verification_id']+'.json')
+report['evidence']=str(path)
+with path.open('x') as stream:
     json.dump(report,stream,ensure_ascii=False,indent=2)
 print(json.dumps(report,ensure_ascii=False,indent=2))

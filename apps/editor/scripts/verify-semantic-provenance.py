@@ -53,6 +53,8 @@ report={'generation_id':gen,'api':base,'api_pg_match':True,'application_writes':
     'claims_with_additional_support':sum(bool(c['support']-c['quoted']) for c in claims.values()),
     'citation_gaps':gaps,'source_support_coverage_passed':not gaps,
     'verifier_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
-path=root/'evidence'/('semantic-provenance-'+gen+'-'+report['verifier_sha256'][:12]+'.json')
+report['verification_id']=str(uuid.uuid4())
+path=root/'evidence'/('semantic-provenance-'+gen+'-'+report['verifier_sha256'][:12]+'-'+report['verification_id']+'.json')
+report['evidence']=str(path)
 with path.open('x') as stream:json.dump(report,stream,indent=2)
 print(json.dumps(report));sys.exit(1 if gaps else 0)

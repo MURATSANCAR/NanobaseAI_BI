@@ -98,46 +98,50 @@ def latest_reviews():
 
 
 def verify_word_closure(page_rows, refs):
-    """Independent geometric closure check, not the production reading-order helper.
+    """Independently reconstruct baseline order; never skip an intervening row.
 
-    Measure nearest lower overlapping text directly. Ambiguity is a failed
-    acceptance, never permission to invent a missing continuation.
+    A later overlapping line is not a word continuation merely because the
+    immediate next region fails the horizontal geometry threshold.
     """
-    selected = set(refs)
+    selected=set(refs);baselines=[]
+    for row in sorted(page_rows,key=lambda r:(r['data']['bbox'][1],r['data']['bbox'][0])):
+        x,y,w,h=row['data']['bbox'];matches=[]
+        for index,line in enumerate(baselines):
+            yy,hh=line['y'],line['h']
+            overlap=max(0,min(y+h,yy+hh)-max(y,yy))/min(h,hh)
+            distance=abs(y+h/2-yy-hh/2)
+            if overlap>=.5 and distance<=.6*max(h,hh):matches.append((distance,index))
+        if matches:baselines[min(matches)[1]]['rows'].append(row)
+        else:baselines.append({'y':y,'h':h,'rows':[row]})
+    ordered=[r for line in baselines for r in sorted(line['rows'],key=lambda r:r['data']['bbox'][0])]
     def agreed(row):
-        return row['data'].get('status') == 'TEXT_AGREED' and row['data'].get('role') == 'TEXT'
-    for left in page_rows:
-        a = left['data']; x,y,w,h = a['bbox']; text = a.get('text','').strip()
-        if re.search(r'\w-$', text):
-            continuations = []
-            for right in page_rows:
-                b = right['data']; xx,yy,ww,hh = b['bbox']
-                if (left['id'] != right['id'] and a['render_sha256'] == b['render_sha256']
-                        and yy >= y + .5*h and yy-(y+h) <= 2*max(h,hh)
-                        and max(0,min(x+w,xx+ww)-max(x,xx)) >= .5*min(w,ww)):
-                    continuations.append(right)
-            closest = []
-            if continuations:
-                nearest_y = min(row['data']['bbox'][1] for row in continuations)
-                closest = [row for row in continuations if abs(row['data']['bbox'][1]-nearest_y) < 1e-9]
-            involved = {left['id']} | {row['id'] for row in closest}
-            if selected & involved:
-                require(len(closest) == 1, 'Incomplete/ambiguous geometric hyphen continuation')
-                right = closest[0]
-                require(involved <= selected and agreed(left) and agreed(right)
-                        and re.match(r'^\s*\w', right['data'].get('text','')), 'Passage exposes a partial hyphenated word')
-        if len(text) == 1 and text.isalnum():
-            for right in page_rows:
-                b=right['data']; body=b.get('text','').lstrip(); xx,yy,ww,hh=b['bbox']
-                if (left['id'] == right['id'] or a['render_sha256'] != b['render_sha256']
-                        or not body or not body[0].islower()):
-                    continue
-                vertical_overlap=max(0,min(y+h,yy+hh)-max(y,yy))
-                if h>=1.4*hh and x<xx and -.5*w<=xx-(x+w)<=.15*hh and vertical_overlap>=.5*hh and y+h>yy+hh:
-                    pair={left['id'],right['id']}
-                    if selected & pair:
-                        require(pair<=selected and agreed(left) and agreed(right) and text.isalpha() and text.isupper(),
-                                'Passage exposes an incomplete separate initial glyph')
+        return row['data'].get('status')=='TEXT_AGREED' and row['data'].get('role')=='TEXT'
+    for index,left in enumerate(ordered):
+        a=left['data'];x,y,w,h=a['bbox'];text=a.get('text','').strip()
+        right=ordered[index+1] if index+1<len(ordered) else None
+        b=right['data'] if right else None
+        if re.search(r'\w-$',text):
+            required={left['id']};readable=False
+            if right:
+                xx,yy,ww,hh=b['bbox']
+                compatible=(a['pdf_page']==b['pdf_page'] and a['render_sha256']==b['render_sha256']
+                            and yy>=y+.5*h and yy-(y+h)<=2*max(h,hh)
+                            and max(0,min(x+w,xx+ww)-max(x,xx))>=.5*min(w,ww))
+                if compatible:
+                    required.add(right['id'])
+                    readable=agreed(left) and agreed(right) and bool(re.match(r'^\s*\w',b.get('text','')))
+            if selected&required:
+                require(readable and required<=selected,'Passage exposes a partial hyphenated word')
+        if right and len(text)==1 and text.isalnum():
+            body=b.get('text','').lstrip();xx,yy,ww,hh=b['bbox']
+            vertical_overlap=max(0,min(y+h,yy+hh)-max(y,yy))
+            if (a['pdf_page']==b['pdf_page'] and a['render_sha256']==b['render_sha256']
+                    and body and body[0].islower() and h>=1.4*hh and x<xx
+                    and -.5*w<=xx-(x+w)<=.15*hh and vertical_overlap>=.5*hh and y+h>yy+hh):
+                required={left['id'],right['id']}
+                if selected&required:
+                    require(required<=selected and agreed(left) and agreed(right) and text.isalpha() and text.isupper(),
+                            'Passage exposes an incomplete separate initial glyph')
 
 
 try:
@@ -202,7 +206,11 @@ try:
                 and review['source_regions'] == regions and review['support_span_refs'] == refs
                 and review['metrics']['finish_reason'] == 'stop', 'Citation support scope/hash incomplete')
         verdict = review['model_result']
-        require(verdict['checks'] == {key: 'PASS' for key in ('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode')}
+        axes=('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode')
+        if review.get('version')=='source-semantic-review-v6-cited-support':
+            axes+=('epistemic_strength',)
+            require(review.get('surface_reference_gate',{}).get('passed') is True, 'Missing named-reference gate')
+        require(verdict['checks'] == {key: 'PASS' for key in axes}
                 and verdict['reason'].strip() and verdict['support_span_refs']
                 and set(verdict['support_span_refs']) <= set(refs), 'Citation axes/references failed')
     for rid, row in passages.items():

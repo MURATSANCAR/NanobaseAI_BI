@@ -45,6 +45,7 @@ def build_passages(generation, records, decisions, manifest):
     from editor.book_store import identifier
     from editor.page_context import story_authority
     from editor.source_alignment import reading_order
+    from editor.semantic_acceptance import surface_reference_gate
     from editor.source_pipeline import quote_check, negation, quote_tokens, narrative_gate
     from editor.source_unit_claims import reading_segments, incomplete_word_refs
     from editor.text_attribution import extract, speaker_for_claim
@@ -146,6 +147,10 @@ def build_passages(generation, records, decisions, manifest):
                     and verdict.get('response_sha256') == digest(result)
                     and verdict.get('input_sha256') == digest(contextual_payload)
                     and verdict.get('metrics', {}).get('finish_reason') == 'stop', 'PREVIEW_SEMANTIC_AUTHORITY_INVALID')
+            current_reference_gate=surface_reference_gate(claim.get('text') or '',cited_payload['source_reading_segments'])
+            require(current_reference_gate.get('passed') is True
+                    and citation.get('surface_reference_gate') == current_reference_gate,
+                    'PREVIEW_NAMED_REFERENCE_AUTHORITY_INVALID')
             require(citation.get('passed') is True and citation.get('source_sha256') == digest(regions)
                     and citation.get('input_sha256') == digest(cited_payload)
                     and citation.get('source_regions') == regions and citation.get('support_span_refs') == refs

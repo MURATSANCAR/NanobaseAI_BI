@@ -1,0 +1,9 @@
+# Kaynak önizleme sözcük sınırı denetimi
+
+R7 tam neslin bağımsız önizleme denetimi `Passage exposes a partial hyphenated word` hatası verdi. Gerçek PG kayıtları incelendiğinde sorun doğrulayıcının komşuluk tanımındaydı: satır sonunda tire bulunan kaynağın hemen arkasındaki gerçek satır yatay örtüşme eşiğini karşılamayınca doğrulayıcı onu atlayıp sonraki bağımsız soru satırını devam kabul ediyordu. Üretim sözleşmesi yalnız geometrik okuma sırasındaki hemen sonraki bölgeyi inceler; uygun devam bulunamazsa öneki eksik kaynak olarak bırakır, daha sonraki satırlara atlamaz.
+
+`verify-source-preview.py` artık bağımsız olarak metin taban çizgilerini gruplayıp soldan sağa okuma sırasını kuruyor; üretim yardımcısını içe aktarmıyor. Tire ve ayrı büyük harf denetimi yalnız bu sıradaki bitişik bölgeyle yapılır. Eşleşmeyen gerçek tire öneki hâlâ reddedilir. Kaynak kaydı, alıntı, cevap veya insan kararı değiştirilmedi; modele çağrı yapılmadı.
+
+Gerçek başarısız kanıt: CPU `evidence/source-preview-20260918T082747212072Z.json`. Kök neden kaydı: `evidence/source-preview-hyphen-diagnostic.json`. İlgili nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`, pasaj `02123d25-150e-5db1-95f9-9f644d63abf5`, sayfa 30; kimlikler yalnız regresyon kanıtıdır, üretim istisnası değildir. Aynı gerçek API/PG/Qdrant ve aynı tamamlanmış iki soru işi ile yeniden denetim `evidence/source-preview-word-closure-rerun.log` dosyasına yazılır. Teknik sözleşme kabulü kitabın anlamsal kabulü değildir; ayrı bulunan kaynakta olmayan ad kullanımı sorunu bu denetimin kapsamını aşar.
+
+Yeniden denetim **PASS**: 100 pasaj, gerçek API/PG eşitliği, Qdrant tam payload/vector karşılaştırması ve aynı iki tamamlanmış soru işi doğrulandı. Son kanıt CPU `evidence/source-preview-20260918T083135488336Z.json`. Canlı üretim kodu değiştirilmeden yalnız bağımsız doğrulayıcının yanlış komşuluk seçimi düzeltildi; ilk FAIL kaydı korunuyor.
