@@ -395,8 +395,7 @@ def source_preview(generation:uuid.UUID):
         return source_preview_capability(db,scope(db,generation))
 
 
-@router.get('/generations/{generation}/records/{record_id}/impact')
-def record_impact(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:int=50,expected_snapshot_sha256:str|None=None):
+def record_impact_snapshot(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:int=50,expected_snapshot_sha256:str|None=None):
     if offset<0 or not 1<=limit<=100:
         raise HTTPException(400,'INVALID_PAGINATION')
     if offset>0 and expected_snapshot_sha256 is None:
@@ -419,11 +418,24 @@ def record_impact(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:in
         result=impact(generation,record_id,rows,reviews,g['manifest'],source['sha256'],offset,limit)
         if expected_snapshot_sha256 is not None and expected_snapshot_sha256.lower()!=result['snapshot_sha256']:
             raise HTTPException(409,'IMPACT_SNAPSHOT_CHANGED')
-        return result
+        return result,g,source
     except RuntimeError as error:
         if str(error) in ('IMPACT_SNAPSHOT_LIMIT_EXCEEDED','IMPACT_EDGE_LIMIT_EXCEEDED'):
             raise HTTPException(413,str(error)) from None
         raise
+
+
+@router.get('/generations/{generation}/records/{record_id}/impact')
+def record_impact(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:int=50,expected_snapshot_sha256:str|None=None):
+    result,_,_=record_impact_snapshot(generation,record_id,offset,limit,expected_snapshot_sha256)
+    return result
+
+
+@router.get('/generations/{generation}/records/{record_id}/reprocessing-plan')
+def record_reprocessing_plan(generation:uuid.UUID,record_id:uuid.UUID,expected_snapshot_sha256:str|None=None):
+    from editor.source_reprocessing import plan
+    result,g,source=record_impact_snapshot(generation,record_id,0,1,expected_snapshot_sha256)
+    return plan(g,source['sha256'],result)
 
 
 @router.get('/generations/{generation}/{kind}')

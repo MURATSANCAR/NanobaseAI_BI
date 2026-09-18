@@ -1,0 +1,15 @@
+# P5 salt okunur yeniden işleme planı — aday, DOĞRULANAMADI
+
+Yeni GET `/v1/generations/{generation}/records/{record_id}/reprocessing-plan?expected_snapshot_sha256=...` yalnız plan döndürür. Mevcut impact endpointinin ACL/aynı-nesil hedef kontrolü, REPEATABLE READ READ ONLY transaction, 8 saniye sorgu sınırı, kayıt/bayt/kenar bütçesi ve snapshot doğrulaması ortak `record_impact_snapshot` fonksiyonuna çıkarıldı. Impact yanıt sözleşmesi değişmez. Beklenen snapshot uyuşmazlığında aynı `409 IMPACT_SNAPSHOT_CHANGED`; hatalı hash400, kapsam dışı hedef404, bütçe413 korunur. İlk plan sorgusunda snapshot parametresi isteğe bağlıdır; plan kendi snapshot/hashini döndürür.
+
+`source_reprocessing.py` stratejisi her kitap için `FULL_GENERATION_FROM_ORIGINAL_SOURCE`. Eksik etki grafiği kısmi yeniden işlemeye veya eski ölçüm/sonuç kullanımına yetki vermez. Yanıt özgün source SHA, content_version, generation, hedef, impact snapshot, plan kod hash ve bütün plan gövdesini bağlayan plan SHA taşır. Bilinen etkilenen kayıt sayısı tam kapsam değildir. Kaynak/eski kayıt/eski review korunması zorunlu; reuse NOT_AUTHORIZED, ölçüm null, execution_available/job_created/accepted/semantic_acceptance false. Hiçbir yazma/model/job endpointi eklenmedi. Bu plan mevcut kaynaktaki hataların düzeleceğini vaat etmez.
+
+Yalnız AST sözdizimi kontrolü yapıldı; yerel test, uygulama importu, model veya yapay veri yok. Canlı R5 backend ve imaj dondurulmuş kaldı. Gerçek API/PG kabulü yapılmadığı için üretime hazır değildir.
+
+## İzole gerçek kabul talimatı
+
+R5 ana imajını değiştirmeden CPU üzerinde ayrı aday context oluşturun: tam R5 backend kopyası üstüne yalnız aday book_api/source_reprocessing, her dosya SHA manifesti. Kilitleri değiştirmeden ağsız imaj derleyin. Önceki P5 izole aday düzenindeki gibi loopback boş port, yalnız GET/HEAD proxy, PostgreSQL default_transaction_read_only, aynı gerçek kaynak deposu read-only; ana Compose/model servisine dokunmayın. Gerçek yetkili tokenı yalnız süreç içinde okuyun, kanıta yazmayın.
+
+Tamamlanmış gerçek nesil ve gerçek hedef env parametresi olsun; aktif yeni nesli kabul girdisi yapmayın. Bağımsız PostgreSQL sorgusuyla generation/content_version/source SHA ve hedef nesil üyeliğini karşılaştırın. Gerçek impact ve yeni plan aynı snapshotla okunmalı; plan target/snapshot/count değerleri eşleşmeli. Bağımsız canonical JSON SHA ile plan_sha256 kontrol edilmeli. Bütün kaynak/review kayıt hashleri önce/sonra eş olmalı. Erişim yetkisi olmayan gerçek kullanıcıyla ACL, aynı kitaptaki başka gerçek hedef/nesil kombinasyonuyla scope denetlenmeli; kitap metni veya inceleme kararı yazılmamalı. Eski gerçek snapshot kanıtı varsa409 tekrarına girdi olabilir; sırf409 üretmek için gerçek kaynak/review değiştirmeyin. Gerçek snapshot değişimi yoksa409 davranışını DOĞRULANAMADI bırakın. Koruma/ret eşikleri için yapay kayıt veya sentetik veri üretmeyin.
+
+Kanıtlar aday tam kaynak/imaj hashini, canlı R5'ten ayrı port/imajı, API yanıtını, bağımsız PG karşılaştırmasını ve korunmuş önce/sonra hashleri içermeli. Aday kabulü canlı R5 yayını veya yeniden işleme yürütücüsü kabulü sayılmaz. İş başlatma sonraki ayrı geliştirmedir.
