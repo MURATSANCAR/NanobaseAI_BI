@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Kullanıcı talebi: kitaba özel geliştirme kesinlikle yasak
+
+Bütün Editör üretim kodu/prompt/config/UI/veri modeli/kurulumunun tüm kitaplarda geçerli genel yapı olması bağlayıcı kural olarak ana AGENTS, modül AGENTS, CLAUDE, README, proje belleği ve roadmap belgelerine yazıldı. Kitap/sayfa/karakter/hash/beklenen cevapla istisna ve istisnayı config/DBye taşıma yasaklandı; gerçek regresyon örneği ile üretim kararı ayrıldı. Kod incelemesindeki hedefli taramada backend/frontend içinde mevcut kitabın adları/kimlikleriyle eşleşme bulunmadı; bu sınırlı statik tarama tüm kitaplarda canlı kabul değildir. Mevcut gerçek doğrulama çalışması sürüyor.
+
 ## 2026-09-18 — V15-r7: kaynak kimlik yetkisi, gerçek soru/mobil ve CPU sınırları
 
 R6 gerçek iki soru ve dört mobil genişlik geçti; ilk2iddia/PARTIAL, desteksiz doğum tarihi0iddia/INSUFFICIENT_EVIDENCE. Bağımsız içerik incelemesi actor konum/eyleyen hatası buldu; R7 kaynak pasajının aynı alan yetkisi dışındaki actor/speaker etiketlerini engeller, eski v1 cevapları güncel göstermez. R7 canlı49backend/10web ve altyapıPASS; yeni gerçekQAakışı çalışıyor. API/worker2CPU/1GiB yapılandırılabilir sınırlar gerçekkonteyner/izolasyonla doğrulandı.48sayfa/1466birim/162sözcükbağımlılığı salt-okunur kaynak kontrolü PASS. İki eski arama manifestini güncel sayan bağımsız verifier betiği kurulu kodhash seçimine düzeltildi; başarısızkanıtkorundu. [Detaylar](editor/2026-09-18-source-analysis-v15.md).

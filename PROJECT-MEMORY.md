@@ -1,5 +1,11 @@
 # NanobaseAI BI — Proje Belleği
 
+## Bağlayıcı kural — bütün kitaplar için genel yapı
+
+Kullanıcının18Eylül2026talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
+
+Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
+
 ## Güncel canlı sürüm — 18 Eylül, V15-r7
 
 Editör backend/document `source-analysis-v15-r7-20260918`, web `source-preview-v15-r2-20260918`;49 backend/10 web dosya eşliği ve gerçek API/PG altyapı kontrolü PASS. Backend tree `f4ed2a6e31949e03808e8372dd6d745bd4f019b1490558924cdc4bc2f264c638`. R5 soru koşusunda gerçek API500 bulundu; DB işlemi dışında kaynak kontrolüyle düzeltildi. Bölünmüş sözcük atıfları, boş cevap indeks hash'i ve cevap/kaynak inceleme ayrımı genel kodda düzeltildi. R6 iki gerçek soru ve dört genişlik teknik kabulü geçti; çıktının actor alanı bağımsız incelemede hata verdi. R7 cevap-v2 kaynak kimlik yetkisi sınırıyla canlı; yeni gerçek kabul sürüyor. API/worker varsayılanı yapılandırılabilir2CPU/1GiB, izolasyon gerçek kontrolde PASS. Kaynak bileşeni48/48sayfa1466birim/162sözcükbağımlılığı PASS. Yeni tam V15 kitap koşusu henüz başlamadı. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v15.md).
