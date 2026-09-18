@@ -650,3 +650,7 @@ Okunmamış kaynak kimliklerinin model tarafından atıf seçilmesi genel kodda 
 ## 2026-09-18 03:19UTC — Editör R3 kabulü ve R4 yayını
 
 R3 ayrı dolu yedek/restore, gerçekAPI/PG/atıf/yayın engeli ve dört genişlik mobil PASS; geçici hedef/ağ temizlendi. R4 V5atıf sözleşmesi canlı;47 backend/imaj eşliği ve28ACL PASS. GPUsoğuk açılış kontrolü çalışırken yeni kitap işi başlatılmadı.262 kaynak incelemesi ve anlamsal kabul açık; kaynak verisi elle değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
+
+## 2026-09-18 — Editör GPU ilk-kurulum OOM
+
+Gerçek boş-cache offline açılışta Qwen torch Inductor autotuning47,69GiB ek bellek istedi ve OOM verdi. Cache ref düzeltmesi çalıştı, ancak tamGPUkurulum kabulü başarısız. Aynı imaj/modelle `--enforce-eager` immutable paket adayı eklendi; canlı runner değiştirilmedi. Asıl servisler geri doğrulanmadan R4analizi başlamayacak. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
