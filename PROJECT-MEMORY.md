@@ -4,6 +4,8 @@
 
 Backend/document `source-analysis-v14-r1-20260918`, web R3.47 backend dosyasının imaj/check-out tree hash'i `888fb9ddfb4f7993737d642a701a1d65f359642053b0ac41f213bd4f6091f7ef`; gerçek API/PG altyapı ve28 ACL geçti. Yeni iş `af2264d8-6f77-4860-be29-a5294283e49b`, nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776` çalışıyor. R2'nin6 iddiasındaki ek OCR desteğinin4 sentez ifadesine eksik aktarılması düzeltildi: değişmez OCR birimi seçimi, yalnız taşınan kaynaklarla ikinci anlam kontrolü ve tam kaynak/hash aktarımı.19/28/38/16 gerçek bileşen pilotları geçti; yeni48 sayfa ve restore kabulü beklenir. Önceki R2 aşağıda tarihsel kanıttır, V14 kabulü değildir. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
 
+R2 adayı: ilk sayfa-amacı önerileri için genişletilmiş kaynak bağlamı, satır sonu ve ayrı büyük başlangıç harfi için izlenebilir okuma görünümü, eksik sözcük kapısı. Gerçek5/8/29 sorunları aday kodla tekrarlandı ve giderildi; ham OCR/inceleme kararları değişmedi. R2 yayını ve tam kabulü henüz yok; R1'in teknik48/48 sonucu anlamsal kabul sayılmaz.
+
 ## 18 Eylül — V13-r2 canlı kabul
 
 Canlı Qwen ortak GPU profili0.82 bellek payı,16 eşzamanlı slot,8192 batched-token ve chunked-prefill oldu. Eski0.90/64 profil gerçek Qwen+OCR yükünde CUDA OOM verdi; sağlık200 yanıltıcıydı. Yeni profilde iki gerçek Qwen görsel isteği+12 OCR isteği örtüşerek geçti; örneklenen boş bellek en az11.896MiB. R2 işi kayıtları korunarak API retry/attempt2 ile devam ediyor. Tam kapasite/uzun süreli yük ve kitaba anlamsal kabul açık. [Kod profili](apps/editor/gpu/compose.qwen-shared-gpu.yaml).
