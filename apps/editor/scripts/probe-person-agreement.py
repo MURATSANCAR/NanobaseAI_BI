@@ -61,6 +61,7 @@ summary = {
     'source_with_first_person_predicate': sum(bool(r['person']['source_first_person_predicates']) for r in results),
     'claims_reusing_such_predicate': sum(bool(r['person']['transfers']) for r in results),
     'needs_review': sum(r['person']['status'] == 'NEEDS_REVIEW' for r in results),
+    'not_applicable': sum(r['person']['status'] == 'NOT_APPLICABLE' for r in results),
     'tense_shift_claims': sum(bool(r['tense_shifts']) for r in results),
     'distinct_words': len(cache), 'unanalysed_words': len(unknown),
 }

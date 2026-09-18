@@ -11,13 +11,17 @@ only that positive signal.  It never proves a claim: third person singular is
 unmarked in Turkish, an ambiguous word is never counted, and a name that also
 occurs outside the utterance (a possible reporter) is left to the speaker gates.
 
+Speech is recognised from quotation marks only.  A dialogue dash gives a start but
+no end, and first-person narration has no marks at all; in both cases the gate
+returns NOT_APPLICABLE with the reason instead of staying silent.
+
 The analyzer is injected: ``analyze(word) -> [(lemma, pos, [morpheme ids])]``.
 No word list, name list or book specific rule is used.
 """
 import re
 import unicodedata
 
-VERSION = 'source-person-agreement-v2'
+VERSION = 'source-person-agreement-v3'
 FIRST_PERSONS = frozenset({'A1sg', 'A1pl'})
 SECOND_PERSONS = frozenset({'A2sg', 'A2pl'})
 PERSONS = FIRST_PERSONS | SECOND_PERSONS | {'A3sg', 'A3pl'}
@@ -32,6 +36,7 @@ PARTICIPLES = frozenset({'PastPart', 'FutPart'})
 COORDINATORS = frozenset({'ve', 'ile', 'veya'})
 SENTENCE_END = '.!?…'
 MAX_BARE_SUFFIX = 4
+DASH_LINE = re.compile(r'^[ \t]*[—–-][ \t]*(?=\S)', re.M)
 
 
 def lower(text):
@@ -85,7 +90,12 @@ def quoted(text):
             spans.append((0, index, True))
     if start is not None:
         spans.append((start, len(text), True))
-    return [span for span in spans if span[0] < span[1]]
+    # A dialogue dash opens speech, but nothing marks where the narrator resumes
+    # on that line ("— Geldim, dedi Ali."), so the span is never certain.
+    for match in DASH_LINE.finditer(text):
+        line_end = text.find('\n', match.end())
+        spans.append((match.end(), len(text) if line_end < 0 else line_end, False))
+    return sorted(span for span in spans if span[0] < span[1])
 
 
 def utterances(text):
@@ -105,16 +115,22 @@ def readings(word, analyze):
 
 
 def first_person_predicates(text, analyze):
-    """Words inside an utterance whose every reading is a verb-root finite first person."""
-    spans, found = utterances(text), []
+    """Finite first-person verb-root words, split into usable ones (inside a
+    certain utterance) and ones the gate cannot judge, with the reason."""
+    spans, usable, skipped = utterances(text), [], []
     for word in words(text):
-        span = next((s for s in spans if s[0] <= word['start'] < s[1]), None)
         parsed = readings(word, analyze)
-        if span and span[2] and parsed and all(r['verbal_root'] and r['person'] in FIRST_PERSONS for r in parsed):
-            found.append({'surface': word['surface'], 'start': word['start'], 'utterance': list(span[:2]),
-                          'lemmas': sorted({r['lemma'] for r in parsed}),
-                          'persons': sorted({r['person'] for r in parsed})})
-    return found
+        if not parsed or not all(r['verbal_root'] and r['person'] in FIRST_PERSONS for r in parsed):
+            continue
+        holders = [s for s in spans if s[0] <= word['start'] < s[1]]
+        found = {'surface': word['surface'], 'start': word['start'],
+                 'lemmas': sorted({r['lemma'] for r in parsed}), 'persons': sorted({r['person'] for r in parsed})}
+        if holders and all(s[2] for s in holders):
+            usable.append({**found, 'utterance': list(holders[0][:2])})
+        else:
+            skipped.append({**found, 'reason': 'UTTERANCE_BOUNDARY_UNCERTAIN' if holders
+                            else 'FIRST_PERSON_OUTSIDE_MARKED_SPEECH'})
+    return usable, skipped
 
 
 def same_name(source_word, stem):
@@ -165,9 +181,11 @@ def subject_names(claim, analyze):
 
 
 def review(source, claim, analyze):
-    predicates = first_person_predicates(source, analyze)
+    predicates, skipped = first_person_predicates(source, analyze)
     source_words, claim_words = words(source), words(claim)
     conflicts, transfers = [], []
+    unjudged = [p for p in skipped
+                if any(r['verbal_root'] and r['lemma'] in p['lemmas'] for w in claim_words for r in readings(w, analyze))]
     for predicate in predicates:
         lemmas = set(predicate['lemmas'])
         reused = [w for w in claim_words
@@ -188,10 +206,15 @@ def review(source, claim, analyze):
                                   'source_mentions_outside_utterance': 0})
     if conflicts:
         status, reason = 'NEEDS_REVIEW', 'FIRST_PERSON_PREDICATE_ASSIGNED_TO_NAME_INSIDE_SAME_UTTERANCE'
+    elif unjudged:
+        # The claim reuses a first-person predicate whose speech boundary is unknown
+        # (dialogue dash, first-person narration).  The gate says so instead of passing silently.
+        status, reason = 'NOT_APPLICABLE', unjudged[0]['reason']
     else:
         status, reason = 'NO_SIGNAL', 'NO_FIRST_PERSON_NAME_CONFLICT'
     return {'version': VERSION, 'status': status, 'reason': reason, 'conflicts': conflicts,
-            'source_first_person_predicates': predicates, 'transfers': transfers, 'proves_claim': False}
+            'source_first_person_predicates': predicates, 'not_applicable': unjudged,
+            'transfers': transfers, 'proves_claim': False}
 
 
 def tense_shifts(source, claim, analyze):

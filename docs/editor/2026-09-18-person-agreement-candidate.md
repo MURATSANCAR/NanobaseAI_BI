@@ -40,3 +40,7 @@ Ara sürümlerin yanlış işaretleri korunur ve her biri genel bir kural düzel
 - Yakalamadığı sınıflar: ad yerine ortak ad öznesi ("robot"), adın hem içeride hem dışarıda geçtiği durumlar, ikinci kişi, konum/sahiplik eklemesi, örnek listenin tam liste sunulması, zamir eşgönderimi.
 - R7 ham kaynağında satır sonu tireleri birleşmemiş olduğu için 46 parça çözümlenemedi; üretimde `reading_view` metni kullanılmalı.
 - Üretim entegrasyonu, imaj bağımlılığı (zeyrek/Zemberek) ve offline paket yapılmadı. `semantic_acceptance=false`.
+
+## v3 — konuşma çizgisi ve açık uygulanamadı raporu
+
+Diğer iki gerçek kitap diyaloğu konuşma çizgisiyle veriyor; kapı orada sessizce devre dışı kalıyordu. v3 bu durumda `NOT_APPLICABLE` ve nedenini döndürür. Ölçüm ve sınırlar: [genellik ölçümleri](2026-09-18-generality-measurements.md).

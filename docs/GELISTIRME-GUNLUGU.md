@@ -1,5 +1,8 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 13:20 UTC — Editör: genellik ölçümleri ve doğrulama seti
+
+Diakritik itiraz kuralı kodlandı (`source_diacritic_witness.py`, aday): 328 gerçek inceleme bölgesinin 32'sinde tek okuyucunun itirazı, iki bağımsız okuyucunun anlaştığı metne karşı yalnız diakritikte ayrışan geçersiz bir sözcük; metin düzeltmesi 0. Üç gerçek kitabın sayfa metninde konuşma işaretlemesi ölçüldü: ölçüm kitabı yalnız tırnak kullanıyor, diğer ikisi konuşma çizgisi (86 ve 36 satır) ve birinci kişi yüklemlerin çoğu işaretli konuşma dışında. **Neden:** kişi eki kapısı bu kitaplarda sessizce devre dışı kalırdı; v3 artık `NOT_APPLICABLE` ve nedenini döndürüyor, R5/R7 sonucu değişmedi. Yakalama oranını ölçebilmek için üretimden ayrı, kapı sonucu içermeyen 164 satırlık etiketleme dosyası üretildi; etiketleme bekliyor. Hiçbiri üretime bağlı değil. [Ölçümler](editor/2026-09-18-generality-measurements.md).
 ## 2026-09-18 17:30 UTC — Tam kapı, model yolu Mac'ten bağımsız, tek kelimelik eşleme kaynağı seçemez
 
 - **Model yolu:** Mac'teki TT VPN gün içinde ikinci kez kesildi (15:43 yerel; terminal kapatılmış), iki koşu 502'de asılı kaldı. Köprü kullanıcı kararıyla Mac'siz GPU tüneline alındı: `/etc/nanobase/semantic-bridge.env` satır 63 `OPENAI_API_BASE` ve satır 66 `SEMANTIC_SELECTOR_BASE` `127.0.0.1:18881` → `127.0.0.1:18885` (Editörün `editor-gpu-tunnel` hattı, aynı `qwen3.8-flash-next`). Geri almak: iki satırı 18881 yapıp köprüyü yeniden başlatmak. Gece koşuları artık Mac'e bağlı değil.
