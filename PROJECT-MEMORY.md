@@ -6,15 +6,17 @@ Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi b
 
 Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
-## Güncel canlı sürüm — 18 Eylül, V15-r7
+## Güncel canlı sürüm — 18 Eylül, V15-r7 tamamlandı
 
-Editör backend/document `source-analysis-v15-r7-20260918`, web `source-preview-v15-r2-20260918`;49 backend/10 web dosya eşliği ve gerçek API/PG altyapı kontrolü PASS. Backend tree `f4ed2a6e31949e03808e8372dd6d745bd4f019b1490558924cdc4bc2f264c638`. R5 soru koşusunda gerçek API500 bulundu; DB işlemi dışında kaynak kontrolüyle düzeltildi. Bölünmüş sözcük atıfları, boş cevap indeks hash'i ve cevap/kaynak inceleme ayrımı genel kodda düzeltildi. R6 iki gerçek soru ve dört genişlik teknik kabulü geçti; çıktının actor alanı bağımsız incelemede hata verdi. R7 cevap-v2 kaynak kimlik yetkisi sınırıyla canlı; yeni gerçek kabul sürüyor. API/worker varsayılanı yapılandırılabilir2CPU/1GiB, izolasyon gerçek kontrolde PASS. Kaynak bileşeni48/48sayfa1466birim/162sözcükbağımlılığı PASS. R7 v2 iki gerçek soru/mobil ve53pasaj API/PG/Qdrant kabulü PASS. Yeni tam V15 iş19893f4c/nesil382da5b3 çalışıyor; tamamlanma/restore/anlamsal kabul henüz yok. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v15.md).
+Backend/document `source-analysis-v15-r7-20260918`, web `source-preview-v15-r2-20260918`; backend tree SHA256 `f4ed2a6e31949e03808e8372dd6d745bd4f019b1490558924cdc4bc2f264c638`. Nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`, iş `19893f4c-e43c-4b99-9680-f9647be12c1d` tamamlandı: 48 sayfa, 1149 kaynak bölgesi, 1494 kaynak birimi, 77 inceleme birimi, sıfır işlenmemiş/kısmi grup; 100 sınırlı uygun iddia. API/PG, kaynak/türetilmiş bütünlük ve yayın kapıları geçti; anlamsal kabul false. Yeni neslin iki gerçek sorusu, dört genişlikte mobil ve 100 pasajın bağımsız API/PG/Qdrant kontrolü geçti. [V15 kanıtları](docs/editor/2026-09-18-source-analysis-v15.md).
 
-## Paralel ilerleme — 18 Eylül 07:00 UTC
+Qualifier ilk denemede mevcut ağlarla çakıştı; Docker IPAM envanterinden çakışmayan çift seçen genel kod eklendi. İkinci denemede sabit kanıt adının yeniden koşuyu engellemesi UUID tabanlı kanıt dosyalarıyla düzeltildi. Backup, ayrı restore, dolu indeks ve geri yüklenmiş API/PG/Qdrant geçti; son mobil/temizlik de 08:43:33 UTC’de geçti; geçici servisler durduruldu, proxy/UFW kaldırıldı, cleanup_errors boş.
 
-R7 kaynak kontrolü 48/48, başarısız sayfa 0; bağlam/kimlik/anlam ve qualifier sürüyor. P5 etki API'si ayrı gerçek API18836/PG ile 134 bağlı kayıt, 164 ilişki ve üç sayfalı snapshot kabulünü geçti. Web18837 dört genişlikte taşmasız, sıfır yazım ve kaynak-inceleme hash eşliğiyle geçti. Bu aday kabulüdür, ana web değişmedi. [P5 kanıtı](docs/editor/2026-09-18-source-impact-ui.md).
+## Paralel V16 ve P5 adayları
 
-Genel sıra hatası bulundu: aday çıkarma, komşu kaynak bağlamından önce yanlış etkinlik sınıfıyla balon diyaloğunu atlayabiliyordu. V16 adayı kaynak→amaç→iddia sırasını, amaç hash bağını ve güvenli engelleme ledgerını uygular. Gerçek öykü dışı/boş metin bileşenleri model çağırmadan geçti; tek diyalog/model pilotu R7 bitişine bağlıdır. V16 henüz canlı değil; R1 imaj derlemesi geçti, sonraki parent-reuse izin listesi düzeltmesi R2 derlemesi gerektirir. Kitap verisi değişmedi. [V16 kod/kanıt](docs/editor/2026-09-18-source-analysis-v16.md).
+P5 salt okunur etki API18836 ve web18837; 134 bağlı kayıt, 164 ilişki, üç sayfalı snapshot/ACL ve dört genişlik kabulü geçti. Ana web değişmedi. [P5 kanıtı](docs/editor/2026-09-18-source-impact-ui.md).
+
+V16 genel kaynak→amaç→iddia sırası ve bölünmez balon kaynak birimi kodlandı. Gerçek üç satırlı balon pilotu ve değiştirilmemiş adayın anonim söz edimi denetimi geçti; karakter kimliği hâlâ belirsiz. 100 R7 iddiasının içerik incelemesinde beş kanıtsız isim eklemesi yeni genel kapıyla engellendi. Belirsizlik/zaman aktarımı için yeni epistemic_strength ekseni gerçek bileşen kabulünde; konum/sahiplik ve tam kitap anlamı açık. Son kaynak değişiklikleri nedeniyle eski V16-r1/r2 imajları yayın adayı değildir; yeni derleme/yeni tam nesil gerekir. Kitap verisi veya insan kararı değiştirilmedi. [V16](docs/editor/2026-09-18-source-analysis-v16.md), [içerik incelemesi](docs/editor/2026-09-18-semantic-source-audit.md).
 
 ## Önceki yayın — 18 Eylül 06:10 UTC
 
