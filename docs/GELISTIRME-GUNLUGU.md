@@ -654,3 +654,7 @@ R3 ayrı dolu yedek/restore, gerçekAPI/PG/atıf/yayın engeli ve dört genişli
 ## 2026-09-18 — Editör GPU ilk-kurulum OOM
 
 Gerçek boş-cache offline açılışta Qwen torch Inductor autotuning47,69GiB ek bellek istedi ve OOM verdi. Cache ref düzeltmesi çalıştı, ancak tamGPUkurulum kabulü başarısız. Aynı imaj/modelle `--enforce-eager` immutable paket adayı eklendi; canlı runner değiştirilmedi. Asıl servisler geri doğrulanmadan R4analizi başlamayacak. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
+
+## 2026-09-18 — GPU paketinde CPUoffload ayarı kaybı
+
+Gerçek aynı-imaj karşılaştırması64,58/88,42GiB bellek farkını, paketleyicide eksik VLLM_PLE_CPU_OFFLOAD=1/NCCL ayarlarını gösterdi. Allowlist, runtime manifesti ve importer/runtime eşlik kontrolleri eklendi; runtime-env-v5 import PASS, eski paket yeni importer tarafından reddedildi. Yeni cold-boot başlatma isteğinde yönetimVPN kapandı; sonuç DOĞRULANAMADI. Doğrudan model tüneli çalışıyor. [Kanıt](editor/2026-09-18-gpu-cold-boot.md).

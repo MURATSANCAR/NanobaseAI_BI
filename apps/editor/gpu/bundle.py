@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import time
+from runner_environment import capture_environment
 
 p=argparse.ArgumentParser()
 p.add_argument('destination')
@@ -24,6 +25,8 @@ containers=json.loads(subprocess.check_output(['docker','inspect',*names]))
 roles=dict(zip(('qwen','ocr','gateway'),containers))
 images={role:row['Image'] for role,row in roles.items()}
 image_rows=json.loads(subprocess.check_output(['docker','image','inspect',*sorted(set(images.values()))]))
+image_by_id={row['Id']:row for row in image_rows}
+runtime_environment={role:capture_environment(roles[role],image_by_id[images[role]]) for role in ('qwen','ocr')}
 models={};required_bytes=sum(row['Size'] for row in image_rows)
 for role in ('qwen','ocr'):
     command=roles[role]['Config']['Cmd']
@@ -44,6 +47,7 @@ destination.mkdir()
 manifest={'kind':'editor-gpu-offline','created_at':time.time(),'files':{},'models':{},
           'images':{},'qualification':'EXPORTED_CACHE_AND_RUNNER_IDENTITIES_NOT_FRESH_GPU_INSTALL_ACCEPTANCE',
           'secrets_included':False,'model_services_restarted':False}
+manifest['runtime_environment']=runtime_environment
 def copy_file(source,target):
     target.parent.mkdir(parents=True,exist_ok=True)
     before=source.stat();digest=hashlib.sha256()
@@ -77,7 +81,7 @@ for role in ('qwen','ocr'):
     services[role]={'image':tags[role],'pull_policy':'never','restart':'unless-stopped' if role=='qwen' else 'no',
         'container_name':'${COMPOSE_PROJECT_NAME:-editor-gpu}-'+role,
         'command':command,'ipc':host['IpcMode'],
-        'environment':{'HF_HUB_OFFLINE':'1','HF_HUB_DISABLE_TELEMETRY':'1','HF_MODULES_CACHE':'/tmp/hf-modules'},
+        'environment':runtime_environment[role],
         'volumes':['./hf-cache:/root/.cache/huggingface:ro',role+'_vllm_cache:/root/.cache/vllm'],
         'deploy':{'resources':{'reservations':{'devices':[{'driver':'nvidia','device_ids':gpu[0]['DeviceIDs'],'capabilities':['gpu']}]}}}}
     if host.get('CapAdd'):services[role]['cap_add']=host['CapAdd']
@@ -96,6 +100,7 @@ compose={'name':'${COMPOSE_PROJECT_NAME:-editor-gpu}','services':services,'volum
 write('compose.yaml',json.dumps(compose,indent=2)+'\n')
 write('.env.example','COMPOSE_PROJECT_NAME=editor-gpu\nGPU_BIND_ADDRESS=127.0.0.1\nQWEN_PORT=8001\nOCR_PORT=8010\nOCR_IDLE_SECONDS=600\n')
 copy_file(Path(__file__).with_name('import-bundle.py'),destination/'import-bundle.py')
+copy_file(Path(__file__).with_name('runner_environment.py'),destination/'runner_environment.py')
 copy_file(Path(__file__).with_name('INSTALL.md'),destination/'INSTALL.md')
 print(json.dumps({'stage':'docker_image_export','images':len(set(tags.values()))}),flush=True)
 subprocess.run(['docker','image','save','-o',str(destination/'images.tar'),*sorted(set(tags.values()))],check=True)

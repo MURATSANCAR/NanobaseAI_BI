@@ -102,6 +102,10 @@ try:
     report['docker_version']=command(['docker','version','--format','{{.Server.Version}}'])
     manifest=json.loads((bundle/'gpu-release-manifest.json').read_text())
     assert manifest['kind']=='editor-gpu-offline'
+    configured=json.loads((bundle/'compose.yaml').read_text())
+    assert set(manifest.get('runtime_environment',{}))=={'qwen','ocr'},'RUNNER_ENVIRONMENT_MANIFEST_REQUIRED'
+    for role,expected in manifest['runtime_environment'].items():
+        assert configured['services'][role]['environment']==expected,'RUNNER_ENVIRONMENT_MANIFEST_MISMATCH:'+role
     for name,wanted in manifest['files'].items():
         path=(bundle/name).resolve();assert path.is_relative_to(bundle)
         with path.open('rb') as stream:assert hashlib.file_digest(stream,'sha256').hexdigest()==wanted,'PACKAGE_HASH_MISMATCH:'+name
@@ -163,13 +167,17 @@ try:
     for role in ('qwen','ocr'):
         name=project+'-'+role;container=json.loads(command(['docker','inspect',name]))[0]
         assert container['Image']==manifest['images'][role]['id']
+        actual_env=dict(value.split('=',1) for value in container['Config']['Env'] if '=' in value)
+        expected_env=manifest['runtime_environment'][role]
+        assert all(actual_env.get(key)==value for key,value in expected_env.items()),'RUNTIME_ENVIRONMENT_MISMATCH:'+role
         model_mount=next(m for m in container['Mounts'] if m['Destination']=='/root/.cache/huggingface')
         assert Path(model_mount['Source']).resolve()==(bundle/'hf-cache').resolve() and model_mount['RW'] is False
         networks=list(container['NetworkSettings']['Networks']);assert len(networks)==1
         assert json.loads(command(['docker','network','inspect',networks[0]]))[0]['Internal'] is True
         probe="import os,socket,json; assert os.environ.get('HF_HUB_OFFLINE')=='1'; s=socket.socket();s.settimeout(2);blocked=s.connect_ex(('1.1.1.1',443))!=0;print(json.dumps({'external_tcp_blocked':blocked}));assert blocked"
         blocked=json.loads(command(['docker','exec',name,'python3','-c',probe]))
-        checks.append({'role':role,'image':container['Image'],'packaged_model_mount_read_only':True,**blocked})
+        checks.append({'role':role,'image':container['Image'],'packaged_model_mount_read_only':True,
+                       'runtime_environment':expected_env,**blocked})
     mark('OFFLINE_RUNTIME_BOUNDARIES',checks=checks)
     shared('cold-shared-inference','http://127.0.0.1:18001','http://127.0.0.1:18010',project+'-qwen',project+'-ocr')
     report['offline_boot_and_real_inference_passed']=True

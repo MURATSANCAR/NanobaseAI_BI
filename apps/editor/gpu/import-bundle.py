@@ -5,10 +5,16 @@ import json
 from pathlib import Path
 import subprocess
 import sys
+from runner_environment import validate_environment
 
 root=Path(sys.argv[1]).resolve()
 manifest=json.loads((root/'gpu-release-manifest.json').read_text())
 assert manifest['kind']=='editor-gpu-offline'
+compose=json.loads((root/'compose.yaml').read_text())
+assert set(manifest.get('runtime_environment',{}))=={'qwen','ocr'},'RUNNER_ENVIRONMENT_MANIFEST_REQUIRED'
+for role,environment in manifest['runtime_environment'].items():
+    validate_environment(environment)
+    assert compose['services'][role]['environment']==environment,'RUNNER_ENVIRONMENT_MANIFEST_MISMATCH:'+role
 for name,wanted in manifest['files'].items():
     path=(root/name).resolve();assert path.is_relative_to(root),'PACKAGE_PATH_ESCAPE'
     with path.open('rb') as stream:actual=hashlib.file_digest(stream,'sha256').hexdigest()
@@ -35,5 +41,6 @@ for role,model in manifest['models'].items():
 subprocess.run(['docker','compose','-f',str(root/'compose.yaml'),'config','--quiet'],cwd=root,check=True)
 print(json.dumps({'gpu_package_hashes_match':True,'images':len(manifest['images']),
                   'images_loaded':images_loaded,
+                  'runtime_environment':manifest['runtime_environment'],
                   'models':manifest['models'],'offline_cache_resolution':resolutions,
                   'model_servers_started':False,'fresh_gpu_install_verified':False}))
