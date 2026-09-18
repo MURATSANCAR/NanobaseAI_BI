@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 00:30 (yerel) — 1000 soruluk setin ilk canlı koşusu ve denetimi
+
+`set1000.jsonl` nanobase-direct köprüsünde 25 paralelle soruldu (`~/testset/run1000-0918.jsonl`, koşturucu `~/testset/run_set1000.py` — `run_testset.py`'nin tam SQL, ilk 8 satır ve uyarıları da kaydeden kopyası; systemd `timas-set1000`). Model yuvası 8 olduğundan soru başına ortalama 203 sn. Cevap dönen 359 sorunun SQL'i ve ilk satırları denetçilerle tek tek okundu (veritabanında yeniden sorgu koşulmadı). Karne: `tests/text2sql/set1000-karne-0918.jsonl`, sayfa https://claude.ai/artifact/RxX3Yvv5Q6SJyXdk2fNPV2.
+
+- **Sonuç:** 116 DOĞRU, 78 KISMEN, 99 YANLIŞ, 66 BOŞ-ŞÜPHELİ, 575 RET, 14 netleştirme, 31 SQL hatası, 21 zaman aşımı. Doğru: Logo 69/424, CRM 41/315, iki kaynaklı 6/261.
+- **Kök nedenler (etki sırasıyla):** 377 ret katalogda olmayan temel iş terimi (tahsilat, açık alacak, vade, döviz, il, çeyrek, ziyaret, kargo, yazar, telif); yanlış cevaplarda alış/satış TRCODE karışması, adet yerine tutar, "kitap" listesinde hammadde/kafe ürünü, TOP/GROUP BY eksik, çelişkili WHERE; 66 boş sonucun çoğu "bugün/bu ay" — Logo 2026 verisi 17.08'de bitiyor, cevap bunu söylemiyor; 58 ret soruda "Logo"/"CRM" adı geçtiği için, 34 ret sıradan kelime ("itibarıyla", "lira", "den") yüzünden; 3 iki kaynaklı soruda plan devreye girmedi.
+- **Doğrulanmamış:** 4 soruda `/tmp/semantic-results-*` geçici dosyası bulunamadı; köprü koşu sırasında yeniden başlamadı, eşzamanlı istekte dizin temizliğinden şüpheleniliyor.
+- Kod/katalog değişikliği yok; bu yalnız ölçüm. Okunan kaynak ölçüsü görünümleri (AA_*, MIND_*) tanımadığı için gürültülü.
 ## 2026-09-18 21:20 UTC — Editör: konuşma çizgisinde konuşma sonu kuralları
 
 Kişi eki kapısı v4: çizgili satır içindeki devrik aktarma cümlesi ("…, dedi Kirpicik.") ve ardışık çizgili satır kuralı kodlandı. Gerçek iki kitapta 123 konuşma parçasının yalnız 15'i kesinleşti. **Neden önemli:** sayfa metni satır sarmasını paragraf sonundan ayıramıyor; çözüm satır geometrisinde. R5/R7 sonucu değişmedi, üretime bağlı değil. [Ölçüm](editor/2026-09-18-generality-measurements.md).
