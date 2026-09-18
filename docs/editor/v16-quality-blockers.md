@@ -45,3 +45,19 @@ CPU kökü `/data/nanobaseai/editor/evidence/`:
 - `v16-r5-page-ledger-monitor.json`: önceki 48/48 teknik kaynak/amaç sırası API/PG kabulü; anlamsal kabul değildir.
 
 Bu not veri düzeltmesi, backend değişikliği veya yeni ana koşu içermez. Kitap/sayfa/karakter örnekleri yalnız başarısız gerçek regresyon kanıtıdır; üretim kurallarına özel durum olarak taşınamaz.
+
+## Aday ilişki bileşeni — üretime bağlı değil
+
+`apps/editor/backend/editor/source_role_bindings.py`, `source-role-bindings-v1`: `review(claim, regions, model)` standart kütüphane ile çalışır. Kaynak grafı iddia görmeden, iddia grafı kaynak görmeden ayrı çağrılarda çıkarılır; üçüncü çağrı yalnız mevcut cümlecik kimliklerini eşler. En fazla üç model çağrısı/iddia; bozuk şema erken durur. SOURCE/CLAIM literal token konumları ve hashleri runtime üretilir; bütün tokenların sıralı/ayrık cümlecik kapsamı zorunludur. Ham üç çıktı, çağrı metrikleri ve input hashleri korunur. `validate_alignment` aynı artefakt üzerinde modelsiz tekrar kullanılabilir.
+
+İlk sürüm coreference yetkisi üretmez: kişi değişimi, zamir/örtük özne → ad aktarımı ve ortak iddia öznesinin farklı kaynak mention kimliklerine bağlanması reddedilir. Literal özne eşliği konservatiftir: çekim/parafraz ve doğrudan konuşmadan raporlanan söze kapsam dönüşümü doğrulanamazsa UNKNOWN/NEEDS_REVIEW kalır. Bilinen adları dışarıdan girmez. Scope ilk sürümde kategori düzeyindedir; ayrı konuşma örneklerinin tam iç içe kapsam ispatı yoktur.
+
+Bu kapı doğru kaynak grafı varsayımı altında bazı ilişki transferlerini deterministik reddeder; modelin yanlış kaynak dilbilgisi çıkarmasını, atladığı yüklemi, nesne/sahiplik/konum ilişkisini veya genel anlam doğruluğunu tek başına garanti etmez. Yapısal PASS semantic acceptance değildir. Üretim entegrasyonu/deploy yapılmadı. Yalnız AST okuması yapıldı; yerel test/model çağrısı yok. Gerçek başarısız/olumlu kayıt bileşen kabulünü root yürütecek.
+
+Aday v1 son statik daraltma: açık ben/biz/sen/siz (ve I/we/you) tokenları mention listesinde bulunmak ve PRONOUN/doğru kişi olarak işaretlenmek zorunda; NAME diye yeniden etiketlenemez. Türkçe adlarda yalnız sınırlı apostrof durum ekleri normalize edilir; alias/aile hitabı eşlemesi yapılmaz. `complete:false` ve `predicate_coverage_proven:false` her sonuçta korunur: token kapsamı yüklem kapsamı garantisi değildir.
+
+### V1 gerçek probe ve v2 şema düzeltmesi
+
+`source-role-bindings-probe-20260918T104003728832Z.json` gerçek yedi kayıtta bir yapısal PASS/altı ret üretti. Kritik PDF27 iddiası INVALID_CLAIM_ROLE_GRAPH ile reddedildi: bu, özne ilişkisinin başarıyla yakalandığı kanıtı değildir. Yüklemsiz parçanın UNKNOWN sentinel öznesi ve iç içe cümleciklerin kesintili token sırası gereksiz format retlerine neden oldu.
+
+Aday v2 UNKNOWN subject sentinel'ini açık destekler; hizalanan yüklem UNKNOWN özneye sahipse hâlâ ROLE_SUBJECT_UNRESOLVED döner. Token kapsamı artık sıralı flatten yerine tam/ayrık birleşimle denetlenir; her clause içi token sırası korunur. Yüklemsiz UNKNOWN parça tek başına diğer yüklemleri geçersiz yapmaz. Üçüncü kişi NOMINAL/PRONOUN kategorileri yalnız aynı boş olmayan literal yüzeyde eşleşebilir; bu referent kimliği veya NAME aktarımı kabulü değildir. Açık kişi zamiri, kaynak literal, ortak özne ve kapsam kapıları korunur. V2 yalnız AST ile incelendi; gerçek kabul henüz yok, üretime bağlı değil.

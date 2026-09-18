@@ -100,7 +100,8 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
     await page.getByRole('heading',{name:'Metin okumaları uyuşuyor',exact:true}).or(page.getByRole('heading',{name:'İnceleme gerekiyor',exact:true})).waitFor({timeout:30000});
     const spansResponse=await context.request.get(base+'/v1/generations/'+generation+'/source_spans?pdf_page='+sourcePage+'&limit=100',{headers:{Authorization:'Bearer '+token}});
     const spans=await spansResponse.json();if(!spans.items?.length)throw new Error('Real page spans missing');
-    const details=page.locator('.source-notes details').first();await details.locator('summary').click();
+    const details=page.locator('.source-notes details[data-span-id="'+spans.items[0].id+'"]');
+    await details.waitFor({state:'visible',timeout:30000});await details.locator('summary').click();
     if(!(await details.textContent()).includes(spans.items[0].data.text))throw new Error('UI span differs from API');
     if(process.env.EDITOR_VERIFY_VISUAL_COVERAGE==='1'){
      const response=await context.request.get(base+'/v1/generations/'+generation+'/visual_observations?pdf_page='+sourcePage+'&limit=100',{headers:{Authorization:'Bearer '+token}});
