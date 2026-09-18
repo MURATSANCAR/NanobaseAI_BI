@@ -1907,6 +1907,10 @@ class ExistingCompiler:
             # in the operator's own words — the caveat sentence from the knowledge pack — never the
             # model's. Without a matching caveat the resolver's account stands, as before.
             why = caveat_for(no_sql_reason(text), self.rules_text)
+            if not why and q.unresolved:
+                # The words the resolver could not place may be exactly what a caveat is about
+                # ("hakediş tablosu boştur"): the operator's sentence, not a "define it" prompt.
+                why = caveat_for(" ".join(q.unresolved) + " " + q.question, self.rules_text, absence_only=True)
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
                                  explain=[why or self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
                                  certified=False, model_text=(text or "").strip()[:1200])

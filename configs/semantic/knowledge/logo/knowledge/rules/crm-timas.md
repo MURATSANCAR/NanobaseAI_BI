@@ -89,3 +89,26 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 - Arşiv kaydı `NEW_FIZIKIARSIVBASE`; ürün `new_arsivurun → NEW_KITAPBASE.new_kitapId` (adı `new_name`); **emanet alan kişi** `new_emanetalankisi → SYSTEMUSERBASE.SystemUserId` (`FullName`); emanet başlangıcı `new_baslangictarihi`, bitişi `new_bitistarihi`, açıklaması `new_emanetaciklamasi`.
 - **Arşiv durumu** `new_arsivdurumu`: 1 Arşivde, 2 **Emanette**. "Emanete verilmiş ve geri dönmemiş" = `new_arsivdurumu = 2`; bekleme süresi `DATEDIFF(day, new_baslangictarihi, GETDATE())`.
 
+## Kural C17 — Baskı işlemleri (NEW_BASKIISLEMBASE)
+
+- Baskı işlemi satırı: işlem tipi `new_islemtipiid → NEW_ISLEMTIPIBASE.new_name`, birim fiyat `new_birimfiyat`, toplam tutar `new_toplamtutar`, forma sayısı `new_formasayisi`, baskıya `new_baskiid → NEW_BASKIBASE`. Bu kurulumda yalnız 2015–2017 kayıtları var (23 satır; birim fiyatı dolu 1 satır). "Birim fiyatı en çok artan işlem tipi" = işlem tipi × yıl ortalama birim fiyat, ardışık yıl farkı; iki yılı olan tip yoksa sonuç boştur ve bu söylenir.
+- "Kitap başına ortalama baskı maliyeti" = baskı işlem toplam tutarı / baskı adedi (`NEW_BASKIBASE.new_netbaskiadedi`) baskı bazında; son bir yılda kayıt yoksa sonuç boştur (veri 2015–2018 ile sınırlı).
+
+## Kural C18 — Telif hakedişleri ve ödeme dönemi
+
+- Hakediş `NEW_ODEMEHAKEDISBASE` (telif tutarı `new_TelifTutari`, ödenen `new_odenenTutar`, dönem `new_Donem → NEW_ODEMEDONEMIBASE`, sözleşme `new_SzlemeId`); ödeme dönemi `NEW_ODEMEDONEMIBASE` (`new_DonemBaslangicTarihi`, `new_DonemBitisTarihi`, `new_sozlesme`). "Ödeme dönemi kapandığı hâlde ödenmemiş hakediş" = dönem bitişi `< GETDATE()` ve `new_odenenTutar` boş/0 (ya da `< new_TelifTutari`). Hakediş tablosu bu kurulumda boştur (0 kayıt), 7 ödeme dönemi kaydı var; sonuç boş = veri yok.
+
+## Kural C19 — Kargo bilgileri (NEW_KARGOBILGISIBASE)
+
+- Kargo kaydı `NEW_KARGOBILGISIBASE` (13.242 kayıt); **çıkış şubesi** `new_sevkiyatcikissubesi`, varış şubesi `new_sevkiyatvarissubesi`, kargo firması `new_kargofirmasi`, **sevk adedi** `new_sevkadeti`, **tutar (kargo maliyeti)** `new_Tutar`, desi `new_desi`, ağırlık `new_agirlik` — bunların hepsi **metin** sütunudur, ondalık ayracı virgüldür: `TRY_CAST(REPLACE(new_Tutar, ',', '.') AS FLOAT)` ile okunur.
+- "Sevk adedi başına maliyet çıkış şubelerine göre" = şube bazında `SUM(tutar) / NULLIF(SUM(sevk adedi), 0)`, kargo adedi ve toplamlarla; şubesi boş kayıtlar ayrı satırda "Belirtilmemiş" olarak kalır.
+
+## Kural C20 — Reklam planları (NEW_REKLAMPLANIBASE)
+
+- Reklam planı: tutar `new_Tutar`, birim fiyat `new_BirimFiyat`, **onay tarihi** `new_OnayTarihi` (onay veren `new_OnayVeren`; ayrıca `new_editortalonay`, `new_pazarlamayoneticisionayi`, `new_genelmuduronayi` bitleri), **teslim edildi** `new_reklamteslimedildimi` (bit), planlanan teslim `new_PlanlananReklamTeslimTarihi`, gerçekleşen teslim `new_gerceklesenteslimtarihi`; mecra `new_reklammecrasi…`, tip `new_reklamtipi…`.
+- "Onaylanmış ama teslim edilmemiş" = `new_OnayTarihi IS NOT NULL AND ISNULL(new_reklamteslimedildimi, 0) = 0`; tutar toplamı `SUM(new_Tutar)`. Bu kurulumda 68 planın hiçbirinde onay tarihi/onay biti dolu değil → sonuç 0/boş; bu veri yokluğudur.
+
+## Kural C21 — Bütçe kayıtları
+
+- Etkinliklere bağlı bir bütçe tablosu yoktur: `NEW_ETKINLIKBASE`'te bütçe sütunu yok; `NEW_BUTCEKALEMIBASE` (iş planı/iş emri bütçe kalemleri, 2013–2014) ve `NEW_PROMOSYONBUTCESIBASE` (promosyon bütçesi: `new_butce`, `new_kullanilanbutce`, `new_kalanbutce`; 2 kayıt, 2017/2020) etkinlikle ilişkili değildir. "Etkinlik giderleri bütçenin neresinde" sorusuna toplam etkinlik gideri verilir ve karşılaştırılacak bir etkinlik bütçesinin tanımlı olmadığı söylenir; promosyon bütçesi etkinlik bütçesi yerine kullanılmaz.
+

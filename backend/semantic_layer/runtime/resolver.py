@@ -707,10 +707,12 @@ class SemanticResolver:
                                            and not (s_.mapping.extra or {}).get("state_measure")
                                            and not (s_.mapping.extra or {}).get("undated")   # a cost on a card, not an event
                                            for s_ in placed)
+        default_applied = False
         if not sq.temporal and self.default_temporal is not None and not undated:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
             if fallback is not None:
                 sq.temporal = [fallback]
+                default_applied = True
                 sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
         elif not sq.temporal and undated:
             sq.explanation.append("dönem belirtilmedi ve soru tarihli bir ölçü sormuyor → tüm kayıtlar üzerinden")
@@ -1050,7 +1052,16 @@ class SemanticResolver:
             sq.explanation.append("katalogda karşılığı olmayan terimler: " + ", ".join(sq.unresolved))
         if sq.unhandled:
             sq.explanation.append("karşılanamayan niteleyiciler: " + ", ".join(sq.unhandled))
+        metrics_before = [s_ for s_ in sq.slots if s_.semantic_type == SemanticType.METRIC and s_.mapping]
         self._keep_to_one_source(sq, qf)
+        # The default year was put on a measure the source rule has since handed to the model (an ERP
+        # word in a CRM question): with no dated measure left, the year is a restriction nobody asked for.
+        if default_applied and metrics_before and any(m not in sq.slots for m in metrics_before) and not any(s_.semantic_type == SemanticType.METRIC and s_.mapping and s_.status in ("CERTIFIED", "INFERRED")
+                                       and (s_.explain or {}).get("source") != "count_cue"
+                                       and not (s_.mapping.extra or {}).get("state_measure") and not (s_.mapping.extra or {}).get("undated")
+                                       for s_ in sq.slots):
+            sq.temporal = []
+            sq.explanation.append("varsayılan dönem geri alındı: tarihli ölçü kalmadı → tüm kayıtlar üzerinden")
         # A measure asked beside named columns is asked *per* those columns: "kartında indirim yüzdesi
         # tanımlı müşteriler … ne kadar iskonto alıyor" is one line per customer with the card's rate
         # and the discount actually taken — not one average over all of them, and not a question the
@@ -1160,7 +1171,11 @@ class SemanticResolver:
                               resolved_as="DIMENSION_VALUE:INFERRED", negated_label=True)
                 sq.explanation.append(undone.explain["why"])
             elif is_negative(tok) and (_negated_light_verb(tok) or _negated_record_verb(tok)) and (absent := next((s_ for s_ in left if s_.mapping
-                    and s_.semantic_type in (SemanticType.METRIC, SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)), None)) is not None:
+                    and s_.semantic_type in (SemanticType.METRIC, SemanticType.DIMENSION_VALUE, SemanticType.ENTITY)), None)) is not None \
+                    and not re.search(rf"\b{re.escape(stem(fold(absent.term.split()[0])))}\w*\s+(olan|bulunan|olup)\b", fold(" ".join(qf.tokens))):
+                # "hedefi olan ürünlerde hiç hedef girilmemiş aylar": the thing negated also exists,
+                # affirmed, in the same sentence — the absence is of a value inside the record (an
+                # empty month), not of the record. That reading is the model's, with a yorum line.
                 # "hiç sevkiyat almamış müşteriler": the light verb carries the negation and the thing
                 # negated is the measure just before it — the customers with no shipment record at all.
                 # Read as a verb root ("al" → a purchase measure) or left to the model, this became
@@ -1516,6 +1531,14 @@ class SemanticResolver:
                 homes = {ranked[0][0]}
                 sq.source_hint = ranked[0][0]
                 sq.explanation.append(f"iki kaynakta da ölçü var; soru {ranked[0][0] or 'ana veri tabanı'} tarafında daha çok tanımlı şey adlandırıyor → o kaynak seçildi")
+            elif re.search(r"\b(oran|yuzde|puan|pay)", fold(" ".join(qf.tokens))):
+                # A rate is asked and one side certifies a rate: "kaç puan indirim" is the discount
+                # ratio, not the shipped quantity that happens to share the word "sevkiyat".
+                ratio_homes = {self._source_of(m.mapping.entity) for m in metrics if "/" in (m.mapping.formula or "")}
+                if len(ratio_homes) == 1:
+                    homes = ratio_homes
+                    sq.source_hint = next(iter(homes))
+                    sq.explanation.append(f"oran soruldu; sertifikalı oran ölçüsü {next(iter(homes)) or 'ana veri tabanı'} tarafında → o kaynak seçildi")
         if len(homes) != 1:
             return
         home = next(iter(homes))

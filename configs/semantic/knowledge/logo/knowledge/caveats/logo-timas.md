@@ -20,3 +20,11 @@
 - `NEW_SOZLESMEBASE.new_teliftutari` ve `new_ajansservisucreti` bu kurulumda hiçbir sözleşmede dolu değil (14.824 aktif sözleşme, 0 dolu); telif hakediş tablosu `NEW_ODEMEHAKEDISBASE` boştur. "Ortalama telif tutarı", "ajans servis ücreti toplamı" soruları bu yüzden boş/NULL döner — veri yok, hesap hatası değil. Sözleşme adedi ve yüzde tabanlı telif (`new_Telif`, `NEW_TELIFTANIMBASE.new_TelifYuzdesi`) verilebilir.
 - `NEW_URETIMBASE.new_UretimAdedi` hiç dolu değil; gerçekleşen üretim `NEW_BASKIBASE.new_uretimadedi` (39 kayıt).
 
+## Telif hakedişi ve ödeme kaydı yok
+
+- **Hakediş verisi yok:** telif hakediş / ödeme hakediş tablosu (`NEW_ODEMEHAKEDISBASE`) bu kurulumda hiç kayıt içermiyor (0 satır) ve taramada profili yok; "ödenmemiş hakediş", "dönemi kapanmış hakediş", "hakediş tutarı" soruları cevaplanamaz — veri girilmemiş. Ödeme dönemi kayıtları (`NEW_ODEMEDONEMIBASE`, 7 kayıt) var ama hakedişe bağlı değil.
+- **Baskı işlemi / baskı maliyeti verisi eski:** `NEW_BASKIISLEMBASE` 2015–2017 (23 satır, birim fiyat 1 satırda dolu), `NEW_BASKIBASE` 2016–2018, satış senaryosu 2014 (4 satır). "Son bir yılda kitap başına baskı maliyeti", "birim fiyatı en çok artan işlem tipi" soruları bu yüzden boş döner — güncel veri yok.
+- **Etkinlik yazarı yok:** etkinlik–yazar eşleşme tablosu boş, `new_lgiliYazar` boş; yazar bazında etkinlik gideri hesaplanamaz.
+- **Etkinlik bütçesi yok:** etkinliklere bağlı bütçe kaydı/sütunu bulunmuyor; "etkinlik gideri bütçenin neresinde" sorusunda karşılaştırma yapılamaz, yalnız toplam gider verilir.
+- **Reklam planı onayı boş:** 68 reklam planının hiçbirinde onay tarihi/onay biti ve teslim işareti dolu değil; "onaylanmış ama teslim edilmemiş" sorusu 0 döner (veri girilmemiş).
+
