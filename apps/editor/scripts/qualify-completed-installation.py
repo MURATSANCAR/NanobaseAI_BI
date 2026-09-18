@@ -19,7 +19,8 @@ from datetime import datetime, timezone
 root=Path(__file__).resolve().parents[1];os.chdir(root)
 lock=(root/'evidence/installation-qualification.lock').open('w')
 fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-run=json.loads((root/'evidence/source-spans-run.json').read_text())
+run_file=root/os.environ.get('EDITOR_VERIFY_RUN_FILE','evidence/source-spans-run.json')
+run=json.loads(run_file.read_text())
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 base='http://127.0.0.1:8810'
 work=Path(os.environ.get('EDITOR_QUALIFICATION_ROOT',str(root.parent/'editor-qualifications')))/run['generation_id'][:8]
@@ -70,6 +71,14 @@ def available_subnets():
     networks=json.loads(subprocess.check_output(['docker','network','inspect',*ids],text=True)) if ids else []
     used=[ipaddress.ip_network(c['Subnet']) for n in networks
           for c in ((n.get('IPAM') or {}).get('Config') or []) if c.get('Subnet')]
+    requested=[os.environ.get('EDITOR_QUALIFICATION_'+name+'_SUBNET') for name in ('PRIVATE','INGRESS')]
+    if any(requested):
+        if not all(requested):raise RuntimeError('BOTH_QUALIFICATION_SUBNETS_REQUIRED')
+        pair=[ipaddress.ip_network(value) for value in requested]
+        if (any(net.version!=4 or not net.is_private for net in pair) or pair[0].overlaps(pair[1])
+                or any(a.version==b.version and a.overlaps(b) for a in pair for b in used)):
+            raise RuntimeError('QUALIFICATION_SUBNETS_INVALID_OR_IN_USE')
+        return tuple(map(str,pair))
     for octet in range(50,250,2):
         pair=[ipaddress.ip_network(f'10.203.{n}.0/24') for n in (octet,octet+1)]
         if not any(a.version==b.version and a.overlaps(b) for a in pair for b in used):
@@ -79,7 +88,14 @@ def available_subnets():
 
 try:
     execute('release_bytes',['python3','scripts/verify-release.py'])
-    bundle_args=['python3','scripts/bundle.py',str(work/'offline'),'--with-models']
+    active_config=json.loads(subprocess.check_output(['docker','compose','config','--format','json'],text=True))
+    active_env=active_config['services']['api'].get('environment',{})
+    external=active_env.get('EDITOR_MODEL_BACKEND')=='vllm' or bool(active_env.get('EDITOR_OCR_VL_BASE_URL'))
+    endpoints={key:os.environ.get('EDITOR_QUALIFY_'+key.removeprefix('EDITOR_'),'')
+               for key in ('EDITOR_MODEL_BASE_URL','EDITOR_OCR_VL_BASE_URL')}
+    if external and not all(endpoints.values()):
+        raise RuntimeError('EXTERNAL_TARGET_MODEL_ENDPOINTS_REQUIRED')
+    bundle_args=['python3','scripts/bundle.py',str(work/'offline'),'--external-models' if external else '--with-models']
     if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':bundle_args.append('--with-ocr-vl')
     if resume and (work/'offline/release-manifest.json').exists():
         record('offline_bundle','REUSED','Hash ve imaj kontrolü offline_import aşamasında tekrarlanacak.')
@@ -111,7 +127,7 @@ try:
         if job['status']=='COMPLETED':break
         time.sleep(30)
     else:raise RuntimeError('ANALYSIS_NOT_FINISHED_WITHIN_24_HOURS')
-    if json.loads((root/'evidence/source-spans-run.json').read_text())!=run:
+    if json.loads(run_file.read_text())!=run:
         raise RuntimeError('ACTIVE_RUN_CHANGED')
     active=subprocess.check_output(['docker','compose','exec','-T','postgres','psql','-U','postgres','-d','editor','-Atc',
         "SELECT count(*) FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')"],text=True).strip()
@@ -132,6 +148,9 @@ try:
     record('wait_for_artifact_tools','PASS')
     record('wait_for_pinned_analysis','PASS','İşleme tamamlandı; anlamsal kabul değil.')
     execute('source_api_pg',['python3','scripts/verify-source-pipeline.py'])
+    if os.environ.get('EDITOR_QUALIFY_DERIVED')=='1':
+        execute('derived_api_pg',['python3','scripts/verify-source-analysis.py',run['generation_id'],'--fragments'])
+        execute('semantic_provenance',['python3','scripts/verify-semantic-provenance.py',run['generation_id']])
     execute('release_bytes_after_analysis',['python3','scripts/verify-release.py'])
     packaged=(work/'offline/editor/backend')
     for path in (root/'backend').rglob('*'):
@@ -164,15 +183,22 @@ try:
     # volumes retained as evidence by an earlier qualification of that generation.
     project='editor-qualification-'+run['generation_id'][:8]+'-'+hashlib.sha256(str(work.resolve()).encode()).hexdigest()[:6]
     private_subnet,ingress_subnet=available_subnets()
-    settings(target/'.env',{'COMPOSE_PROJECT_NAME':project,'EDITOR_PORT':'18810','EDITOR_METRICS_PORT':'19096',
-        'EDITOR_PRIVATE_SUBNET':private_subnet,'EDITOR_INGRESS_SUBNET':ingress_subnet})
+    port=os.environ.get('EDITOR_QUALIFICATION_PORT','18810')
+    settings(target/'.env',{'COMPOSE_PROJECT_NAME':project,'EDITOR_PORT':port,
+        'EDITOR_METRICS_PORT':os.environ.get('EDITOR_QUALIFICATION_METRICS_PORT','19096'),
+        'EDITOR_PRIVATE_SUBNET':private_subnet,'EDITOR_INGRESS_SUBNET':ingress_subnet,
+        **(endpoints if external else {})})
+    record('target_network','CONFIGURED',json.dumps({'private_subnet':private_subnet,'ingress_subnet':ingress_subnet,'api_port':port,'external_models':external}))
     target_started=True
     execute('restore',['python3','scripts/restore.py',str(work/'backup'),project],cwd=target,timeout=7200)
     (target/'evidence').mkdir(exist_ok=True,mode=0o700)
     (target/'evidence/source-spans-run.json').write_text(json.dumps(run))
-    env={**os.environ,'EDITOR_VERIFY_BASE_URL':'http://127.0.0.1:18810',
+    env={**os.environ,'EDITOR_VERIFY_BASE_URL':'http://127.0.0.1:'+port,
          'EDITOR_VERIFY_RUN_FILE':'evidence/source-spans-run.json'}
     execute('restored_source_api_pg',['python3','scripts/verify-source-pipeline.py'],cwd=target,env=env)
+    if os.environ.get('EDITOR_QUALIFY_DERIVED')=='1':
+        execute('restored_derived_api_pg',['python3','scripts/verify-source-analysis.py',run['generation_id'],'--fragments'],cwd=target,env=env)
+        execute('restored_semantic_provenance',['python3','scripts/verify-semantic-provenance.py',run['generation_id']],cwd=target,env=env)
     if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':
         env['EDITOR_VERIFY_OCR_VL']='1'
         execute('restored_ocr_vl_api_pg',['python3','scripts/verify-ocr-vl-review.py'],cwd=target,env=env)

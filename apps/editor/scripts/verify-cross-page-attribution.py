@@ -28,6 +28,7 @@ for kind,items in p['rows'].items():
  for r in items:
   d=by_id[r['id']];assert d['kind']==kind and d['record_key']==r['record_key'] and d['data']==r['data'],'API_PG_MISMATCH'
 indexes={kind:{r['data']['pdf_page']:r for r in items} for kind,items in p['rows'].items() if kind not in ('source_spans','source_fragments','page_context_roles')}
+assert indexes['evidence'] and all(set(index)==set(indexes['evidence']) for index in indexes.values()),'SOURCE_PAGE_COVERAGE_INCOMPLETE'
 bundles=[]
 for page in sorted(set.intersection(*(set(v) for v in indexes.values()))):
  bundles.append({'evidence':indexes['evidence'][page],'layout':indexes['layout_regions'][page]['data'],'visual':indexes['visual_observations'][page]['data'],'page_role':indexes['page_claims'][page]['data']['page_role'],'spans':[r for r in p['rows']['source_spans'] if r['data']['pdf_page']==page]})
@@ -87,7 +88,7 @@ print(json.dumps({'gen':p['gen'],'api_pg_match':True,'native_postgres_types_matc
 '''
 module=Path(sys.argv[2]).read_text() if len(sys.argv)>2 else (root/'backend/editor/cross_page_attribution.py').read_text()
 code_hash=hashlib.sha256(module.encode()).hexdigest()
-fragment_raw=Path(sys.argv[3]).read_bytes() if len(sys.argv)>3 else None
+fragment_raw=Path(sys.argv[3]).read_bytes() if len(sys.argv)>3 and sys.argv[3]!='-' else None
 fragment_report=json.loads(fragment_raw) if fragment_raw else None
 fragment_hash=hashlib.sha256(fragment_raw).hexdigest() if fragment_raw else None
 context_raw=Path(sys.argv[4]).read_bytes() if len(sys.argv)>4 else None

@@ -6,7 +6,7 @@ turns that classification into editorial approval or character identity.
 import hashlib
 import json
 
-VERSION = 'source-page-context-v2'
+VERSION = 'source-page-context-v3'
 UNCERTAINTY_SCOPES = {'PAGE_PURPOSE','SOURCE_COVERAGE','IDENTITY','UNKNOWN'}
 
 
@@ -92,7 +92,7 @@ def classify(target_page, bundles, model):
         '"reason":"belirsizlik","blocks_page_purpose":true}]}.\n'+
         json.dumps(payload, ensure_ascii=False, separators=(',', ':')))
     try:
-        proposed, metrics = model([{'role':'user','content':prompt}],max_tokens=700,prompt_version=VERSION)
+        proposed, metrics = model([{'role':'user','content':prompt}],max_tokens=1100,prompt_version=VERSION)
     except RuntimeError as error:
         if str(error) not in ('CONTEXT_BUDGET_EXCEEDED','MODEL_OUTPUT_TRUNCATED'):
             raise
@@ -175,8 +175,13 @@ def run(job):
                for row in kinds['evidence']]
     completed = {r['data']['pdf_page'] for r in get_records(generation,'page_context_roles')}
     for page, claim in sorted(claims.items()):
-        if claim['page_role']!='UNKNOWN' or page in completed:
+        # A text-only proposer can mistake a speech-balloon question for an
+        # activity instruction. Recheck every non-narrative proposal with real
+        # layout and neighbouring sources; keep the original record immutable.
+        if claim['page_role'] in ('NARRATIVE','MIXED') or page in completed:
             continue
         with connection() as db:fence(db,job)
         result=classify(page,bundles,model)
+        result['original_page_role']=claim['page_role']
+        result['classification_disagreement']=result['page_role']!=claim['page_role']
         save(job,'page_context_roles',f'{page:04}',result)

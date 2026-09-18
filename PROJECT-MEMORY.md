@@ -1,8 +1,8 @@
 # NanobaseAI BI — Proje Belleği
 
-## V14 hazırlığı — alıntı ve kaynak bağımlılığı
+## V14 canlı — alıntı ve kaynak bağımlılığı
 
-R2'nin6 iddiasında ek OCR desteği,4 sentez ifadesinde eksik aktarılmış span bağlantısı bulundu. Yeni V14 kodu alıntıyı modele yazdırmadan değişmez OCR biriminden seçtirir; ayrıca yalnız taşınan dayanakları gören ayrı anlam kontrolü ve sentezde tam kaynak/hash denetimi ekler. Gerçek19/28/38 ve etkinlik16 bileşen pilotları yapıldı; yeni tam nesil/yayın kabulü henüz yok. Canlı R2 ve restore kanıtı aşağıdadır. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
+Backend/document `source-analysis-v14-r1-20260918`, web R3.47 backend dosyasının imaj/check-out tree hash'i `888fb9ddfb4f7993737d642a701a1d65f359642053b0ac41f213bd4f6091f7ef`; gerçek API/PG altyapı ve28 ACL geçti. Yeni iş `af2264d8-6f77-4860-be29-a5294283e49b`, nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776` çalışıyor. R2'nin6 iddiasındaki ek OCR desteğinin4 sentez ifadesine eksik aktarılması düzeltildi: değişmez OCR birimi seçimi, yalnız taşınan kaynaklarla ikinci anlam kontrolü ve tam kaynak/hash aktarımı.19/28/38/16 gerçek bileşen pilotları geçti; yeni48 sayfa ve restore kabulü beklenir. Önceki R2 aşağıda tarihsel kanıttır, V14 kabulü değildir. [Ayrıntı](docs/editor/2026-09-18-source-analysis-v14.md).
 
 ## 18 Eylül — V13-r2 canlı kabul
 

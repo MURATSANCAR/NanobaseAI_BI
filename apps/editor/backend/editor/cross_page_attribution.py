@@ -9,7 +9,7 @@ import re
 import uuid
 from collections import defaultdict
 
-VERSION = 'cross-page-literal-attribution-v7'
+VERSION = 'cross-page-literal-attribution-v8'
 
 
 def _hash(value):
@@ -78,7 +78,7 @@ def resolve(pages, minimum_quote_tokens=4, max_page_distance=1):
         original_role=bundle.get('page_role','UNKNOWN'); effective_role=original_role
         role_authority=None
         contextual=bundle.get('context_role')
-        if original_role=='UNKNOWN' and contextual and contextual.get('eligible_for_identity_context') is True:
+        if original_role not in ('NARRATIVE','MIXED') and contextual and contextual.get('eligible_for_identity_context') is True:
             from editor.page_context import build_context, digest as context_digest, VERSION as CONTEXT_VERSION
             payload,allowed_context=build_context(page,pages)
             refs=contextual.get('source_span_refs',[])
