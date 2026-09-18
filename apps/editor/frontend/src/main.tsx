@@ -4,6 +4,7 @@ import "./style.css";
 import { UploadBook } from "./UploadBook";
 import { AccessPanel } from "./AccessPanel";
 import { SourceQuestionForm } from "./SourceQuestionForm";
+import { SourceImpact } from "./SourceImpact";
 
 type Row = { id: string; record_key: string; data: Record<string, any> };
 type Work = { id: string; title: string };
@@ -589,6 +590,9 @@ function App() {
                     <p>{pageReading.data.agreed_spans} uyumlu bölge · {pageReading.data.review_spans} inceleme gereken bölge</p>
                     <p className="hint">Okumaların uyuşması, olayın veya konuşmacının doğrulandığı anlamına gelmez.</p>
                     {pageReading.data.measurement_reused && <p className="hint">Kaynak ölçümleri önceki koşudan alındı; bu sürümde yeniden karşılaştırıldı.</p>}
+                    {gen && (highlighted || pageClaims) && <SourceImpact token={token} generationId={gen}
+                      targetId={(highlighted ?? pageClaims)!.id}
+                      targetLabel={highlighted ? 'Kaynakta seçtiğiniz metin bölgesi' : 'Bu sayfanın bulgu kaydı'} />}
                     {pageSpans.map((r) => {
                       const review = sourceReview?.regions.find((region: any) => region.span_id === r.id);
                       return <details key={r.id} data-span-id={r.id}>

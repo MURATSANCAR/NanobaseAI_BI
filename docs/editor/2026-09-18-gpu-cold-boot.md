@@ -36,3 +36,7 @@ Hedef çıktı `cold-boot-v14-runtime-env-v5/`. Başlatma isteği sırasında Ma
 GPU→CPU doğrudan model tüneli VPN kaybından etkilenmedi: CPU üzerinden Qwenhealth ve OCRgateway200; ardından R4 yayımlanmış kodun gerçek sayfa bileşen kontrolü başlatıldı. GPU yönetim SSH bağlantısı ise MacVPN/OTP girişini gerektiriyor. Uygulama/model erişimi ile yönetim erişimi ayrı durumlardır.
 
 Runtime-env-v5 tam soğuk açılış kabulü, farklı fiziksel müşteriGPU/RAM kapasitesi ve uzun süreli yük hedefleri henüz tamamlanmış sayılmaz. Kitabın anlamsal kabulü bu altyapı kontrollerinden çıkarılmaz.
+
+## 18 Eylül 06:44 UTC — yönetim erişimi yeniden doğrulandı
+
+`ssh tt-gpu hostname` gerçek sunucuda `gpuubuntu` döndürdü. Paketleme dizini salt okunur incelendi; runtime-env-v5 import kanıtı var, fakat `cold-boot-v14-runtime-env-v5` sonuç dizini yok. Önceki bağlantı kesintisinde başlatma isteği tamamlanmış kabul edilmiyor. Ana V15 kitap analizi çalıştığı için model servisleri durdurulmadı ve ikinci bakım koşusu açılmadı. Yönetim erişim engeli şu an kalkmış görünüyor; tam offline soğuk açılış kabulü hâlâ açık ve aktif işler bittikten sonra denetlenecek.

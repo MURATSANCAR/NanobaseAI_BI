@@ -252,7 +252,7 @@ def start(version:uuid.UUID,body:AnalysisRequest,idempotency_key:str=Header()):
         if body.reuse_measurements_from:
             parent=scope(db,body.reuse_measurements_from)
             if parent['content_version_id']!=version: raise HTTPException(409,'REUSED_CONTENT_VERSION_MISMATCH')
-            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12','source-spans-v13','source-spans-v14',VERSION):
+            if parent['manifest'].get('pipeline_version') not in ('source-spans-v1','source-spans-v2','source-spans-v3','source-spans-v4','source-spans-v5','source-spans-v6','source-spans-v7','source-spans-v8','source-spans-v9','source-spans-v10','source-spans-v11','source-spans-v12','source-spans-v13','source-spans-v14','source-spans-v15',VERSION):
                 raise HTTPException(409,'REUSED_PIPELINE_UNSUPPORTED')
         gen=str(uuid.uuid4()); job=str(uuid.uuid4())
         from editor.source_pipeline import VERSION
@@ -395,6 +395,37 @@ def source_preview(generation:uuid.UUID):
         return source_preview_capability(db,scope(db,generation))
 
 
+@router.get('/generations/{generation}/records/{record_id}/impact')
+def record_impact(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:int=50,expected_snapshot_sha256:str|None=None):
+    if offset<0 or not 1<=limit<=100:
+        raise HTTPException(400,'INVALID_PAGINATION')
+    if offset>0 and expected_snapshot_sha256 is None:
+        raise HTTPException(400,'IMPACT_SNAPSHOT_REQUIRED')
+    if expected_snapshot_sha256 is not None:
+        if len(expected_snapshot_sha256)!=64 or any(char not in '0123456789abcdef' for char in expected_snapshot_sha256.lower()):
+            raise HTTPException(400,'INVALID_IMPACT_SNAPSHOT_HASH')
+    from editor.source_dependencies import load_snapshot,impact
+    try:
+        with connection() as db:
+            db.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY')
+            db.execute("SET LOCAL statement_timeout='8s'")
+            g=scope(db,generation)
+            target=db.execute('SELECT 1 FROM editor.records WHERE id=%s AND generation_id=%s',(record_id,generation)).fetchone()
+            if not target:
+                raise HTTPException(404,'Kayıt bulunamadı')
+            source=db.execute('SELECT sha256 FROM editor.content_versions WHERE id=%s',(g['content_version_id'],)).fetchone()
+            rows,reviews=load_snapshot(db,generation)
+        # Close the transaction before computing hashes or traversing the graph.
+        result=impact(generation,record_id,rows,reviews,g['manifest'],source['sha256'],offset,limit)
+        if expected_snapshot_sha256 is not None and expected_snapshot_sha256.lower()!=result['snapshot_sha256']:
+            raise HTTPException(409,'IMPACT_SNAPSHOT_CHANGED')
+        return result
+    except RuntimeError as error:
+        if str(error) in ('IMPACT_SNAPSHOT_LIMIT_EXCEEDED','IMPACT_EDGE_LIMIT_EXCEEDED'):
+            raise HTTPException(413,str(error)) from None
+        raise
+
+
 @router.get('/generations/{generation}/{kind}')
 def records(generation:uuid.UUID,kind:Literal['entities','events','scenes','visuals','visual_corrections','evidence','literary','passages','validation','claims','relationships','event_merges','book_synthesis','source_spans','layout_regions','page_readings','visual_observations','page_claims','page_checks','character_evidence','figure_identity','figure_comparisons','semantic_reviews','semantic_synthesis','source_fragments','fragment_checks','cross_page_attributions','page_context_roles','source_passages','source_index'],offset:int=0,limit:int=50,pdf_page:int|None=None):
     if offset<0 or not 1<=limit<=100: raise HTTPException(400,'INVALID_PAGINATION')
@@ -516,7 +547,7 @@ class Question(BaseModel):
 
 def source_preview_capability(db,g):
     result={'ready':False,'scope':'PARTIAL_SOURCE_SUPPORTED_DRAFT','reason':'SOURCE_ANALYSIS_NOT_READY'}
-    if g['manifest'].get('pipeline_version') not in ('source-spans-v14','source-spans-v15'):
+    if g['manifest'].get('pipeline_version') not in ('source-spans-v14','source-spans-v15','source-spans-v16'):
         return result
     complete=db.execute("SELECT 1 FROM editor.jobs WHERE generation_id=%s AND task='analysis' AND status='COMPLETED'",(g['id'],)).fetchone()
     if not complete:return result

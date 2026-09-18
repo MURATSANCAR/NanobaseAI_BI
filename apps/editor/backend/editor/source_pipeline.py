@@ -15,7 +15,7 @@ from editor.book_store import ROOT, sha, identifier, get_records, source_for, fe
 from editor.config import connection, code_manifest
 from editor.source_alignment import reader_text, reading_order, valid_box
 
-VERSION = 'source-spans-v15'
+VERSION = 'source-spans-v16'
 
 
 def same_model(metrics):
@@ -457,7 +457,7 @@ def reusable_claim_candidates(parent,key,spans):
             'uncertainties':prior['data']['uncertainties']},prior['data']['metrics'],str(prior['id'])
 
 
-def interpret(job,evidence,spans,parent=None):
+def interpret(job,evidence,spans,parent=None,page_purpose=None):
     from editor.analysis import model
     from editor.source_unit_claims import propose, VERSION as UNIT_VERSION
     from editor.text_attribution import extract as text_attributions, speaker_for_claim
@@ -476,7 +476,7 @@ def interpret(job,evidence,spans,parent=None):
     # Even a page without agreed text gets an explicit, empty coverage ledger.
     # The proposer records per-chunk budget/truncation failures. Unexpected
     # failures must fail the job instead of persisting a false complete ledger.
-    result,metrics=propose(page,spans,fenced_model)
+    result,metrics=propose(page,spans,fenced_model,page_purpose=page_purpose)
     attribution = text_attributions(spans, result.get('page_role','UNKNOWN'))
     save(job,'character_evidence',key,{'pdf_page':page,
         'evidence_refs':[str(evidence['id'])], 'pipeline_version':VERSION, **attribution})
@@ -504,6 +504,7 @@ def interpret(job,evidence,spans,parent=None):
         'input_span_ids':list(allowed),'input_visual_descriptions':False,
         'reused_claim_candidates_from':None,'candidate_reuse_policy':None,'reused_from_generation':None,
         'source_unit_method':UNIT_VERSION,'source_units':result.get('source_units',[]),
+        'proposal_page_purpose':result['proposal_page_purpose'],
         'source_unit_coverage':result.get('source_unit_coverage'),
         'raw_model_result':result.get('raw_model_result'),
         'rejected_model_candidates':result.get('rejected_model_candidates',[]),
@@ -525,7 +526,7 @@ def run(job):
             raise RuntimeError('PIPELINE_VERSION_CHANGED_NEW_GENERATION_REQUIRED')
         db.execute('UPDATE editor.generations SET manifest=manifest || %s WHERE id=%s',
             (Jsonb({'pipeline_version':VERSION,'code_manifest':code_manifest(),
-                   'old_visual_reuse':False,'processing_order':'one_page_parallel_optical_visual_then_claim_gate',
+                   'old_visual_reuse':False,'processing_order':'page_sources_then_verified_purpose_then_claims',
                    'ocr_vl_model':os.environ.get('EDITOR_OCR_VL_MODEL'),
                    'source_of_quotes':'source_spans_only'}),gen))
     parent=previous.get('reuse_measurements_from')
@@ -558,11 +559,27 @@ def run(job):
         all_spans=get_records(gen,'source_spans')
         spans=[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']]
         if row['record_key'] not in observed: observe(job,row,layouts[row['record_key']],spans,root,page_parent)
-        if row['record_key'] not in checked: interpret(job,row,spans,page_parent)
     from editor.source_fragments import run as resolve_fragments
     resolve_fragments(job,root)
     from editor.page_context import run as resolve_page_context
     resolve_page_context(job)
+    # Candidate extraction consumes the separately checked source purpose. A
+    # short balloon question must not independently redefine its page as an
+    # exercise before the neighbouring source context has been considered.
+    from editor.page_context import story_authority
+    contexts={r['data']['pdf_page']:r for r in get_records(gen,'page_context_roles')}
+    all_spans=get_records(gen,'source_spans')
+    fragments=get_records(gen,'source_fragments')
+    layouts={r['data']['pdf_page']:r['data'] for r in get_records(gen,'layout_regions')}
+    bundles=[{'evidence':row,'layout':layouts[row['data']['pdf_page']],
+              'spans':[s for s in all_spans if s['data']['pdf_page']==row['data']['pdf_page']],
+              'fragments':[s for s in fragments if s['data']['pdf_page']==row['data']['pdf_page']]}
+             for row in sorted(evidence,key=lambda r:r['record_key'])]
+    for row in evidence:
+        if row['record_key'] in checked:continue
+        page=row['data']['pdf_page']
+        purpose=story_authority(page,bundles,contexts.get(page))
+        interpret(job,row,[s for s in all_spans if s['data']['pdf_page']==page],page_purpose=purpose)
     from editor.figure_identity import run as resolve_figures
     from editor.semantic_acceptance import run as review_semantics
     # Both consume immutable page sources. Neither promotes the other's model

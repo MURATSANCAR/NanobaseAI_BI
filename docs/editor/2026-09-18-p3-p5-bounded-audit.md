@@ -29,3 +29,7 @@ Gerçek kabul: dondurulmuş gerçek nesilde birkaç kaynaklı tema adayını uyg
 ## Sıra ve sınır
 
 Önerilen sıra: mevcut R7 soru/tam V15/restore kabulü → salt okunur etki/güncellik → kontrollü yeniden işleme → sınırlı tema yorumu. Bu üç iş mevcut kayıtları değiştiren sahte kabul gerektirmeden başlayabilir. Tam insan düzeltme/karar döngüsü ve bağımsız edebî kalite kabulü, gerçek editör eylemi/rubriği bulunmadan kapatılamaz. Bu belge uygulama planıdır; kod yazıldığı veya yeni kabul geçtiği iddiası değildir.
+
+## Sonraki yerel uygulama kaydı
+
+İlk sınırlı P5 işi için `source_dependencies.py`, salt okunur impact endpoint'i ve bağımsız gerçek API/PG denetleyicisi yerelde hazırlandı. Gerçek uzak kayıt şeması tek sınırlı PG sorgusuyla kontrol edildi; endpoint/mobil kabulü henüz yapılmadı ve uzak R7 değiştirilmedi. Snapshot'a bağlı sayfalama, ACL, genel kaynak sınırları ve yapısal durumların anlamı [aday uygulama belgesinde](2026-09-18-source-dependency-impact-candidate.md) kayıtlıdır. Bu ilerleme tüm P5'i veya editör yeniden işleme akışını tamamlamaz.

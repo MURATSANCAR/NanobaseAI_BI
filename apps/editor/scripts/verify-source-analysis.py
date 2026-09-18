@@ -101,7 +101,11 @@ def source_order(page):
 coverage_totals={'pages':0,'units':0,'chunks':0,'needs_review_units':0,'unprocessed_units':0,'partial_context_chunks':0}
 def verify_unit_coverage(page,units,lookup):
     ledger=page['source_unit_coverage'];limits=ledger['limits'];entries=ledger['unit_dispositions']
-    assert ledger['method']=='source-unit-claims-v3'
+    method=page['source_unit_method'];purpose=page.get('proposal_page_purpose')
+    assert method in ('source-unit-claims-v3','source-unit-claims-v4') and ledger['method']==method
+    if method=='source-unit-claims-v4':
+        assert isinstance(purpose,dict) and purpose['pdf_page']==page['pdf_page'] and type(purpose['passed']) is bool
+        assert ledger['proposal_blocked_by_page_purpose']==(not purpose['passed'])
     assert ledger['semantic_complete'] is False and ledger['human_accepted'] is False,'UNIT_LEDGER_PROMOTED_ACCEPTANCE'
     assert ledger['catalogue_sha256']==digest(units),'UNIT_CATALOGUE_HASH_MISMATCH'
     assert ledger['catalogue_units']==len(units) and set(entries)==set(lookup),'UNIT_LEDGER_SET_MISMATCH'
@@ -128,9 +132,14 @@ def verify_unit_coverage(page,units,lookup):
     for chunk in partitions[limits['chunks_per_page']:]:
         for uid in chunk:deferred[uid]={'status':'UNPROCESSED','reason':'PAGE_CALL_BUDGET_EXCEEDED'}
     partitions=partitions[:limits['chunks_per_page']]
+    if method=='source-unit-claims-v4' and not purpose['passed']:
+        partitions=[]
+        deferred={uid:{'status':'NEEDS_REVIEW','reason':purpose['reason']} for uid in lookup}
+        assert entries==deferred and not page['claims'] and not page['blocked_claims']
+        assert 'SOURCE_PAGE_PURPOSE_BLOCKED_PROPOSAL' in page['uncertainties']
     assert all(entries[uid]==value for uid,value in deferred.items()),'UNIT_DEFERRED_REASON_MISMATCH'
     chunks=page['raw_model_result']['chunks'];measurements=page['metrics']['chunks']
-    assert page['metrics']['method']=='source-unit-claims-v3'
+    assert page['metrics']['method']==method
     assert ledger['processed_chunks']==len(chunks)==len(partitions)==len(measurements),'UNIT_CHUNK_COUNT_MISMATCH'
     ordered=source_order(page['pdf_page']);positions={r['id']:i for i,r in enumerate(ordered)}
     initial_pairs=[]
@@ -177,7 +186,8 @@ def verify_unit_coverage(page,units,lookup):
             assert raw is None and manifest is None
         else:
             assert manifest and trace['finish_reason']=='stop'
-            assert trace['prompt_version']=='source-unit-claims-v3'
+            assert trace['prompt_version']==method
+            if method=='source-unit-claims-v4':assert manifest['page_purpose_sha256']==digest(purpose)
             assert manifest['full_context_sha256']==digest(context),'UNIT_FULL_CONTEXT_HASH_MISMATCH'
             assert type(manifest['prompt_characters']) is int and 0<manifest['prompt_characters']<=limits['input_characters_per_chunk']
             if manifest['scope']=='FULL_PAGE':used=context
@@ -216,8 +226,12 @@ def verify_unit_coverage(page,units,lookup):
             if valid_review:valid_review=((uid in selected)==(matching[0]['status']=='CANDIDATE'))
             expected_entry=({'status':matching[0]['status'],'reason':matching[0]['reason'],'chunk_index':index} if valid_review else
                             {'status':'NEEDS_REVIEW','reason':'INVALID_OR_MISSING_UNIT_REVIEW','chunk_index':index})
+            if method=='source-unit-claims-v4' and roles[-1]!=purpose['page_role']:
+                expected_entry={'status':'NEEDS_REVIEW','reason':'PROPOSAL_PAGE_PURPOSE_DISAGREEMENT','chunk_index':index}
+                assert not local_saved,'DISAGREEING_PAGE_PURPOSE_PRODUCED_CLAIM'
             assert entries[uid]==expected_entry,'UNIT_MODEL_DISPOSITION_MISMATCH'
-    assert page['page_role']==(roles[0] if roles and len(set(roles))==1 else 'UNKNOWN'),'UNIT_PAGE_ROLE_PROMOTION'
+    expected_role=(purpose['page_role'] if purpose['passed'] else 'UNKNOWN') if method=='source-unit-claims-v4' else (roles[0] if roles and len(set(roles))==1 else 'UNKNOWN')
+    assert page['page_role']==expected_role,'UNIT_PAGE_ROLE_PROMOTION'
     incomplete=[value for value in entries.values() if value['status'] in ('NEEDS_REVIEW','UNPROCESSED')]
     assert ledger['all_units_have_model_disposition']==(bool(units) and not incomplete)
     if incomplete:assert 'SOURCE_UNIT_COVERAGE_REQUIRES_REVIEW' in page['uncertainties']
@@ -226,7 +240,7 @@ def verify_unit_coverage(page,units,lookup):
     coverage_totals['unprocessed_units']+=sum(value['status']=='UNPROCESSED' for value in entries.values())
 
 for page in pages.values():
-    if page.get('source_unit_method') not in ('source-unit-claims-v1','source-unit-claims-v2','source-unit-claims-v3'):continue
+    if page.get('source_unit_method') not in ('source-unit-claims-v1','source-unit-claims-v2','source-unit-claims-v3','source-unit-claims-v4'):continue
     units=page.get('source_units',[]);lookup={u['unit_id']:u for u in units}
     assert len(lookup)==len(units),'SOURCE_UNIT_ID_COLLISION'
     for unit in units:
@@ -235,7 +249,7 @@ for page in pages.values():
                    and spans[r]['pdf_page']==page['pdf_page'] and spans[r]['render_sha256']==unit['render_sha256'] for r in refs)
         assert unit['quote']=='\n'.join(spans[r]['text'] for r in refs),'SOURCE_UNIT_TEXT_MODIFIED'
         assert unit['sha256']==digest({k:unit[k] for k in ('pdf_page','span_refs','quote','render_sha256')})
-        if page['source_unit_method'] in ('source-unit-claims-v2','source-unit-claims-v3'):
+        if page['source_unit_method'] in ('source-unit-claims-v2','source-unit-claims-v3','source-unit-claims-v4'):
             assert unit['reading_view']['span_refs']==refs
             verify_reading_view(unit['reading_view'],refs,page['pdf_page'])
     for claim in page['claims']+page['blocked_claims']:
@@ -244,7 +258,7 @@ for page in pages.values():
         assert claim['quote']==unit['quote'] and claim['span_refs']==unit['span_refs']
         assert claim['source_unit_sha256']==unit['sha256']
         assert claim['text']==claim['model_candidate']['text'],'MODEL_CLAIM_TEXT_CHANGED'
-    if page['source_unit_method']=='source-unit-claims-v3':verify_unit_coverage(page,units,lookup)
+    if page['source_unit_method'] in ('source-unit-claims-v3','source-unit-claims-v4'):verify_unit_coverage(page,units,lookup)
 if extended:
     assert {r['data']['pdf_page'] for r in api['fragment_checks']} == expected_pages, 'FRAGMENT_CHECKS_INCOMPLETE'
     for row in api['source_fragments']:
@@ -284,7 +298,7 @@ def verify_purpose(page,gate):
     assert extended,'PAGE_PURPOSE_REQUIRES_EXTENDED_VERIFICATION'
     contexts={r['id']:r['data'] for r in api['page_context_roles']}
     context=contexts[gate['record_id']]
-    assert context['version']=='source-page-context-v4' and context['pdf_page']==page
+    assert context['version'] in ('source-page-context-v4','source-page-context-v5') and context['pdf_page']==page
     assert gate['record_sha256']==digest(context)
     layouts={r['data']['pdf_page']:r['data'] for r in api['layout_regions']}
     neighbours=[]
@@ -309,6 +323,14 @@ def verify_purpose(page,gate):
         assert context['eligible_for_identity_context'] and context['review']['supported']
         assert context['uncertainty_review_complete'] and context['blocking_uncertainties']==[]
         assert context['metrics']['finish_reason']==context['review_metrics']['finish_reason']=='stop'
+for page in pages.values():
+    if page.get('source_unit_method')=='source-unit-claims-v4':
+        purpose=page['proposal_page_purpose']
+        verify_purpose(page['pdf_page'],purpose)
+        contexts=[row for row in api['page_context_roles'] if row['id']==purpose.get('record_id')]
+        assert len(contexts)==1 and contexts[0]['data']['classification_stage']=='BEFORE_CLAIM_PROPOSAL'
+        assert contexts[0]['data']['input_claim_candidates'] is False
+
 for row in api['semantic_reviews']:
     review = row['data']; page = pages[review['pdf_page']]
     assert review['input_page_claims_sha256'] == digest(page), 'REVIEW_INPUT_MISMATCH'

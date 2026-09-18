@@ -16,7 +16,7 @@ import httpx
 from editor.semantic_acceptance import AXES, CITED_AXES, VERSION as REVIEW_VERSION, digest, source_regions
 
 VERSION = 'source-preview-retrieval-v1'
-SUPPORTED_PIPELINES = frozenset(('source-spans-v14', 'source-spans-v15'))
+SUPPORTED_PIPELINES = frozenset(('source-spans-v14', 'source-spans-v15', 'source-spans-v16'))
 COLLECTION = 'editor_source_preview_1024_v1'
 KINDS = ('evidence', 'layout_regions', 'source_spans', 'source_fragments',
          'page_claims', 'page_context_roles', 'semantic_reviews')

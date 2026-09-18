@@ -6,7 +6,7 @@ turns that classification into editorial approval or character identity.
 import hashlib
 import json
 
-VERSION = 'source-page-context-v4'
+VERSION = 'source-page-context-v5'
 CONTENT_SCOPES = {'STORY_WORLD','INFORMATIONAL','READER_GUIDANCE','EXERCISE','MIXED','UNKNOWN'}
 UNCERTAINTY_SCOPES = {'PAGE_PURPOSE','SOURCE_COVERAGE','IDENTITY','UNKNOWN'}
 
@@ -209,21 +209,25 @@ def run(job):
     from editor.source_pipeline import save
     generation = job['generation_id']
     kinds = {kind:get_records(generation,kind) for kind in
-             ('evidence','layout_regions','source_spans','source_fragments','page_claims')}
+             ('evidence','layout_regions','source_spans','source_fragments')}
     layouts = {r['data']['pdf_page']:r['data'] for r in kinds['layout_regions']}
-    claims = {r['data']['pdf_page']:r['data'] for r in kinds['page_claims']}
     bundles = [{'evidence':row,'layout':layouts[row['data']['pdf_page']],
                 'spans':[s for s in kinds['source_spans'] if s['data']['pdf_page']==row['data']['pdf_page']],
                 'fragments':[s for s in kinds['source_fragments'] if s['data']['pdf_page']==row['data']['pdf_page']]}
                for row in kinds['evidence']]
     completed = {r['data']['pdf_page'] for r in get_records(generation,'page_context_roles')}
-    for page, claim in sorted(claims.items()):
+    def fenced_model(*args,**kwargs):
+        with connection() as db:fence(db,job)
+        response=model(*args,**kwargs)
+        with connection() as db:fence(db,job)
+        return response
+    for page in sorted(row['data']['pdf_page'] for row in kinds['evidence']):
         # Recheck both false negatives and false positives. Informational prose
         # can be labelled narrative while belonging outside the story world.
         if page in completed:
             continue
         with connection() as db:fence(db,job)
-        result=classify(page,bundles,model)
-        result['original_page_role']=claim['page_role']
-        result['classification_disagreement']=result['page_role']!=claim['page_role']
+        result=classify(page,bundles,fenced_model)
+        result['classification_stage']='BEFORE_CLAIM_PROPOSAL'
+        result['input_claim_candidates']=False
         save(job,'page_context_roles',f'{page:04}',result)

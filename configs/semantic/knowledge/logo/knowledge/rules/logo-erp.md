@@ -108,4 +108,5 @@ Kasa hareketleri `KSLINES` (`SIGN` 0 = giriş/tahsil, 1 = çıkış/ödeme; tuta
 ## Kural 20 — Basılan / satılan / elde kalan (tiraj)
 
 - **Basılan adet (tiraj)** = üretimden giriş `STLINE TRCODE 13, IOCODE 1` (`'üretilen adet'` ölçüsü); **satılan adet** = satış faturası satırları (`TRCODE 7,8,9`, `IOCODE 3,4`); **elde kalan** = stok bakiyesi (`IOCODE 1,2` giriş − `3,4` çıkış, tarih filtresiz). Üçü kitap (`ITEMS`) bazında aynı STLINE üzerinden CASE ile hesaplanır; tükenme oranı = satılan / basılan. İmha adedi ayrı işlem türüdür ve düşülmez (söylenir).
+- **Kitabın baskı maliyeti (Logo tarafı):** kitap bazında maliyet Logo'da satılan malın maliyetidir: satış satırlarında `AMOUNT × OUTCOST` (Kural: Maliyet). "Baskı maliyeti ile satış cirosunu karşılaştır, kitap başına kâr marjı" = kitap (`ITEMS`) bazında `SUM(LINENET)` ciro, `SUM(AMOUNT × OUTCOST)` maliyet, brüt kâr = fark, marj = kâr / ciro; telif ve diğer giderler dahil değildir (söylenir). CRM satış senaryosu maliyeti (4 kayıt, 2014) bu soruda kullanılmaz.
 

@@ -58,3 +58,15 @@ R6 kaynak güncellemesiyle iki gerçek soru+mobil320/390/768/1440 teknik kabulü
 R6 bağımsız arama verifier'ı birden fazla tarihsel kod manifestini güncel saydığı için `Exactly one current source_index required` verdi; başarısız kanıt `evidence/source-preview-20260918T063007460261Z.json`. Betik önce kurulu dosyaların hash'lerini okuyup sadece bunlarla eşleşen manifesti seçmek üzere düzeltildi; tek güncel indeks zorunluluğu kaldırılmadı. R7 canlı yeniden kabulü bekleniyor.
 
 R6 ayrı kaynak bileşeni kabulü48/48,1466birim/162sözcükbağımlılığı PASS; eski2058birime göre düşüş güvenlik dışlamasıdır, anlamsal kapsam artışı değildir. [Bölünmüş sözcük kanıtı](2026-09-18-line-end-word-dependency.md).
+
+## R7 kabul ve yeni tam nesil — 18 Eylül 06:36 UTC
+
+Backend/document `source-analysis-v15-r7-20260918`; APIimage `sha256:8b9b3042c82727a1484cc694e0d91bfe021c696feff85277ec7dd589a8bd4b76`, document `sha256:bc839d14a866ae5d6b55f1dbac63ea76d74c7e4e5959d5a92a7bb13904db57bd`;49dosya tree `f4ed2a6e31949e03808e8372dd6d745bd4f019b1490558924cdc4bc2f264c638`. Web aynı son imajdır.
+
+Gerçek v2 soru işleri `82ce03d4-143b-477c-a7b7-44bb6c99a9e6` ve `d80b9091-6c33-4802-ac8c-97a72f5d1798`: API/PG/atıf ve dört mobil genişlik PASS. İlk2iddia/PARTIAL, ikinci0iddia/INSUFFICIENT_EVIDENCE. Hatalı yeni actor etiketi artık üretilmedi; ekran olayında actor/speaker null. Kaynak cümleleriyle ayrı karşılaştırma yapıldı; bütün kitap kalitesi kabul edilmedi. UIkanıtı `evidence/source-question-ui-35ee8228-ec0b-45d5-b8b7-9314c3e1d9c2/verification.json`.
+
+Bağımsız gerçek API/PG/Qdrant kontrolü53pasaj, exactDotvektör/değer/payload/hash ve iki cevap için PASS: `evidence/source-preview-20260918T063445344922Z.json`. İnsan/kaynak inceleme kayıtları değiştirilmedi.
+
+Yeni tam analiz işi `19893f4c-e43c-4b99-9680-f9647be12c1d`, nesil `382da5b3-a13a-4986-85ba-1a38fd92ff44`; kaynak atası R5 `d9ff5c60-dd47-47cb-bf66-70a5cad59cb1`. Sunucudaki uygulama yeni genel kodla kaynak iddialarını yeniden çıkarıyor. Monitor635347 ve qualifier635348 bağımsız süreçlerde çalışıyor; bunlar tamamlanmış kabul değildir. Güncel offlinepaket06:38:33UTC PASS, import ve tam kitap kabulü sürüyor. Tamamlanınca dolu müşteri restore'unda R7kaynaklı arama/iki gerçek cevap da ayrıca doğrulanacak.
+
+Uygulama kodu yerelmain `6b2494c` içinde; genellik kuralı ilgili belgelerde kaydedildi.27dal/referans taramasında main dışında commit0. Fetchgeçti, pushGitHubkimliği olmadığından başarısız; originyayını tamamlanmadı.

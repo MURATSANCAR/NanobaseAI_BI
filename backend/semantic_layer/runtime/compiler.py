@@ -312,7 +312,11 @@ class DeterministicCompiler:
         # table, so the label needs no join — it is read where the measure is read.
         for s in filters + group_cols:
             if s.mapping.entity != entity and re.sub(r"^LG_", "", s.mapping.entity.upper()) == re.sub(r"^LG_", "", entity.upper()):
+                old_entity = s.mapping.entity
                 s.mapping.entity = entity
+                if (s.mapping.extra or {}).get("conditions"):
+                    s.mapping.extra = dict(s.mapping.extra)
+                    s.mapping.extra["conditions"] = [str(c).replace(f"{old_entity}.", f"{entity}.") for c in s.mapping.extra["conditions"]]
         joins: list[tuple[str, str, str, str]] = []
         overrides, extra_columns, join_kinds = {}, {}, {}
         # One joined entity, one way to reach it. A mapping certified with a reference rule (the
@@ -910,7 +914,9 @@ def caveat_for(reason: str, rules_text: str, *, absence_only: bool = False) -> s
     if not reason or not rules_text:
         return ""
     words = {w.lower().translate(_FOLD)[:5] for w in _WORD.findall(reason) if len(w) >= 4}
-    words -= {"icin", "veri", "yok", "degil", "olan", "bunlar", "ile"}
+    # Words every refusal and every caveat use say nothing about *which* caveat is meant.
+    words -= {"icin", "veri", "yok", "degil", "olan", "bunlar", "ile", "anlam", "tanim", "katal", "kosul", "olcu", "olcum",
+              "sorgu", "cevap", "verid", "kayit", "tablo", "kolon", "sutun", "deger", "bulun", "gelme", "kayna", "liste", "sorus"}
     if len(words) < 2:
         return ""
     lines = []
@@ -1915,7 +1921,7 @@ class ExistingCompiler:
             if not why and q.unresolved:
                 # The words the resolver could not place may be exactly what a caveat is about
                 # ("hakediş tablosu boştur"): the operator's sentence, not a "define it" prompt.
-                why = caveat_for(" ".join(q.unresolved) + " " + q.question, self.rules_text, absence_only=True)
+                why = caveat_for(" ".join(q.unresolved) + " " + " ".join(q.unresolved), self.rules_text, absence_only=True)
             return CompiledQuery(sql="", compiler=self.name, catalog_version=q.catalog_version,
                                  explain=[why or self.empty_table_note(q) or refusal_for(q)], llm_ms=ms,
                                  certified=False, model_text=(text or "").strip()[:1200])
