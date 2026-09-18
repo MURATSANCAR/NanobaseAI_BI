@@ -1,0 +1,6729 @@
+{
+ "recordedAt": "2026-09-18T12:15:26Z",
+ "state": {
+  "catalogHash": "200e0cf6f90c5b827f968534361b2c3b41297ef15cef5d666df2464d2b35559b",
+  "languagePoolHash": "",
+  "catalogVersion": 61083,
+  "rulesHash": "c4954b528fa040ca",
+  "promptHash": "49144219d99f91a6"
+ },
+ "cases": {
+  "A032": {
+   "n": 1,
+   "soru": "Toptan satışta ortalama iskonto oranımız geçen yıla göre arttı mı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "toptan satista",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_2d71ee814cd0",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "8"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iskonto oranimiz",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_80b8fd23b272",
+      "entity": "STLINE",
+      "what": "f:30cdeedb769f68e3",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": true,
+    "temporal": [
+     "LAST_YEAR",
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A060": {
+   "n": 2,
+   "soru": "Ortalama tahsilat vademiz kaç gün, geçen yıla göre uzadı mı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [],
+    "slots": [],
+    "groupBy": [],
+    "unresolved": [
+     "tahsilat"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": true,
+    "temporal": [
+     "LAST_YEAR",
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "UNRESOLVED"
+   }
+  },
+  "B007": {
+   "n": 3,
+   "soru": "Alacaklarımızı otuz, altmış, doksan gün diye yaşlandırıp gösterebilir misin?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [],
+    "slots": [],
+    "groupBy": [],
+    "unresolved": [
+     "alacaklarimizi",
+     "diye",
+     "gosterebilir",
+     "otuz",
+     "yaslandirip"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "UNRESOLVED"
+   }
+  },
+  "B019": {
+   "n": 4,
+   "soru": "Ortalama tahsilat vademiz kaç gün, müşteri grubuna göre ayırır mısın?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteri grubuna",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_83c8e580c858",
+      "entity": "CLCARD",
+      "what": "SPECODE2",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.SPECODE2"
+    ],
+    "unresolved": [
+     "tahsilat"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B029": {
+   "n": 5,
+   "soru": "En çok kâr bıraktığımız on müşteriyi maliyet düştükten sonra sıralar mısın?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteriyi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "rank_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kar",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_8de95a710805",
+      "entity": "STLINE",
+      "what": "f:164b3ec6880482b7",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "maliyet",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_fde85d0bd4ba",
+      "entity": "STLINE",
+      "what": "f:66765a43f8e98def",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [
+     "dustukten"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "biraktigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "on"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 10,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B030": {
+   "n": 6,
+   "soru": "Maliyetin altında satılmış satırlar var mı, hangi müşterilere?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musterilere",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "maliyetin",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_fde85d0bd4ba",
+      "entity": "STLINE",
+      "what": "f:66765a43f8e98def",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B039": {
+   "n": 7,
+   "soru": "Fiyat listesinde tanımlı fiyatın altında kesilen faturalar hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kesilen faturalar",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "tanimli"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C004": {
+   "n": 8,
+   "soru": "Elimizde hiç kalmamış ama hâlâ bekleyen siparişi olan kitaplar hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitaplar",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "bekleyen siparisi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "elimizde",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "kalmamis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "C010": {
+   "n": 9,
+   "soru": "Hangi üretim emirleri planlanan bitiş tarihini geçti ve hâlâ tamamlanmadı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "uretim emirleri",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a310716b1d12",
+      "entity": "PRODORD",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "bitis"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "planlanan",
+     "tamamlanmadi"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C011": {
+   "n": 10,
+   "soru": "İş istasyonlarının geçen ay gerçekleşen süresi planlanandan ne kadar saptı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "gerceklesen suresi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_511aa10d3085",
+      "entity": "NEW_PLANSORUMLULARIBASE",
+      "what": "NEW_TAMAMLANANISSURESI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "istasyonlarinin",
+     "planlanandan"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_MONTH"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C015": {
+   "n": 11,
+   "soru": "İade oranı en yüksek müşteriler hangileri, sevk ettiğimiz adede göre?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "adede",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_95aa570a33f1",
+      "entity": "ACCOUNTBASE",
+      "what": "NEW_ADI",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "invoice default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "INVOICE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iade orani",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_8cd325e7a37e",
+      "entity": "INVOICE",
+      "what": "f:060bc194381dd124",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevk",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_252d8a352fa7",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ACCOUNTBASE.NEW_ADI",
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "ettigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "C021": {
+   "n": 12,
+   "soru": "En çok satan yirmi kitabın stok devir hızı nedir?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitabin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "rank_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "stok",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satan",
+      "type": "METRIC",
+      "status": "INFERRED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "devir"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "devir hizi"
+     },
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "yirmi"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 20,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C026": {
+   "n": 13,
+   "soru": "Bir kitabın son üç baskısında çekilen malzeme miktarları arasında fark var mı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitabin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "baskisinda",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a310716b1d12",
+      "entity": "PRODORD",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "cekilen malzeme miktarlari",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_761633159662",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "fark"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C038": {
+   "n": 14,
+   "soru": "Geçen çeyrekte bekleyen sipariş adedi ay ay nasıl değişti?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "bekleyen siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "LG_ORFLINE",
+      "what": "f:7658ee7394c7f1a9",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": "MONTH",
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_QUARTER"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "C040": {
+   "n": 15,
+   "soru": "Son üç ayda satılan adet, aynı dönemde üretilen adedin ne kadarı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "uretilen adedin",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_0c8990bc92c4",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satilan adet",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_0777c0af5563",
+      "entity": "STLINE",
+      "what": "f:2824b17ebbb9d139",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "RATIO",
+    "grain": null,
+    "limit": null,
+    "ratio": true,
+    "comparison": false,
+    "temporal": [
+     "LAST_N_MONTHS"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "D015": {
+   "n": 16,
+   "soru": "Kartında indirim yüzdesi tanımlı müşteriler gerçekte ortalama ne kadar iskonto alıyor?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "kartinda indirim yuzdesi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_97fddd0771a1",
+      "entity": "CLCARD",
+      "what": "DISCRATE",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kartinda indirim yuzdesi tanimli",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "",
+      "entity": "CLCARD",
+      "what": "DISCRATE",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iskonto",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_80b8fd23b272",
+      "entity": "STLINE",
+      "what": "f:30cdeedb769f68e3",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_",
+     "CLCARD.DISCRATE"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "D037": {
+   "n": 17,
+   "soru": "Sipariş verip de hiç sevkiyat almamış müşterilerimiz var mı?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musterilerimiz",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevkiyat",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_252d8a352fa7",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": "ABSENCE",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "D039": {
+   "n": 18,
+   "soru": "Geçen yıl alıp bu yıl hiç sipariş vermemiş müşterileri çıkarır mısın?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musterileri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "alip",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "sem_86721eb4dbd1",
+      "entity": "ITEMS",
+      "what": "CARDTYPE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "ABSENCE",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_YEAR",
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A002": {
+   "n": 19,
+   "soru": "İptal edilmemiş satış faturalarında iade hariç toplam ciro ne kadar oldu bu ara?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satis faturalarinda",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_50a46b7e61ec",
+      "entity": "INVOICE",
+      "what": "GRPCODE",
+      "values": [
+       "2"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iptal edilmemis",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "sem_a0a1265046a2",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iade haric",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "sem_0fbd7eef76c0",
+      "entity": "STLINE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciro",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "AMBIGUOUS_RECENT"
+    ],
+    "clarification": true,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A004": {
+   "n": 20,
+   "soru": "Son çeyrekte iade faturalarının satış cirosuna oranı yüzde kaç?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "invoice default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "INVOICE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iade faturalarinin oranı",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_8cd325e7a37e",
+      "entity": "INVOICE",
+      "what": "f:060bc194381dd124",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_QUARTER"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A006": {
+   "n": 21,
+   "soru": "Bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler kimler?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "aktif",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_7e24a67d263d",
+      "entity": "CLCARD",
+      "what": "ACTIVE",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "fatura",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "ABSENCE",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A008": {
+   "n": 22,
+   "soru": "Vadesi geçmiş ama hâlâ tahsil edilmemiş müşteri alacaklarımız toplam ne kadar?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "tahsil",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_576bfee4672c",
+      "entity": "CONTACTBASE",
+      "what": "EDUCATIONCODE",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "alacaklarimiz",
+     "vadesi"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "edilmemis",
+     "gecmis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A010": {
+   "n": 23,
+   "soru": "Karşılıksız çıkan veya protesto olan çeklerin bu yılki toplam tutarı ne kadar?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "karsiliksiz cikan veya protesto",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_1056b5aeebca",
+      "entity": "LG_CSCARD",
+      "what": "CURRSTAT",
+      "values": [
+       "11",
+       "5",
+       "7"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ceklerin",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_6d022b8a22c1",
+      "entity": "LG_CSCARD",
+      "what": "DOC",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A026": {
+   "n": 24,
+   "soru": "Risk limitini aşmış cari hesaplar hangileri, ne kadar aşmışlar?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "limitini",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_6842a1fe6f2a",
+      "entity": "ACCOUNTBASE",
+      "what": "CREDITLIMIT",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "risk",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_9cdcf713e9cc",
+      "entity": "NEW_SIPARISBASE",
+      "what": "NEW_ANLIKRISK",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "asmislar"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "asmis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A027": {
+   "n": 25,
+   "soru": "Ambar bazında elde kalan stok adedi en yüksek yirmi kitap hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitap",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "rank_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "ambar",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f67c237a2909",
+      "entity": "STLINE",
+      "what": "SOURCEINDEX",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "elde kalan",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME",
+     "STLINE.SOURCEINDEX"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "MEASURE_READ_AS_UNIT",
+      "term": "adedi"
+     },
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "yirmi"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 20,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A028": {
+   "n": 26,
+   "soru": "Asgari stok seviyesinin altına düşmüş malzemeler hangi ambarlarda var?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "ambarlarda",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f67c237a2909",
+      "entity": "STLINE",
+      "what": "SOURCEINDEX",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "malzemeler",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_30c5bfedddab",
+      "entity": "STLINE",
+      "what": "LINETYPE",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "altina",
+     "asgari",
+     "dusmus",
+     "seviyesinin"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "asgari stok"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "dusmus"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A029": {
+   "n": 27,
+   "soru": "Geçen aya göre kasa ve banka giriş çıkış farkımız nasıl değişti?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "banka",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_3932d3bd54c0",
+      "entity": "LG_BNFLINE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kasa",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_762e5ab78791",
+      "entity": "LG_KSLINES",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "cikis",
+     "giris"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": "MONTH",
+    "limit": null,
+    "ratio": false,
+    "comparison": true,
+    "temporal": [
+     "LAST_MONTH",
+     "THIS_MONTH"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A030": {
+   "n": 28,
+   "soru": "Bu yıl açılan ama hâlâ tamamen sevk edilmemiş müşteri siparişleri kaç kalem?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "sevk edilmemis musteri siparisleri",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "LG_ORFLINE",
+      "what": "f:969488e499dbcb84",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "acilan"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "tamamen"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A031": {
+   "n": 29,
+   "soru": "Kapanmamış siparişlerde bekleyen toplam tutar ve en çok bekleyen müşteri kim?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kapanmamis siparislerde",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "bekleyen",
+     "bekleyen"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A051": {
+   "n": 30,
+   "soru": "Geçen ay hiç hareket görmemiş, yani ne giriş ne çıkış olan stoklar hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "stoklar",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "cikis",
+     "giris"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "gormemis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_MONTH"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A053": {
+   "n": 31,
+   "soru": "Masraf merkezi bazında bu yılki gider toplamları nasıl dağılıyor?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "masraf merkezi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_41cbbafc7a5c",
+      "entity": "EMCENTER",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "gider toplamlari",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_5723ee78f2f2",
+      "entity": "EMFLINE",
+      "what": "f:2c89c41f40ac7d47",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "EMCENTER.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A055": {
+   "n": 32,
+   "soru": "Bu yıl üretim emri açılmış ama üretimi tamamlanmamış işler hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "uretim emri",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a310716b1d12",
+      "entity": "PRODORD",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "uretimi"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "tamamlanmamis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A056": {
+   "n": 33,
+   "soru": "Satış fiyatı tanımlı olmayan aktif stok kartları hangileri?",
+   "kaynak": "logo",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "aktif stok kartlari",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_951b88b1095a",
+      "entity": "LG_ITEMS",
+      "what": "ACTIVE",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satis fiyati",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_a9d5280d0740",
+      "entity": "PRCLIST",
+      "what": "PTYPE",
+      "values": [
+       "2"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "tanimli"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "olmayan"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A041": {
+   "n": 34,
+   "soru": "Forma sayısı yirminin üstünde olan kitapların baskı maliyeti ortalama ne kadar?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "forma sayisi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_ea2a2489b123",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "new_Forma",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_satissenaryosubase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "baski maliyeti ortalama",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_01944c668b5d",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "f:e662b7db5131f09b",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_SATISSENARYOSUBASE.new_Forma"
+    ],
+    "unresolved": [
+     "kitaplarin",
+     "yirminin"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "kitaplarin"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B055": {
+   "n": 35,
+   "soru": "Birden fazla tarafı olan sözleşmelerde ödeme yüzdeleri toplamı yüzü aşan var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "odeme yuzdeleri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f8c78956731f",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "NEW_ODEME",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "sozlesmelerde",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a2235bbf5dd1",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "asan"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "yuzu"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 100,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B073": {
+   "n": 36,
+   "soru": "Yıllık hedefin aylara dağılımı en dengesiz olan ürün hangisi?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "aylara",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_2215b225c6b1",
+      "entity": "NEW_PROJEBASE",
+      "what": "NEW_PROJENINAYI",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "yillik hedefin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8424f510c61f",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "NEW_TOPLAMHEDEF",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_PROJEBASE.NEW_PROJENINAYI",
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
+    ],
+    "unresolved": [
+     "dengesiz",
+     "urun"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "urun"
+     }
+    ],
+    "shape": null,
+    "grain": "YEAR",
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "C045": {
+   "n": 37,
+   "soru": "Termin tarihi geçtiği hâlde hâlâ sevk edilmemiş sipariş satırları var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "termin tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8bf42c930c77",
+      "entity": "LG_ORFLINE",
+      "what": "DUEDATE",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevk edilmemis siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "gectigi"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "C063": {
+   "n": 38,
+   "soru": "Önerilen baskı adedi ile gerçekleşen üretim adedi arasında ne kadar fark var?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "gerceklesen uretim adedi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_959757d3d149",
+      "entity": "NEW_BASKIBASE",
+      "what": "new_uretimadedi",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_baskioneribase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_BASKIONERIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "baski adedi",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_BASKIONERIBASE",
+      "what": "f:171fa72f7d9e5527",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_BASKIBASE.new_uretimadedi"
+    ],
+    "unresolved": [
+     "fark"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "D050": {
+   "n": 39,
+   "soru": "Taraf ödeme yüzdeleri toplamı yüzde yüzü tutmayan sözleşmeler var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "odeme yuzdeleri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f8c78956731f",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "NEW_ODEME",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "sozlesmeler",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a2235bbf5dd1",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "tutmayan"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "RATIO",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "D053": {
+   "n": 40,
+   "soru": "Baskı adedi arttıkça telif yüzdemiz ortalama ne kadar yükseliyor?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "baski adedi",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_0c8990bc92c4",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "telif"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "telif yuzdemiz"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "D069": {
+   "n": 41,
+   "soru": "Rakip kitapları eşlenmiş kitaplarımızın liste fiyatları rakiplere göre nerede duruyor?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_rakipkitapbase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_RAKIPKITAPBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "rakip",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_e86813f4d9a9",
+      "entity": "NEW_RAKIPKITAPBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "rakip kitaplari",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_e86813f4d9a9",
+      "entity": "NEW_RAKIPKITAPBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "liste fiyatlari",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_RAKIPKITAPBASE",
+      "what": "f:8943d547784c2c89",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "kitaplarimizin"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "eslenmis"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "kitaplari"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A012": {
+   "n": 42,
+   "soru": "Termin tarihi geçmiş ama hâlâ sevk edilmemiş sipariş satırları hangileri?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "termin tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8bf42c930c77",
+      "entity": "LG_ORFLINE",
+      "what": "DUEDATE",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevk edilmemis siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_708ab8f11a6b",
+      "entity": "LG_ORFLINE",
+      "what": "CLOSED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "gecmis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A016": {
+   "n": 43,
+   "soru": "Müşteri bazında ortalama sepet tutarı en yüksek ilk on firma hangisi?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "invoice default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "INVOICE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ortalama sepet tutari",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_2dd132cc326a",
+      "entity": "INVOICE",
+      "what": "f:8dd82ec72ff61c45",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "on"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 10,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A019": {
+   "n": 44,
+   "soru": "Süresi bu yıl içinde dolacak telif sözleşmeleri hangileri?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "suresi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_3ba7b0b6b98f",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "NEW_SOZLESMESURESIYIL",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "telif sozlesmeleri",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a2235bbf5dd1",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A020": {
+   "n": 45,
+   "soru": "Sözleşmelerde ortalama telif tutarı yazarlara göre nasıl değişiyor?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "telif tutari",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_81b741731e84",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "new_teliftutari",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "Yazar ",
+      "type": "DIMENSION_VALUE",
+      "status": "PROFILE",
+      "concept": "",
+      "entity": "CONTACTBASE",
+      "what": "Description",
+      "values": [
+       "Yazar "
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "sozlesmelerde",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a2235bbf5dd1",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A036": {
+   "n": 46,
+   "soru": "Aracı firma üzerinden yürüyen sözleşmelerin payı yüzde kaç?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_sozlesmetarafibase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "araci firma uzerinden yuruyen sozlesmelerin sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "f:0c4f26aabea94718",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "toplam kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "f:0c4f26aabea94718",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "RATIO",
+    "grain": null,
+    "limit": null,
+    "ratio": true,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A037": {
+   "n": 47,
+   "soru": "Yurtdışı hak alınmış sözleşmelerde ajans servis ücreti toplamı ne kadar?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "ajans servis ucreti",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_1ec2e3defa09",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "new_ajansservisucreti",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "yurtdisi hak alinmis sozlesmelerde",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_0f71ae91b692",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "new_yurticiyurtdisi",
+      "values": [
+       "3"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A038": {
+   "n": 48,
+   "soru": "Baskı sayısı aralığına göre tanımlı telif yüzdeleri hangi kitaplarda en yüksek?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitaplarda",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "baski sayisi",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a310716b1d12",
+      "entity": "PRODORD",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "CLCARD",
+      "what": "f:8eccfbdecd21aca2",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "araligina",
+     "tanimli",
+     "telif"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "telif yuzdeleri"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A044": {
+   "n": 49,
+   "soru": "Etkinlik giderleri yazar bazında nasıl dağılıyor, en pahalı beş yazar kim?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_etkinlikbase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_ETKINLIKBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "Yazar ",
+      "type": "DIMENSION_VALUE",
+      "status": "PROFILE",
+      "concept": "",
+      "entity": "CONTACTBASE",
+      "what": "Description",
+      "values": [
+       "Yazar "
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "etkinlik giderleri",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_ac8c84dd8953",
+      "entity": "NEW_ETKINLIKBASE",
+      "what": "f:d56738e101bd0e38",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "WORD_READ_AS_ROW_LIMIT",
+      "term": "bes"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": 5,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A066": {
+   "n": 50,
+   "soru": "Metin teslim tarihi geçtiği hâlde hâlâ tamamlanmamış projeler var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "metin teslim tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_05daaa4969fe",
+      "entity": "NEW_PROJEBASE",
+      "what": "new_tahminimetinteslimtarihi",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "tamamlanmamis projeler",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_dd210ef7ac3b",
+      "entity": "NEW_PROJEBASE",
+      "what": "statuscode",
+      "values": [
+       "100000009",
+       "100000012",
+       "100000017",
+       "100000021"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "gectigi→NEW_PROJEBASE.NEW_TAHMINIMETINTESLIMTARIHI"
+    ],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A067": {
+   "n": 51,
+   "soru": "Yayın kurulunda onaylanan projelerde ortalama önerilen telif oranı yüzde kaç?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_projebase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_PROJEBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "yayin kurulunda onaylanan projelerde",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_bc228d5d4eb3",
+      "entity": "NEW_PROJEBASE",
+      "what": "statuscode",
+      "values": [
+       "100000020"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "telif orani",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_PROJEBASE",
+      "what": "f:ee4de4001e50f542",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "RATIO",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A069": {
+   "n": 52,
+   "soru": "İş planlarında tamamlanma oranı en düşük sorumlular kimler?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "sorumlular",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_536351e3c8d8",
+      "entity": "SYSTEMUSERBASE",
+      "what": "FullName",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_isplanibase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "is planlarinda",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_08721fcb687a",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "tamamlanma orani",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "f:bd2ec25f77524cee",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "SYSTEMUSERBASE.FullName"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A093": {
+   "n": 53,
+   "soru": "Fiziki arşivde emanete verilmiş ve hâlâ geri dönmemiş kayıtlar hangileri?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "emanete verilmis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_bbf87e502c33",
+      "entity": "NEW_FIZIKIARSIVBASE",
+      "what": "new_arsivdurumu",
+      "values": [
+       "2"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "geri donmemis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_bbf87e502c33",
+      "entity": "NEW_FIZIKIARSIVBASE",
+      "what": "new_arsivdurumu",
+      "values": [
+       "2"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "fiziki arsivde",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_9a141aab3a9c",
+      "entity": "NEW_FIZIKIARSIVBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A094": {
+   "n": 54,
+   "soru": "Destek taleplerinde ortalama sonuçlandırma süresi kaç gün, departmana göre nasıl?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "suresi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_3ba7b0b6b98f",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "NEW_SOZLESMESURESIYIL",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "departmana",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_41ccd05e3260",
+      "entity": "NEW_TALEPYONETIMIBASE",
+      "what": "new_ilgilidepartman",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_sozlesmebase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "destek taleplerinde",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_1a8434611726",
+      "entity": "NEW_TALEPYONETIMIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "f:0222e82d62a4042d",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_SOZLESMEBASE.NEW_SOZLESMESURESIYIL",
+     "NEW_TALEPYONETIMIBASE.new_ilgilidepartman"
+    ],
+    "unresolved": [
+     "sonuclandirma"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A095": {
+   "n": 55,
+   "soru": "ISBN listesinde stok kartıyla eşleşmemiş yayın numaraları var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "numaralari",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_696b3e7f0395",
+      "entity": "NEW_AUTONUMBERINGWIZARDBASE",
+      "what": "NEW_NUMBER",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "isbn",
+     "stok",
+     "yayin"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "eslesmemis→NEW_ISBNLISTESIBASE.NEW_STOKKARTI"
+    ],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "stok kartiyla"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B047": {
+   "n": 56,
+   "soru": "Sevkiyatlarda liste fiyatı üzerinden ortalama kaç puan indirim yapmışız?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_sevkiyatsatiribase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SEVKIYATSATIRIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "indirim",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_66b273e5dfa3",
+      "entity": "NEW_SEVKIYATSATIRIBASE",
+      "what": "f:4541bca15a21b1cf",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "sevkiyatlarda",
+     "yapmisiz"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "puan"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "DEFAULT_PERIOD_WITHDRAWN",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "sevkiyatlarda"
+     },
+     {
+      "code": "SOURCE_CHOSEN_BY_TALLY",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B049": {
+   "n": 57,
+   "soru": "Termini geçtiği halde hâlâ bekleyen sipariş satırlarımız kaç kalem?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "termini",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_5bbedc174812",
+      "entity": "NEW_SIPARISBASE",
+      "what": "new_istenensevktarihi",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_siparisbase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SIPARISBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "bekleyen siparis satirlarimiz",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_b787139a431c",
+      "entity": "NEW_SIPARISBASE",
+      "what": "statuscode",
+      "values": [
+       "100000000",
+       "100000001",
+       "100000003",
+       "100000015",
+       "2"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SIPARISBASE",
+      "what": "f:6e9fac089521c531",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_SIPARISBASE.new_istenensevktarihi"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "gectigi→NEW_SIPARISSATIRIBASE.NEW_TERMINTARIHI"
+    ],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B050": {
+   "n": 58,
+   "soru": "Yolda görünen ama henüz sevk edilmemiş sipariş tutarımız ne kadar?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "sevk edilmemis siparis tutarimiz",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_6c91092af708",
+      "entity": "LG_ORFLINE",
+      "what": "f:7b4dd5df10476b4f",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "yolda"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B057": {
+   "n": 59,
+   "soru": "Yurtdışı hakla yapılan sözleşmelerin oranı son iki yılda nasıl değişti?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_sozlesmetarafibase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "sozlesmelerin",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a2235bbf5dd1",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "toplam kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "f:0c4f26aabea94718",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "yurtdisi hakla sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_SOZLESMETARAFIBASE",
+      "what": "f:0c4f26aabea94718",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "RATIO",
+    "grain": "YEAR",
+    "limit": null,
+    "ratio": true,
+    "comparison": false,
+    "temporal": [
+     "LAST_N_YEARS"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B060": {
+   "n": 60,
+   "soru": "Ödeme dönemi kapandığı halde hâlâ ödenmemiş hakediş var mı?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kapandigi",
+      "type": "METRIC",
+      "status": "INFERRED",
+      "concept": "sem_6c91092af708",
+      "entity": "LG_ORFLINE",
+      "what": "f:7b4dd5df10476b4f",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "hakedis",
+     "odeme"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "odenmemis→NEW_URETIMBASE.NEW_ODEMEHAKEDISIID"
+    ],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "hakedis"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "odeme donemi"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B061": {
+   "n": 61,
+   "soru": "Kitap başına ortalama baskı maliyetimiz son bir yılda ne kadar yükseldi?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "new_satissenaryosubase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "ortalama baski maliyetimiz",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_01944c668b5d",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "f:e662b7db5131f09b",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "basina",
+     "kitap"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "basina"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "kitap"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "LAST_N_YEARS"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B062": {
+   "n": 62,
+   "soru": "Baskı işlemlerinde birim fiyatı en çok artan işlem tipi hangisi?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "islem tipi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_1ae6f7dc0808",
+      "entity": "NEW_ISLEMTIPIBASE",
+      "what": "new_name",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_baskiislembase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_BASKIISLEMBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "birim fiyati",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_BASKIISLEMBASE",
+      "what": "f:6b6f94c99af41ed6",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_ISLEMTIPIBASE.new_name"
+    ],
+    "unresolved": [
+     "baski"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "artan"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "baski"
+     }
+    ],
+    "shape": null,
+    "grain": "MONTH",
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B064": {
+   "n": 63,
+   "soru": "Etkinliklere harcadığımız toplam gider bütçenin neresinde duruyor?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "gider",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_5723ee78f2f2",
+      "entity": "EMFLINE",
+      "what": "f:2c89c41f40ac7d47",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "butcenin",
+     "etkinliklere"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "etkinliklere"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B066": {
+   "n": 64,
+   "soru": "Reklam planlarında onaylanmış ama teslim edilmemiş işlerin tutarı ne kadar?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "reklam planlarinda",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_6519b0c055ec",
+      "entity": "NEW_REKLAMPLANIBASE",
+      "what": "STATECODE",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "teslim edilmemis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_bb2523d70f48",
+      "entity": "NEW_REKLAMPLANIBASE",
+      "what": "new_reklamteslimedildimi",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "onaylanmis"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B072": {
+   "n": 65,
+   "soru": "Hedefi olan ürünlerde hiç hedef girilmemiş aylar hangileri?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "aylar",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_2215b225c6b1",
+      "entity": "NEW_PROJEBASE",
+      "what": "NEW_PROJENINAYI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "hedefi",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_d6f188afd5f5",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "hedefi",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_d6f188afd5f5",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "urunlerde"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "girilmemis"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "urunlerde"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B074": {
+   "n": 66,
+   "soru": "Kargolarda sevk adedi başına maliyet çıkış şubelerine göre nasıl?",
+   "kaynak": "crm",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "cikis subelerine",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_761d01ba9465",
+      "entity": "NEW_KARGOBILGISIBASE",
+      "what": "new_sevkiyatcikissubesi",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_kargobilgisibase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_KARGOBILGISIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "kargolarda",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_8896c8c71e79",
+      "entity": "NEW_KARGOBILGISIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "sevk adedi basina maliyet",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_7df0afc358f6",
+      "entity": "NEW_KARGOBILGISIBASE",
+      "what": "f:25ac1a9df98d0f04",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_KARGOBILGISIBASE.new_sevkiyatcikissubesi"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A021": {
+   "n": 67,
+   "soru": "Sistemde girilen siparişlerin kaçının faturası hâlâ kesilmemiş, tutarı ne kadar?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "faturasi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "siparislerin",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": "ABSENCE",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A022": {
+   "n": 68,
+   "soru": "Sevkiyatı yapılmış ama faturalaşmamış işleri müşteri bazında listeler misin?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturalasmamis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_2f0be9bdc941",
+      "entity": "STLINE",
+      "what": "BILLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevkiyati",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_252d8a352fa7",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A023": {
+   "n": 69,
+   "soru": "Bu yıl satış hedefi ile gerçekleşen ciroyu kitap bazında karşılaştır.",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "kitap",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satis hedefi",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_d6f188afd5f5",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "ciroyu",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A024": {
+   "n": 70,
+   "soru": "Basılan adetle satılan adedi karşılaştırıp elde kalan tirajı kitap bazında göster.",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitap",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "basilan adetle",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_0c8990bc92c4",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "elde kalan",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satilan adedi",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_0777c0af5563",
+      "entity": "STLINE",
+      "what": "f:2824b17ebbb9d139",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A046": {
+   "n": 71,
+   "soru": "Telif yüzdesine göre bu yıl hangi yazara ne kadar telif tahakkuk etti?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "telif tahakkuk",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_584033112985",
+      "entity": "NEW_ODEMEBASE",
+      "what": "NEW_TAHAKKUKTUTARI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "telif yuzdesine",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f70a1e73644c",
+      "entity": "NEW_TELIFTANIMBASE",
+      "what": "new_TelifYuzdesi",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "Yazar ",
+      "type": "DIMENSION_VALUE",
+      "status": "PROFILE",
+      "concept": "",
+      "entity": "CONTACTBASE",
+      "what": "Description",
+      "values": [
+       "Yazar "
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_TELIFTANIMBASE.new_TelifYuzdesi"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A047": {
+   "n": 72,
+   "soru": "Kampanyada planlanan ciro ile faturalaşan gerçek ciro ne kadar tuttu?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturalasan",
+      "type": "METRIC",
+      "status": "INFERRED",
+      "concept": "sem_c34c5b721f78",
+      "entity": "LG_STLINE",
+      "what": "f:706214c33f78e745",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciro",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "kampanyada",
+     "planlanan"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "kampanyada"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "planlanan ciro"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A048": {
+   "n": 73,
+   "soru": "Sipariş termin tarihi ile irsaliye tarihi arasındaki ortalama gecikme kaç gün?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "siparis termin tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8bf42c930c77",
+      "entity": "LG_ORFLINE",
+      "what": "DUEDATE",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "gecikme",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_b2e79669e0e3",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "NEW_GECIKMESURESIGUN",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_isplanibase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "irsaliye tarihi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_a038c464cecd",
+      "entity": "LG_STLINE",
+      "what": "TRCODE",
+      "values": [
+       "8"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "kayıt sayısı",
+      "type": "METRIC",
+      "status": "COMPOSED",
+      "concept": "",
+      "entity": "NEW_ISPLANIBASE",
+      "what": "f:5ab00a3f034d344e",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "LG_ORFLINE.DUEDATE",
+     "NEW_ISPLANIBASE.NEW_GECIKMESURESIGUN"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "A049": {
+   "n": 74,
+   "soru": "Tahsilat kayıtları ile cari bakiyeler arasında uyuşmayan müşteriler var mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "bakiyeler",
+     "tahsilat"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "uyusmayan"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A050": {
+   "n": 75,
+   "soru": "Bekleyen ürün olarak görünen kitapların depoda gerçekten stoğu var mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitaplarin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "depoda",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "bekleyen"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "bekleyen urun"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A071": {
+   "n": 76,
+   "soru": "Baskı maliyeti ile satış cirosunu karşılaştırıp kitap başına kâr marjını çıkar.",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "kitap basina kar",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_d04737d88b16",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "NEW_BIRIMKAR",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_satissenaryosubase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "baski maliyeti",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_6cc1f9cca2c7",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "f:23fd59fe68f44c5c",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_SATISSENARYOSUBASE.NEW_BIRIMKAR"
+    ],
+    "unresolved": [
+     "satis"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "DEFAULT_PERIOD_WITHDRAWN",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "satis"
+     },
+     {
+      "code": "SOURCE_CHOSEN_BY_TALLY",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A072": {
+   "n": 77,
+   "soru": "Etkinlik yapılan yazarların kitaplarının etkinlik sonrası satışı arttı mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitaplarinin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satisi",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "etkinlik",
+     "sonrasi",
+     "yazarlarin"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "Yazar "
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "etkinlik"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "etkinlik"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A073": {
+   "n": 78,
+   "soru": "Reklam harcaması yapılan kitapların cirosu harcamayı karşıladı mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitaplarin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "harcamasi",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_5723ee78f2f2",
+      "entity": "EMFLINE",
+      "what": "f:2c89c41f40ac7d47",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "cirosu",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "reklam"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "reklam"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A075": {
+   "n": 79,
+   "soru": "Okul ziyaret kayıtları olan kurumların kaçı bu yıl bize sipariş verdi?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "KURUM, OKUL",
+      "type": "DIMENSION_VALUE",
+      "status": "PROFILE",
+      "concept": "",
+      "entity": "CLCARD",
+      "what": "SPECODE2",
+      "values": [
+       "KURUM",
+       "OKUL"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "siparis",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "ziyaret"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A096": {
+   "n": 80,
+   "soru": "Fiyat listesindeki liste fiyatıyla faturada uygulanan fiyat arasında fark var mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "faturada",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "fark"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "uygulanan"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A097": {
+   "n": 81,
+   "soru": "Ödeme vadesi tanımıyla gerçek tahsilat tarihleri arasındaki sapma müşteri bazında nedir?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "tahsilat tarihleri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8f4b30826f97",
+      "entity": "NEW_TAHSILATBASE",
+      "what": "NEW_TAHSILATTARIHI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "odeme",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_b4ad7d9b040c",
+      "entity": "NEW_ODEMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [
+     "sapma",
+     "tanimiyla",
+     "vadesi"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A098": {
+   "n": 82,
+   "soru": "Projede öngörülen ilk yıl satış tahmini gerçekleşti mi, kitap bazında karşılaştır.",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitap",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "gerceklesti",
+     "projede",
+     "satis"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "ongorulen"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "projede"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "satis tahmini"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A099": {
+   "n": 83,
+   "soru": "Kargoya verilen sevk adediyle faturadaki adet birbirini tutuyor mu?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturadaki",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevk",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_252d8a352fa7",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "birbirini",
+     "kargoya"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "kargoya"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "A100": {
+   "n": 84,
+   "soru": "Forma sayısına göre kitapların forma başına getirdiği ciro nasıl değişiyor?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "kitaplarin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "forma sayisina",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_ea2a2489b123",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "new_Forma",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "basina",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_a310716b1d12",
+      "entity": "PRODORD",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciro",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME",
+     "NEW_SATISSENARYOSUBASE.new_Forma"
+    ],
+    "unresolved": [
+     "forma"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "getirdigi→NEW_SATISSENARYOSUBASE.NEW_ICBASKIFORMASAYISI"
+    ],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "forma"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B081": {
+   "n": 85,
+   "soru": "Siparişi alınmış ama faturası hiç kesilmemiş tutarımız ne kadar?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "faturasi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "siparisi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "kesilmemis"
+    ],
+    "qualifierColumns": [
+     "alinmis→INVOICE.FROMORDWITHPAY"
+    ],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B082": {
+   "n": 86,
+   "soru": "Satış hedefinin altında kalan kitapları gerçekleşen ciroyla birlikte gösterir misin?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "kitaplari",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satis hedefinin",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_d6f188afd5f5",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "kalan",
+      "type": "METRIC",
+      "status": "INFERRED",
+      "concept": "sem_c2af44f4d5ac",
+      "entity": "STLINE",
+      "what": "f:0738668ef58f2271",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciroyla",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B083": {
+   "n": 87,
+   "soru": "Kredi kartıyla alınan tahsilatların ne kadarı cari hesaba işlenmemiş?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [],
+    "slots": [],
+    "groupBy": [],
+    "unresolved": [
+     "tahsilatlarin"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "islenmemis"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "UNRESOLVED"
+   }
+  },
+  "B084": {
+   "n": 88,
+   "soru": "Sözleşmedeki telif oranına göre bu yıl satıştan doğan hakedişi hesaplar mısın?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satistan",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "hakedisi",
+     "sozlesmedeki",
+     "telif"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [
+     "dogan→NEW_SATISSENARYOSUBASE.NEW_SATISADEDI_1YIL"
+    ],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "hakedisi"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "sozlesmedeki"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "telif"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "THIS_YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B085": {
+   "n": 89,
+   "soru": "İskonto listesindeki oranla faturada uygulanan indirim tutmayan müşteriler hangileri?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturada",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "iskonto",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_80b8fd23b272",
+      "entity": "STLINE",
+      "what": "f:30cdeedb769f68e3",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [
+     "indirim"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "tutmayan",
+     "uygulanan"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "indirim"
+     },
+     {
+      "code": "SOURCE_CHOSEN_BY_TALLY",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B086": {
+   "n": 90,
+   "soru": "Sevk ettiğimiz halde faturası çıkmamış kalemleri müşteri bazında listeler misin?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "musteri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturasi",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_8a9a41ed5881",
+      "entity": "INVOICE",
+      "what": "TRCODE",
+      "values": [
+       "2",
+       "3",
+       "7",
+       "8",
+       "9"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "sevk",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_252d8a352fa7",
+      "entity": "STLINE",
+      "what": "AMOUNT",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "CLCARD.DEFINITION_"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "ettigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": "ABSENCE",
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B087": {
+   "n": 91,
+   "soru": "Ödeme vadesi tanımıyla gerçek tahsilat tarihi arasındaki sapma kaç gün?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "tahsilat tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8f4b30826f97",
+      "entity": "NEW_TAHSILATBASE",
+      "what": "NEW_TAHSILATTARIHI",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "odeme",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_b4ad7d9b040c",
+      "entity": "NEW_ODEMEBASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "sapma",
+     "tanimiyla",
+     "vadesi"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B088": {
+   "n": 92,
+   "soru": "Bütçelediğimiz pazarlama giderinin ne kadarı muhasebeye gerçekten düşmüş?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "giderinin",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_5723ee78f2f2",
+      "entity": "EMFLINE",
+      "what": "f:2c89c41f40ac7d47",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "muhasebeye",
+     "pazarlama"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "butceledigimiz",
+     "dusmus"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B089": {
+   "n": 93,
+   "soru": "Baskı maliyetiyle o kitabın satış cirosunu kıyaslayıp zarar edenleri bulur musun?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitabin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "satis",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "baski",
+     "edenleri"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "baski maliyetiyle"
+     },
+     {
+      "code": "SOURCE_CHOSEN_BY_TALLY",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B090": {
+   "n": 94,
+   "soru": "Ziyaret ettiğimiz kurumlardan hiç ciro getirmeyenler hangileri?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "KURUM",
+      "type": "DIMENSION_VALUE",
+      "status": "PROFILE",
+      "concept": "",
+      "entity": "CLCARD",
+      "what": "SPECODE2",
+      "values": [
+       "KURUM"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciro",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "getirmeyenler",
+     "ziyaret"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "ettigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B091": {
+   "n": 95,
+   "soru": "Kampanya indirimi verilen siparişlerin tahsilatı diğerlerine göre gecikiyor mu?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "digerlerine",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f5de7f56ff9e",
+      "entity": "NEW_ETKINLIKBASE",
+      "what": "NEW_DIGER",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_sevkiyatsatiribase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SEVKIYATSATIRIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "kampanya",
+      "type": "ENTITY",
+      "status": "CERTIFIED",
+      "concept": "sem_ab2ea765f18b",
+      "entity": "NEW_KAMPANYABASE",
+      "what": "",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "indirimi",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_66b273e5dfa3",
+      "entity": "NEW_SEVKIYATSATIRIBASE",
+      "what": "f:4541bca15a21b1cf",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "NEW_ETKINLIKBASE.NEW_DIGER"
+    ],
+    "unresolved": [
+     "verilen"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "verilen siparislerin"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B092": {
+   "n": 96,
+   "soru": "Risk limiti dolu olduğu halde yeni sipariş girilen müşteriler var mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA",
+     "TIMAS_MSCRM"
+    ],
+    "slots": [
+     {
+      "term": "limiti",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_6842a1fe6f2a",
+      "entity": "ACCOUNTBASE",
+      "what": "CREDITLIMIT",
+      "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "musteriler",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_94d9bdabac96",
+      "entity": "CLCARD",
+      "what": "DEFINITION_",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "risk",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_9cdcf713e9cc",
+      "entity": "NEW_SIPARISBASE",
+      "what": "NEW_ANLIKRISK",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "yeni siparis",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_68e9becebef5",
+      "entity": "NEW_SIPARISBASE",
+      "what": "NEW_YENISIPARISID",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "limiti dolu",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "",
+      "entity": "ACCOUNTBASE",
+      "what": "CreditLimit",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     }
+    ],
+    "groupBy": [
+     "ACCOUNTBASE.CREDITLIMIT"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B094": {
+   "n": 97,
+   "soru": "Etkinlik yaptığımız illerde ciromuz etkinlik sonrasında arttı mı?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciromuz",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "etkinlik",
+     "illerde",
+     "sonrasinda"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "yaptigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "etkinlik"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "etkinlik"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "illerde"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B095": {
+   "n": 98,
+   "soru": "Termin tarihi geçen siparişlerin kaçı gecikmeli de olsa faturalanmış?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "termin tarihi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8bf42c930c77",
+      "entity": "LG_ORFLINE",
+      "what": "DUEDATE",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "siparislerin",
+      "type": "DIMENSION_VALUE",
+      "status": "CERTIFIED",
+      "concept": "sem_69ee4882386c",
+      "entity": "LG_ORFICHE",
+      "what": "TRCODE",
+      "values": [
+       "1"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "faturalanmis",
+      "type": "METRIC",
+      "status": "INFERRED",
+      "concept": "sem_c34c5b721f78",
+      "entity": "LG_STLINE",
+      "what": "f:706214c33f78e745",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "LG_ORFLINE.DUEDATE"
+    ],
+    "unresolved": [],
+    "unhandled": [],
+    "leftToModel": [
+     "gecen"
+    ],
+    "qualifierColumns": [],
+    "drops": [],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "RESOLVED"
+   }
+  },
+  "B096": {
+   "n": 99,
+   "soru": "Yazara ödediğimiz telifin kitabın net cirosuna oranı kaç?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "kitabin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "ANA"
+     },
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "net cirosuna",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_8542c8254c47",
+      "entity": "STLINE",
+      "what": "f:b77985993bcaab9d",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [
+     "ITEMS.NAME"
+    ],
+    "unresolved": [
+     "odedigimiz",
+     "telifin",
+     "yazara"
+    ],
+    "unhandled": [],
+    "leftToModel": [],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "Yazar "
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "odedigimiz"
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "telifin"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  },
+  "B097": {
+   "n": 100,
+   "soru": "Bekleyen ürün yüzünden kaçırdığımız tahmini ciro ne kadar?",
+   "kaynak": "ikisi",
+   "read": {
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "stline default cancelled",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "STLINE",
+      "what": "CANCELLED",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "ANA"
+     },
+     {
+      "term": "ciro",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_b62a0c853395",
+      "entity": "STLINE",
+      "what": "f:aa20177e3e44f2ae",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
+    "groupBy": [],
+    "unresolved": [
+     "bekleyen",
+     "tahmini"
+    ],
+    "unhandled": [],
+    "leftToModel": [
+     "kacirdigimiz"
+    ],
+    "qualifierColumns": [],
+    "drops": [
+     {
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
+     },
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "bekleyen urun"
+     }
+    ],
+    "shape": null,
+    "grain": null,
+    "limit": null,
+    "ratio": false,
+    "comparison": false,
+    "temporal": [
+     "YEAR"
+    ],
+    "clarification": false,
+    "outOfScope": false,
+    "state": "PARTIAL"
+   }
+  }
+ }
+}
