@@ -642,3 +642,7 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 ## 2026-09-18 02:51 UTC — Editör R3 takip
 
 R3 kaynak kontrolü43/48, hata0; gerçek ana API/PG koşusu sürüyor. Güncel paket/import geçti; dolu restore ve mobil kabul henüz bekleniyor. GPU offline kurulum doğrulayıcısı artık paket Docker healthcheck başarısını ayrıca bekliyor; yeni kontrolün canlı kabulü henüz yok. Kitap verisi veya inceleme kararı değiştirilmedi. Ayrıntı: [V14 kayıtları](editor/2026-09-18-source-analysis-v14.md).
+
+## 2026-09-18 — Editör anlamsal atıf sözleşmesi V5
+
+Okunmamış kaynak kimliklerinin model tarafından atıf seçilmesi genel kodda engellendi; gerçek21/22/28 sayfa API/PG aday kontrolleri tamamlandı, kaynak verisi değişmedi. R4 imajları ağsız derlendi; R3 kabulü biterken dağıtım bekliyor. Tam kitap kabulü değildir. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
