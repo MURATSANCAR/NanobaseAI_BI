@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> **18 Eylül03:49UTC — R4 çalışıyor:** Yeni nesil `08ca6877` gerçek kitapla başladı; R3 dolu restore/mobil kabulü tamamlandı. R4 yayımlanmış21/22/28 bileşen kontrolü geçti. GPUoffline pakette eksik CPUoffload ayarı genel kodda düzeltildi ve import geçti; son soğuk açılış isteğinde yönetimVPN koptu, sonucu DOĞRULANAMADI. Doğrudan model tüneli sayesinde kitap koşusu sürüyor. [Koşu](2026-09-18-source-analysis-v14.md), [GPU kök neden](2026-09-18-gpu-cold-boot.md).
+
 > **18 Eylül03:19UTC:** R3 kitap işleme ve ayrı dolu restore/mobil kabulü tamamlandı;60 sınırlı iddia/27 taslak, atıf boşluğu0, anlamsal kabul false. R4 atıf-kimliği düzeltmesi canlı;47 backend dosyası eşliği ve gerçek altyapı/28ACL geçti. Yeni R4 tam koşu GPU offline soğuk açılış kontrolünün bitmesini bekliyor.262 kaynak incelemesi ve genel kimlik hâlâ açık. [Ayrıntı](2026-09-18-source-analysis-v14.md).
 
 > **18 Eylül R3 kodu canlı:**47 backend dosyası ve9 web kaynak/çıktı eşliği geçti.45. sayfadaki bilgilendirici ek/öykü ayrımı kaynak amaç kapısıyla düzeltildi; final gerçek45/5/6 bileşen kontrolleri geçti. R3 yeni nesil97814b6c çalışıyor; bağımsız monitor ve ayrı kurulum qualifier aktif. GPU internet kapalı soğuk açılış paket refs/main newline hatasını yakaladı; paketleme/import kodu düzeltildi, cache-v3 hash/import ve gerçek HF offline çözümleme geçti. Tam GPU cold-boot, başka model isteği görüldüğü için servisler durdurulmadan ertelendi. R2’nin dolu restore/mobil kabulü geçti, anlamsal kabulü yok. [Ayrıntı](2026-09-18-source-analysis-v14.md).

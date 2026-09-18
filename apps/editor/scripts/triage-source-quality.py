@@ -14,7 +14,8 @@ import uuid
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
-run = json.loads((root/'evidence/source-spans-run.json').read_text())
+run_file = root/os.environ.get('EDITOR_VERIFY_RUN_FILE', 'evidence/source-spans-run.json')
+run = json.loads(run_file.read_text())
 generation = str(uuid.UUID(run['generation_id']))
 base = os.environ.get('EDITOR_VERIFY_BASE_URL', 'http://127.0.0.1:8810')
 headers = {'Authorization': 'Bearer '+(root/'secrets/api_token').read_text().strip()}
@@ -56,6 +57,7 @@ for reading in readings:
         'source_span_ids': [row['id'] for row in page_pending]})
 all_claims = [claim for row in claims for key in ('claims','blocked_claims') for claim in row['data'][key]]
 report = {'at': datetime.now(timezone.utc).isoformat(), 'generation_id': generation,
+    'run_file': str(run_file),
     'api': base, 'independent_pg_equal': True, 'total_spans': len(spans),
     'agreed': len(spans)-len(pending), 'review': len(pending), 'issue_counts': dict(issues),
     'issue_combinations': dict(combinations),

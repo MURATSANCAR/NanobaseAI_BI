@@ -141,3 +141,22 @@ Cache-v3 R2 denemesi (`cold-boot-v14-cache-v3-r2`)172 dosya bütünlüğünü ve
 ### GPU cold-boot kök neden düzeltmesi
 
 Canlı64,58GiB ile paket88,42GiB yükleme farkının asıl nedeni paketleyicinin VLLM_PLE_CPU_OFFLOAD=1 ayarını atlamasıdır; eager denemesi tek başına çözmedi. Runtime environment manifesti/allowlist ve gerçek eski paket ret kontrolü eklendi; runtime-env-v5 import PASS. Yeni cold-boot başlatma isteğinde VPN koptu, başlangıç/sonuç DOĞRULANAMADI. CPU→GPU model erişimi çalışıyor. [Ayrıntı ve kanıt](2026-09-18-gpu-cold-boot.md).
+
+### R4 ana koşu ve VPN kesintisi sonrası gerçek kabul
+
+R4 yayımlanmış modülü ile gerçek R3 kaynaklarını okuyan21/22/28 bileşen kontrolü API/PG eşliğiyle tamamlandı; modül byte eşliği zorunlu tutuldu. Geçersiz semantik şema hatası üç sayfada tekrarlanmadı.21:0 uygun aday/0 sentez;22:1/1;28:4/3. Kaynak veya inceleme kararı yazımı0. Kanıt `evidence/v14-r4-live-semantic-v5-page-0021.json`, `0022.json`, `0028.json`; aday modül değil yayın dosyası import edildi.
+
+Qwen process_start_time_seconds, kesinti sonrası gözlem ile bu gerçek çıkarımlar arasında değişmedi. DoğrudanGPU→CPU model yolu sağlıklı olduğundan yeni ana R4 koşu başladı; GPU yönetim erişimi/son cold-boot sonucu ayrı DOĞRULANAMADI kalır. Yeni bir GPU bakım denemesi başlatılmadı.
+
+- İş `28aad122-3c1d-49ee-a182-f00ac449312c`.
+- Nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`; kaynak ata R3 `97814b6c`.
+- Yayın `source-analysis-v14-r4-20260918`, backend tree `bec5b4ff0cbcc81e5b61744359c5dfa207b63f20a490b0b6e5a692e8fda870d8`; webR3.
+- MonitorPID3629239; qualifierPID3629240. `evidence/v14-r4-qualification.log`, `parallel-monitor-28aad122-3c1d-49ee-a182-f00ac449312c.json`.
+- Ayrı kabul kökü `/data/nanobaseai/editor-qualifications/v14-r4-20260918/08ca6877`; hedefAPI18828/metrik19108/subnet76–77. Geçici proxy18886/18888 yalnız hedef77 ağına açık; wrapper sonunda kaldırır.
+- Başlangıç03:49UTC. İlk11 kaynak kontrolü geçti, hata listesi boş; paketPASS, import çalışıyor. Bu ara sonuç tam kitap kabulü değildir.
+
+Başlatma kontrol betiğinin ilk yazımında shell tırnak hatası Pythonparse aşamasında durdu; API çağrısı yapılmadı. Betik yerel dosyadan SCP ile aynen taşındı ve aynı idempotency anahtarıyla tek iş oluşturuldu. Sonraki nesil veya düzeltme için çalışan yayının kabulü bitmeden CPUbackend/qualification dosyaları değiştirilmez.
+
+### 04:01 UTC — R4 kaynak kontrolleri ve tanılama
+
+48/48 kaynak sayfası kontrol edildi, başarısız sayfa yok. İş kaynak sonrası kontrollerde sürüyor; tam analiz/restore sonucu henüz yok. Yeni paket/import geçti. `triage-source-quality.py` eski sabit koşu dosyasına bağlıydı; `EDITOR_VERIFY_RUN_FILE` ve raporda `run_file` eklendi. Gerçek R4 nesliyle API/bağımsız PG eşliği geçti: 1149 bölge, 887 anlaşma/262 inceleme. Kanıt CPU `evidence/source-quality-triage-20260918T040054080902Z.json`, log `evidence/v14-r4-source-triage.log`; aday betik `runtime/triage-source-quality-r4.py`. Bu salt okunur tanılama; kitap/inceleme kararı yazımı yok. Aktif qualifier'ın donmuş paket dosyaları değiştirilmedi.
