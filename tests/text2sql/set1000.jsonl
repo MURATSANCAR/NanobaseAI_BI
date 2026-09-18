@@ -1,0 +1,1000 @@
+{"id": "K0001", "soru": "Bu yılın net cirosu şu an itibarıyla ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0002", "soru": "Geçen yılın aynı dönemine göre ciromuz yüzde kaç büyüdü?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0003", "soru": "2026 cirosunu ay ay gösterir misin, iadeler düşülmüş olsun.", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0004", "soru": "Son on iki ayın net satış tutarını çeyrekler halinde özetle.", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0005", "soru": "KDV hariç brüt satış ile net satış arasındaki fark bu yıl ne kadar tuttu?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0006", "soru": "2021'den bugüne yıllık ciro seyrimiz nasıl, yıl yıl dök.", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0007", "soru": "Ağustos ayı cirosu temmuza göre arttı mı azaldı mı, kaç lira fark var?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0008", "soru": "Bu yıl en yüksek ciroyu hangi ayda yaptık?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0009", "soru": "Yılbaşından bugüne kesilen satış faturalarının ortalama tutarı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0010", "soru": "Cironun yüzde sekseni kaç müşteriden geliyor?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0011", "soru": "İlk yirmi müşterinin toplam cirodaki payı geçen yıla göre değişti mi?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0012", "soru": "Perakende satış faturaları ile toptan satış faturalarının ciro dağılımı nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0013", "soru": "Yurtdışı satışlarımızın bu yılki toplamı ne, geçen yılla kıyasla.", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0014", "soru": "İhracat faturalarını döviz cinsine göre toplar mısın?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0015", "soru": "Satış temsilcisi bazında bu yılki net ciro sıralaması nedir?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0016", "soru": "Cari grup koduna göre ciro dağılımını yüzdeleriyle birlikte ver.", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0017", "soru": "İl bazında ciro dağılımımız nasıl, ilk on il hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0018", "soru": "Haftalık ciro ortalamamız bu çeyrekte kaç lira?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0019", "soru": "Bu ay günlük ortalama fatura tutarımız geçen ayın üstünde mi?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0020", "soru": "Geçen yıl ciroda ilk ondaydı ama bu yıl ilk elliye giremeyen müşteriler var mı?", "kaynak": "logo", "rol": "CFO", "konu": "ciro"}
+{"id": "K0021", "soru": "Bu yıl kesilen iade faturalarının toplamı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0022", "soru": "İade oranımız aylara göre nasıl seyrediyor?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0023", "soru": "En çok iade yapan on müşteriyi iade tutarıyla listele.", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0024", "soru": "İadelerin ciroya oranı 2025 ile 2026'da yüzde kaçtı?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0025", "soru": "Hangi kitaplarda iade adedi satış adedinin yarısını geçmiş?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0026", "soru": "Geçen çeyrekteki iadelerin ne kadarı aynı çeyrekte satılan mallardan?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0027", "soru": "Zincir mağazaların iade oranı bağımsız kitapçılara göre yüksek mi?", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0028", "soru": "Yıl sonuna doğru iadeler artıyor mu, son üç yılın aralık aylarını karşılaştır.", "kaynak": "logo", "rol": "CFO", "konu": "iade"}
+{"id": "K0029", "soru": "Bu yıl faturalarda verdiğimiz toplam iskonto tutarı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0030", "soru": "Ortalama iskonto oranı en yüksek yirmi müşteri kim?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0031", "soru": "Yüzde ellinin üzerinde iskonto uygulanmış fatura satırları var mı?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0032", "soru": "İskonto oranımız çeyrekten çeyreğe nasıl değişti?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0033", "soru": "Satır iskontosu ile fatura altı iskontonun toplamdaki payları nedir?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0034", "soru": "Brüt ciroya göre iskonto yükümüz yüzde kaç?", "kaynak": "logo", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0035", "soru": "Bugün itibarıyla toplam açık alacağımız ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0036", "soru": "Vadesi gelmemiş alacak ile vadesi geçmiş alacağı ayrı ayrı göster.", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0037", "soru": "Doksan günü aşmış alacaklarımız toplam alacağın yüzde kaçı?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0038", "soru": "En yüksek bakiyeli otuz müşteriyi bakiyeleriyle sırala.", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0039", "soru": "Yüz seksen günden eski alacağı olan müşteriler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0040", "soru": "Alacak yaşlandırmasını müşteri grubuna göre kır.", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0041", "soru": "Geçen ay sonuna göre açık alacak toplamımız arttı mı?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0042", "soru": "Alacak devir hızımız bu yıl kaç, geçen yıl kaçtı?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0043", "soru": "Bakiyesi bir milyon liranın üstünde olan cari hesaplar kimler?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0044", "soru": "Alacak bakiyesi olup da son altı aydır hiç ödeme yapmayan müşteriler kimler?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0045", "soru": "Önümüzdeki otuz gün içinde vadesi dolacak alacakların toplamı ne?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0046", "soru": "Vadesi geçmiş alacaklarda ortalama gecikme kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0047", "soru": "Risk limitinin yüzde doksanını doldurmuş müşteriler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0048", "soru": "Risk limiti tanımlanmamış ama bakiyesi yüksek olan cariler var mı?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0049", "soru": "Ters bakiye veren, yani bize borçlu olması gerekirken alacaklı görünen müşteriler var mı?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0050", "soru": "Döviz cinsinden alacaklarımızın bugünkü dökümü nedir?", "kaynak": "logo", "rol": "CFO", "konu": "alacak"}
+{"id": "K0051", "soru": "Bu ay ne kadar tahsilat yaptık?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0052", "soru": "Tahsilatları ödeme türüne göre ayır, nakit, havale, çek, kredi kartı.", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0053", "soru": "Tahsilatın ciroya oranı aylar itibarıyla nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0054", "soru": "Geçen haftaki tahsilat toplamı bir önceki haftaya göre nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0055", "soru": "En çok tahsilat yaptığımız on müşteri bu yıl kim oldu?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0056", "soru": "Ortalama tahsilat süremiz son üç yılda nasıl değişti?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0057", "soru": "Faturasını vadesinden önce ödeyen müşteriler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0058", "soru": "Sürekli geç ödeyen müşteriler kimler, ortalama kaç gün gecikiyorlar?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0059", "soru": "Bu çeyrekte tahsil edilen tutarın ne kadarı önceki yılların faturalarına ait?", "kaynak": "logo", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0060", "soru": "Portföydeki çeklerin toplam tutarı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0061", "soru": "Önümüzdeki üç ayda vadesi gelecek çekleri ay ay topla.", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0062", "soru": "Bankaya tahsile verilmiş çeklerin banka bazında dökümü nedir?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0063", "soru": "Ciro ettiğimiz müşteri çeklerinin toplamı bu yıl ne oldu?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0064", "soru": "Karşılıksız çıkan çekler hangi müşterilere ait?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0065", "soru": "Kendi çeklerimizden henüz ödenmemiş olanların vade dağılımı nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0066", "soru": "Portföydeki senetlerin ortalama vadesi kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0067", "soru": "Teminata verilmiş çek ve senetlerin toplamı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0068", "soru": "Tek bir müşteriden aldığımız çeklerin toplamı beş milyonu geçen var mı?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0069", "soru": "Bu yıl protesto edilen senet oldu mu, tutarı ne?", "kaynak": "logo", "rol": "CFO", "konu": "cek"}
+{"id": "K0070", "soru": "Banka hesaplarımızın güncel bakiyeleri nedir?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0071", "soru": "Hangi bankada ne kadar paramız var, döviz hesapları dahil.", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0072", "soru": "Bu ay bankalardan çıkan toplam ödeme tutarı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0073", "soru": "Banka bazında aylık giriş ve çıkışları karşılaştır.", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0074", "soru": "Kredi hesaplarımızdaki toplam borç ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0075", "soru": "Geçen ay ödenen banka masrafı ve komisyonların toplamı ne?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0076", "soru": "Kredi kartı POS tahsilatlarının bankalara göre dağılımı nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0077", "soru": "Bankalar arası virmanların bu yılki toplamı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "banka"}
+{"id": "K0078", "soru": "Kasaların bugünkü bakiyesi ne?", "kaynak": "logo", "rol": "CFO", "konu": "kasa"}
+{"id": "K0079", "soru": "Kasadan bu ay yapılan ödemeleri açıklamalarıyla listele.", "kaynak": "logo", "rol": "CFO", "konu": "kasa"}
+{"id": "K0080", "soru": "Kasa bakiyesi eksiye düşmüş gün var mı bu yıl?", "kaynak": "logo", "rol": "CFO", "konu": "kasa"}
+{"id": "K0081", "soru": "Kasadan yapılan yüz bin liranın üstündeki tek seferlik ödemeler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "kasa"}
+{"id": "K0082", "soru": "Önümüzdeki altmış gün için beklenen tahsilat ve ödemeleri haftalık göster.", "kaynak": "logo", "rol": "CFO", "konu": "nakit"}
+{"id": "K0083", "soru": "Bu ay sonunda vadesi gelen ödemelerimizi karşılayacak tahsilat görünüyor mu?", "kaynak": "logo", "rol": "CFO", "konu": "nakit"}
+{"id": "K0084", "soru": "Net nakit pozisyonumuz geçen yılın aynı gününe göre nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "nakit"}
+{"id": "K0085", "soru": "Vadesi gelen tedarikçi ödemeleri ile vadesi gelen müşteri çeklerini aynı takvimde göster.", "kaynak": "logo", "rol": "CFO", "konu": "nakit"}
+{"id": "K0086", "soru": "Aylık nakit girişi ile nakit çıkışı arasındaki fark bu yıl hangi aylarda eksi?", "kaynak": "logo", "rol": "CFO", "konu": "nakit"}
+{"id": "K0087", "soru": "Tedarikçilere toplam borcumuz ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0088", "soru": "Vadesi geçmiş tedarikçi borçlarımız var mı, kimlere?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0089", "soru": "En çok borçlu olduğumuz on tedarikçiyi sırala.", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0090", "soru": "Matbaalara olan borcumuzun toplamı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0091", "soru": "Kâğıt tedarikçilerine bu yıl ne kadar ödeme yaptık?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0092", "soru": "Ortalama borç ödeme süremiz kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0093", "soru": "Bu ay vadesi dolacak borçların listesi ve toplamı.", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0094", "soru": "Tedarikçi borç yaşlandırmasını otuz günlük dilimlerle göster.", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0095", "soru": "Hem müşterimiz hem tedarikçimiz olan carilerin net bakiyesi nedir?", "kaynak": "logo", "rol": "CFO", "konu": "borc"}
+{"id": "K0096", "soru": "Bu yılki toplam satınalma tutarımız ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0097", "soru": "Satınalma faturalarını tedarikçiye göre topla, ilk on beşi göster.", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0098", "soru": "Kâğıt alımlarına bu yıl ne kadar harcadık, geçen yıla göre artış yüzde kaç?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0099", "soru": "Alış faturalarında birim fiyatı en çok artan malzemeler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0100", "soru": "Açık satınalma siparişlerimizin toplam tutarı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0101", "soru": "Teslim tarihi geçmiş ama hâlâ gelmemiş satınalma siparişleri var mı?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0102", "soru": "Hizmet alım faturalarının aylık toplamı nasıl değişiyor?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0103", "soru": "Dövizli alımlarımızın bu yılki TL karşılığı toplamı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "satinalma"}
+{"id": "K0104", "soru": "Bu yılki toplam giderimiz ne kadar, geçen yılla karşılaştır.", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0105", "soru": "Masraf merkezlerine göre aylık gider tablosu çıkar.", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0106", "soru": "En çok harcama yapan beş masraf merkezi hangisi?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0107", "soru": "Pazarlama satış dağıtım giderleri bu yıl ne kadar tuttu?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0108", "soru": "Genel yönetim giderlerinin ciroya oranı yüzde kaç?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0109", "soru": "Personel giderleri aylar itibarıyla nasıl seyretti?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0110", "soru": "Kira giderlerimizin yıllık toplamı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0111", "soru": "Nakliye ve kargo giderleri geçen yıla göre ne kadar arttı?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0112", "soru": "Finansman giderlerimiz bu yıl kaç lira oldu?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0113", "soru": "Kur farkı gideri ve kur farkı geliri bu yıl ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0114", "soru": "Giderlerdeki en büyük artış hangi hesapta olmuş?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0115", "soru": "Geçen aya göre yüzde yirmiden fazla artan gider kalemleri hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "gider"}
+{"id": "K0116", "soru": "Brüt kâr marjımız bu yıl yüzde kaç?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0117", "soru": "Satılan malın maliyeti ay ay ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0118", "soru": "Müşteri bazında brüt kârı hesaplayıp en kârlı yirmiyi göster.", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0119", "soru": "Kitap bazında brüt kâr marjı en düşük olanlar hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0120", "soru": "Zararına sattığımız ürünlerin bu yılki toplam zararı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0121", "soru": "Gelir tablosunu bu yıl için özet halinde çıkar.", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0122", "soru": "Faaliyet kârımız çeyrekler itibarıyla nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0123", "soru": "Brüt kâr marjı geçen yıla göre kaç puan değişti?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0124", "soru": "Ürün grubuna göre kârlılık sıralaması nedir?", "kaynak": "logo", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0125", "soru": "Stoklarımızın toplam maliyet değeri ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0126", "soru": "Ambar bazında stok değerini göster.", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0127", "soru": "Bir yıldır hiç satılmayan stokların toplam değeri nedir?", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0128", "soru": "Stok değeri en yüksek elli kalemi listele.", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0129", "soru": "Stok devir hızımız yıllar itibarıyla nasıl değişti?", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0130", "soru": "Stokta ortalama kaç günlük satışa yetecek mal var?", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0131", "soru": "Hammadde stoklarının değeri ile mamul stoklarının değerini ayrı göster.", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0132", "soru": "Yıl başındaki stok değeri ile bugünkü stok değeri arasındaki fark ne?", "kaynak": "logo", "rol": "CFO", "konu": "stokdeger"}
+{"id": "K0133", "soru": "Dövizli açık alacak ve borçlarımızın net pozisyonu nedir?", "kaynak": "logo", "rol": "CFO", "konu": "doviz"}
+{"id": "K0134", "soru": "Euro cinsinden kesilen faturaların bu yılki toplamı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "doviz"}
+{"id": "K0135", "soru": "Dolar bazında borçlu olduğumuz tedarikçiler kimler?", "kaynak": "logo", "rol": "CFO", "konu": "doviz"}
+{"id": "K0136", "soru": "Dövizli işlemlerde kullanılan ortalama kur aylara göre neydi?", "kaynak": "logo", "rol": "CFO", "konu": "doviz"}
+{"id": "K0137", "soru": "Bugün kaç satış faturası kesildi?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0138", "soru": "Dün kesilen faturaların listesini müşteri adı ve tutarıyla ver.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0139", "soru": "Bu ay kesilen iade faturalarını numarasıyla listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0140", "soru": "İptal edilmiş faturalar bu yıl kaç tane, toplam tutarı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0141", "soru": "Fatura numarası atlamış mı, seride boşluk var mı kontrol et.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0142", "soru": "Aynı müşteriye aynı gün aynı tutarda kesilmiş birden fazla fatura var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0143", "soru": "Tutarı sıfır olan faturalar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0144", "soru": "Muhasebeleşmemiş satış faturaları var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0145", "soru": "Eylül ayında kesilip de hâlâ muhasebe fişi oluşmamış alış faturalarını göster.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0146", "soru": "E-fatura olarak gönderilen faturaların sayısı bu ay kaç?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0147", "soru": "E-arşiv faturaların bu yılki toplam tutarı nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0148", "soru": "Vergi numarası boş olan cari hesaplara kesilmiş faturalar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0149", "soru": "Fatura tarihi ile irsaliye tarihi arasında yedi günden fazla olan faturalar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0150", "soru": "Geçen ay kesilen en yüksek tutarlı on fatura hangisi?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0151", "soru": "Belirli bir müşterinin bu yılki bütün faturalarını tarih sırasıyla nasıl görürüm, örneğin D&R için?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0152", "soru": "Proforma olarak kalmış, gerçek faturaya dönmemiş kayıtlar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0153", "soru": "Fatura altı indirimi yüzde onu aşan faturaları listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0154", "soru": "Satır toplamı ile fatura genel toplamı tutmayan faturalar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0155", "soru": "Hizmet faturalarını mal faturalarından ayırarak bu ayın toplamlarını ver.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0156", "soru": "Tevkifatlı kesilen faturalar bu yıl hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fatura"}
+{"id": "K0157", "soru": "Bu ayın hesaplanan KDV toplamı ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0158", "soru": "İndirilecek KDV ile hesaplanan KDV farkı ağustos için nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0159", "soru": "KDV oranlarına göre satış matrahlarını ayır.", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0160", "soru": "Yüzde sıfır KDV ile kesilen faturaların matrahı ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0161", "soru": "Devreden KDV'miz var mı, son altı ayın seyri nasıl?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0162", "soru": "KDV oranı yüzde yirmi olan satışlarımız hangi ürünlerde?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0163", "soru": "İade faturalarından kaynaklanan KDV düzeltmesi bu ay ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0164", "soru": "İhraç kayıtlı ya da istisna kapsamındaki satışların toplamı nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kdv"}
+{"id": "K0165", "soru": "Bu ay için BA formuna girecek tedarikçileri ve tutarlarını çıkar.", "kaynak": "logo", "rol": "muhasebeci", "konu": "babs"}
+{"id": "K0166", "soru": "BS formu için beş bin lira üstü satış yapılan müşteriler ve belge sayıları nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "babs"}
+{"id": "K0167", "soru": "Geçen ay BA BS sınırını aşan carilerde vergi numarası eksik olan var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "babs"}
+{"id": "K0168", "soru": "Bu ay kaç muhasebe fişi kesildi, türlerine göre ayır.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0169", "soru": "Borç alacak toplamı eşit olmayan fiş var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0170", "soru": "Mahsup fişlerinden tutarı en yüksek yirmisini göster.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0171", "soru": "Açıklaması boş bırakılmış muhasebe fişi satırları kaç tane?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0172", "soru": "Kapanış tarihinden sonra geçmiş aya kayıt atılmış fişler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0173", "soru": "Hafta sonu tarihine kesilmiş muhasebe fişleri hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0174", "soru": "Yuvarlak tutarlı, örneğin tam yüz bin liralık manuel fişler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0175", "soru": "Bu yıl en çok fiş giren kullanıcılar kimler?", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0176", "soru": "Sonradan değiştirilmiş fişleri değiştiren kullanıcıyla birlikte listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "fis"}
+{"id": "K0177", "soru": "Ağustos sonu itibarıyla mizanı ana hesap seviyesinde ver.", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0178", "soru": "120 alıcılar hesabının bakiyesi cari bakiyeler toplamıyla tutuyor mu?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0179", "soru": "320 satıcılar hesabının ay sonu bakiyeleri bu yıl nasıl değişti?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0180", "soru": "100 kasa hesabı ile kasa modülündeki bakiye arasında fark var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0181", "soru": "102 bankalar hesabının alt hesap bakiyelerini listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0182", "soru": "600 yurt içi satışlar hesabının aylık alacak toplamları nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0183", "soru": "770 genel yönetim giderlerinin alt hesap kırılımını göster.", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0184", "soru": "Ters bakiye veren hesaplar var mı, örneğin alacak bakiyesi veren kasa?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0185", "soru": "Bu yıl hiç hareket görmemiş muhasebe hesapları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0186", "soru": "153 ticari mallar hesabı ile stok modülündeki envanter değeri uyuşuyor mu?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0187", "soru": "Geçici hesaplarda, örneğin 159 ya da 340'ta bekleyen bakiyeler neler?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0188", "soru": "391 hesaplanan KDV hesabının ağustos hareketleri toplamı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0189", "soru": "Yansıtma hesapları ay sonunda kapatılmış mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "mizan"}
+{"id": "K0190", "soru": "Cari hesap ekstresinde bakiyesi sıfır olmayan kaç müşteri var?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0191", "soru": "Kapatılmamış, yani açık kalemi bulunan faturaları müşteri bazında listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0192", "soru": "Tahsilatı yapılmış ama faturayla eşlenmemiş ödemeler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0193", "soru": "Aynı vergi numarasıyla açılmış birden fazla cari kart var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0194", "soru": "Bu yıl yeni açılan cari hesap sayısı kaç?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0195", "soru": "Adres ya da vergi dairesi bilgisi eksik olan aktif cariler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0196", "soru": "Kullanım dışı bırakılmış ama bakiyesi kalan cari hesaplar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0197", "soru": "Bir liranın altında küsurat bakiyesi kalmış cariler kaç tane?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0198", "soru": "Virman fişiyle bakiyesi başka hesaba aktarılan cariler bu yıl hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0199", "soru": "Mutabakat için bakiyesi yüz bin liranın üstünde olan müşterilerin listesini çıkar.", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0200", "soru": "Personel avans hesaplarında kapanmamış bakiyeler kimlerde?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0201", "soru": "Ödeme planı tanımlanmamış müşteri kartları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cari"}
+{"id": "K0202", "soru": "Bugün nasıl gidiyoruz, günün satış rakamı ne?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0203", "soru": "Bu ay hedefe göre neredeyiz, ciro kaç oldu?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0204", "soru": "Dün ne kadar satış yaptık?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0205", "soru": "Bu hafta geçen haftadan iyi mi?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0206", "soru": "Yılı geçen yılın üstünde kapatır mıyız, şu ana kadarki fark ne?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0207", "soru": "Şirketin bu yılki durumunu üç beş rakamla özetle, ciro, tahsilat, alacak, stok.", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0208", "soru": "Son üç ayda işler yavaşladı mı?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0209", "soru": "En iyi ayımız hangisiydi, en kötüsü hangisi?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0210", "soru": "Bu çeyrek geçen çeyrekten nasıl?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0211", "soru": "Beş yıldır ciro büyümemiz enflasyonun üstünde mi, yıllık artış yüzdeleri ne?", "kaynak": "logo", "rol": "CEO", "konu": "ozet"}
+{"id": "K0212", "soru": "En büyük müşterimiz kim?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0213", "soru": "İlk on müşteriyi ve bizden ne kadar aldıklarını göster.", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0214", "soru": "Bu yıl kaç farklı müşteriye satış yaptık?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0215", "soru": "Bu yıl ilk kez alışveriş yapan yeni müşteriler kimler, ne kadar aldılar?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0216", "soru": "Kaybettiğimiz müşteriler var mı, geçen yıl alıp bu yıl hiç almayanlar?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0217", "soru": "Alımını en çok artıran müşteriler hangileri?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0218", "soru": "Alımı en çok düşen beş büyük müşteri kim?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0219", "soru": "Tek bir müşteriye bağımlılığımız ne kadar, en büyüğün cirodaki payı yüzde kaç?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0220", "soru": "Online satış kanallarının payı yıllar içinde nasıl değişti?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0221", "soru": "Zincir mağazalar mı daha çok alıyor, dağıtımcılar mı?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0222", "soru": "Müşteri başına ortalama yıllık ciro ne kadar?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0223", "soru": "Üç yıldır her yıl alımını artıran müşteriler var mı?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0224", "soru": "Anadolu'daki müşterilerin toplam payı İstanbul'a göre nasıl?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0225", "soru": "Yurtdışında hangi ülkelere satıyoruz?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0226", "soru": "Kamu kurumlarına yaptığımız satışların toplamı ne?", "kaynak": "logo", "rol": "CEO", "konu": "musteri"}
+{"id": "K0227", "soru": "Bu yıl en çok satan yirmi kitap hangisi?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0228", "soru": "Ciroya en çok katkı yapan kitap hangisi oldu?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0229", "soru": "Bu ay çok satanlar listemiz geçen aya göre değişti mi?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0230", "soru": "Satışı en hızlı düşen kitaplar hangileri?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0231", "soru": "Bu yıl çıkan yeni kitapların toplam cirodaki payı ne?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0232", "soru": "Eski kitaplar mı taşıyor ciroyu, yeniler mi?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0233", "soru": "Kaç farklı kitap bu yıl en az bir adet sattı?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0234", "soru": "Hiç satmayan kitap sayımız kaç?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0235", "soru": "Çocuk kitaplarının satış adedi yetişkin kitaplarına göre nasıl?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0236", "soru": "Ürün kategorilerine göre adet ve ciro dağılımı nedir?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0237", "soru": "Beş yıl üst üste her yıl en az bin adet satan kitaplar hangileri?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0238", "soru": "Toplam satış adedimiz bu yıl kaç oldu, geçen yıl aynı tarihte kaçtı?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0239", "soru": "Ortalama kitap satış fiyatımız yıllara göre nasıl arttı?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0240", "soru": "Bir milyon lira ciroyu geçen kaç kitabımız var?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0241", "soru": "Set halinde satılan ürünlerin toplam satışı ne kadar?", "kaynak": "logo", "rol": "CEO", "konu": "urun"}
+{"id": "K0242", "soru": "Batma riski olan, borcunu ödeyemeyen büyük müşteri var mı?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0243", "soru": "Alacaklarımız kontrol altında mı, vadesi geçen tutar büyüyor mu?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0244", "soru": "Kasada ve bankada toplam ne kadar nakdimiz var?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0245", "soru": "Önümüzdeki ay ödeme sıkıntısı çeker miyiz?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0246", "soru": "Depoda yatan ölü stok ne kadar para ediyor?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0247", "soru": "Çeklerimizin ne kadarı tek bir müşteriye ait?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0248", "soru": "Borcumuz alacağımızdan fazla mı?", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0249", "soru": "En riskli beş müşteriyi söyle, neden riskli olduklarını da rakamla göster.", "kaynak": "logo", "rol": "CEO", "konu": "risk"}
+{"id": "K0250", "soru": "2024 ile 2025'i ciro, adet ve iade açısından yan yana koy.", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0251", "soru": "Pandemi sonrası yıllarda büyümemiz nasıl seyretti?", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0252", "soru": "Bu yılın ilk sekiz ayı ile geçen yılın ilk sekiz ayını karşılaştır.", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0253", "soru": "Ramazan ayı satışları diğer aylara göre nasıl?", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0254", "soru": "Kitap fuarı dönemlerinde satışlar artıyor mu, kasım aylarına bak.", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0255", "soru": "Okul açılış dönemi olan eylülde satışlar diğer aylardan ne kadar yüksek?", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0256", "soru": "Yaz aylarında satış düşüyor mu, son üç yılın haziran temmuz ağustosuna bak.", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0257", "soru": "Adet olarak mı büyüyoruz fiyat olarak mı, son üç yılı ayrıştır.", "kaynak": "logo", "rol": "CEO", "konu": "karsilastirma"}
+{"id": "K0258", "soru": "Depoda toplam kaç adet kitap var?", "kaynak": "logo", "rol": "CEO", "konu": "stok"}
+{"id": "K0259", "soru": "En çok stoğu olan kitaplar hangileri?", "kaynak": "logo", "rol": "CEO", "konu": "stok"}
+{"id": "K0260", "soru": "Çok satıp da stoğu bitmek üzere olan kitaplar var mı?", "kaynak": "logo", "rol": "CEO", "konu": "stok"}
+{"id": "K0261", "soru": "Hangi kitaplar iki yıldan fazla yetecek kadar stokta duruyor?", "kaynak": "logo", "rol": "CEO", "konu": "stok"}
+{"id": "K0262", "soru": "Stokta olmayan ama satışı devam eden kitaplar hangileri?", "kaynak": "logo", "rol": "CEO", "konu": "stok"}
+{"id": "K0263", "soru": "Ambarlar arası transferlerin bu ayki toplam adedi nedir?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0264", "soru": "Sayım farkı fişleriyle bu yıl ne kadarlık stok düzeltmesi yapılmış?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0265", "soru": "Fire ve sarf fişleriyle çıkan malzemenin toplam maliyeti ne?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0266", "soru": "Negatif stoğa düşmüş kalemler var mı?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0267", "soru": "Emanet ya da konsinye ambarlarındaki stok miktarı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0268", "soru": "Son giriş maliyeti ile ortalama maliyet arasında yüzde otuzdan fazla fark olan ürünler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0269", "soru": "Asgari stok seviyesi tanımlanmış kaç kalem var, kaçı bu seviyenin altında?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0270", "soru": "Kâğıt stoğumuz kaç tonluk, kaç liralık?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0271", "soru": "İade ambarında bekleyen ürünlerin adedi ve değeri nedir?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0272", "soru": "Hurdaya ayrılan kitapların bu yılki toplam maliyeti ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "stok"}
+{"id": "K0273", "soru": "Stok kartında birim tanımı eksik olan kalemler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0274", "soru": "Barkodu tanımlanmamış aktif stok kartları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0275", "soru": "Aynı barkodla açılmış birden fazla stok kartı var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0276", "soru": "KDV oranı boş ya da sıfır görünen stok kartlarını listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0277", "soru": "Bu ay açılan yeni stok kartları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0278", "soru": "Maliyeti sıfır görünen satış hareketleri var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0279", "soru": "Ambar fişlerinden faturaya bağlanmamış olanlar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0280", "soru": "Dönem sonu envanter listesini ambar ve kalem bazında çıkar.", "kaynak": "logo", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0281", "soru": "Açık müşteri siparişlerinin toplam tutarı ve adedi nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0282", "soru": "Onay bekleyen siparişler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0283", "soru": "Bu hafta girilen siparişleri müşteri bazında topla.", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0284", "soru": "Otuz günden uzun süredir açık duran siparişler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0285", "soru": "Kısmen sevk edilmiş siparişlerde kalan miktarları göster.", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0286", "soru": "Siparişten faturaya dönme süresi ortalama kaç gün?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0287", "soru": "İptal edilen ya da kapatılan siparişlerin bu yılki toplamı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0288", "soru": "Sipariş girilip de stok yetersizliğinden sevk edilemeyen kalemler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0289", "soru": "Faturalanmamış satış irsaliyeleri hangileri, toplam tutarı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0290", "soru": "Bu ay kaç irsaliye kesildi, kaç koli sevk edildi?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0291", "soru": "İrsaliyesi kesilip yedi günü geçtiği halde faturası kesilmeyen sevkiyatlar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0292", "soru": "Alım irsaliyesi gelmiş ama faturası işlenmemiş mal kabulleri hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0293", "soru": "İade irsaliyelerinden henüz iade faturasına bağlanmayanlar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0294", "soru": "Ay sonunda irsaliye tarihi bir ayda fatura tarihi sonraki ayda olan kayıtlar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "irsaliye"}
+{"id": "K0295", "soru": "Bu yıl açılan üretim emirlerinin toplam planlanan adedi ne?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0296", "soru": "Tamamlanan üretim emirlerinde gerçekleşen maliyet planlananı ne kadar aştı?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0297", "soru": "Üretimde en çok malzeme sarfı olan on kitap hangisi?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0298", "soru": "Birim üretim maliyeti en yüksek kitaplar hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0299", "soru": "Üretimden girişi yapılan mamul adedi aylara göre nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0300", "soru": "Devam eden üretim emirlerinin üzerindeki yarı mamul maliyeti ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0301", "soru": "Fason işçilik için ödenen tutar bu yıl ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0302", "soru": "Reçetesi tanımlı olmayan mamul kartları var mı?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0303", "soru": "Üretim emri açılış ile kapanış arası ortalama süre kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0304", "soru": "Aynı kitabın farklı baskılarında birim maliyet nasıl değişmiş?", "kaynak": "logo", "rol": "CFO", "konu": "uretim"}
+{"id": "K0305", "soru": "Fiyat listesinde bu yıl kaç kez zam yapılmış, ortalama artış yüzde kaç?", "kaynak": "logo", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0306", "soru": "Satış fiyatı maliyetinin iki katından az olan kitaplar hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0307", "soru": "Geçerlilik tarihi dolmuş fiyat tanımları hâlâ kullanılıyor mu?", "kaynak": "logo", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0308", "soru": "Aynı ürüne aynı ay içinde en farklı fiyatlarla satış yapılan kalemler hangileri?", "kaynak": "logo", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0309", "soru": "Liste fiyatı bin liranın üstünde olan ürünlerimiz neler?", "kaynak": "logo", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0310", "soru": "Bu yıl ay ay giderlerimiz geçen yılın aynı aylarını ne kadar aştı?", "kaynak": "logo", "rol": "CFO", "konu": "butce"}
+{"id": "K0311", "soru": "Gider artış hızımız ciro artış hızının üstünde mi?", "kaynak": "logo", "rol": "CFO", "konu": "butce"}
+{"id": "K0312", "soru": "Sabit giderlerimizin aylık ortalaması nedir?", "kaynak": "logo", "rol": "CFO", "konu": "butce"}
+{"id": "K0313", "soru": "Amortisman giderleri bu yıl toplam ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "butce"}
+{"id": "K0314", "soru": "Demirbaş alımlarına bu yıl ne kadar harcandı?", "kaynak": "logo", "rol": "CFO", "konu": "butce"}
+{"id": "K0315", "soru": "Satış elemanlarına göre tahsilat performansı nasıl?", "kaynak": "logo", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0316", "soru": "Hangi satış temsilcisinin müşterilerinde vadesi geçmiş alacak en yüksek?", "kaynak": "logo", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0317", "soru": "Temsilci bazında verilen ortalama iskonto oranlarını karşılaştır.", "kaynak": "logo", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0318", "soru": "Temsilcisi atanmamış cari hesapların cirosu ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0319", "soru": "Banka ekstresine işlenmiş ama cari hesaba aktarılmamış havaleler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0320", "soru": "Bu ay gelen havaleleri gönderen müşteriye göre listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0321", "soru": "Gönderilen EFT ve havalelerin bugünkü toplamı nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0322", "soru": "Banka hesaplarından eksi bakiyeye düşen var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0323", "soru": "Dövizli banka hesaplarının TL karşılığı toplamı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0324", "soru": "Kredi taksit ödemelerinin bu yılki toplamı ve kalan anapara nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0325", "soru": "Aynı gün aynı tutarda iki kez işlenmiş banka hareketi var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0326", "soru": "Vadeli mevduat hesaplarımız var mı, faiz geliri bu yıl ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "banka"}
+{"id": "K0327", "soru": "Bugünkü kasa hareketlerini giriş çıkış olarak listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "kasa"}
+{"id": "K0328", "soru": "Kasa tahsilat fişlerinden cari hesabı seçilmemiş olan var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kasa"}
+{"id": "K0329", "soru": "Kasadan bankaya yatırılan tutarların aylık toplamı nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kasa"}
+{"id": "K0330", "soru": "Yedi bin liranın üzerinde nakit tahsilat yapılmış işlemler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "kasa"}
+{"id": "K0331", "soru": "Bugün vadesi gelen çekler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0332", "soru": "Bu hafta ödenecek kendi çeklerimizin listesi ve toplamı.", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0333", "soru": "Portföyde olup vadesi geçmiş ama hâlâ işlem görmemiş çekler var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0334", "soru": "Çek giriş bordrolarını bu ay için müşteri bazında topla.", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0335", "soru": "Tedarikçiye ciro edilen çeklerden karşılıksız dönen oldu mu?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0336", "soru": "Banka teminatındaki çeklerin vade ortalaması nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0337", "soru": "Elden tahsil edilen çeklerin bu yılki toplamı ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0338", "soru": "Seri numarası mükerrer girilmiş çek kaydı var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "cek"}
+{"id": "K0339", "soru": "Dönem sonu kur değerlemesi yapılması gereken dövizli cari bakiyeler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0340", "soru": "Ay sonu itibarıyla gelecek aylara ait gider olarak ayrılması gereken faturalar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0341", "soru": "Şüpheli alacak karşılığı ayrılabilecek, bir yılı aşmış alacaklar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0342", "soru": "Aralık ayında kesilip ocakta irsaliyesi çıkan satışlar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0343", "soru": "Dönem sonu stok sayımı ile kayıtlı stok arasındaki farklar hangi kalemlerde?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0344", "soru": "2025 kapanış bakiyeleri ile 2026 açılış bakiyeleri tutuyor mu?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0345", "soru": "Devir fişiyle gelen cari bakiyelerin toplamı geçen yıl sonu bakiyesiyle aynı mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0346", "soru": "Aynı tedarikçiden aynı tutarda iki kez girilmiş alış faturası var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0347", "soru": "Mesai saatleri dışında girilmiş yüksek tutarlı kayıtlar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0348", "soru": "Geriye dönük tarihle girilmiş faturalar bu yıl kaç tane?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0349", "soru": "Kayıt tarihinden sonra tutarı değiştirilmiş faturalar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0350", "soru": "Silinen ya da iptal edilen tahsilat makbuzları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0351", "soru": "Bir kullanıcının hem faturayı kesip hem tahsilatını işlediği kayıtlar ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0352", "soru": "Fatura kesilmeden tahsilat alınmış müşteriler hangileri, avans bakiyeleri ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0353", "soru": "Vadesi fatura tarihinden önce görünen kayıtlar var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0354", "soru": "Aynı belge numarasıyla kaydedilmiş birden fazla alış faturası var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0355", "soru": "Negatif tutarlı fatura satırları hangi faturalarda var?", "kaynak": "logo", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0356", "soru": "Bu ay gelen alış faturalarını tedarikçi bazında listele.", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0357", "soru": "Ödemesi yapılmış ama faturası gelmemiş tedarikçi avansları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0358", "soru": "Matbaa faturalarının bu yılki aylık toplamları nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0359", "soru": "Stopaj kesintisi yapılan serbest meslek makbuzlarının toplamı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0360", "soru": "Telif ödemesi olarak muhasebeleşen tutarların aylık dökümü nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0361", "soru": "Kargo firmalarından gelen faturaların toplamı geçen yıla göre nasıl?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0362", "soru": "Alış iadelerinin bu yılki toplamı ve tedarikçi dağılımı ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0363", "soru": "Yurt dışı tedarikçilerden gelen faturalar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "tedarikci"}
+{"id": "K0364", "soru": "Bana bu ayın en büyük beş faturasını söyle.", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0365", "soru": "Kitapyurdu bu yıl bizden ne kadar aldı?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0366", "soru": "D&R'ın bize borcu ne kadar?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0367", "soru": "Geçen sene toplam kaç kitap sattık?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0368", "soru": "En çok hangi şehre satıyoruz?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0369", "soru": "Kaç liralık çekimiz var elimizde?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0370", "soru": "Bu ay ne kadar ödeme yapacağız?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0371", "soru": "Matbaalara bu yıl toplam kaç para ödedik?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0372", "soru": "Şu an depoda kaç liralık mal var?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0373", "soru": "İadeler yüzünden bu yıl ne kadar ciro kaybettik?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0374", "soru": "Geçen ay kaç yeni müşteri kazandık?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0375", "soru": "En son ne zaman bu kadar yüksek aylık ciro yapmıştık?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0376", "soru": "Satışların kaçta kaçı İstanbul'dan?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0377", "soru": "Ortalama kaç günde paramızı tahsil ediyoruz?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0378", "soru": "Bu yıl kimlere en çok indirim yaptık?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0379", "soru": "Kâğıda bu yıl ne kadar para verdik?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0380", "soru": "Aylık ortalama ciromuz kaç lira?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0381", "soru": "Ciro rekorumuz hangi ay, kaç lira?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0382", "soru": "Bu yıl zam yaptıktan sonra adetler düştü mü?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0383", "soru": "Geçen yılın bu gününe kadar ne satmıştık, şimdi ne sattık?", "kaynak": "logo", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0384", "soru": "Müşterilere tanıdığımız ortalama vade kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "vade"}
+{"id": "K0385", "soru": "Vadesi yüz yirmi günü aşan satışlarımızın toplamı nedir?", "kaynak": "logo", "rol": "CFO", "konu": "vade"}
+{"id": "K0386", "soru": "Peşin satışların toplam içindeki payı ne kadar?", "kaynak": "logo", "rol": "CFO", "konu": "vade"}
+{"id": "K0387", "soru": "Tedarikçilerin bize tanıdığı ortalama vade ile bizim müşteriye tanıdığımız vade arasındaki fark kaç gün?", "kaynak": "logo", "rol": "CFO", "konu": "vade"}
+{"id": "K0388", "soru": "Vade farkı faturası kestiğimiz müşteriler hangileri, toplamı ne?", "kaynak": "logo", "rol": "CFO", "konu": "vade"}
+{"id": "K0389", "soru": "CRM'e bu ay girilen siparişlerin toplam tutarı ne kadar?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0390", "soru": "Bugün kaç sipariş girildi?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0391", "soru": "Bu hafta en çok sipariş veren müşteriler kimler?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0392", "soru": "Sipariş adedi geçen yılın aynı ayına göre nasıl?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0393", "soru": "Ortalama sipariş tutarımız kaç lira?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0394", "soru": "Bekleyen siparişlerin toplamı ne kadar?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0395", "soru": "Hangi müşterilerin siparişi en uzun süredir bekliyor?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0396", "soru": "Siparişlerin kaçta kaçı zamanında sevk ediliyor?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0397", "soru": "Bu ay iptal edilen siparişlerin tutarı ne?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0398", "soru": "Satış temsilcilerine göre bu ayki sipariş toplamlarını sırala.", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0399", "soru": "Hangi temsilci bu yıl en çok yeni müşteri siparişi getirdi?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0400", "soru": "Sipariş kanallarına göre dağılım nasıl, saha, telefon, internet?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0401", "soru": "En çok sipariş edilen yirmi kitap hangisi bu ay?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0402", "soru": "Sipariş edilip de karşılanamayan kitaplar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0403", "soru": "Sipariş satırlarında talep edilen adet ile sevk edilen adet arasındaki fark toplamda ne kadar?", "kaynak": "crm", "rol": "CEO", "konu": "siparis"}
+{"id": "K0404", "soru": "Açık siparişlerin termin tarihine göre haftalık dağılımı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0405", "soru": "Onay aşamasında bekleyen siparişlerin tutarı ne, kimin onayında bekliyor?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0406", "soru": "Risk nedeniyle bloke edilmiş siparişler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0407", "soru": "Siparişteki anlık risk tutarı en yüksek müşteriler kimler?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0408", "soru": "İskonto oranı yüzde kırk beşin üstünde girilen siparişleri listele.", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0409", "soru": "Özel fiyat ya da ek iskonto onayı istenen siparişler bu ay kaç tane?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0410", "soru": "Sipariş girişinden sevke kadar geçen ortalama süre kaç gün?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0411", "soru": "Tutarı beş yüz bin liranın üstündeki siparişler bu yıl hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0412", "soru": "Ödeme şekli kredi kartı olan siparişlerin toplamı ne?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0413", "soru": "Vadeli girilen siparişlerde ortalama vade kaç gün?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0414", "soru": "Kampanya kodu girilmiş siparişlerin toplam tutarı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0415", "soru": "Bedelsiz ya da promosyon olarak girilen sipariş satırlarının liste fiyatı karşılığı ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0416", "soru": "Sipariş iptal nedenlerine göre dağılım nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0417", "soru": "Aynı müşteriden aynı gün girilmiş mükerrer görünen siparişler var mı?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0418", "soru": "Bu çeyrekte sipariş tutarı geçen çeyreğe göre en çok artan müşteri grupları hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "siparis"}
+{"id": "K0419", "soru": "CRM'de kayıtlı aktif müşteri sayımız kaç?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0420", "soru": "Bu yıl kaç yeni firma kaydı açıldı?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0421", "soru": "Müşterilerin illere göre dağılımı nasıl?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0422", "soru": "Müşteri tiplerine göre kaç firma var, kitapçı, zincir, okul, dağıtımcı?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0423", "soru": "Son bir yıldır hiç sipariş vermeyen kayıtlı müşteriler kaç tane?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0424", "soru": "Temsilci başına düşen müşteri sayısı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0425", "soru": "Sorumlusu atanmamış müşteri kayıtları var mı?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0426", "soru": "En çok ziyaret edilen müşteriler hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0427", "soru": "Altı aydır hiç ziyaret edilmeyen büyük müşteriler kimler?", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0428", "soru": "Kredi limiti en yüksek yirmi müşteriyi göster.", "kaynak": "crm", "rol": "CEO", "konu": "musteri"}
+{"id": "K0429", "soru": "Kredi limiti tanımlı olup limiti sıfır görünen firmalar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0430", "soru": "İlgili kişisi ya da e-postası girilmemiş firma kayıtları kaç tane?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0431", "soru": "Aynı vergi numarasıyla açılmış mükerrer firma kayıtları var mı?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0432", "soru": "Pasife alınan müşteriler bu yıl hangileri, neden pasife alınmış?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0433", "soru": "Müşteri bazında tanımlı iskonto oranlarının dağılımı nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0434", "soru": "Ödeme vadesi doksan günün üstünde tanımlanmış müşteriler kimler?", "kaynak": "crm", "rol": "CFO", "konu": "musteri"}
+{"id": "K0435", "soru": "Bu ay kaç müşteri ziyareti yapıldı?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0436", "soru": "Temsilci bazında haftalık ziyaret sayıları nedir?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0437", "soru": "Okul ziyaretlerinin illere göre dağılımı nasıl?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0438", "soru": "Bu dönem kaç farklı okul ziyaret edildi?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0439", "soru": "Ziyaret sonucu olumlu işaretlenen görüşmelerin oranı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0440", "soru": "En az ziyaret yapan temsilciler kimler?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0441", "soru": "Planlanıp da gerçekleşmeyen ziyaretler kaç tane?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0442", "soru": "Geçen yıl ziyaret edilip bu yıl hiç gidilmeyen okullar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0443", "soru": "Telefon görüşmesi ve randevu kayıtlarının aylık sayısı nasıl değişiyor?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0444", "soru": "Ziyaret notlarında rakip yayınevi adı geçen görüşmeler hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "ziyaret"}
+{"id": "K0445", "soru": "Bu yılki satış hedefimiz toplam ne kadar?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0446", "soru": "Hedefler temsilcilere göre nasıl dağıtılmış?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0447", "soru": "Ürün bazında en yüksek hedef verilen on kitap hangisi?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0448", "soru": "Aylık hedeflerin toplamı yıllık hedefi tutuyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0449", "soru": "Geçen yılın hedefine göre bu yılın hedefi yüzde kaç artırılmış?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0450", "soru": "Hedef girilmemiş temsilci ya da bölge var mı?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0451", "soru": "Bölgelere göre hedef dağılımı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0452", "soru": "Dördüncü çeyrek için konulan hedef yılın yüzde kaçı?", "kaynak": "crm", "rol": "CEO", "konu": "hedef"}
+{"id": "K0453", "soru": "Yürürlükteki telif sözleşmesi sayımız kaç?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0454", "soru": "Önümüzdeki altı ayda süresi dolacak sözleşmeleri listele.", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0455", "soru": "Süresi dolmuş ama yenilenmemiş sözleşmeler hangi kitaplara ait?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0456", "soru": "Ortalama telif oranımız yüzde kaç?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0457", "soru": "Telif oranı yüzde on beşin üzerinde olan sözleşmeler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0458", "soru": "Avans ödemesi yapılmış sözleşmelerin toplam avans tutarı ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0459", "soru": "Avansı henüz satıştan çıkarılamamış, yani kapanmamış sözleşmeler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0460", "soru": "Yabancı para cinsinden imzalanan sözleşmelerin döviz bazında toplamı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0461", "soru": "Ajans üzerinden alınan kitap haklarında ajanslara göre sözleşme sayısı ve tutarı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0462", "soru": "Bu yıl imzalanan yeni sözleşme sayısı geçen yıla göre nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0463", "soru": "Sözleşme türlerine göre dağılım nasıl, telif, çeviri, editörlük, illüstrasyon?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0464", "soru": "Çevirmenlere ödenen sözleşme tutarlarının bu yılki toplamı ne?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0465", "soru": "Götürü bedelle yapılan sözleşmeler ile satışa bağlı telifli sözleşmelerin sayısı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0466", "soru": "Garanti edilen asgari baskı adedi olan sözleşmeler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0467", "soru": "Aynı yazarla birden fazla aktif sözleşmesi olanlar kimler?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0468", "soru": "Sözleşmesi olup da imza tarihi boş bırakılmış kayıtlar var mı?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0469", "soru": "E-kitap ve sesli kitap hakkı içeren sözleşmelerin oranı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0470", "soru": "Telif oranı kademeli tanımlanan sözleşmelerde en yüksek kademe yüzde kaç?", "kaynak": "crm", "rol": "CFO", "konu": "sozlesme"}
+{"id": "K0471", "soru": "Bu dönem hesaplanan toplam telif hakedişi ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0472", "soru": "Hakedişi en yüksek yirmi yazarı sırala.", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0473", "soru": "Ödenmemiş hakedişlerin toplamı ve yazar dağılımı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0474", "soru": "Hakediş dönemlerine göre ödenen tutarların son üç yıllık seyri nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0475", "soru": "Yurtdışındaki hak sahiplerine ödenecek hakedişlerin döviz karşılığı ne?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0476", "soru": "Hakedişi hesaplanmış ama onaylanmamış kayıtlar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0477", "soru": "Stopaj kesintisi uygulanan hakediş ödemelerinin toplam kesinti tutarı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0478", "soru": "Avansı hakedişinden büyük olan, yani bize borçlu görünen yazarlar var mı?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0479", "soru": "Bin liranın altında kalan küçük hakedişler kaç yazara ait?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0480", "soru": "Varislere ödenen hakedişler hangi eserlere ait?", "kaynak": "crm", "rol": "CFO", "konu": "hakedis"}
+{"id": "K0481", "soru": "Kaç yazarla çalışıyoruz?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0482", "soru": "En çok kitabı olan yazarlarımız kimler?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0483", "soru": "Bu yıl aramıza katılan yeni yazarlar kimler?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0484", "soru": "Yazarların kaçı yabancı, kaçı yerli?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0485", "soru": "En çok etkinliğe katılan yazarlar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0486", "soru": "Son üç yıldır yeni kitabı çıkmayan yazarlarımız kimler?", "kaynak": "crm", "rol": "CEO", "konu": "yazar"}
+{"id": "K0487", "soru": "Yayın programında şu an kaç proje var?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0488", "soru": "Projelerin aşamalara göre dağılımı nasıl, değerlendirme, editörlük, dizgi, baskı?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0489", "soru": "Bu yıl yayın kuruluna kaç dosya geldi, kaçı onaylandı?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0490", "soru": "Yayın kurulunda reddedilen projelerin oranı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0491", "soru": "Planlanan yayın tarihi geçmiş ama hâlâ çıkmamış kitaplar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0492", "soru": "Editörlere göre üzerindeki aktif proje sayısı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0493", "soru": "Bir projenin kabulden baskıya kadar geçen ortalama süresi kaç gün?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0494", "soru": "Önümüzdeki üç ayda çıkması planlanan kitaplar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0495", "soru": "Hangi dizilerde bu yıl en çok yeni kitap çıktı?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0496", "soru": "Çeviri projelerinde çevirmen teslim tarihini kaçıranlar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0497", "soru": "Projelerde öngörülen ilk baskı adetlerinin ortalaması nedir?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0498", "soru": "Yayın kurulunda önerilen satış fiyatı en yüksek projeler hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0499", "soru": "Türlere göre proje dağılımı nasıl, roman, çocuk, tarih, din, kişisel gelişim?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0500", "soru": "İptal edilen projeler bu yıl kaç tane, nedenleri ne?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0501", "soru": "Kapak tasarımı bekleyen projeler hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "proje"}
+{"id": "K0502", "soru": "Bu yıl kaç baskı yapıldı, toplam kaç adet basıldı?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0503", "soru": "Toplam baskı maliyetimiz bu yıl ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0504", "soru": "Matbaalara göre baskı adedi ve maliyet dağılımı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0505", "soru": "Adet başına baskı maliyeti en yüksek on kitap hangisi?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0506", "soru": "Baskı maliyeti kalemlerinin dağılımı nasıl, kâğıt, baskı, cilt, kapak?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0507", "soru": "Tekrar baskıların toplam baskı içindeki payı ne?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0508", "soru": "İlk baskı adedi ortalaması yıllara göre nasıl değişti?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0509", "soru": "Onuncu baskısını geçmiş kitaplarımız hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0510", "soru": "Bu ay baskıya giren kitaplar ve adetleri nedir?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0511", "soru": "Baskı talebi açılıp da henüz onaylanmayan işler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0512", "soru": "Matbaa teslim tarihi gecikmiş baskılar var mı?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0513", "soru": "Aynı forma sayısındaki kitaplarda matbaalar arası birim fiyat farkı ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0514", "soru": "Kâğıt cinsine göre baskı maliyetleri nasıl değişiyor?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0515", "soru": "Ciltli baskıların ortalama birim maliyeti karton kapaklılara göre ne kadar yüksek?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0516", "soru": "Baskı birim maliyeti son iki yılda yüzde kaç arttı?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0517", "soru": "Bin adedin altında yapılan küçük tirajlı baskılar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0518", "soru": "Baskı maliyetinin önerilen kapak fiyatına oranı yüzde yirmi beşi aşan kitaplar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0519", "soru": "Teklif alınan ama işe dönmeyen matbaa teklifleri var mı?", "kaynak": "crm", "rol": "CFO", "konu": "baski"}
+{"id": "K0520", "soru": "Bu yıl kaç etkinlik yapıldı, toplam gideri ne?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0521", "soru": "Etkinlik türlerine göre gider dağılımı nasıl, imza günü, söyleşi, fuar, okul?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0522", "soru": "İllere göre etkinlik sayısı ve harcaması nedir?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0523", "soru": "Etkinlik başına ortalama maliyet ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0524", "soru": "Fuarlara bu yıl ne kadar harcadık, fuar fuar göster.", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0525", "soru": "Konaklama ve ulaşım giderleri etkinlik bütçesinin yüzde kaçını tutuyor?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0526", "soru": "Bütçesi aşılan etkinlikler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0527", "soru": "Önümüzdeki ay planlanan etkinlikler ve tahmini giderleri neler?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0528", "soru": "Yazara ödenen katılım ücretlerinin toplamı bu yıl ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0529", "soru": "İptal edilen etkinliklerde yanan masraf var mı?", "kaynak": "crm", "rol": "CFO", "konu": "etkinlik"}
+{"id": "K0530", "soru": "Reklam ve tanıtım planlarının bu yılki toplam bütçesi nedir?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0531", "soru": "Mecra bazında reklam harcaması nasıl dağılıyor, dijital, basılı, açık hava?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0532", "soru": "En çok reklam bütçesi ayrılan on kitap hangisi?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0533", "soru": "Onay bekleyen reklam planları hangileri, toplam tutarı ne?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0534", "soru": "Planlanan reklam bütçesi ile gerçekleşen harcama arasındaki fark nedir?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0535", "soru": "Sosyal medya reklamlarına ay ay ne kadar harcanmış?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0536", "soru": "Reklam ajanslarına göre iş adedi ve tutarı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0537", "soru": "Bu yıl hiç tanıtım bütçesi ayrılmamış yeni çıkan kitaplar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "reklam"}
+{"id": "K0538", "soru": "Bu yıl kaç kampanya yapıldı, hangileri hâlâ açık?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0539", "soru": "Kampanyalarda planlanan ciro toplamı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0540", "soru": "Kampanya iskonto oranlarının ortalaması normal iskontodan ne kadar yüksek?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0541", "soru": "En çok sipariş getiren kampanya hangisi oldu?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0542", "soru": "Kampanya kapsamındaki kitap sayısı kampanyalara göre nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0543", "soru": "Bitiş tarihi geçtiği halde kapatılmamış kampanyalar var mı?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0544", "soru": "Kampanya dönemlerinde ortalama sipariş tutarı artıyor mu?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0545", "soru": "Kampanyaya katılan müşteri sayısı kampanya bazında nedir?", "kaynak": "crm", "rol": "CFO", "konu": "kampanya"}
+{"id": "K0546", "soru": "Bu ay kaç kargo gönderisi çıktı, toplam maliyeti ne?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0547", "soru": "Kargo firmalarına göre gönderi sayısı ve maliyet nedir?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0548", "soru": "Gönderi başına ortalama kargo maliyeti aylara göre nasıl değişti?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0549", "soru": "Alıcı ödemeli gönderilerin oranı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0550", "soru": "Kargo maliyetinin sipariş tutarına oranı en yüksek gönderiler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0551", "soru": "Teslim edilemeyip geri dönen gönderiler kaç tane?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0552", "soru": "İllere göre ortalama teslim süresi kaç gün?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0553", "soru": "Desi başına maliyet hangi kargo firmasında en düşük?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0554", "soru": "Hasarlı teslimat bildirimi yapılan gönderiler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0555", "soru": "Bin liranın altındaki siparişlere yapılan ücretsiz kargoların toplam maliyeti ne?", "kaynak": "crm", "rol": "CFO", "konu": "kargo"}
+{"id": "K0556", "soru": "CRM'de bu ay girilen tahsilat kayıtlarının toplamı nedir?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0557", "soru": "Kredi kartıyla alınan tahsilatları taksit sayısına göre ayır.", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0558", "soru": "Temsilcilerin sahadan topladığı tahsilatların temsilci bazında toplamı nedir?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0559", "soru": "Onaylanmamış tahsilat kayıtları hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0560", "soru": "Tahsilat makbuz numarası boş olan kayıtlar var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0561", "soru": "Bu hafta alınan çeklerin CRM kayıtlarını vade tarihiyle listele.", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0562", "soru": "İade edilen ya da iptal edilen kredi kartı tahsilatları hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0563", "soru": "Sanal POS tahsilatlarının bankalara göre dağılımı nedir?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0564", "soru": "Tahsilat girilmiş ama müşterisi seçilmemiş kayıtlar var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0565", "soru": "Günlük tahsilat toplamlarını bu ay için tarih sırasıyla göster.", "kaynak": "crm", "rol": "muhasebeci", "konu": "tahsilat"}
+{"id": "K0566", "soru": "İskonto listesinde tanımlı müşteri sayısı kaç?", "kaynak": "crm", "rol": "muhasebeci", "konu": "iskonto"}
+{"id": "K0567", "soru": "Ürün grubuna göre tanımlı iskonto oranları nedir?", "kaynak": "crm", "rol": "muhasebeci", "konu": "iskonto"}
+{"id": "K0568", "soru": "Geçerlilik süresi dolmuş iskonto tanımları hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "iskonto"}
+{"id": "K0569", "soru": "Aynı müşteri için çakışan birden fazla iskonto tanımı var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "iskonto"}
+{"id": "K0570", "soru": "En yüksek iskonto oranı tanımlı on müşteri kim?", "kaynak": "crm", "rol": "muhasebeci", "konu": "iskonto"}
+{"id": "K0571", "soru": "CRM fiyat listesinde fiyatı girilmemiş ürünler hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "fiyat"}
+{"id": "K0572", "soru": "Son fiyat güncellemesinde en çok zam gören kitaplar hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "fiyat"}
+{"id": "K0573", "soru": "Fiyat listesinde aynı ürün için birden fazla geçerli fiyat var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "fiyat"}
+{"id": "K0574", "soru": "Liste fiyatı yüz liranın altında kalan kitaplar kaç tane?", "kaynak": "crm", "rol": "muhasebeci", "konu": "fiyat"}
+{"id": "K0575", "soru": "Fiyat değişikliklerinin tarihçesini bu yıl için özetle, kaç kez ve ortalama yüzde kaç?", "kaynak": "crm", "rol": "muhasebeci", "konu": "fiyat"}
+{"id": "K0576", "soru": "ISBN'i girilmemiş yayın kayıtları var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "isbn"}
+{"id": "K0577", "soru": "Aynı ISBN ile kayıtlı birden fazla ürün var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "isbn"}
+{"id": "K0578", "soru": "Bu yıl alınan ISBN sayısı kaç?", "kaynak": "crm", "rol": "muhasebeci", "konu": "isbn"}
+{"id": "K0579", "soru": "Bandrol talep edilen adetler ile basılan adetler tutuyor mu?", "kaynak": "crm", "rol": "muhasebeci", "konu": "isbn"}
+{"id": "K0580", "soru": "Bandrol stoğu azalan kitaplar hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "isbn"}
+{"id": "K0581", "soru": "Açık destek talebi sayımız kaç?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0582", "soru": "Müşteri şikâyetlerinin konulara göre dağılımı nasıl?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0583", "soru": "En çok şikâyet gelen konu hangisi, hasarlı ürün mü geç teslimat mı?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0584", "soru": "Destek taleplerinin ortalama çözüm süresi geçen yıla göre iyileşti mi?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0585", "soru": "Bir haftadan uzun süredir açık kalan talepler kimin üzerinde?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0586", "soru": "En çok şikâyet eden müşteriler hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0587", "soru": "Yeniden açılan destek talepleri kaç tane?", "kaynak": "crm", "rol": "CEO", "konu": "destek"}
+{"id": "K0588", "soru": "Rakip kitap kayıtlarında en sık karşımıza çıkan yayınevleri hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "rakip"}
+{"id": "K0589", "soru": "Rakiplerine göre daha pahalı kalan kitaplarımız hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "rakip"}
+{"id": "K0590", "soru": "Rakip fiyatı girilmiş kitaplarda ortalama fiyat farkımız yüzde kaç?", "kaynak": "crm", "rol": "CEO", "konu": "rakip"}
+{"id": "K0591", "soru": "Hangi türlerde rakip takibi hiç yapılmamış?", "kaynak": "crm", "rol": "CEO", "konu": "rakip"}
+{"id": "K0592", "soru": "Rakip kitap eşlemesi en son ne zaman güncellenmiş?", "kaynak": "crm", "rol": "CEO", "konu": "rakip"}
+{"id": "K0593", "soru": "Geciken iş planı görevleri hangi departmanlarda yoğunlaşıyor?", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0594", "soru": "Bu ay tamamlanan görev sayısı ile açılan görev sayısını karşılaştır.", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0595", "soru": "Üzerinde en çok açık görev olan kişiler kimler?", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0596", "soru": "Bitiş tarihi girilmemiş görevler kaç tane?", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0597", "soru": "Departmanlara göre iş planı tamamlanma yüzdeleri nedir?", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0598", "soru": "Yönetim kurulu kararlarına bağlı açık aksiyonlar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "isplani"}
+{"id": "K0599", "soru": "Fiziki arşivde kaç sözleşme dosyası kayıtlı?", "kaynak": "crm", "rol": "CEO", "konu": "arsiv"}
+{"id": "K0600", "soru": "Arşivden çıkarılıp otuz günden fazla süredir iade edilmeyen dosyalar kimde?", "kaynak": "crm", "rol": "CEO", "konu": "arsiv"}
+{"id": "K0601", "soru": "Arşiv kaydı olmayan yürürlükteki sözleşmeler var mı?", "kaynak": "crm", "rol": "CEO", "konu": "arsiv"}
+{"id": "K0602", "soru": "CRM'i son otuz günde hiç kullanmayan satış temsilcileri var mı?", "kaynak": "crm", "rol": "CEO", "konu": "kullanici"}
+{"id": "K0603", "soru": "Kullanıcı bazında bu ay girilen kayıt sayıları nedir?", "kaynak": "crm", "rol": "CEO", "konu": "kullanici"}
+{"id": "K0604", "soru": "Hangi departman CRM'e en çok veri giriyor?", "kaynak": "crm", "rol": "CEO", "konu": "kullanici"}
+{"id": "K0605", "soru": "Bekleyen ürün listesinde şu an kaç kitap var?", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0606", "soru": "En çok adet bekleyen on kitabı göster.", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0607", "soru": "Bekleyen ürünlerin müşteri bazında dağılımı nedir?", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0608", "soru": "Otuz günden fazladır bekleyen sipariş satırlarının toplam tutarı ne?", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0609", "soru": "Bekleyen ürünlerden baskı planına alınmış olanlar hangileri?", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0610", "soru": "Bekleyen adet önerilen baskı adedini aşan kitaplar var mı?", "kaynak": "crm", "rol": "CEO", "konu": "bekleyen"}
+{"id": "K0611", "soru": "Baskı öneri listesinde bu ay kaç kitap var, toplam önerilen adet ne?", "kaynak": "crm", "rol": "CFO", "konu": "onerilenbaski"}
+{"id": "K0612", "soru": "Önerilen baskı adedi ile onaylanan baskı adedi arasındaki fark hangi kitaplarda büyük?", "kaynak": "crm", "rol": "CFO", "konu": "onerilenbaski"}
+{"id": "K0613", "soru": "Önerilen baskıların tahmini toplam maliyeti ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "onerilenbaski"}
+{"id": "K0614", "soru": "Okul satışlarında bu dönem kaç kurumla anlaşma yapıldı?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0615", "soru": "Okullara verilen numune kitapların adedi ve liste fiyatı karşılığı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0616", "soru": "Okuma listesine giren kitaplarımız hangileri, kaç okulda?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0617", "soru": "Öğrenci sayısı en yüksek ziyaret edilen yüz okul hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0618", "soru": "İl milli eğitim bazında ziyaret edilen okul oranı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0619", "soru": "Özel okullar ile devlet okullarına yapılan ziyaretlerin sayısı nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0620", "soru": "Yazar okul buluşması yapılan kurumların listesi ve tarihleri.", "kaynak": "crm", "rol": "CFO", "konu": "okul"}
+{"id": "K0621", "soru": "Açık satış fırsatlarının toplam tahmini tutarı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "firsat"}
+{"id": "K0622", "soru": "Fırsatların kazanılma oranı bu yıl yüzde kaç?", "kaynak": "crm", "rol": "CFO", "konu": "firsat"}
+{"id": "K0623", "soru": "Kaybedilen fırsatların nedenlere göre dağılımı nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "firsat"}
+{"id": "K0624", "soru": "Tahmini kapanış tarihi geçmiş ama hâlâ açık duran fırsatlar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "firsat"}
+{"id": "K0625", "soru": "Kurumsal toplu satış tekliflerinin toplam tutarı ne, kaçı siparişe döndü?", "kaynak": "crm", "rol": "CFO", "konu": "firsat"}
+{"id": "K0626", "soru": "Bu ay verilen tekliflerin toplamı ve adedi nedir?", "kaynak": "crm", "rol": "CFO", "konu": "teklif"}
+{"id": "K0627", "soru": "Geçerlilik süresi dolmak üzere olan teklifler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "teklif"}
+{"id": "K0628", "soru": "Tekliften siparişe dönüş oranı temsilciye göre nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "teklif"}
+{"id": "K0629", "soru": "Yurtdışına sattığımız yayın haklarından bu yıl ne kadar gelir sözleşmeye bağlandı?", "kaynak": "crm", "rol": "CFO", "konu": "haksatis"}
+{"id": "K0630", "soru": "Hangi ülkelere hak satışı yaptık, ülke bazında kaç eser?", "kaynak": "crm", "rol": "CFO", "konu": "haksatis"}
+{"id": "K0631", "soru": "Hak satışı görüşmesi süren eserler hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "haksatis"}
+{"id": "K0632", "soru": "En çok dile çevrilen kitaplarımız hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "haksatis"}
+{"id": "K0633", "soru": "Tutarı girilmemiş sipariş satırları var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0634", "soru": "Müşteri kodu Logo cari koduyla eşlenmemiş CRM firmaları hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0635", "soru": "Son bir haftada değiştirilen sözleşme kayıtları hangileri, kim değiştirmiş?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0636", "soru": "Silinmiş ya da devre dışı bırakılmış sipariş kayıtları bu ay kaç tane?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0637", "soru": "Para birimi boş bırakılmış sözleşmeler var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0638", "soru": "Telif oranı sıfır ya da boş görünen aktif sözleşmeler hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0639", "soru": "Yazar kartında IBAN ya da vergi numarası eksik olanlar kimler?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0640", "soru": "Hakediş dönemi tanımlanmamış sözleşmeler hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0641", "soru": "Baskı kaydı olup maliyeti girilmemiş işler var mı?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0642", "soru": "Etkinlik gider kayıtlarında belgesi eklenmemiş olanlar hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "veri"}
+{"id": "K0643", "soru": "Temsilcilerin girdiği masraf formlarının bu ayki toplamı ne kadar?", "kaynak": "crm", "rol": "muhasebeci", "konu": "masraf"}
+{"id": "K0644", "soru": "Onay bekleyen masraf talepleri kimlerde bekliyor?", "kaynak": "crm", "rol": "muhasebeci", "konu": "masraf"}
+{"id": "K0645", "soru": "Masraf türlerine göre dağılım nasıl, yakıt, yemek, konaklama?", "kaynak": "crm", "rol": "muhasebeci", "konu": "masraf"}
+{"id": "K0646", "soru": "Kişi başı ortalama aylık saha masrafı ne kadar?", "kaynak": "crm", "rol": "muhasebeci", "konu": "masraf"}
+{"id": "K0647", "soru": "Limitini aşan masraf beyanları hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "masraf"}
+{"id": "K0648", "soru": "Bu yıl bedelsiz gönderilen tanıtım kitaplarının adedi ve değeri nedir?", "kaynak": "crm", "rol": "muhasebeci", "konu": "numune"}
+{"id": "K0649", "soru": "Basına ve eleştirmenlere gönderilen kitapların listesi.", "kaynak": "crm", "rol": "muhasebeci", "konu": "numune"}
+{"id": "K0650", "soru": "Yazar nüshası olarak verilen kitapların toplam adedi ne?", "kaynak": "crm", "rol": "muhasebeci", "konu": "numune"}
+{"id": "K0651", "soru": "Bu yıl en çok hangi yazara telif ödeyeceğiz?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0652", "soru": "Kaç kitabımızın sözleşmesi bu yıl bitiyor?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0653", "soru": "Fuarlara toplam kaç para harcadık?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0654", "soru": "En pahalıya mal olan baskımız hangisiydi?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0655", "soru": "Sırada basılmayı bekleyen kaç kitap var?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0656", "soru": "Bu yıl kaç yeni kitap çıkardık?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0657", "soru": "Hangi editör en çok kitap çıkardı?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0658", "soru": "Reklama en çok hangi kitapta para harcadık?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0659", "soru": "Satış ekibi bu hafta kaç müşteriyle görüştü?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0660", "soru": "Şu an kaç siparişimiz yolda?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0661", "soru": "En çok şikâyet hangi konuda geliyor?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0662", "soru": "Hedefin en gerisinde kalan ürünler hangileri, CRM hedef kayıtlarına göre?", "kaynak": "crm", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0663", "soru": "Aylık yeni çıkan kitap sayısı son üç yılda nasıl seyretti?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0664", "soru": "Sipariş iptal oranı son on iki ayda nasıl değişti?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0665", "soru": "Ortalama ilk baskı adedimiz düşüyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0666", "soru": "Yeni imzalanan sözleşmelerde ortalama telif oranı yıllara göre artıyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0667", "soru": "Etkinlik sayısı ve gideri yıllar içinde nasıl değişti?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0668", "soru": "Müşteri ziyaret sayısı geçen yılın aynı dönemine göre arttı mı?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0669", "soru": "Destek talebi sayısı aylara göre artıyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0670", "soru": "Kargo gönderi adedi hangi aylarda tepe yapıyor?", "kaynak": "crm", "rol": "CEO", "konu": "trend"}
+{"id": "K0671", "soru": "Sözleşmelere bağlı önümüzdeki üç ayın ödeme takvimi nedir?", "kaynak": "crm", "rol": "CFO", "konu": "odemeplan"}
+{"id": "K0672", "soru": "Taksitli avans ödemelerinde vadesi geçmiş taksit var mı?", "kaynak": "crm", "rol": "CFO", "konu": "odemeplan"}
+{"id": "K0673", "soru": "Bu ay ödenmesi gereken çeviri ve editörlük bedelleri toplamı ne?", "kaynak": "crm", "rol": "CFO", "konu": "odemeplan"}
+{"id": "K0674", "soru": "Ajanslara yapılacak yıl sonu ödemelerinin döviz bazında toplamı nedir?", "kaynak": "crm", "rol": "CFO", "konu": "odemeplan"}
+{"id": "K0675", "soru": "İllüstratörlere bu yıl sözleşmeye bağlanan toplam tutar ne kadar?", "kaynak": "crm", "rol": "CFO", "konu": "odemeplan"}
+{"id": "K0676", "soru": "Kitap başına ön hazırlık maliyeti, yani editörlük, çeviri, dizgi ve kapak toplamı ortalama ne?", "kaynak": "crm", "rol": "CFO", "konu": "maliyet"}
+{"id": "K0677", "soru": "Çeviri kitapların ön maliyeti telif kitaplara göre ne kadar yüksek?", "kaynak": "crm", "rol": "CFO", "konu": "maliyet"}
+{"id": "K0678", "soru": "Proje bütçesini aşan kitaplar hangileri?", "kaynak": "crm", "rol": "CFO", "konu": "maliyet"}
+{"id": "K0679", "soru": "Önerilen kapak fiyatı ile birim maliyet arasındaki çarpan hangi kitaplarda üçün altında?", "kaynak": "crm", "rol": "CFO", "konu": "maliyet"}
+{"id": "K0680", "soru": "Tahmini başabaş satış adedi ilk baskı adedinden yüksek olan projeler var mı?", "kaynak": "crm", "rol": "CFO", "konu": "maliyet"}
+{"id": "K0681", "soru": "Temsilci bazında sipariş, ziyaret ve tahsilat sayılarını aynı tabloda göster.", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0682", "soru": "Ziyaret başına düşen sipariş tutarı en yüksek temsilci kim?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0683", "soru": "Bölge müdürlerine göre ekip sipariş toplamları nedir?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0684", "soru": "İşten ayrılan temsilcilerin üzerinde kalan müşteri kayıtları var mı?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0685", "soru": "Temsilcilerin ortalama verdiği iskonto oranı sipariş kayıtlarına göre nedir?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0686", "soru": "Hiç sipariş girmemiş ama ziyaret kaydı olan temsilciler kimler?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0687", "soru": "Bu çeyrekte temsilci başına ortalama sipariş tutarı geçen çeyreğe göre nasıl?", "kaynak": "crm", "rol": "CFO", "konu": "temsilci"}
+{"id": "K0688", "soru": "CRM'de girilen sipariş tutarı ile Logo'da kesilen fatura tutarı bu ay birbirini tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0689", "soru": "Siparişi CRM'de kapalı görünüp Logo'da faturası bulunmayan kayıtlar var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0690", "soru": "Sipariş tutarıyla faturalanan tutar arasında yüzde beşten fazla fark olan siparişler hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0691", "soru": "Siparişten faturaya ortalama dönüş süresi müşteri grubuna göre kaç gün?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0692", "soru": "Bu ay girilen siparişlerin ne kadarı aynı ay içinde faturalandı?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0693", "soru": "Faturası kesilmiş ama CRM'de siparişi bulunmayan satışlar var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0694", "soru": "CRM'deki sipariş iskontosu ile Logo faturasındaki iskonto oranı farklı olan kayıtlar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0695", "soru": "Sipariş edilen adet ile faturalanan adet arasındaki farkı kitap bazında göster.", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0696", "soru": "Kısmi faturalanan siparişlerde kalan tutarın toplamı ne kadar?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0697", "soru": "Geçen ay faturalanmayan sipariş tutarı yüzünden ciro ne kadar eksik kaldı?", "kaynak": "ikisi", "rol": "CFO", "konu": "siparis-fatura"}
+{"id": "K0698", "soru": "Bu yıl hedefin yüzde kaçını gerçekleştirdik, CRM hedefi ile Logo cirosunu karşılaştır.", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0699", "soru": "Temsilci bazında hedef ve gerçekleşen ciroyu yan yana göster.", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0700", "soru": "Hedefini tutturan temsilciler kimler, tutturamayanlar ne kadar geride?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0701", "soru": "Ay ay hedef gerçekleşme oranımız nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0702", "soru": "Hedefini yüzde yüz ellinin üzerinde aşan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0703", "soru": "Hedef verilmiş ama bu yıl hiç satmamış ürünler var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0704", "soru": "Bölge bazında hedefe göre sapma ne kadar?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0705", "soru": "Bu hızla gidersek yıl sonu hedefini tutturur muyuz, kalan aylarda aylık ne satmamız gerekiyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0706", "soru": "Hedefi olmayan ama cirosu yüksek çıkan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0707", "soru": "Geçen yıl hedef tutturma oranımız neydi, bu yıl aynı tarihte ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "hedef"}
+{"id": "K0708", "soru": "Bu yılki net satışlara göre yazarlara tahakkuk eden telif toplamı ne kadar?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0709", "soru": "Telif giderinin net ciroya oranı yüzde kaç?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0710", "soru": "En çok telif hak eden on yazarı satış cirosuyla birlikte göster.", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0711", "soru": "CRM'de hesaplanan hakediş ile Logo'da muhasebeleşen telif gideri tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0712", "soru": "Hakedişi hesaplanmış ama Logo'da ödemesi görünmeyen yazarlar kimler?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0713", "soru": "Sözleşmesi bitmiş olduğu halde satışı devam eden kitaplar var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0714", "soru": "Verilen avansı satışlarıyla henüz karşılayamamış kitaplar hangileri, ne kadar açık var?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0715", "soru": "İadeler düşüldükten sonra telife esas satış adedi yazar bazında nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0716", "soru": "Kademeli telifte üst kademeye geçmiş kitaplar hangileri, satış adedine bak.", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0717", "soru": "Yabancı ajanslara ödenecek telifin satışlara göre hesaplanan tutarı ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0718", "soru": "Telif oranı yüksek olup brüt kârı düşük kalan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0719", "soru": "Sözleşmesi CRM'de bulunmayan ama Logo'da satışı olan kitaplar var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "telif"}
+{"id": "K0720", "soru": "Kitap bazında baskı maliyeti, telif ve reklam düşüldükten sonra kalan katkı payı nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0721", "soru": "İlk baskısını satışla amorti edememiş kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0722", "soru": "Bu yıl çıkan kitapların kaçı maliyetini çıkardı?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0723", "soru": "Yazar bazında toplam ciro ve toplam maliyeti karşılaştır.", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0724", "soru": "Dizi bazında kârlılık sıralaması nasıl?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0725", "soru": "Çeviri kitaplar mı daha kârlı telif kitaplar mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0726", "soru": "Baskı birim maliyeti ile ortalama net satış fiyatı arasındaki marj hangi kitaplarda en dar?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0727", "soru": "Editör bazında çıkan kitapların toplam cirosu ve kârı nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0728", "soru": "Yayın kurulunda öngörülen kârlılık ile gerçekleşen kârlılık arasında en çok sapan projeler hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0729", "soru": "Tür bazında ciro ve maliyet karşılaştırması nasıl?", "kaynak": "ikisi", "rol": "CFO", "konu": "karlilik"}
+{"id": "K0730", "soru": "Son baskı adedinin yüzde kaçı satıldı, kitap bazında göster.", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0731", "soru": "Basılıp da altı ayda yarısı bile satılmayan baskılar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0732", "soru": "Stoğu iki aylık satışın altına düşen ve baskı planında olmayan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0733", "soru": "CRM'deki baskı adedi ile Logo'ya üretimden giren adet tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0734", "soru": "Önerilen baskı adedi mevcut stok ve satış hızına göre makul mü, fazla önerilenler hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0735", "soru": "Baskı maliyeti CRM'de girilen tutar ile Logo'daki matbaa faturası tutarı arasında fark var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0736", "soru": "Tekrar baskı kararı verilen kitapların o günkü stok durumu neydi?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0737", "soru": "Bekleyen sipariş adedi stoktaki adedi aşan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0738", "soru": "Stokta iki yıllık satışa yetecek kadar malı varken yeniden basılan kitap var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0739", "soru": "Baskıya giren kitaplar için matbaaya ödenen tutar Logo'da ne kadar görünüyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "baski-stok"}
+{"id": "K0740", "soru": "Bu ay ne kadar sipariş aldık, ne kadarını faturaladık, ne kadarını tahsil ettik?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0741", "soru": "Sipariş, ciro ve tahsilat rakamlarını son altı ay için aynı tabloda göster.", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0742", "soru": "Hedefe göre neredeyiz ve kasada ne var, tek bakışta özetle.", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0743", "soru": "Satış ekibinin getirdiği siparişler gerçekten paraya dönüyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0744", "soru": "Bu yıl çıkardığımız kitaplar bize ne kazandırdı, ne kadara mal oldu?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0745", "soru": "En çok kazandıran beş yazarımız kim, maliyetleri düşünce de öyle mi?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0746", "soru": "Hangi kitaplara boşuna para harcadık, maliyeti yüksek satışı düşük olanlar?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0747", "soru": "Alınan siparişlerle kesilen faturalar arasındaki açık büyüyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0748", "soru": "En büyük on müşterimizin siparişi, cirosu ve borcu nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0749", "soru": "Yeni kitaplar mı yoksa tekrar baskılar mı daha çok para kazandırıyor?", "kaynak": "ikisi", "rol": "CEO", "konu": "ozet"}
+{"id": "K0750", "soru": "En çok ziyaret ettiğimiz müşteriler en çok ciro yapanlar mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0751", "soru": "Hiç ziyaret edilmediği halde yüksek ciro yapan müşteriler kimler?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0752", "soru": "Çok ziyaret edip az satış yaptığımız müşteriler hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0753", "soru": "CRM'de kayıtlı olup Logo'da hiç faturası olmayan müşteriler kaç tane?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0754", "soru": "Ziyaret sıklığı azalan müşterilerde ciro da düşmüş mü?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0755", "soru": "Şikâyet kaydı açan müşterilerin sonraki aylarda alımı azaldı mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0756", "soru": "Yeni kazanılan müşterilerin ilk yıl cirosu ortalama ne kadar?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0757", "soru": "Temsilcisi değişen müşterilerde satışlar nasıl etkilendi?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0758", "soru": "Kredi limiti CRM'de yüksek görünüp Logo'da vadesi geçmiş borcu olan müşteriler kimler?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0759", "soru": "Müşteri tipine göre ciro, iade ve tahsilat süresini karşılaştır.", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0760", "soru": "Okul kanalından gelen toplam ciro bu yıl ne kadar?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0761", "soru": "Ziyaret edilen okulların bulunduğu illerde satışlarımız diğer illere göre nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0762", "soru": "Destek talebi en çok olan müşterilerin iade oranı da yüksek mi?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0763", "soru": "Büyük müşterilerde sipariş sıklığı ile ödeme gecikmesi arasında ilişki var mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0764", "soru": "CRM'de pasif görünen ama Logo'da bu yıl faturası olan müşteriler var mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "musteri"}
+{"id": "K0765", "soru": "Yazar bazında bu yılki satış adedi ve cirosu nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0766", "soru": "En çok satan yazarlarımızın sözleşmeleri ne zaman bitiyor?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0767", "soru": "Sözleşmesi altı ay içinde dolacak kitapların bu yılki cirosu ne kadar?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0768", "soru": "Yeni yazarların ilk kitapları ortalama kaç adet sattı?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0769", "soru": "Etkinliğe en çok çıkardığımız yazarların satışları diğerlerinden iyi mi?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0770", "soru": "Satışı en çok düşen yazarlar kimler, son kitapları ne zaman çıktı?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0771", "soru": "Yabancı yazarların toplam cirodaki payı nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0772", "soru": "Yazar başına düşen ortalama ciro yıllara göre nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0773", "soru": "Tek kitabıyla cironun yüzde birinden fazlasını getiren yazarlar var mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0774", "soru": "Ayrılan ya da sözleşmesi yenilenmeyen yazarların geçen yılki cirosu ne kadardı?", "kaynak": "ikisi", "rol": "CEO", "konu": "yazar"}
+{"id": "K0775", "soru": "Bu yıl çıkan kitapların ilk üç aylık satışları nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0776", "soru": "Yayın kurulunun onayladığı projelerden kaçı öngörülen satışa ulaştı?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0777", "soru": "İlk baskısı üç ayda tükenen kitaplar hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0778", "soru": "Çıkışından bu yana bin adedin altında satan yeni kitaplar hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0779", "soru": "Editörlere göre çıkan kitapların ortalama ilk yıl satışı nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0780", "soru": "Türlere göre yeni çıkan kitapların satış performansı nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0781", "soru": "Yayın tarihi gecikmesi olan kitapların satışı zamanında çıkanlara göre düşük mü?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0782", "soru": "Dizi kitaplarında serinin yeni kitabı önceki kitapların satışını canlandırıyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0783", "soru": "Çeviri kitapların ilk yıl satış ortalaması telif kitaplara göre nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0784", "soru": "Bu yıl çıkan kitaplardan en hızlı ikinci baskıya giden hangisi?", "kaynak": "ikisi", "rol": "CEO", "konu": "yenikitap"}
+{"id": "K0785", "soru": "Reklam yaptığımız kitaplarla yapmadıklarımızın satış farkı nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0786", "soru": "Reklam bütçesi en yüksek on kitabın reklam sonrası üç aylık cirosu ne?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0787", "soru": "Harcanan her bir liralık reklam kaç liralık ciro getirmiş?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0788", "soru": "İmza günü yapılan haftalarda ilgili kitabın satışı artmış mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0789", "soru": "Fuar dönemlerindeki ciro fuar masrafını karşılıyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0790", "soru": "Kampanya dönemindeki satışlar kampanya öncesine göre ne kadar arttı?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0791", "soru": "Kampanyalı satışlarda brüt kârımız ne kadar düştü?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0792", "soru": "Kampanya bittikten sonraki ay satışlar normalin altına iniyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0793", "soru": "Pazarlama harcamalarının ciroya oranı yıllar içinde nasıl değişti?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0794", "soru": "Numune gönderilen okullardan sonrasında sipariş gelmiş mi?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0795", "soru": "Okuma listesine giren kitaplarımızın satışları girmeyenlere göre nasıl?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0796", "soru": "Etkinlik gideri en yüksek yazarların cirosu bu gideri haklı çıkarıyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0797", "soru": "Sosyal medya reklamı verilen aylarda internet kanalı satışları artıyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0798", "soru": "En pahalı etkinliğimiz hangisiydi, o şehirde sonrasında ne kadar satış oldu?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0799", "soru": "Hiç tanıtım yapılmadan iyi satan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "pazarlama"}
+{"id": "K0800", "soru": "Rakibinden pahalı olan kitaplarımızın satışları düşüyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "rakip"}
+{"id": "K0801", "soru": "Rakip fiyatının altında kalan kitaplarımızda adetler daha mı yüksek?", "kaynak": "ikisi", "rol": "CEO", "konu": "rakip"}
+{"id": "K0802", "soru": "Son zamdan sonra rakiplerden pahalı hale gelen ve satışı düşen kitaplar hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "rakip"}
+{"id": "K0803", "soru": "Siparişten teslimata kadar geçen toplam süre kaç gün, sipariş, irsaliye ve kargo tarihlerine göre?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0804", "soru": "Kargo maliyetimizin ciroya oranı yüzde kaç?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0805", "soru": "Geç sevk edilen siparişlerde iade oranı daha mı yüksek?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0806", "soru": "Stok yokluğu nedeniyle bekleyen siparişlerin tutarı toplam cironun yüzde kaçı?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0807", "soru": "Bekleyen ürünlerin son on iki aylık satış hızına göre kaç günlük talebi birikmiş?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0808", "soru": "Sevk edilen koli sayısı ile kesilen irsaliye sayısı bu ay tutuyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0809", "soru": "Hangi illerde kargo maliyeti o ilden gelen ciroya göre orantısız yüksek?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0810", "soru": "Şikâyet konusu olan siparişlerin faturaları iade edilmiş mi?", "kaynak": "ikisi", "rol": "CEO", "konu": "operasyon"}
+{"id": "K0811", "soru": "CRM'de girilen tahsilatlar ile Logo'ya işlenen tahsilatlar bu ay tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0812", "soru": "CRM'de kayıtlı olup Logo'da karşılığı bulunmayan tahsilatlar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0813", "soru": "Temsilci bazında müşterilerinin vadesi geçmiş alacağı ile topladığı tahsilatı karşılaştır.", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0814", "soru": "Kredi kartı tahsilatlarının CRM'e giriş tarihi ile bankaya geçiş tarihi arasında kaç gün var?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0815", "soru": "Sahadan alınan çekler Logo portföyüne kaç gün sonra giriyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0816", "soru": "CRM'deki ödeme vadesi doksan gün olan müşteriler gerçekte ortalama kaç günde ödüyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0817", "soru": "Tahsilat hedefi olan temsilcilerin gerçekleşen tahsilatı Logo kayıtlarına göre ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0818", "soru": "Peşin ödeme iskontosu alan müşteriler gerçekten peşin ödemiş mi?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0819", "soru": "CRM'de tahsilat tutarı Logo'daki makbuz tutarından farklı olan kayıtlar var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0820", "soru": "Vadesi geçmiş borcu olan müşterilere son bir ayda kaç ziyaret yapılmış?", "kaynak": "ikisi", "rol": "CFO", "konu": "tahsilat"}
+{"id": "K0821", "soru": "Logo'da vadesi geçmiş borcu olduğu halde CRM'de yeni sipariş onaylanan müşteriler hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0822", "soru": "CRM'deki kredi limiti ile Logo'daki risk limiti farklı tanımlanmış müşteriler var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0823", "soru": "Açık sipariş tutarı ile cari bakiyesinin toplamı risk limitini aşan müşteriler kimler?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0824", "soru": "Karşılıksız çeki çıkan müşterilere sonrasında sipariş girilmiş mi?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0825", "soru": "Alacak sigortası ya da teminatı olmayan ve bakiyesi yüksek müşterilerin bekleyen siparişleri ne kadar?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0826", "soru": "Risk nedeniyle bekletilen siparişlerin müşterilerinin güncel Logo bakiyesi nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0827", "soru": "Son altı ayda limiti artırılan müşterilerin ödeme performansı nasıl?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0828", "soru": "Toplam riskimiz, açık alacak artı portföydeki çek artı açık sipariş olarak müşteri bazında ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "risk"}
+{"id": "K0829", "soru": "CRM iskonto listesindeki oran ile Logo'da fiilen verilen ortalama iskonto arasındaki farkı müşteri bazında göster.", "kaynak": "ikisi", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0830", "soru": "Tanımlı iskontosundan fazla indirim alan müşteriler bu yıl bize kaça mal oldu?", "kaynak": "ikisi", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0831", "soru": "Kampanya iskontosu kampanya bittikten sonra da faturalara yansımaya devam etmiş mi?", "kaynak": "ikisi", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0832", "soru": "Ek iskonto onayı alınmadan yüksek iskontoyla faturalanan siparişler var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0833", "soru": "Temsilcilerin CRM'de girdiği iskonto ile Logo faturasına yansıyan iskonto kimde en çok sapıyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "iskonto"}
+{"id": "K0834", "soru": "CRM fiyat listesindeki fiyat ile Logo stok kartındaki satış fiyatı farklı olan kitaplar hangileri?", "kaynak": "ikisi", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0835", "soru": "Zamdan sonra eski fiyatla faturalanmış siparişler var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0836", "soru": "Yayın kurulunda önerilen fiyat ile Logo'daki fiili satış fiyatı arasındaki fark ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0837", "soru": "Fiyat artışı yapılan kitaplarda adet bazında satış nasıl etkilendi?", "kaynak": "ikisi", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0838", "soru": "Liste fiyatı güncellenmiş ama Logo fiyat kartı eski kalan ürünler var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "fiyat"}
+{"id": "K0839", "soru": "Etkinlik bütçesinin ne kadarı Logo'da gider olarak gerçekleşti?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0840", "soru": "Reklam planındaki onaylı tutar ile muhasebedeki reklam gideri hesabı tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0841", "soru": "CRM'de kayıtlı kargo maliyeti ile kargo firmalarından gelen fatura toplamı arasında fark var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0842", "soru": "Saha ekibinin CRM'e girdiği masraflar Logo'da hangi masraf merkezlerine işlenmiş, toplamlar tutuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0843", "soru": "Proje bazında planlanan maliyet ile Logo'da gerçekleşen maliyeti karşılaştır.", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0844", "soru": "Fuar giderlerinin CRM'deki planı ile muhasebe kaydı arasındaki sapma fuar bazında ne?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0845", "soru": "Çevirmen ve editör ödemeleri sözleşmedeki tutarlarla birebir mi, fazla ödeme var mı?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0846", "soru": "Sözleşme avansları Logo'da hangi hesapta duruyor, CRM toplamıyla uyuşuyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "butce"}
+{"id": "K0847", "soru": "CRM müşteri kartındaki vergi numarası ile Logo cari kartındaki vergi numarası farklı olanlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0848", "soru": "CRM'de olup Logo'da cari kartı açılmamış müşteriler hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0849", "soru": "Logo'da cari kartı olup CRM'de firma kaydı bulunmayanlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0850", "soru": "İki sistemde unvanı farklı yazılmış müşteriler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0851", "soru": "CRM'deki ürün kaydı ile Logo stok kartı barkodu eşleşmeyen kitaplar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0852", "soru": "ISBN'i CRM'de olan ama Logo'da stok kartı açılmamış kitaplar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0853", "soru": "Logo'da satışı olan ama CRM ürün listesinde bulunmayan stok kartları hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0854", "soru": "CRM'deki müşteri adresi ile Logo'daki fatura adresi farklı olan kayıtlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0855", "soru": "İki sistemdeki ödeme vadesi tanımı uyuşmayan müşteriler hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0856", "soru": "CRM'de temsilcisi olan ama Logo'da satış elemanı boş görünen cariler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0857", "soru": "Bu ay CRM sipariş numarası girilmeden kesilmiş Logo faturaları hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0858", "soru": "Aynı CRM siparişine bağlı birden fazla Logo faturası olan kayıtlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0859", "soru": "CRM'de iptal edilmiş ama Logo'da faturası duran siparişler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0860", "soru": "Logo'da iptal edilen faturaların CRM siparişleri hâlâ faturalandı olarak mı görünüyor?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0861", "soru": "Günlük CRM tahsilat toplamı ile Logo kasa ve banka girişleri toplamı dün için tutuyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0862", "soru": "Kredi kartı tahsilatlarından Logo'da banka hesabına geçmemiş olanlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0863", "soru": "CRM'de çek olarak girilen tahsilatların Logo çek bordrosu var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0864", "soru": "Çek vade tarihi CRM ve Logo'da farklı girilmiş kayıtlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0865", "soru": "CRM'deki sevk adedi ile Logo irsaliye adedi uyuşmayan siparişler hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0866", "soru": "Kargoya verildi görünen ama irsaliyesi kesilmemiş gönderiler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "mutabakat"}
+{"id": "K0867", "soru": "Bu dönem hakedişi çıkan yazarlara Logo'da ödeme emri oluşturulmuş mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0868", "soru": "Yazar cari hesabındaki bakiye ile CRM'deki ödenmemiş hakediş tutarı tutuyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0869", "soru": "Telif stopajı Logo'da doğru hesaba işlenmiş mi, CRM'deki kesinti toplamıyla karşılaştır.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0870", "soru": "Logo'da yazara ödeme yapılmış ama CRM'de hakediş kaydı bulunmayan durumlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0871", "soru": "Hakediş hesabına esas alınan satış adedi Logo'daki net satış adediyle aynı mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0872", "soru": "Bedelsiz verilen kitaplar telif hesabından düşülmüş mü?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0873", "soru": "Sözleşme avansı olarak ödenen tutarlar Logo'da yazar carisine avans olarak mı işlenmiş?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0874", "soru": "Yurtdışı ajanslara yapılan döviz ödemeleri CRM'deki sözleşme tutarını aşıyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0875", "soru": "Aynı hakediş dönemi için iki kez ödeme yapılmış yazar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0876", "soru": "Cari kartı açılmamış ama hakedişi çıkmış hak sahipleri kimler?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "telif"}
+{"id": "K0877", "soru": "Bugün faturası kesilmesi gereken, sevki tamamlanmış CRM siparişleri hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0878", "soru": "CRM sipariş tarihi ile Logo fatura tarihi arasında otuz günden fazla olan kayıtları listele.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0879", "soru": "Ay sonu itibarıyla sevk edilmiş ama faturalanmamış siparişlerin tutarı ne, gelir tahakkuku için lazım.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0880", "soru": "CRM'de bedelsiz girilen satırlar Logo'da sıfır bedelli mi faturalanmış?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0881", "soru": "Sipariş para birimi ile fatura para birimi farklı olan kayıtlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0882", "soru": "CRM'de teslimat adresi başka şehir olan ama Logo'da merkez adrese faturalanan siparişler hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0883", "soru": "İade talebi CRM'de açılmış ama Logo'da iade faturası işlenmemiş kayıtlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0884", "soru": "Logo'da iade faturası olup CRM'de iade kaydı bulunmayan durumlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0885", "soru": "KDV oranı sipariş ile faturada farklı uygulanmış satırlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0886", "soru": "Bu ay faturalanan siparişlerin kaçı önceki aylara ait siparişlerdi?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "siparis"}
+{"id": "K0887", "soru": "Etkinlik masrafı olarak CRM'e girilen tutarların Logo'da faturası var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0888", "soru": "Matbaa faturalarını CRM'deki baskı kayıtlarıyla eşleştir, eşleşmeyenleri göster.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0889", "soru": "Faturası Logo'ya işlenmiş ama CRM'de baskı kaydı bulunmayan matbaa işleri hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0890", "soru": "Reklam ajansı faturaları CRM'deki reklam planı onaylarıyla uyuşuyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0891", "soru": "Kargo firması faturasındaki gönderi adedi CRM'deki gönderi adedini tutuyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0892", "soru": "CRM'de onaylanan masraf formlarından Logo'da ödemesi yapılmamış olanlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0893", "soru": "Çevirmenlere Logo'dan yapılan ödemeler CRM sözleşme taksitlerine göre gecikmiş mi?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0894", "soru": "Fuar katılım bedeli faturaları hangi etkinlik kaydına bağlı, bağlanamayanlar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0895", "soru": "Numune ve tanıtım amaçlı çıkan kitapların Logo'daki stok çıkış maliyeti ne kadar, CRM adetleriyle tutuyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0896", "soru": "Bandrol alım giderleri ile CRM'deki bandrol talepleri uyumlu mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "gider"}
+{"id": "K0897", "soru": "CRM'de stokta var görünen ama Logo'da bakiyesi sıfır olan kitaplar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0898", "soru": "CRM'deki baskı teslim adedi ile Logo'daki üretimden giriş fişi adedi arasındaki farkları göster.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0899", "soru": "Baskısı tamamlandı görünen ama Logo ambarına girişi yapılmamış kitaplar var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0900", "soru": "Bekleyen ürün listesindeki kitapların Logo'daki ambar bazında stok durumu nedir?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0901", "soru": "İade ambarına giren kitapların CRM'de iade onayı var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0902", "soru": "Yazar nüshası olarak CRM'de görünen adetler Logo'da hangi fişle çıkılmış?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0903", "soru": "CRM'de satışa kapalı işaretli olup Logo'da hâlâ faturalanan ürünler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0904", "soru": "Yeni çıkan kitaplardan Logo'da stok kartı açılıp fiyatı girilmemiş olanlar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "stok"}
+{"id": "K0905", "soru": "Yıl sonu telif karşılığı için yazar bazında satışa göre tahakkuk edecek tutarları çıkar.", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0906", "soru": "Dönem sonunda faturası gelmemiş ama CRM'de gerçekleşmiş görünen baskı maliyetleri ne kadar?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0907", "soru": "Gerçekleşmiş ama faturası bekleyen etkinlik giderlerinin ay sonu toplamı ne?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0908", "soru": "Hakedişi hesaplanıp ödenmemiş tutarlar Logo'da borç olarak görünüyor mu?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0909", "soru": "Ay sonunda CRM'de sevk edilmiş görünen ama ertesi ay faturalanan satışların tutarı ne kadar?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0910", "soru": "Avansı kapanmayacağı belli olan, satışı durmuş kitapların avans bakiyeleri ne?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "donemsonu"}
+{"id": "K0911", "soru": "CRM'de onay limiti üstünde iskonto verilip Logo'da faturalanan işlemleri kim onaylamış?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0912", "soru": "Temsilcinin kendi girdiği siparişin tahsilatını da kendisinin girdiği kayıtlar ne kadar tutuyor?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0913", "soru": "CRM'de tahsil edildi görünüp Logo'da hâlâ açık duran faturalar hangileri?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0914", "soru": "Sipariş onay tarihinden önce kesilmiş fatura var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0915", "soru": "Sözleşmesi olmayan birine Logo'dan telif ödemesi yapılmış mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0916", "soru": "Risk blokesi kaldırılan siparişlerin müşterileri sonradan ödeme yapmış mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0917", "soru": "Tek seferde girilen büyük siparişlerin sonradan büyük kısmı iade edilen müşteriler var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0918", "soru": "Ay sonuna iki gün kala girilip sonraki ay iptal edilen siparişlerin faturaları var mı?", "kaynak": "ikisi", "rol": "muhasebeci", "konu": "denetim"}
+{"id": "K0919", "soru": "Şu müşterinin ekstresini bu yıl için çıkarmak istiyorum, örneğin Kitapyurdu.", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0920", "soru": "Dün hangi tahsilatlar işlendi?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0921", "soru": "Bu hafta vadesi dolan alacakları listeler misin?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0922", "soru": "Bugün ödenecek tedarikçi faturaları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0923", "soru": "Ağustos ayı satış faturalarının KDV dahil toplamı kaç?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0924", "soru": "Son girilen yirmi alış faturasını göster.", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0925", "soru": "Geçen ay kaç tane iade faturası işledik?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0926", "soru": "Hangi müşterilerin bakiyesi alacaklı durumda?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0927", "soru": "Bu ay kesilen faturalardan vadesi girilmemiş olan var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0928", "soru": "Eylül ayında hangi bankadan ne kadar ödeme çıktı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0929", "soru": "Kasa defterini bu hafta için dök.", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0930", "soru": "Bu yıl açılıp hiç hareket görmeyen cari kartlar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0931", "soru": "360 ödenecek vergi hesabının bakiyesi ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0932", "soru": "Bu ay kaç tane e-irsaliye düzenlendi?", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0933", "soru": "Muhtasar için bu ay stopaj kesilen ödemelerin toplamını ver.", "kaynak": "logo", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0934", "soru": "335 personele borçlar hesabının ay sonu bakiyesi ne?", "kaynak": "logo", "rol": "muhasebeci", "konu": "personel"}
+{"id": "K0935", "soru": "Personele verilen iş avanslarından kapanmayanlar hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "personel"}
+{"id": "K0936", "soru": "SGK ve vergi ödemelerinin bu yılki aylık toplamları nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "personel"}
+{"id": "K0937", "soru": "Kıdem tazminatı olarak bu yıl ödenen tutar ne kadar?", "kaynak": "logo", "rol": "muhasebeci", "konu": "personel"}
+{"id": "K0938", "soru": "Bu yıl alınan demirbaşların listesi ve tutarları nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "sabitkiymet"}
+{"id": "K0939", "soru": "Amortismanı tamamen bitmiş sabit kıymetler hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "sabitkiymet"}
+{"id": "K0940", "soru": "Bu yıl satılan ya da hurdaya ayrılan sabit kıymet var mı?", "kaynak": "logo", "rol": "muhasebeci", "konu": "sabitkiymet"}
+{"id": "K0941", "soru": "Masraf merkezi seçilmeden kaydedilmiş gider satırları hangileri?", "kaynak": "logo", "rol": "muhasebeci", "konu": "masrafmerkezi"}
+{"id": "K0942", "soru": "Editörlük departmanının bu yılki giderleri hesap bazında nasıl?", "kaynak": "logo", "rol": "muhasebeci", "konu": "masrafmerkezi"}
+{"id": "K0943", "soru": "Depo giderlerinin aylık toplamı ve geçen yıla göre artışı nedir?", "kaynak": "logo", "rol": "muhasebeci", "konu": "masrafmerkezi"}
+{"id": "K0944", "soru": "Proje kodu girilmiş gider kayıtlarını proje bazında topla.", "kaynak": "logo", "rol": "muhasebeci", "konu": "masrafmerkezi"}
+{"id": "K0945", "soru": "Bu hafta onaylanan siparişleri müşteri ve tutarıyla listele.", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0946", "soru": "Hangi siparişler faturalanmayı bekliyor durumunda?", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0947", "soru": "Bugün girilen tahsilat kayıtlarını göster.", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0948", "soru": "Bu ay ödenecek hakedişlerin yazar listesi ve tutarları.", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0949", "soru": "Bu ay biten sözleşmeler hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0950", "soru": "Geçen ay yapılan baskıların maliyet dökümünü ver.", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0951", "soru": "Onayı tamamlanıp ödeme bekleyen etkinlik giderleri hangileri?", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0952", "soru": "Bu ay kargoya verilen gönderilerin firma bazında adedi kaç?", "kaynak": "crm", "rol": "muhasebeci", "konu": "gundelik"}
+{"id": "K0953", "soru": "Cironun ne kadarı son iki yılda çıkan kitaplardan geliyor?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0954", "soru": "İlk yüz kitap toplam cironun yüzde kaçını yapıyor?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0955", "soru": "Hangi müşteri grubunda büyüyoruz, hangisinde küçülüyoruz?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0956", "soru": "İnternet satış sitelerinin payı beş yıl önce neydi, şimdi ne?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0957", "soru": "Ortalama iskonto oranımız yıllar içinde artıyor mu?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0958", "soru": "İade oranı en düşük müşteri grubu hangisi?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0959", "soru": "Alacak tahsil süremiz büyüdükçe uzuyor mu?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0960", "soru": "Yurtdışı satışların payını yıllara göre göster.", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0961", "soru": "Stok değerinin yıllık ciroya oranı son üç yılda nasıl değişti?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0962", "soru": "En çok kâr bırakan müşteri grubu hangisi?", "kaynak": "logo", "rol": "CEO", "konu": "strateji"}
+{"id": "K0963", "soru": "Yayın programımız türlere göre dengeli mi, son üç yılın dağılımına bak.", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0964", "soru": "Çeviri kitapların yayın programındaki payı artıyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0965", "soru": "Yeni imzalanan sözleşmelerde avans tutarları yükseliyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0966", "soru": "Satış ekibinin ziyaret yoğunluğu hangi bölgelerde zayıf?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0967", "soru": "Yayın kuruluna gelen dosya sayısı yıllara göre nasıl değişti?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0968", "soru": "Önümüzdeki yıl sözleşmesi bitecek kaç kitabımız var, hangi yazarlara ait?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0969", "soru": "Ortalama baskı adedi düşerken baskı sayısı artıyor mu?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0970", "soru": "Hedeflerimizi her yıl yüzde kaç artırmışız?", "kaynak": "crm", "rol": "CEO", "konu": "strateji"}
+{"id": "K0971", "soru": "Hangi türlerde hem satış hem kârlılık yüksek, yayın programını oraya kaydırmalı mıyız?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0972", "soru": "Yüksek avans verdiğimiz kitaplar beklentiyi karşıladı mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0973", "soru": "Son üç yılda çıkardığımız kitapların kaçı hâlâ satıyor?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0974", "soru": "Satış ekibine yaptığımız harcama ile getirdikleri ciroyu bölge bazında karşılaştır.", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0975", "soru": "Büyük tirajlı az kitap mı, küçük tirajlı çok kitap mı daha kârlı çıkmış?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0976", "soru": "Okul kanalına yaptığımız yatırım, ziyaret, numune ve etkinlik olarak, ciroyla karşılık buluyor mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0977", "soru": "Hak satışı yaptığımız kitaplar yurt içinde de çok satanlar mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0978", "soru": "Hedefleri gerçekçi koyuyor muyuz, son üç yılda hedef ile gerçekleşen arasındaki sapma nedir?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0979", "soru": "Yazar kaybedersek ne kaybederiz, sözleşmesi bitecek ilk on yazarın ciro payı ne?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0980", "soru": "Baskı maliyetlerindeki artışı fiyatlara yansıtabilmiş miyiz?", "kaynak": "ikisi", "rol": "CEO", "konu": "strateji"}
+{"id": "K0981", "soru": "Bu ay kaç liralık sipariş geldi, kaç liralık fatura kestik?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0982", "soru": "Hedefin neresindeyiz?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0983", "soru": "En çok satan kitabımızın stoğu ve bekleyen siparişi ne durumda?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0984", "soru": "En iyi satış temsilcimiz kim, hedefine ve tahsilatına göre?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0985", "soru": "Geçen ayki imza gününün satışa etkisi oldu mu?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0986", "soru": "Bu yıl en çok para kazandıran kitap hangisi, maliyetleri düştükten sonra?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0987", "soru": "Bize en çok borcu olan müşterinin bekleyen siparişi var mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0988", "soru": "Yazarlara bu yıl toplam ne kadar ödeyeceğiz, satışlar böyle giderse?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0989", "soru": "Basıp da satamadığımız kitaplar hangileri?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0990", "soru": "Kampanya işe yaradı mı?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0991", "soru": "Hangi bölge hedefin en gerisinde ve orada kaç ziyaret yapılmış?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0992", "soru": "Bu yıl çıkan kitaplardan hangisi beklentinin çok üstünde sattı?", "kaynak": "ikisi", "rol": "CEO", "konu": "gundelik"}
+{"id": "K0993", "soru": "Açık siparişlerin vadelerine göre önümüzdeki üç ayda beklenen nakit girişi nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0994", "soru": "Planlanan baskılar ve hakediş ödemeleri önümüzdeki çeyrekte ne kadar nakit çıkışı gerektiriyor?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0995", "soru": "Sözleşme ödeme takvimi ile Logo'daki vadesi gelen borçları aynı takvimde birleştir.", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0996", "soru": "Bekleyen siparişler sevk edilirse açık alacak toplamı ne olur?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0997", "soru": "Yıl sonu telif ödemeleri için bugünkü nakit ve beklenen tahsilat yeterli görünüyor mu?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0998", "soru": "Planlanan etkinlik ve reklam harcamaları ile mevcut banka bakiyelerini karşılaştır.", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K0999", "soru": "Önümüzdeki ay matbaalara ödenecek tutar, planlı baskılar dahil ne kadar?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}
+{"id": "K1000", "soru": "Kredi kartlı siparişlerin taksit vadelerine göre bankadan beklenen girişler nedir?", "kaynak": "ikisi", "rol": "CFO", "konu": "nakit"}

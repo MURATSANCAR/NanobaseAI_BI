@@ -1,5 +1,8 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 19:30 UTC — 1000 soruluk son kullanıcı seti (CFO / CEO / muhasebeci, Logo + CRM karışık)
+
+`tests/text2sql/set1000.jsonl`: elle yazılmış 1000 Türkçe son kullanıcı sorusu (şablon çarpımı değil). Alanlar `id` (K0001–K1000), `soru`, `kaynak` (logo 424 / crm 315 / ikisi 261), `rol` (CFO 413 / CEO 306 / muhasebeci 281), `konu`. **Neden:** set100 en zor sorulardı; gerçek kullanıcının gündelik, stratejik ve mutabakat/denetim sorularını kapsayan geniş bir liste istendi. Birebir yineleme ve set100 ile çakışma betikle ayıklandı. **Bu yalnız liste:** hiçbir soru köprüde sorulmadı, `beklenen`/referans SQL yok, `kaynak` etiketi yazarın beklentisidir (ölçüm değil). Sıradaki: hızlı kapıyla (`resolver-gate.py`) kaynak okumasını ölçmek, sonra tam koşu.
 ## 2026-09-18 13:20 UTC — Editör: genellik ölçümleri ve doğrulama seti
 
 Diakritik itiraz kuralı kodlandı (`source_diacritic_witness.py`, aday): 328 gerçek inceleme bölgesinin 32'sinde tek okuyucunun itirazı, iki bağımsız okuyucunun anlaştığı metne karşı yalnız diakritikte ayrışan geçersiz bir sözcük; metin düzeltmesi 0. Üç gerçek kitabın sayfa metninde konuşma işaretlemesi ölçüldü: ölçüm kitabı yalnız tırnak kullanıyor, diğer ikisi konuşma çizgisi (86 ve 36 satır) ve birinci kişi yüklemlerin çoğu işaretli konuşma dışında. **Neden:** kişi eki kapısı bu kitaplarda sessizce devre dışı kalırdı; v3 artık `NOT_APPLICABLE` ve nedenini döndürüyor, R5/R7 sonucu değişmedi. Yakalama oranını ölçebilmek için üretimden ayrı, kapı sonucu içermeyen 164 satırlık etiketleme dosyası üretildi; etiketleme bekliyor. Hiçbiri üretime bağlı değil. [Ölçümler](editor/2026-09-18-generality-measurements.md).
