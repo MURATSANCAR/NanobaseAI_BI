@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import socket
 import time
 import urllib.error
@@ -12,6 +13,7 @@ import subprocess
 import sys
 import urllib.request
 import uuid
+import unicodedata
 
 root=Path(__file__).resolve().parents[1];os.chdir(root)
 gen=str(uuid.UUID(sys.argv[1]));page=int(sys.argv[2])
@@ -79,6 +81,22 @@ for row in rows['source_spans']:
         promoted+=1
         assert d['status']=='TEXT_AGREED' and m['finish_reason']=='stop','INVALID_PROMOTION'
         assert d['ocr_vl_selection']['selected_text']==d['text'] and not d['ocr_vl_selection']['blockers'],'UNSUPPORTED_PROMOTION'
+        if d['ocr_vl_selection'].get('superseded_readers'):
+            assert d['ocr_vl_selection']['method']=='paddleocr-vl-region-v2'
+            assert d['ocr_vl_selection']['superseded_readers']==['PPOCR_REGION']
+            assert d['pdf_usable'] and d['pdf_matches'],'NATIVE_CONSENSUS_REQUIRED'
+            reread=d['reread_measurement']
+            assert reread['bbox']==d['bbox'] and {r['psm'] for r in reread['readings']}=={7,13}
+            assert len(reread['readings'])==2
+            # Independently compare complete token streams including punctuation;
+            # do not invoke the production selection function as its own oracle.
+            streams=[]
+            for value in [d['text'],d['pdf_text'],*[r['text'] for r in reread['readings']]]:
+                assert not any(unicodedata.category(c) in ('Co','Cs') or c=='\ufffd' for c in value)
+                normalized=unicodedata.normalize('NFKC',value).replace('İ','i').replace('I','ı').lower()
+                normalized=normalized.translate(str.maketrans({'“':'"','”':'"','‘':"'",'’':"'"}))
+                streams.append(re.findall(r'\w+|[^\w\s]',normalized))
+            assert streams[0] and all(s==streams[0] for s in streams),'NATIVE_CROP_PUNCTUATION_CONFLICT'
     assert m['eligible_for_synthesis'] is False
 visuals=[];fresh_visuals=[]
 for r in rows['visual_observations']:

@@ -230,8 +230,34 @@ for row in api['semantic_synthesis']:
         assert statement['verification']['supported'] is True
         expected_spans = {ref for cid in statement['claim_refs'] for ref in eligible[cid]['span_refs']}
         assert set(statement['source_span_refs'])==expected_spans
+model_calls={}
+def verify_attempts(value):
+    if isinstance(value,list):
+        for item in value:verify_attempts(item)
+    elif isinstance(value,dict):
+        if value.get('generation_retry_policy')=='LENGTH_ONLY_IDENTICAL_INPUT_ONCE_WITHIN_CONTEXT':
+            attempts=value['generation_attempts']
+            assert 1<=len(attempts)<=2,'UNBOUNDED_MODEL_RETRY'
+            assert len({a['messages_sha256'] for a in attempts})==1,'MODEL_RETRY_INPUT_CHANGED'
+            assert attempts[0]['max_output_tokens']==value['requested_max_output_tokens']
+            assert attempts[-1]['finish_reason']==value['finish_reason']=='stop'
+            assert attempts[-1]['request_sha256']==value['request_sha256']
+            for attempt in attempts:
+                assert attempt['max_output_tokens']+value['input_token_count']+512<=value['context_limit']
+                assert re.fullmatch('[0-9a-f]{64}',attempt['response_sha256'])
+                assert attempt['usage']['completion_tokens']<=attempt['max_output_tokens']
+            if len(attempts)==2:
+                assert attempts[0]['finish_reason']=='length','COMPLETED_VERDICT_RETRIED'
+                assert attempts[0]['max_output_tokens']<attempts[1]['max_output_tokens']<=2*attempts[0]['max_output_tokens']
+                assert isinstance(attempts[0]['incomplete_output'],str)
+            model_calls[(value['started_at'],value['request_sha256'])]=len(attempts)
+        for child in value.values():verify_attempts(child)
+for items in api.values():
+    for row in items:verify_attempts(row['data'])
 report = {'generation_id':generation,'api':base,'api_pg_match':True,
           'counts':{kind:len(api[kind]) for kind in kinds},'eligible_claims':len(eligible),
+          'bounded_model_calls_verified':len(model_calls),
+          'length_retry_calls_verified':sum(n==2 for n in model_calls.values()),
           'derived_integrity_passed':True,'semantic_acceptance':False,'application_writes':0}
 target = root/'evidence'/('source-analysis-'+generation+'.json')
 target.write_text(json.dumps(report,indent=2));target.chmod(0o600)

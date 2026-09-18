@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 05:28UTC — R5 model kesilmesi ve güçlü OCR uzlaşması
+
+Kullanıcının devam talebiyle iki genel düzeltme yapıldı.10/32 gerçek kesilmiş model çağrıları aynı girdili tek ek denemeyle tamamlandı; partial JSON kullanılmadı. Temiz PDF,iki kırpım ve OCR-VL noktalaması birlikte uyuşursa tek bölgesel OCR vetosu kayıtlı olarak aşılır.1149 gerçek API/PG bölgesinde9 ek destekli bölge;13 mevcut seçim korundu. CPU R5 imajları ağsız derlendi, henüz yayımlanmadı. Başarı ilanı için yeni nesil tam koşu/restore gerekiyor. [Ayrıntı](editor/2026-09-18-source-analysis-v14-r5.md).
+
 ## 2026-09-18 04:25 UTC — R4 tam teknik koşu, restore ve mobil PASS
 
 R4 nesli08ca6877 COMPLETED/NEEDS_REVIEW:48 kaynak/amaç/anlam/figür sayfası,64 uygun sınırlı iddia/27 taslak, eksik atıf0. Tüm gerçek API/PG ve yayın korumaları geçti; ayrı dolu yedek/restore ve320/390/768/1440px mobil kontrolü04:25:11UTC PASS. Hedef servisler/ağ istisnaları temizlendi, kanıt korundu.262 kaynak incelemesi, genel kimlik0,10/32 kesilmiş ikinci denetim ve tam anlamsal kabul açık. Triage koşu seçimi düzeltmesi efb794f CPU normal scripts yoluna kuruldu ve gerçek R4 API/PG tekrarı geçti; uygulama imajı değişmedi, dondurulmuş paket sonradan değiştirilmedi. GPU yönetim VPN kapalı olsa da sunucular arası model tüneliyle tam koşu tamamlandı; son GPU soğuk kurulum ve GitHub push erişim nedeniyle açık. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).

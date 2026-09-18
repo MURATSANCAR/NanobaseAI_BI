@@ -1,5 +1,9 @@
 # NanobaseAI BI — Proje Belleği
 
+## R5 geliştirmesi —18 Eylül05:28UTC
+
+Kesilmiş model çıktısına aynı girdili tek bounded retry ve temiz PDF+iki kırpım+OCR-VL noktalama uzlaşması hazırlandı. Gerçek10/32 tekrarları iki aşamada tamamlandı;1149 gerçek bölgenin bağımsız API/PG incelemesinde9 ek bölge güçlü destek buldu,13 mevcut seçim korundu. Yeni imajlar derlendi; R5 henüz canlı değil, R4 aşağıda geçerli sürümdür. Kitap verisi veya inceleme kararı değiştirilmedi. [Kod/kanıt](docs/editor/2026-09-18-source-analysis-v14-r5.md).
+
 ## Editör canlı durum — 18 Eylül 04:25 UTC
 
 Backend/document `source-analysis-v14-r4-20260918`, web `source-analysis-v14-r3-20260918`. R4 kodu `0e4bdc7`, 47 backend dosyası tree SHA256 `bec5b4ff0cbcc81e5b61744359c5dfa207b63f20a490b0b6e5a692e8fda870d8`. İş `28aad122-3c1d-49ee-a182-f00ac449312c`, nesil `08ca6877-6e30-4bb3-b1fa-767f048248e4`: COMPLETED / NEEDS_REVIEW. Kaynak/amaç/anlam/figür 48/48; 64 sınırlı uygun iddia, 27 taslak, atıf boşluğu0; 8 figür karşılaştırması, kaynakla doğrulanmış isimli figür kimliği0. Kaynak 1.149=887 anlaşma+262 inceleme. Atıf şeması hatası0; 10/32 ikinci atıf denetiminde kesilmiş yanıtlar kabul edilmedi. Tam kitap anlamsal kabulü yok.

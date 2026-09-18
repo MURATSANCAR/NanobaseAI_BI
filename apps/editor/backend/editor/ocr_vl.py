@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import time
 import unicodedata
@@ -11,7 +12,7 @@ import httpx
 from editor.optical_selection import word_tokens
 from editor.source_alignment import valid_box
 
-VERSION = 'paddleocr-vl-region-v1'
+VERSION = 'paddleocr-vl-region-v2'
 
 
 def digest(raw):
@@ -105,6 +106,8 @@ def select_supported(measurement, line, secondary, pdf_text, pdf_usable, reread)
 
     Stable crop disagreement and usable native disagreement are vetoes. Whole
     page Tesseract may be superseded only by native PDF plus crop agreement.
+    Regional Paddle disagreement additionally requires matching punctuation
+    across native PDF, both crop readings, and VL before it can be superseded.
     Character identity and semantic validity remain outside this gate.
     """
     text=measurement['text']; tokens=word_tokens(text); blockers=[]; support=[]
@@ -122,9 +125,28 @@ def select_supported(measurement, line, secondary, pdf_text, pdf_usable, reread)
     if not native and not crop: blockers.append('NO_INDEPENDENT_REGION_SUPPORT')
     regional=bool(tokens and tokens==word_tokens(line.get('region_text') or ''))
     if regional: support.append('PPOCR_REGION')
-    if not regional: blockers.append('PPOCR_REGION_DISAGREES')
+    # One regional recognizer is not a veto over three agreeing source routes.
+    # Only clean native geometry + both crop readings + VL may supersede it.
+    # Preserve punctuation positions as well as every lexical/negation token;
+    # quotation marks and apostrophes must not become interchangeable.
+    def punctuation(value):
+        position=0; marks=[]
+        for token in re.findall(r'\w+|[^\w\s]',unicodedata.normalize('NFC',value)):
+            if token[0].isalnum() or token[0]=='_':position+=1
+            else:marks.append((position,token.translate(str.maketrans({'“':'"','”':'"','‘':"'",'’':"'"}))))
+        return marks
+    native_crop_consensus=bool(native and crop and all(
+        punctuation(value)==punctuation(text) for value in [pdf_text,*raw]))
+    superseded=[]
+    if not regional:
+        if native_crop_consensus:
+            superseded.append('PPOCR_REGION')
+        else:
+            blockers.append('PPOCR_REGION_DISAGREES')
     if word_tokens(secondary) and tokens!=word_tokens(secondary) and not (native and crop):
         blockers.append('SECONDARY_READER_CONFLICT')
     return {'method':VERSION, 'selected_text':text if not blockers else None,
             'supporting_readers':support,'blockers':blockers,'pdf_matches':native,
+            'superseded_readers':superseded,
+            'native_crop_punctuation_consensus':native_crop_consensus,
             'eligible_for_synthesis':False}
