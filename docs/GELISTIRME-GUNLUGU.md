@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V16-r5 canlı dağıtım, tam koşu ve çevrimdışı paket
+
+52 backend/11 web dosyasıyla dondurulan main1200bdd sürümü gerçek API/PG ve release kontrolünden geçerek canlıya alındı. Yeni iş8032d654/nesil116bb4a8 kaynak→amaç→iddia sırasıyla çalışıyor; 48 sayfanın okuma/amaç aşaması tamamlandı, anlam kabulü bekleniyor. Son19kayıt pilotu12kabul/7ret; bağımsız kaynak kontrolü geçti, bir muhafazakâr yanlış ret açık. Kitap verisine/inceleme kararına elle müdahale yok. R5 çevrimdışı paket ve gerçek CPU import238dosya/8imaj ile geçti; yeni nesil restore kabulü henüz yapılmadı. Canlı P5 etki API gerçek eski nesil/PG referansıyla geçti; mobil tekrar320/390/768/1440px,134bağlı kayıt ve gerçek sayfalama ile PASS (`source-impact-ui-93791cba-493c-46c2-8e2b-e58dab0c4fa7/verification.json`). [Dağıtım ve kalite](editor/2026-09-18-source-analysis-v16.md), [paket kanıtı](editor/2026-09-18-v16-r5-offline-package.md).
+
 ## 2026-09-18 — R5 genel söz edimi/gramer kapısı ve iki gerçek aday kabulü
 
 Token denetiminin belirsiz artikel ve edilgen söz edimini yanlış reddetmesi genel dil sözleşmesinde düzeltildi; kaynak/kimlik kapıları gevşetilmedi. Aynı iki gerçek model adayı V7birleşik kabulü ve ayrı API/PG/literal/hash doğrulamasından geçti; veriler değişmedi.52backenddosyalı R5imajları derlendi; son19kayıt regresyonu sürüyor, ana yayın değiştirilmedi. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).
