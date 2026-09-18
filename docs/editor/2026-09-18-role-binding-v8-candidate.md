@@ -1,6 +1,6 @@
 # V8 rol bağlama adayı — 18 Eylül 2026
 
-Mevcut canlı yayın V16 R5'tir. Semantik V8 ve yeni rol bağlama kapısı adaydır; yayınlanmadı. Kitabın tam anlamsal kabulü verilmedi. Son birleşik alıntı+rol adayı, gerçek API/PG üzerinde 14 pasajla sınanıyor; sonucu aşağıdaki önceki bileşen kanıtlarından ayrı tutulur.
+Mevcut canlı yayın V16 R5'tir. Semantik V8 ve yeni rol bağlama kapısı adaydır; yayınlanmadı. Kitabın tam anlamsal kabulü verilmedi. Son semantik V8/rol V8 adayı gerçek API/PG üzerinde sınandı. Kaynak okuma görünümü 14/14 bağımsız kontrolden geçti; son sekiz-pasaj birleşik kontrolde üç doğru ifade kabul edildi, iki yanlış fail aktarımı ve bir güvensiz iç-önerme kabulü engellendi; iki doğru dolaylı anlatım gereksiz incelemede kaldı. Tam üretim kabulü yoktur.
 
 ## Sorun ve genel çözüm
 
@@ -52,3 +52,20 @@ Yedi bileşen örneği geniş gerçek regresyon veya farklı kitaplarda başarı
 Model artık yalnız `{id,literal}` token girdisini görür; kaynak konum/hash bilgileri değişmez kanıt kaydında kalır. NAME için üçüncü kişi zorunludur. Sınırlı Türkçe isimleşmiş yüklem biçimleri predicate kapsamına alınmadan grafik geçmez; iç yüklem dış raporlama yüklemiyle aynı clause içine yığılamaz. Aynı cümleciğin birebir NOMINAL taşınması yalnız kaynak öznesi UNKNOWN ise kullanılabilir; bilinen özne çelişkileri atlanamaz. Üretim yeniden denetimi ve bağımsız yardımcı bu sözleşmeye güncellendi. Yapısal destek hâlâ tam dilbilgisel/edebî doğruluk değildir; `predicate_coverage_proven=false` korunur.
 
 Bu V7 rol koduyla birleşik 14-pasaj kontrolü yeniden başlatıldı. Önceki V6 kanıtları bu son kodun kabulü sayılmaz. Kaynak, claim veya review verisi elle düzeltilmedi; yeni tam kitap nesli açılmadı.
+
+## Son durum — rol V8, doğrulanmış okuma görünümü
+
+Rol V7'nin son 14 kayıt kanıtı `cited-semantics-probe-20260918T111543190581Z.json`; bağımsız kontrol `role-binding-reference-20260918T111628777504Z.json`. 5 yapısal kabul/9 inceleme vardır; iç `olduğunu` yüklemi atlanan önceki güvensiz PASS artık INVALID_CLAIM_ROLE_GRAPH olarak engellenir. İkinci yanlış fail ifadesinin bu koşuda MODEL_OUTPUT_TRUNCATED olması anlamsal ret kanıtı sayılmadı.
+
+Kaynak rol analizi için genel `role_reading_projection.py` eklendi. Önceden kanıtlanmış büyük başlangıç harfi ve satır sonu tire birleşimlerini tekrar geometri/rawtext/ref/render/hash denetiminden geçirir. Ham OCR değiştirilmez. Her yansıtılmış sözcüğün karakterleri özgün bölge/konumlara kompakt aralıklarla bağlanır; çıkarılan tire/boşluklar ayrıca kaydedilir. Bağımsız `role_projection_reference.py`, üretim modülünü çağırmadan aynı kökeni doğrular. Gerçek API/PG üzerinde 14/14 kaynak projection kabulü: `role-reading-projection-20260918T111841188511Z.json`; model çağrısı ve uygulama yazımı sıfır.
+
+Rol V8, grafiği bu doğrulanmış okuma görünümünden çıkarır; ham `source_sha256` özgün bölgelerin hash'i kalır. Citation/sentez kendi doğrulanmış reading_views girdisini verir. Retrieval ve bağımsız kabul bu görünümle tam eşliği ve proje modülünün fingerprint'ini zorunlu tutar. UI kabulü iki bağımsız yardımcı dosyayı sabit byte/hash ile yükler.
+
+Son değişmemiş kodla sekiz gerçek pasaj: `cited-semantics-probe-20260918T112138821828Z.json`; bağımsız `role-binding-reference-20260918T112156139346Z.json`. Yeni model çağrıları gerçek CPU API konteynerinden mevcut Qwen servisine yapıldı; gerçek PG/API kayıtları eşleşti ve önce/sonra kaynak/review hashleri aynı kaldı.
+
+- Kabul edilen üç ifade: bölünmüş başlangıç harfi/sahiplik öbeği içeren anlatım, adlandırılmış birebir kısa alıntı, kaynakta adı açık robotun eğitim işlevi.
+- Yanlış fail/kişi taşıyan iki ifade reddedildi; kelimelerin kaynakta bulunması ilişkisel destek sayılmadı.
+- İç yüklemi atlanarak önce geçirilmiş robot-olma ifadesi hâlâ engellendi.
+- İki doğru dolaylı anlatım açık: eski token-dayanak kapısının anonim söyleyeni kimlik/tür ataması sanması; çoğul/örtük bildirilen eylem öznesinin model grafiğinde adlandırılmış tek özneye bağlanması. Bu ikisi çözülmüş veya doğru ret diye sunulmadı.
+
+Bütün kayıtlar gerçek kitabın değişmez model çıktılarıdır. Kitap/sayfa/karakter/beklenen cevaba özel üretim istisnası eklenmedi. Tüm kitap yeniden çalıştırılmadı. Son kodun geniş farklı-kitap, tam yeni-nesil, yayın/restore/UI kabulü yapılmadığı için aday canlıya kurulmadı; R5 çalışır durumda bırakıldı. Yerelde yalnız sözdizimi ve whitespace kontrolü yapıldı; yerel test çalıştırılmadı.

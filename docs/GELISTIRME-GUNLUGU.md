@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — Rol V8: kaynak okuma kökeni ve somut yanlış kabullerin kapatılması
+
+Genel okuma projectionı, büyük başlangıç harfi/satırsonu bölünmelerini ham OCR'a yazmadan geometri ve kompakt karakter aralıklarıyla doğrular.14 gerçekpasajAPI/PG+bağımsızprojeksiyon kabulü geçti. Son8pasaj birleşik kontrolünde3doğru kabul,2yanlışfailaktarımı ve1eksikiçönerme engeli doğrulandı;2doğru dolaylıanlatım hâlâgereksizret. Kaynak/reviewhashleri aynı,0uygulamayazımı; modelsonuçlarına ellemüdahale yok. Alıntı/sentez/retrieval/bağımsızUIverifier sözleşmeleri güncellendi. V8aday yayınlanmadı;R5livekorundu, tamkitaptekrarı yok. [Sonuç, kanıtveaçıkkapsam](editor/2026-09-18-role-binding-v8-candidate.md).
+
 ## 2026-09-18 — V8 kişi–eylem ve konuşmacı–alıntı kapıları
 
 Genel rol adayı, alıntı ve sentezde eski semantik/qualification/obligation kapılarıyla AND olarak bağlandı. Kaynak konuşmacı–içerik kenarı, anonim ortak özne, tırnaklı zamir ve birebir NOMINAL cümlecik taşınması kodda düzeltildi. Retrieval yeniden denetimi, kod parmak izi ve üç kabul betiği V8'e uyarlandı; bağımsız literal/kenar/hash/çağrı doğrulayıcısı eklendi. Gerçek yedi kayıt tekrarları format/çıkarım değişkenliğini gösterdi: son bağımsız kanıt 5 yapısal doğrulama/1 kişi çatışması reddi/1 inceleme. Yeni kodun 14 gerçek pasajla birleşik kontrolü sürüyor; canlı dağıtım/tam anlam kabulü verilmedi. Kaynak/review/model çıktıları elle değiştirilmedi, yerel test yok. [Ayrıntı](editor/2026-09-18-role-binding-v8-candidate.md).

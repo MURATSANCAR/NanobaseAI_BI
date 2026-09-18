@@ -1,5 +1,9 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+## Son aday düzeltmesi — kaynak ilişkileri
+
+SemantikV8/rolV8 genel kodu hazır; canlıya alınmadı. Geometrik okuma projectionı14/14gerçekAPI/PG bağımsızkontrolden geçti. Son8pasajda3doğruifadekorundu,2yanlışfailaktarımı ve1içyüklematlanmasıengellendi;2doğru dolaylıanlatım gereksizincelemedekaldı. P2tamkabul açık; yeni tamkitapkoşusu başlamadı. [Ayrıntılı güncelkanıt](2026-09-18-role-binding-v8-candidate.md).
+
 ## Son kapanış — V16-r5 tamamlanan koşu
 
 - Kaynak/iddia muhasebesi: 48/48 API/PG teknik PASS; sıfır işlenmemiş/kısmi kaynak grubu.
