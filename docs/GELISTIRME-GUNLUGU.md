@@ -2,7 +2,7 @@
 
 ## 2026-09-18 — R3 kodu canlı; GPU offline cache ref düzeltmesi
 
-R3 backend/document/web yayımlandı,47 dosya ve9 web kaynak/çıktı eşliği geçti; yeni kitap koşusu GPU bakımı bitene kadar başlatılmadı. Gerçek soğuk GPU açılışı paket cache refs/main dosyasındaki fazladan newline nedeniyle başarısız oldu. Bundle/export ve import doğrulaması kodda düzeltildi; eski paket korunarak cache-v2 türetildi. Import artık gerçek HF kütüphanesiyle internet kapalı snapshot çözümlemesi de yapıyor. Mevcut runner’ların geri açılması ve yeni paketin tekrar kabulü izleniyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
+R3 backend/document/web yayımlandı,47 dosya ve9 web kaynak/çıktı eşliği geçti; yeni kitap koşusu GPU bakımı bitene kadar başlatılmadı. Gerçek soğuk GPU açılışı paket cache refs/main dosyasındaki fazladan newline nedeniyle başarısız oldu. Bundle/export ve import doğrulaması kodda düzeltildi; eski paket korunarak cache-v2 türetildi. Import artık gerçek HF kütüphanesiyle internet kapalı snapshot çözümlemesi de yapıyor. Mevcut runner’lar gerçek paralel çıkarımla geri döndü. İki modelin HF offline çözümlemesi geçti; python alias eksikliği sağlık/probe komutlarında python3 kullanılarak düzeltildi. Cache-v3 import, tüm hashler ve iki gerçek HF çözümlemesi PASS; ikinci soğuk açılış518950 PID ile sürüyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
 
 ## 2026-09-18 — R2 restore PASS; bilgi/öykü kapsamı için R3 düzeltmesi
 
