@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R5 genel söz edimi/gramer kapısı ve iki gerçek aday kabulü
+
+Token denetiminin belirsiz artikel ve edilgen söz edimini yanlış reddetmesi genel dil sözleşmesinde düzeltildi; kaynak/kimlik kapıları gevşetilmedi. Aynı iki gerçek model adayı V7birleşik kabulü ve ayrı API/PG/literal/hash doğrulamasından geçti; veriler değişmedi.52backenddosyalı R5imajları derlendi; son19kayıt regresyonu sürüyor, ana yayın değiştirilmedi. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).
+
 ## 2026-09-18 — V16-r4 adayı, yanlış retlerin kodda giderilmesi
 
 Gerçek karşılaştırmada lexical belirsizlik kapısının iki gereksiz reddi bulundu; V2 tam-cümle token kapsamı ve öneri tanığı bu ikisini kaldırdı, iki gerçek belirsizlik kaybı engeli kaldı. Anonim adayın kaynaksız özne türü eklemesi kapı gevşetilmeden önericide düzeltildi; aynı birimden birden fazla bağımsız söz edimi çıkarma sözleşmesi netleşti. Yeni gerçek kaynak pilotu iki öznesiz aday üretti. R4 ikiimaj52kaynakdosyasıyla derlendi; birleşik19kayıt+ikiyeniaday kabulü sürüyor, henüz yayımlanmadı. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).

@@ -7,7 +7,7 @@ import hashlib
 import json
 import re
 
-VERSION='source-obligations-v3'
+VERSION='source-obligations-v4'
 
 
 def digest(value):
@@ -89,6 +89,12 @@ def review(claim,regions,model):
         'Bağlaç, çekim ve diğer işlevsel kelimelerin anlam ilişkisini değerlendir. Kaynakta açık noktalama veya '
         'yan yana sıralama iki önermeyi aynı kapsamda birleştiriyorsa iddiadaki bağlaç bu ilişkiyi koruyabilir. '
         'Bu durumda her iki kaynak unsurunun SOURCE kimliklerini dayanak seç ve hangi ilişkinin korunduğunu açıkla. '
+        'Belirsiz artikel (Türkçe bir, İngilizce a/an) tek başına kesin sayı veya benzersizlik iddiası değildir; '
+        'sayısal sınırlama ancak cümlenin anlamı bunu gerçekten ileri sürüyorsa denetlenir. '
+        'Edilgen söz ediminde eyleyenin adı belirtilmemesi, kaynakta açıkça bulunan söz edimini desteksiz yapmaz. '
+        'Kaynak sözün ifade ettiği edimi destekliyorsa adsız edilgen anlatım kimlik ataması sayılmaz; '
+        'bu herhangi bir kişinin kimliğini doğrulamaz. İddiadaki özel isim, özne türü, konum ve sahiplik '
+        'atamaları ise açık kaynak desteği yoksa yine UNKNOWN veya FAIL olur. '
         'Salt kelime farklılığı ret gerekçesi değildir; zaman, fail, konum, sahiplik, kesinlik veya nedensellik '
         'eklenmesi ise işlevsel eşdeğerlik değildir. Desteklenmeyen anlamı bağlaç/parafraz diye mazur görme. '
         'Türkçe çekim/parafraz ancak anlam ve ilişkinin bütünü açıkça destekleniyorsa geçer. '

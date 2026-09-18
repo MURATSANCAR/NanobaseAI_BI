@@ -1,4 +1,4 @@
-"""Independent v2/v3 obligation proof reconstruction; no production imports."""
+"""Independent v2/v3/v4 obligation proof reconstruction; no product imports."""
 import hashlib
 import json
 import re
@@ -10,7 +10,7 @@ def digest(value):
 
 def verify_obligations(claim, regions, review):
     version=review.get('version')
-    assert version in ('source-obligations-v2','source-obligations-v3'), 'OBLIGATION_VERSION_UNSUPPORTED'
+    assert version in ('source-obligations-v2','source-obligations-v3','source-obligations-v4'), 'OBLIGATION_VERSION_UNSUPPORTED'
     text=claim['text']
     assert isinstance(text,str) and text.strip(), 'OBLIGATION_EMPTY_CLAIM'
     words=list(re.finditer(r'\S+',text))

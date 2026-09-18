@@ -107,7 +107,7 @@ for c in answer['claims']:
   if review.get('version')=='source-semantic-review-v7-cited-support':
    assert review.get('qualification_gate',{}).get('passed') is True
    obligation=review.get('obligation_review',{})
-   assert obligation.get('version') in ('source-obligations-v2','source-obligations-v3') and obligation.get('passed') is True
+   assert obligation.get('version') in ('source-obligations-v2','source-obligations-v3','source-obligations-v4') and obligation.get('passed') is True
    assert obligation.get('coverage_complete') is True and obligation.get('metrics',{}).get('finish_reason')=='stop'
  assert review['model_result']['checks']=={key:'PASS' for key in axes}
  assert review['model_result']['support_span_refs'] and set(review['model_result']['support_span_refs'])<=set(p['source_span_refs'])

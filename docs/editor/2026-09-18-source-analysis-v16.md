@@ -72,3 +72,9 @@ Bu değişiklikler R3 imaj/stage sonrasıdır; R3 dağıtıma uygun değildir. S
 Yeni öznesiz önerici aynı atomik kaynak biriminden iki ayrı söz edimi üretti; kaynak metni/ref/hash değişmedi: `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-d7548e4782e1.json`. Yeni birleşik koşu `evidence/semantic-v7-r4-integrated-probe.log`, PID1763790: önce19kayıt, sonra bu iki aday; eski nesle yazım yok.
 
 R4 ağsız derleme `evidence/v16-r4-build-proof.json`: API `sha256:96ccb20acef0bbb452b1223c250881439341d79c03c862a70e202bc87cfdcd58`; document `sha256:d8988ced104fa28bb826694c962aeb521c449194c8b58df364a68b177d24ce60`. Her imajın52dosyası/40Python modülü snapshotla exact; kilitler taban imajlarla aynı. Bu imajlar derlenmiştir, henüz ana yayına alınmamıştır.
+
+## R5: anonim söz ediminin gerçek birleşik kabulü
+
+Dayanak V4 genel dil sözleşmesi, belirsiz artikelin kendiliğinden kesin sayı iddiası olmadığını ve edilgen söz ediminin bilinmeyen fail adı gerektirmediğini açıklar. Özel isim/tür/konum/sahiplik ve literal-ID kapıları korunur. Kitaba özel örnek veya beklenen cevap eklenmedi. Aynı iki gerçek aday V7+qualificationV2+obligationsV4 ile geçti: `evidence/semantic-candidate-b3a4aa7e9d89c618bef3.json`; bağımsız gerçek API/PG/literal/claim-hash denetimi `evidence/anonymous-obligation-reference-2371eda7-9adf-4669-9b6a-b47cd7e446b0.json` PASS, model çağrısı0, kaynak değişimi0. Karakter kimliği hâlâ UNKNOWN; bu isim kabulü değildir. Aynı19kayıtlı iddia regresyonu `evidence/semantic-v7-obligations-v4-regression.log` içinde sürer.
+
+R5 imaj kanıtı `evidence/v16-r5-build-proof.json`: API `sha256:c8a6281486154b1f9826b18f0528ccd923cced04ebcd2f89ec0bb45bbee31676`, document `sha256:036205ed10eadb5334e6bc637b4c6b897a59230c0e409f494564fac3468f5bfd`;52backend/40Python dosyası exact, fazladanPython0, bağımlılık kilitleri aynı. Bu son aday R4sonrası dil sözleşmesini içerir; ana yayın/yenitamnesil henüz başlatılmamıştır.
