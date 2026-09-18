@@ -33,6 +33,7 @@ from semantic_layer.normalize import (
     is_negative,
     is_inflection_of,
     is_participle,
+    number_role,
     short_root,
     stem,
     tokenize,
@@ -143,6 +144,21 @@ def _asks_for_a_trend(question: str) -> bool:
     return bool(_TREND_PHRASES.search(folded)) or any(_is_trend_cue(t) for t in tokenize(question))
 # Ranking cues that make a following number a top-N rather than a value.
 _RANK_CUE = frozenset("en ilk top bastaki basta cok fazla yuksek dusuk buyuk".split())
+#: These rank only as a superlative. After an ablative they compare ("birden fazla", "yüzden yüksek").
+_COMPARATIVE_CUE = frozenset("cok fazla yuksek dusuk buyuk".split())
+_ABLATIVE = re.compile(r"(?:den|dan|ten|tan)$")
+
+
+def _rank_cue_before(tokens: list[str], k: int, span: int) -> bool:
+    """Is one of the `span` words before tokens[k] a ranking cue — and used as one?"""
+    for j in range(max(0, k - span), k):
+        word = fold(tokens[j])
+        if word not in _RANK_CUE:
+            continue
+        if word in _COMPARATIVE_CUE and j > 0 and _ABLATIVE.search(fold(tokens[j - 1])):
+            continue
+        return True
+    return False
 _WHICH = frozenset("hangi hangisi hangileri kim kimler kimin kimden".split())
 # "payı yüzde kaç" asks for a share: a plain total is a different answer, not a rounder one.
 _SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzdelik)\b")
@@ -310,7 +326,7 @@ class SemanticResolver:
         # parenthesized units) must not be discarded as generic query grammar.
         rank_requested = qf.limit is not None or any(
             cardinal(token) is not None and 2 <= cardinal(token) <= 1000
-            and {fold(word) for word in qf.tokens[max(0, k - 3):k]} & _RANK_CUE
+            and number_role(qf.tokens, k) == "count" and _rank_cue_before(qf.tokens, k, 3)
             for k, token in enumerate(qf.tokens))
         if rank_requested:
             for k, token in enumerate(qf.tokens):
@@ -656,12 +672,18 @@ class SemanticResolver:
                 nxt = qf.tokens[k + 1] if k + 1 < len(qf.tokens) else ""
                 if nxt and (stem(nxt) in _TIME_WORDS or short_root(nxt) in _TIME_WORDS or cardinal(nxt) is not None):
                     continue
-                before = qf.tokens[max(0, k - 7) : k]
-                if {fold(x) for x in before} & _RANK_CUE:
-                    qf.limit = n
-                    consumed.add(k)
-                    sq.explanation.append(f"'{tok}' sıralama sayısı olarak okundu → ilk {n}")
-                    break
+                if not _rank_cue_before(qf.tokens, k, 7):
+                    continue
+                if number_role(qf.tokens, k) == "value":
+                    # "toplamı yüzü aşan", "yüzde yirmi iskonto", "bini geçen": the number is what a
+                    # column is compared with. Read as a top-N it cut the answer at that many rows
+                    # without anyone having asked for a cap.
+                    sq.explanation.append(f"'{tok}' karşılaştırma değeri olarak okundu ({n}); satır sınırı konmadı")
+                    continue
+                qf.limit = n
+                consumed.add(k)
+                sq.explanation.append(f"'{tok}' sıralama sayısı olarak okundu → ilk {n}")
+                break
 
         # A top-N of named entities is a grouped ranking, even without "bazında".
         if qf.limit is not None and any(h.semantic_type == SemanticType.METRIC for h in hits):

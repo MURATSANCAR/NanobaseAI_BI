@@ -15,6 +15,7 @@ from semantic_layer.normalize import (
     clauses,
     fold,
     ngrams,
+    number_role,
     stem,
     tokenize,
 )
@@ -123,13 +124,19 @@ def extract_question_facts(question: str, n_max: int = 3) -> QuestionFacts:
     limit = None
     m = _LIMIT.search(folded)
     if m:
-        limit = int(m.group(1) or m.group(2))
+        # The pattern sees a cue and a number; whether the number counts rows is grammar's to say.
+        # "en az 50 adet satan", "en yüksek 100'ü aşan": a floor and a threshold — no row is cut.
+        group = 1 if m.group(1) else 2
+        flat = tokenize(folded)
+        at = len(tokenize(folded[: m.start(group)]))
+        if not (at < len(flat) and flat[at] == m.group(group) and number_role(flat, at) == "value"):
+            limit = int(m.group(group))
     elif _RANK_OR_LIST.search(folded):
         # "en çok satılan kanalları göster 5 tane": the count can come last, after the verb.
         # "tane/adet" makes it a count of rows, but only in a ranking or listing request.
         for k, tok in enumerate(tokens[1:], start=1):
             n = cardinal(tokens[k - 1])
-            if tok in ("tane", "adet") and n is not None and 1 <= n <= 1000:
+            if tok in ("tane", "adet") and n is not None and 1 <= n <= 1000 and number_role(tokens, k - 1) != "value":
                 limit = n
                 break
     order_desc = not bool(re.search(r"\b(artan|kucukten buyuge|en az|en dusuk)\b", folded))
