@@ -14,7 +14,7 @@ Qualifier ilk denemede mevcut ağlarla çakıştı; Docker IPAM envanterinden ç
 
 ## Paralel V16 ve P5 adayları
 
-**Son kalite kapısı:** V6 gerçek 19 kayıt tekrarında konum/sahiplik ve bir belirsizlik kaybını yanlış geçirdi; yayın durduruldu. V7 genel belirsizlik tanığı ve her iddia parçasına zorunlu kaynak desteği sözleşmesi adayda bağlı. İlk belirsizlik kapısı dört kaydı engelledi fakat iki gereksiz ret de üretti; V2 cümle kapsamı/öneri düzeltmesi bu ikisini kaldırıp iki gerçek belirsizlik kaybını korudu. Ayrıntı kapısının 19 kayıtlık gerçek pilotunda biçim hatası sıfır, konum/sahiplik retleri korunuyor. Tam V16/V7 nesli henüz yok. R4 iki imajı52backenddosyasıyla derlendi; yeni birleşik19kayıt+ikiöznesizaday pilotu çalışıyor. Ana yayın R7 olarak kaldı.
+**Son kalite kapısı:** V6 gerçek 19 kayıt tekrarında konum/sahiplik ve bir belirsizlik kaybını yanlış geçirdi; yayın durduruldu. V7 genel belirsizlik tanığı ve her iddia parçasına zorunlu kaynak desteği sözleşmesi adayda bağlı. İlk belirsizlik kapısı dört kaydı engelledi fakat iki gereksiz ret de üretti; V2 cümle kapsamı/öneri düzeltmesi bu ikisini kaldırıp iki gerçek belirsizlik kaybını korudu. Ayrıntı kapısının 19 kayıtlık gerçek pilotunda biçim hatası sıfır, konum/sahiplik retleri korunuyor. Tam V16/V7 nesli henüz yok. R5 iki imajı52backenddosyasıyla derlendi; iki öznesiz söz edimi gerçek birleşik ve bağımsız kaynak kabulünü geçti. Son19kayıt regresyonu sürüyor. Ana yayın R7 olarak kaldı.
 
 P5 salt okunur etki API18836 ve web18837; 134 bağlı kayıt, 164 ilişki, üç sayfalı snapshot/ACL ve dört genişlik kabulü geçti. Ana web değişmedi. [P5 kanıtı](docs/editor/2026-09-18-source-impact-ui.md).
 
