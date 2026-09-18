@@ -49,7 +49,10 @@ def _close(a, b, tolerance: float) -> bool:
     x, y = _num(a), _num(b)
     if x is None or y is None:
         return str(a or "").strip() == str(b or "").strip()
-    return abs(x - y) <= max(0.01, tolerance * max(abs(x), abs(y)))
+    # Kuruş yuvarlaması büyük sayılarda kabul edilir; oranlarda (|değer| < 1) mutlak pay yoktur —
+    # 0,01'lik sabit pay 0,1897 ile 0,1980'i "eşit" saymıştı.
+    floor = 0.005 if min(abs(x), abs(y)) >= 1 else 1e-9
+    return abs(x - y) <= max(floor, tolerance * max(abs(x), abs(y)))
 
 
 class Bridge:
@@ -136,6 +139,15 @@ def check(case: dict, answer: dict, reference: list[dict], lookups, tolerance: f
             want = reference[0].get(spec["reference"]) if reference else None
             if not _close(got, want, spec.get("tolerance", tolerance)):
                 problems.append(f"{spec['answer']} = {got}, referans {want}")
+        elif kind == "values_present":
+            # Biçimden bağımsız: referanstaki her değer cevabın sayısal hücrelerinden birinde bulunmalı
+            # (iki yıl bir satırda iki kolon da olabilir, iki satırda tek kolon da).
+            cells = [v for r in records for v in r.values() if _num(v) is not None and not isinstance(v, bool)]
+            for ref_row in reference:
+                for column in spec["reference"]:
+                    want = ref_row.get(column)
+                    if want is not None and not any(_close(v, want, spec.get("tolerance", tolerance)) for v in cells):
+                        problems.append(f"referans {column} = {want} cevapta yok")
         elif kind == "pairs":
             want = {str(r.get(spec["reference_key"]) or "").strip(): r.get(spec["reference_value"]) for r in reference}
             got = {str(_pick(r, spec["answer_key"]) or "").strip(): _pick(r, spec["answer_value"]) for r in records}

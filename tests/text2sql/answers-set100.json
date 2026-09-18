@@ -49,24 +49,11 @@
    "reference_sql": "SELECT (SELECT AVG(CAST(DATEDIFF(day, I.DATE_, P.DATE_) AS float)) FROM LG_411_01_PAYTRANS P JOIN LG_411_01_INVOICE I ON I.LOGICALREF=P.FICHEREF WHERE P.MODULENR=4 AND P.SIGN=0 AND P.CANCELLED=0 AND I.CANCELLED=0 AND I.TRCODE IN (7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) AS vade_gun_bu_yil, (SELECT AVG(CAST(DATEDIFF(day, I.DATE_, P.DATE_) AS float)) FROM LG_211_01_INVOICE I JOIN LG_211_01_PAYTRANS P ON P.FICHEREF=I.LOGICALREF AND P.MODULENR=4 WHERE P.SIGN=0 AND P.CANCELLED=0 AND I.CANCELLED=0 AND I.TRCODE IN (7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1)) AS vade_gun_gecen_yil",
    "checks": [
     {
-     "kind": "value",
-     "answer": [
-      "vade_gun_2026",
+     "kind": "values_present",
+     "reference": [
       "vade_gun_bu_yil",
-      "bu_yil_vade_gun",
-      "*"
+      "vade_gun_gecen_yil"
      ],
-     "reference": "vade_gun_bu_yil",
-     "tolerance": 0.002
-    },
-    {
-     "kind": "value",
-     "answer": [
-      "vade_gun_2025",
-      "vade_gun_gecen_yil",
-      "gecen_yil_vade_gun"
-     ],
-     "reference": "vade_gun_gecen_yil",
      "tolerance": 0.002
     }
    ],
