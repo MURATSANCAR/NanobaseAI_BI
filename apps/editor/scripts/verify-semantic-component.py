@@ -16,7 +16,8 @@ for kind in ('page_claims','source_spans'):
   offset+=len(result['items'])
  rows[kind]=items
 module=Path(sys.argv[3]).read_text() if len(sys.argv)>3 else (root/'backend/editor/semantic_acceptance.py').read_text()
-payload={'rows':rows,'module':module,'generation':gen,'page':page}
+reading_module=Path(sys.argv[4]).read_text() if len(sys.argv)>4 else ''
+payload={'rows':rows,'module':module,'reading_module':reading_module,'generation':gen,'page':page}
 code='''import sys,json,hashlib,types,inspect
 from editor.config import connection,code_manifest
 from editor.analysis import model
@@ -28,14 +29,17 @@ assert sum(map(len,p['rows'].values()))==len(rows),'API_PG_COUNT_MISMATCH'
 for kind,items in p['rows'].items():
  for r in items:
   d=by_id[r['id']];assert d['kind']==kind and d['record_key']==r['record_key'] and d['data']==r['data'],'API_PG_MISMATCH'
+if p['reading_module']:
+ reader=types.ModuleType('editor.source_unit_claims');exec(compile(p['reading_module'],'candidate-reading.py','exec'),reader.__dict__)
+ sys.modules['editor.source_unit_claims']=reader
 module=types.ModuleType('semantic_candidate');exec(compile(p['module'],'candidate-semantic.py','exec'),module.__dict__)
 page=p['rows']['page_claims'][0]['data']; review=module.review_page(page,p['rows']['source_spans'],model)
 print(json.dumps({'stage':'review','review':review},ensure_ascii=False),flush=True)
 extra={'source_spans':p['rows']['source_spans']} if 'source_spans' in inspect.signature(module.synthesize_reviewed).parameters else {}
 synthesis=module.synthesize_reviewed([page],[review],model,**extra)
-print(json.dumps({'stage':'complete','generation_id':p['generation'],'pdf_page':p['page'],'api_pg_match':True,'application_writes':0,'candidate_code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'runtime_code_manifest':code_manifest(),'review':review,'synthesis':synthesis},ensure_ascii=False),flush=True)
+print(json.dumps({'stage':'complete','generation_id':p['generation'],'pdf_page':p['page'],'api_pg_match':True,'application_writes':0,'candidate_code_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),'reading_code_sha256':hashlib.sha256(p['reading_module'].encode()).hexdigest() if p['reading_module'] else None,'runtime_code_manifest':code_manifest(),'review':review,'synthesis':synthesis},ensure_ascii=False),flush=True)
 '''
-out=root/f'evidence/semantic-live-component-{gen}-page{page:04}-{hashlib.sha256(module.encode()).hexdigest()[:12]}.jsonl'
+out=root/f'evidence/semantic-live-component-{gen}-page{page:04}-{hashlib.sha256((module+reading_module).encode()).hexdigest()[:12]}.jsonl'
 if out.exists(): raise SystemExit('Evidence already exists; preserve it and choose a new generation')
 with out.open('w') as target:
  proc=subprocess.run(['docker','compose','exec','-T','api','python','-u','-c',code],input=json.dumps(payload),text=True,stdout=target,stderr=subprocess.PIPE,cwd=root)

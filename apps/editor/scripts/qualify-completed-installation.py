@@ -151,6 +151,7 @@ try:
     if os.environ.get('EDITOR_QUALIFY_DERIVED')=='1':
         execute('derived_api_pg',['python3','scripts/verify-source-analysis.py',run['generation_id'],'--fragments'])
         execute('semantic_provenance',['python3','scripts/verify-semantic-provenance.py',run['generation_id']])
+        execute('publication_gates',['python3','scripts/verify-publication-gates.py'])
     execute('release_bytes_after_analysis',['python3','scripts/verify-release.py'])
     packaged=(work/'offline/editor/backend')
     for path in (root/'backend').rglob('*'):
@@ -199,6 +200,7 @@ try:
     if os.environ.get('EDITOR_QUALIFY_DERIVED')=='1':
         execute('restored_derived_api_pg',['python3','scripts/verify-source-analysis.py',run['generation_id'],'--fragments'],cwd=target,env=env)
         execute('restored_semantic_provenance',['python3','scripts/verify-semantic-provenance.py',run['generation_id']],cwd=target,env=env)
+        execute('restored_publication_gates',['python3','scripts/verify-publication-gates.py'],cwd=target,env=env)
     if os.environ.get('EDITOR_QUALIFY_OCR_VL')=='1':
         env['EDITOR_VERIFY_OCR_VL']='1'
         execute('restored_ocr_vl_api_pg',['python3','scripts/verify-ocr-vl-review.py'],cwd=target,env=env)

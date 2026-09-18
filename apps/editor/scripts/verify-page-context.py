@@ -11,8 +11,10 @@ import uuid
 p=argparse.ArgumentParser()
 p.add_argument('generation');p.add_argument('--page',type=int,required=True)
 p.add_argument('--module',required=True);p.add_argument('--fragment-artifact')
+p.add_argument('--persisted-fragments',action='store_true')
 p.add_argument('--root',default='/data/nanobaseai/editor');args=p.parse_args()
 root=Path(args.root);gen=str(uuid.UUID(args.generation));module=Path(args.module).read_bytes()
+if args.persisted_fragments and args.fragment_artifact:raise SystemExit('Choose persisted fragments or a component artifact')
 headers={'Authorization':'Bearer '+(root/'secrets/api_token').read_text().strip()}
 def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
 def get_rows(kind,page):
@@ -24,6 +26,7 @@ def get_rows(kind,page):
         if not data['has_more']:return rows
         offset+=len(data['items'])
 pages=range(max(1,args.page-1),args.page+2);kinds=('evidence','layout_regions','source_spans')
+if args.persisted_fragments:kinds+=('source_fragments',)
 rows={page:{kind:get_rows(kind,page) for kind in kinds} for page in pages}
 code="import json,sys; from editor.config import connection; p=json.load(sys.stdin); db=connection(); c=db.__enter__(); rows=c.execute('SELECT id,kind,record_key,data FROM editor.records WHERE generation_id=%s AND kind=ANY(%s) AND (data->>%s)::int=ANY(%s)',(p['generation'],p['kinds'],'pdf_page',p['pages'])).fetchall(); print(json.dumps(rows,default=str))"
 payload={'generation':gen,'kinds':list(kinds),'pages':list(pages)}
@@ -36,7 +39,7 @@ for page in pages:
             expected=pg[row['id']]
             assert expected['kind']==kind and expected['data']==row['data'] and expected['record_key']==row['record_key'],'API_PG_MISMATCH'
             count+=1
-fragments=[];fragment_sha=None;fragment_id_projection=[]
+fragments=[row for page in pages for row in rows[page].get('source_fragments',[])];fragment_sha=None;fragment_id_projection=[]
 if args.fragment_artifact:
     artifact_raw=Path(args.fragment_artifact).read_bytes();artifact=json.loads(artifact_raw)
     fragment_sha=hashlib.sha256(artifact_raw).hexdigest()
@@ -66,6 +69,7 @@ tail="\nfrom editor.analysis import model\nbundles=json.loads("+repr(json.dumps(
 result=json.loads(subprocess.check_output(['docker','compose','exec','-T','api','python','-c',
     'import sys; exec(compile(sys.stdin.read(),"page_context_candidate.py","exec"))'],input=module+tail.encode(),cwd=root))
 report={'generation_id':gen,'target_page':args.page,'api_pg_rows_matched':count,'fragment_artifact_sha256':fragment_sha,
+        'persisted_fragments':args.persisted_fragments,
         'fragment_parent_hashes_verified':len(fragments),'module_sha256':hashlib.sha256(module).hexdigest(),
         'fragment_record_id_projection':fragment_id_projection,
         'input_bundles_sha256':digest(bundles),'omitted_incomplete_pages':omitted,'result':result,

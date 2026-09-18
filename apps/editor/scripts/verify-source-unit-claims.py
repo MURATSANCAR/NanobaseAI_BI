@@ -41,6 +41,7 @@ for kind,items in p['records'].items():
  for r in items:
   actual=by_id[r['id']];assert actual['kind']==kind and actual['record_key']==r['record_key'] and actual['data']==r['data'],'API_PG_MISMATCH'
 m=types.ModuleType('source_unit_claims_candidate');exec(compile(p['module'],'source-unit-claims-candidate.py','exec'),m.__dict__)
+sys.modules['editor.source_unit_claims']=m
 if p['semantic_module']:
  sm=types.ModuleType('semantic_review_candidate');exec(compile(p['semantic_module'],'semantic-review-candidate.py','exec'),sm.__dict__)
  review_page=sm.review_page

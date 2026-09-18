@@ -8,6 +8,8 @@ rows={}
 requested_kinds=['evidence','source_spans','layout_regions','visual_observations','page_claims']
 if os.environ.get('EDITOR_VERIFY_PERSISTED_CONTEXT')=='1':
  requested_kinds+=['source_fragments','page_context_roles']
+elif os.environ.get('EDITOR_VERIFY_PERSISTED_FRAGMENTS')=='1':
+ requested_kinds+=['source_fragments']
 for kind in requested_kinds:
  items=[];offset=0
  while True:
@@ -33,7 +35,7 @@ bundles=[]
 for page in sorted(set.intersection(*(set(v) for v in indexes.values()))):
  bundles.append({'evidence':indexes['evidence'][page],'layout':indexes['layout_regions'][page]['data'],'visual':indexes['visual_observations'][page]['data'],'page_role':indexes['page_claims'][page]['data']['page_role'],'spans':[r for r in p['rows']['source_spans'] if r['data']['pdf_page']==page]})
  if 'source_fragments' in p['rows']:
-  context=next((r for r in p['rows']['page_context_roles'] if r['data']['pdf_page']==page),None)
+  context=next((r for r in p['rows'].get('page_context_roles',[]) if r['data']['pdf_page']==page),None)
   bundles[-1].update(fragments=[r for r in p['rows']['source_fragments'] if r['data']['pdf_page']==page],
                     context_role=context['data'] if context else None,
                     context_role_record_id=context['id'] if context else None)
@@ -98,7 +100,7 @@ context_module=Path(sys.argv[5]).read_text() if len(sys.argv)>5 else None
 if context_report and not context_module:raise SystemExit('Context candidate module required')
 suffix='-'+fragment_hash[:12] if fragment_hash else ''
 if context_hash:suffix+='-'+context_hash[:12]
-if os.environ.get('EDITOR_VERIFY_PERSISTED_CONTEXT')=='1':
+if os.environ.get('EDITOR_VERIFY_PERSISTED_CONTEXT')=='1' or os.environ.get('EDITOR_VERIFY_PERSISTED_FRAGMENTS')=='1':
  suffix+='-persisted-'+hashlib.sha256(json.dumps(rows,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()[:12]
 out=root/f'evidence/cross-page-attribution-{gen}-{code_hash[:12]}{suffix}.json'
 if out.exists(): raise SystemExit('Evidence exists; preserve earlier result')

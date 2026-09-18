@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -56,8 +57,34 @@ assert {r['data']['pdf_page'] for r in api['semantic_reviews']} == expected_page
 assert {r['data']['pdf_page'] for r in api['figure_identity']} == expected_pages, 'IDENTITY_PASS_INCOMPLETE'
 assert len(api['semantic_synthesis']) == 1, 'SYNTHESIS_NOT_READY'
 spans = {r['id']:r['data'] for r in api['source_spans']}
+def verify_reading_view(view,allowed_refs,page):
+    refs=view['span_refs'];assert refs and len(set(refs))==len(refs) and set(refs)<=set(allowed_refs)
+    assert all(spans[r]['status']=='TEXT_AGREED' and spans[r]['role']=='TEXT' and spans[r]['pdf_page']==page for r in refs)
+    assert len({spans[r]['render_sha256'] for r in refs})==1
+    assert view['raw_text']=='\n'.join(spans[r]['text'] for r in refs),'READING_RAW_TEXT_CHANGED'
+    joins={(j['left_span_ref'],j['right_span_ref']):j for j in view['line_end_joins']}
+    assert len(joins)==len(view['line_end_joins']) and set(joins)<=set(zip(refs,refs[1:]))
+    text=spans[refs[0]]['text']
+    for left,right in zip(refs,refs[1:]):
+        a,b=spans[left],spans[right]
+        if (left,right) in joins:
+            x,y,w,h=a['bbox'];xx,yy,ww,hh=b['bbox']
+            if joins[left,right]['operation']=='JOIN_VERIFIED_DROP_CAP_IN_READING_VIEW_ONLY':
+                glyph=a['text'].strip();body=b['text'].lstrip()
+                assert len(glyph)==1 and glyph.isalpha() and glyph.isupper() and body[0].islower()
+                assert h>=1.4*hh and x<xx and -.5*w<=xx-(x+w)<=.15*hh
+                assert max(0,min(y+h,yy+hh)-max(y,yy))>=.5*hh and y+h>yy+hh
+                text=text.rstrip()+b['text'].lstrip()
+            else:
+                assert joins[left,right]['operation']=='REMOVE_GEOMETRIC_LINE_END_HYPHEN_IN_READING_VIEW_ONLY'
+                assert re.search(r'\w-\s*$',a['text']) and re.match(r'^\s*\w',b['text'])
+                assert yy>=y+.5*h and yy-(y+h)<=2*max(h,hh)
+                assert max(0,min(x+w,xx+ww)-max(x,xx))>=.5*min(w,ww)
+                text=re.sub(r'-\s*$','',text)+b['text'].lstrip()
+        else:text+='\n'+b['text']
+    assert text==view['reading_text'],'UNDECLARED_READING_TEXT_CHANGE'
 for page in pages.values():
-    if page.get('source_unit_method')!='source-unit-claims-v1':continue
+    if page.get('source_unit_method') not in ('source-unit-claims-v1','source-unit-claims-v2'):continue
     units=page.get('source_units',[]);lookup={u['unit_id']:u for u in units}
     assert len(lookup)==len(units),'SOURCE_UNIT_ID_COLLISION'
     for unit in units:
@@ -66,6 +93,9 @@ for page in pages.values():
                    and spans[r]['pdf_page']==page['pdf_page'] and spans[r]['render_sha256']==unit['render_sha256'] for r in refs)
         assert unit['quote']=='\n'.join(spans[r]['text'] for r in refs),'SOURCE_UNIT_TEXT_MODIFIED'
         assert unit['sha256']==digest({k:unit[k] for k in ('pdf_page','span_refs','quote','render_sha256')})
+        if page['source_unit_method']=='source-unit-claims-v2':
+            assert unit['reading_view']['span_refs']==refs
+            verify_reading_view(unit['reading_view'],refs,page['pdf_page'])
     for claim in page['claims']+page['blocked_claims']:
         unit=lookup[claim['source_unit_id']]
         assert claim['quote_origin']=='IMMUTABLE_OCR_UNIT_SELECTION'
@@ -123,7 +153,7 @@ for row in api['semantic_reviews']:
             assert verdict['identity_gate'] in ('NOT_REQUIRED','SOURCE_VERIFIED')
             assert verdict['claim_id'] not in eligible, 'CLAIM_ID_COLLISION'
             carried=candidate['span_refs']
-            if review['version']=='source-semantic-review-v2':
+            if review['version'] in ('source-semantic-review-v2','source-semantic-review-v3'):
                 carried=verdict['verified_support_span_refs']
                 assert set(candidate['span_refs'])<=set(carried)
                 assert set(verdict['model_result']['support_span_refs'])<=set(carried)
@@ -134,6 +164,12 @@ for row in api['semantic_reviews']:
                 cited=verdict['citation_review'];assert cited['passed'] is True
                 assert cited['source_sha256']==digest(regions)
                 assert all(v=='PASS' for v in cited['model_result']['checks'].values())
+                if review['version']=='source-semantic-review-v3':
+                    views=cited['source_reading_segments'];view_refs=[ref for view in views for ref in view['span_refs']]
+                    assert len(view_refs)==len(set(view_refs)) and set(view_refs)==set(carried)
+                    for view in views:verify_reading_view(view,carried,review['pdf_page'])
+                    claim={k:candidate.get(k) for k in ('kind','text','quote','span_refs','actor','speaker','narrative_mode','polarity')}
+                    assert cited['input_sha256']==digest({'claim':claim,'cited_source_regions':regions,'source_reading_segments':views})
             eligible[verdict['claim_id']] = {**candidate,'span_refs':carried}
 for row in api['figure_identity']:
     identity = row['data']

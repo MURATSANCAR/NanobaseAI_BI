@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — R2 sözcük sınırı düzeltmeleri gerçek kaynakla sınandı
+
+R1'de8. sayfada satıra bölünen sözcük anlamı ve5. sayfada ayrı büyük başlangıç harfi nedeniyle yanlış kişi adı üretildi. Ham OCR değişmedi; genel geometriye dayalı ayrı okuma görünümü, iki kaynaklı başlangıç harfi birleşimi ve eksik sözcük kapısı eklendi. Yeni5/8 çıktıları sistemden doğru kaynak sözcükleriyle geldi; eski yanlış5 iddiası yeni kapıda reddedildi.29'un gerçek ACTIVITY kaydı ve kayıtlı alt bölgeleriyle bağlam/çapraz kontrol1 sınırlı diyalog bağı verdi, genel kimlik0. Isınmış GPU'da2 Qwen+12 OCR PASS/min5114MiB/restart0. İzolasyon aracındaki ağsız reread-worker varsayımı düzeltildi ve gerçek tekrar geçti. R2 henüz canlı değil;16/38 son-hash ve tam nesil/restore kabulü devam edecek. [Kanıtlar](editor/2026-09-18-source-analysis-v14.md).
+
 ## 2026-09-18 — V14 R1 sayfa amacı ve kurulum aracı açığı
 
 Gerçek R1 koşusunda29. sayfanın konuşma sorusu ACTIVITY önerildi; yalnız UNKNOWN etiketleri komşu kaynakla inceleyen koşul bu hatayı atlıyordu. R2 adayı bütün non-narrative önerileri ayrı bağlamda inceleyecek ve ham ilk kararı koruyacak. Gerçek29/16 karşı kontrolleri sırasıyla anlatı/etkinlik verdi; token kesintisi başarısız kanıtı korundu, tam JSON dışında kabul yok. Mevcut R1 sürümü yerinde değiştirilmedi. Müşteri kabul aracı external model uçları/seçili koşu/tam atıf restore kontrolüne hazırlanıyor, gerçek restore henüz bekler. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).

@@ -12,7 +12,7 @@ import urllib.error
 from datetime import datetime, timezone
 
 root=Path(__file__).resolve().parents[1];os.chdir(root)
-run=json.loads((root/'evidence/source-spans-run.json').read_text());gen=run['generation_id']
+run=json.loads((root/os.environ.get('EDITOR_VERIFY_RUN_FILE','evidence/source-spans-run.json')).read_text());gen=run['generation_id']
 base=os.environ.get('EDITOR_VERIFY_BASE_URL','http://127.0.0.1:8810')
 token=(root/'secrets/api_token').read_text().strip()
 
@@ -48,5 +48,6 @@ assert after['status']!='ACTIVE' and before['reviews']==after['reviews'] and bef
 report={'generation_id':gen,'checked_at':datetime.now(timezone.utc).isoformat(),
     'api':base,'checks':checks,'database_before':before,'database_after':after,
     'editorial_decisions_written':0,'question_jobs_created':0,'semantic_acceptance':False}
-(root/'evidence/publication-gates.json').write_text(json.dumps(report,ensure_ascii=False,indent=2))
+with (root/'evidence'/('publication-gates-'+gen+'.json')).open('x') as stream:
+    json.dump(report,stream,ensure_ascii=False,indent=2)
 print(json.dumps(report,ensure_ascii=False,indent=2))

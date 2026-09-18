@@ -17,7 +17,7 @@ for container in containers:
     service = container['Config']['Labels']['com.docker.compose.service']
     host = container['HostConfig']
     networks = list(container['NetworkSettings']['Networks'])
-    if service == 'parser':
+    if service in ('parser','reread-worker'):
         assert host['NetworkMode'] == 'none' and networks == ['none'], (service,networks)
         assert host['ReadonlyRootfs'] and host['CapDrop'] == ['ALL']
         assert not host.get('PortBindings')
