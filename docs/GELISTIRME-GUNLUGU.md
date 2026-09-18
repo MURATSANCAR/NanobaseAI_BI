@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 12:20 UTC — Editör: tek çağrılı özne seçimi adayı, 14 gerçek pasaj
+
+Üç çağrılı rol grafına alternatif olarak modelin yalnız kapalı form doldurduğu, kararı kodun verdiği `source_subject_choice.py` adayı yazıldı ve canlı API/PG salt okunur sürücüsüyle 14 gerçek pasajda ölçüldü: 11 PASS/3 inceleme, 14 çağrı, 46 sn (rol V8 birleşik: 5/9). **Neden:** V8 doğru iddiaları da reddediyor ve pahalı. Bulgu: tek çağrı kesin yanlış PDF27 iddiasını tek başına geçirdi; model çağırmayan kişi eki kapısıyla AND olunca yakalandı (10/4). İkinci koşuda 14 kararın 1'i değişti; aday kararlı değil ve muğlak bir iddiayı geçirdi. Üretime bağlanmadı, V8 yerine önerilmiyor. [Ölçüm](editor/2026-09-18-subject-choice-candidate.md).
+
 ## 2026-09-18 12:10 UTC — Editör: diakritik çelişkilerinde sözlük tanığı ölçümü
 
 328 gerçek inceleme bölgesinde, model çağırmadan ölçüldü: NFC eşdeğerliği hiçbir çelişkiyi kapatmıyor (0; varsayım reddedildi). Paddle ↔ Tesseract yalnız diakritikte ayrışan 74 bölgenin 52'sinde sözlük tanığı tek geçerli sözcüğü buluyor; seçilen sözcük hizalı temiz PDF sözcüğüyle 56 karşılaştırmanın 55'inde, en az 3 harflilerde 53/53 aynı. **Neden:** 253 inceleme bölgesinin bir kısmı anlam değil diakritik farkı; hata iki okuyucuya da dağıldığı için "tek okuyucuya güven" çözmüyor. Yan bulgu: Paddle 5 bölgede Romence `ș` (U+0219) üretiyor. Kural kodlanmadı, kapıya bağlanmadı; PDF'i bozuk sayfalarda doğruluk ölçülemedi. [Ölçüm](editor/2026-09-18-diacritic-witness-probe.md).
