@@ -14,10 +14,16 @@ import subprocess
 import sys
 
 assert sys.platform.startswith('linux') and os.environ.get('EDITOR_VERIFY_REMOTE_HOST')==socket.gethostname()
-p=argparse.ArgumentParser();p.add_argument('evidence');p.add_argument('semantic_module');args=p.parse_args()
+p=argparse.ArgumentParser();p.add_argument('evidence');p.add_argument('semantic_module')
+p.add_argument('--support-module',action='append',default=[]);args=p.parse_args()
 root=Path(os.environ['EDITOR_VERIFY_ROOT']).resolve()
 prior=json.loads(Path(args.evidence).read_text());module=Path(args.semantic_module).read_text()
-payload={'prior':prior,'module':module}
+support_modules={}
+for value in args.support_module:
+ path=Path(value);name=path.stem
+ assert name.isidentifier() and path.suffix=='.py' and name not in support_modules
+ support_modules[name]=path.read_text()
+payload={'prior':prior,'module':module,'support_modules':support_modules}
 identity=hashlib.sha256(json.dumps(payload,sort_keys=True).encode()).hexdigest()
 out=root/'evidence'/('semantic-candidate-'+identity[:20]+'.json')
 assert not out.exists(),'EVIDENCE_ALREADY_EXISTS'
@@ -36,6 +42,9 @@ with connection() as db:
  spans=db.execute("SELECT id,record_key,data FROM editor.records WHERE generation_id=%s AND kind='source_spans' AND (data->>'pdf_page')::int=%s ORDER BY record_key",(generation,page)).fetchall()
  context=db.execute("SELECT data FROM editor.records WHERE id=%s AND generation_id=%s",(prior['page_purpose']['record_id'],generation)).fetchone()['data']
 assert context==prior['page_purpose_source_record']['data']
+for name,source in p['support_modules'].items():
+ module=types.ModuleType('editor.'+name);sys.modules[module.__name__]=module
+ exec(compile(source,name+'.py','exec'),module.__dict__)
 m=types.ModuleType('semantic_candidate');exec(compile(p['module'],'semantic-candidate.py','exec'),m.__dict__)
 assert m.digest(context)==prior['page_purpose']['record_sha256']
 candidate=prior['gated_candidates']
@@ -45,6 +54,7 @@ review=m.review_page(candidate,spans,model,page_purpose=prior['page_purpose'])
 after=protected();assert before==after,'SOURCE_OR_REVIEW_CHANGED'
 print(json.dumps({'generation_id':generation,'pdf_page':page,'candidate_sha256':m.digest(candidate),
  'semantic_module_sha256':hashlib.sha256(p['module'].encode()).hexdigest(),
+ 'support_module_sha256':{name:hashlib.sha256(source.encode()).hexdigest() for name,source in p['support_modules'].items()},
  'protected_before':before,'protected_after':after,'review':review,
  'application_writes':0,'semantic_acceptance':False},ensure_ascii=False))
 '''

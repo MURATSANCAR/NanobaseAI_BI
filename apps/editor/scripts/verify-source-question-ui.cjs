@@ -101,9 +101,14 @@ for c in answer['claims']:
  claim.update(kind='STATEMENT',span_refs=p['source_span_refs'],quote=p['text'])
  assert review['input_sha256']==digest({'claim':claim,'cited_source_regions':p['regions'],'source_reading_segments':review['source_reading_segments']})
  axes=('entailment','actor','speaker','polarity','narrative_mode')
- if review.get('version')=='source-semantic-review-v6-cited-support':
+ if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support'):
   axes+=('epistemic_strength',)
   assert review.get('surface_reference_gate',{}).get('passed') is True
+  if review.get('version')=='source-semantic-review-v7-cited-support':
+   assert review.get('qualification_gate',{}).get('passed') is True
+   obligation=review.get('obligation_review',{})
+   assert obligation.get('version') in ('source-obligations-v2','source-obligations-v3') and obligation.get('passed') is True
+   assert obligation.get('coverage_complete') is True and obligation.get('metrics',{}).get('finish_reason')=='stop'
  assert review['model_result']['checks']=={key:'PASS' for key in axes}
  assert review['model_result']['support_span_refs'] and set(review['model_result']['support_span_refs'])<=set(p['source_span_refs'])
  assert review['metrics']['finish_reason']=='stop' and c['relevance_review']['metrics']['finish_reason']=='stop'

@@ -23,7 +23,7 @@ KINDS = ('evidence', 'layout_regions', 'source_spans', 'source_fragments',
 REVIEW_KINDS = KINDS + ('source_passages', 'source_index')
 DEPENDENCIES = ('source_retrieval.py', 'semantic_acceptance.py', 'page_context.py',
                 'source_unit_claims.py', 'source_pipeline.py', 'source_alignment.py',
-                'text_attribution.py', 'retrieval.py')
+                'text_attribution.py', 'retrieval.py', 'source_qualification.py', 'source_obligations.py')
 
 
 def require(condition, reason):
@@ -46,6 +46,8 @@ def build_passages(generation, records, decisions, manifest):
     from editor.page_context import story_authority
     from editor.source_alignment import reading_order
     from editor.semantic_acceptance import surface_reference_gate
+    from editor.source_qualification import qualification_gate
+    from editor.source_obligations import validate as validate_obligations, source_tokens as obligation_source_tokens
     from editor.source_pipeline import quote_check, negation, quote_tokens, narrative_gate
     from editor.source_unit_claims import reading_segments, incomplete_word_refs
     from editor.text_attribution import extract, speaker_for_claim
@@ -151,6 +153,23 @@ def build_passages(generation, records, decisions, manifest):
             require(current_reference_gate.get('passed') is True
                     and citation.get('surface_reference_gate') == current_reference_gate,
                     'PREVIEW_NAMED_REFERENCE_AUTHORITY_INVALID')
+            if REVIEW_VERSION == 'source-semantic-review-v7':
+                current_qualification = qualification_gate(claim.get('text') or '', cited_payload['source_reading_segments'])
+                require(citation.get('version') == REVIEW_VERSION+'-cited-support'
+                        and current_qualification['passed'] is True
+                        and citation.get('qualification_gate') == current_qualification,
+                        'PREVIEW_QUALIFICATION_AUTHORITY_INVALID')
+                obligation = citation.get('obligation_review', {})
+                checked = validate_obligations(claim['text'], regions, obligation.get('model_result'))
+                anchors = obligation_source_tokens(regions)
+                obligation_sources = [{'span_id':r['span_id'],'text':r['text'],
+                    'tokens':[{'id':a['id'],'text':a['quote']} for a in anchors if a['span_id']==r['span_id']]} for r in regions]
+                require(checked['passed'] is True and all(obligation.get(k)==v for k,v in checked.items())
+                        and obligation.get('status') == 'SOURCE_SUPPORTED_CANDIDATE'
+                        and obligation.get('metrics',{}).get('finish_reason') == 'stop'
+                        and obligation.get('input_sha256') == digest({'claim':claim,
+                            'obligations':checked['obligations'],'source_regions':obligation_sources}),
+                        'PREVIEW_OBLIGATION_AUTHORITY_INVALID')
             require(citation.get('passed') is True and citation.get('source_sha256') == digest(regions)
                     and citation.get('input_sha256') == digest(cited_payload)
                     and citation.get('source_regions') == regions and citation.get('support_span_refs') == refs

@@ -14,6 +14,8 @@ Qualifier ilk denemede mevcut ağlarla çakıştı; Docker IPAM envanterinden ç
 
 ## Paralel V16 ve P5 adayları
 
+**Son kalite kapısı:** V6 gerçek 19 kayıt tekrarında konum/sahiplik ve bir belirsizlik kaybını yanlış geçirdi; yayın durduruldu. V7 genel belirsizlik tanığı ve her iddia parçasına zorunlu kaynak desteği sözleşmesi adayda bağlı. İlk belirsizlik kapısı dört kaydı engelledi fakat iki gereksiz ret de üretti; V2 cümle kapsamı/öneri düzeltmesi bu ikisini kaldırıp iki gerçek belirsizlik kaybını korudu. Ayrıntı kapısının 19 kayıtlık gerçek pilotunda biçim hatası sıfır, konum/sahiplik retleri korunuyor. Tam V16/V7 nesli henüz yok. R4 iki imajı52backenddosyasıyla derlendi; yeni birleşik19kayıt+ikiöznesizaday pilotu çalışıyor. Ana yayın R7 olarak kaldı.
+
 P5 salt okunur etki API18836 ve web18837; 134 bağlı kayıt, 164 ilişki, üç sayfalı snapshot/ACL ve dört genişlik kabulü geçti. Ana web değişmedi. [P5 kanıtı](docs/editor/2026-09-18-source-impact-ui.md).
 
 V16 genel kaynak→amaç→iddia sırası ve bölünmez balon kaynak birimi kodlandı. Gerçek üç satırlı balon pilotu ve değiştirilmemiş adayın anonim söz edimi denetimi geçti; karakter kimliği hâlâ belirsiz. 100 R7 iddiasının içerik incelemesinde beş kanıtsız isim eklemesi yeni genel kapıyla engellendi. Belirsizlik/zaman aktarımı için yeni epistemic_strength ekseni gerçek bileşen kabulünde; konum/sahiplik ve tam kitap anlamı açık. Son kaynak değişiklikleri nedeniyle eski V16-r1/r2 imajları yayın adayı değildir; yeni derleme/yeni tam nesil gerekir. Kitap verisi veya insan kararı değiştirilmedi. [V16](docs/editor/2026-09-18-source-analysis-v16.md), [içerik incelemesi](docs/editor/2026-09-18-semantic-source-audit.md).

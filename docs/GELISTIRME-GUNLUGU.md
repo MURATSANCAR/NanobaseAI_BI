@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — V16-r4 adayı, yanlış retlerin kodda giderilmesi
+
+Gerçek karşılaştırmada lexical belirsizlik kapısının iki gereksiz reddi bulundu; V2 tam-cümle token kapsamı ve öneri tanığı bu ikisini kaldırdı, iki gerçek belirsizlik kaybı engeli kaldı. Anonim adayın kaynaksız özne türü eklemesi kapı gevşetilmeden önericide düzeltildi; aynı birimden birden fazla bağımsız söz edimi çıkarma sözleşmesi netleşti. Yeni gerçek kaynak pilotu iki öznesiz aday üretti. R4 ikiimaj52kaynakdosyasıyla derlendi; birleşik19kayıt+ikiyeniaday kabulü sürüyor, henüz yayımlanmadı. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).
+
+## 2026-09-18 — Semantik V6 gerçek kabulü başarısız; V7 dayanak sözleşmesi
+
+19 gerçek kayıt model tekrarı konum/sahiplik ve belirsizlik kayıplarını hâlâ geçirdi; V6 yayımlanmadı. Genel lexical belirsizlik kapısı ve eksiksiz token bazında kaynak desteği sözleşmesi kodlandı. İlk dayanak pilotunun16karakter-konum hatası kaynak-ID seçimiyle giderildi; yeni pilot sürüyor. Teknik eşlik ile anlam doğruluğu ayrı kaydedildi; kaynak/inceleme/model çıktısına elle müdahale yok. [V16/V7 ayrıntısı](editor/2026-09-18-source-analysis-v16.md).
+
 ## 2026-09-18 — R7 tam teknik kabulü ve kaynak destekli anlam hataları
 
 R7 48 sayfa/1494 kaynak birimi tamamlandı; 100 pasaj ve iki gerçek soru API/PG/Qdrant/mobil kontrolünden geçti. Restore ağ çakışması IPAM envanteriyle, yeniden koşulabilirlik sabit kanıt adları yerine benzersiz dosyalarla düzeltildi. Yeni restore ve indeks kontrolü geçti; son mobil/temizlik de 08:43:33 UTC’de geçti. İçerik incelemesinde beş kaynak dışı isim ataması, belirsizlik kaybı ve açık konum/sahiplik sorunları bulundu. V16 genel kaynak yüzeyi kapısı beş isim atamasını gerçek kayıtlarda engelledi; belirsizlik için yeni anlamsal eksen eklenip gerçek tekrar kontrolüne alındı. Balonun bütün OCR satırlarının tek birim olması ve anonim söz edimi gerçek bileşende geçti; karakter kimliği kabulü değildir. Kitap verisi değiştirilmedi, yerel test çalıştırılmadı. [Ayrıntılı bulgular](editor/2026-09-18-semantic-source-audit.md).

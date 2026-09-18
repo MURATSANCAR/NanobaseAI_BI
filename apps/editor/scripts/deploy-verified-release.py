@@ -92,12 +92,11 @@ assert web_proof['status'] == 'PASS' and web_proof['semantic_acceptance'] is Fal
 assert web_proof['dependency_graph_reference_acceptance'] == 'PASS_SAME_SNAPSHOT_SEPARATE_INDEPENDENT_VERIFIER'
 assert snapshot['images'] == c['images'] and snapshot['web_sources'] == web_sources
 assert snapshot['backend_tree_sha256'] == sha(json.dumps(backend, sort_keys=True).encode())
-expected_python = {Path(k).name:v for k,v in backend.items() if k.startswith('editor/') and k.endswith('.py')}
-assert build['source_sha256'] == expected_python
+assert build['backend_manifest'] == backend, 'BUILD_FULL_BACKEND_MANIFEST_MISMATCH'
 for role in ('api','document'):
     row = next(r for r in build['images'] if r['role'] == role)
     assert row['image_id'] == c['images'][role]
-    assert row['image_python_manifest'] == expected_python and not row['extra_python_files']
+    assert row['image_source_manifest'] == backend and row['exact_source_path_set'] is True and not row['extra_python_files']
     assert command(['docker','image','inspect','--format','{{.Id}}',row['image']]).decode().strip() == row['image_id']
     cid = command(['docker','create',row['image_id']]).decode().strip()
     try:
@@ -106,7 +105,7 @@ for role in ('api','document'):
         with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
             for item in tar.getmembers():
                 name = str(Path(item.name)).removeprefix('./')
-                if item.isfile() and '__pycache__' not in Path(name).parts:
+                if item.isfile() and '__pycache__' not in Path(name).parts and not name.endswith('.pyc'):
                     actual[name] = sha(tar.extractfile(item).read())
         assert actual == backend, 'ALL_BACKEND_IMAGE_BYTES_MISMATCH:' + role
     finally:

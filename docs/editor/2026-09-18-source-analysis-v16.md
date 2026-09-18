@@ -34,3 +34,41 @@ V6 ayrıca kaynak dışı isim yüzeyi kapısı, belirsizlik derecesini koruyan 
 ## Derleme ve açık kabul
 
 Önceki V16-r1/r2 imajları sonraki balon ve anlamsal sözleşme değişikliklerini içermez; yeni yayın için kullanılamaz. Son kaynakla yeni imaj, yeni tam V16 nesli ve aynı sürümde kaynaklı soru/restore/mobil kabulü gerekir. V16 henüz ana yayında değildir. Global karakter kimliği ve bütün kitabın edebî doğruluğu bu düzeltmeyle otomatik tamamlanmaz. Yerel test veya yapay kaynak kullanılmadı.
+
+## V6 gerçek ret testi ve V7 adayının gerekçesi
+
+V6 salt okunur gerçek kayıt tekrarı `evidence/cited-semantics-probe-20260918T084907076324Z.json`: 19 iddiada 17 model PASS, iki ret; API/PG ve korunan kayıt hashleri aynı. Ancak model, kaynakta olmayan konumu gerekçesinde kabul ettiği hâlde çekirdek olay uyuyor diye PASS verdi; bir “galiba” kaybını ve adsız sahipliği de geçirdi. **V6 anlamsal kabulü başarısızdır; yayımlanmadı.**
+
+V7 adayı iki ek kapı uygular. Genel kaynak belirsizliği kapısı, açık ihtimal tanığı olan kaynakta iddiadan bu niteliğin tamamen silinmesini incelemeye ayırır. Gerçek 19 kayıt tekrarında dört blokaj, bunların üçü önceki model PASS; model çağrısı ve veri yazımı sıfır. Bu sınırlı sözlük/biçim denetimi kapsamı doğrulamaz, bazı geçerli parafrazları da incelemeye ayırabilir. Son normalizasyonlu kanıt `evidence/source-qualification-probe-a7e6943a-6838-40df-a1c5-2f1080a533d0.json`.
+
+Diğer kapı iddianın her token/karakter aralığı için ayrı kaynak desteği ister; tek desteksiz ayrıntı bütün ifadeyi engeller. İlk pilotta modelin literal karakter konumlarını üretmesi 16 biçim hatası verdi (19 kayıtta bir PASS, iki anlamsal ret); bu sonuç kalite başarısı sayılmadı. V2 sözleşmesi modele yalnız önceden verilmiş kaynak token kimliklerini seçtirir; metin/konum/hash OCR kaynağından kodla üretilir. Bu genel düzeltmenin aynı gerçek kayıtlardaki pilotu sürüyor. Kaynak veya model cevapları elle değiştirilmedi. V7 citation ve sentez akışına bağlı aday kodun henüz yeni tam nesil/yayın kabulü yoktur.
+
+## Kimlik hattında iki sayfa-rolü otoritesi
+
+R7 gerçek kayıt tanısı `evidence/identity-blocker-audit-075e68f7-be7e-4781-b25b-4a71d5cfaf9c.json`: 48 sayfada iki balon bağlantısı, dokuz sayfada 11 açık metin atfı, sıfır adlı figür çapası. Bir balon sayfasında kaynak amacı geçerken daha erken aday sınıfı ACTIVITY kaldığı için character_evidence atıfları boş oluşturulmuş. V16'da amaç önce hesaplanır, geçen amaç önericinin page_role değerine bağlanır ve metin atfı ardından üretilir; iki otoritenin ayrışmasını genel sıra düzeltmesi kapatmalıdır. Yeni tam nesilde gerçek kontrol gereklidir. Bu değişiklik metinde olmayan ismi üretmez; doğru rol sonrası açık ad kaynağı bulunmazsa figür kimliği yine UNKNOWN kalır.
+
+## V16 rol sıralaması ve kimlik sınırı
+
+R7'deki29sayfa rol ayrışması V16'nın genel sıralama değişikliğiyle hedefleniyor: kaynak sayfa amacı önce belirlenir; proposal sonunda passedpage_purpose.page_role esas alınır; interpret içindeki character_evidence.extract bundan sonra bu rolü kullanır. Yeni tam V16 neslinin gerçek kaynak kanıtı olmadan ayrışma giderildi denmez. Açık ad/atıf kaynağı yoksa bu düzeltmeden sonra bile adlandırılmış görsel dayanak0kalabilir. Kitaptan isim sağlanmaz; yeni identitykoduna bu adımda dokunulmadı.
+
+## Son bileşenler ve imajlar
+
+Dayanak V3 gerçek 19 kayıt tekrarında 19/19 biçim/kapsam bütünlüğü geçti; 14 model PASS, beş inceleme. Kaynaksız konum ve sahiplik retleri korundu. Bağlacın kaynakta harfiyen bulunmaması gerekçesi düzeldi; aynı ifadenin zaman yorumuna ilişkin inceleme devam eder, tamamen doğru ilan edilmedi. Kanıt `evidence/source-obligations-probe-20260918T090037859420Z.json`; ayrı verifier gerçek 14 PASS kaydını model çağırmadan yeniden kurdu: `evidence/source-obligation-reference-probe-ee3db84b-8de0-4103-ac12-311f476d83f2.json`.
+
+Final birleşik V7 pilotu `evidence/semantic-v7-integrated-probe.log`: aynı 19 kayıt, ardından daha önce üretilmiş anonim diyalog adayı; kaynak değiştirmeden, destek modüllerinin ayrı SHA değerleriyle yürütülür. Henüz tam nesil kabulü değildir.
+
+V16-r3 CPU ağsız derlemesi `evidence/v16-r3-build-proof.json`: iki imajda tüm 52 backend dosyası/40 Python modülü birebir; bağımlılık kilitleri canlı taban imajlarla aynı, fazladan Python dosyası yok. API imajı `sha256:1f42da70e7cbcff01ddff406af6c19bfd631d5b3b69de64a35d6b59e016c97e3`, document `sha256:5be33687532c5c7028c4d1aa929637824ad5a160669a2f866005edf4e1e4ea1c`. Derleme servis başlatmadı ve yayını değiştirmedi.
+
+## Birleşik kabul sonrası iki ek genel düzeltme
+
+İlk birleşik V7 `evidence/cited-semantics-probe-20260918T090405005153Z.json`: 19 kayıtta10PASS/9ret; kaynak dışı ad, konum, sahiplik ve iki belirsizlik kaybı engellendi. Bununla birlikte ilk lexical kapı doğru bir olayı sonraki cümlenin “belki” sözcüğüyle engelliyor, öneri bildiren bir anlatımı da kesinlik sayıyordu. Dört lexical ret, dört doğrulanmış hata demek değildir. V2 yalnız iddianın bütün tokenları aynı kaynak cümlesinde sıralı eşleştiğinde kapsamı o cümleye daraltır; bütün eşleşmeleri birlikte alır, belirsiz sınırda tam kaynağa döner. Öneri bildiren dil tanığı eklendi; bu anlamsal kabul değildir. Aynı19gerçek kayıt tekrarında iki gereksiz ret kalktı, iki belirsizlik kaybı engeli korundu: `evidence/source-qualification-probe-6c372a12-1164-4bd2-a25e-dde465a08bf6.json`; bağımsız tüm gate sözleşmesi `evidence/qualification-reference-055ead26-a729-407f-9617-3fb849913c32.json`.
+
+Anonim diyalog adayında eklenen “kişi/varlık” sınıfını yeni kapı reddetti: `evidence/semantic-candidate-fd7bed33c913c645651b.json`. Kapı gevşetilmedi. Önericiye kaynak özne türü vermiyorsa tür eklemeyen, öznesiz söz edimi kuran genel kural eklendi. Yeni gerçek aday, actor/speaker null ve aynı bütün alıntıyla tür eklemeden oluştu; henüz ayrı birleşik anlamsal kontrol gerektirir. Atomik kaynak biriminin tek önerme demek olmadığı da genel sözleşmede netleştirildi; aynı birimden birden fazla ayrı, kaynakla tam destekli aday üretilebilir. Kitap cevabı veya örnek cümle modele verilmedi.
+
+Bu değişiklikler R3 imaj/stage sonrasıdır; R3 dağıtıma uygun değildir. Son kaynakla R4 derlemesi ve yeni gerçek birleşik kabul gerekir.
+
+## R4 birleşik aday ve yayın hazırlığı
+
+Yeni öznesiz önerici aynı atomik kaynak biriminden iki ayrı söz edimi üretti; kaynak metni/ref/hash değişmedi: `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-d7548e4782e1.json`. Yeni birleşik koşu `evidence/semantic-v7-r4-integrated-probe.log`, PID1763790: önce19kayıt, sonra bu iki aday; eski nesle yazım yok.
+
+R4 ağsız derleme `evidence/v16-r4-build-proof.json`: API `sha256:96ccb20acef0bbb452b1223c250881439341d79c03c862a70e202bc87cfdcd58`; document `sha256:d8988ced104fa28bb826694c962aeb521c449194c8b58df364a68b177d24ce60`. Her imajın52dosyası/40Python modülü snapshotla exact; kilitler taban imajlarla aynı. Bu imajlar derlenmiştir, henüz ana yayına alınmamıştır.

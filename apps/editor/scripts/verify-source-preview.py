@@ -18,6 +18,8 @@ import urllib.request
 from urllib.parse import urlparse
 import uuid
 import unicodedata
+from source_obligation_reference import verify_obligations
+from source_qualification_reference import verify_qualification
 
 
 def verify_surface_references(claim,views,gate):
@@ -176,9 +178,14 @@ try:
     # can validate its historical inputs, but cannot identify the current index.
     code_names = ('source_retrieval.py','semantic_acceptance.py','page_context.py',
                   'source_unit_claims.py','source_pipeline.py','source_alignment.py',
-                  'text_attribution.py','retrieval.py')
-    script = 'import json,hashlib; from pathlib import Path; import editor; p=Path(editor.__file__).parent; print(json.dumps({name:hashlib.sha256((p/name).read_bytes()).hexdigest() for name in '+repr(list(code_names))+'}))'
+                  'text_attribution.py','retrieval.py','source_qualification.py','source_obligations.py')
+    script = 'import json,hashlib; from pathlib import Path; import editor; p=Path(editor.__file__).parent; print(json.dumps({name:hashlib.sha256((p/name).read_bytes()).hexdigest() for name in '+repr(list(code_names))+' if (p/name).is_file()}))'
     installed_hashes = json.loads(command(['docker', 'compose', 'exec', '-T', 'api', 'python', '-c', script]))
+    require(set(code_names[:-2]) <= set(installed_hashes), 'Required current code file missing')
+    extras=set(code_names[-2:]) & set(installed_hashes)
+    require(not extras or extras == set(code_names[-2:]), 'Incomplete source gate deployment')
+    if any(row['data'].get('version')=='source-semantic-review-v7' for row in records['semantic_reviews']):
+        require(extras == set(code_names[-2:]), 'V7 source gate code absent')
     report['code_identity'] = installed_hashes
     manifests = []
     historical_code_count = 0
@@ -226,9 +233,12 @@ try:
                 and review['metrics']['finish_reason'] == 'stop', 'Citation support scope/hash incomplete')
         verdict = review['model_result']
         axes=('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode')
-        if review.get('version')=='source-semantic-review-v6-cited-support':
+        if review.get('version') in ('source-semantic-review-v6-cited-support','source-semantic-review-v7-cited-support'):
             axes+=('epistemic_strength',)
             verify_surface_references(claim,review['source_reading_segments'],review['surface_reference_gate'])
+            if review.get('version')=='source-semantic-review-v7-cited-support':
+                verify_qualification(claim,review['source_reading_segments'],review.get('qualification_gate'))
+                verify_obligations(claim,regions,review['obligation_review'])
         require(verdict['checks'] == {key: 'PASS' for key in axes}
                 and verdict['reason'].strip() and verdict['support_span_refs']
                 and set(verdict['support_span_refs']) <= set(refs), 'Citation axes/references failed')
@@ -320,9 +330,9 @@ try:
             require(claim['span_refs']==data['source_span_refs'] and claim['source_regions']==regions
                     and claim['evidence_refs']==data['evidence_refs'] and claim['pdf_page']==data['pdf_page']
                     and claim['passage_input_sha256']==manifest['input_sha256'], 'Answer changed cited source')
-            cited_support(claim['citation_review'],data['source_span_refs'],regions,claim)
             checked_claim = {key:claim.get(key) for key in ('text','actor','speaker','narrative_mode','polarity')}
             checked_claim.update(kind='STATEMENT',span_refs=data['source_span_refs'],quote=data['text'])
+            cited_support(claim['citation_review'],data['source_span_refs'],regions,checked_claim)
             checked_payload = {'claim':checked_claim,'cited_source_regions':regions,
                                'source_reading_segments':claim['citation_review']['source_reading_segments']}
             require(claim['citation_review']['input_sha256']==digest(checked_payload), 'Citation judgment belonged to different answer claim')

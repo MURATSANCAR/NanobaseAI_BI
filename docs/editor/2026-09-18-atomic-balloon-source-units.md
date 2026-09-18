@@ -17,3 +17,19 @@ Model işi olmadığı doğrulandıktan sonra CPU üzerindeki gerçek R5 nesli `
 Gerçek API/PG verileri eşleşti, koşu öncesi/sonrası kaynak ve inceleme kayıt hashleri aynı kaldı. Model bir kaynak biriminden bir iddia üretti; alıntı bütün üç satırı içerdi ve kaynak kapısı `MATCH` geçti. İlk anlamsal denetimde altı kontrol geçti. Yalnız atıf yapılan kaynağı gören ikinci denetimde anlam/olumsuzluk/kip geçti, fakat boş bırakılmış actor/speaker alanlarına `UNKNOWN` verildi. Sonuç bu nedenle **NEEDS_REVIEW, eligible=0** olarak korundu. Eksik satır seçimi bu gerçek senaryoda giderildi; anlamsal kabul tamamlanmış değildir. Belirsiz kimliği kodla isimlendirme veya kabul kararını değiştirme yapılmadı.
 
 CPU kanıtları: `evidence/atomic-balloon-v16-catalogue-preflight.json`, `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-871f780ceb5d.json`, `evidence/atomic-balloon-v16-pilot-29.log`. Önceki başarısız anlamsal pilot korunmuştur. Bu bileşen koşusu yeni V16 neslinin tam pipeline/bağımsız kapsam denetimi veya farklı kitap kabulü yerine geçmez; dağıtım yapılmamıştır.
+
+## Kaynaksız özne türünü kaldıran genel aday kuralı
+
+Birleşik denetim, kaynağın belirtmediği `kişi/varlık` sınıfının aday metnine eklenmesini reddetti. Kabul kapısı gevşetilmedi; aday çıkarma talimatına kaynak öznenin kimliğini veya türünü vermiyorsa özne sınıfı uydurmadan açık söz edimini öznesiz cümleyle aktarma kuralı eklendi. Kitap cümlesi veya beklenen cevap prompta eklenmedi.
+
+Tek gerçek `--proposal-only` yeniden koşusunda model `Bir görüntünün nasıl yapıldığı sorulmaktadır.` adayını üretti. Tam üç satırlı alıntı korundu, kaynak kapısı MATCH, actor/speaker null kaldı; kaynak ve inceleme hashleri değişmedi, API/PG eşleşti. Ayrı emir iddiası üretilmediğinden bütün söz edimlerinin eksiksiz çıkarıldığı iddia edilmez. Anlamsal/obligation kapıları bu koşuda çalışmadı; yeni adayın birleşik kabulü ayrıca gereklidir.
+
+Aday modül SHA `96a77fcc580d4e9ef780899d6165f220c9eb493fb0f59107c13de7acf9578ce5`; CPU kanıtı `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-c7bf18977c3b.json`, log `evidence/atomic-balloon-typeless-proposal.log`. Eski aday değiştirilmedi. V16-r3 image bu son değişikliği içermez; dağıtım yapılmadı.
+
+## Aynı kaynak biriminden bağımsız önermeler
+
+Genel talimat ayrıca bölünmez kaynak biriminin tek önerme olmadığı yönünde netleştirildi. Aynı kaynak birimi birden fazla bağımsız olay/söz edimini destekliyorsa aynı `source_unit_id` ile ayrı adaylar üretilebilir. Her adayın tam kaynak desteği ve dört aday sınırı korunur; birimden aday çıkması anlamsal kapsamın tamamlandığını göstermez.
+
+Tek gerçek yeniden koşuda aynı `UNIT_001`, tam üç satırlı alıntı ve kaynak hash'iyle iki öznesiz aday üretildi: `Bir durma emri verildi.` ve `Bir görüntünün nasıl yapıldığına dair soru soruldu.` İkisi kaynak kapısında MATCH; actor/speaker null. API/PG ve kaynak/inceleme önce-sonra hashleri eşit kaldı. Ledger `semantic_complete:false`, `human_accepted:false` durumlarını korudu. Koşu yalnız aday çıkarımıdır; iki adayın birleşik anlamsal kabulü ayrıca gerekir.
+
+Son modül SHA `5c8cbd611718d5769f6c1cd5f29a658d47d6a99b4c59326091559ae356378469`; CPU kanıtı `evidence/source-unit-claims-d9ff5c60-dd47-47cb-bf66-70a5cad59cb1-0029-d7548e4782e1.json`; log `evidence/atomic-balloon-multiple-propositions.log`. Önceki çıktılar korunmuştur; beklenen cevap modele verilmemiştir.
