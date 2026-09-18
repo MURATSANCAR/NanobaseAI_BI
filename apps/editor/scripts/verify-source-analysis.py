@@ -164,10 +164,64 @@ def verify_unit_coverage(page,units,lookup):
                 required.add(right['id'])
                 readable=all(d['status']=='TEXT_AGREED' and d['role']=='TEXT' for d in (a,b)) and bool(re.match(r'^\s*\w',b.get('text','')))
         wrapped_pairs.append((required,readable))
+    atomic_groups=[];atomic_blocked=set()
+    if method=='source-unit-claims-v4':
+        assert extended,'ATOMIC_LAYOUT_REQUIRES_EXTENDED_VERIFICATION'
+        layout_row=next(r for r in api['layout_regions'] if r['data']['pdf_page']==page['pdf_page'])
+        layout=layout_row['data'];atomic=page['atomic_balloon_manifest']
+        assert atomic['layout_record_id']==layout_row['id'] and atomic['layout_record_sha256']==digest(layout)
+        assert atomic['contract']=='UNIQUE_GEOMETRIC_BALLOON_ATOMIC_RAW_QUOTE_V1'
+        assert all(r['data']['evidence_refs']==layout['evidence_refs'] for r in ordered)
+        boxes=[b.get('bbox') if isinstance(b,dict) else None for b in layout['balloon_candidates']]
+        def valid_balloon_box(box):
+            import math
+            return (isinstance(box,(list,tuple)) and len(box)==4
+                    and all(type(v) in (int,float) and math.isfinite(v) for v in box)
+                    and min(box)>=0 and box[2]>0 and box[3]>0
+                    and box[0]+box[2]<=1.001 and box[1]+box[3]<=1.001)
+        def touch(a,b):
+            return min(a[0]+a[2],b[0]+b[2])>max(a[0],b[0]) and min(a[1]+a[3],b[1]+b[3])>max(a[1],b[1])
+        invalid=layout.get('balloons_truncated') or any(not valid_balloon_box(b) for b in boxes)
+        if invalid:
+            atomic_blocked={r['id'] for r in ordered}
+            assert atomic['reason']=='BALLOON_LAYOUT_INCOMPLETE'
+        else:
+            touching={r['id']:[i for i,b in enumerate(boxes) if touch(r['data']['bbox'],b)] for r in ordered}
+            for i,b in enumerate(boxes):
+                members=[r for r in ordered if i in touching[r['id']]]
+                if not members:continue
+                refs=[r['id'] for r in members];selected=set(refs);reason=None
+                if any(j!=i and touch(b,other) for j,other in enumerate(boxes)):reason='BALLOON_GEOMETRY_AMBIGUOUS'
+                elif any(touching[r['id']]!=[i] or any((r['data']['bbox'][0]<b[0]-1e-9,
+                        r['data']['bbox'][1]<b[1]-1e-9,
+                        r['data']['bbox'][0]+r['data']['bbox'][2]>b[0]+b[2]+1e-9,
+                        r['data']['bbox'][1]+r['data']['bbox'][3]>b[1]+b[3]+1e-9)) for r in members):reason='BALLOON_REGION_BOUNDARY_AMBIGUOUS'
+                elif any(r['data']['status']!='TEXT_AGREED' or r['data']['role']!='TEXT'
+                         or not isinstance(r['data'].get('text'),str) or not r['data']['text'].strip() for r in members):reason='BALLOON_SOURCE_REQUIRES_REVIEW'
+                elif len({r['data']['render_sha256'] for r in members})!=1 or any(required&selected and (not readable or not required<=selected) for required,readable in initial_pairs+wrapped_pairs):reason='BALLOON_WORD_OR_RENDER_BOUNDARY_INCOMPLETE'
+                atomic_groups.append({'balloon_index':i,'bbox':b,'span_refs':refs,
+                                      'status':'NEEDS_REVIEW' if reason else 'ATOMIC_SOURCE_UNIT','reason':reason})
+                if reason:atomic_blocked.update(refs)
+        assert atomic['groups']==atomic_groups and set(atomic['blocked_span_refs'])==atomic_blocked,'ATOMIC_BALLOON_MANIFEST_MISMATCH'
+        if atomic_blocked:assert 'BALLOON_SOURCE_UNIT_REQUIRES_REVIEW' in page['uncertainties']
+        for group in atomic_groups:
+            matches=[u for u in units if set(u['span_refs'])&set(group['span_refs'])]
+            if group['status']=='NEEDS_REVIEW':assert not matches,'AMBIGUOUS_BALLOON_PRODUCED_UNIT'
+            else:
+                assert len(matches)==1 and matches[0]['span_refs']==group['span_refs'],'ATOMIC_BALLOON_SPLIT_OR_MISSING'
+                assert matches[0]['atomic_balloon']=={'layout_record_id':layout_row['id'],
+                    'layout_record_sha256':digest(layout),'balloon_index':group['balloon_index'],
+                    'bbox':group['bbox'],'span_refs':group['span_refs']}
+        assert not any(set(u['span_refs'])&atomic_blocked for u in units)
     for unit in units:
         refs=unit['span_refs'];sequence=[positions[ref] for ref in refs]
-        assert unit['pdf_page']==page['pdf_page'] and 1<=len(refs)<=3
-        assert sequence==list(range(sequence[0],sequence[0]+len(sequence))),'UNIT_NONCONTIGUOUS_SOURCE'
+        assert unit['pdf_page']==page['pdf_page'] and len(refs)>=1
+        if unit.get('atomic_balloon'):
+            assert method=='source-unit-claims-v4' and sequence==sorted(sequence)
+            assert any(g['status']=='ATOMIC_SOURCE_UNIT' and refs==g['span_refs'] for g in atomic_groups)
+        else:
+            assert len(refs)<=3
+            assert sequence==list(range(sequence[0],sequence[0]+len(sequence))),'UNIT_NONCONTIGUOUS_SOURCE'
         for pair,readable in initial_pairs:
             if pair&set(refs):assert readable and pair<=set(refs),'UNIT_PARTIAL_INITIAL_WORD'
         for pair,readable in wrapped_pairs:

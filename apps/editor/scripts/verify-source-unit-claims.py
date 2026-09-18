@@ -70,7 +70,7 @@ purpose=story_authority(p['page'],bundles,context)
 if purpose['passed'] or m.VERSION!='source-unit-claims-v4':
  with connection() as db:
   assert db.execute("SELECT count(*) AS n FROM editor.jobs WHERE status IN ('QUEUED','RUNNING')").fetchone()['n']==0,'ACTIVE_PRODUCT_JOB'
-if m.VERSION=='source-unit-claims-v4':proposal,metrics=m.propose(p['page'],spans,model,page_purpose=purpose)
+if m.VERSION=='source-unit-claims-v4':proposal,metrics=m.propose(p['page'],spans,model,page_purpose=purpose,layout_record=next(r for r in p['records']['layout_regions'] if r['data']['pdf_page']==p['page']))
 else:proposal,metrics=m.propose(p['page'],spans,model)
 allowed={str(r['id']):r for r in spans if r['data']['status']=='TEXT_AGREED' and r['data']['role']=='TEXT'}
 attributions=extract(spans,proposal['page_role'])['attributions'];accepted=[];blocked=[]

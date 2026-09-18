@@ -457,7 +457,7 @@ def reusable_claim_candidates(parent,key,spans):
             'uncertainties':prior['data']['uncertainties']},prior['data']['metrics'],str(prior['id'])
 
 
-def interpret(job,evidence,spans,parent=None,page_purpose=None):
+def interpret(job,evidence,spans,parent=None,page_purpose=None,layout_record=None):
     from editor.analysis import model
     from editor.source_unit_claims import propose, VERSION as UNIT_VERSION
     from editor.text_attribution import extract as text_attributions, speaker_for_claim
@@ -476,7 +476,7 @@ def interpret(job,evidence,spans,parent=None,page_purpose=None):
     # Even a page without agreed text gets an explicit, empty coverage ledger.
     # The proposer records per-chunk budget/truncation failures. Unexpected
     # failures must fail the job instead of persisting a false complete ledger.
-    result,metrics=propose(page,spans,fenced_model,page_purpose=page_purpose)
+    result,metrics=propose(page,spans,fenced_model,page_purpose=page_purpose,layout_record=layout_record)
     attribution = text_attributions(spans, result.get('page_role','UNKNOWN'))
     save(job,'character_evidence',key,{'pdf_page':page,
         'evidence_refs':[str(evidence['id'])], 'pipeline_version':VERSION, **attribution})
@@ -505,6 +505,7 @@ def interpret(job,evidence,spans,parent=None,page_purpose=None):
         'reused_claim_candidates_from':None,'candidate_reuse_policy':None,'reused_from_generation':None,
         'source_unit_method':UNIT_VERSION,'source_units':result.get('source_units',[]),
         'proposal_page_purpose':result['proposal_page_purpose'],
+        'atomic_balloon_manifest':result['atomic_balloon_manifest'],
         'source_unit_coverage':result.get('source_unit_coverage'),
         'raw_model_result':result.get('raw_model_result'),
         'rejected_model_candidates':result.get('rejected_model_candidates',[]),
@@ -568,6 +569,7 @@ def run(job):
     # exercise before the neighbouring source context has been considered.
     from editor.page_context import story_authority
     contexts={r['data']['pdf_page']:r for r in get_records(gen,'page_context_roles')}
+    layout_records={r['data']['pdf_page']:r for r in get_records(gen,'layout_regions')}
     all_spans=get_records(gen,'source_spans')
     fragments=get_records(gen,'source_fragments')
     layouts={r['data']['pdf_page']:r['data'] for r in get_records(gen,'layout_regions')}
@@ -579,7 +581,7 @@ def run(job):
         if row['record_key'] in checked:continue
         page=row['data']['pdf_page']
         purpose=story_authority(page,bundles,contexts.get(page))
-        interpret(job,row,[s for s in all_spans if s['data']['pdf_page']==page],page_purpose=purpose)
+        interpret(job,row,[s for s in all_spans if s['data']['pdf_page']==page],page_purpose=purpose,layout_record=layout_records[page])
     from editor.figure_identity import run as resolve_figures
     from editor.semantic_acceptance import run as review_semantics
     # Both consume immutable page sources. Neither promotes the other's model

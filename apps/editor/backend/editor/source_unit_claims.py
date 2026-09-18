@@ -111,32 +111,91 @@ def reading_segments(spans,selected_refs=None):
                        'reading_text':view,'line_end_joins':joins})
     return output
 
-def catalogue(page,spans):
+def balloon_partition(page,spans,layout_record):
+    """Geometry constrains quote selection, never character or semantic authority."""
+    from editor.source_alignment import reading_order,valid_box
+    if (not isinstance(layout_record,dict) or not layout_record.get('id')
+            or layout_record.get('data',{}).get('pdf_page')!=page):
+        raise RuntimeError('SOURCE_UNIT_LAYOUT_REQUIRED')
+    layout=layout_record['data'];rows=reading_order(spans)
+    if any(r['data'].get('evidence_refs')!=layout.get('evidence_refs') for r in rows):
+        raise RuntimeError('SOURCE_UNIT_LAYOUT_SCOPE_MISMATCH')
+    balloons=layout.get('balloon_candidates',[])
+    if not isinstance(balloons,list):raise RuntimeError('SOURCE_UNIT_LAYOUT_SCHEMA_INVALID')
+    boxes=[b.get('bbox') if isinstance(b,dict) else None for b in balloons]
+    def overlaps(a,b):
+        return min(a[0]+a[2],b[0]+b[2])>max(a[0],b[0]) and min(a[1]+a[3],b[1]+b[3])>max(a[1],b[1])
+    def contains(a,b):
+        return a[0]>=b[0]-1e-9 and a[1]>=b[1]-1e-9 and a[0]+a[2]<=b[0]+b[2]+1e-9 and a[1]+a[3]<=b[1]+b[3]+1e-9
+    manifest={'layout_record_id':str(layout_record['id']),'layout_record_sha256':digest(layout),
+              'contract':'UNIQUE_GEOMETRIC_BALLOON_ATOMIC_RAW_QUOTE_V1','groups':[], 'blocked_span_refs':[]}
+    if layout.get('balloons_truncated') or any(not valid_box(b) for b in boxes):
+        manifest.update(blocked_span_refs=[str(r['id']) for r in rows],reason='BALLOON_LAYOUT_INCOMPLETE')
+        return manifest
+    if any(not valid_box(r['data'].get('bbox')) for r in rows):raise RuntimeError('SOURCE_UNIT_REGION_GEOMETRY_INVALID')
+    touched={str(r['id']):[i for i,b in enumerate(boxes) if overlaps(r['data']['bbox'],b)] for r in rows}
+    blocked=set()
+    for index,box in enumerate(boxes):
+        members=[r for r in rows if index in touched[str(r['id'])]]
+        if not members:continue
+        refs=[str(r['id']) for r in members]
+        reason=None
+        if any(j!=index and overlaps(box,other) for j,other in enumerate(boxes)):
+            reason='BALLOON_GEOMETRY_AMBIGUOUS'
+        elif any(touched[str(r['id'])]!=[index] or not contains(r['data']['bbox'],box) for r in members):
+            reason='BALLOON_REGION_BOUNDARY_AMBIGUOUS'
+        elif any(r['data'].get('status')!='TEXT_AGREED' or r['data'].get('role')!='TEXT'
+                 or not isinstance(r['data'].get('text'),str) or not r['data']['text'].strip() for r in members):
+            reason='BALLOON_SOURCE_REQUIRES_REVIEW'
+        elif len({r['data']['render_sha256'] for r in members})!=1 or incomplete_word_refs(rows,refs):
+            reason='BALLOON_WORD_OR_RENDER_BOUNDARY_INCOMPLETE'
+        manifest['groups'].append({'balloon_index':index,'bbox':box,'span_refs':refs,
+                                   'status':'NEEDS_REVIEW' if reason else 'ATOMIC_SOURCE_UNIT',
+                                   'reason':reason})
+        if reason:blocked.update(refs)
+    manifest['blocked_span_refs']=sorted(blocked)
+    return manifest
+
+
+def catalogue(page,spans,layout_record):
     from editor.source_alignment import reading_order
     from editor.source_pipeline import quote_check,quote_tokens
     rows=reading_order(spans)
     if any(r['data']['pdf_page']!=page for r in rows):raise RuntimeError('SOURCE_UNIT_PAGE_SCOPE_MISMATCH')
-    units=[];context=[]
+    atomic=balloon_partition(page,rows,layout_record)
+    blocked=set(atomic['blocked_span_refs'])
+    groups={g['span_refs'][0]:g for g in atomic['groups'] if g['status']=='ATOMIC_SOURCE_UNIT'}
+    reserved=blocked|{ref for g in atomic['groups'] for ref in g['span_refs']}
+    by_id={str(r['id']):r for r in rows};units=[];context=[]
     def usable(row):
         d=row['data']
         return d.get('status')=='TEXT_AGREED' and d.get('role')=='TEXT' and isinstance(d.get('text'),str) and bool(d['text'].strip())
+    def append(selected,group=None):
+        if incomplete_word_refs(rows,[str(r['id']) for r in selected]):return
+        if len({r['data']['render_sha256'] for r in selected})!=1:raise RuntimeError('SOURCE_UNIT_RENDER_SCOPE_MISMATCH')
+        quote='\n'.join(r['data']['text'] for r in selected)
+        if quote_check(quote,selected,rows)!='MATCH':raise RuntimeError('SOURCE_UNIT_QUOTE_GATE_FAILED')
+        source={'pdf_page':page,'span_refs':[str(r['id']) for r in selected],
+                'quote':quote,'render_sha256':selected[0]['data']['render_sha256']}
+        unit={**source,'unit_id':'UNIT_%03d'%(len(units)+1),'sha256':digest(source),
+              'reading_view':reading_segments(selected)[0]}
+        if group:unit['atomic_balloon']={'layout_record_id':atomic['layout_record_id'],
+            'layout_record_sha256':atomic['layout_record_sha256'],'balloon_index':group['balloon_index'],
+            'bbox':group['bbox'],'span_refs':group['span_refs']}
+        units.append(unit)
     for index,row in enumerate(rows):
+        ref=str(row['id'])
         context.append({'position':index,'text':row['data']['text'] if usable(row) else '[UNVERIFIED_REGION]',
                         'available':usable(row)})
-        if not usable(row):continue
+        if ref in groups:
+            append([by_id[r] for r in groups[ref]['span_refs']],groups[ref]);continue
+        if not usable(row) or ref in reserved:continue
         for size in range(1,4):
             selected=rows[index:index+size]
-            if len(selected)!=size or not all(usable(r) for r in selected):break
-            if incomplete_word_refs(rows,[str(r['id']) for r in selected]):continue
-            if len({r['data']['render_sha256'] for r in selected})!=1:raise RuntimeError('SOURCE_UNIT_RENDER_SCOPE_MISMATCH')
-            quote='\n'.join(r['data']['text'] for r in selected)
-            if size>1 and len(quote_tokens(quote))>96:break
-            if quote_check(quote,selected,rows)!='MATCH':raise RuntimeError('SOURCE_UNIT_QUOTE_GATE_FAILED')
-            source={'pdf_page':page,'span_refs':[str(r['id']) for r in selected],
-                    'quote':quote,'render_sha256':selected[0]['data']['render_sha256']}
-            units.append({**source,'unit_id':'UNIT_%03d'%(len(units)+1),'sha256':digest(source),
-                          'reading_view':reading_segments(selected)[0]})
-    return units,context
+            if len(selected)!=size or not all(usable(r) and str(r['id']) not in reserved for r in selected):break
+            if size>1 and len(quote_tokens('\n'.join(r['data']['text'] for r in selected)))>96:break
+            append(selected)
+    return units,context,atomic
 
 def _limit(name,default,ceiling):
     value=int(os.environ.get(name,str(default)))
@@ -233,14 +292,15 @@ def _propose_chunk(page,spans,units,context,model,fallback_context=None,page_pur
             'model_candidate':candidate})
     return result,metrics
 
-def propose(page,spans,model,*,page_purpose):
+def propose(page,spans,model,*,page_purpose,layout_record):
     if (not isinstance(page_purpose,dict) or page_purpose.get('pdf_page')!=page
             or type(page_purpose.get('passed')) is not bool):
         raise RuntimeError('SOURCE_PAGE_PURPOSE_REQUIRED')
-    units,context=catalogue(page,spans)
+    units,context,atomic=catalogue(page,spans,layout_record)
     chunks,dispositions,limits=coverage_plan(units)
     result={'page_role':'UNKNOWN','claims':[],'uncertainties':[],
             'source_unit_method':VERSION,'source_units':units,'proposal_page_purpose':page_purpose,
+            'atomic_balloon_manifest':atomic,
             'raw_model_result':{'chunks':[]},'rejected_model_candidates':[]}
     metrics={'method':VERSION,'chunks':[]};roles=[];seen=set()
     if page_purpose['passed'] is not True:
@@ -303,6 +363,7 @@ def propose(page,spans,model,*,page_purpose):
     if page_purpose['passed']:result['page_role']=page_purpose['page_role']
     if any(role!=page_purpose.get('page_role') for role in roles):
         result['uncertainties'].append('PROPOSAL_PAGE_PURPOSE_DISAGREEMENT')
+    if atomic['blocked_span_refs']:result['uncertainties'].append('BALLOON_SOURCE_UNIT_REQUIRES_REVIEW')
     if not units:result['uncertainties'].append('NO_AGREED_TEXT_SPANS')
     incomplete=[uid for uid,item in dispositions.items() if item['status'] in ('NEEDS_REVIEW','UNPROCESSED')]
     if incomplete:result['uncertainties'].append('SOURCE_UNIT_COVERAGE_REQUIRES_REVIEW')
