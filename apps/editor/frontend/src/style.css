@@ -194,6 +194,7 @@ main {
   border: 1px solid #dde2da;
   border-radius: 15px;
   padding: 20px;
+  overflow-wrap: anywhere;
 }
 .stats span {
   display: block;

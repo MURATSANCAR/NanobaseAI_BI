@@ -72,6 +72,15 @@ const stages: Record<string, string> = {
   page_claims: "Metne bağlı iddia adayları",
   character_evidence: "Kaynaklı konuşma atıfları",
   page_checks: "Sayfa kabul kontrolü",
+  source_fragments: "Küçük metin bölgeleri okunuyor",
+  fragment_checks: "Küçük bölge okumaları denetleniyor",
+  page_context_roles: "Sayfaların amacı kaynaklardan denetleniyor",
+  cross_page_attributions: "Sayfalar arası konuşma bağlantıları denetleniyor",
+  figure_comparisons: "Figürler karşılaştırılıyor",
+  figure_identity: "Figür ve konuşmacı kanıtları denetleniyor",
+  semantic_reviews: "İddiaların anlam ve kaynak desteği denetleniyor",
+  semantic_synthesis: "Kaynaklı analiz taslağı hazırlanıyor",
+  source_analysis: "Kaynak ve analiz denetimi tamamlandı",
 };
 const answerStatuses: Record<string, string> = {
   ANSWERED: "Kaynaklı cevap adayı",
@@ -435,10 +444,13 @@ function App() {
                 <strong>{statuses[job?.status ?? ""] ?? "Bağlanıyor…"}</strong>
                 <small>
                   {job?.error_code
-                    ? "Hata: " + job.error_code
+                    ? job.error_code === "PIPELINE_VERSION_CHANGED_NEW_GENERATION_REQUIRED"
+                      ? "Yeni sürümle yeni bir analiz gerekiyor. Önceki sonuçlar korundu."
+                      : "İşleme tamamlanamadı. Kaydedilen sonuçlar korundu."
                     : "Son kaydedilen aşama: " +
                       (stages[job?.progress.stage] ?? "Hazırlanıyor")}
                 </small>
+                {job?.error_code && <details><summary>Hata ayrıntısı</summary><code>{job.error_code}</code></details>}
               </article>
               <article>
                 <span>KAYNAK DOSYALARI</span>

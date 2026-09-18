@@ -12,4 +12,6 @@ V2 daha sonra ana gateway'e yayımlandı. Editör worker kısa süre duraklatıl
 
 `compose.gateway-v2.yaml` mevcut GPU OCR Compose üzerine uygulanacak yayın override'ıdır; yalnız gateway imajını seçer ve eski bind mount yerine imaj içindeki sürümlü kodu kullanır. OCR modelini yeniden yaratmak gerekmez. Bu bir tam GPU kurulum dosyası değildir.
 
+Doğal idle/wake kabulü de geçti: model603 saniye boşta kaldığında kendiliğinden kapandı, gerçek kitap kırpımıyla yeniden açılıp200/stop yanıt verdi; gateway sayaçları starts=1/stops=1. Model elle durdurulmadı. Kanıt `natural-idle-wake-acceptance/result.json`. Bu normal yaşam döngüsü kabulüdür; adversarial eşzamanlı istek/idle sınırı stres kabulü değildir.
+
 Qwen/OCR runner imajları ve ağırlıkları bu dizinde henüz paketlenmemiştir. Uygulama offline paketi bu GPU bağımlılıklarının yerine geçmez; tam GPU offline kurulum kabulü açık kalır.

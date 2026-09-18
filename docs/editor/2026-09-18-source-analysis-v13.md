@@ -2,6 +2,18 @@
 
 V13-r1 API/worker, ağsız document/reread tüketicisi ve web yayımlandı; tam kitap kabulü değildir. Kitap içeriğine elle müdahale edilmez.
 
+## Güncel R2 kabul koşusu
+
+Backend/API/worker/document `source-analysis-v13-r2-20260918` yayımlandı;46 dosya hash eşliği `4a2bff06aa1212f87e575a9d0c0e9ce422422d3f1c6a1138c7029174375b4588`, gerçek altyapı/API/PostgreSQL denetimi geçti. Eski V13-r1 işinin API retry denemesi kod manifesti değiştiği için `PIPELINE_VERSION_CHANGED_NEW_GENERATION_REQUIRED` ile doğru biçimde reddedildi; bu koruma kaldırılmadı, önceki kayıtlar değiştirilmedi.
+
+Yeni iş `13640da6-8622-476e-82e2-ec259bd10401`, nesil `c046c684-8821-4770-bab3-fb7dc9c25b05`; kaynak atası V13-r1 neslidir. Kaynaklar mevcut koşuda yeniden denetlenir. Kanıt `evidence/source-analysis-v13-r2-start.json`; salt okunur izleyici ayrıca başlatıldı.
+
+Fragment UI ikinci denemesinde320px taşma bulundu. Kaynak kartı değil, FAILED durumundaki uzun teknik hata kodu taşırıyordu. İşlem kartına metin kırılması, anlaşılır hata mesajı ve açılır teknik ayrıntı eklendi; kaynak/kimlik/anlam aşamalarının gerçek adları ilerleme ekranına bağlandı. Tanı ekran görüntüsü `evidence/v13-fragment-ui-r2-diagnostic/source-span-overflow-320.png`. Web R3 uzak build/kabul aşamasındadır.
+
+Web `source-analysis-v13-r3-20260918` yayımlandı ve dokuz kaynak/çıktı dosya hash eşliği geçti. Aynı başarısız eski işin gerçek fragment verileriyle320/390/768/1440px tekrar kabulü PASS: ham küçük bölge, ham üst satır, okuyucu adı ve iki bbox gezinmesi API ile eşleşti; altı sekmede taşma/dokunma kontrolü geçti. Kanıt `evidence/v13-fragment-ui-r3/verification.json`. Yeni R2 neslinin nihai arayüz kabulü ayrıca yapılacaktır.
+
+GPU gateway V2 doğal olarak603 saniye boşta kaldığında OCR'ı durdurdu; hiçbir manuel model stop yapılmadı. Gerçek kitap kırpımıyla yeniden açılma, HTTP200, sağlıklı durum ve start/stop sayaçları1/1 doğrulandı. GPU kanıtı `/data/paddleocr-vl/candidates/editor-gateway-v2/natural-idle-wake-acceptance/result.json`. Yoğun eşzamanlı istek/idle sınırı stres kabulü bunun dışında açık kalır.
+
 ## Canlı V13-r1
 
 Yayın `source-analysis-v13-r1-20260918`, pipeline `source-spans-v13`; 46 backend dosyasının kaynak/imaj eşliği `b87cc35c7998650cbdb060218df7cc5899920678d58f1cac984546b92c542b76`. Yeni iş `4ca9b23a-7027-4909-b49f-1fd26c93b497`, nesil `18417f1b-d9db-4873-aeb8-b8c719fc0d0d`; V12 ölçümleri kaynak olarak tekrar kullanılır. Öncelik sayfaları yalnız koşu parametresidir. Salt okunur sayfa izleyicisi ayrıca başlatıldı.

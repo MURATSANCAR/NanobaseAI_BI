@@ -118,7 +118,11 @@ const {chromium}=require(path.join(root,'runtime/browser-check/node_modules/play
       return [(box.x-parent.x)/parent.width,(box.y-parent.y)/parent.height,box.width/parent.width,box.height/parent.height];
     });
     if(overlay.some((value,i)=>Math.abs(value-spans.items[0].data.bbox[i])>.003))throw new Error('Source highlight differs from API bbox');
-    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Expanded source span overflow');
+    if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)){
+     const overflowing=await page.evaluate(()=>Array.from(document.querySelectorAll('body *')).map(e=>({tag:e.tagName,className:typeof e.className==='string'?e.className:'',testid:e.getAttribute('data-testid'),right:e.getBoundingClientRect().right,width:e.getBoundingClientRect().width})).filter(e=>e.right>innerWidth+1).slice(0,12));
+     await page.screenshot({path:path.join(out,'source-span-overflow-'+width+'.png'),fullPage:true});
+     throw new Error('Expanded source span overflow '+width+': '+JSON.stringify(overflowing));
+    }
     await page.screenshot({path:path.join(out,'spans-'+width+'.png'),fullPage:true});
    }
    if(process.env.EDITOR_VERIFY_OCR_VL==='1'){

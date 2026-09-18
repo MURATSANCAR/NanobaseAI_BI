@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-18 — yeni sürüm nesli, mobil hata durumu ve doğal OCR yaşam döngüsü
+
+R2 kod manifesti eski neslin retry'ını doğru biçimde reddetti; koruma kaldırılmadan kaynak atalı yeni nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` başlatıldı. Backend R2 hash/gerçek altyapı kontrolü geçti. Web R3, uzun hata kodunun320px taşmasını ve kaynak yüklenme durumunu düzeltti; dört genişlikte gerçek fragment/ham üst kaynak/okuyucu/bbox eşliği ve altı sekme geçti. GPU OCR doğal603sn idle kapanması ve gerçek kırpımla yeniden açılıp200 yanıtı doğrulandı; model elle durdurulmadı. [Sürüm ve kanıt](editor/2026-09-18-source-analysis-v13.md), [gateway](../apps/editor/gpu/README.md).
+
 ## 2026-09-18 — V13 tam koşuda UUID ve kapsam hataları düzeltildi
 
 V13 kaynak48/48 ve anlamsal kayıtları üretip kimlik kolunda TypeError ile FAILED oldu. Gerçek PostgreSQL UUID türüyle yeniden üretildi; yalnız UUID için kanonik hash dönüşümü eklendi. Tam48 sayfa ve27 fragmentte meşru NEEDS_REVIEW ölçümlerinin provenance hatası sayılması ve uzak okunmamış balonun komşu sayfa bağlantısını engellemesi giderildi. Gerçek API/PG/native-type eşliği48 sayfada1 sınırlı konuşma bağlantısı/0 scope_error verdi; eksik kaynaklı37. sayfa reddi korundu. Fragment arayüzündeki erken bulunamadı mesajı yüklenme durumuyla ayrıldı. İlk başarısız loglar korunur; R2 mevcut checkpointleri API retry ile sürdürecektir. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
