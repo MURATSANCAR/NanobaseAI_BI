@@ -12,7 +12,7 @@ Ayrıntı: [Editör çalışma kuralları](apps/editor/AGENTS.md).
 
 ## Güncel Editör durumu — 19 Eylül 2026
 
-**Canlı V16-r6:** `source-analysis-v16-r6-20260919`, kaynak main `21e2abb`; R5 ile aynı varsayılan davranış (anlam V7), büyük kitap altyapısı ayarla açılabilir (kapalı), V8 rol kapısı ve yeniden işleme ucu kapalı. [Yayın kaydı](docs/editor/2026-09-19-v16-r6-release.md). Güncel iş planı ve durumu: [kalite planı](docs/editor/2026-09-19-quality-plan.md) — darboğaz insan etiketi (B1). Aşağıdaki R5 bilgisi önceki sürümdür.
+**Canlı V16-r6:** `source-analysis-v16-r6-20260919`, kaynak main `21e2abb`; R5 ile aynı varsayılan davranış (anlam V7), büyük kitap altyapısı ayarla açılabilir (kapalı), V8 rol kapısı ve yeniden işleme ucu kapalı. [Yayın kaydı](docs/editor/2026-09-19-v16-r6-release.md). Güncel iş planı ve durumu: [kalite planı](docs/editor/2026-09-19-quality-plan.md) — darboğaz insan etiketi (B1). Üst belge: [prod geliştirme planı v1.1](docs/editor/plan/prod-gelistirme-plani-v1.1.md) (özgün .docx aynı dizinde). Aşağıdaki R5 bilgisi önceki sürümdür.
 
 ## Önceki Editör durumu — 18 Eylül 2026
 
