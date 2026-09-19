@@ -23,8 +23,9 @@ KINDS = ('evidence', 'layout_regions', 'source_spans', 'source_fragments',
 REVIEW_KINDS = KINDS + ('source_passages', 'source_index')
 DEPENDENCIES = ('source_retrieval.py', 'semantic_acceptance.py', 'page_context.py',
                 'source_unit_claims.py', 'source_pipeline.py', 'source_alignment.py',
-                'text_attribution.py', 'retrieval.py', 'source_qualification.py', 'source_obligations.py',
-                'source_role_bindings.py', 'role_reading_projection.py')
+                'text_attribution.py', 'retrieval.py', 'source_qualification.py', 'source_obligations.py') + (
+                ('source_role_bindings.py', 'role_reading_projection.py')
+                if REVIEW_VERSION == 'source-semantic-review-v8' else ())
 
 
 def require(condition, reason):

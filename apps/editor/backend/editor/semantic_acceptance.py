@@ -5,10 +5,15 @@ The caller persists the returned report in the new generation.
 """
 import hashlib
 import json
+import os
 import re
 import unicodedata
 
-VERSION = 'source-semantic-review-v8'
+# The three-call role-binding gate (v8) is not accepted for production: on 14 real
+# passages it passed 5 and sent 9 to review, rejecting most correct claims.  It stays
+# available behind an explicit setting; off, the review is v7 exactly as deployed.
+ROLE_BINDING_GATE = os.environ.get('EDITOR_ROLE_BINDING_GATE', '0') == '1'
+VERSION = 'source-semantic-review-v8' if ROLE_BINDING_GATE else 'source-semantic-review-v7'
 AXES = ('entailment', 'actor', 'speaker', 'polarity', 'narrative_mode', 'epistemic_strength', 'page_role')
 CITED_AXES = tuple(axis for axis in AXES if axis != 'page_role')
 
@@ -109,7 +114,7 @@ def review_cited_support(claim, refs, allowed, model, source_rows):
         output['obligation_review']=obligations
         if obligations['passed'] is not True:
             output.update(passed=False,reason=obligations['reason'])
-    if output['passed']:
+    if output['passed'] and ROLE_BINDING_GATE:
         from editor.source_role_bindings import review as review_role_bindings
         role=review_role_bindings(claim,regions,model,reading_views=reading)
         output['role_binding_review']=role
@@ -395,13 +400,14 @@ def synthesize_reviewed(pages, reviews, model, source_spans=None):
                     entry['reason']=obligations['reason']
                     output['blocked_statements'].append(entry)
                     continue
-                from editor.source_role_bindings import review as review_role_bindings
-                role=review_role_bindings(obligation_claim,source_regions(sorted(carried),source_by_id),model,reading_views=reading)
-                entry['role_binding_review']=role
-                if role.get('passed') is not True:
-                    entry['reason']=role.get('reason','ROLE_BINDING_REQUIRES_REVIEW')
-                    output['blocked_statements'].append(entry)
-                    continue
+                if ROLE_BINDING_GATE:
+                    from editor.source_role_bindings import review as review_role_bindings
+                    role=review_role_bindings(obligation_claim,source_regions(sorted(carried),source_by_id),model,reading_views=reading)
+                    entry['role_binding_review']=role
+                    if role.get('passed') is not True:
+                        entry['reason']=role.get('reason','ROLE_BINDING_REQUIRES_REVIEW')
+                        output['blocked_statements'].append(entry)
+                        continue
                 entry['verification_status'] = 'MACHINE_SOURCE_SUPPORTED_DRAFT'
                 output['statements'].append(entry)
             else:

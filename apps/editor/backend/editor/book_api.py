@@ -433,11 +433,13 @@ def record_impact(generation:uuid.UUID,record_id:uuid.UUID,offset:int=0,limit:in
     return result
 
 
-@router.get('/generations/{generation}/records/{record_id}/reprocessing-plan')
-def record_reprocessing_plan(generation:uuid.UUID,record_id:uuid.UUID,expected_snapshot_sha256:str|None=None):
-    from editor.source_reprocessing import plan
-    result,g,source=record_impact_snapshot(generation,record_id,0,1,expected_snapshot_sha256)
-    return plan(g,source['sha256'],result)
+# Candidate endpoint without real acceptance; registered only when explicitly enabled.
+if os.environ.get('EDITOR_REPROCESSING_PLAN', '0') == '1':
+  @router.get('/generations/{generation}/records/{record_id}/reprocessing-plan')
+  def record_reprocessing_plan(generation:uuid.UUID,record_id:uuid.UUID,expected_snapshot_sha256:str|None=None):
+      from editor.source_reprocessing import plan
+      result,g,source=record_impact_snapshot(generation,record_id,0,1,expected_snapshot_sha256)
+      return plan(g,source['sha256'],result)
 
 
 @router.get('/generations/{generation}/{kind}')
