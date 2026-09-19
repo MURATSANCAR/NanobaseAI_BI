@@ -54,7 +54,27 @@ Test sunucusuna yine de `openconnect` 9.12, `/usr/local/sbin/ttvpn-login` (etkil
 
 Sanal makinede GPU, Docker konteyneri, Ollama yok; işletim sistemine kurulu bir SQL Server (2,3 GB) ve açık bir masaüstü oturumu var.
 
-## 4. Qwen3.8-Flash-Next-FP8 denemesi
+## 4.0 Güncel durum (2026-09-19): ana model Qwen3.8-27B-FP8, sunulan ad `nanobaseAI`
+
+Kullanıcı kararıyla Flash-Next bırakıldı ve **kalıcı silindi** (konteynerler, `vllm/vllm-openai:qwen38-flash-next` etiketi, 173 GB model, `/data/qwen38`; komutu kullanıcı çalıştırdı: `scripts/server/tt-gpu-flash-next-sil.sh`). Neden: 186 GB model 2 × 94 GB karta ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); OCR ile bellek taşması ve soğuk açılışta 64 → 88 GiB sıçraması bundan geliyordu. Editörün Flash-Next içeren çevrimdışı paketi (`/data/editor-gpu-releases/source-analysis-v13-gateway-v2-20260918`, 192 GB) ve 9 durmuş `editor-gpu-cold-*` konteyneri silinmedi.
+
+- **Kurulum:** `/data/qwen27/docker-compose.yml` (depoda `apps/editor/gpu/compose.qwen27b.yaml`), konteyner `qwen38-27b`, imaj `vllm/vllm-openai:v0.27.1` (mimari `Qwen3_5ForConditionalGeneration` ve `Qwen3_5MTP` bu imajda kayıtlı; özel imaj gerekmez). Tek sunucu, port 8001, model **iki karta bölünmüş** (`--tensor-parallel-size 2`, `--numa-bind`, `NCCL_P2P_LEVEL=SYS`), `--gpu-memory-utilization 0.80` (OCR'ın GPU 1 payı korunur), 131K bağlam, 32 eşzamanlı istek, önek önbelleği, MTP 3 token, `qwen3_coder` araç ve `qwen3` düşünme ayrıştırıcıları. Geçiş betiği: `scripts/server/tt-gpu-qwen27b-cutover.sh`.
+- **Sunulan ad `nanobaseAI`** (kullanıcı kararı): tüketiciler arkadaki modeli bilmez; gerçek model `/v1/models` → `root` alanında (`Qwen/Qwen3.8-27B-FP8`). Model değişirse tüketici ayarı değişmez. Ad değiştirme betiği: `scripts/server/model-name-switch.sh` (köprü, Editör api/worker, TİMAŞ VM bridge).
+- **Açılış:** indirme 81 dosya / 30 GB, boyutlar Hugging Face listesiyle eş; ilk açılış ≈ 7 dk (derleme 9,7 sn + Triton ısınması). Kart başına ≈ 77–81 GB dolu; KV önbelleği 1.602.153 token (131K bağlamda 12,2 eşzamanlı tam istek; Flash-Next'te 950.590 / 7,25).
+- **Ölçüm (düşünme kapalı, aynı makinede):**
+
+| Test | Flash-Next (09-18) | 27B-FP8 TP2 + MTP |
+|---|---|---|
+| Tek istek, 800 token Türkçe üretim | 130 tok/sn | **177 tok/sn** |
+| BI sorusu → T-SQL (≈ 130 token) | 0,7 sn | **0,5 sn** |
+| 20.335 token istem, kısa cevap | — | 2,2 sn; tekrar (önek önbelleği) 0,4 sn |
+| 8 eşzamanlı | 680 tok/sn | **902 tok/sn** |
+| 32 eşzamanlı | 1.500 tok/sn | **2.256 tok/sn** |
+
+- **Doğrulanan yollar:** düşünme kapalı bayrağı (`reasoning` boş), `structured_outputs.choice` + `logprobs` (tek token, aday olasılıkları), görsel girdi (Türkçe harfli yazı 1,0 sn'de harfi harfine: `GICIRTIYLA AÇILDI! Işık, şüphe, düğüm`), CPU sunucusundan `127.0.0.1:18885` tüneli.
+- **Henüz yapılmadı:** Editörün 91 iddialık logprobs sondası ve gerçek kitap koşusu, OCR ile eşzamanlı yük, set100'ün tamamı, uzun süreli yük. Kalite kabulü bu ölçümlere bağlıdır; hız ölçümü kalite kanıtı değildir.
+
+## 4. Qwen3.8-Flash-Next-FP8 denemesi (geçmiş kayıt — model 2026-09-19'da silindi)
 
 ### 4.1 Model (Hugging Face kaydı + vLLM tarifi)
 

@@ -29,7 +29,7 @@ class SemanticSettings:
     connection_file: str = ""                     # JSON: {datasource, host, port, database, user, password, driver…}
     llm_base: str = "http://127.0.0.1:18881/v1"
     llm_key: str = ""
-    llm_model: str = "qwen3.8-flash-next"
+    llm_model: str = "nanobaseAI"
     llm_timeout: float = 240.0
     # Extra JSON merged into every chat request, e.g. {"chat_template_kwargs": {"enable_thinking": false}} for
     # a local reasoning model; runtime-specific options must match the serving engine.
@@ -70,7 +70,7 @@ class SemanticSettings:
             connection_file=_env("SEMANTIC_CONNECTION_FILE"),
             llm_base=_env("OPENAI_API_BASE", "http://127.0.0.1:18881/v1").rstrip("/"),
             llm_key=_env("OPENAI_API_KEY", ""),
-            llm_model=_env("LLM_MODEL_NAME", "qwen3.8-flash-next"),
+            llm_model=_env("LLM_MODEL_NAME", "nanobaseAI"),
             llm_timeout=float(_env("LLM_TIMEOUT_SEC", "240")),
             llm_extra=json.loads(_env("LLM_EXTRA_BODY_JSON") or "{}"),
             min_support=int(_env("SEMANTIC_MIN_SUPPORT", "3")),
