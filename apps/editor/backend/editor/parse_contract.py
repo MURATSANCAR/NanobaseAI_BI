@@ -32,7 +32,7 @@ def validate_source(directory, expected_sha, expected_bytes):
             or digest(original) != expected_sha or manifest.get('bytes') != expected_bytes):
         raise RuntimeError('SOURCE_HASH_MISMATCH')
     pages = manifest.get('pdf_pages')
-    if (not isinstance(pages, int) or not 1 <= pages <= 100
+    if (not isinstance(pages, int) or not 1 <= pages <= int(os.environ.get('EDITOR_MAX_PAGES', '100'))
             or not manifest.get('source_accounting_complete')
             or [p['pdf_page'] for p in manifest['pages']] != list(range(1, pages + 1))):
         raise RuntimeError('SOURCE_ACCOUNTING_INCOMPLETE')

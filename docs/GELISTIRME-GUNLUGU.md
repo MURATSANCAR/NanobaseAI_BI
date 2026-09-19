@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 06:20 UTC — Editör: sayfa sınırının sabit kopyası ve ayrıştırıcı belleği
+
+Yükleme yolu açıldıktan sonra üç yeni kitap ayrıştırmada düştü. "Dedem Tekrar Çocuk Oldu" ve "Anne Terliği" (128'er sayfa) tam ayrıştırıldı, 128/128 sayfa muhasebeli; `parse_contract.validate_source` sayfa sınırını 100 olarak sabit yazdığı için `SOURCE_ACCOUNTING_INCOMPLETE` verdi. Artık `EDITOR_MAX_PAGES` okur; değişken ortak `x-app` ortamına da eklendi (worker da aynı doğrulamayı çağırıyor). "Levent Dünya Harikalarının Peşinde" (144 sayfa, 360 MB) render'dan sonra Docling'de bellek sınırında öldü: ayrıştırıcı 6 GiB, tepe 6,00 GiB, `oom_kill 1`. Ayrıştırıcı belleği `EDITOR_PARSER_MEMORY` ile ayarlanabilir oldu (varsayılan 6g). Bu, büyük kitap yolunda beşinci ve altıncı engel; hepsi aynı kökten: yol 50 MB/100 sayfa üstünde hiç sınanmamıştı. Başarısız yükleme kalıcıdır; yeniden deneme yeni yükleme kaydıyla yapılır.
+
 ## 2026-09-19 05:35 UTC — Editör: yükleme gövdesi gateway'de tamponlanmıyor
 
 DB kısıtı kaldırıldıktan sonra üç yükleme gateway'de düştü: nginx gövdeyi 32 MiB'lik `/tmp` tmpfs'e yazmaya çalıştı (`No space left on device`). API gövdeyi zaten parça parça diske akıtıyor. `deploy/nginx.conf` yükleme içeriği yolunda (`/v1/uploads/{id}/content`) `proxy_request_buffering off` ve 600 sn gönderme/okuma süresi kullanır. Aynı genel sorun sınırın üç kopyası ile birlikte bulundu: büyük kitap yükleme yolu hiç sınanmamıştı.

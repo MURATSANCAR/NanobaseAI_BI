@@ -21,6 +21,7 @@ x-app: &app
     EDITOR_MODEL_CONCURRENCY: ${EDITOR_MODEL_CONCURRENCY:-1}
     EDITOR_IMAGE_MAX_TOKENS: ${EDITOR_IMAGE_MAX_TOKENS:-1024}
     EDITOR_MAX_SOURCE_BYTES: ${EDITOR_MAX_SOURCE_BYTES:-52428800}
+    EDITOR_MAX_PAGES: ${EDITOR_MAX_PAGES:-100}
     HF_HUB_OFFLINE: '1'
     HF_HUB_DISABLE_TELEMETRY: '1'
     DO_NOT_TRACK: '1'
@@ -204,6 +205,8 @@ services:
     profiles: []
     restart: unless-stopped
     cpus: ${EDITOR_PARSER_CPUS:-4}
+    # Docling memory grows with page count and image size; 6g was OOM-killed on a 144-page, 360 MB book.
+    mem_limit: ${EDITOR_PARSER_MEMORY:-6g}
     entrypoint: [python, -m, editor.parse_worker]
     environment:
       EDITOR_MAX_SOURCE_BYTES: ${EDITOR_MAX_SOURCE_BYTES:-52428800}
