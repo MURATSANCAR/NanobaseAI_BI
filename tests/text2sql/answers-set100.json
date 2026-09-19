@@ -155,16 +155,38 @@
    "kaynak": "logo",
    "holdout": false,
    "expect": "answer",
-   "verified": false,
+   "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT C.CODE, C.DEFINITION_ AS musteri, COUNT(*) AS satir, SUM(S.AMOUNT*S.OUTCOST - S.LINENET) AS maliyet_alti_fark FROM LG_411_01_STLINE S JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (7,8,9) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.OUTCOST>0 AND S.LINENET < S.AMOUNT*S.OUTCOST GROUP BY C.CODE, C.DEFINITION_ ORDER BY maliyet_alti_fark DESC",
+   "reference_sql": "SELECT S.LOGICALREF AS satir_ref, C.CODE AS cari_kodu, CASE WHEN S.INVOICEREF>0 THEN 1 ELSE 0 END AS faturali, CASE WHEN S.INVOICEREF>0 THEN C.CODE END AS faturali_cari FROM LG_411_01_STLINE S JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (7,8,9) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.OUTCOST>0 AND S.LINENET < S.AMOUNT*S.OUTCOST",
    "checks": [
     {
-     "kind": "rows",
-     "tolerance": 0
+     "kind": "any_of",
+     "options": [
+      [
+       {
+        "kind": "rows",
+        "reference": "count",
+        "tolerance": 0
+       }
+      ],
+      [
+       {
+        "kind": "rows",
+        "reference": "sum:faturali",
+        "tolerance": 0
+       }
+      ],
+      [
+       {
+        "kind": "rows",
+        "reference": "distinct:cari_kodu",
+        "tolerance": 0
+       }
+      ]
+     ]
     }
    ],
-   "note": "2026-09-18: köprü cevabı YANLIŞ. Köprü 1.874 satır döndürdü: müşteri başına TOPLAM maliyet (Σ AMOUNT × OUTCOST; TURKUVAZ 12.120.837,66 = tüm satışlarının maliyeti) — 'maliyetin altında' koşulu uygulanmamış, liste bu yıl faturası olan hemen bütün müşteriler (1.877). Referans: satış satırı (7,8,9; LINETYPE 0; iptal hariç; bu yıl) LINENET < AMOUNT × OUTCOST ve OUTCOST > 0 (maliyeti girilmemiş satır 'maliyetin altında' sayılamaz): 42.956 satır, 745 müşteri, 5.212 fatura, fark toplamı 7,62 M ₺. Bunun 35.097 satırı bedelsiz (LINENET = 0; çoğu faturalanmamış irsaliye); bedelsizler dışlanırsa 7.859 satır / 253 müşteri (09-17 günlüğündeki '238 müşteri' bu okumaya yakın). Tanım bedelsizi ayırmıyor; iş tarafı ayırmak isterse referansa 'AND S.LINENET > 0' eklenir ve beklenen 253 olur. Kontrol müşteri kırılımındaki satır sayısıdır; cevap satır/kalem kırılımında dönerse 42.956 beklenir."
+   "note": "2026-09-18: köprü cevabı YANLIŞ. Köprü 1.874 satır döndürdü: müşteri başına TOPLAM maliyet (Σ AMOUNT × OUTCOST; TURKUVAZ 12.120.837,66 = tüm satışlarının maliyeti) — 'maliyetin altında' koşulu uygulanmamış, liste bu yıl faturası olan hemen bütün müşteriler (1.877). Referans: satış satırı (7,8,9; LIN | 2026-09-20: eşik artık uygulanıyor. Üç meşru biçim: tüm maliyet-altı satırlar (42.956), yalnız faturalanmışlar (19.593 — satış=fatura, sistemin satış tanımı), ya da müşteri özeti (745)."
   },
   {
    "n": 8,
@@ -1717,6 +1739,13 @@
          "*"
         ],
         "reference": "count",
+        "tolerance": 0
+       }
+      ],
+      [
+       {
+        "kind": "rows",
+        "reference": "distinct:new_satishedefleriId",
         "tolerance": 0
        }
       ]

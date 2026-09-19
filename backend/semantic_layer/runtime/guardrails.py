@@ -68,6 +68,7 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
                 if part:
                     schemas.add(part)
             known.update({f"{qual}.{phys}", f"{qual}.{p.table_name.upper()}"})
+    entity_names = {p.entity.upper() for p in profiles}
     names = _physical_references(sql, dialect)
     if names is None:
         # Unreadable is not harmless: a statement this cannot parse is one whose tables it cannot
@@ -83,6 +84,10 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
             if bare.startswith(schema + "_"):
                 candidates.add(bare[len(schema) + 1:])
         if not (candidates & known):
+            # The catalog's other label for a profiled table (LG_ORFICHE for ORFICHE): the same
+            # table, and physicalize_sql resolves it the same way.
+            if len({k for k in entity_names if _bare_entity(k) == _bare_entity(bare)}) == 1:
+                continue
             return False, f"table not in the catalog: {name}"
     return True, "ok"
 
@@ -145,6 +150,12 @@ def _carry_tag_through_derived(out: exp.Expression, tagged: dict[str, str]) -> N
     for node in out.find_all(exp.Table):
         if node.name and node.name.upper() in tagged and node.alias and node.alias.upper() not in tagged:
             tagged[node.alias.upper()] = node.alias
+
+
+def _bare_entity(name: str) -> str:
+    """An entity name without the source's "LG_" prefix. The catalog names one table pattern both
+    ways (ORFICHE in most concepts, LG_ORFICHE in a few) while the profiles carry one of them."""
+    return re.sub(r"^LG_", "", str(name or "").upper())
 
 
 def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
@@ -261,6 +272,14 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         if prof is None:
             lt = logical_table(raw)
             prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
+        if prof is None:
+            # The catalog's other label for the same table. The prompt tells the model which entity a
+            # certified word points at, in the catalog's spelling; written as given ("FROM LG_ORFICHE")
+            # it reached the server unresolved — "Invalid object name" — and the repair that followed
+            # moved the answer to a different table. Only where exactly one entity answers to it.
+            same = [e for e in by_entity if _bare_entity(e) == _bare_entity(raw)]
+            if len(same) == 1:
+                prof = by_entity[same[0]]
         return prof
 
     def wrote_physical(node: exp.Table) -> bool:

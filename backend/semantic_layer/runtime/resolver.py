@@ -1221,19 +1221,10 @@ class SemanticResolver:
                     consumed.add(k)
                     sq.explanation.append(flipped.explain["why"])
                     continue
-            if (any(tok in tokenize(t.text) for t in qf.temporal)
-                    or (stem(tok) in STOPWORDS_S | MODIFIERS_S
-                        and not self._modifies_a_noun(qf.tokens, k, consumed))):
-                continue
-            if fold(tok) in _DEGREE_ADVERBS:
-                # "tamamen sevk edilmemiş", "hâlâ bekleyen": an adverb of degree or time qualifies the
-                # verb beside it, and that verb's phrase is what the catalog defines. Handed to the
-                # model as a condition of its own, "tamamen" became SHIPPEDAMOUNT = 0 in two runs out
-                # of three — "not shipped at all" — where the certified phrase already says "not
-                # fully shipped".
-                consumed.add(k)
-                continue
-            if fold(tok) in _COMPARATORS:
+            if fold(tok) in _COMPARATORS and k not in consumed:
+                # Read BEFORE the stopword skip below: most of these words ("altında", "üzerinde",
+                # "üstü", "düşük") are also in STOPWORDS, so placed after that skip this branch never
+                # ran for them — "maliyetin altında satılmış" kept serving the total cost per customer.
                 # A magnitude comparison ("maliyetin altında", "limitin üzerinde", "eşiği aşan"): a
                 # condition on the rows, not grammar. It counts as one only next to a resolved measure —
                 # "en yüksek" is a ranking (handled above by the price/superlative reader) and "yüz
@@ -1252,6 +1243,7 @@ class SemanticResolver:
                         and not any(mq.get("position") == k for mq in sq.model_qualifiers):
                     lo, hi = max(0, k - 2), min(len(qf.tokens), k + 2)
                     sq.model_qualifiers.append({"token": tok, "position": k, "negative": is_negative(tok),
+                                                "kind": "comparison",
                                                 "phrase": " ".join(qf.tokens[lo:hi])})
                     sq.explanation.append(
                         f"'{tok}' bir büyüklük karşılaştırması (ölçü ↔ eşik/kolon); katalogda değeri yok → "
@@ -1259,6 +1251,18 @@ class SemanticResolver:
                         "yorumu hem kısıtı arar")
                     consumed.add(k)
                     continue
+            if (any(tok in tokenize(t.text) for t in qf.temporal)
+                    or (stem(tok) in STOPWORDS_S | MODIFIERS_S
+                        and not self._modifies_a_noun(qf.tokens, k, consumed))):
+                continue
+            if fold(tok) in _DEGREE_ADVERBS:
+                # "tamamen sevk edilmemiş", "hâlâ bekleyen": an adverb of degree or time qualifies the
+                # verb beside it, and that verb's phrase is what the catalog defines. Handed to the
+                # model as a condition of its own, "tamamen" became SHIPPEDAMOUNT = 0 in two runs out
+                # of three — "not shipped at all" — where the certified phrase already says "not
+                # fully shipped".
+                consumed.add(k)
+                continue
             if not self._modifier_candidate(qf.tokens, k, consumed):
                 continue
             if cardinal(tok) is not None:

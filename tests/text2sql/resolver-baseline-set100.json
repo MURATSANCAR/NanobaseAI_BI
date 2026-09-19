@@ -1,11 +1,11 @@
 {
- "recordedAt": "2026-09-19T21:32:34Z",
+ "recordedAt": "2026-09-19T22:15:40Z",
  "state": {
   "catalogHash": "b19b0ded1be8043ee83c383c169b30ec587fde1a6fb909242fcf043277c54448",
   "languagePoolHash": "",
   "catalogVersion": 70549,
   "rulesHash": "c4954b528fa040ca",
-  "promptHash": "7f47127ec1deca67"
+  "promptHash": "32b69bad0be35c98"
  },
  "cases": {
   "A032": {
@@ -321,7 +321,9 @@
     ],
     "unresolved": [],
     "unhandled": [],
-    "leftToModel": [],
+    "leftToModel": [
+     "altinda"
+    ],
     "qualifierColumns": [],
     "drops": [
      {

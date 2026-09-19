@@ -302,3 +302,21 @@ def test_an_undated_table_with_no_period_asked_is_read_from_the_newest_copy():
                          columns=[ColumnProfile(name="ACCRISKLIMIT", data_type="float")], row_count=10, context={"n0": "411", "n1": "01"})
     sql = physicalize_sql("SELECT COUNT(*) FROM CLRNUMS WHERE ACCRISKLIMIT > 0", [r105, r411], {})
     assert "LG_411_01_CLRNUMS" in sql and "LG_105_01_CLRNUMS" not in sql, sql
+
+
+def test_the_catalogs_other_label_for_a_profiled_entity_resolves_to_the_same_tables():
+    """2026-09-19, "geçen yıl alıp bu yıl hiç sipariş vermemiş müşteriler": the certified word pointed at
+    LG_STLINE-style spelling while the profiles were relabelled to the bare name. The model wrote the name it
+    was told and the server answered "Invalid object name"; the repair then moved to another table."""
+    from semantic_layer.runtime.guardrails import allowed_tables
+    sql = "SELECT COUNT(*) FROM LG_STLINE s WHERE s.DATE_ >= '2026-01-01' AND s.DATE_ < '2027-01-01'"
+    out = physicalize_sql(sql, [Y2021, Y2026], {}, period=(date(2026, 1, 1), date(2027, 1, 1)))
+    assert "LG_411_01_STLINE" in out and "LG_211_01_STLINE" not in out, out
+    assert allowed_tables(sql, [Y2021, Y2026], {}, "tsql")[0]
+    # the other direction: profiles under the prefixed label, SQL in the bare one
+    a = _p("LG_211_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2021-01-01", "2025-12-31"), entity="LG_STLINE", ctx={"n0": "211", "n1": "01"})
+    b = _p("LG_411_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2026-01-01", "2026-08-17"), entity="LG_STLINE", ctx={"n0": "411", "n1": "01"})
+    out = physicalize_sql("SELECT COUNT(*) FROM STLINE s WHERE s.DATE_ >= '2026-01-01'", [a, b], {}, period=(date(2026, 1, 1), date(2027, 1, 1)))
+    assert "LG_411_01_STLINE" in out, out
+    # never a guess: a name nothing answers to stays as written and is still refused
+    assert not allowed_tables("SELECT 1 FROM LG_NOPE", [Y2021, Y2026], {}, "tsql")[0]

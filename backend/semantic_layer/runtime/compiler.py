@@ -1179,6 +1179,31 @@ class ExistingCompiler:
         schema = (p.schema_name or "").replace(".", "_")
         return f"{schema}_{phys}" if self.model_naming == "mdl" else f"{p.schema_name}.{phys}"
 
+    def profiled_name(self, mapping: Any) -> Optional[str]:
+        """The name this runtime's profiles use for the table a catalog mapping points at.
+
+        The catalog names one table pattern both ways — most concepts say ORFICHE, a few written
+        during a wider scan say LG_ORFICHE — and the profiles are relabelled to one of them
+        (`one_entity_per_pattern`). A mapping under the other label names an entity that is not in
+        `by_entity`: compared by exact string it was neither placed in the shortlist nor pinned, so
+        the selector dropped the very table the question's certified word points at and the model
+        wrote the answer from the nearest table it was still shown. The pattern is the durable half
+        of a mapping, so it decides; the bare name (without the source's prefix) is the fallback,
+        and only where exactly one profiled entity answers to it."""
+        entity = getattr(mapping, "entity", None)
+        if not entity:
+            return None
+        if entity in self.by_entity:
+            return entity
+        pattern = getattr(mapping, "table_pattern", None)
+        if pattern:
+            same = {p.entity for p in self.profiles if p.table_pattern == pattern}
+            if len(same) == 1:
+                return next(iter(same))
+        bare = re.sub(r"^LG_", "", str(entity).upper())
+        same = {e for e in self.by_entity if re.sub(r"^LG_", "", str(e).upper()) == bare}
+        return next(iter(same)) if len(same) == 1 else None
+
     def relevant_entities(self, q: SemanticQuery, recalled: list[dict[str, str]]) -> list[str]:
         """Which tables this question can possibly need, most likely first.
 
@@ -1204,7 +1229,7 @@ class ExistingCompiler:
 
         for slot in q.slots:
             if slot.mapping:
-                add(slot.mapping.entity)
+                add(self.profiled_name(slot.mapping))
         # A table that carries the only column matching a word the vocabulary does not define. It is
         # the answer to that word, so it is pinned beside what the question resolved: shortlisted by
         # a general ranking it loses to tables the question never mentioned, and the model is then
@@ -1551,7 +1576,14 @@ class ExistingCompiler:
             report["decision"] = "KEPT"
         if self.selector is None or len(entities) <= 1:
             return entities
-        pinned = [s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity in entities]
+        # By the profiled name, not the catalog's spelling of it: a slot certified under the other
+        # label of the same pattern (LG_ORFICHE for ORFICHE) was not "in entities", so it was not
+        # pinned and the selector was free to drop the table the question's own word names.
+        pinned = []
+        for s in q.slots:
+            name = self.profiled_name(s.mapping) if s.mapping else None
+            if name and name in entities and name not in pinned:
+                pinned.append(name)
         # The certified catalog is pinned only where it is the *only* thing that knows which table
         # holds the measure — that is, where the resolver placed nothing. It was measured when the
         # catalog named a few dozen tables; a catalog that names hundreds (every CRM table, once its
@@ -1960,6 +1992,9 @@ class ExistingCompiler:
                 "(2) bu koşulu sorguda gerçekten uygula (WHERE, HAVING, NOT EXISTS ya da JOIN ile). "
                 "Kelimeyi atlama; şemada karşılığı yoksa NO_SQL yaz ve nedenini söyle.\n"
                 + "\n".join(f"- '{m['token']}' (bağlam: \"{m['phrase']}\")" + (" — olumsuz: bulunmayanları/gerçekleşmeyenleri seç" if m.get("negative") else "")
+                                 + (" — büyüklük karşılaştırması: komşu ölçüyü sorudaki diğer büyüklükle satır/grup düzeyinde "
+                                    "<, >, <=, >= ile karşılaştıran gerçek bir koşul yaz; yalnız toplamı döndürme"
+                                    if m.get("kind") == "comparison" else "")
                              for m in q.model_qualifiers) if q.model_qualifiers else "(yok)"),
             "## KOLONUYLA VERİLEN NİTELEYİCİLER (bu kolonu MUTLAKA kısıtla)\n" + (
                 "\n".join(f"'{c['token']}' → {c['entity']}.{c['column']} — kaynağın açıklaması: {c['description']}"

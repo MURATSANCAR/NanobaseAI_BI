@@ -1223,6 +1223,14 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             elif not extra:
                 out.append(Unmet("qualifier", f"'{want.get('token')}' niteleyicisi sorguda hiçbir koşula dönüşmedi",
                                  f"'{want.get('token')}' için yazdığın yorumu WHERE, HAVING, NOT EXISTS ya da JOIN ile uygula."))
+            elif want.get("kind") == "comparison" and not _has_magnitude_test(tree):
+                # "maliyetin altında", "limitin üzerinde": a join key or the measure's own scope is a
+                # restriction, but not this one. The word compares two magnitudes, so the statement
+                # must hold an inequality between columns/aggregates (or against a number) — a period
+                # bound (column vs. date literal) does not count.
+                out.append(Unmet("qualifier", f"'{want.get('token')}' karşılaştırması sorguda bir eşitsizliğe dönüşmedi",
+                                 f"'{want.get('token')}' için iki büyüklüğü karşılaştıran gerçek bir koşul yaz "
+                                 "(WHERE/HAVING içinde <, >, <=, >=; iki kolon/ifade ya da bir sayı ile)."))
         # The reading must be the query's reading. "'tanımlı' → PRCLIST fiyat listesi ile karşılaştırma"
         # above a statement that never reads PRCLIST is a comment about a different query: the person
         # is shown a reading the answer does not use. Every table a reading names must be read.
@@ -1714,6 +1722,25 @@ def repair_qualifiers_sql(sql: str) -> str:
     except Exception:  # noqa: BLE001
         return sql
 
+
+
+def _has_magnitude_test(tree) -> bool:
+    """Does the statement compare two magnitudes — an inequality whose both sides read a column or an
+    aggregate, or one side against a number? Period bounds (column vs. quoted date / date function)
+    are not such a test."""
+    for node in tree.find_all(exp.LT, exp.GT, exp.LTE, exp.GTE):
+        sides = [node.this, node.expression]
+        if any(s is None for s in sides):
+            continue
+        reads = [bool(list(s.find_all(exp.Column))) for s in sides]
+        if all(reads):
+            return True
+        for s, r in zip(sides, reads):
+            if not r:
+                lit = s.this if isinstance(s, (exp.Neg, exp.Paren)) else s
+                if isinstance(lit, exp.Literal) and not lit.is_string and any(reads):
+                    return True
+    return False
 
 def unmet_obligations(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, strict: Optional[bool] = None) -> list[str]:
     """Fail closed when the final SQL does not demonstrate a resolved requirement."""

@@ -132,7 +132,15 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
             if all(tried):
                 problems.extend(min(tried, key=len))
         elif kind == "rows":
-            want = len(reference) if spec.get("reference", "count") == "count" else _num(reference[0][spec["reference"]])
+            ref_spec = spec.get("reference", "count")
+            if ref_spec == "count":
+                want = len(reference)
+            elif ref_spec.startswith("distinct:"):   # referans dökümse, özet biçimin satır sayısı
+                want = len({r.get(ref_spec[9:]) for r in reference})
+            elif ref_spec.startswith("sum:"):        # referans satırlarının bir alt kümesi (0/1 bayrağı)
+                want = sum(_num(r.get(ref_spec[4:])) or 0 for r in reference)
+            else:
+                want = _num(reference[0][ref_spec])
             got = answer.get("rowCount") if answer.get("rowCount") is not None else len(records)
             if not _close(got, want, spec.get("tolerance", tolerance)):
                 problems.append(f"satır sayısı {got}, referans {want}")
