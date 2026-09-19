@@ -31,7 +31,7 @@ _INFLATABLE = (exp.Sum, exp.Avg)   # COUNT(*) over a fan-out is also inflated; C
 
 @dataclass(frozen=True)
 class Finding:
-    kind: str          # FANOUT | NON_NUMERIC | UNKNOWN_COLUMN | UNKNOWN_JOIN
+    kind: str          # FANOUT | NON_NUMERIC | UNKNOWN_COLUMN | UNKNOWN_JOIN | RATIO_BASE
     severity: str      # block | warn
     message: str       # in the language the person asked in, usable as a repair instruction
 
@@ -114,10 +114,14 @@ def _under_function(col: exp.Column, top: exp.Expression) -> bool:
     """AVG(DATEDIFF(day, fatura.DATE_, odeme.DATE_)): the dates are arguments of a function whose
     result is the number averaged — not columns being summed. Arithmetic (+ − × ÷) and parentheses
     still count as summing the column itself."""
+    # `top` itself is looked at too: in SUM(TRY_CAST(x AS FLOAT)) the conversion *is* the aggregate's
+    # argument, and stopping short of it called a converted text column "not numeric".
     p = col.parent
-    while p is not None and p is not top:
+    while p is not None:
         if isinstance(p, (exp.Func, exp.Cast)) and not isinstance(p, exp.AggFunc):
             return True
+        if p is top:
+            break
         p = p.parent
     return False
 
@@ -228,6 +232,150 @@ def _bare_entity(name: str) -> str:
     return re.sub(r"^(?:DBO_)?(?:LG_)?", "", (name or "").upper())
 
 
+def _side_aliases(node: exp.Expression) -> Optional[set[str]]:
+    """The relations one side of a comparison reads. None: it reads a column nobody qualified, so
+    which relation it belongs to is not written in the statement."""
+    cols = list(node.find_all(exp.Column))
+    if any(not c.table for c in cols):
+        return None
+    return {c.table.upper() for c in cols}
+
+
+def _links_two_relations(eq: exp.EQ) -> bool:
+    """`o2.ay = DATEADD(MONTH, -1, o1.ay)`, `LTRIM(RTRIM(CAST(T.KOD AS NVARCHAR(100)))) = G.kod`: a
+    join key is a key whether or not it is written bare. What makes an equality a link between two
+    relations is that its two sides read *different* relations — not that each side is a naked column.
+    A side that reads nothing (`1 = 1`, `x.a = 5`) links nothing."""
+    l, r = _side_aliases(eq.left), _side_aliases(eq.right)
+    if l is None or r is None:
+        # Unqualified columns on a side that does read columns: the reviewer cannot say it is NOT a
+        # key. Fail open, as everywhere else here — provided both sides read something.
+        return bool(list(eq.left.find_all(exp.Column))) and bool(list(eq.right.find_all(exp.Column)))
+    return bool(l) and bool(r) and any(a != b for a in l for b in r)
+
+
+def _lossy(node: exp.Expression) -> dict[tuple[str, str], exp.Expression]:
+    """Columns read through a conversion that answers NULL when the value cannot be read (TRY_CAST,
+    TRY_CONVERT, TRY_PARSE). The author wrote TRY_ because some rows are expected to fail; an
+    aggregate silently leaves those rows out."""
+    out: dict[tuple[str, str], exp.Expression] = {}
+    for t in node.find_all((exp.TryCast, exp.Convert, exp.Anonymous)):
+        if isinstance(t, exp.Anonymous) and not str(t.name or "").upper().startswith("TRY_"):
+            continue
+        if isinstance(t, exp.Convert) and not t.args.get("safe"):
+            continue                                   # CONVERT fails loudly; only TRY_CONVERT answers NULL
+        for c in t.find_all(exp.Column):
+            out.setdefault(((c.table or "").upper(), c.name.upper()), t)
+    return out
+
+
+def _leg_aggregates(leg: exp.Expression, scope: "Scope") -> tuple[list[exp.AggFunc], Optional[exp.Select]]:
+    """The aggregates one leg of a division is made of, and the SELECT they are computed in. A leg
+    written as a column of a CTE/subquery (`t.tutar / t.adet`) is followed one level into it. Legs
+    whose aggregates live in different SELECTs come back with home=None: two separately computed
+    totals are different row sets on purpose (iade / satış) and are not this check's business."""
+    direct = [a for a in leg.find_all(exp.AggFunc) if not a.find_ancestor(exp.Window)]
+    if direct:
+        return direct, scope.expression if isinstance(scope.expression, exp.Select) else None
+    aggs: list[exp.AggFunc] = []
+    homes: set[int] = set()
+    home: Optional[exp.Select] = None
+    sources = {str(k).upper(): v for k, v in scope.sources.items()}
+    for c in leg.find_all(exp.Column):
+        src = sources.get((c.table or "").upper()) if c.table else (next(iter(sources.values())) if len(sources) == 1 else None)
+        if not isinstance(src, Scope) or not isinstance(src.expression, exp.Select):
+            continue
+        for e in src.expression.expressions:
+            if (e.alias_or_name or "").upper() == c.name.upper():
+                found = [a for a in e.find_all(exp.AggFunc) if not a.find_ancestor(exp.Window)]
+                if found:
+                    aggs += found
+                    homes.add(id(src.expression))
+                    home = src.expression
+    return aggs, (home if len(homes) == 1 else None)
+
+
+def _ratio_base(select: exp.Select, scope: "Scope", rels: dict[str, "_Rel"], tables: dict[str, SchemaProfile],
+                narrowed: dict[str, set[str]], by_table: dict, by_entity: dict, cache: dict, dialect: str) -> list[Finding]:
+    """A ratio whose numerator and denominator are not fed by the same rows.
+
+    What can be read off the statement, and only that:
+      1. NULL leg — one leg aggregates TRY_CAST(x) and the other never looks at x: rows where x cannot
+         be read leave one leg and stay in the other. Always a bias when such rows exist; refused,
+         with the rewrite that fixes it.
+      2. Parent counted through its child — the denominator is COUNT(DISTINCT child.fk) and the table
+         fk points at (catalog relationship) is not read, or is read through a join that drops parents
+         without children. Whether "all parents" or "parents that have a child row" was meant is the
+         question's reading, not the statement's; said, not refused.
+    What it cannot see: which of two dates defines the period, whether a filter belongs to both legs
+    by intent, anything behind a view or more than one CTE level away."""
+    out: list[Finding] = []
+    for div in select.find_all(exp.Div):
+        if not _in_scope(div, select):
+            continue
+        n_aggs, n_home = _leg_aggregates(div.this, scope)
+        d_aggs, d_home = _leg_aggregates(div.expression, scope)
+        if not n_aggs or not d_aggs or n_home is None or d_home is None or n_home is not d_home:
+            continue
+        home_where = n_home.args.get("where")
+        guarded = set(_lossy(home_where)) if home_where is not None else set()
+        n_lossy: dict = {}
+        d_lossy: dict = {}
+        for a in n_aggs:
+            n_lossy.update(_lossy(a))
+        for a in d_aggs:
+            d_lossy.update(_lossy(a))
+        for mine, other, leg, other_leg in ((n_lossy, d_lossy, "pay", "payda"), (d_lossy, n_lossy, "payda", "pay")):
+            missing = [k for k in mine if k not in other and k not in guarded]
+            if missing:
+                conv = mine[missing[0]].sql(dialect=dialect)
+                out.append(Finding("RATIO_BASE", "block",
+                    f"{div.sql(dialect=dialect)[:160]}: pay ve payda aynı kayıt kümesinden gelmiyor. {conv} okunamayan "
+                    f"(NULL dönen) satırlar {leg} tarafından düşüyor ama {other_leg} tarafında sayılmaya devam ediyor; oran yanlı çıkar. "
+                    f"İki tarafı da aynı satırlarla sınırla: {other_leg} toplamını CASE WHEN {conv} IS NOT NULL THEN … END içine al "
+                    f"(ya da koşulu WHERE'e yaz)."))
+        if n_home is not select:
+            continue                                   # the parent/child reading below needs this scope's relations
+        if not all(isinstance(a, exp.Count) for a in n_aggs):
+            # "ciro / müşteri sayısı": a total per entity that has rows is the ordinary meaning. Only a
+            # count over a count is a share *of the entities*, where the missing ones change the answer.
+            continue
+        for a in d_aggs:
+            inner = a.this
+            if not (isinstance(a, exp.Count) and isinstance(inner, exp.Distinct) and len(inner.expressions) == 1
+                    and isinstance(inner.expressions[0], exp.Column)):
+                continue
+            col = inner.expressions[0]
+            alias = (col.table or "").upper() if col.table else (next(iter(tables)) if len(tables) == 1 else "")
+            prof = tables.get(alias)
+            if prof is None:
+                continue
+            if _is_pk(prof, col.name):
+                dropped = narrowed.get(alias)
+                if dropped:
+                    who = ", ".join(sorted(rels[x].entity for x in dropped if x in rels))
+                    out.append(Finding("RATIO_BASE", "warn",
+                        f"Oranın paydası yalnız {who} tarafında karşılığı olan {prof.entity} kayıtlarını sayıyor; "
+                        f"karşılığı olmayan {prof.entity} kayıtları birleştirmede düştüğü için paydada yok."))
+                continue
+            parents = {_bare_entity(r.get("ref_entity") or "") for r in (prof.relationships or [])
+                       if str(r.get("column") or "").upper() == col.name.upper() and r.get("ref_entity")}
+            parents.discard(_bare_entity(prof.entity))
+            if not parents:
+                continue
+            present = {x for x, rel in rels.items() if _bare_entity(rel.entity) in parents}
+            if present and not any(narrowed.get(x) for x in present):
+                # The parent is read and keeps its rows (LEFT JOIN from it): the statement could have
+                # counted it directly, and counting the child's key is then a choice, not a loss.
+                continue
+            parent = ", ".join(sorted(parents))
+            out.append(Finding("RATIO_BASE", "warn",
+                f"Oranın paydası {parent} kayıtlarını {prof.entity} satırları üzerinden sayıyor; "
+                f"{prof.entity} tablosunda hiç satırı olmayan {parent} kayıtları paydaya girmiyor. "
+                f"Bütün {parent} kayıtlarına oran isteniyorsa payda {parent} tablosundan sayılmalı."))
+    return out
+
+
 def _mismatched_keys(tree: exp.Expression, by_table: dict, by_entity: dict, dialect: str) -> list[Finding]:
     """`PRCLIST.CARDREF = INVOICE.CLIENTREF`: two foreign keys that the catalog measured to point at
     different tables (items, customers) set equal — a join that matches rows by coincidence of
@@ -315,13 +463,15 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         uncertain: set[str] = set()          # neither side keyed: could go either way
         many_of: dict[str, set[str]] = {}    # keyed alias → the many-sided aliases joined to it
         chasm: set[str] = set()              # many-sided aliases multiplied by a sibling many-side
+        narrowed: dict[str, set[str]] = {}   # keyed alias → the aliases whose join drops its unmatched rows
         for join in select.args.get("joins") or []:
             on = join.args.get("on")
             if on is None or not _in_scope(join, select):
                 continue
             # `JOIN x ON 1 = 1`: every row of one side against every row of the other. Nothing keyed,
             # nothing meant — a cross product wearing a JOIN. Refused before any aggregate is looked at.
-            if not any(isinstance(eq.left, exp.Column) and isinstance(eq.right, exp.Column) for eq in on.find_all(exp.EQ)):
+            if not any((isinstance(eq.left, exp.Column) and isinstance(eq.right, exp.Column)) or _links_two_relations(eq)
+                       for eq in on.find_all(exp.EQ)):
                 findings.append(Finding("FANOUT", "block",
                     f"{join.sql(dialect=dialect)[:80]}: iki tabloyu bağlayan kolon eşitliği yok (çapraz birleştirme); "
                     f"her satır diğer tablonun her satırıyla çoğalıyor. JOIN'i ilişki kolonları üzerinden yaz."))
@@ -333,6 +483,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
             for eq in on.find_all(exp.EQ):
                 l, r = eq.left, eq.right
                 if not (isinstance(l, exp.Column) and isinstance(r, exp.Column)):
+                    # A key written inside a function (`o2.ay = DATEADD(MONTH, -1, o1.ay)`). The bare
+                    # side is joined on that column as written. The wrapped side takes part in the
+                    # join but covers no key: a function can send two rows to one value, so it proves
+                    # nothing about that side's uniqueness.
+                    ls, rs = _side_aliases(l), _side_aliases(r)
+                    if ls and rs and len(ls) == 1 and len(rs) == 1 and ls != rs:
+                        (wa,), (wb,) = tuple(ls), tuple(rs)
+                        if wa in rels and wb in rels:
+                            for side_alias, node in ((wa, l), (wb, r)):
+                                cols = cols_by_alias.setdefault(side_alias, set())
+                                if isinstance(node, exp.Column):
+                                    cols.add(node.name.upper())
                     continue
                 la, ra = (l.table or "").upper(), (r.table or "").upper()
                 if la == ra or la not in rels or ra not in rels:
@@ -360,6 +522,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                 repeated.update(keyed)
                 for k in keyed:
                     many_of.setdefault(k, set()).update(sides - keyed)
+                # …and unless the join keeps them, its rows without a match are gone: a parent with no
+                # child row does not survive an INNER JOIN to the child, nor a WHERE on the child.
+                joined = (join.this.alias_or_name or "").upper()
+                side = (join.side or "").upper()
+                where = select.args.get("where")
+                for k in keyed:
+                    kept = side == "FULL" or (side == "LEFT" and joined != k) or (side == "RIGHT" and joined == k)
+                    if kept and where is not None:
+                        kept = not any((c.table or "").upper() in (sides - keyed) and not isinstance(c.parent, exp.Is)
+                                       for c in where.find_all(exp.Column) if _in_scope(c, select))
+                    if not kept:
+                        narrowed.setdefault(k, set()).update(sides - keyed)
             elif sides and not keyed:
                 uncertain.update(sides)
         # Two many-sided relations hung off the same key (items ← order lines, items ← stock lines):
@@ -450,6 +624,8 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                         findings.append(Finding("NON_NUMERIC", "block",
                             f"{agg.sql(dialect=dialect)}: {prof.entity}.{c.name} sayısal değil "
                             f"({prof.column(c.name).data_type}); bu kolon toplanamaz."))
+
+        findings += _ratio_base(select, scope, rels, tables, narrowed, by_table, by_entity, cache, dialect)
 
         # Two figures kept on different bases, added together. The catalog records the basis a
         # column is on ("KDV dahil", "satır brüt") because mixing them produces a total that is

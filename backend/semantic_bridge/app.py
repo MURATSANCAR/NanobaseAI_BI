@@ -1019,6 +1019,11 @@ class Runtime:
         shown = list(result["records"])[: max(1, int(sample_size or 50))]
         t = time.perf_counter()
         summary = self.summarize(question, sql, result, sq)
+        # What a ratio was measured against is part of the answer, not of the log: a share taken over
+        # "contracts that have a party row" reads as a share of all contracts unless it is said.
+        base_notes = [n["message"] for n in critic_notes if n.get("kind") == "RATIO_BASE" and n.get("severity") == "warn"]
+        if base_notes:
+            summary = (summary + " Not: " + " ".join(dict.fromkeys(base_notes))).strip()
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
         fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
         # Kullanıcı kararı: tam sonuç (tüm satırlar) kaydın içinde durur, böylece incelerken neyin

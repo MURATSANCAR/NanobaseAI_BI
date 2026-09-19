@@ -212,6 +212,40 @@ def _can_scope_formula(formula):
             and all(c.find_ancestor(exp.AggFunc) for c in tree.find_all(exp.Column)))
 
 
+def _align_ratio_legs(formula_sql: str) -> str:
+    """`SUM(TRY_CAST(tutar)) / NULLIF(SUM(TRY_CAST(adet)), 0)`: a row whose amount cannot be read drops
+    out of the numerator and its quantity stays in the denominator, so the ratio is biased by exactly
+    the rows the TRY_ was written for. A ratio of two row-level totals is taken over the rows both
+    legs can read: each leg is conditioned on the other leg's conversions being non-NULL. Conditions
+    written with CASE are left alone — those are scopes chosen on purpose (iade / satış), not unreadable
+    values. The text is returned untouched when there is nothing to align."""
+    import sqlglot
+    from sqlglot import exp
+
+    if "TRY_" not in formula_sql.upper() or "/" not in formula_sql:
+        return formula_sql
+    try:
+        tree = sqlglot.parse_one(formula_sql, read="tsql")
+    except Exception:  # noqa: BLE001
+        return formula_sql
+    changed = False
+    for div in list(tree.find_all(exp.Div)):
+        legs = [[a for a in leg.find_all((exp.Sum, exp.Avg)) if not isinstance(a.this, exp.Distinct)]
+                for leg in (div.this, div.expression)]
+        if not all(legs):
+            continue
+        lossy = [{t.sql(dialect="tsql"): t for a in aggs for t in a.find_all(exp.TryCast)} for aggs in legs]
+        for i in (0, 1):
+            need = [t for k, t in lossy[1 - i].items() if k not in lossy[i]]
+            if not need:
+                continue
+            cond = exp.and_(*[exp.Not(this=exp.Is(this=t.copy(), expression=exp.Null())) for t in need])
+            for a in legs[i]:
+                a.set("this", exp.Case(ifs=[exp.If(this=cond.copy(), true=a.this.copy())]))
+            changed = True
+    return tree.sql(dialect="tsql") if changed else formula_sql
+
+
 def _wrap_condition(formula_sql: str, pred: str) -> str:
     """Condition aggregates without inventing values; COUNT keeps its distinctness."""
     import sqlglot
@@ -538,7 +572,7 @@ class DeterministicCompiler:
             predicates = scopes[id(metric)]
             if separate_scopes and predicates:
                 formula = _wrap_condition(formula, " AND ".join(f"({p})" for p in predicates))
-            return formula
+            return _align_ratio_legs(formula)
 
         for s in plan.metrics:
             formula = scoped_formula(s)
@@ -561,7 +595,7 @@ class DeterministicCompiler:
             num = next((m for m in plan.metrics if m.term == q.ratio.get("numerator")), None)
             den = next((m for m in plan.metrics if m.term == q.ratio.get("denominator")), None)
             if num is not None and den is not None and num is not den:
-                select.append(f"CAST({scoped_formula(num)} AS FLOAT) / NULLIF({scoped_formula(den)}, 0) AS oran")
+                select.append(_align_ratio_legs(f"CAST({scoped_formula(num)} AS FLOAT) / NULLIF({scoped_formula(den)}, 0)") + " AS oran")
                 metric_aliases.append("oran")
                 explain.append(f"oran: '{num.term}' / '{den.term}'")
         where: list[str] = []
