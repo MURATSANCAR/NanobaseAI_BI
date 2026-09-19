@@ -113,6 +113,12 @@ NARRATIVE_ROLES = obj({"events": arr(obj({
                                         "RESOLUTION", "ORDINARY"]},
     "reason": STR}))})
 
+CLAIM_REPAIR = obj({
+    "action": {"type": "string", "enum": ["ADD_EVIDENCE", "NARROW", "NONE"]},
+    "claim": STR,
+    "evidence": arr(obj({"page": INT, "paragraph": INT, "quote": STR})),
+})
+
 CONTRADICTIONS = obj({"candidates": arr(obj({
     "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER", "TEXT_VISUAL",
                                         "CONTINUITY", "IDENTITY"]},

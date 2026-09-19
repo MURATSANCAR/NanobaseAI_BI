@@ -116,66 +116,140 @@ def send_to_editor_queue(generation_id: str, reason: str, claim_id: str | None =
 
 
 # -------------------------------------------------------------- critic
-async def critic_pass(generation_id: str, batch: int = 30) -> dict:
-    """Step 13: the Critic Agent re-reads every claim against its evidence only."""
-    claims = db.all_rows(
-        "SELECT c.id, c.kind, c.claim, c.confidence, c.payload, (SELECT json_agg(json_build_object("
-        " 'page', e.page_no, 'kind', e.kind, 'quote', e.quote, 'verified', e.quote_verified))"
-        " FROM claim_evidence ce JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=c.id) AS ev"
-        " FROM claim c WHERE c.generation_id=%s AND c.status='CANDIDATE'", generation_id)
+_CLAIM_SQL = ("SELECT c.id, c.kind, c.subject, c.claim, c.confidence, c.payload, c.source_pages,"
+              " (SELECT json_agg(json_build_object('id', e.id, 'page', e.page_no, 'kind', e.kind,"
+              " 'quote', e.quote, 'verified', e.quote_verified)) FROM claim_evidence ce JOIN evidence e"
+              " ON e.id=ce.evidence_id WHERE ce.claim_id=c.id) AS ev FROM claim c WHERE ")
 
-    async def run(chunk: list[dict]) -> tuple[dict, dict, int]:
+
+async def _judge(generation_id: str, claims: list[dict], batch: int = 30) -> list[tuple[dict, dict]]:
+    """Critic verdict per claim, from the claim's own evidence only."""
+    async def run(chunk: list[dict]) -> list[tuple[dict, dict]]:
         short = {f"c{i}": x for i, x in enumerate(chunk)}
         lines = [f"{k} [{x['kind']}{'/' + x['payload'].get('modality') if x['payload'].get('modality') else ''}]"
                  f" İDDİA: {x['claim']}\n   KANITLAR: " + " | ".join(
                      f"s{e['page']} ({e['kind']}{'' if e['verified'] else ', alıntı metinde yok'}): “{e['quote']}”"
                      for e in (x["ev"] or [])) for k, x in short.items()]
         ref, body = prompts.render("critic", claims="\n".join(lines))
-        out, cid = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                 prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
-                                                 temperature=0.0, thinking=False)
-        return short, out, cid
-
-    results = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)))
-    stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0, "no_verdict": 0}
-    with db.tx() as c:
-        for short, out, call_id in results:
-            seen = set()
-            for v in out["verdicts"]:
-                x = short.get(v["claim_id"])
-                if not x or v["claim_id"] in seen:
-                    continue
+        out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                               prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
+                                               temperature=0.0, thinking=False)
+        seen, res = set(), []
+        for v in out["verdicts"]:
+            if v["claim_id"] in short and v["claim_id"] not in seen:
                 seen.add(v["claim_id"])
-                stats["checked"] += 1
-                f = _claim_facts(c, str(x["id"]))
-                conf = confidence_from(float(x["confidence"]), f["evidence"], v["supported"])["confidence"]
-                note = f"{v['supported']}: {v['note']}"
-                if v["supported"] == "UNSUPPORTED":
-                    status, review = "REJECTED", False
-                    stats["rejected"] += 1
-                elif not v["modality_ok"] or not v["identity_ok"]:
-                    status, review = "NEEDS_REVIEW", True
-                elif v["supported"] == "PARTIAL":
-                    status, review = "CANDIDATE", conf < REVIEW_CONFIDENCE
-                    stats["partial"] += 1
-                else:
-                    status, review = "VERIFIED", conf < REVIEW_CONFIDENCE
-                    stats["verified"] += 1
-                c.execute("UPDATE claim SET status=%s, confidence=%s, critic_note=%s,"
-                          " needs_editor_review=%s WHERE id=%s", (status, conf, note, review, x["id"]))
-                if review:
-                    why = []
-                    if not v["modality_ok"]:
-                        why.append("kip (plan/hayal/şaka) gerçekleşmiş gibi")
-                    if not v["identity_ok"]:
-                        why.append("belirsiz kimlik kesin gibi")
-                    if conf < REVIEW_CONFIDENCE:
-                        why.append(f"düşük güven {conf:.2f}")
-                    ledger.queue_review(c, generation_id, claim_id=str(x["id"]),
-                                        priority=1 if not (v["modality_ok"] and v["identity_ok"]) else 3,
-                                        reason="Critic: " + "; ".join(why) + f" — {v['note']}")
-                    stats["to_review"] += 1
-            stats["no_verdict"] += len(short) - len(seen)
+                res.append((short[v["claim_id"]], v))
+        return res
+
+    parts = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)))
+    return [x for p in parts for x in p]
+
+
+def _apply_verdict(c, generation_id: str, x: dict, v: dict, stats: dict) -> None:
+    f = _claim_facts(c, str(x["id"]))
+    conf = confidence_from(float(x["confidence"]), f["evidence"], v["supported"])["confidence"]
+    note = f"{v['supported']}: {v['note']}"
+    if v["supported"] == "UNSUPPORTED":
+        status, review = "REJECTED", False
+        stats["rejected"] += 1
+    elif not v["modality_ok"] or not v["identity_ok"]:
+        status, review = "NEEDS_REVIEW", True
+    elif v["supported"] == "PARTIAL":
+        status, review = "CANDIDATE", conf < REVIEW_CONFIDENCE
+        stats["partial"] += 1
+    else:
+        status, review = "VERIFIED", conf < REVIEW_CONFIDENCE
+        stats["verified"] += 1
+    c.execute("UPDATE claim SET status=%s, confidence=%s, critic_note=%s, needs_editor_review=%s"
+              " WHERE id=%s", (status, conf, note, review, x["id"]))
+    if review:
+        why = []
+        if not v["modality_ok"]:
+            why.append("kip (plan/hayal/şaka) gerçekleşmiş gibi")
+        if not v["identity_ok"]:
+            why.append("belirsiz kimlik kesin gibi")
+        if conf < REVIEW_CONFIDENCE:
+            why.append(f"düşük güven {conf:.2f}")
+        ledger.queue_review(c, generation_id, claim_id=str(x["id"]),
+                            priority=1 if not (v["modality_ok"] and v["identity_ok"]) else 3,
+                            reason="Critic: " + "; ".join(why) + f" — {v['note']}")
+        stats["to_review"] += 1
+
+
+async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
+    """The application's own fix for a PARTIAL claim: find the missing evidence on the
+    claim's pages, or narrow the claim to what its evidence says. Claims are immutable,
+    so the repair is a new claim that supersedes the old one. Returns the new claim id."""
+    from .document import page_text_numbered
+    pages = sorted({p + d for p in x["source_pages"] for d in (-1, 0, 1) if p + d > 0})
+    ref, body = prompts.render(
+        "claim_repair", kind=x["kind"], claim=x["claim"], note=v["note"],
+        evidence=" | ".join(f"s{e['page']}: “{e['quote']}”" for e in (x["ev"] or [])),
+        pages_text="\n".join(page_text_numbered(generation_id, p) for p in pages))
+    try:
+        out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                                     prompt=ref, schema=schemas.CLAIM_REPAIR,
+                                                     pages=pages, max_tokens=3000, temperature=0.0,
+                                                     thinking=False)
+    except Exception:  # noqa: BLE001 - an unrepaired claim simply keeps its first verdict
+        return None
+    if out["action"] == "NONE":
+        return None
+    with db.tx() as c:
+        idx = ledger.PageIndex.load(c, generation_id)
+        added = [e for e in ledger.evidence_from_model(c, generation_id, idx, out["evidence"],
+                                                       valid_pages=_valid_pages(c, generation_id))
+                 if e[1]]                       # only quotes found verbatim on the page count
+        text = out["claim"].strip() if out["action"] == "NARROW" and out["claim"].strip() else x["claim"]
+        if not added and text == x["claim"]:
+            return None                         # nothing actually changed
+        old = [(str(e["id"]), e["verified"], e["page"]) for e in (x["ev"] or [])]
+        new_id = ledger.save_claim(
+            c, generation_id, kind=x["kind"], subject=x["subject"], claim=text, evidence=old + added,
+            confidence=float(x["confidence"]), created_by="critic:repair", model_call_id=call_id,
+            payload={**(x["payload"] or {}), "supersedes": str(x["id"]), "repair": out["action"]})
+        c.execute("UPDATE claim SET status='SUPERSEDED', critic_note=%s WHERE id=%s",
+                  (f"PARTIAL: {v['note']} → {out['action']}, yerine {new_id}", x["id"]))
+        for table in ("event", "emotion", "character"):
+            c.execute(f"UPDATE {table} SET claim_id=%s WHERE claim_id=%s", (new_id, x["id"]))
+    return new_id
+
+
+async def critic_pass(generation_id: str) -> dict:
+    """Step 13. The Critic Agent re-reads every claim against its evidence only. What it
+    finds PARTIAL the application first tries to repair itself (missing evidence added
+    from the page, or the claim narrowed) and judges again; only what is still weak
+    after that goes to the editor."""
+    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status='CANDIDATE'", generation_id)
+    stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
+             "repair_tried": 0, "repaired": 0, "no_verdict": 0}
+    first = await _judge(generation_id, claims)
+    stats["no_verdict"] = len(claims) - len(first)
+    repairable = [(x, v) for x, v in first
+                  if v["supported"] == "PARTIAL" and v["modality_ok"] and v["identity_ok"]]
+    rep_ids = {str(x["id"]) for x, _ in repairable}
+    with db.tx() as c:
+        for x, v in first:
+            stats["checked"] += 1
+            if str(x["id"]) not in rep_ids:
+                _apply_verdict(c, generation_id, x, v, stats)
+    stats["repair_tried"] = len(repairable)
+    new_ids = await asyncio.gather(*(_repair(generation_id, x, v) for x, v in repairable))
+    fresh = [i for i in new_ids if i]
+    stats["repaired"] = len(fresh)
+    second = await _judge(generation_id, db.all_rows(_CLAIM_SQL + "c.id = ANY(%s::uuid[])", fresh)) \
+        if fresh else []
+    judged = {str(x["id"]) for x, _ in second}
+    with db.tx() as c:
+        for x, v in second:
+            _apply_verdict(c, generation_id, x, v, stats)
+        for (x, v), nid in zip(repairable, new_ids):
+            if nid is None:                     # could not be repaired: first verdict stands
+                _apply_verdict(c, generation_id, x, v, stats)
+        for nid in fresh:
+            if nid not in judged:
+                ledger.queue_review(c, generation_id, claim_id=nid, priority=3,
+                                    reason="Critic: onarılan iddia yeniden denetlenemedi")
     return stats
 
 
@@ -339,7 +413,7 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
     gen = db.one("SELECT g.*, b.title, bv.sha256, bv.page_count FROM generation g JOIN book_version bv"
                  " ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id WHERE g.id=%s", generation_id)
     q = lambda sql, *a: db.all_rows(sql, generation_id, *a)  # noqa: E731
-    live = "status NOT IN ('REJECTED','EDITOR_REJECTED')"
+    live = "status NOT IN ('REJECTED','EDITOR_REJECTED','SUPERSEDED')"
     md: list[str] = [f"# {gen['title']} — {'Analiz raporu' if kind == 'ANALYSIS' else kind}",
                      f"Nesil `{generation_id}` · içerik `{gen['sha256'][:16]}` · {gen['page_count']} sayfa · "
                      f"{gen['created_at']:%Y-%m-%d %H:%M} UTC", ""]

@@ -48,6 +48,34 @@ def quote_found(quote: str, haystack_norm: str) -> bool:
     return best / len(words) >= 0.85
 
 
+def snap_quote(quote: str, raw_page_text: str) -> str | None:
+    """The model sometimes retypes a sentence with a slip ("oynu" for "oyunu", a
+    line-break hyphen). Find the span of the page that the quote is a near copy of
+    and return the page's own words; None when nothing on the page is that close."""
+    import difflib
+    q = norm(quote)
+    raw = raw_page_text.split()
+    toks = [(norm(w), i) for i, w in enumerate(raw)]
+    toks = [(t, i) for t, i in toks if t]
+    n = len(q.split())
+    if n < 3 or len(toks) < n:
+        return None
+    best, span = 0.0, None
+    for size in (n, n - 1, n + 1, n + 2):
+        if size < 3:
+            continue
+        for a in range(0, len(toks) - size + 1):
+            cand = " ".join(t for t, _ in toks[a:a + size])
+            if abs(len(cand) - len(q)) > len(q) * 0.25:
+                continue
+            r = difflib.SequenceMatcher(None, q, cand, autojunk=False).ratio()
+            if r > best:
+                best, span = r, (toks[a][1], toks[a + size - 1][1])
+    if span is None or best < 0.9:
+        return None
+    return " ".join(raw[span[0]:span[1] + 1])
+
+
 @dataclass
 class PageIndex:
     """Normalised page text (text layer + OCR) and visual scan text, per page."""
@@ -103,6 +131,10 @@ def evidence_from_model(conn: psycopg.Connection, generation_id: str, idx: PageI
         quote = (e.get("quote") or "").strip()
         if page not in valid_pages or not quote:
             continue
+        if default_kind == "TEXT" and not idx.verify(page, quote, "TEXT"):
+            snapped = snap_quote(quote, idx.raw.get(page, ""))
+            if snapped:
+                quote = snapped
         kind = "VISUAL" if int(e.get("paragraph") or 0) == 0 and default_kind == "TEXT" \
             and not idx.verify(page, quote, "TEXT") else default_kind
         eid, ok = save_evidence(conn, generation_id, idx, page=page, quote=quote, kind=kind,

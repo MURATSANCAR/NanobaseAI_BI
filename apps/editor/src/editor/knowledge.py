@@ -431,8 +431,9 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
 
 # ------------------------------------------------------ events / timeline
 async def merge_events(generation_id: str) -> dict:
-    evs = db.all_rows("SELECT id, page_from, page_to, modality, summary FROM event WHERE "
-                      "generation_id=%s AND merged_into IS NULL ORDER BY page_from, page_to", generation_id)
+    evs = db.all_rows("SELECT e.id, e.page_from, e.page_to, e.modality, e.summary, c.model_call_id"
+                      " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
+                      " e.merged_into IS NULL ORDER BY e.page_from, e.page_to", generation_id)
     if not evs:
         return {"events": 0, "merged": 0, "ordered": 0}
     short = {f"e{i}": e for i, e in enumerate(evs)}
@@ -448,6 +449,11 @@ async def merge_events(generation_id: str) -> dict:
             members = [short[x] for x in g["event_ids"] if x in short]
             if len({m["modality"] for m in members}) > 1 or len(members) < 2:
                 continue  # never merge a plan with its realisation
+            # The extractor listed events of one call separately on purpose: two events
+            # from the same call are never one event. Duplicates exist only across calls.
+            calls = [m["model_call_id"] for m in members if m["model_call_id"] is not None]
+            if len(calls) != len(set(calls)):
+                continue
             # Duplicates come from chunk boundaries, so they sit on the same or the next
             # page. Events further apart are consecutive actions, not one event.
             lo = max(m["page_from"] for m in members)

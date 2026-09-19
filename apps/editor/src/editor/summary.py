@@ -48,7 +48,7 @@ async def chapter_summary(generation_id: str, ch: dict) -> dict:
 
 async def book_summary(generation_id: str) -> dict:
     chs = db.all_rows("SELECT subject, claim, source_pages FROM claim WHERE generation_id=%s AND"
-                      " kind='SUMMARY' AND payload->>'level'='chapter' AND status<>'REJECTED'"
+                      " kind='SUMMARY' AND payload->>'level'='chapter' AND status NOT IN ('REJECTED','SUPERSEDED')"
                       " ORDER BY (payload->'pages'->>0)::int, (payload->>'order')::int", generation_id)
     q = {}
     for r in db.all_rows("SELECT c.id, e.page_no, e.quote FROM claim c JOIN claim_evidence ce ON"
