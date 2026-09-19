@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 12:50 UTC — Editör: V16-r6 canlıda
+
+Doğrulanmış yayın aracıyla PASS; araç içi release/altyapı denetimleri ve R5 neslinde dağıtım sonrası kaynak, anlam kökeni ve yayın kapısı denetimleri geçti. Varsayılan davranış R5 ile aynı (anlam V7, sınırlar 50 MiB/100 sayfa); büyük kitap desteği ve aday kapılar kapalı. [Kayıt](editor/2026-09-19-v16-r6-release.md).
+
 ## 2026-09-19 12:30 UTC — Editör: V16-r6 yayını hazırlandı, dağıtılmadı
 
 `main` `21e2abb`'den hazırlık dizini, canlı imajlar üzerine ağsız derleme, kanıtlar ve sözleşme üretildi; dağıtım aracının bütün ön denetimleri geçti. Varsayılan davranış R5 ile aynı (sınırlar, anlam V7); fark büyük kitap altyapısı ve varsayılan kapalı ayarlar. Yedekten dönüş kabulü R5 gibi v15-r7 kanıtıyla bağlandı. [Yayın kaydı](editor/2026-09-19-v16-r6-release.md).
